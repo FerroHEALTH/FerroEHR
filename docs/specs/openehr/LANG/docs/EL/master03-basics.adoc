@@ -10,9 +10,6 @@ The lexical style used in EL is a form of so-called 'snake_case' rather than so-
 * _property, routine and variable names_: lower-case first letter, followed by alphanumerics with underscores, e.g. `_employee_group_`, `_average_pressure_()`;
 * _constants and class (static) functions_: upper-case first letter, followed by alphanumerics with underscores, e.g. `Maximum_speed`.
 
-[.tbd]
-TBD: specify equivalence between snake-case and CamelCase, or a tool-level switch?
-
 == Commenting
 
 Comments are of two styles. For end-of-line commenting, and for creating visual dividing lines, the leader pattern `'--'` is used. Dividing lines are a longer line (more than three characters), e.g `'---------'` or a line of (four or more) `'='` symbols, i.e. `'========'`. The latter is useful for multi-level decision tables.

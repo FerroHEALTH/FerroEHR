@@ -29,8 +29,8 @@ the next ITS-BMM bump.
 | File | Component repo | Commit | Adopted | Why |
 |---|---|---|---|---|
 | `components/BASE/json/openehr_base_1.3.0.bmm.json` | specifications-BASE | `e48795762a0648cbe5701be58d42ec5df0c701a7` | 2026-07-25 | SPECBASE-48 invariants, SPECAM-82 CODE_PHRASE package move, SPECPR-426/386/460 fixes |
-| `components/RM/json/openehr_rm_1.2.0.bmm.json` | specifications-RM | `66d3ac45587e4532a94d5fd27ca24bcf049f5bf3` | 2026-07-26 | asterisk HTML entities normalized to a literal `*` in aliases (upstream PR #33); zero generated-output change |
-| `components/TERM/json/openehr_term_3.1.0.bmm.json` | specifications-TERM | `1232e59bb679928b921b305b6eca4d0b5e1e03f0` | 2026-10-14 | `status` default facet `""` -> `"active"` on CODE_SET, TERMINOLOGY_GROUP, CODE, TERMINOLOGY_CONCEPT; `includes` names `openehr_base_1.3.0` |
+| `components/RM/json/openehr_rm_1.2.0.bmm.json` | specifications-RM | `654296bb027b03b4b076101e7171f3359f44cebc` | 2026-10-19 | SPECRM-103: the `INTERVAL_EVENT.time` documentation states the time is where the interval ends (documentation string only); before it, the asterisk-entity normalization of upstream PR #33 |
+| `components/TERM/json/openehr_term_3.1.0.bmm.json` | specifications-TERM | `d2b05afd73dba9c670455ebb825ac4da6b63362f` | 2026-10-19 | BMM unchanged since `1232e59b` (SPECTERM-31 touches the computable XML only); | `status` default facet `""` -> `"active"` on CODE_SET, TERMINOLOGY_GROUP, CODE, TERMINOLOGY_CONCEPT; `includes` names `openehr_base_1.3.0` |
 
 One knock-on of the BASE overlay: ITS-BMM had independently fixed a doc typo
 (`senstive`->`sensitive`) in `RESOURCE_DESCRIPTION_ITEM.other_details` (see

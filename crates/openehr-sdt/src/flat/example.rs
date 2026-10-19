@@ -49,8 +49,9 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use openehr_rm::v1_2::paths::{PathSegment, RmPath};
 use serde_json::{Map, Value, json};
 
-use crate::flat::build::{stamp_archetype_details, structural_from};
+use crate::flat::build::{RM_VERSION, stamp_archetype_details, structural_from};
 use crate::flat::convert::composition_from_flat;
+use crate::flat::error::FlatError;
 use crate::flat::webtemplate::model::{
     WebTemplate, WebTemplateInput, WebTemplateInputType, WebTemplateNode, WebTemplateRange,
     WebTemplateStructuralStub,
@@ -140,8 +141,24 @@ impl ExampleType {
 /// EVENT `state`, an ENTRY `protocol`) as the empty node its structural stub
 /// constrains (AOM 1.4 `master04-constraint_model_package.adoc` §existence).
 /// For the `output` form, additionally call [`apply_output_uid`].
-#[must_use]
-pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Value {
+///
+/// Only a COMPOSITION-rooted template has a COMPOSITION example: the ITS-REST
+/// example operation answers one of the versioned-object classes
+/// (`responses/200_Template_example_retrieved.yaml` lists COMPOSITION,
+/// EHR_STATUS, FOLDER and the five parties), and a template rooted at an
+/// ENTRY or a SECTION admits none of them.
+///
+/// # Errors
+///
+/// [`FlatError::NoExampleForRoot`] for a template whose root is not a
+/// COMPOSITION, and the build's own [`FlatError`] should the generated document
+/// not build.
+pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Result<Value, FlatError> {
+    if wt.tree.rm_type != "COMPOSITION" {
+        return Err(FlatError::NoExampleForRoot {
+            root: wt.tree.rm_type.clone(),
+        });
+    }
     let mut flat: Map<String, Value> = Map::new();
 
     // Composition-level housekeeping the tree does not carry as data leaves.
@@ -158,15 +175,38 @@ pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Value {
     // honoured by the per-container cardinality pass in `walk`.
     walk(&wt.tree, &wt.tree.id, 0, level, false, &mut flat);
 
-    match composition_from_flat(&flat, wt, EXAMPLE_DATE_TIME) {
-        Ok(mut value) => {
-            fill_mandatory_structures(&mut value, &wt.tree);
-            fill_content_less_sections(&mut value, &wt.tree);
-            value
-        }
-        // The build does not fail for a well-formed tree; keep a total function.
-        Err(_) => Value::Object(Map::new()),
+    let mut value = composition_from_flat(&flat, wt, EXAMPLE_DATE_TIME)?;
+    fill_mandatory_structures(&mut value, &wt.tree);
+    fill_content_less_sections(&mut value, &wt.tree);
+    Ok(value)
+}
+
+/// Generates an example instance of a non-COMPOSITION template's root class.
+///
+/// The root is an ENTRY, a SECTION or a CLUSTER, for example; the instance is
+/// built from `wt` at `level` by [`crate::flat::build::build_root`] without any
+/// COMPOSITION member.
+///
+/// The ITS-REST example operation serves [`example_composition`]; this is the
+/// library form for validating or exercising a non-COMPOSITION template.
+///
+/// # Errors
+///
+/// [`FlatError::Conversion`] for a COMPOSITION-rooted template (use
+/// [`example_composition`]), and the build's own [`FlatError`].
+pub fn example_root_instance(wt: &WebTemplate, level: DetailLevel) -> Result<Value, FlatError> {
+    if wt.tree.rm_type == "COMPOSITION" {
+        return Err(FlatError::Conversion(
+            "a COMPOSITION-rooted template's example is example_composition".to_owned(),
+        ));
     }
+    let mut flat: Map<String, Value> = Map::new();
+    walk(&wt.tree, &wt.tree.id, 0, level, false, &mut flat);
+    let doc = crate::flat::sim::flat::parse_flat(&flat)?;
+    let mut value =
+        crate::flat::build::build_root(&doc, wt, &crate::flat::build::BuildOptions::default())?;
+    fill_mandatory_structures(&mut value, &wt.tree);
+    Ok(value)
 }
 
 /// Populate a deterministic `uid` (an `OBJECT_VERSION_ID`) on an example
@@ -580,7 +620,7 @@ fn insert_missing_occurrences(composition: &mut Value, node: &WebTemplateNode) {
     if let Some(id) = &node.node_id {
         instance.insert("archetype_node_id".into(), json!(id));
     }
-    stamp_archetype_details(&mut instance, node, false, "");
+    stamp_archetype_details(&mut instance, node, false, "", RM_VERSION);
     let instance = Value::Object(instance);
     for_each_at_mut(composition, owner, &mut |obj| {
         let Value::Object(m) = obj else {
@@ -1640,15 +1680,15 @@ mod tests {
     #[test]
     fn is_deterministic() {
         let wt = demo_vitals();
-        let a = example_composition(&wt, DetailLevel::Medium);
-        let b = example_composition(&wt, DetailLevel::Medium);
+        let a = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
+        let b = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
         assert_eq!(a, b, "two calls produce identical JSON");
     }
 
     #[test]
     fn is_a_composition_with_housekeeping() {
         let wt = demo_vitals();
-        let comp = example_composition(&wt, DetailLevel::Required);
+        let comp = example_composition(&wt, DetailLevel::Required).expect("the example builds");
         assert_eq!(
             comp.get("_type").and_then(Value::as_str),
             Some("COMPOSITION")
@@ -1678,14 +1718,17 @@ mod tests {
         // optional still yields a populated document at `medium` (the empty
         // `required` skeleton is the committable *minimum*, not the example).
         let wt = demo_vitals();
-        let comp = example_composition(&wt, DetailLevel::Medium);
+        let comp = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
         let content = comp.get("content").and_then(Value::as_array);
         assert!(
             content.is_some_and(|c| !c.is_empty()),
             "medium example carries content entries"
         );
         assert!(
-            leaf_count(&comp) > leaf_count(&example_composition(&wt, DetailLevel::Required)),
+            leaf_count(&comp)
+                > leaf_count(
+                    &example_composition(&wt, DetailLevel::Required).expect("the example builds")
+                ),
             "medium populates strictly more leaves than required"
         );
     }
@@ -1693,8 +1736,8 @@ mod tests {
     #[test]
     fn complete_demonstrates_repetition() {
         let wt = demo_vitals();
-        let medium = example_composition(&wt, DetailLevel::Medium);
-        let complete = example_composition(&wt, DetailLevel::Complete);
+        let medium = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
+        let complete = example_composition(&wt, DetailLevel::Complete).expect("the example builds");
         assert!(
             leaf_count(&complete) > leaf_count(&medium),
             "complete adds second occurrences of repeating nodes"
@@ -1704,9 +1747,14 @@ mod tests {
     #[test]
     fn levels_are_monotonic() {
         let wt = demo_vitals();
-        let required = leaf_count(&example_composition(&wt, DetailLevel::Required));
-        let medium = leaf_count(&example_composition(&wt, DetailLevel::Medium));
-        let complete = leaf_count(&example_composition(&wt, DetailLevel::Complete));
+        let required = leaf_count(
+            &example_composition(&wt, DetailLevel::Required).expect("the example builds"),
+        );
+        let medium =
+            leaf_count(&example_composition(&wt, DetailLevel::Medium).expect("the example builds"));
+        let complete = leaf_count(
+            &example_composition(&wt, DetailLevel::Complete).expect("the example builds"),
+        );
         assert!(
             required <= medium && medium <= complete,
             "coverage grows with detail: required={required}, medium={medium}, complete={complete}"
@@ -1721,7 +1769,8 @@ mod tests {
     #[test]
     fn output_populates_a_deterministic_uid() {
         let wt = demo_vitals();
-        let mut input = example_composition(&wt, DetailLevel::Required);
+        let mut input =
+            example_composition(&wt, DetailLevel::Required).expect("the example builds");
         assert!(input.get("uid").is_none(), "input form has no uid");
 
         let mut output = input.clone();
@@ -1824,7 +1873,7 @@ mod tests {
         // A populated example must not seed a zero-valued quantity magnitude
         // (clinically unreal; defeats multiplicative jitter).
         let wt = demo_vitals();
-        let comp = example_composition(&wt, DetailLevel::Medium);
+        let comp = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
         let mut mags = Vec::new();
         collect(&comp, &mut mags);
         assert!(!mags.is_empty(), "Demo Vitals exposes DV_QUANTITY leaves");

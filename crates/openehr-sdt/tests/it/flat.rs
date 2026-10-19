@@ -1224,7 +1224,8 @@ fn a_name_discriminated_sibling_set_takes_no_id_only_fallback() {
         "the carrier really has name-differentiated adhoc sections: {sections:?}"
     );
 
-    let mut composition = example_composition(&wt, DetailLevel::Medium);
+    let mut composition =
+        example_composition(&wt, DetailLevel::Medium).expect("the example builds");
     let before = composition_to_flat(&composition, &wt).expect("to_flat");
     assert!(
         before.keys().any(|k| k.contains("/reporting:0/first_test")),

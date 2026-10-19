@@ -6,11 +6,16 @@
 
 4+^h|*LANG Release 1.1.0 (unreleased)*
 
-|[[latest_issue]]1.2.0
+|[[latest_issue]]1.2.1
+|{spec_tickets}/SPECLANG-13[SPECLANG-13^]: Add missing `EXPR_VALUE_REF` class table to the Expression Object Model (Fixes {spec_tickets}/SPECPR-468[SPECPR-468^]).
+|M Zawahra
+|[[latest_issue_date]]30 May 2026
+
+|1.2.0
 |{spec_tickets}/SPECLANG-9[SPECLANG-9^]. Import old Expression Language as 'Basic Expression Language'; +
  Add `OPERATOR_KIND` enumeration.
 |SEC
-|[[latest_issue_date]]14 May 2022
+|14 May 2022
 
 4+^h|*Pre-LANG (Expression Language)*
 

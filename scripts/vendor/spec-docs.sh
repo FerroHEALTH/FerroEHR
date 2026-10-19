@@ -48,10 +48,10 @@ INCLUDE_EXT=(adoc md txt csv json yaml yml robot xml opt g4)
 # schemas untouched (docs/VERSIONS.md names both).
 COMPONENTS=(
   "BASE|specifications-BASE|master (BASE 1.3.0)|45caad1bf3874b26a5ce275e27e28eff15150b4a"
-  "RM|specifications-RM|master (RM 1.2.0)|e0f7c9a24fe9b9cd568adb48c6dd53ac66e43647"
-  "AM|specifications-AM|master (AM 2.4.0 + ADL/AOM/OPT 1.4)|82284df6c0f68aef48eb9bb48344972b9d385a42"
-  "TERM|specifications-TERM|master (TERM 3.1.0)|1232e59bb679928b921b305b6eca4d0b5e1e03f0"
-  "LANG|specifications-LANG|master (LANG 1.1.0)|84cd268326f724c354292b11cb75a8f6b59b1ca2"
+  "RM|specifications-RM|master (RM 1.2.0)|654296bb027b03b4b076101e7171f3359f44cebc"
+  "AM|specifications-AM|master (AM 2.4.0 + ADL/AOM/OPT 1.4)|2635f42c45e33f8700cc6e093b6c8af1406322e3"
+  "TERM|specifications-TERM|master (TERM 3.1.0)|d2b05afd73dba9c670455ebb825ac4da6b63362f"
+  "LANG|specifications-LANG|master (LANG 1.1.0)|f1a984361c83ce05e0d23f4f7d6d7253ade5e436"
   "QUERY|specifications-QUERY|Release-1.1.0|a87bb51fa1c515b863c9610a9444a2d5570dc05a"
   "SM|specifications-SM|master|23ffc4711c10bae2ae43724b1948fe3b24a0964e"
   "CNF|specifications-CNF|master|239dfb4ed2c634ca713aee95df074604a6f5ab56"

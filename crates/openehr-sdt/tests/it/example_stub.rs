@@ -81,7 +81,7 @@ fn edit_tree(node: &mut WebTemplateNode, f: &impl Fn(&mut WebTemplateNode)) {
 #[test]
 fn constrained_action_description_synthesises_the_constrained_node_id() {
     let wt = web_template("../../../openehr-its/tests/fixtures/sdk/ips.v0.opt");
-    let comp = example_composition(&wt, DetailLevel::Required);
+    let comp = example_composition(&wt, DetailLevel::Required).expect("the example builds");
 
     let mut found = Vec::new();
     actions(&comp, &mut found);
@@ -129,7 +129,7 @@ fn clearing_the_stub_reintroduces_the_rejected_placeholder() {
         n.existence.clear();
     });
 
-    let comp = example_composition(&wt, DetailLevel::Required);
+    let comp = example_composition(&wt, DetailLevel::Required).expect("the example builds");
     let mut found = Vec::new();
     actions(&comp, &mut found);
     assert_eq!(
@@ -160,7 +160,7 @@ fn unconstrained_structural_attribute_keeps_the_any_placeholder() {
         n.existence.clear();
     });
 
-    let comp = example_composition(&wt, DetailLevel::Required);
+    let comp = example_composition(&wt, DetailLevel::Required).expect("the example builds");
     let mut found = Vec::new();
     actions(&comp, &mut found);
     assert_eq!(
@@ -244,7 +244,7 @@ fn committable_example_of_every_fixture_fully_validates() {
             let contradictory = CONTRADICTORY_FIXTURES
                 .iter()
                 .any(|(n, l)| *n == name && l.is_none_or(|l| l == level));
-            let comp = example_composition(&wt, level);
+            let comp = example_composition(&wt, level).expect("the example builds");
             let msgs = validate_composition(&comp, &wt);
             if contradictory {
                 assert!(
@@ -274,7 +274,7 @@ fn committable_example_of_every_fixture_fully_validates() {
 #[test]
 fn issue_94_multi_archetype_medium_validates_fully() {
     let wt = web_template("better/ZN - Vital Functions Encounter.opt");
-    let comp = example_composition(&wt, DetailLevel::Medium);
+    let comp = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
     let msgs = validate_composition(&comp, &wt);
     assert!(
         msgs.is_empty(),
@@ -305,8 +305,12 @@ fn example_generation_is_byte_deterministic() {
             DetailLevel::Medium,
             DetailLevel::Complete,
         ] {
-            let a = serde_json::to_string(&example_composition(&wt, level));
-            let b = serde_json::to_string(&example_composition(&wt, level));
+            let a = serde_json::to_string(
+                &example_composition(&wt, level).expect("the example builds"),
+            );
+            let b = serde_json::to_string(
+                &example_composition(&wt, level).expect("the example builds"),
+            );
             assert_eq!(
                 a.ok(),
                 b.ok(),

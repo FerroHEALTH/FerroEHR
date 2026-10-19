@@ -1236,7 +1236,8 @@ async fn adl2_template_resolves_on_the_commit_path_and_validates() {
     let mut comp = openehr_sdt::flat::example::example_composition(
         &wt,
         openehr_sdt::flat::example::DetailLevel::Complete,
-    );
+    )
+    .expect("the example builds");
     assert_eq!(
         comp.pointer("/archetype_details/template_id/value")
             .and_then(Value::as_str),

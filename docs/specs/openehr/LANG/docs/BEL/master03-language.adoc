@@ -45,9 +45,6 @@ The primitive types are shown below, along with typical literal values, which ar
 
 Automatic type promotion from `Integer` to `Real` applies to all integer and real values and expressions, in the same fashion as most programming languages.
 
-[.tbd]
-TBD: do we need `Integer64` and `Real64`?
-
 === Container Types
 
 The same container types as defined in the {openehr_foundation_types}#_structure_types[Foundation Types specification^] are supported in BEL, as follows.

@@ -887,6 +887,7 @@ fn slot_narrowing() {
     eval.slots = vec![WebTemplateSlot {
         path: "/content[at0001]/data[at0002]".to_owned(),
         rm_type: "ITEM_LIST".to_owned(),
+        name: None,
     }];
     let wrong = json!({"_type": "EVALUATION", "archetype_node_id": "at0001",
         "data": {"_type": "ITEM_TREE", "archetype_node_id": "at0002", "items": []}});

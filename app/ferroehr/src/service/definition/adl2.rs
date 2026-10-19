@@ -36,7 +36,7 @@ use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype;
 use openehr_am::v2_4::aom2::archetype::operational_template::OperationalTemplate;
 use openehr_base::validate::InvariantViolation;
-use openehr_sdt::flat::example::{DetailLevel, ExampleType, apply_output_uid, example_composition};
+use openehr_sdt::flat::example::{DetailLevel, ExampleType, apply_output_uid};
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
 
 use crate::db::acquire::acquire;
@@ -604,6 +604,8 @@ impl FerroEhrService {
     ///   (it was engine-valid at upload, so this is a server fault).
     /// - [`ServiceError::Unprocessable`] (`422`) — the OPT cannot be compiled (an
     ///   unresolved constituent reference) or built into a `WebTemplate`.
+    /// - [`ServiceError::BadRequest`] (`400`) — the template's root is not a
+    ///   COMPOSITION, so no example COMPOSITION exists for it.
     pub(super) async fn adl2_example(
         &self,
         template_id: &str,
@@ -611,7 +613,7 @@ impl FerroEhrService {
         kind: ExampleType,
     ) -> Result<Value, ServiceError> {
         let wt = self.web_template_adl2(template_id).await?;
-        let mut composition = example_composition(&wt, level);
+        let mut composition = crate::templates::runtime::example_or_refusal(&wt, level)?;
         if kind == ExampleType::Output {
             apply_output_uid(&mut composition, &wt.template_id);
         }

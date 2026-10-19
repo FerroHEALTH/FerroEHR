@@ -7,6 +7,9 @@ openEHR reference model terminology, and artefacts for binding or using standard
 
 == 3.1.0 (unreleased)
 
+- Added "interoperability" (code 672) to the term mapping purpose vocabulary in openehr_terminology.xml, with es, ja, pt and zh translations.
+See https://openehr.atlassian.net/browse/SPECTERM-31
+
 - Added ng/mL/cm3 and μg/L/cm3 (PSA density) to PropertyUnitData.xml under a new property "Concentration per volume"; added missing property concepts 761-765 to the property vocabulary.
 See https://openehr.atlassian.net/browse/SPECPR-450
 

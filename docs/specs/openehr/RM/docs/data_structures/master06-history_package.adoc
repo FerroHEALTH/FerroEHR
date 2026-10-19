@@ -47,7 +47,7 @@ image::{diagrams_uri}/history_bp.svg[id=history_bp, align="center"]
 
 === Interval Events
 
-Instances of the `INTERVAL_EVENT` class are used to express values corresponding to an interval in time. The `INTERVAL_EVENT._width_` attribute defines the duration of the interval; and the inherited `_time_` value corresponds to the _trailing edge_ of the event.
+Instances of the `INTERVAL_EVENT` class are used to express values corresponding to an interval in time. The `INTERVAL_EVENT._width_` attribute defines the duration of the interval; and the inherited `_time_` value corresponds to the _trailing edge_ of the event. In other words, `_time_` is the time point where the interval ends, and the interval starts at `_time_` minus `_width_`, as returned by `_interval_start_time_()`.
 
 The semantics of the Interval event type in this model are that the values effectively summarise actual instantaneous values of a datum that have occurred during the period of the event interval. The mathematical meaning of the data value of any particular interval event is given by the `_math_function_` attribute. This is coded by the {openehr_terminology_xml}[openEHR vocabulary `event math function`], and takes values such as `145|minimum|`, `144|maximum|`, `146|mean|`, `147|change|` and so on. The math function value on a particular event applies to all the data points attached to the event `_data_` attribute.
 

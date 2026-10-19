@@ -73,9 +73,6 @@ Literal values are mostly instances of the types declared in the imported models
 
 One exception to the above is tuples, which are direct instances of the BMM meta-type `BMM_TUPLE`. They take the literal form `[a, b, c]`, where `a`, `b`, and `c` are generally of different types.
 
-[.tbd]
-TBD: consider to not bother with `Array` and reserve `[]` for tuples.
-
 == Variables
 
 Symbolic variables are valid within the scope of the routine in which they are declared, and are classified as read-only or writable. Read-only variables include routine parameters and the automatically declared variable `Self`, and are reprsented by the meta-type `EL_READONLY_VARIABLE`.
@@ -176,9 +173,6 @@ Access to members of instances of a container type may be achieved by normal fun
 
 |=================================================================
 
-[.tbd]
-TBD: to achieve this generically, the above map of operators to member functions of appropriate types needs to be supplied in the model supplying the types themselves.
-
 Container element access may be used on any expression whose effective type is a container, including function calls.
 
 === Matching Objects
@@ -195,9 +189,6 @@ The `[]` syntax is shorthand for the following assumed functions:
 |`Container<T>` |`match (matcher: Function <[T], Boolean>): List<T>`
 
 |===
-
-[.tbd]
-TBD: For `Any`, need type anchoring... or else generic functions. 
 
 Here, 'matching' is understood to mean _obtain all matching items_. 
 
@@ -254,9 +245,6 @@ Qualified referencing can be combined with selector agents to obtain an effect s
 ----
 
 For matching to work, there must be an appropriate function available on all container types. In the case of the openEHR Foundation types, this is `match (<[T], Boolean>): List<T>` defined on `Container<T>`; any equivalent function in a different model will do. The return type is nullable.
-
-[.tbd]
-TBD: to achieve this generically, the map of operators to member functions of appropriate types needs to be supplied in the model supplying the types themselves.
 
 Other short forms are available, making a predicate syntax reminiscent of Xpath possible, as follows.
 

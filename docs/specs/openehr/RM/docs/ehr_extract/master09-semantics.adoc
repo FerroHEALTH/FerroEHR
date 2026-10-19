@@ -81,6 +81,3 @@ referred to by the uri or data attributes, according to the `_include_multimedia
 * follow the links recursively. For each link: create an `X_VERSIONED_COMPOSITION`; 
 set `_is_primary_` = False, write the path and write the target Compositions in the extract if not already there;
 * create the `DV_LINK` objects so that their paths refer correctly to the Compositions in the Extract;
-
-[.tbd]
-TBD: do something about `Access_control` objects;

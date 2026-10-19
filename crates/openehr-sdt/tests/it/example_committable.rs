@@ -91,18 +91,13 @@ const NOT_COMMITTABLE: &[(&str, &str)] = &[
         "the template pins COMPOSITION.category to 435, a code the openEHR \
          terminology's composition category group (431, 433, 451, 815) does not hold",
     ),
-    // TODO(#3779): same-archetype siblings told apart by name merge in the example.
-    (
-        "covid-19-pneumonia-diagnosis-and-treatment-7th-edition.opt",
-        "two name-distinguished imaging_exam_result siblings",
-    ),
 ];
 
 /// Generates every committable level of `path`'s template and returns the
 /// validation messages, each prefixed with the file and level.
 ///
 /// Only a COMPOSITION commits, so a template rooted in another class is outside
-/// the committable claim (#3780).
+/// the committable claim; the generator refuses it (#3780).
 fn committable_findings(path: &Path) -> Vec<String> {
     let name = file_name(path);
     if NOT_COMMITTABLE.iter().any(|(file, _)| *file == name) {
@@ -122,7 +117,8 @@ fn committable_findings(path: &Path) -> Vec<String> {
     }
     let mut out = Vec::new();
     for level in COMMITTABLE {
-        let example = example_composition(&wt, level);
+        let example = example_composition(&wt, level)
+            .unwrap_or_else(|e| panic!("{name}: the example builds: {e}"));
         for m in validate_composition(&example, &wt) {
             out.push(format!("{name}@{level:?}: {}: {}", m.path, m.message));
         }
@@ -296,7 +292,8 @@ fn assert_content_less_mandatory_is_materialised(attr: &str) {
     make_content_less_mandatory(&mut wt, &holder_path, &stub);
     let segments = owner_segments(&stub);
     for level in [DetailLevel::Medium, DetailLevel::Complete] {
-        let comp = example_composition(&wt, level);
+        let comp =
+            example_composition(&wt, level).unwrap_or_else(|e| panic!("the example builds: {e}"));
         let mut owners = Vec::new();
         objects_at(&comp, &segments, &mut owners);
         assert!(
@@ -378,7 +375,7 @@ fn element_with_a_value_carries_no_null_flavour() {
         DetailLevel::Medium,
         DetailLevel::Complete,
     ] {
-        let comp = example_composition(&wt, level);
+        let comp = example_composition(&wt, level).expect("the example builds");
         let violations = null_flavour_violations(&comp);
         assert!(violations.is_empty(), "{level:?}: {violations:?}");
         let invariant: Vec<String> = validate_composition(&comp, &wt)
@@ -388,7 +385,7 @@ fn element_with_a_value_carries_no_null_flavour() {
             .collect();
         assert!(invariant.is_empty(), "{level:?}: {invariant:?}");
     }
-    let medium = example_composition(&wt, DetailLevel::Medium);
+    let medium = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
     let mut at0004 = Vec::new();
     objects_with_id(&medium, "at0004", &mut at0004);
     assert!(
@@ -422,7 +419,7 @@ fn value_less_mandatory_element_carries_its_null_flavour() {
         .clone()
         .unwrap_or_else(|| panic!("the ELEMENT node id"));
 
-    let comp = example_composition(&wt, DetailLevel::Medium);
+    let comp = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
     let mut found = Vec::new();
     objects_with_id(&comp, &node_id, &mut found);
     assert!(
@@ -433,4 +430,65 @@ fn value_less_mandatory_element_carries_its_null_flavour() {
     );
     let violations = null_flavour_violations(&comp);
     assert!(violations.is_empty(), "{violations:?}");
+}
+
+/// Two same-archetype siblings told apart only by name (`events[at0002,
+/// 'Baseline']` and `events[at0002,'Follow up']` under each of two
+/// `imaging_exam_result` OBSERVATIONs) stay two nodes through the FLAT build,
+/// so every level of the template's example passes the commit-path validation
+/// (BASE `architecture_overview/master11-paths.adoc` §"Using a Name-based
+/// Predicate"; #3779).
+#[test]
+fn name_distinguished_siblings_stay_apart_through_build_and_validation() {
+    let path = ckm_dir().join("full/covid-19-pneumonia-diagnosis-and-treatment-7th-edition.opt");
+    let wt = web_template(&path);
+    for level in COMMITTABLE {
+        let example = example_composition(&wt, level).expect("the example builds");
+        let messages: Vec<String> = validate_composition(&example, &wt)
+            .iter()
+            .map(|m| format!("{}: {}", m.path, m.message))
+            .collect();
+        assert!(messages.is_empty(), "{level:?}: {messages:#?}");
+        if level == DetailLevel::Required {
+            // The two OBSERVATIONs are optional, so the required example
+            // carries no event to tell apart.
+            continue;
+        }
+        let mut events = Vec::new();
+        collect_event_names(&example, &mut events);
+        for name in ["Baseline", "Follow up"] {
+            assert!(
+                events.iter().any(|e| e == name),
+                "{level:?}: the {name} event is its own node: {events:?}"
+            );
+        }
+    }
+}
+
+/// The names of every EVENT under an `imaging_exam_result` OBSERVATION.
+fn collect_event_names(value: &Value, out: &mut Vec<String>) {
+    match value {
+        Value::Object(obj) => {
+            if obj.get("archetype_node_id").and_then(Value::as_str)
+                == Some("openEHR-EHR-OBSERVATION.imaging_exam_result.v0")
+                && let Some(events) = value.pointer("/data/events").and_then(Value::as_array)
+            {
+                out.extend(
+                    events
+                        .iter()
+                        .filter_map(|e| e.pointer("/name/value").and_then(Value::as_str))
+                        .map(str::to_owned),
+                );
+            }
+            for child in obj.values() {
+                collect_event_names(child, out);
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                collect_event_names(item, out);
+            }
+        }
+        _ => {}
+    }
 }

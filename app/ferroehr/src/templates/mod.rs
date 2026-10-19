@@ -33,5 +33,5 @@
 
 pub(crate) mod identity;
 mod ingest;
-mod runtime;
+pub(crate) mod runtime;
 mod store;

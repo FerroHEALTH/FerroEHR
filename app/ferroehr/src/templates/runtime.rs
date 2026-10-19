@@ -109,6 +109,11 @@ impl FerroEhrService {
     ///   template on a *commit* path.
     /// - [`ServiceError::Unprocessable`] (→ `422`) — the template is stored but
     ///   cannot be built into a [`WebTemplate`].
+    /// - [`ServiceError::BadRequest`] (→ `400`) — the template's root is not a
+    ///   COMPOSITION, so no example COMPOSITION exists for it (see
+    ///   [`example_or_refusal`]).
+    /// - [`ServiceError::Internal`] (→ `500`) — the generated document did not
+    ///   build, a server fault.
     /// - [`ServiceError::Database`] — the store read failed.
     pub(crate) async fn template_example(
         &self,
@@ -134,7 +139,7 @@ impl FerroEhrService {
             self.build_cached_web_template(&key, template_id, &xml)
                 .await?
         };
-        let mut composition = openehr_sdt::flat::example::example_composition(&wt, level);
+        let mut composition = example_or_refusal(&wt, level)?;
         if kind == ExampleType::Output {
             openehr_sdt::flat::example::apply_output_uid(&mut composition, template_id);
         }
@@ -182,4 +187,31 @@ fn note_cache_event(event: &'static str) {
     crate::telemetry::metrics::metrics()
         .webtemplate_cache_events
         .add(1, &[opentelemetry::KeyValue::new("event", event)]);
+}
+
+/// The example COMPOSITION of `wt` at `level`, or the refusal the example
+/// operation answers.
+///
+/// ITS-REST `definition_template_adl1.4_example_get` answers an instance of a
+/// versioned-object class (`responses/200_Template_example_retrieved.yaml`)
+/// and allows a `400` for what the server does not generate; a template rooted
+/// at an ENTRY or a SECTION admits no COMPOSITION, so it is refused rather
+/// than served an instance its root class does not declare (#3780).
+///
+/// # Errors
+///
+/// [`ServiceError::BadRequest`] (`400`) naming the root for a non-COMPOSITION
+/// template; [`ServiceError::Internal`] (`500`) when the generated document does
+/// not build.
+pub(crate) fn example_or_refusal(
+    wt: &WebTemplate,
+    level: DetailLevel,
+) -> Result<Value, ServiceError> {
+    match openehr_sdt::flat::example::example_composition(wt, level) {
+        Ok(composition) => Ok(composition),
+        Err(e @ openehr_sdt::flat::error::FlatError::NoExampleForRoot { .. }) => {
+            Err(ServiceError::bad_request(e.to_string(), e))
+        }
+        Err(e) => Err(ServiceError::internal("generate the template example", e)),
+    }
 }

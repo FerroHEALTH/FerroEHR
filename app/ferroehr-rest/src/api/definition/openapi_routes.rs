@@ -626,7 +626,12 @@ pub(crate) async fn definition_template_adl1_4_get(
                                       out-of-enum value (an out-of-enum value is \
                                       also \"syntactically invalid … parameter\" \
                                       under `responses/400.yaml`). Which arm of \
-                                      that either/or applies is OURS.",
+                                      that either/or applies is OURS. The same \
+                                      `400` answers a template whose root is \
+                                      not a COMPOSITION (an ENTRY or a \
+                                      SECTION): the `200` body is one of the \
+                                      versioned-object classes, none of which \
+                                      such a template admits.",
          body = serde_json::Value),
         (status = 404, description = "The released trigger, verbatim: `404 Not \
                                       Found` \"is returned when a template with \
@@ -1183,7 +1188,9 @@ pub(crate) async fn definition_template_adl2_get(
                                       stated on the ADL 1.4 sibling and applied \
                                       uniformly here), and \"syntactically \
                                       invalid … parameter\" under \
-                                      `responses/400.yaml`.",
+                                      `responses/400.yaml`. It also answers a \
+                                      template whose root is not a COMPOSITION, \
+                                      which no example COMPOSITION conforms to.",
          body = serde_json::Value),
         (status = 404, description = "The released trigger, verbatim: `404 Not \
                                       Found` \"is returned when a template with \

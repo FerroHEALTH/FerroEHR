@@ -96,7 +96,7 @@ for direct use in openEHR for various reasons:
 identifiers is available;
 * ISO Oids are long identifiers and may significantly increase the size of persisted information
 due to the ubiquity of coded terms;
-* determing the identity of the terminology in data always requires a request to a service containing
+* determining the identity of the terminology in data always requires a request to a service containing
 the Oid / name mapping;
 * there is a safety factor in having human readable terminology identifiers in the data.
 

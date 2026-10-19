@@ -58,8 +58,8 @@ SETS=(
 # destination file | upstream repo | pinned commit | upstream path | provenance record
 OVERLAYS=(
   "tools/openehr-codegen/vendor/bmm/components/BASE/json/openehr_base_1.3.0.bmm.json|specifications-BASE|e48795762a0648cbe5701be58d42ec5df0c701a7|computable/BMM/openehr_base_1.3.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
-  "tools/openehr-codegen/vendor/bmm/components/RM/json/openehr_rm_1.2.0.bmm.json|specifications-RM|66d3ac45587e4532a94d5fd27ca24bcf049f5bf3|computable/BMM/openehr_rm_1.2.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
-  "tools/openehr-codegen/vendor/bmm/components/TERM/json/openehr_term_3.1.0.bmm.json|specifications-TERM|1232e59bb679928b921b305b6eca4d0b5e1e03f0|computable/BMM/openehr_term_3.1.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
+  "tools/openehr-codegen/vendor/bmm/components/RM/json/openehr_rm_1.2.0.bmm.json|specifications-RM|654296bb027b03b4b076101e7171f3359f44cebc|computable/BMM/openehr_rm_1.2.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
+  "tools/openehr-codegen/vendor/bmm/components/TERM/json/openehr_term_3.1.0.bmm.json|specifications-TERM|d2b05afd73dba9c670455ebb825ac4da6b63362f|computable/BMM/openehr_term_3.1.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
 )
 
 # The provenance records must name every pin before anything is fetched.

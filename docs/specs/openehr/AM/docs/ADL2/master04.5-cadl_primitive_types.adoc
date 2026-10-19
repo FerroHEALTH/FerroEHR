@@ -226,9 +226,6 @@ For example, the following two patterns are equivalent:
 
 The rules for including special characters within strings are described in <<File Encoding and Character Quoting>>.
 
-[.tbd]
-TBD: there is an argument for only allowing a single String value rather than a list, where the value is aways a regex since `{"platypus", "kangaroo", "wombat"}` can be expressed as `{/platypus|kangaroo|wombat/}`. See also AOM spec.
-
 The regular expression patterns supported in cADL are as follows.
 
 [cols="1,3,3",options="header"]

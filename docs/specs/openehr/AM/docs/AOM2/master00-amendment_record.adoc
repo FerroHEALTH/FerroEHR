@@ -6,10 +6,16 @@
 
 4+^h|*AM Release 2.4.0 (unreleased)*
 
-|[[latest_issue]]2.4.1
+|[[latest_issue]]2.4.2
+|Correct text on machine identifiers: `build_uid` is mandatory and defined on `AUTHORED_ARCHETYPE`; `uid` is defined on `AUTHORED_RESOURCE`. ({spec_tickets}/SPECPR-366[SPECPR-366^])
+|S Garde, +
+S Kohler
+|[[latest_issue_date]]16 Oct 2026
+
+|2.4.1
 |Fix typos. ({spec_tickets}/SPECPR-387[SPECPR-387^])
 |S Iancu
-|[[latest_issue_date]]07 Mar 2025
+|07 Mar 2025
 
 |
 |Fix ADL_CODE_DEFINITIONS class to comply with both at-codes and id-codes. (part of {spec_tickets}/SPECAM-90[SPECAM-90^])
