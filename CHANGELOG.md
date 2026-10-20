@@ -82,6 +82,15 @@ workflow refuses a tag that has no matching section here.
   the receiving deployment's party API, which seals the identifier under its
   own key. The book's EHR Extract page records the decision and the steps.
 
+### Fixed
+
+- **A FLAT OBSERVATION without a history origin takes the earliest event's
+  time** (#3888, `openehr-sdt` 0.0.91). Simplified Formats master05
+  §OBSERVATION says `/history_origin` "will be set to the time of the earliest
+  event if not explicitly set"; the builder used the composition's context
+  time. Times are compared as instants across offsets, `ctx/history_origin`
+  still wins, and with no event time the context time stands.
+
 ## [5.1.0] - 2026-10-20
 
 ### Added

@@ -2060,14 +2060,20 @@ fn apply_common_entry_defaults(
 
 /// The OBSERVATION defaults: the HISTORY origin, and each EVENT's time, which
 /// defaults to that origin (master06 §time).
+///
+/// An origin the input does not set is the `ctx/history_origin` default, else
+/// the time of the earliest event that states one ("will be set to the time of
+/// the earliest event if not explicitly set", master05 §OBSERVATION
+/// `/history_origin`), else the composition's context time.
 fn apply_observation_defaults(obj: &mut Map<String, Value>, defaults: &ctx::CtxDefaults) {
-    let origin = defaults
-        .history_origin
-        .clone()
-        .unwrap_or_else(|| defaults.time.clone());
     let Some(Value::Object(history)) = obj.get_mut("data") else {
         return;
     };
+    let origin = defaults
+        .history_origin
+        .clone()
+        .or_else(|| earliest_event_time(history))
+        .unwrap_or_else(|| defaults.time.clone());
     let origin_value = history
         .entry("origin".to_owned())
         .or_insert_with(|| dv_date_time(&origin));
@@ -2088,6 +2094,70 @@ fn apply_observation_defaults(obj: &mut Map<String, Value>, defaults: &ctx::CtxD
             }
         }
     }
+}
+
+/// The earliest time an EVENT of `history` states, as written; `None` when no
+/// event states a time this reader can order.
+///
+/// Times are compared as instants: each is read as an ISO 8601 extended date
+/// time with its offset, and one that does not read leaves the comparison.
+fn earliest_event_time(history: &Map<String, Value>) -> Option<String> {
+    let Some(Value::Array(events)) = history.get("events") else {
+        return None;
+    };
+    events
+        .iter()
+        .filter_map(|event| event.pointer("/time/value").and_then(Value::as_str))
+        .filter(|time| *time != DEFAULT_TIME)
+        .filter_map(|time| instant(time).map(|at| (at, time)))
+        .min_by_key(|(at, _)| *at)
+        .map(|(_, time)| time.to_owned())
+}
+
+/// An ISO 8601 extended date time (`YYYY-MM-DDThh:mm[:ss[.f…]]` with `Z` or
+/// `±hh:mm`, or none for local time read as UTC) as nanoseconds since
+/// 1970-01-01T00:00Z, or `None` when `text` is not of that form.
+fn instant(text: &str) -> Option<i128> {
+    let (date, rest) = text.split_once('T')?;
+    let mut ymd = date.splitn(3, '-');
+    let year: i64 = ymd.next()?.parse().ok()?;
+    let month: i64 = ymd.next()?.parse().ok()?;
+    let day: i64 = ymd.next()?.parse().ok()?;
+    let (clock, offset_minutes) = if let Some(clock) = rest.strip_suffix('Z') {
+        (clock, 0)
+    } else if let Some(at) = rest.rfind(['+', '-']) {
+        let (clock, offset) = rest.split_at(at);
+        let sign = if offset.starts_with('-') { -1 } else { 1 };
+        let (hours, minutes) = offset.get(1..)?.split_once(':')?;
+        let minutes = hours.parse::<i64>().ok()? * 60 + minutes.parse::<i64>().ok()?;
+        (clock, sign * minutes)
+    } else {
+        (rest, 0)
+    };
+    let mut hms = clock.splitn(3, ':');
+    let hour: i64 = hms.next()?.parse().ok()?;
+    let minute: i64 = hms.next()?.parse().ok()?;
+    let (second, nanos) = match hms.next() {
+        None => (0, 0),
+        Some(sec) => match sec.split_once(['.', ',']) {
+            None => (sec.parse::<i64>().ok()?, 0),
+            Some((whole, frac)) => {
+                let digits: String = frac.chars().chain("000000000".chars()).take(9).collect();
+                (whole.parse::<i64>().ok()?, digits.parse::<i64>().ok()?)
+            }
+        },
+    };
+    // NOTE: the days-from-civil count of the proleptic Gregorian calendar
+    // (H. Hinnant, "chrono-Compatible Low-Level Date Algorithms").
+    let y = if month <= 2 { year - 1 } else { year };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let mp = (month + 9) % 12;
+    let doy = (153 * mp + 2).div_euclid(5) + day - 1;
+    let doe = yoe * 365 + yoe.div_euclid(4) - yoe.div_euclid(100) + doy;
+    let days = era * 146_097 + doe - 719_468;
+    let seconds = days * 86_400 + hour * 3_600 + minute * 60 + second - offset_minutes * 60;
+    Some(i128::from(seconds) * 1_000_000_000 + i128::from(nanos))
 }
 
 /// The ACTION defaults: the action time and the ISM transition's current
@@ -2203,6 +2273,52 @@ fn fill_structural_mandatory(obj: &mut Map<String, Value>, rm_type: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// master05 §OBSERVATION `/history_origin`: an origin the input does not
+    /// set is "the time of the earliest event", compared as instants, not as
+    /// text.
+    #[test]
+    fn an_unset_history_origin_is_the_earliest_event_time() {
+        let mut obj = json!({
+            "_type": "OBSERVATION",
+            "data": { "_type": "HISTORY", "events": [
+                { "_type": "POINT_EVENT", "time": dv_date_time("2026-03-02T10:00:00+01:00") },
+                { "_type": "POINT_EVENT", "time": dv_date_time("2026-03-02T08:30:00Z") },
+                { "_type": "POINT_EVENT" }
+            ]}
+        });
+        let defaults = ctx::CtxDefaults {
+            time: "2026-03-05T12:00:00Z".to_owned(),
+            ..ctx::CtxDefaults::default()
+        };
+        let Value::Object(map) = &mut obj else {
+            panic!("an object")
+        };
+        apply_observation_defaults(map, &defaults);
+        assert_eq!(obj["data"]["origin"]["value"], "2026-03-02T08:30:00Z");
+        assert_eq!(
+            obj["data"]["events"][2]["time"]["value"], "2026-03-02T08:30:00Z",
+            "an event without a time takes the origin"
+        );
+
+        let mut none = json!({"_type": "OBSERVATION", "data": {"_type": "HISTORY", "events": []}});
+        let Value::Object(map) = &mut none else {
+            panic!("an object")
+        };
+        apply_observation_defaults(map, &defaults);
+        assert_eq!(
+            none["data"]["origin"]["value"], "2026-03-05T12:00:00Z",
+            "with no event time the context time stands"
+        );
+    }
+
+    #[test]
+    fn instants_order_across_offsets() {
+        assert!(instant("2026-03-02T10:00:00+01:00") > instant("2026-03-02T08:30:00Z"));
+        assert_eq!(instant("1970-01-01T00:00:00Z"), Some(0));
+        assert_eq!(instant("1970-01-01T01:00:00.5+01:00"), Some(500_000_000));
+        assert_eq!(instant("not a time"), None);
+    }
 
     #[test]
     fn name_value_stamps_coded_and_plain_names() {
