@@ -714,7 +714,7 @@ mod tests {
             resource_kinds: BTreeSet::new(),
         };
         let record = m.classify(&AccessedContent::Query(constraints), false);
-        assert_eq!(record.stored_categories(), [IMAGING, BEELD, UNCLASSIFIED]);
+        assert_eq!(record.stored_categories(), [IMAGING, UNCLASSIFIED, BEELD]);
         assert_eq!(record.read_from, ReadFrom::Queried);
 
         let mapped = m.classify(
