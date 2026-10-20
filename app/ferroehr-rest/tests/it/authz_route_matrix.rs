@@ -380,6 +380,9 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/retention/due"),
     // The EHDS Art. 8 access-restriction register (#3682).
     ("GET", "/admin/access-restriction"),
+    // The audited read of a party's protected national identifiers (#3776). It
+    // also needs `authz.rbac.identifier_reader_role`, checked in its handler.
+    ("GET", "/admin/party/identifiers"),
 ];
 
 /// Admin-class writes (base-relative).
