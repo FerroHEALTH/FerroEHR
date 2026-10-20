@@ -34,8 +34,8 @@ use std::collections::HashMap;
 
 use ferrohealth_smart::guard::Requirement;
 use ferrohealth_smart::openehr;
+use ferrohealth_smart::openehr::smart_scopes::{Permission, ResourceFamily};
 use http::{HeaderMap, Method, Uri};
-use smart_grammar::smart_scopes::{Permission, ResourceFamily};
 
 use crate::extensions::access::authn::Principal;
 
@@ -229,11 +229,17 @@ impl SmartRoutes {
         Requirement::Scope(self.product_scope.clone())
     }
 
-    /// The DEMOGRAPHIC API's requirement: a listed client, or the product
-    /// scope.
+    /// The DEMOGRAPHIC API's requirement: a bearer client listed by
+    /// `client_id`, or a caller holding the product scope.
+    ///
+    /// The product-scope arm stays beside the client list because a bearer
+    /// caller without a listed `client_id` reaches the API through it.
     fn demographic(&self) -> Requirement {
         Requirement::Either(
-            Box::new(Requirement::Client(self.demographic_clients.clone())),
+            Box::new(Requirement::Client {
+                client_ids: self.demographic_clients.clone(),
+                basic_users: Vec::new(),
+            }),
             Box::new(self.product()),
         )
     }
@@ -541,6 +547,32 @@ mod tests {
         // A user/ grant beside it widens the reach (the union of the grants).
         let both = principal("patient/composition-*.r user/composition-*.r", None, bound);
         assert!(check(&ehr_data(Permission::Read), &both, Some("ehr-2")).is_ok());
+    }
+
+    /// A subject on `[auth] scopeless_subjects` whose token carries no resource
+    /// scope meets every SMART on openEHR requirement; one off the list, or one
+    /// whose token carries resource scopes, gets only its scopes.
+    #[test]
+    fn a_scopeless_subject_meets_an_openehr_requirement_only_without_scopes() {
+        let caller = |scope: &str, scopeless: bool| {
+            let caller = Caller::new("svc".to_owned(), None, scope, None, scopeless);
+            Principal::new(
+                Access::Caller(Arc::new(caller)),
+                Vec::new(),
+                Honoured::default(),
+            )
+        };
+        let read = ehr_data(Permission::Read);
+        assert!(check(&read, &caller("openid", true), Some("ehr-1")).is_ok());
+        assert!(check(&read, &caller("openid", false), Some("ehr-1")).is_err());
+        assert!(
+            check(&read, &caller("user/template-*.r", true), Some("ehr-1")).is_err(),
+            "a token carrying scopes gets only its scopes"
+        );
+        assert!(
+            check(&routes().product(), &caller("openid", true), None).is_err(),
+            "the allowlist reaches no product-scope surface"
+        );
     }
 
     /// The DEMOGRAPHIC API has no family: a listed client or the product scope

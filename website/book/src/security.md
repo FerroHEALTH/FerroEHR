@@ -63,7 +63,6 @@ honour **refuses to boot** rather than degrading at the first request:
 | `clock_skew_seconds` above `300` | error: leeway may be "no more than a few minutes" (RFC 7519 §4.1.4) |
 | `algorithms` naming an `HS*` algorithm, or empty | error: the server accepts asymmetric algorithms only (RFC 8725 §3.1, §3.2) |
 | a `jwks_file` holding a symmetric key or a private-key member | error: a verifier holds public keys only |
-| `scopeless_subjects` set | error: every FerroEHR route needs a SMART on openEHR scope |
 | a `product_scope` that is neither a full URI nor starts with `__` | error: SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility |
 | a `password_hash` below `m=19456,t=2,p=1` argon2id | error: the OWASP Argon2id floor |
 | `[authz.assurance] minimum` with an empty `levels` map, or with no mapped value at or above it | error: every patient-data request would be refused |
@@ -71,12 +70,12 @@ honour **refuses to boot** rather than degrading at the first request:
 | `[authz.professional]` with a blank `claim` or `acting_for_claim` | error: nothing to read the person from |
 
 Successfully verified Basic credentials are cached for
-`FERROEHR__AUTHZ__BASIC_CACHE_TTL_SECONDS` (default `60`; `0` disables the
-cache) so a busy client pays the deliberately expensive Argon2 verification once
-per TTL instead of on every request. The cache stores only a SHA-256 digest of
-the presented credential, never a plaintext password, and an entry exists only
-after a successful verification; the TTL bounds how long a removed user can
-still authenticate, exactly like a session lifetime.
+`FERROEHR__AUTH__BASIC__CACHE_TTL_SECONDS` (default `0`, which checks every
+request) so a busy client pays the deliberately expensive Argon2 verification
+once per TTL instead of on every request. The cache names each entry by a keyed
+hash of the credential, never the password, and an entry exists only after a
+successful verification; the TTL bounds how long a removed user can still
+authenticate, exactly like a session lifetime.
 
 The bearer settings:
 

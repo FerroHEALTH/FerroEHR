@@ -29,9 +29,15 @@ use url::Url;
 pub struct SmartConfig {
     /// Serve the `/.well-known/smart-configuration` document (default
     /// `false`). The document is built from the first `[auth]` issuer's
-    /// metadata, so it needs an issuer whose metadata the server reads, not a
-    /// `jwks_file`.
+    /// metadata: read from the issuer, or from [`Self::issuer_metadata_file`]
+    /// when the issuer's key set is a `jwks_file`.
     pub enabled: bool,
+
+    /// The RFC 8414 §2 authorization-server metadata of the first `[auth]`
+    /// issuer when its key set is a `jwks_file`, which carries none: a JSON
+    /// document naming that issuer, read at boot. SMART App Launch 2.2.0,
+    /// Conformance, §Metadata requires the `token_endpoint` it names.
+    pub issuer_metadata_file: Option<String>,
 
     /// The SMART platform base URL the discovery document hangs off (master04
     /// §Service Discovery: the document is served relative to the platform or

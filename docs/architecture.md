@@ -270,10 +270,12 @@ expressed in the vocabulary of NIST SP 800-162 (ABAC) and ANSI/INCITS 359
 **Evaluation order** — each stage can only narrow what the previous one allowed,
 which is what makes an optional stage safe to disable:
 
-1. **Authentication** — Basic (Argon2id PHC, verified-credential cache) or
-   OAuth2/OIDC bearer. Produces a `Principal` (subject, roles, scopes, the
-   validated claim set) or a typed refusal. A malformed `Authorization` header is
-   a `400`, not a `401`: the server never read a credential.
+1. **Authentication** — Basic (Argon2id PHC, the `ferrohealth-smart` store's
+   verified-credential cache) or OAuth2/OIDC bearer, both checked by the
+   crate's gate. Produces a `Principal` (subject, roles, scopes, the validated
+   claim set) or a typed refusal. A header that is no scheme and credential is
+   a `400`, not a `401`: the server never read a credential. A bearer token
+   outside the RFC 6750 §2.1 `b64token` alphabet is a malformed token, `401`.
 2. **`EHR_ACCESS`** — always on and unconditional, from the RM's own gateway
    clause ("All access decisions to data in the EHR must be made in accordance
    with the policies and rules in this object").

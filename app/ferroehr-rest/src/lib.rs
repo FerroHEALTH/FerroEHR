@@ -144,7 +144,8 @@ pub async fn build_full(
 /// so Bearer role extraction never falls back to the defaults behind the
 /// operator's back. A served SMART discovery document needs the issuer's
 /// metadata to name a `token_endpoint`, which the document requires (SMART App
-/// Launch 2.2.0, Conformance, §Metadata), so a `jwks_file` issuer refuses it.
+/// Launch 2.2.0, Conformance, §Metadata), so a `jwks_file` issuer refuses it
+/// unless `[smart] issuer_metadata_file` supplies that metadata.
 ///
 /// # Errors
 /// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
@@ -159,7 +160,7 @@ async fn build_authenticator(config: &AppConfig) -> Result<Arc<Authenticator>, S
         return Err(ServeError::Auth(
             "smart.enabled = true needs an [auth] issuer whose metadata names a \
              token_endpoint (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer \
-             read from a jwks_file carries no metadata"
+             read from a jwks_file carries none unless smart.issuer_metadata_file supplies it"
                 .to_owned(),
         ));
     }

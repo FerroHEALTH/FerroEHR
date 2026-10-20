@@ -32,11 +32,13 @@ services:
       # ── the SMART on openEHR resource-server role ──────────────────────────
       # Every route enforces its SMART on openEHR requirement whenever [auth] is
       # on (master08 §Resource Scopes), so the scope cases run with no switch.
-      # The discovery document stays OFF in this lane: it is built from the
-      # issuer's metadata, and the committed test issuer is a key-set FILE with
-      # no metadata to read (no Authorization Server runs here), so the server
-      # refuses to serve a document that could name no token endpoint.
-      FERROEHR__SMART__ENABLED: "false"
+      # The discovery document is built from the issuer's metadata, and the
+      # committed test issuer is a key-set FILE with none to read (no
+      # Authorization Server runs here), so the committed metadata document
+      # supplies the token endpoint SMART App Launch 2.2.0 (Conformance,
+      # §Metadata) requires.
+      FERROEHR__SMART__ENABLED: "true"
+      FERROEHR__SMART__ISSUER_METADATA_FILE: /etc/ferroehr/cnf-smart-issuer-metadata.json
       # master04 §Services: every services.*.baseUrl is an "Absolute URL to the
       # root of the API (required)", so the server needs its external origin.
       FERROEHR__SMART__PUBLIC_BASE_URL: "http://localhost:8080"
@@ -53,3 +55,4 @@ services:
       FERROEHR__AUTH__JWKS_FILE: /etc/ferroehr/cnf-smart-jwks.json
     volumes:
       - ./docs/conformance/party/smart/jwks.json:/etc/ferroehr/cnf-smart-jwks.json:ro
+      - ./docs/conformance/party/smart/issuer-metadata.json:/etc/ferroehr/cnf-smart-issuer-metadata.json:ro

@@ -37,13 +37,13 @@ scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds
 | `clock_skew_seconds` | int | `60` | Leeway on `exp`, `nbf` and `iat`. At most `300`. |
 | `jwks_max_age_seconds` | int | `600` | A key set older than this is read again. |
 | `jwks_refresh_interval_seconds` | int | `60` | A token naming an unknown `kid` reads the key set again at most once per interval. |
-| `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it cannot serve the SMART discovery document. |
+| `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it serves the SMART discovery document only with [`[smart] issuer_metadata_file`](#smart) set. |
 | `timeout_ms` | int | `10000` | One call to the authorization server. |
 | `realm` | string | `""` ⇒ `ferroehr` | The realm every `WWW-Authenticate` challenge names. |
-| `scopeless_subjects` | list of string | `[]` | Refused at boot: the crate's allowlist admits a token without SMART scopes on SMART on FHIR routes only, and every FerroEHR route carries a SMART on openEHR requirement. Grant the subject the openEHR scopes it needs instead. |
+| `scopeless_subjects` | list of string | `[]` | The exact `sub` values whose token, when it carries no resource scope of either the SMART on openEHR or the SMART on FHIR grammar, meets every SMART on openEHR requirement. A token that carries resource scopes gets only its scopes, and the allowlist reaches neither the ADMIN API nor the DEMOGRAPHIC API, which need the product scope. |
 | `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
 | `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
-| `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the clients in `[smart] demographic_clients`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
+| `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the bearer clients in `[smart] demographic_clients`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
 
 > [!WARNING]
 > **`auth.enabled = true` with no mechanism is a boot error.** Such a server
@@ -63,7 +63,9 @@ with a valid token that its credential was refused.
 
 A validated token must also carry a non-blank `sub` claim: the authenticated
 subject is stamped into the audit trail, so a token without one is refused with
-`401` rather than recorded under a placeholder identity.
+`401` rather than recorded under a placeholder identity. A bearer token outside
+the RFC 6750 §2.1 `b64token` alphabet is refused the same way, with `401` and
+`error="invalid_token"`.
 
 ### The Basic-auth user store
 
@@ -78,6 +80,12 @@ environment grammar cannot spell an array index.
 | `scopes` | list of string | `[]` | The SMART on openEHR scopes the user holds, checked on every route exactly like a token's `scope` claim. A user with none is refused everywhere a requirement applies. |
 
 The user's RBAC roles are [`[authz.rbac.basic_roles]`](#authzrbac).
+
+`[auth.basic]` itself takes one key beside the users:
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `cache_ttl_seconds` | int | `0` | How long a credential that verified is kept, so a repeat request skips the Argon2id derivation (`0` checks every request). The entry is named by a keyed hash of `user-id:password`, never the password, and only a credential that verified is kept, so a wrong password always pays the derivation. The TTL bounds how long a removed user keeps working. Argon2id costs tens of milliseconds of CPU per check by design, so a busy Basic client wants a value such as `60`. |
 
 > [!WARNING]
 > **Every `password_hash` must meet the OWASP Argon2id floor: `m>=19456`
@@ -98,10 +106,6 @@ time a refusal takes does not say whether the user exists.
 Role-based (RBAC) and attribute-based (ABAC) authorization, and the
 patient-data assurance gate. The full evaluation order and design rationale are
 in [Security](../security.md).
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `basic_cache_ttl_seconds` | int | `60` | Verified Basic-credential cache TTL (`0` disables). Argon2id verification costs real CPU per call by design, so a credential that has verified is remembered (as a digest of the presented header, never plaintext) and verified again after the TTL. It bounds both the KDF cost of a busy client and how long a removed user keeps working. |
 
 ### `[authz.assurance]`: the assurance level patient data requires
 
@@ -250,13 +254,14 @@ whose grants count for what. See [SMART App Launch](../smart-app-launch.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the first `[auth]` issuer's metadata, so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer read from a `jwks_file` refuses the start with `enabled = true`. |
+| `enabled` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the first `[auth]` issuer's metadata, so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer read from a `jwks_file` refuses the start with `enabled = true` unless `issuer_metadata_file` supplies that metadata. |
+| `issuer_metadata_file` | path | unset | A JSON file holding the RFC 8414 §2 metadata of the first `[auth]` issuer when its key set is a `jwks_file`, read at boot. It must name that issuer, and every endpoint it names must be `https` (a loopback host excepted); the discovery document takes its `token_endpoint` and the other endpoints from it. Set for an issuer whose metadata is read from the issuer, it is a boot error. |
 | `platform_base_url` | string | unset ⇒ the REST root | The path the discovery document hangs off, e.g. `/gateway/v1`. |
 | `public_base_url` | string | **required when enabled** | The server's externally reachable origin (e.g. `https://cdr.example.com`), from which the discovery document's absolute `services.*.baseUrl` values are built. |
 | `launch_base64_json` | bool | `false` | Advertise the `launch-base64-json` capability. Experimental, and advisory: the base64 JSON launch object is consumed by the application, not the CDR. |
 | `backend_clients` | list of string | `[]` | The `client_id`s a `system/aql-*` grant counts for: such a grant "would grant access to all registered and ad-hoc AQL queries system-wide" (master08 §Resource Scopes). |
 | `patient_issuers` | list of string | `[]` | The issuers whose `patient/` grants count, each confined to the EHR the token's `ehrId` claim names (master07 §Context Selection). Empty, a `patient/` grant grants nothing. |
-| `demographic_clients` | list of string | `[]` | The `client_id`s that reach the DEMOGRAPHIC API, which no SMART on openEHR scope covers. A caller holding `[auth] product_scope` reaches it too. |
+| `demographic_clients` | list of string | `[]` | The bearer `client_id`s that reach the DEMOGRAPHIC API, which no SMART on openEHR scope covers. A Basic user-id never matches an entry. A caller holding `[auth] product_scope` reaches it too. |
 
 `[smart.episode]`: `enabled` (bool, `false`) advertises episode context and
 accepts the `launch/episode` scope and `episodeId` claim, but applies no

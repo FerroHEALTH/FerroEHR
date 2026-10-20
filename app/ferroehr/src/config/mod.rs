@@ -75,9 +75,8 @@ pub struct FerroEhrConfig {
     pub log: crate::telemetry::config::LogConfig,
     /// `[telemetry]` — OpenTelemetry export.
     pub telemetry: crate::telemetry::config::OtelConfig,
-    /// `[auth]` — authentication: the `ferrohealth-smart` section, rendered
-    /// into the redacted views by [`auth::redacted`].
-    #[serde(skip_serializing)]
+    /// `[auth]` — authentication: the `ferrohealth-smart` section, whose
+    /// serialization writes every secret as `[redacted]`.
     pub auth: ferrohealth_smart::config::AuthSection,
     /// `[authz]` — RBAC + ABAC.
     pub authz: authz::AuthzConfig,
@@ -647,7 +646,7 @@ impl FerroEhrConfig {
     /// leaf of the tree passes [`secret::redact_userinfo`], so a URL in a key
     /// that is not typed `SecretUrl`, or in a configuration no validation has
     /// run over, is masked too. `[auth]` is the `ferrohealth-smart` section,
-    /// rendered by [`auth::redacted`], which masks each Basic password hash.
+    /// whose serialization writes each Basic password hash as `[redacted]`.
     /// Non-secret identifiers, such as a Basic user's `user` and `scopes`, an
     /// `issuer` without `userinfo`, or `auth.jwks_file` (a path), stay visible.
     ///
@@ -656,9 +655,6 @@ impl FerroEhrConfig {
     pub fn to_redacted_json(&self) -> Result<serde_json::Value, ConfigError> {
         let mut tree = serde_json::to_value(self)
             .map_err(|e| ConfigError::semantic(format!("rendering config as JSON: {e}")))?;
-        if let serde_json::Value::Object(members) = &mut tree {
-            members.insert("auth".to_owned(), auth::redacted(&self.auth));
-        }
         mask_url_userinfo(&mut tree);
         Ok(tree)
     }
@@ -1608,7 +1604,7 @@ mod tests {
         let rendered = c.to_redacted_toml().expect("toml");
         assert!(!rendered.contains("topsecret"), "secret leaked: {rendered}");
         assert!(
-            rendered.contains("***"),
+            rendered.contains("[redacted]"),
             "the hash renders masked: {rendered}"
         );
         assert!(!serde_json::to_string(&c).unwrap().contains("topsecret"));
@@ -1918,6 +1914,7 @@ mod tests {
                 password_hash_file: None,
                 scopes: vec!["user/composition-*.r".to_owned()],
             }],
+            cache_ttl_seconds: 0,
         });
         c.auth.issuer =
             ferrohealth_smart::config::IssuerKey::Flat("https://idp.example".to_owned());
@@ -1937,7 +1934,10 @@ mod tests {
         }
 
         // Structural placeholders present where a secret was set.
-        assert_eq!(value["auth"]["basic"]["users"][0]["password_hash"], "***");
+        assert_eq!(
+            value["auth"]["basic"]["users"][0]["password_hash"],
+            "[redacted]"
+        );
         assert_eq!(value["signing"]["key_passphrase"], "***");
         assert_eq!(value["multimedia"]["secret_access_key"], "***");
         assert_eq!(

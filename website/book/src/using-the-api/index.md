@@ -106,8 +106,8 @@ means "fix your credential":
 | Situation | Status | What it means |
 |---|---|---|
 | No `Authorization` header | `401` | with a `WWW-Authenticate` challenge listing the schemes this server implements, and **no** `error=` code — nothing has gone wrong yet ([RFC 6750 §3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1)) |
-| Credential presented and rejected | `401` | the challenge carries `error="invalid_token"`: expired, revoked, malformed, or simply wrong |
-| `Authorization` header malformed | `400` | an unparsable header, an unknown scheme, or a bearer token outside the [RFC 6750 §2.1](https://www.rfc-editor.org/rfc/rfc6750#section-2.1) `b64token` grammar. The server never got as far as a credential, so this is a request defect (`error="invalid_request"`) |
+| Credential presented and rejected | `401` | the challenge carries `error="invalid_token"`: expired, revoked, malformed (a bearer token outside the [RFC 6750 §2.1](https://www.rfc-editor.org/rfc/rfc6750#section-2.1) `b64token` alphabet included), or simply wrong |
+| `Authorization` header malformed | `400` | two `Authorization` headers, or a header that is no scheme followed by a space and a credential. The server never got as far as a credential, so this is a request defect (`error="invalid_request"`) |
 | Authenticated, not permitted | `403` | for a bearer caller the challenge carries `error="insufficient_scope"`, naming what is missing |
 | The token issuer is unreachable | `503` | with `Retry-After`. No token can be validated, so the server cannot decide; it is **not** a statement about your credential ([RFC 9110 §15.6.4](https://www.rfc-editor.org/rfc/rfc9110#section-15.6.4)). Retry; do not discard the token |
 
