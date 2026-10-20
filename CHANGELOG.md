@@ -22,6 +22,23 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **A `+` in a query-string parameter is read as a space** (#3891). Every
+  query parameter the REST API reads, `q` of `GET /query/aql` included, is
+  decoded as `application/x-www-form-urlencoded` (WHATWG URL Standard §5.1):
+  `+` and `%20` are a space and `%2B` is a literal plus. A form-encoded AQL
+  query that wrote its spaces as `+` was refused with a 400 before. A client
+  that sends an unencoded `+` meaning a plus, such as a time-zone offset,
+  encodes it as `%2B`, as RFC 6570 form expansion and form encoders already
+  do.
+
+- **An `xsi:type` the XML schemas do not define is refused with an error that
+  names them** (#3892). An OPT 1.4 upload whose constraint node carries a type
+  outside the ITS-XML OPT 1.4 schemas (`Template.xsd`, `OpenehrProfile.xsd`,
+  `Archetype.xsd`), such as `T_ARCHETYPE_ROOT` in place of `C_ARCHETYPE_ROOT`,
+  answers 422 with a message saying that those schemas define no such
+  subtype. The RM and AOM2 XML readers name their schemas the same way. The
+  refusal itself is unchanged.
+
 - **A Basic request the verified-credential cache admits writes no ATNA
   login record** (#3895). Since the move to `ferrohealth-smart` 0.3.1 every
   Basic request was marked a fresh authentication, so with
@@ -32,9 +49,10 @@ workflow refuses a tag that has no matching section here.
 
 ### Security
 
-- `rustls-webpki` 0.103.16, `webpki-root-certs` 1.0.10 and `webpki-roots`
-  1.0.10 in the lock, past RUSTSEC-2026-0382 and RUSTSEC-2026-0383
-  (certificate paths through the distrusted emSign intermediates) (#3895).
+- **`rustls-webpki` 0.103.16 and `webpki-roots` / `webpki-root-certs`
+  1.0.10** (RUSTSEC-2026-0381, RUSTSEC-2026-0382, RUSTSEC-2026-0383). The
+  outbound TLS client no longer accepts certificate paths through the
+  distrusted emSign intermediates.
 
 ## [5.2.0] - 2026-10-20
 

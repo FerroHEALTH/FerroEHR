@@ -7,9 +7,9 @@
 //!
 //! An ITS-REST operation's parameters decode through its generated
 //! `*Params::from_request` (`openehr_its::rest::generated`). A query string read
-//! here decodes the same way: RFC 3986 §2.1 percent-decoding, under which `+` is
-//! a literal plus, because the OAS gives every query parameter `style: form`,
-//! which OAS 3.0.3 §Parameter Object defines by RFC 6570 form expansion.
+//! here decodes the same way, through
+//! [`openehr_its::rest::decode::query_component_octets`]: a `+` is a space and
+//! `%2B` a literal plus (WHATWG URL Standard §5.1).
 
 #![expect(
     clippy::disallowed_types,
@@ -22,6 +22,7 @@ use std::collections::BTreeMap;
 use http::{HeaderMap, HeaderValue};
 use serde_json::Value;
 
+use openehr_its::rest::decode::query_component_octets;
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::ItemTag;
 
@@ -30,14 +31,13 @@ use openehr_rm::prelude::ItemTag;
 pub(crate) const QUERY_RESERVED_KEYS: &[&str] =
     &["ehr_id", "offset", "fetch", "q", "query_parameters"];
 
-/// The pairs of `query`, each name and value percent-decoded (RFC 3986 §2.1).
+/// The pairs of `query`, each name and value form-decoded (WHATWG URL
+/// Standard §5.1): a `+` is a space, then every percent-encoded octet decodes.
 ///
 /// Octets that do not decode to UTF-8 are replaced, never dropped, so a pair
 /// keeps its place.
 fn query_pairs(query: &str) -> Vec<(String, String)> {
-    let decode = |text: &str| {
-        String::from_utf8_lossy(&urlencoding::decode_binary(text.as_bytes())).into_owned()
-    };
+    let decode = |text: &str| String::from_utf8_lossy(&query_component_octets(text)).into_owned();
     query
         .split('&')
         .filter(|pair| !pair.is_empty())
@@ -407,7 +407,7 @@ mod tests {
                 "temperature_from=36&temperature_unit=Cel&$flagged=true\
                  &uid=90910cf0-66a0-4382-b1f8-c0f27e81b42d::openEHRSys.example.com::1\
                  &offset=10&fetch=5&ehr_id=abc&q=SELECT\
-                 &shared=named-form&name=a+b",
+                 &shared=named-form&name=a+b&plus=a%2Bb",
             ),
             &["ehr_id", "offset", "fetch", "q"],
         );
@@ -431,9 +431,9 @@ mod tests {
             json!("named-form"),
             "named form wins a collision"
         );
-        // RFC 3986 gives `+` no meaning in a query component, and the OAS
-        // `style: form` (RFC 6570) percent-encodes a space as `%20`.
-        assert_eq!(got["name"], json!("a+b"), "a plus is a literal plus");
+        // WHATWG URL Standard §5.1 step 3.4: `+` is a space, `%2B` a plus.
+        assert_eq!(got["name"], json!("a b"), "a plus is a space");
+        assert_eq!(got["plus"], json!("a+b"), "an encoded plus is a plus");
         for reserved in QUERY_RESERVED_KEYS {
             assert!(
                 !got.contains_key(*reserved),
@@ -461,16 +461,25 @@ mod tests {
         assert!(aql_binds(None).expect("binds").is_empty());
     }
 
-    /// RFC 3986 §2.1: `%20` is a space and `+` stays a plus.
+    /// WHATWG URL Standard §5.1: `+` and `%20` are both a space, `%2B` is a
+    /// literal plus, and the `+` replacement runs before percent-decoding.
     #[test]
     fn percent_and_plus_decoding() {
-        let pairs = query_pairs("q=SELECT%20c&name=a+b&tz=2024-01-01T00:00:00+01:00");
+        let pairs = query_pairs(
+            "q=SELECT+e%2Fehr_id%2Fvalue+FROM+EHR+e&p=SELECT%20c\
+             &tz=2024-01-01T00:00:00%2B01:00&a+b=x&raw=1+2",
+        );
         assert_eq!(
             pairs,
             vec![
-                ("q".to_owned(), "SELECT c".to_owned()),
-                ("name".to_owned(), "a+b".to_owned()),
+                (
+                    "q".to_owned(),
+                    "SELECT e/ehr_id/value FROM EHR e".to_owned()
+                ),
+                ("p".to_owned(), "SELECT c".to_owned()),
                 ("tz".to_owned(), "2024-01-01T00:00:00+01:00".to_owned()),
+                ("a b".to_owned(), "x".to_owned()),
+                ("raw".to_owned(), "1 2".to_owned()),
             ]
         );
     }

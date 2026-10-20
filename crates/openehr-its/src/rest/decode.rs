@@ -12,8 +12,10 @@
 //! A query parameter is read as the generated client writes it: one
 //! `name=value` pair per scalar, one pair per array item, and one pair per
 //! member of a form-exploded object (`style: form, explode: true`). Both the
-//! name and the value are percent-decoded as RFC 3986 §2.1 defines it, so a
-//! `+` is a literal plus, not a space.
+//! name and the value are decoded as the `application/x-www-form-urlencoded`
+//! parser of the WHATWG URL Standard §5.1 decodes them: a `+` is a space and a
+//! literal plus arrives as `%2B`, which RFC 6570 §3.2.8 form expansion always
+//! writes, so every request the OAS `style: form` describes reads unchanged.
 
 use std::fmt;
 use std::str::FromStr;
@@ -101,6 +103,18 @@ impl PathValues {
     }
 }
 
+/// The octets one name or value of a query string decodes to: each `+` a
+/// space, then every percent-encoded octet decoded.
+///
+/// This is the per-component step of the WHATWG URL Standard §5.1
+/// `application/x-www-form-urlencoded` parser (step 3.4, then percent-decoding),
+/// in that order, so an encoded `%2B` stays a literal plus. The caller decides
+/// how octets that are not UTF-8 are answered.
+#[must_use]
+pub fn query_component_octets(text: &str) -> Vec<u8> {
+    urlencoding::decode_binary(text.replace('+', " ").as_bytes()).into_owned()
+}
+
 /// The query pairs of one request, in order, each name and value decoded.
 pub(crate) struct QueryPairs(Vec<(String, String)>);
 
@@ -118,13 +132,11 @@ impl QueryPairs {
             }
             let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
             let decode = |text: &str| {
-                urlencoding::decode(text)
-                    .map(std::borrow::Cow::into_owned)
-                    .map_err(|_not_utf8| {
-                        ApiError::BadRequest(
-                            "the query string does not percent-decode to UTF-8 text".to_owned(),
-                        )
-                    })
+                String::from_utf8(query_component_octets(text)).map_err(|_not_utf8| {
+                    ApiError::BadRequest(
+                        "the query string does not percent-decode to UTF-8 text".to_owned(),
+                    )
+                })
             };
             pairs.push((decode(name)?, decode(value)?));
         }

@@ -457,7 +457,7 @@ impl crate::xml::runtime::FromXml for crate::opt14::types::ArchetypeConstraint {
                 "ArchetypeConstraint: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "ArchetypeConstraint: unknown xsi:type {other}"
+                "ArchetypeConstraint: unknown xsi:type {other}: the ITS-XML OPT 1.4 schemas (Template.xsd, OpenehrProfile.xsd, Archetype.xsd) define no ARCHETYPE_CONSTRAINT subtype of that name"
             ))),
         }
     }
@@ -970,7 +970,7 @@ impl crate::xml::runtime::FromXml for crate::opt14::types::AuthoredResource {
                 "AuthoredResource: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "AuthoredResource: unknown xsi:type {other}"
+                "AuthoredResource: unknown xsi:type {other}: the ITS-XML OPT 1.4 schemas (Template.xsd, OpenehrProfile.xsd, Archetype.xsd) define no AUTHORED_RESOURCE subtype of that name"
             ))),
         }
     }
@@ -1348,7 +1348,7 @@ impl crate::xml::runtime::FromXml for crate::opt14::types::CAttribute {
                 "CAttribute: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "CAttribute: unknown xsi:type {other}"
+                "CAttribute: unknown xsi:type {other}: the ITS-XML OPT 1.4 schemas (Template.xsd, OpenehrProfile.xsd, Archetype.xsd) define no C_ATTRIBUTE subtype of that name"
             ))),
         }
     }
@@ -2021,7 +2021,7 @@ impl crate::xml::runtime::FromXml for crate::opt14::types::CDomainType {
                 "CDomainType: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "CDomainType: unknown xsi:type {other}"
+                "CDomainType: unknown xsi:type {other}: the ITS-XML OPT 1.4 schemas (Template.xsd, OpenehrProfile.xsd, Archetype.xsd) define no C_DOMAIN_TYPE subtype of that name"
             ))),
         }
     }
@@ -2647,7 +2647,7 @@ impl crate::xml::runtime::FromXml for crate::opt14::types::CObject {
                 "CObject: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "CObject: unknown xsi:type {other}"
+                "CObject: unknown xsi:type {other}: the ITS-XML OPT 1.4 schemas (Template.xsd, OpenehrProfile.xsd, Archetype.xsd) define no C_OBJECT subtype of that name"
             ))),
         }
     }
@@ -2719,7 +2719,7 @@ impl crate::xml::runtime::FromXml for crate::opt14::types::CPrimitive {
                 "CPrimitive: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "CPrimitive: unknown xsi:type {other}"
+                "CPrimitive: unknown xsi:type {other}: the ITS-XML OPT 1.4 schemas (Template.xsd, OpenehrProfile.xsd, Archetype.xsd) define no C_PRIMITIVE subtype of that name"
             ))),
         }
     }
@@ -3461,7 +3461,7 @@ impl crate::xml::runtime::FromXml for crate::opt14::types::ExprItem {
                 "ExprItem: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "ExprItem: unknown xsi:type {other}"
+                "ExprItem: unknown xsi:type {other}: the ITS-XML OPT 1.4 schemas (Template.xsd, OpenehrProfile.xsd, Archetype.xsd) define no EXPR_ITEM subtype of that name"
             ))),
         }
     }
@@ -3582,7 +3582,7 @@ impl crate::xml::runtime::FromXml for crate::opt14::types::ExprOperator {
                 "ExprOperator: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "ExprOperator: unknown xsi:type {other}"
+                "ExprOperator: unknown xsi:type {other}: the ITS-XML OPT 1.4 schemas (Template.xsd, OpenehrProfile.xsd, Archetype.xsd) define no EXPR_OPERATOR subtype of that name"
             ))),
         }
     }
@@ -4872,7 +4872,7 @@ impl crate::xml::runtime::FromXml for crate::opt14::types::State {
                 "State: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "State: unknown xsi:type {other}"
+                "State: unknown xsi:type {other}: the ITS-XML OPT 1.4 schemas (Template.xsd, OpenehrProfile.xsd, Archetype.xsd) define no STATE subtype of that name"
             ))),
         }
     }
