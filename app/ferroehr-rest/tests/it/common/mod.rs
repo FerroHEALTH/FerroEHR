@@ -211,6 +211,7 @@ pub(crate) fn basic_auth(users: &[(&str, &str, &str)]) -> AuthSection {
                     scopes: scopes.split_whitespace().map(str::to_owned).collect(),
                 })
                 .collect(),
+            cache_ttl_seconds: 60,
         }),
         ..AuthSection::default()
     }

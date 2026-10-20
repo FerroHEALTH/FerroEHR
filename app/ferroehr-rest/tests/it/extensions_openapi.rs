@@ -573,7 +573,6 @@ fn app_config() -> AppConfig {
         audit_organization_claim: None,
         role_claims: ferroehr::config::authz::RbacConfig::default().role_claims,
         rbac: ferroehr::config::authz::RbacConfig::default(),
-        basic_cache_ttl_seconds: 0,
         assurance: ferroehr::config::auth::AssuranceConfig::default(),
         professional: None,
         spec_profile: ferroehr::config::profile::SpecProfile::default(),
