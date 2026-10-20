@@ -162,10 +162,10 @@ transport = "tls"                     # or [audit.fhir_feed] for a FHIR ARR
   ([enterprise identity providers](../identity-providers.md)). Basic
   authentication is for service accounts and development.
 - Declare the assurance level patient data requires in
-  [`[auth.oidc.assurance]`](../installation/config-auth.md#authoidcassurance-the-assurance-level-patient-data-requires),
+  [`[authz.assurance]`](../installation/config-auth.md#authzassurance-the-assurance-level-patient-data-requires),
   mapping each `acr` value your identity provider emits to an eIDAS level, and
   declare how a token names the natural person in
-  [`[auth.oidc.professional]`](../installation/config-auth.md#authoidcprofessional-the-natural-person-behind-a-token).
+  [`[authz.professional]`](../installation/config-auth.md#authzprofessional-the-natural-person-behind-a-token).
   Both are off by default: until you configure them your identity provider
   alone decides the assurance level, and a token issued to a client
   application is recorded as that client, not as a person.
@@ -253,8 +253,8 @@ knows of for this release.
   the open per-EHR access default, the access log failing open. The
   `production` profile refuses them unless accepted by name.
 - No authentication assurance level is required, and no natural person is
-  asked of a token, until `[auth.oidc.assurance]` and
-  `[auth.oidc.professional]` are configured.
+  asked of a token, until `[authz.assurance]` and
+  `[authz.professional]` are configured.
 - An emergency access in the vital interest of the patient (EHDS Art. 11(5))
   is marked only when the caller declares one of
   `[audit] emergency_purpose_codes`

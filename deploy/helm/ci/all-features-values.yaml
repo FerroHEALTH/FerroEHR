@@ -72,7 +72,7 @@ config:
     # its metadata and key set at boot and accepts asymmetric algorithms only.
     issuer: https://keycloak.example.com/realms/ferroehr
     audience: [ferroehr]
-    # The DEMOGRAPHIC API's listed client and FerroEHR's product scope.
+    # FerroEHR's product scope, which admits the ADMIN and DEMOGRAPHIC APIs.
     product_scope: __ferroehr.platform
   authz:
     rbac:
@@ -89,31 +89,15 @@ config:
   admin:
     enabled: true
   smart:
+    # Serves the discovery document, built at boot from the [auth] issuer's
+    # metadata, so it needs no endpoint list of its own.
     enabled: true
-    public_base_url: https://ferroehr.example.com
-    demographic_clients: [ferroehr-mpi]
     # Required whenever SMART is on: the launch context's service URLs are
-    # absolute, so the server has to be told the origin clients reach it at —
+    # absolute, so the server has to be told the origin clients reach it at;
     # it cannot infer one from a request. Matches the ingress host below.
     public_base_url: https://ferroehr.example.com
-    ehr_id_claim: ehrId
-    patient_claim: patient
-    # Published verbatim at /.well-known/smart-configuration, so these are
-    # boot-validated rather than free text: absolute https endpoints, a
-    # non-empty response/auth-method set, PKCE S256 (SMART App Launch §7.2),
-    # and an `issuer` equal to auth.oidc.issuer above — one says where apps get
-    # tokens, the other says which tokens this server accepts.
-    endpoints:
-      issuer: https://keycloak.example.com/realms/ferroehr
-      jwks_uri: https://keycloak.example.com/realms/ferroehr/protocol/openid-connect/certs
-      authorization_endpoint: https://keycloak.example.com/realms/ferroehr/protocol/openid-connect/auth
-      token_endpoint: https://keycloak.example.com/realms/ferroehr/protocol/openid-connect/token
-      token_endpoint_auth_methods_supported: [client_secret_basic, private_key_jwt]
-      grant_types_supported: [authorization_code, client_credentials]
-      response_types_supported: [code]
-      code_challenge_methods_supported: [S256]
-      scopes_supported: [openid, fhirUser, launch, "patient/*.rs"]
-      capabilities: [launch-ehr, sso-openid-connect]
+    demographic_clients: [ferroehr-mpi]
+    patient_issuers: [https://keycloak.example.com/realms/ferroehr]
   management:
     enabled: true
     base_path: /management

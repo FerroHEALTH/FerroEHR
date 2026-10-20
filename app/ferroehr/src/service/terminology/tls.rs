@@ -25,7 +25,7 @@
 //! PKI.
 //!
 //! The material applies to the connection to the terminology server itself. The
-//! `OAuth2` token endpoint ([`super::oauth2::TokenSource`]) is a different host
+//! `OAuth2` token endpoint ([`ferrohealth_smart::client::cache::TokenSource`]) is a different host
 //! in a different trust domain and keeps the default TLS stack; presenting the
 //! terminology server's client certificate to an identity provider would be a
 //! credential leak.

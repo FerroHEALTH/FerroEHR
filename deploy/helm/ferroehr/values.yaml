@@ -833,7 +833,7 @@ config:
   # `*_file` key points at: the PGP key (signing.key_path), Cedar policies
   # (authz.abac.cedar.policy_dir), ATNA PEMs, terminology-server mutual-TLS PEMs
   # (terminology.external.providers.<name>.client_cert_path / client_key_path /
-  # ca_bundle_path), a JWKS blob (auth.oidc.jwks_json_file), the commercial
+  # ca_bundle_path), a JWKS file (auth.jwks_file), the commercial
   # licence token (licence.file).
   files: {}
   # signing.asc: |

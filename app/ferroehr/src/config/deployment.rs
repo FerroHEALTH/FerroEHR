@@ -279,7 +279,7 @@ impl DeploymentGap {
             }
             Self::AuthOff => {
                 "[auth] enabled is false, so every request is served unauthenticated; set [auth] \
-                 enabled = true with [auth.oidc] or [auth.basic] configured"
+                 enabled = true with an [auth] issuer or [auth.basic] users configured"
             }
             Self::RbacOff => {
                 "[authz.rbac] enabled is false, so every authenticated caller may use every \

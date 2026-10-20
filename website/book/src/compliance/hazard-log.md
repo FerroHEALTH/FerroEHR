@@ -120,10 +120,10 @@ read from the same token claim the ABAC layer reads, and stays empty when
 there is no claim or the caller used Basic. The EHR comes from the resource
 the dispatch resolved, or from the request path where none exists. An AQL
 execution records each served EHR separately. With
-`[auth.oidc.professional]` configured, a token that names no natural person is
+`[authz.professional]` configured, a token that names no natural person is
 refused on patient data unless it is a client token acting for a named
 professional, and the record carries the acting mode (`person` or `client`)
-and that professional; with `[auth.oidc.assurance]` configured, it carries the
+and that professional; with `[authz.assurance]` configured, it carries the
 assurance level the token maps to, and a token below the configured minimum is
 refused with a step-up challenge. The DICOM message and the FHIR
 `AuditEvent` give the client and this server the same data-flow role (DICOM
@@ -160,7 +160,7 @@ record of a delete carries the agent types the BALP `Delete` profile fixes
   `delete_carries_the_agent_types_balp_delete_fixes`.
 
 **Remains:** both blocks are off by default, and until the deployment
-configures `[auth.oidc.professional]` a client application's credential is
+configures `[authz.professional]` a client application's credential is
 recorded as that application, not as the professional behind it. A shared
 Basic account names the account; with either block configured, Basic is
 refused on patient data. The assurance level reaches the local store's columns only, because neither

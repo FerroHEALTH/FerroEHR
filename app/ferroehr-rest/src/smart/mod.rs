@@ -11,7 +11,7 @@
 //!
 //! - [`discovery`] — the `/.well-known/smart-configuration` document
 //!   (master04 §Service Discovery), served pre-auth when `smart.enabled`;
-//! - [`routes`] — the SMART on openEHR requirement of every route, checked by
+//! - `routes` — the SMART on openEHR requirement of every route, checked by
 //!   the authentication middleware after RBAC, and for a COMPOSITION by the
 //!   policy-enforcement point once its template is known, with the `ehrId`
 //!   launch-context binding of a `patient/` grant (master07 §Context

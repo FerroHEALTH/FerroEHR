@@ -17,7 +17,7 @@ or, for production, `database.existingSecret`.
 
 **With no authentication mechanism configured, the server boots and answers
 `401` to everything.** `auth.enabled` defaults to `true`, and a deployment with
-no `[auth.oidc]` issuer and no Basic user has nothing to authenticate against.
+no `[auth]` issuer and no Basic user has nothing to authenticate against.
 That is fail-closed and deliberate: the alternative is an openEHR repository
 serving patient data to anonymous callers. Configure a mechanism, or set
 `config.auth.enabled: false` for a throwaway evaluation.

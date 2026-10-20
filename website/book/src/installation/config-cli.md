@@ -134,7 +134,7 @@ mechanism configured is a boot error** rather than a running server that refuses
 everything: RFC 9110 §11.6.1 requires a `401` challenge to name a scheme
 applicable to the resource, and a server with no mechanism has none: it could
 only refuse every request while advertising a scheme it does not implement. The
-error names the three ways out: add `[[auth.basic.users]]`, add an `[auth.oidc]`
+error names the three ways out: add `[[auth.basic.users]]`, add an `[auth]`
 issuer, or set `auth.enabled = false` for development. So a bare `docker run` of
 the image with no configuration stops at startup with that message, while the
 downloadable Compose quickstart boots because it ships a user.
@@ -152,7 +152,7 @@ For production, set at least:
   personal data. The server then refuses to start while a separation is open
   and not accepted by name, instead of running as a sandbox that looks
   identical.
-- **an authentication mechanism:** a Basic user store and/or `[auth.oidc]`.
+- **an authentication mechanism:** a Basic user store and/or an `[auth]` issuer.
 - **`log.format = "json"`** for cluster log collectors.
 - **`server.cors_permissive`** stays `false`; **`server.swagger_ui`** per
   posture.

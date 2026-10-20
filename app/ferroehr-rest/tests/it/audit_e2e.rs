@@ -740,6 +740,29 @@ async fn aql_execute_emits_one_access_record_per_served_ehr() {
     );
 }
 
+/// The origins, the origin count and the FHIR rendering of the latest
+/// `composition_get` record, waiting up to five seconds for it to land.
+async fn latest_composition_get_record(pool: &sqlx::PgPool) -> (Option<Value>, Option<i64>, Value) {
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    loop {
+        let found: Option<(Option<Value>, Option<i64>, Value)> = sqlx::query_as(
+            "SELECT origins, origin_count, fhir FROM audit.audit_event \
+             WHERE operation = 'composition_get' ORDER BY recorded_at DESC LIMIT 1",
+        )
+        .fetch_optional(pool)
+        .await
+        .expect("read the trail");
+        if let Some(row) = found {
+            return row;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "no composition_get record landed"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
 /// The access record of a composition read carries the origins of the data
 /// it served (EHDS Annex II 3.2(e), #3212): the `FEEDER_AUDIT` originating
 /// systems of the version body, with the true distinct count beside them, on
@@ -809,24 +832,7 @@ async fn composition_get_records_the_origins_of_the_served_data() {
         .unwrap();
     assert_eq!(app.oneshot(get).await.unwrap().status(), StatusCode::OK);
 
-    let deadline = std::time::Instant::now() + Duration::from_secs(5);
-    let row = loop {
-        let found: Option<(Option<Value>, Option<i64>, Value)> = sqlx::query_as(
-            "SELECT origins, origin_count, fhir FROM audit.audit_event \
-             WHERE operation = 'composition_get' ORDER BY recorded_at DESC LIMIT 1",
-        )
-        .fetch_optional(&pool)
-        .await
-        .expect("read the trail");
-        if let Some(row) = found {
-            break row;
-        }
-        assert!(
-            std::time::Instant::now() < deadline,
-            "no composition_get record landed"
-        );
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    };
+    let row = latest_composition_get_record(&pool).await;
     assert_eq!(
         row.0,
         Some(json!(["lab.example"])),

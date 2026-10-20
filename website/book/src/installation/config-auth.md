@@ -10,36 +10,60 @@ environment-name grammar, and file discovery are on the
 
 ## `[auth]`
 
-Authentication: Basic credentials, OAuth2/OIDC bearer tokens, or both.
+Authentication: bearer tokens of one or more trusted issuers, Basic
+credentials, or both. `[auth]` is the section every FerroHEALTH product shares,
+checked by the `ferrohealth-smart` crate. FerroEHR is a resource server: it
+checks tokens and never issues them.
 
 ```toml
 [auth]
 enabled = true
-verified_cache_ttl_seconds = 60
+issuer = "https://keycloak.example.com/realms/ferroehr"
+audience = ["ferroehr"]
 
 [[auth.basic.users]]
-username = "clinician"
+user = "clinician"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$…$…"   # never a plaintext password
-roles = ["USER"]
-
-[auth.oidc]
-issuer = "https://keycloak.example.com/realms/ferroehr"
-audiences = ["ferroehr"]
-algorithms = ["RS256"]
+scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds"]
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `true` | Master switch. `false` = all requests pass unauthenticated (development only). With `true` and **no mechanism configured the server refuses to start**; see below. |
-| `verified_cache_ttl_seconds` | int | `60` | Verified Basic-credential cache TTL (`0` disables). Argon2 verification costs real CPU per call by design, so a credential that has verified is remembered (as a digest of the presented header, never plaintext) and re-verified after the TTL. It bounds both the KDF cost of a busy client and how long a revoked credential keeps working. |
+| `issuer` | string, or `[[auth.issuer]]` tables | unset | The issuer whose tokens are accepted. Its metadata is read at boot, at the RFC 8414 §3 location first and the OpenID Connect Discovery 1.0 §4 location after a `404`, and with it the key set at its `jwks_uri`, so an authorization server that cannot be reached refuses the start. An `https` URL with no query and no fragment and no user name or password; plain `http` is accepted on a loopback host only. Several issuers are `[[auth.issuer]]` tables, each carrying the keys from `issuer` to `jwks_file`. |
+| `audience` | list of string | **required with an issuer** | Accepted `aud` values; a token naming none of them is refused (RFC 9068 §4, RFC 8725 §3.9). |
+| `algorithms` | list of string | `["RS256","RS384","PS256","PS384","ES256","ES384"]` | Accepted signature algorithms. Asymmetric only: an `HS*` algorithm is a boot error, and `none` is no algorithm at all (RFC 8725 §3.1, §3.2). |
+| `token_profile` | `rfc9068` or `jwt` | `rfc9068` | `rfc9068` requires `typ` `at+jwt` and the `client_id`, `iat` and `jti` claims (RFC 9068 §2.2, §4). `jwt` admits a plain JWT bearer token (`typ` absent or `JWT`) for an issuer that mints no RFC 9068 tokens, and reads a `scp` array when `scope` is absent. A token typed as another kind of JWT is refused under either. |
+| `clock_skew_seconds` | int | `60` | Leeway on `exp`, `nbf` and `iat`. At most `300`. |
+| `jwks_max_age_seconds` | int | `600` | A key set older than this is read again. |
+| `jwks_refresh_interval_seconds` | int | `60` | A token naming an unknown `kid` reads the key set again at most once per interval. |
+| `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it cannot serve the SMART discovery document. |
+| `timeout_ms` | int | `10000` | One call to the authorization server. |
+| `realm` | string | `""` ⇒ `ferroehr` | The realm every `WWW-Authenticate` challenge names. |
+| `scopeless_subjects` | list of string | `[]` | Refused at boot: the crate's allowlist admits a token without SMART scopes on SMART on FHIR routes only, and every FerroEHR route carries a SMART on openEHR requirement. Grant the subject the openEHR scopes it needs instead. |
+| `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
+| `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
+| `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the clients in `[smart] demographic_clients`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
 
 > [!WARNING]
 > **`auth.enabled = true` with no mechanism is a boot error.** Such a server
 > could only refuse every request while advertising an authentication scheme it
 > does not implement, which RFC 9110 §11.6.1 forbids: a `401` challenge must
-> name a scheme applicable to the target resource. Configure
-> `[[auth.basic.users]]`, configure `[auth.oidc]`, or set
-> `auth.enabled = false` for a development server.
+> name a scheme applicable to the target resource. Configure an `issuer`,
+> configure `[[auth.basic.users]]`, or set `auth.enabled = false` for a
+> development server.
+
+The key-set fetches verify the identity provider's certificate against the
+platform trust store and follow no redirects. An identity provider whose
+certificate comes from a private CA is trusted once that CA is in the image's
+system store or in a directory or file named by `SSL_CERT_DIR` or
+`SSL_CERT_FILE`. A key set that cannot be read when a token needs it answers
+`503`, never `401`: the server cannot decide, and a `401` would tell a caller
+with a valid token that its credential was refused.
+
+A validated token must also carry a non-blank `sub` claim: the authenticated
+subject is stamped into the audit trail, so a token without one is refused with
+`401` rather than recorded under a placeholder identity.
 
 ### The Basic-auth user store
 
@@ -48,10 +72,12 @@ environment grammar cannot spell an array index.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `username` | string | required | Principal name. A blank or missing one is a boot error. |
+| `user` | string | required | The user-id. Empty, or with a colon or a control character, is a boot error (RFC 7617 §2). |
 | `password_hash` | secret | required | Argon2**id** PHC hash (`$argon2id$v=19$…`), never a plaintext password. Boot-validated against the OWASP floor; see below. |
-| `password_hash_file` | path | unset | Read the hash from a file instead, for a mounted secret. A hash is an offline cracking target, so prefer this wherever the configuration file itself is not treated as sensitive. The Argon2id floor is validated identically either way, because validation runs after the file is resolved. Exactly one of the pair is required. |
-| `roles` | list of string | `["USER"]` | Roles granted, upper-cased on authentication. Use `["ADMIN"]` for an administrative account. |
+| `password_hash_file` | path | unset | Read the hash from a file instead, for a mounted secret. A hash is an offline cracking target, so prefer this wherever the configuration file itself is not treated as sensitive. Exactly one of the pair is required. |
+| `scopes` | list of string | `[]` | The SMART on openEHR scopes the user holds, checked on every route exactly like a token's `scope` claim. A user with none is refused everywhere a requirement applies. |
+
+The user's RBAC roles are [`[authz.rbac.basic_roles]`](#authzrbac).
 
 > [!WARNING]
 > **Every `password_hash` must meet the OWASP Argon2id floor: `m>=19456`
@@ -64,84 +90,20 @@ environment grammar cannot spell an array index.
 > [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
 > §Argon2id minimum.
 
-### `[auth.oidc]`: bearer validation
+An unknown user-id is checked against a decoy hash of the same cost, so the
+time a refusal takes does not say whether the user exists.
 
-The table's absence disables bearer authentication entirely. When present, the
-server validates tokens as a resource server; it never issues them.
+## `[authz]`
+
+Role-based (RBAC) and attribute-based (ABAC) authorization, and the
+patient-data assurance gate. The full evaluation order and design rationale are
+in [Security](../security.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `issuer` | string | required when the table is present | Expected `iss`; also the OIDC discovery base. Must be an absolute `https` URL with no query and no fragment (RFC 8414 §2) and no user name or password (OpenID Connect Core 1.0 §1.2), boot-validated. |
-| `audiences` | list of string | **required, non-empty** | Accepted `aud`. An empty or all-blank list is a boot error. |
-| `algorithms` | list of string | `["RS256"]` | Accepted signature algorithms. Boot-bound to the key source: `HS*` requires `hmac_secret`, `RS*`/`ES*`/`PS*` require public keys (a static JWKS or the discovered one). `none` is refused outright. |
-| `require_at_jwt` | bool | `false` | Refuse a token that does not carry `typ: at+jwt`. A token that *does* carry it is held to RFC 9068 §2.2 either way: `iat`, `jti` and `client_id` become mandatory for it. |
-| `clock_skew_leeway_seconds` | int | `60` | Leeway on the time-based claims (`exp`/`nbf`). Capped at `300`; above that is a boot error. |
-| `allow_insecure_issuer` | bool | `false` | Accept a non-`https` `issuer`. **Development and test only.** |
-| `hmac_secret` / `hmac_secret_file` | secret / path | unset | Symmetric `HS*` secret (development/test), minimum 32 bytes. At most one of the pair. |
-| `jwks_json` / `jwks_json_file` | string / path | unset | Static JWKS document of public keys. At most one of the pair. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error, so the set holds no secret and `config check`, `GET {base}/admin/config` and `ferroehr report` show it in clear. |
-| `connect_timeout_ms` | int | `3000` | TCP connect timeout for the discovery + JWKS fetches. |
-| `request_timeout_ms` | int | `5000` | Whole-request timeout for the discovery + JWKS fetches (connect, TLS, body read). |
-| `negative_cache_ttl_seconds` | int | `10` | How long a *failed* discovery/JWKS fetch is remembered (`0` disables). |
+| `basic_cache_ttl_seconds` | int | `60` | Verified Basic-credential cache TTL (`0` disables). Argon2id verification costs real CPU per call by design, so a credential that has verified is remembered (as a digest of the presented header, never plaintext) and verified again after the TTL. It bounds both the KDF cost of a busy client and how long a removed user keeps working. |
 
-The boot rules, and what each one prevents:
-
-- **`audiences` must name at least one audience.** RFC 7519 §4.1.3 obliges a
-  recipient that does not identify itself with a value in a present `aud` claim
-  to reject the JWT, and RFC 9068 §4 step 4 makes the check unconditional for
-  an access token. A resource server that declares no audience cannot reject a
-  token minted for a *different* resource server, and cannot tell an OpenID
-  Connect ID token (whose `aud` is a client id) from an access token
-  (RFC 8725 §3.9, §3.12). Set it to whatever your identity provider puts in
-  `aud` for this CDR.
-- **`issuer` must be an `https` URL with no query or fragment.** That is the
-  RFC 8414 §2 definition of an issuer identifier, and §6.2 requires TLS for
-  issuer metadata: over plain HTTP an attacker on the network can serve their
-  own signing keys. A development issuer is opted in explicitly with
-  `allow_insecure_issuer = true`; the no-query/no-fragment rules still apply,
-  since those are structural.
-- **`issuer` carries no user name or password.** OpenID Connect Core 1.0 §1.2
-  defines an issuer identifier as scheme, host, and optionally port and path,
-  so an issuer with `user:password@` in it is refused at boot. The refusal
-  masks the credential instead of quoting it.
-- **`clock_skew_leeway_seconds` is capped at 300.** RFC 7519 §4.1.4 allows
-  "some small leeway, usually no more than a few minutes, to account for clock
-  skew", and RFC 9068 §4 step 6 repeats the bound. A large leeway silently
-  extends the life of *every* token past its `exp`.
-- **`hmac_secret` must be at least 32 bytes.** RFC 8725 §3.5: a
-  human-memorizable password must not be used directly as the key to a
-  keyed-MAC algorithm such as `HS256`. A symmetric key is also shared with the
-  authorization server (meaning this server could mint the very tokens it
-  accepts) so the boot log warns that it is a development posture. Prefer
-  discovery or `jwks_json`.
-- **The algorithm set is bound to the key source.** A key belongs to one
-  algorithm family, and accepting an algorithm the configured key material
-  cannot verify is the algorithm-confusion setup RFC 8725 §3.1 warns about:
-  most famously an `RS256` deployment that also accepts `HS256`, letting an
-  attacker sign with the public key as if it were a shared secret.
-
-The signing-key source is exactly one of: the symmetric secret, the static
-JWKS, or (when neither is set) the issuer's OIDC discovery document.
-Configuring both `hmac_secret` and `jwks_json` (in either direct or `*_file`
-form) is a boot error, never resolved by silent precedence. A validated token
-must also carry a non-blank `sub` claim: the authenticated subject is stamped
-into the audit trail, so a token without one is refused with `401` rather than
-recorded under a placeholder identity.
-
-The last three keys apply only when keys come from OIDC discovery. The timeouts
-stop an unresponsive identity provider from parking bearer requests until the
-operating system's TCP timeout; the negative cache means a provider outage
-costs one discovery attempt per `negative_cache_ttl_seconds` rather than one
-per incoming request, so callers get fast `401`s instead of slow ones. Keep the
-negative TTL short: it is also how long recovery takes to be noticed after the
-provider comes back.
-
-The discovery and JWKS fetches verify the identity provider's certificate
-against the platform trust store and follow no redirects. An identity provider
-whose certificate comes from a private CA is trusted once that CA is in the
-image's system store or in a directory or file named by `SSL_CERT_DIR` or
-`SSL_CERT_FILE`.
-
-### `[auth.oidc.assurance]`: the assurance level patient data requires
+### `[authz.assurance]`: the assurance level patient data requires
 
 Off by default. What it refuses and the `401` challenge it sends are described
 in [Security](../security.md#assurance-level-and-the-natural-person-on-patient-data).
@@ -153,10 +115,10 @@ in [Security](../security.md#assurance-level-and-the-natural-person-on-patient-d
 | `minimum` | `low` \| `substantial` \| `high` | unset | The level a patient-data request must carry. Unset refuses nothing. |
 
 ```toml
-[auth.oidc.assurance]
+[authz.assurance]
 minimum = "substantial"
 
-[auth.oidc.assurance.levels]
+[authz.assurance.levels]
 "http://eidas.europa.eu/LoA/substantial" = "substantial"
 "http://eidas.europa.eu/LoA/high" = "high"
 ```
@@ -167,7 +129,7 @@ beside a declared table, and a `levels` value that is blank or carries
 whitespace, a quote or a backslash, because the refusal names the accepted
 values in one quoted, space-separated `acr_values` parameter (RFC 9470 §3).
 
-### `[auth.oidc.professional]`: the natural person behind a token
+### `[authz.professional]`: the natural person behind a token
 
 Absent by default, and tokens are then not judged on it. Present, a
 patient-data request whose token names no natural person is refused with `403`,
@@ -181,14 +143,8 @@ unless it is a client token acting for a named professional.
 
 The access record then carries the acting mode and the professional; see
 [Audit trail](../audit.md#the-ehds-logging-elements-mapped). Both tables are
-reachable from the environment too (`FERROEHR__AUTH__OIDC__ASSURANCE__MINIMUM`,
-`FERROEHR__AUTH__OIDC__PROFESSIONAL__ACTING_FOR_CLAIM`), except the `levels`
-map.
-
-## `[authz]`
-
-Role-based (RBAC) and attribute-based (ABAC) authorization. The full evaluation
-order and design rationale are in [Security](../security.md).
+reachable from the environment too (`FERROEHR__AUTHZ__ASSURANCE__MINIMUM`,
+`FERROEHR__AUTHZ__PROFESSIONAL__ACTING_FOR_CLAIM`), except the `levels` map.
 
 ### `[authz.rbac]`
 
@@ -200,6 +156,7 @@ order and design rationale are in [Security](../security.md).
 | `readonly_role` | string | `READONLY` | Role marking a principal read-only: refused on every write operation (create/update/delete/upload), even alongside granting roles. Reads and AQL queries are still allowed. |
 | `subject_audit_role` | string | unset | Role that may read the access log for one subject at a time: `GET /fhir/r4/AuditEvent` with the `patient` parameter required, refused without it. The grant a patient portal holds to serve a person's right to know who accessed their record (GDPR Art. 15, EHDS Art. 9), instead of an admin credential over every patient's log. Unset, the log stays admin-only. See [Audit trail](../audit.md#retrieving-audit-records-iti-81). |
 | `role_claims` | list of string | `["roles","groups","entitlements","realm_access.roles"]` | JWT claim paths mined for roles, in order. Dotted paths walk nested claims. Must be non-empty and contain no blank path. **`scope` is not a role source**; see [Security](../security.md#rbac-role-based-coarse). |
+| `basic_roles` | table of user-id → list of string | empty | The roles of each `[[auth.basic.users]]` user, upper-cased on authentication. A user it does not list holds `user_role`. File-only. |
 | `ehr_access_default` | enum{open,restricted} | `open` | What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits. `restricted` is object-level default-deny: only `admin_role` reaches a setting-less EHR, so an operator can still author the settings that open it. It is enforced whether `enabled` is on or off. With `[auth] enabled = false` nothing could enforce `restricted`, so that combination is a boot error. See [Security](../security.md#per-ehr-access-control-ehr_access). |
 
 > [!NOTE]
@@ -283,58 +240,30 @@ advertises, so the manifest never names a group that answers `404`.
 
 ## `[smart]`
 
-SMART App Launch. Off by default; when off the discovery document is not served
-and the scope gate is inert. See [SMART App Launch](../smart-app-launch.md).
-
-`[smart]`:
+The SMART on openEHR scopes are enforced on **every route** whenever
+`[auth]` is on: each operation carries a requirement from FerroEHR's route
+table, which the `ferrohealth-smart` crate checks against the token's scopes
+or a Basic user's `scopes`. There is no switch for it. This section decides
+what beside the route table: whether the discovery document is served, and
+whose grants count for what. See [SMART App Launch](../smart-app-launch.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Serve the discovery document and activate the scope gate. |
+| `enabled` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the first `[auth]` issuer's metadata, so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer read from a `jwks_file` refuses the start with `enabled = true`. |
 | `platform_base_url` | string | unset ⇒ the REST root | The path the discovery document hangs off, e.g. `/gateway/v1`. |
 | `public_base_url` | string | **required when enabled** | The server's externally reachable origin (e.g. `https://cdr.example.com`), from which the discovery document's absolute `services.*.baseUrl` values are built. |
-| `ehr_id_claim` | string | `ehrId` | Token claim carrying the launch context's openEHR EHR id. |
-| `patient_claim` | string | `patient` | Fallback launch-context claim when `ehr_id_claim` is absent. |
-| `require_smart_scopes` | bool | `false` | When `true`, the resource-scope gate is fail-closed across the composition, template and AQL families, and the `openehr-permission-v1` capability is advertised: every caller on those families needs a Bearer token carrying a matching SMART resource scope, so a Basic-authenticated caller, which carries no scopes at all, is refused with `403` there (the EHR family is not scope-governed). When `false` the gate is advisory (it enforces only when a token actually carries SMART resource scopes) and the capability is not claimed. |
-| `launch_base64_json` | bool | `false` | Advertise the `launch-base64-json` capability. Experimental, and advisory: the base64-JSON launch object is consumed by the application, not the CDR. |
+| `launch_base64_json` | bool | `false` | Advertise the `launch-base64-json` capability. Experimental, and advisory: the base64 JSON launch object is consumed by the application, not the CDR. |
+| `backend_clients` | list of string | `[]` | The `client_id`s a `system/aql-*` grant counts for: such a grant "would grant access to all registered and ad-hoc AQL queries system-wide" (master08 §Resource Scopes). |
+| `patient_issuers` | list of string | `[]` | The issuers whose `patient/` grants count, each confined to the EHR the token's `ehrId` claim names (master07 §Context Selection). Empty, a `patient/` grant grants nothing. |
+| `demographic_clients` | list of string | `[]` | The `client_id`s that reach the DEMOGRAPHIC API, which no SMART on openEHR scope covers. A caller holding `[auth] product_scope` reaches it too. |
 
 `[smart.episode]`: `enabled` (bool, `false`) advertises episode context and
 accepts the `launch/episode` scope and `episodeId` claim, but applies no
 episode-scoped filtering.
 
-`[smart.endpoints]` carries the external authorization-server endpoints the
-discovery document publishes verbatim: `issuer`, `jwks_uri`,
-`authorization_endpoint`, `token_endpoint`, `registration_endpoint`,
-`introspection_endpoint`, `revocation_endpoint`, `management_endpoint` (all
-string, unset ⇒ omitted from the document); the advertised lists
-`token_endpoint_auth_methods_supported`, `grant_types_supported`,
-`response_types_supported`, `code_challenge_methods_supported`,
-`scopes_supported` and `capabilities` (all list of string, `[]`;
-`capabilities` appends operator-advertised HL7 base capabilities such as
-`launch-ehr` or `sso-openid-connect` to the derived openEHR set); and
-`allow_insecure_endpoints` (bool, `false`).
-
-Everything in `[smart.endpoints]` is **published** at
-`/.well-known/smart-configuration` for third-party applications to act on, so
-`smart.enabled = true` boot-validates it rather than relaying whatever is
-configured:
-
-| Rule | Why |
-|---|---|
-| Deprecated grant types (`implicit`, password) rejected, whether or not SMART is enabled | the SMART App Launch specification's deprecated-flows section |
-| `public_base_url`, `authorization_endpoint`, `token_endpoint` required | an enabled Platform without them publishes an unusable document |
-| Every advertised endpoint an absolute `https` URL | the document tells apps where to send an authorization request and exchange a code, so a plaintext endpoint exposes the code and the access token ([RFC 6749 §3.1.2.1](https://www.rfc-editor.org/rfc/rfc6749#section-3.1.2.1), [RFC 8414 §6.2](https://www.rfc-editor.org/rfc/rfc8414#section-6.2)). `allow_insecure_endpoints = true` opts out for development |
-| `issuer` has no query and no fragment | [RFC 8414 §2](https://www.rfc-editor.org/rfc/rfc8414#section-2), the same rule `auth.oidc.issuer` follows, because it is the same identity |
-| No `smart` URL carries a user name or password, whether or not SMART is enabled | the discovery document publishes these URLs to every app, so a credential in one would be served to anyone who asks |
-| `response_types_supported` non-empty | RFC 8414 §2 marks the field **REQUIRED** |
-| `token_endpoint_auth_methods_supported` non-empty | an empty list advertises a server that authenticates no client |
-| `code_challenge_methods_supported` includes `S256` | SMART App Launch requires PKCE ([RFC 7636](https://www.rfc-editor.org/rfc/rfc7636)); publishing a list without it tells every app the server cannot do PKCE, and `plain` alone is not sufficient |
-| `smart.endpoints.issuer` equals `auth.oidc.issuer` | one says where apps **obtain** tokens, the other which tokens this server **accepts**. A mismatch means every app gets a valid token and every request is refused |
-| `smart.enabled` requires `[auth.oidc]` | the CDR cannot validate the tokens it directs applications to obtain |
-
-> [!NOTE]
-> An empty advertised list is not silence: it claims the authorization server
-> supports none of that thing, and a conforming application will believe it.
+No `smart` URL may carry a user name or password, whether or not the document
+is served: the discovery document publishes these URLs to every application,
+so a credential in one would be served to anyone who asks.
 
 ## `[management]`
 

@@ -266,10 +266,12 @@ curl -H "Authorization: Bearer $TOKEN" -X POST -i \
 
 > [!WARNING]
 > The realm, the client secret and the user passwords are demo values, served
-> over plain HTTP by a Keycloak in `start-dev` mode, which is also why the
-> overlay sets the server's `allow_insecure_issuer` opt-in. For a real
-> deployment, drop this overlay and point `[auth.oidc]` (or
-> `FERROEHR__AUTH__OIDC__*`) at your own issuer over HTTPS.
+> over plain HTTP by a Keycloak in `start-dev` mode. The CDR accepts a token
+> issuer only over HTTPS or on a loopback host, so it does not trust this
+> Keycloak's tokens yet and the bearer call above answers `401`
+> ([#3873](https://github.com/FerroHEALTH/FerroEHR/issues/3873)). For a real
+> deployment, drop this overlay and point `[auth]` (or `FERROEHR__AUTH__ISSUER`
+> and `FERROEHR__AUTH__AUDIENCE`) at your own issuer over HTTPS.
 
 ## The terminology overlay (FerroTERM)
 

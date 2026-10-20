@@ -117,7 +117,7 @@ The user menu opens the access drawer:
   nothing.
 
 The reading is not the viewer's own interpretation: it parses with the same
-module the CDR's SMART scope gate enforces with, so the two can never drift.
+grammar the CDR's SMART on openEHR enforcement reads, so the two can never drift.
 Scopes **narrow** access and never grant it; the CDR remains the enforcer,
 and a previewed grant is an upper bound.
 

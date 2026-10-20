@@ -163,7 +163,7 @@ pub fn assemble<S: std::hash::BuildHasher>(
 
     let config = match builder.build() {
         // `serde_path_to_error` wraps the deserializer so a refusal names the
-        // SECTION PATH ("auth.oidc"), which plain serde errors do not carry —
+        // SECTION PATH ("authz.rbac"), which plain serde errors do not carry —
         // the ingredient that lets `enrich` attribute the right file line, or
         // honestly say the key came from the environment.
         Ok(built) => match serde_path_to_error::deserialize::<_, FerroEhrConfig>(built) {
@@ -602,22 +602,22 @@ mod tests {
 
     #[test]
     fn an_env_sourced_unknown_key_names_its_section_and_the_variable() {
-        // FERROEHR__AUTH__OIDC__ENABLED builds a nested auth.oidc.enabled that
-        // OidcConfig rejects: the diagnostic must name the full path and the
+        // FERROEHR__AUTHZ__RBAC__ENABLD builds a nested authz.rbac.enabld that
+        // RbacConfig rejects: the diagnostic must name the full path and the
         // environment spelling, never a file line.
         let env: HashMap<String, String> = [(
-            "FERROEHR__AUTH__OIDC__ENABLED".to_owned(),
+            "FERROEHR__AUTHZ__RBAC__ENABLD".to_owned(),
             "false".to_owned(),
         )]
         .into();
         let err = assemble(None, &env, &[]).expect_err("the unknown key is refused");
         let text = err.to_string();
         assert!(
-            text.contains("auth.oidc.enabled"),
+            text.contains("authz.rbac.enabld"),
             "the full section path is named: {text}"
         );
         assert!(
-            text.contains("FERROEHR__AUTH__OIDC__ENABLED"),
+            text.contains("FERROEHR__AUTHZ__RBAC__ENABLD"),
             "the environment spelling is named: {text}"
         );
         assert!(!text.contains("(line "), "no file line exists: {text}");
@@ -626,11 +626,11 @@ mod tests {
     #[test]
     fn a_file_line_is_attributed_only_under_the_owning_section() {
         // The misattribution twin: a bare `enabled =` exists earlier under
-        // [admin]; the offender lives under [auth.oidc] and must get ITS line.
+        // [admin]; the offender lives under [authz.rbac] and must get ITS line.
         let content =
-            "[admin]\nenabled = true\n\n[auth.oidc]\nissuer = \"https://x\"\nbogus_key = 1\n";
+            "[admin]\nenabled = true\n\n[authz.rbac]\nadmin_role = \"ADMIN\"\nbogus_key = 1\n";
         assert_eq!(
-            find_key_line_in_section(content, "auth.oidc", "bogus_key"),
+            find_key_line_in_section(content, "authz.rbac", "bogus_key"),
             Some(6)
         );
         assert_eq!(
@@ -639,7 +639,7 @@ mod tests {
         );
         // The bare name from the WRONG section resolves to nothing.
         assert_eq!(
-            find_key_line_in_section(content, "auth.oidc", "enabled"),
+            find_key_line_in_section(content, "authz.rbac", "enabled"),
             None
         );
     }
@@ -649,8 +649,8 @@ mod tests {
         assert_eq!(section_of("auth.basic.users[0]"), "auth.basic.users");
         assert_eq!(section_of(""), "");
         assert_eq!(
-            env_form_of("auth.oidc", "enabled"),
-            "FERROEHR__AUTH__OIDC__ENABLED"
+            env_form_of("authz.rbac", "enabled"),
+            "FERROEHR__AUTHZ__RBAC__ENABLED"
         );
         assert_eq!(env_form_of("", "bogus"), "FERROEHR__BOGUS");
     }
@@ -658,8 +658,8 @@ mod tests {
     #[test]
     fn the_did_you_mean_hint_survives_the_path_rewrite() {
         let err = "unknown field `isser`, expected one of `issuer`, `audience`";
-        let text = enrich("auth.oidc", err, None).to_string();
-        assert!(text.contains("auth.oidc.isser"), "{text}");
+        let text = enrich("auth", err, None).to_string();
+        assert!(text.contains("auth.isser"), "{text}");
         assert!(text.contains("did you mean `issuer`?"), "{text}");
     }
 }

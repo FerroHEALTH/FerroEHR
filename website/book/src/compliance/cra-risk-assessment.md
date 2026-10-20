@@ -186,8 +186,8 @@ reset the product to its original state"
   configured; RBAC on; the admin and management surfaces off; every
   integration off; Swagger UI `private`; the rate limiter on; version signing
   on; the identifier scanner `strict`. Weak settings are refused at boot: an
-  `alg: none` token, a non-HTTPS issuer, a short HMAC secret, an Argon2id hash
-  below the floor. The chart runs non-root with a read-only root filesystem,
+  `alg: none` token, a symmetric algorithm, a non-HTTPS issuer, an Argon2id
+  hash below the floor. The chart runs non-root with a read-only root filesystem,
   all capabilities dropped, `RuntimeDefault` seccomp and an ingress
   NetworkPolicy, and its validation fails a render that loses any of them.
 - **Evidence:** `app/ferroehr/assets/ferroehr.default.toml`;

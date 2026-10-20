@@ -23,7 +23,6 @@ you can judge the exposure rather than reading "secrets" generically.
 |---|---|---|
 | **The database DSN** | always | **direct read/write access to all patient data**, bypassing the API, its authorization and its audit trail entirely |
 | A Basic user's Argon2id hash | `secrets.basicUserPasswordHashes` | an offline cracking target, not a usable password |
-| The OIDC HMAC secret | `secrets.authOidcHmacSecret` (HS256 development setups) | the ability to **mint valid tokens** for any user and role |
 | The version-signing passphrase (plus the PGP key via `config.files`) | `config.signing.mode: pgp` | the ability to forge version signatures, breaking the integrity guarantee |
 | A terminology `client_secret` | `secrets.terminologyOauth2ClientSecrets` | access to that terminology server as this client |
 | The AMQP broker URL | `secrets.eventsUrl` | access to the change-event stream, which is PHI-free by design |
@@ -65,7 +64,7 @@ them from a secret manager:
   Driver](https://secrets-store-csi-driver.sigs.k8s.io/) with the Vault, AWS,
   Azure or GCP provider) mounts the value as a file. Point `extraVolumes` and
   `extraVolumeMounts` at it and set the matching `*_file` configuration key;
-  `config.auth.oidc.hmac_secret_file`, `config.signing.key_passphrase_file`,
+  `config.signing.key_passphrase_file`,
   `config.multimedia.secret_access_key_file`, a terminology client's
   `client_secret_file`. Nothing reaches a Kubernetes Secret at all.
 - **An operator that syncs into a Secret** (External Secrets Operator, Vault
@@ -250,7 +249,6 @@ annotation and rolls the Deployment by itself.)
 | Credential | Rotation | Notes |
 |---|---|---|
 | Database DSN | update the Secret, then `rollout restart` | rotate the **database** password too, or the old one still works; `maxUnavailable: 0` keeps the old pods serving on the old credential until the new ones are ready, so grant both briefly or accept a gap |
-| OIDC HMAC secret | update, then restart | invalidates every token signed with the old secret; prefer JWKS or discovery, where the issuer rotates for you and no secret lives here |
 | Terminology `client_secret` | update, then restart | rotate at the identity provider in the same window |
 | AMQP broker URLs | update, then restart | the credential is inside the URL |
 | S3 credentials | update, then restart | or remove them entirely with IRSA or Workload Identity |

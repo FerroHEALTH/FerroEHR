@@ -146,11 +146,10 @@ curl -u ferroehr:ferroehr -H 'Accept: text/plain' \
 
 > [!NOTE]
 > The Basic-authenticated examples on this page run against the quickstart,
-> where SMART is off. Under `[smart] require_smart_scopes = true`, the posture
-> the conformance stack runs, the template family is scope-governed and a
-> Basic caller answers `403`: only a Bearer token carrying a `user/template-*`
-> (or broader) SMART resource scope reaches these endpoints. See
-> [`[smart]`](installation/config-auth.md#smart).
+> whose user holds `user/template-*.cruds`. The template family is
+> scope-governed on every deployment: a caller, Basic or bearer, whose scopes
+> grant no `template-` access answers `403`. See
+> [SMART App Launch](smart-app-launch.md#what-each-route-requires).
 
 ## Listing templates
 

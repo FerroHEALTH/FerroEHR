@@ -47,18 +47,23 @@ terminology / management / event-subscription surfaces). Entry point:
 - **Implement the generated traits; never fork the contract.** If the contract
   is wrong, fix `openehr-codegen -- emit-rest` and regenerate — never hand-edit
   `src/rest/generated/` in `openehr-its`.
-- **Authz/authn** live in `extensions::access` (`authn/` = Basic + JWT, plus
-  `authn::assurance`, the patient-data gate over `[auth.oidc.assurance]` and
-  `[auth.oidc.professional]`: RFC 9470 step-up `401`, natural-person `403`,
+- **Authz/authn** live in `extensions::access`. `authn/` is the
+  `ferrohealth-smart` `Gate` (bearer tokens from the `[auth]` issuers, Basic
+  users from `[[auth.basic.users]]`) behind FerroEHR's middleware, plus
+  `authn::assurance`, the patient-data gate over `[authz.assurance]` and
+  `[authz.professional]`: RFC 9470 step-up `401`, natural-person `403`,
   judged before RBAC, and the `ActorAuthentication` the audit layer records;
   `authz/` = the RBAC/ABAC engine, incl. a `cedar` policy path; `pep.rs` = the
-  policy-enforcement point; `ehr_access.rs`). Use the pinned crates
-  (`jsonwebtoken`, `oauth2`, `openidconnect`, `argon2`) — never hand-rolled.
-  401 (unauthenticated) vs 403 (unauthorized) per ITS-REST. Rules:
-  `.claude/rules/auth.md`.
-- **SMART** (`smart/`): master08 scope grammar; enforcement AND-composes onto
-  the ABAC PEP and is config-gated off by default (zero wire drift when
-  disabled). Spec: `docs/specs/openehr/ITS-REST/docs/smart_app_launch/`.
+  policy-enforcement point; `ehr_access.rs`. Token checking, Basic
+  verification and the SMART scope grammar come from `ferrohealth-smart`;
+  never hand-rolled. 401 (unauthenticated) vs 403 (unauthorized) per
+  ITS-REST. Rules: `.claude/rules/auth.md`.
+- **SMART** (`smart/`): `routes.rs` maps every route to its
+  `ferrohealth-smart` `Requirement` (master08 families, the product scope
+  for ADMIN, a listed client or the product scope for DEMOGRAPHIC), enforced
+  whenever `[auth]` is on and AND-composed after RBAC; `discovery.rs` serves
+  the crate's SMART configuration document behind `[smart] enabled`. Spec:
+  `docs/specs/openehr/ITS-REST/docs/smart_app_launch/`.
 - **OpenAPI:** serve ONLY our own `utoipa`-generated document
   (`extensions::openapi`); the vendored OAS is the `emit-rest` codegen input
   ONLY (stalled — NOT a behavioural oracle; the ITS-REST docs text is the

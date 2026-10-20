@@ -35,16 +35,21 @@ it to `false` lets all requests through unauthenticated, a development-only
 mode.
 
 There is no single "mode" switch. The server offers two mechanisms and enables
-each by the presence of its configuration block:
+each by the presence of its configuration. Both are checked by
+`ferrohealth-smart`, the resource-server crate every FerroHEALTH product
+shares; FerroEHR checks tokens and never issues them.
 
-- **HTTP Basic** is active when a `basic` block with a user list is
-  configured. Each user has a username, an Argon2 password hash (a PHC string
-  beginning `$argon2id$`) or a `password_hash_file` pointing at one, and a set
-  of roles (defaulting to `["USER"]`). Because it is a list of users, the Basic
-  block is normally supplied through the TOML configuration file rather than
-  environment variables.
-- **OAuth2/OIDC bearer tokens** are active when an `oidc` block is configured.
-  The server validates the token's signature, issuer, and audience.
+- **HTTP Basic** is active when `[[auth.basic.users]]` lists a user. Each user
+  has a user-id, an Argon2id password hash (a PHC string beginning
+  `$argon2id$`) or a `password_hash_file` pointing at one, and the SMART on
+  openEHR `scopes` it holds; its RBAC roles are
+  `[authz.rbac.basic_roles]` (a user with no entry holds `USER`). Because it is
+  a list of users, the Basic store is normally supplied through the TOML
+  configuration file rather than environment variables.
+- **OAuth 2.0 bearer tokens** are active when `[auth]` names an `issuer`. The
+  server reads the issuer's metadata and key set at boot and validates every
+  token's signature (asymmetric algorithms only), issuer, audience, lifetime
+  and type under RFC 9068.
 
 Both mechanisms are validated at startup, and a configuration the server cannot
 honour **refuses to boot** rather than degrading at the first request:
@@ -52,93 +57,92 @@ honour **refuses to boot** rather than degrading at the first request:
 | Configuration | Boot outcome |
 |---|---|
 | `auth.enabled = true` with no mechanism | error: a `401` challenge must name a scheme the server implements (RFC 9110 §11.6.1) |
-| `[auth.oidc]` with no `audiences` | error: a server with no declared audience cannot reject another server's token (RFC 7519 §4.1.3) |
-| `[auth.oidc] issuer` not `https`, or carrying a query/fragment | error: RFC 8414 §2, §6.2 (`allow_insecure_issuer = true` opts a dev issuer out of the scheme rule only) |
-| `[auth.oidc] clock_skew_leeway_seconds` above `300` | error: leeway may be "no more than a few minutes" (RFC 9068 §4 step 6) |
-| `[auth.oidc] hmac_secret` under 32 bytes | error: RFC 8725 §3.5 forbids memorizable passwords as keyed-MAC keys |
-| `[auth.oidc]` with **both** `hmac_secret` and `jwks_json` (or their `*_file` forms) | error: two competing key sources, never resolved by silent precedence |
-| `[auth.oidc] algorithms` naming `none`, or empty | error: an unsigned token proves nothing |
-| `[auth.oidc] algorithms` disagreeing with the key source | error: `HS*` verifies only against a symmetric secret, `RS*`/`ES*`/`PS*` only against public keys |
-| `[auth.oidc] hmac_secret` set at all | boot **warning**: a symmetric key is a development posture (see below) |
+| an `issuer` with no `audience` | error: a server with no declared audience cannot reject another server's token (RFC 9068 §4, RFC 8725 §3.9) |
+| an `issuer` not `https` (plain `http` is accepted on a loopback host only), carrying a query or fragment, or a user name or password | error: RFC 8414 §2, §6.2; OpenID Connect Core 1.0 §1.2 |
+| an issuer whose metadata or key set cannot be read | error: the start is refused rather than the first request |
+| `clock_skew_seconds` above `300` | error: leeway may be "no more than a few minutes" (RFC 7519 §4.1.4) |
+| `algorithms` naming an `HS*` algorithm, or empty | error: the server accepts asymmetric algorithms only (RFC 8725 §3.1, §3.2) |
+| a `jwks_file` holding a symmetric key or a private-key member | error: a verifier holds public keys only |
+| `scopeless_subjects` set | error: every FerroEHR route needs a SMART on openEHR scope |
+| a `product_scope` that is neither a full URI nor starts with `__` | error: SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility |
 | a `password_hash` below `m=19456,t=2,p=1` argon2id | error: the OWASP Argon2id floor |
-| `[auth.oidc.assurance] minimum` with an empty `levels` map, or with no mapped value at or above it | error: every patient-data request would be refused |
-| an `[auth.oidc.assurance] levels` value that is blank or carries whitespace, a quote or a backslash | error: the step-up challenge names the values in one quoted `acr_values` parameter (RFC 9470 §3) |
-| `[auth.oidc.professional]` with a blank `claim` or `acting_for_claim` | error: nothing to read the person from |
+| `[authz.assurance] minimum` with an empty `levels` map, or with no mapped value at or above it | error: every patient-data request would be refused |
+| an `[authz.assurance] levels` value that is blank or carries whitespace, a quote or a backslash | error: the step-up challenge names the values in one quoted `acr_values` parameter (RFC 9470 §3) |
+| `[authz.professional]` with a blank `claim` or `acting_for_claim` | error: nothing to read the person from |
 
 Successfully verified Basic credentials are cached for
-`FERROEHR__AUTH__VERIFIED_CACHE_TTL_SECONDS` (default `60`; `0` disables
-the cache) so a busy client pays the deliberately-expensive Argon2
-verification once per TTL instead of on every request. The cache stores only
-a SHA-256 digest of the presented credential, never a plaintext password,
-and an entry exists only after a successful verification; the TTL bounds how
-long a revoked credential can still authenticate, exactly like a session
-lifetime.
+`FERROEHR__AUTHZ__BASIC_CACHE_TTL_SECONDS` (default `60`; `0` disables the
+cache) so a busy client pays the deliberately expensive Argon2 verification once
+per TTL instead of on every request. The cache stores only a SHA-256 digest of
+the presented credential, never a plaintext password, and an entry exists only
+after a successful verification; the TTL bounds how long a removed user can
+still authenticate, exactly like a session lifetime.
 
-The OIDC settings:
+The bearer settings:
 
 | Environment variable | Default | Meaning |
 |---|---|---|
-| `FERROEHR__AUTH__OIDC__ISSUER` | — (required to enable OIDC) | expected `iss`, and the OIDC discovery base; an `https` URL with no query/fragment |
-| `FERROEHR__AUTH__OIDC__AUDIENCES` | — (**required, non-empty**) | accepted `aud` values |
-| `FERROEHR__AUTH__OIDC__ALGORITHMS` | `["RS256"]` | accepted signing algorithms; must match the key source |
-| `FERROEHR__AUTH__OIDC__CLOCK_SKEW_LEEWAY_SECONDS` | `60` | leeway on `exp`/`nbf`; capped at `300` |
-| `FERROEHR__AUTH__OIDC__REQUIRE_AT_JWT` | `false` | refuse a token that does not claim the RFC 9068 `at+jwt` access-token profile |
-| `FERROEHR__AUTH__OIDC__ALLOW_INSECURE_ISSUER` | `false` | accept a non-`https` issuer (development/testing only) |
-| `FERROEHR__AUTH__OIDC__HMAC_SECRET` | unset | an HS256 symmetric secret, min. 32 bytes (development/testing) |
-| `FERROEHR__AUTH__OIDC__JWKS_JSON` | unset | a static JWKS document |
-| `FERROEHR__AUTH__OIDC__CONNECT_TIMEOUT_MS` | `3000` | discovery/JWKS connect budget |
-| `FERROEHR__AUTH__OIDC__REQUEST_TIMEOUT_MS` | `5000` | discovery/JWKS request budget |
-| `FERROEHR__AUTH__OIDC__NEGATIVE_CACHE_TTL_SECONDS` | `10` | how long a *failed* key fetch is remembered (`0` = off), so an issuer outage does not mean one discovery attempt per request |
+| `FERROEHR__AUTH__ISSUER` | unset (required for bearer tokens) | expected `iss`, and where the metadata is read: RFC 8414 §3 first, OpenID Connect Discovery 1.0 §4 after a `404` |
+| `FERROEHR__AUTH__AUDIENCE` | unset (**required with an issuer**) | accepted `aud` values |
+| `FERROEHR__AUTH__ALGORITHMS` | `RS256,RS384,PS256,PS384,ES256,ES384` | accepted signing algorithms, asymmetric only |
+| `FERROEHR__AUTH__TOKEN_PROFILE` | `rfc9068` | `rfc9068` requires `typ` `at+jwt` and the `client_id`, `iat` and `jti` claims; `jwt` admits a plain JWT for an issuer that mints no RFC 9068 tokens |
+| `FERROEHR__AUTH__CLOCK_SKEW_SECONDS` | `60` | leeway on `exp`, `nbf` and `iat`; capped at `300` |
+| `FERROEHR__AUTH__JWKS_FILE` | unset | a static JWK Set of public keys, read instead of the issuer's metadata |
+| `FERROEHR__AUTH__JWKS_MAX_AGE_SECONDS` | `600` | a key set older than this is read again |
+| `FERROEHR__AUTH__JWKS_REFRESH_INTERVAL_SECONDS` | `60` | an unknown `kid` reads the key set again at most once per interval |
+| `FERROEHR__AUTH__TIMEOUT_MS` | `10000` | one call to the authorization server |
+| `FERROEHR__AUTH__REALM` | `ferroehr` | the realm every challenge names |
+| `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | the scope that admits the ADMIN and DEMOGRAPHIC APIs |
 
-There is no separate JWKS or discovery URL to set: the server discovers the
-JWKS URI from the issuer's `.well-known/openid-configuration` unless you supply
-a static `JWKS_JSON` or an `HMAC_SECRET`; setting both of those is a boot
-error rather than a precedence rule.
+There is no separate key-set URL to set: the server reads the `jwks_uri` from
+the issuer's metadata unless you supply a `JWKS_FILE`. A rotated key is picked
+up on the first token that names it, bounded by the refresh interval, and a
+withdrawn key stops verifying within the max age.
 
-`REQUIRE_AT_JWT` is off by default because RFC 9068 §2.1 makes the `at+jwt`
-type a `SHOULD` for the authorization server, so requiring it would reject
-conforming issuers. A token that *does* claim the profile is held to the whole
-of §2.2 either way: `iat`, `jti` and `client_id` become mandatory for it.
+Every route also enforces its SMART on openEHR requirement: a valid token or
+Basic user whose scopes do not grant the operation is refused with `403`. See
+[SMART App Launch](smart-app-launch.md).
 
 > [!TIP]
 > **Keycloak example.** Point the issuer at your realm and let discovery do the
 > rest:
 >
 > ```bash
-> export FERROEHR__AUTH__OIDC__ISSUER=https://keycloak.example/realms/ferroehr
-> export FERROEHR__AUTH__OIDC__AUDIENCES=ferroehr-api
+> export FERROEHR__AUTH__ISSUER=https://keycloak.example/realms/ferroehr
+> export FERROEHR__AUTH__AUDIENCE=ferroehr-api
 > ```
 >
 > The same pattern works for Active Directory or any standards-compliant
 > identity provider; walkthroughs for Entra ID and AD FS (and the answer for
 > plain-LDAP directories) are in
-> [Enterprise identity providers](identity-providers.md). Prefer
-> JWKS/discovery over a shared HS256 secret in production. User accounts,
+> [Enterprise identity providers](identity-providers.md). User accounts,
 > roles, and lifecycle are administered in the IdP; the CDR has no user API.
 
 An unauthenticated request to a protected route is refused with `401`; an
-authenticated request that lacks the required role is refused with `403`. Two
-outcomes are neither: a **malformed** `Authorization` header is a `400` (the
-server never read a credential), and an **unreachable token issuer** is a `503`
-with `Retry-After` (no token can be validated, so the server cannot decide; it
+authenticated request that lacks the required role or scope is refused with
+`403`. Two outcomes are neither: a **malformed** `Authorization` header, or two
+of them, is a `400` (the server never read a credential), and an **unreadable
+key set** is a `503` (no token can be validated, so the server cannot decide; it
 is not a statement about the caller's credential). The per-status table for
 client authors is in [Using the API](using-the-api/index.md#which-status-a-credential-problem-gets).
 
-The `401` body deliberately says nothing about *why*. Rendering the rejection
-told an unauthenticated caller whether a token was expired or forged, which is
-exactly the distinction an attacker probes for; the reason stays in the log,
-where the operator can read it and the caller cannot. The
-`WWW-Authenticate` challenge still carries the RFC 6750 §3.1 error code, and a
-request that carried no credential at all deliberately gets no code: it has not
-made a mistake yet.
+The `401` body deliberately says nothing about *why*, and neither does the
+challenge: every token that does not hold gets the one `invalid_token` answer
+(RFC 9068 §4), with no `error_description`. Rendering the rejection would tell
+an unauthenticated caller whether a token was expired or forged, which is
+exactly the distinction an attacker probes for; the reason stays in the debug
+log, where the operator can read it and the caller cannot. A `403` names no
+scope either, in its challenge or its body. A request that carried no
+credential at all, or one for a scheme the server does not admit, gets no error
+code: it has not made a mistake yet (RFC 6750 §3.1).
 
 ### Assurance level and the natural person on patient data
 
-Two optional blocks under `[auth.oidc]` judge *how* a professional
+Two optional blocks under `[authz]` judge *how* a professional
 authenticated and *who* stands behind a token. Both are off by default; with
 neither configured nothing below changes the wire.
 
-**`[auth.oidc.assurance]`** reads the authentication assurance level from a
+**`[authz.assurance]`** reads the authentication assurance level from a
 token claim (`claim`, default `acr`) and maps each value your identity provider
 emits to an eIDAS level (`levels`: `low`, `substantial` or `high`). With
 `minimum` set, a patient-data request whose token maps below it, carries a value
@@ -157,7 +161,7 @@ asks an EHR system used by health professionals for reliable identification and
 authentication of them; Implementing Regulation (EU) 2026/2099 Art. 6(3) sets
 `substantial` for cross-border exchange, and `high` from 26 March 2032.
 
-**`[auth.oidc.professional]`** names the claim that identifies the natural
+**`[authz.professional]`** names the claim that identifies the natural
 person (`claim`, default `sub`). A token is a client token when it lacks that
 claim, or, under the default `client_tokens = "sub_is_client"`, when its `sub`
 equals its `client_id` or `azp` (RFC 9068 §2.2 has `sub` name the client when
@@ -178,7 +182,7 @@ judged.
 
 **Basic credentials** carry no assurance level and no issuer-asserted person.
 With `minimum` set a Basic request for patient data gets the same `401` step-up
-challenge, and with `[auth.oidc.professional]` set it gets the `403`; definition
+challenge, and with `[authz.professional]` set it gets the `403`; definition
 routes stay reachable with Basic.
 
 The assurance level is judged before RBAC, so a caller below the level learns
@@ -189,12 +193,10 @@ authorization server to put the professional's assurance level on it.
 
 ### Two limits worth planning around
 
-**A symmetric `hmac_secret` is a development posture, not a production one.**
-The key is shared with the authorization server, so this CDR holds everything
-needed to *mint* the tokens it accepts (an asymmetric key source never gives it
-that power) and it cannot be rotated without a restart. The server logs a
-warning at boot whenever one is configured. Use the issuer's OIDC discovery
-document (the default when no static key material is set) or `jwks_json`.
+**Plain-HTTP issuers are accepted on a loopback host only.** The server reads
+the issuer's metadata and keys over TLS, because over plain HTTP an attacker on
+the network could serve their own signing keys (RFC 8414 §6.2); there is no
+switch that admits a plain-HTTP issuer elsewhere.
 
 **Revocation latency equals the access-token lifetime.** Tokens are validated
 offline against the issuer's published keys; the CDR calls no introspection
@@ -551,17 +553,15 @@ error naming the pair:
 |---|---|
 | the database DSN, per storage domain, and the credential that prepares the schema | `db.url_file`, `storage.<domain>.url_file`, `db.migrate_url_file` |
 | a Basic user's Argon2 hash | `auth.basic.users[].password_hash_file` |
-| the OIDC symmetric key | `auth.oidc.hmac_secret_file` |
-| a static JWKS document | `auth.oidc.jwks_json_file` |
 | the PGP signing-key passphrase | `signing.key_passphrase_file` |
 | a terminology OAuth2 client secret | `terminology.external.oauth2_clients.<name>.client_secret_file` |
 | the object-store secret key | `multimedia.secret_access_key_file` |
 | the AMQP URL of the change events | `events.url_file` |
 | the national-identifier root key | `demographic.identifier_protection.key_file` |
 
-(The TLS `cert_file` / `key_file` / `client_ca_file` settings are paths by
-nature and have no inline form at all, which is the same property arrived at
-from the other direction.)
+(The TLS `cert_file` / `key_file` / `client_ca_file` settings and a static key
+set's `auth.jwks_file` are paths by nature and have no inline form at all,
+which is the same property arrived at from the other direction.)
 
 That is deliberately the shape Docker Secrets and Kubernetes Secrets deliver: a
 file mounted into the container. So the recommended posture needs no extra
@@ -572,13 +572,13 @@ services:
   ferroehr:
     environment:
       # Point the key at the mount path; the VALUE never appears anywhere.
-      FERROEHR__AUTH__OIDC__JWKS_JSON_FILE: /run/secrets/oidc_jwks
+      FERROEHR__SIGNING__KEY_PASSPHRASE_FILE: /run/secrets/signing_passphrase
     secrets:
-      - oidc_jwks
+      - signing_passphrase
 
 secrets:
-  oidc_jwks:
-    file: ./secrets/oidc_jwks.json   # or `external: true` in swarm
+  signing_passphrase:
+    file: ./secrets/signing_passphrase.txt   # or `external: true` in swarm
 ```
 
 Why files rather than environment variables: an environment variable is readable
@@ -593,7 +593,8 @@ Two properties worth knowing because they are not obvious:
   `Secret`/`SecretUrl` newtype whose `Debug` and serialization render `***`, so a
   new secret key cannot be forgotten by a per-endpoint redactor: `/management/env`
   and `ferroehr config check` show `***` because the type does, not because
-  something remembered to hide it.
+  something remembered to hide it. A Basic password hash in `[auth]` is a
+  `secrecy` secret of the shared crate's section, rendered `***` the same way.
 - **A Kubernetes `Secret` is base64, not encryption.** The cheat sheet is blunt
   about this: Secrets are stored unencrypted in etcd by default. Enable
   encryption at rest or use an external manager; the chart mounts whatever you

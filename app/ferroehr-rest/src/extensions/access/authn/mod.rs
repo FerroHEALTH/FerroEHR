@@ -25,7 +25,7 @@
 //! [`crate::extensions::access::authz::AuthzHandle`] is wired the gate then
 //! judges the matched operation's class, denying with a `403` that carries the
 //! principal so the ATNA audit layer records it. The SMART on openEHR
-//! requirement of the matched route ([`crate::smart::routes`]) is checked after
+//! requirement of the matched route (`smart::routes`) is checked after
 //! RBAC, so SMART only narrows (`master08 §Resource Scopes`).
 //!
 //! Between authentication and RBAC, the `assurance` gate judges a patient-data
