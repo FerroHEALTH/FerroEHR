@@ -200,7 +200,8 @@ on the documentation site.
   `sandbox`, the default, names every open one on the banner, in the log and on
   `GET /management/status`
 - **Authentication:** Basic and OAuth2/OIDC (Keycloak, Active Directory,
-  any standards-compliant identity provider)
+  any standards-compliant identity provider), with the SMART on openEHR scopes
+  a caller holds checked on every route
 - **Authorization:** role-based access control plus attribute-based
   policies, via the embedded policy engine or an external policy decision
   point
@@ -562,7 +563,7 @@ deploys, and listed on
 
 ```shell
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 12.1.0 --set database.existingSecret=my-db-secret
+  --version 12.1.1 --set database.existingSecret=my-db-secret
 ```
 
 There is no HTTP chart repository, so `helm repo add` does not apply — OCI is the

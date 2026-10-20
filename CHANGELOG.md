@@ -15,6 +15,8 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [5.1.0] - 2026-10-20
+
 ### Added
 
 - **The Helm chart mounts a database CA for `sslmode=verify-full`** (#3788,
@@ -130,7 +132,8 @@ workflow refuses a tag that has no matching section here.
   `jwks_json` key set and `allow_insecure_issuer`; the Helm chart drops
   `secrets.authOidcHmacSecret` and `bridge.cdr.auth`. Machine-to-machine
   callers authenticate with HTTP Basic or an OAuth 2.0 client-credentials
-  token from the issuer.
+  token from the issuer. Only the asymmetric algorithms RFC 9068 §4 names
+  verify a bearer token, so a token signed with a shared secret is refused.
 - **`[smart] ehr_id_claim`, `patient_claim`, `require_smart_scopes` and
   `[smart.endpoints]`** (#3872). The launch context is the token's `ehrId`
   claim, enforcement is always on, and the discovery document's endpoints come
@@ -174,12 +177,6 @@ workflow refuses a tag that has no matching section here.
   template choice reads "Any template", an absent value reads "(no value)",
   and the hints, notes and form errors that used a dash use a colon or a
   full stop.
-
-### Security
-
-- **A token signed with a shared secret is no longer accepted** (#3872). Only
-  the asymmetric algorithms RFC 9068 §4 names verify a bearer token, so a
-  party holding a key the CDR shares cannot mint one.
 
 ## [5.0.0] - 2026-10-19
 
@@ -11558,7 +11555,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.0.0...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.1.0...HEAD
+[5.1.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.0.0...v5.1.0
 [5.0.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.11...v5.0.0
 [4.3.11]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.10...v4.3.11
 [4.3.10]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.9...v4.3.10

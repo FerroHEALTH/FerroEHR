@@ -329,6 +329,50 @@ language from `Accept-Language` or `[ui] locale`.
 
 Nothing.
 
+## The review of 2026-10-20, for 5.1.0
+
+Read on the tree after commit `18097c6f1`, for FerroEHR 5.1.0. The facts of this
+release checked in every text in scope: authentication and the SMART on openEHR
+scope check run on the shared `ferrohealth-smart` crate, only asymmetric
+algorithms verify a token, the HMAC key is gone, and every route requires a
+scope (#3872); the Keycloak overlay and the development stack serve their
+issuer over TLS with a development CA, and the CDR accepts their tokens again
+(#3873); AQL rooted at `PERSON`, `ORGANISATION` and `ROLE`, and a demographic
+root joined to its EHR's content (#3818, #3831); the audit FHIR feed and the
+remote policy service authenticate with OAuth 2.0 client credentials (#3829);
+the chart mounts a database CA for `sslmode=verify-full` (#3788); a rotated
+mTLS client CA is re-read without a restart (#3769); the viewer reads every
+word from its catalog with FerroUI 0.2.0 (#3860); the nine `openehr-*` crates
+at `0.0.90`.
+
+### Changed on 2026-10-20, for 5.1.0
+
+- **The repository `README.md`**: the authentication bullet named Basic and
+  OAuth2/OIDC alone. Every route now refuses a caller whose scopes do not
+  grant the operation, a limitation a deployment must know (Art. 28(b)), so the
+  bullet says the SMART on openEHR scopes are checked on every route.
+- **[The Rust crates](../crates.md)**: the dependency examples named the crates
+  at `0.0.89`; they name `0.0.90`.
+
+### Read and kept on 2026-10-20, for 5.1.0
+
+- **The Keycloak quickstart**: [Docker Compose](../installation/compose.md),
+  [getting started](../getting-started.md) and the README offer the overlay
+  for bearer-token authentication. Between #3872 and #3873 the CDR did not
+  accept the overlay's tokens; on this tree it does, and the compose page
+  names the development CA and the scopes the realm puts in every token.
+- **Authentication and authorization**: [security](../security.md),
+  [the authentication reference](../installation/config-auth.md) and
+  [SMART App Launch](../smart-app-launch.md) describe the `[auth]` keys, the
+  RFC 9068 profile and the scope check as the code does.
+- **Annex II 2.5**: a caller refused for want of a scope is refused by the
+  grant its own identity provider issued, which the deployment controls; the
+  re-assessment below stands.
+
+### Left open on 2026-10-20, for 5.1.0
+
+Nothing.
+
 ## Annex II 2.5, re-assessed
 
 EHDS Annex II 2.5: "The harmonised software components of an EHR system shall
@@ -392,3 +436,4 @@ cut, after the texts in scope have been read.
 | 2026-10-16 | 4.3.10, after `e923076de` | 2 claims, in two book pages | nothing |
 | 2026-10-19 | 4.3.11, after `a15290689` | none | nothing |
 | 2026-10-19 | 5.0.0, after `ec78e7f40` | 2 claims, in two book pages | nothing |
+| 2026-10-20 | 5.1.0, after `18097c6f1` | 2 claims, in the README and one book page | nothing |
