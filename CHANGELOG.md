@@ -15,6 +15,15 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Changed
+
+- **An EHR extract never carries a protected national identifier between
+  deployments, and the refusal says what to do instead** (#3777). Importing a
+  party whose identifier another deployment sealed answers `422` naming the
+  remedy: import the extract without the party and register the person through
+  the receiving deployment's party API, which seals the identifier under its
+  own key. The book's EHR Extract page records the decision and the steps.
+
 ## [5.1.0] - 2026-10-20
 
 ### Added
