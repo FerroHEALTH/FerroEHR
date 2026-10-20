@@ -185,7 +185,7 @@ pub fn build_composition_with(
 /// The concrete party classes a party build produces (RM demographic
 /// `master02-demographic_package.adoc` §Class Descriptions: `PARTY` and its
 /// descendants are the versioned demographic objects).
-const PARTY_CLASSES: [&str; 5] = ["PERSON", "ORGANISATION", "GROUP", "AGENT", "ROLE"];
+pub(crate) const PARTY_CLASSES: [&str; 5] = ["PERSON", "ORGANISATION", "GROUP", "AGENT", "ROLE"];
 
 /// Converts a parsed simplified document of a party template (a `PERSON`,
 /// `ORGANISATION`, `GROUP`, `AGENT` or `ROLE` root) to a canonical-JSON party.

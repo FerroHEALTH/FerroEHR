@@ -694,7 +694,25 @@ fn build_content_children(
         {
             continue;
         }
+        // A compacted node told apart from a same-archetype sibling by name
+        // (`events[at0002,'Baseline']` beside `events[at0002,'Follow up']`) is a
+        // distinct node (BASE `architecture_overview/master11-paths.adoc` §"Using
+        // a Name-based Predicate"), and the TDD spells it out as the element of
+        // that name, so a match belongs to `wc` only under that element.
+        let named: Vec<&str> = rel
+            .split_last()
+            .map(|(_, above)| above)
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|s| s.predicate.name_value.as_deref())
+            .collect();
         for (wrappers, cel) in find_matches_with_wrappers(el, node_display(wc)) {
+            if !named
+                .iter()
+                .all(|n| wrappers.iter().any(|w| name_matches(&w.name, n)))
+            {
+                continue;
+            }
             let child_value = if wc.has_input() {
                 // A leaf: the ELEMENT wrapper is materialised by `place`; the
                 // datum is the leaf element's `<value>` fragment.
@@ -848,12 +866,18 @@ impl<'a> WrapperMeta<'a> {
     }
 
     /// Whether this wrapper is the spelled-out form of the node materialised
-    /// at `attribute`/`rm_type`: its element name matches the RM attribute,
-    /// its Ocean `…_as_<ConcreteType>` suffix names the node's type, or — for
-    /// a wrapper whose keys discriminate the node kind (`origin`/`time`) —
+    /// at `attribute`/`rm_type`, whose path segment carries the name conjunct
+    /// `name`.
+    ///
+    /// It is when its element name matches the RM attribute or the name
+    /// conjunct (the TDS names an object node after its node name), when its
+    /// Ocean `…_as_<ConcreteType>` suffix names the node's type, or, for a
+    /// wrapper whose keys discriminate the node kind (`origin`/`time`), when
     /// every key it carries is an attribute of the node.
-    fn corresponds(&self, attribute: &str, rm_type: &str) -> bool {
-        if name_matches(&self.el.name, attribute) {
+    fn corresponds(&self, attribute: &str, rm_type: &str, name: Option<&str>) -> bool {
+        if name_matches(&self.el.name, attribute)
+            || name.is_some_and(|n| name_matches(&self.el.name, n))
+        {
             return true;
         }
         if let Some((_, suffix)) = self.el.name.rsplit_once("_as_")
@@ -927,11 +951,12 @@ fn carried_attribute(
 fn take_corresponding<'a>(
     attribute: &str,
     rm_type: &str,
+    name: Option<&str>,
     metas: &mut VecDeque<WrapperMeta<'a>>,
 ) -> Option<WrapperMeta<'a>> {
     if metas
         .front()
-        .is_some_and(|m| m.corresponds(attribute, rm_type))
+        .is_some_and(|m| m.corresponds(attribute, rm_type, name))
     {
         metas.pop_front()
     } else {
@@ -944,13 +969,14 @@ fn take_corresponding<'a>(
 fn discard_corresponding(
     existing: Option<&Value>,
     attribute: &str,
+    name: Option<&str>,
     metas: &mut VecDeque<WrapperMeta<'_>>,
 ) {
     if let Some(ty) = existing
         .and_then(|v| v.get("_type"))
         .and_then(Value::as_str)
     {
-        let _consumed = take_corresponding(attribute, ty, metas);
+        let _consumed = take_corresponding(attribute, ty, name, metas);
     }
 }
 
@@ -990,6 +1016,7 @@ fn place_rec(
 ) -> Result<(), FlatError> {
     let seg = &rel[i];
     let node_id = seg.predicate.archetype_node_id.as_deref();
+    let name = seg.predicate.name_value.as_deref();
     let last = i + 1 == rel.len();
 
     if Some(i) == id_idx {
@@ -1023,13 +1050,20 @@ fn place_rec(
             else {
                 return Ok(());
             };
-            arr.iter()
-                .position(|e| e.get("archetype_node_id").and_then(Value::as_str) == node_id)
+            // The segment's name conjunct takes part in finding the element, as
+            // the node it names is distinct from a same-archetype sibling (BASE
+            // `architecture_overview/master11-paths.adoc` §"Using a Name-based
+            // Predicate"); `new_struct` names a fresh element after it.
+            arr.iter().position(|e| {
+                e.get("archetype_node_id").and_then(Value::as_str) == node_id
+                    && name
+                        .is_none_or(|n| e.pointer("/name/value").and_then(Value::as_str) == Some(n))
+            })
         };
         let idx = if let Some(pos) = created {
             pos
         } else {
-            let fresh = new_struct(seg, rel.get(i + 1), None, metas)?;
+            let fresh = new_struct(seg, rel.get(i + 1), name, metas)?;
             let Some(arr) = cur.get_mut(&seg.attribute).and_then(Value::as_array_mut) else {
                 return Ok(());
             };
@@ -1040,7 +1074,7 @@ fn place_rec(
             return Ok(());
         };
         if created.is_some() {
-            discard_corresponding(arr.get(idx), &seg.attribute, metas);
+            discard_corresponding(arr.get(idx), &seg.attribute, name, metas);
         }
         if let Some(Value::Object(m)) = arr.get_mut(idx) {
             place_rec(m, rel, i + 1, id_idx, child_value, wc, metas)?;
@@ -1053,9 +1087,9 @@ fn place_rec(
         return Ok(());
     }
     if cur.contains_key(&seg.attribute) {
-        discard_corresponding(cur.get(&seg.attribute), &seg.attribute, metas);
+        discard_corresponding(cur.get(&seg.attribute), &seg.attribute, name, metas);
     } else {
-        let fresh = new_struct(seg, rel.get(i + 1), None, metas)?;
+        let fresh = new_struct(seg, rel.get(i + 1), name, metas)?;
         cur.insert(seg.attribute.clone(), fresh);
     }
     if let Some(Value::Object(m)) = cur.get_mut(&seg.attribute) {
@@ -1109,7 +1143,8 @@ fn new_struct(
         }
         _ => {}
     }
-    if let Some(meta) = take_corresponding(&seg.attribute, rm_type, metas) {
+    let segment_name = seg.predicate.name_value.as_deref();
+    if let Some(meta) = take_corresponding(&seg.attribute, rm_type, segment_name, metas) {
         meta.apply(rm_type, &mut o)?;
     }
     Ok(Value::Object(o))

@@ -265,3 +265,122 @@ fn nonconforming_content_is_rejected_not_dropped() {
         "got: {err}"
     );
 }
+
+/// The web-template nodes from the root down to the first node whose
+/// `aqlPath` ends with `tail`, root first.
+fn chain_to<'a>(
+    node: &'a openehr_sdt::flat::webtemplate::model::WebTemplateNode,
+    tail: &str,
+) -> Option<Vec<&'a openehr_sdt::flat::webtemplate::model::WebTemplateNode>> {
+    if node.aql_path.ends_with(tail) {
+        return Some(vec![node]);
+    }
+    node.children.iter().find_map(|c| {
+        chain_to(c, tail).map(|mut below| {
+            below.insert(0, node);
+            below
+        })
+    })
+}
+
+/// The TDD element name of a template node: its name, spaces as `_`.
+fn element(node: &openehr_sdt::flat::webtemplate::model::WebTemplateNode) -> String {
+    node.name
+        .clone()
+        .unwrap_or_else(|| panic!("node {} has a name", node.id))
+        .replace(' ', "_")
+}
+
+/// Two same-archetype EVENTs told apart only by name
+/// (`events[at0002,'Baseline']` and `events[at0002,'Follow up']`, compacted by
+/// the Web Template) convert to two nodes, each with the leaf the TDD spells
+/// out under its own element (BASE `architecture_overview/master11-paths.adoc`
+/// §"Using a Name-based Predicate"; #3833).
+#[test]
+fn name_distinguished_siblings_convert_to_two_nodes() {
+    let wt = wt_from(
+        "../../corpus/templates/ckm/full/covid-19-pneumonia-diagnosis-and-treatment-7th-edition.opt",
+    );
+    let chain = chain_to(&wt.tree, "imaging_exam_result.v0,'Chest x-ray']")
+        .expect("the template carries the Chest x-ray OBSERVATION");
+    let event = |name: &str, diagnosis: &str| {
+        format!(
+            "<{event}><name><value>{name}</value></name>\
+             <Imaging_diagnosis><name><value>Imaging diagnosis</value></name>\
+             <value><rm:value>{diagnosis}</rm:value></value></Imaging_diagnosis></{event}>",
+            event = name.replace(' ', "_")
+        )
+    };
+    let mut body = format!(
+        "{}{}",
+        event("Baseline", "clear lungs"),
+        event("Follow up", "ground-glass opacity")
+    );
+    for node in chain.iter().skip(1).rev() {
+        let el = element(node);
+        body = format!(
+            "<{el}><name><value>{}</value></name>{body}</{el}>",
+            node.name.as_deref().unwrap_or_default()
+        );
+    }
+    let root = element(&wt.tree);
+    let tdd = format!(
+        "<{root} xmlns=\"http://schemas.oceanehr.com/templates\" \
+         xmlns:rm=\"http://schemas.openehr.org/v1\" \
+         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" template_id=\"{}\">\
+         <name><value>{}</value></name>{body}</{root}>",
+        wt.template_id,
+        wt.tree.name.as_deref().unwrap_or_default()
+    );
+    let comp = from_tdd(&tdd, &wt).unwrap_or_else(|e| panic!("from_tdd: {e}"));
+
+    let mut observations = Vec::new();
+    collect_named(&comp, "Chest x-ray", &mut observations);
+    assert_eq!(observations.len(), 1, "one Chest x-ray OBSERVATION");
+    let events = observations[0]
+        .pointer("/data/events")
+        .and_then(Value::as_array)
+        .expect("the OBSERVATION carries events");
+    let found: Vec<(String, String)> = events
+        .iter()
+        .map(|e| {
+            let name = e
+                .pointer("/name/value")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let text = e
+                .pointer("/data/items/0/value/value")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            (name.to_owned(), text.to_owned())
+        })
+        .collect();
+    assert_eq!(
+        found,
+        vec![
+            ("Baseline".to_owned(), "clear lungs".to_owned()),
+            ("Follow up".to_owned(), "ground-glass opacity".to_owned()),
+        ],
+        "each event is its own node with its own leaf: {events:#?}"
+    );
+}
+
+/// Every object under `value` whose `name.value` is `name`.
+fn collect_named<'a>(value: &'a Value, name: &str, out: &mut Vec<&'a Value>) {
+    match value {
+        Value::Object(obj) => {
+            if value.pointer("/name/value").and_then(Value::as_str) == Some(name) {
+                out.push(value);
+            }
+            for child in obj.values() {
+                collect_named(child, name, out);
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                collect_named(item, name, out);
+            }
+        }
+        _ => {}
+    }
+}

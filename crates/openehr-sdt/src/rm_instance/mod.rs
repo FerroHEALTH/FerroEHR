@@ -143,6 +143,48 @@ pub fn validate_composition(composition: &Value, wt: &WebTemplate) -> Vec<Valida
     out
 }
 
+/// Validate a canonical-JSON party against its `WebTemplate`, RM invariants,
+/// and the RM-mandated openEHR terminology.
+///
+/// The party counterpart of [`validate_composition`]: the template root must
+/// be a concrete party class (`PERSON`, `ORGANISATION`, `GROUP`, `AGENT` or
+/// `ROLE`, RM demographic `master02-demographic_package.adoc` §Class
+/// Descriptions), the instance passes of this module run with that class as
+/// the root's declared type, and the archetype-conformance pass walks the
+/// template from the root as it does for a COMPOSITION, a party being "a
+/// completely archetypable structure" (same document, §Archetyping).
+///
+/// A template whose root is not a party class answers one
+/// [`ValidationKind::WrongType`] message at `/` and runs no pass, since the
+/// template cannot describe a party.
+#[must_use]
+pub fn validate_party(party: &Value, wt: &WebTemplate) -> Vec<ValidationMessage> {
+    let root = wt
+        .tree
+        .rm_type
+        .split('<')
+        .next()
+        .unwrap_or(&wt.tree.rm_type);
+    if !crate::flat::build::PARTY_CLASSES.contains(&root) {
+        let mut out = Vec::new();
+        push(
+            &mut out,
+            "/",
+            format!(
+                "template {} is rooted at {root}, which is not a party class",
+                wt.template_id
+            ),
+            ValidationKind::WrongType,
+        );
+        return out;
+    }
+    let mut out = validate_rm_and_terminology_as(party, root);
+    out.extend(crate::flat::validation::validate_archetype_conformance(
+        party, wt,
+    ));
+    out
+}
+
 /// Validate only the **template-independent** passes: RM class invariants +
 /// the RM-mandated openEHR terminology.
 ///
