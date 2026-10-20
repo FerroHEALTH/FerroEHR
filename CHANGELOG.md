@@ -82,6 +82,13 @@ workflow refuses a tag that has no matching section here.
   handshake; a file that fails to load is logged and the previous CA stays
   in force.
 
+- **An unmounted path outside the API answers `404`** (#3834). With
+  `server.swagger_ui` at `private` or `admin_only`, the documentation guard
+  wrapped every unmatched path, so `/.well-known/smart-configuration` on a
+  server with SMART off answered `401`, and the viewer's System screen said
+  the CDR refused the session. The guard now covers the documentation routes
+  only, and the viewer shows SMART as not enabled.
+
 - **The OpenAPI family titles carry no em dash** (#3865). The served
   documents and the viewer's family selector read "FerroEHR: Messaging",
   "openEHR: EHR" and so on.

@@ -887,6 +887,20 @@ async fn the_swagger_surface_honours_its_access_level() {
         anonymous.headers().contains_key("www-authenticate"),
         "the refusal carries the challenge a browser answers"
     );
+    // The guard covers the documentation routes only: a path nothing serves
+    // outside the API, such as the SMART discovery document while SMART is
+    // off, answers `404` (SMART master04 §Service Discovery; #3834), never the
+    // guard's `401`.
+    for path in [
+        "/ferroehr/rest/.well-known/smart-configuration",
+        "/ferroehr/rest/no-such-surface",
+    ] {
+        assert_eq!(
+            probe(&app, "GET", path, None).await.status,
+            StatusCode::NOT_FOUND,
+            "{path} is not mounted, whatever `swagger_ui` is"
+        );
+    }
 
     let (_pg, app) = app_at(AccessLevel::AdminOnly).await;
     assert_eq!(

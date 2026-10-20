@@ -782,8 +782,9 @@ pub(crate) fn swagger_router(cfg: &AppConfig) -> Router<AppState> {
         // Swagger UI is genuinely rendered, so the API's `default-src 'none'`
         // would blank it; everything it loads is same-origin, so `'self'`
         // suffices with no inline allowance. The outer layer uses
-        // `if_not_present`, so this narrower policy survives.
-        .layer(SetResponseHeaderLayer::if_not_present(
+        // `if_not_present`, so this narrower policy survives. Scoped to these
+        // routes, so an unmatched path never takes the Swagger policy.
+        .route_layer(SetResponseHeaderLayer::if_not_present(
             header::CONTENT_SECURITY_POLICY,
             http::HeaderValue::from_static(SWAGGER_UI_CSP),
         ))
