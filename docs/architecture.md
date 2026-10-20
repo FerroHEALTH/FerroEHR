@@ -228,6 +228,15 @@ TimeZone and are not index-legal), no `JSON_TABLE`, and no GIN index (it
 emits no GIN-servable operator; the baseline removed the index). The feature
 envelope is documented per construct; rejections are explicit typed errors.
 
+A query whose outermost `FROM` class is `PERSON`, `ORGANISATION` or `ROLE` is
+the experimental demographic extension (no openEHR spec governs it; QUERY
+master03 §FROM gives semantics only to the clinical repository). The planner
+marks the IR `QueryDomain::Demographic`, and the same SQL runs on the party
+pool, whose `search_path` names the `party` schema rendered from the same DDL,
+without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`, ABAC subject
+scope). A demographic root mixed with `EHR` or clinical classes is refused;
+the cross-pool join is separate work.
+
 ## REST surface + auth (`ferroehr-rest`)
 
 Base path `/ferroehr/rest/openehr/v1`, implementing the generated ITS-REST

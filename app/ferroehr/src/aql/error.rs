@@ -138,10 +138,47 @@ pub enum AqlFeatureError {
     #[error("OR node predicates are not supported (QUERY §Predicates/Node predicate)")]
     OrNodePredicate,
 
-    /// A FROM source that is not an EHR / VERSION / in-scope RM structure class
-    /// (e.g. a demographic PARTY/ROLE/ACTOR source). QUERY §FROM.
-    #[error("FROM source class `{0}` is not in scope (demographic/off-scope class; QUERY §FROM)")]
+    /// A FROM source that is not an EHR, a VERSION or an RM class the node
+    /// store addresses (e.g. a data value class). QUERY §FROM.
+    #[error("FROM source class `{0}` is not in scope (no stored structure; QUERY §FROM)")]
     UnsupportedSourceClass(String),
+
+    /// A demographic FROM class outside the served subset of the demographic
+    /// extension: `GROUP`, `AGENT`, `PARTY_RELATIONSHIP`, or an abstract class
+    /// whose concrete descendants include one of them (`PARTY`, `ACTOR`).
+    /// QUERY master03 §FROM gives semantics to the clinical repository only;
+    /// the served demographic roots are our own design.
+    #[error(
+        "FROM class `{0}` is a demographic class this server does not query; a demographic \
+         root is PERSON, ORGANISATION or ROLE (experimental demographic extension; QUERY §FROM)"
+    )]
+    UnsupportedDemographicClass(String),
+
+    /// A demographic root that is not the outermost FROM class: one nested
+    /// under another class, a second demographic root, or one beside other
+    /// classes in a top-level `AND`/`OR`. Our own design (QUERY master03
+    /// §FROM is silent on demographic roots).
+    #[error(
+        "demographic class `{0}` must be the outermost FROM class, optionally under VERSION, \
+         and the only demographic root of the query (experimental demographic extension; \
+         QUERY §FROM)"
+    )]
+    DemographicRootPlacement(String),
+
+    /// A query rooted at a demographic class that also names `EHR`, which
+    /// would join the demographic and clinical repositories. Our own design:
+    /// the join through `EHR_STATUS.subject` is not served.
+    #[error(
+        "a query rooted at demographic class `{party}` cannot also name `{other}`: \
+         joining the demographic and clinical repositories is not supported \
+         (experimental demographic extension; QUERY §FROM)"
+    )]
+    DemographicWithClinical {
+        /// The demographic root class.
+        party: String,
+        /// The clinical class the query also names.
+        other: String,
+    },
 
     /// A `CONTAINS` pair the RM defines no containment relationship for — a
     /// versioned-object root under a parent that cannot contain it (e.g.

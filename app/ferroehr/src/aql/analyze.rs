@@ -7,8 +7,10 @@
 //! The central operation is the **path split**: every identified path deterministically splits into
 //!
 //! 1. a sequence of **structure hops** — attribute steps whose resolved node is
-//!    a structure root (its own `node` row per [`openehr_rm::v1_2::model::is_structure_root`],
-//!    mirrored from `ferroehr::storage::codec`), ending at the deepest node-row
+//!    a structure type (its own `node` row per
+//!    [`crate::storage::structure::is_structure_type`], the node codec's own
+//!    predicate, which adds the demographic party roots and containers to the
+//!    RM model's composition-content set), ending at the deepest node-row
 //!    anchor; and
 //! 2. a **fragment suffix** — the first non-structure step onward, addressed
 //!    inside the anchor node's `data` JSONB.
@@ -158,7 +160,7 @@ fn analyze_rm_path(
                 && step_types
                     .names()
                     .iter()
-                    .all(|t| model::is_structure_root(t));
+                    .all(|t| crate::storage::structure::is_structure_type(t));
 
             if is_hop {
                 anchor.push(StructureStep {

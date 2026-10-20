@@ -127,6 +127,9 @@ pub struct QueryOutcome {
     /// [`Self::served_ehrs`], keyed by EHR id, so each per-EHR access record
     /// is classified by what that EHR disclosed.
     pub served_ehr_content: BTreeMap<String, Vec<crate::system_log::categories::ContentIds>>,
+    /// The storage domain the query read: the access record of a demographic
+    /// query is filed under the demographic domain.
+    pub domain: crate::aql::ir::QueryDomain,
 }
 
 impl QueryOutcome {
@@ -144,6 +147,7 @@ impl QueryOutcome {
             origin_count: 0,
             accessed: None,
             served_ehr_content: BTreeMap::new(),
+            domain: crate::aql::ir::QueryDomain::Clinical,
         }
     }
 }

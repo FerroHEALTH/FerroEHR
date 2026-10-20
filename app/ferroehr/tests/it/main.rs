@@ -65,6 +65,7 @@ mod report;
 mod schema_preparation_credential;
 mod service_admin;
 mod service_aql;
+mod service_aql_demographic;
 mod service_aql_terminology;
 mod service_branching;
 mod service_contribution;

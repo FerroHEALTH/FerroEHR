@@ -28,13 +28,20 @@
 //! The builder references the `node`/`version`/`ehr`/`audit` column
 //! vocabulary directly and encodes the nested-set, tier and
 //! `branch_number` semantics of the greenfield store;
-//! the planner's own structure-root notion is the RM model's
-//! ([`openehr_rm::v1_2::model::is_structure_root`], kept in lockstep with the
-//! vendored BMM by the `emit-rm-model` generator), which covers the clinical
-//! content every AQL scope reaches today.
-//! [`crate::storage::structure::is_structure_type`] is that set plus the
-//! demographic party roots and the containers nested in them, which no FROM
-//! class resolves to (`from::is_vo_root_type`).
+//! the planner's structure-root notion is the node codec's own
+//! ([`crate::storage::structure::is_structure_type`]: the RM model's
+//! composition-content set, kept in lockstep with the vendored BMM by the
+//! `emit-rm-model` generator, plus the demographic party roots and the
+//! containers nested in them).
+//!
+//! A demographic query ([`QueryDomain::Demographic`]) runs the same SQL on the
+//! party pool, whose `search_path` names the `party` schema rendered from the
+//! same DDL. It carries none of the EHR gates (the population gate, the
+//! `ehr_ids` scope, the per-EHR access decision, the ABAC patient scope),
+//! because the `party` schema has no `ehr` relation and a party is no EHR's
+//! content; the restriction mark and `LATEST_VERSION` ride the head join as
+//! for every root. No openEHR spec governs AQL over a demographic repository:
+//! our own design.
 //!
 //! Every column is named through the schema catalog ([`crate::db::iden`]),
 //! whose own tests pin each name against the clinical migration set and refuse
@@ -58,7 +65,7 @@ use sea_query::{Alias, PostgresQueryBuilder, Query, SelectStatement, Value};
 use sea_query_sqlx::{SqlxBinder as _, SqlxValues};
 
 use super::error::{AqlError, SqlError};
-use super::ir::{Bind, Coercion, ParamValue, Params, QueryIr};
+use super::ir::{Bind, Coercion, ParamValue, Params, QueryDomain, QueryIr};
 use super::lineage::ArchetypeLineage;
 
 use expr::{col, literal_value};
@@ -421,11 +428,18 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
         Some(plan) => b.build_from_streaming(&plan)?,
         None => b.build_from(&ir.contains)?,
     }
-    b.apply_ehr_scope();
-    b.apply_population_gate();
+    let clinical = ir.domain == QueryDomain::Clinical;
+    if clinical {
+        b.apply_ehr_scope();
+        b.apply_population_gate();
+    }
     b.bind_select_paths()?;
     let columns = b.build_select()?;
-    let access_ehr_cols = b.build_access_ehr_columns(ir);
+    let access_ehr_cols = if clinical {
+        b.build_access_ehr_columns(ir)
+    } else {
+        Vec::new()
+    };
     let access_version_cols = b.build_access_version_columns(ir);
     b.build_where()?;
     b.build_order_by()?;
@@ -443,9 +457,11 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     })
 }
 
-/// Builds the ABAC scope-collection query for `ir`, or `None` when the query
-/// binds neither an EHR source nor a versioned-object root (nothing to
-/// collect).
+/// Builds the ABAC scope-collection query for `ir`, or `None` when there is
+/// nothing to collect.
+///
+/// Nothing is collected for a query that binds neither an EHR source nor a
+/// versioned-object root, nor for a demographic query: a party is in no EHR.
 ///
 /// The FROM, the SELECT path bindings and the WHERE are the main query's, so
 /// the collected scope is exactly the rows that query can serve. Every EHR
@@ -462,6 +478,9 @@ pub fn build_scope(
     ctx: &SqlCtx,
 ) -> Result<Option<ScopeQuery>, AqlError> {
     from::refuse_negated_reads(ir)?;
+    if ir.domain == QueryDomain::Demographic {
+        return Ok(None);
+    }
     let mut b = Builder::new(ir, params, ctx);
     b.build_from(&ir.contains)?;
     b.apply_ehr_scope();

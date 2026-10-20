@@ -28,7 +28,7 @@ use openehr_query::parser::parse_str;
 use ferroehr::aql::error::{AnalysisError, AqlError, AqlFeatureError};
 use ferroehr::aql::ir::{
     AggFunc, ArchetypeConstraint, Coercion, ContainsTree, EhrField, Expr, LeafPath, Link, Operand,
-    PathTarget, QueryIr, SelectValue, Source, TypedLit, VersionField, VersionScope,
+    PathTarget, QueryDomain, QueryIr, SelectValue, Source, TypedLit, VersionField, VersionScope,
 };
 use ferroehr::aql::ir::{ParamValue, Params};
 use ferroehr::aql::lineage::ArchetypeLineage;
@@ -623,13 +623,121 @@ fn archetype_node_id_predicate_admits_only_archetype_ids_and_node_codes() {
     );
 }
 
+/// A demographic root inside an EHR would join the two repositories, which
+/// the experimental demographic extension does not serve.
 #[test]
-fn demographic_source_rejected() {
+fn demographic_root_under_an_ehr_rejected() {
     let err = plan_err("SELECT p/uid/value FROM EHR e CONTAINS PERSON p");
-    assert!(matches!(
-        err,
-        AqlError::Feature(AqlFeatureError::UnsupportedSourceClass(c)) if c == "PERSON"
-    ));
+    assert!(
+        matches!(
+            &err,
+            AqlError::Feature(AqlFeatureError::DemographicWithClinical { party, other })
+                if party == "PERSON" && other == "EHR"
+        ),
+        "got {err:?}"
+    );
+}
+
+/// `PERSON`, `ORGANISATION` and `ROLE` roots lower to the demographic domain,
+/// optionally under `VERSION`; every clinical query stays clinical.
+#[test]
+fn demographic_roots_set_the_domain() {
+    for q in [
+        "SELECT p/uid/value FROM PERSON p",
+        "SELECT o/uid/value FROM ORGANISATION o",
+        "SELECT r/uid/value FROM ROLE r",
+        "SELECT v/commit_audit/time_committed FROM VERSION v CONTAINS PERSON p",
+        "SELECT c/items[at0001]/value/id FROM PERSON p \
+         CONTAINS CLUSTER c[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]",
+        "SELECT p/identities[at0001]/details[at0002]/items[at0003]/value/value FROM PERSON p",
+    ] {
+        assert_eq!(plan_ok(q).domain, QueryDomain::Demographic, "{q}");
+    }
+    for q in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
+        "SELECT c/name/value FROM CLUSTER c",
+    ] {
+        assert_eq!(plan_ok(q).domain, QueryDomain::Clinical, "{q}");
+    }
+}
+
+/// A path into a demographic container (`PARTY_IDENTITY`) crosses a stored
+/// row: the codec splits the container out of the party's fragment, so the
+/// planner hops onto it rather than reading it from the party row.
+#[test]
+fn demographic_container_is_a_structure_hop() {
+    let ir = plan_ok(
+        "SELECT p/identities[at0001]/details[at0002]/items[at0003]/value/value FROM PERSON p",
+    );
+    let SelectValue::Path(PathTarget::Data(leaf)) = &ir.select[0].value else {
+        panic!("a data path, got {:?}", ir.select[0].value);
+    };
+    let hops: Vec<&str> = leaf.anchor.iter().map(|s| s.attribute.as_str()).collect();
+    assert_eq!(hops, ["identities", "details", "items"]);
+}
+
+/// The demographic classes outside the served roots, and every other
+/// placement of a demographic root, are typed refusals naming the class.
+#[test]
+fn unserved_demographic_forms_rejected() {
+    for (q, class) in [
+        ("SELECT g/uid/value FROM GROUP g", "GROUP"),
+        ("SELECT a/uid/value FROM AGENT a", "AGENT"),
+        ("SELECT a/uid/value FROM ACTOR a", "ACTOR"),
+        ("SELECT p/uid/value FROM PARTY p", "PARTY"),
+        (
+            "SELECT r/uid/value FROM PARTY_RELATIONSHIP r",
+            "PARTY_RELATIONSHIP",
+        ),
+    ] {
+        let err = plan_err(q);
+        assert!(
+            matches!(&err, AqlError::Feature(AqlFeatureError::UnsupportedDemographicClass(c)) if c == class),
+            "{q}: got {err:?}"
+        );
+    }
+    for (q, class) in [
+        (
+            "SELECT o/uid/value FROM PERSON p CONTAINS ORGANISATION o",
+            "ORGANISATION",
+        ),
+        (
+            "SELECT p/uid/value FROM CLUSTER c CONTAINS PERSON p",
+            "PERSON",
+        ),
+        ("SELECT p/uid/value FROM PERSON p AND CLUSTER c", "PERSON"),
+    ] {
+        let err = plan_err(q);
+        assert!(
+            matches!(&err, AqlError::Feature(AqlFeatureError::DemographicRootPlacement(c)) if c == class),
+            "{q}: got {err:?}"
+        );
+    }
+    let err = plan_err("SELECT p/uid/value FROM PERSON p CONTAINS COMPOSITION c");
+    assert!(
+        matches!(
+            &err,
+            AqlError::Feature(AqlFeatureError::DemographicWithClinical { other, .. })
+                if other == "COMPOSITION"
+        ),
+        "got {err:?}"
+    );
+}
+
+/// A demographic query carries none of the EHR gates: the `party` schema has
+/// no `ehr` relation.
+#[test]
+fn demographic_sql_names_no_ehr_relation() {
+    let sql = build_sql(
+        "SELECT p/uid/value FROM PERSON p \
+         WHERE p/details[at0001]/items[at0002]/value/id = 'x' ORDER BY p/uid/value",
+    );
+    assert!(!sql.contains("\"ehr\""), "{sql}");
+    assert!(
+        sql.contains("\"vo_head\""),
+        "the head join gates the version: {sql}"
+    );
 }
 
 #[test]
