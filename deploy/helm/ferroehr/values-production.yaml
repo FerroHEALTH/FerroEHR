@@ -57,8 +57,14 @@
 
 # ── One credential per storage domain, and one that prepares the schema ──────
 # Each Secret holds a full DSN. Point each domain at its own cluster (see
-# shared_cluster above); `?sslmode=verify-full` encrypts the database hop.
+# shared_cluster above), and end every DSN in
+# `?sslmode=verify-full&sslrootcert=/etc/ferroehr-db-ca/ca.crt`: the hop is
+# encrypted and the server's certificate is checked against the CA below and
+# against the host name in the DSN.
 database:
+  # The CA the database certificates chain to, under the key ca.crt. The
+  # server, the migration Job and the backups mount it at /etc/ferroehr-db-ca.
+  caConfigMap: ferroehr-db-ca
   # The clinical domain's DSN (role ferroehr_clinical). It is also [db].url.
   existingSecret: ferroehr-db-clinical
   existingSecretKey: FERROEHR__DB__URL

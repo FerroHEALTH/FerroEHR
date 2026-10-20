@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). A stock install runs the sandbox deployment profile, which must not hold real patient data; set config.deployment_profile for a production holder.
 
-![Version: 12.0.0](https://img.shields.io/badge/Version-12.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.0.0](https://img.shields.io/badge/AppVersion-5.0.0-informational?style=flat-square)
+![Version: 12.1.0](https://img.shields.io/badge/Version-12.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.0.0](https://img.shields.io/badge/AppVersion-5.0.0-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 12.0.0 \
+  --version 12.1.0 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.0.0
@@ -58,7 +58,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `12.0.0` |
+| the **chart** (templates, defaults, this document) | `--version` | `12.1.0` |
 | the **server image** | `image.tag` | `5.0.0` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -70,7 +70,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:12.0.0 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:12.1.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -78,7 +78,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:12.0.0 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:12.0.0 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:12.1.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.0.0 \
   -R FerroHEALTH/FerroEHR
@@ -309,6 +309,8 @@ Kubernetes: `>=1.36.0-0`
 | database.audit.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the database this domain lives in, when it is not the database `database.migrateExistingSecret` reaches (a migrator of THAT database). Mounted into the migration Job, which applies the schema there, and into the server, which verifies it there under `config.db.migrate=verify`. Empty: such a database is prepared on this domain's own DSN, which a DML-only role cannot do. |
 | database.audit.migrateExistingSecretKey | string | `"FERROEHR__STORAGE__MIGRATE__AUDIT__URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
 | database.audit.url | string | `""` | Inline audit DSN (DEV/TEST ONLY). Ignored when `audit.existingSecret` is set. |
+| database.caConfigMap | string | `""` | An existing ConfigMap holding the CA certificate the database servers' certificates chain to, for DSNs carrying `?sslmode=verify-full&sslrootcert=/etc/ferroehr-db-ca/ca.crt`. Mounted read-only at `/etc/ferroehr-db-ca` into the server, the migration Job and the backup CronJobs, every pod that opens a database connection. Empty mounts nothing; a CA the image already trusts needs no ConfigMap. |
+| database.caConfigMapKey | string | `"ca.crt"` | Key WITHIN caConfigMap holding the PEM CA certificate; it lands as `/etc/ferroehr-db-ca/ca.crt`. |
 | database.clinical.existingSecret | string | `""` | Reference an existing Secret holding the CLINICAL-role DSN (`postgres://ferroehr_clinical:...@host:5432/ferroehr`). Empty uses `database.existingSecret` / `database.url`. |
 | database.clinical.existingSecretKey | string | `"FERROEHR__STORAGE__CLINICAL__URL"` | Key WITHIN it holding that DSN. Mounted as a file; only its PATH reaches the pod's environment. |
 | database.clinical.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the database this domain lives in, when it is not the database `database.migrateExistingSecret` reaches (a migrator of THAT database). Mounted into the migration Job, which applies the schema there, and into the server, which verifies it there under `config.db.migrate=verify`. Empty: such a database is prepared on this domain's own DSN, which a DML-only role cannot do. |

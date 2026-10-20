@@ -191,6 +191,9 @@ spec:
                   readOnly: true
                 - name: backup
                   mountPath: {{ $mount }}
+                {{- if $root.Values.database.caConfigMap }}
+                {{- include "ferroehr.dbCaMount" $root | nindent 16 }}
+                {{- end }}
               resources:
                 {{- toYaml $root.Values.backup.resources | nindent 16 }}
           volumes:
@@ -209,6 +212,9 @@ spec:
             - name: backup
               persistentVolumeClaim:
                 claimName: {{ $domain.claim }}
+            {{- if $root.Values.database.caConfigMap }}
+            {{- include "ferroehr.dbCaVolume" $root | nindent 12 }}
+            {{- end }}
           {{- with $root.Values.backup.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 12 }}

@@ -1020,6 +1020,11 @@ CLAIMS
   done
   [[ "$(yq -r 'select(.kind == "Job") | .metadata.name' <<<"$rendered")" == "${RELEASE_NAME}-migrate" ]] \
     || { red "  no migration Job renders: under migrate = verify nothing would prepare the schema"; missing=1; }
+  local kind
+  for kind in Deployment Job; do
+    [[ "$(yq -r "select(.kind == \"${kind}\") | .spec.template.spec.containers[0].volumeMounts[] | select(.name == \"db-ca\") | .mountPath" <<<"$rendered")" == "/etc/ferroehr-db-ca" ]] \
+      || { red "  the ${kind} does not mount the database CA at /etc/ferroehr-db-ca: a verify-full DSN's sslrootcert would name a missing file"; missing=1; }
+  done
   [[ "$(yq -r 'select(.kind == "NetworkPolicy") | .spec.ingress[0].from | length' <<<"$rendered")" -gt 0 ]] \
     || { red "  the NetworkPolicy admits every source: the plaintext_listener acceptance rests on it admitting the ingress controller alone"; missing=1; }
   [[ "$(yq -r 'select(.kind == "Ingress") | .spec.tls | length' <<<"$rendered")" -gt 0 ]] \

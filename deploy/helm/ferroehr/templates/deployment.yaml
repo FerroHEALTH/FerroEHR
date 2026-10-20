@@ -280,6 +280,9 @@ spec:
               mountPath: {{ include "ferroehr.secretMountPath" . }}
               readOnly: true
             {{- end }}
+            {{- if .Values.database.caConfigMap }}
+            {{- include "ferroehr.dbCaMount" . | nindent 12 }}
+            {{- end }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -406,6 +409,9 @@ spec:
                       path: terminology.external.oauth2_clients.{{ $name }}.client_secret
               {{- end }}
               {{- end }}
+        {{- end }}
+        {{- if .Values.database.caConfigMap }}
+        {{- include "ferroehr.dbCaVolume" . | nindent 8 }}
         {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}

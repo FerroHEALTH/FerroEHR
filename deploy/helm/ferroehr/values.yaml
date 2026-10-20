@@ -121,6 +121,16 @@ database:
   # -- Inline DSN (DEV/TEST ONLY — lands in a chart-managed Secret). Leave empty
   # and use existingSecret in production. Ignored when existingSecret is set.
   url: ""
+  # -- An existing ConfigMap holding the CA certificate the database servers'
+  # certificates chain to, for DSNs carrying
+  # `?sslmode=verify-full&sslrootcert=/etc/ferroehr-db-ca/ca.crt`. Mounted
+  # read-only at `/etc/ferroehr-db-ca` into the server, the migration Job and
+  # the backup CronJobs, every pod that opens a database connection. Empty
+  # mounts nothing; a CA the image already trusts needs no ConfigMap.
+  caConfigMap: ""
+  # -- Key WITHIN caConfigMap holding the PEM CA certificate; it lands as
+  # `/etc/ferroehr-db-ca/ca.crt`.
+  caConfigMapKey: ca.crt
 
   # ── one credential per storage domain ──────────────────────────────────────
   # The four storage domains — clinical, party, linkage, audit — are separated
