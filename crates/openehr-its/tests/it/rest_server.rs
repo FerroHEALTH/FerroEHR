@@ -342,6 +342,44 @@ async fn query_and_header_parameters_reach_the_params_struct() -> TestResult {
     Ok(())
 }
 
+/// A query value is form-decoded (WHATWG URL Standard §5.1): `+` and `%20`
+/// are both a space, `%2B` is a literal plus, and the three forms of one AQL
+/// statement reach the handler as the same text.
+#[tokio::test]
+async fn a_plus_in_the_query_string_is_a_space() -> TestResult {
+    let aql = "SELECT e/ehr_id/value FROM EHR e WHERE e/time_created/value > \
+               '2024-01-01T00:00:00+01:00'";
+    for q in [
+        "SELECT+e%2Fehr_id%2Fvalue+FROM+EHR+e+WHERE+e%2Ftime_created%2Fvalue+%3E+\
+         %272024-01-01T00%3A00%3A00%2B01%3A00%27",
+        "SELECT%20e%2Fehr_id%2Fvalue%20FROM%20EHR%20e%20WHERE%20e%2Ftime_created%2Fvalue%20%3E%20\
+         %272024-01-01T00%3A00%3A00%2B01%3A00%27",
+        "SELECT+e/ehr_id/value%20FROM+EHR%20e+WHERE+e/time_created/value+%3E+\
+         '2024-01-01T00:00:00%2B01:00'",
+    ] {
+        let (app, recorder) = recorder_app();
+        let uri = format!("/query/aql?q={q}&code=a+b&plus=a%2Bb");
+        let (status, _headers, body) = send(
+            app,
+            request(Method::GET, &uri, &[("Accept", "application/json")], "")?,
+        )
+        .await?;
+        assert_eq!(status, StatusCode::OK, "{uri}");
+        let rows: Value = serde_json::from_slice(&body)?;
+        assert_eq!(rows["q"], json!(aql), "{uri}");
+        assert_eq!(
+            recorder.seen(),
+            [format!(
+                "adhoc q={aql} ehr_id=None offset=None fetch=None \
+                 members={{\"code\":\"a b\",\"plus\":\"a+b\"}} \
+                 accept=Some(\"application/json\")"
+            )],
+            "{uri}"
+        );
+    }
+    Ok(())
+}
+
 /// Path parameters are read by position into their wire-named fields,
 /// percent-decoded; a sibling route that names a different parameter at the
 /// same position stays its own operation.

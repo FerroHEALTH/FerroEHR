@@ -36,6 +36,7 @@ use ferrohealth_smart::guard::Requirement;
 use ferrohealth_smart::openehr;
 use ferrohealth_smart::openehr::smart_scopes::{Permission, ResourceFamily};
 use http::{HeaderMap, Method, Uri};
+use openehr_its::rest::decode::query_component_octets;
 
 use crate::extensions::access::authn::Principal;
 
@@ -314,10 +315,10 @@ pub(crate) fn target_ehr(
             .and_then(|query| {
                 query.split('&').find_map(|pair| {
                     let (key, value) = pair.split_once('=')?;
-                    (key == "ehr_id").then(|| urlencoding::decode(value).ok())?
+                    (key == "ehr_id")
+                        .then(|| String::from_utf8(query_component_octets(value)).ok())?
                 })
             })
-            .map(std::borrow::Cow::into_owned)
             .or_else(|| {
                 headers
                     .get("openehr-ehr-id")

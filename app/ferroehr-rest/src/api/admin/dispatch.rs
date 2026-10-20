@@ -25,6 +25,7 @@ use axum::Json;
 use axum::response::{IntoResponse, Response};
 use http::StatusCode;
 
+use openehr_its::rest::decode::query_component_octets;
 use openehr_its::rest::generated::admin::AdminEhrDeleteParams;
 use openehr_its::rest::runtime::ApiError;
 
@@ -151,8 +152,9 @@ fn path_segment(parts: &RequestParts, key: &str) -> Result<String, RestError> {
 /// commas, so both the repeated and the comma-separated forms yield the full
 /// list. Blank entries are dropped.
 ///
-/// A plain query walk rather than percent-decoding: `ehr_id`s are UUIDs, so no
-/// decoding is needed.
+/// The value is split on its literal commas (the RFC 6570 §3.2.8 list
+/// delimiter) before each item is form-decoded as every other query parameter
+/// is ([`query_component_octets`]).
 fn ehr_id_list(query: Option<&str>) -> Vec<String> {
     let Some(q) = query else {
         return Vec::new();
@@ -161,9 +163,12 @@ fn ehr_id_list(query: Option<&str>) -> Vec<String> {
         .filter_map(|pair| pair.split_once('='))
         .filter(|(k, _)| *k == "ehr_id")
         .flat_map(|(_, v)| v.split(','))
-        .map(str::trim)
+        .map(|item| {
+            String::from_utf8_lossy(&query_component_octets(item))
+                .trim()
+                .to_owned()
+        })
         .filter(|s| !s.is_empty())
-        .map(str::to_owned)
         .collect()
 }
 
@@ -190,5 +195,10 @@ mod tests {
         );
         // A present-but-empty value contributes nothing.
         assert!(ehr_id_list(Some("ehr_id=")).is_empty());
+        // Each item is form-decoded after the comma split (WHATWG URL §5.1).
+        assert_eq!(
+            ehr_id_list(Some("ehr_id=a%2Db,+c+")),
+            vec!["a-b".to_owned(), "c".to_owned()]
+        );
     }
 }

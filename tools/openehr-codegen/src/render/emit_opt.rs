@@ -70,6 +70,7 @@ pub(crate) static OPT_TARGET: ModelTarget = ModelTarget {
     impls_subject: "OPT 1.4",
     type_label: "AOM/OPT",
     field_label: "OPT",
+    schema: "the ITS-XML OPT 1.4 schemas (Template.xsd, OpenehrProfile.xsd, Archetype.xsd)",
 };
 
 /// The `aom2` emission target (the AOM2 persistent form, `P_Archetype.xsd`).
@@ -80,6 +81,7 @@ pub(crate) static AOM2_TARGET: ModelTarget = ModelTarget {
     impls_subject: "AOM2 persistent-form archetype",
     type_label: "AOM2 persistent-form",
     field_label: "AOM2 persistent-form",
+    schema: "the ITS-XML AOM2 persistent-form schemas (P_Archetype.xsd)",
 };
 
 /// The `aom2_model` emission target (the AOM2 model form, `Archetype.xsd`).
@@ -90,6 +92,7 @@ pub(crate) static AOM2_MODEL_TARGET: ModelTarget = ModelTarget {
     impls_subject: "AOM2 model-form archetype",
     type_label: "AOM2 model-form",
     field_label: "AOM2 model-form",
+    schema: "the ITS-XML AOM2 model-form schemas (Archetype.xsd)",
 };
 
 /// Resource-metadata types that must be generated from the **OPT XSD** shape
@@ -273,6 +276,9 @@ pub(crate) struct ModelTarget {
     /// The spec-family label substituted into a per-field doc comment: "OPT"
     /// yields `… attribute/element of the OPT <spec name> XSD type.`
     pub(crate) field_label: &'static str,
+    /// The schema closure the target is generated from, named in the refusal
+    /// of an `xsi:type` the closure does not define.
+    pub(crate) schema: &'static str,
 }
 
 /// The generate/resolve model for one XSD closure.
@@ -887,7 +893,14 @@ impl<'a> OptModel<'a> {
         for spec in &self.generate {
             if let Some(ty) = self.xml_type(spec) {
                 emit_to_xml(&mut b, &ty, self.target.prelude, self.xsd, unmatched);
-                emit_from_xml(&mut b, &ty, self.target.prelude, self.xsd, None);
+                emit_from_xml(
+                    &mut b,
+                    &ty,
+                    self.target.prelude,
+                    self.xsd,
+                    None,
+                    self.target.schema,
+                );
             }
         }
         b
