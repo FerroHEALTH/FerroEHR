@@ -934,6 +934,106 @@ fn bench_query(
     ops
 }
 
+/// The `blood_pressure.v2` EVENT the path benches descend through: the
+/// repeated `events[at0006]` under the `at0001` HISTORY, then its `at0003`
+/// `ITEM_TREE`.
+const BP_EVENT: &str = "o/data[at0001]/events[at0006]/data[at0003]";
+
+/// The `ELEMENT`s read under [`BP_EVENT`], sibling leaves of one `ITEM_TREE`:
+/// systolic, diastolic and mean arterial pressure.
+const BP_LEAVES: [&str; 3] = ["at0004", "at0005", "at1006"];
+
+/// An AQL statement selecting the first `leaves` sibling leaves of
+/// [`BP_EVENT`] from every blood-pressure OBSERVATION, with `ORDER BY`
+/// (which keeps the flat FROM shape) or without (which takes the
+/// LIMIT-streaming shape, QUERY master03 §LIMIT).
+fn sibling_leaves_aql(leaves: usize, ordered: bool) -> String {
+    let columns: Vec<String> = BP_LEAVES
+        .iter()
+        .take(leaves)
+        .map(|node| format!("{BP_EVENT}/items[{node}]/value/magnitude"))
+        .collect();
+    format!(
+        "SELECT {} FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]{} LIMIT 50",
+        columns.join(", "),
+        if ordered { " ORDER BY c/uid/value" } else { "" }
+    )
+}
+
+/// The FROM shape `aql` lowers to for a population query, read off the SQL
+/// the generator emits: `streaming` binds each structure step with
+/// `LEFT JOIN LATERAL`, `flat` with an `unnest(ARRAY(...))` probe (#3733).
+fn from_shape(aql: &str) -> &'static str {
+    let ast = openehr_query::parser::parse_str(aql).expect("the path AQL parses");
+    let params = Params::new();
+    let ir =
+        ferroehr::aql::plan(&ast, &params, SpecProfile::default()).expect("the path AQL plans");
+    let ctx = SqlCtx {
+        system_id: "bench.ferroehr.org".to_owned(),
+        ehr_ids: Vec::new(),
+        subject_scope: None,
+        ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
+        limit: Some(50),
+        offset: None,
+        archetype_lineage: Arc::new(ArchetypeLineage::default()),
+    };
+    let sql = ferroehr::aql::sql::build(&ir, &params, &ctx)
+        .expect("the path AQL lowers to SQL")
+        .sql;
+    if sql.contains("LEFT JOIN LATERAL") {
+        "streaming"
+    } else {
+        "flat"
+    }
+}
+
+/// The per-row path bindings (#3747): two and three sibling leaves under the
+/// repeated EVENT of every blood-pressure OBSERVATION in the corpus, in the
+/// flat FROM shape and in the streaming one.
+fn bench_paths(
+    c: &mut Criterion,
+    rt: &Runtime,
+    svc: &FerroEhrService,
+    pool: &PgPool,
+) -> Vec<Value> {
+    const GROUP: &str = "storage_paths";
+    let mut group = c.benchmark_group(GROUP);
+    configure(&mut group);
+    let mut ops = Vec::new();
+    for (ordered, expected) in [(true, "flat"), (false, "streaming")] {
+        for leaves in [2, 3] {
+            let aql = sibling_leaves_aql(leaves, ordered);
+            let shape = from_shape(&aql);
+            assert_eq!(
+                shape, expected,
+                "the `{expected}` path bench lowered to the {shape} shape: {aql}"
+            );
+            let name = format!("{expected}_{leaves}_sibling_leaves");
+            let mut op = measured(rt, pool, &mut group, GROUP, &name, |b| {
+                b.iter_custom(|iters| {
+                    rt.block_on(async {
+                        let start = Instant::now();
+                        for _ in 0..iters {
+                            svc.execute_ad_hoc_query(aql.clone(), AqlQueryRequest::default())
+                                .await
+                                .expect("the sibling-leaves query executes");
+                        }
+                        start.elapsed()
+                    })
+                });
+            });
+            if let Some(fields) = op.as_object_mut() {
+                fields.insert("statement".to_owned(), Value::from(aql));
+                fields.insert("from_shape".to_owned(), Value::from(shape));
+            }
+            ops.push(op);
+        }
+    }
+    group.finish();
+    ops
+}
+
 /// The lifecycle paths: archive and restore of one EHR, and one retention
 /// prune of the event outbox.
 fn bench_lifecycle(
@@ -1231,6 +1331,8 @@ fn storage(c: &mut Criterion) {
                 "operations": bench_read(c, &rt, &svc, &pool, &corpus) }),
         json!({ "name": "storage_query",
                 "operations": bench_query(c, &rt, &svc, &pool, &corpus) }),
+        json!({ "name": "storage_paths",
+                "operations": bench_paths(c, &rt, &svc, &pool) }),
         json!({ "name": "storage_lifecycle",
                 "operations": bench_lifecycle(c, &rt, &svc, &pool, &corpus) }),
     ];
