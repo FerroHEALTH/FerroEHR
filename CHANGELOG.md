@@ -17,6 +17,17 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **A demographic query joins a party to the content of its EHR** (#3831).
+  `FROM PERSON p CONTAINS EHR e CONTAINS COMPOSITION c` (with `ORGANISATION`
+  or `ROLE` as the root too, and party classes beside the `EHR` in an `AND`)
+  answers a row per party and clinical row of an EHR that party is the
+  subject of, through the party-to-EHR map. It runs as one statement per
+  database credential, joined, ordered and paged by the server; a column,
+  `WHERE` condition or `ORDER BY` key reading both sides, an aggregate,
+  `DISTINCT`, and a half above `query.max_result_rows` each answer `400`. The
+  party read and the map read each leave an access record in their own
+  domain.
+
 - **AQL rooted at `PERSON`, `ORGANISATION` or `ROLE`** (#3818), the subset of
   the experimental AQL demographic extension a client needs to find a party by
   what it holds. `POST /query/aql` answers rows over the latest version of
@@ -26,9 +37,9 @@ workflow refuses a tag that has no matching section here.
   other content classes inside a party, named parameters, and the `offset`
   and `fetch` paging. It runs under the authorisation of a Demographic API
   read, on the demographic database credential. `GROUP`, `AGENT`,
-  `PARTY_RELATIONSHIP`, a demographic class below the root, a query that also
-  names `EHR` or clinical content, and an `ehr_id` scope each answer `400`
-  naming the construct.
+  `PARTY_RELATIONSHIP`, a demographic class below the root, `EHR` or clinical
+  content anywhere but directly under the root, and an `ehr_id` scope each
+  answer `400` naming the construct.
 
 - **`openehr-sdt` validates a party against its template** (#3832).
   `rm_instance::validate_party` runs the RM-invariant and terminology passes

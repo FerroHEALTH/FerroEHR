@@ -2689,3 +2689,64 @@ fn a_configured_patient_namespace_matches_the_pair_exactly() {
         );
     }
 }
+
+/// A demographic root containing its `EHR` splits into a party half and a
+/// clinical half, each planning to its own domain; the order keys follow each
+/// half's columns and every other shape is left to the single-statement
+/// planner.
+#[test]
+fn a_demographic_root_containing_its_ehr_splits_into_two_halves() {
+    use ferroehr::aql::join::{Side, split};
+    let ast = parse_str(
+        "SELECT p/uid/value, c/name/value FROM PERSON p \
+         CONTAINS (CLUSTER x AND EHR e CONTAINS COMPOSITION c) \
+         WHERE x/name/value = 'id' AND c/name/value = 'v' \
+         ORDER BY c/name/value DESC, p/name/value",
+    )
+    .expect("parse");
+    let plan = split(&ast).expect("split").expect("a joined query");
+    let profile = ferroehr::config::profile::SpecProfile::default();
+    let party = ferroehr::aql::lower_query(&plan.party, profile).expect("the party half plans");
+    let clinical =
+        ferroehr::aql::lower_query(&plan.clinical, profile).expect("the clinical half plans");
+    assert_eq!(party.domain, QueryDomain::Demographic);
+    assert_eq!(clinical.domain, QueryDomain::Clinical);
+    assert_eq!(
+        plan.columns.iter().map(|c| c.side).collect::<Vec<_>>(),
+        [Side::Party, Side::Clinical]
+    );
+    assert_eq!(
+        plan.order
+            .iter()
+            .map(|k| (k.side, k.rank))
+            .collect::<Vec<_>>(),
+        [(Side::Clinical, 0), (Side::Party, 0)]
+    );
+    assert!(plan.party.where_.is_some() && plan.clinical.where_.is_some());
+    assert_eq!(plan.key_column(Side::Clinical, 0), plan.ehr_id + 1);
+
+    for q in [
+        "SELECT p/uid/value FROM PERSON p",
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
+        "SELECT p/uid/value FROM EHR e CONTAINS PERSON p",
+    ] {
+        assert!(
+            split(&parse_str(q).expect("parse"))
+                .expect("split")
+                .is_none(),
+            "{q}"
+        );
+    }
+    for q in [
+        "SELECT COUNT(*) FROM PERSON p CONTAINS EHR e",
+        "SELECT DISTINCT e/ehr_id/value FROM PERSON p CONTAINS EHR e",
+        "SELECT e/ehr_id/value FROM PERSON p CONTAINS EHR e WHERE p/name/value = 'a' OR e/ehr_id/value = 'b'",
+        "SELECT e/ehr_id/value FROM PERSON p CONTAINS (EHR e AND EHR f)",
+        "SELECT x/ehr_id/value FROM PERSON x CONTAINS EHR x",
+    ] {
+        assert!(
+            split(&parse_str(q).expect("parse")).is_err(),
+            "{q} is refused"
+        );
+    }
+}

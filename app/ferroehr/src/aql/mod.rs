@@ -20,6 +20,7 @@ pub mod constraints;
 pub mod error;
 pub mod exec;
 pub mod ir;
+pub mod join;
 pub mod lineage;
 mod lower;
 pub mod sql;

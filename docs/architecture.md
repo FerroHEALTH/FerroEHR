@@ -234,8 +234,14 @@ master03 §FROM gives semantics only to the clinical repository). The planner
 marks the IR `QueryDomain::Demographic`, and the same SQL runs on the party
 pool, whose `search_path` names the `party` schema rendered from the same DDL,
 without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`, ABAC subject
-scope). A demographic root mixed with `EHR` or clinical classes is refused;
-the cross-pool join is separate work.
+scope). An `EHR` operand directly under the root is the join to the EHR the
+party is the subject of: `aql::join` cuts the AST into a party half and a
+clinical half, the service runs the party half on the party pool, reads the
+map in force on the linkage pool, runs the clinical half scoped to the linked
+EHRs on the clinical pool, and joins, orders (each key by the rank its own
+half's `ORDER BY` assigned) and pages the rows in memory, each half bounded
+by the result ceiling. Any other mix of a demographic root with `EHR` or
+clinical classes is refused.
 
 ## REST surface + auth (`ferroehr-rest`)
 

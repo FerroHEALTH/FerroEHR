@@ -200,6 +200,38 @@ pub(super) async fn open_mappings(
     Ok(found.into_iter().map(EhrId).collect())
 }
 
+/// The `(party, EHR)` pairs of the mappings in force for `parties`, ordered by
+/// party then EHR.
+///
+/// The join of a demographic query to its EHRs needs to know which EHR each
+/// party is the subject of, where the cohort needs only the set
+/// ([`open_mappings`]).
+///
+/// # Errors
+/// [`StoreError::Acquire`] when no connection can be obtained, else
+/// [`StoreError::Database`] when the read fails.
+pub(crate) async fn open_mapping_pairs(
+    pool: &PgPool,
+    parties: &[VoId],
+) -> Result<Vec<(VoId, EhrId)>, StoreError> {
+    if parties.is_empty() {
+        return Ok(Vec::new());
+    }
+    let ids: Vec<Uuid> = parties.iter().map(|party| party.0).collect();
+    let found: Vec<(Uuid, Uuid)> = sqlx::query_as(
+        "SELECT party_id, ehr_id FROM subject_ehr \
+         WHERE party_id = ANY($1) AND upper_inf(sys_period) \
+         ORDER BY party_id, ehr_id",
+    )
+    .bind(&ids)
+    .fetch_all(&mut *acquire(pool).await?)
+    .await?;
+    Ok(found
+        .into_iter()
+        .map(|(party, ehr)| (VoId(party), EhrId(ehr)))
+        .collect())
+}
+
 /// Record the association of `subject` with `ehr`, replacing the metadata of
 /// the association already in force.
 ///

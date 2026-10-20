@@ -165,13 +165,41 @@ pub enum AqlFeatureError {
     )]
     DemographicRootPlacement(String),
 
-    /// A query rooted at a demographic class that also names `EHR`, which
-    /// would join the demographic and clinical repositories. Our own design:
-    /// the join through `EHR_STATUS.subject` is not served.
+    /// An aggregate column in a query that joins a demographic root to its
+    /// `EHR`: the aggregate would need the joined rows inside one statement,
+    /// and the two domains never meet in one. Our own design.
     #[error(
-        "a query rooted at demographic class `{party}` cannot also name `{other}`: \
-         joining the demographic and clinical repositories is not supported \
-         (experimental demographic extension; QUERY §FROM)"
+        "an aggregate function cannot be used in a query that joins a demographic root to its \
+         EHR (experimental demographic extension; QUERY §Aggregate functions)"
+    )]
+    JoinedAggregate,
+
+    /// `SELECT DISTINCT` in a query that joins a demographic root to its
+    /// `EHR`, for the reason [`Self::JoinedAggregate`] gives. Our own design.
+    #[error(
+        "SELECT DISTINCT cannot be used in a query that joins a demographic root to its EHR \
+         (experimental demographic extension; QUERY §DISTINCT)"
+    )]
+    JoinedDistinct,
+
+    /// An expression in a query that joins a demographic root to its `EHR`
+    /// that reads a variable of each domain. Each domain is queried on its
+    /// own, so nothing can compare across them. Our own design.
+    #[error(
+        "{0} reads both the demographic root and the EHR side of the query; in a query that \
+         joins a demographic root to its EHR each column, WHERE condition and ORDER BY key \
+         reads one side only (experimental demographic extension; QUERY §FROM)"
+    )]
+    JoinedCrossDomainExpression(String),
+
+    /// A query rooted at a demographic class that names `EHR` or a clinical
+    /// versioned object anywhere but the one place a demographic root reaches
+    /// clinical content: an `EHR` operand directly under the root
+    /// ([`crate::aql::join`]). Our own design.
+    #[error(
+        "a query rooted at demographic class `{party}` cannot name `{other}` there: it reaches \
+         clinical content only through `CONTAINS EHR` directly under the root (experimental \
+         demographic extension; QUERY §FROM)"
     )]
     DemographicWithClinical {
         /// The demographic root class.

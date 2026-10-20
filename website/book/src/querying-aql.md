@@ -470,11 +470,40 @@ construct, so you can tell a refusal from an empty result:
 
 - `GROUP`, `AGENT`, `PARTY_RELATIONSHIP`, and the abstract `PARTY` and `ACTOR`;
 - a demographic class anywhere but the root, or a second one;
-- a query that also names `EHR` or a clinical versioned object such as
-  `COMPOSITION`. Joining a party to the EHR it is the subject of is not served;
-  read the EHR with `GET /ehr?subject_id=…&subject_namespace=…` instead;
+- a query that names `EHR` or a clinical versioned object such as
+  `COMPOSITION` anywhere but directly under the root (see the join below);
 - an `ehr_id` scope (query parameter or `openehr-ehr-id` header), because a
   party is in no EHR.
+
+**Joining a party to its EHR.** An `EHR` operand directly under the root
+reaches the EHR the party is the subject of, through the party-to-EHR map the
+linkage service keeps:
+
+```
+SELECT p/uid/value, c/name/value
+FROM PERSON p CONTAINS EHR e CONTAINS COMPOSITION c[openEHR-EHR-COMPOSITION.encounter.v1]
+WHERE p/details[at0001]/items[at0002]/value/id = $identifier
+ORDER BY c/context/start_time/value DESC
+```
+
+Party classes may sit beside the `EHR` in an `AND`
+(`PERSON p CONTAINS (CLUSTER id[…] AND EHR e CONTAINS COMPOSITION c)`). A row
+is a party row together with a clinical row of an EHR that party is the subject
+of, so a party with no EHR, and an EHR whose subject has no party, answer no
+row. FerroEHR runs the query as three statements, one on each database
+credential: the party half, the map, and the clinical half scoped to the EHRs
+the map names. It then joins, orders and pages the rows. The rules that follow:
+
+- each column, each `WHERE` condition joined by `AND`, and each `ORDER BY` key
+  reads one side only, the party or the EHR; a condition comparing the two, or
+  an `OR` across them, is a **400**;
+- aggregates and `SELECT DISTINCT` are a **400**;
+- each half, and the joined rows, may hold at most `query.max_result_rows`
+  rows; above that the query is a **400** asking you to narrow it, never a
+  shortened answer;
+- the clinical half carries your per-EHR access decision and patient scope as
+  any query does, and the party read and the map read each leave an access
+  record in their own domain.
 
 **Who may run it.** The query runs under the authorisation of a Demographic API
 read: the role check that admits a party read admits the query, and the per-EHR
