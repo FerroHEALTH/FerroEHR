@@ -30,11 +30,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use argon2::Argon2;
-use argon2::password_hash::PasswordHasher;
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::auth::{AuthConfig, BasicConfig, BasicUser};
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
@@ -54,22 +51,6 @@ use crate::common::BASE;
 const SUBJECT: &str = "patient-art-11-5";
 /// The header the default configuration reads the declared purpose from.
 const PURPOSE: &str = "x-purpose-of-use";
-
-fn hash_pw(pw: &str) -> String {
-    Argon2::default()
-        .hash_password_with_salt(pw.as_bytes(), b"1234567890123456")
-        .expect("hash")
-        .to_string()
-}
-
-fn user(name: &str, roles: &[&str]) -> BasicUser {
-    BasicUser {
-        username: name.to_owned(),
-        password_hash: ferroehr::config::secret::Secret::new(hash_pw("pw")),
-        password_hash_file: None,
-        roles: roles.iter().map(|r| (*r).to_owned()).collect(),
-    }
-}
 
 fn basic(name: &str) -> String {
     use base64::Engine;
@@ -108,17 +89,14 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
             .with_audit_store(AuditStore::new(pool.clone())),
     );
     let mut config = common::api_config(true);
-    config.auth = AuthConfig {
-        enabled: true,
-        basic: Some(BasicConfig {
-            users: vec![
-                user("root", &["ADMIN"]),
-                user("clinician", &["USER"]),
-                user("portal", &["PORTAL"]),
-            ],
-        }),
-        ..AuthConfig::default()
-    };
+    common::with_basic_users(
+        &mut config,
+        &[
+            ("root", &["ADMIN"]),
+            ("clinician", &["USER"]),
+            ("portal", &["PORTAL"]),
+        ],
+    );
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
     authz.rbac.subject_audit_role = Some("PORTAL".to_owned());
@@ -130,7 +108,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
     )
     .map(Arc::new);
     let app =
-        ferroehr_rest::build_full(config, svc, authz, Observability::default()).expect("build app");
+        ferroehr_rest::build_full(config, svc, authz, Observability::default()).await.expect("build app");
 
     let (status, body) = common::send_body(
         &app,

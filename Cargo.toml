@@ -216,7 +216,18 @@ futures = "0.3"
 async-trait = "0.1"                 # still handy for dyn traits; native async-fn-in-trait since 1.75
 
 # ── Authentication & authorization (do NOT hand-roll) ────────────────────────
-jsonwebtoken = { version = "11.0.0", features = ["aws_lc_rs"] }   # JWT encode/decode/validate; aws-lc-rs crypto provider (matches the rustls stack)
+# The FerroHEALTH family's SMART App Launch and OAuth 2.0 resource-server crate
+# (the same Licensor's BUSL-1.1 code, deny.toml): token validation against the
+# issuer's key set, Basic users, the SMART on openEHR scopes, the discovery
+# document and the client credentials grant. It checks tokens and never issues
+# them.
+ferrohealth-smart = { version = "=0.2.0", default-features = false, features = ["fetch"] }
+# The openehr-sdt release ferrohealth-smart's `Requirement::OpenEhr` is typed
+# over. The workspace builds openehr-sdt from `crates/` on its own lockstep
+# line, so the route table names the crate's grammar types through this
+# second, registry-sourced copy of the same parser.
+smart-grammar = { package = "openehr-sdt", version = "=0.0.89", default-features = false }
+jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 oauth2 = { version = "5", default-features = false } # OAuth2 client (HTTP-client agnostic: we supply the pinned reqwest)
 openidconnect = { version = "4", default-features = false }   # OIDC discovery + code flow; HTTP-client agnostic: we supply the pinned reqwest (platform trust store)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
@@ -388,7 +399,6 @@ indexmap = { version = "2", features = ["serde"] }
 
 # ── HTTP client & external integration ───────────────────────────────────────
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "json", "gzip", "brotli"] }
-ferrohealth-smart = { version = "0.2.0", default-features = false, features = ["fetch"] } # the FerroHEALTH client-credentials client (RFC 6749 §4.4) for the outbound audit feed and policy service
 jsonschema = "0.58.3"               # validate against openEHR ITS-JSON schemas (verify latest)
 
 # ── Dev / test (dev-dependencies at the crate level) ─────────────────────────

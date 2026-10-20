@@ -95,18 +95,18 @@ pub(super) const CONVENTIONAL: &[(&str, &str)] = &[
 /// be listed here, or its env form is not merely mis-split but REFUSED —
 /// `invalid type: string …, expected a sequence`. Two shipped keys were missing
 /// and unreachable from the environment until a live probe hit the refusal.
-/// Keys inside arrays-of-tables (a Basic user's `roles`) are file-only by the
+/// Keys inside arrays-of-tables (a Basic user's `scopes`) are file-only by the
 /// env grammar and are deliberately absent.
 pub(super) const LIST_KEYS: &[&str] = &[
-    "auth.oidc.audiences",
-    "auth.oidc.algorithms",
+    "auth.audience",
+    "auth.algorithms",
+    "auth.scopeless_subjects",
+    "auth.capabilities",
+    "auth.scopes_supported",
     "authz.rbac.role_claims",
-    "smart.endpoints.token_endpoint_auth_methods_supported",
-    "smart.endpoints.grant_types_supported",
-    "smart.endpoints.response_types_supported",
-    "smart.endpoints.code_challenge_methods_supported",
-    "smart.endpoints.scopes_supported",
-    "smart.endpoints.capabilities",
+    "smart.backend_clients",
+    "smart.patient_issuers",
+    "smart.demographic_clients",
     "signing.retired_key_paths",
     "privacy.subject_namespaces",
     "audit.purpose_codes",
@@ -153,8 +153,8 @@ mod tests {
             "FERROEHR__DB__MAX_CONNECTIONS"
         );
         assert_eq!(
-            env_name_for("auth.oidc.issuer"),
-            "FERROEHR__AUTH__OIDC__ISSUER"
+            env_name_for("auth.jwks_file"),
+            "FERROEHR__AUTH__JWKS_FILE"
         );
     }
 }

@@ -49,7 +49,6 @@ use tower::ServiceExt;
 
 use crate::common;
 
-const HMAC_SECRET: &str = "audit-coverage-secret";
 const ISSUER: &str = "https://issuer.example";
 const AUDIENCE: &str = "ferroehr";
 
@@ -217,7 +216,7 @@ fn mounted(cfg: &AppConfig) -> BTreeMap<(String, String), Option<String>> {
     out
 }
 
-/// Authentication on with an HMAC bearer (cheap per request), the admin group
+/// Authentication on with a bearer token (cheap per request), the admin group
 /// mounted, and every optional surface the exempt table names switched on so
 /// the table is checked against what is served.
 fn config() -> AppConfig {
@@ -226,7 +225,7 @@ fn config() -> AppConfig {
             swagger_ui: AccessLevel::Public,
             ..Default::default()
         },
-        auth: common::hs256_auth_config(ISSUER, AUDIENCE, HMAC_SECRET),
+        auth: common::issuer_auth(ISSUER, AUDIENCE),
         admin: AdminConfig { enabled: true },
         smart: SmartConfig {
             enabled: true,
@@ -263,7 +262,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config(), Arc::new(svc), authz, Observability::default())
+    let app = ferroehr_rest::build_full(config(), Arc::new(svc), authz, Observability::default()).await
         .expect("build app");
     (db, pool, app)
 }
@@ -279,7 +278,7 @@ fn admin_bearer(subject: &str) -> String {
         "exp": exp,
         "roles": ["ADMIN"],
     });
-    common::hs256_bearer(HMAC_SECRET, &claims)
+    common::bearer(&claims)
 }
 
 /// Substitute every `{param}` capture with [`PROBE_PARAM`].

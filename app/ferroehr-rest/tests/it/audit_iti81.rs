@@ -18,11 +18,8 @@
 
 use std::sync::Arc;
 
-use argon2::Argon2;
-use argon2::password_hash::PasswordHasher;
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::auth::{AuthConfig, BasicConfig, BasicUser};
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::event::{
@@ -42,37 +39,17 @@ use crate::common;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 
-fn hash_pw(pw: &str) -> String {
-    Argon2::default()
-        .hash_password_with_salt(pw.as_bytes(), b"1234567890123456")
-        .expect("hash")
-        .to_string()
-}
-
-fn user(name: &str, roles: &[&str]) -> BasicUser {
-    BasicUser {
-        username: name.to_owned(),
-        password_hash: ferroehr::config::secret::Secret::new(hash_pw("pw")),
-        password_hash_file: None,
-        roles: roles.iter().map(|r| (*r).to_owned()).collect(),
-    }
-}
-
 fn rest_config() -> AppConfig {
-    AppConfig {
-        auth: AuthConfig {
-            enabled: true,
-            basic: Some(BasicConfig {
-                users: vec![
-                    user("root", &["ADMIN"]),
-                    user("user", &["USER"]),
-                    user("portal", &["PORTAL"]),
-                ],
-            }),
-            ..AuthConfig::default()
-        },
-        ..Default::default()
-    }
+    let mut config = AppConfig::default();
+    common::with_basic_users(
+        &mut config,
+        &[
+            ("root", &["ADMIN"]),
+            ("user", &["USER"]),
+            ("portal", &["PORTAL"]),
+        ],
+    );
+    config
 }
 
 fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
@@ -135,7 +112,7 @@ async fn app(with_store: bool, rbac: bool) -> (testkit::TestDb, Router, AuditSto
         Arc::new(svc),
         authz(rbac),
         ferroehr_rest::extensions::management::Observability::default(),
-    )
+    ).await
     .expect("build app");
     (pg, app, store)
 }

@@ -40,7 +40,7 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferroehr::config::auth::AuthConfig;
+use ferrohealth_smart::config::AuthSection;
 use ferroehr::config::server::ServerConfig;
 use ferroehr_rest::config::AppConfig;
 
@@ -93,11 +93,10 @@ fn config() -> AppConfig {
             cors_permissive: false,
             ..Default::default()
         },
-        auth: AuthConfig {
+        auth: AuthSection {
             enabled: false,
             basic: None,
-            oidc: None,
-            ..AuthConfig::default()
+            ..AuthSection::default()
         },
         ..Default::default()
     }
@@ -158,7 +157,7 @@ fn without_uids(map: BTreeMap<String, Value>) -> BTreeMap<String, Value> {
 /// router and a created EHR id.
 async fn app_with_ehr() -> (testkit::TestDb, Router, String) {
     let (pg, service) = common::test_service().await;
-    let app = common::router_with(config(), service);
+    let app = common::router_with(config(), service).await;
     let (status, _h, body) = send(
         &app,
         Request::builder()

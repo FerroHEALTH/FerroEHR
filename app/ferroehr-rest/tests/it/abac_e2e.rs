@@ -35,7 +35,7 @@ use async_trait::async_trait;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::aql::subject::EhrSubject;
-use ferroehr::config::auth::AuthConfig;
+use ferrohealth_smart::config::AuthSection;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::server::ServerConfig;
 use ferroehr::service::FerroEhrService;
@@ -58,10 +58,9 @@ use tower::ServiceExt;
 use crate::common;
 use crate::common::BASE;
 
-const HMAC_SECRET: &str = "abac-test-secret";
 const ISSUER: &str = "https://issuer.example";
-/// The audience every fixture token is minted for: `audiences` is mandatory
-/// whenever `[auth.oidc]` is present, so a token for another resource server
+/// The audience every fixture token is minted for: `audience` is mandatory
+/// whenever `[auth]` names an issuer, so a token for another resource server
 /// can never authenticate here.
 const AUDIENCE: &str = "ferroehr";
 // Two EHRs with distinct subjects (the resolver maps them below).
@@ -127,7 +126,7 @@ fn rest_config() -> AppConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
-        auth: common::hs256_auth_config(ISSUER, AUDIENCE, HMAC_SECRET),
+        auth: common::issuer_auth(ISSUER, AUDIENCE),
         // Lifted the way the binary lifts it, from the one setting, so this
         // follows a change to the default claim name instead of pinning a
         // second copy of it.
@@ -142,9 +141,9 @@ fn rest_config() -> AppConfig {
 /// An auth-off config used only to seed data over the shared service.
 fn seed_config() -> AppConfig {
     let mut c = rest_config();
-    c.auth = AuthConfig {
+    c.auth = AuthSection {
         enabled: false,
-        ..AuthConfig::default()
+        ..AuthSection::default()
     };
     c
 }
@@ -230,13 +229,13 @@ async fn service(audit: Option<AuditSender>) -> (testkit::TestDb, Arc<FerroEhrSe
 }
 
 /// The ABAC app over `svc`.
-fn abac_app(svc: Arc<FerroEhrService>, abac_enabled: bool) -> Router {
+async fn abac_app(svc: Arc<FerroEhrService>, abac_enabled: bool) -> Router {
     build_full(
         rest_config(),
         svc,
         authz(abac_enabled),
         Observability::default(),
-    )
+    ).await
     .expect("build app")
 }
 
@@ -340,7 +339,7 @@ fn claims(patient: Option<&str>) -> Value {
 }
 
 fn bearer(patient: Option<&str>) -> String {
-    common::hs256_bearer(HMAC_SECRET, &claims(patient))
+    common::bearer(&claims(patient))
 }
 
 /// The same token plus the `organization_id` claim — the claim
@@ -349,7 +348,7 @@ fn bearer(patient: Option<&str>) -> String {
 fn bearer_with_organisation(patient: Option<&str>, organisation: &str) -> String {
     let mut claims = claims(patient);
     claims["organization_id"] = json!(organisation);
-    common::hs256_bearer(HMAC_SECRET, &claims)
+    common::bearer(&claims)
 }
 
 fn request(method: &str, path: &str, token: &str) -> Request<Body> {
@@ -372,7 +371,7 @@ async fn status(app: &Router, req: Request<Body>) -> StatusCode {
 /// the gate under test).
 async fn service_and_seed_app() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let (pg, svc) = service(None).await;
-    let seed = build_with(seed_config(), Arc::clone(&svc)).expect("seed app");
+    let seed = build_with(seed_config(), Arc::clone(&svc)).await.expect("seed app");
     (pg, svc, seed)
 }
 
@@ -383,13 +382,13 @@ async fn probe(app: &Router, method: &str, path: &str, patient: Option<&str>) ->
 
 /// The app whose PDP permits only requests carrying the IPS template attribute,
 /// resolved from the REAL service.
-fn template_scoped_app(svc: Arc<FerroEhrService>) -> Router {
+async fn template_scoped_app(svc: Arc<FerroEhrService>) -> Router {
     build_full(
         rest_config(),
         Arc::clone(&svc),
         authz_with(Arc::new(RequireIpsTemplate), service_resolvers(svc)),
         Observability::default(),
-    )
+    ).await
     .expect("build app")
 }
 
@@ -399,7 +398,7 @@ fn template_scoped_app(svc: Arc<FerroEhrService>) -> Router {
 async fn create_for_other_patient_is_pre_check_forbidden() {
     // The pre-check denies before dispatch (no data needed).
     let (_pg, svc) = service(None).await;
-    let app = abac_app(svc, true);
+    let app = abac_app(svc, true).await;
     let s = probe(
         &app,
         "POST",
@@ -419,7 +418,7 @@ async fn create_for_own_patient_clears_the_gate() {
     let (_pg, svc, seed) = service_and_seed_app().await;
     seed_ehr(&seed, EHR_OWN).await;
 
-    let app = abac_app(svc, true);
+    let app = abac_app(svc, true).await;
     let s = probe(
         &app,
         "POST",
@@ -444,7 +443,7 @@ async fn read_of_other_patient_is_post_check_forbidden() {
     seed_ehr(&seed, EHR_OTHER).await;
     let uid = seed_composition(&seed, EHR_OTHER).await;
 
-    let app = abac_app(svc, true);
+    let app = abac_app(svc, true).await;
     let s = probe(
         &app,
         "GET",
@@ -465,7 +464,7 @@ async fn read_of_own_patient_is_served() {
     seed_ehr(&seed, EHR_OWN).await;
     let uid = seed_composition(&seed, EHR_OWN).await;
 
-    let app = abac_app(svc, true);
+    let app = abac_app(svc, true).await;
     let s = probe(
         &app,
         "GET",
@@ -479,7 +478,7 @@ async fn read_of_own_patient_is_served() {
 #[tokio::test]
 async fn missing_patient_claim_is_forbidden() {
     let (_pg, svc) = service(None).await;
-    let app = abac_app(svc, true);
+    let app = abac_app(svc, true).await;
     let s = probe(&app, "POST", &format!("/ehr/{EHR_OWN}/composition"), None).await;
     assert_eq!(
         s,
@@ -494,7 +493,7 @@ async fn abac_disabled_restores_behaviour() {
     let (_pg, svc, seed) = service_and_seed_app().await;
     seed_ehr(&seed, EHR_OTHER).await;
 
-    let app = abac_app(svc, false);
+    let app = abac_app(svc, false).await;
     let s = probe(
         &app,
         "POST",
@@ -514,7 +513,7 @@ async fn abac_deny_is_audited() {
     // (`EventOutcomeIndicator="4"`) attributed to `svc`.
     let (socket, sender) = audit_capture().await;
     let (_pg, svc) = service(Some(sender)).await;
-    let app = abac_app(svc, true);
+    let app = abac_app(svc, true).await;
 
     let s = probe(
         &app,
@@ -567,9 +566,9 @@ async fn the_accessing_organisation_reaches_the_stored_record() {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let seed = build_with(seed_config(), Arc::clone(&svc)).expect("seed app");
+    let seed = build_with(seed_config(), Arc::clone(&svc)).await.expect("seed app");
     seed_ehr(&seed, EHR_OWN).await;
-    let app = abac_app(Arc::clone(&svc), true);
+    let app = abac_app(Arc::clone(&svc), true).await;
 
     for token in [
         bearer_with_organisation(Some(PATIENT_OWN), "zh-noordwest"),
@@ -640,9 +639,9 @@ async fn the_accessing_organisation_is_recorded_with_the_abac_gate_off() {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let seed = build_with(seed_config(), Arc::clone(&svc)).expect("seed app");
+    let seed = build_with(seed_config(), Arc::clone(&svc)).await.expect("seed app");
     seed_ehr(&seed, EHR_OWN).await;
-    let app = abac_app(Arc::clone(&svc), false);
+    let app = abac_app(Arc::clone(&svc), false).await;
 
     let req = Request::builder()
         .method("GET")
@@ -731,7 +730,7 @@ async fn template_scoped_rule_binds_on_a_direct_route_composition() {
     seed_ehr(&seed, EHR_OWN).await;
     let uid = seed_templated_composition(&seed, EHR_OWN).await;
 
-    let app = template_scoped_app(svc);
+    let app = template_scoped_app(svc).await;
 
     let s = probe(
         &app,
@@ -757,7 +756,7 @@ async fn template_scoped_rule_does_not_bind_a_templateless_composition() {
     seed_ehr(&seed, EHR_OWN).await;
     let uid = seed_composition(&seed, EHR_OWN).await;
 
-    let app = template_scoped_app(svc);
+    let app = template_scoped_app(svc).await;
 
     let s = probe(
         &app,
@@ -850,8 +849,8 @@ async fn query_is_filtered_to_the_callers_patient() {
     seed_composition(&seed, EHR_OWN).await;
     seed_composition(&seed, EHR_OTHER).await;
 
-    let gated = abac_app(Arc::clone(&svc), true);
-    let open = abac_app(svc, false);
+    let gated = abac_app(Arc::clone(&svc), true).await;
+    let open = abac_app(svc, false).await;
     for aql in [
         "SELECT e/ehr_id/value FROM EHR e",
         "SELECT e/ehr_id/value, e/ehr_status/subject FROM EHR e",
@@ -926,7 +925,7 @@ async fn the_query_post_check_applies_to_an_ehr_only_query() {
         svc,
         authz_with(Arc::new(DenyOwnPatientQueries), resolvers()),
         Observability::default(),
-    )
+    ).await
     .expect("build app");
     for aql in [
         "SELECT e/ehr_id/value FROM EHR e",
@@ -962,7 +961,7 @@ async fn db_resolved_apps(patient_namespace: Option<&str>) -> (testkit::TestDb, 
     let svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
     ));
-    let seed = build_with(seed_config(), Arc::clone(&svc)).expect("seed app");
+    let seed = build_with(seed_config(), Arc::clone(&svc)).await.expect("seed app");
     let resolvers = AuthzResolvers {
         subject: Arc::new(move |ehr_id: String| {
             let pool = pool.clone();
@@ -987,7 +986,7 @@ async fn db_resolved_apps(patient_namespace: Option<&str>) -> (testkit::TestDb, 
         resolvers,
     )
     .map(Arc::new);
-    let app = build_full(rest_config(), svc, handle, Observability::default()).expect("build app");
+    let app = build_full(rest_config(), svc, handle, Observability::default()).await.expect("build app");
     (pg, seed, app)
 }
 
@@ -1073,7 +1072,7 @@ async fn a_patient_keyed_rule_applies_to_the_touched_subjects_without_a_claim() 
         resolvers(),
     )
     .map(Arc::new);
-    let app = build_full(rest_config(), svc, handle, Observability::default()).expect("build app");
+    let app = build_full(rest_config(), svc, handle, Observability::default()).await.expect("build app");
 
     assert_eq!(
         unscoped_query_status(&app, "SELECT e/ehr_id/value FROM EHR e").await,

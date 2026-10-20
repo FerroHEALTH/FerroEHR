@@ -27,11 +27,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use argon2::Argon2;
-use argon2::password_hash::PasswordHasher;
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::auth::{AuthConfig, BasicConfig, BasicUser, OidcConfig};
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::server::AdminConfig;
 use ferroehr::config::server::ServerConfig;
@@ -43,71 +40,42 @@ use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, Reso
 
 use crate::common;
 use http::{Request, StatusCode};
-use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 use serde_json::{Value, json};
 use tokio::net::UdpSocket;
 use tower::ServiceExt;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
-const HMAC_SECRET: &str = "rbac-test-secret";
 const ISSUER: &str = "https://issuer.example";
-/// The audience every fixture token is minted for: `audiences` is mandatory
-/// whenever `[auth.oidc]` is present, so a token for another resource server
+/// The audience every fixture token is minted for: `audience` is mandatory
+/// whenever `[auth]` names an issuer, so a token for another resource server
 /// can never authenticate here.
 const AUDIENCE: &str = "ferroehr";
 const EHR_ID: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
 // ── config + app assembly ─────────────────────────────────────────────────────
 
-fn hash_pw(pw: &str) -> String {
-    Argon2::default()
-        .hash_password_with_salt(pw.as_bytes(), b"1234567890123456")
-        .expect("hash")
-        .to_string()
-}
-
-fn user(name: &str, roles: &[&str]) -> BasicUser {
-    BasicUser {
-        username: name.to_owned(),
-        password_hash: ferroehr::config::secret::Secret::new(hash_pw("pw")),
-        password_hash_file: None,
-        roles: roles.iter().map(|r| (*r).to_owned()).collect(),
-    }
-}
-
 fn rest_config() -> AppConfig {
-    AppConfig {
+    let mut config = AppConfig {
         server: ServerConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
-        },
-        auth: AuthConfig {
-            enabled: true,
-            basic: Some(BasicConfig {
-                users: vec![
-                    user("user", &["USER"]),
-                    user("root", &["ADMIN"]),
-                    user("noroles", &[]),
-                ],
-            }),
-            oidc: Some(OidcConfig {
-                issuer: ISSUER.to_owned(),
-                audiences: vec![AUDIENCE.to_owned()],
-                algorithms: vec!["HS256".to_owned()],
-                hmac_secret: Some(ferroehr::config::secret::Secret::new(
-                    HMAC_SECRET.to_owned(),
-                )),
-                jwks_json: None,
-                ..OidcConfig::default()
-            }),
-            ..AuthConfig::default()
         },
         // The admin group must be reachable so the RBAC gate is what decides
         // access (the admin tests assert 403 for USER vs a cleared gate for
         // ADMIN at the dispatcher, not the config gate's 404).
         admin: AdminConfig { enabled: true },
         ..Default::default()
-    }
+    };
+    common::with_basic_users(
+        &mut config,
+        &[("user", &["USER"]), ("root", &["ADMIN"]), ("noroles", &[])],
+    );
+    let basic = config.auth.basic.take();
+    config.auth = ferrohealth_smart::config::AuthSection {
+        basic,
+        ..common::issuer_auth(ISSUER, AUDIENCE)
+    };
+    config
 }
 
 fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
@@ -138,7 +106,7 @@ async fn app(rbac_enabled: bool, audit: Option<AuditSender>) -> (testkit::TestDb
         svc,
         authz(rbac_enabled),
         ferroehr_rest::extensions::management::Observability::default(),
-    )
+    ).await
     .expect("build app");
     (pg, app)
 }
@@ -194,39 +162,25 @@ fn basic(name: &str) -> String {
     format!("Basic {}", base64_encode(format!("{name}:pw").as_bytes()))
 }
 
-/// A `Bearer` HMAC token carrying the given `scope` claim.
 /// A bearer token carrying `scope` and no role claim.
 fn bearer(scope: &str) -> String {
     let exp = u64::try_from(jiff::Timestamp::now().as_second()).unwrap() + 3600;
-    let claims: Value =
-        json!({ "sub": "svc", "iss": ISSUER, "aud": AUDIENCE, "exp": exp, "scope": scope });
-    let token = encode(
-        &Header::new(Algorithm::HS256),
-        &claims,
-        &EncodingKey::from_secret(HMAC_SECRET.as_bytes()),
+    common::bearer(
+        &json!({ "sub": "svc", "iss": ISSUER, "aud": AUDIENCE, "exp": exp, "scope": scope }),
     )
-    .expect("encode");
-    format!("Bearer {token}")
 }
 
 /// A bearer token carrying `roles` — the RFC 9068 §2.2.3.1 carrier — and no
 /// scope, which is how a role actually reaches the RBAC gate.
 fn bearer_with_roles(roles: &[&str]) -> String {
     let exp = u64::try_from(jiff::Timestamp::now().as_second()).unwrap() + 3600;
-    let claims: Value = json!({
+    common::bearer(&json!({
         "sub": "svc",
         "iss": ISSUER,
         "aud": AUDIENCE,
         "exp": exp,
         "roles": roles,
-    });
-    let token = encode(
-        &Header::new(Algorithm::HS256),
-        &claims,
-        &EncodingKey::from_secret(HMAC_SECRET.as_bytes()),
-    )
-    .expect("encode");
-    format!("Bearer {token}")
+    }))
 }
 
 fn req(method: &str, path: &str, authorization: &str) -> Request<Body> {
@@ -482,7 +436,7 @@ async fn app_with_config_snapshot(snapshot: Value) -> (testkit::TestDb, Router) 
         env_snapshot: Arc::new(snapshot),
         ..Default::default()
     };
-    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs).expect("build app");
+    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs).await.expect("build app");
     (pg, app)
 }
 
@@ -587,7 +541,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         env_snapshot: Arc::new(snapshot),
         ..Default::default()
     };
-    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs).expect("build app");
+    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs).await.expect("build app");
     for uri in [format!("{BASE}/admin/config"), "/management/env".to_owned()] {
         let request = Request::builder()
             .method("GET")

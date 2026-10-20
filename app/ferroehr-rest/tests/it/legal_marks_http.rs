@@ -36,7 +36,7 @@ use crate::common::BASE;
 
 async fn app() -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
-    (pg, common::router_with(common::api_config(true), service))
+    (pg, common::router_with(common::api_config(true), service).await)
 }
 
 async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
@@ -331,7 +331,7 @@ async fn the_retention_register_round_trips_and_lists_what_is_due() {
 #[tokio::test]
 async fn the_mark_routes_are_behind_the_admin_switch() {
     let (pg, service) = common::test_service().await;
-    let app = common::router_with(common::api_config(false), service);
+    let app = common::router_with(common::api_config(false), service).await;
     drop(pg);
 
     for req in [

@@ -40,11 +40,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use argon2::Argon2;
-use argon2::password_hash::PasswordHasher;
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::auth::{AuthConfig, BasicConfig, BasicUser};
+use ferrohealth_smart::config::AuthSection;
 use ferroehr::config::server::ServerConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig, Transport};
@@ -102,38 +100,16 @@ fn composition() -> Value {
 
 // ── auth config ────────────────────────────────────────────────────────────────
 
-fn hash_pw(pw: &str) -> String {
-    Argon2::default()
-        .hash_password_with_salt(pw.as_bytes(), b"1234567890123456")
-        .expect("hash")
-        .to_string()
-}
-
-fn auth_on() -> AuthConfig {
-    AuthConfig {
-        enabled: true,
-        basic: Some(BasicConfig {
-            users: vec![BasicUser {
-                username: "alice".to_owned(),
-                password_hash: ferroehr::config::secret::Secret::new(hash_pw("pw")),
-                password_hash_file: None,
-                roles: vec!["USER".to_owned()],
-            }],
-        }),
-        oidc: None,
-        ..AuthConfig::default()
-    }
-}
-
 fn rest_config() -> AppConfig {
-    AppConfig {
+    let mut config = AppConfig {
         server: ServerConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
-        auth: auth_on(),
         ..Default::default()
-    }
+    };
+    common::with_basic_users(&mut config, &[("alice", &["USER"])]);
+    config
 }
 
 fn auth_off_config() -> AppConfig {
@@ -142,9 +118,9 @@ fn auth_off_config() -> AppConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
-        auth: AuthConfig {
+        auth: AuthSection {
             enabled: false,
-            ..AuthConfig::default()
+            ..AuthSection::default()
         },
         ..Default::default()
     }
@@ -259,7 +235,7 @@ async fn audit_app(sender: AuditSender) -> (testkit::TestDb, Router) {
     );
     (
         pg,
-        ferroehr_rest::build_with(rest_config(), svc).expect("build app"),
+        ferroehr_rest::build_with(rest_config(), svc).await.expect("build app"),
     )
 }
 
@@ -273,7 +249,7 @@ async fn audit_app_with_composition(sender: AuditSender) -> (testkit::TestDb, Ro
     let seed_svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
     ));
-    let seed_app = ferroehr_rest::build_with(auth_off_config(), seed_svc).expect("seed app");
+    let seed_app = ferroehr_rest::build_with(auth_off_config(), seed_svc).await.expect("seed app");
     let put = Request::builder()
         .method("PUT")
         .uri(format!("{BASE}/ehr/{EHR}"))
@@ -305,7 +281,7 @@ async fn audit_app_with_composition(sender: AuditSender) -> (testkit::TestDb, Ro
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let app = ferroehr_rest::build_with(rest_config(), svc).expect("build app");
+    let app = ferroehr_rest::build_with(rest_config(), svc).await.expect("build app");
     (pg, app, uid)
 }
 
@@ -785,7 +761,7 @@ async fn composition_get_records_the_origins_of_the_served_data() {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let app = ferroehr_rest::build_with(auth_off_config(), svc).expect("build app");
+    let app = ferroehr_rest::build_with(auth_off_config(), svc).await.expect("build app");
 
     let put = Request::builder()
         .method("PUT")

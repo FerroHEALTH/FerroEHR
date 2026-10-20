@@ -436,27 +436,6 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
         config.signing.key_passphrase_file.take(),
         errors,
     );
-    if let Some(oidc) = config.auth.oidc.as_mut() {
-        resolve_secret(
-            "auth.oidc.hmac_secret",
-            &mut oidc.hmac_secret,
-            oidc.hmac_secret_file.take(),
-            errors,
-        );
-        // jwks_json is public verification material; validation refuses secret keys in it.
-        if let Some(path) = oidc.jwks_json_file.take() {
-            if oidc.jwks_json.is_some() {
-                errors.push(ConfigError::new(
-                    "set only one of auth.oidc.jwks_json / auth.oidc.jwks_json_file".to_owned(),
-                ));
-            } else {
-                match read_trim(&path) {
-                    Ok(s) => oidc.jwks_json = Some(s),
-                    Err(e) => errors.push(e),
-                }
-            }
-        }
-    }
     resolve_secret(
         "demographic.identifier_protection.key",
         &mut config.demographic.identifier_protection.key,
@@ -481,9 +460,20 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
     resolve_outbound_client_secrets(config, errors);
     if let Some(basic) = config.auth.basic.as_mut() {
         for user in &mut basic.users {
-            let file = user.password_hash_file.take();
-            let key = format!("auth.basic.users[{:?}].password_hash", user.username);
-            resolve_set_secret(&key, &mut user.password_hash, file, errors);
+            let Some(path) = user.password_hash_file.take() else {
+                continue;
+            };
+            if user.password_hash.is_some() {
+                errors.push(ConfigError::new(format!(
+                    "set only one of auth.basic.users[{:?}].password_hash / password_hash_file",
+                    user.user
+                )));
+                continue;
+            }
+            match read_trim(&path) {
+                Ok(hash) => user.password_hash = Some(secrecy::SecretString::from(hash)),
+                Err(e) => errors.push(e),
+            }
         }
     }
 
@@ -550,30 +540,6 @@ fn resolve_secret(
     }
     match read_trim(&path) {
         Ok(secret) => *target = Some(Secret::new(secret)),
-        Err(e) => errors.push(e),
-    }
-}
-
-/// Read `path`'s contents into a [`Secret`] field that is always present, using
-/// emptiness as "unset".
-///
-/// The `Option<Secret>` fields above can say "the operator set this" with
-/// `is_some`; a mandatory field cannot, so an empty value is the unset state.
-fn resolve_set_secret(
-    key: &str,
-    target: &mut Secret,
-    file: Option<PathBuf>,
-    errors: &mut Vec<ConfigError>,
-) {
-    let Some(path) = file else { return };
-    if !target.expose().is_empty() {
-        errors.push(ConfigError::new(format!(
-            "set only one of {key} / {key}_file"
-        )));
-        return;
-    }
-    match read_trim(&path) {
-        Ok(secret) => *target = Secret::new(secret),
         Err(e) => errors.push(e),
     }
 }

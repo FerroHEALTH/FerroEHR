@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The patient-data authentication gate over the real axum app: the
-//! `[auth.oidc.assurance]` step-up refusal (RFC 9470 §3), the
-//! `[auth.oidc.professional]` natural-person refusal, and the access record
+//! `[authz.assurance]` step-up refusal (RFC 9470 §3), the
+//! `[authz.professional]` natural-person refusal, and the access record
 //! carrying the acting mode, the assurance level and the professional (EHDS
 //! Annex II 3.1 and 3.2(b), `docs/law/eu/ehds/text.html Annex II 3`).
 //!
@@ -35,7 +35,6 @@ use sqlx::{PgPool, Row};
 
 use crate::common::{self, BASE};
 
-const SECRET: &str = "patient-data-gate-test-secret-0123456789";
 const ISSUER: &str = "https://issuer.example";
 const AUDIENCE: &str = "ferroehr";
 const EHR: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
@@ -63,11 +62,9 @@ async fn app(
 ) -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let mut config = common::api_config(false);
-    config.auth = common::hs256_auth_config(ISSUER, AUDIENCE, SECRET);
-    if let Some(oidc) = config.auth.oidc.as_mut() {
-        oidc.assurance = assurance();
-        oidc.professional = professional;
-    }
+    config.auth = common::issuer_auth(ISSUER, AUDIENCE);
+    config.assurance = assurance();
+    config.professional = professional;
     let mut service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     if audited {
         let audit = AuditConfig {
@@ -89,7 +86,7 @@ async fn app(
             .expect("audit start");
         service = service.with_audit(sender);
     }
-    let router = common::router_with(config, Arc::new(service));
+    let router = common::router_with(config, Arc::new(service)).await;
     (db, pool, router)
 }
 
@@ -105,7 +102,7 @@ fn bearer(extra: &Value) -> String {
     for (key, value) in extra.as_object().expect("object") {
         claims[key] = value.clone();
     }
-    common::hs256_bearer(SECRET, &claims)
+    common::bearer(&claims)
 }
 
 fn ehr_path() -> String {

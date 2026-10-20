@@ -33,11 +33,8 @@
 
 use std::sync::Arc;
 
-use argon2::Argon2;
-use argon2::password_hash::PasswordHasher;
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::auth::{AuthConfig, BasicConfig, BasicUser};
 use ferroehr::config::server::ServerConfig;
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr_rest::config::AppConfig;
@@ -53,45 +50,27 @@ const EHR_ID: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
 // ── config + app assembly ─────────────────────────────────────────────────────
 
-fn hash_pw(pw: &str) -> String {
-    Argon2::default()
-        .hash_password_with_salt(pw.as_bytes(), b"1234567890123456")
-        .expect("hash")
-        .to_string()
-}
-
-fn user(name: &str, roles: &[&str]) -> BasicUser {
-    BasicUser {
-        username: name.to_owned(),
-        password_hash: ferroehr::config::secret::Secret::new(hash_pw("pw")),
-        password_hash_file: None,
-        roles: roles.iter().map(|r| (*r).to_owned()).collect(),
-    }
-}
-
 /// A config with Basic auth on (or off) and no OIDC. The four users cover the
 /// `user:`/`role:` matching cases.
 fn rest_config(auth_enabled: bool) -> AppConfig {
-    AppConfig {
+    let mut config = AppConfig {
         server: ServerConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
-        auth: AuthConfig {
-            enabled: auth_enabled,
-            basic: Some(BasicConfig {
-                users: vec![
-                    user("alice", &[]),
-                    user("bob", &[]),
-                    user("carol", &[]),
-                    user("nadia", &["NURSE"]),
-                ],
-            }),
-            oidc: None,
-            ..AuthConfig::default()
-        },
         ..Default::default()
-    }
+    };
+    common::with_basic_users(
+        &mut config,
+        &[
+            ("alice", &[]),
+            ("bob", &[]),
+            ("carol", &[]),
+            ("nadia", &["NURSE"]),
+        ],
+    );
+    config.auth.enabled = auth_enabled;
+    config
 }
 
 fn committer(name: &str) -> Value {
@@ -164,7 +143,7 @@ async fn app(auth_enabled: bool, scheme: Option<Value>) -> (testkit::TestDb, Rou
         Arc::new(svc),
         None,
         Observability::default(),
-    )
+    ).await
     .expect("build app");
     (pg, app)
 }
@@ -449,7 +428,7 @@ async fn query_app() -> (testkit::TestDb, Router) {
         Arc::new(svc),
         None,
         Observability::default(),
-    )
+    ).await
     .expect("build app");
     (pg, app)
 }
@@ -584,9 +563,16 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
         .expect("create ehr");
 
     let mut config = rest_config(true);
-    if let Some(basic) = config.auth.basic.as_mut() {
-        basic.users.push(user("root", &["SUPERADMIN"]));
-    }
+    common::with_basic_users(
+        &mut config,
+        &[
+            ("alice", &[]),
+            ("bob", &[]),
+            ("carol", &[]),
+            ("nadia", &["NURSE"]),
+            ("root", &["SUPERADMIN"]),
+        ],
+    );
     let mut authz = ferroehr::config::authz::AuthzConfig::default();
     authz.rbac.enabled = false;
     authz.rbac.ehr_access_default = ferroehr::config::authz::EhrAccessDefault::Restricted;
@@ -602,7 +588,7 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
         handle.as_ref().is_some_and(|h| !h.rbac_active()),
         "a restricted default is carried with the coarse gate off"
     );
-    let app = ferroehr_rest::build_full(config, Arc::new(svc), handle, Observability::default())
+    let app = ferroehr_rest::build_full(config, Arc::new(svc), handle, Observability::default()).await
         .expect("build app");
 
     assert_eq!(

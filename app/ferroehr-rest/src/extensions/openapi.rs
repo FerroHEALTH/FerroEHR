@@ -14,8 +14,8 @@
 //! input for the generated group contract only, and are never served.
 //!
 //! Authentication in the document is config-driven: the served document declares
-//! exactly the one scheme in effect per [`AuthConfig`] (`openehr_auth`, bearer
-//! JWT when OIDC is configured, else HTTP Basic; none when auth is disabled), so
+//! exactly the one scheme in effect per `[auth]` (`openehr_auth`, bearer JWT
+//! when an issuer is configured, else HTTP Basic; none when auth is disabled), so
 //! the Swagger "Authorize" dialog and the per-endpoint padlocks match the running
 //! server. The lock is applied to the authenticated surfaces only.
 //!
@@ -49,7 +49,7 @@ use crate::extensions::health;
 use crate::extensions::management;
 use crate::overview::status;
 use crate::state::AppState;
-use ferroehr::config::auth::AuthConfig;
+use ferrohealth_smart::config::AuthSection;
 use ferroehr::telemetry::provenance;
 
 /// The logical name of the single advertised security scheme. One name, one
@@ -251,21 +251,21 @@ pub(crate) fn rehome_path(doc: &mut utoipa::openapi::OpenApi, declared: &str, li
 /// Returns the single security scheme the running server advertises, or `None`
 /// when authentication is disabled.
 ///
-/// Bearer JWT when OIDC is configured, else HTTP Basic — never both. No openEHR
-/// spec governs the authorization scheme (ITS-REST places it out of band) — our
-/// own operational choice.
-fn advertised_scheme(auth: &AuthConfig) -> Option<SecurityScheme> {
+/// Bearer JWT when an issuer is configured, else HTTP Basic — never both. No
+/// openEHR spec governs the authorization scheme (ITS-REST places it out of
+/// band) — our own operational choice.
+fn advertised_scheme(auth: &AuthSection) -> Option<SecurityScheme> {
     if !auth.enabled {
         return None;
     }
-    if auth.oidc.is_some() {
+    if ferroehr::config::auth::has_bearer(auth) {
         Some(SecurityScheme::Http(
             HttpBuilder::new()
                 .scheme(HttpAuthScheme::Bearer)
                 .bearer_format("JWT")
                 .build(),
         ))
-    } else if auth.basic.is_some() {
+    } else if ferroehr::config::auth::has_basic(auth) {
         Some(SecurityScheme::Http(Http::new(HttpAuthScheme::Basic)))
     } else {
         None

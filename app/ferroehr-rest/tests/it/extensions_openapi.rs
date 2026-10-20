@@ -30,7 +30,7 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferroehr::config::auth::AuthConfig;
+use ferrohealth_smart::config::AuthSection;
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
 use ferroehr::config::server::{AdminConfig, ServerConfig};
 use ferroehr::config::smart::SmartConfig;
@@ -558,9 +558,9 @@ fn app_config() -> AppConfig {
             swagger_ui: AccessLevel::Public,
             ..Default::default()
         },
-        auth: AuthConfig {
+        auth: AuthSection {
             enabled: false,
-            ..AuthConfig::default()
+            ..AuthSection::default()
         },
         admin: AdminConfig { enabled: true },
         smart: SmartConfig {
@@ -571,6 +571,10 @@ fn app_config() -> AppConfig {
         events_admin_api: true,
         audit_organization_claim: None,
         role_claims: ferroehr::config::authz::RbacConfig::default().role_claims,
+        rbac: ferroehr::config::authz::RbacConfig::default(),
+        basic_cache_ttl_seconds: 0,
+        assurance: ferroehr::config::auth::AssuranceConfig::default(),
+        professional: None,
         spec_profile: ferroehr::config::profile::SpecProfile::default(),
     }
 }
@@ -609,5 +613,5 @@ async fn full_app() -> Router {
         ..Observability::default()
     };
     let (_pg, service) = common::test_service().await;
-    ferroehr_rest::build_full(config, service, None, observability).expect("build")
+    ferroehr_rest::build_full(config, service, None, observability).await.expect("build")
 }

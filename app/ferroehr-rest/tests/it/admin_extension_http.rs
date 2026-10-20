@@ -37,7 +37,7 @@ async fn app(admin_enabled: bool) -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
     (
         pg,
-        common::router_with(common::api_config(admin_enabled), service),
+        common::router_with(common::api_config(admin_enabled), service).await,
     )
 }
 

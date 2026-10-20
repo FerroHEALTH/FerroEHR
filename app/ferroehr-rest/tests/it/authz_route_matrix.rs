@@ -56,7 +56,6 @@ use tower::ServiceExt;
 use crate::common;
 use crate::common::BASE;
 
-const HMAC_SECRET: &str = "route-matrix-secret";
 const ISSUER: &str = "https://issuer.example";
 const AUDIENCE: &str = "ferroehr";
 
@@ -480,7 +479,7 @@ fn mounted(cfg: &AppConfig) -> Vec<(String, String)> {
 
 // ── app assembly ──────────────────────────────────────────────────────────────
 
-/// Authentication on (bearer only — an HMAC token is orders of magnitude
+/// Authentication on (bearer only — a token check is orders of magnitude
 /// cheaper than an Argon2 verification, and this suite issues hundreds of
 /// requests), the admin group reachable so the RBAC gate is what decides.
 fn matrix_config() -> AppConfig {
@@ -492,7 +491,7 @@ fn matrix_config() -> AppConfig {
             swagger_ui: AccessLevel::Public,
             ..Default::default()
         },
-        auth: common::hs256_auth_config(ISSUER, AUDIENCE, HMAC_SECRET),
+        auth: common::issuer_auth(ISSUER, AUDIENCE),
         admin: AdminConfig { enabled: true },
         // ON for the same reason as the Swagger pair: the PUBLIC table declares
         // the discovery document, and it is mounted only when SMART is enabled.
@@ -530,7 +529,7 @@ async fn app() -> (testkit::TestDb, Router) {
         Arc::new(svc),
         authz(),
         ferroehr_rest::extensions::management::Observability::default(),
-    )
+    ).await
     .expect("build app");
     (pg, app)
 }
@@ -548,7 +547,7 @@ fn bearer(roles: &[&str]) -> String {
         "exp": exp,
         "roles": roles,
     });
-    common::hs256_bearer(HMAC_SECRET, &claims)
+    common::bearer(&claims)
 }
 
 /// The refusal the authorization layer rendered, identified by the reason text
@@ -866,7 +865,7 @@ async fn the_swagger_surface_honours_its_access_level() {
             )),
             authz(),
             ferroehr_rest::extensions::management::Observability::default(),
-        )
+        ).await
         .expect("build app");
         (pg, app)
     }

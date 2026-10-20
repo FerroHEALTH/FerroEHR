@@ -1,15 +1,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end HTTP tests for the SMART App Launch surface (group-15 audit,
-//! #391): the discovery document's absolute `baseUrl`s (master04 §Services:
-//! "Absolute URL to the root of the API `*(required)*`"), the honest
-//! `capabilities` (`openehr-permission-v1` only in fail-closed mode), and the
-//! fail-closed template/AQL scope enforcement (master08 §Resource Scopes —
-//! the previously-inert two of the three resource families).
+//! End-to-end HTTP tests for the SMART on openEHR surface: the discovery
+//! document built from the issuer's metadata, with its absolute `baseUrl`s
+//! (master04 §Services: "Absolute URL to the root of the API `*(required)*`")
+//! and the capabilities the server enforces, and the route requirements of the
+//! template, AQL and composition families (master08 §Resource Scopes), with the
+//! `ehrId` launch context a `patient/` grant is confined to (master07 §Context
+//! Selection).
 #![expect(
     clippy::unwrap_used,
     clippy::expect_used,
+    clippy::indexing_slicing,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
               module's helpers and async bodies; panicking assertions are the \
@@ -20,18 +22,56 @@ use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
-use serde_json::Value;
+use serde_json::{Value, json};
 use tower::ServiceExt;
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use ferroehr::config::auth::AuthConfig;
+use ferrohealth_smart::config::{AuthSection, IssuerKey};
 use ferroehr::config::server::ServerConfig;
 use ferroehr_rest::config::AppConfig;
 
 use crate::common;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
+const AUDIENCE: &str = "ferroehr";
+const DISCOVERY: &str = "/ferroehr/rest/.well-known/smart-configuration";
 
-fn config(smart_enabled: bool, fail_closed: bool) -> AppConfig {
+/// An authorization server serving its RFC 8414 metadata and the committed test
+/// key set, advertising flows and methods the discovery document must filter.
+async fn issuer() -> MockServer {
+    let server = MockServer::start().await;
+    let uri = server.uri();
+    Mock::given(method("GET"))
+        .and(path("/.well-known/oauth-authorization-server"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "issuer": uri,
+            "jwks_uri": format!("{uri}/jwks"),
+            "authorization_endpoint": format!("{uri}/authorize"),
+            "token_endpoint": format!("{uri}/token"),
+            // master06 §Deprecated Flows: the implicit and password grants
+            // must never reach the document.
+            "grant_types_supported": ["authorization_code", "client_credentials", "implicit", "password"],
+            "token_endpoint_auth_methods_supported": ["client_secret_basic", "private_key_jwt"],
+            "response_types_supported": ["code"],
+            "code_challenge_methods_supported": ["plain", "S256"],
+            "scopes_supported": ["openid", "patient/composition-*.r"],
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/jwks"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(include_str!(
+            "../../../../docs/conformance/party/smart/jwks.json"
+        )))
+        .mount(&server)
+        .await;
+    server
+}
+
+/// The configuration trusting `issuer`, its discovery document served when
+/// `smart_enabled`, its `patient/` grants bound when `patient_bound`.
+fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
     let mut cfg = AppConfig {
         server: ServerConfig {
             bind: "127.0.0.1:0".to_owned(),
@@ -41,28 +81,31 @@ fn config(smart_enabled: bool, fail_closed: bool) -> AppConfig {
             cors_permissive: false,
             ..Default::default()
         },
-        auth: AuthConfig {
-            enabled: false,
-            basic: None,
-            oidc: None,
-            ..AuthConfig::default()
+        auth: AuthSection {
+            issuer: IssuerKey::Flat(issuer.to_owned()),
+            audience: vec![AUDIENCE.to_owned()],
+            ..AuthSection::default()
         },
         ..Default::default()
     };
     cfg.smart.enabled = smart_enabled;
-    cfg.smart.require_smart_scopes = fail_closed;
     cfg.smart.public_base_url = Some("https://cdr.example.com".to_owned());
-    cfg.smart.endpoints.authorization_endpoint = Some("https://as.example/authorize".to_owned());
-    cfg.smart.endpoints.token_endpoint = Some("https://as.example/token".to_owned());
+    if patient_bound {
+        cfg.smart.patient_issuers = vec![issuer.to_owned()];
+    }
     cfg
 }
 
-async fn app(smart_enabled: bool, fail_closed: bool) -> (testkit::TestDb, Router) {
+async fn app(cfg: AppConfig) -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
-    (
-        pg,
-        common::router_with(config(smart_enabled, fail_closed), service),
-    )
+    (pg, common::router_with(cfg, service).await)
+}
+
+/// A server with authentication off.
+async fn open_app() -> (testkit::TestDb, Router) {
+    let mut cfg = common::api_config(false);
+    BASE.clone_into(&mut cfg.server.base_path);
+    app(cfg).await
 }
 
 async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
@@ -72,21 +115,48 @@ async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
     (status, String::from_utf8_lossy(&bytes).into_owned())
 }
 
-fn get(uri: &str) -> Request<Body> {
-    Request::builder()
+fn get(uri: &str, credential: Option<&str>) -> Request<Body> {
+    let mut builder = Request::builder()
         .method("GET")
         .uri(uri)
-        .header(header::ACCEPT, "application/json")
-        .body(Body::empty())
+        .header(header::ACCEPT, "application/json");
+    if let Some(credential) = credential {
+        builder = builder.header(header::AUTHORIZATION, credential);
+    }
+    builder.body(Body::empty()).unwrap()
+}
+
+/// A bearer token of `issuer` granting `scope`, with `extra` claims.
+fn token(issuer: &str, scope: &str, extra: &Value) -> String {
+    let mut claims = json!({
+        "sub": "alice",
+        "iss": issuer,
+        "aud": AUDIENCE,
+        "exp": jiff::Timestamp::now().as_second() + 3600,
+        "scope": scope,
+    });
+    for (key, value) in extra.as_object().expect("object") {
+        claims[key] = value.clone();
+    }
+    common::bearer(&claims)
+}
+
+fn capabilities(doc: &Value) -> Vec<&str> {
+    doc["capabilities"]
+        .as_array()
         .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .collect()
 }
 
 // ── discovery ─────────────────────────────────────────────────────────────────
 
 #[tokio::test]
-async fn discovery_serves_absolute_base_urls() {
-    let (_pg, app) = app(true, false).await;
-    let (status, body) = send(&app, get("/ferroehr/rest/.well-known/smart-configuration")).await;
+async fn discovery_serves_absolute_base_urls_and_the_enforced_capabilities() {
+    let issuer = issuer().await;
+    let (_pg, app) = app(config(&issuer.uri(), true, false)).await;
+    let (status, body) = send(&app, get(DISCOVERY, None)).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let doc: Value = serde_json::from_str(&body).unwrap();
     let base = doc["services"]["org.openehr.rest"]["baseUrl"]
@@ -96,128 +166,140 @@ async fn discovery_serves_absolute_base_urls() {
         base.starts_with("https://cdr.example.com/"),
         "master04 §Services: baseUrl is an Absolute URL — got {base}"
     );
+    let caps = capabilities(&doc);
+    assert!(caps.contains(&"openehr-permission-v1"), "{caps:?}");
+    assert!(caps.contains(&"context-openehr-ehr"), "{caps:?}");
+    assert!(caps.contains(&"permission-user"), "{caps:?}");
+    assert!(
+        !caps.contains(&"permission-patient"),
+        "no issuer is bound, so no patient/ grant counts: {caps:?}"
+    );
+    assert_eq!(doc["token_endpoint"], format!("{}/token", issuer.uri()));
+}
+
+/// SMART App Launch 2.2.0, Conformance, §Metadata: the document names only
+/// the `authorization_code` and `client_credentials` grants (master06
+/// §Deprecated Flows refuses the implicit and password grants), carries `S256`
+/// and never `plain`, and lists the scopes the server honours, never the
+/// issuer's own list.
+#[tokio::test]
+async fn discovery_drops_deprecated_flows_plain_pkce_and_the_issuer_s_scopes() {
+    let issuer = issuer().await;
+    let (_pg, app) = app(config(&issuer.uri(), true, false)).await;
+    let (_status, body) = send(&app, get(DISCOVERY, None)).await;
+    let doc: Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(
+        doc["grant_types_supported"],
+        json!(["authorization_code", "client_credentials"])
+    );
+    assert_eq!(doc["code_challenge_methods_supported"], json!(["S256"]));
+    let scopes: Vec<&str> = doc["scopes_supported"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .collect();
+    assert!(
+        !scopes.contains(&"patient/composition-*.r"),
+        "the issuer's patient scope is not honoured without a bound issuer: {scopes:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_bound_issuer_declares_patient_permission() {
+    let issuer = issuer().await;
+    let (_pg, app) = app(config(&issuer.uri(), true, true)).await;
+    let (_status, body) = send(&app, get(DISCOVERY, None)).await;
+    let doc: Value = serde_json::from_str(&body).unwrap();
+    assert!(capabilities(&doc).contains(&"permission-patient"));
 }
 
 #[tokio::test]
 async fn discovery_absent_when_disabled() {
-    let (_pg, app) = app(false, false).await;
-    let (status, _b) = send(&app, get("/ferroehr/rest/.well-known/smart-configuration")).await;
+    let issuer = issuer().await;
+    let (_pg, app) = app(config(&issuer.uri(), false, false)).await;
+    let (status, _b) = send(&app, get(DISCOVERY, None)).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "zero wire drift when off");
 }
 
+// ── the route requirements ───────────────────────────────────────────────────
+
+/// master08 §Resource Scopes: a token granting no `template-` scope is refused
+/// the template family, one granting it is served.
 #[tokio::test]
-async fn permission_capability_only_in_fail_closed_mode() {
-    let (_pg, advisory) = app(true, false).await;
-    let (_s, body) = send(
-        &advisory,
-        get("/ferroehr/rest/.well-known/smart-configuration"),
+async fn the_template_family_needs_a_template_grant() {
+    let issuer = issuer().await;
+    let uri = issuer.uri();
+    let (_pg, app) = app(config(&uri, false, false)).await;
+    let list = format!("{BASE}/definition/template/adl1.4");
+    let (status, body) = send(&app, get(&list, Some(&token(&uri, "openid", &json!({}))))).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    let (status, body) = send(
+        &app,
+        get(&list, Some(&token(&uri, "user/template-*.r", &json!({})))),
     )
     .await;
-    let doc: Value = serde_json::from_str(&body).unwrap();
-    let caps: Vec<&str> = doc["capabilities"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter_map(Value::as_str)
-        .collect();
-    assert!(
-        !caps.contains(&"openehr-permission-v1"),
-        "advisory mode must not claim fine-grained enforcement: {caps:?}"
-    );
-
-    let (_pg2, strict) = app(true, true).await;
-    let (_s, body) = send(
-        &strict,
-        get("/ferroehr/rest/.well-known/smart-configuration"),
-    )
-    .await;
-    let doc: Value = serde_json::from_str(&body).unwrap();
-    let caps: Vec<&str> = doc["capabilities"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter_map(Value::as_str)
-        .collect();
-    assert!(
-        caps.contains(&"openehr-permission-v1"),
-        "fail-closed mode advertises the enforcement it performs: {caps:?}"
-    );
-}
-
-// ── the template + AQL families enforce in fail-closed mode ─────────────────
-
-#[tokio::test]
-async fn fail_closed_denies_scopeless_template_access() {
-    let (_pg, app) = app(true, true).await;
-    // Auth is disabled, so the caller holds no SMART resource scopes at all —
-    // fail-closed mode (master08 §Scopes ¶2: "The Platform must validate
-    // requested scopes…") denies the template family.
-    let (status, body) = send(&app, get(&format!("{BASE}/definition/template/adl1.4"))).await;
-    assert_eq!(
-        status,
-        StatusCode::FORBIDDEN,
-        "a scope-less caller is denied the template family: {body}"
-    );
-}
-
-#[tokio::test]
-async fn fail_closed_denies_scopeless_query_access() {
-    let (_pg, app) = app(true, true).await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/query/aql"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(r#"{"q": "SELECT e/ehr_id/value FROM EHR e"}"#))
-        .unwrap();
-    let (status, body) = send(&app, req).await;
-    assert_eq!(
-        status,
-        StatusCode::FORBIDDEN,
-        "a scope-less caller is denied the AQL family: {body}"
-    );
-}
-
-#[tokio::test]
-async fn advisory_mode_defers_for_scopeless_callers() {
-    let (_pg, app) = app(true, false).await;
-    // Advisory mode: no SMART scope for the family → the gate defers to
-    // RBAC/ABAC; the list serves normally.
-    let (status, body) = send(&app, get(&format!("{BASE}/definition/template/adl1.4"))).await;
     assert_eq!(status, StatusCode::OK, "{body}");
 }
 
-/// With no authenticated principal there is no token, and therefore no SMART
-/// scopes — a state the configuration already answers. Advisory mode defers to
-/// the RBAC/ABAC tiers; fail-closed mode refuses.
-///
-/// This is the distinction that keeps `auth.enabled = false` usable: there the
-/// absence of a principal is the operator's explicit choice, not a missing
-/// credential, so a gate that refused unconditionally would brick the
-/// development posture.
+/// master08 §Resource Scopes: a token granting no `aql-` search is refused an
+/// ad hoc query.
 #[tokio::test]
-async fn scopeless_caller_defers_in_advisory_mode_and_is_refused_when_required() {
-    let path = format!("{BASE}/definition/template/adl1.4");
-
-    let (_pg, advisory) = app(true, false).await;
-    let (status, body) = send(&advisory, get(&path)).await;
-    assert_eq!(
-        status,
-        StatusCode::OK,
-        "advisory mode must defer for a scopeless caller: {body}"
-    );
-
-    let (_pg2, fail_closed) = app(true, true).await;
-    let (status, body) = send(&fail_closed, get(&path)).await;
-    assert_eq!(
-        status,
-        StatusCode::FORBIDDEN,
-        "fail-closed mode must refuse a caller carrying no SMART scopes: {body}"
-    );
+async fn the_query_family_needs_an_aql_grant() {
+    let issuer = issuer().await;
+    let uri = issuer.uri();
+    let (_pg, app) = app(config(&uri, false, false)).await;
+    let query = |credential: &str| {
+        Request::builder()
+            .method("POST")
+            .uri(format!("{BASE}/query/aql"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .header(header::AUTHORIZATION, credential)
+            .body(Body::from(r#"{"q": "SELECT e/ehr_id/value FROM EHR e"}"#))
+            .unwrap()
+    };
+    let (status, body) = send(
+        &app,
+        query(&token(&uri, "user/template-*.r", &json!({}))),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    let (status, body) = send(&app, query(&token(&uri, "user/aql-*.s", &json!({})))).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
 }
 
+/// master07 §Context Selection and master08 §Resource Scopes: a `patient/`
+/// query grant of a bound issuer runs only within the launch context's EHR,
+/// named by the single-EHR `ehr_id`; a query naming no EHR is refused.
 #[tokio::test]
-async fn smart_disabled_leaves_families_ungated() {
-    let (_pg, app) = app(false, false).await;
-    let (status, body) = send(&app, get(&format!("{BASE}/definition/template/adl1.4"))).await;
+async fn a_patient_query_grant_runs_within_the_launch_context_ehr_alone() {
+    let issuer = issuer().await;
+    let uri = issuer.uri();
+    let (_pg, app) = app(config(&uri, false, true)).await;
+    let launched = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+    let credential = token(&uri, "patient/aql-*.s", &json!({ "ehrId": launched }));
+    let query = |ehr: Option<&str>| {
+        let q = "SELECT%20e/ehr_id/value%20FROM%20EHR%20e";
+        let uri = ehr.map_or_else(
+            || format!("{BASE}/query/aql?q={q}"),
+            |ehr| format!("{BASE}/query/aql?q={q}&ehr_id={ehr}"),
+        );
+        get(&uri, Some(&credential))
+    };
+    let (status, body) = send(&app, query(None)).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    let (status, body) = send(&app, query(Some("0b8f7c5e-0000-4000-8000-000000000001"))).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "another EHR: {body}");
+    let (status, _body) = send(&app, query(Some(launched))).await;
+    assert_ne!(status, StatusCode::FORBIDDEN, "the launch context's EHR is reached");
+}
+
+/// With authentication off there is no credential, so there is no scope to
+/// check: the operator's explicit choice, which a gate that refused every
+/// request would make unusable.
+#[tokio::test]
+async fn authentication_off_leaves_the_families_ungated() {
+    let (_pg, app) = open_app().await;
+    let (status, body) = send(&app, get(&format!("{BASE}/definition/template/adl1.4"), None)).await;
     assert_eq!(status, StatusCode::OK, "{body}");
 }

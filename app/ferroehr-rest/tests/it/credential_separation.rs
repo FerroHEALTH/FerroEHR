@@ -132,7 +132,7 @@ async fn deployment(settings: &DbConfig, storage: &StorageConfig) -> Deployment 
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&clinical))
             .with_demographic_pool(demographic.clone()),
     );
-    let router = common::router_with(common::api_config(false), service);
+    let router = common::router_with(common::api_config(false), service).await;
     Deployment {
         clinical,
         demographic,

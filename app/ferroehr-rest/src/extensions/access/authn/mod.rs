@@ -1,15 +1,22 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Authentication: HTTP Basic + OAuth2/OIDC bearer, plus the coarse RBAC gate.
+//! Authentication over the `ferrohealth-smart` crate, plus the coarse RBAC gate
+//! and the SMART on openEHR route requirements.
 //!
 //! ITS-REST leaves authentication a `SHOULD` and mandates no scheme
 //! (`overview/Requests_and_responses.md` §Authentication and authorization), but
 //! when a framework IS present the service MUST use `WWW-Authenticate` and
 //! return `401`/`403`/`407` as applicable — the bar this middleware meets:
 //! missing or invalid credentials are a `401` with a challenge, and an
-//! authenticated-but-refused caller a `403` without one. The CNF security suites
+//! authenticated-but-refused caller a `403`. The CNF security suites
 //! (`CNF/tests/platform/robot/SECURITY_TESTS/`) are the conformance reference.
+//!
+//! The crate's [`Gate`] checks every credential: a bearer token against the
+//! configured issuers' key sets (RFC 9068 §4, asymmetric algorithms only) and a
+//! Basic credential against the Argon2id hashes of `[[auth.basic.users]]`
+//! (RFC 7617). It issues no token. Its [`Refusal`] gives each refusal its status
+//! and challenge (RFC 6750 §3.1); the body is the ITS-REST error body.
 //!
 //! No openEHR spec governs role-based authorization — the SM places it out of
 //! band, so the coarse RBAC gate is our own enterprise extension. It runs as one
@@ -17,11 +24,13 @@
 //! [`Principal`] into the request extensions, and when an
 //! [`crate::extensions::access::authz::AuthzHandle`] is wired the gate then
 //! judges the matched operation's class, denying with a `403` that carries the
-//! principal so the ATNA audit layer records it.
+//! principal so the ATNA audit layer records it. The SMART on openEHR
+//! requirement of the matched route ([`crate::smart::routes`]) is checked after
+//! RBAC, so SMART only narrows (`master08 §Resource Scopes`).
 //!
-//! Between the two, the `assurance` gate judges a patient-data request by the
-//! assurance level and the natural person its credential carries, and publishes
-//! what it read for the access record.
+//! Between authentication and RBAC, the `assurance` gate judges a patient-data
+//! request by the assurance level and the natural person its credential
+//! carries, and publishes what it read for the access record.
 
 #![expect(
     clippy::disallowed_types,
@@ -30,33 +39,34 @@
 )]
 
 pub(crate) mod assurance;
-mod basic;
-mod jwt;
-
-use ferroehr::config::auth::AuthConfig;
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::extensions::access::authz::roles::RbacDecision;
 use axum::extract::{FromRequestParts, MatchedPath, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
+use ferrohealth_smart::guard::Gate;
+use ferrohealth_smart::refusal::Refusal;
+use ferrohealth_smart::resource::configuration::SmartOptions;
+use ferrohealth_smart::resource::{
+    Access, Caller, Honoured, IssuerSet, ResourceError, ResourceServer, Via,
+};
 use http::request::Parts;
 use http::{HeaderValue, StatusCode, header};
-
 use openehr_its::rest::runtime::ApiError;
 
+use crate::config::AppConfig;
 use crate::extensions::access::authz::AuthzHandle;
+use crate::extensions::access::authz::roles::{RbacDecision, extract_roles};
 use crate::overview::error::RestError;
+use crate::smart::routes::{Need, SmartRoutes};
 use assurance::{PatientDataGate, PatientDataRefusal};
 use ferroehr::system_log::event::ActorAuthentication;
-use jsonwebtoken::Algorithm;
-use jsonwebtoken::errors::ErrorKind;
-use jwt::JwtValidator;
 
 /// The state the [`middleware`] runs on: the authenticator, the optional
-/// authorization handle (`None` is authentication-only) and the optional
-/// patient-data gate.
+/// authorization handle (`None` is authentication-only), the optional
+/// patient-data gate and the SMART on openEHR route table.
 #[derive(Clone)]
 pub(crate) struct AuthLayer {
     pub(crate) authenticator: Arc<Authenticator>,
@@ -64,6 +74,8 @@ pub(crate) struct AuthLayer {
     /// The patient-data assurance and natural-person gate; `None` when no
     /// bearer mechanism is configured.
     pub(crate) patient_data: Option<Arc<PatientDataGate>>,
+    /// The SMART on openEHR requirement of each route.
+    pub(crate) smart: Arc<SmartRoutes>,
 }
 
 /// The authenticated caller.
@@ -71,12 +83,13 @@ pub(crate) struct AuthLayer {
 pub struct Principal {
     /// Token `sub` / Basic username.
     pub subject: String,
-    /// `OAuth2` scopes granted to the caller (empty for Basic).
+    /// The `scope` claim of the token, or the scopes `[[auth.basic.users]]`
+    /// grants a Basic user (RFC 6749 §3.3).
     pub scopes: Vec<String>,
     /// Roles granted to the caller, normalized to upper-case: for Bearer from
     /// the configured JWT claim paths (defaulting to the RFC 9068 §2.2.3.1
-    /// carriers), for Basic from the user's configured role list. An OAuth2
-    /// scope is not a role — see [`Self::scopes`].
+    /// carriers), for Basic from `[authz.rbac.basic_roles]`. An OAuth2 scope is
+    /// not a role — see [`Self::scopes`].
     pub roles: Vec<String>,
     /// The retained, validated JWT claim set (Bearer only; empty for Basic), so
     /// the ABAC layer can resolve subject attributes without re-parsing the
@@ -84,6 +97,50 @@ pub struct Principal {
     pub claims: serde_json::Map<String, serde_json::Value>,
     /// Which mechanism authenticated the caller.
     pub method: AuthMethod,
+    /// What the `ferrohealth-smart` gate admitted, which the SMART on openEHR
+    /// checks read.
+    pub access: Access,
+    /// What FerroEHR honours for the caller beyond a `user/` grant: whether it
+    /// is a listed backend client and whether its issuer's `patient/` grants
+    /// count (`[smart] backend_clients`, `[smart] patient_issuers`).
+    pub honoured: Honoured,
+}
+
+impl Principal {
+    /// Returns the principal of the caller the gate admitted with `access`,
+    /// holding `roles` and honoured as `honoured`.
+    ///
+    /// An open surface admits no caller, so it yields an empty, unattributed
+    /// principal; the middleware never builds one there.
+    #[must_use]
+    pub fn new(access: Access, roles: Vec<String>, honoured: Honoured) -> Self {
+        let (subject, scopes, claims, method) = match access.caller() {
+            Some(caller) => (
+                caller.subject().to_owned(),
+                caller.scope().to_vec(),
+                caller.claims().clone(),
+                match caller.via() {
+                    Via::Basic => AuthMethod::Basic,
+                    Via::Bearer => AuthMethod::Bearer,
+                },
+            ),
+            None => (
+                String::new(),
+                Vec::new(),
+                serde_json::Map::new(),
+                AuthMethod::Bearer,
+            ),
+        };
+        Self {
+            subject,
+            scopes,
+            roles,
+            claims,
+            method,
+            access,
+            honoured,
+        }
+    }
 }
 
 /// The mechanism that authenticated a [`Principal`].
@@ -91,7 +148,7 @@ pub struct Principal {
 pub enum AuthMethod {
     /// HTTP Basic: a username/password pair verified against the Argon2 store.
     Basic,
-    /// OAuth2/OIDC Bearer: a JWT validated against the issuer's JWKS.
+    /// OAuth2/OIDC Bearer: a JWT validated against the issuer's key set.
     Bearer,
 }
 
@@ -114,263 +171,64 @@ pub(crate) struct Authenticated {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct FreshAuthentication;
 
-/// Why a bearer token was refused.
-///
-/// RFC 6750 §3.1 gives every one of these the same `invalid_token` challenge
-/// code, so the distinction never reaches the client; it exists for the operator
-/// and the cause chain. The variants built from `jsonwebtoken` name the check
-/// that refused the token and carry that error as their
-/// [`std::error::Error::source`], so a caller can walk to the concrete kind
-/// instead of matching another crate's message text, and a chain printer reads
-/// it once.
-#[derive(Debug, Clone, thiserror::Error)]
-pub enum TokenRejection {
-    /// The `exp` claim is in the past, beyond the configured clock-skew leeway.
-    #[error("the token has expired")]
-    Expired(#[source] jsonwebtoken::errors::Error),
-    /// The `nbf` claim puts the token's validity in the future.
-    #[error("the token is not yet valid")]
-    NotYetValid(#[source] jsonwebtoken::errors::Error),
-    /// The signature does not verify against the selected key.
-    #[error("the token signature does not verify")]
-    Signature(#[source] jsonwebtoken::errors::Error),
-    /// The `iss` claim is not the configured issuer.
-    #[error("the token issuer is not the configured issuer")]
-    Issuer(#[source] jsonwebtoken::errors::Error),
-    /// The `aud` claim names none of the configured audiences.
-    #[error("the token audience names no configured audience")]
-    Audience(#[source] jsonwebtoken::errors::Error),
-    /// The `sub` claim is not a subject the validation admits.
-    #[error("the token subject is not admitted")]
-    Subject(#[source] jsonwebtoken::errors::Error),
-    /// A required claim is absent, or carries the wrong JSON type. The message
-    /// names the claim, never its value.
-    #[error("a required claim is absent or carries the wrong type")]
-    ClaimSet(#[source] jsonwebtoken::errors::Error),
-    /// The credential is not a well-formed JWT at all: a bad shape, or base64 /
-    /// JSON / UTF-8 that does not decode.
-    #[error("the credential is not a well-formed JWT")]
-    Malformed(#[source] jsonwebtoken::errors::Error),
-    /// The header's algorithm disagrees with the decoding key or the validation.
-    #[error("the token algorithm disagrees with the key or the validation")]
-    AlgorithmMismatch(#[source] jsonwebtoken::errors::Error),
-    /// The key material the validator holds is unusable — an issuer or
-    /// deployment misconfiguration rather than a client fault.
-    #[error("the key material the validator holds is unusable")]
-    KeyMaterial(#[source] jsonwebtoken::errors::Error),
-    /// A `jsonwebtoken` failure outside the classified set. Its `ErrorKind` is
-    /// `#[non_exhaustive]`, so a crate upgrade can add kinds this mapping has
-    /// not yet named.
-    #[error("the token failed validation")]
-    Unclassified(#[source] jsonwebtoken::errors::Error),
-    /// The header's `alg` is outside `auth.oidc.algorithms`.
-    #[error("token algorithm {0:?} not accepted")]
-    AlgorithmNotAccepted(Algorithm),
-    /// The header's `typ` names a media type that is not an access token
-    /// (RFC 8725 §3.11).
-    #[error("token type `{0}` is not an access token")]
-    TokenTypeNotAccessToken(String),
-    /// `auth.oidc.require_at_jwt` is set and the token does not claim the
-    /// RFC 9068 `at+jwt` profile.
-    #[error(
-        "the token does not claim the RFC 9068 `at+jwt` profile, which \
-         auth.oidc.require_at_jwt demands"
-    )]
-    AtJwtProfileRequired,
-    /// The token claims the `at+jwt` profile but omits a claim RFC 9068 §2.2
-    /// then requires. Carries the claim name.
-    #[error("an `at+jwt` access token must carry `{0}` (RFC 9068 §2.2)")]
-    AtJwtProfileClaimMissing(String),
-    /// The token carries no usable `sub`, so the caller would be unattributable
-    /// in the ATNA audit trail.
-    #[error(
-        "token carries no usable `sub` claim; an audit-attributable subject is \
-         required"
-    )]
-    SubjectMissing,
-    /// The token's `kid` names no key in the issuer's JWKS.
-    #[error("the issuer's JWKS carries no key `{0}`")]
-    UnknownKeyId(String),
-    /// The token carries no `kid` and no JWKS key can verify its algorithm.
-    #[error(
-        "the token carries no `kid` and the issuer's JWKS holds no key usable for \
-         verifying this algorithm"
-    )]
-    NoUsableKey,
-    /// The token carries no `kid` and several JWKS keys could verify it, so the
-    /// key cannot be chosen without guessing.
-    #[error(
-        "the token carries no `kid` and {0} keys in the issuer's JWKS could verify \
-         it — the issuer must identify the key"
-    )]
-    AmbiguousKey(usize),
-    /// The selected JWK cannot be turned into a decoding key.
-    #[error("the selected JWK cannot be turned into a decoding key")]
-    UnusableJwk(#[source] jsonwebtoken::errors::Error),
-}
-
-impl From<jsonwebtoken::errors::Error> for TokenRejection {
-    fn from(error: jsonwebtoken::errors::Error) -> Self {
-        match error.kind() {
-            ErrorKind::ExpiredSignature => Self::Expired(error),
-            ErrorKind::ImmatureSignature => Self::NotYetValid(error),
-            ErrorKind::InvalidSignature => Self::Signature(error),
-            ErrorKind::InvalidIssuer => Self::Issuer(error),
-            ErrorKind::InvalidAudience => Self::Audience(error),
-            ErrorKind::InvalidSubject => Self::Subject(error),
-            ErrorKind::MissingRequiredClaim(_) | ErrorKind::InvalidClaimFormat(_) => {
-                Self::ClaimSet(error)
-            }
-            ErrorKind::InvalidToken
-            | ErrorKind::Base64(_)
-            | ErrorKind::Json(_)
-            | ErrorKind::Utf8(_) => Self::Malformed(error),
-            ErrorKind::InvalidAlgorithm
-            | ErrorKind::InvalidAlgorithmName
-            | ErrorKind::MissingAlgorithm
-            | ErrorKind::UnsupportedAlgorithm => Self::AlgorithmMismatch(error),
-            ErrorKind::InvalidEcdsaKey
-            | ErrorKind::InvalidEddsaKey
-            | ErrorKind::InvalidRsaKey(_)
-            | ErrorKind::InvalidKeyFormat => Self::KeyMaterial(error),
-            _ => Self::Unclassified(error),
-        }
-    }
-}
-
-impl TokenRejection {
-    /// A stable, low-cardinality label naming this rejection.
-    ///
-    /// Carries no token bytes and no claim value, so it is safe as a structured
-    /// log field or a metric label.
-    pub(crate) const fn label(&self) -> &'static str {
-        match self {
-            TokenRejection::Expired(_) => "expired",
-            TokenRejection::NotYetValid(_) => "not_yet_valid",
-            TokenRejection::Signature(_) => "signature",
-            TokenRejection::Issuer(_) => "issuer",
-            TokenRejection::Audience(_) => "audience",
-            TokenRejection::Subject(_) => "subject",
-            TokenRejection::ClaimSet(_) => "claim_set",
-            TokenRejection::Malformed(_) => "malformed",
-            TokenRejection::AlgorithmMismatch(_) => "algorithm_mismatch",
-            TokenRejection::KeyMaterial(_) => "key_material",
-            TokenRejection::Unclassified(_) => "unclassified",
-            TokenRejection::AlgorithmNotAccepted(_) => "algorithm_not_accepted",
-            TokenRejection::TokenTypeNotAccessToken(_) => "token_type",
-            TokenRejection::AtJwtProfileRequired => "at_jwt_profile_required",
-            TokenRejection::AtJwtProfileClaimMissing(_) => "at_jwt_claim_missing",
-            TokenRejection::SubjectMissing => "subject_missing",
-            TokenRejection::UnknownKeyId(_) => "unknown_key_id",
-            TokenRejection::NoUsableKey => "no_usable_key",
-            TokenRejection::AmbiguousKey(_) => "ambiguous_key",
-            TokenRejection::UnusableJwk(_) => "unusable_jwk",
-        }
-    }
-}
-
 /// An authentication failure.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum AuthError {
-    /// The request carried no credential for any enabled mechanism.
+    /// The request carried no credential for any admitted mechanism.
     #[error("no credentials supplied")]
     MissingCredentials,
-    /// An unknown user, or a password that does not match the stored Argon2
-    /// hash: a credential presented and rejected — RFC 6750 §3.1's
-    /// `invalid_token` case for bearer, an ordinary 401 for Basic.
+    /// A Basic credential that does not verify: an unknown user or a wrong
+    /// password, one outcome so a refusal says neither.
     #[error("invalid credentials")]
     InvalidCredentials,
-    /// The `Authorization` header is not a well-formed credential at all: an
-    /// unparsable header, an unknown scheme, or a bearer credential outside the
+    /// The `Authorization` header is not a well-formed credential at all: two
+    /// credentials, an unparsable header, or a bearer credential outside the
     /// RFC 6750 §2.1 `b64token` grammar.
     ///
     /// RFC 6750 §3.1 gives this its own `invalid_request` code and a `400`,
     /// because it is a request defect rather than a credential decision.
     #[error("malformed authorization header: {0}")]
     MalformedRequest(String),
-    /// A bearer token that failed structural, signature, or claim validation.
+    /// A bearer token that does not hold.
     ///
-    /// The [`TokenRejection`] names which check refused it and carries the
-    /// underlying `jsonwebtoken` error as its source; the distinction is an
-    /// operator signal, never a wire one.
+    /// RFC 9068 §4 gives every failed check the one `invalid_token` answer; the
+    /// crate logs which check failed at debug level and nothing else.
     #[error("invalid bearer token")]
-    InvalidToken(#[from] TokenRejection),
-    /// The issuer's signing keys (JWKS) could not be fetched or parsed, so no
-    /// bearer token can be validated.
-    ///
-    /// The [`KeyResolutionError`] names the failed step in curated words, which
-    /// are the whole `503` body; the failure behind it is its source.
-    #[error("could not resolve signing keys")]
-    KeyResolution(#[source] KeyResolutionError),
+    InvalidToken,
+    /// The issuer's signing keys could not be read, so no bearer token can be
+    /// validated.
+    #[error("the authorization server's signing keys could not be read")]
+    KeyResolution,
     /// The caller authenticated but is not permitted the request — the 403
     /// branch of the ITS-REST 401-vs-403 split.
     #[error("forbidden: {0}")]
     Forbidden(String),
-    /// The server could not run credential verification at all, for instance a
-    /// panicked blocking Argon2 task. A server fault, never a statement about
-    /// the credentials, so it maps to 500 rather than 401.
+    /// The server could not run credential verification at all. A server
+    /// fault, never a statement about the credentials, so it maps to 500
+    /// rather than 401.
     #[error("credential verification unavailable: {0}")]
     VerificationUnavailable(String),
 }
 
-/// Why the issuer's signing keys could not be resolved.
-///
-/// The `Display` is a curated category naming the failed step, and it is the
-/// only text the `503` body carries: a transport or discovery error names the
-/// identity provider's URLs, which a client must not read. The failure behind
-/// it is the [`std::error::Error::source`], so the log walks to the concrete
-/// error ([RFC 0201](https://rust-lang.github.io/rfcs/0201-error-chaining.html)).
-/// No openEHR spec governs this — our own design.
-///
-/// `Arc`, not `Box`, because [`AuthError`] is cloned out of the key-set cache.
-#[derive(Debug, Clone)]
-pub struct KeyResolutionError {
-    /// The curated step message.
-    message: String,
-    /// The failure the step reported, never rendered into `message`.
-    source: Option<Arc<dyn std::error::Error + Send + Sync>>,
-}
-
-impl KeyResolutionError {
-    /// A refusal whose message is the whole fact, with no cause beneath it.
-    pub(crate) fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-            source: None,
-        }
-    }
-
-    /// A refusal naming the failed step, carrying the failure as its source.
-    pub(crate) fn caused(
-        message: &'static str,
-        source: impl std::error::Error + Send + Sync + 'static,
-    ) -> Self {
-        Self {
-            message: message.to_owned(),
-            source: Some(Arc::new(source)),
-        }
-    }
-}
-
-impl std::fmt::Display for KeyResolutionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-// NOTE: hand-written, because `#[derive(thiserror::Error)]` over an
-// `Option<Arc<dyn Error>>` yields the `Arc` wrapper as the source hop
-// (<https://docs.rs/thiserror/2.0.18/thiserror/index.html>), not the real cause.
-impl std::error::Error for KeyResolutionError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match &self.source {
-            Some(source) => Some(&**source),
-            None => None,
-        }
-    }
-}
-
 impl AuthError {
+    /// The outcome of a [`Refusal`] the gate answered.
+    fn from_refusal(refusal: &Refusal) -> Self {
+        match refusal {
+            Refusal::Missing(_) => AuthError::MissingCredentials,
+            Refusal::InvalidRequest => AuthError::MalformedRequest(
+                "the Authorization header carries no single well-formed credential".to_owned(),
+            ),
+            Refusal::InvalidToken => AuthError::InvalidToken,
+            Refusal::Forbidden | Refusal::Unclassified => {
+                AuthError::Forbidden("the credential does not permit this request".to_owned())
+            }
+            Refusal::Unavailable => AuthError::KeyResolution,
+            // NOTE: `Refusal` is non-exhaustive; an outcome added later is a
+            // credential that does not hold until it is read here.
+            Refusal::InvalidBasic | _ => AuthError::InvalidCredentials,
+        }
+    }
+
     fn to_api_error(&self) -> ApiError {
         match self {
             AuthError::Forbidden(m) => ApiError::Forbidden(m.clone()),
@@ -382,255 +240,274 @@ impl AuthError {
             // the server cannot decide: RFC 9110 §15.6.4 makes that a 503. A 401
             // would tell a caller with a valid token its credential was
             // rejected.
-            AuthError::KeyResolution(k) => ApiError::ServiceUnavailable(k.to_string()),
+            AuthError::KeyResolution => ApiError::ServiceUnavailable(self.to_string()),
             // The body says nothing about why: rendering the rejection would
             // tell an unauthenticated caller whether a token was expired or
-            // forged. The reason stays in the log.
-            _ => ApiError::Unauthorized("authentication failed".to_owned()),
+            // forged. The reason stays in the debug log.
+            AuthError::MissingCredentials
+            | AuthError::InvalidCredentials
+            | AuthError::InvalidToken => ApiError::Unauthorized("authentication failed".to_owned()),
         }
     }
 
-    /// Returns the RFC 6750 §3.1 `error` code this outcome carries on its
-    /// `WWW-Authenticate` challenge, or `None` when it must carry none.
-    ///
-    /// §3.1: "If the request lacks any authentication information … the resource
-    /// server SHOULD NOT include an error code".
-    const fn bearer_error_code(&self) -> Option<&'static str> {
+    /// The refusal whose challenge this outcome carries, or `None` for an
+    /// outcome that carries none.
+    const fn refusal(&self, schemes: ferrohealth_smart::refusal::Schemes) -> Option<Refusal> {
         match self {
-            AuthError::InvalidCredentials | AuthError::InvalidToken(_) => Some("invalid_token"),
-            AuthError::Forbidden(_) => Some("insufficient_scope"),
-            AuthError::MalformedRequest(_) => Some("invalid_request"),
-            // No credential presented, or a server-side fault: neither is a
-            // statement the client can act on by changing its credential.
-            AuthError::MissingCredentials
-            | AuthError::KeyResolution(_)
-            | AuthError::VerificationUnavailable(_) => None,
+            AuthError::MissingCredentials => Some(Refusal::Missing(schemes)),
+            AuthError::InvalidCredentials => Some(Refusal::InvalidBasic),
+            AuthError::InvalidToken => Some(Refusal::InvalidToken),
+            AuthError::MalformedRequest(_) => Some(Refusal::InvalidRequest),
+            AuthError::Forbidden(_) => Some(Refusal::Forbidden),
+            AuthError::KeyResolution | AuthError::VerificationUnavailable(_) => None,
         }
     }
 
     /// A stable, low-cardinality label naming this outcome.
     ///
     /// Carries no credential material, so it is safe as a structured log field
-    /// or a metric label. A bearer refusal delegates to
-    /// [`TokenRejection::label`], so expired-versus-invalid is countable.
+    /// or a metric label.
     pub(crate) const fn label(&self) -> &'static str {
         match self {
             AuthError::MissingCredentials => "missing_credentials",
             AuthError::InvalidCredentials => "invalid_credentials",
             AuthError::MalformedRequest(_) => "malformed_request",
-            AuthError::InvalidToken(rejection) => rejection.label(),
-            AuthError::KeyResolution(_) => "key_resolution",
+            AuthError::InvalidToken => "invalid_token",
+            AuthError::KeyResolution => "key_resolution",
             AuthError::Forbidden(_) => "forbidden",
             AuthError::VerificationUnavailable(_) => "verification_unavailable",
         }
     }
 }
 
-/// The configured authenticator: the enabled mechanisms and the coarse admin
-/// gate.
+/// The configured authenticator: the crate's gate, the role sources and the
+/// verified Basic credential cache.
 pub struct Authenticator {
-    config: AuthConfig,
-    jwt: Option<JwtValidator>,
+    /// `[auth] enabled`.
+    enabled: bool,
+    /// The credentials admitted, checked by `ferrohealth-smart`.
+    gate: Gate,
+    /// The protection space every challenge names.
+    realm: String,
+    /// The issuer whose metadata the SMART discovery document is built from.
+    primary: Option<Arc<ResourceServer>>,
+    /// Dotted JWT claim paths mined for RBAC roles (`[authz.rbac] role_claims`).
+    role_claims: Vec<String>,
+    /// The RBAC rules a Basic user's roles are read from.
+    rbac: ferroehr::config::authz::RbacConfig,
     /// Verified Basic-credential cache, keyed by the SHA-256 of the presented
     /// `Authorization` header.
     ///
     /// An entry exists only after a successful Argon2 verification, and the TTL
-    /// (`config::AuthConfig::verified_cache_ttl_seconds`) bounds revocation lag;
-    /// `None` disables it. Argon2 costs tens of milliseconds of CPU per call by
+    /// (`[authz] basic_cache_ttl_seconds`) bounds revocation lag; `None`
+    /// disables it. Argon2 costs tens of milliseconds of CPU per call by
     /// design, so without this a busy client's request rate is capped by the
     /// KDF's work factor.
     verified: Option<moka::future::Cache<[u8; 32], Principal>>,
     /// KDF verifications actually performed: a test seam and a cheap
     /// operational signal.
-    kdf_verifications: std::sync::atomic::AtomicU64,
+    kdf_verifications: AtomicU64,
 }
 
 impl std::fmt::Debug for Authenticator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Authenticator")
-            .field("enabled", &self.config.enabled)
-            .field("basic", &self.config.basic.is_some())
-            .field("oidc", &self.jwt.is_some())
+            .field("enabled", &self.enabled)
+            .field("gate", &self.gate)
             .finish_non_exhaustive()
     }
 }
 
 impl Authenticator {
-    /// Builds an authenticator from configuration, constructing the bearer
-    /// validator if OIDC is configured.
+    /// Builds the authenticator of `config`: each `[auth]` issuer's metadata
+    /// and key set are read here, so an authorization server that cannot be
+    /// reached refuses the start rather than the first request.
     ///
     /// # Errors
-    /// Returns a message if the OIDC key material/algorithms are invalid.
-    pub fn new(config: AuthConfig) -> Result<Arc<Self>, String> {
-        Self::with_role_claims(
-            config,
-            ferroehr::config::authz::RbacConfig::default().role_claims,
-        )
-    }
-
-    /// Builds an authenticator with explicit Bearer role-claim paths.
-    ///
-    /// The server passes the configured `[authz.rbac] role_claims` whether or
-    /// not an authorization gate is wired; [`Authenticator::new`] uses the
-    /// defaults.
-    ///
-    /// # Errors
-    /// Returns a message if the OIDC key material/algorithms are invalid.
-    pub fn with_role_claims(
-        config: AuthConfig,
-        role_claims: Vec<String>,
-    ) -> Result<Arc<Self>, String> {
-        let jwt = match &config.oidc {
-            Some(oidc) => Some(JwtValidator::with_role_claims(oidc, role_claims)?),
-            None => None,
-        };
-        let verified = (config.verified_cache_ttl_seconds > 0).then(|| {
+    /// A message naming the refused setting or the issuer that could not be
+    /// read.
+    pub async fn new(config: &AppConfig) -> Result<Arc<Self>, String> {
+        let resolved = ferroehr::config::auth::resolve(&config.auth)
+            .map_err(|e| ferroehr::service::error::ErrorChain::new(&e).to_string())?;
+        let mut gate = Gate::open();
+        let mut primary = None;
+        if resolved.enabled {
+            if !resolved.issuers.is_empty() {
+                let mut issuers = IssuerSet::new();
+                for settings in resolved.issuers {
+                    let issuer = settings.issuer.clone();
+                    let server = ResourceServer::discover(settings)
+                        .await
+                        .map_err(|e| unreadable_issuer(&issuer, &e))?;
+                    let server = Arc::new(server);
+                    primary.get_or_insert_with(|| Arc::clone(&server));
+                    issuers = issuers.with(server);
+                }
+                gate = gate.with_bearer(Arc::new(issuers));
+            }
+            if let Some(store) = resolved.basic {
+                gate = gate.with_basic(Arc::new(store));
+            }
+            let backend = config.smart.backend_clients.clone();
+            let patient = config.smart.patient_issuers.clone();
+            gate = gate
+                .with_realm(ferroehr::config::auth::realm(&config.auth))
+                .with_honoured(move |caller| Honoured {
+                    backend: caller
+                        .client_id()
+                        .is_some_and(|client| backend.iter().any(|listed| listed == client)),
+                    patient: caller
+                        .issuer()
+                        .is_some_and(|issuer| patient.iter().any(|listed| listed == issuer)),
+                });
+        }
+        let verified = (config.basic_cache_ttl_seconds > 0).then(|| {
             moka::future::Cache::builder()
                 .max_capacity(1024)
                 .time_to_live(std::time::Duration::from_secs(
-                    config.verified_cache_ttl_seconds,
+                    config.basic_cache_ttl_seconds,
                 ))
                 .build()
         });
         Ok(Arc::new(Self {
-            config,
-            jwt,
+            enabled: config.auth.enabled,
+            gate,
+            realm: ferroehr::config::auth::realm(&config.auth).to_owned(),
+            primary,
+            role_claims: config.role_claims.clone(),
+            rbac: config.rbac.clone(),
             verified,
-            kdf_verifications: std::sync::atomic::AtomicU64::new(0),
+            kdf_verifications: AtomicU64::new(0),
         }))
     }
 
     pub(crate) fn enabled(&self) -> bool {
-        self.config.enabled
+        self.enabled
     }
 
-    /// The authentication configuration this authenticator was built from.
-    pub(crate) fn config(&self) -> &AuthConfig {
-        &self.config
+    /// Whether a bearer token is admitted.
+    pub(crate) fn bearer_admitted(&self) -> bool {
+        self.gate.schemes().bearer
     }
 
-    /// Builds the `WWW-Authenticate` challenge advertising the enabled
-    /// mechanisms.
+    /// The SMART discovery document of the first issuer under `options`, or
+    /// `None` when no issuer's metadata was read.
+    pub(crate) fn smart_configuration(&self, options: &SmartOptions) -> Option<serde_json::Value> {
+        self.primary
+            .as_ref()
+            .map(|server| server.smart_configuration(options))
+    }
+
+    /// KDF verifications performed so far.
+    #[cfg(test)]
+    pub(crate) fn kdf_verifications(&self) -> u64 {
+        self.kdf_verifications.load(Ordering::Relaxed)
+    }
+
+    /// Builds the `WWW-Authenticate` challenge of `outcome`: the schemes the
+    /// gate admits with no error code when no credential was presented
+    /// (RFC 6750 §3.1), the refused scheme's otherwise.
     pub(crate) fn challenge(&self, outcome: Option<&AuthError>) -> HeaderValue {
-        let error = outcome.and_then(AuthError::bearer_error_code);
-        let mut parts: Vec<String> = Vec::new();
-        if self.config.basic.is_some() {
-            // RFC 7617 §2.1: `charset="UTF-8"` names the credential encoding,
-            // and is the RFC's only legal value.
-            parts.push(r#"Basic realm="ferroehr", charset="UTF-8""#.to_owned());
-        }
-        if self.jwt.is_some() {
-            // RFC 6750 §3: the challenge carries `realm` and, when the client
-            // can act on the failure, an `error` code from §3.1.
-            let bearer = match error {
-                Some(code) => format!(r#"Bearer realm="ferroehr", error="{code}""#),
-                None => r#"Bearer realm="ferroehr""#.to_owned(),
-            };
-            parts.push(bearer);
-        }
-        if parts.is_empty() {
-            // Unreachable in a booted server (`auth.enabled` without a mechanism
-            // is a boot error), but a challenge must never be empty.
-            parts.push(r#"Basic realm="ferroehr", charset="UTF-8""#.to_owned());
-        }
-        HeaderValue::from_str(&parts.join(", "))
-            .unwrap_or_else(|_| HeaderValue::from_static(r#"Basic realm="ferroehr""#))
+        let refusal = outcome.map_or(Some(Refusal::Missing(self.gate.schemes())), |e| {
+            e.refusal(self.gate.schemes())
+        });
+        let value = refusal
+            .and_then(|refusal| refusal.challenge(Some(&self.realm)))
+            .unwrap_or_else(|| format!(r#"Bearer realm="{}""#, self.realm));
+        HeaderValue::from_str(&value)
+            .unwrap_or_else(|_invalid| HeaderValue::from_static(r#"Bearer realm="ferroehr""#))
     }
 
-    #[expect(
-        clippy::map_err_ignore,
-        reason = "every failure on the credential path collapses to one opaque \
-                  outcome deliberately: a caller must not learn from the 401 which \
-                  part of the credential was rejected"
-    )]
+    /// Authenticates the request carrying `headers`.
+    ///
+    /// A Basic credential verified within the cache TTL is answered from the
+    /// cache, a continuing session; every other credential goes to the gate.
     pub(crate) async fn authenticate(
         &self,
         headers: &http::HeaderMap,
     ) -> Result<Authenticated, AuthError> {
-        let auth = headers
+        let mut basic_key = None;
+        if let Some(raw) = headers
             .get(header::AUTHORIZATION)
-            .ok_or(AuthError::MissingCredentials)?;
-        let raw = auth.to_str().map_err(|_| {
-            AuthError::MalformedRequest(
-                "the Authorization header is not valid ISO-8859-1 text".to_owned(),
-            )
-        })?;
-        let scheme = raw
-            .split_whitespace()
-            .next()
-            .ok_or_else(|| {
-                AuthError::MalformedRequest("the Authorization header is empty".to_owned())
-            })?
-            .to_ascii_lowercase();
-
-        match scheme.as_str() {
-            "basic" => {
-                let cfg = self
-                    .config
-                    .basic
-                    .as_ref()
-                    .ok_or(AuthError::InvalidCredentials)?;
+            .and_then(|value| value.to_str().ok())
+        {
+            let scheme = raw.split_whitespace().next().unwrap_or_default();
+            if scheme.eq_ignore_ascii_case("bearer") && self.gate.schemes().bearer {
+                bearer_credential(raw)?;
+            }
+            if scheme.eq_ignore_ascii_case("basic") && self.gate.schemes().basic {
                 // Keyed by the SHA-256 of the presented header, never the
-                // plaintext. A miss runs Argon2 on the blocking pool, so the
-                // async workers are never parked on CPU-bound hashing.
+                // plaintext.
                 let key: [u8; 32] = {
                     use sha2::Digest as _;
-                    sha2::Sha256::digest(auth.as_bytes()).into()
+                    sha2::Sha256::digest(raw.as_bytes()).into()
                 };
                 if let Some(cache) = &self.verified
                     && let Some(principal) = cache.get(&key).await
                 {
-                    // A cache hit is a continuing session, not a new
-                    // authentication event.
                     return Ok(Authenticated {
                         principal,
                         fresh: false,
                     });
                 }
-                self.kdf_verifications
-                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                let principal = {
-                    let auth = auth.clone();
-                    let cfg = cfg.clone();
-                    tokio::task::spawn_blocking(move || basic::verify(&auth, &cfg))
-                        .await
-                        .map_err(|join_error| {
-                            AuthError::VerificationUnavailable(format!(
-                                "password-verification task failed: {join_error}"
-                            ))
-                        })??
-                };
-                if let Some(cache) = &self.verified {
-                    cache.insert(key, principal.clone()).await;
-                }
-                // The KDF actually ran: this request is a genuine authentication.
-                Ok(Authenticated {
-                    principal,
-                    fresh: true,
-                })
+                self.kdf_verifications.fetch_add(1, Ordering::Relaxed);
+                basic_key = Some(key);
             }
-            "bearer" => {
-                let validator = self.jwt.as_ref().ok_or(AuthError::InvalidCredentials)?;
-                let token = bearer_credential(raw)?;
-                // Federated: the authentication event happened at the OIDC
-                // provider, so a per-request login record is never minted here.
-                validator
-                    .validate(token)
-                    .await
-                    .map(|principal| Authenticated {
-                        principal,
-                        fresh: false,
-                    })
-            }
-            other => Err(AuthError::MalformedRequest(format!(
-                "unsupported authentication scheme `{other}`"
-            ))),
+        }
+        let access = self
+            .gate
+            .authenticate(headers)
+            .await
+            .map_err(|refusal| AuthError::from_refusal(&refusal))?;
+        let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
+        // An unattributable subject cannot be recorded in the ATNA trail, so a
+        // blank `sub` is refused like any token that does not hold.
+        if caller.subject().trim().is_empty() {
+            return Err(AuthError::InvalidToken);
+        }
+        let roles = self.roles_of(caller);
+        let honoured = self.gate.honoured(&access);
+        let principal = Principal::new(access.clone(), roles, honoured);
+        // The KDF ran for a Basic credential: a genuine authentication event.
+        let fresh = basic_key.is_some() && caller.via() == Via::Basic;
+        if let (true, Some(key), Some(cache)) = (fresh, basic_key, &self.verified) {
+            cache.insert(key, principal.clone()).await;
+        }
+        Ok(Authenticated { principal, fresh })
+    }
+
+    /// The roles of `caller`: the configured claim paths of a token, the
+    /// `[authz.rbac.basic_roles]` entry of a Basic user.
+    fn roles_of(&self, caller: &Caller) -> Vec<String> {
+        match caller.via() {
+            Via::Basic => self.rbac.roles_of_basic_user(caller.subject()),
+            Via::Bearer => extract_roles(caller.claims(), &self.role_claims),
         }
     }
 }
 
-/// Extracts the bearer credential from an `Authorization` header value,
-/// enforcing the RFC 6750 §2.1 grammar.
+/// The boot refusal of an issuer whose metadata or key set could not be read.
+///
+/// A key set that does not parse is named by its JSON failure class and
+/// position, never by the parser's message, which quotes the offending value;
+/// every other failure carries its whole cause chain.
+fn unreadable_issuer(issuer: &str, error: &ResourceError) -> String {
+    match error {
+        ResourceError::KeySet { error: json, .. } => format!(
+            "the authorization server {issuer} could not be read: {error}: {:?} error at \
+             line {}, column {}",
+            json.classify(),
+            json.line(),
+            json.column()
+        ),
+        _ => format!(
+            "the authorization server {issuer} could not be read: {}",
+            ferroehr::service::error::ErrorChain::new(error)
+        ),
+    }
+}
+
+/// Holds a bearer credential to the RFC 6750 §2.1 grammar.
 ///
 /// The RFC is exact: `credentials = "Bearer" 1*SP b64token` with
 /// `b64token = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" ) *"="`.
@@ -734,6 +611,10 @@ pub(crate) async fn middleware(
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
+            if let Some(mut refusal) = smart_refusal(&layer, &req, &principal) {
+                refusal.extensions_mut().insert(actor);
+                return refusal;
+            }
             req.extensions_mut().insert(principal.clone());
             let for_audit = principal.clone();
             let committer = committer_identity(&for_audit);
@@ -792,6 +673,47 @@ fn rbac_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opti
     };
     count_auth_failure(mechanism_label(principal.method), "403");
     let mut resp = RestError(ApiError::Forbidden(reason)).into_response();
+    resp.extensions_mut().insert(principal.clone());
+    Some(resp)
+}
+
+/// Checks the SMART on openEHR requirement of the matched route, after RBAC.
+///
+/// A requirement the caller's grants do not meet, or a `patient/` grant whose
+/// target is not the EHR of the token's launch context, is a `403` with the
+/// `insufficient_scope` challenge (RFC 6750 §3.1) that names no scope,
+/// attributed to the caller. A composition operation is checked by the PEP once
+/// its template is known.
+fn smart_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Option<Response> {
+    let matched = req
+        .extensions()
+        .get::<MatchedPath>()
+        .map(MatchedPath::as_str);
+    let need = layer.smart.need(req.method(), matched, req.uri().path());
+    let Need::Now(requirement) = need else {
+        return None;
+    };
+    let reason = match crate::smart::routes::check(
+        &requirement,
+        principal,
+        crate::smart::routes::target_ehr(&requirement, matched, req.uri(), req.headers())
+            .as_deref(),
+    ) {
+        Ok(()) => return None,
+        Err(reason) => reason,
+    };
+    count_auth_failure(mechanism_label(principal.method), "403");
+    tracing::debug!(reason, "a SMART on openEHR requirement was not met");
+    let mut resp = RestError(ApiError::Forbidden(
+        "the credential does not permit this request".to_owned(),
+    ))
+    .into_response();
+    resp.headers_mut().insert(
+        header::WWW_AUTHENTICATE,
+        layer
+            .authenticator
+            .challenge(Some(&AuthError::Forbidden(String::new()))),
+    );
     resp.extensions_mut().insert(principal.clone());
     Some(resp)
 }
@@ -865,9 +787,9 @@ fn committer_identity(principal: &Principal) -> ferroehr::service::committer::Co
         issuer: match principal.method {
             AuthMethod::Basic => None,
             AuthMethod::Bearer => principal
-                .claims
-                .get("iss")
-                .and_then(serde_json::Value::as_str)
+                .access
+                .caller()
+                .and_then(Caller::issuer)
                 .map(str::to_owned),
         },
     }
@@ -879,7 +801,7 @@ fn committer_identity(principal: &Principal) -> ferroehr::service::committer::Co
 /// one is the operator's signal. Neither record carries the token or a claim
 /// value. ITS-REST §Authentication and authorization makes the
 /// `WWW-Authenticate` challenge a MUST on a `401`, and RFC 6750 §3 carries one
-/// on a bearer `403` too, where it names what the client lacks.
+/// on a bearer `400` and `403` too, where it names what the client did wrong.
 fn refusal_response(auth: &Authenticator, headers: &header::HeaderMap, e: &AuthError) -> Response {
     let api = e.to_api_error();
     let status = api.status();
@@ -903,20 +825,21 @@ fn refusal_response(auth: &Authenticator, headers: &header::HeaderMap, e: &AuthE
             "authentication refused"
         );
     }
-    let needs_challenge = matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN);
-    let challenge = auth.challenge(Some(e));
     let mut resp = RestError(api).into_response();
-    if needs_challenge {
+    if matches!(
+        status,
+        StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN | StatusCode::BAD_REQUEST
+    ) {
         resp.headers_mut()
-            .insert(header::WWW_AUTHENTICATE, challenge);
+            .insert(header::WWW_AUTHENTICATE, auth.challenge(Some(e)));
     }
     resp
 }
 
-/// The RFC 6750 §2.1 grammar and the challenge shapes, asserted per clause.
+/// The RFC 6750 §2.1 grammar, asserted per clause.
 #[cfg(test)]
 mod bearer_grammar_tests {
-    use super::{AuthError, TokenRejection, bearer_credential};
+    use super::{AuthError, bearer_credential};
 
     #[test]
     fn bearer_credentials_follow_rfc6750_abnf() {
@@ -950,42 +873,12 @@ mod bearer_grammar_tests {
         }
     }
 
-    /// RFC 6750 §3.1 assigns each outcome its own code, and deliberately assigns
-    /// NONE when no credential was presented: an unauthenticated first request
-    /// has not made a mistake yet.
-    #[test]
-    fn challenge_error_codes_follow_rfc6750() {
-        assert_eq!(AuthError::MissingCredentials.bearer_error_code(), None);
-        assert_eq!(
-            AuthError::InvalidCredentials.bearer_error_code(),
-            Some("invalid_token")
-        );
-        assert_eq!(
-            AuthError::InvalidToken(TokenRejection::NoUsableKey).bearer_error_code(),
-            Some("invalid_token")
-        );
-        assert_eq!(
-            AuthError::Forbidden("x".to_owned()).bearer_error_code(),
-            Some("insufficient_scope")
-        );
-        assert_eq!(
-            AuthError::MalformedRequest("x".to_owned()).bearer_error_code(),
-            Some("invalid_request")
-        );
-        // A server-side fault is not a statement about the credential.
-        assert_eq!(
-            AuthError::KeyResolution(super::KeyResolutionError::new("x")).bearer_error_code(),
-            None
-        );
-    }
-
     /// RFC 9110 §15.6.4: an unreachable issuer means the server cannot decide,
     /// which is a 503 — never a 401 telling a caller its valid token was
     /// rejected.
     #[test]
     fn unreachable_issuer_is_503_not_401() {
-        let api = AuthError::KeyResolution(super::KeyResolutionError::new("jwks unreachable"))
-            .to_api_error();
+        let api = AuthError::KeyResolution.to_api_error();
         assert_eq!(api.status(), http::StatusCode::SERVICE_UNAVAILABLE);
     }
 
@@ -995,6 +888,18 @@ mod bearer_grammar_tests {
     fn malformed_authorization_header_is_400_invalid_request() {
         let api = AuthError::MalformedRequest("bad".to_owned()).to_api_error();
         assert_eq!(api.status(), http::StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn verification_unavailable_is_500_not_401() {
+        // A failed blocking verification is a SERVER fault: it must surface as
+        // 500 Internal, never as 401 — a server failure misreported as a client
+        // error is the silent-wrong-answer class this mapping exists to prevent.
+        let err = AuthError::VerificationUnavailable("task panicked".to_owned());
+        assert_eq!(
+            err.to_api_error().status(),
+            http::StatusCode::INTERNAL_SERVER_ERROR
+        );
     }
 }
 
@@ -1052,10 +957,21 @@ impl<S: Sync> FromRequestParts<S> for AuthenticatedUser {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    #![expect(
+        clippy::disallowed_types,
+        reason = "a test builds a token's claim set directly; the claim set is RFC 7519-open"
+    )]
+
+    use std::time::Duration;
+
     use argon2::password_hash::PasswordHasher;
     use argon2::{Argon2, PasswordHash};
-    use ferroehr::config::auth::{BasicConfig, BasicUser, OidcConfig};
+    use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser};
+    use secrecy::SecretString;
+    use serde_json::{Value, json};
+
+    use super::*;
+    use crate::test_support::{self, AUDIENCE, ISSUER};
 
     fn hash(pw: &str) -> String {
         Argon2::default()
@@ -1064,38 +980,38 @@ mod tests {
             .to_string()
     }
 
-    fn basic_only() -> Arc<Authenticator> {
-        Authenticator::new(AuthConfig {
-            enabled: true,
-            basic: Some(BasicConfig {
-                users: vec![BasicUser {
-                    username: "alice".to_owned(),
-                    password_hash: ferroehr::config::secret::Secret::new(hash("pw")),
-                    password_hash_file: None,
-                    roles: vec!["USER".to_owned()],
-                }],
-            }),
-            oidc: None,
-            ..AuthConfig::default()
-        })
-        .unwrap()
+    /// A Basic-only configuration admitting `alice` / `pw`.
+    fn basic_config(cache_ttl: u64) -> AppConfig {
+        AppConfig {
+            auth: AuthSection {
+                basic: Some(BasicSection {
+                    users: vec![BasicUser {
+                        user: "alice".to_owned(),
+                        password_hash: Some(SecretString::from(hash("pw"))),
+                        password_hash_file: None,
+                        scopes: vec!["user/composition-*.cruds".to_owned()],
+                    }],
+                }),
+                ..AuthSection::default()
+            },
+            basic_cache_ttl_seconds: cache_ttl,
+            ..AppConfig::default()
+        }
     }
 
-    fn hmac_oidc() -> Arc<Authenticator> {
-        Authenticator::new(AuthConfig {
-            enabled: true,
-            basic: None,
-            oidc: Some(OidcConfig {
-                issuer: "https://issuer.example".to_owned(),
-                audiences: vec![],
-                algorithms: vec!["HS256".to_owned()],
-                hmac_secret: Some(ferroehr::config::secret::Secret::new("secret".to_owned())),
-                jwks_json: None,
-                ..OidcConfig::default()
-            }),
-            ..AuthConfig::default()
+    async fn basic_only() -> Arc<Authenticator> {
+        Authenticator::new(&basic_config(60))
+            .await
+            .expect("a Basic-only authenticator")
+    }
+
+    async fn bearer_only() -> Arc<Authenticator> {
+        Authenticator::new(&AppConfig {
+            auth: test_support::bearer_auth(),
+            ..AppConfig::default()
         })
-        .unwrap()
+        .await
+        .expect("a bearer authenticator")
     }
 
     fn headers(auth: &str) -> http::HeaderMap {
@@ -1104,9 +1020,17 @@ mod tests {
         h
     }
 
+    fn bearer(claims: &Value) -> http::HeaderMap {
+        headers(&format!("Bearer {}", test_support::token(claims)))
+    }
+
+    fn now() -> i64 {
+        jiff::Timestamp::now().as_second()
+    }
+
     #[tokio::test]
     async fn verified_credential_cache_skips_the_kdf_on_a_hit() {
-        let auth = basic_only();
+        let auth = basic_only().await;
         let h = headers("Basic YWxpY2U6cHc="); // alice:pw
         let first = auth.authenticate(&h).await.expect("first verifies");
         let second = auth.authenticate(&h).await.expect("second hits the cache");
@@ -1116,8 +1040,7 @@ mod tests {
             "a cache hit is a continuing session, not a new authentication"
         );
         assert_eq!(
-            auth.kdf_verifications
-                .load(std::sync::atomic::Ordering::Relaxed),
+            auth.kdf_verifications(),
             1,
             "one KDF verification for two requests with the same credential"
         );
@@ -1127,8 +1050,7 @@ mod tests {
         let bad = headers("Basic YWxpY2U6d3Jvbmc="); // alice:wrong
         auth.authenticate(&bad).await.expect_err("wrong password");
         assert_eq!(
-            auth.kdf_verifications
-                .load(std::sync::atomic::Ordering::Relaxed),
+            auth.kdf_verifications(),
             2,
             "the wrong credential paid its own (failed) verification"
         );
@@ -1136,35 +1058,17 @@ mod tests {
 
     #[tokio::test]
     async fn verified_cache_ttl_zero_disables_caching() {
-        let mut cfg = AuthConfig {
-            enabled: true,
-            basic: Some(BasicConfig {
-                users: vec![BasicUser {
-                    username: "alice".to_owned(),
-                    password_hash: ferroehr::config::secret::Secret::new(hash("pw")),
-                    password_hash_file: None,
-                    roles: vec!["USER".to_owned()],
-                }],
-            }),
-            oidc: None,
-            ..AuthConfig::default()
-        };
-        cfg.verified_cache_ttl_seconds = 0;
-        let auth = Authenticator::new(cfg).unwrap();
+        let auth = Authenticator::new(&basic_config(0)).await.unwrap();
         let h = headers("Basic YWxpY2U6cHc=");
         auth.authenticate(&h).await.expect("ok");
         auth.authenticate(&h).await.expect("ok");
-        assert_eq!(
-            auth.kdf_verifications
-                .load(std::sync::atomic::Ordering::Relaxed),
-            2,
-            "TTL 0 verifies every request"
-        );
+        assert_eq!(auth.kdf_verifications(), 2, "TTL 0 verifies every request");
     }
 
     #[tokio::test]
     async fn missing_credentials() {
         let err = basic_only()
+            .await
             .authenticate(&http::HeaderMap::new())
             .await
             .expect_err("reject");
@@ -1174,12 +1078,22 @@ mod tests {
 
     #[tokio::test]
     async fn valid_basic() {
-        // "alice:pw" base64 = YWxpY2U6cHc=
         let p = basic_only()
+            .await
             .authenticate(&headers("Basic YWxpY2U6cHc="))
             .await
             .expect("ok");
         assert_eq!(p.principal.subject, "alice");
+        assert_eq!(p.principal.method, AuthMethod::Basic);
+        assert_eq!(
+            p.principal.scopes,
+            vec!["user/composition-*.cruds".to_owned()]
+        );
+        assert_eq!(
+            p.principal.roles,
+            vec!["USER".to_owned()],
+            "a Basic user with no [authz.rbac.basic_roles] entry holds the user role"
+        );
         assert!(
             p.fresh,
             "a first Basic verification is a genuine authentication"
@@ -1187,35 +1101,76 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn bearer_without_oidc_is_rejected() {
-        let err = basic_only()
+    async fn configured_basic_roles_are_upper_cased() {
+        let mut config = basic_config(60);
+        config
+            .rbac
+            .basic_roles
+            .insert("alice".to_owned(), vec!["admin".to_owned(), "user".to_owned()]);
+        let auth = Authenticator::new(&config).await.unwrap();
+        let p = auth
+            .authenticate(&headers("Basic YWxpY2U6cHc="))
+            .await
+            .expect("ok");
+        assert_eq!(
+            p.principal.roles,
+            vec!["ADMIN".to_owned(), "USER".to_owned()]
+        );
+    }
+
+    /// RFC 6750 §3.1: a request that "attempted using an unsupported
+    /// authentication method" lacks authentication information, so a bearer
+    /// token on a Basic-only surface is a missing credential, challenged with no
+    /// error code.
+    #[tokio::test]
+    async fn bearer_without_an_issuer_is_a_missing_credential() {
+        let auth = basic_only().await;
+        let err = auth
             .authenticate(&headers("Bearer sometoken"))
             .await
             .expect_err("reject");
-        assert!(matches!(err, AuthError::InvalidCredentials));
+        assert!(matches!(err, AuthError::MissingCredentials), "got {err:?}");
+        let challenge = auth.challenge(Some(&err));
+        assert!(
+            !challenge.to_str().unwrap().contains("error="),
+            "{challenge:?}"
+        );
     }
 
     #[tokio::test]
     async fn wrong_password_is_401_not_500() {
-        let err = basic_only()
-            .authenticate(&headers("Basic YWxpY2U6d3Jvbmc=")) // "alice:wrong"
-            .await
-            .expect_err("reject");
-        assert!(matches!(err, AuthError::InvalidCredentials));
-        assert_eq!(err.to_api_error().status(), StatusCode::UNAUTHORIZED);
+        let auth = basic_only().await;
+        for credential in [
+            "Basic YWxpY2U6d3Jvbmc=", // alice:wrong
+            "Basic Ym9iOnB3",         // bob:pw, an unknown user
+        ] {
+            let err = auth
+                .authenticate(&headers(credential))
+                .await
+                .expect_err("reject");
+            assert!(matches!(err, AuthError::InvalidCredentials), "got {err:?}");
+            assert_eq!(err.to_api_error().status(), StatusCode::UNAUTHORIZED);
+        }
     }
 
-    #[test]
-    fn verification_unavailable_is_500_not_401() {
-        // A JoinError from the blocking Argon2 task is a SERVER fault: it must
-        // surface as 500 Internal, never as 401 InvalidCredentials — a server
-        // failure misreported as a client error is the silent-wrong-answer
-        // class this crate's error mapping exists to prevent.
-        let err = AuthError::VerificationUnavailable("task panicked".to_owned());
-        assert_eq!(
-            err.to_api_error().status(),
-            StatusCode::INTERNAL_SERVER_ERROR
-        );
+    /// RFC 7617 §2: the credential is the base64 of `user-id:password`, so an
+    /// unpadded, over-padded, interior-padded or non-alphabet value does not
+    /// decode and is refused like a wrong password.
+    #[tokio::test]
+    async fn a_malformed_basic_credential_is_refused() {
+        let auth = basic_only().await;
+        for malformed in [
+            "Basic YWxpY2U6cHc",    // unpadded
+            "Basic YWxpY2U6cHc===", // excess padding
+            "Basic YWxp=Y2U6cHc=",  // interior padding
+            "Basic YWxpY2U6cHc*",   // outside the alphabet
+        ] {
+            let err = auth
+                .authenticate(&headers(malformed))
+                .await
+                .expect_err("a malformed credential must be refused");
+            assert!(matches!(err, AuthError::InvalidCredentials), "{malformed}: {err:?}");
+        }
     }
 
     #[test]
@@ -1225,65 +1180,110 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn bearer_smoke_with_hmac() {
-        // A malformed token is rejected as an invalid token (not missing creds).
-        let err = hmac_oidc()
-            .authenticate(&headers("Bearer not-a-jwt"))
+    async fn valid_token_authenticates() {
+        let p = bearer_only()
             .await
-            .expect_err("reject");
-        assert!(
-            matches!(err, AuthError::InvalidToken(TokenRejection::Malformed(_))),
-            "got {err:?}"
+            .authenticate(&bearer(&test_support::claims("alice", "openid user/composition-*.r")))
+            .await
+            .expect("ok");
+        assert_eq!(p.principal.subject, "alice");
+        assert_eq!(p.principal.method, AuthMethod::Bearer);
+        assert!(p.principal.scopes.contains(&"openid".to_owned()));
+        // The validated claim set is retained on the Principal.
+        assert_eq!(
+            p.principal.claims.get("sub").and_then(Value::as_str),
+            Some("alice")
         );
+        assert!(!p.fresh, "a bearer request is federated, never a login event");
     }
 
-    /// One value of every [`TokenRejection`] variant, for the wire-identity
-    /// assertion below.
-    fn every_token_rejection() -> Vec<TokenRejection> {
-        let cause = || jsonwebtoken::errors::Error::from(ErrorKind::ExpiredSignature);
+    /// One invalid token of every kind the old validator classified: each is
+    /// refused, and none differs from another on the wire.
+    fn invalid_tokens() -> Vec<(&'static str, String)> {
+        let base = test_support::claims("alice", "user/composition-*.r");
+        let without = |claim: &str| {
+            let mut c = base.clone();
+            c.as_object_mut().expect("object").remove(claim);
+            test_support::token(&c)
+        };
+        let with = |claim: &str, value: Value| {
+            let mut c = base.clone();
+            c[claim] = value;
+            test_support::token(&c)
+        };
+        let mut tampered = test_support::token(&base);
+        let flip = tampered.len() - 10;
+        let replacement = if tampered.as_bytes()[flip] == b'A' { "B" } else { "A" };
+        tampered.replace_range(flip..=flip, replacement);
+        let unsigned = |typ: Option<&str>, claims: &Value| {
+            let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
+            header.typ = typ.map(str::to_owned);
+            // RFC 8725 §2.1: a token "signed" with the issuer's PUBLIC key as an
+            // HMAC secret, the algorithm-confusion forgery.
+            jsonwebtoken::encode(
+                &header,
+                claims,
+                &jsonwebtoken::EncodingKey::from_secret(include_bytes!(
+                    "../../../../../../docs/conformance/party/smart/jwks.json"
+                )),
+            )
+            .expect("encode")
+        };
+        let typed = |typ: &str| {
+            let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);
+            header.typ = Some(typ.to_owned());
+            header.kid = Some("cnf-smart-test".to_owned());
+            jsonwebtoken::encode(
+                &header,
+                &base,
+                &jsonwebtoken::EncodingKey::from_rsa_pem(include_bytes!(
+                    "../../../../../../docs/conformance/party/smart/cnf-smart-test.key.pem"
+                ))
+                .expect("key"),
+            )
+            .expect("encode")
+        };
         vec![
-            TokenRejection::Expired(cause()),
-            TokenRejection::NotYetValid(cause()),
-            TokenRejection::Signature(cause()),
-            TokenRejection::Issuer(cause()),
-            TokenRejection::Audience(cause()),
-            TokenRejection::Subject(cause()),
-            TokenRejection::ClaimSet(cause()),
-            TokenRejection::Malformed(cause()),
-            TokenRejection::AlgorithmMismatch(cause()),
-            TokenRejection::KeyMaterial(cause()),
-            TokenRejection::Unclassified(cause()),
-            TokenRejection::AlgorithmNotAccepted(Algorithm::HS256),
-            TokenRejection::TokenTypeNotAccessToken("JWT+ID".to_owned()),
-            TokenRejection::AtJwtProfileRequired,
-            TokenRejection::AtJwtProfileClaimMissing("jti".to_owned()),
-            TokenRejection::SubjectMissing,
-            TokenRejection::UnknownKeyId("k1".to_owned()),
-            TokenRejection::NoUsableKey,
-            TokenRejection::AmbiguousKey(2),
-            TokenRejection::UnusableJwk(cause()),
+            ("not a JWT", "not-a-jwt".to_owned()),
+            ("no sub", without("sub")),
+            ("blank sub", with("sub", json!("   "))),
+            ("expired", with("exp", json!(now() - 3600))),
+            ("not yet valid", with("nbf", json!(now() + 3600))),
+            ("wrong issuer", with("iss", json!("https://evil.example"))),
+            ("no issuer", without("iss")),
+            ("another audience", with("aud", json!("some-other-resource-server"))),
+            ("tampered signature", tampered),
+            ("HMAC confusion", unsigned(Some("at+jwt"), &base)),
+            ("an ID token", typed("JWT+ID")),
+            ("untyped under RFC 9068", typed("JWT")),
+            ("no jti", without("jti")),
+            ("no client_id", without("client_id")),
+            ("no iat", without("iat")),
+            ("issued in the future", with("iat", json!(now() + 3600))),
         ]
     }
 
-    /// RFC 6750 §3.1 gives ONE code to every rejected token — `invalid_token`
-    /// covers a token that "is expired, revoked, malformed, or invalid for
-    /// other reasons" — so neither the status nor the challenge a client sees
-    /// may vary with the reason the server classified internally.
-    #[test]
-    fn every_token_rejection_renders_one_status_and_one_challenge() {
-        let auth = hmac_oidc();
+    /// RFC 9068 §4 rejects a token "in case of any failure in the validation
+    /// checks" with one `invalid_token` answer (RFC 6750 §3.1): neither the
+    /// status nor the challenge a client sees may vary with the reason.
+    #[tokio::test]
+    async fn every_invalid_token_renders_one_status_and_one_challenge() {
+        let auth = bearer_only().await;
         let mut challenges: Vec<HeaderValue> = Vec::new();
-        for rejection in every_token_rejection() {
-            let err = AuthError::InvalidToken(rejection);
+        for (case, token) in invalid_tokens() {
+            let err = auth
+                .authenticate(&headers(&format!("Bearer {token}")))
+                .await
+                .expect_err(case);
+            assert!(matches!(err, AuthError::InvalidToken), "{case}: {err:?}");
             assert_eq!(
                 err.to_api_error().status(),
                 StatusCode::UNAUTHORIZED,
-                "{err:?}"
+                "{case}"
             );
-            assert_eq!(err.bearer_error_code(), Some("invalid_token"), "{err:?}");
             challenges.push(auth.challenge(Some(&err)));
         }
-        let first = challenges.first().expect("rejection kinds exist").clone();
+        let first = challenges.first().expect("cases exist").clone();
         assert!(
             challenges.iter().all(|c| *c == first),
             "the challenge must not vary with the refusal reason: {challenges:?}"
@@ -1291,6 +1291,157 @@ mod tests {
         assert_eq!(
             first,
             HeaderValue::from_static(r#"Bearer realm="ferroehr", error="invalid_token""#)
+        );
+    }
+
+    /// RFC 9068 §4: under the `jwt` profile a plainly typed or untyped token is
+    /// accepted, and a token typed as another kind of JWT is still refused.
+    #[tokio::test]
+    async fn the_jwt_profile_admits_a_plain_jwt_and_refuses_another_kind() {
+        let mut auth = test_support::bearer_auth();
+        auth.token_profile = ferrohealth_smart::resource::TokenProfile::Jwt;
+        let authenticator = Authenticator::new(&AppConfig {
+            auth,
+            ..AppConfig::default()
+        })
+        .await
+        .expect("authenticator");
+        let key = jsonwebtoken::EncodingKey::from_rsa_pem(include_bytes!(
+            "../../../../../../docs/conformance/party/smart/cnf-smart-test.key.pem"
+        ))
+        .expect("key");
+        let mint = |typ: Option<&str>| {
+            let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);
+            header.typ = typ.map(str::to_owned);
+            header.kid = Some("cnf-smart-test".to_owned());
+            let mut claims = json!({
+                "iss": ISSUER, "aud": AUDIENCE, "sub": "alice", "exp": now() + 3600,
+            });
+            claims["scope"] = json!("user/composition-*.r");
+            jsonwebtoken::encode(&header, &claims, &key).expect("encode")
+        };
+        for typ in [Some("JWT"), None] {
+            authenticator
+                .authenticate(&headers(&format!("Bearer {}", mint(typ))))
+                .await
+                .expect("a plain JWT authenticates under the jwt profile");
+        }
+        let err = authenticator
+            .authenticate(&headers(&format!("Bearer {}", mint(Some("JWT+ID")))))
+            .await
+            .expect_err("an ID token is refused under either profile");
+        assert!(matches!(err, AuthError::InvalidToken), "got {err:?}");
+    }
+
+    #[tokio::test]
+    async fn keycloak_realm_access_roles_extracted() {
+        // Roles live under `realm_access.roles` and surface upper-cased. The
+        // `scope` claim is NOT a role source: an OAuth2 scope grants a client
+        // delegated authority (RFC 6749 §3.3) and asserts nothing about the
+        // subject's roles.
+        let mut c = test_support::claims("alice", "openid EHR_READ");
+        c["realm_access"] = json!({ "roles": ["user", "ferroehr-admin"] });
+        let p = bearer_only()
+            .await
+            .authenticate(&bearer(&c))
+            .await
+            .expect("ok")
+            .principal;
+        assert!(p.roles.contains(&"USER".to_owned()));
+        assert!(p.roles.contains(&"FERROEHR-ADMIN".to_owned()));
+        assert!(
+            !p.roles.contains(&"OPENID".to_owned()),
+            "`openid` is a scope, not a role",
+        );
+        assert!(
+            !p.roles.contains(&"EHR_READ".to_owned()),
+            "a scope must not become a role",
+        );
+        assert!(p.scopes.contains(&"openid".to_owned()));
+    }
+
+    #[test]
+    fn extract_roles_upper_cases_and_dedups() {
+        let claims = json!({
+            "realm_access": { "roles": ["admin", "Admin", "user"] },
+            "scope": "user OFFLINE_ACCESS",
+        })
+        .as_object()
+        .cloned()
+        .unwrap();
+        let roles = extract_roles(
+            &claims,
+            &ferroehr::config::authz::RbacConfig::default().role_claims,
+        );
+        assert_eq!(roles, vec!["ADMIN".to_owned(), "USER".to_owned()]);
+    }
+
+    #[test]
+    fn extract_roles_missing_paths_yields_empty() {
+        let claims = json!({ "sub": "x" }).as_object().cloned().unwrap();
+        assert!(
+            extract_roles(
+                &claims,
+                &ferroehr::config::authz::RbacConfig::default().role_claims
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn extract_roles_custom_nested_path() {
+        let claims = json!({ "resource_access": { "client": { "roles": ["writer"] } } })
+            .as_object()
+            .cloned()
+            .unwrap();
+        let roles = extract_roles(&claims, &["resource_access.client.roles".to_owned()]);
+        assert_eq!(roles, vec!["WRITER".to_owned()]);
+    }
+
+    /// Each outcome gets its own stable label, so a burst of one kind is
+    /// countable in the logs rather than greppable out of a message.
+    #[test]
+    fn outcome_labels_are_distinct() {
+        let mut labels: Vec<&'static str> = [
+            AuthError::MissingCredentials,
+            AuthError::InvalidCredentials,
+            AuthError::MalformedRequest(String::new()),
+            AuthError::InvalidToken,
+            AuthError::KeyResolution,
+            AuthError::Forbidden(String::new()),
+            AuthError::VerificationUnavailable(String::new()),
+        ]
+        .iter()
+        .map(AuthError::label)
+        .collect();
+        let total = labels.len();
+        labels.sort_unstable();
+        labels.dedup();
+        assert_eq!(labels.len(), total, "two outcomes share a label");
+    }
+
+    /// RFC 6750 §3.1 assigns each outcome its own code, and assigns NONE when
+    /// no credential was presented.
+    #[tokio::test]
+    async fn challenge_error_codes_follow_rfc6750() {
+        let auth = bearer_only().await;
+        let code = |outcome: &AuthError| {
+            auth.challenge(Some(outcome))
+                .to_str()
+                .unwrap()
+                .split("error=")
+                .nth(1)
+                .map(|rest| rest.trim_matches('"').to_owned())
+        };
+        assert_eq!(code(&AuthError::MissingCredentials), None);
+        assert_eq!(code(&AuthError::InvalidToken).as_deref(), Some("invalid_token"));
+        assert_eq!(
+            code(&AuthError::Forbidden("x".to_owned())).as_deref(),
+            Some("insufficient_scope")
+        );
+        assert_eq!(
+            code(&AuthError::MalformedRequest("x".to_owned())).as_deref(),
+            Some("invalid_request")
         );
     }
 
@@ -1324,9 +1475,9 @@ mod tests {
         }
     }
 
-    /// The refusal reason must reach the LOG as its own field — countable
-    /// rather than greppable — and neither the token nor a claim value may
-    /// appear anywhere in the record.
+    /// The refusal reaches the log as its own field — the crate's debug record
+    /// names which check failed, FerroEHR's record the outcome — and neither
+    /// the token nor a claim value appears anywhere in the record.
     #[tokio::test]
     async fn a_refused_token_logs_its_reason_and_never_the_token() {
         use tracing_subscriber::layer::SubscriberExt as _;
@@ -1337,10 +1488,15 @@ mod tests {
         let subscriber = tracing_subscriber::registry().with(capture.clone());
         let _guard = tracing::subscriber::set_default(subscriber);
 
+        let config = AppConfig {
+            auth: test_support::bearer_auth(),
+            ..AppConfig::default()
+        };
         let layer = AuthLayer {
-            authenticator: hmac_oidc(),
+            authenticator: Authenticator::new(&config).await.expect("authenticator"),
             authz: None,
             patient_data: None,
+            smart: Arc::new(SmartRoutes::new("", "__ferroehr.platform", Vec::new())),
         };
         let app = axum::Router::new()
             .route("/x", axum::routing::get(|| async { "ok" }))
@@ -1369,13 +1525,26 @@ mod tests {
             .expect("the refusal is logged");
         assert_eq!(
             refusal.get("reason").map(String::as_str),
-            Some("malformed"),
+            Some("invalid_token"),
             "{refusal:?}"
         );
         assert_eq!(
             refusal.get("mechanism").map(String::as_str),
             Some("bearer"),
             "{refusal:?}"
+        );
+        let check = events
+            .iter()
+            .find(|fields| {
+                fields
+                    .get("message")
+                    .is_some_and(|m| m == "an access token was refused")
+            })
+            .expect("the crate logs which check failed");
+        assert_eq!(
+            check.get("reason").map(String::as_str),
+            Some("malformed"),
+            "{check:?}"
         );
         for fields in &events {
             for (name, value) in fields {
@@ -1387,17 +1556,203 @@ mod tests {
         }
     }
 
-    /// Each classified reason gets its own stable label, so a burst of one kind
-    /// is countable in the logs rather than greppable out of a message.
-    #[test]
-    fn token_rejection_labels_are_distinct() {
-        let mut labels: Vec<&'static str> = every_token_rejection()
-            .iter()
-            .map(TokenRejection::label)
-            .collect();
-        let total = labels.len();
-        labels.sort_unstable();
-        labels.dedup();
-        assert_eq!(labels.len(), total, "two rejection kinds share a label");
+    /// The issuer's key set, read over its `jwks_uri`: the boot read, the
+    /// refetch on an unknown key, and the failures of each. No openEHR spec
+    /// governs auth transport hardening — the crate's design, held here at
+    /// FerroEHR's seam.
+    mod remote_issuer {
+        use std::sync::atomic::AtomicUsize;
+        use std::time::Instant;
+
+        use wiremock::matchers::{method, path};
+        use wiremock::{Mock, MockServer, Request as MockRequest, Respond, ResponseTemplate};
+
+        use super::*;
+
+        const JWKS_PATH: &str = "/jwks";
+
+        /// The OAuth 2.0 metadata of the issuer `server` runs (RFC 8414 §3).
+        fn metadata(issuer: &str) -> Value {
+            json!({
+                "issuer": issuer,
+                "token_endpoint": format!("{issuer}/token"),
+                "jwks_uri": format!("{issuer}{JWKS_PATH}"),
+            })
+        }
+
+        /// The committed test key set, its key named `kid`.
+        fn jwks(kid: &str) -> Value {
+            let mut set: Value = serde_json::from_str(include_str!(
+                "../../../../../../docs/conformance/party/smart/jwks.json"
+            ))
+            .expect("the committed key set");
+            set["keys"][0]["kid"] = json!(kid);
+            set
+        }
+
+        /// An `[auth]` section trusting the issuer `server` runs.
+        fn section(issuer: &str, refresh_seconds: u64, timeout_ms: u64) -> AuthSection {
+            AuthSection {
+                issuer: ferrohealth_smart::config::IssuerKey::Flat(issuer.to_owned()),
+                audience: vec![AUDIENCE.to_owned()],
+                jwks_refresh_interval_seconds: refresh_seconds,
+                timeout_ms,
+                ..AuthSection::default()
+            }
+        }
+
+        async fn authenticator(section: AuthSection) -> Result<Arc<Authenticator>, String> {
+            Authenticator::new(&AppConfig {
+                auth: section,
+                ..AppConfig::default()
+            })
+            .await
+        }
+
+        async fn mount_metadata(server: &MockServer) {
+            Mock::given(method("GET"))
+                .and(path("/.well-known/oauth-authorization-server"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(metadata(&server.uri())))
+                .mount(server)
+                .await;
+        }
+
+        /// A token of `issuer` signed with the test key under `kid`.
+        fn token_under(issuer: &str, kid: &str) -> http::HeaderMap {
+            let mut claims = test_support::claims("alice", "user/composition-*.r");
+            claims["iss"] = json!(issuer);
+            let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);
+            header.typ = Some("at+jwt".to_owned());
+            header.kid = Some(kid.to_owned());
+            let token = jsonwebtoken::encode(
+                &header,
+                &claims,
+                &jsonwebtoken::EncodingKey::from_rsa_pem(include_bytes!(
+                    "../../../../../../docs/conformance/party/smart/cnf-smart-test.key.pem"
+                ))
+                .expect("key"),
+            )
+            .expect("encode");
+            headers(&format!("Bearer {token}"))
+        }
+
+        /// Answers the key-set reads in turn: the first with `kid` "boot", the
+        /// second with a `500`, every later one with `kid` "rotated".
+        struct Rotation(Arc<AtomicUsize>);
+
+        impl Respond for Rotation {
+            fn respond(&self, _request: &MockRequest) -> ResponseTemplate {
+                match self.0.fetch_add(1, Ordering::SeqCst) {
+                    0 => ResponseTemplate::new(200).set_body_json(jwks("boot")),
+                    1 => ResponseTemplate::new(500),
+                    _ => ResponseTemplate::new(200).set_body_json(jwks("rotated")),
+                }
+            }
+        }
+
+        /// A fetched key set that does not parse refuses the start with its
+        /// failure class and position, never with the parser's message, which
+        /// quotes the offending value.
+        #[tokio::test]
+        async fn unparsable_fetched_jwks_does_not_quote_its_input() {
+            let server = MockServer::start().await;
+            mount_metadata(&server).await;
+            Mock::given(method("GET"))
+                .and(path(JWKS_PATH))
+                .respond_with(
+                    ResponseTemplate::new(200)
+                        .set_body_json(json!({ "keys": "s3cr3t-key-material" })),
+                )
+                .mount(&server)
+                .await;
+            let Err(message) = authenticator(section(&server.uri(), 60, 5_000)).await else {
+                panic!("the set does not parse");
+            };
+            assert!(!message.contains("s3cr3t"), "{message}");
+            assert!(message.contains("line 1"), "{message}");
+        }
+
+        /// An issuer whose metadata cannot be read refuses the start rather
+        /// than the first request, so no request ever answers with its URL.
+        #[tokio::test]
+        async fn a_failed_discovery_refuses_the_start() {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .respond_with(ResponseTemplate::new(500))
+                .mount(&server)
+                .await;
+            assert!(authenticator(section(&server.uri(), 60, 5_000)).await.is_err());
+        }
+
+        #[tokio::test]
+        async fn stalled_issuer_fails_within_the_configured_request_timeout() {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .respond_with(
+                    ResponseTemplate::new(200)
+                        .set_body_json(metadata(&server.uri()))
+                        .set_delay(Duration::from_secs(30)),
+                )
+                .mount(&server)
+                .await;
+            let started = Instant::now();
+            let refused = authenticator(section(&server.uri(), 60, 300)).await;
+            let elapsed = started.elapsed();
+            assert!(refused.is_err(), "the timeout must fire");
+            // The 300 ms budget, generously slacked; without it the request
+            // would park for the mock's 30 s.
+            assert!(
+                elapsed < Duration::from_secs(5),
+                "discovery took {elapsed:?}: the request timeout did not fire"
+            );
+        }
+
+        /// A key set that cannot be read again answers a `503` whose body names
+        /// neither the issuer's URL nor the transport error; a second unknown key
+        /// inside the refresh interval reads nothing; once the interval passes,
+        /// the recovered issuer's rotated key validates.
+        #[tokio::test]
+        async fn a_failed_key_set_read_is_a_503_backed_off_until_the_issuer_recovers() {
+            let server = MockServer::start().await;
+            mount_metadata(&server).await;
+            let reads = Arc::new(AtomicUsize::new(0));
+            Mock::given(method("GET"))
+                .and(path(JWKS_PATH))
+                .respond_with(Rotation(Arc::clone(&reads)))
+                .mount(&server)
+                .await;
+            let auth = authenticator(section(&server.uri(), 1, 5_000))
+                .await
+                .expect("the boot read succeeds");
+            let issuer = server.uri();
+
+            tokio::time::sleep(Duration::from_millis(1_100)).await;
+            let err = auth
+                .authenticate(&token_under(&issuer, "rotated"))
+                .await
+                .expect_err("the refetch fails");
+            assert!(matches!(err, AuthError::KeyResolution), "got {err:?}");
+            let api = err.to_api_error();
+            assert_eq!(api.status(), StatusCode::SERVICE_UNAVAILABLE);
+            let body = api.to_string();
+            assert!(!body.contains("127.0.0.1"), "the body names the URL: {body}");
+            assert_eq!(reads.load(Ordering::SeqCst), 2, "the boot read and one refetch");
+
+            // Still inside the interval since the failed read: nothing is read.
+            assert!(auth.authenticate(&token_under(&issuer, "rotated")).await.is_err());
+            assert_eq!(
+                reads.load(Ordering::SeqCst),
+                2,
+                "a read escaped inside the refresh interval"
+            );
+
+            tokio::time::sleep(Duration::from_millis(1_100)).await;
+            let principal = auth
+                .authenticate(&token_under(&issuer, "rotated"))
+                .await
+                .expect("the recovered issuer's rotated key validates")
+                .principal;
+            assert_eq!(principal.subject, "alice");
+        }
     }
 }

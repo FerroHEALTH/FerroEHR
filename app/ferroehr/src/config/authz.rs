@@ -107,6 +107,15 @@ pub struct RbacConfig {
     /// gate runs without the coarse one; with authentication off nothing could
     /// enforce `restricted`, so that combination is refused at boot.
     pub ehr_access_default: EhrAccessDefault,
+    /// The roles of each Basic user, by the user-id `[[auth.basic.users]]`
+    /// names (`[authz.rbac.basic_roles]`); a user it does not list holds
+    /// [`Self::user_role`].
+    ///
+    /// `[[auth.basic.users]]` is the shared `ferrohealth-smart` section and
+    /// carries a user's SMART scopes, not its roles, so the roles the RBAC gate
+    /// reads live here beside the other role keys. Names are upper-cased like
+    /// every role. No openEHR spec governs role semantics — our own design.
+    pub basic_roles: BTreeMap<String, Vec<String>>,
 }
 
 impl Default for RbacConfig {
@@ -124,7 +133,23 @@ impl Default for RbacConfig {
                 "realm_access.roles".to_owned(),
             ],
             ehr_access_default: EhrAccessDefault::Open,
+            basic_roles: BTreeMap::new(),
         }
+    }
+}
+
+impl RbacConfig {
+    /// Returns the roles of the Basic user `user`, upper-cased: its
+    /// [`Self::basic_roles`] entry, or [`Self::user_role`] when it has none.
+    #[must_use]
+    pub fn roles_of_basic_user(&self, user: &str) -> Vec<String> {
+        let mut roles: Vec<String> = match self.basic_roles.get(user) {
+            Some(roles) => roles.iter().map(|role| role.to_ascii_uppercase()).collect(),
+            None => vec![self.user_role.to_ascii_uppercase()],
+        };
+        roles.sort_unstable();
+        roles.dedup();
+        roles
     }
 }
 
@@ -315,13 +340,39 @@ impl AbacConfig {
 
 /// Authorization configuration: the coarse RBAC gate plus the opt-in ABAC
 /// policy layer.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct AuthzConfig {
     /// Role-based access control.
     pub rbac: RbacConfig,
     /// Attribute-based access control (opt-in).
     pub abac: AbacConfig,
+    /// The authentication assurance a patient-data request must carry
+    /// (`[authz.assurance]`, off by default).
+    pub assurance: crate::config::auth::AssuranceConfig,
+    /// How a bearer token names the natural person behind it
+    /// (`[authz.professional]`, absent by default).
+    pub professional: Option<crate::config::auth::ProfessionalConfig>,
+    /// How long a verified Basic credential is reused before its Argon2id hash
+    /// is checked again, in seconds (default 60; `0` checks every request).
+    ///
+    /// Argon2id costs tens of milliseconds of CPU per check by design, so
+    /// without the cache a busy client's request rate is capped by the work
+    /// factor; the TTL bounds how long a removed user keeps working. No
+    /// specification governs this: our own design.
+    pub basic_cache_ttl_seconds: u64,
+}
+
+impl Default for AuthzConfig {
+    fn default() -> Self {
+        Self {
+            rbac: RbacConfig::default(),
+            abac: AbacConfig::default(),
+            assurance: crate::config::auth::AssuranceConfig::default(),
+            professional: None,
+            basic_cache_ttl_seconds: 60,
+        }
+    }
 }
 
 /// A boot-time authorization-configuration error — a hard error that must

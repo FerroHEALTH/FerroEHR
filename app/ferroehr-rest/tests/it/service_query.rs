@@ -36,7 +36,7 @@ const BASE: &str = "/ferroehr/rest/openehr/v1";
 const AQL: &str = "SELECT c FROM EHR e CONTAINS COMPOSITION c";
 
 /// The router backed by the DB service, with authentication disabled.
-fn app(pool: &PgPool) -> Router {
+async fn app(pool: &PgPool) -> Router {
     let mut config = AppConfig::default();
     config.auth.enabled = false;
     ferroehr_rest::build_with(
@@ -44,7 +44,7 @@ fn app(pool: &PgPool) -> Router {
         std::sync::Arc::new(FerroEhrService::new(
             &ferroehr::db::domain::DomainPools::from_shared(pool),
         )),
-    )
+    ).await
     .expect("router builds")
 }
 
@@ -102,7 +102,7 @@ async fn adhoc_aql_over_http_returns_result_set() {
     // Empty store → COUNT(*) over compositions is 0, but the endpoint, dispatch,
     // engine, and RESULT_SET assembly are all exercised.
     let (status, body) = post_json(
-        app(&pool.clone()),
+        app(&pool.clone()).await,
         &format!("{BASE}/query/aql"),
         r#"{"q":"SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c"}"#,
     )
@@ -122,7 +122,7 @@ async fn adhoc_aql_over_http_returns_result_set() {
 
     // The GET form takes `q` as a query parameter (URL-encoded).
     let (status, body) = get(
-        app(&pool),
+        app(&pool).await,
         &format!(
             "{BASE}/query/aql?q=SELECT%20COUNT(*)%20FROM%20EHR%20e%20CONTAINS%20COMPOSITION%20c"
         ),
@@ -140,7 +140,7 @@ async fn malformed_adhoc_aql_is_400() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let (status, _body) = post_json(
-        app(&pool),
+        app(&pool).await,
         &format!("{BASE}/query/aql"),
         r#"{"q":"SELECT FROM WHERE not aql"}"#,
     )
@@ -156,7 +156,7 @@ async fn versioned_store_returns_200_with_location_and_409_on_duplicate() {
     let uri = format!("{BASE}/definition/query/{name}/1.0.0");
 
     // First store: 200 OK + Location pointing at the stored resource.
-    let (status, headers, _body) = put(app(&pool.clone()), &uri, AQL).await;
+    let (status, headers, _body) = put(app(&pool.clone()).await, &uri, AQL).await;
     assert_eq!(status, StatusCode::OK, "store success is 200, not 204");
     let location = headers
         .get(header::LOCATION)
@@ -169,7 +169,7 @@ async fn versioned_store_returns_200_with_location_and_409_on_duplicate() {
     );
 
     // Re-storing the same name+version is a 409 Conflict (immutable version).
-    let (status, _headers, _body) = put(app(&pool.clone()), &uri, AQL).await;
+    let (status, _headers, _body) = put(app(&pool.clone()).await, &uri, AQL).await;
     assert_eq!(
         status,
         StatusCode::CONFLICT,
@@ -177,7 +177,7 @@ async fn versioned_store_returns_200_with_location_and_409_on_duplicate() {
     );
 
     // The stored query is retrievable and untouched.
-    let (status, body) = get(app(&pool), &format!("{BASE}/definition/query/{name}/1.0.0")).await;
+    let (status, body) = get(app(&pool).await, &format!("{BASE}/definition/query/{name}/1.0.0")).await;
     assert_eq!(status, StatusCode::OK);
     assert!(body.contains(AQL), "stored AQL retrievable: {body}");
 }
@@ -190,13 +190,13 @@ async fn no_version_store_upserts_and_returns_200() {
     let uri = format!("{BASE}/definition/query/{name}");
 
     // No-version store: 200 OK (auto-assigned version).
-    let (status, _headers, _body) = put(app(&pool.clone()), &uri, AQL).await;
+    let (status, _headers, _body) = put(app(&pool.clone()).await, &uri, AQL).await;
     assert_eq!(status, StatusCode::OK, "no-version store success is 200");
 
     // Re-storing the no-version path updates rather than conflicting (spec:
     // "stores a new query, or updates an existing query").
     let updated = "SELECT c FROM EHR e CONTAINS COMPOSITION c WHERE c/name/value = 'x'";
-    let (status, _headers, _body) = put(app(&pool.clone()), &uri, updated).await;
+    let (status, _headers, _body) = put(app(&pool.clone()).await, &uri, updated).await;
     assert_eq!(
         status,
         StatusCode::OK,
@@ -204,7 +204,7 @@ async fn no_version_store_upserts_and_returns_200() {
     );
 
     // The latest text is what is retrieved.
-    let (status, body) = get(app(&pool), &format!("{BASE}/definition/query/{name}/1.0.0")).await;
+    let (status, body) = get(app(&pool).await, &format!("{BASE}/definition/query/{name}/1.0.0")).await;
     assert_eq!(status, StatusCode::OK);
     assert!(
         body.contains(updated),
@@ -219,7 +219,7 @@ async fn no_version_store_upserts_and_returns_200() {
 async fn mixed_aggregate_projection_is_a_typed_400() {
     let db = testkit::db().await.expect("testkit database");
     let (status, body) = post_json(
-        app(&db.pool().clone()),
+        app(&db.pool().clone()).await,
         &format!("{BASE}/query/aql"),
         r#"{"q":"SELECT e/ehr_id/value, COUNT(c/uid/value) FROM EHR e CONTAINS COMPOSITION c"}"#,
     )
@@ -244,7 +244,7 @@ async fn a_quoted_get_parameter_binds_the_string_it_denotes() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let (status, _headers, body) = put(
-        app(&pool),
+        app(&pool).await,
         &format!("{BASE}/definition/query/org.test::by_uid"),
         BY_UID,
     )
@@ -258,7 +258,7 @@ async fn a_quoted_get_parameter_binds_the_string_it_denotes() {
             format!("{BASE}/query/aql?q={q}&uid={uid}"),
             format!("{BASE}/query/org.test::by_uid?uid={uid}"),
         ] {
-            let (status, body) = get(app(&pool), &uri).await;
+            let (status, body) = get(app(&pool).await, &uri).await;
             assert_eq!(status, StatusCode::OK, "{uri}: {body}");
             let json: serde_json::Value = serde_json::from_str(&body).expect("result set json");
             let text = json["meta"]["_executed_aql"]

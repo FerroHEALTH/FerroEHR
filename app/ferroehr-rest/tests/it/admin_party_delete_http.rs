@@ -41,7 +41,6 @@ use sqlx::PgPool;
 use crate::common;
 use crate::common::BASE;
 
-const HMAC_SECRET: &str = "admin-party-delete-secret";
 const ISSUER: &str = "https://issuer.example";
 const AUDIENCE: &str = "ferroehr";
 
@@ -51,7 +50,7 @@ const UNKNOWN_PARTY: &str = "11111111-2222-4333-8444-555555555555";
 /// Bearer authentication, the admin group mounted, the default RBAC gate.
 fn config() -> AppConfig {
     AppConfig {
-        auth: common::hs256_auth_config(ISSUER, AUDIENCE, HMAC_SECRET),
+        auth: common::issuer_auth(ISSUER, AUDIENCE),
         admin: AdminConfig { enabled: true },
         ..Default::default()
     }
@@ -84,7 +83,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config(), Arc::new(svc), authz, Observability::default())
+    let app = ferroehr_rest::build_full(config(), Arc::new(svc), authz, Observability::default()).await
         .expect("build app");
     (db, pool, app)
 }
@@ -99,7 +98,7 @@ fn bearer(subject: &str, role: &str) -> String {
         "exp": exp,
         "roles": [role],
     });
-    common::hs256_bearer(HMAC_SECRET, &claims)
+    common::bearer(&claims)
 }
 
 /// Sends `method uri` as `credential`, with an optional JSON body.
