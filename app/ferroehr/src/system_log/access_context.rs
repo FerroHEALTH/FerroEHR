@@ -25,6 +25,7 @@ use tokio::task_local;
 task_local! {
     static DECLARED_PURPOSE: Option<String>;
     static REQUEST_ROLES: Vec<String>;
+    static ACCESS_RESTRICTION_ENFORCED: bool;
 }
 
 /// The roles the authenticated caller holds for the current request (#3239).
@@ -61,4 +62,30 @@ where
     F: Future,
 {
     DECLARED_PURPOSE.scope(purpose, fut).await
+}
+
+/// Whether the EHDS Art. 8 restriction of access holds for the current
+/// request: restricted data then reads as absent.
+///
+/// The protocol adapter publishes `true` for the request of a health
+/// professional or a healthcare provider, and `false` for the controller's
+/// own surfaces and for an emergency access in the vital interest of the
+/// person (EHDS Art. 11(5), `docs/law/eu/ehds/text.html`). Outside a request
+/// scope (a background task, the admin dump, an erase) it is `false`: the
+/// restriction limits access by professionals, never storage or the
+/// controller's processing. No openEHR spec governs restriction of access —
+/// our own design/extension.
+#[must_use]
+pub fn access_restriction_enforced() -> bool {
+    ACCESS_RESTRICTION_ENFORCED
+        .try_with(|enforced| *enforced)
+        .unwrap_or(false)
+}
+
+/// Run `fut` with the EHDS Art. 8 restriction of access enforced or not.
+pub async fn with_access_restriction<F>(enforced: bool, fut: F) -> F::Output
+where
+    F: Future,
+{
+    ACCESS_RESTRICTION_ENFORCED.scope(enforced, fut).await
 }

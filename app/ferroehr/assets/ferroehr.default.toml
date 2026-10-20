@@ -336,6 +336,10 @@ readonly_role = "READONLY"   # carriers are refused on every write operation
 # show a person who accessed their record, instead of an admin credential over
 # every patient's log. Unset, the log is admin-only.
 #? subject_audit_role = "PORTAL"
+# The role that reads data under an EHDS Art. 8 access restriction when the
+# caller also declares one of [audit] emergency_purpose_codes (Art. 11(5)).
+# Unset, nobody may override a restriction.
+#? emergency_access_role = "EMERGENCY"
 role_claims = ["roles", "groups", "entitlements", "realm_access.roles"]
 # What an EHR carrying no ACCESS_CONTROL_SETTINGS admits. A new EHR carries
 # none, so this governs most records. "restricted" is object-level default-deny:

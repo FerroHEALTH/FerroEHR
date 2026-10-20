@@ -28,6 +28,11 @@
 //! - `retention_policy` / `retention_anchor` and the `retention_due` view hold
 //!   the periods, their citations, and what has fallen due — a list, never a
 //!   disposal.
+//! - `access_restriction` records the person's EHDS Art. 8 restriction of
+//!   access by health professionals, and `ehr.access_restricted_at` /
+//!   `vo_head.access_restricted_at` are its marks, recomputed by
+//!   [`refresh_access_restriction_marks`]. It limits access only, never
+//!   storage or other processing (`docs/law/eu/ehds/text.html` Art. 8).
 
 use sqlx::Connection as _;
 use sqlx::{PgConnection, PgPool, Row as _};
@@ -103,6 +108,173 @@ pub struct EhrMarks {
     pub restricted: bool,
     /// Whether an unoverridden research objection stands for this EHR.
     pub research_objected: bool,
+}
+
+// ── access restriction (EHDS Art. 8) ─────────────────────────────────────────
+
+/// One row of the access-restriction register.
+#[derive(Debug, Clone)]
+pub struct AccessRestrictionRow {
+    /// The register row id.
+    pub id: Uuid,
+    /// The EHR the restriction was recorded for.
+    pub ehr_id: EhrId,
+    /// The restricted versioned object, or `None` for the whole EHR.
+    pub vo_id: Option<VoId>,
+    /// When the person's instruction was recorded.
+    pub requested_at: jiff::Timestamp,
+    /// When it was lifted, or `None` while it is in force.
+    pub lifted_at: Option<jiff::Timestamp>,
+    /// The controller's free-text note.
+    pub note: Option<String>,
+}
+
+/// Append an access restriction to the register and refresh the marks it
+/// implies; `vo_id = None` restricts the whole EHR.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure, including the foreign key
+/// refusing an unknown EHR.
+pub async fn record_access_restriction(
+    tx: &mut PgConnection,
+    ehr_id: EhrId,
+    vo_id: Option<VoId>,
+    note: Option<&str>,
+) -> Result<Uuid, StorageError> {
+    let id: Uuid = sqlx::query_scalar(
+        "INSERT INTO access_restriction (ehr_id, vo_id, note) VALUES ($1, $2, $3) RETURNING id",
+    )
+    .bind(ehr_id)
+    .bind(vo_id)
+    .bind(note)
+    .fetch_one(&mut *tx)
+    .await?;
+    refresh_access_restriction_marks(tx, ehr_id).await?;
+    Ok(id)
+}
+
+/// Lift every in-force access restriction of `ehr_id` at the given grain and
+/// refresh the marks; returns how many register rows were lifted.
+///
+/// `vo_id = None` lifts the whole-EHR restrictions only, and a per-object
+/// restriction recorded separately stands.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn lift_access_restriction(
+    tx: &mut PgConnection,
+    ehr_id: EhrId,
+    vo_id: Option<VoId>,
+) -> Result<u64, StorageError> {
+    let lifted = sqlx::query(
+        "UPDATE access_restriction SET lifted_at = now() \
+         WHERE ehr_id = $1 AND vo_id IS NOT DISTINCT FROM $2 AND lifted_at IS NULL",
+    )
+    .bind(ehr_id)
+    .bind(vo_id)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    refresh_access_restriction_marks(tx, ehr_id).await?;
+    Ok(lifted)
+}
+
+/// Recompute the access-restriction marks of one EHR from the register.
+///
+/// `ehr.access_restricted_at` and every `vo_head.access_restricted_at` take
+/// the earliest in-force request that reaches them, whether it named the
+/// object or the whole EHR.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn refresh_access_restriction_marks(
+    tx: &mut PgConnection,
+    ehr_id: EhrId,
+) -> Result<(), StorageError> {
+    sqlx::query(
+        "UPDATE ehr SET access_restricted_at = (\
+             SELECT min(r.requested_at) FROM access_restriction r \
+              WHERE r.ehr_id = $1 AND r.vo_id IS NULL AND r.lifted_at IS NULL) \
+         WHERE id = $1",
+    )
+    .bind(ehr_id)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "UPDATE vo_head h SET access_restricted_at = (\
+             SELECT min(r.requested_at) FROM access_restriction r \
+              WHERE r.ehr_id = $1 AND r.lifted_at IS NULL \
+                AND (r.vo_id IS NULL OR r.vo_id = h.vo_id)) \
+         WHERE h.ehr_id = $1",
+    )
+    .bind(ehr_id)
+    .execute(&mut *tx)
+    .await?;
+    Ok(())
+}
+
+/// The access-restriction register rows of one EHR, newest request first.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn access_restrictions(
+    pool: &PgPool,
+    ehr_id: EhrId,
+) -> Result<Vec<AccessRestrictionRow>, StorageError> {
+    let rows = sqlx::query(
+        "SELECT id, ehr_id, vo_id, requested_at, lifted_at, note \
+         FROM access_restriction WHERE ehr_id = $1 ORDER BY requested_at DESC, id DESC",
+    )
+    .bind(ehr_id)
+    .fetch_all(&mut *acquire(pool).await?)
+    .await?;
+    rows.iter()
+        .map(|row| {
+            Ok(AccessRestrictionRow {
+                id: row.try_get("id")?,
+                ehr_id: row.try_get("ehr_id")?,
+                vo_id: row.try_get("vo_id")?,
+                requested_at: row
+                    .try_get::<jiff_sqlx::Timestamp, _>("requested_at")?
+                    .to_jiff(),
+                lifted_at: row
+                    .try_get::<Option<jiff_sqlx::Timestamp>, _>("lifted_at")?
+                    .map(jiff_sqlx::Timestamp::to_jiff),
+                note: row.try_get("note")?,
+            })
+        })
+        .collect()
+}
+
+/// Whether the whole EHR carries an access-restriction mark; `false` for an
+/// unknown EHR.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn is_ehr_access_restricted(pool: &PgPool, ehr_id: EhrId) -> Result<bool, StorageError> {
+    let restricted: Option<bool> =
+        sqlx::query_scalar("SELECT access_restricted_at IS NOT NULL FROM ehr WHERE id = $1")
+            .bind(ehr_id)
+            .fetch_optional(&mut *acquire(pool).await?)
+            .await?;
+    Ok(restricted.unwrap_or(false))
+}
+
+/// Whether a versioned object carries an access-restriction mark; `false` for
+/// an unknown object.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn is_access_restricted(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+) -> Result<bool, StorageError> {
+    let restricted: Option<bool> =
+        sqlx::query_scalar("SELECT access_restricted_at IS NOT NULL FROM vo_head WHERE vo_id = $1")
+            .bind(vo_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    Ok(restricted.unwrap_or(false))
 }
 
 // ── restriction ──────────────────────────────────────────────────────────────

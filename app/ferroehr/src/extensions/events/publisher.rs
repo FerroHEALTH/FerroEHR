@@ -383,20 +383,25 @@ async fn drain_batch(
     let mut conn = acquire(pool).await.map_err(DrainError::Acquire)?;
     let mut tx = conn.begin().await.map_err(DrainError::Db)?;
     // A mark recorded after the commit withholds the row instead of dropping
-    // it: it stays pending and publishes if the restriction is lifted (GDPR
-    // Art. 18(3) contemplates exactly that) or if the controller records an
-    // Art. 21(6) override, and it leaves with the EHR if the EHR is erased.
-    // Only the clinical statement names `ehr`, which is the only domain that
-    // has it. `docs/law/eu/gdpr/text.html`; no openEHR spec governs eventing —
-    // our own extension.
+    // it: it publishes once a restriction is lifted (GDPR Art. 18(3)) or an
+    // Art. 21(6) override is recorded, and leaves with the EHR on an erase. An
+    // EHDS Art. 8 access restriction of the EHR or of a member object withholds
+    // it the same way. Only the clinical statement names `ehr`, the one domain
+    // that has it. `docs/law/eu/gdpr/text.html`, `docs/law/eu/ehds/text.html`;
+    // no openEHR spec governs eventing — our own extension.
     let rows = sqlx::query(match domain {
         OutboxDomain::Clinical => {
             "SELECT seq, envelope FROM event_outbox o \
              WHERE o.published_at IS NULL \
                AND NOT EXISTS (SELECT 1 FROM ehr e WHERE e.id = o.ehr_id \
                    AND (e.restricted_at IS NOT NULL \
+                        OR e.access_restricted_at IS NOT NULL \
                         OR (e.research_objected_at IS NOT NULL \
                             AND e.research_objection_ground IS NULL))) \
+               AND NOT EXISTS (SELECT 1 FROM version v \
+                   JOIN vo_head h ON h.vo_id = v.vo_id \
+                   WHERE v.contribution_id = o.contribution_id \
+                     AND h.access_restricted_at IS NOT NULL) \
              ORDER BY o.seq LIMIT $1 FOR UPDATE SKIP LOCKED"
         }
         OutboxDomain::Party => {

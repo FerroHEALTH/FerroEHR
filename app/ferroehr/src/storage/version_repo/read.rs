@@ -116,6 +116,12 @@ pub struct StoredVersion {
     /// leaves storage through refuses a marked object. No openEHR spec governs
     /// restriction of processing — our own design/extension.
     pub restricted_at: Option<jiff::Timestamp>,
+    /// The EHDS Art. 8 access-restriction mark of the versioned object
+    /// (`vo_head.access_restricted_at`), `None` when it is unrestricted. While
+    /// the request enforces the restriction
+    /// ([`crate::system_log::access_context::access_restriction_enforced`]),
+    /// every read here answers as though the object did not exist.
+    pub access_restricted_at: Option<jiff::Timestamp>,
     /// The materialized canonical body (`version.body` — written from the
     /// same value the node rows decompose from), or [`Value::Null`] for a
     /// logically deleted version (master06 §Logical Deletion). [`Value::Null`]
@@ -168,7 +174,7 @@ macro_rules! version_select {
             "v.branch_version, v.lifecycle_state, v.creating_system_id, v.preceding_version_uid, ",
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, v.origins, ",
-            "v.body, h.restricted_at, ",
+            "v.body, h.restricted_at, h.access_restricted_at, ",
             "(SELECT n.archetype FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
             "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
@@ -200,7 +206,7 @@ macro_rules! version_select_raw {
             "v.branch_version, v.lifecycle_state, v.creating_system_id, v.preceding_version_uid, ",
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, ",
-            "v.origins, v.body, h.restricted_at, ",
+            "v.origins, v.body, h.restricted_at, h.access_restricted_at, ",
             "(SELECT n.archetype FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
             "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
@@ -219,6 +225,16 @@ macro_rules! version_select_raw {
             $tail
         )
     };
+}
+
+/// Whether `stored` may be served to the current request: an object under an
+/// EHDS Art. 8 access restriction is absent while the request enforces it
+/// (`docs/law/eu/ehds/text.html` Art. 8: the restriction is "not visible to
+/// healthcare providers"). No openEHR spec governs restriction of access — our
+/// own design/extension.
+fn visible(stored: &StoredVersion) -> bool {
+    stored.access_restricted_at.is_none()
+        || !crate::system_log::access_context::access_restriction_enforced()
 }
 
 // ── the rendered statements ──────────────────────────────────────────────────
@@ -340,6 +356,9 @@ fn stored_version_fields(
         restricted_at: row
             .try_get::<Option<jiff_sqlx::Timestamp>, _>("restricted_at")?
             .map(jiff_sqlx::Timestamp::to_jiff),
+        access_restricted_at: row
+            .try_get::<Option<jiff_sqlx::Timestamp>, _>("access_restricted_at")?
+            .map(jiff_sqlx::Timestamp::to_jiff),
         canonical,
         canonical_text,
         attestations_at_committal,
@@ -451,6 +470,7 @@ pub async fn read_current(
         .await?
         .map(|row| stored_version(vo_id, &row))
         .transpose()
+        .map(|found| found.filter(visible))
 }
 
 /// [`read_current`] with the body as its stored jsonb text — the
@@ -471,6 +491,7 @@ pub async fn read_current_raw(
         .await?
         .map(|row| stored_version_raw(vo_id, &row))
         .transpose()
+        .map(|found| found.filter(visible))
 }
 
 /// [`read_version`] with the body as its stored jsonb text — the
@@ -498,6 +519,7 @@ pub async fn read_version_raw(
         .await?
         .map(|row| stored_version_raw(vo_id, &row))
         .transpose()
+        .map(|found| found.filter(visible))
 }
 
 /// Read the current TRUNK versions of a SET of objects in ONE statement.
@@ -527,6 +549,7 @@ pub async fn read_currents(
             let vo_id: VoId = row.try_get("vo_id")?;
             stored_version(vo_id, &row)
         })
+        .filter(|decoded| decoded.as_ref().map_or(true, visible))
         .collect()
 }
 
@@ -548,6 +571,7 @@ pub async fn read_version_by_ordinal(
         .await?
         .map(|row| stored_version(vo_id, &row))
         .transpose()
+        .map(|found| found.filter(visible))
 }
 
 /// Read a specific version by its `VERSION_TREE_ID` column ints (for
@@ -575,6 +599,7 @@ pub async fn read_version(
         .await?
         .map(|row| stored_version(vo_id, &row))
         .transpose()
+        .map(|found| found.filter(visible))
 }
 
 /// Read a SET of specific versions in ONE statement.
@@ -615,6 +640,7 @@ pub async fn read_versions_by_tree(
             let vo_id: VoId = row.try_get("vo_id")?;
             stored_version(vo_id, &row)
         })
+        .filter(|decoded| decoded.as_ref().map_or(true, visible))
         .collect()
 }
 
@@ -657,6 +683,7 @@ pub async fn version_at(
         .await?
         .map(|row| stored_version(vo_id, &row))
         .transpose()
+        .map(|found| found.filter(visible))
 }
 
 /// Decode a scoped-read row through [`stored_version`], keyed by the row's
@@ -692,6 +719,7 @@ pub async fn read_current_of_kind(
         .as_ref()
         .map(stored_version_by_row)
         .transpose()
+        .map(|found| found.filter(visible))
 }
 
 /// [`read_current_of_kind`]'s time-travel form: the TRUNK version of the
@@ -723,6 +751,7 @@ pub async fn version_at_of_kind(
         .as_ref()
         .map(stored_version_by_row)
         .transpose()
+        .map(|found| found.filter(visible))
 }
 
 /// Read the current version of the EHR's DIRECTORY folder in ONE statement.
@@ -750,6 +779,7 @@ pub async fn read_current_directory(
         .as_ref()
         .map(stored_version_by_row)
         .transpose()
+        .map(|found| found.filter(visible))
 }
 
 /// The stored canonical body BYTES of one version, across both storage tiers

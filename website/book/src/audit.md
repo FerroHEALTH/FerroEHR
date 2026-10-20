@@ -327,12 +327,12 @@ EHR restricted under GDPR Art. 18 stays refused with an emergency purpose,
 because Art. 18(2) admits processing only with consent, for legal claims, for
 the rights of another person or for an important public interest, and the
 person's own vital interests are not on that list. The refused attempt is
-still logged with the mark. FerroEHR does not hold an EHDS Art. 8 restriction
-today, so it neither hides restricted data from a professional nor grants the
-override: that is the Member State's access service or your own system, and
-the restriction itself is planned in
-[#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682). An emergency the
-caller does not declare is not marked.
+still logged with the mark. An EHDS Art. 8 restriction of access by health
+professionals is different: a caller holding `authz.rbac.emergency_access_role`
+that declares an emergency purpose reads the restricted data, and its record
+carries the mark
+([restriction of access](security.md#restriction-of-access-by-health-professionals-ehds-art-8)).
+An emergency the caller does not declare is not marked.
 
 ### Retention, and who chooses it
 

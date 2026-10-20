@@ -79,6 +79,18 @@ pub struct RbacConfig {
     /// the log is admin-only, as before (#3240). No openEHR spec governs the
     /// access log — our own design/extension.
     pub subject_audit_role: Option<String>,
+    /// The role that may reach data under an EHDS Art. 8 access restriction in
+    /// an emergency (`FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE`, default
+    /// unset).
+    ///
+    /// EHDS Art. 11(5) lets access to restricted data be granted where
+    /// necessary to protect the vital interests of the person
+    /// (`docs/law/eu/ehds/text.html`). A caller holding this role that
+    /// declares one of `[audit] emergency_purpose_codes` reads the restricted
+    /// data, and its access record carries the emergency mark. Unset, nobody
+    /// may. No openEHR spec governs restriction of access — our own
+    /// design/extension.
+    pub emergency_access_role: Option<String>,
     /// JWT claim paths mined for roles, in resolution order.
     ///
     /// Defaults to the carriers RFC 9068 §2.2.3.1 names for conveying
@@ -126,6 +138,7 @@ impl Default for RbacConfig {
             user_role: "USER".to_owned(),
             readonly_role: "READONLY".to_owned(),
             subject_audit_role: None,
+            emergency_access_role: None,
             role_claims: vec![
                 "roles".to_owned(),
                 "groups".to_owned(),

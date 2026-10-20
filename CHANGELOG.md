@@ -15,6 +15,24 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Added
+
+- **The EHDS Art. 8 restriction of access by health professionals** (#3682).
+  On the person's instruction the controller records a restriction with
+  `POST {base}/admin/access-restriction`, for a whole EHR or one versioned
+  object (`GET` reads the register, `POST …/lift` lifts it). Restricted data
+  then reads as absent to every professional route, query and export: a
+  restricted composition or EHR answers `404` as an unknown one does, queries
+  and exports leave it out, a CONTRIBUTION lists none of its versions, the
+  event stream withholds it, and a write to it is refused as a write to an
+  unknown target. A whole-EHR restriction covers data recorded after it. The
+  admin routes still see everything, and nothing is deleted. A caller holding
+  the new `[authz.rbac] emergency_access_role` that declares one of
+  `[audit] emergency_purpose_codes` reads restricted data (EHDS Art. 11(5)),
+  and its access record carries the emergency mark. Two migrations add the
+  register and the marks (`clinical/0015_access_restriction.sql`,
+  `party/0011_access_restriction_column.sql`).
+
 ## [5.1.0] - 2026-10-20
 
 ### Added

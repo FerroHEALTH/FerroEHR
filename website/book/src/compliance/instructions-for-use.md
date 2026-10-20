@@ -259,8 +259,10 @@ knows of for this release.
   is marked only when the caller declares one of
   `[audit] emergency_purpose_codes`
   ([the emergency mark](../audit.md#emergency-access-ehds-art-115)). The
-  mark lifts no restriction, and FerroEHR holds no EHDS Art. 8 restriction
-  today (planned, [#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682)).
+  mark alone lifts no restriction. An EHDS Art. 8 restriction is lifted only
+  for a caller holding `authz.rbac.emergency_access_role` that declares an
+  emergency purpose
+  ([restriction of access](../security.md#restriction-of-access-by-health-professionals-ehds-art-8)).
 - An access record written before the upgrade to 4.3.9 keeps the original
   digest of the tamper chain, which leaves out the purpose, legal basis,
   categories, authentication fields and the emergency mark; for those records

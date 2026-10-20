@@ -207,6 +207,16 @@ impl FerroEhrService {
         }
     }
 
+    /// Whether `purpose` is one of `[audit] emergency_purpose_codes`, the codes
+    /// that declare an emergency access in the vital interest of the person
+    /// (EHDS Art. 11(5)); `false` when no audit sender is wired.
+    #[must_use]
+    pub fn is_emergency_purpose(&self, purpose: Option<&str>) -> bool {
+        self.audit
+            .as_ref()
+            .is_some_and(|sender| sender.is_emergency_purpose(purpose))
+    }
+
     /// Whether ATNA auditing is on (a sender is wired and its master switch set).
     pub fn audit_enabled(&self) -> bool {
         self.audit.as_ref().is_some_and(AuditSender::enabled)

@@ -57,6 +57,7 @@ pub mod authn;
 pub mod authz;
 pub mod ehr_access;
 pub mod pep;
+pub(crate) mod restriction;
 
 // The authn surface (identity + the request-scoped principal). The middleware
 // + `AuthLayer` are `pub(crate)` and installed by the router via `authn::`

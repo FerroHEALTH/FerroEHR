@@ -28,6 +28,7 @@ mod canonical_json_literals;
 mod common;
 
 mod abac_e2e;
+mod access_restriction_http;
 mod admin_extension_http;
 mod admin_http;
 mod admin_integrity_http;
