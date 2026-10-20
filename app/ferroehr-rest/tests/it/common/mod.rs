@@ -150,6 +150,54 @@ pub(crate) fn issuer_auth(issuer: &str, audience: &str) -> AuthSection {
     }
 }
 
+static METADATA_ISSUER: tokio::sync::OnceCell<String> = tokio::sync::OnceCell::const_new();
+
+/// The URI of an authorization server shared by the whole test binary: it
+/// serves RFC 8414 metadata naming a `token_endpoint` and the committed test
+/// key set, so a server that serves the SMART discovery document can boot
+/// against it. `wiremock` runs each server on a thread of its own, so the one
+/// started here outlives the runtime of the test that started it.
+pub(crate) async fn metadata_issuer() -> &'static str {
+    METADATA_ISSUER
+        .get_or_init(|| async {
+            use wiremock::matchers::{method, path};
+            use wiremock::{Mock, MockServer, ResponseTemplate};
+            let server = MockServer::start().await;
+            let uri = server.uri();
+            Mock::given(method("GET"))
+                .and(path("/.well-known/oauth-authorization-server"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "issuer": uri,
+                    "jwks_uri": format!("{uri}/jwks"),
+                    "authorization_endpoint": format!("{uri}/authorize"),
+                    "token_endpoint": format!("{uri}/token"),
+                    "grant_types_supported": ["authorization_code", "client_credentials"],
+                    "token_endpoint_auth_methods_supported": ["client_secret_basic"],
+                    "response_types_supported": ["code"],
+                    "code_challenge_methods_supported": ["S256"],
+                })))
+                .mount(&server)
+                .await;
+            Mock::given(method("GET"))
+                .and(path("/jwks"))
+                .respond_with(ResponseTemplate::new(200).set_body_string(include_str!(
+                    "../../../../../docs/conformance/party/smart/jwks.json"
+                )))
+                .mount(&server)
+                .await;
+            Box::leak(Box::new(server));
+            uri
+        })
+        .await
+}
+
+/// The URI [`metadata_issuer`] started; call it only after that has run.
+pub(crate) fn started_metadata_issuer() -> &'static str {
+    METADATA_ISSUER
+        .get()
+        .expect("metadata_issuer runs before a token names it")
+}
+
 /// Basic authentication admitting each `(user, Argon2id PHC hash, scopes)`.
 pub(crate) fn basic_auth(users: &[(&str, &str, &str)]) -> AuthSection {
     AuthSection {

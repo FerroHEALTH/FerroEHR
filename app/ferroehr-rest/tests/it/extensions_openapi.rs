@@ -39,9 +39,12 @@ use ferroehr::telemetry::log_reload::LogReload;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::extensions::openapi::extensions_document;
-use ferrohealth_smart::config::AuthSection;
+use ferrohealth_smart::config::{AuthSection, IssuerKey};
 
 use crate::common;
+
+/// The issuer the served document is described for; its key set is a file.
+const ISSUER: &str = "https://issuer.example";
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 
@@ -550,18 +553,16 @@ fn log_reload() -> LogReload {
 
 /// The `AppConfig` used by both the served document and [`full_app`], so the
 /// documented paths and the mounted routes are derived from one config (same
-/// base path). Auth off + every surface enabled, so every documented path is
-/// mounted.
+/// base path). Bearer authentication on, because the SMART discovery document
+/// is built from an issuer's metadata, and every surface enabled, so every
+/// documented path is mounted.
 fn app_config() -> AppConfig {
     AppConfig {
         server: ServerConfig {
             swagger_ui: AccessLevel::Public,
             ..Default::default()
         },
-        auth: AuthSection {
-            enabled: false,
-            ..AuthSection::default()
-        },
+        auth: common::issuer_auth(ISSUER, "ferroehr"),
         admin: AdminConfig { enabled: true },
         smart: SmartConfig {
             enabled: true,
@@ -579,10 +580,17 @@ fn app_config() -> AppConfig {
     }
 }
 
-/// A server with auth off and every extension surface enabled, so every
-/// documented path is mounted.
+/// A server trusting the shared metadata issuer, with every extension surface
+/// enabled, so every documented path is mounted.
 async fn full_app() -> Router {
-    let config = app_config();
+    let config = AppConfig {
+        auth: AuthSection {
+            issuer: IssuerKey::Flat(common::metadata_issuer().await.to_owned()),
+            audience: vec!["ferroehr".to_owned()],
+            ..AuthSection::default()
+        },
+        ..app_config()
+    };
     let public = EndpointLevels {
         info: AccessLevel::Public,
         metrics: AccessLevel::Public,

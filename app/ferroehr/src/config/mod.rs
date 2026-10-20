@@ -2494,12 +2494,14 @@ mod tests {
             .iter()
             .flat_map(|(section, fields)| {
                 // A sub-table field is declared by its own `[section.field]`
-                // header, exactly as the serialized-field walk accepts one.
+                // header, exactly as the serialized-field walk accepts one, or
+                // by the `[[section.field.…]]` header of the array it holds.
                 fields
                     .iter()
                     .filter(move |f| {
                         !template_declares(f)
                             && !DEFAULT_TEMPLATE.contains(&format!("[{section}.{f}]"))
+                            && !DEFAULT_TEMPLATE.contains(&format!("[[{section}.{f}."))
                     })
                     .map(move |f| format!("{section}.{f}"))
             })

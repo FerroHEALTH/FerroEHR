@@ -49,6 +49,7 @@ use ferroehr::config::server::{AdminConfig, ServerConfig};
 use ferroehr::config::smart::SmartConfig;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
+use ferrohealth_smart::config::{AuthSection, IssuerKey};
 use http::{Request, StatusCode};
 use serde_json::{Value, json};
 use tower::ServiceExt;
@@ -514,6 +515,20 @@ fn authz() -> Option<Arc<AuthzHandle>> {
     .map(Arc::new)
 }
 
+/// [`matrix_config`] trusting the shared metadata issuer, which the SMART
+/// discovery document needs at boot.
+async fn served_config() -> AppConfig {
+    let issuer = common::metadata_issuer().await;
+    AppConfig {
+        auth: AuthSection {
+            issuer: IssuerKey::Flat(issuer.to_owned()),
+            audience: vec![AUDIENCE.to_owned()],
+            ..AuthSection::default()
+        },
+        ..matrix_config()
+    }
+}
+
 async fn app() -> (testkit::TestDb, Router) {
     let (pg, pool) = common::migrated_pool().await;
     // The local Audit Record Repository is wired because the ITI-81 route's
@@ -525,7 +540,7 @@ async fn app() -> (testkit::TestDb, Router) {
     )
     .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool));
     let app = ferroehr_rest::build_full(
-        matrix_config(),
+        served_config().await,
         Arc::new(svc),
         authz(),
         ferroehr_rest::extensions::management::Observability::default(),
@@ -543,7 +558,7 @@ fn bearer(roles: &[&str]) -> String {
     let exp = u64::try_from(jiff::Timestamp::now().as_second()).expect("timestamp") + 3600;
     let claims: Value = json!({
         "sub": "matrix",
-        "iss": ISSUER,
+        "iss": common::started_metadata_issuer(),
         "aud": AUDIENCE,
         "exp": exp,
         "roles": roles,
@@ -847,7 +862,7 @@ async fn the_swagger_surface_honours_its_access_level() {
     }
     async fn app_with(level: AccessLevel, smart: bool) -> (testkit::TestDb, Router) {
         let (pg, pool) = common::migrated_pool().await;
-        let base = matrix_config();
+        let base = served_config().await;
         let cfg = AppConfig {
             server: ServerConfig {
                 swagger_ui: level,

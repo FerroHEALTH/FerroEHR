@@ -42,6 +42,7 @@ use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
+use ferrohealth_smart::config::{AuthSection, IssuerKey};
 use http::Request;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -262,7 +263,15 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config(), Arc::new(svc), authz, Observability::default())
+    let served = AppConfig {
+        auth: AuthSection {
+            issuer: IssuerKey::Flat(common::metadata_issuer().await.to_owned()),
+            audience: vec![AUDIENCE.to_owned()],
+            ..AuthSection::default()
+        },
+        ..config()
+    };
+    let app = ferroehr_rest::build_full(served, Arc::new(svc), authz, Observability::default())
         .await
         .expect("build app");
     (db, pool, app)
@@ -274,7 +283,7 @@ fn admin_bearer(subject: &str) -> String {
     let exp = u64::try_from(jiff::Timestamp::now().as_second()).expect("timestamp") + 3600;
     let claims: Value = json!({
         "sub": subject,
-        "iss": ISSUER,
+        "iss": common::started_metadata_issuer(),
         "aud": AUDIENCE,
         "exp": exp,
         "roles": ["ADMIN"],
