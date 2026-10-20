@@ -710,7 +710,11 @@ config:
   # asymmetric algorithms are accepted, and every [[auth.basic.users]]
   # password_hash must be argon2id at m>=19456,t=2,p=1. All checked at boot.
   # Every route enforces SMART on openEHR scopes: a Basic user's `scopes` and a
-  # token's `scope` claim must grant what it calls.
+  # token's `scope` claim must grant what it calls; a subject listed in
+  # `scopeless_subjects` whose token carries no resource scope meets every
+  # SMART on openEHR requirement. `basic.cache_ttl_seconds` (default 0) keeps a
+  # verified Basic credential for that long, so a repeat request skips the
+  # Argon2id derivation; a busy Basic client wants a value such as 60.
   auth:
     enabled: true
 

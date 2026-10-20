@@ -9,10 +9,9 @@
 //! the accepted algorithms (asymmetric only, RFC 8725 §3.1 and §3.2), the
 //! audiences (RFC 9068 §4), the Basic users of `[[auth.basic.users]]` with
 //! the scopes each holds, and the product scope. The crate checks tokens and
-//! never issues them. This module holds what FerroEHR adds on top: a
-//! Basic-only surface, the Argon2id cost floor, the issuer `userinfo` rule,
-//! the refusal of private or symmetric key material in a `jwks_file`, and the
-//! patient-data assurance types of `[authz.assurance]` and
+//! never issues them. This module holds what FerroEHR adds on top: the
+//! Argon2id cost floor, the issuer `userinfo` rule, the refusal of private or
+//! symmetric key material in a `jwks_file`, and the patient-data assurance types of `[authz.assurance]` and
 //! `[authz.professional]`. No openEHR spec governs authentication mechanics,
 //! ITS-REST leaving the scheme open — our own design, with the IETF OAuth and
 //! JOSE RFCs as the authority for every rule enforced here.
@@ -108,25 +107,15 @@ pub fn product_scope(section: &AuthSection) -> &str {
 /// Resolves `[auth]` into the issuers and the Basic store the crate checks
 /// credentials against.
 ///
-/// A section with no issuer is a Basic-only surface: the crate refuses an
-/// enabled section without one, so it is resolved with its issuers off and
-/// its Basic users kept (no specification governs this: our own design).
+/// An enabled section with Basic users and no issuer resolves to a Basic-only
+/// surface; one that admits no credential at all is refused.
 ///
 /// # Errors
 /// [`AuthConfigError::Section`] when the crate refuses the section.
 pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
-    if has_bearer(section) || !section.enabled {
-        return section
-            .resolve()
-            .map_err(|source| AuthConfigError::Section { source });
-    }
-    let mut basic_only = section.clone();
-    basic_only.enabled = false;
-    let mut resolved = basic_only
+    section
         .resolve()
-        .map_err(|source| AuthConfigError::Section { source })?;
-    resolved.enabled = true;
-    Ok(resolved)
+        .map_err(|source| AuthConfigError::Section { source })
 }
 
 /// Validates `[auth]` at boot: the rules FerroEHR adds, then the crate's.
@@ -134,9 +123,6 @@ pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
 /// # Errors
 /// The [`AuthConfigError`] naming the first rule the section breaks.
 pub fn validate(section: &AuthSection) -> Result<(), AuthConfigError> {
-    if !section.scopeless_subjects.is_empty() {
-        return Err(AuthConfigError::ScopelessSubjects);
-    }
     for entry in section.issuers() {
         check_issuer_userinfo(&entry.issuer)?;
         if let Some(path) = entry.jwks_file.as_deref().filter(|path| !path.is_empty()) {
@@ -153,6 +139,11 @@ pub fn validate(section: &AuthSection) -> Result<(), AuthConfigError> {
             }
         }
     }
+    // NOTE: RFC 9110 §11.6.1, a section with no mechanism is refused by
+    // `require_mechanism`, whose message names the keys that fix it.
+    if require_mechanism(section).is_err() {
+        return Ok(());
+    }
     resolve(section).map(|_resolved| ())
 }
 
@@ -168,66 +159,6 @@ pub fn require_mechanism(section: &AuthSection) -> Result<(), AuthConfigError> {
         return Err(AuthConfigError::NoMechanism);
     }
     Ok(())
-}
-
-/// Returns `[auth]` as the redacted configuration views render it
-/// (`ferroehr config check`, `/management/env`, `ferroehr report`): every key
-/// with its value, a password hash as `***`.
-///
-/// The crate's section types implement no `Serialize`, so the tree is written
-/// here, key for key.
-#[must_use]
-pub fn redacted(section: &AuthSection) -> serde_json::Value {
-    let issuer = match &section.issuer {
-        IssuerKey::Flat(issuer) => serde_json::Value::String(issuer.clone()),
-        IssuerKey::List(entries) => entries
-            .iter()
-            .map(|entry| {
-                serde_json::json!({
-                    "issuer": entry.issuer,
-                    "audience": entry.audience,
-                    "algorithms": entry.algorithms,
-                    "token_profile": entry.token_profile,
-                    "clock_skew_seconds": entry.clock_skew_seconds,
-                    "jwks_max_age_seconds": entry.jwks_max_age_seconds,
-                    "jwks_refresh_interval_seconds": entry.jwks_refresh_interval_seconds,
-                    "jwks_file": entry.jwks_file,
-                })
-            })
-            .collect(),
-    };
-    let basic = section.basic.as_ref().map(|basic| {
-        serde_json::json!({
-            "users": basic
-                .users
-                .iter()
-                .map(|user| serde_json::json!({
-                    "user": user.user,
-                    "password_hash": user.password_hash.as_ref().map(|_set| "***"),
-                    "password_hash_file": user.password_hash_file,
-                    "scopes": user.scopes,
-                }))
-                .collect::<Vec<_>>(),
-        })
-    });
-    serde_json::json!({
-        "enabled": section.enabled,
-        "issuer": issuer,
-        "audience": section.audience,
-        "algorithms": section.algorithms,
-        "token_profile": section.token_profile,
-        "clock_skew_seconds": section.clock_skew_seconds,
-        "jwks_max_age_seconds": section.jwks_max_age_seconds,
-        "jwks_refresh_interval_seconds": section.jwks_refresh_interval_seconds,
-        "jwks_file": section.jwks_file,
-        "timeout_ms": section.timeout_ms,
-        "realm": section.realm,
-        "scopeless_subjects": section.scopeless_subjects,
-        "capabilities": section.capabilities,
-        "scopes_supported": section.scopes_supported,
-        "product_scope": section.product_scope,
-        "basic": basic,
-    })
 }
 
 /// An `[auth]`, `[authz.assurance]` or `[authz.professional]` setting the
@@ -247,13 +178,6 @@ pub enum AuthConfigError {
         #[source]
         source: ConfigError,
     },
-    /// `[auth] scopeless_subjects` is set, and no FerroEHR route honours it.
-    #[error(
-        "auth.scopeless_subjects is set, but every FerroEHR route carries a SMART on openEHR \
-         requirement, which the allowlist does not satisfy: grant the subject the openEHR \
-         scopes it needs (for example system/composition-*.cruds) and remove the key"
-    )]
-    ScopelessSubjects,
     /// The issuer carries `userinfo`; the value is shown masked.
     #[error(
         "auth.issuer {0:?} must carry no userinfo: an issuer identifier holds only \
@@ -874,6 +798,7 @@ mod tests {
                     password_hash_file: None,
                     scopes: vec!["user/composition-*.cruds".to_owned()],
                 }],
+                cache_ttl_seconds: 0,
             }),
             ..AuthSection::default()
         }
@@ -1077,17 +1002,32 @@ mod tests {
         assert!(require_mechanism(&disabled).is_ok());
     }
 
-    /// The crate's scopeless allowlist admits a token on SMART on FHIR routes
-    /// only, and FerroEHR's routes are SMART on openEHR, so a configured
-    /// allowlist would promise access no route grants: it is refused.
+    /// The crate honours the scopeless allowlist on every SMART on openEHR
+    /// requirement, so a configured allowlist boots.
     #[test]
-    fn a_scopeless_subject_allowlist_is_a_boot_error() {
+    fn a_scopeless_subject_allowlist_boots() {
         let mut cfg = valid();
         cfg.scopeless_subjects = vec!["svc".to_owned()];
+        assert!(validate(&cfg).is_ok());
+    }
+
+    /// An enabled section with Basic users and no issuer resolves to a
+    /// Basic-only surface, and one that admits no credential is refused.
+    #[test]
+    fn a_basic_only_section_resolves_enabled_and_an_empty_one_is_refused() {
+        let floor = phc(MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, MIN_ARGON2_P_COST);
+        let resolved = resolve(&basic(&floor)).expect("a Basic-only section resolves");
+        assert!(resolved.enabled);
+        assert!(resolved.issuers.is_empty());
+        assert!(resolved.basic.is_some());
         assert!(matches!(
-            validate(&cfg),
-            Err(AuthConfigError::ScopelessSubjects)
+            resolve(&AuthSection::default()),
+            Err(AuthConfigError::Section { .. })
         ));
+        assert!(
+            validate(&AuthSection::default()).is_ok(),
+            "no mechanism is require_mechanism's refusal, not validate's"
+        );
     }
 
     /// The realm and the product scope fall back to FerroEHR's when unset, and

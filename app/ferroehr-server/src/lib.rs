@@ -1274,7 +1274,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
         role_claims: config.authz.rbac.role_claims.clone(),
         rbac: config.authz.rbac.clone(),
-        basic_cache_ttl_seconds: config.authz.basic_cache_ttl_seconds,
         assurance: config.authz.assurance.clone(),
         professional: config.authz.professional.clone(),
         spec_profile: config.spec_profile,

@@ -82,13 +82,9 @@ tracing-opentelemetry = { workspace = true }
 
 # Authentication and the SMART on openEHR scopes: the FerroHEALTH resource-server
 # crate checks every bearer token and Basic credential and enforces the route
-# table's `Requirement`s (`extensions::access::authn`, `smart`); `smart-grammar`
-# is the openehr-sdt release those requirements are typed over. The verified
-# Basic credential cache keys on the SHA-256 of the header.
+# table's `Requirement`s (`extensions::access::authn`, `smart`), and re-exports
+# the openehr-sdt scope grammar those requirements are typed over.
 ferrohealth-smart = { workspace = true, features = ["axum", "openehr"] }
-smart-grammar = { workspace = true }
-base64 = { workspace = true }
-moka = { workspace = true }
 sha2 = { workspace = true }
 
 # Authorization (RBAC + ABAC), folded in from the former ferroehr-authz crate:

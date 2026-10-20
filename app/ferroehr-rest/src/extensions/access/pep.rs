@@ -55,7 +55,7 @@ use ferroehr::aql::subject::{EhrSubject, TouchedSubjects};
 use ferroehr::service::status::{CallStatusType, SmError};
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 use ferrohealth_smart::guard::Requirement;
-use smart_grammar::smart_scopes::ResourceFamily;
+use ferrohealth_smart::openehr::smart_scopes::ResourceFamily;
 
 /// Whether an operation is ABAC-checked, and when.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
