@@ -63,6 +63,11 @@ pub(crate) fn marks_routes() -> OpenApiRouter<AppState> {
         .routes(routes!(admin_retention_anchor))
         .routes(routes!(admin_retention_hold))
         .routes(routes!(admin_retention_due))
+        .routes(routes!(
+            admin_restrict_access,
+            admin_access_restriction_register
+        ))
+        .routes(routes!(admin_lift_access_restriction))
 }
 
 /// Record a restriction of processing (`POST /admin/restriction`).
@@ -435,6 +440,118 @@ pub(crate) async fn admin_retention_due(
     guarded_dispatch(state, "admin_retention_due", parts, dispatch).await
 }
 
+/// Record an EHDS Art. 8 restriction of access by health professionals
+/// (`POST /admin/access-restriction`).
+///
+/// **Our own extension — no ITS-REST operation governs this** (module docs).
+#[utoipa::path(
+    post, path = "/admin/access-restriction", tag = "admin-marks",
+    request_body(content = serde_json::Value,
+                 description = "`{ \"ehr_id\": …, \"vo_id\": …?, \"note\": …? }`, \
+                                recorded on the person's instruction (EHDS \
+                                Art. 8). Omitting `vo_id` restricts the whole \
+                                EHR, including data recorded after it.",
+                 example = json!({
+                     "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
+                     "note": "instruction received at the front desk on 2026-10-20"
+                 })),
+    responses(
+        (status = 204, description = "The restriction is recorded. Every \
+                                      professional route, query and export \
+                                      then treats the data as absent, and no \
+                                      status, header or count says that a \
+                                      restriction exists. A caller holding \
+                                      `authz.rbac.emergency_access_role` that \
+                                      declares an emergency purpose reads it \
+                                      (EHDS Art. 11(5))."),
+        (status = 400, description = "The body is not the object above.",
+         body = serde_json::Value),
+        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
+        (status = 404, description = "The EHR is unknown, or the named object is \
+                                      not in it. Nothing is recorded.",
+         body = serde_json::Value),
+        (status = 405, description = "The admin API is disabled on this server.",
+         body = serde_json::Value),
+        (status = 415, description = "The request `Content-Type` is not \
+                                      `application/json`.",
+         body = serde_json::Value)
+    )
+)]
+pub(crate) async fn admin_restrict_access(
+    State(state): State<AppState>,
+    request: axum::extract::Request,
+) -> Response {
+    let parts = crate::api::into_parts(request).await;
+    guarded_dispatch(state, "admin_restrict_access", parts, dispatch).await
+}
+
+/// Read one EHR's access-restriction register
+/// (`GET /admin/access-restriction`).
+///
+/// **Our own extension — no ITS-REST operation governs this** (module docs).
+#[utoipa::path(
+    get, path = "/admin/access-restriction", tag = "admin-marks",
+    params(("ehr_id" = String, Query, description = "The EHR whose register to read.")),
+    responses(
+        (status = 200, description = "The register rows, newest request first; \
+                                      a lift is a row with `lifted_at` set.",
+         body = serde_json::Value),
+        (status = 400, description = "`ehr_id` is missing or not a UUID.",
+         body = serde_json::Value),
+        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
+        (status = 404, description = "The EHR is unknown.", body = serde_json::Value),
+        (status = 405, description = "The admin API is disabled on this server.",
+         body = serde_json::Value)
+    )
+)]
+pub(crate) async fn admin_access_restriction_register(
+    State(state): State<AppState>,
+    request: axum::extract::Request,
+) -> Response {
+    let parts = crate::api::into_parts(request).await;
+    guarded_dispatch(state, "admin_access_restriction_register", parts, dispatch).await
+}
+
+/// Lift an EHDS Art. 8 access restriction
+/// (`POST /admin/access-restriction/lift`).
+///
+/// **Our own extension — no ITS-REST operation governs this** (module docs).
+#[utoipa::path(
+    post, path = "/admin/access-restriction/lift", tag = "admin-marks",
+    request_body(content = serde_json::Value,
+                 description = "`{ \"ehr_id\": …, \"vo_id\": …? }`, the grain to \
+                                lift. Omitting `vo_id` lifts the whole-EHR \
+                                restrictions and leaves any object-scoped one \
+                                standing.",
+                 example = json!({ "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398" })),
+    responses(
+        (status = 204, description = "Every in-force access restriction at that \
+                                      grain carries a lift instant. Idempotent: \
+                                      lifting nothing succeeds."),
+        (status = 400, description = "The body is not the object above.",
+         body = serde_json::Value),
+        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
+        (status = 404, description = "The EHR is unknown, or the named object is \
+                                      not in it.",
+         body = serde_json::Value),
+        (status = 405, description = "The admin API is disabled on this server.",
+         body = serde_json::Value),
+        (status = 415, description = "The request `Content-Type` is not \
+                                      `application/json`.",
+         body = serde_json::Value)
+    )
+)]
+pub(crate) async fn admin_lift_access_restriction(
+    State(state): State<AppState>,
+    request: axum::extract::Request,
+) -> Response {
+    let parts = crate::api::into_parts(request).await;
+    guarded_dispatch(state, "admin_lift_access_restriction", parts, dispatch).await
+}
+
 // ── dispatch ─────────────────────────────────────────────────────────────────
 
 pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
@@ -644,6 +761,56 @@ async fn run(
                 StatusCode::OK,
                 &serde_json::json!({ "due": body }),
             ))
+        }
+        "admin_restrict_access" => {
+            let body = negotiate::json_value(h, &parts.body)?;
+            state
+                .backend()
+                .restrict_access(
+                    required_str(&body, "ehr_id")?,
+                    optional_str(&body, "vo_id")?,
+                    optional_str(&body, "note")?,
+                )
+                .await?;
+            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+        }
+        "admin_access_restriction_register" => {
+            let ehr_id =
+                params::query_param(parts.query.as_deref(), "ehr_id").ok_or_else(|| {
+                    RestError(ApiError::BadRequest(
+                        "the `ehr_id` query parameter is required".to_owned(),
+                    ))
+                })?;
+            let rows = state.backend().access_restriction_register(&ehr_id).await?;
+            let body: Vec<serde_json::Value> = rows
+                .iter()
+                .map(|row| {
+                    serde_json::json!({
+                        "id": row.id,
+                        "ehr_id": row.ehr_id.to_string(),
+                        "vo_id": row.vo_id.map(|id| id.to_string()),
+                        "requested_at": row.requested_at.to_string(),
+                        "lifted_at": row.lifted_at.map(|at| at.to_string()),
+                        "note": row.note,
+                    })
+                })
+                .collect();
+            Ok(negotiate::respond(
+                h,
+                StatusCode::OK,
+                &serde_json::json!({ "access_restrictions": body }),
+            ))
+        }
+        "admin_lift_access_restriction" => {
+            let body = negotiate::json_value(h, &parts.body)?;
+            state
+                .backend()
+                .lift_access_restriction(
+                    required_str(&body, "ehr_id")?,
+                    optional_str(&body, "vo_id")?,
+                )
+                .await?;
+            Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError(ApiError::Internal(format!(
             "unrouted admin marks operation: {other}"

@@ -80,7 +80,7 @@ use openehr_its::rest::routes::{Lookup, Param, ParamLocation, PathParam, RouteMa
 use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::extensions::access::{ehr_access, pep};
+use crate::extensions::access::{ehr_access, pep, restriction};
 #[cfg(feature = "events")]
 use crate::extensions::event_subscription;
 #[cfg(feature = "fhir")]
@@ -286,16 +286,34 @@ pub(crate) async fn guarded_dispatch(
     parts: RequestParts,
     dispatch: Dispatcher,
 ) -> Response {
-    let mut resp = match ehr_access::enforce(&state, op, &parts).await {
-        Ok(()) => match pep::pre_check(&state, op, &parts).await {
-            Ok(()) => {
-                let resp = dispatch(state.clone(), op, parts).await;
-                pep::post_check(&state, op, resp).await
+    // NOTE: EHDS Art. 8 (`docs/law/eu/ehds/text.html`), restricted data reads as
+    // absent to every operation but the controller's own and an emergency access.
+    let enforced = restriction::applies(&state, op);
+    let mut resp = ferroehr::system_log::access_context::with_access_restriction(
+        enforced,
+        Box::pin(async move {
+            match ehr_access::enforce(&state, op, &parts).await {
+                Ok(()) => {
+                    if enforced {
+                        match restriction::refuse_restricted(&state, op, &parts).await {
+                            Ok(Some(absent)) => return absent,
+                            Ok(None) => {}
+                            Err(fault) => return *fault,
+                        }
+                    }
+                    match pep::pre_check(&state, op, &parts).await {
+                        Ok(()) => {
+                            let resp = dispatch(state.clone(), op, parts).await;
+                            pep::post_check(&state, op, resp).await
+                        }
+                        Err(deny) => deny,
+                    }
+                }
+                Err(deny) => *deny,
             }
-            Err(deny) => deny,
-        },
-        Err(deny) => *deny,
-    };
+        }),
+    )
+    .await;
     resp.extensions_mut()
         .insert(crate::system_log::middleware::AuditOpId(op));
     resp

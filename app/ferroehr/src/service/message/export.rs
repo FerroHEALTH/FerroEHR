@@ -268,12 +268,14 @@ impl FerroEhrService {
     /// Whether an EHR with `ehr_id` exists (the `has_ehr` precondition of both
     /// export calls; `i_ehr_extract_service.adoc`).
     async fn extract_ehr_exists(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        Ok(
-            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
-                .bind(ehr_id)
-                .fetch_one(&mut *acquire(&self.pool).await?)
-                .await?,
+        Ok(sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1 \
+                 AND (NOT $2 OR access_restricted_at IS NULL))",
         )
+        .bind(ehr_id)
+        .bind(crate::system_log::access_context::access_restriction_enforced())
+        .fetch_one(&mut *acquire(&self.pool).await?)
+        .await?)
     }
 
     /// The `(vo_id, kind)` of every versioned object currently in the EHR (one
@@ -455,8 +457,11 @@ impl FerroEhrService {
     /// GDPR Art. 18(2) does not admit for a restricted object
     /// (`docs/law/eu/gdpr/text.html`): storage is the only processing left. The
     /// object is therefore absent from the Extract rather than failing the
-    /// whole export, the same treatment the AQL result set gives it. No openEHR
-    /// spec governs restriction of processing — our own design/extension.
+    /// whole export, the same treatment the AQL result set gives it. An object
+    /// under an EHDS Art. 8 access restriction is absent too while the request
+    /// enforces it (`docs/law/eu/ehds/text.html` Art. 8). No openEHR spec
+    /// governs restriction of processing or of access — our own
+    /// design/extension.
     async fn ehr_versioned_objects(
         &self,
         ehr_id: EhrId,
@@ -465,9 +470,11 @@ impl FerroEhrService {
             "SELECT version.vo_id, version.kind FROM version \
              JOIN vo_head h ON h.vo_id = version.vo_id AND h.trunk_head_sys_version = version.sys_version \
              WHERE version.ehr_id = $1 AND h.restricted_at IS NULL \
+             AND (NOT $2 OR h.access_restricted_at IS NULL) \
              ORDER BY version.vo_id",
         )
         .bind(ehr_id)
+        .bind(crate::system_log::access_context::access_restriction_enforced())
         .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut out = Vec::with_capacity(rows.len());
@@ -487,10 +494,12 @@ impl FerroEhrService {
         Ok(sqlx::query_scalar(
             "SELECT version.kind FROM version \
              JOIN vo_head h ON h.vo_id = version.vo_id AND h.trunk_head_sys_version = version.sys_version \
-             WHERE version.vo_id = $1 AND version.ehr_id = $2 AND h.restricted_at IS NULL",
+             WHERE version.vo_id = $1 AND version.ehr_id = $2 AND h.restricted_at IS NULL \
+             AND (NOT $3 OR h.access_restricted_at IS NULL)",
         )
         .bind(vo_id)
         .bind(ehr_id)
+        .bind(crate::system_log::access_context::access_restriction_enforced())
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?)
     }
@@ -1106,11 +1115,15 @@ async fn resolve_entity_ehr(
         return Err(SmError::ehr_not_found(format!("no EHR with id {id}")));
     }
     if let Some(subject) = subject_id {
-        let id: Option<EhrId> = sqlx::query_scalar("SELECT id FROM ehr WHERE subject_id = $1")
-            .bind(subject)
-            .fetch_optional(&mut *acquire(&svc.pool).await?)
-            .await
-            .map_err(ServiceError::from)?;
+        let id: Option<EhrId> = sqlx::query_scalar(
+            "SELECT id FROM ehr WHERE subject_id = $1 \
+             AND (NOT $2 OR access_restricted_at IS NULL)",
+        )
+        .bind(subject)
+        .bind(crate::system_log::access_context::access_restriction_enforced())
+        .fetch_optional(&mut *acquire(&svc.pool).await?)
+        .await
+        .map_err(ServiceError::from)?;
         return id
             .ok_or_else(|| SmError::ehr_not_found(format!("no EHR for subject_id {subject:?}")));
     }

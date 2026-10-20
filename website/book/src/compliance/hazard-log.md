@@ -396,12 +396,14 @@ logged with the mark.
 `app/ferroehr/tests/it/audit_store.rs`:
 `both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten`.
 
-**Remains:** FerroEHR does not hold the Art. 8 restriction itself, so it
-neither hides restricted data nor grants the override; the mark rests on the
-purpose the caller declares, and an emergency the caller does not declare is
-not marked. The Art. 8 restriction with its override is planned
-([#3682](https://github.com/FerroHEALTH/FerroEHR/issues/3682)). The DICOM
-syslog rendering has no purpose element and does not carry the mark.
+**Remains:** the Art. 8 restriction hides restricted data from every
+professional route, query and export, and only a caller holding
+`authz.rbac.emergency_access_role` that declares an emergency purpose reads it
+(`app/ferroehr-rest/tests/it/access_restriction_http.rs`:
+`only_an_emergency_access_reads_restricted_data_and_is_marked`). The mark rests
+on the purpose the caller declares, and an emergency the caller does not
+declare is not marked. The DICOM syslog rendering has no purpose element and
+does not carry the mark.
 
 ## When the log is reviewed
 

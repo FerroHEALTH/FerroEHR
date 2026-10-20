@@ -344,8 +344,14 @@ impl FerroEhrService {
         // set, not a list probe: a cohort scope names a hundred thousand EHRs
         // (#3159), and a probe per id made that check quadratic.
         let present: std::collections::HashSet<Uuid> =
-            sqlx::query_scalar::<_, EhrId>("SELECT id FROM ehr WHERE id = ANY($1)")
-                .bind(&ids)
+            // NOTE: EHDS Art. 8 (`docs/law/eu/ehds/text.html`), an EHR under a whole-EHR
+            // access restriction reads as absent while the request enforces it.
+            sqlx::query_scalar::<_, EhrId>(
+                "SELECT id FROM ehr WHERE id = ANY($1) \
+                 AND (NOT $2 OR access_restricted_at IS NULL)",
+            )
+            .bind(&ids)
+            .bind(crate::system_log::access_context::access_restriction_enforced())
                 .fetch_all(
                     &mut *acquire(&self.pool)
                         .await

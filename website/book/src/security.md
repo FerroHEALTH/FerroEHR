@@ -301,6 +301,52 @@ names it in its `WHERE` clause, in an `EHR` predicate, through the `ehr_id`
 parameter, or not at all, as in a population query. Query results are not
 filtered by privacy level.
 
+### Restriction of access by health professionals (EHDS Art. 8)
+
+Regulation (EU) 2025/327 Art. 8 gives a person the right to restrict the
+access of health professionals and healthcare providers to all or parts of
+their data, and has the fact of the restriction stay invisible to healthcare
+providers. Art. 11(5) lets the restricted data be reached where necessary to
+protect the person's vital interests, logged so the person can see it. No
+openEHR specification governs this; it is our own design.
+
+- **Recording it.** The controller records a restriction on the person's
+  instruction with `POST {base}/admin/access-restriction`, for a whole EHR or
+  for one versioned object, and lifts it with
+  `POST {base}/admin/access-restriction/lift`
+  ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
+  A whole-EHR restriction covers data recorded after it too.
+- **What a professional sees.** Restricted data reads as absent: a restricted
+  composition or EHR answers **404** exactly as an unknown one does, a query
+  leaves it out at every scope (and a query scoped to a restricted EHR answers
+  as for an unknown EHR), an export skips it, a CONTRIBUTION lists none of its
+  versions, the event stream withholds it, and a write to it is refused as a
+  write to an unknown target. No status, header or count says that a
+  restriction exists.
+- **What it does not change.** Nothing is deleted, and storage and the
+  controller's own processing go on: the admin routes (dump, archive, erase,
+  the registers) see everything. It is not the GDPR Art. 18 restriction of
+  processing, which answers **403** and stops processing itself.
+- **The emergency override.** A caller holding the role
+  `authz.rbac.emergency_access_role` names that declares one of
+  `[audit] emergency_purpose_codes` reads the restricted data, and its access
+  record carries the [emergency mark](audit.md#emergency-access-ehds-art-115).
+  Either alone lifts nothing. Unset, nobody may override.
+
+```toml
+[authz.rbac]
+emergency_access_role = "EMERGENCY"
+
+[audit]
+purpose_codes = ["TREAT", "ETREAT"]
+emergency_purpose_codes = ["ETREAT"]
+```
+
+The grain is the versioned object, the whole EHR, or both. A finer grain (one
+entry inside a composition) is not built: an object is the unit the version
+reads, the queries and the exports already decide on, and splitting a
+composition would change what the stored, signed version holds.
+
 ### RBAC (role-based, coarse)
 
 Every openEHR operation is classified as **Public**, **Clinical**, or

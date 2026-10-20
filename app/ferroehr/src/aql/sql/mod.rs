@@ -308,6 +308,10 @@ struct Builder<'a> {
     /// then JOIN instead of adding comma-separated FROM items, or a later
     /// `LATERAL` could no longer reference them (SQL join-tree scoping).
     streaming: bool,
+    /// Whether the request enforces the EHDS Art. 8 restriction of access, read
+    /// once when the builder starts: a restricted object or EHR then
+    /// contributes no row (`crate::system_log::access_context`).
+    access_restricted: bool,
     /// The structure steps the SELECT paths bind once per row
     /// ([`Builder::bind_select_paths`]), one entry per distinct step prefix.
     step_bindings: Vec<StepBinding>,
@@ -342,6 +346,7 @@ impl<'a> Builder<'a> {
             branch_roots: Vec::new(),
             sub_ctr: 0,
             streaming: false,
+            access_restricted: crate::system_log::access_context::access_restriction_enforced(),
             step_bindings: Vec::new(),
         }
     }

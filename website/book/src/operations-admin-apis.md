@@ -209,7 +209,7 @@ Two consequences to plan for:
 
 ## Legal marks: restriction, objection and retention
 
-Eight routes behind the same switch and role, carrying the three marks the law
+Eleven routes behind the same switch and role, carrying the four marks the law
 asks a repository to hold beside its clinical content. None of them deletes
 anything.
 
@@ -224,6 +224,9 @@ anything.
 | `PUT {base}/admin/retention/anchor` | `{"ehr_id": "…", "jurisdiction": "…", "anchored_at": "…"?, "hold_at": "…"?, "hold_ground": "…"?}` | **204**: the EHR's anchor and any whole-record hold |
 | `POST {base}/admin/retention/hold` | `{"vo_id": "…", "held": true}` | **204**: the per-object exemption is placed or released |
 | `GET {base}/admin/retention/due` | `?limit=100` | **200**: what has run out, oldest first, per period and category, with the due and held object counts |
+| `POST {base}/admin/access-restriction` | `{"ehr_id": "…", "vo_id": "…"?, "note": "…"?}` | **204**: the EHDS Art. 8 restriction of access by health professionals is recorded and in force |
+| `GET {base}/admin/access-restriction` | `?ehr_id=…` | **200**: the access-restriction register, newest request first, lifts included |
+| `POST {base}/admin/access-restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force access restriction at that grain is lifted |
 
 A body of the wrong shape or a malformed id is **400**, an id that names nothing
 is **404**, and a body without `Content-Type: application/json` is **415**, in
@@ -252,6 +255,11 @@ read the register itself to learn whether a restriction is in force. What
 each mark means, which provision it serves and what the deploying organisation
 still has to decide are on [Retention, restriction and
 objection](compliance/retention.md).
+
+An access restriction is not a restriction of processing: it limits what a
+health professional reaches and nothing else, and it is invisible to them. What
+it changes is on [restriction of access by health
+professionals](security.md#restriction-of-access-by-health-professionals-ehds-art-8).
 
 ## Reading a party's protected identifiers
 

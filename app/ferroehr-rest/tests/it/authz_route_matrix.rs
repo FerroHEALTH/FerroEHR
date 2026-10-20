@@ -378,6 +378,8 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/restriction"),
     ("GET", "/admin/retention/policy"),
     ("GET", "/admin/retention/due"),
+    // The EHDS Art. 8 access-restriction register (#3682).
+    ("GET", "/admin/access-restriction"),
     // The audited read of a party's protected national identifiers (#3776). It
     // also needs `authz.rbac.identifier_reader_role`, checked in its handler.
     ("GET", "/admin/party/identifiers"),
@@ -414,6 +416,10 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     ("PUT", "/admin/retention/policy"),
     ("PUT", "/admin/retention/anchor"),
     ("POST", "/admin/retention/hold"),
+    // The EHDS Art. 8 access restriction, recorded and lifted on the person's
+    // instruction (#3682).
+    ("POST", "/admin/access-restriction"),
+    ("POST", "/admin/access-restriction/lift"),
     // The repair the parity sweep is the diagnosis for. Unlike the sweep it
     // REPLACES stored rows, so it stays out of EXTENSION_READ_ROUTES and a
     // read-only server refuses it (#3143).

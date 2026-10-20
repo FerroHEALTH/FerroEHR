@@ -57,6 +57,10 @@ pub enum Ehr {
     /// `research_objection_ground` — the controller's recorded public-interest
     /// ground for overriding the objection; `NULL` while it stands.
     ResearchObjectionGround,
+    /// `access_restricted_at` — when an EHDS Art. 8 restriction of access by
+    /// health professionals was recorded for the whole EHR; `NULL` =
+    /// unrestricted.
+    AccessRestrictedAt,
 }
 
 /// `commit_audit` — `AUDIT_DETAILS` of every committed change.
@@ -179,6 +183,9 @@ pub enum VoHead {
     /// `restricted_at` — when restriction of processing was recorded for this
     /// object; `NULL` = unrestricted.
     RestrictedAt,
+    /// `access_restricted_at` — when an EHDS Art. 8 restriction of access was
+    /// recorded for this object or its whole EHR; `NULL` = unrestricted.
+    AccessRestrictedAt,
     /// `retention_hold_at` — when a retention hold was placed; `NULL` = none.
     RetentionHoldAt,
     /// `archived_at` — when the object moved to the cold tier; `NULL` while
@@ -276,6 +283,18 @@ mod tests {
         ),
     ];
 
+    /// The later clinical migrations that add columns to those relations with
+    /// `ALTER TABLE … ADD COLUMN`.
+    const ALTERS: &[&str] = &[include_str!(
+        "../../migrations/clinical/0015_access_restriction.sql"
+    )];
+
+    /// Whether a later migration adds `col` to `table`.
+    fn added_by_alter(table: &str, col: &str) -> bool {
+        let statement = format!("ALTER TABLE {table} ADD COLUMN {col} ");
+        ALTERS.iter().any(|file| file.contains(&statement))
+    }
+
     /// The `CREATE TABLE {table} ( … )` body, comments stripped before the
     /// parentheses are counted: the DDL documents itself in prose, and an
     /// interval written `[a, b)` would otherwise close the table early and
@@ -337,6 +356,7 @@ mod tests {
                     Ehr::RestrictedAt.to_string(),
                     Ehr::ResearchObjectedAt.to_string(),
                     Ehr::ResearchObjectionGround.to_string(),
+                    Ehr::AccessRestrictedAt.to_string(),
                 ],
             ),
             (
@@ -391,6 +411,7 @@ mod tests {
                     VoHead::TemplateId.to_string(),
                     VoHead::CommittedAt.to_string(),
                     VoHead::RestrictedAt.to_string(),
+                    VoHead::AccessRestrictedAt.to_string(),
                     VoHead::RetentionHoldAt.to_string(),
                     VoHead::ArchivedAt.to_string(),
                     VoHead::ArchiveReason.to_string(),
@@ -428,7 +449,7 @@ mod tests {
             let body = create_table_body(&table);
             for column in columns {
                 assert!(
-                    declares_column(&body, &column),
+                    declares_column(&body, &column) || added_by_alter(&table, &column),
                     "the catalog names `{table}.{column}`, which `CREATE TABLE {table}` does not \
                      declare in the clinical migration set — schema drift"
                 );
