@@ -21,8 +21,8 @@ vendored specification text.
 
 ```toml
 [dependencies]
-openehr-rm = "0.0.89"
-openehr-its = "0.0.89"
+openehr-rm = "0.0.90"
+openehr-its = "0.0.90"
 ```
 
 All nine are **edition 2024** with an MSRV of **Rust 1.97**, and all nine
@@ -122,8 +122,8 @@ OPT 1.4 template:
 
 ```toml
 [dependencies]
-openehr-its = { version = "0.0.89", default-features = false, features = ["opt14"] }
-openehr-sdt = { version = "0.0.89", default-features = false, features = ["flat"] }
+openehr-its = { version = "0.0.90", default-features = false, features = ["opt14"] }
+openehr-sdt = { version = "0.0.90", default-features = false, features = ["flat"] }
 ```
 
 With `default-features = false` and no feature at all, `openehr-sdt` compiles

@@ -27,8 +27,8 @@ each with the files that implement it.
 | Specification | Where |
 |---|---|
 | TLS 1.3 (rustls), mutual TLS | `[server.tls]`; [server configuration](../../website/book/src/installation/config-server.md) |
-| OAuth 2.0 bearer tokens, JWT (RFC 7519), the JWT best current practice (RFC 8725), OpenID Connect discovery | [authentication](../../website/book/src/security.md#authentication) |
-| SMART App Launch, with PKCE (RFC 7636) | [SMART App Launch](../../website/book/src/smart-app-launch.md) |
+| OAuth 2.0 bearer tokens (RFC 6750), the JWT access-token profile (RFC 9068), JWT (RFC 7519), the JWT best current practice (RFC 8725), authorization-server metadata (RFC 8414), OpenID Connect discovery; the client-credentials grant (RFC 6749 §4.4) for the audit FHIR feed, the remote policy service and the terminology server | [authentication](../../website/book/src/security.md#authentication) |
+| SMART App Launch, with PKCE (RFC 7636), and the SMART on openEHR scopes every route requires | [SMART App Launch](../../website/book/src/smart-app-launch.md) |
 | IHE ATNA (ITI-19, ITI-20, ITI-81), IHE BALP, DICOM PS3.15 §A.5 audit messages, FHIR R4 `AuditEvent`, syslog (RFC 5424) | [audit trail](../../website/book/src/audit.md) |
 | SLSA Build Level 3 provenance, Sigstore bundles | [verifying releases](../../website/book/src/verifying-releases.md#what-slsa-level-each-artifact-reaches) |
 | CycloneDX and SPDX software bills of materials | [the SBOMs](../../website/book/src/verifying-releases.md#the-sboms-one-per-published-artefact) |
