@@ -19,6 +19,7 @@
 //! own design / product extension; only the wire paths are spec-bound.
 
 use crate::example_options::{ExampleDetail, ExampleType};
+use crate::locale::Msg;
 
 /// Which template family a Template Manager view is showing.
 ///
@@ -48,46 +49,38 @@ impl TemplateFamily {
 
     /// The family switch's visible label.
     #[must_use]
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> Msg {
         match self {
-            Self::Adl14 => "ADL 1.4",
-            Self::Adl2 => "ADL 2",
+            Self::Adl14 => Msg::Adl14,
+            Self::Adl2 => Msg::Adl2,
         }
     }
 
     /// The upload trigger's label — what the header button offers.
     #[must_use]
-    pub fn upload_label(self) -> &'static str {
+    pub fn upload_label(self) -> Msg {
         match self {
-            Self::Adl14 => "Upload OPT",
-            Self::Adl2 => "Upload ADL2",
+            Self::Adl14 => Msg::UploadOpt,
+            Self::Adl2 => Msg::UploadAdl2,
         }
     }
 
     /// The upload dialog's heading.
     #[must_use]
-    pub fn upload_title(self) -> &'static str {
+    pub fn upload_title(self) -> Msg {
         match self {
-            Self::Adl14 => "Upload an operational template",
-            Self::Adl2 => "Upload an ADL2 operational template",
+            Self::Adl14 => Msg::UploadAnOperationalTemplate,
+            Self::Adl2 => Msg::UploadAdl2OperationalTemplate,
         }
     }
 
     /// The upload dialog's one-paragraph help: what the CDR ingests, and that
     /// a refusal is shown verbatim.
     #[must_use]
-    pub fn upload_help(self) -> &'static str {
+    pub fn upload_help(self) -> Msg {
         match self {
-            Self::Adl14 => {
-                "The CDR ingests an ADL 1.4 operational template as OPT/XML. Choose a file or \
-                 paste the source below; the CDR's validation diagnostics are shown verbatim on \
-                 refusal."
-            }
-            Self::Adl2 => {
-                "The CDR ingests the ADL2 artefact SOURCE as text/plain. Choose a file or paste \
-                 the source below; the openEHR-ADL engine's diagnostics are shown verbatim on \
-                 refusal."
-            }
+            Self::Adl14 => Msg::CdrIngestsAdl14Operational,
+            Self::Adl2 => Msg::CdrIngestsAdl2ArtefactSourceText,
         }
     }
 
@@ -102,19 +95,19 @@ impl TemplateFamily {
 
     /// The paste area's placeholder: a recognizable first line of the format.
     #[must_use]
-    pub fn upload_placeholder(self) -> &'static str {
+    pub fn upload_placeholder(self) -> Msg {
         match self {
-            Self::Adl14 => "<template xmlns=\"http://schemas.openehr.org/v1\"> …",
-            Self::Adl2 => "operational_template (adl_version=2.0.6; rm_release=1.0.2; generated) …",
+            Self::Adl14 => Msg::TemplateXmlnsHttpSchemasOpenehrOrg,
+            Self::Adl2 => Msg::OperationalTemplateAdlVersion20,
         }
     }
 
     /// The file picker's button label.
     #[must_use]
-    pub fn upload_choose_label(self) -> &'static str {
+    pub fn upload_choose_label(self) -> Msg {
         match self {
-            Self::Adl14 => "Choose an OPT/XML file",
-            Self::Adl2 => "Choose an ADL2 file",
+            Self::Adl14 => Msg::ChooseOptXmlFile,
+            Self::Adl2 => Msg::ChooseAnAdl2File,
         }
     }
 
@@ -175,12 +168,12 @@ impl Adl2Tab {
 
     /// The tab's visible label.
     #[must_use]
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> Msg {
         match self {
-            Self::Source => "Source",
-            Self::Json => "AOM2 JSON",
-            Self::Catalog => "Path catalog",
-            Self::Example => "Example",
+            Self::Source => Msg::Source,
+            Self::Json => Msg::Aom2Json,
+            Self::Catalog => Msg::PathCatalog,
+            Self::Example => Msg::Example,
         }
     }
 

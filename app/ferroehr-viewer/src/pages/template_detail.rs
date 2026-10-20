@@ -33,6 +33,7 @@ use crate::components::toast::{toast_error, toast_success};
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
 use crate::format::ReprFormat;
+use crate::locale::{Msg, tr, tr_with};
 
 /// Template identity + language metadata for the detail header card,
 /// combined from the typed OPT (uid, concept, original language) and its
@@ -84,13 +85,14 @@ pub struct TemplateDetail {
 /// fails to build (the diagnostic named, never a panic).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn template_detail_from_opt(source: String) -> Result<TemplateDetail, ViewerError> {
-    let opt = openehr_its::opt14::from_xml(&source)
-        .map_err(|e| ViewerError::Internal(format!("OPT 1.4 parse: {e}")))?;
+    let opt = openehr_its::opt14::from_xml(&source).map_err(|e| {
+        ViewerError::Internal(tr_with(Msg::Opt14Parse, &[("e", (e).to_string().into())]))
+    })?;
     let web_template =
         openehr_sdt::flat::webtemplate::builder::build_web_template(&opt).map_err(|e| {
-            ViewerError::Internal(format!(
-                "WebTemplate build: {}",
-                crate::error::error_chain(&e)
+            ViewerError::Internal(tr_with(
+                Msg::WebtemplateBuild2,
+                &[("value0", (crate::error::error_chain(&e)).clone().into())],
             ))
         })?;
     Ok(TemplateDetail {
@@ -298,18 +300,25 @@ pub fn TemplateDetailPage() -> impl IntoView {
     // is a shareable query param. All three bodies stay mounted (toggled by
     // `class:hidden`) so each pane keeps its loaded state across tab switches.
     let tabs = crate::components::tab_bar::url_tabs(
-        "Template views",
-        &[("wt", "WT"), ("opt", "OPT"), ("example", "Example")],
+        tr(Msg::TemplateViews),
+        &[
+            ("wt", Msg::TabWt),
+            ("opt", Msg::TabOpt),
+            ("example", Msg::Example),
+        ],
         move |value| tab_href(&template_id.get(), value),
         Signal::derive(move || selected_tab.get()),
     );
 
     view! {
-        <Title text=move || format!("Template · {}", template_id.get()) />
+        <Title text=move || tr_with(
+            Msg::Template2,
+            &[("template_id", (template_id.get()).clone().into())],
+        ) />
         <div>
             <PageHeader
                 title=template_id
-                crumbs=vec![Crumb::new("Templates", "/templates")]
+                crumbs=vec![Crumb::new(tr(Msg::Templates), "/templates")]
                 mono=true
             >
                 {delete_action}
@@ -358,25 +367,26 @@ fn delete_section(template_id: Signal<String>) -> AnyView {
         Some((id, Ok(()))) => {
             toast_success(
                 toaster,
-                "Template deleted",
-                &format!("{id} was removed from the CDR."),
+                &tr(Msg::TemplateDeleted),
+                &tr_with(Msg::WasRemovedFromCdr2, &[("id", id.clone().into())]),
             );
             navigate("/templates", leptos_router::NavigateOptions::default());
         }
         Some((id, Err(error))) => toast_error(
             toaster,
-            "Delete failed",
-            &crate::admin::delete_failure_copy(&format!("Template {id}"), &error),
+            &tr(Msg::DeleteFailed),
+            &crate::admin::delete_failure_copy(
+                &tr_with(Msg::Template3, &[("id", id.clone().into())]),
+                &error,
+            ),
         ),
         None => {}
     });
 
     let message = Signal::derive(move || {
-        format!(
-            "Permanently delete the operational template “{}” from the CDR? This cannot be \
-             undone. The CDR refuses the delete while a committed version still references the \
-             template.",
-            template_id.get()
+        tr_with(
+            Msg::PermanentlyDeleteOperationalTemplateFromCdr,
+            &[("template_id", (template_id.get()).clone().into())],
         )
     });
 
@@ -390,13 +400,13 @@ fn delete_section(template_id: Signal<String>) -> AnyView {
                 on:click=move |_| confirming.set(true)
             >
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
-                "Delete template"
+                {tr(Msg::DeleteTemplate)}
             </button>
             <crate::components::confirm_dialog::ConfirmDialog
                 open=confirming
-                title="Delete template"
+                title=tr(Msg::DeleteTemplate)
                 message=message
-                confirm_label="Delete template"
+                confirm_label=tr(Msg::DeleteTemplate)
                 dialog_id="template-delete-confirm-dialog"
                 confirm_id="template-delete-confirm"
                 on_cancel=Callback::new(move |()| confirming.set(false))
@@ -414,14 +424,14 @@ fn delete_section(template_id: Signal<String>) -> AnyView {
 /// languages — always visible above the tabs. Resolved inside `Suspense`
 /// per the house error pattern, from the shared detail handle.
 fn meta_section(detail: Resource<Result<TemplateDetail, ViewerError>>) -> AnyView {
-    let entry = |label: &'static str, value: String, mono: bool| {
+    let entry = |label: String, value: String, mono: bool| {
         let value_class = if mono {
             "font-mono text-xs text-ink wrap-break-word"
         } else {
             "text-sm text-ink"
         };
         let shown = if value.is_empty() {
-            "—".to_owned()
+            tr(Msg::NoValue)
         } else {
             value
         };
@@ -438,7 +448,7 @@ fn meta_section(detail: Resource<Result<TemplateDetail, ViewerError>>) -> AnyVie
     view! {
         <section class=format!("{CARD_PAD} mb-4")>
             <Suspense fallback=|| {
-                view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
+                view! { {ferrohealth_ui::view::empty::skeleton(1, tr(Msg::Loading))} }
             }>
                 {move || {
                     Suspend::new(async move {
@@ -452,11 +462,11 @@ fn meta_section(detail: Resource<Result<TemplateDetail, ViewerError>>) -> AnyVie
                                 };
                                 view! {
                                     <dl class="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
-                                        {entry("Concept", m.concept, false)}
-                                        {entry("Version", m.version, false)}
-                                        {entry("Default language", m.language, false)}
-                                        {entry("Languages", language_list, false)}
-                                        {entry("UID", m.uid, true)}
+                                        {entry(tr(Msg::Concept), m.concept, false)}
+                                        {entry(tr(Msg::Version), m.version, false)}
+                                        {entry(tr(Msg::DefaultLanguage), m.language, false)}
+                                        {entry(tr(Msg::Languages), language_list, false)}
+                                        {entry("UID".to_owned(), m.uid, true)}
                                     </dl>
                                 }
                                     .into_any()
@@ -481,7 +491,7 @@ fn wt_tab(
     view! {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             <section class=CARD_PAD>
-                <h2 class=CARD_TITLE>"Path catalog (WT tree)"</h2>
+                <h2 class=CARD_TITLE>{tr(Msg::PathCatalogWtTree)}</h2>
                 <div class="overflow-auto max-h-[70vh]">
                     <Transition fallback=tree_skeleton>
                         {move || Suspend::new(async move {
@@ -507,7 +517,7 @@ fn wt_tab(
                 </div>
             </section>
             <section class=CARD_PAD>
-                <h2 class=CARD_TITLE>"Node inspector"</h2>
+                <h2 class=CARD_TITLE>{tr(Msg::NodeInspector)}</h2>
                 <div>{node_inspector(selected)}</div>
             </section>
         </div>
@@ -518,7 +528,7 @@ fn wt_tab(
 /// The `<Transition>` fallback the template detail panes share (both ADL
 /// families — the ADL2 screen imports it rather than re-declaring a copy).
 pub(crate) fn tree_skeleton() -> impl IntoView {
-    view! { {ferrohealth_ui::view::empty::skeleton(3, "Loading…")} }
+    view! { {ferrohealth_ui::view::empty::skeleton(3, tr(Msg::Loading))} }
 }
 
 /// The catalog error state (e.g. a `404` unknown template, or a `WebTemplate`
@@ -532,12 +542,12 @@ pub(crate) fn catalog_error_view(error: &ViewerError, back_href: &'static str) -
     view! {
         <div role="alert" class="fui-alert">
             <div>
-                {message} " — "
+                {message} ": "
                 <leptos_router::components::A
                     href=back_href
                     attr:class="text-accent hover:underline"
                 >
-                    "back to templates"
+                    {tr(Msg::BackToTemplates)}
                 </leptos_router::components::A>
             </div>
         </div>
@@ -667,9 +677,7 @@ pub(crate) fn node_inspector(selected: RwSignal<Option<CatalogNode>>) -> AnyView
         {move || match selected.get() {
             None => {
                 view! {
-                    <p class="text-sm text-ink-muted">
-                        "Select a node to inspect its path and metadata."
-                    </p>
+                    <p class="text-sm text-ink-muted">{tr(Msg::SelectNodeInspectPathMetadata)}</p>
                 }
                     .into_any()
             }
@@ -685,12 +693,12 @@ pub(crate) fn node_inspector(selected: RwSignal<Option<CatalogNode>>) -> AnyView
 /// `Vec<AnyView>` is not `Clone`, and `<Show>` would re-call its body.
 fn inspector_body(node: &CatalogNode) -> AnyView {
     let node_id = if node.node_id.is_empty() {
-        "—".to_owned()
+        tr(Msg::NoValue)
     } else {
         node.node_id.clone()
     };
     let selectable = if node.selectable { "yes" } else { "no" };
-    let units_section = chip_section("units", &node.unit_options);
+    let units_section = chip_section("units".to_owned(), &node.unit_options);
     let codes_section = code_chip_section(node);
 
     view! {
@@ -699,7 +707,7 @@ fn inspector_body(node: &CatalogNode) -> AnyView {
             <dd>{node.label.clone()}</dd>
             <dt class="font-medium text-ink-muted">"rmType"</dt>
             <dd class="font-mono">{node.rm_type.clone()}</dd>
-            <dt class="font-medium text-ink-muted">"node id"</dt>
+            <dt class="font-medium text-ink-muted">{tr(Msg::NodeId)}</dt>
             <dd class="font-mono">{node_id}</dd>
             <dt class="font-medium text-ink-muted">"selectable"</dt>
             <dd>{selectable}</dd>
@@ -713,7 +721,7 @@ fn inspector_body(node: &CatalogNode) -> AnyView {
 }
 
 /// A titled chip row for a list of plain string options; empty → nothing.
-fn chip_section(title: &'static str, values: &[String]) -> AnyView {
+fn chip_section(title: String, values: &[String]) -> AnyView {
     if values.is_empty() {
         return ().into_any();
     }

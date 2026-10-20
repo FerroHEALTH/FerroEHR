@@ -26,6 +26,7 @@
               (#1694)"
 )]
 
+use crate::locale::{Msg, tr, tr_with};
 use serde_json::Value;
 
 /// One node of the rendered document.
@@ -356,14 +357,14 @@ fn element_row(value: &Value, attribute: &str, key: String) -> RenderedRow {
                 let (flavour_text, flavour_code) = format_value(flavour);
                 (format!("({flavour_text})"), flavour_code)
             }
-            None => ("(no value)".to_owned(), None),
+            None => (tr(Msg::NoValue), None),
         },
     };
     RenderedRow {
         key,
         label,
         value: if text.trim().is_empty() {
-            "(no value)".to_owned()
+            tr(Msg::NoValue)
         } else {
             text
         },
@@ -500,7 +501,7 @@ fn format_multimedia(value: &Value) -> (String, Option<String>) {
     let bytes = if size.is_empty() {
         String::new()
     } else {
-        format!("{size} bytes")
+        tr_with(Msg::Bytes, &[("size", size.clone().into())])
     };
     (
         join_with_space(&join_parenthesized(&media, &bytes), &uri),

@@ -33,6 +33,8 @@ use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::{Msg, tr_served, tr_with};
 
 /// One terminology's descriptor, flattened for the descriptor card.
 ///
@@ -88,7 +90,7 @@ impl TermRow {
         if self.text.is_empty() {
             self.code.clone()
         } else {
-            format!("{} — {}", self.code, self.text)
+            format!("{} · {}", self.code, self.text)
         }
     }
 }
@@ -247,7 +249,12 @@ async fn terminology_get(path: &str) -> Result<Option<serde_json::Value>, Viewer
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
     serde_json::from_str::<serde_json::Value>(&body)
         .map(Some)
-        .map_err(|e| ViewerError::Internal(format!("terminology JSON: {e}")))
+        .map_err(|e| {
+            ViewerError::Internal(tr_with(
+                Msg::TerminologyJson,
+                &[("e", (e).to_string().into())],
+            ))
+        })
 }
 
 /// The optional `at_date` query fragment, introduced by `lead` (`?` when it
@@ -268,7 +275,10 @@ fn at_date_query(at_date: &str, lead: char) -> String {
 fn require_value(value: &str, what: &str) -> Result<String, ViewerError> {
     let value = value.trim();
     if value.is_empty() {
-        return Err(ViewerError::Invalid(format!("a {what} is required")));
+        return Err(ViewerError::Invalid(tr_with(
+            Msg::AIsRequired,
+            &[("what", (what).to_string().into())],
+        )));
     }
     Ok(value.to_owned())
 }
@@ -305,7 +315,7 @@ pub async fn fetch_terminology_description(
     /// The terminology to describe.
     terminology_id: String,
 ) -> Result<Option<TerminologyDescriptor>, ViewerError> {
-    let terminology_id = require_value(&terminology_id, "terminology id")?;
+    let terminology_id = require_value(&terminology_id, &tr_served(Msg::TerminologyId))?;
     let path = format!("terminology/{}", urlencoding::encode(&terminology_id));
     Ok(terminology_get(&path)
         .await?
@@ -332,8 +342,8 @@ pub async fn fetch_term(
     /// definition.
     at_date: String,
 ) -> Result<Option<TerminologyExtractView>, ViewerError> {
-    let terminology_id = require_value(&terminology_id, "terminology id")?;
-    let code = require_value(&code, "term code")?;
+    let terminology_id = require_value(&terminology_id, &tr_served(Msg::TerminologyId))?;
+    let code = require_value(&code, &tr_served(Msg::TermCode2))?;
     let path = format!(
         "terminology/{}/term/{}{}",
         urlencoding::encode(&terminology_id),
@@ -363,9 +373,9 @@ pub async fn check_subsumption(
     /// The candidate (descendant) code.
     candidate: String,
 ) -> Result<Option<bool>, ViewerError> {
-    let terminology_id = require_value(&terminology_id, "terminology id")?;
-    let ref_code = require_value(&ref_code, "reference code")?;
-    let candidate = require_value(&candidate, "candidate code")?;
+    let terminology_id = require_value(&terminology_id, &tr_served(Msg::TerminologyId))?;
+    let ref_code = require_value(&ref_code, &tr_served(Msg::ReferenceCode2))?;
+    let candidate = require_value(&candidate, &tr_served(Msg::CandidateCode2))?;
     let path = format!(
         "terminology/{}/subsumes?ref_code={}&candidate={}",
         urlencoding::encode(&terminology_id),
@@ -392,8 +402,8 @@ pub async fn fetch_value_set(
     /// The value set to expand.
     value_set_id: String,
 ) -> Result<Option<TerminologyExtractView>, ViewerError> {
-    let terminology_id = require_value(&terminology_id, "terminology id")?;
-    let value_set_id = require_value(&value_set_id, "value set id")?;
+    let terminology_id = require_value(&terminology_id, &tr_served(Msg::TerminologyId))?;
+    let value_set_id = require_value(&value_set_id, &tr_served(Msg::ValueSetId2))?;
     let path = format!(
         "terminology/{}/value_set/{}",
         urlencoding::encode(&terminology_id),
@@ -425,9 +435,9 @@ pub async fn validate_value_set_code(
     /// set.
     at_date: String,
 ) -> Result<Option<bool>, ViewerError> {
-    let terminology_id = require_value(&terminology_id, "terminology id")?;
-    let value_set_id = require_value(&value_set_id, "value set id")?;
-    let candidate_code = require_value(&candidate_code, "candidate code")?;
+    let terminology_id = require_value(&terminology_id, &tr_served(Msg::TerminologyId))?;
+    let value_set_id = require_value(&value_set_id, &tr_served(Msg::ValueSetId2))?;
+    let candidate_code = require_value(&candidate_code, &tr_served(Msg::CandidateCode2))?;
     let path = format!(
         "terminology/{}/value_set/{}/validate?candidate_code={}{}",
         urlencoding::encode(&terminology_id),
@@ -509,7 +519,7 @@ mod tests {
         assert_eq!(view.version, "3.1.0");
         let codes: Vec<&str> = view.terms.iter().map(|t| t.code.as_str()).collect();
         assert_eq!(codes, vec!["111", "249", "532"]);
-        assert_eq!(view.terms[1].rubric(), "249 — creation");
+        assert_eq!(view.terms[1].rubric(), "249 · creation");
         assert!(!view.terms[1].preferred);
         assert!(view.terms[2].preferred);
         // The bare code carries no text, so its rubric IS the code.
@@ -524,7 +534,7 @@ mod tests {
         let view = extract_view(&body);
         assert_eq!(view.terms.len(), 1);
         assert_eq!(view.terms[0].code, "249");
-        assert_eq!(view.terms[0].rubric(), "249 — creation");
+        assert_eq!(view.terms[0].rubric(), "249 · creation");
     }
 
     #[test]
@@ -573,7 +583,7 @@ mod tests {
             language: "en".to_owned(),
             preferred: false,
         };
-        assert_eq!(defined.rubric(), "249 — creation");
+        assert_eq!(defined.rubric(), "249 · creation");
         let bare = TermRow {
             text: String::new(),
             ..defined

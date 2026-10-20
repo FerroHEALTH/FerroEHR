@@ -32,6 +32,7 @@ use crate::components::empty_state::EmptyState;
 use crate::components::field::INPUT;
 use crate::components::page_header::PageHeader;
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 
 /// One distilled audit record: the promoted facts the table shows plus the
 /// full stored `AuditEvent` JSON for the raw view. Client-safe fields only
@@ -158,8 +159,12 @@ fn prefixed(prefix: &str, value: &str) -> String {
 /// Distil the ITI-81 `searchset` Bundle into an [`AuditPage`].
 #[cfg(not(target_arch = "wasm32"))]
 fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
-    let bundle = serde_json::from_str::<serde_json::Value>(body)
-        .map_err(|e| ViewerError::Internal(format!("AuditEvent Bundle JSON: {e}")))?;
+    let bundle = serde_json::from_str::<serde_json::Value>(body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::AuditeventBundleJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let total = bundle
         .get("total")
         .and_then(serde_json::Value::as_u64)
@@ -197,9 +202,9 @@ fn audit_row(resource: &serde_json::Value) -> AuditRow {
     let type_code = text(resource.pointer("/type/code"));
     let family = match type_code.as_str() {
         "rest" => "REST".to_owned(),
-        "110114" => "Authentication".to_owned(),
-        "110106" => "Export".to_owned(),
-        "110107" => "Import".to_owned(),
+        "110114" => tr(Msg::Authentication),
+        "110106" => tr(Msg::Export),
+        "110107" => tr(Msg::Import),
         other => other.to_owned(),
     };
     // The concrete operation: the last subtype coding (the ITS-REST
@@ -220,9 +225,9 @@ fn audit_row(resource: &serde_json::Value) -> AuditRow {
     let outcome_code = text(resource.get("outcome"));
     let (outcome, success) = match outcome_code.as_str() {
         "0" => ("success".to_owned(), true),
-        "4" => ("minor failure".to_owned(), false),
-        "8" => ("serious failure".to_owned(), false),
-        "12" => ("major failure".to_owned(), false),
+        "4" => (tr(Msg::MinorFailure), false),
+        "8" => (tr(Msg::SeriousFailure), false),
+        "12" => (tr(Msg::MajorFailure), false),
         other => (other.to_owned(), false),
     };
     // The requesting principal: the requestor agent's who-identifier
@@ -302,8 +307,8 @@ pub fn AuditPage() -> impl IntoView {
         <Title text="Audit log" />
         <div>
             <PageHeader
-                title="Audit log"
-                subtitle="The ATNA security audit trail: who accessed what, with what outcome (IHE ITI-81 retrieval)."
+                title=tr(Msg::AuditLog)
+                subtitle=tr(Msg::AtnaSecurityAuditTrailWhoAccessed)
             />
             {filter_section}
             {table_section}
@@ -319,26 +324,26 @@ fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
     let initial = move |key: &str| query.read_untracked().get(key).unwrap_or_default();
     let from = text_filter(
         "from",
-        "From (instant)",
-        Some("2026-07-01T00:00:00Z"),
+        tr(Msg::FromInstant),
+        Some("2026-07-01T00:00:00Z".to_owned()),
         initial("from"),
     );
     let to = text_filter(
         "to",
-        "To (instant)",
-        Some("2026-07-18T00:00:00Z"),
+        tr(Msg::ToInstant),
+        Some("2026-07-18T00:00:00Z".to_owned()),
         initial("to"),
     );
-    let patient = text_filter("patient", "Patient id", None, initial("patient"));
-    let agent = text_filter("agent", "Principal", None, initial("agent"));
-    let outcome = choice_filter("outcome", "Outcome", &OUTCOMES, &initial("outcome"));
-    let action = choice_filter("action", "Action", &ACTIONS, &initial("action"));
+    let patient = text_filter("patient", tr(Msg::PatientId), None, initial("patient"));
+    let agent = text_filter("agent", tr(Msg::Principal), None, initial("agent"));
+    let outcome = choice_filter("outcome", tr(Msg::Outcome), &OUTCOMES, &initial("outcome"));
+    let action = choice_filter("action", tr(Msg::Action2), &ACTIONS, &initial("action"));
     view! {
         <leptos_router::components::Form method="GET" action="/audit" attr:class="mb-4">
             <div class="fui-field-flow">
                 {from} {to} {patient} {agent} {outcome} {action}
                 <button type="submit" class=crate::components::field::BTN_PRIMARY>
-                    "Filter"
+                    {tr(Msg::Filter)}
                 </button>
             </div>
         </leptos_router::components::Form>
@@ -348,31 +353,31 @@ fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
 
 /// The outcome choices of the filter, as the value the query carries and
 /// the words shown.
-const OUTCOMES: [(&str, &str); 5] = [
-    ("", "any"),
-    ("0", "success"),
-    ("4", "minor failure"),
-    ("8", "serious failure"),
-    ("12", "major failure"),
+const OUTCOMES: [(&str, Msg); 5] = [
+    ("", Msg::ChoiceAny),
+    ("0", Msg::ChoiceSuccess),
+    ("4", Msg::MinorFailure),
+    ("8", Msg::SeriousFailure),
+    ("12", Msg::MajorFailure),
 ];
 
 /// The action choices of the filter, as the value the query carries and the
 /// words shown.
-const ACTIONS: [(&str, &str); 6] = [
-    ("", "any"),
-    ("C", "create"),
-    ("R", "read"),
-    ("U", "update"),
-    ("D", "delete"),
-    ("E", "execute"),
+const ACTIONS: [(&str, Msg); 6] = [
+    ("", Msg::ChoiceAny),
+    ("C", Msg::ActionCreate),
+    ("R", Msg::ActionRead),
+    ("U", Msg::ActionUpdate),
+    ("D", Msg::ActionDelete),
+    ("E", Msg::ActionExecute),
 ];
 
 /// One text filter of the form, the query parameter `name` seeded with
 /// `value`.
 fn text_filter(
     name: &'static str,
-    label: &'static str,
-    placeholder: Option<&'static str>,
+    label: String,
+    placeholder: Option<String>,
     value: String,
 ) -> AnyView {
     let id = format!("audit-{name}");
@@ -393,8 +398,8 @@ fn text_filter(
 /// selected.
 fn choice_filter(
     name: &'static str,
-    label: &'static str,
-    choices: &[(&'static str, &'static str)],
+    label: String,
+    choices: &[(&'static str, Msg)],
     current: &str,
 ) -> AnyView {
     let id = format!("audit-{name}");
@@ -406,7 +411,7 @@ fn choice_filter(
         .map(|(value, words)| {
             view! {
                 <option value=*value selected=*value == current>
-                    {*words}
+                    {tr(*words)}
                 </option>
             }
         })
@@ -446,8 +451,8 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::SHIELD_OFF
-                message="The local audit repository is disabled"
-                hint="Enable [audit.store] on the CDR to record and browse the ATNA audit trail here."
+                message=tr(Msg::LocalAuditRepositoryDisabled)
+                hint=tr(Msg::EnableAuditStoreCdrRecordBrowse)
             />
         }
         .into_any();
@@ -456,8 +461,8 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::SHIELD_CHECK
-                message="No audit records match"
-                hint="Widen the time window or clear a filter — every audited operation lands here."
+                message=tr(Msg::NoAuditRecordsMatch)
+                hint=tr(Msg::WidenTimeWindowClearFilterEvery)
             />
         }
         .into_any();
@@ -472,16 +477,16 @@ fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> 
     let footer = pagination(page.total, page.offset, query);
     view! {
         {table_shell(
-            "Audit records",
+            &tr(Msg::AuditRecords),
             &[
-                "Recorded",
-                "Event",
-                "Operation",
-                "Outcome",
-                "Principal",
-                "Patient",
-                "Resource",
-                "Record",
+                &tr(Msg::Recorded),
+                &tr(Msg::Event2),
+                &tr(Msg::Operation),
+                &tr(Msg::Outcome),
+                &tr(Msg::Principal),
+                &tr(Msg::Patient),
+                &tr(Msg::Resource),
+                &tr(Msg::Record),
             ],
             body,
         )}
@@ -502,25 +507,25 @@ fn row_view(row: AuditRow) -> impl IntoView {
     view! {
         <tr class=ROW>
             <td class=CELL>{ferrohealth_ui::view::time::timestamp(&row.recorded)}</td>
-            <td class=CELL data-label="Event">
+            <td class=CELL data-label=tr(Msg::Event2)>
                 {event}
             </td>
-            <td class=CELL_MONO data-label="Operation">
+            <td class=CELL_MONO data-label=tr(Msg::Operation)>
                 {row.operation}
             </td>
-            <td class=outcome_class data-label="Outcome">
+            <td class=outcome_class data-label=tr(Msg::Outcome)>
                 {row.outcome}
             </td>
-            <td class=CELL_MONO data-label="Principal">
+            <td class=CELL_MONO data-label=tr(Msg::Principal)>
                 {row.principal}
             </td>
-            <td class=CELL_MONO data-label="Patient">
+            <td class=CELL_MONO data-label=tr(Msg::Patient)>
                 {row.patient}
             </td>
-            <td class=CELL_MONO data-label="Resource">
+            <td class=CELL_MONO data-label=tr(Msg::Resource)>
                 {row.resource}
             </td>
-            <td class=CELL data-label="Record">
+            <td class=CELL data-label=tr(Msg::Record)>
                 <details>
                     <summary class="cursor-pointer text-accent hover:underline text-xs">
                         "view"
@@ -564,7 +569,7 @@ fn pagination(total: u32, offset: u32, query: Memo<leptos_router::params::Params
                 attr:class="text-accent hover:underline"
             >
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_LEFT, "12")}
-                " Newer"
+                {tr(Msg::Newer)}
             </leptos_router::components::A>
         }
     });
@@ -574,14 +579,23 @@ fn pagination(total: u32, offset: u32, query: Memo<leptos_router::params::Params
                 href=href_for(page_index + 1)
                 attr:class="text-accent hover:underline"
             >
-                "Older "
+                {tr(Msg::Older)}
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "12")}
             </leptos_router::components::A>
         }
     });
     view! {
         <div class="mt-3 flex items-center gap-4 text-sm text-ink-muted">
-            <span>{format!("{shown_from}–{shown_to} of {total} records")}</span>
+            <span>
+                {tr_with(
+                    Msg::OfRecords,
+                    &[
+                        ("shown_from", (shown_from).to_string().into()),
+                        ("shown_to", (shown_to).to_string().into()),
+                        ("total", (total).to_string().into()),
+                    ],
+                )}
+            </span>
             {prev}
             {next}
         </div>

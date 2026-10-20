@@ -67,6 +67,9 @@ use serde_json::Value;
 
 use crate::components::wire::{VersionEntry, VersionedObjectFacts};
 use crate::error::ViewerError;
+use crate::locale::Msg;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::{tr_served, tr_with};
 use crate::uid::container_uid_of;
 
 /// The five concrete PARTY families the Demographic API routes by.
@@ -128,13 +131,13 @@ impl PartyKind {
 
     /// The plural label the kind switcher shows.
     #[must_use]
-    pub fn plural(self) -> &'static str {
+    pub fn plural(self) -> Msg {
         match self {
-            Self::Agent => "Agents",
-            Self::Group => "Groups",
-            Self::Organisation => "Organisations",
-            Self::Person => "People",
-            Self::Role => "Roles",
+            Self::Agent => Msg::Agents,
+            Self::Group => Msg::Groups,
+            Self::Organisation => Msg::Organisations,
+            Self::Person => Msg::People,
+            Self::Role => Msg::Roles,
         }
     }
 
@@ -419,9 +422,7 @@ pub async fn resolve_demographic_version_at_time(
         .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?;
     let at_time = crate::format::datetime_local_to_rfc3339(&at_time);
     if at_time.is_empty() {
-        return Err(ViewerError::Invalid(
-            "pick a date and time to travel to".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::PickDateTimeTravel)));
     }
     let url = state.cdr.rest_v1(&format!(
         "demographic/{}/{}/version?version_at_time={}",
@@ -466,9 +467,9 @@ pub async fn fetch_demographic_version_document(
         .ok_or_else(|| unknown_segment(&resource, "resource"))?;
     let version_uid = version_uid.trim();
     if version_uid.is_empty() {
-        return Err(ViewerError::Invalid(
-            "a version uid is required to read a past version".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::VersionUidRequiredReadPastVersion,
+        )));
     }
     let url = state.cdr.rest_v1(&format!(
         "demographic/{}/{}",
@@ -515,7 +516,7 @@ pub async fn resolve_party_kind(
     let state: crate::state::AppState = leptos::prelude::expect_context();
     let uid = container_uid_of(&uid);
     if uid.is_empty() {
-        return Err(ViewerError::Invalid("a party id is required".to_owned()));
+        return Err(ViewerError::Invalid(tr_served(Msg::PartyIdRequired)));
     }
     let encoded = urlencoding::encode(&uid).into_owned();
     for kind in PartyKind::ALL {
@@ -550,10 +551,18 @@ fn parse_versioned_object(
     object_body: &str,
     version_body: &str,
 ) -> Result<VersionedObjectFacts, ViewerError> {
-    let object: Value = serde_json::from_str(object_body)
-        .map_err(|e| ViewerError::Internal(format!("versioned demographic object JSON: {e}")))?;
-    let version: Value = serde_json::from_str(version_body)
-        .map_err(|e| ViewerError::Internal(format!("demographic version JSON: {e}")))?;
+    let object: Value = serde_json::from_str(object_body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::VersionedDemographicObjectJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
+    let version: Value = serde_json::from_str(version_body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::DemographicVersionJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     Ok(VersionedObjectFacts {
         object_uid: crate::uid::uid_value_of_document(&object),
         owner_id: json_str(&object, &["owner_id", "id", "value"]),

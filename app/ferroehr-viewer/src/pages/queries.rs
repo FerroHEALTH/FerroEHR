@@ -36,6 +36,7 @@ use crate::components::page_header::PageHeader;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::components::toast::{toast_error, toast_success};
 use crate::error::ViewerError;
+use crate::locale::{Msg, message, tr, tr_with};
 use crate::queries_api::{StoredQueryRow, fetch_stored_query, list_stored_queries};
 use crate::query_namespace::{QueryNamespaceGroup, bare_name_of, group_by_namespace, group_label};
 
@@ -79,13 +80,28 @@ pub fn QueriesPage() -> impl IntoView {
     Effect::new(move |_| match cdr_delete.value().get() {
         Some(((name, version), Ok(()))) => toast_success(
             toaster,
-            "Stored query deleted",
-            &format!("{name} v{version} was removed from the CDR."),
+            &tr(Msg::StoredQueryDeleted),
+            &tr_with(
+                Msg::VWasRemovedFromCdr,
+                &[
+                    ("name", name.clone().into()),
+                    ("version", version.clone().into()),
+                ],
+            ),
         ),
         Some(((name, version), Err(error))) => toast_error(
             toaster,
-            "Delete failed",
-            &crate::admin::delete_failure_copy(&format!("Stored query {name} v{version}"), &error),
+            &tr(Msg::DeleteFailed),
+            &crate::admin::delete_failure_copy(
+                &tr_with(
+                    Msg::StoredQueryV,
+                    &[
+                        ("name", name.clone().into()),
+                        ("version", version.clone().into()),
+                    ],
+                ),
+                &error,
+            ),
         ),
         None => {}
     });
@@ -96,15 +112,12 @@ pub fn QueriesPage() -> impl IntoView {
     view! {
         <Title text="Stored queries" />
         <div>
-            <PageHeader
-                title="Queries"
-                subtitle="The CDR's stored queries, grouped by the namespace in their qualified name."
-            >
+            <PageHeader title=tr(Msg::Queries) subtitle=tr(Msg::CdrSStoredQueriesGroupedNamespace)>
                 <a href="/queries/builder" class=BTN_PRIMARY>
-                    "New query"
+                    {tr(Msg::NewQuery)}
                 </a>
                 <a href="/queries/aql" class=BTN_SECONDARY>
-                    "Raw AQL"
+                    {tr(Msg::RawAql)}
                 </a>
             </PageHeader>
             <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(16rem,1fr)] gap-6 items-start">
@@ -148,7 +161,7 @@ fn stored_queries_panel(
     let confirm = cdr_delete_dialog(pending_delete, cdr_delete);
     view! {
         <section class="space-y-3">
-            <h2 class=CARD_TITLE>"Stored queries"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::StoredQueries)}</h2>
             {table}
             {detail_view}
             {confirm}
@@ -171,18 +184,21 @@ fn cdr_delete_dialog(
         pending_delete
             .get()
             .map_or_else(String::new, |(name, version)| {
-                format!(
-                    "Permanently delete stored query “{name}” version {version} from the CDR? \
-                     Every client loses that version, and it cannot be undone."
+                tr_with(
+                    Msg::PermanentlyDeleteStoredQueryVersionFrom,
+                    &[
+                        ("name", name.clone().into()),
+                        ("version", version.clone().into()),
+                    ],
                 )
             })
     });
     view! {
         <crate::components::confirm_dialog::ConfirmDialog
             open=Signal::derive(move || pending_delete.get().is_some())
-            title="Delete stored query from the CDR"
+            title=tr(Msg::DeleteStoredQueryFromCdr)
             message=message
-            confirm_label="Delete from CDR"
+            confirm_label=tr(Msg::DeleteFromCdr)
             dialog_id="stored-query-delete-confirm-dialog"
             confirm_id="stored-query-delete-confirm"
             on_cancel=Callback::new(move |()| pending_delete.set(None))
@@ -243,8 +259,8 @@ fn stored_rows_view(
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::SEARCH_CODE
-                message="No stored queries"
-                hint="Build one in the query builder, or write raw AQL, then save it."
+                message=tr(Msg::NoStoredQueries)
+                hint=tr(Msg::BuildOneQueryBuilderWriteRaw)
             />
         }
         .into_any();
@@ -267,13 +283,17 @@ fn stored_rows_view(
     .into_any();
     let footer = table_footer(
         "/queries",
-        "Stored query pages",
-        ferrohealth_ui::table::model::Noun::new("stored query", "stored queries"),
+        tr(Msg::StoredQueryPages),
+        ferrohealth_ui::table::model::Noun::new(message(Msg::NounStoredQueries)),
         paging,
         Signal::derive(move || total),
     );
     view! {
-        {table_shell("Stored queries", &["Name", "Version", "Saved", ""], body)}
+        {table_shell(
+            &tr(Msg::StoredQueries),
+            &[&tr(Msg::Name), &tr(Msg::Version), &tr(Msg::Saved), ""],
+            body,
+        )}
         {footer}
     }
     .into_any()
@@ -328,13 +348,16 @@ fn stored_row(
             on:click=on_click
         >
             <td class=CELL_MONO>{row.name}</td>
-            <td class=CELL_MONO data-label="Version">
+            <td class=CELL_MONO data-label=tr(Msg::Version)>
                 {row.version}
             </td>
-            <td class=format!("{CELL} text-xs text-ink-muted whitespace-nowrap") data-label="Saved">
+            <td
+                class=format!("{CELL} text-xs text-ink-muted whitespace-nowrap")
+                data-label=tr(Msg::Saved)
+            >
                 {ferrohealth_ui::view::time::timestamp(&row.saved)}
             </td>
-            <td class=format!("{CELL} min-w-[15rem]") data-label="Actions">
+            <td class=format!("{CELL} min-w-[15rem]") data-label=tr(Msg::Actions)>
                 // The row wraps between whole actions, never inside a label.
                 <div class="flex flex-wrap items-center gap-2 whitespace-nowrap">
                     <a
@@ -343,10 +366,10 @@ fn stored_row(
                         data-run-stored=run_hook
                         on:click=|ev| ev.stop_propagation()
                     >
-                        "Run"
+                        {tr(Msg::Run)}
                     </a>
                     <a href=load_href class=BTN_SECONDARY_SMALL on:click=|ev| ev.stop_propagation()>
-                        "Open in editor"
+                        {tr(Msg::OpenInEditor)}
                     </a>
                     <a
                         href=builder_href
@@ -354,7 +377,7 @@ fn stored_row(
                         data-open-in-builder=builder_hook
                         on:click=|ev| ev.stop_propagation()
                     >
-                        "Open in builder"
+                        {tr(Msg::OpenInBuilder)}
                     </a>
                     {delete_button}
                 </div>
@@ -389,7 +412,7 @@ fn cdr_delete_button(
             disabled=Signal::derive(move || cdr_delete.pending().get())
             on:click=on_click
         >
-            "Delete from CDR"
+            {tr(Msg::DeleteFromCdr)}
         </button>
     }
     .into_any()
@@ -402,7 +425,7 @@ fn stored_detail(detail: Resource<Result<Option<String>, ViewerError>>) -> AnyVi
     view! {
         <div class="mt-3">
             <Transition fallback=|| {
-                view! { <p class="text-sm text-ink-muted">"Loading query…"</p> }
+                view! { <p class="text-sm text-ink-muted">{tr(Msg::LoadingQuery)}</p> }
             }>
                 {move || Suspend::new(async move {
                     match detail.await {
@@ -438,7 +461,7 @@ fn detail_panel(aql: String) -> AnyView {
                     "AQL"
                 </span>
                 <button type="button" class=BTN_PRIMARY on:click=on_run>
-                    "Run as ad-hoc AQL"
+                    {tr(Msg::RunAdHocAql)}
                 </button>
             </div>
             <DocumentPane id="stored-query-pane" body=body />
@@ -459,7 +482,7 @@ fn namespaces_panel(stored: Resource<Result<Vec<StoredQueryRow>, ViewerError>>) 
     // resolves INSIDE the `Suspend`.
     let list = view! {
         <Transition fallback=|| {
-            view! { <p class="text-sm text-ink-muted">"Loading namespaces…"</p> }
+            view! { <p class="text-sm text-ink-muted">{tr(Msg::LoadingNamespaces)}</p> }
         }>
             {move || Suspend::new(async move {
                 match stored.await {
@@ -472,11 +495,11 @@ fn namespaces_panel(stored: Resource<Result<Vec<StoredQueryRow>, ViewerError>>) 
     .into_any();
     view! {
         <section class="space-y-3">
-            <h2 class=CARD_TITLE>"Namespaces"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::Namespaces)}</h2>
             <p class="text-sm text-ink-muted">
-                "A query's group is the namespace of its qualified name ("
+                {tr(Msg::QuerySGroupNamespaceQualifiedName)}
                 <span class="font-mono">"namespace::name"</span>
-                "), chosen when you save it. The viewer stores no grouping of its own, so every openEHR client sees the same one."
+                {tr(Msg::ChosenWhenYouSaveViewerStores)}
             </p>
             {list}
         </section>
@@ -492,8 +515,8 @@ fn namespace_cards(rows: &[StoredQueryRow]) -> AnyView {
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::INBOX
-                message="No namespaces yet"
-                hint="Save a query as namespace::name — its namespace becomes a group here and a tile on the dashboard."
+                message=tr(Msg::NoNamespacesYet)
+                hint=tr(Msg::SaveQueryNamespaceNameNamespaceBecomes)
             />
         }
         .into_any();
@@ -510,9 +533,9 @@ fn namespace_card(group: &QueryNamespaceGroup) -> AnyView {
     let label_hook = label.clone();
     let count = group.members.len();
     let summary = if count == 1 {
-        "1 query".to_owned()
+        tr(Msg::N1Query)
     } else {
-        format!("{count} queries")
+        tr_with(Msg::Queries3, &[("count", (count).to_string().into())])
     };
     let chips = group
         .members

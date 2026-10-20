@@ -40,6 +40,7 @@ use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
 use crate::format::ReprFormat;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::template_detail::{
     CatalogTreeNode, catalog_error_view, node_inspector, tree_skeleton,
 };
@@ -47,11 +48,11 @@ use crate::pages::templates::TemplateRow;
 
 /// The ADL2 detail's views, each its `?tab=` key and its words: the closed
 /// set of [`Adl2Tab`], in display order.
-const ADL2_TABS: &[(&str, &str)] = &[
-    ("source", "Source"),
-    ("json", "AOM2 JSON"),
-    ("catalog", "Path catalog"),
-    ("example", "Example"),
+const ADL2_TABS: &[(&str, Msg)] = &[
+    ("source", Msg::Source),
+    ("json", Msg::Aom2Json),
+    ("catalog", Msg::PathCatalog),
+    ("example", Msg::Example),
 ];
 
 /// Fetch the stored ADL2 operational-template SOURCE.
@@ -144,12 +145,17 @@ pub fn adl2_catalog_from_json(json: &str) -> Result<CatalogNode, ViewerError> {
     let opt = openehr_its::json::from_canonical_json::<
         openehr_am::v2_4::aom2::archetype::operational_template::OperationalTemplate,
     >(json)
-    .map_err(|e| ViewerError::Internal(format!("OperationalTemplateV2 parse: {e}")))?;
+    .map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::Operationaltemplatev2Parse,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let web_template = openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4(&opt)
         .map_err(|e| {
-            ViewerError::Internal(format!(
-                "WebTemplate build: {}",
-                crate::error::error_chain(&e)
+            ViewerError::Internal(tr_with(
+                Msg::WebtemplateBuild,
+                &[("value0", (crate::error::error_chain(&e)).clone().into())],
             ))
         })?;
     Ok(crate::builder::catalog::from_web_template(&web_template))
@@ -388,7 +394,7 @@ pub fn Adl2TemplateDetailPage() -> impl IntoView {
     let example_pane = example_tab(example, example_format, example_detail, example_kind);
 
     let tabs = crate::components::tab_bar::url_tabs(
-        "ADL2 template views",
+        tr(Msg::Adl2TemplateViews),
         ADL2_TABS,
         move |key| {
             crate::adl2::view_href(
@@ -401,11 +407,14 @@ pub fn Adl2TemplateDetailPage() -> impl IntoView {
     );
 
     view! {
-        <Title text=move || format!("ADL2 template · {}", template_id.get()) />
+        <Title text=move || tr_with(
+            Msg::Adl2Template,
+            &[("template_id", (template_id.get()).clone().into())],
+        ) />
         <div>
             <PageHeader
                 title=template_id
-                crumbs=vec![Crumb::new("Templates", TemplateFamily::Adl2.href())]
+                crumbs=vec![Crumb::new(tr(Msg::Templates), TemplateFamily::Adl2.href())]
                 mono=true
             />
             {versions}
@@ -456,11 +465,7 @@ fn version_section(
             let (stem, _) = crate::adl2::split_hrid(&id);
             let stored = crate::adl2::family_versions(&ids, stem);
             if stored.is_empty() {
-                return view! {
-                    <p class="text-sm text-ink-muted">
-                        "The listing holds no other version of this template family."
-                    </p>
-                }
+                return view! { <p class="text-sm text-ink-muted">{tr(Msg::ListingHoldsNoOtherVersionTemplate)}</p> }
                 .into_any();
             }
             let buttons = stored
@@ -477,9 +482,9 @@ fn version_section(
     };
     view! {
         <section class=format!("{CARD_PAD} mb-4")>
-            <h2 class=CARD_TITLE>"Version"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::Version)}</h2>
             <Transition fallback=|| {
-                view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
+                view! { {ferrohealth_ui::view::empty::skeleton(1, tr(Msg::Loading))} }
             }>{chips}</Transition>
             {version_form(template_id, tab, version)}
         </section>
@@ -495,7 +500,7 @@ fn version_chip(
     version: Memo<Option<String>>,
     value: Option<String>,
 ) -> AnyView {
-    let label = value.clone().unwrap_or_else(|| "As stored".to_owned());
+    let label = value.clone().unwrap_or_else(|| tr(Msg::AsStored2));
     let marker = value.clone().unwrap_or_else(|| "stored".to_owned());
     let selected = {
         let value = value.clone();
@@ -549,7 +554,7 @@ fn version_form(
                 />
                 {field(
                     "adl2-version-input",
-                    "Release version (1.1.0, or a 1 / 1.0 prefix)",
+                    tr(Msg::ReleaseVersion1101),
                     None,
                     view! {
                         <input
@@ -557,13 +562,13 @@ fn version_form(
                             type="text"
                             name="version"
                             class=INPUT
-                            placeholder="as stored"
+                            placeholder=tr(Msg::AsStored)
                             value=initial
                         />
                     },
                 )}
                 <button id="adl2-version-apply" type="submit" class=BTN_SECONDARY>
-                    "Show version"
+                    {tr(Msg::ShowVersion)}
                 </button>
             </div>
         </leptos_router::components::Form>
@@ -582,11 +587,8 @@ fn catalog_tab(
     view! {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             <section class=CARD_PAD>
-                <h2 class=CARD_TITLE>"Path catalog (WT tree)"</h2>
-                <p class="mb-2 fui-help">
-                    "Built by the viewer from the served OperationalTemplateV2: the ADL2 resource \
-                     serves no Web Template representation of its own."
-                </p>
+                <h2 class=CARD_TITLE>{tr(Msg::PathCatalogWtTree)}</h2>
+                <p class="mb-2 fui-help">tr(Msg::BuiltViewerFromServedOperationaltemplatev2Adl2)</p>
                 <div class="overflow-auto max-h-[70vh]">
                     <Transition fallback=tree_skeleton>
                         {move || Suspend::new(async move {
@@ -600,7 +602,7 @@ fn catalog_tab(
                                     }
                                         .into_any()
                                 }
-                                Ok(CatalogBody::Absent) => absent_view("path catalog"),
+                                Ok(CatalogBody::Absent) => absent_view(&tr(Msg::PathCatalog2)),
                                 Err(e) => catalog_error_view(&e, "/templates?family=adl2"),
                             }
                         })}
@@ -608,7 +610,7 @@ fn catalog_tab(
                 </div>
             </section>
             <section class=CARD_PAD>
-                <h2 class=CARD_TITLE>"Node inspector"</h2>
+                <h2 class=CARD_TITLE>{tr(Msg::NodeInspector)}</h2>
                 <div>{node_inspector(selected)}</div>
             </section>
         </div>
@@ -619,9 +621,9 @@ fn catalog_tab(
 /// The absence state: the CDR answered `404` for the template (or the pinned
 /// version), which is a fact about the store, not a failure of the screen.
 fn absent_view(what: &str) -> AnyView {
-    let message = format!(
-        "The CDR holds no {what} for this template at the selected version. Pick another version, \
-         or go back to the ADL2 listing."
+    let message = tr_with(
+        Msg::CdrHoldsNoTemplateSelectedVersion,
+        &[("what", (what).to_string().into())],
     );
     view! {
         {ferrohealth_ui::view::notice::notice(
@@ -635,7 +637,7 @@ fn absent_view(what: &str) -> AnyView {
                     href=TemplateFamily::Adl2.href()
                     attr:class="text-accent hover:underline"
                 >
-                    "ADL2 templates"
+                    {tr(Msg::Adl2Templates)}
                 </leptos_router::components::A>
             },
         )}
@@ -660,7 +662,7 @@ fn source_tab(source: Resource<Result<PaneBody, ViewerError>>) -> AnyView {
                         }
                             .into_any()
                     }
-                    Ok(PaneBody::Absent) => absent_view("ADL2 source"),
+                    Ok(PaneBody::Absent) => absent_view(&tr(Msg::Adl2Source)),
                     Err(e) => crate::components::notice::inline_error(&e),
                 }
             })}
@@ -690,7 +692,7 @@ fn json_tab(json: Resource<Result<PaneBody, ViewerError>>) -> AnyView {
                         }
                             .into_any()
                     }
-                    Ok(PaneBody::Absent) => absent_view("OperationalTemplateV2 JSON"),
+                    Ok(PaneBody::Absent) => absent_view(&tr(Msg::Operationaltemplatev2Json)),
                     Err(e) => crate::components::notice::inline_error(&e),
                 }
             })}
@@ -710,11 +712,7 @@ fn example_tab(
 ) -> AnyView {
     view! {
         <div class="space-y-3">
-            <p class="text-sm text-ink-muted">
-                "The example is generated from the artefact this route names — the Definition API \
-                 declares no versioned example resource, so the version bar above does not change \
-                 it."
-            </p>
+            <p class="text-sm text-ink-muted">tr(Msg::ExampleGeneratedFromArtefactRouteNames)</p>
             <crate::components::example_controls::ExampleControls
                 format=format
                 detail=detail
@@ -737,7 +735,7 @@ fn example_tab(
                             }
                                 .into_any()
                         }
-                        Ok(PaneBody::Absent) => absent_view("example composition"),
+                        Ok(PaneBody::Absent) => absent_view(&tr(Msg::ExampleComposition)),
                         Err(e) => crate::components::notice::inline_error(&e),
                     }
                 })}

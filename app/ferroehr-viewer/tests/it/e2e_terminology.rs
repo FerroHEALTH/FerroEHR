@@ -71,7 +71,7 @@ async fn terminology_browser_defines_terms_and_expands_value_sets() {
     h.wait_css("#terminology-term-lookup").await.click().await;
     h.wait_css("[data-extract='term'] [data-term-code='249']")
         .await;
-    wait_text_contains(&h, "[data-extract='term']", "249 — creation").await;
+    wait_text_contains(&h, "[data-extract='term']", "249 · creation").await;
     h.shot(2, "terminology-term-defined").await;
 
     // Expand a value set and prove the code is one of its members.
@@ -174,7 +174,7 @@ async fn query_builder_coded_criterion_picks_codes_from_the_terminology() {
     retype(&h, "#qb-coded-terminology-0", "openehr").await;
     retype(&h, "#qb-coded-code-0", "249").await;
     h.wait_css("#qb-coded-lookup-0").await.click().await;
-    wait_text_contains(&h, "[data-coded-chip='249']", "249 — creation").await;
+    wait_text_contains(&h, "[data-coded-chip='249']", "249 · creation").await;
 
     // A second code, this time picked out of a value set's members.
     retype(&h, "#qb-coded-value-set-0", "audit_change_type").await;
@@ -183,7 +183,7 @@ async fn query_builder_coded_criterion_picks_codes_from_the_terminology() {
         .await
         .click()
         .await;
-    wait_text_contains(&h, "[data-coded-chip='250']", "250 — amendment").await;
+    wait_text_contains(&h, "[data-coded-chip='250']", "250 · amendment").await;
     h.shot(2, "builder-coded-chips").await;
 
     // The criterion lowers to runnable AQL over the picked codes, and it runs.

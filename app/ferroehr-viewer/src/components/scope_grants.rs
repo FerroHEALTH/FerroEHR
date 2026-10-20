@@ -13,7 +13,8 @@
 use leptos::prelude::*;
 
 use crate::components::field::INPUT;
-use crate::scopes::{CAPABILITY_NOTE, Grant, GrantDetail, ResourceGrant, grants};
+use crate::locale::{Msg, tr};
+use crate::scopes::{Grant, GrantDetail, ResourceGrant, capability_note_text, grants};
 
 /// One grant card.
 const CARD: &str = "flex flex-col gap-1.5 rounded-control border border-edge bg-sunken p-2.5";
@@ -42,7 +43,7 @@ const NOTE: &str = "text-[11px] leading-snug text-ink-muted";
 pub fn capability_note() -> AnyView {
     view! {
         <p class="rounded-control border border-edge bg-raised px-3 py-2 text-[11px] leading-snug text-ink-muted">
-            {CAPABILITY_NOTE}
+            {capability_note_text()}
         </p>
     }
     .into_any()
@@ -50,7 +51,7 @@ pub fn capability_note() -> AnyView {
 
 /// One label/value fact row (the drawer's identity block).
 #[must_use]
-pub fn fact_row(label: &'static str, value: String) -> AnyView {
+pub fn fact_row(label: String, value: String) -> AnyView {
     view! {
         <div class="grid grid-cols-[7rem_1fr] gap-x-3 text-sm">
             <span class="text-xs text-ink-muted">{label}</span>
@@ -78,8 +79,8 @@ fn grant_card(grant: Grant) -> AnyView {
     let Grant { raw, detail } = grant;
     let (kind, body) = match detail {
         GrantDetail::Resource(resource) => ("resource", resource_body(resource)),
-        GrantDetail::Context { label, note } => ("context", labelled_body(&label, note)),
-        GrantDetail::Identity { label, note } => ("identity", labelled_body(&label, note)),
+        GrantDetail::Context { label, note } => ("context", labelled_body(&label, note.clone())),
+        GrantDetail::Identity { label, note } => ("identity", labelled_body(&label, note.clone())),
         GrantDetail::Unrecognized { expected } => ("unrecognized", unrecognized_body(expected)),
     };
     view! {
@@ -108,7 +109,7 @@ fn resource_body(resource: ResourceGrant) -> AnyView {
         .into_iter()
         .map(|permission| view! { <span class=CHIP_PERMISSION>{permission}</span> })
         .collect::<Vec<_>>();
-    let broad_chip = broad.then(|| view! { <span class=CHIP_WARN>"broad access"</span> });
+    let broad_chip = broad.then(|| view! { <span class=CHIP_WARN>{tr(Msg::BroadAccess)}</span> });
     view! {
         <div class="flex flex-col gap-1.5">
             <div class="flex flex-wrap items-center gap-1.5">
@@ -128,7 +129,7 @@ fn resource_body(resource: ResourceGrant) -> AnyView {
 }
 
 /// A launch-context or identity scope: its label and what it means.
-fn labelled_body(label: &str, note: &'static str) -> AnyView {
+fn labelled_body(label: &str, note: String) -> AnyView {
     let label = label.to_owned();
     view! {
         <div class="flex flex-col gap-1.5">
@@ -144,13 +145,11 @@ fn labelled_body(label: &str, note: &'static str) -> AnyView {
 /// A scope the grammar does not recognise: kept verbatim and inert, with the
 /// master08 expectation when the string looks like a resource scope.
 fn unrecognized_body(expected: Option<String>) -> AnyView {
-    let explanation = expected.unwrap_or_else(|| {
-        "Not a scope openEHR defines. It is carried alongside the openEHR scopes and grants nothing here.".to_owned()
-    });
+    let explanation = expected.unwrap_or_else(|| tr(Msg::NotScopeOpenehrDefinesCarriedAlongside));
     view! {
         <div class="flex flex-col gap-1.5">
             <div class="flex flex-wrap items-center gap-1.5">
-                <span class=CHIP_WARN>"not recognised"</span>
+                <span class=CHIP_WARN>{tr(Msg::NotRecognised)}</span>
             </div>
             <p class=NOTE>{explanation}</p>
         </div>
@@ -186,21 +185,19 @@ pub fn ScopePreviewer() -> impl IntoView {
     view! {
         <section class="flex flex-col gap-2">
             <label class="fui-label" for="scope-previewer-input">
-                "Preview a scope"
+                {tr(Msg::PreviewAScope)}
             </label>
             <input
                 id="scope-previewer-input"
                 type="text"
                 class=format!("{INPUT} w-full font-mono text-xs")
-                placeholder="patient/composition-*.rs user/template-MyHospital::Template.v0.crud"
+                placeholder=tr(Msg::PatientCompositionRsUserTemplateMyhospital)
                 autocomplete="off"
                 spellcheck="false"
                 prop:value=move || input.get()
                 on:input:target=move |ev| input.set(ev.target().value())
             />
-            <p class=NOTE>
-                "One scope or a whole space-separated claim. The form is <compartment>/<resource>.<permission> — nothing is sent to the CDR, and nothing here changes what you may do."
-            </p>
+            <p class=NOTE>{tr(Msg::OneScopeWholeSpaceSeparatedClaim)}</p>
             <div id="scope-preview-results">{results}</div>
         </section>
     }

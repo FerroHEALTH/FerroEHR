@@ -37,6 +37,7 @@ use crate::components::version_history::{
 };
 use crate::components::wire::VersionedObjectFacts;
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr};
 use crate::pages::demographics::party::fact_row;
 use crate::pages::demographics::{
     DemographicResource, contribution_href, fetch_demographic_revision_history,
@@ -48,17 +49,19 @@ use crate::pages::demographics::{
 type VersionedResource = Resource<Result<Option<VersionedObjectFacts>, ViewerError>>;
 
 /// This family's copy and DOM hooks for the shared History-tab kit.
-const LABELS: VersionHistoryLabels = VersionHistoryLabels {
-    row_hook: "data-demographic-version",
-    empty_message: "No versions",
-    empty_hint: "Every demographic object is created with a first version; if none is listed, the CDR reported no revision history for this id.",
-    history_lead: "Newest first. Open a version to read the document exactly as it stood at that commit.",
-    at_time_title: "Version at a point in time",
-    at_time_field_id: "demographic-at-time",
-    at_time_button_id: "demographic-at-time-go",
-    at_time_absent: "No version existed at that time.",
-    document_id: "demographic-version-document",
-};
+fn labels() -> VersionHistoryLabels {
+    VersionHistoryLabels {
+        row_hook: "data-demographic-version",
+        empty_message: Msg::NoVersions,
+        empty_hint: Msg::EveryDemographicObjectCreatedFirstVersion,
+        history_lead: Msg::NewestFirstOpenVersionReadDocument,
+        at_time_title: Msg::VersionPointTime,
+        at_time_field_id: "demographic-at-time",
+        at_time_button_id: "demographic-at-time-go",
+        at_time_absent: Msg::NoVersionExistedTime,
+        document_id: "demographic-version-document",
+    }
+}
 
 /// The History tab: the versioned-object card, the revision-history table, the
 /// at-time lookup, and the pinned version's document.
@@ -137,9 +140,9 @@ pub(super) fn history_section(
     );
 
     let card = versioned_facts_section(versioned, versioned_card);
-    let table = revision_history_section(history, pinned, LABELS);
-    let lookup = at_time_lookup_section(uid, at_time, at_time_input, LABELS);
-    let pane = pinned_document_section(document, pinned, LABELS);
+    let table = revision_history_section(history, pinned, labels());
+    let lookup = at_time_lookup_section(uid, at_time, at_time_input, labels());
+    let pane = pinned_document_section(document, pinned, labels());
     view! { <div class="flex flex-col gap-4">{card} {table} {lookup} {pane}</div> }.into_any()
 }
 
@@ -172,14 +175,17 @@ fn versioned_card(facts: &VersionedObjectFacts) -> AnyView {
     });
     view! {
         <section class=CARD_PAD id="demographic-versioned">
-            <h2 class=CARD_TITLE>"Versioned object"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::VersionedObject2)}</h2>
             <dl class="fui-facts text-sm">
-                {fact_row("versioned object", "object-uid", facts.object_uid.clone())}
-                {fact_row("created", "created", facts.time_created.clone())}
-                {fact_row("version", "version-id", facts.version_id.clone())}
-                {fact_row("lifecycle", "lifecycle", facts.lifecycle_state.clone())}
-                {fact_row("preceding version", "preceding", facts.preceding_version_uid.clone())}
-                {contribution} {fact_row("signature", "signature", signature)}
+                {fact_row(tr(Msg::VersionedObject), "object-uid", facts.object_uid.clone())}
+                {fact_row("created".to_owned(), "created", facts.time_created.clone())}
+                {fact_row("version".to_owned(), "version-id", facts.version_id.clone())}
+                {fact_row("lifecycle".to_owned(), "lifecycle", facts.lifecycle_state.clone())}
+                {fact_row(
+                    tr(Msg::PrecedingVersion),
+                    "preceding",
+                    facts.preceding_version_uid.clone(),
+                )} {contribution} {fact_row("signature".to_owned(), "signature", signature)}
             </dl>
         </section>
     }

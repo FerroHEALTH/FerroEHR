@@ -42,6 +42,7 @@ use crate::components::field::{BTN_SECONDARY, SELECT};
 use crate::components::page_header::PageHeader;
 use crate::components::surface::titled_card;
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 use crate::served_vocabulary::OPENAPI_FAMILIES;
 
 /// Where the CDR serves its SMART service-discovery document, relative to the
@@ -86,8 +87,12 @@ pub async fn fetch_smart_config() -> Result<Option<String>, ViewerError> {
 /// [`OPENAPI_FAMILIES`], which the server holds its own family set to, and a
 /// deployment that does not serve a family answers `404`, a first-class state
 /// on the card.
-fn openapi_families() -> impl Iterator<Item = (&'static str, &'static str)> {
-    std::iter::once(("", "Complete surface")).chain(OPENAPI_FAMILIES)
+fn openapi_families() -> impl Iterator<Item = (&'static str, String)> {
+    std::iter::once(("", tr(Msg::CompleteSurface))).chain(
+        OPENAPI_FAMILIES
+            .into_iter()
+            .map(|(slug, label)| (slug, label.to_owned())),
+    )
 }
 
 /// Returns the known family slug `value` names, or the empty slug (the
@@ -190,8 +195,7 @@ pub async fn fetch_admin_config() -> Result<String, ViewerError> {
 /// (`docs/specs/openehr/ITS-REST/specifications/docs/query/Request.md`
 /// §Query parameters) and is matched as data.
 #[cfg(not(target_arch = "wasm32"))]
-const TEMPLATE_USAGE_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c \
-                                  WHERE c/archetype_details/template_id/value = $template";
+const TEMPLATE_USAGE_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c WHERE c/archetype_details/template_id/value = $template";
 
 #[cfg(not(target_arch = "wasm32"))]
 /// Build the `POST query/aql` request body counting the compositions committed
@@ -317,8 +321,8 @@ pub fn SystemPage() -> impl IntoView {
         <Title text="System" />
         <div>
             <PageHeader
-                title="System"
-                subtitle="CDR status, the openEHR conformance manifest, SMART discovery, repository usage, the served OpenAPI documents, the redacted runtime configuration, and the manufacturer."
+                title=tr(Msg::System)
+                subtitle=tr(Msg::CdrStatusOpenehrConformanceManifestSmart)
             />
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                 {status} {manifest} {smart} {usage} {openapi} {config} {activity} {manufacturer}
@@ -341,7 +345,7 @@ fn manufacturer_card() -> AnyView {
         <dl id="manufacturer" class="fui-facts text-sm">
             <dt class="font-medium text-ink-muted">"name"</dt>
             <dd class="text-ink">{manufacturer.name}</dd>
-            <dt class="font-medium text-ink-muted">"postal address"</dt>
+            <dt class="font-medium text-ink-muted">{tr(Msg::PostalAddress)}</dt>
             <dd class="text-ink">{manufacturer.postal_address}</dd>
             <dt class="font-medium text-ink-muted">"contact"</dt>
             <dd class="wrap-break-word">
@@ -361,7 +365,7 @@ fn manufacturer_card() -> AnyView {
         </dl>
     }
     .into_any();
-    titled_card("Manufacturer", false, body)
+    titled_card(tr(Msg::Manufacturer), false, body)
 }
 
 /// The conformance-manifest card: what the CDR advertises about ITSELF through
@@ -390,21 +394,24 @@ fn manifest_card() -> AnyView {
         </Suspense>
     }
     .into_any();
-    titled_card("Conformance manifest", false, body)
+    titled_card(tr(Msg::ConformanceManifest), false, body)
 }
 
 /// Render the `Options` document: the product identity and claimed conformance
 /// profile as a definition list, and one chip per mounted API group.
 fn manifest_body(manifest: &crate::system_api::ConformanceManifest) -> AnyView {
     let facts = [
-        ("solution", manifest.solution.clone()),
-        ("vendor", manifest.vendor.clone()),
-        ("conformance profile", manifest.conformance_profile.clone()),
+        ("solution".to_owned(), manifest.solution.clone()),
+        ("vendor".to_owned(), manifest.vendor.clone()),
+        (
+            tr(Msg::ConformanceProfile),
+            manifest.conformance_profile.clone(),
+        ),
     ]
     .into_iter()
     .map(|(label, value)| {
         let shown = if value.is_empty() {
-            "—".to_owned()
+            tr(Msg::NoValue)
         } else {
             value
         };
@@ -435,20 +442,20 @@ fn manifest_body(manifest: &crate::system_api::ConformanceManifest) -> AnyView {
         <div id="conformance-manifest">
             <dl class="fui-facts text-sm">{facts}</dl>
             <div class="mt-3">
-                <div class="text-xs font-medium text-ink-muted mb-1">"Mounted API groups"</div>
+                <div class="text-xs font-medium text-ink-muted mb-1">
+                    {tr(Msg::MountedApiGroups)}
+                </div>
                 <div class="flex flex-wrap gap-1">{groups}</div>
                 {empty_groups
                     .then(|| {
                         view! {
                             <p class="text-sm text-ink-muted">
-                                "This CDR advertises no API groups in its manifest."
+                                {tr(Msg::CdrAdvertisesNoApiGroupsManifest)}
                             </p>
                         }
                     })}
             </div>
-            <p class="mt-3 fui-help">
-                "The product and openEHR REST versions are in the Status card — the manifest and the status document report the same versions, so the viewer reads them in one place."
-            </p>
+            <p class="mt-3 fui-help">{tr(Msg::ProductOpenehrRestVersionsStatusCard)}</p>
         </div>
     }
     .into_any()
@@ -459,7 +466,7 @@ fn usage_card() -> AnyView {
     let resource = Resource::new(|| (), |()| async move { template_usage().await });
     let body = view! {
         <Suspense fallback=|| {
-            view! { {ferrohealth_ui::view::empty::skeleton(4, "Loading…")} }
+            view! { {ferrohealth_ui::view::empty::skeleton(4, tr(Msg::Loading))} }
         }>
             {move || {
                 Suspend::new(async move {
@@ -468,8 +475,8 @@ fn usage_card() -> AnyView {
                             view! {
                                 <EmptyState
                                     icon=ferrohealth_ui::icon::Glyph::FILE_CODE
-                                    message="No template usage yet"
-                                    hint="Counts appear once compositions are committed against a template."
+                                    message=tr(Msg::NoTemplateUsageYet)
+                                    hint=tr(Msg::CountsAppearOnceCompositionsCommittedAgainst)
                                 />
                             }
                                 .into_any()
@@ -490,7 +497,7 @@ fn usage_card() -> AnyView {
                                                     "{} fui-num",
                                                     crate::components::data_table::CELL,
                                                 )
-                                                data-label="Compositions"
+                                                data-label=tr(Msg::Compositions)
                                             >
                                                 {count}
                                             </td>
@@ -501,8 +508,8 @@ fn usage_card() -> AnyView {
                                 .collect_view()
                                 .into_any();
                             let table = crate::components::data_table::table_shell(
-                                "Compositions per template",
-                                &["Template", "Compositions"],
+                                &tr(Msg::CompositionsPerTemplate),
+                                &[&tr(Msg::Template), &tr(Msg::Compositions)],
                                 body,
                             );
                             if truncated {
@@ -510,8 +517,12 @@ fn usage_card() -> AnyView {
                                     <div>
                                         {table}
                                         <p class="mt-2 fui-help">
-                                            {format!(
-                                                "Showing the {shown} busiest of {total} templates.",
+                                            {tr_with(
+                                                Msg::ShowingBusiestTemplates,
+                                                &[
+                                                    ("shown", (shown).to_string().into()),
+                                                    ("total", (total).to_string().into()),
+                                                ],
                                             )}
                                         </p>
                                     </div>
@@ -528,7 +539,7 @@ fn usage_card() -> AnyView {
         </Suspense>
     }
     .into_any();
-    titled_card("Repository usage", false, body)
+    titled_card(tr(Msg::RepositoryUsage), false, body)
 }
 
 /// The runtime-configuration card: the CDR's redacted effective config
@@ -538,7 +549,7 @@ fn config_card() -> AnyView {
     let resource = Resource::new(|| (), |()| async move { fetch_admin_config().await });
     let body = view! {
         <Suspense fallback=|| {
-            view! { {ferrohealth_ui::view::empty::skeleton(4, "Loading…")} }
+            view! { {ferrohealth_ui::view::empty::skeleton(4, tr(Msg::Loading))} }
         }>
             {move || {
                 Suspend::new(async move {
@@ -554,7 +565,7 @@ fn config_card() -> AnyView {
                         Err(e) if e.status_code() == Some(http::StatusCode::NOT_FOUND) => {
                             view! {
                                 <p class="text-sm text-ink-muted">
-                                    "The CDR's admin API is disabled — enable [admin] to expose the configuration view."
+                                    {tr(Msg::CdrSAdminApiDisabledEnable)}
                                 </p>
                             }
                                 .into_any()
@@ -562,7 +573,7 @@ fn config_card() -> AnyView {
                         Err(ViewerError::Forbidden(_)) => {
                             view! {
                                 <p class="text-sm text-ink-muted">
-                                    "This session lacks the ADMIN role — the configuration view needs an admin sign-in."
+                                    {tr(Msg::SessionLacksAdminRoleConfigurationView)}
                                 </p>
                             }
                                 .into_any()
@@ -570,7 +581,7 @@ fn config_card() -> AnyView {
                         Err(ViewerError::CdrUnauthorized(_)) => {
                             view! {
                                 <p class="text-sm text-ink-muted">
-                                    "The CDR no longer accepts this session — sign in again to read the configuration."
+                                    {tr(Msg::CdrNoLongerAcceptsSessionSign)}
                                 </p>
                             }
                                 .into_any()
@@ -582,12 +593,12 @@ fn config_card() -> AnyView {
         </Suspense>
     }
     .into_any();
-    titled_card("Runtime configuration (redacted)", true, body)
+    titled_card(tr(Msg::RuntimeConfigurationRedacted), true, body)
 }
 
 /// The `<Suspense>` fallback shared by every data-backed card.
 fn card_skeleton() -> impl IntoView {
-    view! { {ferrohealth_ui::view::empty::skeleton(3, "Loading…")} }
+    view! { {ferrohealth_ui::view::empty::skeleton(3, tr(Msg::Loading))} }
 }
 
 /// Status card: `fetch_status` JSON → a definition list. A transport or parse
@@ -619,7 +630,7 @@ fn status_card() -> AnyView {
         </Suspense>
     }
     .into_any();
-    titled_card("Status", false, body)
+    titled_card(tr(Msg::Status), false, body)
 }
 
 /// The uniform card error state: the domain-error message in FerroUI's
@@ -641,8 +652,9 @@ fn card_error(error: &ViewerError) -> AnyView {
 /// # Errors
 /// [`ViewerError::Internal`] when the body is not valid JSON.
 fn status_body(body: &str) -> Result<AnyView, ViewerError> {
-    let doc = serde_json::from_str::<serde_json::Value>(body)
-        .map_err(|e| ViewerError::Internal(format!("status JSON: {e}")))?;
+    let doc = serde_json::from_str::<serde_json::Value>(body).map_err(|e| {
+        ViewerError::Internal(tr_with(Msg::StatusJson, &[("e", (e).to_string().into())]))
+    })?;
     let up = doc
         .get("status")
         .and_then(serde_json::Value::as_str)
@@ -705,7 +717,7 @@ fn smart_card() -> AnyView {
         </Suspense>
     }
     .into_any();
-    titled_card("SMART", false, body)
+    titled_card("SMART".to_owned(), false, body)
 }
 
 /// What to say when the SMART discovery probe could not be read.
@@ -718,17 +730,17 @@ fn smart_card() -> AnyView {
 pub fn smart_probe_failure_copy(error: &ViewerError) -> String {
     let endpoint = format!("/{SMART_DISCOVERY_PATH}");
     match error {
-        ViewerError::CdrUnreachable(detail) => format!(
-            "SMART discovery could not be read: the CDR is unreachable ({detail}). This says \
-             nothing about whether SMART is enabled — check the CDR is up, then reload."
+        ViewerError::CdrUnreachable(detail) => tr_with(
+            Msg::SmartDiscoveryCouldNotReadCdr,
+            &[("detail", detail.clone().into())],
         ),
-        ViewerError::CdrUnauthorized(_) | ViewerError::Unauthenticated => format!(
-            "SMART discovery could not be read: the CDR refused this session at {endpoint}. Sign \
-             in again, then reload."
+        ViewerError::CdrUnauthorized(_) | ViewerError::Unauthenticated => tr_with(
+            Msg::SmartDiscoveryCouldNotReadCdr2,
+            &[("endpoint", endpoint.clone().into())],
         ),
-        ViewerError::Forbidden(_) => format!(
-            "SMART discovery could not be read: this session may not read {endpoint}. It needs an \
-             account the CDR allows there."
+        ViewerError::Forbidden(_) => tr_with(
+            Msg::SmartDiscoveryCouldNotReadSession,
+            &[("endpoint", endpoint.clone().into())],
         ),
         _ => {
             // A CDR body that only restates its own status ("HTTP 302") adds
@@ -736,18 +748,31 @@ pub fn smart_probe_failure_copy(error: &ViewerError) -> String {
             // repeats.
             let detail = match error {
                 ViewerError::Cdr { status, message } => {
-                    let restatement = format!("HTTP {status}");
+                    let restatement =
+                        tr_with(Msg::Http, &[("status", (status).to_string().into())]);
                     if message.trim().is_empty() || message.trim() == restatement {
-                        format!("the CDR answered {status} there")
+                        tr_with(
+                            Msg::TheCdrAnsweredThere,
+                            &[("status", (status).to_string().into())],
+                        )
                     } else {
-                        format!("the CDR answered {status} there: {message}")
+                        tr_with(
+                            Msg::TheCdrAnsweredThere2,
+                            &[
+                                ("status", (status).to_string().into()),
+                                ("message", message.clone().into()),
+                            ],
+                        )
                     }
                 }
                 other => other.to_string(),
             };
-            format!(
-                "SMART discovery could not be read from {endpoint} — {detail}. Whether SMART is \
-                 enabled is therefore unknown; check that the CDR serves that path."
+            tr_with(
+                Msg::SmartDiscoveryCouldNotReadFrom,
+                &[
+                    ("endpoint", endpoint.clone().into()),
+                    ("detail", detail.clone().into()),
+                ],
             )
         }
     }
@@ -764,9 +789,7 @@ fn smart_body(config: Option<String>) -> AnyView {
                 ferrohealth_ui::tone::Tone::Info,
                 ferrohealth_ui::view::notice::Announce::Status,
                 None,
-                view! {
-                    "SMART is not enabled on this CDR: it serves no service-discovery document."
-                },
+                view! { {tr(Msg::SmartNotEnabledCdrServesNo)} },
             )}
         }
         .into_any();
@@ -777,7 +800,7 @@ fn smart_body(config: Option<String>) -> AnyView {
                 ferrohealth_ui::tone::Tone::Warn,
                 ferrohealth_ui::view::notice::Announce::Status,
                 None,
-                view! { "SMART configuration returned, but it is not valid JSON." },
+                view! { {tr(Msg::SmartConfigurationReturnedButNotValid)} },
             )}
         }
         .into_any();
@@ -785,10 +808,10 @@ fn smart_body(config: Option<String>) -> AnyView {
 
     // Advertised authentication endpoints → out-links (present ones only).
     let endpoints = [
-        ("authorization_endpoint", "Authorization"),
-        ("token_endpoint", "Token"),
-        ("jwks_uri", "JWKS"),
-        ("introspection_endpoint", "Introspection"),
+        ("authorization_endpoint", tr(Msg::Authorization)),
+        ("token_endpoint", tr(Msg::Token)),
+        ("jwks_uri", "JWKS".to_owned()),
+        ("introspection_endpoint", tr(Msg::Introspection)),
     ];
     let links = endpoints
         .iter()
@@ -797,7 +820,7 @@ fn smart_body(config: Option<String>) -> AnyView {
                 .and_then(serde_json::Value::as_str)
                 .map(|url| {
                     let href = url.to_owned();
-                    let label = *label;
+                    let label = label.clone();
                     view! {
                         <a
                             href=href
@@ -815,9 +838,9 @@ fn smart_body(config: Option<String>) -> AnyView {
 
     // Advertised capability lists → chips.
     let chip_groups = [
-        ("grant_types_supported", "Grant types"),
-        ("code_challenge_methods_supported", "PKCE methods"),
-        ("scopes_supported", "Scopes"),
+        ("grant_types_supported", tr(Msg::GrantTypes)),
+        ("code_challenge_methods_supported", tr(Msg::PkceMethods)),
+        ("scopes_supported", tr(Msg::Scopes)),
     ];
     let chips = chip_groups
         .iter()
@@ -833,7 +856,7 @@ fn smart_body(config: Option<String>) -> AnyView {
                             view! { <span class="rounded-full bg-accent-subtle px-2 py-0.5 text-xs text-accent-ink">{s}</span> }
                         })
                         .collect::<Vec<_>>();
-                    let label = *label;
+                    let label = label.clone();
                     view! {
                         <div class="mt-2">
                             <div class="text-xs font-medium text-ink-muted mb-1">{label}</div>
@@ -873,7 +896,9 @@ fn openapi_card(family: Memo<String>) -> AnyView {
                     .await
                     .and_then(|doc_str| {
                         let doc = serde_json::from_str::<serde_json::Value>(&doc_str)
-                            .map_err(|e| ViewerError::Internal(format!("openapi JSON: {e}")))?;
+                            .map_err(|e| ViewerError::Internal(
+                                tr_with(Msg::OpenapiJson, &[("e", (e).to_string().into())]),
+                            ))?;
                         Ok::<_, ViewerError>(openapi_body(&doc))
                     });
                 match rendered {
@@ -881,7 +906,7 @@ fn openapi_card(family: Memo<String>) -> AnyView {
                     Err(e) if e.status_code() == Some(http::StatusCode::NOT_FOUND) => {
                         view! {
                             <p class="text-sm text-ink-muted">
-                                "This CDR serves no document for that API family — pick another, or the complete surface."
+                                {tr(Msg::CdrServesNoDocumentApiFamily)}
                             </p>
                         }
                             .into_any()
@@ -894,7 +919,7 @@ fn openapi_card(family: Memo<String>) -> AnyView {
     .into_any();
     let body =
         view! { <div>{selector} <div id="openapi-family-card">{document}</div></div> }.into_any();
-    titled_card("Served OpenAPI", true, body)
+    titled_card(tr(Msg::ServedOpenapi), true, body)
 }
 
 /// The API-family selector: a GET form whose `openapi` field is the URL state
@@ -917,7 +942,7 @@ fn openapi_selector(family: Memo<String>) -> AnyView {
             <div class="fui-field-flow">
                 {field(
                     "openapi-family",
-                    "API family",
+                    tr(Msg::ApiFamily),
                     None,
                     view! {
                         <select id="openapi-family" name="openapi" class=SELECT>
@@ -925,7 +950,7 @@ fn openapi_selector(family: Memo<String>) -> AnyView {
                         </select>
                     },
                 )} <button id="openapi-family-show" type="submit" class=BTN_SECONDARY>
-                    "Show"
+                    {tr(Msg::Show)}
                 </button>
             </div>
         </leptos_router::components::Form>
@@ -940,8 +965,8 @@ fn openapi_body(doc: &serde_json::Value) -> AnyView {
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::ROUTE
-                message="No paths advertised"
-                hint="The CDR served an OpenAPI document with no operations in it."
+                message=tr(Msg::NoPathsAdvertised)
+                hint=tr(Msg::CdrServedOpenapiDocumentNoOperations)
             />
         }
         .into_any();
@@ -985,17 +1010,17 @@ fn activity_log_card() -> AnyView {
     let body = view! {
         <div class="flex flex-col items-start gap-3">
             <p class="text-sm text-ink-muted">
-                "Who accessed what, with what outcome: the ATNA security audit trail, "
-                "filterable by time window, patient, principal, outcome and action."
+                {tr(Msg::WhoAccessedWhatWhatOutcomeAtna)}
+                {tr(Msg::FilterableTimeWindowPatientPrincipalOutcome)}
             </p>
             <A href="/audit" attr:class=BTN_SECONDARY>
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ACTIVITY, "14")}
-                " Open audit browser"
+                {tr(Msg::OpenAuditBrowser)}
             </A>
         </div>
     }
     .into_any();
-    titled_card("Audit log", false, body)
+    titled_card(tr(Msg::AuditLog), false, body)
 }
 
 /// Every top-level scalar field of a JSON object as `(key, text)`, sorted by
@@ -1191,8 +1216,12 @@ mod tests {
     /// name and in its order, `messaging` included.
     #[test]
     fn the_family_selector_offers_every_served_family() {
-        let offered: Vec<(&str, &str)> = openapi_families().skip(1).collect();
-        assert_eq!(offered, OPENAPI_FAMILIES);
+        let offered: Vec<(&str, String)> = openapi_families().skip(1).collect();
+        let served: Vec<(&str, String)> = OPENAPI_FAMILIES
+            .into_iter()
+            .map(|(slug, label)| (slug, label.to_owned()))
+            .collect();
+        assert_eq!(offered, served);
         assert!(
             offered
                 .iter()

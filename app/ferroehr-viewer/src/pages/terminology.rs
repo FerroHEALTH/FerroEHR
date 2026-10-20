@@ -34,6 +34,7 @@ use crate::components::notice::inline_error;
 use crate::components::page_header::PageHeader;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr};
 use crate::terminology::{
     TerminologyDescriptor, TerminologyExtractView, check_subsumption, fetch_term,
     fetch_terminology_description, fetch_value_set, list_terminologies, validate_value_set_code,
@@ -86,8 +87,8 @@ pub fn TerminologyPage() -> impl IntoView {
         <Title text="Terminology" />
         <div id="terminology-screen">
             <PageHeader
-                title="Terminology"
-                subtitle="Browse the terminologies the CDR serves: describe one, define a code, expand a value set, and test membership or subsumption."
+                title=tr(Msg::Terminology)
+                subtitle=tr(Msg::BrowseTerminologiesCdrServesDescribeOne)
             />
             {body}
         </div>
@@ -131,8 +132,8 @@ fn disabled_card() -> AnyView {
         <section id="terminology-disabled" class=CARD_PAD>
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::BOOK_X
-                message="The terminology extension is disabled on this server"
-                hint="The CDR answers its terminology routes as if unmounted. Set api_enabled = true under [terminology] in the CDR's configuration to browse terminologies, terms and value sets here."
+                message=tr(Msg::TerminologyExtensionDisabledServer)
+                hint=tr(Msg::CdrAnswersTerminologyRoutesIfUnmounted)
             />
         </section>
     }
@@ -155,7 +156,7 @@ fn enabled_body(
         <div class="space-y-4">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
                 <section class=CARD_PAD>
-                    <h2 class=CARD_TITLE>"Terminologies"</h2>
+                    <h2 class=CARD_TITLE>{tr(Msg::Terminologies)}</h2>
                     {list}
                 </section>
                 <div class="lg:col-span-2">{facts}</div>
@@ -179,8 +180,8 @@ fn list_card(ids: Vec<String>, selected: Signal<String>) -> AnyView {
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::BOOK_X
-                message="No terminologies"
-                hint="The CDR serves the terminology API but reports no terminology in it."
+                message=tr(Msg::NoTerminologies)
+                hint=tr(Msg::CdrServesTerminologyApiButReports)
             />
         }
         .into_any();
@@ -221,7 +222,7 @@ fn descriptor_card(
 ) -> AnyView {
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Descriptor"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::Descriptor)}</h2>
             // <Transition>, not <Suspense>: switching terminology refetches,
             // and the previous descriptor stays visible instead of flashing a
             // skeleton.
@@ -232,7 +233,7 @@ fn descriptor_card(
                         Ok(None) if selected.get_untracked().is_empty() => {
                             view! {
                                 <p class="text-sm text-ink-muted">
-                                    "Pick a terminology on the left to describe it."
+                                    {tr(Msg::PickTerminologyLeftDescribe)}
                                 </p>
                             }
                                 .into_any()
@@ -241,7 +242,7 @@ fn descriptor_card(
                             let id = selected.get_untracked();
                             view! {
                                 <p class="text-sm text-ink-muted">
-                                    "The CDR serves no terminology called "
+                                    {tr(Msg::CdrServesNoTerminologyCalled)}
                                     <span class="font-mono text-ink">{id}</span> "."
                                 </p>
                             }
@@ -258,22 +259,24 @@ fn descriptor_card(
 
 /// One descriptor's facts, each rendered only when the CDR published it.
 fn descriptor_facts(descriptor: &TerminologyDescriptor) -> AnyView {
-    let name = (!descriptor.name.is_empty()).then(|| fact_row("Name", descriptor.name.clone()));
+    let name =
+        (!descriptor.name.is_empty()).then(|| fact_row(tr(Msg::Name), descriptor.name.clone()));
     let publisher = (!descriptor.publisher.is_empty())
-        .then(|| fact_row("Publisher", descriptor.publisher.clone()));
-    let uri = (!descriptor.uri.is_empty()).then(|| fact_row("URI", descriptor.uri.clone()));
+        .then(|| fact_row(tr(Msg::Publisher), descriptor.publisher.clone()));
+    let uri =
+        (!descriptor.uri.is_empty()).then(|| fact_row("URI".to_owned(), descriptor.uri.clone()));
     let versions = (!descriptor.available_versions.is_empty()).then(|| {
         fact_row(
-            "Available versions",
+            tr(Msg::AvailableVersions),
             descriptor.available_versions.join(", "),
         )
     });
     let attributes = (!descriptor.attributes.is_empty())
-        .then(|| fact_row("Attributes", descriptor.attributes.join(", ")));
+        .then(|| fact_row(tr(Msg::Attributes), descriptor.attributes.join(", ")));
     let id = descriptor.terminology_id.clone();
     view! {
         <dl id="terminology-descriptor" class="fui-facts text-sm">
-            {fact_row("Terminology", id)}
+            {fact_row(tr(Msg::Terminology), id)}
             {name}
             {publisher}
             {uri}
@@ -285,7 +288,7 @@ fn descriptor_facts(descriptor: &TerminologyDescriptor) -> AnyView {
 }
 
 /// One label/value row of the descriptor card.
-fn fact_row(label: &'static str, value: String) -> AnyView {
+fn fact_row(label: String, value: String) -> AnyView {
     view! {
         <div>
             <dt>{label}</dt>
@@ -319,7 +322,7 @@ fn term_card(selected: Signal<String>) -> AnyView {
             return;
         }
         if code.is_empty() {
-            validation.set(Some("Type a term code to define.".to_owned()));
+            validation.set(Some(tr(Msg::TypeTermCodeDefine)));
             return;
         }
         validation.set(None);
@@ -336,9 +339,9 @@ fn term_card(selected: Signal<String>) -> AnyView {
                 .unwrap_or_default();
             view! {
                 <p id="terminology-term-absent" class="text-sm text-ink-muted">
-                    "Unknown code "
+                    {tr(Msg::UnknownCode)}
                     <span class="font-mono text-ink">{code}</span>
-                    " in "
+                    {tr(Msg::In)}
                     <span class="font-mono text-ink">{terminology}</span>
                     "."
                 </p>
@@ -350,11 +353,11 @@ fn term_card(selected: Signal<String>) -> AnyView {
 
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Define a term"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::DefineATerm)}</h2>
             <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="terminology-code">
-                        "Term code"
+                        {tr(Msg::TermCode)}
                     </label>
                     <input
                         id="terminology-code"
@@ -366,7 +369,7 @@ fn term_card(selected: Signal<String>) -> AnyView {
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="terminology-at-date">
-                        "Effective date (optional)"
+                        {tr(Msg::EffectiveDateOptional)}
                     </label>
                     <input
                         id="terminology-at-date"
@@ -383,12 +386,12 @@ fn term_card(selected: Signal<String>) -> AnyView {
                     disabled=Signal::derive(move || lookup.pending().get())
                     on:click=on_click
                 >
-                    "Define"
+                    {tr(Msg::Define)}
                 </button>
             </div>
             <div id="terminology-term-result" class="mt-3 text-sm">
                 <Show when=move || lookup.pending().get()>
-                    <span class="text-ink-muted">"Looking up…"</span>
+                    <span class="text-ink-muted">{tr(Msg::LookingUp)}</span>
                 </Show>
                 {move || validation.get().map(validation_note)}
                 {outcome}
@@ -424,9 +427,7 @@ fn subsumption_card(selected: Signal<String>) -> AnyView {
             return;
         }
         if reference.is_empty() || candidate.is_empty() {
-            validation.set(Some(
-                "Both a reference code and a candidate code are needed.".to_owned(),
-            ));
+            validation.set(Some(tr(Msg::BothReferenceCodeCandidateCodeNeeded)));
             return;
         }
         validation.set(None);
@@ -443,9 +444,9 @@ fn subsumption_card(selected: Signal<String>) -> AnyView {
                 .map(|(_, reference, candidate)| (reference, candidate))
                 .unwrap_or_default();
             let verb = if subsumes {
-                " subsumes "
+                tr(Msg::Subsumes)
             } else {
-                " does not subsume "
+                tr(Msg::DoesNotSubsume)
             };
             view! {
                 <p id="terminology-subsumes-verdict" class="text-sm text-ink">
@@ -461,11 +462,11 @@ fn subsumption_card(selected: Signal<String>) -> AnyView {
 
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Test subsumption"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::TestSubsumption)}</h2>
             <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="terminology-subsumes-ref">
-                        "Reference code"
+                        {tr(Msg::ReferenceCode)}
                     </label>
                     <input
                         id="terminology-subsumes-ref"
@@ -477,7 +478,7 @@ fn subsumption_card(selected: Signal<String>) -> AnyView {
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="terminology-subsumes-candidate">
-                        "Candidate code"
+                        {tr(Msg::CandidateCode)}
                     </label>
                     <input
                         id="terminology-subsumes-candidate"
@@ -494,13 +495,13 @@ fn subsumption_card(selected: Signal<String>) -> AnyView {
                     disabled=Signal::derive(move || test.pending().get())
                     on:click=on_click
                 >
-                    "Test"
+                    {tr(Msg::Test)}
                 </button>
             </div>
-            <p class="mt-2 fui-help">"Subsumption is strict: a code never subsumes itself."</p>
+            <p class="mt-2 fui-help">{tr(Msg::SubsumptionStrictCodeNeverSubsumesItself)}</p>
             <div class="mt-2 text-sm">
                 <Show when=move || test.pending().get()>
-                    <span class="text-ink-muted">"Testing…"</span>
+                    <span class="text-ink-muted">{tr(Msg::Testing)}</span>
                 </Show>
                 {move || validation.get().map(validation_note)}
                 {outcome}
@@ -523,12 +524,9 @@ fn value_set_form_error(
         return Some(message);
     }
     let Some(candidate) = candidate else {
-        return value_set
-            .is_empty()
-            .then(|| "Type a value set id to expand.".to_owned());
+        return value_set.is_empty().then(|| tr(Msg::TypeValueSetIdExpand));
     };
-    (value_set.is_empty() || candidate.is_empty())
-        .then(|| "Both a value set id and a candidate code are needed.".to_owned())
+    (value_set.is_empty() || candidate.is_empty()).then(|| tr(Msg::BothValueSetIdCandidateCode))
 }
 
 /// The value-set card: expand a value set's members, then test one code's
@@ -584,9 +582,9 @@ fn value_set_card(selected: Signal<String>) -> AnyView {
             let (terminology, value_set) = expand.input().get().unwrap_or_default();
             view! {
                 <p id="terminology-value-set-absent" class="text-sm text-ink-muted">
-                    "Unknown value set "
+                    {tr(Msg::UnknownValueSet)}
                     <span class="font-mono text-ink">{value_set}</span>
-                    " in "
+                    {tr(Msg::In)}
                     <span class="font-mono text-ink">{terminology}</span>
                     "."
                 </p>
@@ -606,9 +604,9 @@ fn value_set_card(selected: Signal<String>) -> AnyView {
                 .map(|(_, value_set, candidate)| (value_set, candidate))
                 .unwrap_or_default();
             let verb = if valid {
-                " is a member of "
+                tr(Msg::IsAMemberOf)
             } else {
-                " is not a member of "
+                tr(Msg::NotMember)
             };
             view! {
                 <p id="terminology-value-set-verdict" class="text-sm text-ink">
@@ -624,11 +622,11 @@ fn value_set_card(selected: Signal<String>) -> AnyView {
 
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Expand a value set"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::ExpandAValueSet)}</h2>
             <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="terminology-value-set-id">
-                        "Value set id"
+                        {tr(Msg::ValueSetId)}
                     </label>
                     <input
                         id="terminology-value-set-id"
@@ -645,11 +643,11 @@ fn value_set_card(selected: Signal<String>) -> AnyView {
                     disabled=Signal::derive(move || expand.pending().get())
                     on:click=on_expand
                 >
-                    "Expand"
+                    {tr(Msg::Expand2)}
                 </button>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="terminology-value-set-candidate">
-                        "Candidate code"
+                        {tr(Msg::CandidateCode)}
                     </label>
                     <input
                         id="terminology-value-set-candidate"
@@ -666,12 +664,12 @@ fn value_set_card(selected: Signal<String>) -> AnyView {
                     disabled=Signal::derive(move || validate.pending().get())
                     on:click=on_validate
                 >
-                    "Validate"
+                    {tr(Msg::Validate)}
                 </button>
             </div>
             <div class="mt-3 text-sm">
                 <Show when=move || expand.pending().get() || validate.pending().get()>
-                    <span class="text-ink-muted">"Asking the CDR…"</span>
+                    <span class="text-ink-muted">{tr(Msg::AskingTheCdr)}</span>
                 </Show>
                 {move || validation.get().map(validation_note)}
                 {verdict}
@@ -690,15 +688,15 @@ fn extract_panel(extract: &TerminologyExtractView, hook: &'static str) -> AnyVie
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::SEARCH_X
-                message="Nothing in this extract"
-                hint="The CDR answered with an extract that carries no term and no relationship."
+                message=tr(Msg::NothingInThisExtract)
+                hint=tr(Msg::CdrAnsweredExtractCarriesNoTerm)
             />
         }
         .into_any();
     }
     let version = (!extract.version.is_empty()).then(|| {
         let version = extract.version.clone();
-        view! { <p class="mb-2 fui-help">"Terminology version " {version}</p> }
+        view! { <p class="mb-2 fui-help">{tr(Msg::TerminologyVersion)} {version}</p> }
     });
     let terms = (!extract.terms.is_empty()).then(|| terms_table(extract, hook));
     let relationships = (!extract.relationships.is_empty()).then(|| relationships_table(extract));
@@ -722,10 +720,10 @@ fn terms_table(extract: &TerminologyExtractView, hook: &'static str) -> AnyView 
                     <td class=CELL_MONO data-term-code=code_hook>
                         {rubric}
                     </td>
-                    <td class=CELL data-label="Language">
+                    <td class=CELL data-label=tr(Msg::Language)>
                         {language}
                     </td>
-                    <td class=CELL data-label="Preferred">
+                    <td class=CELL data-label=tr(Msg::Preferred)>
                         {preferred}
                     </td>
                 </tr>
@@ -735,7 +733,11 @@ fn terms_table(extract: &TerminologyExtractView, hook: &'static str) -> AnyView 
         .into_any();
     // `data-extract` names which lookup produced the table (a term definition
     // or a value-set expansion); each row's term cell carries `data-term-code`.
-    let table = table_shell("Terms", &["Term", "Language", "Preferred"], rows);
+    let table = table_shell(
+        &tr(Msg::Terms),
+        &[&tr(Msg::Term), &tr(Msg::Language), &tr(Msg::Preferred)],
+        rows,
+    );
     view! { <div data-extract=hook>{table}</div> }.into_any()
 }
 
@@ -751,10 +753,10 @@ fn relationships_table(extract: &TerminologyExtractView) -> AnyView {
             view! {
                 <tr class=ROW>
                     <td class=CELL_MONO>{origin}</td>
-                    <td class=CELL data-label="Relation">
+                    <td class=CELL data-label=tr(Msg::Relation)>
                         {name}
                     </td>
-                    <td class=CELL_MONO data-label="Targets">
+                    <td class=CELL_MONO data-label=tr(Msg::Targets)>
                         {targets}
                     </td>
                 </tr>
@@ -763,8 +765,8 @@ fn relationships_table(extract: &TerminologyExtractView) -> AnyView {
         .collect_view()
         .into_any();
     table_shell(
-        "Concept relations",
-        &["Origin", "Relation", "Targets"],
+        &tr(Msg::ConceptRelations),
+        &[&tr(Msg::Origin), &tr(Msg::Relation), &tr(Msg::Targets)],
         rows,
     )
 }
@@ -775,7 +777,7 @@ fn absent_terminology_note(terminology: Option<String>) -> AnyView {
     let terminology = terminology.unwrap_or_default();
     view! {
         <p class="text-sm text-ink-muted">
-            "The CDR serves no terminology called "
+            {tr(Msg::CdrServesNoTerminologyCalled)}
             <span class="font-mono text-ink">{terminology}</span> "."
         </p>
     }
@@ -799,7 +801,7 @@ fn validation_note(message: String) -> AnyView {
 fn missing_selection(terminology: &str) -> Option<String> {
     terminology
         .is_empty()
-        .then(|| "Pick a terminology on the left first.".to_owned())
+        .then(|| tr(Msg::PickTerminologyLeftFirst))
 }
 
 /// The trimmed current value of an uncontrolled input.

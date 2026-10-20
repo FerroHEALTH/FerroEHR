@@ -14,6 +14,7 @@
 //! the status document's shape beyond `status` and the versions — our own
 //! design/extension.
 
+use crate::locale::{Msg, tr, tr_with};
 use serde::Deserialize;
 
 /// The CDR status document, typed over the fields the shell reads.
@@ -85,9 +86,10 @@ impl SandboxNotice {
     /// The rule this deployment is under, stated as the rule rather than as a
     /// category: it has not made the production separations, and it must not
     /// hold real patient data.
-    pub const RULE: &'static str = "Sandbox deployment: this deployment has not made the \
-                                    production separations and must not hold real patient \
-                                    data.";
+    #[must_use]
+    pub fn rule() -> String {
+        tr(Msg::SandboxDeploymentDeploymentHasNotMade)
+    }
 
     /// The gap list as one sentence, or an empty string when the server
     /// reported none.
@@ -96,7 +98,10 @@ impl SandboxNotice {
         if self.gaps.is_empty() {
             return String::new();
         }
-        format!("Open: {}.", self.gaps.join("; "))
+        tr_with(
+            Msg::Open2,
+            &[("gaps", (self.gaps.join("; ")).clone().into())],
+        )
     }
 }
 
@@ -105,48 +110,23 @@ impl SandboxNotice {
 #[must_use]
 pub fn gap_text(code: &str) -> String {
     match code {
-        "shared_credential" => {
-            "the clinical, demographic and linkage domains share one database credential"
-        }
-        "shared_cluster" => "two domains reach the same PostgreSQL cluster",
-        "open_subject_namespace" => {
-            "no subject pseudonym namespace is declared, so an EHR subject may carry a real \
-             identifier"
-        }
-        "audit_off" => "access is not recorded to a durable audit trail",
-        "audit_fails_open" => {
-            "an access record the audit queue cannot take is dropped and the request still \
-             succeeds"
-        }
-        "audit_syslog_udp" => {
-            "the access log is shipped over UDP syslog, unencrypted and without delivery \
-             confirmation"
-        }
-        "open_ehr_access_default" => {
-            "an EHR without its own access settings admits every caller the role checks let \
-             through"
-        }
-        "migrate_on_runtime_credential" => {
-            "schema preparation runs on the clinical runtime credential"
-        }
-        "auth_off" => "requests are served without authentication",
-        "rbac_off" => {
-            "role checks are off, so every signed-in caller may use every enabled surface, the \
-             admin and management endpoints included"
-        }
-        "plaintext_listener" => {
-            "a listener serves plain HTTP on an address reachable from the network"
-        }
-        "plaintext_broker" => "change events are published to a message broker without encryption",
-        "plaintext_audit_feed" => {
-            "access records are sent to the audit repository without encryption"
-        }
-        "plaintext_object_store" => {
-            "multimedia files are stored over a connection without encryption"
-        }
+        "shared_credential" => tr(Msg::ClinicalDemographicLinkageDomainsShareOne),
+        "shared_cluster" => tr(Msg::TwoDomainsReachSamePostgresqlCluster),
+        "open_subject_namespace" => tr(Msg::NoSubjectPseudonymNamespaceDeclaredSo),
+        "audit_off" => tr(Msg::AccessNotRecordedDurableAuditTrail),
+        "audit_fails_open" => tr(Msg::AccessRecordAuditQueueCannotTake),
+        "audit_syslog_udp" => tr(Msg::AccessLogShippedOverUdpSyslog),
+        "open_ehr_access_default" => tr(Msg::EhrWithoutOwnAccessSettingsAdmits),
+        "migrate_on_runtime_credential" => tr(Msg::SchemaPreparationRunsClinicalRuntimeCredential),
+        "auth_off" => tr(Msg::RequestsServedWithoutAuthentication),
+        "rbac_off" => tr(Msg::RoleChecksOffSoEverySigned),
+        "plaintext_listener" => tr(Msg::ListenerServesPlainHttpAddressReachable),
+        "plaintext_broker" => tr(Msg::ChangeEventsPublishedMessageBrokerWithout),
+        "plaintext_audit_feed" => tr(Msg::AccessRecordsSentAuditRepositoryWithout),
+        "plaintext_object_store" => tr(Msg::MultimediaFilesStoredOverConnectionWithout),
         other => return other.to_owned(),
     }
-    .to_owned()
+    .clone()
 }
 
 #[cfg(test)]
@@ -185,7 +165,7 @@ mod tests {
             "Open: the clinical, demographic and linkage domains share one database \
              credential; access is not recorded to a durable audit trail."
         );
-        assert!(SandboxNotice::RULE.contains("must not hold real patient data"));
+        assert!(SandboxNotice::rule().contains("must not hold real patient data"));
 
         let production = status("production", &[]);
         assert_eq!(production.profile(), Some("production"));

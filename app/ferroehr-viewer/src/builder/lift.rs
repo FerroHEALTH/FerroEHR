@@ -32,6 +32,7 @@ use crate::builder::model::{
     BoolOp, BuilderQuery, Criterion, CriterionKind, CriterionNode, OrderRule, QueryShape,
     SelectedColumn,
 };
+use crate::locale::{Msg, tr};
 
 /// The variable the builder binds the EHR to (mirrors `lower`).
 const EHR_VAR: &str = "e";
@@ -61,22 +62,18 @@ pub enum LiftError {
     NotAql(String),
     /// The query binds `$parameters`.
     #[error(
-        "this query takes parameters ($…), which the point-and-click builder has no fields for — \
-         run it on the stored-query runner, which prompts for each parameter"
+        "this query takes parameters ($…), which the point-and-click builder has no fields for: run it on the stored-query runner, which prompts for each parameter"
     )]
     Parameterised,
     /// The `FROM` clause is not the builder's fixed `EHR e CONTAINS
     /// COMPOSITION c`.
     #[error(
-        "the builder always queries `FROM EHR e CONTAINS COMPOSITION c`; this query selects from \
-         something else (another RM class, a further CONTAINS level, a predicate, or other \
-         variable names)"
+        "the builder always queries `FROM EHR e CONTAINS COMPOSITION c`; this query selects from something else (another RM class, a further CONTAINS level, a predicate, or other variable names)"
     )]
     UnsupportedFrom,
     /// The `SELECT` list is none of the four builder output shapes.
     #[error(
-        "the builder's output shapes are whole compositions, projected data-value columns, \
-         `COUNT(*)`, and the distinct EHR ids; this query selects something else"
+        "the builder's output shapes are whole compositions, projected data-value columns, `COUNT(*)`, and the distinct EHR ids; this query selects something else"
     )]
     UnsupportedSelect,
     /// The deprecated `TOP` row limit.
@@ -105,8 +102,7 @@ pub enum LiftError {
     Invalid(BuilderError),
     /// The lifted state lowers to a DIFFERENT query.
     #[error(
-        "this query cannot be represented in the builder without changing it, so it was not \
-         loaded — edit it as raw AQL instead"
+        "this query cannot be represented in the builder without changing it, so it was not loaded: edit it as raw AQL instead"
     )]
     RoundTrip,
 }
@@ -881,9 +877,9 @@ fn fragment_text(expr: &WhereExpr) -> String {
 /// Render one `ORDER BY` term as AQL text for a refusal message.
 fn order_text(term: &OrderByExpr) -> String {
     let direction = match term.order {
-        Some(SortOrder::Ascending) => " ASC",
-        Some(SortOrder::Descending) => " DESC",
-        None => "",
+        Some(SortOrder::Ascending) => tr(Msg::Asc),
+        Some(SortOrder::Descending) => tr(Msg::Desc),
+        None => String::new(),
     };
     format!(
         "{}{}{direction}",

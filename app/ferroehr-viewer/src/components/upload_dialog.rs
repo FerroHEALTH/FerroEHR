@@ -47,7 +47,7 @@ pub fn UploadDialog(
     #[prop(into)]
     upload: Signal<Upload>,
     /// The submitting button's label.
-    submit_label: &'static str,
+    submit_label: String,
     /// The source awaiting upload: the field fills it, and the submit button
     /// dispatches exactly what it holds.
     source: RwSignal<String>,

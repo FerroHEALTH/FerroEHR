@@ -55,13 +55,18 @@ use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::components::tab_bar::url_tabs;
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_served;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::demographics::{PartyKind, browse_href};
 use crate::uid::container_uid_of;
 use ferrohealth_ui::highlight::Language;
 
 /// The noun phrase every party write-failure toast is built around
 /// ([`crate::feedback::write_failure_copy`]).
-const PARTY_OBJECT: &str = "this party";
+fn party_object() -> Msg {
+    Msg::ThisParty
+}
 
 /// The viewer's view of one party version.
 ///
@@ -123,10 +128,10 @@ pub async fn fetch_party(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, "party kind"))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
     let uid = container_uid_of(&uid);
     if uid.is_empty() {
-        return Err(ViewerError::Invalid("a party id is required".to_owned()));
+        return Err(ViewerError::Invalid(tr_served(Msg::PartyIdRequired)));
     }
     let url = state.cdr.rest_v1(&format!(
         "demographic/{}/{}",
@@ -172,7 +177,7 @@ pub async fn create_party(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, "party kind"))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
     let body = checked_party_body(&body, kind)?;
     let url = state
         .cdr
@@ -191,9 +196,9 @@ pub async fn create_party(
     let response = crate::cdr::CdrClient::expect_success(response)?;
     let uid = crate::uid::uid_value_of(&response.body);
     if uid.is_empty() {
-        return Err(ViewerError::Internal(
-            "the CDR created the party but returned no uid to open it by".to_owned(),
-        ));
+        return Err(ViewerError::Internal(tr_served(
+            Msg::CdrCreatedPartyButReturnedNo,
+        )));
     }
     Ok(uid)
 }
@@ -240,12 +245,11 @@ pub async fn update_party(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, "party kind"))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
     let current = current_version_uid.trim();
     if current.is_empty() {
         return Err(ViewerError::Invalid(
-            "the current version uid is required to update this party — reload this tab and retry"
-                .to_owned(),
+            { tr_served(Msg::CurrentVersionUidRequiredUpdateParty) }.clone(),
         ));
     }
     let body = apply_party_edits(&base_body, &identities, &details)?;
@@ -303,14 +307,12 @@ pub async fn delete_party(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, "party kind"))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
     let version_uid = version_uid.trim();
     if !version_uid.contains("::") {
-        return Err(ViewerError::Invalid(
-            "deleting a party needs the latest version's full OBJECT_VERSION_ID — reload this \
-             screen and retry"
-                .to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::DeletingPartyNeedsLatestVersionS,
+        )));
     }
     let url = state.cdr.rest_v1(&format!(
         "demographic/{}/{}",
@@ -334,18 +336,22 @@ pub async fn delete_party(
 /// [`ViewerError::Invalid`] when the body is not valid JSON, not an object, or
 /// declares a different `_type`.
 fn checked_party_body(body: &str, kind: PartyKind) -> Result<String, ViewerError> {
-    let doc: Value = serde_json::from_str(body.trim())
-        .map_err(|e| ViewerError::Invalid(format!("the party body is not valid JSON: {e}")))?;
+    let doc: Value = serde_json::from_str(body.trim()).map_err(|e| {
+        ViewerError::Invalid(tr_with(
+            Msg::PartyBodyNotValidJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let object = doc
         .as_object()
-        .ok_or_else(|| ViewerError::Invalid("the party body must be a JSON object".to_owned()))?;
+        .ok_or_else(|| ViewerError::Invalid(tr(Msg::PartyBodyMustJsonObject)))?;
     let declared = object
         .get("_type")
         .and_then(Value::as_str)
         .unwrap_or_default();
     if declared != kind.rm_type() {
         return Err(ViewerError::Invalid(format!(
-            "this is the {} route, but the body declares _type {declared:?} — create it under \
+            "this is the {} route, but the body declares _type {declared:?}: create it under \
              /demographics/{} instead, or fix the _type",
             kind.rm_type(),
             declared.to_lowercase()
@@ -367,8 +373,9 @@ fn checked_party_body(body: &str, kind: PartyKind) -> Result<String, ViewerError
 /// # Errors
 /// [`ViewerError::Internal`] when the body is not valid JSON.
 fn parse_party_state(body: &str, served_etag: Option<&str>) -> Result<PartyState, ViewerError> {
-    let doc: Value = serde_json::from_str(body)
-        .map_err(|e| ViewerError::Internal(format!("party JSON: {e}")))?;
+    let doc: Value = serde_json::from_str(body).map_err(|e| {
+        ViewerError::Internal(tr_with(Msg::PartyJson, &[("e", (e).to_string().into())]))
+    })?;
     let version_uid =
         served_etag.map_or_else(|| crate::uid::uid_value_of_document(&doc), str::to_owned);
     let identities = doc.get("identities").filter(|value| !value.is_null());
@@ -422,16 +429,16 @@ fn count_of(value: Option<&Value>) -> u32 {
 /// The operator-facing complaint when the draft is not a non-empty JSON array.
 fn parse_identities(draft: &str) -> Result<Value, String> {
     let trimmed = draft.trim();
-    let value: Value =
-        serde_json::from_str(trimmed).map_err(|e| format!("identities is not valid JSON: {e}"))?;
+    let value: Value = serde_json::from_str(trimmed).map_err(|e| {
+        tr_with(
+            Msg::IdentitiesNotValidJson,
+            &[("e", (e).to_string().into())],
+        )
+    })?;
     match value.as_array() {
         Some(items) if !items.is_empty() => Ok(value),
-        Some(_) => Err(
-            "identities must hold at least one PARTY_IDENTITY — a party with no \
-                        identity is invalid (PARTY invariant Identities_valid)"
-                .to_owned(),
-        ),
-        None => Err("identities must be a JSON array of PARTY_IDENTITY objects".to_owned()),
+        Some(_) => Err(tr(Msg::IdentitiesMustHoldLeastOneParty)),
+        None => Err(tr(Msg::IdentitiesMustJsonArrayPartyIdentity)),
     }
 }
 
@@ -450,12 +457,12 @@ fn parse_details(draft: &str) -> Result<Option<Value>, String> {
     if trimmed.is_empty() {
         return Ok(None);
     }
-    let value: Value =
-        serde_json::from_str(trimmed).map_err(|e| format!("details is not valid JSON: {e}"))?;
+    let value: Value = serde_json::from_str(trimmed)
+        .map_err(|e| tr_with(Msg::DetailsNotValidJson, &[("e", (e).to_string().into())]))?;
     if value.is_object() {
         Ok(Some(value))
     } else {
-        Err("details must be a JSON object — an ITEM_STRUCTURE such as \
+        Err("details must be a JSON object: an ITEM_STRUCTURE such as \
              {\"_type\": \"ITEM_TREE\", …}"
             .to_owned())
     }
@@ -482,24 +489,27 @@ pub(super) fn apply_party_edits(
     details: &str,
 ) -> Result<String, ViewerError> {
     let mut doc: Value = serde_json::from_str(base).map_err(|e| {
-        ViewerError::Invalid(format!(
-            "the loaded party document is not valid JSON ({e}) — reload this tab and retry"
+        ViewerError::Invalid(tr_with(
+            Msg::LoadedPartyDocumentNotValidJson,
+            &[("e", (e).to_string().into())],
         ))
     })?;
     let identities = parse_identities(identities).map_err(ViewerError::Invalid)?;
     let details = parse_details(details).map_err(ViewerError::Invalid)?;
-    let object = doc.as_object_mut().ok_or_else(|| {
-        ViewerError::Invalid(
-            "the loaded party document is not a JSON object — reload this tab and retry".to_owned(),
-        )
-    })?;
+    let object = doc
+        .as_object_mut()
+        .ok_or_else(|| ViewerError::Invalid(tr(Msg::LoadedPartyDocumentNotJsonObject)))?;
     drop(object.insert("identities".to_owned(), identities));
     match details {
         Some(details) => drop(object.insert("details".to_owned(), details)),
         None => drop(object.remove("details")),
     }
-    serde_json::to_string(&doc)
-        .map_err(|e| ViewerError::Invalid(format!("the edited party could not be serialized: {e}")))
+    serde_json::to_string(&doc).map_err(|e| {
+        ViewerError::Invalid(tr_with(
+            Msg::EditedPartyCouldNotSerialized,
+            &[("e", (e).to_string().into())],
+        ))
+    })
 }
 
 /// The party-detail screen: the header, the delete affordance, the tab bar, and
@@ -570,8 +580,8 @@ fn party_screen(kind: PartyKind, uid: Signal<String>, selected: Memo<String>) ->
             <PageHeader
                 title=heading
                 crumbs=vec![
-                    Crumb::new("Demographics", browse_href(kind)),
-                    Crumb::new(kind.plural(), browse_href(kind)),
+                    Crumb::new(tr(Msg::Demographics), browse_href(kind)),
+                    Crumb::new(tr(kind.plural()), browse_href(kind)),
                 ]
                 mono=true
             >
@@ -595,12 +605,12 @@ fn party_screen(kind: PartyKind, uid: Signal<String>, selected: Memo<String>) ->
 /// tabs working before hydration (the router intercepts them once WASM loads).
 fn tab_bar(kind: PartyKind, uid: Signal<String>, selected: Memo<String>) -> AnyView {
     url_tabs(
-        "Party views",
+        tr(Msg::PartyViews),
         &[
-            ("party", "Party"),
-            ("history", "History"),
-            ("relationships", "Relationships"),
-            ("tags", "Tags"),
+            ("party", Msg::Party),
+            ("history", Msg::History2),
+            ("relationships", Msg::Relationships),
+            ("tags", Msg::Tags),
         ],
         move |value| {
             format!(
@@ -759,19 +769,19 @@ fn party_section(
     Effect::new(move |_| match save.value().get() {
         Some(Ok(uid)) => {
             let detail = if uid.is_empty() {
-                "A new version was committed.".to_owned()
+                tr(Msg::NewVersionWasCommitted)
             } else {
-                format!("New version {uid}")
+                tr_with(Msg::NewVersion3, &[("uid", uid.clone().into())])
             };
-            toast_success(toaster, "Party updated", &detail);
+            toast_success(toaster, &tr(Msg::PartyUpdated), &detail);
         }
         Some(Err(error)) => {
             let title = if error.status_code() == Some(http::StatusCode::PRECONDITION_FAILED) {
-                "Party changed on the server"
+                tr(Msg::PartyChangedServer)
             } else {
-                "Save failed"
+                tr(Msg::SaveFailed)
             };
-            crate::feedback::toast_write_failure(toaster, title, PARTY_OBJECT, &error);
+            crate::feedback::toast_write_failure(toaster, &title, &tr(party_object()), &error);
         }
         None => {}
     });
@@ -810,10 +820,7 @@ fn facts_section(
                     }
                     Ok(None) => deleted_card(),
                     Err(e) if e.status_code() == Some(http::StatusCode::NOT_FOUND) => {
-                        missing_notice(
-                            "party-not-found",
-                            "The CDR holds no party of this kind with this id. Check the id and the kind — the same id under a different kind is a different resource.",
-                        )
+                        missing_notice("party-not-found", tr(Msg::CdrHoldsNoPartyKindId))
                     }
                     Err(e) => inline_error(&e),
                 }
@@ -825,22 +832,27 @@ fn facts_section(
 
 /// The `204` state: the party exists but its current version is deleted.
 fn deleted_card() -> AnyView {
-    deleted_notice(
-        "party-deleted",
-        "This party's current version is deleted. Its earlier versions are still readable — open one from the History tab.",
-    )
+    deleted_notice("party-deleted", tr(Msg::PartySCurrentVersionDeletedEarlier))
 }
 
 /// Render the loaded party's facts as a card.
 fn facts_card(state: &PartyState) -> AnyView {
     let facts = vec![
-        fact_row("type", "type", state.rm_type.clone()),
-        fact_row("name", "name", state.name.clone()),
-        fact_row("archetype", "archetype", state.archetype_node_id.clone()),
-        fact_row("version", "version", state.version_uid.clone()),
-        fact_row("identities", "identities", state.identity_count.to_string()),
+        fact_row("type".to_owned(), "type", state.rm_type.clone()),
+        fact_row("name".to_owned(), "name", state.name.clone()),
         fact_row(
-            "relationships (inline)",
+            "archetype".to_owned(),
+            "archetype",
+            state.archetype_node_id.clone(),
+        ),
+        fact_row("version".to_owned(), "version", state.version_uid.clone()),
+        fact_row(
+            "identities".to_owned(),
+            "identities",
+            state.identity_count.to_string(),
+        ),
+        fact_row(
+            tr(Msg::RelationshipsInline),
             "relationships",
             state.relationships.len().to_string(),
         ),
@@ -855,7 +867,7 @@ fn facts_card(state: &PartyState) -> AnyView {
 
 /// One label/value line of a fact card, carrying the demographic screens'
 /// `data-demographic-fact` hook.
-pub(super) fn fact_row(label: &'static str, hook: &'static str, value: String) -> AnyView {
+pub(super) fn fact_row(label: String, hook: &'static str, value: String) -> AnyView {
     crate::components::facts::fact_row(label, "data-demographic-fact", hook, value)
 }
 
@@ -916,20 +928,18 @@ fn edit_form(
         "party-diagnostic",
         Signal::derive(move || save.value().get().and_then(Result::err)),
     );
-    let hint = format!(
-        "Commits a new {} version on top of the one loaded above (If-Match), so a concurrent \
-         change is refused rather than overwritten. Every other attribute travels back exactly as \
-         the CDR served it.",
-        kind.rm_type()
+    let hint = tr_with(
+        Msg::CommitsNewVersionTopOneLoaded2,
+        &[("kind", (kind.rm_type()).to_string().into())],
     );
     view! {
         <section class=CARD_PAD id="party-edit">
-            <h2 class=CARD_TITLE>"Edit party"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::EditParty)}</h2>
             <p class="mb-3 fui-help">{hint}</p>
             <div class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="party-identities">
-                        "identities (canonical JSON array of PARTY_IDENTITY — at least one)"
+                        {tr(Msg::IdentitiesCanonicalJsonArrayPartyIdentity)}
                     </label>
                     {code_field(
                         "party-identities",
@@ -941,7 +951,7 @@ fn edit_form(
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="party-details">
-                        "details (canonical JSON ITEM_STRUCTURE — leave blank to remove)"
+                        {tr(Msg::DetailsCanonicalJsonItemStructureLeave)}
                     </label>
                     {code_field(
                         "party-details",
@@ -961,10 +971,10 @@ fn edit_form(
                         on:click=on_save
                     >
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SAVE, "14")}
-                        "Save party"
+                        {tr(Msg::SaveParty)}
                     </button>
                     <Show when=move || save.pending().get()>
-                        <span class="text-sm text-ink-muted">"Saving…"</span>
+                        <span class="text-sm text-ink-muted">{tr(Msg::Saving)}</span>
                     </Show>
                 </div>
                 {validation}
@@ -1009,11 +1019,12 @@ fn delete_section(kind: PartyKind, uid: Signal<String>, version_uid: RwSignal<St
         async move { delete_party(kind.segment().to_owned(), version).await }
     });
     let message = Signal::derive(move || {
-        format!(
-            "Delete {} {}? This commits a deleted version: the party stops resolving as current, \
-             and every earlier version stays readable by its own version uid.",
-            kind.rm_type(),
-            uid.get()
+        tr_with(
+            Msg::DeleteCommitsDeletedVersionPartyStops,
+            &[
+                ("kind", (kind.rm_type()).to_string().into()),
+                ("uid", (uid.get()).clone().into()),
+            ],
         )
     });
     logical_delete_section(
@@ -1023,11 +1034,11 @@ fn delete_section(kind: PartyKind, uid: Signal<String>, version_uid: RwSignal<St
         browse_href(kind),
         LogicalDeleteCopy {
             button_id: "party-delete",
-            label: "Delete party",
+            label: Msg::DeleteParty,
             dialog_id: "party-delete-dialog",
             confirm_id: "party-delete-confirm",
-            success_title: "Party deleted",
-            object: PARTY_OBJECT,
+            success_title: Msg::PartyDeleted,
+            object: party_object(),
         },
     )
 }

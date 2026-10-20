@@ -29,6 +29,7 @@ use leptos::prelude::*;
 
 use crate::clinical::{RenderedNode, RenderedRow, RenderedSection};
 use crate::format::ReprFormat;
+use crate::locale::{Msg, tr};
 
 /// The scroll container of the rendered clinical view (proportional text, no
 /// whitespace preservation).
@@ -66,8 +67,8 @@ fn format_of(key: &str) -> ReprFormat {
 /// A FerroUI segmented control over `choices`, bound to `selected` through
 /// each value's key: the one choice strip every selector of the viewer draws.
 pub(crate) fn choice_strip<T>(
-    label: &'static str,
-    choices: &'static [(&'static str, &'static str)],
+    label: String,
+    choices: &[(&'static str, String)],
     selected: RwSignal<T>,
     key_of: fn(T) -> &'static str,
     value_of: fn(&str) -> T,
@@ -92,7 +93,11 @@ pub fn FormatSelector(
     /// source so a change refetches).
     selected: RwSignal<ReprFormat>,
 ) -> impl IntoView {
-    choice_strip("Format", FORMATS, selected, format_key, format_of)
+    let formats: Vec<_> = FORMATS
+        .iter()
+        .map(|(key, words)| (*key, (*words).to_owned()))
+        .collect();
+    choice_strip(tr(Msg::Format), &formats, selected, format_key, format_of)
 }
 
 /// Which view of the document the pane is showing.
@@ -167,8 +172,8 @@ pub fn DocumentPane(
     document_pane_opening(
         ferrohealth_ui::widget::document::DocumentPane {
             id,
-            label: "Document",
-            formats: &[],
+            label: tr(Msg::Document).into(),
+            formats: Vec::new(),
             format: Signal::derive(|| ""),
             text: body,
             language,

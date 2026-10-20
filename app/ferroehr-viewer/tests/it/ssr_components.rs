@@ -35,7 +35,8 @@ use ferroehr_viewer::components::surface::{CARD_TITLE, titled_card};
 use ferroehr_viewer::components::toast::{toast_error, toast_outcome, toast_success};
 use ferroehr_viewer::components::upload_dialog::UploadDialog;
 use ferroehr_viewer::error::ViewerError;
-use ferroehr_viewer::scopes::{CAPABILITY_NOTE, grants};
+use ferroehr_viewer::locale::Msg;
+use ferroehr_viewer::scopes::{capability_note_text, grants};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::widget::toast::{provide_toasts, toast_region};
 use leptos::prelude::*;
@@ -72,7 +73,7 @@ fn the_lockup_renders_the_product_name_beside_an_inline_svg_mark() {
 fn a_titled_card_renders_its_heading_over_the_body_it_was_given() {
     let html = render(|| {
         titled_card(
-            "Repository usage",
+            "Repository usage".to_owned(),
             false,
             view! { <p id="body">"41 compositions"</p> }.into_any(),
         )
@@ -87,7 +88,7 @@ fn a_titled_card_renders_its_heading_over_the_body_it_was_given() {
 
 #[test]
 fn a_full_width_titled_card_spans_both_grid_columns() {
-    let html = render(|| titled_card("Effective configuration", true, ().into_any()));
+    let html = render(|| titled_card("Effective configuration".to_owned(), true, ().into_any()));
     assert!(html.contains("lg:col-span-2"), "{html}");
     assert!(html.contains(">Effective configuration</h2>"), "{html}");
 }
@@ -146,7 +147,7 @@ fn a_mutation_outcome_adds_no_toast_to_the_server_pass() {
         toast_outcome(
             toasts,
             outcome,
-            ("Template uploaded", "Upload failed"),
+            (Msg::TemplateUploaded, Msg::UploadFailed),
             |name, ()| format!("{name} is now available."),
             |name, error| format!("{name}: {error}"),
         );
@@ -268,8 +269,8 @@ fn an_activity_chart_with_points_renders_the_named_chart_container() {
         activity_chart(
             &points,
             "Commits",
-            "No commits yet",
-            "Commit a composition to see the trend",
+            "No commits yet".to_owned(),
+            "Commit a composition to see the trend".to_owned(),
         )
     });
     // The journey hook naming which chart this is.
@@ -296,8 +297,8 @@ fn an_activity_chart_without_points_renders_the_shared_empty_state() {
         activity_chart(
             &[],
             "Commits",
-            "No commits yet",
-            "Commit a composition to see the trend",
+            "No commits yet".to_owned(),
+            "Commit a composition to see the trend".to_owned(),
         )
     });
     assert!(html.contains("No commits yet"), "{html}");
@@ -321,9 +322,9 @@ fn confirm_dialog_html(open_state: bool) -> String {
         view! {
             <ConfirmDialog
                 open=Signal::derive(move || open.get())
-                title="Delete template"
+                title="Delete template".to_owned()
                 message=Signal::derive(|| "vitals.v1 will be removed.".to_owned())
-                confirm_label="Delete"
+                confirm_label="Delete".to_owned()
                 confirm_icon=Glyph::TRASH
                 dialog_id="confirm-delete-template-dialog"
                 confirm_id="confirm-delete-template"
@@ -379,13 +380,13 @@ fn an_upload_dialog_renders_closed_with_its_upload_field_open_or_closed() {
                     help=Signal::derive(|| "The CDR ingests OPT/XML.".to_owned())
                     upload=Signal::derive(|| ferrohealth_ui::widget::upload::Upload {
                         id: "template-upload",
-                        label: "Template source",
-                        choose: "Choose an OPT/XML file",
+                        label: "Template source".into(),
+                        choose: "Choose an OPT/XML file".into(),
                         accept: &[".opt", ".xml"],
                         max_bytes: 1024,
-                        placeholder: "<template …",
+                        placeholder: "<template …".into(),
                     })
-                    submit_label="Upload template"
+                    submit_label="Upload template".to_owned()
                     source=source
                     pending=Signal::derive(|| false)
                     error=Signal::derive(|| Option::<String>::None)
@@ -479,12 +480,12 @@ fn a_page_header_renders_its_ancestors_as_links_and_the_title_as_the_current_cru
 #[test]
 fn the_capability_note_states_that_scopes_narrow_rather_than_grant() {
     let html = render(capability_note);
-    assert!(html.contains(CAPABILITY_NOTE), "{html}");
+    assert!(html.contains(&capability_note_text()), "{html}");
 }
 
 #[test]
 fn a_fact_row_renders_its_label_beside_its_value() {
-    let html = render(|| fact_row("Identity", "alice@example.org".to_owned()));
+    let html = render(|| fact_row("Identity".to_owned(), "alice@example.org".to_owned()));
     assert!(html.contains("Identity"), "{html}");
     assert!(html.contains("alice@example.org"), "{html}");
 }

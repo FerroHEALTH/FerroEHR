@@ -23,6 +23,8 @@ use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::{Msg, tr_served, tr_served_with};
 use crate::pages::ehrs::ResultPage;
 
 /// A stored-query listing row (ITS-REST Definition API).
@@ -81,13 +83,17 @@ pub async fn run_aql(
     let parameters: serde_json::Value = if parameters_json.trim().is_empty() {
         serde_json::json!({})
     } else {
-        serde_json::from_str(&parameters_json)
-            .map_err(|e| ViewerError::Invalid(format!("parameters must be a JSON object: {e}")))?
+        serde_json::from_str(&parameters_json).map_err(|e| {
+            ViewerError::Invalid(tr_served_with(
+                Msg::ParametersMustJsonObject3,
+                &[("e", (e).to_string().into())],
+            ))
+        })?
     };
     if !parameters.is_object() {
-        return Err(ViewerError::Invalid(
-            "parameters must be a JSON object".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::ParametersMustJsonObject,
+        )));
     }
     let url = state.cdr.rest_v1("query/aql");
     // NOTE: `fetch` "cannot be combined with AQL-top" —
@@ -139,8 +145,12 @@ pub async fn list_stored_queries() -> Result<Vec<StoredQueryRow>, ViewerError> {
         return Ok(Vec::new());
     }
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
-    let doc: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|e| ViewerError::Internal(format!("stored-query list JSON: {e}")))?;
+    let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
+        ViewerError::Internal(tr_served_with(
+            Msg::StoredQueryListJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     // The list shape nests under "versions" per the Definition API; parse
     // defensively (array at root or under "versions").
     let items = doc
@@ -191,8 +201,12 @@ pub async fn fetch_stored_query(
         .get(&session.credential, &url, "application/json")
         .await?;
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
-    let doc: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|e| ViewerError::Internal(format!("stored query JSON: {e}")))?;
+    let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
+        ViewerError::Internal(tr_served_with(
+            Msg::StoredQueryJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     Ok(doc
         .get("query")
         .or_else(|| doc.get("q"))
@@ -241,9 +255,7 @@ pub async fn store_query(
 ) -> Result<(), ViewerError> {
     let session = crate::session::require_session().await?;
     if name.trim().is_empty() {
-        return Err(ViewerError::Invalid(
-            "the stored query needs a name".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::StoredQueryNeedsName)));
     }
     // An empty field means "no version" — the unversioned store — so the
     // screens can bind a plain text input without an Option dance.
@@ -253,11 +265,9 @@ pub async fn store_query(
     if let Some(version) = version.as_deref()
         && !crate::query_namespace::is_full_semver(version)
     {
-        return Err(ViewerError::Invalid(format!(
-            "`{version}` is not a version to store at: a stored-query version is \
-             `major.minor.patch` (for example `1.0.0`). A shorter pattern like \
-             `1` or `1.0` selects the latest matching version when READING a \
-             query; leave the field empty to let the server assign the version."
+        return Err(ViewerError::Invalid(tr_served_with(
+            Msg::NotVersionStoreStoredQueryVersion,
+            &[("version", (version).to_string().into())],
         )));
     }
     openehr_query::parser::parse_str(&aql)
@@ -338,20 +348,24 @@ pub async fn run_stored_query(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = leptos::prelude::expect_context();
     if name.trim().is_empty() {
-        return Err(ViewerError::Invalid(
-            "no stored query to run — open one from the stored-query list".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::NoStoredQueryRunOpenOne,
+        )));
     }
     let parameters: serde_json::Value = if parameters_json.trim().is_empty() {
         serde_json::json!({})
     } else {
-        serde_json::from_str(&parameters_json)
-            .map_err(|e| ViewerError::Invalid(format!("parameters must be a JSON object: {e}")))?
+        serde_json::from_str(&parameters_json).map_err(|e| {
+            ViewerError::Invalid(tr_served_with(
+                Msg::ParametersMustJsonObject4,
+                &[("e", (e).to_string().into())],
+            ))
+        })?
     };
     if !parameters.is_object() {
-        return Err(ViewerError::Invalid(
-            "parameters must be a JSON object".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::ParametersMustJsonObject,
+        )));
     }
     // Name and version are separate path segments, each percent-encoded via
     // `urlencoding`.
@@ -424,8 +438,12 @@ pub async fn run_stored_count(
         .get(&session.credential, &url, "application/json")
         .await?;
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
-    let doc: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|e| ViewerError::Internal(format!("stored-query result JSON: {e}")))?;
+    let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
+        ViewerError::Internal(tr_served_with(
+            Msg::StoredQueryResultJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let rows = doc
         .get("rows")
         .and_then(serde_json::Value::as_array)

@@ -37,6 +37,7 @@ use crate::components::version_history::{
 };
 use crate::components::wire::VersionedObjectFacts;
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr};
 use crate::pages::ehr_detail::status::{
     fetch_ehr_status_version, fetch_status_revision_history, fetch_status_version_at_time,
     fetch_versioned_status,
@@ -46,17 +47,19 @@ use crate::pages::ehr_detail::status::{
 type VersionedResource = Resource<Result<Option<VersionedObjectFacts>, ViewerError>>;
 
 /// This family's copy and DOM hooks for the shared History-tab kit.
-const LABELS: VersionHistoryLabels = VersionHistoryLabels {
-    row_hook: "data-status-version",
-    empty_message: "No EHR_STATUS versions",
-    empty_hint: "Every EHR is created with a first EHR_STATUS version; if none is listed, the CDR did not report a revision history for this EHR.",
-    history_lead: "Newest first. Open a version to read the EHR_STATUS document exactly as it stood at that commit.",
-    at_time_title: "EHR_STATUS at a point in time",
-    at_time_field_id: "status-at-time",
-    at_time_button_id: "status-at-time-go",
-    at_time_absent: "No EHR_STATUS version existed at that time.",
-    document_id: "status-version-document",
-};
+fn labels() -> VersionHistoryLabels {
+    VersionHistoryLabels {
+        row_hook: "data-status-version",
+        empty_message: Msg::NoEhrStatusVersions,
+        empty_hint: Msg::EveryEhrCreatedFirstEhrStatus,
+        history_lead: Msg::NewestFirstOpenVersionReadEhr,
+        at_time_title: Msg::EhrStatusPointTime,
+        at_time_field_id: "status-at-time",
+        at_time_button_id: "status-at-time-go",
+        at_time_absent: Msg::NoEhrStatusVersionExistedTime,
+        document_id: "status-version-document",
+    }
+}
 
 /// Status history tab: the versioned-object card, the revision-history table,
 /// the at-time lookup, and the pinned version's document.
@@ -122,9 +125,9 @@ pub(in crate::pages::ehr_detail) fn status_history_section(
     );
 
     let card = versioned_facts_section(versioned, versioned_card);
-    let table = revision_history_section(history, pinned, LABELS);
-    let lookup = at_time_lookup_section(ehr_id, at_time, at_time_input, LABELS);
-    let pane = pinned_document_section(document, pinned, LABELS);
+    let table = revision_history_section(history, pinned, labels());
+    let lookup = at_time_lookup_section(ehr_id, at_time, at_time_input, labels());
+    let pane = pinned_document_section(document, pinned, labels());
     view! { <div class="flex flex-col gap-4">{card} {table} {lookup} {pane}</div> }.into_any()
 }
 
@@ -137,16 +140,23 @@ fn versioned_card(details: &VersionedObjectFacts) -> AnyView {
     };
     view! {
         <section class=CARD_PAD id="versioned-ehr-status">
-            <h2 class=CARD_TITLE>"Versioned EHR_STATUS"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::VersionedEhrStatus)}</h2>
             <dl class="fui-facts text-sm">
-                {fact_row("versioned object", "object-uid", details.object_uid.clone())}
-                {fact_row("owner EHR", "owner", details.owner_id.clone())}
-                {fact_row("created", "created", details.time_created.clone())}
-                {fact_row("version", "version", details.version_id.clone())}
-                {fact_row("lifecycle", "lifecycle", details.lifecycle_state.clone())}
-                {fact_row("preceding version", "preceding", details.preceding_version_uid.clone())}
-                {fact_row("contribution", "contribution", details.contribution_uid.clone())}
-                {fact_row("signature", "signature", signature)}
+                {fact_row(tr(Msg::VersionedObject), "object-uid", details.object_uid.clone())}
+                {fact_row(tr(Msg::OwnerEhr), "owner", details.owner_id.clone())}
+                {fact_row("created".to_owned(), "created", details.time_created.clone())}
+                {fact_row("version".to_owned(), "version", details.version_id.clone())}
+                {fact_row("lifecycle".to_owned(), "lifecycle", details.lifecycle_state.clone())}
+                {fact_row(
+                    tr(Msg::PrecedingVersion),
+                    "preceding",
+                    details.preceding_version_uid.clone(),
+                )}
+                {fact_row(
+                    "contribution".to_owned(),
+                    "contribution",
+                    details.contribution_uid.clone(),
+                )} {fact_row("signature".to_owned(), "signature", signature)}
             </dl>
         </section>
     }
@@ -155,6 +165,6 @@ fn versioned_card(details: &VersionedObjectFacts) -> AnyView {
 
 /// One label/value line of the versioned-object card, carrying this family's
 /// `data-versioned-fact` hook.
-fn fact_row(label: &'static str, hook: &'static str, value: String) -> AnyView {
+fn fact_row(label: String, hook: &'static str, value: String) -> AnyView {
     crate::components::facts::fact_row(label, "data-versioned-fact", hook, value)
 }

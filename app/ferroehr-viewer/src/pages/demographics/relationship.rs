@@ -58,13 +58,18 @@ use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::components::tab_bar::url_tabs;
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_served;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::demographics::party::fact_row;
 use crate::pages::demographics::{DemographicResource, PartyKind, party_href, relationship_href};
 use crate::uid::container_uid_of;
 use ferrohealth_ui::highlight::Language;
 
 /// The noun phrase every relationship write-failure toast is built around.
-const RELATIONSHIP_OBJECT: &str = "this relationship";
+fn relationship_object() -> Msg {
+    Msg::ThisRelationship
+}
 
 /// The `PARTY_REF` namespace the viewer writes.
 ///
@@ -158,9 +163,7 @@ pub async fn fetch_relationship(
     let state: crate::state::AppState = expect_context();
     let uid = container_uid_of(&uid);
     if uid.is_empty() {
-        return Err(ViewerError::Invalid(
-            "a relationship id is required".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::RelationshipIdRequired)));
     }
     let url = state.cdr.rest_v1(&format!(
         "demographic/party_relationship/{}",
@@ -245,9 +248,9 @@ pub async fn create_relationship(
     let response = crate::cdr::CdrClient::expect_success(response)?;
     let uid = crate::uid::uid_value_of(&response.body);
     if uid.is_empty() {
-        return Err(ViewerError::Internal(
-            "the CDR created the relationship but returned no uid to open it by".to_owned(),
-        ));
+        return Err(ViewerError::Internal(tr_served(
+            Msg::CdrCreatedRelationshipButReturnedNo,
+        )));
     }
     Ok(uid)
 }
@@ -285,11 +288,9 @@ pub async fn update_relationship(
     let state: crate::state::AppState = expect_context();
     let current = current_version_uid.trim();
     if current.is_empty() {
-        return Err(ViewerError::Invalid(
-            "the current version uid is required to update this relationship — reload this screen \
-             and retry"
-                .to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::CurrentVersionUidRequiredUpdateRelationship,
+        )));
     }
     let body = apply_relationship_edits(&base_body, &name, &details)?;
     let if_match = format!("\"{current}\"");
@@ -335,11 +336,9 @@ pub async fn delete_relationship(
     let state: crate::state::AppState = expect_context();
     let version_uid = version_uid.trim();
     if !version_uid.contains("::") {
-        return Err(ViewerError::Invalid(
-            "deleting a relationship needs the latest version's full OBJECT_VERSION_ID — reload \
-             this screen and retry"
-                .to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::DeletingRelationshipNeedsLatestVersionS,
+        )));
     }
     let url = state.cdr.rest_v1(&format!(
         "demographic/party_relationship/{}",
@@ -364,14 +363,10 @@ fn relationship_body(draft: &RelationshipDraft) -> Result<String, String> {
     let archetype_node_id = draft.archetype_node_id.trim();
     let name = draft.name.trim();
     if archetype_node_id.is_empty() {
-        return Err("an archetype node id is required (LOCATABLE.archetype_node_id)".to_owned());
+        return Err(tr(Msg::ArchetypeNodeIdRequiredLocatableArchetype));
     }
     if name.is_empty() {
-        return Err(
-            "a relationship type is required — it is stored as the relationship's name \
-             (PARTY_RELATIONSHIP invariant Type_validity)"
-                .to_owned(),
-        );
+        return Err(tr(Msg::RelationshipTypeRequiredStoredRelationshipS));
     }
     let source = party_ref(&draft.source_uid, &draft.source_kind, "source")?;
     let target = party_ref(&draft.target_uid, &draft.target_kind, "target")?;
@@ -424,16 +419,23 @@ pub struct RelationshipDraft {
 fn party_ref(uid: &str, kind: &str, end: &str) -> Result<Value, String> {
     let uid = uid.trim();
     if uid.is_empty() {
-        return Err(format!("the {end} party's id is required"));
-    }
-    if uid.contains("::") {
-        return Err(format!(
-            "the {end} party must be named by its versioned_object_uid, not by one version's \
-             OBJECT_VERSION_ID — a relationship refers to the party's version container"
+        return Err(tr_with(
+            Msg::PartySIdRequired,
+            &[("end", (end).to_string().into())],
         ));
     }
-    let kind = PartyKind::from_segment(kind)
-        .ok_or_else(|| format!("the {end} party's kind must be one of the five party kinds"))?;
+    if uid.contains("::") {
+        return Err(tr_with(
+            Msg::PartyMustNamedVersionedObjectUid,
+            &[("end", (end).to_string().into())],
+        ));
+    }
+    let kind = PartyKind::from_segment(kind).ok_or_else(|| {
+        tr_with(
+            Msg::PartySKindMustOneFive,
+            &[("end", (end).to_string().into())],
+        )
+    })?;
     let mut id = serde_json::Map::new();
     drop(id.insert(
         "_type".to_owned(),
@@ -472,12 +474,12 @@ fn parse_details_draft(draft: &str) -> Result<Option<Value>, String> {
     if trimmed.is_empty() {
         return Ok(None);
     }
-    let value: Value =
-        serde_json::from_str(trimmed).map_err(|e| format!("details is not valid JSON: {e}"))?;
+    let value: Value = serde_json::from_str(trimmed)
+        .map_err(|e| tr_with(Msg::DetailsNotValidJson2, &[("e", (e).to_string().into())]))?;
     if value.is_object() {
         Ok(Some(value))
     } else {
-        Err("details must be a JSON object — an ITEM_STRUCTURE such as \
+        Err("details must be a JSON object: an ITEM_STRUCTURE such as \
              {\"_type\": \"ITEM_TREE\", …}"
             .to_owned())
     }
@@ -498,22 +500,18 @@ fn apply_relationship_edits(base: &str, name: &str, details: &str) -> Result<Str
     let name = name.trim();
     if name.is_empty() {
         return Err(ViewerError::Invalid(
-            "a relationship type is required (PARTY_RELATIONSHIP invariant Type_validity)"
-                .to_owned(),
+            { tr(Msg::RelationshipTypeRequiredPartyRelationshipInvariant) }.clone(),
         ));
     }
     let mut doc: Value = serde_json::from_str(base).map_err(|e| {
-        ViewerError::Invalid(format!(
-            "the loaded relationship document is not valid JSON ({e}) — reload this screen and \
-             retry"
+        ViewerError::Invalid(tr_with(
+            Msg::LoadedRelationshipDocumentNotValidJson,
+            &[("e", (e).to_string().into())],
         ))
     })?;
     let details = parse_details_draft(details).map_err(ViewerError::Invalid)?;
     let object = doc.as_object_mut().ok_or_else(|| {
-        ViewerError::Invalid(
-            "the loaded relationship document is not a JSON object — reload this screen and retry"
-                .to_owned(),
-        )
+        ViewerError::Invalid({ tr(Msg::LoadedRelationshipDocumentNotJsonObject) }.clone())
     })?;
     drop(object.insert("name".to_owned(), dv_text(name)));
     match details {
@@ -521,8 +519,9 @@ fn apply_relationship_edits(base: &str, name: &str, details: &str) -> Result<Str
         None => drop(object.remove("details")),
     }
     serde_json::to_string(&doc).map_err(|e| {
-        ViewerError::Invalid(format!(
-            "the edited relationship could not be serialized: {e}"
+        ViewerError::Invalid(tr_with(
+            Msg::EditedRelationshipCouldNotSerialized,
+            &[("e", (e).to_string().into())],
         ))
     })
 }
@@ -542,8 +541,12 @@ fn parse_relationship_state(
     body: &str,
     served_etag: Option<&str>,
 ) -> Result<RelationshipState, ViewerError> {
-    let doc: Value = serde_json::from_str(body)
-        .map_err(|e| ViewerError::Internal(format!("PARTY_RELATIONSHIP JSON: {e}")))?;
+    let doc: Value = serde_json::from_str(body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::PartyRelationshipJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let version_uid =
         served_etag.map_or_else(|| crate::uid::uid_value_of_document(&doc), str::to_owned);
     Ok(RelationshipState {
@@ -651,7 +654,7 @@ fn party_ref_value(reference: &PartyRefView, hook: &'static str) -> AnyView {
     if id.is_empty() {
         return view! {
             <span class="font-mono text-ink" data-relationship-end=hook>
-                "—"
+                tr(Msg::NoValue)
             </span>
         }
         .into_any();
@@ -674,9 +677,7 @@ fn party_ref_value(reference: &PartyRefView, hook: &'static str) -> AnyView {
             <span class="font-mono wrap-break-word text-ink" data-relationship-end=hook>
                 {id}
             </span>
-            <span class="ml-2 text-xs text-ink-faint">
-                "(an abstract party type has no per-kind route)"
-            </span>
+            <span class="ml-2 text-xs text-ink-faint">{tr(Msg::AbstractPartyTypeHasNoPer)}</span>
         }
         .into_any(),
     }
@@ -720,9 +721,11 @@ pub fn RelationshipsPage() -> impl IntoView {
         <Title text="Relationships" />
         <div>
             <PageHeader
-                title="Party relationships"
-                subtitle="A relationship joins two parties, source to target. It is its own versioned object here — an extension of this CDR, not part of the released openEHR demographic API."
-                crumbs=vec![Crumb::new("Demographics", super::browse_href(PartyKind::Person))]
+                title=tr(Msg::PartyRelationships)
+                subtitle=tr(Msg::RelationshipJoinsTwoPartiesSourceTarget)
+                crumbs=vec![
+                    Crumb::new(tr(Msg::Demographics), super::browse_href(PartyKind::Person)),
+                ]
             />
             {lookup}
             {create}
@@ -752,30 +755,28 @@ fn lookup_card() -> AnyView {
     };
     view! {
         <section class=format!("{CARD_PAD} mb-6")>
-            <h2 class=CARD_TITLE>"Open a relationship"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::OpenARelationship)}</h2>
             <form method="GET" action="/demographics/relationship" on:submit=on_submit>
                 <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="relationship-lookup">
-                            "PARTY_RELATIONSHIP id"
+                            {tr(Msg::PartyRelationshipId)}
                         </label>
                         <input
                             id="relationship-lookup"
                             name="find"
                             type="text"
                             class=INPUT
-                            placeholder="versioned_object_uid or version_uid"
+                            placeholder=tr(Msg::VersionedObjectUidVersionUid)
                             node_ref=lookup_ref
                         />
                     </div>
                     <button id="relationship-find" type="submit" class=BTN_PRIMARY>
-                        "Open"
+                        {tr(Msg::Open)}
                     </button>
                 </div>
             </form>
-            <p class="mt-2 fui-help">
-                "A relationship is reached by its own id: the demographic API publishes no way to ask which relationships point at a given party."
-            </p>
+            <p class="mt-2 fui-help">{tr(Msg::RelationshipReachedOwnIdDemographicApi)}</p>
         </section>
     }
     .into_any()
@@ -824,8 +825,11 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
         Some(Ok(uid)) => {
             toast_success(
                 toaster,
-                "Relationship created",
-                &format!("New PARTY_RELATIONSHIP version {uid}"),
+                &tr(Msg::RelationshipCreated),
+                &tr_with(
+                    Msg::NewPartyRelationshipVersion,
+                    &[("uid", uid.clone().into())],
+                ),
             );
             navigate(
                 &relationship_href(&uid),
@@ -835,8 +839,8 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
         Some(Err(error)) => {
             crate::feedback::toast_write_failure(
                 toaster,
-                "Create failed",
-                "the new relationship",
+                &tr(Msg::CreateFailed),
+                &tr(Msg::TheNewRelationship),
                 &error,
             );
         }
@@ -879,15 +883,13 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
     let selected_source = source_kind.to_owned();
     view! {
         <section class=CARD_PAD id="relationship-create">
-            <h2 class=CARD_TITLE>"Create a relationship"</h2>
-            <p class="mb-3 fui-help">
-                "Both ends name a party by its versioned_object_uid — a relationship refers to the party's version container, not to one of its versions. The type you give is stored as the relationship's name, which is what openEHR reads it as."
-            </p>
+            <h2 class=CARD_TITLE>{tr(Msg::CreateARelationship)}</h2>
+            <p class="mb-3 fui-help">{tr(Msg::BothEndsNamePartyVersionedObject)}</p>
             <div class="flex flex-col gap-3">
                 <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="relationship-type">
-                            "Relationship type"
+                            {tr(Msg::RelationshipType)}
                         </label>
                         <input
                             id="relationship-type"
@@ -899,7 +901,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="relationship-archetype">
-                            "Archetype node id"
+                            {tr(Msg::ArchetypeNodeId)}
                         </label>
                         // `LOCATABLE.archetype_node_id` is mandatory and a
                         // relationship is archetyped like any other LOCATABLE,
@@ -919,7 +921,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
                 <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="relationship-source">
-                            "Source party id"
+                            {tr(Msg::SourcePartyId)}
                         </label>
                         <input
                             id="relationship-source"
@@ -935,7 +937,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
                 <div class="fui-field-flow">
                     <div class="flex flex-col gap-1">
                         <label class=LABEL r#for="relationship-target">
-                            "Target party id"
+                            {tr(Msg::TargetPartyId)}
                         </label>
                         <input
                             id="relationship-target"
@@ -949,7 +951,7 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="relationship-details">
-                        "details (canonical JSON ITEM_STRUCTURE — optional)"
+                        {tr(Msg::DetailsCanonicalJsonItemStructureOptional)}
                     </label>
                     {code_field(
                         "relationship-details",
@@ -968,10 +970,10 @@ fn create_card(source_uid: &str, source_kind: &str) -> AnyView {
                         on:click=on_click
                     >
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::LINK, "14")}
-                        "Create relationship"
+                        {tr(Msg::CreateRelationship)}
                     </button>
                     <Show when=move || create.pending().get()>
-                        <span class="text-sm text-ink-muted">"Creating…"</span>
+                        <span class="text-sm text-ink-muted">{tr(Msg::Creating)}</span>
                     </Show>
                 </div>
                 {move || {
@@ -1017,7 +1019,7 @@ fn kind_select(
     view! {
         <div class="flex flex-col gap-1">
             <label class=LABEL r#for=id>
-                "Kind"
+                {tr(Msg::Kind)}
             </label>
             <select id=id class=SELECT node_ref=node_ref>
                 {options}
@@ -1062,7 +1064,7 @@ pub fn RelationshipDetailPage() -> impl IntoView {
     let heading = Signal::derive(move || {
         let id = uid.get();
         let short: String = id.chars().take(8).collect();
-        format!("Relationship {short}…")
+        tr_with(Msg::Relationship2, &[("short", short.clone().into())])
     });
 
     view! {
@@ -1070,7 +1072,7 @@ pub fn RelationshipDetailPage() -> impl IntoView {
         <div>
             <PageHeader
                 title=heading
-                crumbs=vec![Crumb::new("Relationships", "/demographics/relationship")]
+                crumbs=vec![Crumb::new(tr(Msg::Relationships), "/demographics/relationship")]
                 mono=true
             >
                 {delete}
@@ -1087,8 +1089,11 @@ pub fn RelationshipDetailPage() -> impl IntoView {
 /// The relationship detail's two-tab bar.
 fn tab_bar(uid: Signal<String>, selected: Memo<String>) -> AnyView {
     url_tabs(
-        "Relationship views",
-        &[("relationship", "Relationship"), ("history", "History")],
+        tr(Msg::RelationshipViews),
+        &[
+            ("relationship", Msg::Relationship),
+            ("history", Msg::History2),
+        ],
         move |value| format!("{}?tab={value}", relationship_href(uid.get().as_str())),
         selected.into(),
     )
@@ -1157,19 +1162,24 @@ fn relationship_section(uid: Signal<String>, latest_version: RwSignal<String>) -
     Effect::new(move |_| match save.value().get() {
         Some(Ok(uid)) => {
             let detail = if uid.is_empty() {
-                "A new version was committed.".to_owned()
+                tr(Msg::NewVersionWasCommitted)
             } else {
-                format!("New version {uid}")
+                tr_with(Msg::NewVersion4, &[("uid", uid.clone().into())])
             };
-            toast_success(toaster, "Relationship updated", &detail);
+            toast_success(toaster, &tr(Msg::RelationshipUpdated), &detail);
         }
         Some(Err(error)) => {
             let title = if error.status_code() == Some(http::StatusCode::PRECONDITION_FAILED) {
-                "Relationship changed on the server"
+                tr(Msg::RelationshipChangedServer)
             } else {
-                "Save failed"
+                tr(Msg::SaveFailed)
             };
-            crate::feedback::toast_write_failure(toaster, title, RELATIONSHIP_OBJECT, &error);
+            crate::feedback::toast_write_failure(
+                toaster,
+                &title,
+                &tr(relationship_object()),
+                &error,
+            );
         }
         None => {}
     });
@@ -1202,13 +1212,13 @@ fn relationship_section(uid: Signal<String>, latest_version: RwSignal<String>) -
                     Ok(None) => {
                         deleted_notice(
                             "relationship-deleted",
-                            "This relationship's current version is deleted. Its earlier versions are still readable — open one from the History tab.",
+                            tr(Msg::RelationshipSCurrentVersionDeletedEarlier),
                         )
                     }
                     Err(e) if e.status_code() == Some(http::StatusCode::NOT_FOUND) => {
                         missing_notice(
                             "relationship-not-found",
-                            "No relationship with this id. Relationship routes are an extension of this CDR, so a server built without them answers the same 404.",
+                            tr(Msg::NoRelationshipIdRelationshipRoutesExtension),
                         )
                     }
                     Err(e) => inline_error(&e),
@@ -1241,10 +1251,10 @@ fn facts_card(state: &RelationshipState) -> AnyView {
     view! {
         <section class=CARD_PAD id="relationship-facts">
             <dl class="fui-facts text-sm">
-                {fact_row("type", "type", state.name.clone())}
-                {fact_row("archetype", "archetype", state.archetype_node_id.clone())}
-                {fact_row("version", "version", state.version_uid.clone())}
-                {fact_row("time validity", "time-validity", state.time_validity.clone())}
+                {fact_row("type".to_owned(), "type", state.name.clone())}
+                {fact_row("archetype".to_owned(), "archetype", state.archetype_node_id.clone())}
+                {fact_row("version".to_owned(), "version", state.version_uid.clone())}
+                {fact_row(tr(Msg::TimeValidity), "time-validity", state.time_validity.clone())}
                 {party_ref_link(&state.source, "source")} {party_ref_link(&state.target, "target")}
             </dl>
         </section>
@@ -1267,8 +1277,7 @@ fn edit_card(
         let details = details_draft.get();
         if name.trim().is_empty() {
             validation.set(Some(
-                "A relationship needs a type — openEHR stores it as the relationship's name."
-                    .to_owned(),
+                { tr(Msg::RelationshipNeedsTypeOpenehrStoresRelationship) }.clone(),
             ));
             return;
         }
@@ -1291,14 +1300,12 @@ fn edit_card(
     );
     view! {
         <section class=CARD_PAD id="relationship-edit">
-            <h2 class=CARD_TITLE>"Edit relationship"</h2>
-            <p class="mb-3 fui-help">
-                "Commits a new version on top of the one loaded above (If-Match). The two ends and the time validity travel back exactly as the CDR served them — a relationship between different parties is a different relationship."
-            </p>
+            <h2 class=CARD_TITLE>{tr(Msg::EditRelationship)}</h2>
+            <p class="mb-3 fui-help">{tr(Msg::CommitsNewVersionTopOneLoaded)}</p>
             <div class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="relationship-edit-type">
-                        "Relationship type"
+                        {tr(Msg::RelationshipType)}
                     </label>
                     <input
                         id="relationship-edit-type"
@@ -1310,7 +1317,7 @@ fn edit_card(
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="relationship-edit-details">
-                        "details (canonical JSON ITEM_STRUCTURE — leave blank to remove)"
+                        {tr(Msg::DetailsCanonicalJsonItemStructureLeave)}
                     </label>
                     {code_field(
                         "relationship-edit-details",
@@ -1329,10 +1336,10 @@ fn edit_card(
                         on:click=on_save
                     >
                         {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::SAVE, "14")}
-                        "Save relationship"
+                        {tr(Msg::SaveRelationship)}
                     </button>
                     <Show when=move || save.pending().get()>
-                        <span class="text-sm text-ink-muted">"Saving…"</span>
+                        <span class="text-sm text-ink-muted">{tr(Msg::Saving)}</span>
                     </Show>
                 </div>
                 {move || {
@@ -1359,11 +1366,9 @@ fn delete_section(uid: Signal<String>, version_uid: RwSignal<String>) -> AnyView
         async move { delete_relationship(version).await }
     });
     let message = Signal::derive(move || {
-        format!(
-            "Delete relationship {}? This commits a deleted version: the relationship stops \
-             resolving as current, and every earlier version stays readable by its own version \
-             uid.",
-            uid.get()
+        tr_with(
+            Msg::DeleteRelationshipCommitsDeletedVersionRelationship,
+            &[("uid", (uid.get()).clone().into())],
         )
     });
     logical_delete_section(
@@ -1373,11 +1378,11 @@ fn delete_section(uid: Signal<String>, version_uid: RwSignal<String>) -> AnyView
         "/demographics/relationship".to_owned(),
         LogicalDeleteCopy {
             button_id: "relationship-delete",
-            label: "Delete relationship",
+            label: Msg::DeleteRelationship,
             dialog_id: "relationship-delete-dialog",
             confirm_id: "relationship-delete-confirm",
-            success_title: "Relationship deleted",
-            object: RELATIONSHIP_OBJECT,
+            success_title: Msg::RelationshipDeleted,
+            object: relationship_object(),
         },
     )
 }
@@ -1406,7 +1411,7 @@ pub(super) fn party_relationships_section(
                     Ok(None) => {
                         deleted_notice(
                             "party-relationships-deleted",
-                            "This party's current version is deleted, so it has no relationships to show and cannot be related to another party.",
+                            tr(Msg::PartySCurrentVersionDeletedSo),
                         )
                     }
                     Err(e) => inline_error(&e),
@@ -1428,8 +1433,8 @@ fn relationships_view(
         view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::NETWORK
-                message="No relationships on this party"
-                hint="A party document carries the relationships it is the SOURCE of. Create one below, or add it to the party's own relationships list on the Party tab."
+                message=tr(Msg::NoRelationshipsParty)
+                hint=tr(Msg::PartyDocumentCarriesRelationshipsSourceCreate)
             />
         }
         .into_any()
@@ -1446,20 +1451,16 @@ fn relationships_view(
     view! {
         <div class="flex flex-col gap-4">
             <section class=CARD_PAD id="party-relationships">
-                <h2 class=CARD_TITLE>"Relationships (as source)"</h2>
-                <p class="mb-3 fui-help">
-                    "These come from the party document itself, which carries the relationships this party is the source of. openEHR models the other direction as a derived attribute the CDR leaves unpopulated, so no request can list the relationships that point AT this party — open those by their own id."
-                </p>
+                <h2 class=CARD_TITLE>{tr(Msg::RelationshipsAsSource)}</h2>
+                <p class="mb-3 fui-help">{tr(Msg::TheseComeFromPartyDocumentItself)}</p>
                 {table}
             </section>
             <section class=CARD_PAD>
-                <h2 class=CARD_TITLE>"Relate this party"</h2>
-                <p class="mb-3 fui-help">
-                    "Creates a PARTY_RELATIONSHIP resource with this party as its source. That resource is versioned in its own right — an extension of this CDR, not part of the released openEHR demographic API."
-                </p>
+                <h2 class=CARD_TITLE>{tr(Msg::RelateThisParty)}</h2>
+                <p class="mb-3 fui-help">{tr(Msg::CreatesPartyRelationshipResourcePartySource)}</p>
                 <a href=create_href class=BTN_PRIMARY id="party-relate">
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::LINK, "14")}
-                    "Create a relationship"
+                    {tr(Msg::CreateARelationship)}
                 </a>
             </section>
         </div>
@@ -1490,13 +1491,13 @@ fn inline_table(items: &[InlineRelationship]) -> AnyView {
                     <td class=CELL data-inline-relationship=hook>
                         {name}
                     </td>
-                    <td class=CELL data-label="Target">
+                    <td class=CELL data-label=tr(Msg::Target)>
                         {target}
                     </td>
-                    <td class=CELL_MONO data-label="Archetype">
+                    <td class=CELL_MONO data-label=tr(Msg::Archetype)>
                         {archetype}
                     </td>
-                    <td class=CELL_MONO data-label="Own uid">
+                    <td class=CELL_MONO data-label=tr(Msg::OwnUid)>
                         {uid}
                     </td>
                 </tr>
@@ -1505,8 +1506,13 @@ fn inline_table(items: &[InlineRelationship]) -> AnyView {
         })
         .collect::<Vec<_>>();
     table_shell(
-        "Relationships",
-        &["Type", "Target", "Archetype", "Own uid"],
+        &tr(Msg::Relationships),
+        &[
+            &tr(Msg::Type2),
+            &tr(Msg::Target),
+            &tr(Msg::Archetype),
+            &tr(Msg::OwnUid),
+        ],
         rows.into_any(),
     )
 }

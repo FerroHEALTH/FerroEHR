@@ -31,15 +31,13 @@
 use serde_json::{Map, Value};
 
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 
 /// The projection, source and EHR binding every compositions listing shares.
 ///
 /// The `ehr_id` is the one parameter that is always bound; the filter
 /// predicates below append to this same `WHERE`.
-const SELECT_FROM: &str = "SELECT c/uid/value, c/name/value, \
-c/archetype_details/template_id/value, c/context/start_time/value, \
-c/composer/name \
-FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = $ehr_id";
+const SELECT_FROM: &str = "SELECT c/uid/value, c/name/value, c/archetype_details/template_id/value, c/context/start_time/value, c/composer/name FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = $ehr_id";
 
 /// The template-id predicate (`ARCHETYPED._template_id_` on the composition's
 /// `archetype_details`).
@@ -152,14 +150,18 @@ pub fn composition_query(
         aql.push_str(FROM_PREDICATE);
         drop(parameters.insert(
             "from".to_owned(),
-            Value::String(instant_bound(&filter.from, DAY_START, "The “from” date")?),
+            Value::String(instant_bound(
+                &filter.from,
+                DAY_START,
+                &tr(Msg::TheFromDate),
+            )?),
         ));
     }
     if !filter.to.is_empty() {
         aql.push_str(TO_PREDICATE);
         drop(parameters.insert(
             "to".to_owned(),
-            Value::String(instant_bound(&filter.to, DAY_END, "The “to” date")?),
+            Value::String(instant_bound(&filter.to, DAY_END, &tr(Msg::TheToDate))?),
         ));
     }
     if !filter.composer.is_empty() {
@@ -208,7 +210,7 @@ fn contains_pattern(value: &str) -> String {
 fn instant_bound(value: &str, day_suffix: &str, label: &str) -> Result<String, ViewerError> {
     let refuse = || {
         ViewerError::Invalid(format!(
-            "{label} must be a date (2026-07-14) or an instant (2026-07-14T08:00:00Z) — \
+            "{label} must be a date (2026-07-14) or an instant (2026-07-14T08:00:00Z): \
              {value:?} is neither"
         ))
     };
@@ -224,7 +226,7 @@ fn instant_bound(value: &str, day_suffix: &str, label: &str) -> Result<String, V
     // A `datetime-local`-shaped value carries no offset; the filter's stated
     // vocabulary is UTC, so that is the offset it gains.
     let civil: jiff::civil::DateTime = value.parse().map_err(|_ignored| refuse())?;
-    Ok(format!("{civil}Z"))
+    Ok(tr_with(Msg::Z2, &[("civil", (civil).to_string().into())]))
 }
 
 #[cfg(test)]

@@ -37,6 +37,9 @@ use crate::components::item_tags::{
     ItemTagRow, TagActions, TagEdit, TagList, TagPanelCopy, tag_panel,
 };
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_served;
+use crate::locale::{Msg, tr};
 use crate::pages::demographics::PartyKind;
 
 /// The demographic tag index (`GET /demographic/tags`), optionally filtered.
@@ -97,7 +100,7 @@ pub async fn fetch_party_tags(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, "party kind"))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
     read_party_tags(&state, &session.credential, kind, &uid).await
 }
 
@@ -155,11 +158,10 @@ pub async fn set_party_tag(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, "party kind"))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
     if key.trim().is_empty() {
         return Err(ViewerError::Invalid(
-            "a tag key is required (ITEM_TAG invariant Inv_key_valid: the key is not empty)"
-                .to_owned(),
+            { tr_served(Msg::TagKeyRequiredItemTagInvariant) }.clone(),
         ));
     }
     let existing = read_party_tags(&state, &session.credential, kind, &uid).await?;
@@ -213,10 +215,10 @@ pub async fn delete_party_tag(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, "party kind"))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
     let key = key.trim();
     if key.is_empty() {
-        return Err(ViewerError::Invalid("a tag key is required".to_owned()));
+        return Err(ViewerError::Invalid(tr_served(Msg::TagKeyRequired)));
     }
     let url = format!(
         "{}/{}",
@@ -288,14 +290,14 @@ pub(super) fn tags_section(
     Effect::new(move |_| match set.value().get() {
         Some(Ok(())) => crate::components::toast::toast_success(
             toaster,
-            "Tag saved",
-            "The party's tag collection was replaced with the merged list.",
+            &tr(Msg::TagSaved),
+            &tr(Msg::PartySTagCollectionWasReplaced),
         ),
         Some(Err(error)) => {
             crate::feedback::toast_write_failure(
                 toaster,
-                "Tag save failed",
-                "this party's tags",
+                &tr(Msg::TagSaveFailed),
+                &tr(Msg::ThisPartySTags),
                 &error,
             );
         }
@@ -304,13 +306,13 @@ pub(super) fn tags_section(
     Effect::new(move |_| match remove.value().get() {
         Some(Ok(())) => crate::components::toast::toast_success(
             toaster,
-            "Tag deleted",
-            "Every tag carrying that key was removed.",
+            &tr(Msg::TagDeleted),
+            &tr(Msg::EveryTagCarryingKeyWasRemoved),
         ),
         Some(Err(error)) => crate::components::toast::toast_error(
             toaster,
-            "Tag delete failed",
-            &crate::feedback::write_failure_copy("this party's tag", &error),
+            &tr(Msg::TagDeleteFailed),
+            &crate::feedback::write_failure_copy(&tr(Msg::ThisPartySTag), &error),
         ),
         None => {}
     });
@@ -326,12 +328,10 @@ pub(super) fn tags_section(
     };
     tag_panel(
         TagPanelCopy {
-            title: "Tags",
-            note: "These are the VERSIONED_PARTY container's tags. Saving one re-sends the whole \
-                   collection, which is how the openEHR tag update works — a tag another client \
-                   added in the meantime can be lost, so reload before editing a busy party.",
-            empty_message: "No tags on this party",
-            empty_hint: "Tags are free key/value markers a client sets on a party; add one below.",
+            title: Msg::Tags,
+            note: Msg::TheseVersionedPartyContainerSTags,
+            empty_message: Msg::NoTagsParty,
+            empty_hint: Msg::TagsFreeKeyValueMarkersClient,
             form_id: "party-tag-set",
         },
         uid,

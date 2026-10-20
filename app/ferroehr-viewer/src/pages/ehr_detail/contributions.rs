@@ -25,6 +25,9 @@ use crate::components::field::{BTN_SECONDARY, INPUT, LABEL};
 use crate::components::format_view::DocumentPane;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_with;
+use crate::locale::{Msg, tr};
 
 /// Rows fetched per page of the contribution list (fixed, per the tab's
 /// prev/next paging).
@@ -112,8 +115,12 @@ pub async fn list_contributions(
 /// # Errors
 /// [`ViewerError::Internal`] when the body is not valid JSON.
 fn parse_contributions(body: &str) -> Result<ContributionPage, ViewerError> {
-    let doc: Value = serde_json::from_str(body)
-        .map_err(|e| ViewerError::Internal(format!("contributions JSON: {e}")))?;
+    let doc: Value = serde_json::from_str(body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::ContributionsJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let rows = doc
         .get("rows")
         .and_then(Value::as_array)
@@ -233,7 +240,7 @@ fn activity_section(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
     );
     let body = view! {
         <Suspense fallback=|| {
-            view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
+            view! { {ferrohealth_ui::view::empty::skeleton(1, tr(Msg::Loading))} }
         }>
             {move || Suspend::new(async move {
                 match resource.await {
@@ -241,8 +248,8 @@ fn activity_section(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
                         activity_chart(
                             &points,
                             "contributions",
-                            "No contribution activity yet",
-                            "Every write to this EHR is a contribution; the timeline fills as they are committed.",
+                            tr(Msg::NoContributionActivityYet),
+                            tr(Msg::EveryWriteEhrContributionTimelineFills),
                         )
                     }
                     Ok(None) => ().into_any(),
@@ -254,7 +261,7 @@ fn activity_section(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
     .into_any();
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"Contribution activity"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::ContributionActivity)}</h2>
             {body}
         </section>
     }
@@ -304,8 +311,8 @@ fn contributions_table(page: &ContributionPage, offset: RwSignal<u32>) -> AnyVie
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::INBOX
-                message="No contributions"
-                hint="This EHR has no contributions on this page."
+                message=tr(Msg::NoContributions)
+                hint=tr(Msg::EhrHasNoContributionsPage)
             />
         }
         .into_any();
@@ -329,7 +336,7 @@ fn contributions_table(page: &ContributionPage, offset: RwSignal<u32>) -> AnyVie
                 class=BTN_SECONDARY
                 on:click=move |_| offset.set(current.saturating_sub(CONTRIBUTION_FETCH))
             >
-                "← Previous"
+                {tr(Msg::Previous)}
             </button>
         }
         .into_any()
@@ -341,20 +348,25 @@ fn contributions_table(page: &ContributionPage, offset: RwSignal<u32>) -> AnyVie
                 class=BTN_SECONDARY
                 on:click=move |_| offset.set(current.saturating_add(CONTRIBUTION_FETCH))
             >
-                "Next →"
+                {tr(Msg::Next)}
             </button>
         }
         .into_any()
     });
     view! {
         {table_shell(
-            "Contributions",
-            &["Contribution", "Committed", "Committer", "Change type"],
+            &tr(Msg::Contributions),
+            &[
+                &tr(Msg::Contribution2),
+                &tr(Msg::Committed),
+                &tr(Msg::Committer),
+                &tr(Msg::ChangeType),
+            ],
             body,
         )}
         <p id="contribution-total" class="mt-2 text-xs text-ink-muted">
             {total}
-            " contribution(s) total"
+            {tr(Msg::ContributionSTotal)}
         </p>
         <div class="mt-3 flex gap-2">{prev} {next}</div>
     }
@@ -373,13 +385,13 @@ fn contribution_row_view(row: &ContributionRow) -> AnyView {
     view! {
         <tr class=ROW>
             <td class=CELL_MONO>{row.uid.clone()}</td>
-            <td class=CELL data-label="Committed">
+            <td class=CELL data-label=tr(Msg::Committed)>
                 {ferrohealth_ui::view::time::timestamp(&row.time_committed)}
             </td>
-            <td class=CELL data-label="Committer">
+            <td class=CELL data-label=tr(Msg::Committer)>
                 {row.committer.clone()}
             </td>
-            <td class=CELL title=row.change_type.clone() data-label="Change type">
+            <td class=CELL title=row.change_type.clone() data-label=tr(Msg::ChangeType)>
                 {change_type}
             </td>
         </tr>
@@ -411,19 +423,19 @@ fn contribution_lookup(ehr_id: Signal<String>, selected: Memo<String>) -> AnyVie
             <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="contribution-uid">
-                        "Contribution uid"
+                        {tr(Msg::ContributionUid)}
                     </label>
                     <input
                         id="contribution-uid"
                         type="text"
                         class=INPUT
-                        placeholder="contribution uid (UUID)"
+                        placeholder=tr(Msg::ContributionUidUuid)
                         prop:value=move || uid_input.get()
                         on:input:target=move |ev| uid_input.set(ev.target().value())
                     />
                 </div>
                 <button type="button" class=BTN_SECONDARY on:click=on_click>
-                    "Look up"
+                    {tr(Msg::LookUp)}
                 </button>
             </div>
         </section>
@@ -439,7 +451,7 @@ fn contribution_lookup(ehr_id: Signal<String>, selected: Memo<String>) -> AnyVie
                         // mismatches at hydration in leptos 0.8.
                         view! {
                             <p class="text-sm text-ink-muted">
-                                "Enter a contribution uid to look it up."
+                                {tr(Msg::EnterContributionUidLookUp)}
                             </p>
                         }
                             .into_any()

@@ -26,6 +26,7 @@ use leptos::server_fn::ServerFn as _;
 
 use crate::auth::{LoginBasic, fetch_login_screen};
 use crate::components::brand::viewer_lockup;
+use crate::locale::{Msg, tr, tr_with};
 
 /// The login screen.
 ///
@@ -58,7 +59,7 @@ pub fn LoginPage() -> impl IntoView {
                                 Tone::Warn,
                                 Announce::Status,
                                 Some("session-expired"),
-                                "Your session ended. Sign in again to continue.",
+                                tr(Msg::YourSessionEndedSignAgainContinue),
                             )
                         })}
                     {refused
@@ -67,10 +68,10 @@ pub fn LoginPage() -> impl IntoView {
                                 Tone::Bad,
                                 Announce::Alert,
                                 Some(REFUSAL_ID),
-                                "Wrong username or password.",
+                                tr(Msg::WrongUsernameOrPassword),
                             )
                         })}
-                    {ferrohealth_ui::view::empty::skeleton(3, "Loading the sign-in methods…")}
+                    {ferrohealth_ui::view::empty::skeleton(3, tr(Msg::LoadingSignMethods))}
                 </div>
             }
         }>
@@ -85,10 +86,7 @@ pub fn LoginPage() -> impl IntoView {
                     if expired {
                         notices
                             .push(
-                                Notice::new(
-                                        Tone::Warn,
-                                        "Your session ended. Sign in again to continue.",
-                                    )
+                                Notice::new(Tone::Warn, tr(Msg::YourSessionEndedSignAgainContinue))
                                     .id("session-expired"),
                             );
                     }
@@ -100,14 +98,17 @@ pub fn LoginPage() -> impl IntoView {
                             .push(
                                 Notice::new(
                                     Tone::Warn,
-                                    format!("Could not read the CDR's login modes: {error}"),
+                                    tr_with(
+                                        Msg::CouldNotReadCdrSLogin,
+                                        &[("error", error.clone().into())],
+                                    ),
                                 ),
                             );
                     }
                     sign_in(SignIn {
                             lockup: viewer_lockup().into_any(),
                             notices,
-                            refusal: refused.then(|| "Wrong username or password.".to_owned()),
+                            refusal: refused.then(|| tr(Msg::WrongUsernameOrPassword)),
                             basic: basic
                                 .then(|| Basic {
                                     action: LoginBasic::url(),
@@ -116,7 +117,7 @@ pub fn LoginPage() -> impl IntoView {
                             provider: oidc
                                 .then(|| Provider {
                                     href: oidc_login_href(&next),
-                                    label: "Sign in with OIDC".to_owned(),
+                                    label: tr(Msg::SignInWithOidc),
                                 }),
                             links: links.into_iter().map(|link| (link.label, link.href)).collect(),
                         })
@@ -132,7 +133,7 @@ pub fn LoginPage() -> impl IntoView {
         {centred(
             card,
             Footer {
-                product: "FerroEHR Viewer",
+                product: "FerroEHR Viewer".into(),
                 version: env!("CARGO_PKG_VERSION"),
                 about: "/system#manufacturer",
             },

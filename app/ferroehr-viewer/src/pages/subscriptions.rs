@@ -34,6 +34,7 @@ use crate::components::page_header::PageHeader;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::components::toast::toast_outcome;
 use crate::error::ViewerError;
+use crate::locale::{Msg, message, tr, tr_with};
 use crate::subscriptions::{
     SubscriptionPredicates, SubscriptionRow, create_event_subscription, delete_event_subscription,
     list_event_subscriptions, match_summary, name_is_valid, predicate_label,
@@ -235,8 +236,8 @@ pub fn SubscriptionsPage() -> impl IntoView {
         <Title text="Subscriptions" />
         <div id="subscriptions-screen">
             <PageHeader
-                title="Subscriptions"
-                subtitle="The CDR's event subscriptions: the stored filters over its committed-version event stream."
+                title=tr(Msg::Subscriptions)
+                subtitle=tr(Msg::CdrSEventSubscriptionsStoredFilters)
             />
             {create_card}
             {editor_card}
@@ -261,22 +262,27 @@ fn mutation_toasts(
     toast_outcome(
         toaster,
         create.value().into(),
-        ("Subscription created", "Create failed"),
-        |name, row| format!("{name} — {}", match_summary(row)),
+        (Msg::SubscriptionCreated, Msg::CreateFailed),
+        |name, row| format!("{name} · {}", match_summary(row)),
         write_failure,
     );
     toast_outcome(
         toaster,
         update.value().into(),
-        ("Subscription updated", "Update failed"),
-        |name, row| format!("{name} — {}", match_summary(row)),
+        (Msg::SubscriptionUpdated, Msg::UpdateFailed),
+        |name, row| format!("{name} · {}", match_summary(row)),
         write_failure,
     );
     toast_outcome(
         toaster,
         delete.value().into(),
-        ("Subscription deleted", "Delete failed"),
-        |name, ()| format!("{name} was removed from the CDR."),
+        (Msg::SubscriptionDeleted, Msg::DeleteFailed),
+        |name, ()| {
+            tr_with(
+                Msg::WasRemovedFromCdr,
+                &[("name", (name).to_string().into())],
+            )
+        },
         write_failure,
     );
 }
@@ -284,7 +290,10 @@ fn mutation_toasts(
 /// The actionable copy every refused subscription write is reported with,
 /// naming the subscription the operator was working on.
 fn write_failure(name: &str, error: &ViewerError) -> String {
-    subscription_failure_copy(&format!("subscription `{name}`"), error)
+    subscription_failure_copy(
+        &tr_with(Msg::Subscription2, &[("name", (name).to_string().into())]),
+        error,
+    )
 }
 
 /// The create card: the name, the four predicates, the enabled toggle, and the
@@ -302,12 +311,12 @@ fn create_card(name: RwSignal<String>, draft: Draft, create: CreateAction) -> An
     }));
     view! {
         <section id="subscription-create" class=format!("{CARD_PAD} mb-4")>
-            <h2 class=CARD_TITLE>"Create a subscription"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::CreateASubscription)}</h2>
             <div class="fui-field-flow">
                 {text_field(
                     "subscription-create-name".to_owned(),
-                    "Name",
-                    Some("vitals-feed"),
+                    tr(Msg::Name),
+                    Some("vitals-feed".to_owned()),
                     name,
                 )} {predicate_fields("create", draft)}
                 {enabled_toggle("subscription-create-enabled", draft.enabled, true)}
@@ -321,14 +330,10 @@ fn create_card(name: RwSignal<String>, draft: Draft, create: CreateAction) -> An
                         drop(create.dispatch((name.get_untracked(), draft.read())));
                     }
                 >
-                    "Create subscription"
+                    {tr(Msg::CreateSubscription)}
                 </button>
             </div>
-            <p class="mt-2 fui-help">
-                "The name is unique on the CDR and cannot be changed afterwards — it may hold only \
-                 letters, digits, and “_”, “.” or “-”. Every predicate left empty matches anything, \
-                 so a subscription with none of them set receives every committed version."
-            </p>
+            <p class="mt-2 fui-help">tr(Msg::NameUniqueCdrCannotChangedAfterwards)</p>
             {failure}
         </section>
     }
@@ -362,13 +367,13 @@ fn edit_card(editor: Editor, update: UpdateAction) -> AnyView {
         };
         view! {
             <section id="subscription-edit" class=format!("{CARD_PAD} mb-4")>
-                <h2 class=CARD_TITLE>{format!("Edit subscription {}", row.name)}</h2>
+                <h2 class=CARD_TITLE>
+                    {tr_with(Msg::EditSubscription, &[("name", row.name.clone().into())])}
+                </h2>
                 <p class="mb-3 fui-help">
-                    <span class="font-medium">"Subscription id: "</span>
+                    <span class="font-medium">{tr(Msg::SubscriptionId)}</span>
                     <span class="font-mono wrap-break-word text-ink">{row.id}</span>
-                    <span class="ml-2">
-                        "The name is the CDR's queue key and cannot be changed."
-                    </span>
+                    <span class="ml-2">{tr(Msg::NameCdrSQueueKeyCannot)}</span>
                 </p>
                 <div class="fui-field-flow">
                     {predicate_fields("edit", editor.draft)}
@@ -380,7 +385,7 @@ fn edit_card(editor: Editor, update: UpdateAction) -> AnyView {
                         disabled=Signal::derive(move || update.pending().get())
                         on:click=on_save
                     >
-                        "Save subscription"
+                        {tr(Msg::SaveSubscription)}
                     </button>
                     <button
                         id="subscription-edit-cancel"
@@ -388,12 +393,10 @@ fn edit_card(editor: Editor, update: UpdateAction) -> AnyView {
                         class=BTN_SECONDARY
                         on:click=move |_| editor.close()
                     >
-                        "Cancel"
+                        {tr(Msg::Cancel)}
                     </button>
                 </div>
-                <p class="mt-2 fui-help">
-                    "Saving replaces every predicate: one cleared here becomes “any” on the CDR."
-                </p>
+                <p class="mt-2 fui-help">{tr(Msg::SavingReplacesEveryPredicateOneCleared)}</p>
             </section>
         }
         .into_any()
@@ -411,17 +414,22 @@ fn edit_card(editor: Editor, update: UpdateAction) -> AnyView {
 /// `subscription-edit-kind`, …) — both cards can be on screen at once.
 fn predicate_fields(form: &'static str, draft: Draft) -> AnyView {
     view! {
-        {text_field(format!("subscription-{form}-kind"), "Kind", Some("COMPOSITION"), draft.kind)}
+        {text_field(
+            format!("subscription-{form}-kind"),
+            tr(Msg::Kind),
+            Some("COMPOSITION".to_owned()),
+            draft.kind,
+        )}
         {text_field(
             format!("subscription-{form}-change-type"),
-            "Change type",
-            Some("249"),
+            tr(Msg::ChangeType),
+            Some("249".to_owned()),
             draft.change_type,
         )}
         {text_field(
             format!("subscription-{form}-template"),
-            "Template id",
-            Some("blank = any"),
+            tr(Msg::TemplateId),
+            Some(tr(Msg::BlankAny)),
             draft.template_id,
         )}
     }
@@ -445,7 +453,7 @@ fn enabled_toggle(id: &'static str, value: RwSignal<bool>, initial: bool) -> Any
                 prop:checked=move || value.get()
                 on:change=move |ev| value.set(event_target_checked(&ev))
             />
-            "Enabled"
+            {tr(Msg::Enabled)}
         </label>
     }
     .into_any()
@@ -468,7 +476,7 @@ fn listing_table(
                     Ok(Some(rows)) if rows.is_empty() => empty_listing(),
                     Ok(Some(rows)) => rows_view(rows, paging, editor, pending_delete, delete),
                     Ok(None) => disabled_card(),
-                    Err(error) => read_error(&error, "event subscriptions"),
+                    Err(error) => read_error(&error, &tr(Msg::EventSubscriptions)),
                 }
             })}
         </Transition>
@@ -507,8 +515,8 @@ fn disabled_card() -> AnyView {
         <section id="subscriptions-disabled" class=CARD_PAD>
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::RADIO_TOWER
-                message="The event-subscription API is disabled on this server"
-                hint="The CDR answers its subscription routes as if unmounted. Set admin_api = true under [events] in the CDR's configuration to administer subscriptions here."
+                message=tr(Msg::EventSubscriptionApiDisabledServer)
+                hint=tr(Msg::CdrAnswersSubscriptionRoutesIfUnmounted)
             />
         </section>
     }
@@ -520,8 +528,8 @@ fn empty_listing() -> AnyView {
     view! {
         <EmptyState
             icon=ferrohealth_ui::icon::Glyph::RADIO_TOWER
-            message="No event subscriptions"
-            hint="Create the first subscription with the card above."
+            message=tr(Msg::NoEventSubscriptions)
+            hint=tr(Msg::CreateFirstSubscriptionCardAbove)
         />
     }
     .into_any()
@@ -543,15 +551,15 @@ fn rows_view(
         rows,
         paging,
         "/subscriptions",
-        "Subscriptions",
-        ferrohealth_ui::table::model::Noun::new("subscription", "subscriptions"),
+        tr(Msg::Subscriptions),
+        ferrohealth_ui::table::model::Noun::new(message(Msg::NounSubscriptions)),
         &[
-            "Subscription",
-            "Kind",
-            "Change type",
-            "Template",
-            "State",
-            "Created",
+            &tr(Msg::Subscription),
+            &tr(Msg::Kind),
+            &tr(Msg::ChangeType),
+            &tr(Msg::Template),
+            &tr(Msg::State),
+            &tr(Msg::Created),
             "",
         ],
         |row: &SubscriptionRow| row.id.clone(),
@@ -589,24 +597,24 @@ fn row_view(
                     {summary}
                 </div>
             </td>
-            <td class=CELL_MONO data-label="Kind" data-subscription-cell="kind">
+            <td class=CELL_MONO data-label=tr(Msg::Kind) data-subscription-cell="kind">
                 {predicate_label(&row.kind)}
             </td>
-            <td class=CELL_MONO data-label="Change type" data-subscription-cell="change-type">
+            <td class=CELL_MONO data-label=tr(Msg::ChangeType) data-subscription-cell="change-type">
                 {predicate_label(&row.change_type)}
             </td>
-            <td class=CELL_MONO data-label="Template" data-subscription-cell="template">
+            <td class=CELL_MONO data-label=tr(Msg::Template) data-subscription-cell="template">
                 {predicate_label(&row.template_id)}
             </td>
-            <td class=CELL data-label="State">
+            <td class=CELL data-label=tr(Msg::State)>
                 <span class=state_class data-subscription-state=state_value>
                     {state}
                 </span>
             </td>
-            <td class=CELL data-label="Created">
+            <td class=CELL data-label=tr(Msg::Created)>
                 {ferrohealth_ui::view::time::timestamp(&row.created_at)}
             </td>
-            <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">
+            <td class=ferrohealth_ui::table::view::ACTIONS data-label=tr(Msg::Actions)>
                 <div class="flex justify-end gap-2">
                     <button
                         type="button"
@@ -614,7 +622,7 @@ fn row_view(
                         data-subscription-edit=edit_hook
                         on:click=move |_| editor.open(for_edit.clone())
                     >
-                        "Edit"
+                        {tr(Msg::Edit)}
                     </button>
                     <button
                         type="button"
@@ -623,7 +631,7 @@ fn row_view(
                         disabled=Signal::derive(move || delete.pending().get())
                         on:click=move |_| pending_delete.set(Some(for_delete.clone()))
                     >
-                        "Delete"
+                        {tr(Msg::Delete)}
                     </button>
                 </div>
             </td>
@@ -640,20 +648,20 @@ fn delete_dialog(
 ) -> AnyView {
     let message = Signal::derive(move || {
         pending_delete.get().map_or_else(String::new, |row| {
-            format!(
-                "Delete the subscription “{}” from the CDR? {} Consumers reading its stream stop \
-                 receiving events, and the subscription cannot be restored — only created again \
-                 under the same name.",
-                row.name,
-                match_summary(&row)
+            tr_with(
+                Msg::DeleteSubscriptionFromCdrConsumersReading,
+                &[
+                    ("name", row.name.clone().into()),
+                    ("value1", (match_summary(&row)).clone().into()),
+                ],
             )
         })
     });
     delete_confirmation(
         pending_delete,
         delete,
-        "Delete subscription",
-        "Delete subscription",
+        Msg::DeleteSubscription,
+        Msg::DeleteSubscription,
         ("subscription-delete-dialog", "subscription-delete-confirm"),
         message,
     )

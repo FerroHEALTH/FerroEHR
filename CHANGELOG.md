@@ -15,6 +15,22 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Changed
+
+- **The viewer takes FerroUI 0.2.0 and reads every word it draws from its
+  catalog** (#300, #3860). The labels it hands FerroUI (table captions,
+  column headers, pager nouns with their plurals, navigation, tabs, fields,
+  dialogs, toasts) are looked up in `locales/en/ferroehr-viewer.ftl` at run
+  time, and the stray-literal baseline drops from 1918 to 505 literals.
+  English remains the only locale.
+
+### Fixed
+
+- **No viewer string carries an em dash** (#3860). The query builder's
+  template choice reads "Any template", an absent value reads "(no value)",
+  and the hints, notes and form errors that used a dash use a colon or a
+  full stop.
+
 ## [5.0.0] - 2026-10-19
 
 ### Added

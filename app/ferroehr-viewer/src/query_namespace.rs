@@ -22,6 +22,7 @@
 //! governs the viewer. Only the name format these rules read is spec-bound,
 //! cited above.
 
+use crate::locale::Msg;
 use crate::queries_api::StoredQueryRow;
 
 /// The heading for stored queries whose name carries no namespace.
@@ -194,11 +195,11 @@ impl VersionResolution {
 
     /// The picker label, worded as the spec describes the form.
     #[must_use]
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> Msg {
         match self {
-            Self::Latest => "Latest version (no version sent)",
-            Self::Prefix => "Version prefix (latest match)",
-            Self::Exact => "Exact version",
+            Self::Latest => Msg::LatestVersionNoVersionSent,
+            Self::Prefix => Msg::VersionPrefixLatestMatch,
+            Self::Exact => Msg::ExactVersion,
         }
     }
 
@@ -225,13 +226,13 @@ pub enum VersionResolutionError {
     /// A prefix form given something that is not a `{major}` /
     /// `{major}.{minor}` pattern.
     #[error(
-        "`{0}` is not a version prefix — a prefix is `{{major}}` or `{{major}}.{{minor}}` \
+        "`{0}` is not a version prefix: a prefix is `{{major}}` or `{{major}}.{{minor}}` \
          (for example `1` or `1.2`) and resolves to the latest version matching it"
     )]
     NotAPrefix(String),
     /// An exact form given something that is not a complete triple.
     #[error(
-        "`{0}` is not an exact version — an exact version is `major.minor.patch` \
+        "`{0}` is not an exact version: an exact version is `major.minor.patch` \
          (for example `1.2.0`)"
     )]
     NotExact(String),
@@ -690,7 +691,7 @@ mod tests {
     fn resolution_form_values_round_trip() {
         for mode in VersionResolution::ALL {
             assert_eq!(VersionResolution::from_str_or_exact(mode.as_str()), mode);
-            assert!(!mode.label().is_empty());
+            assert!(!crate::locale::tr(mode.label()).is_empty());
         }
         // Unknown input falls back to the exact form.
         assert_eq!(

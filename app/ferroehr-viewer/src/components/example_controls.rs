@@ -16,16 +16,25 @@ use crate::components::field::LABEL;
 use crate::components::format_view::{FormatSelector, choice_strip};
 use crate::example_options::{ExampleDetail, ExampleType};
 use crate::format::ReprFormat;
+use crate::locale::{Msg, tr};
 
 /// The detail levels, each its key and its words.
-const DETAILS: &[(&str, &str)] = &[
-    ("required", "Required"),
-    ("medium", "Medium"),
-    ("complete", "Complete"),
+const DETAILS: &[(&str, Msg)] = &[
+    ("required", Msg::Required),
+    ("medium", Msg::Medium),
+    ("complete", Msg::Complete),
 ];
 
 /// The example forms, each its key and its words.
-const FORMS: &[(&str, &str)] = &[("input", "Input"), ("output", "Output")];
+const FORMS: &[(&str, Msg)] = &[("input", Msg::Input), ("output", Msg::Output)];
+
+/// The choices `choices`, each key beside its words in the page's locale.
+fn words(choices: &[(&'static str, Msg)]) -> Vec<(&'static str, String)> {
+    choices
+        .iter()
+        .map(|(key, words)| (*key, tr(*words)))
+        .collect()
+}
 
 /// The key a detail level carries in [`DETAILS`].
 fn detail_key(detail: ExampleDetail) -> &'static str {
@@ -76,16 +85,16 @@ pub fn ExampleControls(
     view! {
         <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
             <div class="flex items-center gap-2">
-                <span class=LABEL>"Format"</span>
+                <span class=LABEL>{tr(Msg::Format)}</span>
                 <FormatSelector selected=format />
             </div>
             <div class="flex items-center gap-2">
-                <span class=LABEL>"Detail level"</span>
-                {choice_strip("Detail level", DETAILS, detail, detail_key, detail_of)}
+                <span class=LABEL>{tr(Msg::DetailLevel)}</span>
+                {choice_strip(tr(Msg::DetailLevel), &words(DETAILS), detail, detail_key, detail_of)}
             </div>
             <div class="flex items-center gap-2">
-                <span class=LABEL>"Form"</span>
-                {choice_strip("Example form", FORMS, kind, form_key, form_of)}
+                <span class=LABEL>{tr(Msg::Form)}</span>
+                {choice_strip(tr(Msg::ExampleForm), &words(FORMS), kind, form_key, form_of)}
             </div>
         </div>
     }

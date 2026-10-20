@@ -60,8 +60,8 @@ pub const BTN_DANGER_SMALL: &str = Variant::Danger.small();
 #[must_use]
 pub fn text_field(
     id: String,
-    label: &'static str,
-    placeholder: Option<&'static str>,
+    label: String,
+    placeholder: Option<String>,
     value: RwSignal<String>,
 ) -> AnyView {
     let input = view! {

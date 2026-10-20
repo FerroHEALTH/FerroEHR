@@ -16,6 +16,7 @@
 //! control's value into the instant `version_at_time` takes — the same
 //! `Resources.md` the media types above cite.
 
+use crate::locale::{Msg, tr_with};
 use serde::{Deserialize, Serialize};
 
 /// One selectable representation of an openEHR resource.
@@ -97,7 +98,7 @@ pub fn datetime_local_to_rfc3339(local: &str) -> String {
     } else {
         trimmed.to_owned()
     };
-    format!("{with_seconds}Z")
+    tr_with(Msg::Z, &[("with_seconds", with_seconds.clone().into())])
 }
 
 /// Whether a datetime value already names its zone: a trailing `Z`, or a

@@ -56,6 +56,7 @@ use crate::components::page_header::{Crumb, PageHeader};
 use crate::components::surface::CARD_PAD;
 use crate::components::toast::{toast_error, toast_success};
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::ehr_detail::commit::commit_section;
 use crate::pages::ehr_detail::compositions::compositions_section;
 use crate::pages::ehr_detail::contributions::contributions_section;
@@ -133,8 +134,9 @@ pub async fn fetch_ehr_summary(
 /// # Errors
 /// [`ViewerError::Internal`] when the body is not valid JSON.
 fn parse_ehr_summary(body: &str) -> Result<EhrSummary, ViewerError> {
-    let doc: Value =
-        serde_json::from_str(body).map_err(|e| ViewerError::Internal(format!("EHR JSON: {e}")))?;
+    let doc: Value = serde_json::from_str(body).map_err(|e| {
+        ViewerError::Internal(tr_with(Msg::EhrJson, &[("e", (e).to_string().into())]))
+    })?;
     Ok(EhrSummary {
         ehr_id: json_path(&doc, &["ehr_id", "value"]),
         system_id: json_path(&doc, &["system_id", "value"]),
@@ -180,7 +182,7 @@ fn summary_section(ehr_id: Signal<String>, status: StatusFeed) -> AnyView {
             <section class=CARD_PAD id="ehr-summary">
                 {identity}
                 <Suspense fallback=|| {
-                    view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
+                    view! { {ferrohealth_ui::view::empty::skeleton(1, tr(Msg::Loading))} }
                 }>
                     {move || Suspend::new(async move {
                         match resource.await {
@@ -192,7 +194,7 @@ fn summary_section(ehr_id: Signal<String>, status: StatusFeed) -> AnyView {
                                         id="ehr-not-found"
                                         class="rounded-card border border-danger/40 bg-danger-subtle px-3 py-2 text-sm text-danger"
                                     >
-                                        "The CDR holds no EHR with this id — check the id, or create it on the EHRs screen."
+                                        {tr(Msg::CdrHoldsNoEhrIdCheck)}
                                     </div>
                                 }
                                     .into_any()
@@ -219,7 +221,7 @@ fn identity_strip(status: StatusFeed) -> AnyView {
     let resource = status.resource;
     view! {
         <Transition fallback=|| {
-            view! { {ferrohealth_ui::view::empty::skeleton(1, "Loading…")} }
+            view! { {ferrohealth_ui::view::empty::skeleton(1, tr(Msg::Loading))} }
         }>
             {move || Suspend::new(async move {
                 match resource.await {
@@ -239,8 +241,18 @@ fn identity_strip(status: StatusFeed) -> AnyView {
                                         {subject}
                                     </span>
                                 </span>
-                                {capability_badge("header", "queryable", state.is_queryable)}
-                                {capability_badge("header", "modifiable", state.is_modifiable)}
+                                {capability_badge(
+                                    "header",
+                                    "queryable",
+                                    Msg::FlagQueryable,
+                                    state.is_queryable,
+                                )}
+                                {capability_badge(
+                                    "header",
+                                    "modifiable",
+                                    Msg::FlagModifiable,
+                                    state.is_modifiable,
+                                )}
                             </div>
                         }
                             .into_any()
@@ -258,7 +270,10 @@ fn summary_facts(summary: &EhrSummary) -> AnyView {
     let status_label = if summary.ehr_status_type.is_empty() {
         "ehr_status".to_owned()
     } else {
-        format!("ehr_status ({})", summary.ehr_status_type)
+        tr_with(
+            Msg::EhrStatus2,
+            &[("ehr_status_type", summary.ehr_status_type.clone().into())],
+        )
     };
     let facts = vec![
         summary_fact("ehr_id".to_owned(), summary.ehr_id.clone()),
@@ -324,7 +339,7 @@ pub fn EhrDetailPage() -> impl IntoView {
     let heading = Signal::derive(move || {
         let id = ehr_id.get();
         let short: String = id.chars().take(8).collect();
-        format!("EHR {short}…")
+        tr_with(Msg::Ehr2, &[("short", short.clone().into())])
     });
 
     let summary = summary_section(ehr_id, status_feed);
@@ -336,7 +351,7 @@ pub fn EhrDetailPage() -> impl IntoView {
         <div>
             <PageHeader
                 title=Signal::derive(move || heading.get())
-                crumbs=vec![Crumb::new("EHRs", "/ehrs")]
+                crumbs=vec![Crumb::new(tr(Msg::Ehrs), "/ehrs")]
                 mono=true
             >
                 {delete_action}
@@ -391,25 +406,26 @@ fn delete_section(ehr_id: Signal<String>) -> AnyView {
         Some((id, Ok(()))) => {
             toast_success(
                 toaster,
-                "EHR deleted",
-                &format!("EHR {id} and all of its data were removed from the CDR."),
+                &tr(Msg::EhrDeleted),
+                &tr_with(Msg::EhrAllDataWereRemovedFrom, &[("id", id.clone().into())]),
             );
             navigate("/ehrs", leptos_router::NavigateOptions::default());
         }
         Some((id, Err(error))) => toast_error(
             toaster,
-            "Delete failed",
-            &crate::admin::delete_failure_copy(&format!("EHR {id}"), &error),
+            &tr(Msg::DeleteFailed),
+            &crate::admin::delete_failure_copy(
+                &tr_with(Msg::Ehr3, &[("id", id.clone().into())]),
+                &error,
+            ),
         ),
         None => {}
     });
 
     let message = Signal::derive(move || {
-        format!(
-            "Permanently delete EHR {} — every composition, contribution and audit record in \
-             it? This is the CDR's physical delete: nothing stays readable afterwards, and it \
-             cannot be undone.",
-            ehr_id.get()
+        tr_with(
+            Msg::PermanentlyDeleteEhrEveryCompositionContribution,
+            &[("ehr_id", (ehr_id.get()).clone().into())],
         )
     });
 
@@ -424,13 +440,13 @@ fn delete_section(ehr_id: Signal<String>) -> AnyView {
                     on:click=move |_| confirming.set(true)
                 >
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
-                    "Delete EHR"
+                    {tr(Msg::DeleteEhr)}
                 </button>
                 <crate::components::confirm_dialog::ConfirmDialog
                     open=confirming
-                    title="Delete EHR"
+                    title=tr(Msg::DeleteEhr)
                     message=message
-                    confirm_label="Delete EHR"
+                    confirm_label=tr(Msg::DeleteEhr)
                     dialog_id="ehr-delete-confirm-dialog"
                     confirm_id="ehr-delete-confirm"
                     on_cancel=Callback::new(move |()| confirming.set(false))
@@ -450,15 +466,15 @@ fn delete_section(ehr_id: Signal<String>) -> AnyView {
 /// once WASM loads).
 fn tab_bar(ehr_id: Signal<String>, selected: Memo<String>) -> AnyView {
     crate::components::tab_bar::url_tabs(
-        "EHR views",
+        tr(Msg::EhrViews),
         &[
-            ("status", "Status"),
-            ("status-history", "Status history"),
-            ("directory", "Directory"),
-            ("compositions", "Compositions"),
-            ("contributions", "Contributions"),
-            ("commit", "Commit"),
-            ("tags", "Tags"),
+            ("status", Msg::Status),
+            ("status-history", Msg::StatusHistory),
+            ("directory", Msg::Directory),
+            ("compositions", Msg::Compositions),
+            ("contributions", Msg::Contributions),
+            ("commit", Msg::Commit),
+            ("tags", Msg::Tags),
         ],
         move |value| format!("/ehrs/{}?tab={value}", ehr_id.get()),
         selected.into(),

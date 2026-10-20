@@ -44,6 +44,7 @@ use crate::components::page_header::PageHeader;
 use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
 use crate::components::toast::toast_success;
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::ehrs::{ResultPage, cell_text};
 use crate::pages::query_aql::LoadedQuery;
 use crate::pages::template_detail::fetch_template_catalog;
@@ -158,12 +159,12 @@ pub fn QueryBuilderPage() -> impl IntoView {
     // (`save_feedback`), beside the AQL it rejected.
     let toaster = crate::components::toast::toaster();
     Effect::new(move |_| match save_action.value().get() {
-        Some(Ok(())) => toast_success(toaster, "Query saved", ""),
+        Some(Ok(())) => toast_success(toaster, &tr(Msg::QuerySaved), ""),
         Some(Err(error)) => {
             crate::feedback::toast_write_failure(
                 toaster,
-                "Save failed",
-                "the stored query",
+                &tr(Msg::SaveFailed),
+                &tr(Msg::TheStoredQuery),
                 &error,
             );
         }
@@ -200,19 +201,19 @@ pub fn QueryBuilderPage() -> impl IntoView {
         <Title text="Query builder" />
         <div class="space-y-4">
             <PageHeader
-                title="Query builder"
-                subtitle="Pick a template, walk its paths, and turn data-value leaves into criteria and columns."
+                title=tr(Msg::QueryBuilder)
+                subtitle=tr(Msg::PickTemplateWalkPathsTurnData)
             />
             {load_notice}
             {template_step}
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <section class="fui-card overflow-auto lg:max-h-[calc(100vh-8rem)]">
-                    <h2 class=CARD_TITLE>"Path catalog"</h2>
+                    <h2 class=CARD_TITLE>{tr(Msg::PathCatalog)}</h2>
                     {picker}
                 </section>
                 <div class="lg:col-span-2 space-y-4">
                     <section class=CARD_PAD>
-                        <h2 class=CARD_TITLE>"Criteria"</h2>
+                        <h2 class=CARD_TITLE>{tr(Msg::Criteria)}</h2>
                         {criteria}
                     </section>
                     <section class=CARD_PAD>{output}</section>
@@ -368,7 +369,7 @@ fn load_notice_section(
 ) -> AnyView {
     view! {
         <Transition fallback=move || {
-            view! { <p class="text-sm text-ink-muted">"Loading stored query…"</p> }
+            view! { <p class="text-sm text-ink-muted">{tr(Msg::LoadingStoredQuery)}</p> }
         }>
             {move || Suspend::new(async move {
                 match load_resource.await {
@@ -378,7 +379,7 @@ fn load_notice_section(
                     Ok(None) => {
                         view! {
                             <p class="text-sm text-ink-muted">
-                                "That link does not name a stored-query version, so the builder started empty."
+                                {tr(Msg::LinkDoesNotNameStoredQuery)}
                             </p>
                         }
                             .into_any()
@@ -401,9 +402,9 @@ fn loaded_notice(qualified: &str, version: &str, refusal: RwSignal<Option<LiftEr
     view! {
         <section class=CARD_PAD>
             <p class="text-sm text-ink-muted">
-                "Loaded stored query " <span class="font-mono text-ink">{name}</span> " at version "
-                <span class="font-mono text-ink">{version}</span>
-                ". Saving stores the version in the field below — that version is immutable, so the next one is proposed."
+                {tr(Msg::LoadedStoredQuery)} <span class="font-mono text-ink">{name}</span>
+                {tr(Msg::AtVersion)} <span class="font-mono text-ink">{version}</span>
+                {tr(Msg::SavingStoresVersionFieldBelowVersion2)}
             </p>
             {move || {
                 refusal
@@ -419,9 +420,9 @@ fn loaded_notice(qualified: &str, version: &str, refusal: RwSignal<Option<LiftEr
                                 <p>{error.to_string()}</p>
                                 <p class="mt-1">
                                     <a href=href class="underline">
-                                        "Open it in the raw AQL editor instead"
+                                        {tr(Msg::OpenRawAqlEditorInstead)}
                                     </a>
-                                    " — the builder was left empty rather than loading a query it would change."
+                                    {tr(Msg::BuilderWasLeftEmptyRatherThan)}
                                 </p>
                             </div>
                         }
@@ -448,10 +449,12 @@ fn template_step_section(
         <section class=CARD_PAD>
             <div class="flex flex-col gap-1 max-w-md">
                 <label class=LABEL r#for="qb-template">
-                    "Template"
+                    {tr(Msg::Template)}
                 </label>
                 <Suspense fallback=move || {
-                    view! { <span class="text-sm text-ink-muted">"Loading templates…"</span> }
+                    view! {
+                        <span class="text-sm text-ink-muted">{tr(Msg::LoadingTemplates)}</span>
+                    }
                 }>
                     {move || Suspend::new(async move {
                         match templates.await {
@@ -493,7 +496,7 @@ fn template_select(
                 ctx.bump();
             }
         >
-            <option value="">"— any template —"</option>
+            <option value="">{tr(Msg::AnyTemplate)}</option>
             {options}
         </select>
     }
@@ -520,9 +523,7 @@ fn picker_section(
                         // Resolve inside the Transition: an SSR'd ErrorBoundary fallback
                         // mismatches at hydration in leptos 0.8.
                         view! {
-                            <p class="text-sm text-ink-muted">
-                                "Pick a template to browse its paths."
-                            </p>
+                            <p class="text-sm text-ink-muted">{tr(Msg::PickTemplateBrowsePaths)}</p>
                         }
                             .into_any()
                     }
@@ -546,7 +547,10 @@ fn disclosure_toggle(node_label: &str, expanded: RwSignal<bool>, has_children: b
     if !has_children {
         return view! { <span class="inline-block w-4 shrink-0"></span> }.into_any();
     }
-    let toggle_label = format!("Toggle {node_label}");
+    let toggle_label = tr_with(
+        Msg::Toggle,
+        &[("node_label", (node_label).to_string().into())],
+    );
     view! {
         <button
             type="button"
@@ -609,7 +613,7 @@ fn picker_node(
                     class=BTN_SECONDARY_SMALL
                     on:click=move |_| add_criterion(ctx, &add_node)
                 >
-                    "+ condition"
+                    {tr(Msg::Condition)}
                 </button>
                 <button
                     type="button"
@@ -617,7 +621,7 @@ fn picker_node(
                     class:hidden=move || !shape_is_dv.get()
                     on:click=move |_| add_column(ctx, &col_node)
                 >
-                    "+ column"
+                    {tr(Msg::Column)}
                 </button>
             </div>
         }
@@ -707,7 +711,7 @@ fn criteria_section(ctx: BuilderCtx) -> AnyView {
                         view! {
                             <EmptyState
                                 icon=ferrohealth_ui::icon::Glyph::LIST_CHECKS
-                                message="No conditions yet"
+                                message=tr(Msg::NoConditionsYet)
                                 hint="Add one with \"+ condition\" from the path catalog on the left."
                             />
                         }
@@ -769,7 +773,7 @@ fn leaf_card(criterion: &Criterion, path: Vec<usize>, ctx: BuilderCtx) -> AnyVie
                     <button
                         type="button"
                         class=BTN_DANGER_SMALL
-                        aria-label="Remove this condition"
+                        aria-label=tr(Msg::RemoveThisCondition)
                         on:click=move |_| {
                             ctx.query.update(|q| remove_at(&mut q.criteria, &remove_path));
                             ctx.active_path.set(Vec::new());
@@ -805,7 +809,7 @@ fn group_card(
             criterion_view(child, child_path, ctx)
         })
         .collect::<Vec<_>>();
-    let toolbar = group_toolbar(op_word, negated, is_root, path, ctx);
+    let toolbar = group_toolbar(op_word.to_owned(), negated, is_root, path, ctx);
 
     view! {
         <div class="rounded-card border border-edge p-2 bg-sunken/50">
@@ -818,7 +822,7 @@ fn group_card(
 /// The header toolbar of a group card: connective toggle, whole-group NOT,
 /// "add group", the "add here" target toggle, and remove/clear.
 fn group_toolbar(
-    op_word: &'static str,
+    op_word: String,
     negated: bool,
     is_root: bool,
     path: Vec<usize>,
@@ -834,9 +838,9 @@ fn group_toolbar(
     // The root group's remove reads "clear" in words; a nested group's is the
     // icon alone, so it needs the name spelled out.
     let remove_label = if is_root {
-        "Clear all conditions"
+        tr(Msg::ClearAllConditions)
     } else {
-        "Remove this group"
+        tr(Msg::RemoveThisGroup)
     };
     view! {
         <div class="flex items-center gap-1 flex-wrap mb-2">
@@ -868,7 +872,7 @@ fn group_toolbar(
                     ctx.bump();
                 }
             >
-                "+ group"
+                {tr(Msg::Group2)}
             </button>
             <button
                 type="button"
@@ -877,7 +881,7 @@ fn group_toolbar(
                 }
                 on:click=move |_| ctx.active_path.set(target_set_path.clone())
             >
-                "add here"
+                {tr(Msg::AddHere)}
             </button>
             <button
                 type="button"
@@ -942,11 +946,7 @@ fn leaf_editor(
         }
         CriterionKind::DateTimeRange { from, to } => datetime_editor(from, to, path, ctx),
         CriterionKind::BooleanIs { value } => boolean_editor(value, path, ctx),
-        CriterionKind::Exists => view! {
-            <p class="text-xs text-ink-muted italic">
-                "Presence check only for this type — matches when the node exists."
-            </p>
-        }
+        CriterionKind::Exists => view! { <p class="text-xs text-ink-muted italic">{tr(Msg::PresenceCheckOnlyTypeMatchesWhen)}</p> }
         .into_any(),
     }
 }
@@ -956,7 +956,7 @@ fn leaf_editor(
 /// query. Blank text parses to `None` at the editor level.
 fn number_input(
     id: String,
-    label: &'static str,
+    label: String,
     signal: RwSignal<String>,
     apply: impl Fn() + 'static,
 ) -> AnyView {
@@ -999,8 +999,18 @@ fn quantity_editor(
         ctx.query.update(|q| set_leaf_kind(q, &path, kind));
     };
     let unit_options = meta.map(|m| m.unit_options).unwrap_or_default();
-    let min_field = number_input(format!("{key}-min"), "min magnitude", min_s, apply.clone());
-    let max_field = number_input(format!("{key}-max"), "max magnitude", max_s, apply.clone());
+    let min_field = number_input(
+        format!("{key}-min"),
+        tr(Msg::MinMagnitude),
+        min_s,
+        apply.clone(),
+    );
+    let max_field = number_input(
+        format!("{key}-max"),
+        tr(Msg::MaxMagnitude),
+        max_s,
+        apply.clone(),
+    );
     let units_control = units_input(format!("{key}-units"), unit_options, units_s, apply);
 
     view! { <div class="fui-field-flow">{min_field}{max_field}{units_control}</div> }.into_any()
@@ -1047,7 +1057,7 @@ fn units_input(
                 apply();
             }
         >
-            <option value="">"(any units)"</option>
+            <option value="">{tr(Msg::AnyUnits)}</option>
             {opts}
         </select>
     };
@@ -1066,8 +1076,13 @@ fn count_editor(min: Option<i64>, max: Option<i64>, path: Vec<usize>, ctx: Build
         };
         ctx.query.update(|q| set_leaf_kind(q, &path, kind));
     };
-    let min_field = number_input(format!("{key}-min"), "min count", min_s, apply.clone());
-    let max_field = number_input(format!("{key}-max"), "max count", max_s, apply);
+    let min_field = number_input(
+        format!("{key}-min"),
+        tr(Msg::MinCount),
+        min_s,
+        apply.clone(),
+    );
+    let max_field = number_input(format!("{key}-max"), tr(Msg::MaxCount), max_s, apply);
     view! { <div class="fui-field-flow">{min_field}{max_field}</div> }.into_any()
 }
 
@@ -1088,8 +1103,13 @@ fn proportion_editor(
         };
         ctx.query.update(|q| set_leaf_kind(q, &path, kind));
     };
-    let min_field = number_input(format!("{key}-min"), "min numerator", min_s, apply.clone());
-    let max_field = number_input(format!("{key}-max"), "max numerator", max_s, apply);
+    let min_field = number_input(
+        format!("{key}-min"),
+        tr(Msg::MinNumerator),
+        min_s,
+        apply.clone(),
+    );
+    let max_field = number_input(format!("{key}-max"), tr(Msg::MaxNumerator), max_s, apply);
     view! { <div class="fui-field-flow">{min_field}{max_field}</div> }.into_any()
 }
 
@@ -1216,11 +1236,7 @@ fn coded_option_boxes(
     // An inline hint, not an `EmptyState`: this is one field inside a
     // leaf-condition card, and the kit's dashed box is sized for a data region.
     if options.is_empty() {
-        return view! {
-            <p class="text-xs text-ink-muted italic">
-                "No coded options in the template for this node."
-            </p>
-        }
+        return view! { <p class="text-xs text-ink-muted italic">{tr(Msg::NoCodedOptionsTemplateNode)}</p> }
         .into_any();
     }
     let selected = coded.selected;
@@ -1365,7 +1381,7 @@ fn coded_code_entry(key: &str, coded: CodedCtx, path: Vec<usize>, ctx: BuilderCt
                     disabled=Signal::derive(move || lookup.pending().get())
                     on:click=on_lookup
                 >
-                    "look up"
+                    {tr(Msg::LookUp2)}
                 </button> <button id=add_id type="button" class=BTN_SECONDARY on:click=on_add>
                     "add"
                 </button>
@@ -1406,7 +1422,10 @@ fn coded_chip_list(coded: CodedCtx, path: Vec<usize>, ctx: BuilderCtx) -> AnyVie
                             <button
                                 type="button"
                                 class="text-danger"
-                                aria-label=format!("Remove code {remove_code}")
+                                aria-label=tr_with(
+                                    Msg::RemoveCode,
+                                    &[("remove_code", remove_code.clone().into())],
+                                )
                                 on:click=move |_| remove_coded_code(ctx, coded, &path, &remove_code)
                             >
                                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::X, "10")}
@@ -1451,8 +1470,8 @@ fn coded_value_set(key: &str, coded: CodedCtx, path: Vec<usize>, ctx: BuilderCtx
             let value_set = expand.input().get().unwrap_or_default();
             view! {
                 <p class="text-xs text-ink-muted italic">
-                    "No value set " <span class="font-mono">{value_set}</span>
-                    " in this terminology."
+                    {tr(Msg::NoValueSet)} <span class="font-mono">{value_set}</span>
+                    {tr(Msg::InThisTerminology)}
                 </p>
             }
             .into_any()
@@ -1464,7 +1483,7 @@ fn coded_value_set(key: &str, coded: CodedCtx, path: Vec<usize>, ctx: BuilderCtx
             <div class="fui-field-flow">
                 {keyed_field(
                     value_set_id.clone(),
-                    "value set (optional)",
+                    tr(Msg::ValueSetOptional),
                     None,
                     view! {
                         <input
@@ -1550,11 +1569,7 @@ fn ordinal_editor(
     if options.is_empty() {
         // An inline hint for the same reason as the coded editor's: a single
         // field inside a leaf card, not a data region.
-        return view! {
-            <p class="text-xs text-ink-muted italic">
-                "No ordinal steps in the template for this node."
-            </p>
-        }
+        return view! { <p class="text-xs text-ink-muted italic">{tr(Msg::NoOrdinalStepsTemplateNode)}</p> }
         .into_any();
     }
     let items = options
@@ -1780,7 +1795,7 @@ fn boolean_editor(value: bool, path: Vec<usize>, ctx: BuilderCtx) -> AnyView {
 fn output_section(ctx: BuilderCtx) -> AnyView {
     view! {
         <div>
-            <h2 class=CARD_TITLE>"Output"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::Output)}</h2>
             {move || {
                 ctx.struct_ver.get();
                 let snapshot = ctx.query.get_untracked();
@@ -1806,8 +1821,11 @@ fn shape_radio(ctx: BuilderCtx, current: QueryShape) -> AnyView {
         .find(|(_, _, shape)| *shape == current)
         .map_or("compositions", |(key, _, _)| *key);
     ferrohealth_ui::widget::segmented::segmented(
-        "Output",
-        SHAPE_CHOICES,
+        tr(Msg::Output),
+        &SHAPE_CHOICES
+            .iter()
+            .map(|(key, words)| (*key, tr(*words)))
+            .collect::<Vec<_>>(),
         Signal::stored(key),
         move |chosen| {
             if let Some((_, _, shape)) = SHAPES.iter().find(|(key, _, _)| *key == chosen) {
@@ -1821,19 +1839,19 @@ fn shape_radio(ctx: BuilderCtx, current: QueryShape) -> AnyView {
 }
 
 /// The result shapes the output choice offers: key, words and shape.
-const SHAPES: [(&str, &str, QueryShape); 4] = [
-    ("compositions", "Compositions", QueryShape::Compositions),
-    ("data-values", "Data values", QueryShape::DataValues),
-    ("count", "Count", QueryShape::Count),
-    ("ehrs", "EHRs (cohort)", QueryShape::Ehrs),
+const SHAPES: [(&str, Msg, QueryShape); 4] = [
+    ("compositions", Msg::Compositions, QueryShape::Compositions),
+    ("data-values", Msg::DataValues, QueryShape::DataValues),
+    ("count", Msg::Count, QueryShape::Count),
+    ("ehrs", Msg::EhrsCohort, QueryShape::Ehrs),
 ];
 
 /// [`SHAPES`] as the segmented control's key and words.
-const SHAPE_CHOICES: &[(&str, &str)] = &[
-    ("compositions", "Compositions"),
-    ("data-values", "Data values"),
-    ("count", "Count"),
-    ("ehrs", "EHRs (cohort)"),
+const SHAPE_CHOICES: &[(&str, Msg)] = &[
+    ("compositions", Msg::Compositions),
+    ("data-values", Msg::DataValues),
+    ("count", Msg::Count),
+    ("ehrs", Msg::EhrsCohort),
 ];
 
 /// The projection-columns editor (data-value shape): one row per column with an
@@ -1842,8 +1860,8 @@ fn columns_editor(ctx: BuilderCtx, columns: &[SelectedColumn]) -> AnyView {
     if columns.is_empty() {
         // An inline hint, not an `EmptyState`: the columns editor is one row of
         // the options strip beside "Order by" and "Limit".
-        return view! { <p class="fui-help">"Add projection columns with \"+ column\" in the path catalog."</p> }
-        .into_any();
+        return view! { <p class="fui-help">{tr(Msg::AddProjectionColumnsColumnPathCatalog)}</p> }
+            .into_any();
     }
     let rows = columns
         .iter()
@@ -1854,8 +1872,14 @@ fn columns_editor(ctx: BuilderCtx, columns: &[SelectedColumn]) -> AnyView {
             // The row's controls have no visible label (the path text beside
             // them is the heading), so each names itself by its position.
             let position = i.saturating_add(1);
-            let alias_label = format!("Alias for column {position}");
-            let remove_label = format!("Remove column {position}");
+            let alias_label = tr_with(
+                Msg::AliasForColumn,
+                &[("position", (position).to_string().into())],
+            );
+            let remove_label = tr_with(
+                Msg::RemoveColumn,
+                &[("position", (position).to_string().into())],
+            );
             view! {
                 <div class="flex items-center gap-2">
                     <span
@@ -1904,7 +1928,7 @@ fn columns_editor(ctx: BuilderCtx, columns: &[SelectedColumn]) -> AnyView {
         .collect::<Vec<_>>();
     view! {
         <div class="space-y-1">
-            <div class="fui-label">"Columns"</div>
+            <div class="fui-label">{tr(Msg::Columns)}</div>
             {rows}
         </div>
     }
@@ -1919,9 +1943,18 @@ fn order_row(ctx: BuilderCtx, i: usize, rule: &OrderRule) -> AnyView {
     // "Order by" labels the whole editor, not the individual rows, so every
     // control in a row names itself by the rule's position.
     let position = i.saturating_add(1);
-    let path_label = format!("Sort path for rule {position}");
-    let direction_label = format!("Sort direction for rule {position}");
-    let remove_label = format!("Remove sort rule {position}");
+    let path_label = tr_with(
+        Msg::SortPathForRule,
+        &[("position", (position).to_string().into())],
+    );
+    let direction_label = tr_with(
+        Msg::SortDirectionForRule,
+        &[("position", (position).to_string().into())],
+    );
+    let remove_label = tr_with(
+        Msg::RemoveSortRule,
+        &[("position", (position).to_string().into())],
+    );
     view! {
         <div class="flex items-center gap-2">
             <input
@@ -1992,7 +2025,7 @@ fn order_editor(ctx: BuilderCtx, rules: &[OrderRule]) -> AnyView {
     view! {
         <div class="space-y-1">
             <div class="flex items-center gap-2">
-                <span class="fui-label">"Order by"</span>
+                <span class="fui-label">{tr(Msg::OrderBy)}</span>
                 <button
                     type="button"
                     class=BTN_SECONDARY_SMALL
@@ -2008,7 +2041,7 @@ fn order_editor(ctx: BuilderCtx, rules: &[OrderRule]) -> AnyView {
                         ctx.bump();
                     }
                 >
-                    "+ add"
+                    {tr(Msg::Add)}
                 </button>
             </div>
             {rows}
@@ -2035,7 +2068,7 @@ fn limit_editor(ctx: BuilderCtx, limit: Option<u32>) -> AnyView {
             }
         />
     };
-    field("qb-limit", "Limit", None, input).into_any()
+    field("qb-limit", tr(Msg::Limit), None, input).into_any()
 }
 
 // ---------------------------------------------------------------------------
@@ -2120,7 +2153,7 @@ fn preview_run_section(
 
     view! {
         <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>"AQL preview"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::AqlPreview)}</h2>
             <div class="space-y-3">
                 {move || match preview.get() {
                     Ok(aql) => {
@@ -2131,7 +2164,7 @@ fn preview_run_section(
                                     "{WELL} overflow-auto font-mono text-xs whitespace-pre-wrap text-ink",
                                 )>{aql}</pre>
                                 <A href=href attr:class="text-sm text-accent hover:underline">
-                                    "Open in raw editor "
+                                    {tr(Msg::OpenInRawEditor)}
                                     {ferrohealth_ui::icon::icon(
                                         ferrohealth_ui::icon::Glyph::ARROW_RIGHT,
                                         "12",
@@ -2154,7 +2187,7 @@ fn preview_run_section(
                     }
                 }} {save_fields} <div class="fui-cluster">
                     <button type="button" class=BTN_PRIMARY disabled=disabled on:click=run_click>
-                        "Run"
+                        {tr(Msg::Run)}
                     </button>
                     <button
                         type="button"
@@ -2162,7 +2195,7 @@ fn preview_run_section(
                         disabled=save_disabled
                         on:click=save_click
                     >
-                        "Save"
+                        {tr(Msg::Save)}
                     </button>
                 </div> {save_feedback(save_action)}
             </div>
@@ -2178,7 +2211,7 @@ fn save_feedback(save_action: SaveAction) -> AnyView {
     view! {
         <div class="text-sm">
             <Show when=move || save_action.pending().get()>
-                <span class="text-ink-muted">"Saving…"</span>
+                <span class="text-ink-muted">{tr(Msg::Saving)}</span>
             </Show>
             {move || match save_action.value().get() {
                 Some(Err(error)) => crate::components::notice::inline_error(&error),
@@ -2187,6 +2220,20 @@ fn save_feedback(save_action: SaveAction) -> AnyView {
         </div>
     }
     .into_any()
+}
+
+/// What a save-as version field means: the server-assigned version, an
+/// explicit immutable one, or a pattern the store refuses.
+fn version_meaning(version: &str) -> Result<String, String> {
+    let version = version.trim();
+    let args = [("version", version.to_owned().into())];
+    if version.is_empty() {
+        Ok(tr(Msg::ServerAssignsVersionReplacingQueryStored))
+    } else if is_full_semver(version) {
+        Ok(tr_with(Msg::ANewImmutableVersion, &args))
+    } else {
+        Err(tr_with(Msg::NotVersionStoreUseMajorMinor, &args))
+    }
 }
 
 /// The shared **Save as** fields both query screens use: the optional
@@ -2227,28 +2274,14 @@ pub(crate) fn save_as_fields(id_prefix: &str, fields: SaveFields) -> AnyView {
     // What the version field currently means for the save: an explicit
     // immutable version, the server-assigned one, or a pattern that cannot be
     // stored at (blocked before any request — `SaveFields::version_is_unstorable`).
-    let version_note = Signal::derive(move || {
-        version.with(|version| {
-            let version = version.trim();
-            if version.is_empty() {
-                Ok("the server assigns the version, replacing the query stored at it".to_owned())
-            } else if is_full_semver(version) {
-                Ok(format!("a new immutable version {version}"))
-            } else {
-                Err(format!(
-                    "{version} is not a version to store at — use major.minor.patch, \
-                     for example 1.0.0"
-                ))
-            }
-        })
-    });
+    let version_note = Signal::derive(move || version.with(|version| version_meaning(version)));
     let input_class = INPUT;
     view! {
         <div class="flex flex-col gap-1">
             <div class="fui-field-flow">
                 {keyed_field(
                     namespace_id.clone(),
-                    "Namespace (optional)",
+                    tr(Msg::NamespaceOptional),
                     None,
                     view! {
                         <input
@@ -2263,7 +2296,7 @@ pub(crate) fn save_as_fields(id_prefix: &str, fields: SaveFields) -> AnyView {
                 )}
                 {keyed_field(
                     name_id.clone(),
-                    "Query name",
+                    tr(Msg::QueryName),
                     None,
                     view! {
                         <input
@@ -2278,7 +2311,7 @@ pub(crate) fn save_as_fields(id_prefix: &str, fields: SaveFields) -> AnyView {
                 )}
                 {keyed_field(
                     version_id.clone(),
-                    "Version (optional)",
+                    tr(Msg::VersionOptional),
                     None,
                     view! {
                         <input
@@ -2303,8 +2336,9 @@ pub(crate) fn save_as_fields(id_prefix: &str, fields: SaveFields) -> AnyView {
                         };
                         view! {
                             <span class="text-xs text-ink-muted">
-                                "Saves as " <span class="font-mono text-ink">{composed}</span>
-                                " — " <span class=note_class>{note_text}</span>
+                                {tr(Msg::SavesAs)}
+                                <span class="font-mono text-ink">{composed}</span> ": "
+                                <span class=note_class>{note_text}</span>
                             </span>
                         }
                     })
@@ -2342,7 +2376,9 @@ fn results_section(
                         view! {
                             <section class=CARD_PAD>
                                 <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
-                                    <h2 class="text-sm font-semibold text-ink">"Results"</h2>
+                                    <h2 class="text-sm font-semibold text-ink">
+                                        {tr(Msg::Results)}
+                                    </h2>
                                     {export}
                                 </div>
                                 {body}
@@ -2373,7 +2409,7 @@ pub(crate) fn export_forms(current_aql: Signal<String>, params: Signal<String>) 
                 <input type="hidden" name="parameters_json" prop:value=move || params.get() />
                 <input type="hidden" name="format" value="csv" />
                 <button type="submit" class=BTN_SECONDARY>
-                    "Export CSV"
+                    {tr(Msg::ExportCsv)}
                 </button>
             </form>
             <form method="post" action="/export/aql" class="inline">
@@ -2381,12 +2417,10 @@ pub(crate) fn export_forms(current_aql: Signal<String>, params: Signal<String>) 
                 <input type="hidden" name="parameters_json" prop:value=move || params.get() />
                 <input type="hidden" name="format" value="json" />
                 <button type="submit" class=BTN_SECONDARY>
-                    "Export JSON"
+                    {tr(Msg::ExportJson)}
                 </button>
             </form>
-            <span class="text-xs text-ink-muted">
-                "Exports the query's own LIMIT window, or the server default."
-            </span>
+            <span class="text-xs text-ink-muted">{tr(Msg::ExportsQuerySOwnLimitWindow)}</span>
         </div>
     }
     .into_any()
@@ -2406,7 +2440,7 @@ pub(crate) fn results_view(page: &ResultPage, is_count: bool) -> AnyView {
         return view! {
             <div class="py-6 text-center">
                 <div class="text-4xl font-semibold tabular-nums text-ink">{n}</div>
-                <div class="text-xs text-ink-muted mt-1">"matching rows"</div>
+                <div class="text-xs text-ink-muted mt-1">{tr(Msg::MatchingRows)}</div>
             </div>
         }
         .into_any();
@@ -2415,8 +2449,8 @@ pub(crate) fn results_view(page: &ResultPage, is_count: bool) -> AnyView {
         return view! {
             <EmptyState
                 icon=ferrohealth_ui::icon::Glyph::SEARCH_X
-                message="No rows"
-                hint="The query ran and matched nothing — widen a condition or clear a filter."
+                message=tr(Msg::NoRows)
+                hint=tr(Msg::QueryRanMatchedNothingWidenCondition)
             />
         }
         .into_any();
@@ -2444,18 +2478,19 @@ pub(crate) fn results_view(page: &ResultPage, is_count: bool) -> AnyView {
         />
     }
     .into_any();
-    let table = table_shell("Query results", &header_refs, body);
+    let table = table_shell(&tr(Msg::QueryResults), &header_refs, body);
 
     // Every non-empty page offers the table | chart pair: the chart derives one
     // series per numeric column, and a page with nothing chartable says so.
     let show_chart = RwSignal::new(false);
     let chart = crate::components::results_chart::results_chart(&page.columns, &page.rows);
+    let views = [("table", tr(Msg::Table)), ("chart", tr(Msg::Chart))];
     view! {
         <div>
             <div class="mb-2">
                 {ferrohealth_ui::widget::segmented::segmented(
-                    "Results view",
-                    &[("table", "Table"), ("chart", "Chart")],
+                    tr(Msg::ResultsView),
+                    &views,
                     Signal::derive(move || if show_chart.get() { "chart" } else { "table" }),
                     move |key| show_chart.set(key == "chart"),
                 )}
@@ -2502,7 +2537,7 @@ pub(crate) fn paging_buttons(offset: RwSignal<u32>, row_count: usize) -> AnyView
                 on:click=move |_| offset.update(|o| *o = o.saturating_sub(PAGE_SIZE))
             >
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_LEFT, "12")}
-                " Previous"
+                {tr(Msg::Previous2)}
             </button>
             <button
                 type="button"
@@ -2510,7 +2545,7 @@ pub(crate) fn paging_buttons(offset: RwSignal<u32>, row_count: usize) -> AnyView
                 disabled=next_disabled
                 on:click=move |_| offset.update(|o| *o = o.saturating_add(PAGE_SIZE))
             >
-                "Next "
+                {tr(Msg::Next2)}
                 {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "12")}
             </button>
         </div>
@@ -2588,37 +2623,54 @@ fn criterion_sentence(criterion: &Criterion, meta: Option<&CatalogNode>) -> Stri
         CriterionKind::CodedIn { codes, .. } => {
             let names = code_labels(codes, meta);
             if names.is_empty() {
-                format!("{label} is a coded value")
+                sentence_words(Msg::IsACodedValue, &[("label", &label)])
             } else {
-                format!("{label} is one of {names}")
+                sentence_words(Msg::IsOneOf, &[("label", &label), ("names", &names)])
             }
         }
         CriterionKind::OrdinalIn { values } => {
             let names = ordinal_labels(values, meta);
             if names.is_empty() {
-                format!("{label} is a graded value")
+                sentence_words(Msg::IsAGradedValue, &[("label", &label)])
             } else {
-                format!("{label} is one of {names}")
+                sentence_words(Msg::IsOneOf2, &[("label", &label), ("names", &names)])
             }
         }
-        CriterionKind::TextEquals { text } => format!("{label} equals \"{text}\""),
-        CriterionKind::TextLike { pattern } => {
-            format!("{label} contains \"{}\"", strip_stars(pattern))
+        CriterionKind::TextEquals { text } => {
+            sentence_words(Msg::Equals, &[("label", &label), ("text", text)])
         }
+        CriterionKind::TextLike { pattern } => sentence_words(
+            Msg::Contains,
+            &[("label", &label), ("value1", strip_stars(pattern))],
+        ),
         CriterionKind::DateTimeRange { from, to } => match (from.is_empty(), to.is_empty()) {
-            (false, false) => format!("{label} from {from} to {to}"),
-            (false, true) => format!("{label} on or after {from}"),
-            (true, false) => format!("{label} on or before {to}"),
-            (true, true) => format!("{label} (any date)"),
+            (false, false) => sentence_words(
+                Msg::FromTo,
+                &[("label", &label), ("from", from), ("to", to)],
+            ),
+            (false, true) => sentence_words(Msg::OnOrAfter, &[("label", &label), ("from", from)]),
+            (true, false) => sentence_words(Msg::OnOrBefore, &[("label", &label), ("to", to)]),
+            (true, true) => sentence_words(Msg::AnyDate, &[("label", &label)]),
         },
-        CriterionKind::BooleanIs { value } => format!("{label} is {value}"),
-        CriterionKind::Exists => format!("{label} is present"),
+        CriterionKind::BooleanIs { value } => {
+            sentence_words(Msg::Is, &[("label", &label), ("value", &value.to_string())])
+        }
+        CriterionKind::Exists => sentence_words(Msg::IsPresent, &[("label", &label)]),
     };
     if criterion.negated {
-        format!("NOT ({body})")
+        sentence_words(Msg::Not, &[("body", &body)])
     } else {
         body
     }
+}
+
+/// One criterion sentence of the catalog, its placeables filled from text.
+fn sentence_words(msg: Msg, args: &[(&'static str, &str)]) -> String {
+    let args: Vec<_> = args
+        .iter()
+        .map(|(name, value)| (*name, (*value).to_owned().into()))
+        .collect();
+    tr_with(msg, &args)
 }
 
 /// Look up the leaf at `path` in the live query and render its sentence.
@@ -2640,9 +2692,22 @@ fn sentence_of(
 /// `"magnitude between 36 and 38.5"` / `"…at least 36"` / `"…at most 38.5"`.
 fn range_phrase(word: &str, min: Option<String>, max: Option<String>) -> String {
     match (min, max) {
-        (Some(a), Some(b)) => format!("{word} between {a} and {b}"),
-        (Some(a), None) => format!("{word} at least {a}"),
-        (None, Some(b)) => format!("{word} at most {b}"),
+        (Some(a), Some(b)) => tr_with(
+            Msg::BetweenAnd,
+            &[
+                ("word", (word).to_string().into()),
+                ("a", a.clone().into()),
+                ("b", b.clone().into()),
+            ],
+        ),
+        (Some(a), None) => tr_with(
+            Msg::AtLeast,
+            &[("word", (word).to_string().into()), ("a", a.clone().into())],
+        ),
+        (None, Some(b)) => tr_with(
+            Msg::AtMost,
+            &[("word", (word).to_string().into()), ("b", b.clone().into())],
+        ),
         (None, None) => format!("{word} (any)"),
     }
 }
@@ -2880,7 +2945,7 @@ fn set_leaf_kind(query: &mut BuilderQuery, path: &[usize], kind: CriterionKind) 
 mod tests {
     #[test]
     fn the_output_choices_name_every_shape_in_order() {
-        let keys: Vec<(&str, &str)> = super::SHAPES
+        let keys: Vec<(&str, super::Msg)> = super::SHAPES
             .iter()
             .map(|(key, words, _)| (*key, *words))
             .collect();

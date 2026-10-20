@@ -58,6 +58,9 @@ use crate::components::field::{BTN_DANGER_SMALL, BTN_PRIMARY, BTN_SECONDARY, INP
 use crate::components::notice::inline_error;
 use crate::components::surface::{CARD_PAD, CARD_TITLE};
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_with;
+use crate::locale::{Msg, tr};
 
 /// One `ITEM_TAG` as the tag routes serve it.
 ///
@@ -128,14 +131,14 @@ pub type TagList = Resource<Result<Option<Vec<ItemTagRow>>, ViewerError>>;
 #[derive(Debug, Clone, Copy)]
 pub struct TagPanelCopy {
     /// The heading over the tag table ("Tags").
-    pub title: &'static str,
+    pub title: Msg,
     /// One paragraph naming the addressed collection and its whole-collection
     /// replace semantics.
-    pub note: &'static str,
+    pub note: Msg,
     /// The empty state's headline.
-    pub empty_message: &'static str,
+    pub empty_message: Msg,
     /// The empty state's hint.
-    pub empty_hint: &'static str,
+    pub empty_hint: Msg,
     /// The set-a-tag section's DOM id — the panel's stable E2E hook.
     pub form_id: &'static str,
 }
@@ -183,8 +186,8 @@ pub fn tag_panel(
                         view! {
                             <EmptyState
                                 icon=ferrohealth_ui::icon::Glyph::TAGS
-                                message=copy.empty_message
-                                hint=copy.empty_hint
+                                message=tr(copy.empty_message)
+                                hint=tr(copy.empty_hint)
                             />
                         }
                             .into_any()
@@ -207,7 +210,7 @@ pub fn tag_panel(
         (!subject.is_empty()).then(|| {
             view! {
                 <p class="mb-3 fui-help">
-                    <span class="font-medium">"Collection: "</span>
+                    <span class="font-medium">{tr(Msg::Collection)}</span>
                     <span class="font-mono wrap-break-word text-ink" data-tag-collection=hook>
                         {subject}
                     </span>
@@ -218,8 +221,8 @@ pub fn tag_panel(
     view! {
         <div class="flex flex-col gap-4">
             <section class=CARD_PAD>
-                <h2 class=CARD_TITLE>{copy.title}</h2>
-                <p class="mb-3 fui-help">{copy.note}</p>
+                <h2 class=CARD_TITLE>{tr(copy.title)}</h2>
+                <p class="mb-3 fui-help">{tr(copy.note)}</p>
                 {collection}
                 {table}
             </section>
@@ -243,11 +246,17 @@ fn tags_table(tags: Vec<ItemTagRow>, actions: TagActions) -> AnyView {
     }
     .into_any();
     let headers: &[&str] = if paths {
-        &["Key", "Value", "Target path", "Target", ""]
+        &[
+            &tr(Msg::Key),
+            &tr(Msg::Value),
+            &tr(Msg::TargetPath),
+            &tr(Msg::Target),
+            "",
+        ]
     } else {
-        &["Key", "Value", "Target", ""]
+        &[&tr(Msg::Key), &tr(Msg::Value), &tr(Msg::Target), ""]
     };
-    table_shell("Item tags", headers, rows)
+    table_shell(&tr(Msg::ItemTags), headers, rows)
 }
 
 /// One tag row plus its delete-by-key action.
@@ -263,21 +272,21 @@ fn tag_row(tag: &ItemTagRow, paths: bool, actions: TagActions) -> AnyView {
             <td class=CELL_MONO data-tag-key=hook.clone()>
                 {shown_key}
             </td>
-            <td class=CELL data-label="Value">
+            <td class=CELL data-label=tr(Msg::Value)>
                 {value}
             </td>
             {paths
                 .then(|| {
                     view! {
-                        <td class=CELL_MONO data-label="Target path">
+                        <td class=CELL_MONO data-label=tr(Msg::TargetPath)>
                             {target_path}
                         </td>
                     }
                 })}
-            <td class=CELL_MONO data-label="Target">
+            <td class=CELL_MONO data-label=tr(Msg::Target)>
                 {target}
             </td>
-            <td class=ferrohealth_ui::table::view::ACTIONS data-label="Actions">
+            <td class=ferrohealth_ui::table::view::ACTIONS data-label=tr(Msg::Actions)>
                 <button
                     type="button"
                     class=BTN_DANGER_SMALL
@@ -286,7 +295,7 @@ fn tag_row(tag: &ItemTagRow, paths: bool, actions: TagActions) -> AnyView {
                     on:click=move |_| actions.delete.run(key.clone())
                 >
                     {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
-                    "Delete"
+                    {tr(Msg::Delete)}
                 </button>
             </td>
         </tr>
@@ -314,9 +323,7 @@ fn set_form(copy: TagPanelCopy, actions: TagActions) -> AnyView {
         };
         let key = field(key_ref);
         if key.is_empty() {
-            validation.set(Some(
-                "A tag needs a key (ITEM_TAG invariant Inv_key_valid).".to_owned(),
-            ));
+            validation.set(Some(tr(Msg::TagNeedsKeyItemTagInvariant)));
             return;
         }
         validation.set(None);
@@ -328,11 +335,11 @@ fn set_form(copy: TagPanelCopy, actions: TagActions) -> AnyView {
     };
     view! {
         <section class=CARD_PAD id=copy.form_id>
-            <h2 class=CARD_TITLE>"Set a tag"</h2>
+            <h2 class=CARD_TITLE>{tr(Msg::SetATag)}</h2>
             <div class="fui-field-flow">
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="tag-key">
-                        "Key"
+                        {tr(Msg::Key)}
                     </label>
                     <input
                         id="tag-key"
@@ -344,7 +351,7 @@ fn set_form(copy: TagPanelCopy, actions: TagActions) -> AnyView {
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="tag-value">
-                        "Value (optional)"
+                        {tr(Msg::ValueOptional)}
                     </label>
                     <input
                         id="tag-value"
@@ -356,7 +363,7 @@ fn set_form(copy: TagPanelCopy, actions: TagActions) -> AnyView {
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class=LABEL r#for="tag-target-path">
-                        "Target path (optional)"
+                        {tr(Msg::TargetPathOptional)}
                     </label>
                     <input
                         id="tag-target-path"
@@ -373,12 +380,10 @@ fn set_form(copy: TagPanelCopy, actions: TagActions) -> AnyView {
                     disabled=Signal::derive(move || actions.busy.get())
                     on:click=on_save
                 >
-                    "Save tag"
+                    {tr(Msg::SaveTag)}
                 </button>
             </div>
-            <p class="mt-2 fui-help">
-                "A tag is identified by its key and target path together, so the same key on two different paths is two tags. Deleting addresses the key alone and removes both."
-            </p>
+            <p class="mt-2 fui-help">{tr(Msg::TagIdentifiedKeyTargetPathTogether)}</p>
             {move || {
                 validation
                     .get()
@@ -414,18 +419,17 @@ pub fn tag_filter_form(
     filters: Signal<(String, String, String)>,
     hidden: &[(&'static str, String)],
 ) -> AnyView {
-    let field =
-        move |id: &'static str, name: &'static str, label: &'static str, current: String| {
-            view! {
-                <div class="flex flex-col gap-1">
-                    <label class=LABEL r#for=id>
-                        {label}
-                    </label>
-                    <input id=id name=name type="text" class=INPUT value=current />
-                </div>
-            }
-            .into_any()
-        };
+    let field = move |id: &'static str, name: &'static str, label: String, current: String| {
+        view! {
+            <div class="flex flex-col gap-1">
+                <label class=LABEL r#for=id>
+                    {label}
+                </label>
+                <input id=id name=name type="text" class=INPUT value=current />
+            </div>
+        }
+        .into_any()
+    };
     let carried: Vec<AnyView> = hidden
         .iter()
         .map(|(name, value)| {
@@ -437,11 +441,11 @@ pub fn tag_filter_form(
         <form method="GET" action=action class="mb-3">
             {carried}
             <div class="fui-field-flow">
-                {field("tag-filter-key", "tag_key", "Key", key)}
-                {field("tag-filter-value", "tag_value", "Value", value)}
-                {field("tag-filter-path", "tag_target_path", "Target path", target_path)}
+                {field("tag-filter-key", "tag_key", tr(Msg::Key), key)}
+                {field("tag-filter-value", "tag_value", tr(Msg::Value), value)}
+                {field("tag-filter-path", "tag_target_path", tr(Msg::TargetPath), target_path)}
                 <button id="tag-filter-apply" type="submit" class=BTN_SECONDARY>
-                    "Filter"
+                    {tr(Msg::Filter)}
                 </button>
             </div>
         </form>
@@ -539,8 +543,12 @@ fn update_tag(key: &str, value: &str, target_path: &str) -> Value {
 /// [`ViewerError::Internal`] when the body is not valid JSON.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn parse_item_tags(body: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let doc: Value = serde_json::from_str(body)
-        .map_err(|e| ViewerError::Internal(format!("ITEM_TAG list JSON: {e}")))?;
+    let doc: Value = serde_json::from_str(body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::ItemTagListJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let items = doc.as_array().cloned().unwrap_or_default();
     Ok(items
         .iter()

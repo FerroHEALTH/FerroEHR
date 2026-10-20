@@ -51,11 +51,16 @@ use crate::components::surface::CARD_PAD;
 use crate::components::toast::toast_success;
 use crate::components::wire::{VersionEntry, VersionedObjectFacts};
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_served;
+use crate::locale::{Msg, tr, tr_with};
 use crate::pages::ehr_detail::status::edit::{StatusEdit, StatusForm, edit_form, seed};
 
 /// The noun phrase every `EHR_STATUS` write-failure toast is built around
 /// ([`crate::feedback::write_failure_copy`]).
-const STATUS_OBJECT: &str = "the EHR's status";
+fn status_object() -> String {
+    tr(Msg::TheEhrSStatus)
+}
 
 /// The viewer's view of an EHR's CURRENT `EHR_STATUS`.
 ///
@@ -152,9 +157,9 @@ pub async fn fetch_ehr_status_version(
     let state: crate::state::AppState = expect_context();
     let version_uid = version_uid.trim();
     if version_uid.is_empty() {
-        return Err(ViewerError::Invalid(
-            "a version uid is required to read a past EHR_STATUS version".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::VersionUidRequiredReadPastEhr,
+        )));
     }
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/ehr_status/{}",
@@ -226,11 +231,9 @@ pub async fn update_ehr_status(
     let state: crate::state::AppState = expect_context();
     let current = current_version_uid.trim();
     if current.is_empty() {
-        return Err(ViewerError::Invalid(
-            "the current EHR_STATUS version uid is required to update it — reload this tab and \
-             retry"
-                .to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::CurrentEhrStatusVersionUidRequired,
+        )));
     }
     let body = edit::apply_status_edits(&base_body, is_queryable, is_modifiable, &other_details)?;
     let if_match = format!("\"{current}\"");
@@ -375,9 +378,7 @@ pub async fn fetch_status_version_at_time(
     let state: crate::state::AppState = expect_context();
     let at_time = crate::format::datetime_local_to_rfc3339(&at_time);
     if at_time.is_empty() {
-        return Err(ViewerError::Invalid(
-            "pick a date and time to travel to".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(Msg::PickDateTimeTravel)));
     }
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/versioned_ehr_status/version?version_at_time={}",
@@ -408,8 +409,12 @@ fn parse_status_state(
     body: &str,
     served_etag: Option<&str>,
 ) -> Result<EhrStatusState, ViewerError> {
-    let doc: Value = serde_json::from_str(body)
-        .map_err(|e| ViewerError::Internal(format!("ehr_status JSON: {e}")))?;
+    let doc: Value = serde_json::from_str(body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::EhrStatusJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let other_details = doc
         .get("other_details")
         .filter(|value| !value.is_null())
@@ -444,10 +449,15 @@ fn parse_versioned_status(
     object_body: &str,
     version_body: &str,
 ) -> Result<VersionedObjectFacts, ViewerError> {
-    let object: Value = serde_json::from_str(object_body)
-        .map_err(|e| ViewerError::Internal(format!("versioned ehr_status JSON: {e}")))?;
-    let version: Value = serde_json::from_str(version_body)
-        .map_err(|e| ViewerError::Internal(format!("version JSON: {e}")))?;
+    let object: Value = serde_json::from_str(object_body).map_err(|e| {
+        ViewerError::Internal(tr_with(
+            Msg::VersionedEhrStatusJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
+    let version: Value = serde_json::from_str(version_body).map_err(|e| {
+        ViewerError::Internal(tr_with(Msg::VersionJson3, &[("e", (e).to_string().into())]))
+    })?;
     Ok(VersionedObjectFacts {
         object_uid: crate::uid::uid_value_of_document(&object),
         owner_id: json_str(&object, &["owner_id", "id", "value"]),
@@ -551,9 +561,9 @@ pub fn status_feed(ehr_id: Signal<String>) -> StatusFeed {
 /// from).
 fn status_toast_detail(uid: &str) -> String {
     if uid.is_empty() {
-        "A new EHR_STATUS version was committed.".to_owned()
+        tr(Msg::NewEhrStatusVersionWasCommitted)
     } else {
-        format!("New version {uid}")
+        tr_with(Msg::NewVersion7, &[("uid", (uid).to_string().into())])
     }
 }
 
@@ -578,15 +588,19 @@ pub(super) fn status_section(
     // ALSO stays inline beside the form.
     Effect::new(move |_| match save.value().get() {
         Some(Ok(uid)) => {
-            toast_success(toaster, "EHR status updated", &status_toast_detail(&uid));
+            toast_success(
+                toaster,
+                &tr(Msg::EhrStatusUpdated),
+                &status_toast_detail(&uid),
+            );
         }
         Some(Err(error)) => {
             let title = if error.status_code() == Some(http::StatusCode::PRECONDITION_FAILED) {
-                "EHR status changed on the server"
+                tr(Msg::EhrStatusChangedServer)
             } else {
-                "Save failed"
+                tr(Msg::SaveFailed)
             };
-            crate::feedback::toast_write_failure(toaster, title, STATUS_OBJECT, &error);
+            crate::feedback::toast_write_failure(toaster, &title, &status_object(), &error);
         }
         None => {}
     });
@@ -643,7 +657,7 @@ fn facts_section(resource: StatusResource, form: StatusForm) -> AnyView {
 #[must_use]
 pub(super) fn subject_label(state: &EhrStatusState) -> String {
     match (state.subject.as_str(), state.subject_namespace.as_str()) {
-        ("", _) => "self — no external subject reference".to_owned(),
+        ("", _) => tr(Msg::SelfNoExternalSubjectReference),
         (id, "") => id.to_owned(),
         (id, namespace) => format!("{id} ({namespace})"),
     }
@@ -655,14 +669,14 @@ pub(super) fn subject_label(state: &EhrStatusState) -> String {
 fn facts_card(state: &EhrStatusState) -> AnyView {
     let queryable = state.is_queryable;
     let version = if state.version_uid.is_empty() {
-        "—".to_owned()
+        tr(Msg::NoValue)
     } else {
         state.version_uid.clone()
     };
     view! {
         <div class=format!("{CARD_PAD} flex flex-col gap-3")>
             <dl class="fui-facts text-sm">
-                <dt>"Version"</dt>
+                <dt>{tr(Msg::Version)}</dt>
                 <dd class="font-mono wrap-break-word text-ink" data-status-fact="version">
                     {version}
                 </dd>
@@ -674,7 +688,7 @@ fn facts_card(state: &EhrStatusState) -> AnyView {
                             role="status"
                             class="rounded-control border border-warn/40 bg-warn-subtle px-3 py-2 text-sm text-warn"
                         >
-                            "This EHR is not queryable — AQL over it returns nothing. Tick “is_queryable” below and save to bring it back into population queries."
+                            {tr(Msg::EhrNotQueryableAqlOverReturns)}
                         </div>
                     }
                 })}
@@ -713,7 +727,12 @@ fn document_section(resource: StatusResource) -> AnyView {
 /// rendered state of that flag, and `data-status-scope` says WHERE it is
 /// rendered — the page header (`header`) and the Status tab (`tab`) show the
 /// same flag from the same read, so a selector has to be able to name one.
-pub(super) fn capability_badge(scope: &'static str, label: &'static str, on: bool) -> AnyView {
+pub(super) fn capability_badge(
+    scope: &'static str,
+    label: &'static str,
+    word: Msg,
+    on: bool,
+) -> AnyView {
     let (icon, class) = if on {
         (ferrohealth_ui::icon::Glyph::CHECK, "bg-ok-subtle text-ok")
     } else {
@@ -733,7 +752,7 @@ pub(super) fn capability_badge(scope: &'static str, label: &'static str, on: boo
             data-status-value=rendered_state
         >
             {ferrohealth_ui::icon::icon(icon, "12")}
-            {label}
+            {tr(word)}
         </span>
     }
     .into_any()
@@ -808,10 +827,7 @@ mod tests {
         assert_eq!(state.version_uid, "");
         assert!(state.is_queryable && state.is_modifiable);
         // An absent external_ref is an ABSENCE, said as one — never a blank.
-        assert_eq!(
-            subject_label(&state),
-            "self — no external subject reference"
-        );
+        assert_eq!(subject_label(&state), "self: no external subject reference");
         // An external_ref with no namespace reads as the bare id.
         let no_namespace = parse_status_state(
             r#"{"_type":"EHR_STATUS","subject":{"_type":"PARTY_SELF",

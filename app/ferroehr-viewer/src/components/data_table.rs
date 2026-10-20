@@ -16,6 +16,7 @@
 //! listing that can show patient data keeps it in the page alone
 //! ([`paging_in_session`]), never in a URL or the history.
 
+use crate::locale::{Msg, tr};
 use ferrohealth_ui::table::model::Noun;
 use ferrohealth_ui::table::model::{DEFAULT_SIZE, Paging, Window, href};
 use ferrohealth_ui::table::view::{
@@ -91,7 +92,7 @@ fn owned_columns(headers: &[&str]) -> Vec<Column> {
 /// skeleton standing in for the rows while the data loads.
 #[must_use]
 pub fn table_skeleton() -> impl IntoView {
-    ferrohealth_ui::view::empty::skeleton(3, "Loading the rows…")
+    ferrohealth_ui::view::empty::skeleton(3, tr(Msg::LoadingTheRows))
 }
 
 /// A paged table's position: where it is kept, and the page and size it names.
@@ -177,15 +178,17 @@ pub fn row_total(len: usize) -> u32 {
 #[must_use]
 pub fn table_footer(
     base: &str,
-    label: &'static str,
+    label: String,
     noun: Noun,
     paging: TablePaging,
     total: Signal<u32>,
 ) -> AnyView {
     let base = base.to_owned();
+    let hook = label.clone();
     view! {
-        <div data-table-footer=label>
+        <div data-table-footer=hook>
             {move || {
+                let label = label.clone();
                 let window = paging.window(total.get());
                 match paging.source {
                     Source::Url(query) => {
@@ -221,7 +224,7 @@ pub fn paged_table<R, V>(
     rows: Vec<R>,
     paging: TablePaging,
     base: &str,
-    label: &'static str,
+    label: String,
     noun: Noun,
     headers: &[&str],
     key: fn(&R) -> String,
@@ -235,9 +238,10 @@ where
     let total = Signal::derive(move || count);
     let body = view! { <For each=move || page_rows(&rows, paging.window(total.get())) key=key children=row /> }
     .into_any();
+    let shell = table_shell(&label, headers, body);
     let footer = table_footer(base, label, noun, paging, total);
     view! {
-        {table_shell(label, headers, body)}
+        {shell}
         {footer}
     }
     .into_any()

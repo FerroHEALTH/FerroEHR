@@ -15,6 +15,7 @@ use leptos::prelude::*;
 
 use crate::activity::ActivityPoint;
 use crate::components::empty_state::EmptyState;
+use crate::locale::{Msg, tr_with};
 
 /// The sentence that summarises `points`: how many `noun` over how many days,
 /// and the busiest day.
@@ -25,9 +26,14 @@ fn summary(points: &[ActivityPoint], noun: &str) -> String {
         .max_by_key(|point| point.count)
         .map(|point| point.day.as_str())
         .unwrap_or_default();
-    format!(
-        "{total} {noun} over {} days, most on {busiest}.",
-        points.len()
+    tr_with(
+        Msg::OverDaysMostOn,
+        &[
+            ("total", (total).to_string().into()),
+            ("noun", (noun).to_string().into()),
+            ("points", (points.len()).to_string().into()),
+            ("busiest", (busiest).to_string().into()),
+        ],
     )
 }
 
@@ -41,8 +47,8 @@ fn summary(points: &[ActivityPoint], noun: &str) -> String {
 pub fn activity_chart(
     points: &[ActivityPoint],
     series_name: &'static str,
-    empty_message: &'static str,
-    empty_hint: &'static str,
+    empty_message: String,
+    empty_hint: String,
 ) -> AnyView {
     if points.is_empty() {
         return view! {
@@ -66,7 +72,10 @@ pub fn activity_chart(
     );
     let chart = ActivityChart {
         name: series_name,
-        label: format!("{series_name} per day"),
+        label: tr_with(
+            Msg::PerDay,
+            &[("series_name", (series_name).to_string().into())],
+        ),
         summary: summary(points, &series_name.to_lowercase()),
         points: (0_u32..)
             .zip(points)

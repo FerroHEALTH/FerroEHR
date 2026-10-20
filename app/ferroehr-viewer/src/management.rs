@@ -44,15 +44,14 @@ use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::{tr_served, tr_served_with};
 
 /// One headline metric: its name, its tile label, and an optional
 /// `(label, value)` sample filter.
 #[cfg(not(target_arch = "wasm32"))]
-type HeadlineMetric = (
-    &'static str,
-    &'static str,
-    Option<(&'static str, &'static str)>,
-);
+type HeadlineMetric = (&'static str, Msg, Option<(&'static str, &'static str)>);
 
 /// The headline metric tiles, in display order.
 ///
@@ -65,16 +64,16 @@ type HeadlineMetric = (
 // is pinned by the CDR's `exporter_renders_the_viewer_metric_names` test.
 #[cfg(not(target_arch = "wasm32"))]
 const HEADLINE_METRICS: [HeadlineMetric; 4] = [
-    ("http_server_active_requests", "In-flight requests", None),
+    ("http_server_active_requests", Msg::InFlightRequests, None),
     (
         "compositions_committed_total",
-        "Compositions committed",
+        Msg::CompositionsCommitted,
         None,
     ),
-    ("aql_queries_total", "AQL queries", None),
+    ("aql_queries_total", Msg::AqlQueries, None),
     (
         "db_pool_connections",
-        "DB connections in use",
+        Msg::DbConnectionsInUse,
         Some(("state", "in_use")),
     ),
 ];
@@ -283,8 +282,12 @@ pub async fn fetch_readiness() -> Result<ReadinessView, ViewerError> {
     } else {
         crate::cdr::CdrClient::expect_success(response)?.body
     };
-    let value = serde_json::from_str::<serde_json::Value>(&body)
-        .map_err(|e| ViewerError::Internal(format!("readiness JSON: {e}")))?;
+    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
+        ViewerError::Internal(tr_served_with(
+            Msg::ReadinessJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     Ok(readiness_view(&value, is_detailed))
 }
 
@@ -345,7 +348,7 @@ impl InfoSection {
     #[must_use]
     pub fn title(&self) -> String {
         if self.key == "spec" {
-            return "openEHR specification pins".to_owned();
+            return tr(Msg::OpenehrSpecificationPins);
         }
         let spaced = self.key.replace('_', " ");
         let mut chars = spaced.chars();
@@ -398,7 +401,7 @@ fn leaf_rows(object: &serde_json::Map<String, serde_json::Value>) -> Vec<(String
 fn leaf_text(value: &serde_json::Value) -> String {
     match value {
         serde_json::Value::String(s) => s.clone(),
-        serde_json::Value::Null => "—".to_owned(),
+        serde_json::Value::Null => tr(Msg::NoValue),
         other => other.to_string(),
     }
 }
@@ -419,8 +422,12 @@ pub async fn fetch_build_info() -> Result<Option<BuildInfoView>, ViewerError> {
     let Some(body) = management_get("info").await? else {
         return Ok(None);
     };
-    let value = serde_json::from_str::<serde_json::Value>(&body)
-        .map_err(|e| ViewerError::Internal(format!("management info JSON: {e}")))?;
+    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
+        ViewerError::Internal(tr_served_with(
+            Msg::ManagementInfoJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     Ok(Some(build_info_view(&value)))
 }
 
@@ -549,8 +556,12 @@ pub async fn fetch_metric_names() -> Result<Option<Vec<String>>, ViewerError> {
     let Some(body) = management_get("metrics").await? else {
         return Ok(None);
     };
-    let value = serde_json::from_str::<serde_json::Value>(&body)
-        .map_err(|e| ViewerError::Internal(format!("metric list JSON: {e}")))?;
+    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
+        ViewerError::Internal(tr_served_with(
+            Msg::MetricListJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     let mut names: Vec<String> = value
         .get("names")
         .and_then(serde_json::Value::as_array)
@@ -581,14 +592,18 @@ pub async fn fetch_metric_detail(
     name: String,
 ) -> Result<Option<MetricDetailView>, ViewerError> {
     if name.trim().is_empty() {
-        return Err(ViewerError::Invalid("no metric name given".to_owned()));
+        return Err(ViewerError::Invalid(tr_served(Msg::NoMetricNameGiven)));
     }
     let path = format!("metrics/{}", urlencoding::encode(&name));
     let Some(body) = management_get(&path).await? else {
         return Ok(None);
     };
-    let value = serde_json::from_str::<serde_json::Value>(&body)
-        .map_err(|e| ViewerError::Internal(format!("metric detail JSON: {e}")))?;
+    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
+        ViewerError::Internal(tr_served_with(
+            Msg::MetricDetailJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     Ok(Some(metric_detail_view(&value)))
 }
 
@@ -612,13 +627,13 @@ pub async fn fetch_headline_metrics() -> Result<Option<Vec<MetricTile>>, ViewerE
                 .await?
                 .as_ref()
                 .and_then(|detail| metric_total(detail, filter))
-                .map_or_else(|| "—".to_owned(), format_metric)
+                .map_or_else(|| tr(Msg::NoValue), format_metric)
         } else {
-            "—".to_owned()
+            tr(Msg::NoValue)
         };
         tiles.push(MetricTile {
             name: name.to_owned(),
-            label: label.to_owned(),
+            label: tr_served(label),
             value,
         });
     }
@@ -664,8 +679,12 @@ pub async fn fetch_loggers() -> Result<Option<LoggerView>, ViewerError> {
     let Some(body) = management_get("loggers").await? else {
         return Ok(None);
     };
-    let value = serde_json::from_str::<serde_json::Value>(&body)
-        .map_err(|e| ViewerError::Internal(format!("loggers JSON: {e}")))?;
+    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
+        ViewerError::Internal(tr_served_with(
+            Msg::LoggersJson,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     Ok(Some(logger_view(&value)))
 }
 
@@ -691,9 +710,9 @@ pub async fn set_log_filter(
     let session = crate::session::require_session().await?;
     let filter = filter.trim().to_owned();
     if filter.is_empty() {
-        return Err(ViewerError::Invalid(
-            "a log filter needs at least one directive, e.g. `ferroehr=debug`".to_owned(),
-        ));
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::LogFilterNeedsLeastOneDirective,
+        )));
     }
     let state: crate::state::AppState = expect_context();
     let url = state.cdr.management_url("loggers");
@@ -710,8 +729,12 @@ pub async fn set_log_filter(
         )
         .await?;
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
-    let value = serde_json::from_str::<serde_json::Value>(&body)
-        .map_err(|e| ViewerError::Internal(format!("loggers JSON: {e}")))?;
+    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
+        ViewerError::Internal(tr_served_with(
+            Msg::LoggersJson2,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     Ok(logger_view(&value))
 }
 
@@ -726,8 +749,12 @@ pub async fn reset_log_filter() -> Result<LoggerView, ViewerError> {
     let url = state.cdr.management_url("loggers");
     let response = state.cdr.delete(&session.credential, &url, &[]).await?;
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
-    let value = serde_json::from_str::<serde_json::Value>(&body)
-        .map_err(|e| ViewerError::Internal(format!("loggers JSON: {e}")))?;
+    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
+        ViewerError::Internal(tr_served_with(
+            Msg::LoggersJson3,
+            &[("e", (e).to_string().into())],
+        ))
+    })?;
     Ok(logger_view(&value))
 }
 
@@ -760,6 +787,7 @@ mod tests {
         logger_view, metric_detail_view, metric_total, readiness_view, renders_management_ops,
     };
     use crate::error::ViewerError;
+    use crate::locale::{Msg, tr};
 
     #[test]
     fn only_a_404_means_the_surface_is_absent() {
@@ -969,9 +997,9 @@ mod tests {
         assert_eq!(
             section("support").rows,
             vec![
-                ("release_date".to_owned(), "—".to_owned()),
+                ("release_date".to_owned(), tr(Msg::NoValue)),
                 ("status".to_owned(), "unreleased".to_owned()),
-                ("support_ends".to_owned(), "—".to_owned()),
+                ("support_ends".to_owned(), tr(Msg::NoValue)),
             ]
         );
         assert_eq!(
