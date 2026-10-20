@@ -145,7 +145,24 @@ impl FerroEhrService {
         // The IR is a pure function of the query text — parameter values,
         // paging and scope all bind downstream — so a cached plan serves every
         // caller of the same text correctly.
-        let ir = self.plan_query(aql, &params).await?;
+        let ir = match self.plan_query(aql, &params).await? {
+            Planned::Single(ir) => ir,
+            Planned::Joined(plan) => {
+                record_phase("plan", plan_start);
+                let exec_start = Instant::now();
+                let outcome = self
+                    .execute_joined(&super::join::JoinRequest {
+                        aql,
+                        name,
+                        request,
+                        plan: &plan,
+                        params: &params,
+                    })
+                    .await?;
+                record_phase("execute", exec_start);
+                return Ok(outcome);
+            }
+        };
         record_phase("plan", plan_start);
 
         // A demographic query reads no EHR, so an EHR scope cannot apply to it;
@@ -252,19 +269,21 @@ impl FerroEhrService {
     /// A plan whose `matches` operands were resolved through the terminology
     /// service is not cached, the resolution being free to differ on a later
     /// execution (QUERY master03 §TERMINOLOGY), so such a query always re-parses
-    /// and re-expands.
+    /// and re-expands. A query that joins a demographic root to its EHR is cut
+    /// into its two halves ([`aql::join::split`]) and not cached either: each
+    /// half is lowered when it runs.
     ///
     /// # Errors
     ///
     /// [`Failure`] on: unparseable AQL (precondition), a terminology
     /// expansion / lowering / parameter-binding [`AqlError`] (mapped by
     /// [`map_plan_error`], labelled by [`outcome_of`]).
-    async fn plan_query(&self, aql: &str, params: &Params) -> Result<Arc<QueryIr>, Failure> {
+    async fn plan_query(&self, aql: &str, params: &Params) -> Result<Planned, Failure> {
         // Cache hit: the plan is request-independent, but the caller's
         // bindings still must satisfy it.
         if let Some(ir) = self.plan_cache.get(aql).await {
             aql::check_params(&ir, params).map_err(Failure::plan)?;
-            return Ok(ir);
+            return Ok(Planned::Single(ir));
         }
         // Miss: full parse → terminology expansion → lowering.
         let mut ast = parse_str(aql).map_err(|e| {
@@ -278,6 +297,9 @@ impl FerroEhrService {
         let expanded = aql::terminology::expand_matches(&mut ast, self)
             .await
             .map_err(Failure::plan)?;
+        if let Some(plan) = aql::join::split(&ast).map_err(Failure::plan)? {
+            return Ok(Planned::Joined(Box::new(plan)));
+        }
         let ir = Arc::new(aql::lower_query(&ast, self.spec_profile).map_err(Failure::plan)?);
         // Cache only terminology-free plans (a resolved expansion may change).
         if !expanded {
@@ -286,7 +308,7 @@ impl FerroEhrService {
                 .await;
         }
         aql::check_params(&ir, params).map_err(Failure::plan)?;
-        Ok(ir)
+        Ok(Planned::Single(ir))
     }
 
     /// Resolve the request's `ehr_ids` (string form) into the scoped `Uuid`
@@ -345,13 +367,22 @@ impl FerroEhrService {
     }
 }
 
+/// A planned query: one statement, or the two halves of a query that joins a
+/// demographic root to its EHR.
+enum Planned {
+    /// One single-domain statement.
+    Single(Arc<QueryIr>),
+    /// The party and clinical halves of a joined query.
+    Joined(Box<aql::join::JoinPlan>),
+}
+
 /// What a statement touched, for the access record's category classification:
 /// the identifiers of the served versions, or the query's positive constraints
 /// when the answer carries none; and the identifiers per served EHR.
 ///
 /// No openEHR spec governs access-log classification — our own design/extension
 /// (EHDS Annex II 3.2(c), `docs/law/eu/ehds/text.html`).
-fn accessed_content(
+pub(super) fn accessed_content(
     result: &aql::exec::QueryResult,
 ) -> (
     AccessedContent,
@@ -387,7 +418,7 @@ fn accessed_content(
 /// can fail from any point (parse, terminology expansion, lowering, parameter
 /// binding, paging, scoping, execution, scope collection) and the caller
 /// counts + returns uniformly, exactly once.
-struct Failure {
+pub(super) struct Failure {
     outcome: &'static str,
     error: SmError,
 }
@@ -395,7 +426,7 @@ struct Failure {
 impl Failure {
     /// A failure with the fixed `analysis_error` label (client preconditions
     /// and pre-execution service faults — the historical bookkeeping).
-    fn analysis(error: SmError) -> Self {
+    pub(super) fn analysis(error: SmError) -> Self {
         Self {
             outcome: "analysis_error",
             error,
@@ -405,7 +436,7 @@ impl Failure {
     /// A planning-stage [`AqlError`] (terminology expansion, lowering,
     /// parameter binding) — labelled by [`outcome_of`], mapped by
     /// [`map_plan_error`].
-    fn plan(e: AqlError) -> Self {
+    pub(super) fn plan(e: AqlError) -> Self {
         Self {
             outcome: outcome_of(&e),
             error: map_plan_error(e),
@@ -414,7 +445,7 @@ impl Failure {
 
     /// An execution-stage [`AqlError`] — labelled by [`outcome_of`], mapped
     /// by [`map_exec_error`].
-    fn exec(e: AqlError) -> Self {
+    pub(super) fn exec(e: AqlError) -> Self {
         Self {
             outcome: outcome_of(&e),
             error: map_exec_error(e),
@@ -425,7 +456,7 @@ impl Failure {
     /// is prefixed with [`QUERY_TIMEOUT_TAG`] so the REST adapter renders it
     /// as `408 Request Timeout` (`Requests_and_responses.md` §HTTP status
     /// codes). The tag is stripped at the wire, leaving the clean detail.
-    fn timeout(budget: Duration) -> Self {
+    pub(super) fn timeout(budget: Duration) -> Self {
         Self {
             outcome: "exec_error",
             error: SmError::exception(format!(
@@ -446,7 +477,7 @@ impl Failure {
 /// `Request.md` §Common Headers and Query Parameters) — the two layers
 /// compose; the only prohibited combination is `fetch` with the deprecated
 /// AQL `TOP` modifier, which `Request.md` names explicitly.
-fn compose_paging(
+pub(super) fn compose_paging(
     aql_limit: Option<i64>,
     aql_offset: Option<i64>,
     limit_is_top: bool,
@@ -504,7 +535,10 @@ fn compose_paging(
 /// (query `Request.md` §Common Headers and Query Parameters), and a refused
 /// page is the released `400` branch ("invalid input … at least one of the
 /// parameters has an invalid syntax", `400_Query`).
-fn apply_result_ceiling(limit: Option<i64>, ceiling: Option<i64>) -> Result<Option<i64>, Failure> {
+pub(super) fn apply_result_ceiling(
+    limit: Option<i64>,
+    ceiling: Option<i64>,
+) -> Result<Option<i64>, Failure> {
     match (limit, ceiling) {
         (None, Some(ceiling)) => Ok(Some(ceiling)),
         (Some(asked), Some(ceiling)) if asked > ceiling => {

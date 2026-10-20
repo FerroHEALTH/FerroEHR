@@ -36,7 +36,7 @@ use crate::versioning::Kind;
 /// §FROM names only clinical classes), so the served set is our own design:
 /// the three roots the extension's consumers issue. `GROUP`, `AGENT` and
 /// `PARTY_RELATIONSHIP` answer a typed refusal.
-const SERVED_PARTY_ROOTS: [&str; 3] = ["PERSON", "ORGANISATION", "ROLE"];
+pub(crate) const SERVED_PARTY_ROOTS: [&str; 3] = ["PERSON", "ORGANISATION", "ROLE"];
 
 /// Lowers one parsed [`SelectQuery`] into a [`QueryIr`] (without parameter-
 /// presence validation, which [`super::plan`] performs).
@@ -614,7 +614,9 @@ impl Planner {
 
 /// LIMIT / TOP resolution: `TOP n` maps to `LIMIT n`; combining the two is
 /// rejected (QUERY §Query structure/LIMIT).
-fn lower_limit(query: &SelectQuery) -> Result<(Option<i64>, Option<i64>, bool), AqlError> {
+pub(crate) fn lower_limit(
+    query: &SelectQuery,
+) -> Result<(Option<i64>, Option<i64>, bool), AqlError> {
     let (limit, offset, limit_is_top) = match (&query.select.top, &query.limit) {
         (Some(_), Some(_)) => return Err(AqlFeatureError::TopWithLimit.into()),
         (Some(top), None) => {

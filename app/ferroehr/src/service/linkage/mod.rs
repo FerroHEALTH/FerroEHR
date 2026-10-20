@@ -578,7 +578,7 @@ impl FerroEhrService {
 /// holds; a record built down here gets them from the two task-locals the
 /// adapter published for the request's scope
 /// ([`crate::service::committer`], [`crate::system_log::access_context`]).
-fn stamp_requester(event: &mut AuditEvent) {
+pub(crate) fn stamp_requester(event: &mut AuditEvent) {
     if let Some(committer) = crate::service::committer::current_committer() {
         event.user_id = committer.subject;
     }

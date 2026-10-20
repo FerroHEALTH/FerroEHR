@@ -13,6 +13,9 @@
 //!   execution orchestration (parse → plan → execute → assemble), paging
 //!   composition, `ehr_ids` resolution, and the per-query execution budget.
 //!   The AQL *engine* it drives is [`crate::aql`].
+//! - `join` — a query that joins a demographic root to its EHR, run as one
+//!   statement per pool and joined on the party-to-EHR map (no openEHR spec
+//!   governs it — our own design).
 //! - `result_set` — `RESULT_SET` / `RESULT_SET_COLUMN` / `RESULT_SET_ROW`
 //!   assembly (`result_set.adoc`) + parameter substitution, isolated so the
 //!   SM-vs-ITS-REST shape divergences (the `RESULT_SET.id` MUST)
@@ -24,6 +27,7 @@
 
 pub mod config;
 mod execute;
+mod join;
 pub mod plan_cache;
 pub(crate) mod result_set;
 

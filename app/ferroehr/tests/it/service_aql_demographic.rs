@@ -431,3 +431,113 @@ async fn unserved_demographic_constructs_are_refused() {
     .await;
     assert!(rows.is_empty(), "no clinical row for {jane}, got {rows:?}");
 }
+
+/// A party, the EHR it is the subject of, and one composition per name in it.
+async fn linked(svc: &FerroEhrService, name: &str, id: &str, compositions: &[&str]) -> String {
+    let uid = create(svc, PartyKind::Person, &person(name, id, "urn:bsn")).await;
+    let party = ferroehr::ids::VoId(
+        uid.split("::")
+            .next()
+            .and_then(|s| s.parse().ok())
+            .expect("party id"),
+    );
+    let ehr = svc.create_ehr(None).await.expect("create_ehr");
+    svc.link(party, ehr)
+        .await
+        .expect("link the party to its EHR");
+    for composition in compositions {
+        svc.create_composition(
+            ehr,
+            crate::fixtures::uv(&crate::fixtures::composition(composition), "249", None),
+        )
+        .await
+        .unwrap_or_else(|e| panic!("create_composition ({composition}): {e:?}"));
+    }
+    uid
+}
+
+/// `PERSON p CONTAINS EHR e CONTAINS COMPOSITION c` joins each party to the
+/// compositions of the EHR it is the subject of, across the three pools, with
+/// the WHERE conjuncts of each side, ORDER BY over keys of both sides, and
+/// REST paging over the joined rows. A deleted party and an EHR whose subject
+/// has no party answer nothing.
+#[tokio::test]
+async fn a_party_joins_to_the_content_of_its_ehr() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = new_service(&db);
+
+    let ada = linked(&svc, "Ada", "P-1", &["visit b", "visit a"]).await;
+    let bram = linked(&svc, "Bram", "P-2", &["visit c"]).await;
+    let gone = linked(&svc, "Gone", "P-3", &["visit d"]).await;
+    svc.party_delete(PartyKind::Person, gone.clone(), Some(gone), None)
+        .await
+        .expect("delete");
+    // An EHR with content and no party.
+    let orphan = svc.create_ehr(None).await.expect("create_ehr");
+    svc.create_composition(
+        orphan,
+        crate::fixtures::uv(&crate::fixtures::composition("visit e"), "249", None),
+    )
+    .await
+    .expect("orphan composition");
+
+    let aql = "SELECT p/uid/value, c/name/value \
+               FROM PERSON p CONTAINS EHR e CONTAINS COMPOSITION c \
+               ORDER BY p/details[at0001]/items[at0002]/value/id DESC, c/name/value";
+    let rows = run(&svc, aql, AqlQueryRequest::default()).await;
+    assert_eq!(
+        rows,
+        vec![
+            json!([bram, "visit c"]),
+            json!([ada, "visit a"]),
+            json!([ada, "visit b"]),
+        ],
+        "joined, ordered by a party key then a clinical key"
+    );
+
+    let page = run(
+        &svc,
+        aql,
+        AqlQueryRequest {
+            offset: Some(1),
+            fetch: Some(1),
+            ..AqlQueryRequest::default()
+        },
+    )
+    .await;
+    assert_eq!(
+        page,
+        vec![json!([ada, "visit a"])],
+        "the page is cut from the join"
+    );
+
+    let rows = run(
+        &svc,
+        "SELECT c/name/value FROM PERSON p CONTAINS EHR e CONTAINS COMPOSITION c \
+         WHERE p/details[at0001]/items[at0002]/value/id = $identifier \
+         AND c/name/value = 'visit b'",
+        params(&[("identifier", "P-1")]),
+    )
+    .await;
+    assert_eq!(rows, vec![json!(["visit b"])], "each side's WHERE applies");
+
+    for (aql, names) in [
+        (
+            "SELECT COUNT(*) FROM PERSON p CONTAINS EHR e CONTAINS COMPOSITION c",
+            "aggregate",
+        ),
+        (
+            "SELECT DISTINCT c/name/value FROM PERSON p CONTAINS EHR e CONTAINS COMPOSITION c",
+            "DISTINCT",
+        ),
+        (
+            "SELECT c/name/value FROM PERSON p CONTAINS EHR e CONTAINS COMPOSITION c \
+             WHERE p/name/value = c/name/value",
+            "both",
+        ),
+    ] {
+        let err = refuse(&svc, aql, AqlQueryRequest::default()).await;
+        assert_eq!(err.status, CallStatusType::PreconditionViolation, "{aql}");
+        assert!(err.message.contains(names), "{aql}: {}", err.message);
+    }
+}
