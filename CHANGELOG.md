@@ -30,6 +30,14 @@ workflow refuses a tag that has no matching section here.
   names `EHR` or clinical content, and an `ehr_id` scope each answer `400`
   naming the construct.
 
+- **`openehr-sdt` validates a party against its template** (#3832).
+  `rm_instance::validate_party` runs the RM-invariant and terminology passes
+  with the template's party class (`PERSON`, `ORGANISATION`, `GROUP`, `AGENT`
+  or `ROLE`) as the root type, then the archetype-conformance pass over the
+  template, so a party missing a mandatory element is refused at that
+  element's path. A template rooted at another class is refused at `/`. The
+  nine `openehr-*` crates move to `0.0.90`.
+
 ### Changed
 
 - **The viewer takes FerroUI 0.2.0 and reads every word it draws from its
@@ -40,6 +48,12 @@ workflow refuses a tag that has no matching section here.
   English remains the only locale.
 
 ### Fixed
+
+- **A TDD keeps two same-archetype siblings told apart by name apart**
+  (#3833). Converting a TDD of a template whose events (or other compacted
+  nodes) share an archetype node id and differ by name, such as a `Baseline`
+  and a `Follow up` event, now builds two nodes, each with the content the TDD
+  spells out under its own element, where it used to merge them into one.
 
 - **No viewer string carries an em dash** (#3860). The query builder's
   template choice reads "Any template", an absent value reads "(no value)",

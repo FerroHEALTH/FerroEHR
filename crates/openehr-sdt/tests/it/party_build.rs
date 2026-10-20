@@ -405,3 +405,71 @@ fn a_party_build_stamps_the_chosen_rm_version() {
     let party = party_from_flat(&party_document(&wt), &wt, &options).expect("PERSON build");
     assert_eq!(party["archetype_details"]["rm_version"], "1.1.0");
 }
+
+// ── the template-driven party validator (#3832) ──────────────────────────────
+
+/// The `path: message` lines of a validation report.
+fn report(messages: &[openehr_sdt::rm_instance::ValidationMessage]) -> Vec<String> {
+    messages
+        .iter()
+        .map(|m| format!("{}: {}", m.path, m.message))
+        .collect()
+}
+
+/// A party `build_party` produced passes the validator for each party root,
+/// and the same party missing its template's mandatory identity element is
+/// refused, at the element's own path.
+#[test]
+fn the_party_validator_accepts_a_built_party_and_refuses_a_broken_one() {
+    use openehr_sdt::rm_instance::{ValidationKind, validate_party};
+    for class in ["PERSON", "ORGANISATION"] {
+        let wt = party_template(class);
+        let party = build(&party_document(&wt), &wt).expect("the party builds");
+        let messages = validate_party(&party, &wt);
+        assert!(messages.is_empty(), "{class}: {:#?}", report(&messages));
+
+        let mut broken = party.clone();
+        let items = broken
+            .pointer_mut("/identities/0/details/items")
+            .and_then(Value::as_array_mut)
+            .expect("the identity's items");
+        items.clear();
+        let messages = validate_party(&broken, &wt);
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.kind == ValidationKind::Required && m.path.contains("items[at0005]")),
+            "{class}: the missing Name element is refused: {:#?}",
+            report(&messages)
+        );
+    }
+}
+
+/// The validator runs the RM pass with the party class as the root's type, so
+/// a body of another class is refused at the root.
+#[test]
+fn the_party_validator_refuses_a_body_of_another_class() {
+    use openehr_sdt::rm_instance::validate_party;
+    let wt = party_template("PERSON");
+    let mut party = build(&party_document(&wt), &wt).expect("the party builds");
+    party["_type"] = json!("ORGANISATION");
+    let messages = validate_party(&party, &wt);
+    assert!(
+        messages.iter().any(|m| m.path == "/"),
+        "an ORGANISATION body against a PERSON template is refused: {:#?}",
+        report(&messages)
+    );
+}
+
+/// A COMPOSITION template describes no party.
+#[test]
+fn the_party_validator_refuses_a_composition_template() {
+    use openehr_sdt::rm_instance::{ValidationKind, validate_party};
+    let wt = minimal_composition_template();
+    let messages = validate_party(&json!({"_type": "PERSON"}), &wt);
+    assert_eq!(messages.len(), 1, "{:#?}", report(&messages));
+    assert_eq!(
+        messages.first().map(|m| m.kind),
+        Some(ValidationKind::WrongType)
+    );
+}
