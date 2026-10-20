@@ -34,6 +34,13 @@ workflow refuses a tag that has no matching section here.
   subtype. The RM and AOM2 XML readers name their schemas the same way. The
   refusal itself is unchanged.
 
+### Security
+
+- **`rustls-webpki` 0.103.16 and `webpki-roots` / `webpki-root-certs`
+  1.0.10** (RUSTSEC-2026-0381, RUSTSEC-2026-0382, RUSTSEC-2026-0383). The
+  outbound TLS client no longer accepts certificate paths through the
+  distrusted emSign intermediates.
+
 ## [5.2.0] - 2026-10-20
 
 ### Added
