@@ -17,17 +17,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::secret::SecretUrl;
 
-/// The syslog transport to the Audit Record Repository (ARR).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum Transport {
-    /// RFC 5426 UDP (the reference Elastic/Logstash stack default, port 514).
-    #[default]
-    Udp,
-    /// RFC 5425 TLS (the IHE-recommended secure transport).
-    Tls,
-}
-
 /// Behaviour when an audit record cannot be enqueued/delivered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
@@ -142,8 +131,8 @@ impl StoreConfig {
 }
 
 /// The classic ATNA feed (`[audit.syslog]`): the DICOM PS3.15 §A.5 XML
-/// record over syslog (IHE ITI TF-2 ITI-20; RFC 5424 message, RFC 5426 UDP
-/// or RFC 5425 TLS transport).
+/// record over syslog (IHE ITI TF-2 ITI-20; the RFC 5424 message over RFC 5425
+/// TLS, sent through `ihe-atna`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct SyslogConfig {
@@ -152,10 +141,9 @@ pub struct SyslogConfig {
     pub enabled: bool,
     /// ARR host (`FERROEHR__AUDIT__SYSLOG__HOST`).
     pub host: String,
-    /// ARR port (`FERROEHR__AUDIT__SYSLOG__PORT`).
+    /// ARR port (`FERROEHR__AUDIT__SYSLOG__PORT`), the RFC 5425 §4.1 port
+    /// 6514 by default.
     pub port: u16,
-    /// Transport (`FERROEHR__AUDIT__SYSLOG__TRANSPORT`): `udp` | `tls`.
-    pub transport: Transport,
     /// PEM file with the ARR CA to trust for TLS
     /// (`FERROEHR__AUDIT__SYSLOG__TLS_CA_FILE`).
     pub tls_ca_file: Option<String>,
@@ -172,8 +160,7 @@ impl Default for SyslogConfig {
         Self {
             enabled: false,
             host: "localhost".to_owned(),
-            port: 514,
-            transport: Transport::default(),
+            port: ihe_atna::atna::syslog::TLS_PORT,
             tls_ca_file: None,
             tls_identity_cert_file: None,
             tls_identity_key_file: None,
@@ -585,8 +572,9 @@ mod tests {
         assert_eq!(c.store.retention_days, 0, "keep forever by default");
         assert!(!c.syslog.enabled, "forwarding is opt-in");
         assert!(!c.fhir_feed.enabled, "forwarding is opt-in");
-        assert_eq!(c.syslog.port, 514);
-        assert_eq!(c.syslog.transport, Transport::Udp);
+        // RFC 5425 §4.1: syslog over TLS listens on 6514, the one transport
+        // ITI TF-2 §3.20.4.1.2.1.1 recommends and `ihe-atna` sends.
+        assert_eq!(c.syslog.port, 6514);
         assert_eq!(c.value_if_missing, "UNKNOWN");
         assert!(c.suppress_login_events);
         assert!(c.resolve_subject);

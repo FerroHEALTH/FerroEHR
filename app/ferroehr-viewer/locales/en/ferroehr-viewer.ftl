@@ -1017,7 +1017,6 @@ cdr-no-longer-accepts-session-so = The CDR no longer accepts this session, so { 
 sandbox-deployment-deployment-has-not-made = Sandbox deployment: this deployment has not made the production separations and must not hold real patient data.
 no-subject-pseudonym-namespace-declared-so = no subject pseudonym namespace is declared, so an EHR subject may carry a real identifier
 access-record-audit-queue-cannot-take = an access record the audit queue cannot take is dropped and the request still succeeds
-access-log-shipped-over-udp-syslog = the access log is shipped over UDP syslog, unencrypted and without delivery confirmation
 ehr-without-own-access-settings-admits = an EHR without its own access settings admits every caller the role checks let through
 role-checks-off-so-every-signed = role checks are off, so every signed-in caller may use every enabled surface, the admin and management endpoints included
 changed-cdr-since-screen-loaded-reload = { $object } changed in the CDR since this screen loaded ({ $message }). Reload the latest version, then reapply your change.

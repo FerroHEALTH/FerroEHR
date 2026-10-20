@@ -36,7 +36,7 @@ use ferroehr::service::status::SmError;
 use ferroehr::support::{SupportPeriod, today_utc};
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::config::AuditPosture;
-use ferroehr::system_log::sender::{AuditHandle, AuditSender, SubjectResolver};
+use ferroehr::system_log::sender::{AuditHandle, AuditSender, ResolvedSubject, SubjectResolver};
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr::telemetry::health::{HealthIndicator, HealthRegistry};
 use ferroehr::usage_report::config::Switch;
@@ -1390,20 +1390,26 @@ pub fn authz_resolvers(pool: PgPool, service: Arc<FerroEhrService>) -> AuthzReso
     }
 }
 
-/// A background-only indexed lookup of `ehr.subject_id` for the Patient-Number
-/// participant object.
+/// A background-only indexed lookup of `ehr.subject_id` and
+/// `ehr.subject_namespace` for the Patient-Number participant object and the
+/// access record's patient.
 fn subject_resolver(pool: PgPool) -> SubjectResolver {
     Arc::new(move |ehr_id: String| {
         let pool = pool.clone();
         Box::pin(async move {
             let id = Uuid::parse_str(&ehr_id).ok()?;
-            sqlx::query_scalar::<_, Option<String>>("SELECT subject_id FROM ehr WHERE id = $1")
-                .bind(id)
-                .fetch_optional(&pool)
-                .await
-                .ok()
-                .flatten()
-                .flatten()
+            let (subject, namespace) = sqlx::query_as::<_, (Option<String>, Option<String>)>(
+                "SELECT subject_id, subject_namespace FROM ehr WHERE id = $1",
+            )
+            .bind(id)
+            .fetch_optional(&pool)
+            .await
+            .ok()
+            .flatten()?;
+            Some(ResolvedSubject {
+                id: subject?,
+                namespace,
+            })
         })
     })
 }

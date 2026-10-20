@@ -107,6 +107,8 @@ utoipa-swagger-ui = { workspace = true }
 [dev-dependencies]
 openehr-lang = { path = "../../crates/openehr-lang" }
 testkit = { path = "../../tools/testkit" }
+# The audit tests read the access record `ehds-logging` writes by its names.
+ehds-logging = { workspace = true, features = ["balp"] }
 sqlx.workspace = true
 # The at-time version tests take their probe instant from the database rather
 # than a wall clock (#3119); sqlx has no jiff feature, so the timestamptz comes

@@ -7,8 +7,8 @@
 //! `oneshot`, over the **real** `FerroEhrService` (the scripted `Mock`
 //! and its in-memory `AuditSink` are gone). Auditing now runs the real ATNA path: an
 //! [`AuditSender`] ships a DICOM `AuditMessage` (rendered to XML, framed as an
-//! RFC 5424 syslog record) over UDP to a listener the test binds. We assert on
-//! the datagram the listener receives — the action code, outcome indicator,
+//! RFC 5424 syslog record) over TLS to a listener the test binds. We assert on
+//! the frame the listener receives — the action code, outcome indicator,
 //! user, object class and object id the HTTP middleware produced.
 //!
 //! Where the old Mock scripted a canned success (a `501` stub or a fixed uid),
@@ -29,7 +29,6 @@
     clippy::unwrap_used,
     clippy::expect_used,
     clippy::panic,
-    clippy::indexing_slicing,
     clippy::missing_assert_message,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
@@ -44,14 +43,14 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::server::ServerConfig;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig, Transport};
+use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, SubjectResolver, start};
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode};
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
-use tokio::net::UdpSocket;
+use testkit::syslog_tls::SyslogTlsListener;
 use tower::ServiceExt;
 
 use crate::common;
@@ -128,11 +127,11 @@ fn auth_off_config() -> AppConfig {
 
 // ── ATNA capture ───────────────────────────────────────────────────────────────
 
-/// Bind a UDP listener and an [`AuditSender`] (fail-open, login suppressed by
+/// Bind a TLS syslog listener and an [`AuditSender`] (fail-open, login suppressed by
 /// default) shipping DICOM records to it.
-async fn audit_capture(suppress_login: bool) -> (UdpSocket, AuditSender) {
-    let socket = UdpSocket::bind("127.0.0.1:0").await.expect("bind udp");
-    let port = socket.local_addr().expect("addr").port();
+async fn audit_capture(suppress_login: bool) -> (SyslogTlsListener, AuditSender) {
+    let socket = SyslogTlsListener::bind().await.expect("syslog listener");
+    let port = socket.port;
     let cfg = AuditConfig {
         enabled: true,
         store: StoreConfig {
@@ -144,9 +143,9 @@ async fn audit_capture(suppress_login: bool) -> (UdpSocket, AuditSender) {
         },
         syslog: SyslogConfig {
             enabled: true,
-            transport: Transport::Udp,
             host: "127.0.0.1".to_owned(),
             port,
+            tls_ca_file: Some(socket.ca_file.display().to_string()),
             ..SyslogConfig::default()
         },
         suppress_login_events: suppress_login,
@@ -162,12 +161,9 @@ async fn audit_capture(suppress_login: bool) -> (UdpSocket, AuditSender) {
 /// resolver + a 1-slot queue), so once the queue fills every further emit is
 /// `Rejected` → the middleware returns `503`.
 async fn audit_capture_fail_closed() -> AuditSender {
-    // A free port for the sender's connected UDP transport. The drain is stalled
-    // (see below) so it never actually sends — no listener is required.
-    let port = {
-        let s = UdpSocket::bind("127.0.0.1:0").await.expect("bind udp");
-        s.local_addr().expect("addr").port()
-    };
+    // A port nothing listens on: the drain is stalled (see below) so it never
+    // sends, and the sink connects only on its first send.
+    let port = 1;
     let cfg = AuditConfig {
         enabled: true,
         store: StoreConfig {
@@ -179,7 +175,6 @@ async fn audit_capture_fail_closed() -> AuditSender {
         },
         syslog: SyslogConfig {
             enabled: true,
-            transport: Transport::Udp,
             host: "127.0.0.1".to_owned(),
             port,
             ..SyslogConfig::default()
@@ -204,22 +199,16 @@ async fn audit_capture_fail_closed() -> AuditSender {
     sender
 }
 
-async fn recv_one(socket: &UdpSocket) -> Option<String> {
-    let mut buf = vec![0u8; 65_536];
-    match tokio::time::timeout(Duration::from_secs(3), socket.recv_from(&mut buf)).await {
-        Ok(Ok((n, _))) => Some(String::from_utf8_lossy(&buf[..n]).into_owned()),
-        _ => None,
-    }
+async fn recv_one(socket: &mut SyslogTlsListener) -> Option<String> {
+    let frame = socket.recv(Duration::from_secs(3)).await?;
+    Some(String::from_utf8_lossy(&frame).into_owned())
 }
 
-/// Drain every DICOM datagram that arrives within the window.
-async fn drain(socket: &UdpSocket) -> Vec<String> {
+/// Drain every DICOM frame that arrives within the window.
+async fn drain(socket: &mut SyslogTlsListener) -> Vec<String> {
     let mut out = Vec::new();
-    let mut buf = vec![0u8; 65_536];
-    while let Ok(Ok((n, _))) =
-        tokio::time::timeout(Duration::from_millis(700), socket.recv_from(&mut buf)).await
-    {
-        out.push(String::from_utf8_lossy(&buf[..n]).into_owned());
+    while let Some(frame) = socket.recv(Duration::from_millis(800)).await {
+        out.push(String::from_utf8_lossy(&frame).into_owned());
     }
     out
 }
@@ -243,11 +232,11 @@ async fn audit_app(sender: AuditSender) -> (testkit::TestDb, Router) {
 
 /// An audited app over a DB pre-seeded with an EHR (`EHR`) and one committed
 /// composition (returns the composition version uid). Seeding goes through a
-/// **separate, unaudited** service on the same pool, so it emits no datagrams.
+/// **separate, unaudited** service on the same pool, so it emits no frames.
 async fn audit_app_with_composition(sender: AuditSender) -> (testkit::TestDb, Router, String) {
     let (pg, pool) = common::migrated_pool().await;
 
-    // Seed via an unaudited service (no audit datagrams).
+    // Seed via an unaudited service (no audit frames).
     let seed_svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
     ));
@@ -307,11 +296,11 @@ fn req(method: &str, path: &str, auth: bool) -> Request<Body> {
 
 #[tokio::test]
 async fn ehr_create_emits_create_record() {
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     let resp = app.oneshot(req("POST", "/ehr", true)).await.expect("resp");
     assert_eq!(resp.status(), StatusCode::CREATED);
-    let xml = recv_one(&socket).await.expect("audit record");
+    let xml = recv_one(&mut socket).await.expect("audit record");
     assert!(xml.contains(r#"EventActionCode="C""#), "create: {xml}");
     assert!(
         xml.contains(r#"EventOutcomeIndicator="0""#),
@@ -330,7 +319,7 @@ async fn ehr_create_emits_create_record() {
 
 #[tokio::test]
 async fn composition_get_emits_read_record() {
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let vo = uid.split("::").next().unwrap().to_owned();
     let resp = app
@@ -338,7 +327,7 @@ async fn composition_get_emits_read_record() {
         .await
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::OK);
-    let xml = recv_one(&socket).await.expect("audit record");
+    let xml = recv_one(&mut socket).await.expect("audit record");
     assert!(xml.contains(r#"EventActionCode="R""#), "read: {xml}");
     assert!(
         xml.contains(r#"EventOutcomeIndicator="0""#),
@@ -353,7 +342,7 @@ async fn composition_get_emits_read_record() {
 
 #[tokio::test]
 async fn composition_update_emits_update_record() {
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let vo = uid.split("::").next().unwrap().to_owned();
     let request = Request::builder()
@@ -372,7 +361,7 @@ async fn composition_update_emits_update_record() {
     // "If no response body is returned, the service SHOULD use `204 No
     // Content`").
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-    let xml = recv_one(&socket).await.expect("audit record");
+    let xml = recv_one(&mut socket).await.expect("audit record");
     assert!(xml.contains(r#"EventActionCode="U""#), "update: {xml}");
     assert!(
         xml.contains(r#"EventOutcomeIndicator="0""#),
@@ -382,7 +371,7 @@ async fn composition_update_emits_update_record() {
 
 #[tokio::test]
 async fn composition_delete_emits_delete_record() {
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let resp = app
         .oneshot(req(
@@ -393,7 +382,7 @@ async fn composition_delete_emits_delete_record() {
         .await
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-    let xml = recv_one(&socket).await.expect("audit record");
+    let xml = recv_one(&mut socket).await.expect("audit record");
     assert!(xml.contains(r#"EventActionCode="D""#), "delete: {xml}");
     assert!(
         xml.contains(r#"EventOutcomeIndicator="0""#),
@@ -410,7 +399,7 @@ async fn composition_tags_update_emits_update_record() {
     // spec-correct. Emitting an IHE ATNA record instead is OUR OWN DESIGN (no
     // openEHR spec governs this): a tag carries clinical meaning and a mutation
     // with no trail would be a medico-legal blind spot.
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let vo = uid.split("::").next().unwrap().to_owned();
     let request = Request::builder()
@@ -425,7 +414,7 @@ async fn composition_tags_update_emits_update_record() {
         .expect("request");
     let resp = app.oneshot(request).await.expect("resp");
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-    let xml = recv_one(&socket).await.expect("audit record");
+    let xml = recv_one(&mut socket).await.expect("audit record");
     assert!(xml.contains(r#"EventActionCode="U""#), "update: {xml}");
     assert!(
         xml.contains(r#"EventOutcomeIndicator="0""#),
@@ -436,7 +425,7 @@ async fn composition_tags_update_emits_update_record() {
 
 #[tokio::test]
 async fn composition_tags_delete_emits_delete_record() {
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let vo = uid.split("::").next().unwrap().to_owned();
     // Seed one tag through the audited app, then drain that record.
@@ -451,7 +440,9 @@ async fn composition_tags_delete_emits_delete_record() {
         app.clone().oneshot(put).await.expect("resp").status(),
         StatusCode::NO_CONTENT
     );
-    let _seeded = recv_one(&socket).await.expect("the seeding audit record");
+    let _seeded = recv_one(&mut socket)
+        .await
+        .expect("the seeding audit record");
 
     let resp = app
         .oneshot(req(
@@ -462,7 +453,7 @@ async fn composition_tags_delete_emits_delete_record() {
         .await
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-    let xml = recv_one(&socket).await.expect("audit record");
+    let xml = recv_one(&mut socket).await.expect("audit record");
     assert!(xml.contains(r#"EventActionCode="D""#), "delete: {xml}");
     assert!(
         xml.contains(r#"EventOutcomeIndicator="0""#),
@@ -472,7 +463,7 @@ async fn composition_tags_delete_emits_delete_record() {
 
 #[tokio::test]
 async fn aql_execute_emits_execute_record() {
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     // A well-formed ad-hoc query reaches the (implemented) QueryService and
     // succeeds on an empty DB → outcome success (was a stub 501/serious-failure).
@@ -485,7 +476,7 @@ async fn aql_execute_emits_execute_record() {
         .await
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::OK);
-    let xml = recv_one(&socket).await.expect("audit record");
+    let xml = recv_one(&mut socket).await.expect("audit record");
     assert!(xml.contains(r#"EventActionCode="E""#), "execute: {xml}");
     // Query execution uses the dedicated DICOM EventID 110112 "Query"
     // (DICOM PS3.15 §A.5.1).
@@ -501,13 +492,13 @@ async fn aql_execute_emits_execute_record() {
 
 #[tokio::test]
 async fn unauthenticated_request_emits_401_record() {
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     let resp = app.oneshot(req("POST", "/ehr", false)).await.expect("resp");
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     // An authentication event: minor failure, no principal — the DICOM renderer
     // substitutes the configured value_if_missing ("UNKNOWN") for the empty user.
-    let xml = recv_one(&socket).await.expect("audit record");
+    let xml = recv_one(&mut socket).await.expect("audit record");
     // A rejected access attempt is a failed user-authentication event: the
     // dedicated DICOM EventID 110114 "User Authentication" with EventTypeCode
     // 110122 "Login" (DICOM PS3.15 §A.5.1).
@@ -525,7 +516,7 @@ async fn unauthenticated_request_emits_401_record() {
 
 #[tokio::test]
 async fn template_get_emits_template_record() {
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     // The template is not uploaded → 404, but the op is still audited as the
     // Template class (R); the template id is derived from the path.
@@ -538,7 +529,7 @@ async fn template_get_emits_template_record() {
         .await
         .expect("resp");
     let _status = resp.status();
-    let xml = recv_one(&socket).await.expect("audit record");
+    let xml = recv_one(&mut socket).await.expect("audit record");
     assert!(xml.contains(r#"EventActionCode="R""#), "read: {xml}");
     assert!(
         xml.contains(r#"originalText="template""#),
@@ -552,7 +543,7 @@ async fn template_get_emits_template_record() {
 
 #[tokio::test]
 async fn demographic_get_emits_demographic_record() {
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     // Demographic is implemented; the person does not exist on an empty DB → 404
     // → minor-failure (was a stub 501/serious-failure); R, party uid from path.
@@ -561,7 +552,7 @@ async fn demographic_get_emits_demographic_record() {
         .await
         .expect("resp");
     let _status = resp.status();
-    let xml = recv_one(&socket).await.expect("audit record");
+    let xml = recv_one(&mut socket).await.expect("audit record");
     assert!(xml.contains(r#"EventActionCode="R""#), "read: {xml}");
     assert!(
         xml.contains(r#"originalText="demographic""#),
@@ -577,13 +568,13 @@ async fn demographic_get_emits_demographic_record() {
 async fn login_event_is_suppressed_by_default() {
     // suppress_login=true: an audited operation emits the operation record and no
     // login/application-activity record.
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     let _response = app
         .oneshot(req("GET", "/definition/template/adl1.4", true))
         .await
         .expect("resp");
-    let records = drain(&socket).await;
+    let records = drain(&mut socket).await;
     assert!(
         records
             .iter()
@@ -602,13 +593,13 @@ async fn login_event_is_suppressed_by_default() {
 async fn login_event_emitted_when_not_suppressed() {
     // Not suppressed: both the operation record and a login (User
     // Authentication) record are emitted for the fresh Basic authentication.
-    let (socket, sender) = audit_capture(false).await;
+    let (mut socket, sender) = audit_capture(false).await;
     let (_pg, app) = audit_app(sender).await;
     let _response = app
         .oneshot(req("GET", "/definition/template/adl1.4", true))
         .await
         .expect("resp");
-    let records = drain(&socket).await;
+    let records = drain(&mut socket).await;
     assert!(
         records
             .iter()
@@ -699,7 +690,7 @@ async fn drive_until_503(app: &Router) -> StatusCode {
 /// were actually returned, so the trail names a disclosure that happened.
 #[tokio::test]
 async fn aql_execute_emits_one_access_record_per_served_ehr() {
-    let (socket, sender) = audit_capture(true).await;
+    let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app, _uid) = audit_app_with_composition(sender).await;
 
     let resp = app
@@ -712,7 +703,7 @@ async fn aql_execute_emits_one_access_record_per_served_ehr() {
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let records = drain(&socket).await;
+    let records = drain(&mut socket).await;
     assert!(
         records
             .iter()
@@ -843,7 +834,9 @@ async fn composition_get_records_the_origins_of_the_served_data() {
     assert!(
         entities
             .iter()
-            .any(|e| e["what"]["identifier"]["value"] == "lab.example"),
+            .filter(|e| e["name"] == "origin")
+            .flat_map(|e| e["detail"].as_array().into_iter().flatten())
+            .any(|d| d["type"] == "system-id" && d["valueString"] == "lab.example"),
         "the FHIR rendering names the origin: {}",
         row.2
     );

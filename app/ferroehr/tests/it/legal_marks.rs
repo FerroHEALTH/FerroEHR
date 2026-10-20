@@ -491,12 +491,21 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
     assert!(bad_hold.is_err(), "the CHECK refuses a groundless hold");
 }
 
+/// The stored token of the priority category `code`, as `ehds-logging` writes
+/// it (HL7 Europe's `EEHRxFDocumentPriorityCategoryCS`).
+fn token(code: &str) -> String {
+    format!(
+        "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs|{code}"
+    )
+}
+
 /// Declare three COMPOSITION periods in DE: ten years for test results, thirty
-/// for imaging (the longest), and five keyed on no category.
+/// for imaging (the longest), and five keyed on no category, each priority
+/// category named by its bare code.
 async fn declare_category_periods(svc: &FerroEhrService) {
     for (category, period) in [
-        (Some("test-results"), "10 years"),
-        (Some("imaging"), "30 years"),
+        (Some("Laboratory-Reports"), "10 years"),
+        (Some("Medical-Imaging"), "30 years"),
         (None, "5 years"),
     ] {
         svc.put_retention_policy(
@@ -542,7 +551,7 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
     let map: ferroehr::system_log::categories::CategoryMapConfig = toml::from_str(
         r#"
         [archetypes]
-        "openEHR-EHR-COMPOSITION.encounter.v1" = ["test-results"]
+        "openEHR-EHR-COMPOSITION.encounter.v1" = ["Laboratory-Reports"]
         "#,
     )
     .expect("the map parses");
@@ -579,9 +588,9 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
     .await
     .expect("anchor");
     let due = svc.retention_due(100).await.expect("due list");
-    let row = |category: Option<&str>| {
+    let row = |category: Option<String>| {
         due.iter()
-            .find(|row| row.category.as_deref() == category)
+            .find(|row| row.category == category)
             .expect("a due row for every category in force")
     };
     assert_eq!(
@@ -590,12 +599,12 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
         "the period keyed on no category lists every composition"
     );
     assert_eq!(
-        row(Some("test-results")).objects_due,
+        row(Some(token("Laboratory-Reports"))).objects_due,
         1,
         "the mapped composition is listed under its category"
     );
     assert_eq!(
-        row(Some("imaging")).objects_due,
+        row(Some(token("Medical-Imaging"))).objects_due,
         1,
         "the unclassified composition takes the longest period for its kind"
     );
@@ -605,8 +614,8 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
     let map: ferroehr::system_log::categories::CategoryMapConfig = toml::from_str(
         r#"
         [archetypes]
-        "openEHR-EHR-COMPOSITION.encounter.v1" = ["test-results"]
-        "openEHR-EHR-COMPOSITION.report.v1" = ["test-results"]
+        "openEHR-EHR-COMPOSITION.encounter.v1" = ["Laboratory-Reports"]
+        "openEHR-EHR-COMPOSITION.report.v1" = ["Laboratory-Reports"]
         "#,
     )
     .expect("the map parses");
@@ -616,12 +625,12 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
     let due = svc.retention_due(100).await.expect("due list");
     assert!(
         due.iter()
-            .all(|row| row.category.as_deref() != Some("imaging")),
+            .all(|row| row.category != Some(token("Medical-Imaging"))),
         "a category row with no object is left out: {due:#?}"
     );
     assert_eq!(
         due.iter()
-            .find(|row| row.category.as_deref() == Some("test-results"))
+            .find(|row| row.category == Some(token("Laboratory-Reports")))
             .expect("the test-results row")
             .objects_due,
         2

@@ -31,12 +31,14 @@
 use jiff::Timestamp;
 
 use ferroehr::config::auth::AssuranceLevel;
+use ferroehr::system_log::categories::{AccessedContent, Classifier, ContentIds};
 use ferroehr::system_log::event::{
     AccessDomain, ActingMode, ActorAuthentication, AuditEvent, EventActionCode, EventOutcome,
     EventType, ObjectClass,
 };
 use ferroehr::system_log::fhir;
-use ferroehr::system_log::message::{AuditContext, AuditMessage};
+use ferroehr::system_log::message::{self, AuditContext};
+use secrecy::ExposeSecret as _;
 
 fn ctx() -> AuditContext {
     AuditContext {
@@ -44,10 +46,13 @@ fn ctx() -> AuditContext {
         enterprise_site_id: "site-1".to_owned(),
         server_ip: "10.42.23.77".to_owned(),
         value_if_missing: "UNKNOWN".to_owned(),
+        ..AuditContext::default()
     }
 }
 
-/// One clinical read by a named person, with everything the model can carry.
+/// One clinical read by a named person, with everything the model can carry,
+/// classified (unclassified under the empty map) so it is an EHDS access
+/// record.
 fn access_event() -> AuditEvent {
     let mut e = AuditEvent::new(
         EventActionCode::Read,
@@ -67,15 +72,41 @@ fn access_event() -> AuditEvent {
     e.legal_basis = Some("gdpr-9-2-h".to_owned());
     e.result_count = Some(1);
     e.timestamp = "2026-07-10T08:30:00Z".parse().expect("a fixed instant");
+    e.issuer = Some("https://idp.example".to_owned());
+    e.client_id = Some("ward-app".to_owned());
+    e.category = Some(Classifier::default().classify(
+        &AccessedContent::Objects(vec![ContentIds {
+            template_id: Some("Vitals".to_owned()),
+            archetype_id: None,
+            resource_kind: None,
+        }]),
+        false,
+    ));
     e
+}
+
+/// The `ihe-otherId` of `agent`: the professional identifier BALP 1.1.4
+/// §3:5.7.5.4 maps the IUA `national_provider_identifier` to.
+fn other_id(agent: &serde_json::Value) -> Option<&str> {
+    agent["extension"]
+        .as_array()?
+        .iter()
+        .find(|x| x["url"] == "https://profiles.ihe.net/ITI/BALP/StructureDefinition/ihe-otherId")?
+        .get("valueIdentifier")?
+        .get("value")?
+        .as_str()
 }
 
 /// The event as its two wire renderings: DICOM PS3.15 XML and the FHIR R4
 /// `AuditEvent` the BALP feed carries.
 fn renderings(event: &AuditEvent) -> (String, String) {
-    let xml = AuditMessage::build(event, &ctx(), Some("patient-42"))
-        .to_xml()
-        .expect("the DICOM rendering builds");
+    let xml = String::from_utf8(
+        message::to_xml(event, &ctx(), Some("patient-42"))
+            .expect("the DICOM rendering builds")
+            .expose_secret()
+            .to_vec(),
+    )
+    .expect("the DICOM rendering is UTF-8");
     let json = serde_json::to_string(
         &fhir::to_fhir(event, &ctx(), Some("patient-42")).expect("the FHIR rendering builds"),
     )
@@ -112,12 +143,15 @@ fn element_b_the_person_who_accessed_is_recorded_and_rendered() {
 }
 
 /// (b) for a client application acting for a named professional: the
-/// professional is the requesting participant in both renderings, and the
-/// application stands beside it as a non-requesting one.
+/// professional is the requesting DICOM participant, and the application
+/// stands beside it as a non-requesting one. In FHIR the token's subject is
+/// the requesting `agent:user` with the professional's identifier as its
+/// `ihe-otherId`, and the application its own agent (BALP 1.1.4 §3:5.7.5.4).
 #[test]
 fn element_b_the_professional_behind_a_client_is_recorded_and_rendered() {
     let mut event = access_event();
     "scheduler-app".clone_into(&mut event.user_id);
+    event.client_id = Some("scheduler-app".to_owned());
     event.actor = ActorAuthentication {
         mode: Some(ActingMode::Client),
         assurance_level: Some(AssuranceLevel::Substantial),
@@ -142,22 +176,26 @@ fn element_b_the_professional_behind_a_client_is_recorded_and_rendered() {
     };
     let person = agents
         .iter()
-        .find(|a| who(a).as_deref() == Some("dr.jansen"))
-        .expect("the professional is a FHIR agent");
+        .find(|a| other_id(a) == Some("dr.jansen"))
+        .expect("the professional is named on a FHIR agent");
     assert_eq!(person.get("requestor"), Some(&serde_json::json!(true)));
     let client = agents
         .iter()
-        .find(|a| who(a).as_deref() == Some("scheduler-app"))
+        .find(|a| {
+            a.get("requestor") == Some(&serde_json::json!(false))
+                && who(a).as_deref() == Some("scheduler-app")
+        })
         .expect("the client application is a FHIR agent");
     assert_eq!(client.get("requestor"), Some(&serde_json::json!(false)));
 }
 
-/// Annex II 3.1: the authentication assurance level is recorded on the event,
-/// and neither rendering carries it, because neither format defines an
-/// element for it (DICOM PS3.15 §A.5.1 `ActiveParticipant`; FHIR R4
-/// `AuditEvent.agent.policy` is the authorizing policy, not a level).
+/// Annex II 3.1: the authentication assurance level is recorded on the event.
+/// The DICOM rendering carries none (PS3.15 §A.5.1 `ActiveParticipant` has no
+/// element for it); the FHIR rendering carries the level as the BALP
+/// `ihe-assuranceLevel` extension (BALP 1.1.4 §3:5.7.5.4, Regulation (EU) No
+/// 910/2014 Art. 8(2)), never the raw claim value.
 #[test]
-fn the_assurance_level_is_recorded_and_reaches_neither_rendering() {
+fn the_assurance_level_is_recorded_and_reaches_the_fhir_rendering_as_a_level() {
     let mut event = access_event();
     event.actor = ActorAuthentication {
         mode: Some(ActingMode::Person),
@@ -169,6 +207,10 @@ fn the_assurance_level_is_recorded_and_reaches_neither_rendering() {
     let (xml, json) = renderings(&event);
     assert!(!xml.contains("assurance-high"), "{xml}");
     assert!(!json.contains("assurance-high"), "{json}");
+    assert!(
+        json.contains("ihe-assuranceLevel") && json.contains(r#""code":"high""#),
+        "{json}"
+    );
 }
 
 /// (d) "the time and date of access".
@@ -228,23 +270,22 @@ fn element_c_the_resource_class_and_domain_stand_in_for_the_category() {
 #[test]
 fn element_c_the_priority_category_is_recorded_and_rendered_in_fhir_only() {
     let map: ferroehr::system_log::categories::CategoryMapConfig =
-        toml::from_str("[templates]\n\"Laboratory Report\" = [\"test-results\"]\n")
+        toml::from_str("[templates]\n\"Laboratory Report\" = [\"Laboratory-Reports\"]\n")
             .expect("the map parses");
     let map = map.compile().expect("the map compiles");
     let mut event = access_event();
     event.category = Some(map.classify(
-        &ferroehr::system_log::categories::AccessedContent::Objects(vec![
-            ferroehr::system_log::categories::ContentIds {
-                template_id: Some("Laboratory Report".to_owned()),
-                archetype_id: None,
-                resource_kind: None,
-            },
-        ]),
+        &AccessedContent::Objects(vec![ContentIds {
+            template_id: Some("Laboratory Report".to_owned()),
+            archetype_id: None,
+            resource_kind: None,
+        }]),
+        false,
     ));
     event.category_map_digest = Some(map.digest());
     let (xml, json) = renderings(&event);
     assert!(
-        json.contains("categories of the data accessed") && json.contains("test-results"),
+        json.contains("ehds-categories") && json.contains("|Laboratory-Reports"),
         "the FHIR rendering carries the category: {json}"
     );
     assert!(
@@ -252,7 +293,7 @@ fn element_c_the_priority_category_is_recorded_and_rendered_in_fhir_only() {
         "the FHIR rendering names the map that classified the record: {json}"
     );
     assert!(
-        !xml.contains("test-results") && !xml.contains("Laboratory Report"),
+        !xml.contains("Laboratory-Reports") && !xml.contains("Laboratory Report"),
         "PS3.15 §A.5 has no element for the category: {xml}"
     );
 }
@@ -262,9 +303,11 @@ fn element_c_the_priority_category_is_recorded_and_rendered_in_fhir_only() {
 ///
 /// Read beside (b), this element asks for the ORGANISATION on whose behalf the
 /// access happened, distinct from the natural person (b) names. FHIR R4 takes
-/// it as a second `agent` whose `who` references an `Organization` and which
+/// it as a further `agent` whose `who` is a logical reference to an
+/// `Organization` (`Reference.type` and `Reference.identifier`) and which
 /// declares no `type` — `agent.type` is 0..1, so no participation code has to
-/// be invented (<https://hl7.org/fhir/R4/auditevent.html>).
+/// be invented (<https://hl7.org/fhir/R4/auditevent.html>,
+/// <https://hl7.org/fhir/R4/references.html>).
 ///
 /// The DICOM rendering carries nothing, and that half is pinned as the format
 /// limit it is: PS3.15 §A.5 gives `ActiveParticipant` no organisation
@@ -279,7 +322,10 @@ fn element_a_the_accessing_organisation_is_recorded_and_rendered_in_fhir() {
     let agents = fhir_agents(&event);
     let organisation = agents
         .iter()
-        .find(|agent| agent["who"]["reference"] == "Organization/zh-noordwest")
+        .find(|agent| {
+            agent["who"]["type"] == "Organization"
+                && agent["who"]["identifier"]["value"] == "zh-noordwest"
+        })
         .expect("the organisation reaches the FHIR rendering as an Organization agent");
     assert!(
         organisation.get("type").is_none(),
@@ -305,9 +351,10 @@ fn element_a_the_accessing_organisation_is_recorded_and_rendered_in_fhir() {
 /// content it served came from, read from the `FEEDER_AUDIT` provenance
 /// openEHR stamps on content (RM common `master04` §Feeder Audit) as the
 /// commit path derived it onto `version.origins`, with the true distinct
-/// count beside the capped set. The FHIR rendering carries one named entity
-/// per origin; the DICOM Audit Message of PS3.15 §A.5 defines no element for
-/// it, and a value appearing there would be invented.
+/// count beside the capped set. The FHIR rendering carries one `origin`
+/// entity per origin, naming its system; the DICOM Audit Message of PS3.15
+/// §A.5 defines no element for it, and a value appearing there would be
+/// invented.
 #[test]
 fn element_e_the_origin_of_the_data_is_recorded_and_rendered_in_fhir() {
     let event = access_event();
@@ -318,12 +365,10 @@ fn element_e_the_origin_of_the_data_is_recorded_and_rendered_in_fhir() {
     let entities = rendered["entity"].as_array().expect("entities");
     let origins: Vec<&str> = entities
         .iter()
-        .filter(|e| {
-            e["name"]
-                .as_str()
-                .is_some_and(|n| n.contains("origin of the served data"))
-        })
-        .filter_map(|e| e["what"]["identifier"]["value"].as_str())
+        .filter(|e| e["name"] == "origin")
+        .flat_map(|e| e["detail"].as_array().expect("origin details"))
+        .filter(|detail| detail["type"] == "system-id")
+        .filter_map(|detail| detail["valueString"].as_str())
         .collect();
     assert_eq!(origins, ["lab.example", "pacs.example"], "{rendered}");
     let (xml, _) = renderings(&event);
@@ -410,9 +455,9 @@ fn every_resource_class_answers_which_domain_it_touched() {
 /// NEN 7513 lists the role or authority under which the person accessed the
 /// record among what a logged event has to contain. The record carries the
 /// caller's roles and both renderings show them: FHIR `agent.role` on the
-/// requestor ("the security role that the user was acting under") and a
-/// `RoleIDCode` per role on the DICOM source participant (PS3.15 §A.5.1 makes
-/// the element 0..*).
+/// requestor ("the security role that the user was acting under"), beside
+/// the acting mode `ehds-logging` writes there, and a `RoleIDCode` per role on
+/// the DICOM source participant (PS3.15 §A.5.1 makes the element 0..*).
 #[test]
 fn nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats() {
     let event = access_event();
@@ -426,9 +471,9 @@ fn nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats() {
         .as_array()
         .expect("agent.role is a list")
         .iter()
-        .filter_map(|r| r["text"].as_str())
+        .filter_map(|r| r["coding"][0]["code"].as_str())
         .collect();
-    assert_eq!(roles, ["USER", "clinician"], "{requestor}");
+    assert_eq!(roles, ["person", "USER", "clinician"], "{requestor}");
 
     let (xml, _json) = renderings(&event);
     assert!(
@@ -436,39 +481,66 @@ fn nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats() {
         "the role must reach the DICOM source participant as a RoleIDCode: {xml}"
     );
 
-    // No principal, no roles: the requestor carries no role element rather
-    // than an empty one.
+    // No roles: the requestor carries the acting mode alone, never an
+    // invented role.
     let mut anonymous = access_event();
     anonymous.roles.clear();
     let agents = fhir_agents(&anonymous);
-    assert!(
-        agents[0]["role"].as_array().is_none_or(Vec::is_empty),
-        "an unknown role set renders as absent: {}",
-        agents[0]
+    let requestor = agents
+        .iter()
+        .find(|a| a["requestor"] == true)
+        .expect("the requesting person is an agent");
+    assert_eq!(
+        requestor["role"],
+        serde_json::json!([{"coding": [{"code": "person"}]}]),
+        "an empty role set adds no role: {requestor}"
     );
 }
 
 /// EHDS Art. 11(5): an emergency access "shall be logged in a clear and
 /// understandable format and shall be easily accessible for the data subject"
 /// (`docs/law/eu/ehds/text.html Art. 11(5)`). The FHIR rendering carries the
-/// mark as `purposeOfEvent` with a fixed coding and plain-words text; the DICOM
-/// schema has no purpose element, so the mark is absent there and that absence
-/// is pinned.
+/// mark as the `ehds-logging` entity that states it in plain words, with the
+/// purpose that marked it; the DICOM schema has no purpose element, so the
+/// mark is absent there and that absence is pinned.
 #[test]
 fn art_11_5_the_emergency_mark_reaches_the_fhir_rendering_only() {
     let mut event = access_event();
     event.purpose = Some("ETREAT".to_owned());
     event.emergency_access = true;
+    let etreat = ehds_logging::record::Purpose {
+        system: None,
+        code: "ETREAT".to_owned(),
+    };
+    let marking = AuditContext {
+        recording: fhir::Recording {
+            emergency: ehds_logging::emergency::EmergencyPurposes::declare(&[etreat])
+                .expect("one emergency purpose"),
+            ..fhir::Recording::default()
+        },
+        ..ctx()
+    };
 
     let rendered =
-        fhir::to_fhir(&event, &ctx(), Some("patient-42")).expect("the FHIR rendering builds");
-    let concept = &rendered["purposeOfEvent"][0];
-    assert_eq!(concept["coding"][0]["code"], "ETREAT", "{rendered}");
+        fhir::to_fhir(&event, &marking, Some("patient-42")).expect("the FHIR rendering builds");
+    let mark = rendered["entity"]
+        .as_array()
+        .expect("entities")
+        .iter()
+        .find(|entity| entity["name"] == ehds_logging::balp::EMERGENCY_ENTITY)
+        .expect("the emergency mark is an entity");
     assert_eq!(
-        concept["coding"][0]["system"],
-        "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+        mark["description"],
+        ehds_logging::balp::EMERGENCY_DESCRIPTION
     );
-    assert_eq!(concept["text"], fhir::EMERGENCY_ACCESS_TEXT);
+    assert!(
+        mark["detail"]
+            .as_array()
+            .expect("details")
+            .iter()
+            .any(|d| d["type"] == "ehds-emergency-purpose" && d["valueString"] == "ETREAT"),
+        "{mark}"
+    );
 
     let (xml, _) = renderings(&event);
     assert!(

@@ -33,7 +33,7 @@ use crate::db::acquire::acquire;
 use crate::service::error::ErrorChain;
 use crate::system_log::AuditError;
 use crate::system_log::codes::AtnaAction;
-use crate::system_log::event::{ActingMode, AuditEvent, EventType, ObjectClass};
+use crate::system_log::event::{ActingMode, AuditEvent, EventOutcome, EventType, ObjectClass};
 
 /// The single-record insert, returning the stored row id.
 const INSERT_ONE: &str = "INSERT INTO audit.audit_event (recorded_at, action, outcome, \
@@ -545,13 +545,15 @@ pub struct AuditSearchFilter {
 }
 
 fn action_str(event: &AuditEvent) -> String {
-    event.action.as_char().to_string()
+    event.action.as_code().to_owned()
 }
 
 fn outcome_smallint(event: &AuditEvent) -> i16 {
-    use crate::system_log::codes::AtnaOutcome;
-    // The DICOM indicator values are 0/4/8/12 — always in smallint range.
-    i16::try_from(event.outcome.as_i32()).unwrap_or(i16::MAX)
+    match event.outcome {
+        EventOutcome::Success => 0,
+        EventOutcome::MinorFailure => 4,
+        EventOutcome::SeriousFailure => 8,
+    }
 }
 
 fn event_code(event: &AuditEvent) -> &'static str {

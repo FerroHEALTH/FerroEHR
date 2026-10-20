@@ -275,10 +275,14 @@ pub(crate) async fn admin_retention_policies(
                                 \"source\": … }`. `kind` is COMPOSITION | \
                                 EHR_STATUS | FOLDER | EHR; `category`, when \
                                 present, keys the period on one EHDS priority \
-                                category as `[audit.categories]` spells it \
-                                (patient-summary | eprescription | \
-                                edispensation | imaging | test-results | \
-                                discharge-report | national:<code> | none), \
+                                category as `[audit.categories]` names it (a \
+                                priority category by its code: \
+                                Patient-Summaries | Electronic-Prescriptions | \
+                                Electronic-Dispensations | Medical-Imaging | \
+                                Laboratory-Reports | Discharge-Reports, or as \
+                                <system>|<code>; a national category as the \
+                                <system>|<code> the map declares; or none), \
+                                stored as its <system>|<code> token, \
                                 and an object the map cannot classify takes \
                                 the longest period configured for its kind; \
                                 `period` is a PostgreSQL interval, `anchor` one \

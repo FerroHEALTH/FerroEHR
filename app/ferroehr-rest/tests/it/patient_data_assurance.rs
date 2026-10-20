@@ -234,9 +234,21 @@ async fn a_client_acting_for_a_professional_passes_and_is_recorded() {
         row.get::<Option<String>, _>("professional_id").as_deref(),
         Some("prof-007")
     );
+    // BALP 1.1.4 §3:5.7.5.4: the token's subject is the requesting
+    // `agent:user`, with the professional's identifier as its `ihe-otherId`.
     let fhir: Value = row.get("fhir");
-    assert_eq!(fhir["agent"][0]["who"]["identifier"]["value"], "prof-007");
-    assert_eq!(fhir["agent"][0]["requestor"], true);
-    assert_eq!(fhir["agent"][1]["who"]["identifier"]["value"], "app-1");
-    assert_eq!(fhir["agent"][1]["requestor"], false);
+    let user = fhir["agent"]
+        .as_array()
+        .expect("agents")
+        .iter()
+        .find(|agent| agent["requestor"] == true)
+        .expect("the agent:user");
+    assert_eq!(user["who"]["identifier"]["value"], "app-1", "{fhir}");
+    let other_id = user["extension"]
+        .as_array()
+        .expect("the agent:user extensions")
+        .iter()
+        .find(|x| x["url"] == "https://profiles.ihe.net/ITI/BALP/StructureDefinition/ihe-otherId")
+        .expect("the professional identifier");
+    assert_eq!(other_id["valueIdentifier"]["value"], "prof-007", "{fhir}");
 }

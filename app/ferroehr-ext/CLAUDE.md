@@ -1,9 +1,10 @@
 # `ferroehr-ext` — the optional-integration crate (feature-gated)
 
 The carve-out target for the platform's OPTIONAL integrations (#1890):
-`fhir` (the typed FHIR surface — the ATNA `AuditEvent` renderer and the
-terminology-response decoder; FHIR resource mapping is FerroBRIDGE's, not
-this crate's), `events` (subscriptions + publisher
+`fhir` (the typed FHIR surface — the terminology-response decoder; the ATNA
+`AuditEvent` is written by the shared FerroAUDIT crates `ihe-atna` and
+`ehds-logging`, which `ferroehr` uses directly; FHIR resource mapping is
+FerroBRIDGE's, not this crate's), `events` (subscriptions + publisher
 transports), `multimedia` (blob store/offload). One ADDITIVE cargo feature
 per integration; the shipped binary builds all-on, slim deployments compile
 integrations out.
@@ -17,18 +18,15 @@ integrations out.
 - **No openEHR spec governs these surfaces** — flag every behaviour decision
   as our own design; vendor implementations are prior art only. FHIR wire
   facts still cite official HL7/docs.rs sources.
-- **Two FHIR release identities, deliberately** (`src/fhir/mod.rs`): the
-  `AuditEvent` renderer (`fhir::audit`) serves the ITI-81 retrieval under
-  `/fhir/r4`, and the resource is unchanged between R4 and R4B; the TERMINOLOGY
-  decoder (`fhir::terminology`) speaks **R4B** because the release belongs to
-  the external server it reads, and cites `hl7.org/fhir/R4B/…`. Keep a new
-  citation on the side its subsystem is on.
+- **The TERMINOLOGY decoder (`fhir::terminology`) speaks R4B** because the
+  release belongs to the external server it reads, and cites
+  `hl7.org/fhir/R4B/…`. The `AuditEvent` the ITI-81 retrieval serves under
+  `/fhir/r4` is R4, written by `ihe-atna` on its own FHIR model.
 - Heavy external model dependencies (a generated FHIR model, brokers,
   codecs) land HERE, never in `ferroehr`. **`fhir-model` (fhir-sdk's `r4b`
   model generation) is named ONLY in this crate's `fhir` module** — no other
-  crate may name a `fhir_model` type; the platform seams take the neutral
-  descriptor structs (`fhir::audit::AuditRecord`) and get plain JSON / plain
-  views back.
+  crate may name a `fhir_model` type; the platform seams get plain JSON /
+  plain views back.
 - Zero re-exports. The serde CONFIG sections stay in the `ferroehr` config
   tree (they carry `Secret`/`SecretUrl` and the tree's redaction semantics);
   this crate takes plain runtime parameter structs at construction

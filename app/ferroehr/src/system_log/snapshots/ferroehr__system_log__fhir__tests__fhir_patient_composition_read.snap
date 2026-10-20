@@ -1,123 +1,141 @@
 ---
 source: app/ferroehr/src/system_log/fhir.rs
-assertion_line: 553
 expression: v
 ---
 {
-  "resourceType": "AuditEvent",
+  "action": "R",
+  "agent": [
+    {
+      "network": {
+        "address": "10.216.24.150",
+        "type": "2"
+      },
+      "requestor": false,
+      "type": {
+        "coding": [
+          {
+            "code": "110152",
+            "display": "Destination Role ID",
+            "system": "http://dicom.nema.org/resources/ontology/DCM"
+          }
+        ]
+      },
+      "who": {
+        "display": "john doe"
+      }
+    },
+    {
+      "network": {
+        "address": "urn:ferroehr:ferroehr",
+        "type": "5"
+      },
+      "requestor": false,
+      "type": {
+        "coding": [
+          {
+            "code": "110153",
+            "display": "Source Role ID",
+            "system": "http://dicom.nema.org/resources/ontology/DCM"
+          }
+        ]
+      },
+      "who": {
+        "display": "ferroehr"
+      }
+    },
+    {
+      "requestor": true,
+      "type": {
+        "coding": [
+          {
+            "code": "IRCP",
+            "display": "information recipient",
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType"
+          }
+        ]
+      },
+      "who": {
+        "identifier": {
+          "system": "urn:ferroehr:ferroehr",
+          "value": "john doe"
+        }
+      }
+    },
+    {
+      "requestor": false,
+      "type": {
+        "coding": [
+          {
+            "code": "110150",
+            "display": "Application",
+            "system": "http://dicom.nema.org/resources/ontology/DCM"
+          }
+        ]
+      },
+      "who": {
+        "identifier": {
+          "value": "UNKNOWN"
+        }
+      }
+    }
+  ],
+  "entity": [
+    {
+      "role": {
+        "code": "1",
+        "display": "Patient",
+        "system": "http://terminology.hl7.org/CodeSystem/object-role"
+      },
+      "type": {
+        "code": "1",
+        "display": "Person",
+        "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type"
+      },
+      "what": {
+        "identifier": {
+          "system": "urn:ferroehr:subject",
+          "value": "patient-42"
+        }
+      }
+    },
+    {
+      "name": "composition_get",
+      "type": {
+        "code": "2",
+        "display": "System Object",
+        "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type"
+      },
+      "what": {
+        "identifier": {
+          "value": "8fa1::ferroehr::1"
+        }
+      }
+    }
+  ],
   "meta": {
     "profile": [
       "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientRead"
     ]
   },
-  "type": {
-    "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
-    "code": "rest",
-    "display": "RESTful Operation"
+  "outcome": "0",
+  "recorded": "2026-07-06T12:00:00Z",
+  "resourceType": "AuditEvent",
+  "source": {
+    "observer": {
+      "display": "ferroehr"
+    },
+    "site": "1f332a66-0000-0000-0000-000000000001"
   },
   "subtype": [
     {
-      "system": "http://hl7.org/fhir/restful-interaction",
       "code": "read",
-      "display": "read"
-    },
-    {
-      "system": "urn:openehr:its-rest:operation",
-      "code": "composition_get",
-      "display": "composition_get"
+      "display": "read",
+      "system": "http://hl7.org/fhir/restful-interaction"
     }
   ],
-  "action": "R",
-  "recorded": "2026-07-06T12:00:00Z",
-  "outcome": "0",
-  "agent": [
-    {
-      "type": {
-        "coding": [
-          {
-            "system": "http://dicom.nema.org/resources/ontology/DCM",
-            "code": "110152",
-            "display": "Destination Role ID"
-          }
-        ]
-      },
-      "who": {
-        "identifier": {
-          "value": "john doe"
-        }
-      },
-      "requestor": true,
-      "network": {
-        "address": "10.216.24.150",
-        "type": "2"
-      }
-    },
-    {
-      "type": {
-        "coding": [
-          {
-            "system": "http://dicom.nema.org/resources/ontology/DCM",
-            "code": "110153",
-            "display": "Source Role ID"
-          }
-        ]
-      },
-      "who": {
-        "identifier": {
-          "value": "ferroehr"
-        }
-      },
-      "requestor": false,
-      "network": {
-        "address": "10.42.23.77",
-        "type": "2"
-      }
-    }
-  ],
-  "source": {
-    "site": "1f332a66-0000-0000-0000-000000000001",
-    "observer": {
-      "identifier": {
-        "value": "ferroehr"
-      }
-    },
-    "type": [
-      {
-        "system": "http://terminology.hl7.org/CodeSystem/security-source-type",
-        "code": "4",
-        "display": "Application Server"
-      }
-    ]
-  },
-  "entity": [
-    {
-      "what": {
-        "identifier": {
-          "value": "patient-42"
-        }
-      },
-      "type": {
-        "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type",
-        "code": "1",
-        "display": "Person"
-      },
-      "role": {
-        "system": "http://terminology.hl7.org/CodeSystem/object-role",
-        "code": "1",
-        "display": "Patient"
-      }
-    },
-    {
-      "what": {
-        "identifier": {
-          "value": "8fa1::ferroehr::1"
-        }
-      },
-      "type": {
-        "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type",
-        "code": "2",
-        "display": "System Object"
-      }
-    }
-  ]
+  "type": {
+    "code": "rest",
+    "display": "Restful Operation",
+    "system": "http://terminology.hl7.org/CodeSystem/audit-event-type"
+  }
 }

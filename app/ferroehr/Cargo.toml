@@ -143,6 +143,10 @@ openehr-query = { path = "../../crates/openehr-query" }
 # building these targets with the library's `fhir` feature off.
 ferroehr-ext = { path = "../ferroehr-ext", features = ["multimedia", "events", "fhir"] }
 testkit = { path = "../../tools/testkit" }
+# The access-record tests read what `ehds-logging` writes by its names.
+ehds-logging = { workspace = true, features = ["balp"] }
+# The in-process TLS listeners of the syslog and terminology mutual-TLS tests.
+tokio-rustls.workspace = true
 serde_norway.workspace = true
 # Temp config files for the pure-loader (`config` module) tests.
 assert_fs.workspace = true

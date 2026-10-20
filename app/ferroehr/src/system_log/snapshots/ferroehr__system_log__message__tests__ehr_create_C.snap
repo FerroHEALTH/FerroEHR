@@ -1,23 +1,5 @@
 ---
 source: app/ferroehr/src/system_log/message.rs
-assertion_line: 327
 expression: xml
 ---
-<AuditMessage>
-  <EventIdentification EventActionCode="C" EventDateTime="[REDACTED]" EventOutcomeIndicator="0">
-    <EventID csd-code="110110" codeSystemName="DCM" originalText="Patient Record"/>
-    <EventOutcomeDescription>Operation performed successfully</EventOutcomeDescription>
-  </EventIdentification>
-  <ActiveParticipant UserID="john doe" UserIsRequestor="true" NetworkAccessPointID="10.216.24.150" NetworkAccessPointTypeCode="2">
-    <RoleIDCode csd-code="110153" codeSystemName="DCM" originalText="Source Role ID"/>
-  </ActiveParticipant>
-  <ActiveParticipant UserID="ferroehr" UserIsRequestor="false" NetworkAccessPointID="10.42.23.77" NetworkAccessPointTypeCode="2">
-    <RoleIDCode csd-code="110152" codeSystemName="DCM" originalText="Destination Role ID"/>
-  </ActiveParticipant>
-  <AuditSourceIdentification AuditEnterpriseSiteID="1f332a66-0000-0000-0000-000000000001" AuditSourceID="ferroehr">
-    <AuditSourceTypeCode csd-code="4" codeSystemName="DCM" originalText="Application Server Process or Thread"/>
-  </AuditSourceIdentification>
-  <ParticipantObjectIdentification ParticipantObjectID="patient-42" ParticipantObjectTypeCode="1" ParticipantObjectTypeCodeRole="1" ParticipantObjectDataLifeCycle="1">
-    <ParticipantObjectIDTypeCode csd-code="2" codeSystemName="RFC-3881" originalText="Patient Number"/>
-  </ParticipantObjectIdentification>
-</AuditMessage>
+<?xml version="1.0" encoding="UTF-8"?><AuditMessage><EventIdentification EventActionCode="C" EventDateTime="[REDACTED]" EventOutcomeIndicator="0"><EventID csd-code="110110" codeSystemName="DCM" originalText="Patient Record"/></EventIdentification><ActiveParticipant UserID="john doe" UserIsRequestor="true" NetworkAccessPointID="10.216.24.150" NetworkAccessPointTypeCode="2"><RoleIDCode csd-code="110153" codeSystemName="DCM" originalText="Source Role ID"/></ActiveParticipant><ActiveParticipant UserID="ferroehr" UserIsRequestor="false" NetworkAccessPointID="10.42.23.77" NetworkAccessPointTypeCode="2"><RoleIDCode csd-code="110152" codeSystemName="DCM" originalText="Destination Role ID"/></ActiveParticipant><AuditSourceIdentification AuditEnterpriseSiteID="1f332a66-0000-0000-0000-000000000001" AuditSourceID="ferroehr"/><ParticipantObjectIdentification ParticipantObjectID="patient-42" ParticipantObjectTypeCode="1" ParticipantObjectTypeCodeRole="1"><ParticipantObjectIDTypeCode csd-code="2" codeSystemName="RFC-3881" originalText="Patient Number"/></ParticipantObjectIdentification></AuditMessage>

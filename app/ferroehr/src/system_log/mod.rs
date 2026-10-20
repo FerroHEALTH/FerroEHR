@@ -15,10 +15,14 @@
 //! formats and fanned out to the configured sinks: the local Audit Record
 //! Repository (the `audit` schema, the durability anchor, on by default, served
 //! back via the RESTful-ATNA ITI-81 retrieval), the classic DICOM Audit Message
-//! feed (DICOM PS3.15 §A.5 XML over RFC 5424 syslog; RFC 5426 UDP or RFC 5425
-//! TLS; IHE ITI TF-2 ITI-20), and the FHIR R4 `AuditEvent` feed (IHE BALP shape;
-//! ITI-20 ATX:FHIR Feed). This is authorized defensive security-audit logging
-//! for a healthcare system.
+//! feed (DICOM PS3.15 §A.5 XML over RFC 5424 syslog on RFC 5425 TLS; IHE ITI
+//! TF-2 ITI-20), and the FHIR R4 `AuditEvent` feed (IHE BALP shape; ITI-20 ATX:
+//! FHIR Feed). The shared FerroAUDIT crates write both formats and send them:
+//! `ihe-atna` the ATNA trail and the BALP `AuditEvent`, `ehds-logging` the EHDS
+//! access record, its categories, its retention and its emergency mark.
+//! FerroEHR decides which accesses are logged, what each record says, and
+//! where it is stored. This is authorized defensive security-audit logging for
+//! a healthcare system.
 //!
 //! ## Scope boundary
 //!
@@ -47,10 +51,13 @@
 //!   access record is stamped through.
 //! - [`codes`] — DCM / RFC-3881 code constants and the ATNA rendering of the
 //!   event enums.
-//! - [`message`] — the DICOM `AuditMessage` model and `quick-xml` serializer.
-//! - `fhir` — the FHIR R4 `AuditEvent` rendering per the IHE BALP content
-//!   profiles (the `fhir` cargo feature, over `ferroehr_ext::fhir::audit`).
-//! - [`syslog`] — RFC 5424 assembly plus RFC 5426 UDP / RFC 5425 TLS transports.
+//! - [`message`] — the DICOM `AuditMessage` of a record, on `ihe-atna`'s
+//!   message model and writer.
+//! - `fhir` — the FHIR R4 `AuditEvent` of a record (the `fhir` cargo feature):
+//!   the EHDS access record written by `ehds-logging`, every other record a
+//!   BALP exchange written by `ihe-atna`.
+//! - [`syslog`] — the ITI-20 syslog sink: `ihe-atna`'s RFC 5424 frame over its
+//!   RFC 5425 TLS connection.
 //! - [`store`] — the local Audit Record Repository and the ITI-81 search filter.
 //! - [`sender`] — the bounded-mpsc sender, background drain, sink fan-out and
 //!   fail modes.
@@ -68,6 +75,8 @@ pub mod chain_check;
 pub mod codes;
 pub mod config;
 pub mod event;
+#[cfg(feature = "fhir")]
+mod feed;
 #[cfg(feature = "fhir")]
 pub mod fhir;
 pub mod message;
@@ -90,16 +99,15 @@ use crate::service::status::{CallStatusType, SmError};
 /// Every variant that has an underlying failure carries it as
 /// [`std::error::Error::source`] (RFC 0201), so a caller can walk or match the
 /// cause instead of parsing prose. The boxed sources are the ones several
-/// unrelated types converge on: XML serialization fails as either an
-/// `std::io::Error` or a `FromUtf8Error`, and the transport as either an
-/// `std::io::Error` (syslog UDP/TLS) or a `reqwest::Error` (the ITI-20 feed).
+/// unrelated types converge on: the `ihe-atna` message, repository and feed
+/// errors, and the file reads of the TLS material.
 #[derive(Debug, thiserror::Error)]
 pub enum AuditError {
     /// XML serialization of the DICOM Audit Message failed.
     #[error("audit message serialization failed")]
     Xml(#[source] Box<dyn std::error::Error + Send + Sync>),
-    /// The syslog transport (UDP/TLS) could not be established, or the ITI-20
-    /// feed request could not be sent.
+    /// The syslog TLS connection could not be established, or the ITI-20 feed
+    /// request could not be sent.
     #[error("audit transport error")]
     Transport(#[source] Box<dyn std::error::Error + Send + Sync>),
     /// The ITI-20 ATX:FHIR Feed answered a non-success status.
@@ -118,14 +126,12 @@ pub enum AuditError {
     /// reports the same findings.
     #[error("the audit category map is invalid: {}", .0.iter().map(ToString::to_string).collect::<Vec<_>>().join("; "))]
     CategoryMap(Vec<categories::CategoryMapError>),
-}
-
-// quick-xml's `Writer` over an in-memory buffer surfaces write failures as
-// `std::io::Error`; in the DICOM serializer these can only be a buffer fault.
-impl From<std::io::Error> for AuditError {
-    fn from(e: std::io::Error) -> Self {
-        AuditError::Xml(Box::new(e))
-    }
+    /// `ehds-logging` refused an `[audit] emergency_purpose_codes` entry.
+    #[error("the audit emergency purposes are invalid")]
+    Emergency(#[source] ehds_logging::emergency::EmergencyError),
+    /// `ehds-logging` refused a retention or label policy of the access record.
+    #[error("the access record policy is invalid")]
+    Policy(#[source] Box<dyn std::error::Error + Send + Sync>),
 }
 
 /// The loud slim-build refusal for the FHIR-rendering audit sinks.

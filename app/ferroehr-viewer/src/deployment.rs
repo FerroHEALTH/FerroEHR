@@ -115,7 +115,6 @@ pub fn gap_text(code: &str) -> String {
         "open_subject_namespace" => tr(Msg::NoSubjectPseudonymNamespaceDeclaredSo),
         "audit_off" => tr(Msg::AccessNotRecordedDurableAuditTrail),
         "audit_fails_open" => tr(Msg::AccessRecordAuditQueueCannotTake),
-        "audit_syslog_udp" => tr(Msg::AccessLogShippedOverUdpSyslog),
         "open_ehr_access_default" => tr(Msg::EhrWithoutOwnAccessSettingsAdmits),
         "migrate_on_runtime_credential" => tr(Msg::SchemaPreparationRunsClinicalRuntimeCredential),
         "auth_off" => tr(Msg::RequestsServedWithoutAuthentication),

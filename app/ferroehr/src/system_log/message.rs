@@ -27,10 +27,12 @@ use crate::system_log::codes::{
 };
 use crate::system_log::event::{ActingMode, AuditEvent};
 
-/// The server-side identity shared by every emitted record (the destination
-/// node + audit source). Built once by the sender from
+/// The server-side identity shared by every emitted record.
+///
+/// The destination node and audit source, and the policies an access record
+/// is written under. Built once by the sender from
 /// [`super::config::AuditConfig`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AuditContext {
     /// `AuditSourceID` and the destination `ActiveParticipant.UserID`.
     pub source_id: String,
@@ -40,6 +42,9 @@ pub struct AuditContext {
     pub server_ip: String,
     /// Fill for empty mandatory fields (default `UNKNOWN`).
     pub value_if_missing: String,
+    /// The retention, label and emergency policies of the EHDS access record.
+    #[cfg(feature = "fhir")]
+    pub recording: crate::system_log::fhir::Recording,
 }
 
 /// The `codeSystemName` of the deployment's own role vocabulary on a
@@ -270,6 +275,7 @@ mod tests {
             enterprise_site_id: "1f332a66-0000-0000-0000-000000000001".to_owned(),
             server_ip: "10.42.23.77".to_owned(),
             value_if_missing: "UNKNOWN".to_owned(),
+            ..AuditContext::default()
         }
     }
 

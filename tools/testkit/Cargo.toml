@@ -39,6 +39,10 @@ uuid = { workspace = true, features = ["v4"] }   # random scratch-database names
 # alive across nextest's process-per-test model and across whole runs.
 testcontainers = { workspace = true, features = ["reusable-containers"] }
 testcontainers-modules = { workspace = true }
+# `syslog_tls`: the in-process syslog-over-TLS repository the audit tests send
+# their ATNA trail to.
+rustls = { workspace = true }
+tokio-rustls = { workspace = true }
 
 [lints]
 workspace = true

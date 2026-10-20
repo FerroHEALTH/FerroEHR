@@ -150,6 +150,9 @@ pub struct AuditEvent {
     pub client_ip: Option<String>,
     /// The owning EHR id, for optional background subject enrichment.
     pub ehr_id: Option<String>,
+    /// The namespace of the EHR subject's id, as `EHR_STATUS.subject` names
+    /// it, filled by the drain beside the subject it resolves.
+    pub subject_namespace: Option<String>,
     /// The resolved object identifier (resource URI / version uid / query name).
     pub object_id: Option<String>,
     /// The bearer token's `jti` claim when the request was Bearer-authenticated
@@ -348,6 +351,7 @@ impl AuditEvent {
             roles: Vec::new(),
             client_ip: None,
             ehr_id: None,
+            subject_namespace: None,
             object_id: None,
             token_id: None,
             domain: AccessDomain::of(object),

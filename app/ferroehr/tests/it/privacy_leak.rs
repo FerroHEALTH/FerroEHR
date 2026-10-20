@@ -38,7 +38,8 @@ use ferroehr::privacy::config::PrivacyConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 use ferroehr::system_log::fhir;
-use ferroehr::system_log::message::{AuditContext, AuditMessage};
+use ferroehr::system_log::message::{self, AuditContext};
+use secrecy::ExposeSecret as _;
 
 use crate::fixtures::uv;
 
@@ -67,6 +68,7 @@ fn audit_context() -> AuditContext {
         enterprise_site_id: "site-1".to_owned(),
         server_ip: "10.42.23.77".to_owned(),
         value_if_missing: "UNKNOWN".to_owned(),
+        ..AuditContext::default()
     }
 }
 
@@ -221,9 +223,13 @@ async fn the_atna_records_carry_the_opaque_pseudonym_and_nothing_else() {
     "clinician".clone_into(&mut event.user_id);
 
     let ctx = audit_context();
-    let xml = AuditMessage::build(&event, &ctx, resolved.as_deref())
-        .to_xml()
-        .expect("the DICOM PS3.15 audit message renders");
+    let xml = String::from_utf8(
+        message::to_xml(&event, &ctx, resolved.as_deref())
+            .expect("the DICOM PS3.15 audit message renders")
+            .expose_secret()
+            .to_vec(),
+    )
+    .expect("the message is UTF-8");
     assert!(
         xml.contains(&format!("ParticipantObjectID=\"{OPAQUE_SUBJECT}\"")),
         "the Patient-Number participant must carry the pseudonym: {xml}"

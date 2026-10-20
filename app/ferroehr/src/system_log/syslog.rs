@@ -37,7 +37,8 @@ const PROCID: &str = "-";
 pub struct SyslogSink {
     sender: Sender,
     repository: Repository,
-    connection: Option<Connection>,
+    // NOTE: `ihe_atna` 0.1.0's `Connection` is `Send` but not `Sync`; the lock lets the drain share the sink.
+    connection: tokio::sync::Mutex<Option<Connection>>,
 }
 
 impl SyslogSink {
@@ -49,21 +50,28 @@ impl SyslogSink {
     /// [`AuditError::Transport`] when a header field is not printable US-ASCII
     /// of the length RFC 5424 §6.2 allows, the trust or identity files cannot
     /// be read, or `ihe-atna` refuses the address or the PEM material.
-    pub fn new(config: &SyslogConfig, hostname: &str, app_name: &str) -> Result<Self, AuditError> {
+    pub async fn new(
+        config: &SyslogConfig,
+        hostname: &str,
+        app_name: &str,
+    ) -> Result<Self, AuditError> {
         let hostname = if hostname.is_empty() { "-" } else { hostname };
         let sender = Sender::new(hostname, app_name, PROCID)
             .map_err(|e| AuditError::Transport(Box::new(e)))?;
         let address = url::Url::parse(&format!("tls://{}:{}", config.host, config.port))
             .map_err(|e| AuditError::Transport(Box::new(e)))?;
-        let roots = config.tls_ca_file.as_deref().map(read).transpose()?;
+        let roots = match config.tls_ca_file.as_deref() {
+            Some(path) => Some(read(path).await?),
+            None => None,
+        };
         let identity = match (
             config.tls_identity_cert_file.as_deref(),
             config.tls_identity_key_file.as_deref(),
         ) {
             (Some(cert), Some(key)) => {
-                let mut pem = read(cert)?;
+                let mut pem = read(cert).await?;
                 pem.push(b'\n');
-                pem.extend(read(key)?);
+                pem.extend(read(key).await?);
                 let pem = String::from_utf8(pem).map_err(|e| AuditError::Transport(Box::new(e)))?;
                 Some(SecretString::from(pem))
             }
@@ -74,7 +82,7 @@ impl SyslogSink {
         Ok(Self {
             sender,
             repository,
-            connection: None,
+            connection: tokio::sync::Mutex::new(None),
         })
     }
 
@@ -85,14 +93,12 @@ impl SyslogSink {
     /// [`AuditError::Transport`] when the repository cannot be reached or the
     /// frame cannot be written; the connection is dropped, and the next send
     /// opens a new one.
-    pub async fn send(&mut self, at: Timestamp, xml: &SecretSlice<u8>) -> Result<(), AuditError> {
+    pub async fn send(&self, at: Timestamp, xml: &SecretSlice<u8>) -> Result<(), AuditError> {
         let frame = self.sender.frame(at, xml);
-        let held = match self.connection.take() {
-            Some(mut held) if held.is_closed().await => {
-                drop(held);
-                None
-            }
-            held => held,
+        let mut slot = self.connection.lock().await;
+        let held = match slot.take() {
+            Some(mut held) => (!held.is_closed().await).then_some(held),
+            None => None,
         };
         let mut connection = match held {
             Some(open) => open,
@@ -106,12 +112,14 @@ impl SyslogSink {
             .send(&frame)
             .await
             .map_err(|e| AuditError::Transport(Box::new(e)))?;
-        self.connection = Some(connection);
+        *slot = Some(connection);
         Ok(())
     }
 }
 
 /// The bytes of the PEM file at `path`.
-fn read(path: &str) -> Result<Vec<u8>, AuditError> {
-    std::fs::read(path).map_err(|e| AuditError::Transport(Box::new(e)))
+async fn read(path: &str) -> Result<Vec<u8>, AuditError> {
+    tokio::fs::read(path)
+        .await
+        .map_err(|e| AuditError::Transport(Box::new(e)))
 }

@@ -17,7 +17,6 @@
 #![expect(
     clippy::unwrap_used,
     clippy::expect_used,
-    clippy::indexing_slicing,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
               module's helpers and async bodies; panicking assertions and direct \
@@ -33,7 +32,7 @@ use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::server::AdminConfig;
 use ferroehr::config::server::ServerConfig;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig, Transport};
+use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, ResolveError};
@@ -41,7 +40,7 @@ use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, Reso
 use crate::common;
 use http::{Request, StatusCode};
 use serde_json::{Value, json};
-use tokio::net::UdpSocket;
+use testkit::syslog_tls::SyslogTlsListener;
 use tower::ServiceExt;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
@@ -112,14 +111,14 @@ async fn app(rbac_enabled: bool, audit: Option<AuditSender>) -> (testkit::TestDb
     (pg, app)
 }
 
-// ── ATNA capture: a UDP listener + a sender pointed at it ──────────────────────
+// ── ATNA capture: a TLS syslog listener + a sender pointed at it ───────────────
 
-/// Bind a UDP listener and build an [`AuditSender`] shipping DICOM records to it
-/// (fail-open, login events suppressed). The returned socket receives the RFC
-/// 5424 datagrams; each carries the DICOM `AuditMessage` XML in its `MSG` field.
-async fn audit_capture() -> (UdpSocket, AuditSender) {
-    let socket = UdpSocket::bind("127.0.0.1:0").await.expect("bind udp");
-    let port = socket.local_addr().expect("addr").port();
+/// Bind a TLS syslog listener and build an [`AuditSender`] shipping DICOM records to it
+/// (fail-open, login events suppressed). The returned listener receives the RFC
+/// 5425 frames; each carries the DICOM `AuditMessage` XML in its `MSG` field.
+async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
+    let socket = SyslogTlsListener::bind().await.expect("syslog listener");
+    let port = socket.port;
     let cfg = AuditConfig {
         enabled: true,
         store: StoreConfig {
@@ -131,9 +130,9 @@ async fn audit_capture() -> (UdpSocket, AuditSender) {
         },
         syslog: SyslogConfig {
             enabled: true,
-            transport: Transport::Udp,
             host: "127.0.0.1".to_owned(),
             port,
+            tls_ca_file: Some(socket.ca_file.display().to_string()),
             ..SyslogConfig::default()
         },
         suppress_login_events: true,
@@ -147,13 +146,10 @@ async fn audit_capture() -> (UdpSocket, AuditSender) {
     (socket, sender)
 }
 
-/// Receive one DICOM audit datagram (as UTF-8) within a short window.
-async fn recv_audit(socket: &UdpSocket) -> Option<String> {
-    let mut buf = vec![0u8; 65_536];
-    match tokio::time::timeout(Duration::from_secs(3), socket.recv_from(&mut buf)).await {
-        Ok(Ok((n, _))) => Some(String::from_utf8_lossy(&buf[..n]).into_owned()),
-        _ => None,
-    }
+/// Receive one DICOM audit frame (as UTF-8) within a short window.
+async fn recv_audit(socket: &mut SyslogTlsListener) -> Option<String> {
+    let frame = socket.recv(Duration::from_secs(3)).await?;
+    Some(String::from_utf8_lossy(&frame).into_owned())
 }
 
 // ── credentials + requests ────────────────────────────────────────────────────
@@ -386,11 +382,11 @@ async fn oauth2_committer_identifier_names_the_token_issuer() {
 async fn rbac_deny_is_audited() {
     // A 403 from the RBAC gate carries the Principal, so the ATNA audit layer
     // records a failure audit for the denied caller. The emitter ships a
-    // DICOM record over syslog/UDP; we assert on the datagram: a
+    // DICOM record over syslog/TLS; we assert on the frame: a
     // User-Authentication event (`csd-code="110114"`, DICOM PS3.15 §A.5.1 —
     // a rejected access attempt), a minor-failure outcome
     // (`EventOutcomeIndicator="4"`), attributed to `user`.
-    let (socket, sender) = audit_capture().await;
+    let (mut socket, sender) = audit_capture().await;
     let (_pg, app) = app(true, Some(sender)).await;
 
     let s = status(
@@ -400,9 +396,9 @@ async fn rbac_deny_is_audited() {
     .await;
     assert_eq!(s, StatusCode::FORBIDDEN);
 
-    let xml = recv_audit(&socket)
+    let xml = recv_audit(&mut socket)
         .await
-        .expect("an audit datagram is emitted for the denied caller");
+        .expect("an audit frame is emitted for the denied caller");
     assert!(
         xml.contains(r#"csd-code="110114""#),
         "User-Authentication event: {xml}"

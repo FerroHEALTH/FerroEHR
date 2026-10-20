@@ -755,7 +755,8 @@ mod tests {
 
     #[test]
     fn the_mirror_rows_carry_tokens_and_none() {
-        let rows = map(MAP).rows();
+        let classifier = map(MAP);
+        let rows = classifier.rows();
         assert!(rows.contains(&("template", "admin note".to_owned(), NONE.to_owned())));
         assert!(rows.contains(&("template", "lab report".to_owned(), LAB.to_owned())));
         assert!(rows.contains(&(

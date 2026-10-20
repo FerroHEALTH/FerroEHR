@@ -303,7 +303,10 @@ mod tests {
             BTreeSet::from(["openEHR-EHR-COMPOSITION.report.v1".to_owned()])
         );
         assert!(c.reaches_content);
-        assert!(c.every_root_bound, "the one positive content operand is bound");
+        assert!(
+            c.every_root_bound,
+            "the one positive content operand is bound"
+        );
     }
 
     #[test]
@@ -315,7 +318,10 @@ mod tests {
             &Params::new(),
         );
         assert_eq!(c.template_ids, BTreeSet::from(["Lab Report".to_owned()]));
-        assert!(c.every_root_bound, "the template equality binds the composition");
+        assert!(
+            c.every_root_bound,
+            "the template equality binds the composition"
+        );
     }
 
     #[test]

@@ -27,6 +27,7 @@ fn ctx() -> AuditContext {
         enterprise_site_id: "site-1".to_owned(),
         server_ip: "10.42.23.77".to_owned(),
         value_if_missing: "UNKNOWN".to_owned(),
+        ..AuditContext::default()
     }
 }
 
@@ -386,13 +387,15 @@ async fn the_accessing_organisation_round_trips_on_both_write_paths() {
     );
 
     // The stored FHIR document carries the same fact as the column: the
-    // organisation as a second agent referencing an Organization.
+    // organisation as an agent of its own, a logical reference to an
+    // Organization (FHIR R4 `Reference.type` and `Reference.identifier`).
     let stored: serde_json::Value = rows[0].get("fhir");
     let agents = stored["agent"].as_array().expect("the agent list");
     assert!(
-        agents
-            .iter()
-            .any(|agent| agent["who"]["reference"] == "Organization/zh-noordwest"),
+        agents.iter().any(|agent| {
+            agent["who"]["type"] == "Organization"
+                && agent["who"]["identifier"]["value"] == "zh-noordwest"
+        }),
         "the stored document must carry the organisation agent: {stored}"
     );
 }
@@ -457,8 +460,16 @@ async fn the_actor_roles_round_trip_on_both_write_paths() {
     assert_eq!(roles(3), None, "no principal means no roles to record");
 
     let stored: serde_json::Value = rows[0].get("fhir");
-    let requestor = &stored["agent"][0];
-    assert_eq!(requestor["role"][1]["text"], "clinician", "{stored}");
+    let requestor = stored["agent"]
+        .as_array()
+        .expect("the agent list")
+        .iter()
+        .find(|agent| agent["requestor"] == true)
+        .expect("the agent:user");
+    assert_eq!(
+        requestor["role"][1]["coding"][0]["code"], "clinician",
+        "{stored}"
+    );
 }
 
 /// The trail is append-only for the runtime role: the access-logging columns

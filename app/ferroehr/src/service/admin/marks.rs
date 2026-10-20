@@ -212,17 +212,20 @@ impl FerroEhrService {
         let category = category
             .map(|reference| {
                 let fallback = crate::system_log::categories::Classifier::default();
-                let map = self
-                    .audit
-                    .as_ref()
-                    .map_or(&fallback, crate::system_log::sender::AuditSender::categories);
+                let map = self.audit.as_ref().map_or(
+                    &fallback,
+                    crate::system_log::sender::AuditSender::categories,
+                );
+                if reference == crate::system_log::categories::NONE {
+                    return Ok(reference.to_owned());
+                }
                 map.category_token(reference).ok_or_else(|| {
                     SmError::precondition(format!(
                         "{reference:?} is not an audit category: a priority category of EHDS \
                          Art. 14(1) by its code (Patient-Summaries, Electronic-Prescriptions, \
                          Electronic-Dispensations, Medical-Imaging, Laboratory-Reports, \
                          Discharge-Reports) or as <system>|<code>, or a national category \
-                         [audit.categories] national declares"
+                         [audit.categories] national declares, or none"
                     ))
                 })
             })

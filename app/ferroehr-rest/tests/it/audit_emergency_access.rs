@@ -32,11 +32,11 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
+use ehds_logging::balp::{EMERGENCY_DESCRIPTION, EMERGENCY_ENTITY};
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
-use ferroehr::system_log::fhir::{EMERGENCY_ACCESS_TEXT, SYS_V3_ACT_REASON};
-use ferroehr::system_log::sender::{AuditHandle, SubjectResolver, start};
+use ferroehr::system_log::sender::{AuditHandle, ResolvedSubject, SubjectResolver, start};
 use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
@@ -78,8 +78,14 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
         },
         ..AuditConfig::default()
     };
-    let resolver: SubjectResolver =
-        Arc::new(|_ehr_id| Box::pin(async { Some(SUBJECT.to_owned()) }));
+    let resolver: SubjectResolver = Arc::new(|_ehr_id| {
+        Box::pin(async {
+            Some(ResolvedSubject {
+                id: SUBJECT.to_owned(),
+                namespace: Some("urn:ferroehr:test-subjects".to_owned()),
+            })
+        })
+    });
     let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), Some(pool.clone()))
         .await
         .expect("the audit sender");
@@ -199,9 +205,9 @@ async fn composition_reads(pool: &PgPool, expected: usize) -> Vec<(Option<String
 
 /// An access declared with an emergency purpose is marked in the store, and
 /// the patient portal's subject-scoped retrieval of the person's own access
-/// log (ITI-81 with `patient`) serves that access with the mark: the fixed
-/// `ETREAT` coding on `purposeOfEvent` and the plain-words text. An access
-/// with an ordinary purpose carries no mark.
+/// log (ITI-81 with `patient`) serves that access with the mark: the
+/// `ehds-logging` entity that states it in plain words. An access with an
+/// ordinary purpose carries no mark.
 #[tokio::test]
 async fn an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log() {
     let (_db, pool, app, ehr) = app().await;
@@ -236,9 +242,9 @@ async fn an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log(
         .iter()
         .map(|entry| &entry["resource"])
         .filter(|resource| {
-            resource["subtype"]
+            resource["entity"]
                 .as_array()
-                .is_some_and(|s| s.iter().any(|c| c["code"] == "composition_get"))
+                .is_some_and(|e| e.iter().any(|entity| entity["name"] == "composition_get"))
         })
         .collect();
     assert_eq!(reads.len(), 2, "{bundle}");
@@ -254,16 +260,22 @@ async fn an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log(
         .iter()
         .find(|r| declared(r).as_deref() == Some("ETREAT"))
         .expect("the emergency read is in the subject's log");
-    let concept = &emergency["purposeOfEvent"][0];
-    assert_eq!(concept["coding"][0]["system"], SYS_V3_ACT_REASON);
-    assert_eq!(concept["coding"][0]["code"], "ETREAT");
-    assert_eq!(concept["text"], EMERGENCY_ACCESS_TEXT);
+    let mark = |resource: &Value| {
+        resource["entity"]
+            .as_array()
+            .expect("entities")
+            .iter()
+            .find(|entity| entity["name"] == EMERGENCY_ENTITY)
+            .cloned()
+    };
+    let marked = mark(emergency).expect("the emergency read carries the mark");
+    assert_eq!(marked["description"], EMERGENCY_DESCRIPTION);
     let ordinary = reads
         .iter()
         .find(|r| declared(r).as_deref() == Some("TREAT"))
         .expect("the ordinary read is in the subject's log");
     assert!(
-        ordinary.get("purposeOfEvent").is_none(),
+        mark(ordinary).is_none(),
         "an ordinary access carries no mark: {ordinary}"
     );
 }
