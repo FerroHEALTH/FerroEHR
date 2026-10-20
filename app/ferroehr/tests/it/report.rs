@@ -71,6 +71,7 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
             password_hash_file: None,
             scopes: Vec::new(),
         }],
+        cache_ttl_seconds: 0,
     });
     config.terminology.external.oauth2_clients = BTreeMap::from([(
         "terminology".to_owned(),

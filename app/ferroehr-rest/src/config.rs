@@ -46,9 +46,6 @@ pub struct AppConfig {
     /// `[authz.rbac]` — the role rules a Basic user's roles are read from
     /// (`basic_roles`, `user_role`).
     pub rbac: RbacConfig,
-    /// `[authz] basic_cache_ttl_seconds` — how long a verified Basic
-    /// credential is reused before its hash is checked again.
-    pub basic_cache_ttl_seconds: u64,
     /// `[authz.assurance]` — the assurance a patient-data request must carry.
     pub assurance: AssuranceConfig,
     /// `[authz.professional]` — how a token names the natural person behind it.
@@ -71,7 +68,6 @@ impl Default for AppConfig {
             audit_organization_claim: None,
             role_claims: RbacConfig::default().role_claims,
             rbac: RbacConfig::default(),
-            basic_cache_ttl_seconds: 60,
             assurance: AssuranceConfig::default(),
             professional: None,
             spec_profile: ferroehr::config::profile::SpecProfile::default(),

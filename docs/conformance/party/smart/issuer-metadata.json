@@ -1,0 +1,8 @@
+{
+  "issuer": "https://as.cnf.test",
+  "authorization_endpoint": "https://as.cnf.test/authorize",
+  "token_endpoint": "https://as.cnf.test/token",
+  "jwks_uri": "https://as.cnf.test/jwks",
+  "grant_types_supported": ["authorization_code", "client_credentials"],
+  "code_challenge_methods_supported": ["S256"]
+}
