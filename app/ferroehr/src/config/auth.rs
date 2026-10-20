@@ -139,6 +139,11 @@ pub fn validate(section: &AuthSection) -> Result<(), AuthConfigError> {
             }
         }
     }
+    // NOTE: RFC 9110 §11.6.1, a section with no mechanism is refused by
+    // `require_mechanism`, whose message names the keys that fix it.
+    if require_mechanism(section).is_err() {
+        return Ok(());
+    }
     resolve(section).map(|_resolved| ())
 }
 
@@ -1019,6 +1024,10 @@ mod tests {
             resolve(&AuthSection::default()),
             Err(AuthConfigError::Section { .. })
         ));
+        assert!(
+            validate(&AuthSection::default()).is_ok(),
+            "no mechanism is require_mechanism's refusal, not validate's"
+        );
     }
 
     /// The realm and the product scope fall back to FerroEHR's when unset, and
