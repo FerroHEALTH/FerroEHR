@@ -64,6 +64,11 @@ BEGIN
     RETURN NEW;
 END $$;
 
+-- PUBLIC holds EXECUTE on a new function by default (PostgreSQL 18, CREATE
+-- FUNCTION, https://www.postgresql.org/docs/18/sql-createfunction.html), which
+-- would let the party and linkage roles reach a clinical relation.
+REVOKE ALL ON FUNCTION vo_head_inherits_access_restriction() FROM PUBLIC;
+
 CREATE TRIGGER trg_vo_head_access_restriction
     BEFORE INSERT ON vo_head
     FOR EACH ROW EXECUTE FUNCTION vo_head_inherits_access_restriction();
