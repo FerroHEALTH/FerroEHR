@@ -207,7 +207,9 @@ async fn recv_one(socket: &mut SyslogTlsListener) -> Option<String> {
 /// Drain every DICOM frame that arrives within the window.
 async fn drain(socket: &mut SyslogTlsListener) -> Vec<String> {
     let mut out = Vec::new();
-    while let Some(frame) = socket.recv(Duration::from_millis(800)).await {
+    // The sink opens its TLS connection on the first record, so the window is
+    // the silence after the last frame, long enough for a handshake.
+    while let Some(frame) = socket.recv(Duration::from_secs(2)).await {
         out.push(String::from_utf8_lossy(&frame).into_owned());
     }
     out

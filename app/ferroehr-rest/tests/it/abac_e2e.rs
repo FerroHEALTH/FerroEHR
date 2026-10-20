@@ -307,7 +307,9 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
 /// Collect DICOM audit frames until the window elapses.
 async fn drain_audit(socket: &mut SyslogTlsListener) -> Vec<String> {
     let mut out = Vec::new();
-    while let Some(frame) = socket.recv(Duration::from_millis(800)).await {
+    // The sink opens its TLS connection on the first record, so the window is
+    // the silence after the last frame, long enough for a handshake.
+    while let Some(frame) = socket.recv(Duration::from_secs(2)).await {
         out.push(String::from_utf8_lossy(&frame).into_owned());
     }
     out
