@@ -155,11 +155,12 @@ pub enum AuthMethod {
 /// A successful authentication: the [`Principal`] plus whether this request
 /// was an authentication event.
 ///
-/// `fresh` is `true` for every Basic credential the gate admitted: RFC 7617 §2
-/// sends the credential with each request, and the gate checks it each time,
-/// from its verified-credential cache or by the key derivation. A Bearer
-/// request is federated, so it is `false`. It decides whether to emit an IHE
-/// ATNA login record, which marks authentication events.
+/// `fresh` is `true` for a Basic credential the gate verified by the key
+/// derivation on this request, and `false` for one its verified-credential
+/// cache admitted (`Caller::cached`), which was authenticated on an earlier
+/// request. A Bearer request is federated, so it is `false`. It decides
+/// whether to emit an IHE ATNA login record, which marks authentication
+/// events.
 #[derive(Debug, Clone)]
 pub(crate) struct Authenticated {
     pub(crate) principal: Principal,
@@ -431,7 +432,9 @@ impl Authenticator {
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
         let roles = self.roles_of(caller);
         let honoured = self.gate.honoured(&access);
-        let fresh = caller.via() == Via::Basic;
+        // NOTE: no specification governs this: our own design; a credential the
+        // verified-credential cache admitted was authenticated on an earlier request.
+        let fresh = caller.via() == Via::Basic && !caller.cached();
         let principal = Principal::new(access.clone(), roles, honoured);
         Ok(Authenticated { principal, fresh })
     }
@@ -954,7 +957,12 @@ mod tests {
             let h = headers("Basic YWxpY2U6cHc="); // alice:pw
             let first = auth.authenticate(&h).await.expect("first verifies");
             let second = auth.authenticate(&h).await.expect("second verifies");
-            assert!(first.fresh && second.fresh, "each Basic request is checked");
+            assert!(first.fresh, "the first Basic request is an authentication");
+            assert_eq!(
+                ttl == 0,
+                second.fresh,
+                "a repeat the cache admits is no new authentication; without a cache it is"
+            );
             for bad in [
                 "Basic YWxpY2U6d3Jvbmc=", // alice:wrong
                 "Basic YWxpY2U6cHcg",     // alice:"pw "

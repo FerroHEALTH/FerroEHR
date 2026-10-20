@@ -221,7 +221,7 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # issuer's key set, Basic users, the SMART on openEHR scopes, the discovery
 # document and the client credentials grant. It checks tokens and never issues
 # them.
-ferrohealth-smart = { version = "=0.3.1", default-features = false, features = ["fetch"] }
+ferrohealth-smart = { version = "=0.4.0", default-features = false, features = ["fetch"] }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 openidconnect = { version = "4", default-features = false }   # OIDC discovery + code flow; HTTP-client agnostic: we supply the pinned reqwest (platform trust store)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits

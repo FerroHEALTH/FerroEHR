@@ -15,6 +15,11 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Changed
+
+- **`ferrohealth-smart` 0.4.0** (#3895), the version every FerroHEALTH
+  product pins. The refusal statuses and challenges do not change.
+
 ### Fixed
 
 - **A `+` in a query-string parameter is read as a space** (#3891). Every
@@ -33,6 +38,14 @@ workflow refuses a tag that has no matching section here.
   answers 422 with a message saying that those schemas define no such
   subtype. The RM and AOM2 XML readers name their schemas the same way. The
   refusal itself is unchanged.
+
+- **A Basic request the verified-credential cache admits writes no ATNA
+  login record** (#3895). Since the move to `ferrohealth-smart` 0.3.1 every
+  Basic request was marked a fresh authentication, so with
+  `suppress_login_events = false` each one wrote a login record (DICOM
+  PS3.15 §A.5.1, `EventID` 110114). The crate's `Caller::cached` now tells
+  the cache hit apart: one login record per credential verification, as
+  `[auth.basic] cache_ttl_seconds` documents.
 
 ### Security
 
