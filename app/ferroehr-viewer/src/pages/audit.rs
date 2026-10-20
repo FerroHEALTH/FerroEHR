@@ -537,7 +537,7 @@ fn row_view(row: AuditRow) -> impl IntoView {
                     <summary class="cursor-pointer text-accent hover:underline text-xs">
                         "view"
                     </summary>
-                    <pre class="mt-2 max-h-80 w-56 overflow-auto rounded-card border border-edge bg-sunken p-2 font-mono text-xs">
+                    <pre class="mt-2 max-h-80 w-48 overflow-auto rounded-card border border-edge bg-sunken p-2 font-mono text-xs">
                         {row.raw}
                     </pre>
                 </details>
