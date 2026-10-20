@@ -2394,6 +2394,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "ehds-logging"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e04f6060007816a120eb9ce54ed57f7ac471e9424737ab10f3dc2fa9e91332bb"
+dependencies = [
+ "async-trait",
+ "ihe-atna",
+ "jiff",
+ "secrecy",
+ "serde",
+ "thiserror 2.0.21",
+ "url",
+]
+
+[[package]]
 name = "either"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2623,12 +2638,14 @@ dependencies = [
  "base64 0.23.1",
  "config",
  "criterion",
+ "ehds-logging",
  "ferroehr-ext",
  "ferrohealth-smart",
  "futures",
  "hmac 0.13.0",
  "http",
  "http-body-util",
+ "ihe-atna",
  "indexmap 2.14.2",
  "inferno",
  "insta",
@@ -2674,7 +2691,6 @@ dependencies = [
  "testkit",
  "thiserror 2.0.21",
  "tokio",
- "tokio-rustls",
  "toml",
  "tower",
  "tracing",
@@ -2903,6 +2919,18 @@ dependencies = [
  "derive_builder",
  "serde",
  "time",
+]
+
+[[package]]
+name = "fhir-types"
+version = "0.1.127"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1d316f2ef88198139bb57a6dcb17b25311274b42ccc2584e27a849d35697a42"
+dependencies = [
+ "quick-xml 0.42.0",
+ "regex",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3993,6 +4021,30 @@ dependencies = [
  "same-file",
  "walkdir",
  "winapi-util",
+]
+
+[[package]]
+name = "ihe-atna"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3447c9ed26bbb3797804655242ffa9089267c4ca25e0c28c630fcead31320417"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "fhir-types",
+ "http",
+ "jiff",
+ "quick-xml 0.42.0",
+ "reqwest",
+ "rustls",
+ "rustls-platform-verifier",
+ "secrecy",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
+ "url",
 ]
 
 [[package]]
@@ -7124,9 +7176,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-platform-verifier"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26d1e2536ce4f35f4846aa13bff16bd0ff40157cdb14cc056c7b14ba41233ba0"
+checksum = "1167586491e2b18b8bfbb293e8180ec17c201c4f076d7cb3070ca964e7598f98"
 dependencies = [
  "core-foundation 0.10.1",
  "core-foundation-sys",
@@ -7145,9 +7197,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-platform-verifier-android"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f87165f0995f63a9fbeea62b64d10b4d9d8e78ec6d7d51fb2125fda7bb36788f"
+checksum = "eec689c0bc40ff2458a5977b6619cb718087084a18e02a131c599b62d05e1a5f"
 
 [[package]]
 name = "rustls-webpki"

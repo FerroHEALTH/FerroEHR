@@ -1,188 +1,91 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The EHDS priority category of each access, through a deployment-declared
-//! map (`[audit.categories]`).
+//! The EHDS category of each access: the deployment's map
+//! (`[audit.categories]`) and what FerroEHR reads off its own data for
+//! `ehds-logging` to classify.
 //!
 //! Regulation (EU) 2025/327 Annex II 3.2(c) asks the European logging
 //! component to record "the categories of data accessed", and Art. 14(1)
-//! names the priority categories: patient summaries, electronic
-//! prescriptions, electronic dispensations, medical imaging studies and
-//! related imaging reports, medical test results, and discharge reports, with
-//! national additional categories under its third subparagraph
-//! (`docs/law/eu/ehds/text.html`). AQL selects archetypes and templates, never
-//! categories, so a deployment declares which of its templates and archetypes
-//! hold which category, and every access record is classified against that
-//! map at the moment of access.
+//! names the priority categories (`docs/law/eu/ehds/text.html`). The shared
+//! crate `ehds-logging` (FerroAUDIT) holds the categories, the map and the
+//! classification; FerroEHR keeps what the crate leaves to the product: the
+//! map's configuration, the openEHR checks on its keys, the digest that names
+//! it, and the model ids of what an access reached.
 //!
 //! **No openEHR spec governs this — our own design/extension.**
 //!
-//! Classification reads the template id first and the root archetype id
-//! second, per served object. An object neither id classifies is recorded
-//! `unclassified` with both ids as evidence and is never refused. `EHR`,
-//! `EHR_STATUS`, the directory `FOLDER`, item tags and revision history are
-//! classified by resource kind as holding no priority-category data. The map's
-//! digest rides on every record, so a record says which map classified it.
-//!
-//! The classification is audit content: it is never written to the request
-//! log, a span or a metric label.
+//! An object the map cannot classify is recorded `unclassified` and is never
+//! refused. `EHR`, `EHR_STATUS`, `EHR_ACCESS`, the directory `FOLDER`, item
+//! tags and revision history hold no data of any category. The classification
+//! is audit content: it is never written to the request log, a span or a
+//! metric label.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+use ehds_logging::category::Category;
+use ehds_logging::classify::{Basis, Classification, Evidence, Queried, RootObject};
+use ehds_logging::map::{CategoryMap, Declared, MapError, Table};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-/// The category spelling an access carries when the map cannot classify it.
+/// The word a stored record carries for an access the map cannot classify.
 pub const UNCLASSIFIED: &str = "unclassified";
 
-/// The spelling of [`Category::None`].
-const NONE: &str = "none";
+/// The word a stored record carries for an access of no category, the word a
+/// map declares it with.
+pub const NONE: &str = ehds_logging::map::NONE;
 
-/// The prefix of a national additional category (`national:<code>`).
-const NATIONAL_PREFIX: &str = "national:";
-
-/// One category a template or archetype is mapped to.
+/// The `[audit.categories]` section: the national categories the deployment
+/// adds, and which categories each template and each archetype holds.
 ///
-/// The six priority categories of EHDS Art. 14(1), a national additional
-/// category (Art. 14(1) third subparagraph), or [`Category::None`] for content
-/// that holds no priority-category data.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(try_from = "String", into = "String")]
-pub enum Category {
-    /// `patient-summary` — Art. 14(1)(a).
-    PatientSummary,
-    /// `eprescription` — Art. 14(1)(b).
-    Eprescription,
-    /// `edispensation` — Art. 14(1)(c).
-    Edispensation,
-    /// `imaging` — Art. 14(1)(d), imaging studies and related reports.
-    Imaging,
-    /// `test-results` — Art. 14(1)(e), laboratory and other diagnostic results.
-    TestResults,
-    /// `discharge-report` — Art. 14(1)(f).
-    DischargeReport,
-    /// `national:<code>` — a category a Member State adds in national law.
-    National(String),
-    /// `none` — content mapped as holding no priority-category data.
-    None,
-}
-
-/// A category spelling the map refuses.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error(
-    "`{0}` is not an audit category; the categories are patient-summary, eprescription, \
-     edispensation, imaging, test-results, discharge-report, national:<code> and none"
-)]
-pub struct UnknownCategory(pub String);
-
-impl Category {
-    /// Parses one spelling.
-    ///
-    /// # Errors
-    /// [`UnknownCategory`] for a spelling outside the set, including a
-    /// `national:` code that is empty or carries whitespace or a comma.
-    pub fn parse(spelling: &str) -> Result<Self, UnknownCategory> {
-        Ok(match spelling {
-            "patient-summary" => Category::PatientSummary,
-            "eprescription" => Category::Eprescription,
-            "edispensation" => Category::Edispensation,
-            "imaging" => Category::Imaging,
-            "test-results" => Category::TestResults,
-            "discharge-report" => Category::DischargeReport,
-            NONE => Category::None,
-            other => match other.strip_prefix(NATIONAL_PREFIX) {
-                Some(code)
-                    if !code.is_empty()
-                        && code.chars().all(|c| c.is_ascii_graphic() && c != ',') =>
-                {
-                    Category::National(code.to_owned())
-                }
-                _ => return Err(UnknownCategory(other.to_owned())),
-            },
-        })
-    }
-
-    /// The stored and configured spelling.
-    #[must_use]
-    pub fn spelling(&self) -> String {
-        match self {
-            Category::PatientSummary => "patient-summary".to_owned(),
-            Category::Eprescription => "eprescription".to_owned(),
-            Category::Edispensation => "edispensation".to_owned(),
-            Category::Imaging => "imaging".to_owned(),
-            Category::TestResults => "test-results".to_owned(),
-            Category::DischargeReport => "discharge-report".to_owned(),
-            Category::National(code) => format!("{NATIONAL_PREFIX}{code}"),
-            Category::None => NONE.to_owned(),
-        }
-    }
-}
-
-impl TryFrom<String> for Category {
-    type Error = UnknownCategory;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Category::parse(&value)
-    }
-}
-
-impl From<Category> for String {
-    fn from(category: Category) -> Self {
-        category.spelling()
-    }
-}
-
-impl fmt::Display for Category {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.spelling())
-    }
-}
-
-/// The `[audit.categories]` section: which categories each template and each
-/// archetype holds.
-///
-/// Empty by default: FerroEHR ships no map, so every access is recorded
-/// `unclassified` until a deployment declares one.
+/// A category is a priority category of Art. 14(1) by its code in HL7
+/// Europe's `EEHRxFDocumentPriorityCategoryCS` (`Patient-Summaries`,
+/// `Electronic-Prescriptions`, `Electronic-Dispensations`, `Medical-Imaging`,
+/// `Laboratory-Reports`, `Discharge-Reports`) or as `<system>|<code>`, or a
+/// national one declared in `national` as `<system>|<code>`; a key whose data
+/// hold no category maps to the word `"none"`. Empty by default: FerroEHR
+/// ships no map, so every access is recorded `unclassified` until a deployment
+/// declares one.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct CategoryMapConfig {
+    /// The national categories (Art. 14(1) third subparagraph), each
+    /// `<system>|<code>`.
+    pub national: Vec<String>,
     /// Template id → categories (`[audit.categories.templates]`), consulted
     /// first.
-    pub templates: BTreeMap<String, Vec<Category>>,
+    #[serde(serialize_with = "serialize_table")]
+    pub templates: BTreeMap<String, Declared>,
     /// Archetype id → categories (`[audit.categories.archetypes]`), consulted
     /// for an object whose template the map does not name.
-    pub archetypes: BTreeMap<String, Vec<Category>>,
+    #[serde(serialize_with = "serialize_table")]
+    pub archetypes: BTreeMap<String, Declared>,
+}
+
+/// Writes a table the way it is configured: `"none"` or a list of codes.
+fn serialize_table<S: serde::Serializer>(
+    table: &BTreeMap<String, Declared>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    use serde::ser::SerializeMap as _;
+    let mut map = serializer.serialize_map(Some(table.len()))?;
+    for (key, declared) in table {
+        match declared {
+            Declared::Word(word) => map.serialize_entry(key, word)?,
+            Declared::Codes(codes) => map.serialize_entry(key, codes)?,
+        }
+    }
+    map.end()
 }
 
 /// A map entry the boot validation refuses.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum CategoryMapError {
-    /// A blank template or archetype key.
-    #[error("audit.categories.{table} carries a blank key")]
-    BlankKey {
-        /// `templates` or `archetypes`.
-        table: &'static str,
-    },
-    /// A key mapped to no category at all.
-    #[error(
-        "audit.categories.{table}.{key:?} maps to no category; map it to [\"none\"] when it holds \
-         no priority-category data"
-    )]
-    Empty {
-        /// `templates` or `archetypes`.
-        table: &'static str,
-        /// The key.
-        key: String,
-    },
-    /// `none` combined with a category, which contradicts itself.
-    #[error("audit.categories.{table}.{key:?} combines \"none\" with a category")]
-    NoneWithCategory {
-        /// `templates` or `archetypes`.
-        table: &'static str,
-        /// The key.
-        key: String,
-    },
+    /// `ehds-logging` refused a declaration.
+    #[error("audit.categories: {0}")]
+    Map(#[source] MapError),
     /// Two keys that differ only in letter case.
     #[error(
         "audit.categories.{table} names {key:?} twice, differing only in case; openEHR \
@@ -203,79 +106,94 @@ pub enum CategoryMapError {
 }
 
 impl CategoryMapConfig {
-    /// Validates the map and compiles it for lookup.
+    /// Validates the map and compiles it for classification.
+    ///
+    /// Every key is checked on its own, so one pass names every defect: the
+    /// openEHR form of an archetype key, two keys that differ only in case,
+    /// and each declaration `ehds-logging` refuses.
     ///
     /// # Errors
-    /// Every [`CategoryMapError`] the map carries, so an operator fixes it in
-    /// one pass.
-    pub fn compile(&self) -> Result<CategoryMap, Vec<CategoryMapError>> {
+    /// Every [`CategoryMapError`] the map carries.
+    pub fn compile(&self) -> Result<Classifier, Vec<CategoryMapError>> {
         let mut errors = Vec::new();
-        let templates = compile_table("templates", &self.templates, &mut errors);
+        let none = BTreeMap::new();
+        if let Err(error) = CategoryMap::declare(&self.national, &none, &none) {
+            errors.push(CategoryMapError::Map(error));
+            return Err(errors);
+        }
         for key in self.archetypes.keys() {
             if !key.trim().is_empty() && key.parse::<openehr_base::prelude::ArchetypeId>().is_err()
             {
                 errors.push(CategoryMapError::NotAnArchetypeId(key.clone()));
             }
         }
-        let archetypes = compile_table("archetypes", &self.archetypes, &mut errors);
+        let templates = self.folded(Table::Templates, &self.templates, &mut errors);
+        let archetypes = self.folded(Table::Archetypes, &self.archetypes, &mut errors);
         if !errors.is_empty() {
             return Err(errors);
         }
-        let digest = MapDigest::of(&templates, &archetypes);
-        Ok(CategoryMap {
-            templates,
-            archetypes,
+        let map = CategoryMap::declare(&self.national, &templates, &archetypes)
+            .map_err(|error| vec![CategoryMapError::Map(error)])?;
+        let digest = MapDigest::of(&map);
+        let mut rows = Vec::new();
+        for (kind, table) in [("template", &templates), ("archetype", &archetypes)] {
+            for (key, declared) in table {
+                match declared {
+                    Declared::Word(_) => rows.push((kind, key.clone(), NONE.to_owned())),
+                    Declared::Codes(codes) => rows.extend(codes.iter().filter_map(|code| {
+                        map.category(code)
+                            .map(|category| (kind, key.clone(), category.token()))
+                    })),
+                }
+            }
+        }
+        rows.sort();
+        rows.dedup();
+        Ok(Classifier {
+            map: map.with_digest(digest.to_string()),
             digest,
+            rows,
         })
+    }
+
+    /// One table with its keys case-folded, each declaration checked on its
+    /// own against the national categories.
+    fn folded(
+        &self,
+        table: Table,
+        entries: &BTreeMap<String, Declared>,
+        errors: &mut Vec<CategoryMapError>,
+    ) -> BTreeMap<String, Declared> {
+        let mut out = BTreeMap::new();
+        let none = BTreeMap::new();
+        for (key, declared) in entries {
+            let one = BTreeMap::from([(key.clone(), declared.clone())]);
+            let checked = match table {
+                Table::Templates => CategoryMap::declare(&self.national, &one, &none),
+                Table::Archetypes => CategoryMap::declare(&self.national, &none, &one),
+            };
+            if let Err(error) = checked {
+                errors.push(CategoryMapError::Map(error));
+                continue;
+            }
+            if out.insert(fold(key), declared.clone()).is_some() {
+                errors.push(CategoryMapError::DuplicateKey {
+                    table: table.name(),
+                    key: key.clone(),
+                });
+            }
+        }
+        out
     }
 
     /// The boot validation's findings, as messages; empty when the map compiles.
     #[must_use]
     pub fn errors(&self) -> Vec<String> {
-        self.compile()
-            .err()
-            .unwrap_or_default()
-            .iter()
-            .map(ToString::to_string)
-            .collect()
-    }
-}
-
-/// Validates and case-folds one table of the map.
-fn compile_table(
-    table: &'static str,
-    entries: &BTreeMap<String, Vec<Category>>,
-    errors: &mut Vec<CategoryMapError>,
-) -> BTreeMap<String, BTreeSet<Category>> {
-    let mut out: BTreeMap<String, BTreeSet<Category>> = BTreeMap::new();
-    for (key, categories) in entries {
-        if key.trim().is_empty() {
-            errors.push(CategoryMapError::BlankKey { table });
-            continue;
-        }
-        if categories.is_empty() {
-            errors.push(CategoryMapError::Empty {
-                table,
-                key: key.clone(),
-            });
-            continue;
-        }
-        let set: BTreeSet<Category> = categories.iter().cloned().collect();
-        if set.contains(&Category::None) && set.len() > 1 {
-            errors.push(CategoryMapError::NoneWithCategory {
-                table,
-                key: key.clone(),
-            });
-            continue;
-        }
-        if out.insert(fold(key), set).is_some() {
-            errors.push(CategoryMapError::DuplicateKey {
-                table,
-                key: key.clone(),
-            });
+        match self.compile() {
+            Ok(_) => Vec::new(),
+            Err(errors) => errors.iter().map(ToString::to_string).collect(),
         }
     }
-    out
 }
 
 /// The comparison form of an identifier: ASCII-lowercased, the form the node
@@ -287,27 +205,15 @@ fn fold(id: &str) -> String {
     id.to_ascii_lowercase()
 }
 
-/// The SHA-256 digest of a compiled map's canonical form, so a record names
-/// the map that classified it.
+/// The SHA-256 digest of a compiled map's canonical text, so a record names the
+/// map that classified it.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct MapDigest([u8; 32]);
 
 impl MapDigest {
-    /// The digest of the canonical rendering: one `kind\tkey\tcategory` line
-    /// per mapping, keys case-folded, in sorted order.
-    fn of(
-        templates: &BTreeMap<String, BTreeSet<Category>>,
-        archetypes: &BTreeMap<String, BTreeSet<Category>>,
-    ) -> Self {
-        let mut hasher = Sha256::new();
-        for (kind, table) in [("template", templates), ("archetype", archetypes)] {
-            for (key, categories) in table {
-                for category in categories {
-                    hasher.update(format!("{kind}\t{key}\t{category}\n").as_bytes());
-                }
-            }
-        }
-        MapDigest(hasher.finalize().into())
+    /// The digest of `map`'s canonical text ([`CategoryMap::canonical`]).
+    fn of(map: &CategoryMap) -> Self {
+        MapDigest(Sha256::digest(map.canonical().as_bytes()).into())
     }
 }
 
@@ -333,28 +239,27 @@ impl Serialize for MapDigest {
     }
 }
 
-/// A compiled, validated category map.
+/// The compiled map every access record is classified through.
 #[derive(Debug, Clone)]
-pub struct CategoryMap {
-    templates: BTreeMap<String, BTreeSet<Category>>,
-    archetypes: BTreeMap<String, BTreeSet<Category>>,
+pub struct Classifier {
+    map: CategoryMap,
     digest: MapDigest,
+    rows: Vec<(&'static str, String, String)>,
 }
 
-impl Default for CategoryMap {
+impl Default for Classifier {
     fn default() -> Self {
-        let templates = BTreeMap::new();
-        let archetypes = BTreeMap::new();
-        let digest = MapDigest::of(&templates, &archetypes);
+        let map = CategoryMap::default();
+        let digest = MapDigest::of(&map);
         Self {
-            templates,
-            archetypes,
+            map: map.with_digest(digest.to_string()),
             digest,
+            rows: Vec::new(),
         }
     }
 }
 
-/// The resource kinds classified as holding no priority-category data.
+/// The resource kinds that hold no data of any category.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ResourceKind {
     /// The `EHR` itself.
@@ -393,7 +298,7 @@ pub struct ContentIds {
     pub template_id: Option<String>,
     /// The archetype id of the object's root node.
     pub archetype_id: Option<String>,
-    /// Set for an object of a kind that holds no priority-category data
+    /// Set for an object of a kind that holds no data of any category
     /// (`EHR_STATUS`, `EHR_ACCESS`, `FOLDER`), which is classified by kind
     /// alone.
     pub resource_kind: Option<ResourceKind>,
@@ -417,6 +322,15 @@ impl ContentIds {
             resource_kind,
         }
     }
+
+    /// The root object `ehds-logging` classifies, its ids in comparison form.
+    fn root_object(&self) -> RootObject {
+        RootObject {
+            template_id: self.template_id.as_deref().map(fold),
+            archetype_id: self.archetype_id.as_deref().map(fold),
+            version_uid: None,
+        }
+    }
 }
 
 /// The positive archetype and template constraints of a bound AQL query.
@@ -430,233 +344,206 @@ pub struct QueryConstraints {
     /// Archetype ids the query constrains to.
     pub archetype_ids: BTreeSet<String>,
     /// Whether a positive operand binds clinical content (anything but `EHR`,
-    /// `EHR_STATUS` and `FOLDER`).
+    /// `EHR_STATUS`, `EHR_ACCESS` and `FOLDER`).
     pub reaches_content: bool,
+    /// Whether every positive operand that binds clinical content is bound to
+    /// an archetype id or a template id, so what the query read is known.
+    pub every_root_bound: bool,
     /// The no-category resource kinds the query reads, as evidence for a query
     /// that reaches no content.
     pub resource_kinds: BTreeSet<ResourceKind>,
 }
 
-/// What an access touched, as the classifier reads it.
+/// What an access touched, as FerroEHR reads it off its own data.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AccessedContent {
     /// The objects the access delivered, read or wrote.
     Objects(Vec<ContentIds>),
     /// A query answer that carries no object, classified from the query.
     Query(QueryConstraints),
-    /// A resource kind that holds no priority-category data.
+    /// A resource kind that holds no data of any category.
     ResourceKind(ResourceKind),
 }
 
-/// What a classification rests on.
+/// What a stored classification was read from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CategoryBasis {
-    /// Every served object classified through its template id.
-    Template,
-    /// At least one object needed its root archetype id, whether or not that
-    /// classified it.
-    Archetype,
+pub enum ReadFrom {
+    /// The objects the access delivered or read.
+    Returned,
+    /// The objects the access wrote.
+    Written,
     /// The bound query's positive constraints.
-    Query,
+    Queried,
     /// The resource kind alone.
     ResourceKind,
 }
 
-impl CategoryBasis {
+impl ReadFrom {
     /// The stored spelling, matching the `ck_audit_event_category_basis`
     /// constraint.
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
-            CategoryBasis::Template => "template",
-            CategoryBasis::Archetype => "archetype",
-            CategoryBasis::Query => "query",
-            CategoryBasis::ResourceKind => "resource-kind",
+            ReadFrom::Returned => "returned",
+            ReadFrom::Written => "written",
+            ReadFrom::Queried => "queried",
+            ReadFrom::ResourceKind => "resource-kind",
         }
     }
 }
 
-/// The classification one access record carries.
+/// The classification one access record carries: what `ehds-logging` made of
+/// it, and what FerroEHR read it from.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CategoryRecord {
-    /// The category spellings, sorted; `unclassified` when an object or query
-    /// could not be classified.
-    pub categories: Vec<String>,
-    /// What the classification rests on.
-    pub basis: CategoryBasis,
-    /// The identifiers it rests on, sorted and capped at the record cap.
-    pub evidence: Vec<String>,
+    /// The categories, their bases and the evidence, as `ehds-logging`
+    /// classified them.
+    pub classification: Classification,
+    /// What the classification was read from.
+    pub read_from: ReadFrom,
+    /// The resource kinds of no category the access reached, as evidence.
+    pub resource_kinds: BTreeSet<ResourceKind>,
 }
 
-/// The accumulator one classification fills.
-#[derive(Default)]
-struct Tally {
-    categories: BTreeSet<String>,
-    evidence: BTreeSet<String>,
-    unclassified: bool,
-}
-
-impl Tally {
-    fn add(&mut self, categories: &BTreeSet<Category>, evidence: &str) {
-        self.categories
-            .extend(categories.iter().map(Category::spelling));
-        self.evidence.insert(evidence.to_owned());
+impl CategoryRecord {
+    /// The stored category words, sorted: each category as `<system>|<code>`,
+    /// `none` for an access of no category, `unclassified` when the map could
+    /// not classify all of it.
+    #[must_use]
+    pub fn stored_categories(&self) -> Vec<String> {
+        let mut words: BTreeSet<String> = self
+            .classification
+            .categories()
+            .keys()
+            .map(Category::token)
+            .collect();
+        if self.classification.is_no_category() {
+            words.insert(NONE.to_owned());
+        }
+        if self.classification.unclassified().is_some() {
+            words.insert(UNCLASSIFIED.to_owned());
+        }
+        words.into_iter().collect()
     }
 
-    fn finish(self, basis: CategoryBasis) -> CategoryRecord {
-        let mut categories = self.categories;
-        if self.unclassified {
-            categories.insert(UNCLASSIFIED.to_owned());
-        }
-        // `none` says nothing beside a real category or an unknown one.
-        if categories.iter().any(|c| c != NONE) {
-            categories.remove(NONE);
-        }
-        let mut evidence: Vec<String> = self.evidence.into_iter().collect();
+    /// The stored evidence, sorted and capped at the record cap: the template
+    /// and archetype ids the classification read, in comparison form, and the
+    /// RM class names of the resource kinds of no category.
+    #[must_use]
+    pub fn stored_evidence(&self) -> Vec<String> {
+        let mut evidence: BTreeSet<String> = self
+            .classification
+            .templates()
+            .iter()
+            .chain(self.classification.archetypes())
+            .cloned()
+            .collect();
+        evidence.extend(
+            self.resource_kinds
+                .iter()
+                .map(|kind| kind.rm_name().to_owned()),
+        );
+        let mut evidence: Vec<String> = evidence.into_iter().collect();
         evidence.truncate(crate::versioning::origins::RECORD_CAP);
-        CategoryRecord {
-            categories: categories.into_iter().collect(),
-            basis,
-            evidence,
-        }
+        evidence
     }
 }
 
-impl CategoryMap {
-    /// The digest of this map's canonical form.
+impl Classifier {
+    /// The digest of this map's canonical text.
     #[must_use]
     pub fn digest(&self) -> MapDigest {
         self.digest
     }
 
+    /// The compiled `ehds-logging` map.
+    #[must_use]
+    pub fn map(&self) -> &CategoryMap {
+        &self.map
+    }
+
     /// Whether the map declares nothing.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.templates.is_empty() && self.archetypes.is_empty()
+        self.map.is_empty()
+    }
+
+    /// The category `reference` names, as `<system>|<code>`: a priority
+    /// category by its bare code or its token, or a national one the map
+    /// declares.
+    #[must_use]
+    pub fn category_token(&self, reference: &str) -> Option<String> {
+        self.map
+            .category(reference)
+            .map(|category| category.token())
     }
 
     /// Every mapping as `(key kind, case-folded key, category)`, the rows the
-    /// boot mirror writes for the retention register.
+    /// boot mirror writes for the retention register; a key of no category
+    /// maps to `none`, every other to a `<system>|<code>` token.
     #[must_use]
-    pub fn rows(&self) -> Vec<(&'static str, String, String)> {
-        let mut rows = Vec::new();
-        for (kind, table) in [
-            ("template", &self.templates),
-            ("archetype", &self.archetypes),
-        ] {
-            for (key, categories) in table {
-                for category in categories {
-                    rows.push((kind, key.clone(), category.spelling()));
-                }
-            }
-        }
-        rows
+    pub fn rows(&self) -> &[(&'static str, String, String)] {
+        &self.rows
     }
 
-    fn template(&self, id: &str) -> Option<&BTreeSet<Category>> {
-        self.templates.get(&fold(id))
-    }
-
-    fn archetype(&self, id: &str) -> Option<&BTreeSet<Category>> {
-        self.archetypes.get(&fold(id))
-    }
-
-    /// Classifies one access.
+    /// Classifies one access whose objects were read (`written` false) or
+    /// written (`written` true).
     ///
-    /// Objects are read template first, then root archetype; an object neither
-    /// id classifies adds `unclassified` and both ids as evidence. A query
-    /// answer with no object reads the query's template constraints first, then
-    /// its archetype constraints, and is `unclassified` when none of them is
-    /// mapped.
+    /// Objects are read template first, then root archetype; an object of a
+    /// kind that holds no category data adds only its kind as evidence. A
+    /// query answer with no object is classified from the query's positive
+    /// constraints.
     #[must_use]
-    pub fn classify(&self, content: &AccessedContent) -> CategoryRecord {
-        match content {
-            AccessedContent::Objects(objects) => self.classify_objects(objects),
-            AccessedContent::Query(constraints) => self.classify_query(constraints),
+    pub fn classify(&self, content: &AccessedContent, written: bool) -> CategoryRecord {
+        let mut resource_kinds = BTreeSet::new();
+        let (evidence, read_from) = match content {
             AccessedContent::ResourceKind(kind) => {
-                let mut tally = Tally::default();
-                tally.categories.insert(NONE.to_owned());
-                tally.evidence.insert(kind.rm_name().to_owned());
-                tally.finish(CategoryBasis::ResourceKind)
+                resource_kinds.insert(*kind);
+                (Evidence::no_category(), ReadFrom::ResourceKind)
             }
-        }
-    }
-
-    fn classify_objects(&self, objects: &[ContentIds]) -> CategoryRecord {
-        let mut tally = Tally::default();
-        let mut by_archetype = false;
-        let mut by_template = false;
-        for object in objects {
-            if let Some(kind) = object.resource_kind {
-                tally.categories.insert(NONE.to_owned());
-                tally.evidence.insert(kind.rm_name().to_owned());
-                continue;
-            }
-            if let Some(template) = object.template_id.as_deref()
-                && let Some(categories) = self.template(template)
-            {
-                tally.add(categories, template);
-                by_template = true;
-                continue;
-            }
-            by_archetype = true;
-            if let Some(archetype) = object.archetype_id.as_deref()
-                && let Some(categories) = self.archetype(archetype)
-            {
-                tally.add(categories, archetype);
-                continue;
-            }
-            tally.unclassified = true;
-            tally.evidence.extend(object.template_id.iter().cloned());
-            tally.evidence.extend(object.archetype_id.iter().cloned());
-        }
-        if objects.is_empty() {
-            tally.unclassified = true;
-        }
-        let basis = if by_archetype {
-            CategoryBasis::Archetype
-        } else if by_template || objects.is_empty() {
-            CategoryBasis::Template
-        } else {
-            CategoryBasis::ResourceKind
-        };
-        tally.finish(basis)
-    }
-
-    fn classify_query(&self, constraints: &QueryConstraints) -> CategoryRecord {
-        let mut tally = Tally::default();
-        if !constraints.reaches_content {
-            tally.categories.insert(NONE.to_owned());
-            tally.evidence.extend(
-                constraints
-                    .resource_kinds
-                    .iter()
-                    .map(|k| k.rm_name().to_owned()),
-            );
-            return tally.finish(CategoryBasis::ResourceKind);
-        }
-        for template in &constraints.template_ids {
-            if let Some(categories) = self.template(template) {
-                tally.add(categories, template);
-            }
-        }
-        if tally.categories.is_empty() {
-            for archetype in &constraints.archetype_ids {
-                if let Some(categories) = self.archetype(archetype) {
-                    tally.add(categories, archetype);
+            AccessedContent::Objects(objects) => {
+                let (basis, read_from) = if written {
+                    (Basis::Written, ReadFrom::Written)
+                } else {
+                    (Basis::Returned, ReadFrom::Returned)
+                };
+                let mut roots = Vec::new();
+                for object in objects {
+                    match object.resource_kind {
+                        Some(kind) => {
+                            resource_kinds.insert(kind);
+                        }
+                        None => roots.push(object.root_object()),
+                    }
+                }
+                if roots.is_empty() && !resource_kinds.is_empty() {
+                    (Evidence::no_category(), ReadFrom::ResourceKind)
+                } else {
+                    (Evidence::reached(basis, roots), read_from)
                 }
             }
+            AccessedContent::Query(constraints) => {
+                if constraints.reaches_content {
+                    let queried = Queried {
+                        templates: constraints.template_ids.iter().map(|t| fold(t)).collect(),
+                        archetypes: constraints.archetype_ids.iter().map(|a| fold(a)).collect(),
+                        every_root_bound: constraints.every_root_bound,
+                    };
+                    (
+                        Evidence::reached(Basis::Returned, Vec::new()).queried(queried),
+                        ReadFrom::Queried,
+                    )
+                } else {
+                    resource_kinds.extend(constraints.resource_kinds.iter().copied());
+                    (Evidence::no_category(), ReadFrom::ResourceKind)
+                }
+            }
+        };
+        CategoryRecord {
+            classification: self.map.classify(&evidence),
+            read_from,
+            resource_kinds,
         }
-        if tally.categories.is_empty() {
-            tally.unclassified = true;
-            tally
-                .evidence
-                .extend(constraints.template_ids.iter().cloned());
-            tally
-                .evidence
-                .extend(constraints.archetype_ids.iter().cloned());
-        }
-        tally.finish(CategoryBasis::Query)
     }
 }
 
@@ -664,7 +551,15 @@ impl CategoryMap {
 mod tests {
     use super::*;
 
-    fn map(toml_text: &str) -> CategoryMap {
+    const LAB: &str = "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs|\
+         Laboratory-Reports";
+    const SUMMARY: &str = "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs|\
+         Patient-Summaries";
+    const IMAGING: &str = "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs|\
+         Medical-Imaging";
+    const BEELD: &str = "urn:oid:2.16.840.1.113883.2.4.3.11.60.1|beeld";
+
+    fn map(toml_text: &str) -> Classifier {
         let config: CategoryMapConfig = toml::from_str(toml_text).expect("parse");
         config.compile().expect("compile")
     }
@@ -678,38 +573,21 @@ mod tests {
     }
 
     const MAP: &str = r#"
+        national = ["urn:oid:2.16.840.1.113883.2.4.3.11.60.1|beeld"]
         [templates]
-        "Lab Report" = ["test-results"]
-        "IPS" = ["patient-summary"]
-        "Admin Note" = ["none"]
+        "Lab Report" = ["Laboratory-Reports"]
+        "IPS" = ["Patient-Summaries"]
+        "Admin Note" = "none"
         [archetypes]
-        "openEHR-EHR-COMPOSITION.imaging_report.v1" = ["imaging", "national:nl-beeld"]
+        "openEHR-EHR-COMPOSITION.imaging_report.v1" = ["Medical-Imaging", "urn:oid:2.16.840.1.113883.2.4.3.11.60.1|beeld"]
     "#;
 
     #[test]
-    fn every_spelling_round_trips_and_unknown_ones_are_refused() {
-        for spelling in [
-            "patient-summary",
-            "eprescription",
-            "edispensation",
-            "imaging",
-            "test-results",
-            "discharge-report",
-            "national:de-mio",
-            "none",
-        ] {
-            let category = Category::parse(spelling).expect(spelling);
-            assert_eq!(category.spelling(), spelling);
-        }
-        for bad in [
-            "laboratory",
-            "national:",
-            "national:a b",
-            "unclassified",
-            "",
-        ] {
-            assert!(Category::parse(bad).is_err(), "{bad:?} must be refused");
-        }
+    fn the_config_round_trips_through_its_serialized_form() {
+        let config: CategoryMapConfig = toml::from_str(MAP).expect("parse");
+        let text = toml::to_string(&config).expect("serialize");
+        let again: CategoryMapConfig = toml::from_str(&text).expect("parse again");
+        assert_eq!(config, again);
     }
 
     #[test]
@@ -718,90 +596,110 @@ mod tests {
             r#"
             [templates]
             "a" = []
-            "b" = ["none", "imaging"]
-            "C" = ["imaging"]
-            "c" = ["imaging"]
+            "b" = ["none", "Medical-Imaging"]
+            "C" = ["Medical-Imaging"]
+            "c" = ["Medical-Imaging"]
             [archetypes]
-            "not-an-archetype" = ["imaging"]
+            "not-an-archetype" = ["Medical-Imaging"]
             "#,
         )
         .expect("parse");
         let errors = config.errors();
         assert_eq!(errors.len(), 4, "{errors:#?}");
         assert!(errors.iter().any(|e| e.contains("maps to no category")));
-        assert!(errors.iter().any(|e| e.contains("combines \"none\"")));
+        assert!(errors.iter().any(|e| e.contains("\"none\"")));
         assert!(errors.iter().any(|e| e.contains("differing only in case")));
         assert!(errors.iter().any(|e| e.contains("is not an archetype id")));
-        let unknown = toml::from_str::<CategoryMapConfig>("[templates]\n\"a\" = [\"lab\"]")
-            .expect_err("an unknown spelling fails to load");
-        assert!(unknown.to_string().contains("is not an audit category"));
+        let unknown: CategoryMapConfig =
+            toml::from_str("[templates]\n\"a\" = [\"lab\"]").expect("parse");
+        assert!(
+            unknown
+                .errors()
+                .iter()
+                .any(|e| e.contains("neither a priority category nor a declared national one")),
+            "an unknown category is refused"
+        );
     }
 
     #[test]
     fn the_digest_is_stable_over_case_and_order_and_moves_with_the_content() {
         let a = map(MAP);
         let b = map(r#"
+            national = ["urn:oid:2.16.840.1.113883.2.4.3.11.60.1|beeld"]
             [archetypes]
-            "openEHR-EHR-COMPOSITION.IMAGING_REPORT.v1" = ["national:nl-beeld", "imaging"]
+            "openEHR-EHR-COMPOSITION.IMAGING_REPORT.v1" = ["urn:oid:2.16.840.1.113883.2.4.3.11.60.1|beeld", "Medical-Imaging"]
             [templates]
-            "admin note" = ["none"]
-            "ips" = ["patient-summary"]
-            "lab report" = ["test-results"]
+            "admin note" = "none"
+            "ips" = ["Patient-Summaries"]
+            "lab report" = ["Laboratory-Reports"]
             "#);
         assert_eq!(a.digest(), b.digest());
-        assert_ne!(a.digest(), CategoryMap::default().digest());
+        assert_ne!(a.digest(), Classifier::default().digest());
         assert!(a.digest().to_string().starts_with("sha256:"));
     }
 
     #[test]
     fn objects_are_classified_template_first_then_root_archetype() {
         let m = map(MAP);
-        let by_template = m.classify(&AccessedContent::Objects(vec![object(
-            Some("lab report"),
-            Some("openEHR-EHR-COMPOSITION.imaging_report.v1"),
-        )]));
-        assert_eq!(by_template.categories, ["test-results"]);
-        assert_eq!(by_template.basis, CategoryBasis::Template);
-        assert_eq!(by_template.evidence, ["lab report"]);
+        let by_template = m.classify(
+            &AccessedContent::Objects(vec![object(
+                Some("lab report"),
+                Some("openEHR-EHR-COMPOSITION.imaging_report.v1"),
+            )]),
+            false,
+        );
+        assert_eq!(by_template.stored_categories(), [LAB]);
+        assert_eq!(by_template.read_from, ReadFrom::Returned);
 
-        let by_archetype = m.classify(&AccessedContent::Objects(vec![object(
-            Some("unmapped"),
-            Some("openehr-ehr-composition.imaging_report.v1"),
-        )]));
-        assert_eq!(by_archetype.categories, ["imaging", "national:nl-beeld"]);
-        assert_eq!(by_archetype.basis, CategoryBasis::Archetype);
+        let by_archetype = m.classify(
+            &AccessedContent::Objects(vec![object(
+                Some("unmapped"),
+                Some("openehr-ehr-composition.imaging_report.v1"),
+            )]),
+            true,
+        );
+        assert_eq!(by_archetype.stored_categories(), [IMAGING, BEELD]);
+        assert_eq!(by_archetype.read_from, ReadFrom::Written);
     }
 
     #[test]
     fn an_unmapped_object_is_unclassified_with_its_ids_as_evidence() {
         let m = map(MAP);
-        let record = m.classify(&AccessedContent::Objects(vec![
-            object(Some("IPS"), None),
-            object(Some("Vitals"), Some("openEHR-EHR-COMPOSITION.encounter.v1")),
-        ]));
-        assert_eq!(record.categories, ["patient-summary", UNCLASSIFIED]);
-        assert_eq!(
-            record.evidence,
-            ["IPS", "Vitals", "openEHR-EHR-COMPOSITION.encounter.v1"]
+        let record = m.classify(
+            &AccessedContent::Objects(vec![
+                object(Some("IPS"), None),
+                object(Some("Vitals"), Some("openEHR-EHR-COMPOSITION.encounter.v1")),
+            ]),
+            false,
         );
-        assert_eq!(record.basis, CategoryBasis::Archetype);
+        assert_eq!(record.stored_categories(), [SUMMARY, UNCLASSIFIED]);
+        assert_eq!(
+            record.stored_evidence(),
+            ["ips", "openehr-ehr-composition.encounter.v1", "vitals"]
+        );
     }
 
     #[test]
     fn none_gives_way_to_a_real_category_and_kinds_classify_as_none() {
         let m = map(MAP);
-        let mixed = m.classify(&AccessedContent::Objects(vec![
-            object(Some("Admin Note"), None),
-            object(Some("Lab Report"), None),
-            ContentIds::of_kind("EHR_STATUS", None, None),
-        ]));
-        assert_eq!(mixed.categories, ["test-results"]);
-        let kind = m.classify(&AccessedContent::ResourceKind(ResourceKind::Ehr));
-        assert_eq!(kind.categories, ["none"]);
-        assert_eq!(kind.basis, CategoryBasis::ResourceKind);
-        assert_eq!(kind.evidence, ["EHR"]);
+        let mixed = m.classify(
+            &AccessedContent::Objects(vec![
+                object(Some("Admin Note"), None),
+                object(Some("Lab Report"), None),
+                ContentIds::of_kind("EHR_STATUS", None, None),
+            ]),
+            false,
+        );
+        assert_eq!(mixed.stored_categories(), [LAB]);
+        let kind = m.classify(&AccessedContent::ResourceKind(ResourceKind::Ehr), false);
+        assert_eq!(kind.stored_categories(), [NONE]);
+        assert_eq!(kind.read_from, ReadFrom::ResourceKind);
+        assert_eq!(kind.stored_evidence(), ["EHR"]);
     }
 
+    /// Every queried id must map: an unmapped one leaves the access
+    /// unclassified beside what did map (Annex II 3.2(c) records the
+    /// categories of all the data accessed).
     #[test]
     fn a_query_without_objects_reads_its_positive_constraints() {
         let m = map(MAP);
@@ -812,25 +710,58 @@ mod tests {
                 "openEHR-EHR-OBSERVATION.unmapped.v1".to_owned(),
             ]),
             reaches_content: true,
+            every_root_bound: true,
             resource_kinds: BTreeSet::new(),
         };
-        let record = m.classify(&AccessedContent::Query(constraints));
-        assert_eq!(record.categories, ["imaging", "national:nl-beeld"]);
-        assert_eq!(record.basis, CategoryBasis::Query);
+        let record = m.classify(&AccessedContent::Query(constraints), false);
+        assert_eq!(record.stored_categories(), [IMAGING, BEELD, UNCLASSIFIED]);
+        assert_eq!(record.read_from, ReadFrom::Queried);
 
-        let none_mapped = m.classify(&AccessedContent::Query(QueryConstraints {
-            template_ids: BTreeSet::from(["Vitals".to_owned()]),
-            reaches_content: true,
-            ..QueryConstraints::default()
-        }));
-        assert_eq!(none_mapped.categories, [UNCLASSIFIED]);
-        assert_eq!(none_mapped.evidence, ["Vitals"]);
+        let mapped = m.classify(
+            &AccessedContent::Query(QueryConstraints {
+                archetype_ids: BTreeSet::from([
+                    "openEHR-EHR-COMPOSITION.imaging_report.v1".to_owned()
+                ]),
+                reaches_content: true,
+                every_root_bound: true,
+                ..QueryConstraints::default()
+            }),
+            false,
+        );
+        assert_eq!(mapped.stored_categories(), [IMAGING, BEELD]);
 
-        let ehr_only = m.classify(&AccessedContent::Query(QueryConstraints {
-            resource_kinds: BTreeSet::from([ResourceKind::Ehr]),
-            ..QueryConstraints::default()
-        }));
-        assert_eq!(ehr_only.categories, ["none"]);
-        assert_eq!(ehr_only.basis, CategoryBasis::ResourceKind);
+        let none_mapped = m.classify(
+            &AccessedContent::Query(QueryConstraints {
+                template_ids: BTreeSet::from(["Vitals".to_owned()]),
+                reaches_content: true,
+                every_root_bound: true,
+                ..QueryConstraints::default()
+            }),
+            false,
+        );
+        assert_eq!(none_mapped.stored_categories(), [UNCLASSIFIED]);
+        assert_eq!(none_mapped.stored_evidence(), ["vitals"]);
+
+        let ehr_only = m.classify(
+            &AccessedContent::Query(QueryConstraints {
+                resource_kinds: BTreeSet::from([ResourceKind::Ehr]),
+                ..QueryConstraints::default()
+            }),
+            false,
+        );
+        assert_eq!(ehr_only.stored_categories(), [NONE]);
+        assert_eq!(ehr_only.read_from, ReadFrom::ResourceKind);
+    }
+
+    #[test]
+    fn the_mirror_rows_carry_tokens_and_none() {
+        let rows = map(MAP).rows();
+        assert!(rows.contains(&("template", "admin note".to_owned(), NONE.to_owned())));
+        assert!(rows.contains(&("template", "lab report".to_owned(), LAB.to_owned())));
+        assert!(rows.contains(&(
+            "archetype",
+            "openehr-ehr-composition.imaging_report.v1".to_owned(),
+            BEELD.to_owned()
+        )));
     }
 }

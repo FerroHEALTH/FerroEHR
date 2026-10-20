@@ -667,27 +667,30 @@ impl CategoryColumns {
     }
 }
 
-/// The `categories` column value: the classified category spellings as a JSON
-/// array, or `NULL` when the operation touched no clinical content.
+/// The `categories` column value: the stored category words as a JSON array,
+/// or `NULL` when the operation touched no clinical content.
 fn categories_json(event: &AuditEvent) -> Option<serde_json::Value> {
     event
         .category
         .as_ref()
-        .map(|record| serde_json::json!(record.categories))
+        .map(|record| serde_json::json!(record.stored_categories()))
 }
 
-/// The `category_basis` column value.
+/// The `category_basis` column value: what the classification was read from.
 fn category_basis(event: &AuditEvent) -> Option<&'static str> {
-    event.category.as_ref().map(|record| record.basis.as_str())
+    event
+        .category
+        .as_ref()
+        .map(|record| record.read_from.as_str())
 }
 
 /// The `category_evidence` column value: the identifiers the classification
-/// rests on, as a JSON array.
+/// read, as a JSON array.
 fn category_evidence_json(event: &AuditEvent) -> Option<serde_json::Value> {
     event
         .category
         .as_ref()
-        .map(|record| serde_json::json!(record.evidence))
+        .map(|record| serde_json::json!(record.stored_evidence()))
 }
 
 /// The `category_map_digest` column value.

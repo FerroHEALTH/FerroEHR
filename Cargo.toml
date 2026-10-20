@@ -222,6 +222,17 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # document and the client credentials grant. It checks tokens and never issues
 # them.
 ferrohealth-smart = { version = "=0.4.0", default-features = false, features = ["fetch"] }
+
+# ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
+# The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
+# integrates it. `ihe-atna` is the IHE ATNA Record Audit Event sender (ITI-20:
+# the DICOM PS3.15 audit message, RFC 5424 syslog over RFC 5425 TLS, the ATX:
+# FHIR Feed) and the BALP `AuditEvent`; `ehds-logging` is the European logging
+# software component of Regulation (EU) 2025/327 (the Annex II 3.2 access
+# record, the Art 14(1) categories and their classification map, the Art 9(2)
+# retention floor). Features are chosen per member.
+ihe-atna = { version = "=0.1.0", default-features = false }
+ehds-logging = { version = "=0.1.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 openidconnect = { version = "4", default-features = false }   # OIDC discovery + code flow; HTTP-client agnostic: we supply the pinned reqwest (platform trust store)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits

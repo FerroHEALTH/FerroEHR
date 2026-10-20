@@ -44,8 +44,6 @@ pub enum EventOutcome {
     MinorFailure,
     /// `8` — serious failure (the action was not performed; e.g. 5xx).
     SeriousFailure,
-    /// `12` — major failure (the node/service is compromised/unavailable).
-    MajorFailure,
 }
 
 /// The class of resource an operation touches — determines the DICOM `EventID`
@@ -125,6 +123,12 @@ pub struct AuditEvent {
     pub outcome: EventOutcome,
     /// The requesting user (Basic username / OAuth `sub`; `UNKNOWN` when absent).
     pub user_id: String,
+    /// The issuer of the bearer token that authenticated the user (`iss`,
+    /// RFC 7519 §4.1.1); `None` for a Basic-authenticated or anonymous caller.
+    pub issuer: Option<String>,
+    /// The client application the bearer token was issued to (`client_id`,
+    /// RFC 9068 §2.2, or `azp`); `None` when the token names none.
+    pub client_id: Option<String>,
     /// Whether the source participant is the requestor (always true here).
     pub user_is_requestor: bool,
     /// The organisation the requesting user acted for, when the deployment
@@ -337,6 +341,8 @@ impl AuditEvent {
             event_type: None,
             outcome,
             user_id: String::new(),
+            issuer: None,
+            client_id: None,
             user_is_requestor: true,
             organisation: None,
             roles: Vec::new(),

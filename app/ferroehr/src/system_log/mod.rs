@@ -255,16 +255,24 @@ impl FerroEhrService {
     }
 
     /// Classifies what an access touched through the configured category map
-    /// ([`config::AuditConfig::categories`]); `None` when no audit sender is
-    /// wired, because no record will carry it.
+    /// ([`config::AuditConfig::categories`]), as data the access wrote when
+    /// `action` creates, updates or deletes and as data it read otherwise;
+    /// `None` when no audit sender is wired, because no record will carry it.
     #[must_use]
     pub fn audit_classify(
         &self,
         content: &categories::AccessedContent,
+        action: event::EventActionCode,
     ) -> Option<categories::CategoryRecord> {
+        let written = matches!(
+            action,
+            event::EventActionCode::Create
+                | event::EventActionCode::Update
+                | event::EventActionCode::Delete
+        );
         self.audit
             .as_ref()
-            .map(|sender| sender.categories().classify(content))
+            .map(|sender| sender.categories().classify(content, written))
     }
 
     /// The content identities an access record of `vo_ids` is classified by:

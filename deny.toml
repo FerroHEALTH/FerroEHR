@@ -151,6 +151,12 @@ exceptions = [
   # client authenticates the outbound audit feed and policy service (owner
   # decision 2026-10-20, #3829).
   { allow = ["BUSL-1.1"], crate = "ferrohealth-smart" },
+  # FerroAUDIT, the FerroHEALTH products' shared audit library, is the same
+  # Licensor's code under the same licence: `ihe-atna` sends the ATNA trail and
+  # writes the BALP AuditEvent, `ehds-logging` is the EHDS logging component
+  # the access record is written through (owner decision 2026-10-20, #3887).
+  { allow = ["BUSL-1.1"], crate = "ihe-atna" },
+  { allow = ["BUSL-1.1"], crate = "ehds-logging" },
 ]
 
 [bans]

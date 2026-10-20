@@ -115,7 +115,7 @@ struct SenderInner {
     emergency_purpose_codes: Vec<String>,
     legal_basis: Option<String>,
     /// The compiled `[audit.categories]` map every record is classified through.
-    categories: crate::system_log::categories::CategoryMap,
+    categories: crate::system_log::categories::Classifier,
     /// Whether the local store is currently accepting writes (`true` when the
     /// store is disabled — health then rides on the queue alone). Written by
     /// the drain, read by [`AuditSender::emit`] under `fail_mode = closed`.
@@ -209,7 +209,7 @@ impl AuditSender {
 
     /// The category map every access record is classified through.
     #[must_use]
-    pub fn categories(&self) -> &crate::system_log::categories::CategoryMap {
+    pub fn categories(&self) -> &crate::system_log::categories::Classifier {
         &self.inner.categories
     }
 
@@ -1004,7 +1004,7 @@ mod tests {
                 purpose_codes: Vec::new(),
                 emergency_purpose_codes: vec!["ETREAT".to_owned()],
                 legal_basis: None,
-                categories: crate::system_log::categories::CategoryMap::default(),
+                categories: crate::system_log::categories::Classifier::default(),
                 fail_mode,
                 store_healthy: Arc::new(AtomicBool::new(store_healthy)),
                 dropped_since_warn: AtomicU64::new(0),
