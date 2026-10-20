@@ -383,6 +383,25 @@ workspace `members = ["crates/*", "app/*", "tools/*"]`. Arrows:
 methods (no trait catalog), SM call semantics as the design authority — with
 zero re-exports anywhere (every import names its defining module).
 
+### Repository scope: what lives here, and where each boundary runs
+
+Settled on #2807 (2026-10-20, `main` at `7d8eeb828`). No openEHR spec governs
+repository scope; this is our own decision. Each component that could stand on
+its own has one verdict and one boundary.
+
+| Component | Verdict | Boundary |
+|---|---|---|
+| The viewer (`app/ferroehr-viewer`) | stays here, as the one in-tree consumer of the CDR | the wire: ITS-REST only, never a crate dependency on `app/ferroehr` or `app/ferroehr-rest`; it draws in `ferrohealth-ui`, the component library every FerroHEALTH console shares |
+| The FHIR and OMOP connectors | FerroBRIDGE, a sibling product; the in-tree FHIR connector was retired in its favour (#3702) | the wire: FerroBRIDGE reaches the CDR over ITS-REST only |
+| The spec layer (`crates/openehr-*`) | published on crates.io on one lockstep line | crates.io: `openehr-its` splits into the `json`, `xml`, `opt14`, `schema-validation`, `rest`, `rest-server` and `rest-client` features, so a consumer with no HTTP server takes `default-features = false, features = ["json", "opt14"]` and no HTTP engine |
+| SMART on openEHR scope handling | the grammar is `openehr_sdt::smart_scopes`, a published crate; checking tokens and scopes is `ferrohealth-smart`, the family crate every product shares | crates.io: the CDR consumes both as dependencies and keeps only its route-to-requirement table (`ferroehr-rest::smart`) |
+
+The other products of the family (FerroTERM, FerroCHART, FerroFED and the
+platform services) and the conformance instrument (Veredictum) live in their
+own repositories by the same rule: a sibling reaches the CDR over ITS-REST, and
+shared code travels as a published crate. The structure of the application
+layer itself is #3086.
+
 ### SM platform component map
 
 The service layer realizes the openEHR **SM Platform Service Model**
