@@ -155,28 +155,38 @@ jobs:
       # scan (a failed probe uploads nothing); zero findings upload an empty
       # run, which is what keeps the tools page listing Trivy. The mirror
       # gates nothing — the run-colour rule above is unchanged.
+      #
+      # Each image's run carries its own category in
+      # `runs[].automationDetails.id` (`trivy-image/<image>/<arch>/`): code
+      # scanning keys an analysis by tool and category, and the upload action
+      # refuses a file whose runs share one (#3877). The id in the file takes
+      # precedence over the action's `category` input, so the steps set none.
       - name: Convert the reports to one SARIF per architecture
         run: |
           set -euo pipefail
           for arch in amd64 arm64; do
             for image in ferroehr ferroehr-postgres ferroehr-viewer; do
-              trivy convert --format sarif --output "${image}.${arch}.sarif" "${image}.${arch}.json"
+              trivy convert --format sarif --output "${image}.${arch}.raw.sarif" "${image}.${arch}.json"
+              jq --arg id "trivy-image/${image}/${arch}/" \
+                '.runs |= map(.automationDetails = { id: $id })' \
+                "${image}.${arch}.raw.sarif" > "${image}.${arch}.sarif"
             done
             jq -s '{ "$schema": .[0]."$schema", version: .[0].version, runs: [.[].runs[]] }' \
               ferroehr."${arch}".sarif ferroehr-postgres."${arch}".sarif ferroehr-viewer."${arch}".sarif \
               > "trivy-${arch}.sarif"
-            jq -r --arg arch "$arch" '"trivy-\($arch): \([.runs[].results | length] | add) result(s) across \(.runs | length) run(s)"' "trivy-${arch}.sarif"
+            # A probe, not a report: two runs under one category would be refused
+            # at upload, so the run goes red here, where the cause is named.
+            jq -e '[.runs[].automationDetails.id] | length == (unique | length)' "trivy-${arch}.sarif" > /dev/null
+            jq -r --arg arch "$arch" '"trivy-\($arch): \([.runs[].results | length] | add) result(s) across \(.runs | length) run(s), one category each"' "trivy-${arch}.sarif"
           done
       - name: Upload the amd64 findings to code scanning
         uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: trivy-amd64.sarif
-          category: trivy-image/amd64
       - name: Upload the arm64 findings to code scanning
         uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: trivy-arm64.sarif
-          category: trivy-image/arm64
 
       # An issue with no failing check can be closed without the finding being
       # addressed, so the issue says what the remedy is and the remediation law
