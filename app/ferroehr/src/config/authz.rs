@@ -202,6 +202,10 @@ pub struct RemoteConfig {
     pub connect_timeout_ms: u64,
     /// Whole-request timeout in milliseconds (default 5000).
     pub request_timeout_ms: u64,
+    /// The OAuth 2.0 client-credentials grant the policy service is called
+    /// with (`[authz.abac.remote.oauth]`); absent, the calls carry the Basic
+    /// credentials of `server`, if any.
+    pub oauth: Option<crate::config::client_credentials::ClientCredentialsConfig>,
 }
 
 impl Default for RemoteConfig {
@@ -212,6 +216,7 @@ impl Default for RemoteConfig {
             // 5 s: the whole-request budget the discovery and terminology
             // clients use, so one outbound-HTTP posture spans the server.
             request_timeout_ms: 5_000,
+            oauth: None,
         }
     }
 }

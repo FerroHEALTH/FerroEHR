@@ -630,9 +630,9 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "aws-lc-rs"
-version = "1.18.1"
+version = "1.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b281d307588d634de920874890732659e2e7672f72b5e10e81badc1a8a83621e"
+checksum = "faac5829c2b74c28f830747e7818ccfb684261b5f48a1118b1e2a13d36dfab13"
 dependencies = [
  "aws-lc-sys",
  "untrusted 0.7.1",
@@ -641,9 +641,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-sys"
-version = "0.45.0"
+version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bff6c3b54fad79a2e60b8102caf565819711497c1f5f092f49508e2f5c31b27"
+checksum = "f1622d8446a2d4b2ce0c7eefc73dd43a99779028d5ee5c2dd8073a658ba8a2bc"
 dependencies = [
  "cc",
  "cmake",
@@ -2624,6 +2624,7 @@ dependencies = [
  "config",
  "criterion",
  "ferroehr-ext",
+ "ferrohealth-smart",
  "futures",
  "hmac 0.13.0",
  "http",
@@ -2725,6 +2726,7 @@ dependencies = [
  "bytes",
  "cedar-policy",
  "ferroehr",
+ "ferrohealth-smart",
  "futures",
  "governor",
  "http",
@@ -2830,6 +2832,28 @@ dependencies = [
  "tracing-subscriber",
  "urlencoding",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "ferrohealth-smart"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36d40787a48114fadf34df5bc696989c8b077732317cad06ddd2a3a1d7243e7a"
+dependencies = [
+ "argon2 0.6.0",
+ "aws-lc-rs",
+ "base64 0.23.1",
+ "http",
+ "jiff",
+ "jsonwebtoken",
+ "reqwest",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
 ]
 
 [[package]]
@@ -7274,6 +7298,7 @@ version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e891af845473308773346dc847b2c23ee78fe442e0472ac50e22a18a93d3ae5a"
 dependencies = [
+ "serde",
  "zeroize",
 ]
 
@@ -7386,10 +7411,11 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.151"
+version = "1.0.154"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14"
+checksum = "e7e9cc8b1b85264074fbcc02a88680c4096b1e47df8f739dceb03bf482f04bd6"
 dependencies = [
+ "foldhash 0.2.0",
  "indexmap 2.14.2",
  "itoa",
  "memchr",

@@ -244,6 +244,16 @@ namespaces is refused with `403`, because a bare id would name both subjects.
   `engine = "remote"`, and it must end with `/`, because the policy name is
   appended; credentials embedded in it are redacted from every rendering), `connect_timeout_ms` (int, `2000`), `request_timeout_ms` (int,
   `5000`).
+- **`[authz.abac.remote.oauth]`:** calls the policy service as an OAuth 2.0
+  client instead of with the Basic credentials of `server`: FerroEHR obtains a
+  token with the client credentials grant and sends it as a bearer token. The
+  keys are those of [`[audit.fhir_feed.oauth]`](config-audit.md#auditfhir_feedoauth-authenticating-with-oauth-20-client-credentials)
+  (`token_url` or `issuer`, `client_id`, `client_secret` or
+  `client_secret_file`, `client_auth`, `scope`, `audience`, `resource`).
+  When the policy service refuses the token with `401`, a new one is fetched
+  and the decision asked once more; a token that cannot be obtained, or that
+  is refused again, is no decision, and the request fails closed with a `500`,
+  never a `403`. `server` with credentials beside this table stops startup.
 - **`[authz.abac.policy.<kind>]`:** one entry per resource kind, with `kind` ∈
   `ehr`, `ehr_status`, `composition`, `contribution`, `query`, `directory`.
   Keys: `name` (string, the policy to evaluate) and `parameters` (list of

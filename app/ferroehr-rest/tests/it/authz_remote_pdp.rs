@@ -37,6 +37,7 @@ fn config(server: &str, name: &str, parameters: Vec<AbacParam>) -> AbacConfig {
             server: Some(ferroehr::config::secret::SecretUrl::new(server)),
             connect_timeout_ms: 500,
             request_timeout_ms: 1000,
+            oauth: None,
         },
         policy,
         ..AbacConfig::default()
@@ -233,4 +234,126 @@ fn deny_for_patient(who: &'static str) -> impl Fn(&Request) -> bool {
             .and_then(|v| v.get("patient").and_then(Value::as_str).map(|p| p == who))
             .unwrap_or(false)
     }
+}
+
+// ── the client-credentials grant (#3829) ──────────────────────────────────────
+
+/// A client-credentials grant at `as_uri`'s token endpoint.
+fn grant(as_uri: &str) -> ferroehr::config::client_credentials::ClientCredentialsConfig {
+    ferroehr::config::client_credentials::ClientCredentialsConfig {
+        token_url: Some(format!("{as_uri}/token")),
+        client_id: "ferroehr-pep".to_owned(),
+        client_secret: Some(ferroehr::config::secret::Secret::new("s3cret")),
+        scope: Some("pdp.decide".to_owned()),
+        ..Default::default()
+    }
+}
+
+/// Under `[authz.abac.remote.oauth]` the PEP fetches a token with the client
+/// credentials grant (RFC 6749 §4.4, the client authenticated with HTTP
+/// Basic) and calls the policy service with it as a bearer credential.
+#[tokio::test]
+async fn the_policy_service_is_called_with_a_client_credentials_token() {
+    let auth = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .and(wiremock::matchers::header(
+            "authorization",
+            "Basic ZmVycm9laHItcGVwOnMzY3JldA==",
+        ))
+        .and(wiremock::matchers::body_string_contains(
+            "grant_type=client_credentials",
+        ))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "access_token": "tok-1", "token_type": "Bearer", "expires_in": 300
+        })))
+        .expect(1)
+        .mount(&auth)
+        .await;
+    let pdp_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/policy/p"))
+        .and(wiremock::matchers::header("authorization", "Bearer tok-1"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(2)
+        .mount(&pdp_server)
+        .await;
+
+    let mut cfg = config(
+        &format!("{}/policy/", pdp_server.uri()),
+        "p",
+        vec![AbacParam::Organization],
+    );
+    cfg.remote.oauth = Some(grant(&auth.uri()));
+    let pdp = RemotePdp::new(&cfg).expect("build");
+    for _ in 0..2 {
+        assert_eq!(
+            pdp.decide(&composition_req(None, None))
+                .await
+                .expect("decided"),
+            Decision::Permit,
+            "the token is fetched once and reused"
+        );
+    }
+}
+
+/// A token endpoint that refuses the client, and a policy service that
+/// refuses a newly obtained token, are no decision: both fail closed as
+/// `Unreachable`, never as a deny.
+#[tokio::test]
+async fn a_refused_grant_or_token_fails_closed() {
+    let auth = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(
+            ResponseTemplate::new(401).set_body_json(json!({ "error": "invalid_client" })),
+        )
+        .mount(&auth)
+        .await;
+    let pdp_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(0)
+        .mount(&pdp_server)
+        .await;
+    let mut cfg = config(
+        &format!("{}/policy/", pdp_server.uri()),
+        "p",
+        vec![AbacParam::Organization],
+    );
+    cfg.remote.oauth = Some(grant(&auth.uri()));
+    let pdp = RemotePdp::new(&cfg).expect("build");
+    let err = pdp
+        .decide(&composition_req(None, None))
+        .await
+        .expect_err("no token, no decision");
+    assert!(matches!(err, AuthzError::Unreachable(_)), "got {err:?}");
+
+    let auth = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "access_token": "tok-x", "token_type": "Bearer", "expires_in": 300
+        })))
+        .expect(2)
+        .mount(&auth)
+        .await;
+    let pdp_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(401))
+        .expect(2)
+        .mount(&pdp_server)
+        .await;
+    let mut cfg = config(
+        &format!("{}/policy/", pdp_server.uri()),
+        "p",
+        vec![AbacParam::Organization],
+    );
+    cfg.remote.oauth = Some(grant(&auth.uri()));
+    let pdp = RemotePdp::new(&cfg).expect("build");
+    let err = pdp
+        .decide(&composition_req(None, None))
+        .await
+        .expect_err("a refused token is no decision");
+    assert!(matches!(err, AuthzError::Unreachable(_)), "got {err:?}");
 }

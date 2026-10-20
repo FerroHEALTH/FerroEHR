@@ -28,6 +28,16 @@ workflow refuses a tag that has no matching section here.
   party read and the map read each leave an access record in their own
   domain.
 
+- **The audit feed and the remote policy service authenticate with OAuth 2.0
+  client credentials** (#3829). `[audit.fhir_feed.oauth]` and
+  `[authz.abac.remote.oauth]` take a client-credentials grant (`token_url` or
+  `issuer`, `client_id`, `client_secret` or `client_secret_file`,
+  `client_auth`, `scope`, `audience`, `resource`). The server sends the token
+  as a bearer credential, renews it before it expires, and fetches a new one
+  once when the upstream refuses it with `401`. A policy service that cannot
+  be reached with a token fails the request closed. HTTP Basic through the
+  URL stays, and setting both is a startup error.
+
 - **AQL rooted at `PERSON`, `ORGANISATION` or `ROLE`** (#3818), the subset of
   the experimental AQL demographic extension a client needs to find a party by
   what it holds. `POST /query/aql` answers rows over the latest version of

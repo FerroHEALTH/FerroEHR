@@ -148,6 +148,7 @@ async fn remote_permit_when_patient_ok() -> (MockServer, RemotePdp) {
             ))),
             connect_timeout_ms: 500,
             request_timeout_ms: 1000,
+            oauth: None,
         },
         policy,
         ..AbacConfig::default()

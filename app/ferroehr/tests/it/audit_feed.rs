@@ -35,6 +35,7 @@ fn config(arr_url: &str) -> AuditConfig {
             batch_size: 16,
             poll_interval_ms: 100,
             max_retries: 1,
+            oauth: None,
         },
         ..AuditConfig::default()
     }
@@ -165,6 +166,76 @@ async fn arr_outage_leaves_rows_pending_then_delivers_on_recovery() {
     )
     .await;
     assert!(delivered, "the pending record ships after ARR recovery");
+
+    drop(sender);
+    handle.shutdown(Duration::from_secs(2)).await;
+}
+
+/// Under `[audit.fhir_feed.oauth]` the feed fetches a token with the client
+/// credentials grant (RFC 6749 §4.4) and POSTs each `AuditEvent` with it as a
+/// bearer credential, the IHE IUA authorized client; when the ARR refuses the
+/// held token with `401`, a new one is fetched and the record sent once more.
+#[tokio::test]
+async fn the_feed_authenticates_with_a_client_credentials_token() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+
+    let auth = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .and(wiremock::matchers::body_string_contains(
+            "grant_type=client_credentials",
+        ))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "access_token": "feed-token", "token_type": "Bearer", "expires_in": 300
+        })))
+        .expect(1..)
+        .mount(&auth)
+        .await;
+    let arr = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/fhir/AuditEvent"))
+        .and(header("authorization", "Bearer feed-token"))
+        .respond_with(ResponseTemplate::new(401))
+        .up_to_n_times(1)
+        .mount(&arr)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/fhir/AuditEvent"))
+        .and(header("authorization", "Bearer feed-token"))
+        .respond_with(ResponseTemplate::new(201))
+        .expect(1..)
+        .mount(&arr)
+        .await;
+
+    let mut cfg = config(&format!("{}/fhir", arr.uri()));
+    cfg.fhir_feed.oauth = Some(
+        ferroehr::config::client_credentials::ClientCredentialsConfig {
+            token_url: Some(format!("{}/token", auth.uri())),
+            client_id: "ferroehr-feed".to_owned(),
+            client_secret: Some(ferroehr::config::secret::Secret::new("s3cret")),
+            ..Default::default()
+        },
+    );
+    let (sender, handle) = sender::start(cfg, None, Some(pool.clone()))
+        .await
+        .expect("start");
+    let _ = sender.emit(event());
+
+    let delivered = eventually(
+        || async {
+            sqlx::query_scalar::<_, i64>(
+                "SELECT count(*) FROM audit.audit_event WHERE delivered_fhir_feed_at IS NOT NULL",
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap_or(0)
+                == 1
+        },
+        Duration::from_secs(10),
+    )
+    .await;
+    assert!(delivered, "the record is delivered under the renewed token");
 
     drop(sender);
     handle.shutdown(Duration::from_secs(2)).await;

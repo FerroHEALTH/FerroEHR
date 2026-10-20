@@ -32,6 +32,7 @@ mod strict;
 
 pub mod auth;
 pub mod authz;
+pub mod client_credentials;
 pub mod deployment;
 pub mod management;
 pub mod profile;
@@ -130,6 +131,7 @@ impl FerroEhrConfig {
         self.validate_key_sources(&mut errors);
         self.validate_privacy(&mut errors);
         self.validate_audit(&mut errors);
+        self.validate_outbound_clients(&mut errors);
         errors.extend(
             self.audit
                 .categories
@@ -156,6 +158,53 @@ impl FerroEhrConfig {
             Ok(())
         } else {
             Err(ConfigErrors(errors))
+        }
+    }
+
+    /// The client-credentials grants of the outbound connections that are in
+    /// use: the ITI-20 feed when it is enabled and the remote policy service
+    /// when ABAC runs on it. A grant beside credentials in the URL's userinfo
+    /// is refused: the upstream would receive two authorizations, and which
+    /// one it honours is not ours to guess. No openEHR spec governs outbound
+    /// authentication — our own design.
+    fn validate_outbound_clients(&self, errors: &mut Vec<ConfigError>) {
+        let feed = &self.audit.fhir_feed;
+        let remote = &self.authz.abac.remote;
+        let remote_in_use =
+            self.authz.abac.enabled && self.authz.abac.engine == authz::AbacEngineKind::Remote;
+        let checks = [
+            (
+                "audit.fhir_feed",
+                feed.enabled,
+                feed.oauth.as_ref(),
+                Some(feed.url.expose()),
+            ),
+            (
+                "authz.abac.remote",
+                remote_in_use,
+                remote.oauth.as_ref(),
+                remote.server.as_ref().map(secret::SecretUrl::expose),
+            ),
+        ];
+        for (key, in_use, oauth, url) in checks {
+            let Some(oauth) = oauth.filter(|_| in_use) else {
+                continue;
+            };
+            errors.extend(
+                oauth
+                    .problems(&format!("{key}.oauth"))
+                    .into_iter()
+                    .map(ConfigError::semantic),
+            );
+            let userinfo = url
+                .and_then(|u| url::Url::parse(u).ok())
+                .is_some_and(|u| !u.username().is_empty() || u.password().is_some());
+            if userinfo {
+                errors.push(ConfigError::semantic(format!(
+                    "{key} carries credentials in its URL and an [{key}.oauth] grant; \
+                     authenticate one way: remove the userinfo or the grant"
+                )));
+            }
         }
     }
 
