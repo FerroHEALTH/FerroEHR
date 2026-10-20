@@ -1517,6 +1517,86 @@ async fn an_imported_party_with_a_plaintext_identifier_is_refused() {
     );
 }
 
+/// A party sealed by another deployment carries a reference whose row does not
+/// travel in an extract, so the import is refused with the remedy, and nothing
+/// of the party is stored (#3777).
+#[tokio::test]
+async fn an_imported_party_with_another_deployments_sealed_identifier_is_refused() {
+    use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
+
+    let source_db = testkit::db().await.expect("testkit database");
+    let (source, _source_engine, _source_party) = protected_service(&source_db);
+    let target_db = testkit::db().await.expect("testkit database");
+    let (target, _engine, target_party) = protected_service(&target_db);
+
+    let created = source
+        .party_create(
+            PartyKind::Person,
+            typed(&person_carrying("Lovelace", &[("nl-bsn", SYNTHETIC_BSN)])),
+            None,
+        )
+        .await
+        .expect("the source seals the identifier");
+    let (party, _) = committed_ids(&created.body);
+
+    let ehr = source.create_ehr(None).await.expect("ehr");
+    let mut status = source
+        .get_ehr_status_at_time(ehr, None)
+        .await
+        .expect("status get");
+    let status_ovid = status
+        .pointer("/uid/value")
+        .and_then(serde_json::Value::as_str)
+        .expect("uid")
+        .to_owned();
+    status.as_object_mut().expect("status obj").remove("uid");
+    *status.pointer_mut("/subject").expect("the subject") = serde_json::json!({
+        "_type": "PARTY_SELF",
+        "external_ref": {
+            "_type": "PARTY_REF",
+            "namespace": "demographic",
+            "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": party }
+        }
+    });
+    source
+        .replace_ehr_status(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid)))
+        .await
+        .expect("status update");
+    let exported = source.extract_ehrs(ehr).await.expect("export_ehrs");
+    let text = serde_json::to_string(&exported).expect("the extract serializes");
+    assert!(
+        text.contains("urn:ferroehr:protected-identifier:"),
+        "the extract carries the party with its sealed reference"
+    );
+    assert!(
+        !text.contains(SYNTHETIC_BSN),
+        "the extract never carries the value"
+    );
+    let extract: Extract =
+        openehr_its::json::from_canonical_value(exported.first().expect("one EXTRACT"))
+            .expect("EXTRACT deserializes into the typed RM model");
+
+    let refused = target
+        .import_ehr(None, extract)
+        .await
+        .expect_err("a reference to a row this deployment does not hold is refused");
+    assert_eq!(
+        refused.status,
+        CallStatusType::ContentInvalid,
+        "{refused:?}"
+    );
+    assert!(
+        format!("{refused:?}").contains("does not travel in an EHR extract"),
+        "the refusal names the remedy: {refused:?}"
+    );
+    assert_eq!(
+        sealed_and_versions(&target_party).await,
+        (0, 0),
+        "nothing of the refused party is stored"
+    );
+}
+
 /// The dump carries a party's sealed rows as ciphertext and never the value,
 /// and a load restores them, so the restored versions expand to what they
 /// committed and the identifier resolves again.
