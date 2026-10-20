@@ -195,6 +195,13 @@ impl SmartRoutes {
                 resource: None,
             };
         }
+        if under("/definition/query") {
+            return Requirement::OpenEhr {
+                family: ResourceFamily::Aql,
+                permission: permission_of_method(method),
+                resource: path_param(template, path, "qualified_query_name"),
+            };
+        }
         if under("/message/export") {
             return ehr_data(Permission::Read);
         }
