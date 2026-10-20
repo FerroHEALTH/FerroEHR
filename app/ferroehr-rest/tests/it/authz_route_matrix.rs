@@ -843,13 +843,21 @@ async fn every_route_outside_the_public_inventory_needs_a_credential() {
 #[tokio::test]
 async fn the_swagger_surface_honours_its_access_level() {
     async fn app_at(level: AccessLevel) -> (testkit::TestDb, Router) {
+        app_with(level, true).await
+    }
+    async fn app_with(level: AccessLevel, smart: bool) -> (testkit::TestDb, Router) {
         let (pg, pool) = common::migrated_pool().await;
+        let base = matrix_config();
         let cfg = AppConfig {
             server: ServerConfig {
                 swagger_ui: level,
                 ..Default::default()
             },
-            ..matrix_config()
+            smart: SmartConfig {
+                enabled: smart,
+                ..base.smart.clone()
+            },
+            ..base
         };
         let app = ferroehr_rest::build_full(
             cfg,
@@ -891,16 +899,26 @@ async fn the_swagger_surface_honours_its_access_level() {
     // outside the API, such as the SMART discovery document while SMART is
     // off, answers `404` (SMART master04 §Service Discovery; #3834), never the
     // guard's `401`.
-    for path in [
-        "/ferroehr/rest/.well-known/smart-configuration",
-        "/ferroehr/rest/no-such-surface",
-    ] {
-        assert_eq!(
-            probe(&app, "GET", path, None).await.status,
-            StatusCode::NOT_FOUND,
-            "{path} is not mounted, whatever `swagger_ui` is"
-        );
-    }
+    assert_eq!(
+        probe(&app, "GET", "/ferroehr/rest/no-such-surface", None)
+            .await
+            .status,
+        StatusCode::NOT_FOUND,
+        "an unknown path is not mounted, whatever `swagger_ui` is"
+    );
+    let (_pg_off, smart_off) = app_with(AccessLevel::Private, false).await;
+    assert_eq!(
+        probe(
+            &smart_off,
+            "GET",
+            "/ferroehr/rest/.well-known/smart-configuration",
+            None
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND,
+        "the discovery document of a server with SMART off is not mounted"
+    );
 
     let (_pg, app) = app_at(AccessLevel::AdminOnly).await;
     assert_eq!(
