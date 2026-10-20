@@ -388,6 +388,7 @@ indexmap = { version = "2", features = ["serde"] }
 
 # ── HTTP client & external integration ───────────────────────────────────────
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "json", "gzip", "brotli"] }
+ferrohealth-smart = { version = "0.2.0", default-features = false, features = ["fetch"] } # the FerroHEALTH client-credentials client (RFC 6749 §4.4) for the outbound audit feed and policy service
 jsonschema = "0.58.3"               # validate against openEHR ITS-JSON schemas (verify latest)
 
 # ── Dev / test (dev-dependencies at the crate level) ─────────────────────────

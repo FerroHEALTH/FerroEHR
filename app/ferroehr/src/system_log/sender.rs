@@ -332,29 +332,69 @@ struct FeedClient {
     client: reqwest::Client,
     endpoint: String,
     max_retries: usize,
+    /// The bearer token of `[audit.fhir_feed.oauth]`, the IHE IUA authorized
+    /// client; `None` sends the Basic credentials of the URL, if any.
+    token: Option<ferrohealth_smart::client::cache::TokenSource>,
 }
 
 impl FeedClient {
-    fn new(config: &FhirFeedConfig) -> Self {
-        FeedClient {
+    /// The feed client for `config`.
+    ///
+    /// # Errors
+    /// [`AuditError::Transport`] when the configured grant is incomplete or
+    /// its HTTP engine cannot be built; boot validation refuses an incomplete
+    /// grant first.
+    fn new(config: &FhirFeedConfig) -> Result<Self, AuditError> {
+        let token = config
+            .oauth
+            .as_ref()
+            .map(|oauth| {
+                let grant = oauth
+                    .grant("audit.fhir_feed.oauth")
+                    .map_err(|e| AuditError::Transport(e.into()))?;
+                ferrohealth_smart::client::cache::TokenSource::new(grant)
+                    .map_err(|e| AuditError::Transport(Box::new(e)))
+            })
+            .transpose()?;
+        Ok(FeedClient {
             client: reqwest::Client::new(),
             endpoint: format!("{}/AuditEvent", config.url.expose().trim_end_matches('/')),
             max_retries: config.max_retries,
-        }
+            token,
+        })
+    }
+
+    /// One `POST` of `body`, under the feed's bearer token when it has one,
+    /// sent once more under a new token when the ARR refuses the held one
+    /// with `401` (RFC 6750 §3.1).
+    async fn send_once(&self, body: &serde_json::Value) -> Result<reqwest::Response, AuditError> {
+        let request = |bearer: Option<http::HeaderValue>| {
+            let mut request = self
+                .client
+                .post(&self.endpoint)
+                .header(http::header::CONTENT_TYPE, "application/fhir+json")
+                .json(body);
+            if let Some(bearer) = bearer {
+                request = request.header(http::header::AUTHORIZATION, bearer);
+            }
+            request.send()
+        };
+        let Some(token) = &self.token else {
+            return request(None)
+                .await
+                .map_err(|e| AuditError::Transport(Box::new(e)));
+        };
+        token
+            .call(|bearer| request(Some(bearer)))
+            .await
+            .map_err(|e| AuditError::Transport(Box::new(e)))
     }
 
     /// POST one FHIR `AuditEvent` (ITI-20 ATX:FHIR Feed) with bounded jittered
     /// retries.
     async fn post(&self, body: &serde_json::Value) -> Result<(), AuditError> {
         let send = || async {
-            let resp = self
-                .client
-                .post(&self.endpoint)
-                .header(http::header::CONTENT_TYPE, "application/fhir+json")
-                .json(body)
-                .send()
-                .await
-                .map_err(|e| AuditError::Transport(Box::new(e)))?;
+            let resp = self.send_once(body).await?;
             if resp.status().is_success() {
                 Ok(())
             } else {
@@ -409,7 +449,7 @@ pub async fn start(
     let mut feed_notify = None;
     let mut direct_feed = None;
     if config.fhir_feed.enabled {
-        let feed = FeedClient::new(&config.fhir_feed);
+        let feed = FeedClient::new(&config.fhir_feed)?;
         if let Some(store) = store.clone() {
             // Outbox-durable delivery: the worker polls undelivered rows.
             let notify = Arc::new(Notify::new());

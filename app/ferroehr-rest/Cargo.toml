@@ -96,6 +96,7 @@ sha2 = { workspace = true }
 # `thiserror`/`tracing`/`metrics`/`async-trait`/`tokio` are already deps above.)
 cedar-policy = { workspace = true }
 reqwest = { workspace = true }
+ferrohealth-smart = { workspace = true }
 arc-swap = { workspace = true }
 
 # OpenAPI / Swagger UI. This server serves ONLY the document it generates from

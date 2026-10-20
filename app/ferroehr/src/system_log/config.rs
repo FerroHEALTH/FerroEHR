@@ -207,6 +207,10 @@ pub struct FhirFeedConfig {
     /// or dropped + metered (store off)
     /// (`FERROEHR__AUDIT__FHIR_FEED__MAX_RETRIES`).
     pub max_retries: usize,
+    /// The OAuth 2.0 client-credentials grant the feed authenticates with
+    /// (`[audit.fhir_feed.oauth]`), the IHE IUA authorized client; absent, the
+    /// feed sends the Basic credentials of `url`, if any.
+    pub oauth: Option<crate::config::client_credentials::ClientCredentialsConfig>,
 }
 
 impl Default for FhirFeedConfig {
@@ -217,6 +221,7 @@ impl Default for FhirFeedConfig {
             batch_size: 64,
             poll_interval_ms: 2000,
             max_retries: 3,
+            oauth: None,
         }
     }
 }

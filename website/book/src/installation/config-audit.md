@@ -142,6 +142,27 @@ category through the [admin marks API](../operations-admin-apis.md).
 | `poll_interval_ms` | int | `2000` | Outbox poll interval when idle. |
 | `max_retries` | int | `3` | Per-record `POST` retries before the record is left pending (local store on) or dropped and metered (store off). |
 
+#### `[audit.fhir_feed.oauth]`: authenticating with OAuth 2.0 client credentials
+
+The feed authenticates with HTTP Basic through the credentials in `url`, or,
+with this table, as an OAuth 2.0 client (the IHE IUA authorized-client model):
+FerroEHR obtains a token with the client credentials grant, sends it as a
+bearer token, renews it before it expires, and when the repository refuses the
+held token with `401` fetches a new one and sends the record once more. Set
+one of the two, never both: a `url` with credentials beside this table stops
+startup.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `token_url` | URL | unset | The token endpoint. Set this or `issuer`. |
+| `issuer` | URL | unset | The issuer whose metadata (`/.well-known/oauth-authorization-server`) names the token endpoint. |
+| `client_id` | string | unset | The client identifier. Required. |
+| `client_secret` / `client_secret_file` | secret | unset | The client secret, inline or read from a file. One is required. |
+| `client_auth` | enum{client_secret_basic,client_secret_post} | `client_secret_basic` | How the client authenticates to the token endpoint. |
+| `scope` | string | unset | The `scope` of the token request. |
+| `audience` | string | unset | The `audience` parameter, for an authorization server that reads it. |
+| `resource` | URL | unset | The `resource` indicator (RFC 8707) naming the repository. |
+
 With the local store on, the feed drains the store's outbox and is therefore
 loss-free across a repository outage. With the store off it ships in-drain, and
 a record that exhausts its retries is dropped and counted.

@@ -48,6 +48,9 @@ pub struct RemotePdp {
     ///
     /// [`ResourceKind::config_key`]: crate::extensions::access::authz::request::ResourceKind::config_key
     policies: BTreeMap<String, PolicyRule>,
+    /// The bearer token of `[authz.abac.remote.oauth]`; `None` sends the Basic
+    /// credentials of `server`, if any.
+    token: Option<ferrohealth_smart::client::cache::TokenSource>,
 }
 
 impl RemotePdp {
@@ -69,10 +72,24 @@ impl RemotePdp {
             .timeout(Duration::from_millis(config.remote.request_timeout_ms))
             .build()
             .map_err(|e| AuthzError::PolicyLoad(format!("building remote PDP client: {e}")))?;
+        let token = config
+            .remote
+            .oauth
+            .as_ref()
+            .map(|oauth| {
+                let grant = oauth
+                    .grant("authz.abac.remote.oauth")
+                    .map_err(AuthzError::PolicyLoad)?;
+                ferrohealth_smart::client::cache::TokenSource::new(grant).map_err(|e| {
+                    AuthzError::PolicyLoad(format!("building the policy-service token client: {e}"))
+                })
+            })
+            .transpose()?;
         Ok(Self {
             client,
             server,
             policies: config.policy.clone(),
+            token,
         })
     }
 
@@ -116,13 +133,38 @@ impl RemotePdp {
         let url = format!("{}{}", self.server.expose(), rule.name);
         let shown = format!("{}{}", self.server, rule.name);
         let body = Self::body(rule, combo);
-        let response = self
-            .client
-            .post(&url)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| AuthzError::Unreachable(format!("POST {shown}: {e}")))?;
+        let request = |bearer: Option<http::HeaderValue>| {
+            let mut request = self.client.post(&url).json(&body);
+            if let Some(bearer) = bearer {
+                request = request.header(http::header::AUTHORIZATION, bearer);
+            }
+            request.send()
+        };
+        // Under a grant, a `401` is the policy service refusing the token, not
+        // a decision: the call is sent once more under a new token, and a token
+        // that cannot be obtained or is refused again is no decision either.
+        let response = match &self.token {
+            None => request(None)
+                .await
+                .map_err(|e| AuthzError::Unreachable(format!("POST {shown}: {e}")))?,
+            Some(token) => {
+                let response = token
+                    .call(|bearer| request(Some(bearer)))
+                    .await
+                    .map_err(|e| {
+                        AuthzError::Unreachable(format!(
+                            "POST {shown}: {}",
+                            ferroehr::service::error::ErrorChain::new(&e)
+                        ))
+                    })?;
+                if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+                    return Err(AuthzError::Unreachable(format!(
+                        "POST {shown}: the policy service refused a newly obtained token (401)"
+                    )));
+                }
+                response
+            }
+        };
         let status = response.status();
         if status == reqwest::StatusCode::OK {
             return Ok(true);
