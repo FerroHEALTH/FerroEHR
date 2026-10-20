@@ -214,7 +214,7 @@ k8s_record_host_users() {
   host_users="$(kubectl -n "$1" get deploy "$2" -o jsonpath='{.spec.template.spec.hostUsers}' 2>/dev/null)"
   [[ "$host_users" == false ]] && return 0
   uncovered "hostUsers: false, the pod's own user namespace (deployment $1/$2)" \
-    "this run's pods have hostUsers '${host_users:-unset}' (overrides: ${PROBE_K8S_VALUES:-none}): the node cannot create user-namespaced pods, as on kind in a podman VM, so the separation the chart default makes was not observed"
+    "this run's pods do not set hostUsers: false (they carry '${host_users:-unset}', overrides: ${PROBE_K8S_VALUES:-none}), so they share the node's user namespace and the separation the chart default makes was not observed"
 }
 
 # The owner role the image's init script creates holds ferroehr_migrator and
@@ -285,13 +285,21 @@ k8s_prod_secrets() {
 }
 
 # The values the probe layers over values-production.yaml: the overlay's
-# example Secret names replaced by the ones created above, the image under
-# probe, and no usage report from a probe instance. Every separation the
+# example Secret names replaced by the ones created above, its example identity
+# provider's metadata replaced by the committed CNF test key set (the server
+# reads an issuer at boot, and idp.example.com does not resolve), the image
+# under probe, and no usage report from a probe instance. Every separation the
 # overlay makes stays its own.
 k8s_prod_overrides() {
   cat > "$K8S_PROD_OVERRIDES" <<YAML
 usageReport:
   enabled: false
+config:
+  auth:
+    jwks_file: /etc/ferroehr/probe-jwks.json
+  files:
+    probe-jwks.json: |
+$(sed 's/^/      /' docs/conformance/party/smart/jwks.json)
 image:
   repository: ${PROBE_K8S_IMAGE_REPO}
   tag: "${PROBE_K8S_IMAGE_TAG}"
@@ -501,7 +509,8 @@ render_check() {
     'value: "/etc/ferroehr-secrets/storage.migrate.audit.url"' \
     "name: ${K8S_PROD_RELEASE}-migrate" \
     "name: ${K8S_PROD_CA_CONFIGMAP}" \
-    "mountPath: /etc/ferroehr-db-ca"; do
+    "mountPath: /etc/ferroehr-db-ca" \
+    'jwks_file = "/etc/ferroehr/probe-jwks.json"'; do
     grep -qF -- "$want" <<<"$rendered" || { red "  the production install render lacks: ${want}"; failed=1; }
   done
   [[ "$(grep -c -- '- key: dsn' <<<"$rendered")" -ge 12 ]] \

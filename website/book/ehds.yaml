@@ -127,7 +127,6 @@ requirements:
           manufacturer's instructions without adversely affecting their
           characteristics and performance.
         status: partial
-        issues: [3788]
         evidence:
           - text: The instructions for use
             href: instructions-for-use.md
@@ -153,9 +152,21 @@ requirements:
           on their own migration credentials, the server boot under
           `production` with `plaintext_listener` its only gap, and the boot
           refuse all four domains on one cluster by naming `shared_cluster`.
-          That run used a kind cluster on podman with `hostUsers: true` and
-          plain TCP to the databases, so the overlay's `hostUsers: false` and
-          `sslmode=verify-full` were not exercised. The chart and the Compose files
+          A run on 2026-10-20, against the main image after the move to the
+          shared authentication crate (#3872), gave the four clusters
+          certificates from one CA and made each refuse a connection without
+          encryption, and the overlay mounts that CA
+          (`database.caConfigMap`): it observed the migration Job and the
+          server reach all four clusters with `sslmode=verify-full`
+          (P-K8S-PROD-TLS-REFUSE, P-K8S-PROD-TLS), the boot under
+          `production`, and the `shared_cluster` refusal. It ran on a kind
+          cluster in a podman VM, whose node cannot create user-namespaced
+          pods: a pod with `hostUsers: false` fails at sandbox creation,
+          because runc may not mount `sysfs` in the new user namespace
+          ("operation not permitted"). That run therefore set
+          `hostUsers: true`, and its record names `hostUsers: false` as not
+          exercised; observing it needs a cluster whose node runtime can
+          create user-namespaced pods. The chart and the Compose files
           still declare `sandbox` by default, so an installation that follows
           the quickstart instead of the instructions runs the sandbox posture,
           which must not hold real personal data; the server says so on every
