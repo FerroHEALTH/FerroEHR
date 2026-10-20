@@ -17,13 +17,31 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
-- **An authorised, audited read of a party's protected national identifiers**
-  (#3776). `GET {base}/admin/party/identifiers?version_uid=…` serves a party
-  version with the identifiers `[demographic.identifier_protection]` seals put
-  back to their values, a historical version included. It needs the admin
-  role and the new `[authz.rbac] identifier_reader_role`; unset, nobody may
-  call it. Every read writes one access record per scheme expanded, naming the
-  reader, the party and the scheme, never the value.
+### Changed
+
+- **Authentication runs on `ferrohealth-smart` 0.3.1** (#3875). The crate now
+  holds what FerroEHR kept around it: the cache of verified Basic credentials,
+  the RFC 6750 §2.1 `b64token` check, the refusal of a blank `sub` and the
+  redacted rendering of `[auth]`. What changes for you:
+  - `[authz] basic_cache_ttl_seconds` is now `[auth.basic] cache_ttl_seconds`
+    (`FERROEHR__AUTH__BASIC__CACHE_TTL_SECONDS`), and its default is `0`, which
+    checks every request. Set `60` to keep the former behaviour. The old key is
+    an unknown key and refuses the start.
+  - `[auth] scopeless_subjects` is accepted: a listed subject whose token
+    carries no resource scope meets every SMART on openEHR requirement, and a
+    token that carries scopes gets only its scopes. It refused the start
+    before.
+  - A bearer token outside the `b64token` alphabet answers `401` with
+    `error="invalid_token"` (RFC 6750 §3.1: a malformed token). It answered
+    `400 invalid_request` before. A header that is no scheme and credential,
+    and two `Authorization` headers, still answer `400`.
+  - A rendered configuration (`ferroehr config check`, `/management/env`,
+    `ferroehr report`) writes a Basic password hash as `[redacted]`.
+  - With `[audit] suppress_login_events = false`, every request a Basic
+    credential authenticates writes a login record, since the credential is
+    checked on each request. Before, only a request that missed the cache
+    did.
+  - The Helm chart is 12.1.2; its values document the two keys.
 
 ## [5.1.0] - 2026-10-20
 

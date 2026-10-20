@@ -351,7 +351,7 @@ impl AbacConfig {
 
 /// Authorization configuration: the coarse RBAC gate plus the opt-in ABAC
 /// policy layer.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct AuthzConfig {
     /// Role-based access control.
@@ -364,26 +364,6 @@ pub struct AuthzConfig {
     /// How a bearer token names the natural person behind it
     /// (`[authz.professional]`, absent by default).
     pub professional: Option<crate::config::auth::ProfessionalConfig>,
-    /// How long a verified Basic credential is reused before its Argon2id hash
-    /// is checked again, in seconds (default 60; `0` checks every request).
-    ///
-    /// Argon2id costs tens of milliseconds of CPU per check by design, so
-    /// without the cache a busy client's request rate is capped by the work
-    /// factor; the TTL bounds how long a removed user keeps working. No
-    /// specification governs this: our own design.
-    pub basic_cache_ttl_seconds: u64,
-}
-
-impl Default for AuthzConfig {
-    fn default() -> Self {
-        Self {
-            rbac: RbacConfig::default(),
-            abac: AbacConfig::default(),
-            assurance: crate::config::auth::AssuranceConfig::default(),
-            professional: None,
-            basic_cache_ttl_seconds: 60,
-        }
-    }
 }
 
 /// A boot-time authorization-configuration error — a hard error that must
