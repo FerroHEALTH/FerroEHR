@@ -724,3 +724,184 @@ async fn the_watcher_serves_a_renewal_on_its_interval() {
     watcher.abort();
     assert_eq!(presented, renewed, "the watcher never served the renewal");
 }
+
+// ── the client CA reload (#3769) ─────────────────────────────────────────────
+
+/// A second client CA (`CN=ehrbase-terminology-test-ca`), the one the
+/// terminology mTLS suite signs its client certificate with.
+const ROTATED_CLIENT_CA_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
+MIIDPzCCAiegAwIBAgIUQdzLptxYSE4Z2KUtCRX4orOs5x4wDQYJKoZIhvcNAQEL
+BQAwJjEkMCIGA1UEAwwbZWhyYmFzZS10ZXJtaW5vbG9neS10ZXN0LWNhMCAXDTI2
+MDcyOTEzNDQ0MFoYDzIxMjYwNzA1MTM0NDQwWjAmMSQwIgYDVQQDDBtlaHJiYXNl
+LXRlcm1pbm9sb2d5LXRlc3QtY2EwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQCr5GwUx1SYbKWyobe/4gNljimQ2fMkF6NJ2UbqQo1YmchqjbDU3yqPhO+u
+2uA3tjPy7LJiyFai7JexYbrgBcQEcphDvfWfTUTkpb5XxSrWYBxQEW1auxWpq33m
+5oQKch+SkblKpdhGXnRwBwtmiQs/oECPexEq/AOWCYwjn0Y0ZwZryjH0L0SAlHXa
+0SWIihVz2pBGk1xKiQkV7OPM+sbbR1e9D+clQOzTHWz1cGtfep7b2vWn14nBc36C
+cbF336umG/2XiF9B+dFM6KQxNRA3RizCuSPIIH0fdQBaAVuCzjGc3/sLqvulsbxV
+cEFmZchu7kEcVGVdcrS1tCple8AFAgMBAAGjYzBhMB0GA1UdDgQWBBT4JtIe+Kky
+uKi1rzSo2Sc1sg+zhjAfBgNVHSMEGDAWgBT4JtIe+KkyuKi1rzSo2Sc1sg+zhjAP
+BgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjANBgkqhkiG9w0BAQsFAAOC
+AQEAhD4fgejqDAO0ypzfEgJLzaFqqvJpbt8pyiNZ+THR6KrjylW3pUNk1WZRxL9p
+4b9A1YKtQX1ABt2AEJ0pFgm1PiXy4EDszyRK8A33hls91c6761pHds0+SFYsq6jr
+zSJEanbJ5sQccTbsZ6nkzEjq3y/QBmw49TAqzbzMrYJjvHFPXpUr3Bpt9qTR/UmQ
+NQ/kWfCpLqmpWD8O71enKN1F7UId3nnpEus+/HMtnPtErMHBfGBOWsr95d37NB52
+CJTogkq19bUHC9nI4XBnNhR4F1BTZL9lQYghjettRzu0fvHj0JCR437GbkFmOZyA
+6O1x7xRNYxQG+wohHHPFnyDENg==
+-----END CERTIFICATE-----
+";
+
+/// A client leaf (`CN=ehrbase-cdr`, `extendedKeyUsage=clientAuth`) signed by
+/// [`ROTATED_CLIENT_CA_PEM`].
+const ROTATED_CLIENT_CERT_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
+MIIDPjCCAiagAwIBAgIUN6RUnq7anOZdiSdi9b6onYdW7PEwDQYJKoZIhvcNAQEL
+BQAwJjEkMCIGA1UEAwwbZWhyYmFzZS10ZXJtaW5vbG9neS10ZXN0LWNhMCAXDTI2
+MDcyOTEzNDQ0MVoYDzIxMjYwNzA1MTM0NDQxWjAWMRQwEgYDVQQDDAtlaHJiYXNl
+LWNkcjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKYtID4ud0jEkUFr
+Dync/gEVvAeklhwA23JEdsLobmJkFJtbn68qJmmEMRyJx/0OYNwpoJ8MeY7NMNyx
+63J6lDfmhQFpxJVxHqLspBp9DmEu0ifO7Q5VmEeQrnqkd4cF/hp61M7X83TybG79
+O1605+X30/amgxHj6Y3NAFuO3+C9ayJl8oFjrX86if9m4ywPO2pps8fKRmy6V0P1
+O2PBIaf8lEvPYbzEj8pMiBiWj45ZuNopOq5OAUIndFtR55G7cL51KrocMuVo48i4
+AXRQQR14BDyhiyuCd8zhDtMoGuWsa0E+K9yove6Uhv7aKyaVlkVPSQ9vIQjXx9LJ
+b2n0QRkCAwEAAaNyMHAwDgYDVR0PAQH/BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUF
+BwMCMAkGA1UdEwQCMAAwHQYDVR0OBBYEFL65rmBZ4vWcx18igZhEiWnsGDp/MB8G
+A1UdIwQYMBaAFPgm0h74qTK4qLWvNKjZJzWyD7OGMA0GCSqGSIb3DQEBCwUAA4IB
+AQAHzzukoZnHp6zkcSwulSMUsECfdXQFjmPszTsgdoMRtozrIJBeTTn8TU4udt83
+lcqJO2aHxaEsXQAC6HiO68LLqudio4BymkpYY/jnBLZNOCiChY2NkMR+PNnWrrKh
+eXBNKgzE1OFcPs2eDzXDGi4u0C+5TAzTyk1iFJSjVPrm+WYBlSQ40+KkZjc3QPqM
+9mmbv/ywOeaLihcgIeIkTHQLb7dlhTazDyX5KpqegPqh/NMXVdVchN0pnRZ7l4V9
+xYMKapLu7dF65h/aXFYQaKSn7ztjDS5/sEKcwBjjSRcoXOqISuXyfONEjuInj/Lh
+WKGF8hUt9DgUqWPuDe33JrC8
+-----END CERTIFICATE-----
+";
+
+/// The key of [`ROTATED_CLIENT_CERT_PEM`].
+const ROTATED_CLIENT_KEY_PEM: &[u8] = b"-----BEGIN PRIVATE KEY-----
+MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCmLSA+LndIxJFB
+aw8p3P4BFbwHpJYcANtyRHbC6G5iZBSbW5+vKiZphDEcicf9DmDcKaCfDHmOzTDc
+setyepQ35oUBacSVcR6i7KQafQ5hLtInzu0OVZhHkK56pHeHBf4aetTO1/N08mxu
+/TtetOfl99P2poMR4+mNzQBbjt/gvWsiZfKBY61/Oon/ZuMsDztqabPHykZsuldD
+9TtjwSGn/JRLz2G8xI/KTIgYlo+OWbjaKTquTgFCJ3RbUeeRu3C+dSq6HDLlaOPI
+uAF0UEEdeAQ8oYsrgnfM4Q7TKBrlrGtBPivcqL3ulIb+2ismlZZFT0kPbyEI18fS
+yW9p9EEZAgMBAAECggEACfes9m3dE81OlSjxyOYLik8ebyrtIhLfFtSKdxhv/pDY
+N5VgV6ZklXGrbHXLPB+PqcUJcGDULb+bDbHSWJSHrW6zTalldD1LxCQDl98mbKfd
+TSv5RiHWN3yzKoIQ9VVjr3zspNeJL9uWq3WfCQg63K1n1mSYegs8qBfCzLseLKG3
+LR2yhZSbMdH7NNWwoG1iwDXyJGx4SM4r7z2dPRobMxT5ErIKtCzDRLcUWMeW3FiU
+qEB5SXscrF5TitQaFtwRFPO0IpbPWoXbW99OZTPoi+ZHUxVRShWE3gtO3D6cvgHf
+iwLxdpy3tUHIAnm5SbDjtp30AAF1S/CUU3ZpcoiafQKBgQDc7/LI4FcG0xmKzGHe
+vzfDZDUFxjVkCY0zQ919l9TufJZbZXOp6iVnAEts46ykZ2oPZXAt9csLT94EF4iy
+1/VxQ67NQxAyfMMKCCTMMgAuL0VCWhzKdx0udcOvoqdnoRAt48jOW/9fKlhSitMW
+Ef6pg+n1T3ZbXUPE+zi4ezC+vwKBgQDAjGS6k11728mqKP9SThpGGdPiJVwM9c3y
+etCHwz0g7Dfo0dZBFrXbyDksaI+M/OchbJLq3Ar+UOlB0l08m60f6OmXVzSDFvgs
+m1ilCvAp3cxvFuasji5CqTlQ5DZlNbjbsADUHwel4geiCgYvn655IONuUqo2stCf
+qArTp9dOJwKBgQCo/ML3kFggOTDtL/yf0iRFyAyiOQO3W3LrxjnQiWRtcU/T4lpA
+mX44NUp7o/z11r+RvSW7kafXJCSNfq6pFHOASaOXDneCFllb//SdVpU6vh88bA5f
+chIY6ixd14wxwEjOwM5jwIwobwwVPmfMFsFxSRuW7Ut7AHAIZ5rvyBH1owKBgQCB
+yWBQPurhhPm+/9lyEgE1xU0D/2i3t6v1SQFssZZvranV/jMsNnGozqJzI5u3TfVB
+m1zAgEfMup8v5etA4jJk8usZPwe/YOkxsBilTuUpYz7clpQwNbpK5qQiuWFNAVQ0
+iMNWOABAuUWp3JXk3f6N2TRT9daT/h4PsAZ0OosvOwKBgQCt7E+/RlRNlcC+4o2S
+kT6qEL4sTV0Qc+RMtlakqDaLElcQx9ZIc4SPAeiIRq0Lm/w5l1GV1JvxawWR63P0
+16krB8b1EGloCd5p8XBWMQRdn7Pyo+kY+Xrpo+3SJroCVbKHojJKxnPgX2GE0XVx
+SxWyjGrM2xGr1RcYYQM5nopluQ==
+-----END PRIVATE KEY-----
+";
+
+/// One handshake presenting the rotated client certificate, then `GET
+/// /rest/status`; `true` when the server answered.
+async fn served_with_client_certificate(port: u16) -> bool {
+    use rustls::pki_types::pem::PemObject;
+    let provider = std::sync::Arc::new(rustls::crypto::aws_lc_rs::default_provider());
+    let chain = vec![der_of(ROTATED_CLIENT_CERT_PEM)];
+    let key = rustls::pki_types::PrivateKeyDer::from_pem_slice(ROTATED_CLIENT_KEY_PEM)
+        .expect("client key");
+    let tls = rustls::ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .expect("versions")
+        .with_root_certificates(test_roots())
+        .with_client_auth_cert(chain, key)
+        .expect("client identity");
+    let client = reqwest::Client::builder()
+        .use_preconfigured_tls(tls)
+        .timeout(Duration::from_secs(5))
+        .build()
+        .expect("client");
+    client
+        .get(format!("https://localhost:{port}/rest/status"))
+        .send()
+        .await
+        .is_ok_and(|r| r.status() == reqwest::StatusCode::OK)
+}
+
+/// Serve a minimal router through `config` on an ephemeral port, keeping the
+/// caller's handle on the configuration so it can swap one in.
+async fn serve_config(config: axum_server::tls_rustls::RustlsConfig) -> u16 {
+    let app = axum::Router::new().route("/rest/status", axum::routing::get(|| async { "OK" }));
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    drop(listener);
+    tokio::spawn(async move {
+        let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
+        axum_server::bind_rustls(addr, config)
+            .serve(app.into_make_service())
+            .await
+            .expect("tls server task");
+    });
+    for _ in 0..50 {
+        if tokio::net::TcpStream::connect(("127.0.0.1", port))
+            .await
+            .is_ok()
+        {
+            return port;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    panic!("TLS listener did not come up");
+}
+
+/// A client CA rotated on disk verifies the next handshake once the reloader
+/// has read it and the listener has swapped the configuration in; a broken
+/// replacement is refused and the rotated CA stays in force.
+#[tokio::test]
+async fn a_rotated_client_ca_verifies_without_a_restart() {
+    let dir = assert_fs::TempDir::new().expect("tempdir");
+    let tls = tls_files(&dir, ClientAuth::Required);
+    let server_tls = ferroehr_rest::tls::server_tls(&tls).expect("tls config");
+    let listener_config = axum_server::tls_rustls::RustlsConfig::from_config(server_tls.config);
+    let port = serve_config(listener_config.clone()).await;
+    let reloader = server_tls
+        .client_ca
+        .expect("a client CA reloader under client_auth");
+
+    assert!(
+        !served_with_client_certificate(port).await,
+        "a certificate of another CA is refused"
+    );
+
+    let ca_path = tls.client_ca_file.clone().expect("client_ca_file");
+    std::fs::write(&ca_path, ROTATED_CLIENT_CA_PEM).expect("rotate the client CA");
+    let config = reloader
+        .reload()
+        .await
+        .expect("the rotated CA loads")
+        .expect("a changed CA builds a configuration");
+    listener_config.reload_from_config(config);
+    assert!(
+        served_with_client_certificate(port).await,
+        "the rotated CA verifies the next handshake"
+    );
+    assert!(
+        reloader.reload().await.expect("unchanged").is_none(),
+        "an unchanged file builds nothing"
+    );
+
+    std::fs::write(&ca_path, b"not a certificate").expect("break the client CA");
+    reloader.reload().await.expect_err("a broken CA is refused");
+    assert!(
+        reloader.reload().await.expect("reported once").is_none(),
+        "the refused file is not re-reported"
+    );
+    assert!(
+        served_with_client_certificate(port).await,
+        "the rotated CA stays in force"
+    );
+}

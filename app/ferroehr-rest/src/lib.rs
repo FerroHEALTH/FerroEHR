@@ -237,22 +237,26 @@ async fn run_server(
             signal_handle.graceful_shutdown(Some(std::time::Duration::from_secs(10)));
         });
         tracing::info!(%bind, client_auth = ?tls.client_auth, "ferroehr-rest listening (TLS)");
+        let listener_config = axum_server::tls_rustls::RustlsConfig::from_config(server_tls.config);
         let watcher = tls
             .reload_interval()
             .map(|interval| tokio::spawn(Arc::clone(&server_tls.certificate).watch(interval)));
-        let mut server = axum_server::bind_rustls(
-            addr,
-            axum_server::tls_rustls::RustlsConfig::from_config(server_tls.config),
-        )
-        .handle(handle);
+        // A renewed client CA needs a new configuration; the listener swaps it
+        // in for every new handshake.
+        let ca_watcher = tls.reload_interval().and_then(|interval| {
+            server_tls.client_ca.as_ref().map(|reloader| {
+                tokio::spawn(Arc::clone(reloader).watch(interval, listener_config.clone()))
+            })
+        });
+        let mut server = axum_server::bind_rustls(addr, listener_config).handle(handle);
         // The connection-level bound, applied where hyper actually enforces it.
         // Everything else in this stack engages after a request head is parsed,
         // so this is the only place a connection that never finishes writing one
         // can be reclaimed.
         bound_connections(server.http_builder(), connection);
         let outcome = server.serve(make).await;
-        if let Some(watcher) = watcher {
-            watcher.abort();
+        for task in [watcher, ca_watcher].into_iter().flatten() {
+            task.abort();
         }
         outcome?;
         return Ok(());

@@ -76,6 +76,16 @@ workflow refuses a tag that has no matching section here.
   and a `Follow up` event, now builds two nodes, each with the content the TDD
   spells out under its own element, where it used to merge them into one.
 
+- **A rotated mTLS client CA takes effect without a restart** (#3769).
+  `[server.tls] client_ca_file` is re-read every `reload_interval_secs`, as
+  the certificate and key already were, and a changed CA verifies every new
+  handshake; a file that fails to load is logged and the previous CA stays
+  in force.
+
+- **The OpenAPI family titles carry no em dash** (#3865). The served
+  documents and the viewer's family selector read "FerroEHR: Messaging",
+  "openEHR: EHR" and so on.
+
 - **No viewer string carries an em dash** (#3860). The query builder's
   template choice reads "Any template", an absent value reads "(no value)",
   and the hints, notes and form errors that used a dash use a colon or a

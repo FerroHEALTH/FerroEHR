@@ -623,7 +623,9 @@ When cert-manager renews the certificate, the kubelet updates the mounted
 files and the server serves the new pair within
 `config.server.tls.reload_interval_secs` (60 seconds by default), with no
 restart; a renewed pair that fails to load is logged and the old one stays in
-service.
+service. A rotated client CA (`client_ca_file`, for `client_auth`) is picked up
+on the same interval, and the connections already open keep the trust anchor
+they were verified against.
 
 The viewer and FerroBRIDGE read the CA through `SSL_CERT_DIR`, which the chart
 sets to the image's system roots plus the mounted CA, so their other peers

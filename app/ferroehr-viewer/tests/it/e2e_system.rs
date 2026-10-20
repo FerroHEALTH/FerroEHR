@@ -56,7 +56,7 @@ async fn system_panel_shows_the_conformance_manifest() {
 }
 
 /// The `OpenAPI` card's per-family selector: the complete surface lists paths from
-/// several families, picking **openEHR — Query** narrows the document to the
+/// several families, picking **openEHR: Query** narrows the document to the
 /// query paths, and the choice lives in the URL so it is shareable and survives
 /// a reload.
 #[tokio::test]

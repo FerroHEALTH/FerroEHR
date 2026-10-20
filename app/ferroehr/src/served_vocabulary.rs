@@ -34,16 +34,16 @@ pub const DEPLOYMENT_GAPS: [&str; 14] = [
 /// Every API family served as its own OpenAPI document, as
 /// `(url slug, selector name)`, in the server's selector order.
 pub const OPENAPI_FAMILIES: [(&str, &str); 12] = [
-    ("ehr", "openEHR — EHR"),
-    ("query", "openEHR — Query"),
-    ("definition", "openEHR — Definition"),
-    ("demographic", "openEHR — Demographic"),
-    ("admin", "openEHR — Admin"),
-    ("management", "FerroEHR — Status & Management"),
-    ("terminology", "FerroEHR — Terminology"),
-    ("relationships", "FerroEHR — Party Relationships"),
-    ("messaging", "FerroEHR — Messaging"),
-    ("events", "FerroEHR — Event Subscriptions"),
-    ("audit", "FerroEHR — Audit"),
-    ("smart", "FerroEHR — SMART Discovery"),
+    ("ehr", "openEHR: EHR"),
+    ("query", "openEHR: Query"),
+    ("definition", "openEHR: Definition"),
+    ("demographic", "openEHR: Demographic"),
+    ("admin", "openEHR: Admin"),
+    ("management", "FerroEHR: Status & Management"),
+    ("terminology", "FerroEHR: Terminology"),
+    ("relationships", "FerroEHR: Party Relationships"),
+    ("messaging", "FerroEHR: Messaging"),
+    ("events", "FerroEHR: Event Subscriptions"),
+    ("audit", "FerroEHR: Audit"),
+    ("smart", "FerroEHR: SMART Discovery"),
 ];
