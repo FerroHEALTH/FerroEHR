@@ -110,7 +110,13 @@ Basic user whose scopes do not grant the operation is refused with `403`. See
 > ```bash
 > export FERROEHR__AUTH__ISSUER=https://keycloak.example/realms/ferroehr
 > export FERROEHR__AUTH__AUDIENCE=ferroehr-api
+> export FERROEHR__AUTH__TOKEN_PROFILE=jwt
 > ```
+>
+> Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068 profile the
+> server expects by default, hence `token_profile = "jwt"`. The client's
+> default client scopes put the SMART on openEHR scopes the routes need into
+> each token's `scope` claim.
 >
 > The same pattern works for Active Directory or any standards-compliant
 > identity provider; walkthroughs for Entra ID and AD FS (and the answer for

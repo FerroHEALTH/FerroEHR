@@ -160,6 +160,17 @@ fi
 wait_http "$CDR_URL/ferroehr/rest/status" 150
 wait_http "$KEYCLOAK_URL/auth/realms/ferroehr/.well-known/openid-configuration" 90
 
+# The development CA Keycloak's TLS certificate chains to (docker-compose.dev.yml
+# `keycloak-tls`), for the host-mode viewer: rustls reads SSL_CERT_DIR beside
+# SSL_CERT_FILE on Linux, so the viewer trusts the dev issuer and every public
+# CA. The composed CDR and viewer mount the same CA (docker/viewer/e2e-env.yml).
+DEV_CA_DIR="$ROOT/target/ui-e2e/dev-ca"
+mkdir -p "$DEV_CA_DIR"
+docker compose exec -T keycloak cat /opt/keycloak/conf/tls/ca/ca.crt > "$DEV_CA_DIR/ca.crt"
+VIEWER_TLS_ENV=(SSL_CERT_DIR="$DEV_CA_DIR")
+[[ -f /etc/ssl/certs/ca-certificates.crt ]] \
+  && VIEWER_TLS_ENV+=(SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt)
+
 # ── 2. Deterministic Keycloak test passwords (the shipped realm export holds
 #      only hashes; reset via the bootstrap admin API — never edit the realm) ─
 echo "── resetting Keycloak test-user passwords"
@@ -253,7 +264,7 @@ echo "   seeded 3 extra FLAT compositions with quantity magnitudes"
 if [[ -n "${UI_E2E_IMAGE:-}" ]]; then
   # Image mode — the TRUE shipped artifact: compose-build the viewer image
   # (docker/viewer/Dockerfile) with the e2e-env override supplying the OIDC
-  # test wiring; the issuer (http://keycloak:8081) resolves in-network via
+  # test wiring; the issuer (https://keycloak:8443) resolves in-network via
   # docker DNS and in the E2E browser via the harness host-resolver mapping.
   # The explicit -f chain here MATCHES the CDR up in step 1 (base + override +
   # the e2e overlay): compose recreates any dependency whose model differs, so
@@ -308,12 +319,12 @@ else
   FERROEHR_VIEWER__CDR__BASE_URL="$CDR_URL" \
   FERROEHR_VIEWER__SESSION__COOKIE_SECURE="false" \
   FERROEHR_VIEWER__AUTH__OIDC__ENABLED="true" \
-  FERROEHR_VIEWER__AUTH__OIDC__ISSUER="http://keycloak:8081/auth/realms/ferroehr" \
-  FERROEHR_VIEWER__AUTH__OIDC__RESOLVE="keycloak=127.0.0.1:8081" \
+  FERROEHR_VIEWER__AUTH__OIDC__ISSUER="https://keycloak:8443/auth/realms/ferroehr" \
+  FERROEHR_VIEWER__AUTH__OIDC__RESOLVE="keycloak=127.0.0.1:8443" \
   FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID="ferroehr" \
   FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET="bT5T4oWn3xNdBytQsl2cfpBDi1pp15Va" \
   FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL="$VIEWER_URL" \
-    "$ROOT/target/debug/ferroehr-viewer" &
+    env "${VIEWER_TLS_ENV[@]}" "$ROOT/target/debug/ferroehr-viewer" &
   VIEWER_PID=$!
 fi
 wait_http "$VIEWER_URL/login"

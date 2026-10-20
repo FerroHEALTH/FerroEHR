@@ -1,20 +1,28 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 
-# FerroEHR quickstart, OIDC variant — a STANDALONE overlay on docker-compose.yml
+# FerroEHR quickstart, OIDC variant: a STANDALONE overlay on docker-compose.yml
 # (the same pattern as docker-compose.observability.yml). Download BOTH files
 # into one directory and run:
 #
 #   docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up
 #
 # It adds a Keycloak identity provider with a ready-made demo realm (inline
-# below — no repo checkout needed) and turns RBAC on. The CDR does NOT trust
-# this Keycloak's tokens yet: the demo realm is served as plain HTTP on the
-# compose network, and the CDR accepts a token issuer only over https or on a
-# loopback host (RFC 8414 §3, §6.2), so the bearer call below answers 401
-# until the overlay serves an issuer the CDR accepts (FerroHEALTH/FerroEHR#3873).
-# Basic auth from the base file keeps working. Get a bearer token and call the
-# API:
+# below, no repo checkout needed), points the CDR's bearer validation at it and
+# turns RBAC on. Basic auth from the base file keeps working; the server then
+# advertises `Basic, Bearer`.
+#
+# The CDR accepts a token issuer only over https, or plain http on a loopback
+# host (RFC 8414 §3, §6.2), so Keycloak serves its issuer over TLS on the
+# compose network: https://keycloak:8443. The one-shot `keycloak-tls` service
+# generates a development CA and a server certificate for `keycloak` into the
+# `keycloak-tls` volume on the first `up`, and the CDR trusts that CA. The
+# CA's private key is discarded once the certificate is signed. `down -v`
+# deletes the volume, and the next `up` generates a new CA.
+#
+# Keycloak also answers plain HTTP on port 8081 for the token call below; the
+# tokens it mints there still name the https issuer, so the CDR accepts them.
+# Get a bearer token and call the API:
 #
 #   TOKEN=$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
 #     -d username=ferroehr -d password=ferroehr -d grant_type=password \
@@ -22,6 +30,11 @@
 #     | jq -r .access_token)
 #   curl -H "Authorization: Bearer $TOKEN" -X POST -i \
 #     http://localhost:8080/ferroehr/rest/openehr/v1/ehr
+#
+# Every route checks SMART on openEHR scopes, so the realm's client puts them
+# in every token: `user/composition-*.cruds`, `user/template-*.cruds` and
+# `user/aql-*.cruds` (every resource family), and `__ferroehr.platform`, the
+# product scope the ADMIN and DEMOGRAPHIC APIs need. The roles then decide.
 #
 # FOUR demo identities, because role separation cannot be shown with one user.
 # RBAC is ENABLED in this overlay (the base quickstart leaves it off), so these
@@ -37,14 +50,14 @@
 # refusals are the point: a 401 means the credential was not accepted, a 403
 # means it was and the caller still may not do this.
 #
-# QUICKSTART DEFAULTS — do NOT use in production: demo realm, demo secret,
-# demo password, HTTP (not TLS), Keycloak in start-dev mode. For a real
+# QUICKSTART DEFAULTS, do NOT use in production: demo realm, demo secret,
+# demo password, a development CA, Keycloak in start-dev mode. For a real
 # deployment configure your own https issuer via FERROEHR__AUTH__ISSUER and
 # FERROEHR__AUTH__AUDIENCE (or the [auth] config block) and remove this overlay.
 #
 # The repo's dev/e2e lanes use their OWN Keycloak (docker-compose.dev.yml,
-# `keycloak` profile) with the full exported realm from docker/keycloak/import
-# — this overlay's minimal demo realm is deliberately independent of it.
+# `keycloak` profile) with the full exported realm from docker/keycloak/import;
+# this overlay's minimal demo realm is deliberately independent of it.
 
 services:
   ferroehr:
@@ -52,13 +65,48 @@ services:
       keycloak:
         condition: service_healthy
     environment:
+      # The env layer beats the mounted config file, so these ADD bearer trust
+      # on top of the base quickstart posture without replacing it. The issuer
+      # is the canonical KC_HOSTNAME below: token `iss` claims match it no
+      # matter which host the token was requested from.
+      FERROEHR__AUTH__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak:8443/auth}/realms/ferroehr
+      # Required: the audience this CDR answers to (RFC 7519 §4.1.3), the
+      # realm's client id.
+      FERROEHR__AUTH__AUDIENCE: ferroehr
+      # Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068 profile
+      # the CDR expects by default.
+      FERROEHR__AUTH__TOKEN_PROFILE: jwt
+      # The development CA beside the image's own trust store: rustls reads
+      # both variables (rustls-native-certs), so public CAs stay trusted.
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      SSL_CERT_DIR: /run/ferroehr-dev-tls/ca
       # RBAC ON, because an identity provider whose roles decide nothing is a
       # login screen, not authorization. The base quickstart leaves it off so a
       # first run needs no role setup; this overlay exists to show real
-      # identities, so the roles have to be load-bearing here — otherwise every
+      # identities, so the roles have to be load-bearing here. Otherwise every
       # authenticated caller may use every surface and the four users below are
       # decoration.
       FERROEHR__AUTHZ__RBAC__ENABLED: "true"
+    volumes:
+      - keycloak-tls:/run/ferroehr-dev-tls:ro
+
+  # Generates the development CA and Keycloak's certificate once, into the
+  # `keycloak-tls` volume, with the keytool of the Keycloak image itself. It
+  # runs as root only because a fresh named volume is root-owned; it holds no
+  # capability and exits when done.
+  keycloak-tls:
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
+    user: "0"
+    entrypoint: ["bash", "/usr/local/bin/keycloak-tls.sh"]
+    configs:
+      - source: keycloak-tls-script
+        target: /usr/local/bin/keycloak-tls.sh
+    volumes:
+      - keycloak-tls:/tls
+    restart: "no"
 
   keycloak:
     cap_drop: [ALL]
@@ -68,25 +116,35 @@ services:
     # 2026-07-24 (docs.docker.com/build/building/best-practices).
     image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
     command: ["start-dev", "--import-realm"]
+    depends_on:
+      keycloak-tls:
+        condition: service_completed_successfully
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       KC_HTTP_RELATIVE_PATH: /auth
-      # In-network port == default host port (8081): one issuer hostname:port
-      # (http://keycloak:8081) is then valid from BOTH the docker network and
-      # the host, so the CDR and a host browser can share one OIDC issuer.
+      # Plain HTTP for the token call in the header and the healthcheck. In-network
+      # port == default host port (8081), so the same port works from the host.
       KC_HTTP_PORT: 8081
-      # ONE canonical issuer regardless of which host the caller used — token
+      # The issuer the CDR reads, over TLS with the certificate `keycloak-tls`
+      # generated.
+      KC_HTTPS_PORT: 8443
+      KC_HTTPS_KEY_STORE_FILE: /opt/keycloak/conf/tls/keycloak.p12
+      KC_HTTPS_KEY_STORE_PASSWORD: ferroehr-dev-tls
+      # ONE canonical issuer regardless of which host the caller used: token
       # `iss` claims stay stable, so the CDR validates bearer tokens against
       # the single configured issuer above.
       # NOTE: a URL-form KC_HOSTNAME replaces the whole base — Keycloak does
       # NOT append KC_HTTP_RELATIVE_PATH to it, so /auth must be included.
-      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-http://keycloak:8081/auth}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-https://keycloak:8443/auth}
     configs:
       - source: keycloak-realm
         target: /opt/keycloak/data/import/ferroehr-realm.json
+    volumes:
+      - keycloak-tls:/opt/keycloak/conf/tls:ro
     ports:
       - "${FERROEHR_BIND_HOST:-127.0.0.1}:${KEYCLOAK_PORT:-8081}:8081"
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${KEYCLOAK_TLS_PORT:-8443}:8443"
     deploy:
       resources:
         limits:
@@ -111,16 +169,56 @@ services:
       retries: 90
       start_period: 20s
 
+volumes:
+  keycloak-tls:
+
 configs:
+  # The development TLS material, generated once per volume: an EC P-256 CA,
+  # and a certificate for `keycloak` (SAN keycloak, localhost, 127.0.0.1)
+  # signed by it. Keycloak reads the PKCS #12 key store; the CDR reads only
+  # the CA certificate under ca/. The CA key never leaves the work directory.
+  keycloak-tls-script:
+    content: |
+      set -eu
+      tls=/tls
+      if [ -s "$$tls/keycloak.p12" ] && [ -s "$$tls/ca/ca.crt" ]; then
+        echo "development TLS material present"
+        exit 0
+      fi
+      work="$$(mktemp -d)"
+      pass=ferroehr-dev-tls
+      keytool -genkeypair -alias ca -keyalg EC -groupname secp256r1 -sigalg SHA256withECDSA \
+        -dname "CN=FerroEHR development CA" -ext bc:c=ca:true,pathlen:0 -ext ku:c=keyCertSign,cRLSign \
+        -validity 825 -storetype PKCS12 -keystore "$$work/ca.p12" -storepass "$$pass"
+      keytool -exportcert -rfc -alias ca -keystore "$$work/ca.p12" -storepass "$$pass" -file "$$work/ca.crt"
+      keytool -genkeypair -alias keycloak -keyalg EC -groupname secp256r1 -sigalg SHA256withECDSA \
+        -dname "CN=keycloak" -validity 825 -storetype PKCS12 -keystore "$$work/keycloak.p12" -storepass "$$pass"
+      keytool -certreq -alias keycloak -keystore "$$work/keycloak.p12" -storepass "$$pass" -file "$$work/keycloak.csr"
+      keytool -gencert -alias ca -keystore "$$work/ca.p12" -storepass "$$pass" -infile "$$work/keycloak.csr" \
+        -outfile "$$work/keycloak.crt" -rfc -validity 825 -sigalg SHA256withECDSA \
+        -ext san=dns:keycloak,dns:localhost,ip:127.0.0.1 -ext ku:c=digitalSignature -ext eku=serverAuth
+      keytool -importcert -noprompt -alias ca -file "$$work/ca.crt" -keystore "$$work/keycloak.p12" -storepass "$$pass"
+      keytool -importcert -noprompt -alias keycloak -file "$$work/keycloak.crt" -keystore "$$work/keycloak.p12" -storepass "$$pass"
+      keytool -delete -alias ca -keystore "$$work/keycloak.p12" -storepass "$$pass"
+      mkdir -p "$$tls/ca"
+      cp "$$work/keycloak.p12" "$$tls/keycloak.p12"
+      cp "$$work/ca.crt" "$$tls/ca/ca.crt"
+      chmod 0755 "$$tls" "$$tls/ca"
+      chmod 0644 "$$tls/keycloak.p12" "$$tls/ca/ca.crt"
+      rm -r "$$work"
+      echo "development TLS material written"
+
   # A MINIMAL demo realm, inline so the downloaded overlay is self-sufficient
   # (docs.docker.com/reference/compose-file/configs — the `content` attribute).
   # One confidential client (`ferroehr` / ferroehr-quickstart-secret, password
-  # grant enabled for curl-friendly token fetching) and one user
-  # (ferroehr / ferroehr) carrying the ADMIN + USER realm roles — Keycloak's
-  # default client scopes put realm roles into the token's
-  # `realm_access.roles`, which is the CDR's default role claim.
-  # The client's `oidc-audience-mapper` is LOAD-BEARING, not decoration: a
-  # CDR trusting this realm sets FERROEHR__AUTH__AUDIENCE=ferroehr, and Keycloak puts a
+  # grant enabled for curl-friendly token fetching) and four users. A realm
+  # that declares `clientScopes` gets none of Keycloak's built-in ones, so the
+  # two the CDR reads are declared as Keycloak defines them: `basic` (the
+  # `sub` claim) and `roles` (the realm roles in `realm_access.roles`, the
+  # CDR's default role claim). The four SMART scopes are default client scopes
+  # of the client, so every token carries them in `scope`.
+  # The client's `oidc-audience-mapper` is LOAD-BEARING, not decoration: the
+  # CDR sets FERROEHR__AUTH__AUDIENCE=ferroehr above, and Keycloak puts a
   # client into `aud` only when a mapper says so or the token carries that
   # client's own roles. Without it the realm emits no `ferroehr` audience and
   # every bearer call is refused 401 (RFC 7519 §4.1.3 audience validation).
@@ -134,11 +232,147 @@ configs:
         "defaultSignatureAlgorithm": "RS256",
         "roles": {
           "realm": [
-            { "name": "ADMIN", "description": "FerroEHR admin-surface role" },
-            { "name": "USER", "description": "FerroEHR clinical-API role" },
-            { "name": "READONLY", "description": "FerroEHR read-only role, which overrides any grant" }
+            {
+              "name": "ADMIN",
+              "description": "FerroEHR admin-surface role"
+            },
+            {
+              "name": "USER",
+              "description": "FerroEHR clinical-API role"
+            },
+            {
+              "name": "READONLY",
+              "description": "FerroEHR read-only role, which overrides any grant"
+            }
           ]
         },
+        "clientScopes": [
+          {
+            "name": "basic",
+            "description": "OpenID Connect scope for add all basic claims to the token",
+            "protocol": "openid-connect",
+            "attributes": {
+              "include.in.token.scope": "false",
+              "display.on.consent.screen": "false"
+            },
+            "protocolMappers": [
+              {
+                "name": "auth_time",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-usersessionmodel-note-mapper",
+                "consentRequired": false,
+                "config": {
+                  "user.session.note": "AUTH_TIME",
+                  "id.token.claim": "true",
+                  "introspection.token.claim": "true",
+                  "access.token.claim": "true",
+                  "claim.name": "auth_time",
+                  "jsonType.label": "long"
+                }
+              },
+              {
+                "name": "sub",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-sub-mapper",
+                "consentRequired": false,
+                "config": {
+                  "introspection.token.claim": "true",
+                  "access.token.claim": "true"
+                }
+              }
+            ]
+          },
+          {
+            "name": "roles",
+            "description": "OpenID Connect scope for add user roles to the access token",
+            "protocol": "openid-connect",
+            "attributes": {
+              "include.in.token.scope": "false",
+              "consent.screen.text": "$${rolesScopeConsentText}",
+              "display.on.consent.screen": "true"
+            },
+            "protocolMappers": [
+              {
+                "name": "realm roles",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-usermodel-realm-role-mapper",
+                "consentRequired": false,
+                "config": {
+                  "user.attribute": "foo",
+                  "introspection.token.claim": "true",
+                  "access.token.claim": "true",
+                  "claim.name": "realm_access.roles",
+                  "jsonType.label": "String",
+                  "multivalued": "true"
+                }
+              },
+              {
+                "name": "client roles",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-usermodel-client-role-mapper",
+                "consentRequired": false,
+                "config": {
+                  "user.attribute": "foo",
+                  "introspection.token.claim": "true",
+                  "access.token.claim": "true",
+                  "claim.name": "resource_access.$${client_id}.roles",
+                  "jsonType.label": "String",
+                  "multivalued": "true"
+                }
+              },
+              {
+                "name": "audience resolve",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-audience-resolve-mapper",
+                "consentRequired": false,
+                "config": {
+                  "introspection.token.claim": "true",
+                  "access.token.claim": "true"
+                }
+              }
+            ]
+          },
+          {
+            "name": "user/composition-*.cruds",
+            "description": "SMART on openEHR scope",
+            "protocol": "openid-connect",
+            "attributes": {
+              "include.in.token.scope": "true",
+              "display.on.consent.screen": "false"
+            }
+          },
+          {
+            "name": "user/template-*.cruds",
+            "description": "SMART on openEHR scope",
+            "protocol": "openid-connect",
+            "attributes": {
+              "include.in.token.scope": "true",
+              "display.on.consent.screen": "false"
+            }
+          },
+          {
+            "name": "user/aql-*.cruds",
+            "description": "SMART on openEHR scope",
+            "protocol": "openid-connect",
+            "attributes": {
+              "include.in.token.scope": "true",
+              "display.on.consent.screen": "false"
+            }
+          },
+          {
+            "name": "__ferroehr.platform",
+            "description": "FerroEHR product scope",
+            "protocol": "openid-connect",
+            "attributes": {
+              "include.in.token.scope": "true",
+              "display.on.consent.screen": "false"
+            }
+          }
+        ],
+        "defaultDefaultClientScopes": [
+          "basic",
+          "roles"
+        ],
         "users": [
           {
             "username": "ferroehr",
@@ -148,9 +382,16 @@ configs:
             "firstName": "Ferro",
             "lastName": "EHR",
             "credentials": [
-              { "type": "password", "value": "ferroehr", "temporary": false }
+              {
+                "type": "password",
+                "value": "ferroehr",
+                "temporary": false
+              }
             ],
-            "realmRoles": [ "ADMIN", "USER" ]
+            "realmRoles": [
+              "ADMIN",
+              "USER"
+            ]
           },
           {
             "username": "clinician",
@@ -160,9 +401,15 @@ configs:
             "firstName": "Clara",
             "lastName": "Clinician",
             "credentials": [
-              { "type": "password", "value": "clinician", "temporary": false }
+              {
+                "type": "password",
+                "value": "clinician",
+                "temporary": false
+              }
             ],
-            "realmRoles": [ "USER" ]
+            "realmRoles": [
+              "USER"
+            ]
           },
           {
             "username": "auditor",
@@ -172,9 +419,16 @@ configs:
             "firstName": "Ada",
             "lastName": "Auditor",
             "credentials": [
-              { "type": "password", "value": "auditor", "temporary": false }
+              {
+                "type": "password",
+                "value": "auditor",
+                "temporary": false
+              }
             ],
-            "realmRoles": [ "USER", "READONLY" ]
+            "realmRoles": [
+              "USER",
+              "READONLY"
+            ]
           },
           {
             "username": "nobody",
@@ -184,7 +438,11 @@ configs:
             "firstName": "Noa",
             "lastName": "Nobody",
             "credentials": [
-              { "type": "password", "value": "nobody", "temporary": false }
+              {
+                "type": "password",
+                "value": "nobody",
+                "temporary": false
+              }
             ],
             "realmRoles": []
           }
@@ -200,8 +458,12 @@ configs:
             "standardFlowEnabled": true,
             "directAccessGrantsEnabled": true,
             "serviceAccountsEnabled": true,
-            "redirectUris": [ "*" ],
-            "webOrigins": [ "*" ],
+            "redirectUris": [
+              "*"
+            ],
+            "webOrigins": [
+              "*"
+            ],
             "protocolMappers": [
               {
                 "name": "ferroehr-audience",
@@ -213,6 +475,14 @@ configs:
                   "id.token.claim": "false"
                 }
               }
+            ],
+            "defaultClientScopes": [
+              "basic",
+              "roles",
+              "user/composition-*.cruds",
+              "user/template-*.cruds",
+              "user/aql-*.cruds",
+              "__ferroehr.platform"
             ]
           }
         ]

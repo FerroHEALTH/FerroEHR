@@ -66,12 +66,11 @@ loggers = "admin_only"
 health = "admin_only"
 status = "admin_only"
 
-# No bearer trust: the dev Keycloak realm (docker/keycloak/import) is served as
-# http://keycloak:8081 on the compose network, and the CDR accepts a token
-# issuer only over https or on a loopback host (RFC 8414 §3, §6.2). An
-# OIDC-logged-in viewer therefore gets 401 from this CDR until the dev stack
-# serves an issuer it accepts.
-# TODO(#3873): give the dev stack a Keycloak issuer the CDR accepts.
+# No [auth] issuer here: the CDR reads an issuer's metadata at boot, and the
+# dev stack starts Keycloak only under its `keycloak` profile. The trust of the
+# dev realm (https://keycloak:8443/auth/realms/ferroehr, served with the
+# development CA docker-compose.dev.yml generates) rides docker/viewer/e2e-env.yml,
+# the overlay the OIDC lanes add beside that profile.
 
 # The read-only terminology extension API (six GETs over the in-process
 # openEHR vocabulary bundle) is ON in the dev stack so the viewer's

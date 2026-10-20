@@ -235,9 +235,25 @@ file, and stack the two:
 docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up
 ```
 
-That starts **Keycloak** on port 8081 with a small demo realm (`ferroehr`)
-defined inline and points the server's bearer validation at it. Basic auth from
-the base file keeps working, so the server then advertises `Basic, Bearer`.
+That starts **Keycloak** with a small demo realm (`ferroehr`) defined inline and
+points the server's bearer validation at it. Basic auth from the base file keeps
+working, so the server then advertises `Basic, Bearer`.
+
+The server accepts a token issuer only over HTTPS, or plain HTTP on a loopback
+host, so Keycloak serves the issuer over TLS on the compose network at
+`https://keycloak:8443/auth/realms/ferroehr`. On the first `up`, a one-shot
+`keycloak-tls` service generates a development CA and a certificate for
+`keycloak` into the `keycloak-tls` volume and discards the CA's private key;
+the server trusts that CA (`SSL_CERT_DIR`) beside the public ones. `docker
+compose down --volumes` deletes the volume, and the next `up` generates a new
+CA. Keycloak also answers plain HTTP on port 8081 for the token call below, and
+the tokens it mints there name the HTTPS issuer. Keycloak's access tokens carry
+`typ: JWT`, so the overlay sets `FERROEHR__AUTH__TOKEN_PROFILE=jwt`.
+
+Every route checks SMART on openEHR scopes, so the realm's client puts four in
+every token: `user/composition-*.cruds`, `user/template-*.cruds` and
+`user/aql-*.cruds` grant every resource family, and `__ferroehr.platform` is the
+product scope the ADMIN and DEMOGRAPHIC APIs need. The roles below then decide.
 
 The overlay also **turns RBAC on**, deliberately: an identity provider whose
 roles decide nothing is a login screen, not authorization. So the realm ships
@@ -265,13 +281,10 @@ curl -H "Authorization: Bearer $TOKEN" -X POST -i \
 ```
 
 > [!WARNING]
-> The realm, the client secret and the user passwords are demo values, served
-> over plain HTTP by a Keycloak in `start-dev` mode. The CDR accepts a token
-> issuer only over HTTPS or on a loopback host, so it does not trust this
-> Keycloak's tokens yet and the bearer call above answers `401`
-> ([#3873](https://github.com/FerroHEALTH/FerroEHR/issues/3873)). For a real
-> deployment, drop this overlay and point `[auth]` (or `FERROEHR__AUTH__ISSUER`
-> and `FERROEHR__AUTH__AUDIENCE`) at your own issuer over HTTPS.
+> The realm, the client secret, the user passwords and the CA are demo values,
+> served by a Keycloak in `start-dev` mode. For a real deployment, drop this
+> overlay and point `[auth]` (or `FERROEHR__AUTH__ISSUER` and
+> `FERROEHR__AUTH__AUDIENCE`) at your own issuer over HTTPS.
 
 ## The terminology overlay (FerroTERM)
 

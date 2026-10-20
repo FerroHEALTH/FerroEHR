@@ -828,7 +828,11 @@
         "acr",
         "profile",
         "roles",
-        "email"
+        "email",
+        "user/composition-*.cruds",
+        "user/template-*.cruds",
+        "user/aql-*.cruds",
+        "__ferroehr.platform"
       ],
       "optionalClientScopes": [
         "address",
@@ -1436,6 +1440,42 @@
           }
         }
       ]
+    },
+    {
+      "name": "user/composition-*.cruds",
+      "description": "SMART on openEHR scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "user/template-*.cruds",
+      "description": "SMART on openEHR scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "user/aql-*.cruds",
+      "description": "SMART on openEHR scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "__ferroehr.platform",
+      "description": "FerroEHR product scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
     }
   ],
   "defaultDefaultClientScopes": [

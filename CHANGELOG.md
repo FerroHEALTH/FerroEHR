@@ -98,9 +98,15 @@ workflow refuses a tag that has no matching section here.
   `ferrohealth-smart`** (#3872). The `[terminology.external.oauth2_clients]`
   keys are unchanged.
 - **The Helm chart and the compose files follow the new keys** (#3872, chart
-  12.0.0). The chart's Basic users are keyed by `user`, the CDR credential
-  FerroBRIDGE uses is HTTP Basic only, and the development stack's Keycloak
-  overlay no longer makes the CDR trust Keycloak's tokens (#3873).
+  12.0.0). The chart's Basic users are keyed by `user`, and the CDR credential
+  FerroBRIDGE uses is HTTP Basic only.
+- **The Keycloak overlay and the development stack serve Keycloak's issuer over
+  TLS** (#3873). A one-shot `keycloak-tls` service generates a development CA
+  and Keycloak's certificate on the first `up`, Keycloak serves the issuer at
+  `https://keycloak:8443/auth/realms/ferroehr`, and the CDR trusts that CA
+  through `SSL_CERT_DIR` with `token_profile = "jwt"`, so a Keycloak token is
+  accepted again. Both realms put the SMART on openEHR scopes and the product
+  scope into every token. The token call on port 8081 is unchanged.
 
 - **The viewer takes FerroUI 0.2.0 and reads every word it draws from its
   catalog** (#300, #3860). The labels it hands FerroUI (table captions,
