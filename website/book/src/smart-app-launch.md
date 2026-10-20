@@ -112,8 +112,10 @@ authorization, token, registration, introspection and revocation endpoints,
 the grant types and client authentication methods it supports, and its
 `jwks_uri`. It therefore needs an issuer whose metadata names a
 `token_endpoint`, which the document requires (SMART App Launch 2.2.0,
-Conformance, §Metadata): an issuer read from a `jwks_file` has no metadata,
-and `enabled = true` refuses the start with one.
+Conformance, §Metadata). An issuer read from a `jwks_file` has no metadata of
+its own: `[smart] issuer_metadata_file` names a JSON file with its RFC 8414 §2
+metadata, which must name that issuer and hold every endpoint to `https` (a
+loopback host excepted). Without it, `enabled = true` refuses the start.
 
 ```bash
 export FERROEHR__AUTH__ISSUER=https://as.example/realms/ferroehr

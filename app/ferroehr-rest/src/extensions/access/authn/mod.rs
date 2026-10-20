@@ -41,12 +41,12 @@
 pub(crate) mod assurance;
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use axum::extract::{FromRequestParts, MatchedPath, OriginalUri, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_smart::guard::Gate;
+use ferrohealth_smart::metadata::ServerMetadata;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::{
@@ -153,12 +153,13 @@ pub enum AuthMethod {
 }
 
 /// A successful authentication: the [`Principal`] plus whether this request
-/// performed a genuine credential verification.
+/// was an authentication event.
 ///
-/// `fresh` is `true` only for a Basic verified-credential cache miss, where the
-/// KDF actually ran. A cache hit is a continuing session and a Bearer request is
-/// federated, so both are `false`. It decides whether to emit an IHE ATNA login
-/// record, which marks authentication events rather than requests.
+/// `fresh` is `true` for every Basic credential the gate admitted: RFC 7617 §2
+/// sends the credential with each request, and the gate checks it each time,
+/// from its verified-credential cache or by the key derivation. A Bearer
+/// request is federated, so it is `false`. It decides whether to emit an IHE
+/// ATNA login record, which marks authentication events.
 #[derive(Debug, Clone)]
 pub(crate) struct Authenticated {
     pub(crate) principal: Principal,
@@ -280,8 +281,7 @@ impl AuthError {
     }
 }
 
-/// The configured authenticator: the crate's gate, the role sources and the
-/// verified Basic credential cache.
+/// The configured authenticator: the crate's gate and the role sources.
 pub struct Authenticator {
     /// `[auth] enabled`.
     enabled: bool,
@@ -295,18 +295,6 @@ pub struct Authenticator {
     role_claims: Vec<String>,
     /// The RBAC rules a Basic user's roles are read from.
     rbac: ferroehr::config::authz::RbacConfig,
-    /// Verified Basic-credential cache, keyed by the SHA-256 of the presented
-    /// `Authorization` header.
-    ///
-    /// An entry exists only after a successful Argon2 verification, and the TTL
-    /// (`[authz] basic_cache_ttl_seconds`) bounds revocation lag; `None`
-    /// disables it. Argon2 costs tens of milliseconds of CPU per call by
-    /// design, so without this a busy client's request rate is capped by the
-    /// KDF's work factor.
-    verified: Option<moka::future::Cache<[u8; 32], Principal>>,
-    /// KDF verifications actually performed: a test seam and a cheap
-    /// operational signal.
-    kdf_verifications: AtomicU64,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -323,9 +311,14 @@ impl Authenticator {
     /// and key set are read here, so an authorization server that cannot be
     /// reached refuses the start rather than the first request.
     ///
+    /// The first issuer takes `[smart] issuer_metadata_file` as its metadata
+    /// when its key set is a `jwks_file`, so its discovery document can name a
+    /// `token_endpoint`.
+    ///
     /// # Errors
-    /// A message naming the refused setting or the issuer that could not be
-    /// read.
+    /// A message naming the refused setting, the issuer that could not be
+    /// read, or the metadata file that could not be read or does not fit the
+    /// first issuer.
     pub async fn new(config: &AppConfig) -> Result<Arc<Self>, String> {
         let resolved = ferroehr::config::auth::resolve(&config.auth)
             .map_err(|e| ferroehr::service::error::ErrorChain::new(&e).to_string())?;
@@ -333,19 +326,37 @@ impl Authenticator {
         let mut primary = None;
         if resolved.enabled {
             if !resolved.issuers.is_empty() {
+                let mut supplied = match config.smart.issuer_metadata_file.as_deref() {
+                    Some(path) => Some(issuer_metadata(path).await?),
+                    None => None,
+                };
                 let mut issuers = IssuerSet::new();
                 for settings in resolved.issuers {
                     let issuer = settings.issuer.clone();
-                    let server = ResourceServer::discover(settings)
+                    let mut server = ResourceServer::discover(settings)
                         .await
                         .map_err(|e| unreadable_issuer(&issuer, &e))?;
+                    if let Some(metadata) = supplied.take() {
+                        server = server.with_metadata(metadata).map_err(|e| {
+                            format!(
+                                "smart.issuer_metadata_file does not fit the first [auth] \
+                                 issuer {issuer}: {}",
+                                ferroehr::service::error::ErrorChain::new(&e)
+                            )
+                        })?;
+                    }
                     let server = Arc::new(server);
                     primary.get_or_insert_with(|| Arc::clone(&server));
                     issuers = issuers.with(server);
                 }
                 gate = gate.with_bearer(Arc::new(issuers));
             }
-            if let Some(store) = resolved.basic {
+            // NOTE: RFC 9110 §11.6.1, a challenge names only a scheme the server
+            // implements, so an `[auth.basic]` table without users admits no Basic.
+            if let Some(store) = resolved
+                .basic
+                .filter(|_store| ferroehr::config::auth::has_basic(&config.auth))
+            {
                 gate = gate.with_basic(Arc::new(store));
             }
             let backend = config.smart.backend_clients.clone();
@@ -361,14 +372,6 @@ impl Authenticator {
                         .is_some_and(|issuer| patient.iter().any(|listed| listed == issuer)),
                 });
         }
-        let verified = (config.basic_cache_ttl_seconds > 0).then(|| {
-            moka::future::Cache::builder()
-                .max_capacity(1024)
-                .time_to_live(std::time::Duration::from_secs(
-                    config.basic_cache_ttl_seconds,
-                ))
-                .build()
-        });
         Ok(Arc::new(Self {
             enabled: config.auth.enabled,
             gate,
@@ -376,8 +379,6 @@ impl Authenticator {
             primary,
             role_claims: config.role_claims.clone(),
             rbac: config.rbac.clone(),
-            verified,
-            kdf_verifications: AtomicU64::new(0),
         }))
     }
 
@@ -398,12 +399,6 @@ impl Authenticator {
             .map(|server| server.smart_configuration(options))
     }
 
-    /// KDF verifications performed so far.
-    #[cfg(test)]
-    pub(crate) fn kdf_verifications(&self) -> u64 {
-        self.kdf_verifications.load(Ordering::Relaxed)
-    }
-
     /// Builds the `WWW-Authenticate` challenge of `outcome`: the schemes the
     /// gate admits with no error code when no credential was presented
     /// (RFC 6750 §3.1), the refused scheme's otherwise.
@@ -418,61 +413,26 @@ impl Authenticator {
             .unwrap_or_else(|_invalid| HeaderValue::from_static(r#"Bearer realm="ferroehr""#))
     }
 
-    /// Authenticates the request carrying `headers`.
+    /// Authenticates the request carrying `headers` through the gate.
     ///
-    /// A Basic credential verified within the cache TTL is answered from the
-    /// cache, a continuing session; every other credential goes to the gate.
+    /// The gate holds a bearer token to the RFC 6750 §2.1 `b64token` syntax and
+    /// refuses a blank `sub` (RFC 9068 §2.2), and its Basic store keeps a
+    /// verified credential for `[auth.basic] cache_ttl_seconds`; it logs which
+    /// check refused a credential.
     pub(crate) async fn authenticate(
         &self,
         headers: &http::HeaderMap,
     ) -> Result<Authenticated, AuthError> {
-        let mut basic_key = None;
-        if let Some(raw) = headers
-            .get(header::AUTHORIZATION)
-            .and_then(|value| value.to_str().ok())
-        {
-            let scheme = raw.split_whitespace().next().unwrap_or_default();
-            if scheme.eq_ignore_ascii_case("bearer") && self.gate.schemes().bearer {
-                bearer_credential(raw)?;
-            }
-            if scheme.eq_ignore_ascii_case("basic") && self.gate.schemes().basic {
-                // Keyed by the SHA-256 of the presented header, never the
-                // plaintext.
-                let key: [u8; 32] = {
-                    use sha2::Digest as _;
-                    sha2::Sha256::digest(raw.as_bytes()).into()
-                };
-                if let Some(cache) = &self.verified
-                    && let Some(principal) = cache.get(&key).await
-                {
-                    return Ok(Authenticated {
-                        principal,
-                        fresh: false,
-                    });
-                }
-                self.kdf_verifications.fetch_add(1, Ordering::Relaxed);
-                basic_key = Some(key);
-            }
-        }
         let access = self
             .gate
             .authenticate(headers)
             .await
-            .map_err(|refusal| AuthError::from_refusal(&refusal))?;
+            .map_err(|denied| AuthError::from_refusal(denied.refusal()))?;
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
-        // An unattributable subject cannot be recorded in the ATNA trail, so a
-        // blank `sub` is refused like any token that does not hold.
-        if caller.subject().trim().is_empty() {
-            return Err(AuthError::InvalidToken);
-        }
         let roles = self.roles_of(caller);
         let honoured = self.gate.honoured(&access);
+        let fresh = caller.via() == Via::Basic;
         let principal = Principal::new(access.clone(), roles, honoured);
-        // The KDF ran for a Basic credential: a genuine authentication event.
-        let fresh = basic_key.is_some() && caller.via() == Via::Basic;
-        if let (true, Some(key), Some(cache)) = (fresh, basic_key, &self.verified) {
-            cache.insert(key, principal.clone()).await;
-        }
         Ok(Authenticated { principal, fresh })
     }
 
@@ -507,46 +467,27 @@ fn unreadable_issuer(issuer: &str, error: &ResourceError) -> String {
     }
 }
 
-/// Holds a bearer credential to the RFC 6750 §2.1 grammar.
+/// Reads the RFC 8414 §2 authorization-server metadata at `path`
+/// (`[smart] issuer_metadata_file`).
 ///
-/// The RFC is exact: `credentials = "Bearer" 1*SP b64token` with
-/// `b64token = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" ) *"="`.
-/// A value outside it is a malformed request rather than a rejected credential,
-/// so it answers 400 (§3.1 `invalid_request`).
+/// A document that does not parse is named by its JSON failure class and
+/// position, never by the parser's message, which quotes the input.
 ///
 /// # Errors
-/// [`AuthError::MalformedRequest`] when the scheme is not followed by at least
-/// one space and a non-empty `b64token`, or when the token carries a character
-/// the grammar does not admit.
-fn bearer_credential(raw: &str) -> Result<&str, AuthError> {
-    let rest = raw
-        .strip_prefix("Bearer")
-        .or_else(|| raw.strip_prefix("bearer"))
-        .ok_or_else(|| AuthError::MalformedRequest("expected the Bearer scheme".to_owned()))?;
-    // `1*SP`: at least one space, and the RFC names SP specifically — a tab or a
-    // newline is not a legal separator.
-    if !rest.starts_with(' ') {
-        return Err(AuthError::MalformedRequest(
-            "the Bearer scheme must be followed by a single space and the token".to_owned(),
-        ));
-    }
-    let token = rest.trim_start_matches(' ');
-    if token.is_empty() {
-        return Err(AuthError::MalformedRequest(
-            "the Bearer credential carries no token".to_owned(),
-        ));
-    }
-    // `*"="` is a TRAILING run only, so padding may not appear mid-token.
-    let body = token.trim_end_matches('=');
-    if !body
-        .bytes()
-        .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'.' | b'_' | b'~' | b'+' | b'/'))
-    {
-        return Err(AuthError::MalformedRequest(
-            "the Bearer token is outside the RFC 6750 b64token grammar".to_owned(),
-        ));
-    }
-    Ok(token)
+/// A message naming the file that could not be read or parsed.
+async fn issuer_metadata(path: &str) -> Result<ServerMetadata, String> {
+    let text = tokio::fs::read_to_string(path)
+        .await
+        .map_err(|e| format!("smart.issuer_metadata_file {path} could not be read: {e}"))?;
+    serde_json::from_str(&text).map_err(|e| {
+        format!(
+            "smart.issuer_metadata_file {path} is not an RFC 8414 metadata document: \
+             {:?} error at line {}, column {}",
+            e.classify(),
+            e.line(),
+            e.column()
+        )
+    })
 }
 
 tokio::task_local! {
@@ -843,42 +784,10 @@ fn refusal_response(auth: &Authenticator, headers: &header::HeaderMap, e: &AuthE
     resp
 }
 
-/// The RFC 6750 §2.1 grammar, asserted per clause.
+/// The status each refusal outcome answers with.
 #[cfg(test)]
-mod bearer_grammar_tests {
-    use super::{AuthError, bearer_credential};
-
-    #[test]
-    fn bearer_credentials_follow_rfc6750_abnf() {
-        // `credentials = "Bearer" 1*SP b64token`
-        assert_eq!(
-            bearer_credential("Bearer abc.def.ghi").expect("ok"),
-            "abc.def.ghi"
-        );
-        assert_eq!(bearer_credential("bearer abc").expect("ok"), "abc");
-        // `1*SP` — more than one space is legal.
-        assert_eq!(bearer_credential("Bearer   abc").expect("ok"), "abc");
-        // Trailing `*"="` padding is part of the grammar.
-        assert_eq!(bearer_credential("Bearer abc==").expect("ok"), "abc==");
-
-        for malformed in [
-            "Bearer",         // no separator, no token
-            "Bearer ",        // separator, no token
-            "Bearer\tabc",    // a tab is not SP
-            "Bearer abc def", // a space inside the token
-            "Bearer abc?def", // `?` is outside b64token
-            "Bearer a=bc",    // interior padding
-            "Basic abc",      // wrong scheme for this parser
-        ] {
-            assert!(
-                matches!(
-                    bearer_credential(malformed),
-                    Err(AuthError::MalformedRequest(_))
-                ),
-                "`{malformed}` must be a malformed REQUEST, not a rejected credential",
-            );
-        }
-    }
+mod outcome_status_tests {
+    use super::AuthError;
 
     /// RFC 9110 §15.6.4: an unreachable issuer means the server cannot decide,
     /// which is a 503 — never a 401 telling a caller its valid token was
@@ -987,7 +896,8 @@ mod tests {
             .to_string()
     }
 
-    /// A Basic-only configuration admitting `alice` / `pw`.
+    /// A Basic-only configuration admitting `alice` / `pw`, its verified
+    /// credentials kept for `cache_ttl` seconds.
     fn basic_config(cache_ttl: u64) -> AppConfig {
         AppConfig {
             auth: AuthSection {
@@ -998,10 +908,10 @@ mod tests {
                         password_hash_file: None,
                         scopes: vec!["user/composition-*.cruds".to_owned()],
                     }],
+                    cache_ttl_seconds: cache_ttl,
                 }),
                 ..AuthSection::default()
             },
-            basic_cache_ttl_seconds: cache_ttl,
             ..AppConfig::default()
         }
     }
@@ -1035,41 +945,72 @@ mod tests {
         jiff::Timestamp::now().as_second()
     }
 
+    /// A credential the cache holds never admits another password for the
+    /// same user, with the cache on or off.
     #[tokio::test]
-    async fn verified_credential_cache_skips_the_kdf_on_a_hit() {
-        let auth = basic_only().await;
-        let h = headers("Basic YWxpY2U6cHc="); // alice:pw
-        let first = auth.authenticate(&h).await.expect("first verifies");
-        let second = auth.authenticate(&h).await.expect("second hits the cache");
-        assert!(first.fresh, "the KDF ran → a genuine authentication event");
-        assert!(
-            !second.fresh,
-            "a cache hit is a continuing session, not a new authentication"
-        );
-        assert_eq!(
-            auth.kdf_verifications(),
-            1,
-            "one KDF verification for two requests with the same credential"
-        );
-
-        // A different credential is a different key — it must NOT hit the
-        // cached entry, and the wrong password still fails.
-        let bad = headers("Basic YWxpY2U6d3Jvbmc="); // alice:wrong
-        auth.authenticate(&bad).await.expect_err("wrong password");
-        assert_eq!(
-            auth.kdf_verifications(),
-            2,
-            "the wrong credential paid its own (failed) verification"
-        );
+    async fn a_cached_credential_never_admits_a_wrong_password() {
+        for ttl in [60, 0] {
+            let auth = Authenticator::new(&basic_config(ttl)).await.unwrap();
+            let h = headers("Basic YWxpY2U6cHc="); // alice:pw
+            let first = auth.authenticate(&h).await.expect("first verifies");
+            let second = auth.authenticate(&h).await.expect("second verifies");
+            assert!(first.fresh && second.fresh, "each Basic request is checked");
+            for bad in [
+                "Basic YWxpY2U6d3Jvbmc=", // alice:wrong
+                "Basic YWxpY2U6cHcg",     // alice:"pw "
+                "Basic Ym9iOnB3",         // bob:pw, an unknown user
+            ] {
+                let err = auth
+                    .authenticate(&headers(bad))
+                    .await
+                    .expect_err("a credential the store does not hold is refused");
+                assert!(
+                    matches!(err, AuthError::InvalidCredentials),
+                    "{bad}: {err:?}"
+                );
+            }
+        }
     }
 
+    /// RFC 6750 §2.1 holds a bearer credential to `"Bearer" 1*SP b64token`:
+    /// a header that is no scheme and credential is a malformed request
+    /// (`400 invalid_request`, §3.1), and a token outside the `b64token`
+    /// alphabet is a malformed token (`401 invalid_token`, §3.1).
     #[tokio::test]
-    async fn verified_cache_ttl_zero_disables_caching() {
-        let auth = Authenticator::new(&basic_config(0)).await.unwrap();
-        let h = headers("Basic YWxpY2U6cHc=");
-        auth.authenticate(&h).await.expect("ok");
-        auth.authenticate(&h).await.expect("ok");
-        assert_eq!(auth.kdf_verifications(), 2, "TTL 0 verifies every request");
+    async fn a_bearer_credential_outside_rfc6750_is_refused() {
+        let auth = bearer_only().await;
+        for (malformed, request_defect) in [
+            ("Bearer", true),          // no separator, no token
+            ("Bearer ", true),         // separator, no token
+            ("Bearer\tabc", true),     // a tab is not SP
+            ("Bearer abc def", false), // a space inside the token
+            ("Bearer abc?def", false), // `?` is outside b64token
+            ("Bearer a=bc", false),    // interior padding
+            ("Bearer =abc", false),    // padding alone at the front
+        ] {
+            let err = auth
+                .authenticate(&headers(malformed))
+                .await
+                .expect_err("a malformed bearer credential is refused");
+            if request_defect {
+                assert!(
+                    matches!(err, AuthError::MalformedRequest(_)),
+                    "`{malformed}`: {err:?}"
+                );
+                assert_eq!(err.to_api_error().status(), StatusCode::BAD_REQUEST);
+            } else {
+                assert!(
+                    matches!(err, AuthError::InvalidToken),
+                    "`{malformed}`: {err:?}"
+                );
+                assert_eq!(err.to_api_error().status(), StatusCode::UNAUTHORIZED);
+            }
+        }
+        let err = auth
+            .authenticate(&headers("Basic abc"))
+            .await
+            .expect_err("a scheme the surface does not admit");
+        assert!(matches!(err, AuthError::MissingCredentials), "{err:?}");
     }
 
     #[tokio::test]
@@ -1582,12 +1523,91 @@ mod tests {
         }
     }
 
+    /// A metadata file written for one test, removed when dropped.
+    struct MetadataFile(std::path::PathBuf);
+
+    impl MetadataFile {
+        fn new(name: &str, body: &str) -> Self {
+            let path = std::env::temp_dir().join(format!(
+                "ferroehr-rest-issuer-metadata-{name}-{}.json",
+                std::process::id()
+            ));
+            std::fs::write(&path, body).expect("write the metadata file");
+            Self(path)
+        }
+    }
+
+    impl Drop for MetadataFile {
+        fn drop(&mut self) {
+            drop(std::fs::remove_file(&self.0));
+        }
+    }
+
+    /// A `jwks_file` issuer authenticator reading `[smart] issuer_metadata_file`.
+    async fn with_metadata_file(file: Option<&MetadataFile>) -> Result<Arc<Authenticator>, String> {
+        let mut config = AppConfig {
+            auth: test_support::bearer_auth(),
+            ..AppConfig::default()
+        };
+        config.smart.issuer_metadata_file = file.map(|file| file.0.display().to_string());
+        Authenticator::new(&config).await
+    }
+
+    /// SMART App Launch 2.2.0, Conformance, §Metadata requires a
+    /// `token_endpoint`: a `jwks_file` issuer names one only through the
+    /// operator-supplied metadata, which must name that issuer (RFC 8414 §3.3)
+    /// and parse, never quoting its input when it does not.
+    #[tokio::test]
+    async fn a_jwks_file_issuer_takes_its_metadata_from_the_configured_file() {
+        let options = SmartOptions::default();
+        let without = with_metadata_file(None).await.expect("authenticator");
+        let document = without.smart_configuration(&options).expect("a document");
+        assert!(document.get("token_endpoint").is_none(), "{document}");
+
+        let good = MetadataFile::new(
+            "good",
+            &json!({ "issuer": ISSUER, "token_endpoint": format!("{ISSUER}/token") }).to_string(),
+        );
+        let with = with_metadata_file(Some(&good))
+            .await
+            .expect("authenticator");
+        let document = with.smart_configuration(&options).expect("a document");
+        assert_eq!(
+            document.get("token_endpoint").and_then(Value::as_str),
+            Some("https://issuer.example/token"),
+            "{document}"
+        );
+
+        let other = MetadataFile::new(
+            "other",
+            &json!({ "issuer": "https://other.example", "token_endpoint": "https://other.example/token" })
+                .to_string(),
+        );
+        let Err(message) = with_metadata_file(Some(&other)).await else {
+            panic!("metadata of another issuer is refused");
+        };
+        assert!(message.contains("issuer_metadata_file"), "{message}");
+
+        let insecure = MetadataFile::new(
+            "insecure",
+            &json!({ "issuer": ISSUER, "token_endpoint": "http://issuer.example/token" })
+                .to_string(),
+        );
+        assert!(with_metadata_file(Some(&insecure)).await.is_err());
+
+        let broken = MetadataFile::new("broken", r#"{"issuer": "s3cr3t-in-the-input""#);
+        let Err(message) = with_metadata_file(Some(&broken)).await else {
+            panic!("a document that does not parse is refused");
+        };
+        assert!(!message.contains("s3cr3t"), "{message}");
+    }
+
     /// The issuer's key set, read over its `jwks_uri`: the boot read, the
     /// refetch on an unknown key, and the failures of each. No openEHR spec
     /// governs auth transport hardening — the crate's design, held here at
     /// FerroEHR's seam.
     mod remote_issuer {
-        use std::sync::atomic::AtomicUsize;
+        use std::sync::atomic::{AtomicUsize, Ordering};
         use std::time::Instant;
 
         use wiremock::matchers::{method, path};
