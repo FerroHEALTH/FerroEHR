@@ -318,7 +318,7 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::ArchetypeConstra
                 "ArchetypeConstraint: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "ArchetypeConstraint: unknown xsi:type {other}"
+                "ArchetypeConstraint: unknown xsi:type {other}: the ITS-XML AOM2 model-form schemas (Archetype.xsd) define no ARCHETYPE_CONSTRAINT subtype of that name"
             ))),
         }
     }
@@ -1011,7 +1011,7 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::AuthoredResource
                 "AuthoredResource: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "AuthoredResource: unknown xsi:type {other}"
+                "AuthoredResource: unknown xsi:type {other}: the ITS-XML AOM2 model-form schemas (Archetype.xsd) define no AUTHORED_RESOURCE subtype of that name"
             ))),
         }
     }
@@ -2293,7 +2293,7 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::CObject {
                 "CObject: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "CObject: unknown xsi:type {other}"
+                "CObject: unknown xsi:type {other}: the ITS-XML AOM2 model-form schemas (Archetype.xsd) define no C_OBJECT subtype of that name"
             ))),
         }
     }
@@ -3095,7 +3095,7 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::ExprItem {
                 "ExprItem: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "ExprItem: unknown xsi:type {other}"
+                "ExprItem: unknown xsi:type {other}: the ITS-XML AOM2 model-form schemas (Archetype.xsd) define no EXPR_ITEM subtype of that name"
             ))),
         }
     }
@@ -3209,7 +3209,7 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::ExprOperator {
                 "ExprOperator: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "ExprOperator: unknown xsi:type {other}"
+                "ExprOperator: unknown xsi:type {other}: the ITS-XML AOM2 model-form schemas (Archetype.xsd) define no EXPR_OPERATOR subtype of that name"
             ))),
         }
     }
@@ -4314,7 +4314,7 @@ impl crate::xml::runtime::FromXml for crate::aom2_model::types::RuleElement {
                 "RuleElement: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "RuleElement: unknown xsi:type {other}"
+                "RuleElement: unknown xsi:type {other}: the ITS-XML AOM2 model-form schemas (Archetype.xsd) define no RULE_ELEMENT subtype of that name"
             ))),
         }
     }

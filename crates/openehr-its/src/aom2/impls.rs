@@ -684,7 +684,7 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::ExprItem {
                 "ExprItem: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "ExprItem: unknown xsi:type {other}"
+                "ExprItem: unknown xsi:type {other}: the ITS-XML AOM2 persistent-form schemas (P_Archetype.xsd) define no EXPR_ITEM subtype of that name"
             ))),
         }
     }
@@ -794,7 +794,7 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::ExprOperator {
                 "ExprOperator: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "ExprOperator: unknown xsi:type {other}"
+                "ExprOperator: unknown xsi:type {other}: the ITS-XML AOM2 persistent-form schemas (P_Archetype.xsd) define no EXPR_OPERATOR subtype of that name"
             ))),
         }
     }
@@ -1753,7 +1753,7 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::PArchetypeConstraint {
                 "PArchetypeConstraint: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "PArchetypeConstraint: unknown xsi:type {other}"
+                "PArchetypeConstraint: unknown xsi:type {other}: the ITS-XML AOM2 persistent-form schemas (P_Archetype.xsd) define no P_ARCHETYPE_CONSTRAINT subtype of that name"
             ))),
         }
     }
@@ -3339,7 +3339,7 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::PCObject {
                 "PCObject: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "PCObject: unknown xsi:type {other}"
+                "PCObject: unknown xsi:type {other}: the ITS-XML AOM2 persistent-form schemas (P_Archetype.xsd) define no P_C_OBJECT subtype of that name"
             ))),
         }
     }
@@ -4332,7 +4332,7 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::RuleElement {
                 "RuleElement: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "RuleElement: unknown xsi:type {other}"
+                "RuleElement: unknown xsi:type {other}: the ITS-XML AOM2 persistent-form schemas (P_Archetype.xsd) define no RULE_ELEMENT subtype of that name"
             ))),
         }
     }

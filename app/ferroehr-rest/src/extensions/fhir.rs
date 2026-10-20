@@ -30,6 +30,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use ferroehr::service::status::SmError;
+use openehr_its::rest::decode::query_component_octets;
 
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::extensions::access::authz::roles::RbacDecision;
@@ -245,8 +246,8 @@ fn audit_filter(
     Ok(filter)
 }
 
-/// Decode the query string into `(key, value)` pairs (percent-decoding via
-/// the `urlencoding` crate — the house rule for all percent codecs).
+/// Decode the query string into `(key, value)` pairs, each form-decoded
+/// ([`query_component_octets`]: `+` a space, `%2B` a plus).
 fn query_pairs(query: Option<&str>) -> Vec<(String, String)> {
     query
         .unwrap_or_default()
@@ -254,10 +255,8 @@ fn query_pairs(query: Option<&str>) -> Vec<(String, String)> {
         .filter(|pair| !pair.is_empty())
         .filter_map(|pair| {
             let (key, value) = pair.split_once('=')?;
-            let key = urlencoding::decode(key).ok()?.into_owned();
-            let value = urlencoding::decode(&value.replace('+', " "))
-                .ok()?
-                .into_owned();
+            let key = String::from_utf8(query_component_octets(key)).ok()?;
+            let value = String::from_utf8(query_component_octets(value)).ok()?;
             Some((key, value))
         })
         .collect()

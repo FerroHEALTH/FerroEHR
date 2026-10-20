@@ -134,7 +134,7 @@ pub(crate) fn emit_file(
                 crate::render::emit::type_module_path(s.schema, xml_type_spec(&ty))
             );
             emit_to_xml(&mut b, &ty, &path, xsd, unmatched);
-            emit_from_xml(&mut b, &ty, &path, xsd, Some(s));
+            emit_from_xml(&mut b, &ty, &path, xsd, Some(s), RM_XML_SCHEMA);
         }
     }
     if !appended.is_empty() {
@@ -502,14 +502,22 @@ fn emit_write_map_field(b: &mut String, f: &XmlField, rust: &str) {
 
 // ── deserialization ─────────────────────────────────────────────────────────
 
+/// The schema closure the RM/BASE canonical-XML codec is generated from, named
+/// in the refusal of an `xsi:type` it does not define.
+pub(crate) const RM_XML_SCHEMA: &str = "the ITS-XML RM schemas";
+
 /// Emit `impl FromXml` for one [`XmlType`]. Public so the OPT emitter
 /// (`emit_opt`) can reuse it over XSD-derived [`XmlType`]s.
+///
+/// `schema` names the schema closure `ty` comes from: an `xsi:type` outside
+/// the closure's subtypes is refused with an error naming it.
 pub(crate) fn emit_from_xml(
     b: &mut String,
     ty: &XmlType,
     path: &str,
     xsd: &XsdModel,
     door_env: Option<&XmlSchema<'_>>,
+    schema: &str,
 ) {
     match ty {
         XmlType::Struct {
@@ -529,7 +537,7 @@ pub(crate) fn emit_from_xml(
             ..
         } => {
             let target = XmlTarget { spec, rust, path };
-            emit_enum_from_xml(b, &target, generics, dispatch);
+            emit_enum_from_xml(b, &target, generics, dispatch, schema);
         }
         XmlType::Newtype { rust, .. } => {
             let _ = write!(
@@ -894,12 +902,14 @@ fn door_param_type(door_env: Option<&XmlSchema<'_>>, ty: &str, spec: &str) -> St
 }
 
 /// Emits `impl FromXml` for an untagged enum: the `xsi:type` dispatch into the
-/// variant that owns each concrete descendant.
+/// variant that owns each concrete descendant, any other `xsi:type` refused
+/// with an error naming `schema`, the closure that does not define it.
 fn emit_enum_from_xml(
     b: &mut String,
     target: &XmlTarget<'_>,
     generics: &[String],
     dispatch: &[(String, String)],
+    schema: &str,
 ) {
     let (hdr, args) = generic_header(generics, "crate::xml::runtime::FromXml");
     let (path, rust, spec) = (target.path, target.rust, target.spec);
@@ -935,7 +945,7 @@ fn emit_enum_from_xml(
     }
     let _ = writeln!(
         b,
-        "Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(\"{rust}: unknown xsi:type {{other}}\"))),"
+        "Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(\"{rust}: unknown xsi:type {{other}}: {schema} define no {spec} subtype of that name\"))),"
     );
     b.push_str("}\n}\n}\n\n");
 }

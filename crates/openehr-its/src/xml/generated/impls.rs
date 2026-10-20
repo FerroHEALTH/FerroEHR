@@ -721,7 +721,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                 "Interval: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Interval: unknown xsi:type {other}"
+                "Interval: unknown xsi:type {other}: the ITS-XML RM schemas define no Interval subtype of that name"
             ))),
         }
     }
@@ -1079,7 +1079,7 @@ Some("Iso8601_duration") => Ok(openehr_base::v1_3::foundation_types::time::iso86
 Some("Iso8601_time") => Ok(openehr_base::v1_3::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Time(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("Iso8601_timezone") => Ok(openehr_base::v1_3::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Timezone(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("Iso8601Type: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601Type: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601Type: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_type subtype of that name"))),
 }
     }
 }
@@ -1314,7 +1314,7 @@ Some("OBJECT_VERSION_ID") => Ok(openehr_base::v1_3::base_types::identification::
 Some("TEMPLATE_ID") => Ok(openehr_base::v1_3::base_types::identification::object_id::ObjectId::TemplateId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("TERMINOLOGY_ID") => Ok(openehr_base::v1_3::base_types::identification::object_id::ObjectId::TerminologyId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("ObjectId: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ObjectId: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ObjectId: unknown xsi:type {other}: the ITS-XML RM schemas define no OBJECT_ID subtype of that name"))),
 }
     }
 }
@@ -1433,7 +1433,7 @@ Some("LOCATABLE_REF") => Ok(openehr_base::v1_3::base_types::identification::obje
 Some("OBJECT_REF") => Ok(openehr_base::v1_3::base_types::identification::object_ref::ObjectRef::ObjectRef(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("PARTY_REF") => Ok(openehr_base::v1_3::base_types::identification::object_ref::ObjectRef::PartyRef(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Ok(openehr_base::v1_3::base_types::identification::object_ref::ObjectRef::ObjectRef(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ObjectRef: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ObjectRef: unknown xsi:type {other}: the ITS-XML RM schemas define no OBJECT_REF subtype of that name"))),
 }
     }
 }
@@ -1817,7 +1817,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
 Some("Multiplicity_interval") => Ok(openehr_base::v1_3::foundation_types::interval::proper_interval::ProperInterval::MultiplicityInterval(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("Proper_interval") => Ok(openehr_base::v1_3::foundation_types::interval::proper_interval::ProperInterval::ProperInterval(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Ok(openehr_base::v1_3::foundation_types::interval::proper_interval::ProperInterval::ProperInterval(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ProperInterval: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ProperInterval: unknown xsi:type {other}: the ITS-XML RM schemas define no Proper_interval subtype of that name"))),
 }
     }
 }
@@ -2730,7 +2730,7 @@ impl crate::xml::runtime::FromXml for openehr_base::v1_3::base_types::identifica
                 "Uid: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Uid: unknown xsi:type {other}"
+                "Uid: unknown xsi:type {other}: the ITS-XML RM schemas define no UID subtype of that name"
             ))),
         }
     }
@@ -2769,7 +2769,7 @@ impl crate::xml::runtime::FromXml
 Some("HIER_OBJECT_ID") => Ok(openehr_base::v1_3::base_types::identification::uid_based_id::UidBasedId::HierObjectId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("OBJECT_VERSION_ID") => Ok(openehr_base::v1_3::base_types::identification::uid_based_id::UidBasedId::ObjectVersionId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("UidBasedId: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("UidBasedId: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("UidBasedId: unknown xsi:type {other}: the ITS-XML RM schemas define no UID_BASED_ID subtype of that name"))),
 }
     }
 }
@@ -3348,7 +3348,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::actor::Acto
                 "Actor: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Actor: unknown xsi:type {other}"
+                "Actor: unknown xsi:type {other}: the ITS-XML RM schemas define no ACTOR subtype of that name"
             ))),
         }
     }
@@ -4296,7 +4296,7 @@ impl crate::xml::runtime::FromXml
                 ),
             ),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "AuditDetails: unknown xsi:type {other}"
+                "AuditDetails: unknown xsi:type {other}: the ITS-XML RM schemas define no AUDIT_DETAILS subtype of that name"
             ))),
         }
     }
@@ -4592,7 +4592,7 @@ impl crate::xml::runtime::FromXml
                 "CareEntry: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "CareEntry: unknown xsi:type {other}"
+                "CareEntry: unknown xsi:type {other}: the ITS-XML RM schemas define no CARE_ENTRY subtype of that name"
             ))),
         }
     }
@@ -5241,7 +5241,7 @@ impl crate::xml::runtime::FromXml
                 "ContentItem: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "ContentItem: unknown xsi:type {other}"
+                "ContentItem: unknown xsi:type {other}: the ITS-XML RM schemas define no CONTENT_ITEM subtype of that name"
             ))),
         }
     }
@@ -5410,7 +5410,7 @@ impl crate::xml::runtime::FromXml
                 "DataStructure: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "DataStructure: unknown xsi:type {other}"
+                "DataStructure: unknown xsi:type {other}: the ITS-XML RM schemas define no DATA_STRUCTURE subtype of that name"
             ))),
         }
     }
@@ -5501,7 +5501,7 @@ Some("DV_TEXT") => Ok(openehr_rm::v1_2::data_types::basic::data_value::DataValue
 Some("DV_TIME") => Ok(openehr_rm::v1_2::data_types::basic::data_value::DataValue::DvTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("DV_URI") => Ok(openehr_rm::v1_2::data_types::basic::data_value::DataValue::DvUri(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("DataValue: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DataValue: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DataValue: unknown xsi:type {other}: the ITS-XML RM schemas define no DATA_VALUE subtype of that name"))),
 }
     }
 }
@@ -5542,7 +5542,7 @@ Some("DV_DATE") => Ok(openehr_rm::v1_2::data_types::quantity::dv_absolute_quanti
 Some("DV_DATE_TIME") => Ok(openehr_rm::v1_2::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity::DvDateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("DV_TIME") => Ok(openehr_rm::v1_2::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity::DvTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("DvAbsoluteQuantity: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvAbsoluteQuantity: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvAbsoluteQuantity: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_ABSOLUTE_QUANTITY subtype of that name"))),
 }
     }
 }
@@ -5617,7 +5617,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::quantity::dv
                 "DvAmount: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "DvAmount: unknown xsi:type {other}"
+                "DvAmount: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_AMOUNT subtype of that name"
             ))),
         }
     }
@@ -6377,7 +6377,7 @@ impl crate::xml::runtime::FromXml
 Some("DV_MULTIMEDIA") => Ok(openehr_rm::v1_2::data_types::encapsulated::dv_encapsulated::DvEncapsulated::DvMultimedia(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("DV_PARSABLE") => Ok(openehr_rm::v1_2::data_types::encapsulated::dv_encapsulated::DvEncapsulated::DvParsable(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("DvEncapsulated: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvEncapsulated: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvEncapsulated: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_ENCAPSULATED subtype of that name"))),
 }
     }
 }
@@ -6877,7 +6877,7 @@ impl crate::xml::runtime::FromXml
                 "DvOrdered: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "DvOrdered: unknown xsi:type {other}"
+                "DvOrdered: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_ORDERED subtype of that name"
             ))),
         }
     }
@@ -7427,7 +7427,7 @@ impl crate::xml::runtime::FromXml
                 "DvQuantified: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "DvQuantified: unknown xsi:type {other}"
+                "DvQuantified: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_QUANTIFIED subtype of that name"
             ))),
         }
     }
@@ -7797,7 +7797,7 @@ Some("DV_DATE") => Ok(openehr_rm::v1_2::data_types::quantity::date_time::dv_temp
 Some("DV_DATE_TIME") => Ok(openehr_rm::v1_2::data_types::quantity::date_time::dv_temporal::DvTemporal::DvDateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("DV_TIME") => Ok(openehr_rm::v1_2::data_types::quantity::date_time::dv_temporal::DvTemporal::DvTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("DvTemporal: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvTemporal: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvTemporal: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_TEMPORAL subtype of that name"))),
 }
     }
 }
@@ -7952,7 +7952,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::text::dv_tex
                 crate::xml::runtime::FromXml::from_xml(reader, start)?,
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "DvText: unknown xsi:type {other}"
+                "DvText: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_TEXT subtype of that name"
             ))),
         }
     }
@@ -8110,7 +8110,7 @@ impl crate::xml::runtime::FromXml
 Some("DV_GENERAL_TIME_SPECIFICATION") => Ok(openehr_rm::v1_2::data_types::time_specification::dv_time_specification::DvTimeSpecification::DvGeneralTimeSpecification(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("DV_PERIODIC_TIME_SPECIFICATION") => Ok(openehr_rm::v1_2::data_types::time_specification::dv_time_specification::DvTimeSpecification::DvPeriodicTimeSpecification(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("DvTimeSpecification: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvTimeSpecification: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvTimeSpecification: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_TIME_SPECIFICATION subtype of that name"))),
 }
     }
 }
@@ -8211,7 +8211,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::uri::dv_uri:
                 crate::xml::runtime::FromXml::from_xml(reader, start)?,
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "DvUri: unknown xsi:type {other}"
+                "DvUri: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_URI subtype of that name"
             ))),
         }
     }
@@ -8835,7 +8835,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::composition::content::en
                 "Entry: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Entry: unknown xsi:type {other}"
+                "Entry: unknown xsi:type {other}: the ITS-XML RM schemas define no ENTRY subtype of that name"
             ))),
         }
     }
@@ -9087,7 +9087,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                 "Event: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Event: unknown xsi:type {other}"
+                "Event: unknown xsi:type {other}: the ITS-XML RM schemas define no EVENT subtype of that name"
             ))),
         }
     }
@@ -9675,7 +9675,7 @@ impl crate::xml::runtime::FromXml
 Some("EXTRACT_CHAPTER") => Ok(openehr_rm::v1_2::ehr_extract::common::extract_chapter::ExtractChapter::ExtractChapter(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("EXTRACT_ENTITY_CHAPTER") => Ok(openehr_rm::v1_2::ehr_extract::common::extract_chapter::ExtractChapter::ExtractEntityChapter(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Ok(openehr_rm::v1_2::ehr_extract::common::extract_chapter::ExtractChapter::ExtractChapter(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ExtractChapter: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ExtractChapter: unknown xsi:type {other}: the ITS-XML RM schemas define no EXTRACT_CHAPTER subtype of that name"))),
 }
     }
 }
@@ -9713,7 +9713,7 @@ impl crate::xml::runtime::FromXml
 Some("GENERIC_CONTENT_ITEM") => Ok(openehr_rm::v1_2::ehr_extract::common::extract_content_item::ExtractContentItem::GenericContentItem(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("OPENEHR_CONTENT_ITEM") => Ok(openehr_rm::v1_2::ehr_extract::common::extract_content_item::ExtractContentItem::OpenehrContentItem(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("ExtractContentItem: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ExtractContentItem: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ExtractContentItem: unknown xsi:type {other}: the ITS-XML RM schemas define no EXTRACT_CONTENT_ITEM subtype of that name"))),
 }
     }
 }
@@ -10197,7 +10197,7 @@ Some("EXTRACT_FOLDER") => Ok(openehr_rm::v1_2::ehr_extract::common::extract_item
 Some("GENERIC_CONTENT_ITEM") => Ok(openehr_rm::v1_2::ehr_extract::common::extract_item::ExtractItem::GenericContentItem(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("OPENEHR_CONTENT_ITEM") => Ok(openehr_rm::v1_2::ehr_extract::common::extract_item::ExtractItem::OpenehrContentItem(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("ExtractItem: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ExtractItem: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ExtractItem: unknown xsi:type {other}: the ITS-XML RM schemas define no EXTRACT_ITEM subtype of that name"))),
 }
     }
 }
@@ -12565,7 +12565,7 @@ impl crate::xml::runtime::FromXml
                 "Item: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Item: unknown xsi:type {other}"
+                "Item: unknown xsi:type {other}: the ITS-XML RM schemas define no ITEM subtype of that name"
             ))),
         }
     }
@@ -12852,7 +12852,7 @@ Some("ITEM_SINGLE") => Ok(openehr_rm::v1_2::data_structures::item_structure::ite
 Some("ITEM_TABLE") => Ok(openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure::ItemTable(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("ITEM_TREE") => Ok(openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure::ItemTree(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("ItemStructure: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ItemStructure: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ItemStructure: unknown xsi:type {other}: the ITS-XML RM schemas define no ITEM_STRUCTURE subtype of that name"))),
 }
     }
 }
@@ -13262,7 +13262,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                 "Interval: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Interval: unknown xsi:type {other}"
+                "Interval: unknown xsi:type {other}: the ITS-XML RM schemas define no Interval subtype of that name"
             ))),
         }
     }
@@ -13384,7 +13384,7 @@ impl crate::xml::runtime::FromXml
                 ),
             ),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Iso8601Date: unknown xsi:type {other}"
+                "Iso8601Date: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_date subtype of that name"
             ))),
         }
     }
@@ -13485,7 +13485,7 @@ impl crate::xml::runtime::FromXml
 Some("DV_DATE_TIME") => Ok(openehr_rm::v1_2::foundation_types::time::iso8601_date_time::Iso8601DateTime::DvDateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("Iso8601_date_time") => Ok(openehr_rm::v1_2::foundation_types::time::iso8601_date_time::Iso8601DateTime::Iso8601DateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Ok(openehr_rm::v1_2::foundation_types::time::iso8601_date_time::Iso8601DateTime::Iso8601DateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601DateTime: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601DateTime: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_date_time subtype of that name"))),
 }
     }
 }
@@ -13585,7 +13585,7 @@ impl crate::xml::runtime::FromXml
 Some("DV_DURATION") => Ok(openehr_rm::v1_2::foundation_types::time::iso8601_duration::Iso8601Duration::DvDuration(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("Iso8601_duration") => Ok(openehr_rm::v1_2::foundation_types::time::iso8601_duration::Iso8601Duration::Iso8601Duration(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Ok(openehr_rm::v1_2::foundation_types::time::iso8601_duration::Iso8601Duration::Iso8601Duration(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601Duration: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601Duration: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_duration subtype of that name"))),
 }
     }
 }
@@ -13706,7 +13706,7 @@ impl crate::xml::runtime::FromXml
                 ),
             ),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Iso8601Time: unknown xsi:type {other}"
+                "Iso8601Time: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_time subtype of that name"
             ))),
         }
     }
@@ -13758,7 +13758,7 @@ Some("Iso8601_duration") => Ok(openehr_rm::v1_2::foundation_types::time::iso8601
 Some("Iso8601_time") => Ok(openehr_rm::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Time(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("Iso8601_timezone") => Ok(openehr_rm::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Timezone(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("Iso8601Type: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601Type: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601Type: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_type subtype of that name"))),
 }
     }
 }
@@ -14280,7 +14280,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::archetyped::loca
                 "Locatable: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Locatable: unknown xsi:type {other}"
+                "Locatable: unknown xsi:type {other}: the ITS-XML RM schemas define no LOCATABLE subtype of that name"
             ))),
         }
     }
@@ -14449,7 +14449,7 @@ impl crate::xml::runtime::FromXml
 Some("SYNC_EXTRACT") => Ok(openehr_rm::v1_2::ehr_extract::message::message_content::MessageContent::SyncExtract(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("SYNC_EXTRACT_REQUEST") => Ok(openehr_rm::v1_2::ehr_extract::message::message_content::MessageContent::SyncExtractRequest(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Err(crate::xml::runtime::XmlError::Parse("MessageContent: missing xsi:type".into())),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("MessageContent: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("MessageContent: unknown xsi:type {other}: the ITS-XML RM schemas define no MESSAGE_CONTENT subtype of that name"))),
 }
     }
 }
@@ -14701,7 +14701,7 @@ match start.xsi_type() {
 Some("OPENEHR_CODE_SET_IDENTIFIERS") => Ok(openehr_rm::v1_2::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers::OpenehrCodeSetIdentifiers(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("TERMINOLOGY_SERVICE") => Ok(openehr_rm::v1_2::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers::TerminologyService(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Ok(openehr_rm::v1_2::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers::OpenehrCodeSetIdentifiers(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("OpenehrCodeSetIdentifiers: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("OpenehrCodeSetIdentifiers: unknown xsi:type {other}: the ITS-XML RM schemas define no OPENEHR_CODE_SET_IDENTIFIERS subtype of that name"))),
 }
 }
 }
@@ -14880,7 +14880,7 @@ match start.xsi_type() {
 Some("OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS") => Ok(openehr_rm::v1_2::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers::OpenehrTerminologyGroupIdentifiers(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("TERMINOLOGY_SERVICE") => Ok(openehr_rm::v1_2::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers::TerminologyService(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Ok(openehr_rm::v1_2::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers::OpenehrTerminologyGroupIdentifiers(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("OpenehrTerminologyGroupIdentifiers: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("OpenehrTerminologyGroupIdentifiers: unknown xsi:type {other}: the ITS-XML RM schemas define no OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS subtype of that name"))),
 }
 }
 }
@@ -15373,7 +15373,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::party::Part
                 "Party: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Party: unknown xsi:type {other}"
+                "Party: unknown xsi:type {other}: the ITS-XML RM schemas define no PARTY subtype of that name"
             ))),
         }
     }
@@ -15505,7 +15505,7 @@ impl crate::xml::runtime::FromXml
 Some("PARTY_IDENTIFIED") => Ok(openehr_rm::v1_2::common::generic::party_identified::PartyIdentified::PartyIdentified(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("PARTY_RELATED") => Ok(openehr_rm::v1_2::common::generic::party_identified::PartyIdentified::PartyRelated(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Ok(openehr_rm::v1_2::common::generic::party_identified::PartyIdentified::PartyIdentified(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("PartyIdentified: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("PartyIdentified: unknown xsi:type {other}: the ITS-XML RM schemas define no PARTY_IDENTIFIED subtype of that name"))),
 }
     }
 }
@@ -15678,7 +15678,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::generic::party_p
                 "PartyProxy: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "PartyProxy: unknown xsi:type {other}"
+                "PartyProxy: unknown xsi:type {other}: the ITS-XML RM schemas define no PARTY_PROXY subtype of that name"
             ))),
         }
     }
@@ -16463,7 +16463,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::archetyped::path
                 "Pathable: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Pathable: unknown xsi:type {other}"
+                "Pathable: unknown xsi:type {other}: the ITS-XML RM schemas define no PATHABLE subtype of that name"
             ))),
         }
     }
@@ -18186,7 +18186,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                 "Version: missing xsi:type".into(),
             )),
             Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
-                "Version: unknown xsi:type {other}"
+                "Version: unknown xsi:type {other}: the ITS-XML RM schemas define no VERSION subtype of that name"
             ))),
         }
     }
@@ -18627,7 +18627,7 @@ Some("VERSIONED_FOLDER") => Ok(openehr_rm::v1_2::common::change_control::version
 Some("VERSIONED_OBJECT") => Ok(openehr_rm::v1_2::common::change_control::versioned_object::VersionedObject::VersionedObject(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("VERSIONED_PARTY") => Ok(openehr_rm::v1_2::common::change_control::versioned_object::VersionedObject::VersionedParty(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Ok(openehr_rm::v1_2::common::change_control::versioned_object::VersionedObject::VersionedObject(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("VersionedObject: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("VersionedObject: unknown xsi:type {other}: the ITS-XML RM schemas define no VERSIONED_OBJECT subtype of that name"))),
 }
     }
 }
@@ -19339,7 +19339,7 @@ Some("X_VERSIONED_FOLDER") => Ok(openehr_rm::v1_2::ehr_extract::openehr_extract:
 Some("X_VERSIONED_OBJECT") => Ok(openehr_rm::v1_2::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedObject(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 Some("X_VERSIONED_PARTY") => Ok(openehr_rm::v1_2::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedParty(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
 None => Ok(openehr_rm::v1_2::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedObject(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
-Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("XVersionedObject: unknown xsi:type {other}"))),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("XVersionedObject: unknown xsi:type {other}: the ITS-XML RM schemas define no X_VERSIONED_OBJECT subtype of that name"))),
 }
     }
 }

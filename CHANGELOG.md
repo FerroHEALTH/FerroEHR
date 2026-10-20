@@ -15,6 +15,25 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A `+` in a query-string parameter is read as a space** (#3891). Every
+  query parameter the REST API reads, `q` of `GET /query/aql` included, is
+  decoded as `application/x-www-form-urlencoded` (WHATWG URL Standard §5.1):
+  `+` and `%20` are a space and `%2B` is a literal plus. A form-encoded AQL
+  query that wrote its spaces as `+` was refused with a 400 before. A client
+  that sends an unencoded `+` meaning a plus, such as a time-zone offset,
+  encodes it as `%2B`, as RFC 6570 form expansion and form encoders already
+  do.
+
+- **An `xsi:type` the XML schemas do not define is refused with an error that
+  names them** (#3892). An OPT 1.4 upload whose constraint node carries a type
+  outside the ITS-XML OPT 1.4 schemas (`Template.xsd`, `OpenehrProfile.xsd`,
+  `Archetype.xsd`), such as `T_ARCHETYPE_ROOT` in place of `C_ARCHETYPE_ROOT`,
+  answers 422 with a message saying that those schemas define no such
+  subtype. The RM and AOM2 XML readers name their schemas the same way. The
+  refusal itself is unchanged.
+
 ## [5.2.0] - 2026-10-20
 
 ### Added
