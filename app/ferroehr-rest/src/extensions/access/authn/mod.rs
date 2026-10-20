@@ -43,7 +43,7 @@ pub(crate) mod assurance;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use axum::extract::{FromRequestParts, MatchedPath, Request, State};
+use axum::extract::{FromRequestParts, MatchedPath, OriginalUri, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_smart::guard::Gate;
@@ -684,20 +684,27 @@ fn rbac_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opti
 /// `insufficient_scope` challenge (RFC 6750 §3.1) that names no scope,
 /// attributed to the caller. A composition operation is checked by the PEP once
 /// its template is known.
+///
+/// The API router is nested under the base path, so the request URI this layer
+/// sees has the base stripped while the matched template carries it; the path
+/// parameters are read from the original URI, which lines up with the template.
 fn smart_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Option<Response> {
     let matched = req
         .extensions()
         .get::<MatchedPath>()
         .map(MatchedPath::as_str);
-    let need = layer.smart.need(req.method(), matched, req.uri().path());
+    let uri = req
+        .extensions()
+        .get::<OriginalUri>()
+        .map_or_else(|| req.uri(), |original| &original.0);
+    let need = layer.smart.need(req.method(), matched, uri.path());
     let Need::Now(requirement) = need else {
         return None;
     };
     let reason = match crate::smart::routes::check(
         &requirement,
         principal,
-        crate::smart::routes::target_ehr(&requirement, matched, req.uri(), req.headers())
-            .as_deref(),
+        crate::smart::routes::target_ehr(&requirement, matched, uri, req.headers()).as_deref(),
     ) {
         Ok(()) => return None,
         Err(reason) => reason,

@@ -294,6 +294,67 @@ async fn a_patient_query_grant_runs_within_the_launch_context_ehr_alone() {
     );
 }
 
+/// master07 §Context Selection and master08 §Resource Scopes: a `patient/`
+/// grant of a bound issuer reaches the launch context's EHR on a route that
+/// names it by `{ehr_id}`, a released operation and an extension alike, and is
+/// refused another EHR. The API is nested under the base path, so this pins
+/// that the `{ehr_id}` segment is read from the full request path.
+#[tokio::test]
+async fn a_patient_grant_reaches_the_launch_context_ehr_on_its_routes() {
+    let issuer = issuer().await;
+    let uri = issuer.uri();
+    let (_pg, app) = app(config(&uri, false, true)).await;
+    let launched = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+    let other = "0b8f7c5e-0000-4000-8000-000000000001";
+    let credential = token(
+        &uri,
+        "patient/composition-*.r",
+        &json!({ "ehrId": launched }),
+    );
+    for route in ["", "/ehr_status", "/contribution"] {
+        let (status, body) = send(
+            &app,
+            get(&format!("{BASE}/ehr/{launched}{route}"), Some(&credential)),
+        )
+        .await;
+        assert_ne!(
+            status,
+            StatusCode::FORBIDDEN,
+            "GET /ehr/{{ehr_id}}{route} of the launch context's EHR: {body}"
+        );
+        let (status, body) = send(
+            &app,
+            get(&format!("{BASE}/ehr/{other}{route}"), Some(&credential)),
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::FORBIDDEN,
+            "GET /ehr/{{ehr_id}}{route} of another EHR: {body}"
+        );
+    }
+}
+
+/// A `user/` grant reaches the EHR-scoped extension routes, the contribution
+/// list among them, which name their EHR only by the `{ehr_id}` segment.
+#[tokio::test]
+async fn a_user_grant_reaches_the_contribution_list() {
+    let issuer = issuer().await;
+    let uri = issuer.uri();
+    let (_pg, app) = app(config(&uri, false, false)).await;
+    let ehr = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+    let (status, body) = send(
+        &app,
+        get(
+            &format!("{BASE}/ehr/{ehr}/contribution"),
+            Some(&token(&uri, "user/composition-*.r", &json!({}))),
+        ),
+    )
+    .await;
+    assert_ne!(status, StatusCode::FORBIDDEN, "{body}");
+    assert_ne!(status, StatusCode::UNAUTHORIZED, "{body}");
+}
+
 /// With authentication off there is no credential, so there is no scope to
 /// check: the operator's explicit choice, which a gate that refused every
 /// request would make unusable.
