@@ -15,6 +15,27 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Changed
+
+- **`ferrohealth-smart` 0.4.0** (#3895), the version every FerroHEALTH
+  product pins. The refusal statuses and challenges do not change.
+
+### Fixed
+
+- **A Basic request the verified-credential cache admits writes no ATNA
+  login record** (#3895). Since the move to `ferrohealth-smart` 0.3.1 every
+  Basic request was marked a fresh authentication, so with
+  `suppress_login_events = false` each one wrote a login record (DICOM
+  PS3.15 §A.5.1, `EventID` 110114). The crate's `Caller::cached` now tells
+  the cache hit apart: one login record per credential verification, as
+  `[auth.basic] cache_ttl_seconds` documents.
+
+### Security
+
+- `rustls-webpki` 0.103.16, `webpki-root-certs` 1.0.10 and `webpki-roots`
+  1.0.10 in the lock, past RUSTSEC-2026-0382 and RUSTSEC-2026-0383
+  (certificate paths through the distrusted emSign intermediates) (#3895).
+
 ## [5.2.0] - 2026-10-20
 
 ### Added
