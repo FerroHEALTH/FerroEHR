@@ -87,33 +87,42 @@ sgb_v_309_controller = true
 
 ### `[audit.categories]`
 
-The map every access record is classified through by EHDS priority category
-(Annex II 3.2(c); see [the EHDS logging elements](../audit.md#the-ehds-logging-elements-mapped)).
+The map every access record is classified through by EHDS category (Annex II
+3.2(c); see [the EHDS logging elements](../audit.md#the-ehds-logging-elements-mapped)).
+The classification is done by `ehds-logging`, the EHDS logging component the
+FerroHEALTH products share (FerroAUDIT); this section is the deployment's map.
 A template id, or failing that a root archetype id, maps to a list of
-categories. **Empty by default**: FerroEHR ships no map, and an access the map
-cannot classify is recorded `unclassified` with its ids, never refused.
+categories, or to the word `none` for data of no category. **Empty by
+default**: FerroEHR ships no map, and an access the map cannot classify is
+recorded `unclassified` with its ids, never refused.
 
 ```toml
+[audit.categories]
+national = ["urn:oid:2.16.840.1.113883.2.4.3.11.60.1|beeld"]
+
 [audit.categories.templates]
-"International Patient Summary" = ["patient-summary"]
-"Laboratory Report" = ["test-results"]
+"International Patient Summary" = ["Patient-Summaries"]
+"Laboratory Report" = ["Laboratory-Reports"]
 
 [audit.categories.archetypes]
-"openEHR-EHR-COMPOSITION.report-result.v1" = ["test-results"]
-"openEHR-EHR-COMPOSITION.encounter.v1" = ["none"]
+"openEHR-EHR-COMPOSITION.report-result.v1" = ["Laboratory-Reports"]
+"openEHR-EHR-COMPOSITION.encounter.v1" = "none"
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `templates` | table of template id → list of category | empty | Consulted first, by the template id the object was committed against. |
-| `archetypes` | table of archetype id → list of category | empty | Consulted for an object whose template the map does not name, by its root archetype id. A key that is not an archetype id refuses boot. |
+| `national` | list of `<system>\|<code>` | empty | The national categories (EHDS Art. 14(1) third subparagraph) the map may name. |
+| `templates` | table of template id → list of category, or `"none"` | empty | Consulted first, by the template id the object was committed against. |
+| `archetypes` | table of archetype id → list of category, or `"none"` | empty | Consulted for an object whose template the map does not name, by its root archetype id. A key that is not an archetype id refuses boot. |
 
-The categories are `patient-summary`, `eprescription`, `edispensation`,
-`imaging`, `test-results` and `discharge-report` (EHDS Art. 14(1)), a national
-additional category as `national:<code>`, and `none` for content that holds no
-priority-category data. Keys compare case-insensitively. An unknown spelling,
-an empty list, `none` combined with a category, or two keys that differ only in
-case refuses boot with a message naming the entry.
+A priority category of EHDS Art. 14(1) is named by its code in HL7 Europe's
+`EEHRxFDocumentPriorityCategoryCS`: `Patient-Summaries`,
+`Electronic-Prescriptions`, `Electronic-Dispensations`, `Medical-Imaging`,
+`Laboratory-Reports` and `Discharge-Reports`, or as `<system>|<code>`. A
+national category is named by the `<system>|<code>` it is declared with. Keys
+compare case-insensitively. An unknown code, an empty list, a word other than
+`none`, or two keys that differ only in case refuses boot with a message naming
+the entry. A record stores each category as its `<system>|<code>` token.
 
 The map's SHA-256 digest is on the boot line, on `GET /management/info` under
 `audit.category_map`, and on every access record. At boot the map is also
@@ -122,13 +131,16 @@ category through the [admin marks API](../operations-admin-apis.md).
 
 ### `[audit.syslog]`: the classic DICOM/syslog feed (ITI-20)
 
+The DICOM PS3.15 audit message, framed as RFC 5424 syslog and sent over RFC
+5425 TLS 1.2 or later by `ihe-atna` (FerroAUDIT). TLS is the one transport: an
+audit message names a patient (ITI TF-2 §3.20.4.1.2.1.1).
+
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `false` | Ship DICOM PS3.15 audit records to an external repository over syslog. |
 | `host` | string | `localhost` | Repository host. |
-| `port` | int | `514` | Repository port (514 for UDP, 6514 for TLS, conventionally). |
-| `transport` | enum{udp,tls} | `udp` | Syslog transport: RFC 5426 UDP or RFC 5425 TLS. Use `tls` for PHI-adjacent audit. Under `deployment_profile = "production"`, `udp` on an enabled feed opens the [`audit_syslog_udp`](configuration.md#deployment_profile) gap. |
-| `tls_ca_file` | path | unset | PEM file with the repository CA to trust for the TLS transport. |
+| `port` | int | `6514` | Repository port, the RFC 5425 port by default. |
+| `tls_ca_file` | path | unset | PEM file with the repository CA to trust beside the platform's roots. |
 | `tls_identity_cert_file` | path | unset | Client-certificate PEM for mutual TLS. |
 | `tls_identity_key_file` | path | unset | Client-key PEM for mutual TLS. |
 

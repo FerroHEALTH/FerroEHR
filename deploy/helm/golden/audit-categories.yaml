@@ -23,7 +23,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), but from EVERY source — this policy narrows ports, NOT sources (networkPolicy.ingressAllowAll=true). Set networkPolicy.ingressFrom for a PHI workload.
   labels:
-    helm.sh/chart: ferroehr-12.1.3
+    helm.sh/chart: ferroehr-13.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.2.0"
@@ -51,7 +51,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-12.1.3
+    helm.sh/chart: ferroehr-13.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.2.0"
@@ -72,7 +72,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-12.1.3
+    helm.sh/chart: ferroehr-13.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.2.0"
@@ -87,7 +87,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-12.1.3
+    helm.sh/chart: ferroehr-13.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.2.0"
@@ -115,11 +115,11 @@ data:
       enabled = true
       [audit.categories]
         [audit.categories.archetypes]
-          "openEHR-EHR-COMPOSITION.encounter.v1" = ["none"]
-          "openEHR-EHR-COMPOSITION.report-result.v1" = ["test-results"]
+          "openEHR-EHR-COMPOSITION.encounter.v1" = "none"
+          "openEHR-EHR-COMPOSITION.report-result.v1" = ["Laboratory-Reports"]
         [audit.categories.templates]
-          "International Patient Summary" = ["patient-summary"]
-          "Laboratory Report" = ["test-results"]
+          "International Patient Summary" = ["Patient-Summaries"]
+          "Laboratory Report" = ["Laboratory-Reports"]
       [audit.store]
         enabled = true
         retention_days = 0.0
@@ -215,7 +215,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-12.1.3
+    helm.sh/chart: ferroehr-13.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.2.0"
@@ -245,7 +245,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-12.1.3
+    helm.sh/chart: ferroehr-13.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.2.0"
@@ -270,7 +270,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: a8f96d3128d5b8566f08de87402ced09d4d73dccc1200ff84e5817f9ebc3ea3e
+        checksum/config: c8fc86e7a433b36331c4884e878045861941b6dfca8dd124461ca343f9c3368a
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

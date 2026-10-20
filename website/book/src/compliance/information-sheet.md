@@ -126,7 +126,7 @@ the EHR system and versions of those standards, formats and specifications".
 | IHE ATNA: Record Audit Event (ITI-20), Authenticate Node (ITI-19), Retrieve ATNA Audit Event (ITI-81); IHE Basic Audit Log Patterns (BALP) | the profile revision is not pinned | the access log |
 | DICOM PS3.15 §A.5 audit message | the edition is not pinned | the access log over syslog |
 | HL7 FHIR `AuditEvent` | R4 | the access log as FHIR |
-| Syslog | RFC 5424, over UDP or TLS | the access-log feed |
+| Syslog | RFC 5424 over RFC 5425 TLS | the access-log feed |
 | HL7 FHIR terminology operations | R4B | validating codes against external terminology servers |
 | OAuth 2.0 bearer tokens, JWT, OpenID Connect | RFC 6750, RFC 7519, OpenID Connect Core 1.0 | authentication |
 | OAuth 2.0 Step Up Authentication Challenge | RFC 9470 | refusing a patient-data request below the configured assurance level |

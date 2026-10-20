@@ -28,8 +28,8 @@ config:
       sgb_v_309_controller: true
     categories:
       templates:
-        "International Patient Summary": [patient-summary]
-        "Laboratory Report": [test-results]
+        "International Patient Summary": [Patient-Summaries]
+        "Laboratory Report": [Laboratory-Reports]
       archetypes:
-        openEHR-EHR-COMPOSITION.report-result.v1: [test-results]
-        openEHR-EHR-COMPOSITION.encounter.v1: [none]
+        openEHR-EHR-COMPOSITION.report-result.v1: [Laboratory-Reports]
+        openEHR-EHR-COMPOSITION.encounter.v1: none

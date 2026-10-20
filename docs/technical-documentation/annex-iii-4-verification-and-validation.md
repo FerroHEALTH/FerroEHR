@@ -26,7 +26,13 @@ requirements as set out in Parts I and II of Annex I".
   renderings give the client and the server one data-flow role is asserted in
   `app/ferroehr/src/system_log/fhir.rs`
   (`dicom_and_fhir_agree_on_the_data_flow_direction`). The tests run on every
-  pull request and their results are the CI runs of the release commit.
+  pull request and their results are the CI runs of the release commit. The
+  shared crates `ehds-logging` and `ihe-atna` carry their own tests in
+  FerroAUDIT (<https://github.com/FerroHEALTH/FerroAUDIT>): the six category
+  codes against the vendored HL7 Europe packages, the written records against
+  the vendored BALP patterns and the store-and-forward against the vendored
+  ITI-20 text; they run on every FerroAUDIT pull request and before each of
+  its releases.
 - **Annex II, row by row.** The
   [readiness page](../../website/book/src/compliance/ehds-readiness.md) gives
   the status and the evidence for each requirement, read against the text on

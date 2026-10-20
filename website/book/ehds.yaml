@@ -78,11 +78,16 @@ components:
     name: European logging software component for EHR systems
     status: partial
     note: >-
-      Shipped by FerroEHR: the access-event model, the audit store with its
-      hash chain and the scheduled verification of that chain, the DICOM and
-      FHIR renderings and the sinks, the middleware that records and
-      classifies every API access, the ITI-81 retrieval, and the retention
-      register. All five Annex II 3.2 elements are recorded, and every access
+      Shipped by FerroEHR on the FerroHEALTH products' shared logging crate
+      `ehds-logging` 0.1.0 and audit crate `ihe-atna` 0.1.0 (FerroAUDIT):
+      `ehds-logging` holds the Annex II 3.2 access record, the Art. 14(1)
+      categories and the classification, the retention floor of Art. 9(2)
+      and the emergency mark, and `ihe-atna` writes the BALP and DICOM
+      renderings and sends the ATNA trail. FerroEHR ships the access-event
+      model, the audit store with its hash chain and the scheduled
+      verification of that chain, the sinks, the middleware that records and
+      classifies every API access from its own data, the ITI-81 retrieval,
+      and the retention register. All five Annex II 3.2 elements are recorded, and every access
       record outside the demographic domain carries a category; a token that
       names a client application is recorded as that client, together with
       the professional it acts for when the deployment declares the claim
@@ -209,11 +214,9 @@ requirements:
         gap: >-
           The logging component works with other products through IHE ATNA:
           ITI-20 feeds, ITI-81 retrieval, ITI-19 mutual TLS. The syslog feed
-          ships with UDP transport when switched on, which delivers no record
-          reliably and encrypts none, so `deployment_profile = "production"`
-          refuses it unless `audit_syslog_udp` is accepted by name; TLS syslog
-          and the outbox-driven FHIR feed are the reliable choices, and the
-          instructions for use name them. FerroEHR claims no
+          sends over RFC 5425 TLS only, through `ihe-atna`, and the FHIR feed
+          is outbox-driven, so a record survives a repository outage; the
+          instructions for use name both. FerroEHR claims no
           interoperability with a medical device; a device manufacturer that
           claims it carries Art. 27(1).
   - group: "2"
@@ -329,8 +332,8 @@ requirements:
           acts for. Point
           (c) is recorded through the `[audit.categories]` map the deployment
           declares from its templates and archetypes to the Art. 14(1)
-          priority categories; FerroEHR ships no map, so until one is declared
-          every access is recorded unclassified. Records in the demographic
+          categories, classified by `ehds-logging`; FerroEHR ships no map, so
+          until one is declared every access is recorded unclassified. Records in the demographic
           domain carry no category, because no priority category lives there.
           The FHIR rendering of a read or a query carries the origins of the
           served data. The DICOM rendering

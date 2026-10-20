@@ -795,16 +795,20 @@ config:
       # -- (int)
       # @default -- unset
       retention_years: null
-    # [audit.categories] — the EHDS priority category of every access: which
-    # categories each template id, and failing that each root archetype id,
-    # holds (patient-summary, eprescription, edispensation, imaging,
-    # test-results, discharge-report, national:<code>, none). EMPTY by
-    # default: an access the map cannot classify is recorded "unclassified",
-    # never refused. Example:
+    # [audit.categories] — the EHDS priority category of every access,
+    # classified by ehds-logging (FerroAUDIT): which categories each template
+    # id, and failing that each root archetype id, holds. A priority category
+    # is its HL7 Europe code (Patient-Summaries, Electronic-Prescriptions,
+    # Electronic-Dispensations, Medical-Imaging, Laboratory-Reports,
+    # Discharge-Reports) or <system>|<code>; a national one is declared under
+    # national as <system>|<code>; data of no category map to the word none.
+    # EMPTY by default: an access the map cannot classify is recorded
+    # "unclassified", never refused. Example:
     #   templates:
-    #     "International Patient Summary": [patient-summary]
+    #     "International Patient Summary": [Patient-Summaries]
     #   archetypes:
-    #     openEHR-EHR-COMPOSITION.report-result.v1: [test-results]
+    #     openEHR-EHR-COMPOSITION.report-result.v1: [Laboratory-Reports]
+    #     openEHR-EHR-COMPOSITION.encounter.v1: none
     categories:
       templates: {}
       archetypes: {}
