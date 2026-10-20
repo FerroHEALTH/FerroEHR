@@ -437,3 +437,35 @@ cut, after the texts in scope have been read.
 | 2026-10-19 | 4.3.11, after `a15290689` | none | nothing |
 | 2026-10-19 | 5.0.0, after `ec78e7f40` | 2 claims, in two book pages | nothing |
 | 2026-10-20 | 5.1.0, after `18097c6f1` | 2 claims, in the README and one book page | nothing |
+
+## The review of 2026-10-20, for 5.2.0
+
+Read on the tree after commit `e5aa1902b`, for FerroEHR 5.2.0. The facts of this
+release checked in every text in scope: authentication runs on
+`ferrohealth-smart` 0.3.1, with `[auth.basic] cache_ttl_seconds` in place of
+`[authz] basic_cache_ttl_seconds`, `scopeless_subjects` accepted and a
+malformed bearer token answered `401` (#3875); `[smart] issuer_metadata_file`
+(#3875); the EHDS Art. 8 restriction of access with its emergency override
+(#3682); the audited read of a party's protected identifiers (#3776); an EHR
+extract never carries a sealed identifier (#3777); the FLAT history origin from
+the earliest event (#3888); the nine `openehr-*` crates at `0.0.91`.
+
+### Changed on 2026-10-20, for 5.2.0
+
+- **[The Rust crates](../crates.md)**: the dependency examples named the crates
+  at `0.0.90`; they name `0.0.91`.
+
+### Read and kept on 2026-10-20, for 5.2.0
+
+- **The Art. 8 statements**: [security](../security.md), the
+  [audit trail](../audit.md), the [compliance overview](index.md), the
+  [instructions for use](instructions-for-use.md), [EHDS readiness](ehds-readiness.md)
+  rows 1.1 and 1.3 and the [hazard log](hazard-log.md) describe the restriction
+  as the code does, and none of them calls it planned any more.
+- **The authentication reference**: [the configuration reference](../installation/config-auth.md),
+  [security](../security.md) and [using the API](../using-the-api/index.md)
+  name the moved cache key and the `401` for a bearer value outside `b64token`.
+
+### Left open on 2026-10-20, for 5.2.0
+
+Nothing.

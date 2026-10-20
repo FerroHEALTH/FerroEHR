@@ -15,6 +15,8 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [5.2.0] - 2026-10-20
+
 ### Added
 
 - **`[smart] issuer_metadata_file` supplies the metadata of a `jwks_file`
@@ -11632,6 +11634,7 @@ but has not yet run in production.
 
 
 [unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.1.0...HEAD
+[5.2.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.1.0...v5.2.0
 [5.1.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.0.0...v5.1.0
 [5.0.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.11...v5.0.0
 [4.3.11]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.10...v4.3.11
