@@ -84,8 +84,8 @@ fn serialize_table<S: serde::Serializer>(
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum CategoryMapError {
     /// `ehds-logging` refused a declaration.
-    #[error("audit.categories: {0}")]
-    Map(#[source] MapError),
+    #[error(transparent)]
+    Map(MapError),
     /// Two keys that differ only in letter case.
     #[error(
         "audit.categories.{table} names {key:?} twice, differing only in case; openEHR \

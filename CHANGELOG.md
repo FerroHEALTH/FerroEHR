@@ -19,6 +19,54 @@ workflow refuses a tag that has no matching section here.
 
 - **`ferrohealth-smart` 0.4.0** (#3895), the version every FerroHEALTH
   product pins. The refusal statuses and challenges do not change.
+- **The access log is written through the FerroHEALTH products' shared audit
+  crates** (#3887). The EHDS access record, the Art. 14(1) categories and their
+  classification, the Art. 9(2) retention floor and the Art. 11(5) emergency
+  mark come from `ehds-logging` 0.1.0, and the BALP `AuditEvent`, the DICOM
+  audit message, the syslog sender and the ATX: FHIR Feed client from
+  `ihe-atna` 0.1.0 (FerroAUDIT). FerroEHR still decides which accesses are
+  logged, what each record says and where it is stored.
+- **`[audit.categories]` names categories by their HL7 Europe codes.** A
+  priority category is `Patient-Summaries`, `Electronic-Prescriptions`,
+  `Electronic-Dispensations`, `Medical-Imaging`, `Laboratory-Reports` or
+  `Discharge-Reports`, or `<system>|<code>`; a national category is declared
+  in the new `national` list as `<system>|<code>`; a key of no category maps to
+  the word `"none"` instead of `["none"]`. The old spellings
+  (`patient-summary`, `test-results`, `national:<code>` and the others) refuse
+  boot. The Helm chart's `config.audit.categories` takes the same values
+  (chart 13.0.0).
+- **A stored access record names each category by its `<system>|<code>`
+  token**, and `category_basis` says what the classification was read from:
+  `returned`, `written`, `queried` or `resource-kind` (audit migration 0012).
+  Records written before keep their spellings. Evidence ids are stored in the
+  case-folded form the map is read in. A query whose constraints name an id the
+  map does not hold, or bind no id to a content operand, is now recorded
+  `unclassified` beside the categories that did map.
+- **The retention register keys a period on the category token**
+  (clinical migration 0016). `PUT {base}/admin/retention/policy` takes a
+  category as `[audit.categories]` names it and stores the token; periods keyed
+  on a priority spelling move to its token, and a period keyed on a
+  `national:<code>` spelling refuses the migration until it is declared again.
+- **The FHIR `AuditEvent` follows the BALP 1.1.4 patterns `ehds-logging` and
+  `ihe-atna` write.** The person is the `agent:user` slice (the token's issuer
+  and subject, the professional's identifier as `ihe-otherId`, the assurance
+  level as `ihe-assuranceLevel`), the client application an agent of its own,
+  the organisation a logical `Organization` reference; the categories, the
+  retention, the security labels and the origins ride in `ehds-categories` and
+  `origin` entities; the emergency mark is the `ehds-emergency-access` entity;
+  a query's subtype is `search`. The token's `jti` agent, the ITS-REST
+  operation-id subtype, the `outcomeDesc` and the audit source type are no
+  longer written.
+- **The DICOM audit message is written without a byte order mark,
+  `EventOutcomeDescription`, `AuditSourceTypeCode` or
+  `ParticipantObjectDataLifeCycle`** (ITI TF-2 §3.20.4.1.2).
+
+### Removed
+
+- **The UDP syslog transport** (`[audit.syslog] transport`). The syslog feed
+  sends RFC 5424 over RFC 5425 TLS only, on port 6514 by default, and a
+  `transport` key refuses boot. The `audit_syslog_udp` deployment gap is gone
+  with it.
 
 ### Fixed
 

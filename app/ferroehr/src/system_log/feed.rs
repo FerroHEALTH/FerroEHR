@@ -131,8 +131,8 @@ impl FeedClient {
         }
     }
 
-    /// A slim build sends no FHIR feed: [`start`] refuses a configuration that
-    /// enables it.
+    /// One `POST` of `body` under `bearer`, a refused or unavailable answer
+    /// carrying its status.
     async fn post_under(
         &self,
         bearer: Option<&http::HeaderValue>,
