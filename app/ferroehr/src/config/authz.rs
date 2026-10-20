@@ -79,6 +79,16 @@ pub struct RbacConfig {
     /// the log is admin-only, as before (#3240). No openEHR spec governs the
     /// access log — our own design/extension.
     pub subject_audit_role: Option<String>,
+    /// The role that may read a party's protected national identifiers
+    /// (`FERROEHR__AUTHZ__RBAC__IDENTIFIER_READER_ROLE`, default unset).
+    ///
+    /// `GET /admin/party/identifiers` expands the identifiers
+    /// `[demographic.identifier_protection]` seals, and every read is an
+    /// access record. The route sits in the ADMIN API and also needs this
+    /// role, so holding `admin_role` alone does not reveal a national
+    /// identifier. Unset, nobody may call it (#3776). No openEHR spec governs
+    /// this — our own design/extension.
+    pub identifier_reader_role: Option<String>,
     /// JWT claim paths mined for roles, in resolution order.
     ///
     /// Defaults to the carriers RFC 9068 §2.2.3.1 names for conveying
@@ -126,6 +136,7 @@ impl Default for RbacConfig {
             user_role: "USER".to_owned(),
             readonly_role: "READONLY".to_owned(),
             subject_audit_role: None,
+            identifier_reader_role: None,
             role_claims: vec![
                 "roles".to_owned(),
                 "groups".to_owned(),

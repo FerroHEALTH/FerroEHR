@@ -88,11 +88,13 @@ fn management_lookup(op: &str) -> Option<Classification> {
 /// The extension routes recorded like a released operation.
 ///
 /// The physical party delete records what `admin_ehr_delete` records for an
-/// EHR: a `D` on the deleted record, here a demographic party. Every other id
+/// EHR: a `D` on the deleted record, here a demographic party, and the
+/// protected-identifier read an `R` on the party it expands. Every other id
 /// falls through to the management table.
 fn extension_lookup(op: &str) -> Option<Classification> {
     match op {
         "admin_party_delete" => Some(Classification::audited(Delete, Demographic)),
+        "admin_party_identifiers" => Some(Classification::audited(Read, Demographic)),
         _ => management_lookup(op),
     }
 }

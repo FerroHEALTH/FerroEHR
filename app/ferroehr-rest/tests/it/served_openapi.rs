@@ -1448,7 +1448,7 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
             "/ferroehr/rest/openehr/v1/admin/query/",
         ],
         flag: "no its-rest operation governs this",
-        operations: 4,
+        operations: 5,
     },
     NonSpecFamily {
         // SM I_ADMIN_SERVICE's four statistics calls; the released Admin API

@@ -17,14 +17,6 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
-- **`[smart] issuer_metadata_file` supplies the metadata of a `jwks_file`
-  issuer** (#3875). It names a JSON file with the RFC 8414 §2 metadata of the
-  first `[auth]` issuer, read at boot, so a server whose key set is a file can
-  serve the SMART discovery document with a `token_endpoint`. The metadata
-  must name that issuer and every endpoint in it must be `https` (a loopback
-  host excepted); a file set for an issuer whose metadata the server fetches
-  refuses the start.
-
 ### Changed
 
 - **Authentication runs on `ferrohealth-smart` 0.3.1** (#3875). The crate now

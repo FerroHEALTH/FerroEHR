@@ -378,6 +378,9 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/restriction"),
     ("GET", "/admin/retention/policy"),
     ("GET", "/admin/retention/due"),
+    // The audited read of a party's protected national identifiers (#3776). It
+    // also needs `authz.rbac.identifier_reader_role`, checked in its handler.
+    ("GET", "/admin/party/identifiers"),
 ];
 
 /// Admin-class writes (base-relative).

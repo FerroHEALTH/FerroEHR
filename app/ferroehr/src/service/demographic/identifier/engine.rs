@@ -235,27 +235,38 @@ impl IdentifierProtection {
         Ok(())
     }
 
-    /// Put the plaintext values back into a stored body.
+    /// Put the plaintext values back into a stored body, and return the
+    /// scheme of each value put back, in document order.
     ///
     /// The audited expansion: the caller is responsible for deciding that this
     /// reader may see the values and for recording the access.
     ///
     /// # Errors
-    /// [`StoreError`] when a referenced row cannot be read or does not
-    /// authenticate. A reference whose row is gone expands to nothing and
+    /// [`StoreError::ForeignReference`] for a reference whose identifier names
+    /// no scheme, and [`StoreError`] when a referenced row cannot be read or
+    /// does not authenticate. A reference whose row is gone expands to nothing and
     /// leaves the reference in place, which says truthfully that the value was
     /// held and is no longer.
-    pub async fn expand(&self, body: &mut Value) -> Result<usize, StoreError> {
+    pub async fn expand(&self, body: &mut Value) -> Result<Vec<String>, StoreError> {
         let keys = DomainKeys::derive(&self.root, KeyDomain::Demographic);
         let references = referenced(body);
         let mut values = Vec::with_capacity(references.len());
+        let mut schemes = Vec::with_capacity(references.len());
         for (pointer, row) in references {
             if let Some(value) = self.store.open(&keys, row).await? {
+                // A reference whose identifier names no scheme was not written
+                // by `externalize`, which keeps the scheme beside every row.
+                let scheme = body
+                    .pointer(&format!("{pointer}/type"))
+                    .and_then(Value::as_str)
+                    .ok_or(StoreError::ForeignReference)?
+                    .to_owned();
+                schemes.push(scheme);
                 values.push((pointer, value));
             }
         }
         body::expand(body, &values);
-        Ok(values.len())
+        Ok(schemes)
     }
 
     /// The opaque subject pseudonym `party` is known by on the clinical side
