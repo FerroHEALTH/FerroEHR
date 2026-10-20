@@ -75,7 +75,7 @@ const SECURITY_SCHEME: &str = "openehr_auth";
 #[derive(OpenApi)]
 #[openapi(
     info(
-        title = "FerroEHR — openEHR ITS-REST + extensions",
+        title = "FerroEHR: openEHR ITS-REST + extensions",
         version = env!("CARGO_PKG_VERSION"),
         description = "The complete surface this server serves, generated natively from its \
                        handlers: the standardised ITS-REST API groups (EHR / COMPOSITION / \
@@ -456,7 +456,7 @@ enum Members {
 const FAMILIES: &[(&str, &str, Members)] = &[
     // The standardised ITS-REST groups (our generated wire), by resource path.
     (
-        "openEHR — EHR",
+        "openEHR: EHR",
         "ehr",
         Members::Path {
             include: "/ehr",
@@ -465,7 +465,7 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         },
     ),
     (
-        "openEHR — Query",
+        "openEHR: Query",
         "query",
         Members::Path {
             include: "/query",
@@ -474,7 +474,7 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         },
     ),
     (
-        "openEHR — Definition",
+        "openEHR: Definition",
         "definition",
         Members::Path {
             include: "/definition",
@@ -483,7 +483,7 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         },
     ),
     (
-        "openEHR — Demographic",
+        "openEHR: Demographic",
         "demographic",
         Members::Path {
             include: "/demographic",
@@ -494,7 +494,7 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         },
     ),
     (
-        "openEHR — Admin",
+        "openEHR: Admin",
         "admin",
         Members::Path {
             include: "/admin/ehr",
@@ -514,43 +514,43 @@ const FAMILIES: &[(&str, &str, Members)] = &[
     ),
     // The server's own extension families, by tag.
     (
-        "FerroEHR — Status & Management",
+        "FerroEHR: Status & Management",
         "management",
         // `system` is the ITS-REST System Options-and-Conformance manifest, the
         // one released operation with no resource path of its own.
         Members::Tags(&["status", "management", "openapi", "system"]),
     ),
     (
-        "FerroEHR — Terminology",
+        "FerroEHR: Terminology",
         "terminology",
         Members::Tags(&["terminology"]),
     ),
     (
-        "FerroEHR — Party Relationships",
+        "FerroEHR: Party Relationships",
         "relationships",
         Members::Tags(&["demographic-relationship"]),
     ),
     (
-        "FerroEHR — Messaging",
+        "FerroEHR: Messaging",
         "messaging",
         // The SM MESSAGE component on our own `/message/` routes; the release
         // publishes no message API, so the whole family is an extension.
         Members::Tags(&["message"]),
     ),
     (
-        "FerroEHR — Event Subscriptions",
+        "FerroEHR: Event Subscriptions",
         "events",
         Members::Tags(&["event-subscription"]),
     ),
     (
-        "FerroEHR — Audit",
+        "FerroEHR: Audit",
         "audit",
         // The ITI-81 AuditEvent retrieval under `/fhir/r4`, gated by the local
         // audit repository.
         Members::Tags(&["audit"]),
     ),
     (
-        "FerroEHR — SMART Discovery",
+        "FerroEHR: SMART Discovery",
         "smart",
         Members::Tags(&["smart"]),
     ),
@@ -782,8 +782,9 @@ pub(crate) fn swagger_router(cfg: &AppConfig) -> Router<AppState> {
         // Swagger UI is genuinely rendered, so the API's `default-src 'none'`
         // would blank it; everything it loads is same-origin, so `'self'`
         // suffices with no inline allowance. The outer layer uses
-        // `if_not_present`, so this narrower policy survives.
-        .layer(SetResponseHeaderLayer::if_not_present(
+        // `if_not_present`, so this narrower policy survives. Scoped to these
+        // routes, so an unmatched path never takes the Swagger policy.
+        .route_layer(SetResponseHeaderLayer::if_not_present(
             header::CONTENT_SECURITY_POLICY,
             http::HeaderValue::from_static(SWAGGER_UI_CSP),
         ))
@@ -823,7 +824,7 @@ fn swagger_config(cfg: &AppConfig) -> Arc<Config<'static>> {
         let url = format!("{root}/ferroehr-{slug}.openapi.json");
         urls.push(Url::new(name, url.leak()));
     }
-    urls.push(Url::new("FerroEHR — Complete surface", json_path.leak()));
+    urls.push(Url::new("FerroEHR: Complete surface", json_path.leak()));
     Arc::new(Config::new(urls))
 }
 

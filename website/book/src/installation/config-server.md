@@ -277,7 +277,7 @@ reload_interval_secs = 60
 | `client_auth` | enum{off,optional,required} | `off` | Client-certificate policy. `optional` verifies a certificate when one is presented and still accepts connections without; `required` rejects any client without a verified certificate at the handshake. |
 | `client_ca_file` | path | unset | The explicit CA bundle client certificates must chain to, never the web PKI. Required unless `client_auth = "off"`. |
 | `min_version` | enum{"1.3","1.2"} | `"1.3"` | The lowest TLS version this listener negotiates. |
-| `reload_interval_secs` | integer | `60` | How often `cert_file` and `key_file` are re-read while the server runs. A changed pair is served to every new handshake without a restart; a pair that fails to load is logged with its cause and the previous pair stays in service. `0` reads them once, at startup. |
+| `reload_interval_secs` | integer | `60` | How often `cert_file`, `key_file` and `client_ca_file` are re-read while the server runs. A changed pair is served, and a changed client CA verifies, every new handshake without a restart; a file that fails to load is logged with its cause and the previous one stays in service. `0` reads them once, at startup. |
 
 > [!NOTE]
 > `min_version` defaults to **1.3 only**, following the OWASP Transport Layer

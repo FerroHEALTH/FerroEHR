@@ -1225,7 +1225,7 @@ mod tests {
         assert!(
             offered
                 .iter()
-                .any(|(slug, label)| *slug == "messaging" && *label == "FerroEHR — Messaging"),
+                .any(|(slug, label)| *slug == "messaging" && *label == "FerroEHR: Messaging"),
             "{offered:?}"
         );
         assert_eq!(openapi_family_slug("messaging"), "messaging");

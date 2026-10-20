@@ -404,7 +404,11 @@ fn mount_public_surface(
         AccessLevel::Off => {}
         AccessLevel::Public => inner = inner.merge(openapi::swagger_router(cfg)),
         level @ (AccessLevel::Private | AccessLevel::AdminOnly) => {
-            inner = inner.merge(openapi::swagger_router(cfg).layer(from_fn_with_state(
+            // `route_layer`, never `layer`: a layer also wraps the router's
+            // fallback, so after the merge every unmatched path outside the
+            // API (a SMART discovery document that is switched off, a typo)
+            // answered the guard's `401` instead of `404`.
+            inner = inner.merge(openapi::swagger_router(cfg).route_layer(from_fn_with_state(
                 management::AccessGuard {
                     authenticator: Arc::clone(authenticator),
                     rbac: management_rbac(state),

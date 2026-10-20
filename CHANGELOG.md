@@ -76,6 +76,30 @@ workflow refuses a tag that has no matching section here.
   and a `Follow up` event, now builds two nodes, each with the content the TDD
   spells out under its own element, where it used to merge them into one.
 
+- **A rotated mTLS client CA takes effect without a restart** (#3769).
+  `[server.tls] client_ca_file` is re-read every `reload_interval_secs`, as
+  the certificate and key already were, and a changed CA verifies every new
+  handshake; a file that fails to load is logged and the previous CA stays
+  in force.
+
+- **An unmounted path outside the API answers `404`** (#3834). With
+  `server.swagger_ui` at `private` or `admin_only`, the documentation guard
+  wrapped every unmatched path, so `/.well-known/smart-configuration` on a
+  server with SMART off answered `401`, and the viewer's System screen said
+  the CDR refused the session. The guard now covers the documentation routes
+  only, and the viewer shows SMART as not enabled.
+
+- **Four viewer layout defects** (#3841). The Create EHR id field's
+  placeholder reads "UUID, or blank" and fits; the audit log's From and To
+  filters take a wider share of the row so an instant shows whole, its Event
+  column keeps "REST · E" on one line, and an opened record scrolls inside a
+  narrow box instead of widening the page. The book captures are taken with
+  reduced motion, so the results Table/Chart toggle no longer shows mid-fade.
+
+- **The OpenAPI family titles carry no em dash** (#3865). The served
+  documents and the viewer's family selector read "FerroEHR: Messaging",
+  "openEHR: EHR" and so on.
+
 - **No viewer string carries an em dash** (#3860). The query builder's
   template choice reads "Any template", an absent value reads "(no value)",
   and the hints, notes and form errors that used a dash use a colon or a

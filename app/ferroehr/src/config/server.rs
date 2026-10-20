@@ -321,8 +321,8 @@ pub enum ClientAuth {
 /// Off by default (deployments commonly terminate TLS at an ingress); with it
 /// on, the protocol floor is [`TlsVersion`] (1.3 only unless widened to 1.2),
 /// and `client_auth` adds the IHE ATNA ITI-19 mutual-TLS node authentication
-/// against an explicit trust anchor. The certificate and key are re-read every
-/// `reload_interval_secs`, so a renewed pair is served without a restart. The
+/// against an explicit trust anchor. The certificate, key and client CA are
+/// re-read every `reload_interval_secs`, so a renewal needs no restart. The
 /// separate-port management listener stays plain HTTP (an internal surface).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -343,8 +343,8 @@ pub struct TlsConfig {
     /// The lowest TLS version this listener will negotiate
     /// (`FERROEHR__SERVER__TLS__MIN_VERSION`): `"1.3"` (default) or `"1.2"`.
     pub min_version: TlsVersion,
-    /// How often, in seconds, `cert_file` and `key_file` are re-read so a
-    /// renewed pair is served without a restart
+    /// How often, in seconds, `cert_file`, `key_file` and `client_ca_file` are
+    /// re-read so a renewed pair or client CA takes effect without a restart
     /// (`FERROEHR__SERVER__TLS__RELOAD_INTERVAL_SECS`); `0` reads them once,
     /// at boot.
     pub reload_interval_secs: u64,

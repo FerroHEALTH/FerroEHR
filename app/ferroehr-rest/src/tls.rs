@@ -9,8 +9,10 @@
 //! which re-reads the two files on an interval and swaps a renewed pair in, so
 //! a certificate rotated on disk (cert-manager renewing a mounted Secret) is
 //! served without a restart. A renewed pair that fails to load is logged and
-//! the previous pair stays in service. No openEHR spec governs this — our own
-//! design/extension.
+//! the previous pair stays in service. The client CA behind mutual TLS is
+//! watched the same way by [`ClientCaReloader`], which builds a fresh
+//! configuration around a renewed trust anchor for the listener to swap in.
+//! No openEHR spec governs this — our own design/extension.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -145,6 +147,10 @@ pub struct ServerTls {
     /// The certificate source the configuration resolves every handshake
     /// against; [`CertificateReloader::watch`] keeps it current.
     pub certificate: Arc<CertificateReloader>,
+    /// The client-CA source when `client_auth` is not `off`;
+    /// [`ClientCaReloader::watch`] hands the listener a configuration built
+    /// around a renewed trust anchor.
+    pub client_ca: Option<Arc<ClientCaReloader>>,
 }
 
 /// Builds the TLS listener configuration for `[server.tls]`.
@@ -164,45 +170,178 @@ pub fn server_tls(tls: &TlsConfig) -> Result<ServerTls, TlsError> {
 
     // NOTE: 1.3-only by default — OWASP Transport Layer Security §Only Support
     // Strong Protocols; 1.1/1.0 are unreachable by construction (RFC 8996).
-    let versions: &[&rustls::SupportedProtocolVersion] = match tls.min_version {
-        TlsVersion::V1_3 => &[&rustls::version::TLS13],
-        TlsVersion::V1_2 => &[&rustls::version::TLS13, &rustls::version::TLS12],
+    let versions = match tls.min_version {
+        TlsVersion::V1_3 => TLS13_ONLY,
+        TlsVersion::V1_2 => TLS13_AND_12,
     };
-    let builder = rustls::ServerConfig::builder_with_provider(Arc::clone(&provider))
-        .with_protocol_versions(versions)
-        .map_err(TlsError::Versions)?;
+    let shape = ConfigShape {
+        provider,
+        versions,
+        resolver: Arc::clone(&certificate),
+    };
 
-    let builder = match tls.client_auth {
-        ClientAuth::Off => builder.with_no_client_auth(),
+    let (client_ca, config) = match tls.client_auth {
+        ClientAuth::Off => (None, shape.build(None)?),
         ClientAuth::Optional | ClientAuth::Required => {
-            let path = required(tls.client_ca_file.as_ref(), "client_ca_file")?;
-            let ca_pem = read(path, "client_ca_file")?;
-            let mut roots = rustls::RootCertStore::empty();
-            for cert in parse_certificates(&ca_pem, path, "client_ca_file")? {
-                roots.add(cert).map_err(|source| TlsError::ClientCa {
-                    path: path.to_path_buf(),
-                    source,
-                })?;
-            }
-            let verifier = rustls::server::WebPkiClientVerifier::builder_with_provider(
-                roots.into(),
-                Arc::clone(&provider),
-            );
-            let verifier = if tls.client_auth == ClientAuth::Optional {
-                verifier.allow_unauthenticated()
-            } else {
-                verifier
+            let path = required(tls.client_ca_file.as_ref(), "client_ca_file")?.to_path_buf();
+            let pem = read(&path, "client_ca_file")?;
+            let reloader = ClientCaReloader {
+                path,
+                optional: tls.client_auth == ClientAuth::Optional,
+                shape: shape.clone(),
+                seen: tokio::sync::Mutex::new(Sha256::digest(&pem).into()),
             };
-            builder.with_client_cert_verifier(verifier.build().map_err(TlsError::Verifier)?)
+            let config = reloader.build(&pem)?;
+            (Some(Arc::new(reloader)), config)
         }
     };
-
-    let resolver: Arc<dyn ResolvesServerCert> = Arc::<CertificateReloader>::clone(&certificate);
-    let config = builder.with_cert_resolver(resolver);
     Ok(ServerTls {
         config: Arc::new(config),
         certificate,
+        client_ca,
     })
+}
+
+/// The protocol set of the default floor.
+const TLS13_ONLY: &[&rustls::SupportedProtocolVersion] = &[&rustls::version::TLS13];
+/// The protocol set of the `1.2` compatibility floor.
+const TLS13_AND_12: &[&rustls::SupportedProtocolVersion] =
+    &[&rustls::version::TLS13, &rustls::version::TLS12];
+
+/// What every listener configuration shares, whichever client trust anchor it
+/// is built around: the crypto provider, the protocol floor and the
+/// certificate source.
+#[derive(Debug, Clone)]
+struct ConfigShape {
+    provider: Arc<CryptoProvider>,
+    versions: &'static [&'static rustls::SupportedProtocolVersion],
+    resolver: Arc<CertificateReloader>,
+}
+
+impl ConfigShape {
+    /// Builds a listener configuration, verifying client certificates against
+    /// `client` when it is given, never against the web PKI.
+    ///
+    /// # Errors
+    /// [`TlsError::Versions`] when the protocol floor is refused and
+    /// [`TlsError::Verifier`] when the verifier cannot be built.
+    fn build(
+        &self,
+        client: Option<(rustls::RootCertStore, bool)>,
+    ) -> Result<rustls::ServerConfig, TlsError> {
+        let builder = rustls::ServerConfig::builder_with_provider(Arc::clone(&self.provider))
+            .with_protocol_versions(self.versions)
+            .map_err(TlsError::Versions)?;
+        let builder = match client {
+            None => builder.with_no_client_auth(),
+            Some((roots, optional)) => {
+                let verifier = rustls::server::WebPkiClientVerifier::builder_with_provider(
+                    roots.into(),
+                    Arc::clone(&self.provider),
+                );
+                let verifier = if optional {
+                    verifier.allow_unauthenticated()
+                } else {
+                    verifier
+                };
+                builder.with_client_cert_verifier(verifier.build().map_err(TlsError::Verifier)?)
+            }
+        };
+        let resolver: Arc<dyn ResolvesServerCert> =
+            Arc::<CertificateReloader>::clone(&self.resolver);
+        Ok(builder.with_cert_resolver(resolver))
+    }
+}
+
+/// The client CA of mutual TLS, re-read from `[server.tls] client_ca_file` and
+/// turned into a fresh listener configuration when it changes.
+///
+/// rustls fixes the client-certificate verifier inside a
+/// [`rustls::ServerConfig`], so a renewed trust anchor means a new
+/// configuration, which the listener swaps in for every new handshake
+/// (`axum_server::tls_rustls::RustlsConfig::reload_from_config`). A changed
+/// file that fails to load is refused and the configuration in service stays;
+/// the refused file is remembered by digest and reported once, the rule
+/// [`CertificateReloader`] follows for the server pair.
+#[derive(Debug)]
+pub struct ClientCaReloader {
+    /// `[server.tls] client_ca_file`.
+    path: PathBuf,
+    /// Whether `client_auth` is `optional`.
+    optional: bool,
+    /// What every configuration shares.
+    shape: ConfigShape,
+    /// SHA-256 of the file as last read, loaded or refused.
+    seen: tokio::sync::Mutex<[u8; 32]>,
+}
+
+impl ClientCaReloader {
+    /// A listener configuration verifying client certificates against the
+    /// trust anchors in `pem`.
+    ///
+    /// # Errors
+    /// [`TlsError`] when `pem` holds no usable certificate or the verifier
+    /// cannot be built.
+    fn build(&self, pem: &[u8]) -> Result<rustls::ServerConfig, TlsError> {
+        let mut roots = rustls::RootCertStore::empty();
+        for cert in parse_certificates(pem, &self.path, "client_ca_file")? {
+            roots.add(cert).map_err(|source| TlsError::ClientCa {
+                path: self.path.clone(),
+                source,
+            })?;
+        }
+        self.shape.build(Some((roots, self.optional)))
+    }
+
+    /// Re-reads the client CA file and, when it changed, answers the listener
+    /// configuration built around it.
+    ///
+    /// # Errors
+    /// [`TlsError`] when the file cannot be read or a changed file fails to
+    /// load; the configuration in service then stays. A refused file is
+    /// reported once: until it changes again, later calls answer `None`.
+    pub async fn reload(&self) -> Result<Option<Arc<rustls::ServerConfig>>, TlsError> {
+        let pem = read_async(&self.path, "client_ca_file").await?;
+        let fresh: [u8; 32] = Sha256::digest(&pem).into();
+        let mut seen = self.seen.lock().await;
+        if *seen == fresh {
+            return Ok(None);
+        }
+        *seen = fresh;
+        Ok(Some(Arc::new(self.build(&pem)?)))
+    }
+
+    /// Checks the file every `interval` and swaps each configuration built
+    /// around a renewed client CA into `listener`, logging each replacement
+    /// and each refusal with its cause chain, for as long as anything besides
+    /// this task still holds the reloader (the listener's [`ServerTls`] does).
+    pub async fn watch(
+        self: Arc<Self>,
+        interval: Duration,
+        listener: axum_server::tls_rustls::RustlsConfig,
+    ) {
+        let mut ticker = tokio::time::interval(interval);
+        ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        // The first tick completes at once, and the file was loaded at boot.
+        ticker.tick().await;
+        while Arc::strong_count(&self) > 1 {
+            ticker.tick().await;
+            match self.reload().await {
+                Ok(None) => {}
+                Ok(Some(config)) => {
+                    listener.reload_from_config(config);
+                    tracing::info!(
+                        client_ca_file = %self.path.display(),
+                        "the TLS client CA changed on disk and now verifies new handshakes"
+                    );
+                }
+                Err(error) => tracing::error!(
+                    error = %ErrorChain::new(&error),
+                    "the TLS client CA on disk could not be loaded; the previous one still verifies"
+                ),
+            }
+        }
+    }
 }
 
 /// Whether a reload put a new certificate into service.
