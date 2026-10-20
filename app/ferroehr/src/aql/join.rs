@@ -310,7 +310,9 @@ fn distribute_order(
     for key in &query.order_by {
         let mut roots = Roots::default();
         roots.visit_identified_path(&key.path);
-        let side = sides.of(&roots.0, || format!("ORDER BY {}", key.path.root))?;
+        let side = sides.of(&roots.0, || {
+            format!("the order key on variable `{}`", key.path.root)
+        })?;
         let rank = half_of(halves, side).push_order(key);
         order.push(JoinOrderKey { side, rank });
     }
@@ -541,9 +543,9 @@ fn roots_of_column(column: &SelectExpr) -> BTreeSet<String> {
 /// A column as a refusal names it: its alias, else its path text.
 fn describe_column(column: &SelectExpr) -> String {
     match (&column.alias, &column.column) {
-        (Some(alias), _) => format!("SELECT column {alias}"),
-        (None, ColumnExpr::Path(p)) => format!("SELECT {}{}", p.root, p.column_path_text()),
-        (None, _) => "a SELECT column".to_owned(),
+        (Some(alias), _) => format!("the column `{alias}`"),
+        (None, ColumnExpr::Path(p)) => format!("the column `{}{}`", p.root, p.column_path_text()),
+        (None, _) => "a column".to_owned(),
     }
 }
 
