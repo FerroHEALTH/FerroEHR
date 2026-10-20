@@ -152,9 +152,6 @@ mod tests {
             env_name_for("db.max_connections"),
             "FERROEHR__DB__MAX_CONNECTIONS"
         );
-        assert_eq!(
-            env_name_for("auth.jwks_file"),
-            "FERROEHR__AUTH__JWKS_FILE"
-        );
+        assert_eq!(env_name_for("auth.jwks_file"), "FERROEHR__AUTH__JWKS_FILE");
     }
 }

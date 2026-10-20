@@ -111,7 +111,8 @@ async fn router_for(profile: SpecProfile, pool: &sqlx::PgPool) -> Router {
             FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
                 .with_spec_profile(profile),
         ),
-    ).await
+    )
+    .await
 }
 
 /// A stored version the active profile cannot express is a `409`, not a served

@@ -23,7 +23,6 @@ use async_trait::async_trait;
 
 use axum::Router;
 use axum::body::Body;
-use ferrohealth_smart::config::AuthSection;
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
 use ferroehr::config::server::ServerConfig;
 use ferroehr::telemetry::build_info::BuildInfo;
@@ -31,6 +30,7 @@ use ferroehr::telemetry::health::{Health, HealthIndicator, HealthRegistry};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
+use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 use http::{Request, StatusCode, header};
@@ -87,7 +87,9 @@ async fn build_app(
     let (pg, service) = common::test_service().await;
     (
         pg,
-        ferroehr_rest::build_full(config, service, authz, observability).await.expect("build"),
+        ferroehr_rest::build_full(config, service, authz, observability)
+            .await
+            .expect("build"),
     )
 }
 
@@ -771,7 +773,9 @@ async fn a_management_request_is_recorded_in_the_audit_trail() {
         info: AccessLevel::AdminOnly,
         ..EndpointLevels::default()
     });
-    let app = ferroehr_rest::build_full(config, service, authz, observability).await.expect("build");
+    let app = ferroehr_rest::build_full(config, service, authz, observability)
+        .await
+        .expect("build");
     assert_eq!(
         status_of(app, get_auth("/management/info")).await,
         StatusCode::OK

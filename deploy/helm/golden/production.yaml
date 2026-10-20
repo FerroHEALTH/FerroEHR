@@ -127,10 +127,9 @@ data:
         retention_days = 0.0
     
     [auth]
+      audience = ["ferroehr"]
       enabled = true
-      [auth.oidc]
-        audiences = ["ferroehr"]
-        issuer = "https://idp.example.com/realms/ferroehr"
+      issuer = "https://idp.example.com/realms/ferroehr"
     
     [authz]
       [authz.abac]
@@ -271,7 +270,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 7394559e6dacd9cc99722bbc4fff2ed7007d20c776f009b3e88ebbf2bf228042
+        checksum/config: 49e0c84135eca3f18848feb2da45af6c4ddd768304a3b8b8090443194143c349
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

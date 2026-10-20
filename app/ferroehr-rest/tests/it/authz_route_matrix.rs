@@ -529,7 +529,8 @@ async fn app() -> (testkit::TestDb, Router) {
         Arc::new(svc),
         authz(),
         ferroehr_rest::extensions::management::Observability::default(),
-    ).await
+    )
+    .await
     .expect("build app");
     (pg, app)
 }
@@ -865,7 +866,8 @@ async fn the_swagger_surface_honours_its_access_level() {
             )),
             authz(),
             ferroehr_rest::extensions::management::Observability::default(),
-        ).await
+        )
+        .await
         .expect("build app");
         (pg, app)
     }

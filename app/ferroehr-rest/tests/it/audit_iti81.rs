@@ -112,7 +112,8 @@ async fn app(with_store: bool, rbac: bool) -> (testkit::TestDb, Router, AuditSto
         Arc::new(svc),
         authz(rbac),
         ferroehr_rest::extensions::management::Observability::default(),
-    ).await
+    )
+    .await
     .expect("build app");
     (pg, app, store)
 }

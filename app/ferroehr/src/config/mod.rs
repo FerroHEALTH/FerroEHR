@@ -546,7 +546,12 @@ impl FerroEhrConfig {
         if let Err(e) = self.authz.assurance.validate() {
             errors.push(ConfigError::semantic(format!("authz: {e}")));
         }
-        if let Some(Err(e)) = self.authz.professional.as_ref().map(auth::ProfessionalConfig::validate) {
+        if let Some(Err(e)) = self
+            .authz
+            .professional
+            .as_ref()
+            .map(auth::ProfessionalConfig::validate)
+        {
             errors.push(ConfigError::semantic(format!("authz: {e}")));
         }
         if let Err(e) = self.smart.validate() {
@@ -1289,19 +1294,13 @@ mod tests {
                     "FERROEHR__AUTHZ__PROFESSIONAL__CLIENT_TOKENS",
                     "claim_absent",
                 ),
-                (
-                    "FERROEHR__AUTHZ__PROFESSIONAL__ACTING_FOR_CLAIM",
-                    "act.sub",
-                ),
+                ("FERROEHR__AUTHZ__PROFESSIONAL__ACTING_FOR_CLAIM", "act.sub"),
             ]),
             &[],
         );
         assert_eq!(c.authz.assurance.claim, "loa");
         assert_eq!(c.authz.assurance.minimum, Some(auth::AssuranceLevel::High));
-        let professional = c
-            .authz
-            .professional
-            .expect("professional table from env");
+        let professional = c.authz.professional.expect("professional table from env");
         assert_eq!(professional.claim, "uzi");
         assert_eq!(
             professional.client_tokens,
@@ -1603,13 +1602,15 @@ mod tests {
 
     #[test]
     fn secrets_never_render_and_file_resolves() {
-        let file = toml_file(
-            "[[auth.basic.users]]\nuser = \"alice\"\npassword_hash = \"topsecret\"\n",
-        );
+        let file =
+            toml_file("[[auth.basic.users]]\nuser = \"alice\"\npassword_hash = \"topsecret\"\n");
         let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
         let rendered = c.to_redacted_toml().expect("toml");
         assert!(!rendered.contains("topsecret"), "secret leaked: {rendered}");
-        assert!(rendered.contains("***"), "the hash renders masked: {rendered}");
+        assert!(
+            rendered.contains("***"),
+            "the hash renders masked: {rendered}"
+        );
         assert!(!serde_json::to_string(&c).unwrap().contains("topsecret"));
         let secret = assert_fs::NamedTempFile::new("pass").expect("temp");
         secret.write_str("s3cret\n").expect("write");

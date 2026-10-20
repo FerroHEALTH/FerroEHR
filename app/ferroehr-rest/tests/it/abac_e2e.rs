@@ -35,7 +35,6 @@ use async_trait::async_trait;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::aql::subject::EhrSubject;
-use ferrohealth_smart::config::AuthSection;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::server::ServerConfig;
 use ferroehr::service::FerroEhrService;
@@ -50,6 +49,7 @@ use ferroehr_rest::extensions::access::authz::request::{
 use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, ResolveError};
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::{build_full, build_with};
+use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode};
 use serde_json::{Value, json};
 use tokio::net::UdpSocket;
@@ -235,7 +235,8 @@ async fn abac_app(svc: Arc<FerroEhrService>, abac_enabled: bool) -> Router {
         svc,
         authz(abac_enabled),
         Observability::default(),
-    ).await
+    )
+    .await
     .expect("build app")
 }
 
@@ -371,7 +372,9 @@ async fn status(app: &Router, req: Request<Body>) -> StatusCode {
 /// the gate under test).
 async fn service_and_seed_app() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let (pg, svc) = service(None).await;
-    let seed = build_with(seed_config(), Arc::clone(&svc)).await.expect("seed app");
+    let seed = build_with(seed_config(), Arc::clone(&svc))
+        .await
+        .expect("seed app");
     (pg, svc, seed)
 }
 
@@ -388,7 +391,8 @@ async fn template_scoped_app(svc: Arc<FerroEhrService>) -> Router {
         Arc::clone(&svc),
         authz_with(Arc::new(RequireIpsTemplate), service_resolvers(svc)),
         Observability::default(),
-    ).await
+    )
+    .await
     .expect("build app")
 }
 
@@ -566,7 +570,9 @@ async fn the_accessing_organisation_reaches_the_stored_record() {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let seed = build_with(seed_config(), Arc::clone(&svc)).await.expect("seed app");
+    let seed = build_with(seed_config(), Arc::clone(&svc))
+        .await
+        .expect("seed app");
     seed_ehr(&seed, EHR_OWN).await;
     let app = abac_app(Arc::clone(&svc), true).await;
 
@@ -639,7 +645,9 @@ async fn the_accessing_organisation_is_recorded_with_the_abac_gate_off() {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let seed = build_with(seed_config(), Arc::clone(&svc)).await.expect("seed app");
+    let seed = build_with(seed_config(), Arc::clone(&svc))
+        .await
+        .expect("seed app");
     seed_ehr(&seed, EHR_OWN).await;
     let app = abac_app(Arc::clone(&svc), false).await;
 
@@ -925,7 +933,8 @@ async fn the_query_post_check_applies_to_an_ehr_only_query() {
         svc,
         authz_with(Arc::new(DenyOwnPatientQueries), resolvers()),
         Observability::default(),
-    ).await
+    )
+    .await
     .expect("build app");
     for aql in [
         "SELECT e/ehr_id/value FROM EHR e",
@@ -961,7 +970,9 @@ async fn db_resolved_apps(patient_namespace: Option<&str>) -> (testkit::TestDb, 
     let svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
     ));
-    let seed = build_with(seed_config(), Arc::clone(&svc)).await.expect("seed app");
+    let seed = build_with(seed_config(), Arc::clone(&svc))
+        .await
+        .expect("seed app");
     let resolvers = AuthzResolvers {
         subject: Arc::new(move |ehr_id: String| {
             let pool = pool.clone();
@@ -986,7 +997,9 @@ async fn db_resolved_apps(patient_namespace: Option<&str>) -> (testkit::TestDb, 
         resolvers,
     )
     .map(Arc::new);
-    let app = build_full(rest_config(), svc, handle, Observability::default()).await.expect("build app");
+    let app = build_full(rest_config(), svc, handle, Observability::default())
+        .await
+        .expect("build app");
     (pg, seed, app)
 }
 
@@ -1072,7 +1085,9 @@ async fn a_patient_keyed_rule_applies_to_the_touched_subjects_without_a_claim() 
         resolvers(),
     )
     .map(Arc::new);
-    let app = build_full(rest_config(), svc, handle, Observability::default()).await.expect("build app");
+    let app = build_full(rest_config(), svc, handle, Observability::default())
+        .await
+        .expect("build app");
 
     assert_eq!(
         unscoped_query_status(&app, "SELECT e/ehr_id/value FROM EHR e").await,

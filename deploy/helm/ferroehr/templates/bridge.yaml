@@ -23,7 +23,7 @@ carries its own copy and the chart's security gate checks all of them.
 {{- fail "bridge.enabled=true with an empty bridge.networkPolicy.ingressFrom: name the peers that may reach FerroBRIDGE (a podSelector for the in-cluster clients that call it, a namespaceSelector, or an ipBlock). FerroBRIDGE authenticates no caller yet (FerroHEALTH/FerroBRIDGE#400), and an ingress rule with no `from` admits EVERY source, so whoever reached the port would act on the CDR with FerroBRIDGE's credential. There is no key that admits every source." }}
 {{- end }}
 {{- if not .Values.bridge.cdr.existingSecret }}
-{{- fail "bridge.enabled=true with an empty bridge.cdr.existingSecret: create a Secret holding FerroBRIDGE's credential for this release's CDR and name it there. With bridge.cdr.auth=basic it carries the keys `user` and `password` (a user of config.auth.basic.users); with bridge.cdr.auth=bearer, the key `bearer_token`. The chart never takes the credential as a value." }}
+{{- fail "bridge.enabled=true with an empty bridge.cdr.existingSecret: create a Secret holding FerroBRIDGE's credential for this release's CDR and name it there. It carries the keys `user` and `password`, a user of config.auth.basic.users. The chart never takes the credential as a value." }}
 {{- end }}
 {{- if and .Values.bridge.mappings.existingConfigMap (not .Values.bridge.mappings.files) }}
 {{- fail "bridge.mappings.existingConfigMap is set with an empty bridge.mappings.files: list the ConfigMap keys to mount, one mapping file each. The chart mounts each key on its own because a whole ConfigMap volume carries the kubelet's `..data` snapshot directories, which FerroBRIDGE's recursive walk reads as duplicate copies of every mapping and refuses at boot." }}
@@ -127,13 +127,11 @@ spec:
           env:
             - name: FERROBRIDGE_CONFIG
               value: {{ printf "%s/config.toml" (include "ferroehr.bridgeConfigDir" .) | quote }}
-            {{- if eq .Values.bridge.cdr.auth "basic" }}
             - name: FERROBRIDGE__CDR__CREDENTIALS__USER
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.bridge.cdr.existingSecret }}
                   key: user
-            {{- end }}
             {{- if eq (include "ferroehr.serverTls" .) "true" }}
             {{- include "ferroehr.cdrTrustEnv" . | nindent 12 }}
             {{- end }}
@@ -204,13 +202,8 @@ spec:
           secret:
             secretName: {{ .Values.bridge.cdr.existingSecret }}
             items:
-              {{- if eq .Values.bridge.cdr.auth "bearer" }}
-              - key: bearer_token
-                path: bearer_token
-              {{- else }}
               - key: password
                 path: password
-              {{- end }}
         {{- with .Values.bridge.mappings.existingConfigMap }}
         - name: mappings
           configMap:

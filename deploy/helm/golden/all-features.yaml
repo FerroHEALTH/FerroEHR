@@ -404,7 +404,6 @@ metadata:
     app.kubernetes.io/part-of: ferroehr
 type: Opaque
 stringData:
-  auth.oidc.hmac_secret: "ci-fixture-not-a-secret-0000000000000000"
   signing.key_passphrase: "ci-fixture-not-a-secret-passphrase"
   multimedia.secret_access_key: "s3-secret"
   terminology.external.oauth2_clients.tx.client_secret: "tx-client-secret"
@@ -457,7 +456,7 @@ data:
     [cdr]
       base_url = "http://ferroehr:8080/ferroehr/rest/openehr/v1"
       [cdr.credentials]
-        bearer_token_file = "/etc/ferrobridge/secrets/cdr/bearer_token"
+        password_file = "/etc/ferrobridge/secrets/cdr/password"
     
     [terminology]
       base_url = "http://ferroehr-terminology:8080/r4"
@@ -513,11 +512,10 @@ data:
         transport = "tls"
     
     [auth]
+      audience = ["ferroehr"]
       enabled = true
-      [auth.oidc]
-        algorithms = ["HS256"]
-        audiences = ["ferroehr"]
-        issuer = "https://keycloak.example.com/realms/ferroehr"
+      issuer = "https://keycloak.example.com/realms/ferroehr"
+      product_scope = "__ferroehr.platform"
     
     [authz]
       [authz.abac]
@@ -599,6 +597,7 @@ data:
       verify_on_read = "strict"
     
     [smart]
+      demographic_clients = ["ferroehr-mpi"]
       ehr_id_claim = "ehrId"
       enabled = true
       patient_claim = "patient"
@@ -1163,7 +1162,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 06f18a82e5a19a0765319e8a0d7eee9d97cefff32910b4796411127dd979dfc8
+        checksum/config: cc89d97fab54a0de1f6888920274f3c29a3d25962ae4aeb2617f1e8ec9d6e366
       labels:
         app.kubernetes.io/name: ferroehr-bridge
         app.kubernetes.io/instance: ferroehr
@@ -1204,6 +1203,11 @@ spec:
           env:
             - name: FERROBRIDGE_CONFIG
               value: "/etc/ferrobridge/config/config.toml"
+            - name: FERROBRIDGE__CDR__CREDENTIALS__USER
+              valueFrom:
+                secretKeyRef:
+                  name: ferroehr-bridge-cdr
+                  key: user
           livenessProbe:
             httpGet:
               path: /health/liveness
@@ -1251,8 +1255,8 @@ spec:
           secret:
             secretName: ferroehr-bridge-cdr
             items:
-              - key: bearer_token
-                path: bearer_token
+              - key: password
+                path: password
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -1297,7 +1301,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 92ab7b3e122276c28cc26b64ce25a5f9ac2b3ed0df40f9e889c8d6db07645e06
+        checksum/config: cdc86f0103eb644f9d48cb6d068a05450056b39a089c4e4607a937e1b3fac578
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"
@@ -1364,8 +1368,6 @@ spec:
               value: "/etc/ferroehr-secrets/storage.audit.url"
             - name: FERROEHR__DB__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/db.migrate_url"
-            - name: FERROEHR__AUTH__OIDC__HMAC_SECRET_FILE
-              value: "/etc/ferroehr-secrets/auth.oidc.hmac_secret"
             - name: FERROEHR__SIGNING__KEY_PASSPHRASE_FILE
               value: "/etc/ferroehr-secrets/signing.key_passphrase"
             - name: FERROEHR__EVENTS__URL_FILE
@@ -1513,8 +1515,6 @@ spec:
                   items:
                     - key: events.url
                       path: events.url
-                    - key: auth.oidc.hmac_secret
-                      path: auth.oidc.hmac_secret
                     - key: signing.key_passphrase
                       path: signing.key_passphrase
                     - key: multimedia.secret_access_key

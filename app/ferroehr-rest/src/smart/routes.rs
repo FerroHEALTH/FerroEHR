@@ -156,7 +156,8 @@ impl SmartRoutes {
             },
             Group::Ehr
                 if !op.contains("_tags_")
-                    && (op.starts_with("composition_") || op.starts_with("versioned_composition_")) =>
+                    && (op.starts_with("composition_")
+                        || op.starts_with("versioned_composition_")) =>
             {
                 return Need::Composition(permission_of_op(op));
             }

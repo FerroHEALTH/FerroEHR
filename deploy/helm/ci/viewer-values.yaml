@@ -20,8 +20,12 @@ config:
     enabled: true
     basic:
       users:
-        - username: clinician
-          roles: [ADMIN]
+        - user: clinician
+          scopes: [user/composition-*.cruds, user/template-*.cruds, user/aql-*.cruds, __ferroehr.platform]
+  authz:
+    rbac:
+      basic_roles:
+        clinician: [ADMIN]
 
 viewer:
   enabled: true

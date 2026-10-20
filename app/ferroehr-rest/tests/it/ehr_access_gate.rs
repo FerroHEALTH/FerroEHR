@@ -143,7 +143,8 @@ async fn app(auth_enabled: bool, scheme: Option<Value>) -> (testkit::TestDb, Rou
         Arc::new(svc),
         None,
         Observability::default(),
-    ).await
+    )
+    .await
     .expect("build app");
     (pg, app)
 }
@@ -428,7 +429,8 @@ async fn query_app() -> (testkit::TestDb, Router) {
         Arc::new(svc),
         None,
         Observability::default(),
-    ).await
+    )
+    .await
     .expect("build app");
     (pg, app)
 }
@@ -588,7 +590,8 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
         handle.as_ref().is_some_and(|h| !h.rbac_active()),
         "a restricted default is carried with the coarse gate off"
     );
-    let app = ferroehr_rest::build_full(config, Arc::new(svc), handle, Observability::default()).await
+    let app = ferroehr_rest::build_full(config, Arc::new(svc), handle, Observability::default())
+        .await
         .expect("build app");
 
     assert_eq!(

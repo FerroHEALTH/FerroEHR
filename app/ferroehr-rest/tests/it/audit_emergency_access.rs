@@ -107,8 +107,9 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app =
-        ferroehr_rest::build_full(config, svc, authz, Observability::default()).await.expect("build app");
+    let app = ferroehr_rest::build_full(config, svc, authz, Observability::default())
+        .await
+        .expect("build app");
 
     let (status, body) = common::send_body(
         &app,

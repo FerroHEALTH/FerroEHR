@@ -194,10 +194,10 @@ SECURITY POSTURE
 {{ if not .Values.config.auth.enabled }}
   ⚠  config.auth.enabled=false — ALL requests pass UNAUTHENTICATED. Dev only.
 {{ end -}}
-{{ if not (or (dig "oidc" "issuer" "" .Values.config.auth) (dig "basic" "users" list .Values.config.auth) .Values.config.files) }}
-  ⚠  config.auth.enabled={{ .Values.config.auth.enabled }} but no OIDC issuer, no
+{{ if not (or (dig "issuer" "" .Values.config.auth) (dig "basic" "users" list .Values.config.auth) .Values.config.files) }}
+  ⚠  config.auth.enabled={{ .Values.config.auth.enabled }} but no token issuer, no
      Basic user store, and no mounted config.files. With no mechanism, every
-     request 401s — add config.auth.oidc.issuer, an [[auth.basic.users]] entry
+     request 401s — add config.auth.issuer, an [[auth.basic.users]] entry
      under config.auth.basic.users, or supply material via config.files.
 {{ end -}}
 {{ if and .Values.config.multimedia.enabled .Values.config.multimedia.allow_http }}

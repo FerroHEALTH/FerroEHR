@@ -154,7 +154,7 @@ when there is at least one secret value to carry).
 {{- $inlineDb := and (not .Values.database.existingSecret) .Values.database.url }}
 {{- $inlineDomain := include "ferroehr.hasInlineDomainDsn" . }}
 {{- $inlineMigrate := and (not .Values.database.migrateExistingSecret) .Values.database.migrateUrl }}
-{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.basicUserPasswordHashes .Values.secrets.authOidcHmacSecret .Values.secrets.signingKeyPassphrase .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl .Values.secrets.auditFhirFeedUrl .Values.secrets.multimediaAccessKeyId .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyOauth2ClientSecrets -}}
+{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.basicUserPasswordHashes .Values.secrets.signingKeyPassphrase .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl .Values.secrets.auditFhirFeedUrl .Values.secrets.multimediaAccessKeyId .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyOauth2ClientSecrets -}}
 true
 {{- end -}}
 {{- end }}
@@ -181,7 +181,7 @@ names a Secret nothing created makes the pod fail to mount.
 {{- $inlineDb := and (not .Values.database.existingSecret) .Values.database.url -}}
 {{- $inlineDomain := include "ferroehr.hasInlineDomainDsn" . -}}
 {{- $inlineMigrate := and (not .Values.database.migrateExistingSecret) .Values.database.migrateUrl -}}
-{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.authOidcHmacSecret .Values.secrets.signingKeyPassphrase .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyOauth2ClientSecrets .Values.secrets.basicUserPasswordHashes .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl -}}
+{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.signingKeyPassphrase .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyOauth2ClientSecrets .Values.secrets.basicUserPasswordHashes .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl -}}
 true
 {{- end -}}
 {{- end }}
@@ -261,7 +261,7 @@ key, keyed on its leaf name. Unknown ⇒ `unrouted`, which is what makes a secre
 key added upstream tomorrow move to the Secret instead of leaking.
 */}}
 {{- define "ferroehr.secretClass" -}}
-{{- if has . (list "url" "hmac_secret" "key_passphrase" "secret_access_key" "client_secret" "password_hash") -}}
+{{- if has . (list "url" "key_passphrase" "secret_access_key" "client_secret" "password_hash") -}}
 routed
 {{- else -}}
 unrouted
@@ -274,11 +274,10 @@ The `secrets:` key that carries a routed secret, keyed on its leaf name.
 {{- define "ferroehr.secretRemedy" -}}
 {{- $routes := dict
   "url" "route it through the matching `secrets:` key — `eventsUrl` (mounted as a file via events.url_file), `auditFhirFeedUrl` (env; that key still has no `*_file` sibling), or `database.existingSecret` for the shared DSN (mounted via db.url_file) and `database.<domain>.existingSecret` for one storage domain's own (mounted via storage.<domain>.url_file)"
-  "hmac_secret" "set `secrets.authOidcHmacSecret` instead"
   "key_passphrase" "set `secrets.signingKeyPassphrase` instead"
   "secret_access_key" "set `secrets.multimediaSecretAccessKey` instead"
   "client_secret" "set `secrets.terminologyOauth2ClientSecrets.<client name>` instead"
-  "password_hash" "set `secrets.basicUserPasswordHashes.<username>` instead, and leave only `username`/`roles` under `config:` (the chart mounts the hash and injects password_hash_file)"
+  "password_hash" "set `secrets.basicUserPasswordHashes.<user>` instead, and leave only `user`/`scopes` under `config:` (the chart mounts the hash and injects password_hash_file)"
 -}}
 {{- get $routes . | default "no `secrets:` route exists for this key" -}}
 {{- end }}
@@ -327,13 +326,13 @@ secret VALUE refused outright.
 {{- $users := dig "auth" "basic" "users" (list) $rendered -}}
 {{- $matched := false -}}
 {{- range $entry := $users -}}
-{{- if eq (get $entry "username") $user -}}
+{{- if eq (get $entry "user") $user -}}
 {{- $_ := set $entry "password_hash_file" (printf "%s/auth.basic.users.%s.password_hash" (include "ferroehr.secretMountPath" $) $user) -}}
 {{- $matched = true -}}
 {{- end -}}
 {{- end -}}
 {{- if not $matched -}}
-{{- fail (printf "secrets.basicUserPasswordHashes.%s has no matching entry at config.auth.basic.users[] with username: %s (declare the username and roles there; only the hash belongs in secrets:)" $user $user) -}}
+{{- fail (printf "secrets.basicUserPasswordHashes.%s has no matching entry at config.auth.basic.users[] with user: %s (declare the user and its scopes there, its roles at config.authz.rbac.basic_roles; only the hash belongs in secrets:)" $user $user) -}}
 {{- end -}}
 {{- end -}}
 {{- range $name, $value := .Values.secrets.terminologyOauth2ClientSecrets -}}
@@ -1006,11 +1005,7 @@ spec governs this; FerroBRIDGE's own configuration reference defines the keys.
 {{- if not (hasKey $config "cdr") -}}{{- $_ := set $config "cdr" (dict) -}}{{- end -}}
 {{- $cdr = get $config "cdr" -}}
 {{- $_ := set $cdr "base_url" (include "ferroehr.cdrRestUrl" $) -}}
-{{- if eq $.Values.bridge.cdr.auth "bearer" -}}
-{{- $_ := set $cdr "credentials" (dict "bearer_token_file" (printf "%s/bearer_token" (include "ferroehr.bridgeSecretDir" $))) -}}
-{{- else -}}
 {{- $_ := set $cdr "credentials" (dict "password_file" (printf "%s/password" (include "ferroehr.bridgeSecretDir" $))) -}}
-{{- end -}}
 {{- if $.Values.terminology.enabled -}}
 {{- $_ := set $config "terminology" (dict "base_url" (printf "http://%s:%v/r4" (include "ferroehr.terminologyFullname" $) $.Values.terminology.service.port) "wire_version" "r4") -}}
 {{- end -}}
@@ -1027,7 +1022,7 @@ The secret-shaped LEAF keys of a `bridge.config` subtree, one dotted path per
 line. Unlike `ferroehr.secretScan`, a map is always descended into rather than
 judged by its name: FerroBRIDGE's `[cdr.credentials]` and
 `[terminology.credentials]` are sections whose `user` is not a secret, and
-whose `password`/`bearer_token` are.
+whose `password` is.
 */}}
 {{- define "ferroehr.bridgeSecretScan" -}}
 {{- $path := .path -}}

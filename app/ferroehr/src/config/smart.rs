@@ -181,7 +181,10 @@ mod tests {
         };
         assert!(c.validate().is_err());
         c.public_base_url = Some("/ferroehr".to_owned());
-        assert!(c.validate().is_err(), "a relative origin is no absolute URL");
+        assert!(
+            c.validate().is_err(),
+            "a relative origin is no absolute URL"
+        );
         c.public_base_url = Some("https://cdr.example.com".to_owned());
         assert!(c.validate().is_ok());
     }

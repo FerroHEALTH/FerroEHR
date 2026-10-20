@@ -32,9 +32,9 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferrohealth_smart::config::AuthSection;
 use ferroehr::config::server::ServerConfig;
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 
@@ -71,7 +71,9 @@ async fn app(terminology_enabled: bool) -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
     (
         pg,
-        ferroehr_rest::build_with(config(terminology_enabled), service).await.expect("router builds"),
+        ferroehr_rest::build_with(config(terminology_enabled), service)
+            .await
+            .expect("router builds"),
     )
 }
 
@@ -115,7 +117,9 @@ async fn disabled_group_answers_401_before_404_when_unauthenticated() {
     let mut cfg = config(false);
     common::with_basic_users(&mut cfg, &[("alice", &["USER"])]);
     let (_pg, service) = common::test_service().await;
-    let app = ferroehr_rest::build_with(cfg, service).await.expect("router builds");
+    let app = ferroehr_rest::build_with(cfg, service)
+        .await
+        .expect("router builds");
 
     let (status, _) = send(app, get(format!("{BASE}/terminology"))).await;
     assert_eq!(
@@ -133,7 +137,9 @@ async fn disabled_group_answers_404_when_authenticated() {
     let mut cfg = config(false);
     common::with_basic_users(&mut cfg, &[("alice", &["USER"])]);
     let (_pg, service) = common::test_service().await;
-    let app = ferroehr_rest::build_with(cfg, service).await.expect("router builds");
+    let app = ferroehr_rest::build_with(cfg, service)
+        .await
+        .expect("router builds");
 
     let req = Request::builder()
         .method("GET")

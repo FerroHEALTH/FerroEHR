@@ -42,12 +42,12 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
-use ferrohealth_smart::config::AuthSection;
 use ferroehr::config::server::ServerConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig, Transport};
 use ferroehr::system_log::sender::{AuditSender, SubjectResolver, start};
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode};
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
@@ -235,7 +235,9 @@ async fn audit_app(sender: AuditSender) -> (testkit::TestDb, Router) {
     );
     (
         pg,
-        ferroehr_rest::build_with(rest_config(), svc).await.expect("build app"),
+        ferroehr_rest::build_with(rest_config(), svc)
+            .await
+            .expect("build app"),
     )
 }
 
@@ -249,7 +251,9 @@ async fn audit_app_with_composition(sender: AuditSender) -> (testkit::TestDb, Ro
     let seed_svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
     ));
-    let seed_app = ferroehr_rest::build_with(auth_off_config(), seed_svc).await.expect("seed app");
+    let seed_app = ferroehr_rest::build_with(auth_off_config(), seed_svc)
+        .await
+        .expect("seed app");
     let put = Request::builder()
         .method("PUT")
         .uri(format!("{BASE}/ehr/{EHR}"))
@@ -281,7 +285,9 @@ async fn audit_app_with_composition(sender: AuditSender) -> (testkit::TestDb, Ro
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let app = ferroehr_rest::build_with(rest_config(), svc).await.expect("build app");
+    let app = ferroehr_rest::build_with(rest_config(), svc)
+        .await
+        .expect("build app");
     (pg, app, uid)
 }
 
@@ -761,7 +767,9 @@ async fn composition_get_records_the_origins_of_the_served_data() {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let app = ferroehr_rest::build_with(auth_off_config(), svc).await.expect("build app");
+    let app = ferroehr_rest::build_with(auth_off_config(), svc)
+        .await
+        .expect("build app");
 
     let put = Request::builder()
         .method("PUT")

@@ -27,7 +27,11 @@ config:
     enabled: true
     basic:
       users:
-        # No password_hash here — only the identity and the roles. The hash is a
-        # secret and lives in `secrets:` above.
-        - username: clinician
-          roles: [USER]
+        # No password_hash here — only the identity and the scopes. The hash is
+        # a secret and lives in `secrets:` above; the roles are authz below.
+        - user: clinician
+          scopes: [user/composition-*.cruds, user/template-*.cruds, user/aql-*.cruds, __ferroehr.platform]
+  authz:
+    rbac:
+      basic_roles:
+        clinician: [USER]

@@ -401,9 +401,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "authOidcHmacSecret": {
-          "type": "string"
-        },
         "signingKeyPassphrase": {
           "type": "string"
         },
@@ -1529,15 +1526,8 @@
           "additionalProperties": false,
           "properties": {
             "existingSecret": {
-              "description": "An EXISTING Secret with the keys user and password (auth basic) or bearer_token (auth bearer). Required when enabled.",
+              "description": "An EXISTING Secret with the keys user and password, a user of config.auth.basic.users. Required when enabled.",
               "type": "string"
-            },
-            "auth": {
-              "type": "string",
-              "enum": [
-                "basic",
-                "bearer"
-              ]
             }
           }
         },

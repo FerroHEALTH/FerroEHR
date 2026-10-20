@@ -44,7 +44,8 @@ async fn app(pool: &PgPool) -> Router {
         std::sync::Arc::new(FerroEhrService::new(
             &ferroehr::db::domain::DomainPools::from_shared(pool),
         )),
-    ).await
+    )
+    .await
     .expect("router builds")
 }
 
@@ -177,7 +178,11 @@ async fn versioned_store_returns_200_with_location_and_409_on_duplicate() {
     );
 
     // The stored query is retrievable and untouched.
-    let (status, body) = get(app(&pool).await, &format!("{BASE}/definition/query/{name}/1.0.0")).await;
+    let (status, body) = get(
+        app(&pool).await,
+        &format!("{BASE}/definition/query/{name}/1.0.0"),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert!(body.contains(AQL), "stored AQL retrievable: {body}");
 }
@@ -204,7 +209,11 @@ async fn no_version_store_upserts_and_returns_200() {
     );
 
     // The latest text is what is retrieved.
-    let (status, body) = get(app(&pool).await, &format!("{BASE}/definition/query/{name}/1.0.0")).await;
+    let (status, body) = get(
+        app(&pool).await,
+        &format!("{BASE}/definition/query/{name}/1.0.0"),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert!(
         body.contains(updated),

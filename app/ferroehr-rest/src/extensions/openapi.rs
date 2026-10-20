@@ -49,8 +49,8 @@ use crate::extensions::health;
 use crate::extensions::management;
 use crate::overview::status;
 use crate::state::AppState;
-use ferrohealth_smart::config::AuthSection;
 use ferroehr::telemetry::provenance;
+use ferrohealth_smart::config::AuthSection;
 
 /// The logical name of the single advertised security scheme. One name, one
 /// scheme kind chosen by config, so the Swagger "Authorize" dialog shows exactly

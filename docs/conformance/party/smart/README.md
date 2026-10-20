@@ -16,7 +16,7 @@ deployment ever does, every token it accepts is forgeable by anyone.
 | File | What it is |
 |---|---|
 | `cnf-smart-test.key.pem` | The RSA-2048 private key (PKCS#8 PEM) the runner signs RS256 access tokens with. |
-| `jwks.json` | The matching **public** JWKS (`kid: cnf-smart-test`), mounted into the SUT as `auth.oidc.jwks_json_file`. |
+| `jwks.json` | The matching **public** JWKS (`kid: cnf-smart-test`), mounted into the SUT as `auth.jwks_file`. |
 
 The pair is generated once and committed, so a conformance run is reproducible
 and needs no key-generation step. It was produced with:
@@ -31,9 +31,11 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
 ## How the lane wires it together
 
 1. `docker/sut-smart.yml` (the compose overlay) mounts `jwks.json` into the
-   SUT and points `auth.oidc` at it, with a static issuer + audience, and turns
-   the SMART resource-server role on (`smart.enabled`,
-   `smart.require_smart_scopes`).
+   SUT and points `[auth]` at it (`auth.jwks_file`), with a static issuer and
+   audience and the `jwt` token profile the runner's tokens meet. Every route
+   enforces its SMART on openEHR requirement with no switch; the discovery
+   document stays off in this lane, because it is built from the issuer's
+   metadata and a key-set file carries none.
 2. `docs/conformance/party/ferroehr/ixit.json` declares the posture: the
    `smart` block names this key file, the issuer, the audience and the `kid`;
    the `sut`/`admin`/`readonly` principals carry `bearer_mint` auth with

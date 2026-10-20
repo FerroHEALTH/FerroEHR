@@ -27,9 +27,9 @@ use tower::ServiceExt;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use ferrohealth_smart::config::{AuthSection, IssuerKey};
 use ferroehr::config::server::ServerConfig;
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_smart::config::{AuthSection, IssuerKey};
 
 use crate::common;
 
@@ -258,11 +258,7 @@ async fn the_query_family_needs_an_aql_grant() {
             .body(Body::from(r#"{"q": "SELECT e/ehr_id/value FROM EHR e"}"#))
             .unwrap()
     };
-    let (status, body) = send(
-        &app,
-        query(&token(&uri, "user/template-*.r", &json!({}))),
-    )
-    .await;
+    let (status, body) = send(&app, query(&token(&uri, "user/template-*.r", &json!({})))).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
     let (status, body) = send(&app, query(&token(&uri, "user/aql-*.s", &json!({})))).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -291,7 +287,11 @@ async fn a_patient_query_grant_runs_within_the_launch_context_ehr_alone() {
     let (status, body) = send(&app, query(Some("0b8f7c5e-0000-4000-8000-000000000001"))).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "another EHR: {body}");
     let (status, _body) = send(&app, query(Some(launched))).await;
-    assert_ne!(status, StatusCode::FORBIDDEN, "the launch context's EHR is reached");
+    assert_ne!(
+        status,
+        StatusCode::FORBIDDEN,
+        "the launch context's EHR is reached"
+    );
 }
 
 /// With authentication off there is no credential, so there is no scope to
@@ -300,6 +300,10 @@ async fn a_patient_query_grant_runs_within_the_launch_context_ehr_alone() {
 #[tokio::test]
 async fn authentication_off_leaves_the_families_ungated() {
     let (_pg, app) = open_app().await;
-    let (status, body) = send(&app, get(&format!("{BASE}/definition/template/adl1.4"), None)).await;
+    let (status, body) = send(
+        &app,
+        get(&format!("{BASE}/definition/template/adl1.4"), None),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK, "{body}");
 }

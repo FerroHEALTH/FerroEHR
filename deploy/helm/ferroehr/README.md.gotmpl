@@ -154,8 +154,8 @@ enforces NetworkPolicy**. Check yours; several do not.
 the FHIR and openEHR bridge, as its own workload pointed at this release's CDR
 Service (and at the chart's FerroTERM when `terminology.enabled` is set). It
 needs two things the render refuses to go without: `bridge.cdr.existingSecret`,
-a Secret holding its CDR credential (`user` and `password`, or `bearer_token`
-with `bridge.cdr.auth=bearer`), and at least one peer in
+a Secret holding its CDR credential (`user` and `password`, a Basic user of the
+CDR whose `scopes` grant what FerroBRIDGE calls), and at least one peer in
 `bridge.networkPolicy.ingressFrom`. FerroBRIDGE authenticates no caller yet
 ([FerroBRIDGE#400](https://github.com/FerroHEALTH/FerroBRIDGE/issues/400)), so
 the chart keeps it cluster-internal: a ClusterIP Service, no Ingress, and a

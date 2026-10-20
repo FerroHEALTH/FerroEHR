@@ -650,14 +650,19 @@ fn engine_error(
 /// Whether `op` is a COMPOSITION operation whose SMART requirement the
 /// policy-enforcement point checks (`crate::smart::routes`, `Need::Composition`).
 fn smart_composition_op(op: &str) -> bool {
-    !op.contains("_tags_") && (op.starts_with("composition_") || op.starts_with("versioned_composition_"))
+    !op.contains("_tags_")
+        && (op.starts_with("composition_") || op.starts_with("versioned_composition_"))
 }
 
 /// The SMART gate of a COMPOSITION write, on the template its body names or,
 /// for a delete, the template of the version it deletes (master08 §Resource
 /// Scopes, `composition-<templateId>`). Inert without an authenticated
 /// principal, which only an unauthenticated surface lacks.
-async fn smart_pre(state: &AppState, op: &'static str, parts: &RequestParts) -> Result<(), Response> {
+async fn smart_pre(
+    state: &AppState,
+    op: &'static str,
+    parts: &RequestParts,
+) -> Result<(), Response> {
     if !matches!(
         op,
         "composition_create" | "composition_update" | "composition_delete"
@@ -737,9 +742,8 @@ async fn composition_template_of(
     let Some(uid) = uid else {
         return Ok(None);
     };
-    let decoded = parse_uid_based_id(uid).map_err(|e| {
-        forbidden(principal, &format!("unaddressable resource id: {e}"))
-    })?;
+    let decoded = parse_uid_based_id(uid)
+        .map_err(|e| forbidden(principal, &format!("unaddressable resource id: {e}")))?;
     let version = decoded
         .version
         .map(|ovid| ovid.version_tree_id().value().to_owned());
@@ -1195,8 +1199,13 @@ mod tests {
             Honoured::default(),
         );
         assert!(
-            smart_composition(&granted, "composition_create", Some("Vitals.v1"), Some("ehr-1"))
-                .is_ok()
+            smart_composition(
+                &granted,
+                "composition_create",
+                Some("Vitals.v1"),
+                Some("ehr-1")
+            )
+            .is_ok()
         );
         let bare = Principal::new(
             Access::Caller(Arc::new(Caller::basic("bob".to_owned(), ""))),
@@ -1204,15 +1213,21 @@ mod tests {
             Honoured::default(),
         );
         assert!(
-            smart_composition(&bare, "composition_create", Some("Vitals.v1"), Some("ehr-1"))
-                .is_err()
+            smart_composition(
+                &bare,
+                "composition_create",
+                Some("Vitals.v1"),
+                Some("ehr-1")
+            )
+            .is_err()
         );
     }
 
     /// An unresolved template is covered only by a grant on every template.
     #[test]
     fn smart_an_unresolved_template_needs_a_wildcard() {
-        let specific = principal_with_scopes("user/composition-Vitals.v1.r", &serde_json::json!({}));
+        let specific =
+            principal_with_scopes("user/composition-Vitals.v1.r", &serde_json::json!({}));
         assert!(smart_composition(&specific, "composition_get", None, Some("ehr-1")).is_err());
         let every = principal_with_scopes("user/composition-*.r", &serde_json::json!({}));
         assert!(smart_composition(&every, "composition_get", None, Some("ehr-1")).is_ok());
@@ -1292,7 +1307,9 @@ mod tests {
     #[test]
     fn smart_composition_ops_are_the_composition_family() {
         assert!(smart_composition_op("composition_get"));
-        assert!(smart_composition_op("versioned_composition_revision_history"));
+        assert!(smart_composition_op(
+            "versioned_composition_revision_history"
+        ));
         assert!(!smart_composition_op("composition_tags_get"));
         assert!(!smart_composition_op("ehr_create"));
     }

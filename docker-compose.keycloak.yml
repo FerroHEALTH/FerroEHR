@@ -8,9 +8,13 @@
 #   docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up
 #
 # It adds a Keycloak identity provider with a ready-made demo realm (inline
-# below — no repo checkout needed) and points the CDR's bearer validation at
-# it. Basic auth from the base file keeps working; the server then advertises
-# `Basic, Bearer`. Get a bearer token and call the API:
+# below — no repo checkout needed) and turns RBAC on. The CDR does NOT trust
+# this Keycloak's tokens yet: the demo realm is served as plain HTTP on the
+# compose network, and the CDR accepts a token issuer only over https or on a
+# loopback host (RFC 8414 §3, §6.2), so the bearer call below answers 401
+# until the overlay serves an issuer the CDR accepts (FerroHEALTH/FerroEHR#3873).
+# Basic auth from the base file keeps working. Get a bearer token and call the
+# API:
 #
 #   TOKEN=$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
 #     -d username=ferroehr -d password=ferroehr -d grant_type=password \
@@ -35,8 +39,8 @@
 #
 # QUICKSTART DEFAULTS — do NOT use in production: demo realm, demo secret,
 # demo password, HTTP (not TLS), Keycloak in start-dev mode. For a real
-# deployment configure your own issuer via FERROEHR__AUTH__OIDC__* (or the
-# [auth.oidc] config block) and remove this overlay.
+# deployment configure your own https issuer via FERROEHR__AUTH__ISSUER and
+# FERROEHR__AUTH__AUDIENCE (or the [auth] config block) and remove this overlay.
 #
 # The repo's dev/e2e lanes use their OWN Keycloak (docker-compose.dev.yml,
 # `keycloak` profile) with the full exported realm from docker/keycloak/import
@@ -48,17 +52,6 @@ services:
       keycloak:
         condition: service_healthy
     environment:
-      # The env layer beats the mounted config file, so these ADD bearer trust
-      # on top of the base quickstart posture without replacing it. The issuer
-      # is the canonical KC_HOSTNAME below: token `iss` claims match it no
-      # matter which host the token was requested from.
-      FERROEHR__AUTH__OIDC__ISSUER: http://keycloak:8081/auth/realms/ferroehr
-      # The demo realm speaks plain HTTP inside the compose network, which
-      # RFC 8414 §6.2 forbids for a real issuer — a dev-only opt-in. The
-      # audience is required (RFC 7519 §4.1.3): it is the realm's client id.
-      FERROEHR__AUTH__OIDC__ALLOW_INSECURE_ISSUER: "true"
-      FERROEHR__AUTH__OIDC__AUDIENCES: ferroehr
-      FERROEHR__AUTH__OIDC__ALGORITHMS: RS256
       # RBAC ON, because an identity provider whose roles decide nothing is a
       # login screen, not authorization. The base quickstart leaves it off so a
       # first run needs no role setup; this overlay exists to show real
@@ -126,8 +119,8 @@ configs:
   # (ferroehr / ferroehr) carrying the ADMIN + USER realm roles — Keycloak's
   # default client scopes put realm roles into the token's
   # `realm_access.roles`, which is the CDR's default role claim.
-  # The client's `oidc-audience-mapper` is LOAD-BEARING, not decoration: this
-  # overlay sets FERROEHR__AUTH__OIDC__AUDIENCES=ferroehr, and Keycloak puts a
+  # The client's `oidc-audience-mapper` is LOAD-BEARING, not decoration: a
+  # CDR trusting this realm sets FERROEHR__AUTH__AUDIENCE=ferroehr, and Keycloak puts a
   # client into `aud` only when a mapper says so or the token carries that
   # client's own roles. Without it the realm emits no `ferroehr` audience and
   # every bearer call is refused 401 (RFC 7519 §4.1.3 audience validation).

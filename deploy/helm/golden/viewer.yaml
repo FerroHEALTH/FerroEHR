@@ -239,8 +239,8 @@ data:
     
         [[auth.basic.users]]
           password_hash_file = "/etc/ferroehr-secrets/auth.basic.users.clinician.password_hash"
-          roles = ["ADMIN"]
-          username = "clinician"
+          scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
+          user = "clinician"
     
     [authz]
       [authz.abac]
@@ -249,6 +249,8 @@ data:
         admin_role = "ADMIN"
         enabled = true
         user_role = "USER"
+        [authz.rbac.basic_roles]
+          clinician = ["ADMIN"]
     
     [db]
       acquire_timeout_secs = 30.0
@@ -403,7 +405,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 184383a0ce9b12825423482bf69ef3568ec9b849190a69e0e94ea70ea6dfc290
+        checksum/config: 214c80918c112005b45bc147674ec59aeb53b1da9d4ac985c4ac4bb5854a34bf
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

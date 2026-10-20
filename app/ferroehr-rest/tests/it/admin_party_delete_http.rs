@@ -83,7 +83,8 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config(), Arc::new(svc), authz, Observability::default()).await
+    let app = ferroehr_rest::build_full(config(), Arc::new(svc), authz, Observability::default())
+        .await
         .expect("build app");
     (db, pool, app)
 }

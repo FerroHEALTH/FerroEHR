@@ -12,9 +12,11 @@
 # the box.
 #
 # DEV DEFAULTS — do NOT use in production. The credentials are:
-#   username: ferroehr           password: ferroehr   (Argon2id PHC hash below)
-#   username: ferroehr-admin     password: ferroehr   (ADMIN + USER roles)
-#   username: ferroehr-readonly  password: ferroehr   (READONLY role; writes 403)
+#   user: ferroehr           password: ferroehr   (Argon2id PHC hash below)
+#   user: ferroehr-admin     password: ferroehr   (ADMIN + USER roles)
+#   user: ferroehr-readonly  password: ferroehr   (READONLY role; writes 403)
+# Each holds every SMART on openEHR scope and the product scope, so the SMART
+# layer passes and the RBAC roles decide.
 
 # The openEHR specification generation set (matches the built-in default;
 # explicit here so the dev lanes state the posture they test).
@@ -64,23 +66,12 @@ loggers = "admin_only"
 health = "admin_only"
 status = "admin_only"
 
-# Dev-only trust for the shipped dev Keycloak realm (docker/keycloak/import):
-# standard OIDC discovery — the issuer is the canonical KC_HOSTNAME from
-# docker-compose.dev.yml; the CDR resolves the JWKS lazily from the issuer's
-# discovery document (cached, refreshed — key rotation just works, exactly
-# like any real OAuth2 resource server; no static key material). With this
-# the CDR advertises `Basic, Bearer` and an OIDC-logged-in viewer can
-# query it. Do NOT copy into production; configure your real issuer instead.
-[auth.oidc]
-issuer = "http://keycloak:8081/auth/realms/ferroehr"
-# The dev realm is served over plain HTTP inside the compose network, which
-# RFC 8414 §6.2 forbids for a real issuer — hence the explicit dev-only opt-in.
-allow_insecure_issuer = true
-# Required: the audience this CDR answers to. A resource server that declares
-# none cannot reject a token minted for a different one (RFC 7519 §4.1.3), so
-# the dev realm's `ferroehr` client id is named here.
-audiences = ["ferroehr"]
-algorithms = ["RS256"]
+# No bearer trust: the dev Keycloak realm (docker/keycloak/import) is served as
+# http://keycloak:8081 on the compose network, and the CDR accepts a token
+# issuer only over https or on a loopback host (RFC 8414 §3, §6.2). An
+# OIDC-logged-in viewer therefore gets 401 from this CDR until the dev stack
+# serves an issuer it accepts.
+# TODO(#3873): give the dev stack a Keycloak issuer the CDR accepts.
 
 # The read-only terminology extension API (six GETs over the in-process
 # openEHR vocabulary bundle) is ON in the dev stack so the viewer's
@@ -146,7 +137,8 @@ cache_ttl_secs = 0
 "cnf-ts-down" = "unreachable"
 
 [[auth.basic.users]]
-username = "ferroehr"
+user = "ferroehr"
+scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
 # Argon2id hash of the password "ferroehr".
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
@@ -155,14 +147,19 @@ password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl
 # defaults to it). Same dev password "ferroehr" (same hash); ADMIN + USER
 # roles. Do NOT use in production.
 [[auth.basic.users]]
-username = "ferroehr-admin"
+user = "ferroehr-admin"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-roles = ["ADMIN", "USER"]
+scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
 
 # Dev-only READ-ONLY account for the conformance suite's authorization-
 # separation cases (SEC-BASIC): authenticated, but every write operation is
 # refused by the RBAC read-only gate. Do NOT use in production.
 [[auth.basic.users]]
-username = "ferroehr-readonly"
+user = "ferroehr-readonly"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-roles = ["READONLY"]
+scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
+
+# The RBAC roles of the dev users; `ferroehr` holds the default USER role.
+[authz.rbac.basic_roles]
+ferroehr-admin = ["ADMIN", "USER"]
+ferroehr-readonly = ["READONLY"]

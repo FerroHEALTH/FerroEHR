@@ -511,11 +511,10 @@ fn check_password_hash(username: &str, phc: &str) -> Result<(), AuthConfigError>
             algorithm: hash.algorithm.as_str().to_owned(),
         });
     }
-    let params =
-        Params::try_from(&hash).map_err(|e| AuthConfigError::PasswordHashUnparsable {
-            username: username.to_owned(),
-            reason: e.to_string(),
-        })?;
+    let params = Params::try_from(&hash).map_err(|e| AuthConfigError::PasswordHashUnparsable {
+        username: username.to_owned(),
+        reason: e.to_string(),
+    })?;
     if params.m_cost() < MIN_ARGON2_M_COST
         || params.t_cost() < MIN_ARGON2_T_COST
         || params.p_cost() < MIN_ARGON2_P_COST
@@ -836,7 +835,8 @@ mod tests {
             Err(AuthConfigError::JwksUnparsable { .. })
         ));
         // A parse failure never quotes the value it choked on.
-        let err = check_jwks(r#"{"keys":"c2VjcmV0LWtleS1tYXRlcmlhbA"}"#).expect_err("not a JWK Set");
+        let err =
+            check_jwks(r#"{"keys":"c2VjcmV0LWtleS1tYXRlcmlhbA"}"#).expect_err("not a JWK Set");
         assert!(
             !err.to_string().contains("c2VjcmV0"),
             "the refusal must not quote the input"
@@ -852,7 +852,10 @@ mod tests {
             let body = format!(
                 "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nalgorithms = [\"{spelling}\"]\n"
             );
-            assert!(parse(&body).is_err(), "`{spelling}` must be refused at boot");
+            assert!(
+                parse(&body).is_err(),
+                "`{spelling}` must be refused at boot"
+            );
         }
     }
 
@@ -900,7 +903,10 @@ mod tests {
             validate(&no_hash),
             Err(AuthConfigError::Section { .. })
         ));
-        assert!(validate(&basic(&floor)).is_ok(), "a Basic-only section boots");
+        assert!(
+            validate(&basic(&floor)).is_ok(),
+            "a Basic-only section boots"
+        );
     }
 
     #[test]

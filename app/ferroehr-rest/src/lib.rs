@@ -439,9 +439,9 @@ pub(crate) mod test_support {
         let mut header = Header::new(Algorithm::RS256);
         header.typ = Some("at+jwt".to_owned());
         header.kid = Some(KID.to_owned());
-        let key = EncodingKey::from_rsa_pem(
-            include_bytes!("../../../docs/conformance/party/smart/cnf-smart-test.key.pem"),
-        )
+        let key = EncodingKey::from_rsa_pem(include_bytes!(
+            "../../../docs/conformance/party/smart/cnf-smart-test.key.pem"
+        ))
         .expect("the committed test key");
         encode(&header, claims, &key).expect("encode")
     }

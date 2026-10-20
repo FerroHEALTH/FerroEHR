@@ -25,8 +25,8 @@
 //! - [`fhir`] — [`FhirTerminologyProvider`](fhir::FhirTerminologyProvider), a
 //!   remote FHIR R4B TS client (opt-in via
 //!   [`ExternalTerminologyConfig`](config::ExternalTerminologyConfig)).
-//! - [`oauth2`] — [`TokenSource`](oauth2::TokenSource), the `OAuth2`
-//!   client-credentials authentication a provider may carry.
+//! - [`oauth2`] — the OAuth 2.0 client credentials grant a provider may
+//!   authenticate with, on the `ferrohealth-smart` client.
 //! - [`tls`] — the per-provider outbound TLS material (no openEHR spec governs
 //!   transport security — our own design).
 //! - [`router`] — [`TerminologyRouter`](router::TerminologyRouter): every

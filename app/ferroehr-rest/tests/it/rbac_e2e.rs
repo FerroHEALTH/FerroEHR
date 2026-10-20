@@ -106,7 +106,8 @@ async fn app(rbac_enabled: bool, audit: Option<AuditSender>) -> (testkit::TestDb
         svc,
         authz(rbac_enabled),
         ferroehr_rest::extensions::management::Observability::default(),
-    ).await
+    )
+    .await
     .expect("build app");
     (pg, app)
 }
@@ -436,7 +437,9 @@ async fn app_with_config_snapshot(snapshot: Value) -> (testkit::TestDb, Router) 
         env_snapshot: Arc::new(snapshot),
         ..Default::default()
     };
-    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs).await.expect("build app");
+    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs)
+        .await
+        .expect("build app");
     (pg, app)
 }
 
@@ -541,7 +544,9 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         env_snapshot: Arc::new(snapshot),
         ..Default::default()
     };
-    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs).await.expect("build app");
+    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs)
+        .await
+        .expect("build app");
     for uri in [format!("{BASE}/admin/config"), "/management/env".to_owned()] {
         let request = Request::builder()
             .method("GET")

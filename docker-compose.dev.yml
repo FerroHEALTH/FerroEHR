@@ -81,9 +81,10 @@ services:
 
   # Keycloak for OAuth2/OIDC bearer auth (the "ferroehr" realm is imported from
   # docker/keycloak/import), behind the `keycloak` profile. The app defaults to
-  # Basic auth, so it does NOT depend on Keycloak; docker/ferroehr.dev.toml's
-  # [auth.oidc] block points at the realm below, and the OIDC lanes start it
-  # with `docker compose --profile keycloak up`.
+  # Basic auth, so it does NOT depend on Keycloak; the viewer's OIDC login
+  # points at the realm below, and the OIDC lanes start it with
+  # `docker compose --profile keycloak up`. The CDR does not trust this
+  # plain-HTTP issuer (FerroHEALTH/FerroEHR#3873).
   keycloak:
     cap_drop: [ALL]
     security_opt:
@@ -103,9 +104,9 @@ services:
       # containerized viewer and a host browser can share one OIDC issuer.
       KC_HTTP_PORT: 8081
       # ONE canonical issuer regardless of which host the caller used —
-      # token `iss` claims stay stable, so the CDR can validate bearer
-      # tokens against a single configured issuer (ferroehr.dev.toml
-      # [auth.oidc]). Override for human viewer browsing if needed.
+      # token `iss` claims stay stable, so a client can validate bearer
+      # tokens against a single configured issuer. Override for human viewer
+      # browsing if needed.
       # NOTE: a URL-form KC_HOSTNAME replaces the whole base — Keycloak does
       # NOT append KC_HTTP_RELATIVE_PATH to it, so /auth must be included.
       KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-http://keycloak:8081/auth}

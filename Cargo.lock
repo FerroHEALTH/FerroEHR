@@ -2637,7 +2637,6 @@ dependencies = [
  "jsonschema",
  "lapin",
  "moka",
- "oauth2",
  "object_store",
  "openehr-adl",
  "openehr-am",

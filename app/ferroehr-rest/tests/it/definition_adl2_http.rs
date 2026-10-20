@@ -32,9 +32,9 @@ use serde_json::Value;
 use std::fmt::Write;
 use tower::ServiceExt;
 
-use ferrohealth_smart::config::AuthSection;
 use ferroehr::config::server::ServerConfig;
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 

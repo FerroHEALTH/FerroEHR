@@ -127,10 +127,9 @@ data:
         sgb_v_309_controller = true
     
     [auth]
+      audience = ["ferroehr"]
       enabled = true
-      [auth.oidc]
-        audiences = ["ferroehr"]
-        issuer = "https://idp.example.com/realms/ferroehr"
+      issuer = "https://idp.example.com/realms/ferroehr"
     
     [authz]
       [authz.abac]
@@ -271,7 +270,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 6957d183bfdb051961ce757bd3aaea0d95e1479536c2190165b11a730c8d29aa
+        checksum/config: a8f96d3128d5b8566f08de87402ced09d4d73dccc1200ff84e5817f9ebc3ea3e
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

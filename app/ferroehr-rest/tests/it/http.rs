@@ -302,7 +302,10 @@ async fn a_bearer_without_a_resource_scope_is_403() {
         .get(header::WWW_AUTHENTICATE)
         .and_then(|v| v.to_str().ok())
         .unwrap_or_default();
-    assert!(challenge.contains(r#"error="insufficient_scope""#), "{challenge}");
+    assert!(
+        challenge.contains(r#"error="insufficient_scope""#),
+        "{challenge}"
+    );
     assert!(!challenge.contains("scope=\""), "{challenge}");
 }
 

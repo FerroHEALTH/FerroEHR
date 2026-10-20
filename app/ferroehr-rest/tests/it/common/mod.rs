@@ -31,9 +31,9 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
 use ferroehr_rest::extensions::access::authz::{AuthzResolvers, ResolveError};
 use ferroehr_rest::state::AppState;
+use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser, IssuerKey};
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
-use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser, IssuerKey};
 use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 use serde_json::Value;
 use sqlx::PgPool;
@@ -127,10 +127,8 @@ const TEST_KID: &str = "cnf-smart-test";
 pub(crate) fn jwks_file() -> PathBuf {
     static FILE: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
     FILE.get_or_init(|| {
-        let path = std::env::temp_dir().join(format!(
-            "ferroehr-rest-it-jwks-{}.json",
-            std::process::id()
-        ));
+        let path =
+            std::env::temp_dir().join(format!("ferroehr-rest-it-jwks-{}.json", std::process::id()));
         std::fs::write(
             &path,
             include_str!("../../../../../docs/conformance/party/smart/jwks.json"),

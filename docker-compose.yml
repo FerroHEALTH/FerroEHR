@@ -629,17 +629,22 @@ configs:
       enabled = true
 
       # The quickstart user: ferroehr / ferroehr (the hash is Argon2id of
-      # "ferroehr"). Replace with your own users — or an [auth.oidc] issuer —
-      # before exposing the server to anything real.
+      # "ferroehr"). Replace with your own users — or an [auth] issuer — before
+      # exposing the server to anything real. Every route checks the SMART on
+      # openEHR scopes a user holds: these grant every resource family, and
+      # the product scope admits the ADMIN and DEMOGRAPHIC APIs.
       [[auth.basic.users]]
-      username = "ferroehr"
+      user = "ferroehr"
       password_hash = "$$argon2id$$v=19$$m=19456,t=2,p=1$$ZmVycm9laHJEZXZTYWx0$$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-      roles = ["ADMIN", "USER"]
+      scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
 
       # Quickstart: authentication only, no role gate — the one user above can
       # use the clinical API, the admin API and the management endpoints.
       [authz.rbac]
       enabled = false
+
+      [authz.rbac.basic_roles]
+      ferroehr = ["ADMIN", "USER"]
 
       # The admin API (DELETE /admin/...) — on for the quickstart so the
       # optional viewer's panels work; keep off in production unless

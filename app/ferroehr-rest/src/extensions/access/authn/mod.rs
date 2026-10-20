@@ -1103,10 +1103,10 @@ mod tests {
     #[tokio::test]
     async fn configured_basic_roles_are_upper_cased() {
         let mut config = basic_config(60);
-        config
-            .rbac
-            .basic_roles
-            .insert("alice".to_owned(), vec!["admin".to_owned(), "user".to_owned()]);
+        config.rbac.basic_roles.insert(
+            "alice".to_owned(),
+            vec!["admin".to_owned(), "user".to_owned()],
+        );
         let auth = Authenticator::new(&config).await.unwrap();
         let p = auth
             .authenticate(&headers("Basic YWxpY2U6cHc="))
@@ -1169,7 +1169,10 @@ mod tests {
                 .authenticate(&headers(malformed))
                 .await
                 .expect_err("a malformed credential must be refused");
-            assert!(matches!(err, AuthError::InvalidCredentials), "{malformed}: {err:?}");
+            assert!(
+                matches!(err, AuthError::InvalidCredentials),
+                "{malformed}: {err:?}"
+            );
         }
     }
 
@@ -1183,7 +1186,10 @@ mod tests {
     async fn valid_token_authenticates() {
         let p = bearer_only()
             .await
-            .authenticate(&bearer(&test_support::claims("alice", "openid user/composition-*.r")))
+            .authenticate(&bearer(&test_support::claims(
+                "alice",
+                "openid user/composition-*.r",
+            )))
             .await
             .expect("ok");
         assert_eq!(p.principal.subject, "alice");
@@ -1194,7 +1200,10 @@ mod tests {
             p.principal.claims.get("sub").and_then(Value::as_str),
             Some("alice")
         );
-        assert!(!p.fresh, "a bearer request is federated, never a login event");
+        assert!(
+            !p.fresh,
+            "a bearer request is federated, never a login event"
+        );
     }
 
     /// One invalid token of every kind the old validator classified: each is
@@ -1213,7 +1222,11 @@ mod tests {
         };
         let mut tampered = test_support::token(&base);
         let flip = tampered.len() - 10;
-        let replacement = if tampered.as_bytes()[flip] == b'A' { "B" } else { "A" };
+        let replacement = if tampered.as_bytes()[flip] == b'A' {
+            "B"
+        } else {
+            "A"
+        };
         tampered.replace_range(flip..=flip, replacement);
         let unsigned = |typ: Option<&str>, claims: &Value| {
             let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
@@ -1251,7 +1264,10 @@ mod tests {
             ("not yet valid", with("nbf", json!(now() + 3600))),
             ("wrong issuer", with("iss", json!("https://evil.example"))),
             ("no issuer", without("iss")),
-            ("another audience", with("aud", json!("some-other-resource-server"))),
+            (
+                "another audience",
+                with("aud", json!("some-other-resource-server")),
+            ),
             ("tampered signature", tampered),
             ("HMAC confusion", unsigned(Some("at+jwt"), &base)),
             ("an ID token", typed("JWT+ID")),
@@ -1434,7 +1450,10 @@ mod tests {
                 .map(|rest| rest.trim_matches('"').to_owned())
         };
         assert_eq!(code(&AuthError::MissingCredentials), None);
-        assert_eq!(code(&AuthError::InvalidToken).as_deref(), Some("invalid_token"));
+        assert_eq!(
+            code(&AuthError::InvalidToken).as_deref(),
+            Some("invalid_token")
+        );
         assert_eq!(
             code(&AuthError::Forbidden("x".to_owned())).as_deref(),
             Some("insufficient_scope")
@@ -1681,7 +1700,11 @@ mod tests {
                 .respond_with(ResponseTemplate::new(500))
                 .mount(&server)
                 .await;
-            assert!(authenticator(section(&server.uri(), 60, 5_000)).await.is_err());
+            assert!(
+                authenticator(section(&server.uri(), 60, 5_000))
+                    .await
+                    .is_err()
+            );
         }
 
         #[tokio::test]
@@ -1735,11 +1758,22 @@ mod tests {
             let api = err.to_api_error();
             assert_eq!(api.status(), StatusCode::SERVICE_UNAVAILABLE);
             let body = api.to_string();
-            assert!(!body.contains("127.0.0.1"), "the body names the URL: {body}");
-            assert_eq!(reads.load(Ordering::SeqCst), 2, "the boot read and one refetch");
+            assert!(
+                !body.contains("127.0.0.1"),
+                "the body names the URL: {body}"
+            );
+            assert_eq!(
+                reads.load(Ordering::SeqCst),
+                2,
+                "the boot read and one refetch"
+            );
 
             // Still inside the interval since the failed read: nothing is read.
-            assert!(auth.authenticate(&token_under(&issuer, "rotated")).await.is_err());
+            assert!(
+                auth.authenticate(&token_under(&issuer, "rotated"))
+                    .await
+                    .is_err()
+            );
             assert_eq!(
                 reads.load(Ordering::SeqCst),
                 2,

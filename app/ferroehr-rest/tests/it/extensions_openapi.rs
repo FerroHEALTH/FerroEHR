@@ -30,7 +30,6 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferrohealth_smart::config::AuthSection;
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
 use ferroehr::config::server::{AdminConfig, ServerConfig};
 use ferroehr::config::smart::SmartConfig;
@@ -40,6 +39,7 @@ use ferroehr::telemetry::log_reload::LogReload;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::extensions::openapi::extensions_document;
+use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 
@@ -613,5 +613,7 @@ async fn full_app() -> Router {
         ..Observability::default()
     };
     let (_pg, service) = common::test_service().await;
-    ferroehr_rest::build_full(config, service, None, observability).await.expect("build")
+    ferroehr_rest::build_full(config, service, None, observability)
+        .await
+        .expect("build")
 }

@@ -9,9 +9,9 @@
 
 use ferroehr::config::auth::{AssuranceConfig, ProfessionalConfig};
 use ferroehr::config::authz::RbacConfig;
-use ferrohealth_smart::config::AuthSection;
 use ferroehr::config::server::{AdminConfig, ServerConfig};
 use ferroehr::config::smart::SmartConfig;
+use ferrohealth_smart::config::AuthSection;
 
 /// The REST adapter's runtime configuration view, assembled by the binary
 /// from the root [`ferroehr::config::FerroEhrConfig`].
