@@ -30,9 +30,9 @@ versioned with the release like every page of this book.
 ## The component and the surface it records
 
 The component is, in the code: the FerroHEALTH products' shared crates
-`ehds-logging` 0.1.0 (the Annex II 3.2 access record, the Art. 14(1)
+`ehds-logging` 0.1.1 (the Annex II 3.2 access record, the Art. 14(1)
 categories and their classification, the Art. 9(2) retention floor and the
-emergency mark) and `ihe-atna` 0.1.0 (the BALP and DICOM renderings and the
+emergency mark) and `ihe-atna` 0.1.1 (the BALP and DICOM renderings and the
 ATNA sender), from FerroAUDIT; `ferroehr::system_log` (the access-event model,
 the audit store, what each rendering says and the sinks),
 `ferroehr-rest::system_log` (the middleware that records every API access and
@@ -429,4 +429,4 @@ EHDS-side risk assessment of the component.
 | 4 | 2026-10-15 | Reviewed for release 4.3.9 (changes since 4.3.6: digest version 2 of the audit chain over every column, audit migration 0011 (#3686); one data-flow direction for the DICOM and FHIR renderings (#3687) and the BALP `Delete` agent types (#3750); the physical party delete classified and its party named (#3683); every audit-store and retention-register checkout through the typed database acquire (#3749)); every named test exists and asserts its control; H1, H2 and H7 name the new tests, H7 the version 1 records; no hazard added |
 | 5 | 2026-10-20 | Reviewed for release 5.1.0 (changes since 5.0.0: the audit FHIR feed authenticates with an OAuth 2.0 client-credentials token, and a token endpoint that refuses or cannot be reached is a transport error, so the records stay pending and are delivered on recovery as H5 states (#3829); the assurance and professional rules the access record carries move under `[authz]` (#3872)); every named test exists and asserts its control; no hazard added |
 | 6 | 2026-10-20 | Reviewed for release 5.2.0 (changes since 5.1.0: the EHDS Art. 8 restriction of access lands, so H9's control is the restriction with its emergency override and the mark on that access record (#3682); a read of a party's protected identifiers is recorded per scheme (#3776); the access context carries whether a request enforces the restriction); every named test exists and asserts its control; no hazard added |
-| 7 | 2026-10-20 | Reviewed for the move onto FerroAUDIT (#3887): the access record, its categories and their classification, the retention floor and the emergency mark come from `ehds-logging` 0.1.0, the BALP and DICOM renderings and the ATNA sender from `ihe-atna` 0.1.0; the syslog feed sends over TLS only; H2, H3 and H9 name the moved tests; every named test exists and asserts its control; no hazard added |
+| 7 | 2026-10-20 | Reviewed for the move onto FerroAUDIT (#3887): the access record, its categories and their classification, the retention floor and the emergency mark come from `ehds-logging` 0.1.1, the BALP and DICOM renderings and the ATNA sender from `ihe-atna` 0.1.1; the syslog feed sends over TLS only; H2, H3 and H9 name the moved tests; every named test exists and asserts its control; no hazard added |

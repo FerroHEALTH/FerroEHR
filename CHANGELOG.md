@@ -22,9 +22,9 @@ workflow refuses a tag that has no matching section here.
 - **The access log is written through the FerroHEALTH products' shared audit
   crates** (#3887). The EHDS access record, the Art. 14(1) categories and their
   classification, the Art. 9(2) retention floor and the Art. 11(5) emergency
-  mark come from `ehds-logging` 0.1.0, and the BALP `AuditEvent`, the DICOM
+  mark come from `ehds-logging` 0.1.1, and the BALP `AuditEvent`, the DICOM
   audit message, the syslog sender and the ATX: FHIR Feed client from
-  `ihe-atna` 0.1.0 (FerroAUDIT). FerroEHR still decides which accesses are
+  `ihe-atna` 0.1.1 (FerroAUDIT). FerroEHR still decides which accesses are
   logged, what each record says and where it is stored.
 - **`[audit.categories]` names categories by their HL7 Europe codes.** A
   priority category is `Patient-Summaries`, `Electronic-Prescriptions`,
