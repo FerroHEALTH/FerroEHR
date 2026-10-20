@@ -131,6 +131,15 @@
           "description": "Inline DSN (dev/test only). Ignored when existingSecret is set.",
           "type": "string"
         },
+        "caConfigMap": {
+          "description": "An existing ConfigMap holding the database CA certificate, mounted at /etc/ferroehr-db-ca in every pod that connects to the database. Empty mounts nothing.",
+          "type": "string"
+        },
+        "caConfigMapKey": {
+          "description": "The key within caConfigMap holding the PEM CA certificate; it lands as /etc/ferroehr-db-ca/ca.crt.",
+          "type": "string",
+          "minLength": 1
+        },
         "clinical": {
           "description": "The clinical storage domain's own DSN. Empty uses the shared existingSecret / url, which is the schema-only posture.",
           "type": "object",

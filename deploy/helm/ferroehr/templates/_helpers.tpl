@@ -196,6 +196,28 @@ commonly points at it, so a secrets subdirectory there would be walked as policy
 {{- end }}
 
 {{/*
+The database CA (`database.caConfigMap`): the volume and its read-only mount
+at the directory a DSN's `sslrootcert=/etc/ferroehr-db-ca/ca.crt` names, for
+every pod that opens a database connection (PostgreSQL 18 docs, "SSL Support"
+§ Certificate Verification: verify-full checks the chain and the host name).
+*/}}
+{{- define "ferroehr.dbCaMount" -}}
+- name: db-ca
+  mountPath: /etc/ferroehr-db-ca
+  readOnly: true
+{{- end }}
+
+{{- define "ferroehr.dbCaVolume" -}}
+- name: db-ca
+  configMap:
+    name: {{ .Values.database.caConfigMap }}
+    defaultMode: 0444
+    items:
+      - key: {{ .Values.database.caConfigMapKey }}
+        path: ca.crt
+{{- end }}
+
+{{/*
 Secret-shaped leaf key names, as one regex. A ConfigMap is not a sensitive
 object — it is readable with namespace read, collected by backup tooling that
 excludes Secrets, and not covered by Secret encryption at rest — so a credential

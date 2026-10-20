@@ -288,6 +288,16 @@ k8s_pod() {
 }
 
 k8s_pf_start() {
+  # `port-forward svc/…` binds to ONE pod chosen when it starts, and a pod a
+  # rollout has just replaced can still be that pod while it terminates; the
+  # forward then dies with it and every later request reads `000`. So the
+  # forward starts once no server pod of the release is terminating.
+  local _i
+  for _i in $(seq 1 45); do
+    [[ -z "$(kc get pod -l "app.kubernetes.io/name=ferroehr,app.kubernetes.io/instance=${K8S_RELEASE}" \
+      -o jsonpath='{.items[?(@.metadata.deletionTimestamp)].metadata.name}' 2>/dev/null)" ]] && break
+    sleep 2
+  done
   kc port-forward "svc/$K8S_RELEASE" "${K8S_PORT}:8080" >/dev/null 2>&1 &
   K8S_PF_PID=$!
   wait_http "$K8S_CDR/health/liveness" 45

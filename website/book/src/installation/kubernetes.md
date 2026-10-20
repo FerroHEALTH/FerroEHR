@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 12.0.0 -n ferroehr \
+  --version 12.1.0 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.0.0
 ```
@@ -55,7 +55,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.0.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.1.0
 ```
 
 ### Pin two versions, not one
@@ -68,7 +68,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 12.0.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 12.1.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.0.0` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -168,7 +168,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.0.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.1.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -301,12 +301,21 @@ separation that profile checks made, except one it accepts by name:
 | `plaintext_audit_feed`, `plaintext_object_store` | the audit FHIR feed and the multimedia store off; an `https://` URL for either when you turn it on |
 | `plaintext_listener` | accepted by name: TLS ends at the Ingress (`ingress.tls`), the pod listens in plain HTTP, and the NetworkPolicy admits only the ingress controller's namespace (`networkPolicy.ingressFrom`, with `networkPolicy.ingressAllowAll: false`) |
 
-Every Secret name, the identity provider, the pseudonym namespace, the host,
-the TLS Secret and the ingress controller's namespace in it are examples.
+The database hop is TLS with the server's certificate checked: end every DSN in
+`?sslmode=verify-full&sslrootcert=/etc/ferroehr-db-ca/ca.crt`, and put the CA
+your database certificates chain to in a ConfigMap under the key `ca.crt`. The
+overlay names it `ferroehr-db-ca` (`database.caConfigMap`), and the chart mounts
+it read-only at `/etc/ferroehr-db-ca` in the server, the migration Job and the
+backup CronJobs. A CA the image already trusts needs no ConfigMap; leave
+`database.caConfigMap` empty then.
+
+Every Secret name, the CA ConfigMap name, the identity provider, the pseudonym
+namespace, the host, the TLS Secret and the ingress controller's namespace in it
+are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.0.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.1.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -318,10 +327,11 @@ validation renders the overlay and asserts each separation above, and its
 boot check has the server evaluate the posture from the rendered
 configuration. Neither reaches a database. The deployment probe
 (`scripts/deploy-probe-k8s.sh --production-only`) installs the overlay on a
-real cluster against four PostgreSQL clusters: it observes the migration Job
-prepare all four, the server start under `production` with `plaintext_listener`
-as its only gap, and the server refuse all four domains on one cluster by
-naming `shared_cluster`. Against your own databases, `shared_cluster` is first
+real cluster against four PostgreSQL clusters that refuse a connection without
+encryption: it observes the migration Job prepare all four and the server start
+under `production` with `plaintext_listener` as its only gap, both over
+`sslmode=verify-full` against the CA the overlay mounts, and the server refuse
+all four domains on one cluster by naming `shared_cluster`. Against your own databases, `shared_cluster` is first
 judged when the pod starts.
 
 ## Database roles — who runs migrations
@@ -566,9 +576,10 @@ on a cluster whose network plugin does not enforce NetworkPolicy the object is
 documentation rather than a control, and nothing in Kubernetes reports that.
 Confirm it by attempting a connection the policy should refuse.
 
-The database-side controls (TLS with `sslmode=verify-full`, pgaudit, at-rest
-encryption, WAL archiving / PITR) belong to whoever provisions PostgreSQL; the
-chart references them but cannot enforce them. See
+The database-side controls (the server certificate behind `sslmode=verify-full`,
+pgaudit, at-rest encryption, WAL archiving / PITR) belong to whoever provisions
+PostgreSQL; the chart mounts the CA (`database.caConfigMap`) but cannot enforce
+the rest. See
 [Operations](../operations.md).
 
 ### TLS at the pod
@@ -776,7 +787,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 12.0.0 -n ferroehr --reuse-values \
+  --version 12.1.0 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -875,7 +886,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 12.0.0 -n ferroehr --reuse-values \
+  --version 12.1.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1220,7 +1231,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.0.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.1.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

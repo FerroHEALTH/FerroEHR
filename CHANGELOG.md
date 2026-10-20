@@ -17,6 +17,14 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **The Helm chart mounts a database CA for `sslmode=verify-full`** (#3788,
+  chart 12.1.0). `database.caConfigMap` names a ConfigMap holding the CA the
+  database certificates chain to (key `database.caConfigMapKey`, `ca.crt` by
+  default); the server, the migration Job and the backup CronJobs mount it at
+  `/etc/ferroehr-db-ca`, where a DSN's `sslrootcert` names it.
+  `values-production.yaml` sets it to `ferroehr-db-ca` and tells you to end
+  every DSN in `?sslmode=verify-full&sslrootcert=/etc/ferroehr-db-ca/ca.crt`.
+
 - **A demographic query joins a party to the content of its EHR** (#3831).
   `FROM PERSON p CONTAINS EHR e CONTAINS COMPOSITION c` (with `ORGANISATION`
   or `ROLE` as the root too, and party classes beside the `EHR` in an `AND`)

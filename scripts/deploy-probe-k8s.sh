@@ -48,7 +48,9 @@
 #                     podman VM cannot create the user-namespaced pods
 #                     `hostUsers: false` asks for). The header prints it, and the
 #                     posture probes then measure the overridden release, so a
-#                     run with it is never a record of the chart's defaults.
+#                     run with it is never a record of the chart's defaults. A
+#                     release whose pods do not run with `hostUsers: false` is
+#                     recorded as not exercised, by name.
 #   PROBE_K8S_PROD_PORT_BASE
 #                     first host port of the four PostgreSQL clusters the
 #                     production probes bring up, one per storage domain
@@ -101,6 +103,10 @@ K8S_PROD_DOMAINS=(clinical party linkage audit)
 K8S_PROD_VALUES="deploy/helm/ferroehr/values-production.yaml"
 K8S_PROD_OVERRIDES="$PROBE_TMP/production-probe-values.yaml"
 K8S_PROD_PASSWORD="probe-only-not-a-secret"
+# The CA every cluster's certificate chains to, and where the overlay mounts it.
+K8S_PROD_CA="$PROBE_TMP/probe-db-ca.crt"
+K8S_PROD_CA_CONFIGMAP="probe-db-ca"
+K8S_PROD_TLS_QUERY="sslmode=verify-full&sslrootcert=/etc/ferroehr-db-ca/ca.crt"
 
 kp() { kubectl -n "$K8S_PROD_NS" "$@"; }
 
@@ -130,9 +136,85 @@ k8s_prod_psql() {
     psql -v ON_ERROR_STOP=1 -U postgres -d "${PG_INIT_DB:-ferroehr}" -tAc "$2"
 }
 
-# k8s_prod_dsn <login> <password> <cluster>
+# k8s_prod_dsn <login> <password> <cluster>: TLS with the server's certificate
+# checked against the probe CA and the host name pods reach it at.
 k8s_prod_dsn() {
-  printf 'postgres://%s:%s@%s:%s/%s' "$1" "$2" "$K8S_DB_HOST" "$(k8s_prod_port "$3")" "${PG_INIT_DB:-ferroehr}"
+  printf 'postgres://%s:%s@%s:%s/%s?%s' "$1" "$2" "$K8S_DB_HOST" "$(k8s_prod_port "$3")" \
+    "${PG_INIT_DB:-ferroehr}" "$K8S_PROD_TLS_QUERY"
+}
+
+# k8s_prod_pg <cluster> <command...>: run a command in a cluster's container as
+# the postgres user, so the files it writes in the data directory are the
+# server's own.
+k8s_prod_pg() {
+  local cluster="$1"
+  shift
+  docker compose -p "$(k8s_prod_project "$cluster")" exec -T -u postgres ferroehr-postgres "$@"
+}
+
+# TLS on every cluster: one probe CA, made in the clinical container, and per
+# cluster a server certificate for the address pods reach it at, signed by it.
+# Each cluster then refuses a connection without encryption (`hostnossl ...
+# reject`, PostgreSQL 18 docs, "The pg_hba.conf File"), so a boot over these
+# DSNs is a boot over TLS, and `sslmode=verify-full` makes the server check the
+# chain and the host name (PostgreSQL 18 docs, "SSL Support" § Certificate
+# Verification).
+k8s_prod_tls() {
+  local ca=/tmp/probe-ca san domain dir
+  case "$K8S_DB_HOST" in
+    *[!0-9.]*) san="DNS:${K8S_DB_HOST}" ;;
+    *) san="IP:${K8S_DB_HOST}" ;;
+  esac
+  k8s_prod_pg clinical sh -ec "mkdir -p $ca
+    openssl req -x509 -new -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 2 \
+      -subj '/CN=FerroEHR probe database CA' \
+      -addext 'basicConstraints=critical,CA:TRUE' -addext 'keyUsage=critical,keyCertSign,cRLSign' \
+      -keyout $ca/ca.key -out $ca/ca.crt
+    printf 'subjectAltName=%s\nbasicConstraints=CA:FALSE\nkeyUsage=critical,digitalSignature\nextendedKeyUsage=serverAuth\n' '$san' > $ca/server.ext" \
+    >/dev/null 2>&1 || return 1
+  k8s_prod_pg clinical cat "$ca/ca.crt" > "$K8S_PROD_CA" || return 1
+  for domain in "${K8S_PROD_DOMAINS[@]}"; do
+    dir="$(k8s_prod_psql "$domain" "SHOW data_directory")" || return 1
+    k8s_prod_pg "$domain" openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
+        -subj "/CN=${K8S_DB_HOST}" -keyout "$dir/probe-server.key" 2>/dev/null \
+      | k8s_prod_pg clinical openssl x509 -req -CA "$ca/ca.crt" -CAkey "$ca/ca.key" -CAcreateserial \
+        -days 2 -extfile "$ca/server.ext" 2>/dev/null \
+      | k8s_prod_pg "$domain" sh -ec "cat > '$dir/probe-server.crt'; chmod 0600 '$dir/probe-server.key'
+          sed -i '1i hostnossl all all all reject' '$dir/pg_hba.conf'" || return 1
+    k8s_prod_psql "$domain" "ALTER SYSTEM SET ssl_cert_file = 'probe-server.crt'" >/dev/null || return 1
+    k8s_prod_psql "$domain" "ALTER SYSTEM SET ssl_key_file = 'probe-server.key'" >/dev/null || return 1
+    k8s_prod_psql "$domain" "ALTER SYSTEM SET ssl = on" >/dev/null || return 1
+    k8s_prod_psql "$domain" "SELECT pg_reload_conf()" >/dev/null || return 1
+  done
+  local _i
+  for _i in $(seq 1 15); do
+    for domain in "${K8S_PROD_DOMAINS[@]}"; do
+      [[ "$(k8s_prod_psql "$domain" "SHOW ssl")" == on ]] || continue 2
+    done
+    return 0
+  done
+  return 1
+}
+
+# k8s_prod_plaintext_refused <cluster>: a TCP connection without encryption,
+# on a valid login, is refused by the cluster itself.
+k8s_prod_plaintext_refused() {
+  local out
+  out="$(docker compose -p "$(k8s_prod_project "$1")" exec -T ferroehr-postgres \
+    psql "host=127.0.0.1 sslmode=disable user=$(k8s_prod_login "$1") password=${K8S_PROD_PASSWORD} dbname=${PG_INIT_DB:-ferroehr}" \
+    -tAc 'SELECT 1' 2>&1)" && return 1
+  case "$out" in *"no encryption"*) return 0 ;; *) return 1 ;; esac
+}
+
+# k8s_record_host_users <namespace> <deployment>: a release whose pods share the
+# node's user namespace leaves `hostUsers: false` unexercised, and the record
+# says so by name rather than by silence.
+k8s_record_host_users() {
+  local host_users
+  host_users="$(kubectl -n "$1" get deploy "$2" -o jsonpath='{.spec.template.spec.hostUsers}' 2>/dev/null)"
+  [[ "$host_users" == false ]] && return 0
+  uncovered "hostUsers: false, the pod's own user namespace (deployment $1/$2)" \
+    "this run's pods do not set hostUsers: false (they carry '${host_users:-unset}', overrides: ${PROBE_K8S_VALUES:-none}), so they share the node's user namespace and the separation the chart default makes was not observed"
 }
 
 # The owner role the image's init script creates holds ferroehr_migrator and
@@ -203,18 +285,28 @@ k8s_prod_secrets() {
 }
 
 # The values the probe layers over values-production.yaml: the overlay's
-# example Secret names replaced by the ones created above, the image under
-# probe, and no usage report from a probe instance. Every separation the
+# example Secret names replaced by the ones created above, its example identity
+# provider's metadata replaced by the committed CNF test key set (the server
+# reads an issuer at boot, and idp.example.com does not resolve), the image
+# under probe, and no usage report from a probe instance. Every separation the
 # overlay makes stays its own.
 k8s_prod_overrides() {
   cat > "$K8S_PROD_OVERRIDES" <<YAML
 usageReport:
   enabled: false
+config:
+  auth:
+    jwks_file: /etc/ferroehr/probe-jwks.json
+  files:
+    probe-jwks.json: |
+$(sed 's/^/      /' docs/conformance/party/smart/jwks.json)
 image:
   repository: ${PROBE_K8S_IMAGE_REPO}
   tag: "${PROBE_K8S_IMAGE_TAG}"
   pullPolicy: IfNotPresent
 database:
+  caConfigMap: ${K8S_PROD_CA_CONFIGMAP}
+  caConfigMapKey: ca.crt
   existingSecret: probe-db-clinical
   existingSecretKey: dsn
   party: {existingSecret: probe-db-party, existingSecretKey: dsn,
@@ -257,8 +349,6 @@ k8s_prod_teardown() {
 
 probes_k8s_production() {
   bold "the production overlay against four database clusters"
-  uncovered "the database hop's TLS under the production overlay" \
-    "the four compose clusters serve plain TCP, so the DSNs carry no sslmode=verify-full; the overlay's advice to set it is not exercised"
   if ! k8s_prod_db_up; then
     uncovered "P-K8S-PROD-BOOT and P-K8S-PROD-SHARED" \
       "the four compose PostgreSQL clusters never became ready, a harness problem rather than a finding"
@@ -273,9 +363,25 @@ probes_k8s_production() {
       "the harness could not stand up four clusters with four system identifiers and the domain login roles (identifiers seen: ${ids})"
     return 0
   fi
+  if ! k8s_prod_tls; then
+    uncovered "P-K8S-PROD-TLS, P-K8S-PROD-BOOT and P-K8S-PROD-SHARED" \
+      "the harness could not give the four clusters a certificate from one probe CA, a harness problem rather than a finding"
+    return 0
+  fi
   kubectl create namespace "$K8S_PROD_NS" >/dev/null 2>&1 || true
+  kp create configmap "$K8S_PROD_CA_CONFIGMAP" --from-file=ca.crt="$K8S_PROD_CA" \
+    --dry-run=client -o yaml | kp apply -f - >/dev/null
   k8s_prod_overrides
   k8s_prod_secrets separate
+
+  probe "P-K8S-PROD-TLS-REFUSE" "broken" "compose" "#3788" \
+    "each of the four clusters refuses a connection without encryption, so only TLS reaches them"
+  for domain in "${K8S_PROD_DOMAINS[@]}"; do
+    k8s_prod_plaintext_refused "$domain" \
+      || probe_fail "cluster ${domain} refuses sslmode=disable with 'no encryption'" "it did not" \
+        "without the refusal a boot over these DSNs would not show that the hop is encrypted"
+  done
+  probe_done
 
   probe "P-K8S-PROD-BOOT" "working" "server" "#3692" \
     "the chart's migration Job prepares four clusters on their own migrators, and values-production.yaml then boots under production with migrate = verify, its only gap plaintext_listener, accepted by name"
@@ -311,6 +417,26 @@ probes_k8s_production() {
     fi
   fi
   probe_done
+
+  probe "P-K8S-PROD-TLS" "working" "server" "#3788" \
+    "the migration Job and the server reach all four clusters with sslmode=verify-full, the certificates checked against the CA the overlay mounts at /etc/ferroehr-db-ca"
+  if [[ "$installed" -eq 0 ]]; then
+    probe_fail "an installed release" "the install failed above"
+  elif [[ -z "${report:-}" ]]; then
+    probe_fail "a booted server that read its live pools" "the rollout never completed"
+  else
+    assert_eq "/etc/ferroehr-db-ca" \
+      "$(kp get deploy "$K8S_PROD_RELEASE" -o jsonpath='{.spec.template.spec.containers[0].volumeMounts[?(@.name=="db-ca")].mountPath}')" \
+      "the overlay mounts the CA where every DSN's sslrootcert names it"
+    local ssl_rows
+    ssl_rows="$(for domain in "${K8S_PROD_DOMAINS[@]}"; do
+      k8s_prod_psql "$domain" "SELECT count(*) FROM pg_stat_ssl s JOIN pg_stat_activity a USING (pid) WHERE a.usename = '$(k8s_prod_login "$domain")' AND NOT s.ssl"
+    done | sort -u | tr '\n' ' ')"
+    assert_eq "0 " "$ssl_rows" \
+      "no domain role holds a connection without TLS on its cluster"
+  fi
+  probe_done
+  k8s_record_host_users "$K8S_PROD_NS" "$K8S_PROD_RELEASE"
 
   probe "P-K8S-PROD-SHARED" "broken" "server" "#3692" \
     "with all four domains on one cluster, each on its own role, the production boot refuses and names shared_cluster"
@@ -381,7 +507,10 @@ render_check() {
     'value: "/etc/ferroehr-secrets/storage.migrate.party.url"' \
     'value: "/etc/ferroehr-secrets/storage.migrate.linkage.url"' \
     'value: "/etc/ferroehr-secrets/storage.migrate.audit.url"' \
-    "name: ${K8S_PROD_RELEASE}-migrate"; do
+    "name: ${K8S_PROD_RELEASE}-migrate" \
+    "name: ${K8S_PROD_CA_CONFIGMAP}" \
+    "mountPath: /etc/ferroehr-db-ca" \
+    'jwks_file = "/etc/ferroehr/probe-jwks.json"'; do
     grep -qF -- "$want" <<<"$rendered" || { red "  the production install render lacks: ${want}"; failed=1; }
   done
   [[ "$(grep -c -- '- key: dsn' <<<"$rendered")" -ge 12 ]] \
@@ -491,6 +620,7 @@ fi
 
 k8s_namespace
 if probes_k8s_boot; then
+  k8s_record_host_users "$K8S_NS" "$K8S_RELEASE"
   probes_k8s_runtime_posture
   probes_k8s_psa
   probes_k8s_service_links

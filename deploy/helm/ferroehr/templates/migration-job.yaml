@@ -144,6 +144,9 @@ spec:
             - name: migrator-secret
               mountPath: {{ include "ferroehr.secretMountPath" . }}
               readOnly: true
+            {{- if .Values.database.caConfigMap }}
+            {{- include "ferroehr.dbCaMount" . | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.migrations.job.resources | nindent 12 }}
       volumes:
@@ -168,6 +171,9 @@ spec:
                       path: storage.migrate.{{ $domain }}.url
               {{- end }}
               {{- end }}
+      {{- if .Values.database.caConfigMap }}
+      {{- include "ferroehr.dbCaVolume" . | nindent 8 }}
+      {{- end }}
       {{- with .Values.migrations.job.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
