@@ -1013,7 +1013,7 @@ messages! {
     SubjectNamespaceOptional = "subject-namespace-optional",
     /// `Subject id (optional)`
     SubjectIdOptional = "subject-id-optional",
-    /// `ehr_id (UUID) — blank lets the CDR mint one`
+    /// `UUID, or blank`
     EhrIdUuidBlankLetsCdr = "ehr-id-uuid-blank-lets-cdr",
     /// `EHR id (optional)`
     EhrIdOptional = "ehr-id-optional",

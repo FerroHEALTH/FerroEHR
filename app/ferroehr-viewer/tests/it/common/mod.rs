@@ -103,6 +103,10 @@ impl Harness {
         let mut caps = DesiredCapabilities::chrome();
         caps.add_arg("--headless=new").expect("caps");
         caps.add_arg("--window-size=1440,900").expect("caps");
+        // Transitions finish at once, so a capture taken right after a click
+        // shows the settled state rather than a cross-fade.
+        caps.add_arg("--force-prefers-reduced-motion")
+            .expect("caps");
         // The system theme reads light whatever the host prefers, so a journey
         // and a light screenshot see the same page on every machine.
         caps.add_arg("--blink-settings=preferredColorScheme=1")
@@ -257,6 +261,10 @@ impl Harness {
         let mut caps = DesiredCapabilities::chrome();
         caps.add_arg("--headless=new").expect("caps");
         caps.add_arg("--window-size=1440,900").expect("caps");
+        // Transitions finish at once, so a capture taken right after a click
+        // shows the settled state rather than a cross-fade.
+        caps.add_arg("--force-prefers-reduced-motion")
+            .expect("caps");
         // The system theme reads light whatever the host prefers, so a journey
         // and a light screenshot see the same page on every machine.
         caps.add_arg("--blink-settings=preferredColorScheme=1")

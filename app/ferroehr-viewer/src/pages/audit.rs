@@ -322,6 +322,8 @@ pub fn AuditPage() -> impl IntoView {
 /// keeps the form filled.
 fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
     let initial = move |key: &str| query.read_untracked().get(key).unwrap_or_default();
+    // The two instants take a wider share of the row than the other filters,
+    // so a whole instant shows at the desktop width.
     let from = text_filter(
         "from",
         tr(Msg::FromInstant),
@@ -341,7 +343,12 @@ fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
     view! {
         <leptos_router::components::Form method="GET" action="/audit" attr:class="mb-4">
             <div class="fui-field-flow">
-                {from} {to} {patient} {agent} {outcome} {action}
+                <div class="basis-56">{from}</div>
+                <div class="basis-56">{to}</div>
+                {patient}
+                {agent}
+                {outcome}
+                {action}
                 <button type="submit" class=crate::components::field::BTN_PRIMARY>
                     {tr(Msg::Filter)}
                 </button>
@@ -507,7 +514,7 @@ fn row_view(row: AuditRow) -> impl IntoView {
     view! {
         <tr class=ROW>
             <td class=CELL>{ferrohealth_ui::view::time::timestamp(&row.recorded)}</td>
-            <td class=CELL data-label=tr(Msg::Event2)>
+            <td class=CELL class:whitespace-nowrap=true data-label=tr(Msg::Event2)>
                 {event}
             </td>
             <td class=CELL_MONO data-label=tr(Msg::Operation)>
@@ -530,7 +537,7 @@ fn row_view(row: AuditRow) -> impl IntoView {
                     <summary class="cursor-pointer text-accent hover:underline text-xs">
                         "view"
                     </summary>
-                    <pre class="mt-2 max-h-80 max-w-xl overflow-auto rounded-card border border-edge bg-sunken p-2 font-mono text-xs">
+                    <pre class="mt-2 max-h-80 w-56 overflow-auto rounded-card border border-edge bg-sunken p-2 font-mono text-xs">
                         {row.raw}
                     </pre>
                 </details>

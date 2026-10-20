@@ -89,6 +89,13 @@ workflow refuses a tag that has no matching section here.
   the CDR refused the session. The guard now covers the documentation routes
   only, and the viewer shows SMART as not enabled.
 
+- **Four viewer layout defects** (#3841). The Create EHR id field's
+  placeholder reads "UUID, or blank" and fits; the audit log's From and To
+  filters take a wider share of the row so an instant shows whole, its Event
+  column keeps "REST · E" on one line, and an opened record scrolls inside a
+  narrow box instead of widening the page. The book captures are taken with
+  reduced motion, so the results Table/Chart toggle no longer shows mid-fade.
+
 - **The OpenAPI family titles carry no em dash** (#3865). The served
   documents and the viewer's family selector read "FerroEHR: Messaging",
   "openEHR: EHR" and so on.
