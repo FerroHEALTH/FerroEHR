@@ -44,7 +44,8 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
-use crate::service::error::ServiceError;
+use crate::service::demographic::identifier::store::StoreError;
+use crate::service::error::{ServiceError, Violation};
 use crate::storage::codec::{decompose, reassemble};
 use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::TreeId;
@@ -480,6 +481,12 @@ async fn land_first_receipt(
 /// data-minimisation scan does for clinical content. No openEHR spec governs
 /// identifier protection — our own design/extension.
 ///
+/// A sealed identifier does not travel in an extract (#3777): each deployment
+/// seals under its own root key, and the sealed row is not part of the
+/// `ORIGINAL_VERSION`, so a reference from another instance holds no row here.
+/// The refusal names the remedy: the receiving deployment registers the party
+/// through its own party API, which seals under its own key.
+///
 /// # Errors
 /// [`crate::versioning::change::protection_refusal`] of the engine's refusal:
 /// `422` for a plaintext protected value or a reference this party does not
@@ -499,7 +506,17 @@ async fn refuse_unsealed_identifiers(
     engine
         .refuse_unsealed(tx, cursor.vo_id.0, data)
         .await
-        .map_err(crate::versioning::change::protection_refusal)
+        .map_err(|error| match error {
+            StoreError::ForeignReference => ServiceError::content_invalid(Violation::new(
+                "the party references a protected identifier this deployment does not hold for \
+                 it; a sealed identifier from another deployment does not travel in an EHR \
+                 extract, so import the extract without this party and register the person \
+                 through this deployment's party API, which seals the identifier under its own \
+                 key"
+                .to_owned(),
+            )),
+            other => crate::versioning::change::protection_refusal(other),
+        })
 }
 
 /// Replays one received original as an `IMPORTED_VERSION` row (plus its nodes
