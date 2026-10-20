@@ -15,6 +15,16 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Added
+
+- **An authorised, audited read of a party's protected national identifiers**
+  (#3776). `GET {base}/admin/party/identifiers?version_uid=…` serves a party
+  version with the identifiers `[demographic.identifier_protection]` seals put
+  back to their values, a historical version included. It needs the admin
+  role and the new `[authz.rbac] identifier_reader_role`; unset, nobody may
+  call it. Every read writes one access record per scheme expanded, naming the
+  reader, the party and the scheme, never the value.
+
 ## [5.1.0] - 2026-10-20
 
 ### Added

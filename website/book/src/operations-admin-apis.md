@@ -253,6 +253,48 @@ each mark means, which provision it serves and what the deploying organisation
 still has to decide are on [Retention, restriction and
 objection](compliance/retention.md).
 
+## Reading a party's protected identifiers
+
+With [national-identifier protection](installation/config-privacy.md#protecting-national-identifiers-in-the-demographic-domain)
+on, a party's versioned body carries a reference where each protected
+identifier stood, and every ordinary read serves that reference.
+`GET {base}/admin/party/identifiers` is the one route that puts the values back
+for a reader entitled to see them. No openEHR specification governs it; it is
+our own extension.
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  "$BASE/admin/party/identifiers?version_uid=8d7c…::ferroehr.local::2"
+```
+
+```json
+{
+  "version_uid": "8d7c…::ferroehr.local::2",
+  "expanded_schemes": ["nl-bsn"],
+  "version": { "_type": "ORIGINAL_VERSION", "data": { "_type": "PERSON", … } }
+}
+```
+
+- **Two gates.** The route is in the admin group, so it needs `admin.enabled`
+  and the admin role, and it also needs the role
+  [`authz.rbac.identifier_reader_role`](installation/config-auth.md#authzrbac)
+  names. Holding the admin role alone reveals no national identifier, and with
+  the key unset nobody may call the route (**403**).
+- **Any version.** `version_uid` names one party version; a historical
+  version shows the value it committed.
+- **A view, never a write.** The body is the stored `ORIGINAL_VERSION` with
+  the values put back, so it no longer matches the signed version. Nothing is
+  written back.
+- **Every read is recorded.** Each scheme expanded is one access record in the
+  `demographic` domain, naming the reader, the party and the scheme
+  (`party:<id>#national-identifier:<scheme>`), never the value. A version that
+  holds no protected identifier still leaves one record. Under
+  `audit.fail_mode = "closed"` a record the trail cannot take withholds the
+  values with **503**.
+- **Refusals.** **400** for a missing or malformed `version_uid`, or a
+  deployment that configures no identifier protection; **404** when no party
+  holds that version.
+
 ## Storage integrity
 
 Two routes that check the stored data against itself and repair what they

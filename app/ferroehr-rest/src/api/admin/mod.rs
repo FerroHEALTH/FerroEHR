@@ -14,12 +14,15 @@
 //! (`I_ADMIN_ARCHIVE`), [`report`] (the four `I_ADMIN_SERVICE` statistics
 //! calls) and [`dump_load`] (`I_ADMIN_DUMP_LOAD`). The fourth, [`integrity`],
 //! realizes no SM interface at all: it sweeps the storage's two content copies
-//! for disagreement, and no openEHR spec governs storage mechanics. Each
-//! carries its own spec-silence flag and register citation.
+//! for disagreement, and no openEHR spec governs storage mechanics. Beside
+//! them, [`marks`] keeps the legal marks and [`identifiers`] serves the audited
+//! read of a party's protected national identifiers. Each carries its own
+//! spec-silence flag and register citation.
 
 pub mod archive;
 pub mod dispatch;
 pub mod dump_load;
+pub mod identifiers;
 pub mod integrity;
 pub mod marks;
 pub(crate) mod openapi_routes;
