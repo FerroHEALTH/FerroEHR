@@ -13,7 +13,7 @@
 //! substantial, high from 26 March 2032
 //! (`docs/law/eu/cross-border-identification-2026-2099/text.html Art. 6(3)`).
 //!
-//! The gate reads `[auth.oidc.assurance]` and `[auth.oidc.professional]`. On a
+//! The gate reads `[authz.assurance]` and `[authz.professional]`. On a
 //! patient-data request it refuses a token below the configured level with the
 //! RFC 9470 §3 step-up challenge (`401`, `insufficient_user_authentication`),
 //! and a token that names no natural person with a `403`, unless the token is a
@@ -26,7 +26,7 @@
 use std::collections::BTreeMap;
 
 use ferroehr::config::auth::{
-    AssuranceLevel, AuthConfig, ClientTokenRule, OidcConfig, ProfessionalConfig,
+    AssuranceConfig, AssuranceLevel, ClientTokenRule, ProfessionalConfig,
 };
 use ferroehr::system_log::event::{ActingMode, ActorAuthentication};
 use http::HeaderValue;
@@ -95,22 +95,22 @@ pub(crate) struct PatientDataGate {
 }
 
 impl PatientDataGate {
-    /// Builds the gate from the `[auth.oidc]` table, or `None` when no bearer
-    /// mechanism is configured.
+    /// Builds the gate from `[authz.assurance]` and `[authz.professional]`,
+    /// or `None` when no bearer token is admitted (`bearer` false).
     #[must_use]
-    pub(crate) fn new(auth: &AuthConfig, base_path: &str) -> Option<Self> {
-        let OidcConfig {
-            assurance,
-            professional,
-            ..
-        } = auth.oidc.as_ref()?;
-        Some(Self {
+    pub(crate) fn new(
+        bearer: bool,
+        assurance: &AssuranceConfig,
+        professional: Option<&ProfessionalConfig>,
+        base_path: &str,
+    ) -> Option<Self> {
+        bearer.then(|| Self {
             base_path: base_path.to_owned(),
             claim: assurance.claim.clone(),
             levels: assurance.levels.clone(),
             minimum: assurance.minimum,
             accepted: assurance.accepted_values().join(" "),
-            professional: professional.clone(),
+            professional: professional.cloned(),
         })
     }
 
@@ -218,52 +218,46 @@ fn names_the_client(principal: &Principal) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use ferroehr::config::auth::AssuranceConfig;
+    use std::sync::Arc;
+
+    use ferrohealth_smart::resource::{Access, Caller, Honoured};
     use serde_json::{Value, json};
+
+    use super::*;
 
     const BASE: &str = "/ferroehr/rest/openehr/v1";
 
     fn bearer(claims: &Value) -> Principal {
         let claims = claims.as_object().cloned().expect("object");
-        Principal {
-            subject: claims
-                .get("sub")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_owned(),
-            scopes: Vec::new(),
-            roles: vec!["USER".to_owned()],
-            claims,
-            method: AuthMethod::Bearer,
-        }
+        let subject = claims
+            .get("sub")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let caller = Caller::new(subject, None, "", None, false).with_claims(claims);
+        Principal::new(
+            Access::Caller(Arc::new(caller)),
+            vec!["USER".to_owned()],
+            Honoured::default(),
+        )
     }
 
     fn gate(
         minimum: Option<AssuranceLevel>,
-        professional: Option<ProfessionalConfig>,
+        professional: Option<&ProfessionalConfig>,
     ) -> PatientDataGate {
-        let auth = AuthConfig {
-            oidc: Some(OidcConfig {
-                issuer: "https://idp.example".to_owned(),
-                audiences: vec!["ferroehr".to_owned()],
-                assurance: AssuranceConfig {
-                    levels: [
-                        ("loa-low".to_owned(), AssuranceLevel::Low),
-                        ("loa-substantial".to_owned(), AssuranceLevel::Substantial),
-                        ("loa-high".to_owned(), AssuranceLevel::High),
-                    ]
-                    .into_iter()
-                    .collect(),
-                    minimum,
-                    ..AssuranceConfig::default()
-                },
-                professional,
-                ..OidcConfig::default()
-            }),
-            ..AuthConfig::default()
+        let assurance = AssuranceConfig {
+            levels: [
+                ("loa-low".to_owned(), AssuranceLevel::Low),
+                ("loa-substantial".to_owned(), AssuranceLevel::Substantial),
+                ("loa-high".to_owned(), AssuranceLevel::High),
+            ]
+            .into_iter()
+            .collect(),
+            minimum,
+            ..AssuranceConfig::default()
         };
-        PatientDataGate::new(&auth, BASE).expect("gate")
+        PatientDataGate::new(true, &assurance, professional, BASE).expect("gate")
     }
 
     const EHR: &str = "/ferroehr/rest/openehr/v1/ehr/{ehr_id}";
@@ -357,7 +351,7 @@ mod tests {
     /// is refused on patient data unless it carries the acting-for claim.
     #[test]
     fn a_client_token_needs_a_professional_it_acts_for() {
-        let without = gate(None, Some(ProfessionalConfig::default()));
+        let without = gate(None, Some(&ProfessionalConfig::default()));
         let client = json!({ "sub": "app-1", "client_id": "app-1" });
         let (refusal, actor) = without
             .judge(&bearer(&client), Some(EHR))
@@ -367,7 +361,7 @@ mod tests {
 
         let with = gate(
             Some(AssuranceLevel::Substantial),
-            Some(ProfessionalConfig {
+            Some(&ProfessionalConfig {
                 acting_for_claim: Some("act.sub".to_owned()),
                 ..ProfessionalConfig::default()
             }),
@@ -394,7 +388,7 @@ mod tests {
     fn a_person_token_names_the_person() {
         let gate = gate(
             None,
-            Some(ProfessionalConfig {
+            Some(&ProfessionalConfig {
                 claim: "professional_id".to_owned(),
                 client_tokens: ClientTokenRule::ClaimAbsent,
                 acting_for_claim: None,
@@ -418,13 +412,11 @@ mod tests {
     /// refuses it on patient data.
     #[test]
     fn basic_is_refused_on_patient_data_when_either_block_asks() {
-        let basic = Principal {
-            subject: "alice".to_owned(),
-            scopes: Vec::new(),
-            roles: vec!["USER".to_owned()],
-            claims: serde_json::Map::new(),
-            method: AuthMethod::Basic,
-        };
+        let basic = Principal::new(
+            Access::Caller(Arc::new(Caller::basic("alice".to_owned(), ""))),
+            vec!["USER".to_owned()],
+            Honoured::default(),
+        );
         assert_eq!(
             gate(Some(AssuranceLevel::Low), None)
                 .judge(&basic, Some(EHR))
@@ -433,7 +425,7 @@ mod tests {
             PatientDataRefusal::InsufficientAssurance
         );
         assert_eq!(
-            gate(None, Some(ProfessionalConfig::default()))
+            gate(None, Some(&ProfessionalConfig::default()))
                 .judge(&basic, Some(EHR))
                 .expect_err("refused")
                 .0,
@@ -441,7 +433,7 @@ mod tests {
         );
         gate(
             Some(AssuranceLevel::Low),
-            Some(ProfessionalConfig::default()),
+            Some(&ProfessionalConfig::default()),
         )
         .judge(&basic, Some(format!("{BASE}/terminology/x").as_str()))
         .expect("not patient data");

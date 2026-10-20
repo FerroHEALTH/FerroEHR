@@ -60,23 +60,15 @@ services:
       # The SMART resource-server posture of the primary (docker/sut-smart.yml)
       # — same trust, same scope discipline, so the ixit's bearer_mint
       # principals reach this deployment with the same tokens.
-      FERROEHR__SMART__ENABLED: "true"
-      FERROEHR__SMART__REQUIRE_SMART_SCOPES: "true"
+      FERROEHR__SMART__ENABLED: "false"
       # master04 §Services: baseUrl names the origin THIS deployment is
       # reached on, not the primary's.
       FERROEHR__SMART__PUBLIC_BASE_URL: "http://localhost:${FERROEHR_STABLE_PORT:-8082}"
-      FERROEHR__SMART__ENDPOINTS__ALLOW_INSECURE_ENDPOINTS: "true"
-      FERROEHR__SMART__ENDPOINTS__AUTHORIZATION_ENDPOINT: "https://as.cnf.test/authorize"
-      FERROEHR__SMART__ENDPOINTS__TOKEN_ENDPOINT: "https://as.cnf.test/token"
-      FERROEHR__SMART__ENDPOINTS__JWKS_URI: "https://as.cnf.test/jwks.json"
-      FERROEHR__SMART__ENDPOINTS__GRANT_TYPES_SUPPORTED: "authorization_code,client_credentials"
-      FERROEHR__SMART__ENDPOINTS__RESPONSE_TYPES_SUPPORTED: "code"
-      FERROEHR__SMART__ENDPOINTS__TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED: "client_secret_basic,private_key_jwt"
-      FERROEHR__SMART__ENDPOINTS__CODE_CHALLENGE_METHODS_SUPPORTED: "S256"
-      FERROEHR__AUTH__OIDC__ISSUER: "https://as.cnf.test"
-      FERROEHR__AUTH__OIDC__AUDIENCES: "cnf-smart-sut"
-      FERROEHR__AUTH__OIDC__ALGORITHMS: "RS256"
-      FERROEHR__AUTH__OIDC__JWKS_JSON_FILE: /etc/ferroehr/cnf-smart-jwks.json
+      FERROEHR__AUTH__ISSUER: "https://as.cnf.test"
+      FERROEHR__AUTH__AUDIENCE: "cnf-smart-sut"
+      FERROEHR__AUTH__ALGORITHMS: "RS256"
+      FERROEHR__AUTH__TOKEN_PROFILE: "jwt"
+      FERROEHR__AUTH__JWKS_FILE: /etc/ferroehr/cnf-smart-jwks.json
     volumes:
       - ./docker/ferroehr.dev.toml:/etc/ferroehr/ferroehr.toml:ro
       - ./docs/conformance/party/smart/jwks.json:/etc/ferroehr/cnf-smart-jwks.json:ro

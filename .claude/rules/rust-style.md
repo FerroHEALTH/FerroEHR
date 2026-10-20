@@ -24,7 +24,7 @@ change the emitter and regenerate (`cargo run -p openehr-codegen -- emit`/
   `openehr-am`, `openehr-term`, `openehr-query`, `openehr-its`). Never re-model
   the RM or re-serialize.
 - **Use proper crates; don't hand-roll** what the ecosystem provides — `axum`/
-  `tower-http`, `sqlx`+`sea-query`, `oauth2`/`openidconnect`/`jsonwebtoken`/
+  `tower-http`, `sqlx`+`sea-query`, `ferrohealth-smart`/`openidconnect`/
   `argon2`, `utoipa`, `moka`, `jiff`, `uuid`. Add deps only from
   `Cargo.toml [workspace.dependencies]` (`dep.workspace = true`).
 - **Every crate you touch compiles + is clippy-clean + tested before you move

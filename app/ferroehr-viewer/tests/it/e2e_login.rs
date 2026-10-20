@@ -90,6 +90,15 @@ async fn login_oidc_round_trips_through_keycloak() {
         !url.contains("/login"),
         "OIDC flow must land on the viewer, not back at /login (got {url})"
     );
+    // The CDR accepts the Keycloak token: the seeded EHR's status document
+    // is read with it.
+    if let Some(ehr_id) = env("UI_E2E_SEEDED_EHR_ID") {
+        h.goto(&format!("/ehrs/{ehr_id}")).await;
+        h.wait_xpath("//*[contains(., 'queryable')]").await;
+        h.shot(3, "ehr-read-with-oidc-token").await;
+    } else {
+        println!("SKIP the CDR read: UI_E2E_SEEDED_EHR_ID unset (run scripts/ui-e2e.sh)");
+    }
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;
     h.finish().await;

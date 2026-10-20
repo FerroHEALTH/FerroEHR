@@ -254,7 +254,7 @@ the same gate), the `/message` group realizing the SM Message component
 the always-on public health family (`/health`, `/health/liveness`,
 `/health/readiness`), `/rest/status`, the ops-introspection `/management/*`
 surface, item tags (there is no EhrScape surface). **Auth:** Basic +
-OAuth2/OIDC via `argon2`/`jsonwebtoken`/`oauth2`/`openidconnect`; authorization is the
+OAuth 2.0 bearer tokens via `ferrohealth-smart`; authorization is the
 shipped RBAC/ABAC `access` module in `ferroehr-rest`.
 
 ### The access layer (`ferroehr-rest::extensions::access`) — our own design

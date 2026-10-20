@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). A stock install runs the sandbox deployment profile, which must not hold real patient data; set config.deployment_profile for a production holder.
 
-![Version: 11.1.7](https://img.shields.io/badge/Version-11.1.7-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.0.0](https://img.shields.io/badge/AppVersion-5.0.0-informational?style=flat-square)
+![Version: 12.0.0](https://img.shields.io/badge/Version-12.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.0.0](https://img.shields.io/badge/AppVersion-5.0.0-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -17,7 +17,7 @@ or, for production, `database.existingSecret`.
 
 **With no authentication mechanism configured, the server boots and answers
 `401` to everything.** `auth.enabled` defaults to `true`, and a deployment with
-no `[auth.oidc]` issuer and no Basic user has nothing to authenticate against.
+no `[auth]` issuer and no Basic user has nothing to authenticate against.
 That is fail-closed and deliberate: the alternative is an openEHR repository
 serving patient data to anonymous callers. Configure a mechanism, or set
 `config.auth.enabled: false` for a throwaway evaluation.
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.1.7 \
+  --version 12.0.0 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.0.0
@@ -58,7 +58,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `11.1.7` |
+| the **chart** (templates, defaults, this document) | `--version` | `12.0.0` |
 | the **server image** | `image.tag` | `5.0.0` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -70,7 +70,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:11.1.7 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:12.0.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -78,7 +78,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:11.1.7 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:11.1.7 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:12.0.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.0.0 \
   -R FerroHEALTH/FerroEHR
@@ -154,8 +154,8 @@ enforces NetworkPolicy**. Check yours; several do not.
 the FHIR and openEHR bridge, as its own workload pointed at this release's CDR
 Service (and at the chart's FerroTERM when `terminology.enabled` is set). It
 needs two things the render refuses to go without: `bridge.cdr.existingSecret`,
-a Secret holding its CDR credential (`user` and `password`, or `bearer_token`
-with `bridge.cdr.auth=bearer`), and at least one peer in
+a Secret holding its CDR credential (`user` and `password`, a Basic user of the
+CDR whose `scopes` grant what FerroBRIDGE calls), and at least one peer in
 `bridge.networkPolicy.ingressFrom`. FerroBRIDGE authenticates no caller yet
 ([FerroBRIDGE#400](https://github.com/FerroHEALTH/FerroBRIDGE/issues/400)), so
 the chart keeps it cluster-internal: a ClusterIP Service, no Ingress, and a
@@ -223,8 +223,7 @@ Kubernetes: `>=1.36.0-0`
 | backup.tolerations | list | `[]` | Tolerations for the dump pods. |
 | backup.ttlSecondsAfterFinished | int | `86400` | How long a finished dump's pod is kept for its logs. |
 | bridge.affinity | object | `{}` | Affinity. |
-| bridge.cdr.auth | string | `"basic"` | How FerroBRIDGE authenticates to the CDR: `basic` (RFC 7617, a user of the CDR's `config.auth.basic.users`) or `bearer` (RFC 6750, a token the CDR accepts). FerroBRIDGE sends a bearer token as it is and cannot renew one, so `bearer` suits only a token that does not expire. |
-| bridge.cdr.existingSecret | string | `""` | Name of an EXISTING Secret holding FerroBRIDGE's credential for this release's CDR. Required. With `auth: basic` it must carry the keys `user` and `password`; with `auth: bearer`, the key `bearer_token`. The password or token is mounted as a FILE and named by its `_file` key in config.toml, so it never enters the ConfigMap or the pod's environment; the user name, which FerroBRIDGE does not treat as a secret, reaches the container as `FERROBRIDGE__CDR__CREDENTIALS__USER`. |
+| bridge.cdr.existingSecret | string | `""` | Name of an EXISTING Secret holding FerroBRIDGE's credential for this release's CDR. Required. It must carry the keys `user` and `password`, a user of the CDR's `config.auth.basic.users` (RFC 7617) whose `scopes` grant what FerroBRIDGE calls. The password is mounted as a FILE and named by its `_file` key in config.toml, so it never enters the ConfigMap or the pod's environment; the user name, which FerroBRIDGE does not treat as a secret, reaches the container as `FERROBRIDGE__CDR__CREDENTIALS__USER`. |
 | bridge.config | object | `{}` | Further FerroBRIDGE configuration, rendered into its config.toml beside the keys the chart writes (FerroBRIDGE's configuration reference: https://ferrobridge.eu/docs/operate/configuration.html). FerroBRIDGE refuses an unknown key at boot, so a typo here is a crash loop, not a silent default. Refused at render: `cdr.base_url`, `cdr.credentials`, `server.listen`, `terminology` while `terminology.enabled` is on, `mappings.directory` while `mappings.existingConfigMap` is set, and any secret-shaped key (a password, a token, `cdm.url`), whose `_file` sibling takes a file you mount with `extraVolumes`. |
 | bridge.enabled | bool | `false` | Deploy FerroBRIDGE alongside the CDR. Needs `bridge.cdr.existingSecret` and at least one `bridge.networkPolicy.ingressFrom` peer; the render is refused without either. |
 | bridge.extraEnv | list | `[]` | Extra environment for FerroBRIDGE (escape hatch). |
@@ -406,8 +405,7 @@ Kubernetes: `>=1.36.0-0`
 | replicaCount | int | `2` | Number of replicas (ignored when autoscaling.enabled is true). |
 | resources | object | `{"limits":{"cpu":"2","ephemeral-storage":"1Gi","memory":"1Gi"},"requests":{"cpu":"250m","ephemeral-storage":"128Mi","memory":"256Mi"}}` | Resource requests/limits. Sized for a modest API replica; tune for load. ephemeral-storage is bounded too: the container writes only logs/tmp (the root filesystem is read-only), and an unbounded default would let runaway local writes evict the pod's node neighbours (https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#setting-requests-and-limits-for-local-ephemeral-storage). |
 | secrets.auditFhirFeedUrl | string | `""` | FHIR base URL of the external Audit Record Repository for [audit.fhir_feed] (may carry basic-auth credentials in its userinfo) → FERROEHR__AUDIT__FHIR_FEED__URL env: audit.fhir_feed.url has no `*_file` sibling either. |
-| secrets.authOidcHmacSecret | string | `""` | Symmetric HS256 secret for [auth.oidc] (dev/test). MOUNTED as /etc/ferroehr-secrets/auth.oidc.hmac_secret (auth.oidc.hmac_secret_file). |
-| secrets.basicUserPasswordHashes | object | `{}` | Argon2id password hashes for [[auth.basic.users]], keyed by username. Each is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<username>.password_hash and the chart injects the matching `password_hash_file` into the rendered TOML. Declare the user itself — `username`, `roles` — under config.auth.basic.users; a username with no matching entry is a render error. A hash under `config:` is refused: it would reach the ConfigMap. |
+| secrets.basicUserPasswordHashes | object | `{}` | Argon2id password hashes for [[auth.basic.users]], keyed by user-id. Each is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<user>.password_hash and the chart injects the matching `password_hash_file` into the rendered TOML. Declare the user itself — `user`, `scopes` — under config.auth.basic.users, and its RBAC roles under config.authz.rbac.basic_roles.<user>; a user-id with no matching entry is a render error. A hash under `config:` is refused: it would reach the ConfigMap. |
 | secrets.eventsUrl | string | `""` | AMQP broker URL for [events] (carries credentials). MOUNTED as /etc/ferroehr-secrets/events.url (events.url_file). |
 | secrets.multimediaAccessKeyId | string | `""` | S3 access key id for [multimedia] → FERROEHR__MULTIMEDIA__ACCESS_KEY_ID env. Not a secret in the server's own model (it is reported unredacted by /management/env); prefer IRSA/Workload-Identity (leave empty) on cloud. |
 | secrets.multimediaSecretAccessKey | string | `""` | S3 secret access key for [multimedia]. MOUNTED as /etc/ferroehr-secrets/multimedia.secret_access_key (multimedia.secret_access_key_file). |

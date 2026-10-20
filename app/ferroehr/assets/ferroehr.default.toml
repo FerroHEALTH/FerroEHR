@@ -235,68 +235,70 @@ metrics_push = false
 #? flame_file = "/var/log/ferroehr/tracing.folded"
 
 # ── [auth] — authentication (PROD: configure a mechanism) ─────────────────────
+# The FerroHEALTH family's shared section (the ferrohealth-smart crate): the
+# server checks bearer tokens against the trusted issuers' key sets and Basic
+# credentials against [[auth.basic.users]]. It never issues a token.
 [auth]
 enabled = true               # false = all requests pass unauthenticated (dev only)
-verified_cache_ttl_seconds = 60
 
+# With enabled = true at least ONE mechanism MUST be configured, an issuer or a
+# Basic user: a server with none could only refuse every request while
+# advertising a scheme it does not implement (RFC 9110 §11.6.1), so it refuses
+# to start instead.
 
-# With enabled = true at least ONE mechanism below MUST be configured: a server
-# with none could only refuse every request while advertising a scheme it does
-# not implement (RFC 9110 §11.6.1), so it refuses to start instead.
+# issuer: an RFC 8414 §2 issuer identifier — an https URL with no query and no
+# fragment (plain http only on a loopback host). Its metadata is read at boot
+# (RFC 8414 §3, OpenID Connect Discovery 1.0 §4 as the fallback), and with it
+# the key set at its jwks_uri. Several issuers: [[auth.issuer]] tables, each
+# with the keys from `issuer` to `jwks_file`.
+#? issuer = "https://idp.example/realms/ferroehr"
+# audience: REQUIRED with an issuer, at least one. A token whose `aud` names
+# none of these is refused (RFC 9068 §4, RFC 8725 §3.9).
+#? audience = ["ferroehr"]
+# Asymmetric algorithms only: HS* and `none` are refused (RFC 8725 §3.1, §3.2).
+algorithms = ["RS256", "RS384", "PS256", "PS384", "ES256", "ES384"]
+# rfc9068: `typ` must be `at+jwt` and `client_id`, `iat` and `jti` present
+# (RFC 9068 §2.2, §4). jwt: a plain JWT bearer token (`typ` absent or `JWT`),
+# for an issuer that mints no RFC 9068 tokens.
+token_profile = "rfc9068"    # rfc9068 | jwt
+clock_skew_seconds = 60      # at most 300 (RFC 9068 §4)
+jwks_max_age_seconds = 600   # a key set older than this is read again
+jwks_refresh_interval_seconds = 60   # at most one read per interval on an unknown `kid`
+# A JWK Set of PUBLIC keys handed over out of band, read instead of the
+# issuer's metadata; boot refuses a symmetric (oct) key or a private member.
+jwks_file = ""
+timeout_ms = 10000           # one call to the authorization server
+realm = ""                   # the challenge realm; empty = "ferroehr"
+scopeless_subjects = []      # refused: every FerroEHR route needs a SMART on openEHR scope
+capabilities = []            # SMART capabilities the discovery document adds
+scopes_supported = []        # the scopes the discovery document lists; empty = the ones the route table honours
+# product_scope: FerroEHR's own scope, which admits the ADMIN API and, beside
+# the clients in [smart] demographic_clients, the DEMOGRAPHIC API — the two
+# surfaces no SMART on openEHR resource family covers. A full URI or a string
+# starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context,
+# §Extensibility). Empty = "__ferroehr.platform".
+product_scope = ""
 
 # Basic-auth users (file-only; array of tables). Every password_hash must be an
 # argon2id PHC string meeting the OWASP Password Storage Cheat Sheet §Argon2id
 # floor — m>=19456, t>=2, p>=1 — checked at boot, because the verifier takes its
-# cost parameters from the stored hash:
+# cost parameters from the stored hash. `scopes` are the SMART on openEHR
+# scopes the user holds, checked on every route like a token's; its RBAC roles
+# are [authz.rbac.basic_roles].
 #? [[auth.basic.users]]
-#? username = "alice"
+#? user = "alice"
 #? password_hash = "$argon2id$v=19$m=19456,t=2,p=1$...$..."   # never a plaintext password
 #? password_hash_file = "/run/secrets/alice-hash"   # or a mounted file; the Argon2id floor applies either way
-#? roles = ["USER"]
+#? scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds"]
 
-# OAuth2/OIDC bearer (absent table ⇒ bearer disabled):
-#? [auth.oidc]
-# issuer: an RFC 8414 §2 issuer identifier — an https URL with no query and no
-# fragment. Boot-validated.
-#? issuer = "https://idp.example/realms/ferroehr"
-# audiences: REQUIRED, at least one. A resource server that declares no audience
-# cannot reject a token minted for a different one, nor tell an OIDC ID token
-# apart from an access token (RFC 7519 §4.1.3, RFC 9068 §4 step 4).
-#? audiences = ["ferroehr"]
-#? algorithms = ["RS256"]
-# clock_skew_leeway_seconds: leeway on the time-based claims. Capped at 300 —
-# leeway may be "no more than a few minutes" (RFC 9068 §4 step 6), and a large
-# value silently extends every token's life.
-#? clock_skew_leeway_seconds = 60
-# require_at_jwt: refuse a token that does not claim the RFC 9068 access-token
-# profile (`typ: at+jwt`). Off by default because §2.1 makes the type a SHOULD
-# for the authorization server, so requiring it rejects conforming issuers. A
-# token that DOES claim the profile is held to the whole of §2.2 either way —
-# `iat`, `jti` and `client_id` become mandatory for it.
-#? require_at_jwt = false
-# allow_insecure_issuer: accept a non-https issuer. DEVELOPMENT/TEST ONLY — it
-# exposes token verification material to the network (RFC 8414 §6.2).
-#? allow_insecure_issuer = false
-# hmac_secret: a symmetric HS* key, at least 32 bytes of high-entropy material
-# and never a memorizable password (RFC 8725 §3.5). A development posture: the
-# key is shared with the authorization server, so this server could mint the
-# tokens it accepts. Boot warns when it is set.
-#? hmac_secret = "..."
-#? hmac_secret_file = "/run/secrets/hmac"
-# jwks_json: a static JWK Set of PUBLIC keys; boot refuses a symmetric (oct)
-# key or a private-key member, so the set is shown in clear by config check.
-#? jwks_json = "{...}"
-#? jwks_json_file = "/etc/ferroehr/jwks.json"
-# Discovery/JWKS fetch hardening (used only when neither hmac_secret nor
-# jwks_json is set, i.e. keys come from the issuer's OIDC discovery document):
-#? connect_timeout_ms = 3000
-#? request_timeout_ms = 5000
-#? negative_cache_ttl_seconds = 10   # remember a FAILED fetch this long (0 = off);
-                                     # a down issuer then yields fast 503s (the gate
-                                     # cannot DECIDE, so it never answers 401) instead
-                                     # of one discovery attempt per bearer request
+# ── [authz] — RBAC + ABAC ─────────────────────────────────────────────────────
+[authz]
+# How long a verified Basic credential is reused before its Argon2id hash is
+# checked again (0 = every request). Argon2id costs tens of milliseconds of CPU
+# by design; the TTL bounds how long a removed user keeps working.
+basic_cache_ttl_seconds = 60
 
-# Authentication assurance on patient data (absent ⇒ off: nothing refused, no
+# Authentication assurance on patient data (off by default: nothing refused, no
 # level recorded). `levels` maps each value the issuer puts in `claim` to an
 # eIDAS level of assurance (low | substantial | high). With `minimum` set, a
 # patient-data request whose token maps below it, or not at all, is refused
@@ -305,9 +307,9 @@ verified_cache_ttl_seconds = 60
 # `minimum` no mapped value reaches. Cross-border exchange asks for
 # substantial, high from 26 March 2032 (Implementing Regulation 2026/2099
 # Art. 6(3)).
-#? [auth.oidc.assurance]
-#? claim = "acr"                 # dotted path into a JSON object allowed
-#? minimum = "substantial"       # low | substantial | high; unset = refuse nothing
+[authz.assurance]
+claim = "acr"                 # dotted path into a JSON object allowed
+#? minimum = "substantial"    # low | substantial | high; unset = refuse nothing
 #? levels = { "http://eidas.europa.eu/LoA/substantial" = "substantial", "http://eidas.europa.eu/LoA/high" = "high" }
 
 # The natural person behind a token (absent ⇒ tokens are not judged on it).
@@ -316,12 +318,11 @@ verified_cache_ttl_seconds = 60
 # named in `acting_for_claim`. A token lacking `claim` is a client token;
 # under `client_tokens = "sub_is_client"` so is one whose `sub` equals its
 # `client_id` or `azp` (RFC 9068 §2.2). Basic is refused on patient data.
-#? [auth.oidc.professional]
+#? [authz.professional]
 #? claim = "sub"                 # the claim naming the person; dotted path allowed
 #? client_tokens = "sub_is_client"   # sub_is_client | claim_absent
 #? acting_for_claim = "act.sub"  # unset = every client token refused on patient data
 
-# ── [authz] — RBAC + ABAC ─────────────────────────────────────────────────────
 [authz.rbac]
 # The coarse role gate. Off, every authenticated caller may use every enabled
 # surface (the rbac_off deployment gap); ehr_access_default and admin_role
@@ -344,6 +345,11 @@ role_claims = ["roles", "groups", "entitlements", "realm_access.roles"]
 ehr_access_default = "open"   # open | restricted
 # The management surface is NOT configured here — see [management.endpoints],
 # which owns it, one level per endpoint.
+
+# The RBAC roles of each [[auth.basic.users]] user, by user-id; a user it does
+# not list holds user_role.
+[authz.rbac.basic_roles]
+#? alice = ["ADMIN", "USER"]
 
 [authz.abac]
 enabled = false
@@ -375,46 +381,30 @@ request_timeout_ms = 5000
 [admin]
 enabled = false
 
-# ── [smart] — SMART App Launch ────────────────────────────────────────────────
+# ── [smart] — SMART on openEHR ────────────────────────────────────────────────
+# The SMART on openEHR scopes are enforced on every route whenever [auth] is on
+# (master08 §Resource Scopes); this section decides what beside the route
+# table: the discovery document, and whose grants count for what.
 [smart]
+# Serve /.well-known/smart-configuration, built from the first [auth] issuer's
+# metadata (a jwks_file issuer carries none, so it cannot serve it).
 enabled = false
 #? platform_base_url = "/gateway/v1"
 #? public_base_url = "https://cdr.example.com"   # REQUIRED when enabled: the external origin the absolute services.*.baseUrl values are built from (master04 §Services)
-ehr_id_claim = "ehrId"
-patient_claim = "patient"
-require_smart_scopes = false
 launch_base64_json = false
+# The client_ids a system/aql-* grant counts for: it "would grant access to all
+# registered and ad-hoc AQL queries system-wide" (master08 §Resource Scopes).
+backend_clients = []
+# The issuers whose patient/ grants count, each confined to the EHR the
+# token's `ehrId` claim names (master07 §Context Selection). Empty = a
+# patient/ grant grants nothing.
+patient_issuers = []
+# The client_ids that reach the DEMOGRAPHIC API, which no SMART scope covers;
+# a caller holding [auth] product_scope reaches it too.
+demographic_clients = []
 
 [smart.episode]
 enabled = false
-
-# Everything in this table is PUBLISHED to third-party apps at
-# /.well-known/smart-configuration, so an empty list is not silence — it claims
-# the authorization server supports none of that thing, and an app that reads it
-# complies. With `smart.enabled = true` these are boot-validated: every advertised
-# endpoint must be an absolute https URL (allow_insecure_endpoints opts out for
-# development), `response_types_supported` must be non-empty (RFC 8414 §2 marks it
-# REQUIRED), `token_endpoint_auth_methods_supported` must name at least one
-# method, and `code_challenge_methods_supported` must include "S256" — SMART App
-# Launch requires PKCE (RFC 7636), and `plain` alone is not sufficient (§7.2).
-# `smart.endpoints.issuer` must also equal `auth.oidc.issuer`: one says where apps
-# GET tokens, the other says which tokens this server ACCEPTS.
-[smart.endpoints]
-token_endpoint_auth_methods_supported = []
-grant_types_supported = []
-response_types_supported = []
-code_challenge_methods_supported = []
-scopes_supported = []
-allow_insecure_endpoints = false   # DEV/TEST ONLY: accept a non-https advertised endpoint
-capabilities = []   # extra (HL7 base) capabilities to advertise, e.g. ["launch-ehr", "sso-openid-connect"]
-#? issuer = "https://as.example"
-#? jwks_uri = "https://as.example/jwks"
-#? authorization_endpoint = "https://as.example/authorize"
-#? token_endpoint = "https://as.example/token"
-#? registration_endpoint = "https://as.example/register"
-#? introspection_endpoint = "https://as.example/introspect"
-#? revocation_endpoint = "https://as.example/revoke"
-#? management_endpoint = "https://as.example/manage"
 
 # ── [management] — ops-introspection surface ───────────────────────────────────
 # Introspection (info / prometheus / metrics / env / loggers / flamegraph /

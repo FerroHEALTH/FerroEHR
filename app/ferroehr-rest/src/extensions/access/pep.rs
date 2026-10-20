@@ -22,8 +22,11 @@
 //! [`AuditObject`](crate::system_log::middleware::AuditObject) the dispatch set.
 //! Every deny is a `403` and every engine failure a `500` (fail-closed), each
 //! carrying the [`Principal`] on the response extensions for the ATNA layer.
-//! ABAC is inert without a wired `crate::extensions::access::authz::AbacGate`;
-//! the SMART gate is inert until SMART is enabled (`smart_config` decides).
+//! ABAC is inert without a wired `crate::extensions::access::authz::AbacGate`.
+//! The SMART gate here covers the COMPOSITION operations, whose template only
+//! the body or the stored version names (`crate::smart::routes`); every other
+//! route's SMART requirement is checked by the authentication middleware. It
+//! runs whenever authentication is on.
 #![expect(
     clippy::result_large_err,
     reason = "the Err variant of every decision point in this module is a \
@@ -44,15 +47,15 @@ use crate::extensions::access::authn::{Principal, current_principal};
 use crate::extensions::access::authz::AbacGate;
 use crate::overview::error::RestError;
 
-use crate::smart::enforce::{self, GateConfig, ScopeDecision};
+use crate::smart::routes;
 use crate::state::AppState;
 use crate::{negotiate, params};
 use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::aql::subject::{EhrSubject, TouchedSubjects};
-use ferroehr::config::smart::SmartConfig;
 use ferroehr::service::status::{CallStatusType, SmError};
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
-use openehr_sdt::smart_scopes::SmartScope;
+use ferrohealth_smart::guard::Requirement;
+use smart_grammar::smart_scopes::ResourceFamily;
 
 /// Whether an operation is ABAC-checked, and when.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -196,17 +199,24 @@ pub(crate) async fn query_post(
     Ok(())
 }
 
-/// Pre-check the request. `Err(response)` short-circuits the dispatch with a
+/// Pre-check the request: the ABAC decision, then the SMART gate of a
+/// COMPOSITION write. `Err(response)` short-circuits the dispatch with a
 /// ready 403/500; `Ok(())` lets it proceed.
 pub(crate) async fn pre_check(
     state: &AppState,
     op: &'static str,
     parts: &RequestParts,
 ) -> Result<(), Response> {
-    // The template + AQL families are ABAC-`Skip`, so they never reach the
-    // `smart_gate` below; their scopes are enforced here off the route's own
-    // path parameters (master08 §Resource Scopes).
-    smart_skip_family_gate(state, op, parts)?;
+    abac_pre(state, op, parts).await?;
+    smart_pre(state, op, parts).await
+}
+
+/// The ABAC pre-check of the request.
+async fn abac_pre(
+    state: &AppState,
+    op: &'static str,
+    parts: &RequestParts,
+) -> Result<(), Response> {
     let Some(handle) = state.authz() else {
         return Ok(());
     };
@@ -256,16 +266,28 @@ pub(crate) async fn pre_check(
         patient: patient.map(Attr::One),
         template,
     };
-    decide(abac, &principal, &req).await?;
-
-    // The resource id is the template the pre-check resolved; an unresolved id
-    // matches only a broad `*`/`**` scope (master08 §Resource Scopes).
-    let resource_id = req.template.as_ref().and_then(attr_single);
-    smart_gate(state, abac, &principal, op, resource_id, ehr_id.as_deref()).await
+    decide(abac, &principal, &req).await
 }
 
-/// Post-check a successful response using the resource ids the dispatch recorded.
+/// Post-check a successful response: the ABAC decision over the resource ids
+/// the dispatch recorded, then the SMART gate of a COMPOSITION read.
 pub(crate) async fn post_check(state: &AppState, op: &'static str, resp: Response) -> Response {
+    let resp = abac_post(state, op, resp).await;
+    if !resp.status().is_success() {
+        return resp;
+    }
+    let object = resp
+        .extensions()
+        .get::<crate::system_log::middleware::AuditObject>()
+        .cloned();
+    match smart_post(state, op, object).await {
+        Ok(()) => resp,
+        Err(deny) => deny,
+    }
+}
+
+/// The ABAC post-check of a successful response.
+async fn abac_post(state: &AppState, op: &'static str, resp: Response) -> Response {
     if !resp.status().is_success() {
         return resp;
     }
@@ -320,12 +342,7 @@ pub(crate) async fn post_check(state: &AppState, op: &'static str, resp: Respons
         patient: patient.map(Attr::One),
         template,
     };
-    if let Err(deny) = decide(abac, &principal, &req).await {
-        return deny;
-    }
-    // The SMART gate on the post-resolved template, after the Cedar decision.
-    let resource_id = req.template.as_ref().and_then(attr_single);
-    match smart_gate(state, abac, &principal, op, resource_id, ehr_id.as_deref()).await {
+    match decide(abac, &principal, &req).await {
         Ok(()) => resp,
         Err(deny) => deny,
     }
@@ -630,152 +647,111 @@ fn engine_error(
     resp
 }
 
-/// Returns the single value of a resolved attribute, or `None` for an absent or
-/// multi-valued one: SMART maps one operation onto one resource id, and a
-/// contribution's template set has no single id.
-fn attr_single(attr: &Attr) -> Option<&str> {
-    match attr {
-        Attr::One(s) => Some(s.as_str()),
-        Attr::Set(_) => None,
-    }
+/// Whether `op` is a COMPOSITION operation whose SMART requirement the
+/// policy-enforcement point checks (`crate::smart::routes`, `Need::Composition`).
+fn smart_composition_op(op: &str) -> bool {
+    !op.contains("_tags_")
+        && (op.starts_with("composition_") || op.starts_with("versioned_composition_"))
 }
 
-/// Returns the SMART configuration for this server, or `None` when SMART is
-/// disabled.
-///
-/// SMART is off by default and produces zero wire drift when disabled, so the
-/// gates are inert unless an operator opts in via `FERROEHR_REST_SMART__ENABLED`.
-fn smart_config(state: &AppState) -> Option<&SmartConfig> {
-    let cfg = &state.config().smart;
-    cfg.enabled.then_some(cfg)
-}
-
-/// Runs the SMART gate for one operation, AND-composed after the RBAC/Cedar
-/// decision.
-///
-/// A scope deny is a `403`; a `patient/` compartment grant additionally binds
-/// the launch context to the target EHR through the ABAC [`subject_gate`].
-/// Inert when SMART is disabled.
-async fn smart_gate(
+/// The SMART gate of a COMPOSITION write, on the template its body names or,
+/// for a delete, the template of the version it deletes (master08 §Resource
+/// Scopes, `composition-<templateId>`). Inert without an authenticated
+/// principal, which only an unauthenticated surface lacks.
+async fn smart_pre(
     state: &AppState,
-    abac: &AbacGate,
-    principal: &Principal,
-    op: &str,
-    resource_id: Option<&str>,
-    ehr_id: Option<&str>,
-) -> Result<(), Response> {
-    let Some(cfg) = smart_config(state) else {
-        return Ok(());
-    };
-    match smart_decide(cfg, principal, op, resource_id) {
-        Err(reason) => Err(forbidden(principal, &reason)),
-        // A `user`/`system` scope, or no SMART family governs the op.
-        Ok(None) => Ok(()),
-        // A `patient/` compartment binds the launch context to the EHR being
-        // accessed (master07 §Context Selection) through the ABAC subject gate;
-        // a target-less op passes vacuously.
-        //
-        // NOTE: the context value prefers the `ehrId` claim then the SMART
-        // `patient` claim (master07 token-response table), matched against the
-        // EHR *subject* external ref.
-        Ok(Some(ctx)) => subject_gate(abac, principal, Some(ctx.as_str()), ehr_id).await,
-    }
-}
-
-/// Decides the SMART scope (master08 §Resource Scopes) and resolves the launch
-/// context (master07 §Context Selection).
-///
-/// Returns:
-/// - `Err(reason)` → deny (the reason is the audit/diagnostic detail);
-/// - `Ok(None)` → permit, no launch-context binding required;
-/// - `Ok(Some(ctx))` → permit, but a `patient/` compartment scope means the
-///   caller must bind launch-context `ctx` to the EHR being accessed.
-fn smart_decide(
-    cfg: &SmartConfig,
-    principal: &Principal,
-    op: &str,
-    resource_id: Option<&str>,
-) -> Result<Option<String>, String> {
-    // SMART resource scopes ride Bearer tokens only; `Principal.scopes` is the
-    // token `scope`/`scp` claim (empty for Basic, so a Basic caller holds no
-    // SMART scope — advisory mode defers, fail-closed mode denies).
-    let scopes = SmartScope::parse_all(&principal.scopes.join(" "));
-    let outcome = enforce::evaluate(
-        &scopes,
-        enforce::family_of_op(op),
-        enforce::permission_of_op(op),
-        resource_id,
-        GateConfig {
-            require_smart_scopes: cfg.require_smart_scopes,
-        },
-    );
-    if let ScopeDecision::Deny(reason) = outcome.decision {
-        return Err(reason);
-    }
-    if !outcome.bind_patient_compartment {
-        return Ok(None);
-    }
-    // master07 §Context Selection: a `patient/` compartment scope requires a
-    // resolved launch context; its absence is a deny.
-    enforce::launch_context_ehr_id(&principal.claims, &cfg.ehr_id_claim, &cfg.patient_claim)
-        .map(Some)
-        .ok_or_else(|| {
-            "SMART patient scope requires a launch-context ehrId/patient claim \
-             (master07 §Context Selection)"
-                .to_owned()
-        })
-}
-
-/// The SMART resource-scope gate for the ABAC-`Skip` families, template and AQL
-/// (master08 §Resource Scopes).
-///
-/// Both carry their resource id in the route, so the gate runs off the path
-/// parameters independently of any ABAC wiring: `{template_id}` for template
-/// ops, `{qualified_query_name}` for AQL definition and stored execution. An
-/// operation with neither has an unresolved id, which matches only a broad
-/// `*`/`**` scope ([`enforce::evaluate`]). A `patient/` compartment permit needs
-/// no EHR binding here — templates are unscoped and queries are cross-EHR, so
-/// per-row patient scoping stays with the ABAC query subject-scope pre-filter.
-fn smart_skip_family_gate(
-    state: &AppState,
-    op: &str,
+    op: &'static str,
     parts: &RequestParts,
 ) -> Result<(), Response> {
-    let Some(cfg) = smart_config(state) else {
-        return Ok(());
-    };
-    let family = enforce::family_of_op(op);
     if !matches!(
-        family,
-        Some(
-            openehr_sdt::smart_scopes::ResourceFamily::Template
-                | openehr_sdt::smart_scopes::ResourceFamily::Aql
-        )
+        op,
+        "composition_create" | "composition_update" | "composition_delete"
     ) {
         return Ok(());
     }
-    // No principal means no token and therefore no SMART scopes: advisory mode
-    // defers to the RBAC/ABAC tiers, fail-closed mode refuses. Refusing
-    // unconditionally would brick `auth.enabled = false`.
     let Some(principal) = current_principal() else {
-        if cfg.require_smart_scopes {
-            return Err(forbidden_unauthenticated(
-                "smart.require_smart_scopes demands a token carrying SMART resource scopes",
-            ));
-        }
         return Ok(());
     };
-    let resource_id = parts
-        .path
-        .get("template_id")
-        .or_else(|| parts.path.get("qualified_query_name"))
-        .map(String::as_str);
-    match smart_decide(cfg, &principal, op, resource_id) {
-        Err(reason) => Err(forbidden(&principal, &reason)),
-        // A `patient/` compartment binding is vacuous for these target-less
-        // families (see the doc).
-        Ok(_) => Ok(()),
+    let template = match op {
+        "composition_delete" => {
+            composition_template_of(
+                state,
+                &principal,
+                parts.path.get("uid_based_id").map(String::as_str),
+            )
+            .await?
+        }
+        _ => composition_template(parts),
+    };
+    smart_composition(
+        &principal,
+        op,
+        template.as_deref(),
+        parts.path.get("ehr_id").map(String::as_str),
+    )
+}
+
+/// The SMART gate of a COMPOSITION read, on the template of the version the
+/// dispatch returned (`object`, the ids it recorded).
+async fn smart_post(
+    state: &AppState,
+    op: &'static str,
+    object: Option<crate::system_log::middleware::AuditObject>,
+) -> Result<(), Response> {
+    if !smart_composition_op(op) {
+        return Ok(());
     }
+    let Some(principal) = current_principal() else {
+        return Ok(());
+    };
+    let ehr_id = object.as_ref().and_then(|o| o.ehr_id.clone());
+    let uid = object.as_ref().and_then(|o| o.uid.clone());
+    let template = composition_template_of(state, &principal, uid.as_deref()).await?;
+    smart_composition(&principal, op, template.as_deref(), ehr_id.as_deref())
+}
+
+/// Checks the `composition-` requirement of `op` on `template` for
+/// `principal`, a `patient/` grant confined to the launch context's EHR.
+///
+/// An unresolved template is covered only by a grant on every template, `*`
+/// or `**` (master08 §Resource Scopes).
+fn smart_composition(
+    principal: &Principal,
+    op: &str,
+    template: Option<&str>,
+    ehr_id: Option<&str>,
+) -> Result<(), Response> {
+    let requirement = Requirement::OpenEhr {
+        family: ResourceFamily::Composition,
+        permission: routes::permission_of_op(op),
+        resource: template.map(str::to_owned),
+    };
+    routes::check(&requirement, principal, ehr_id).map_err(|reason| {
+        tracing::debug!(reason, "a SMART on openEHR requirement was not met");
+        forbidden(principal, "the credential does not permit this request")
+    })
+}
+
+/// Returns the template of the COMPOSITION version `uid` names, read from the
+/// store, or `None` when the request names no version.
+async fn composition_template_of(
+    state: &AppState,
+    principal: &Principal,
+    uid: Option<&str>,
+) -> Result<Option<String>, Response> {
+    let Some(uid) = uid else {
+        return Ok(None);
+    };
+    let decoded = parse_uid_based_id(uid)
+        .map_err(|e| forbidden(principal, &format!("unaddressable resource id: {e}")))?;
+    let version = decoded
+        .version
+        .map(|ovid| ovid.version_tree_id().value().to_owned());
+    state
+        .backend()
+        .template_of_version(decoded.vo_id, version.as_deref())
+        .await
+        .map_err(|e| engine_error(principal, "resolve the composition template", &e))
 }
 
 #[cfg(test)]
@@ -793,9 +769,20 @@ mod tests {
     use async_trait::async_trait;
     use http::StatusCode;
 
+    use ferrohealth_smart::resource::{Access, Caller, Honoured};
+
     use super::*;
-    use crate::extensions::access::authn::AuthMethod;
     use crate::extensions::access::authz::{AuthzResolvers, ResolveError};
+
+    /// A bearer principal for `subject` carrying `claims`.
+    fn bearer_principal(
+        subject: &str,
+        claims: serde_json::Map<String, serde_json::Value>,
+        roles: Vec<String>,
+    ) -> Principal {
+        let caller = Caller::new(subject.to_owned(), None, "", None, false).with_claims(claims);
+        Principal::new(Access::Caller(Arc::new(caller)), roles, Honoured::default())
+    }
 
     /// A counting engine: records how often `decide` is called (the patient gate
     /// must deny *without* reaching it), always permits.
@@ -834,13 +821,7 @@ mod tests {
     fn principal_with_patient(patient: &str) -> Principal {
         let mut claims = serde_json::Map::new();
         claims.insert("patient_id".to_owned(), serde_json::json!(patient));
-        Principal {
-            subject: "alice".to_owned(),
-            scopes: Vec::new(),
-            roles: vec!["USER".to_owned()],
-            claims,
-            method: AuthMethod::Bearer,
-        }
+        bearer_principal("alice", claims, vec!["USER".to_owned()])
     }
 
     #[tokio::test]
@@ -1018,13 +999,7 @@ mod tests {
         let calls = Arc::new(AtomicUsize::new(0));
         let gate = gate_with_subject(Some(unique("P1")), calls);
         // A principal with no patient claim configured-but-absent → 403.
-        let principal = Principal {
-            subject: "alice".to_owned(),
-            scopes: Vec::new(),
-            roles: vec!["USER".to_owned()],
-            claims: serde_json::Map::new(),
-            method: AuthMethod::Bearer,
-        };
+        let principal = bearer_principal("alice", serde_json::Map::new(), vec!["USER".to_owned()]);
         let err = resolve_patient_claim(&gate, &principal).expect_err("missing claim");
         assert_eq!(err.status(), StatusCode::FORBIDDEN);
     }
@@ -1096,13 +1071,7 @@ mod tests {
     /// removed (attributing a denial to an identity that never authenticated
     /// writes a false subject into the audit trail).
     fn test_principal() -> Principal {
-        Principal {
-            subject: "test-subject".to_owned(),
-            scopes: Vec::new(),
-            roles: Vec::new(),
-            claims: serde_json::Map::new(),
-            method: AuthMethod::Bearer,
-        }
+        bearer_principal("test-subject", serde_json::Map::new(), Vec::new())
     }
 
     /// The PEP reads a resource id through this adapter's one strict
@@ -1166,138 +1135,182 @@ mod tests {
         }
     }
 
-    // ── SMART scope + launch-context gate (master08 §Resource Scopes; ─────────
-    //    master07 §Context Selection) ───────────────────────────────────────────
-
-    fn smart(require: bool) -> SmartConfig {
-        SmartConfig {
-            enabled: true,
-            require_smart_scopes: require,
-            ..SmartConfig::default()
-        }
-    }
+    // ── SMART scope + launch-context gate on COMPOSITION operations ────────
+    //    (master08 §Resource Scopes; master07 §Context Selection)
 
     fn principal_with_scopes(scope: &str, claims: &serde_json::Value) -> Principal {
-        Principal {
-            subject: "alice".to_owned(),
-            scopes: scope.split_whitespace().map(str::to_owned).collect(),
-            roles: vec!["USER".to_owned()],
-            claims: claims.as_object().cloned().unwrap_or_default(),
-            method: AuthMethod::Bearer,
-        }
+        principal_honoured(scope, claims, Honoured::default())
+    }
+
+    fn principal_honoured(
+        scope: &str,
+        claims: &serde_json::Value,
+        honoured: Honoured,
+    ) -> Principal {
+        let caller = Caller::new("alice".to_owned(), None, scope, None, false)
+            .with_issuer("https://as.example".to_owned())
+            .with_claims(claims.as_object().cloned().unwrap_or_default());
+        Principal::new(
+            Access::Caller(Arc::new(caller)),
+            vec!["USER".to_owned()],
+            honoured,
+        )
     }
 
     #[test]
-    fn smart_user_scope_permits_matching_composition_no_binding() {
-        // A `user/` grant permits with no launch-context binding required.
+    fn smart_user_scope_permits_its_template() {
         let p = principal_with_scopes("user/composition-Vitals.v1.r", &serde_json::json!({}));
-        assert_eq!(
-            smart_decide(&smart(true), &p, "composition_get", Some("Vitals.v1")),
-            Ok(None)
-        );
+        assert!(smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-1")).is_ok());
+        let other = smart_composition(&p, "composition_get", Some("Labs.v1"), Some("ehr-1"))
+            .expect_err("another template is not granted");
+        assert_eq!(other.status(), StatusCode::FORBIDDEN);
     }
 
     #[test]
     fn smart_permission_mismatch_denies() {
         // A read-only scope cannot authorise a create.
         let p = principal_with_scopes("user/composition-*.r", &serde_json::json!({}));
-        assert!(smart_decide(&smart(false), &p, "composition_create", Some("Vitals.v1")).is_err());
-    }
-
-    #[test]
-    fn smart_advisory_defers_for_plain_oidc_token() {
-        // No SMART resource scope + advisory mode → the gate does not engage.
-        let p = principal_with_scopes("openid profile", &serde_json::json!({}));
-        assert_eq!(
-            smart_decide(&smart(false), &p, "composition_create", Some("Vitals.v1")),
-            Ok(None)
+        assert!(
+            smart_composition(&p, "composition_create", Some("Vitals.v1"), Some("ehr-1")).is_err()
         );
     }
 
-    /// A Basic-authenticated caller holds no SMART scopes at all: fail-closed
-    /// refuses it on a scope-governed family and advisory defers to RBAC/ABAC
-    /// (#3255). The conformance stack runs fail-closed, which is why its Basic
-    /// dev users cannot upload a template there.
+    /// SMART on openEHR scopes are enforced on every route: a token carrying no
+    /// resource scope is refused on a COMPOSITION operation (master08 §Scopes:
+    /// the platform validates requested scopes against its access policy).
     #[test]
-    fn smart_fail_closed_refuses_a_basic_caller_and_advisory_defers() {
-        let mut basic = principal_with_scopes("", &serde_json::json!({}));
-        basic.method = AuthMethod::Basic;
+    fn smart_a_token_without_a_resource_scope_is_refused() {
+        let p = principal_with_scopes("openid profile", &serde_json::json!({}));
         assert!(
-            smart_decide(
-                &smart(true),
-                &basic,
-                "definition_template_adl1.4_upload",
-                None
+            smart_composition(&p, "composition_create", Some("Vitals.v1"), Some("ehr-1")).is_err()
+        );
+    }
+
+    /// A Basic user holds the scopes `[[auth.basic.users]]` grants it, and
+    /// none beyond them.
+    #[test]
+    fn smart_a_basic_caller_holds_its_configured_scopes() {
+        let granted = Principal::new(
+            Access::Caller(Arc::new(Caller::basic(
+                "alice".to_owned(),
+                "user/composition-*.cruds",
+            ))),
+            vec!["USER".to_owned()],
+            Honoured::default(),
+        );
+        assert!(
+            smart_composition(
+                &granted,
+                "composition_create",
+                Some("Vitals.v1"),
+                Some("ehr-1")
+            )
+            .is_ok()
+        );
+        let bare = Principal::new(
+            Access::Caller(Arc::new(Caller::basic("bob".to_owned(), ""))),
+            vec!["USER".to_owned()],
+            Honoured::default(),
+        );
+        assert!(
+            smart_composition(
+                &bare,
+                "composition_create",
+                Some("Vitals.v1"),
+                Some("ehr-1")
             )
             .is_err()
         );
-        assert_eq!(
-            smart_decide(
-                &smart(false),
-                &basic,
-                "definition_template_adl1.4_upload",
-                None
-            ),
-            Ok(None)
+    }
+
+    /// An unresolved template is covered only by a grant on every template.
+    #[test]
+    fn smart_an_unresolved_template_needs_a_wildcard() {
+        let specific =
+            principal_with_scopes("user/composition-Vitals.v1.r", &serde_json::json!({}));
+        assert!(smart_composition(&specific, "composition_get", None, Some("ehr-1")).is_err());
+        let every = principal_with_scopes("user/composition-*.r", &serde_json::json!({}));
+        assert!(smart_composition(&every, "composition_get", None, Some("ehr-1")).is_ok());
+    }
+
+    /// master07 §Context Selection: a `patient/` grant from a bound issuer
+    /// reaches the EHR the token's `ehrId` names, and no other.
+    #[test]
+    fn smart_patient_scope_binds_the_launch_context_ehr() {
+        let bound = Honoured {
+            backend: false,
+            patient: true,
+        };
+        let p = principal_honoured(
+            "patient/composition-*.r",
+            &serde_json::json!({ "ehrId": "ehr-1" }),
+            bound,
+        );
+        assert!(smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-1")).is_ok());
+        assert!(
+            smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-2")).is_err()
         );
     }
 
+    /// A `patient/` grant whose token names no `ehrId` reaches nothing.
     #[test]
-    fn smart_fail_closed_denies_without_family_scope() {
-        let p = principal_with_scopes("openid profile", &serde_json::json!({}));
-        assert!(smart_decide(&smart(true), &p, "composition_create", Some("Vitals.v1")).is_err());
+    fn smart_patient_scope_requires_a_launch_context_claim() {
+        let bound = Honoured {
+            backend: false,
+            patient: true,
+        };
+        let p = principal_honoured("patient/composition-*.r", &serde_json::json!({}), bound);
+        assert!(
+            smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-1")).is_err()
+        );
     }
 
+    /// The SMART `patient` claim is no openEHR launch context: master07
+    /// §Context Selection names `ehrId` for the EHR, so a token carrying only
+    /// `patient` binds no EHR.
     #[test]
-    fn smart_patient_scope_yields_launch_context_for_binding() {
-        // `patient/` compartment → permit, returning the launch-context id the
-        // PEP must bind to the target EHR (via the subject gate).
+    fn smart_the_patient_claim_is_no_ehr_launch_context() {
+        let bound = Honoured {
+            backend: false,
+            patient: true,
+        };
+        let p = principal_honoured(
+            "patient/composition-*.r",
+            &serde_json::json!({ "patient": "ehr-1" }),
+            bound,
+        );
+        assert!(
+            smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-1")).is_err()
+        );
+    }
+
+    /// A `patient/` grant from an issuer FerroEHR has not bound grants nothing.
+    #[test]
+    fn smart_patient_scope_of_an_unbound_issuer_grants_nothing() {
         let p = principal_with_scopes(
             "patient/composition-*.r",
             &serde_json::json!({ "ehrId": "ehr-1" }),
         );
-        assert_eq!(
-            smart_decide(&smart(false), &p, "composition_get", Some("Vitals.v1")),
-            Ok(Some("ehr-1".to_owned()))
-        );
-    }
-
-    #[test]
-    fn smart_patient_scope_requires_a_launch_context_claim() {
-        // `patient/` compartment but no ehrId/patient claim → deny.
-        let p = principal_with_scopes("patient/composition-*.r", &serde_json::json!({}));
-        assert!(smart_decide(&smart(false), &p, "composition_get", Some("Vitals.v1")).is_err());
-    }
-
-    #[test]
-    fn smart_patient_scope_falls_back_to_patient_claim() {
-        // No `ehrId` claim → the standard SMART `patient` context claim is used
-        // (master07 token-response table).
-        let p = principal_with_scopes(
-            "patient/composition-*.r",
-            &serde_json::json!({ "patient": "subject-9" }),
-        );
-        assert_eq!(
-            smart_decide(&smart(false), &p, "composition_get", Some("Vitals.v1")),
-            Ok(Some("subject-9".to_owned()))
+        assert!(
+            smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-1")).is_err()
         );
     }
 
     #[test]
     fn smart_user_scope_needs_no_patient_binding() {
-        // A `user/` grant permits without forcing the launch-context binding.
         let p = principal_with_scopes("user/composition-*.r", &serde_json::json!({}));
-        assert_eq!(
-            smart_decide(&smart(false), &p, "composition_get", Some("Vitals.v1")),
-            Ok(None)
-        );
+        assert!(smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-2")).is_ok());
     }
 
+    /// Only the COMPOSITION operations are gated here; the tags are held to
+    /// every template by the middleware.
     #[test]
-    fn smart_non_family_op_is_never_gated() {
-        // EHR ops carry no SMART resource family (master08 lists only
-        // template/composition/aql), so the gate defers even fail-closed.
-        let p = principal_with_scopes("openid", &serde_json::json!({}));
-        assert_eq!(smart_decide(&smart(true), &p, "ehr_create", None), Ok(None));
+    fn smart_composition_ops_are_the_composition_family() {
+        assert!(smart_composition_op("composition_get"));
+        assert!(smart_composition_op(
+            "versioned_composition_revision_history"
+        ));
+        assert!(!smart_composition_op("composition_tags_get"));
+        assert!(!smart_composition_op("ehr_create"));
     }
 }

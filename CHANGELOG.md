@@ -61,12 +61,74 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **Authentication and SMART on openEHR run on `ferrohealth-smart` 0.2.0**
+  (#3872). This is a breaking change to the configuration with no
+  deprecation period. `[auth.oidc]` is gone: the token issuer is configured
+  in `[auth]` itself (`issuer` or `[[auth.issuer]]`, `audience`,
+  `algorithms`, `token_profile`, `clock_skew_seconds`,
+  `jwks_max_age_seconds`, `jwks_refresh_interval_seconds`, `jwks_file`,
+  `timeout_ms`, `realm`). The server reads each issuer's metadata and key set
+  at boot, accepts only asymmetric algorithms, requires `typ: at+jwt` under
+  the default `token_profile` (RFC 9068 §4), and answers every invalid token
+  with one `401` that names no reason. An issuer on plain `http` is accepted
+  only on a loopback address. A Basic user is `user`, `password_hash` or
+  `password_hash_file`, and `scopes`; its roles move to
+  `[authz.rbac.basic_roles]`, and the verified-credential cache to
+  `[authz] basic_cache_ttl_seconds`. `[auth.oidc.assurance]` and
+  `[auth.oidc.professional]` become `[authz.assurance]` and
+  `[authz.professional]`.
+- **Every route enforces its SMART on openEHR scope whenever `[auth]` is
+  on** (#3872). There is no switch any more: an EHR, composition, directory
+  or contribution route needs a `composition-` scope, a template route a
+  `template-` scope, a query an `aql-` scope, the ADMIN API the
+  `[auth] product_scope` (default `__ferroehr.platform`), and the
+  DEMOGRAPHIC API a client listed in `[smart] demographic_clients` or the
+  product scope. A credential without the scope gets `403` with the
+  `insufficient_scope` challenge. A `patient/` grant counts only for an
+  issuer in `[smart] patient_issuers` and is bound to the EHR the token's
+  `ehrId` claim names; a `system/aql-*` grant counts only for a client in
+  `[smart] backend_clients`.
+- **The SMART configuration document is built from the issuer's metadata**
+  (#3872). `[smart] enabled` serves it, needs an issuer whose metadata names
+  a `token_endpoint`, and lists only the `authorization_code` and
+  `client_credentials` grants and the `S256` challenge method. Its
+  `capabilities` and `scopes_supported` come from `[auth] capabilities` and
+  `[auth] scopes_supported` beside what the server enforces.
+- **The terminology client fetches its client-credentials token through
+  `ferrohealth-smart`** (#3872). The `[terminology.external.oauth2_clients]`
+  keys are unchanged.
+- **The Helm chart and the compose files follow the new keys** (#3872, chart
+  12.0.0). The chart's Basic users are keyed by `user`, and the CDR credential
+  FerroBRIDGE uses is HTTP Basic only.
+- **The Keycloak overlay and the development stack serve Keycloak's issuer over
+  TLS** (#3873). A one-shot `keycloak-tls` service generates a development CA
+  and Keycloak's certificate on the first `up`, Keycloak serves the issuer at
+  `https://keycloak:8443/auth/realms/ferroehr`, and the CDR trusts that CA
+  through `SSL_CERT_DIR` with `token_profile = "jwt"`, so a Keycloak token is
+  accepted again. Both realms put the SMART on openEHR scopes and the product
+  scope into every token. The token call on port 8081 is unchanged.
+
 - **The viewer takes FerroUI 0.2.0 and reads every word it draws from its
   catalog** (#300, #3860). The labels it hands FerroUI (table captions,
   column headers, pager nouns with their plurals, navigation, tabs, fields,
   dialogs, toasts) are looked up in `locales/en/ferroehr-viewer.ftl` at run
   time, and the stray-literal baseline drops from 1918 to 505 literals.
   English remains the only locale.
+
+### Removed
+
+- **The HMAC token key and the static bearer token** (#3872).
+  `hmac_secret` and `hmac_secret_file` are unknown keys, as are the inline
+  `jwks_json` key set and `allow_insecure_issuer`; the Helm chart drops
+  `secrets.authOidcHmacSecret` and `bridge.cdr.auth`. Machine-to-machine
+  callers authenticate with HTTP Basic or an OAuth 2.0 client-credentials
+  token from the issuer.
+- **`[smart] ehr_id_claim`, `patient_claim`, `require_smart_scopes` and
+  `[smart.endpoints]`** (#3872). The launch context is the token's `ehrId`
+  claim, enforcement is always on, and the discovery document's endpoints come
+  from the issuer's metadata.
+- **`[auth] scopeless_subjects` is refused at boot** (#3872), because a
+  SMART on openEHR requirement admits no caller without scopes.
 
 ### Fixed
 
@@ -104,6 +166,12 @@ workflow refuses a tag that has no matching section here.
   template choice reads "Any template", an absent value reads "(no value)",
   and the hints, notes and form errors that used a dash use a colon or a
   full stop.
+
+### Security
+
+- **A token signed with a shared secret is no longer accepted** (#3872). Only
+  the asymmetric algorithms RFC 9068 §4 names verify a bearer token, so a
+  party holding a key the CDR shares cannot mint one.
 
 ## [5.0.0] - 2026-10-19
 

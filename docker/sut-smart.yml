@@ -29,51 +29,27 @@
 services:
   ferroehr:
     environment:
-      # ── the SMART resource-server role ────────────────────────────────────
-      FERROEHR__SMART__ENABLED: "true"
-      # master04 §Capabilities: advertising `openehr-permission-v1` is the
-      # declaration that the scope layer decides an ungranted resource family.
-      FERROEHR__SMART__REQUIRE_SMART_SCOPES: "true"
+      # ── the SMART on openEHR resource-server role ──────────────────────────
+      # Every route enforces its SMART on openEHR requirement whenever [auth] is
+      # on (master08 §Resource Scopes), so the scope cases run with no switch.
+      # The discovery document stays OFF in this lane: it is built from the
+      # issuer's metadata, and the committed test issuer is a key-set FILE with
+      # no metadata to read (no Authorization Server runs here), so the server
+      # refuses to serve a document that could name no token endpoint.
+      FERROEHR__SMART__ENABLED: "false"
       # master04 §Services: every services.*.baseUrl is an "Absolute URL to the
       # root of the API (required)", so the server needs its external origin.
-      # This is the origin the runner reaches the composed SUT on.
       FERROEHR__SMART__PUBLIC_BASE_URL: "http://localhost:8080"
-      # ...and that origin is plaintext, because the lane composes over a local
-      # bridge network with no TLS anywhere. Boot validation refuses a non-https
-      # `public_base_url` or advertised endpoint (RFC 6749 §3.1.2.1, RFC 8414
-      # §6.2 — the discovery document tells third-party applications where to
-      # get tokens, so a plaintext endpoint exposes the code and the token to
-      # anyone on the path), and this flag is the named development escape it
-      # points at. It belongs HERE and never in a deployed configuration: a real
-      # SMART deployment publishes https endpoints or publishes nothing.
-      FERROEHR__SMART__ENDPOINTS__ALLOW_INSECURE_ENDPOINTS: "true"
-      # master04 §Authentication Endpoints — the external Authorization
-      # Server's endpoints, advertised verbatim. The CDR implements none of
-      # them, so example.com literals are the honest declaration for a lane
-      # whose tokens are minted by the runner rather than obtained from an AS.
-      FERROEHR__SMART__ENDPOINTS__AUTHORIZATION_ENDPOINT: "https://as.cnf.test/authorize"
-      FERROEHR__SMART__ENDPOINTS__TOKEN_ENDPOINT: "https://as.cnf.test/token"
-      FERROEHR__SMART__ENDPOINTS__JWKS_URI: "https://as.cnf.test/jwks.json"
-      # master06 §Deprecated Flows: implicit and resource-owner-password MUST
-      # NOT be advertised (SmartConfig::validate rejects them at boot).
-      FERROEHR__SMART__ENDPOINTS__GRANT_TYPES_SUPPORTED: "authorization_code,client_credentials"
-      FERROEHR__SMART__ENDPOINTS__RESPONSE_TYPES_SUPPORTED: "code"
-      # Boot validation refuses an EMPTY list here: a document advertising a
-      # token endpoint and no client-authentication method describes an
-      # authorization server that authenticates no client at all. RFC 8414 §2
-      # marks the field optional with an implied `client_secret_basic`, but the
-      # CDR will not guess on an operator's behalf about an AS it does not run.
-      # Both listed values are the SMART App Launch ones matching the grants
-      # advertised above.
-      FERROEHR__SMART__ENDPOINTS__TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED: "client_secret_basic,private_key_jwt"
-      FERROEHR__SMART__ENDPOINTS__CODE_CHALLENGE_METHODS_SUPPORTED: "S256"
       # ── trust the committed CNF test issuer ───────────────────────────────
-      # Overrides the dev config's Keycloak issuer: the lane validates the
-      # runner-minted tokens against a STATIC JWKS, so no Authorization Server
-      # has to be running for the scope cases to execute.
-      FERROEHR__AUTH__OIDC__ISSUER: "https://as.cnf.test"
-      FERROEHR__AUTH__OIDC__AUDIENCES: "cnf-smart-sut"
-      FERROEHR__AUTH__OIDC__ALGORITHMS: "RS256"
-      FERROEHR__AUTH__OIDC__JWKS_JSON_FILE: /etc/ferroehr/cnf-smart-jwks.json
+      # The lane validates the runner-minted tokens against a STATIC key set, so
+      # no Authorization Server has to be running for the scope cases to
+      # execute. The runner mints plain RS256 JWTs (`typ` JWT, no `client_id`
+      # or `jti`), which the `jwt` profile admits; RFC 9068 tokens would need
+      # the default `rfc9068` profile.
+      FERROEHR__AUTH__ISSUER: "https://as.cnf.test"
+      FERROEHR__AUTH__AUDIENCE: "cnf-smart-sut"
+      FERROEHR__AUTH__ALGORITHMS: "RS256"
+      FERROEHR__AUTH__TOKEN_PROFILE: "jwt"
+      FERROEHR__AUTH__JWKS_FILE: /etc/ferroehr/cnf-smart-jwks.json
     volumes:
       - ./docs/conformance/party/smart/jwks.json:/etc/ferroehr/cnf-smart-jwks.json:ro

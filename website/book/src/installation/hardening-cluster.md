@@ -124,7 +124,7 @@ component can read.
 What makes it concrete for this deployment: **anything that can read etcd can read
 every Secret in the cluster**, and this release's Secrets are not incidental. They
 hold the **database DSN** (the credential that reaches patient data) plus the
-OIDC HMAC secret, the version-signing passphrase, any Basic user's Argon2id hash,
+version-signing passphrase, any Basic user's Argon2id hash,
 and any terminology-server client secret. So "etcd is a cluster concern" is true
 and insufficient: for this workload etcd is the confidentiality boundary of the
 credentials that reach PHI. The full inventory is [what our Secrets
@@ -203,8 +203,8 @@ preferred over long-lived credentials, and a missing credential distinguished fr
 a refused one (`401` with a challenge versus `403`). The
 [Security chapter](../security.md) is the detail. An operator who understands why
 a static token file is a poor cluster credential already understands why
-`config.auth.basic` is a development mechanism here and `config.auth.oidc` is the
-production one.
+`config.auth.basic` is a machine and bootstrap mechanism here and a
+`config.auth.issuer` is the production one for people.
 
 ## Cluster RBAC, and why this chart needs none
 

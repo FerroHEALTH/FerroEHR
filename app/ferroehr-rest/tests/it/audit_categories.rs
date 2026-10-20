@@ -28,7 +28,6 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::auth::AuthConfig;
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
 use ferroehr::config::server::ServerConfig;
 use ferroehr::service::FerroEhrService;
@@ -37,6 +36,7 @@ use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
+use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
@@ -127,9 +127,9 @@ fn config() -> AppConfig {
             swagger_ui: AccessLevel::Off,
             ..Default::default()
         },
-        auth: AuthConfig {
+        auth: AuthSection {
             enabled: false,
-            ..AuthConfig::default()
+            ..AuthSection::default()
         },
         ..Default::default()
     }
@@ -165,7 +165,9 @@ async fn app(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let app = ferroehr_rest::build_full(config(), svc, None, observability).expect("build app");
+    let app = ferroehr_rest::build_full(config(), svc, None, observability)
+        .await
+        .expect("build app");
     let (status, _, body) = send(
         &app,
         Request::post(format!("{BASE}/definition/template/adl1.4"))

@@ -20,7 +20,6 @@ use std::collections::BTreeMap;
 
 use assert_fs::prelude::*;
 use ferroehr::config::FerroEhrConfig;
-use ferroehr::config::auth::OidcConfig;
 use ferroehr::config::secret::{Secret, SecretUrl};
 use ferroehr::db::domain::DomainPools;
 use ferroehr::manufacturer::MANUFACTURER;
@@ -32,7 +31,7 @@ use ferroehr::service::terminology::config::TerminologyOauth2Config;
 const DB_PW: &str = "DB_PW_SENTINEL_5c1e";
 const MIGRATE_PW: &str = "MIGRATE_PW_SENTINEL_9d2a";
 const PARTY_PW: &str = "PARTY_PW_SENTINEL_3b7f";
-const HMAC: &str = "HMAC_SENTINEL_8e4c";
+const BASIC_HASH: &str = "$argon2id$BASIC_HASH_SENTINEL_8e4c";
 const CLIENT_SECRET: &str = "CLIENT_SECRET_SENTINEL_2a6d";
 const PASSPHRASE: &str = "PASSPHRASE_SENTINEL_7f3b";
 const KEY_MATERIAL: &str = "SIGNING_KEY_MATERIAL_SENTINEL_1c9e";
@@ -62,10 +61,16 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
     config.storage.party.url = Some(SecretUrl::new(format!(
         "postgres://partyuser:{PARTY_PW}@127.0.0.1:1/ferroehr"
     )));
-    config.auth.oidc = Some(OidcConfig {
-        issuer: format!("https://idpuser:{ISSUER_PW}@idp.example/realms/ferroehr"),
-        hmac_secret: Some(Secret::new(HMAC)),
-        ..OidcConfig::default()
+    config.auth.issuer = ferrohealth_smart::config::IssuerKey::Flat(format!(
+        "https://idpuser:{ISSUER_PW}@idp.example/realms/ferroehr"
+    ));
+    config.auth.basic = Some(ferrohealth_smart::config::BasicSection {
+        users: vec![ferrohealth_smart::config::BasicUser {
+            user: "reporter".to_owned(),
+            password_hash: Some(secrecy::SecretString::from(BASIC_HASH)),
+            password_hash_file: None,
+            scopes: Vec::new(),
+        }],
     });
     config.terminology.external.oauth2_clients = BTreeMap::from([(
         "terminology".to_owned(),
@@ -107,7 +112,7 @@ async fn no_credential_reaches_the_report() {
         DB_PW,
         MIGRATE_PW,
         PARTY_PW,
-        HMAC,
+        BASIC_HASH,
         CLIENT_SECRET,
         PASSPHRASE,
         KEY_MATERIAL,

@@ -28,9 +28,9 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 use uuid::Uuid;
 
-use ferroehr::config::auth::AuthConfig;
 use ferroehr::config::server::ServerConfig;
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 
@@ -47,11 +47,10 @@ fn config(enabled: bool) -> AppConfig {
             cors_permissive: false,
             ..Default::default()
         },
-        auth: AuthConfig {
+        auth: AuthSection {
             enabled: false,
             basic: None,
-            oidc: None,
-            ..AuthConfig::default()
+            ..AuthSection::default()
         },
         events_admin_api: enabled,
         ..Default::default()
@@ -62,7 +61,9 @@ async fn app(enabled: bool) -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
     (
         pg,
-        ferroehr_rest::build_with(config(enabled), service).expect("router builds"),
+        ferroehr_rest::build_with(config(enabled), service)
+            .await
+            .expect("router builds"),
     )
 }
 

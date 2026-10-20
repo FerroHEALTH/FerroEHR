@@ -56,7 +56,7 @@ async fn app_with_impossible_timeout() -> (
 ) {
     let (pg, service) = common::test_service().await;
     service.create_ehr(None).await.expect("seed an EHR");
-    let router = common::router_with(common::api_config(true), service);
+    let router = common::router_with(common::api_config(true), service).await;
     let stack = tower::ServiceBuilder::new()
         .layer(TimeoutLayer::with_status_code(
             StatusCode::REQUEST_TIMEOUT,
@@ -131,7 +131,7 @@ async fn the_streamed_sweep_completes_under_a_timeout_the_aggregated_one_cannot_
 #[tokio::test]
 async fn a_wildcard_accept_keeps_the_aggregated_document() {
     let (_pg, service) = common::test_service().await;
-    let app = common::router_with(common::api_config(true), service);
+    let app = common::router_with(common::api_config(true), service).await;
 
     let (status, body) = common::send_body(&app, verify(Some("*/*"))).await;
 
@@ -158,7 +158,7 @@ fn rebuild(query: &str) -> Request<Body> {
 async fn the_rebuild_answers_a_report_over_an_undamaged_repository() {
     let (_pg, service) = common::test_service().await;
     service.create_ehr(None).await.expect("seed an EHR");
-    let app = common::router_with(common::api_config(true), service);
+    let app = common::router_with(common::api_config(true), service).await;
 
     let (status, body) = common::send_body(&app, rebuild("")).await;
 
@@ -181,7 +181,7 @@ async fn the_rebuild_answers_a_report_over_an_undamaged_repository() {
 #[tokio::test]
 async fn a_sys_version_without_a_vo_id_is_refused() {
     let (_pg, service) = common::test_service().await;
-    let app = common::router_with(common::api_config(true), service);
+    let app = common::router_with(common::api_config(true), service).await;
 
     let (status, body) = common::send_body(&app, rebuild("?sys_version=2")).await;
 
@@ -200,7 +200,7 @@ async fn a_sys_version_without_a_vo_id_is_refused() {
 #[tokio::test]
 async fn the_rebuild_is_gated_with_the_rest_of_the_admin_group() {
     let (_pg, service) = common::test_service().await;
-    let app = common::router_with(common::api_config(false), service);
+    let app = common::router_with(common::api_config(false), service).await;
 
     let (status, _) = common::send_body(&app, rebuild("")).await;
 

@@ -65,13 +65,13 @@ including after the `FERROEHR` prefix.** A single underscore only ever appears
 | TOML | Environment variable |
 |---|---|
 | `[db] max_connections = 20` | `FERROEHR__DB__MAX_CONNECTIONS=20` |
-| `[auth.oidc] issuer = "…"` | `FERROEHR__AUTH__OIDC__ISSUER=…` |
+| `[auth] issuer = "…"` | `FERROEHR__AUTH__ISSUER=…` |
 | `[management.endpoints] env = "off"` | `FERROEHR__MANAGEMENT__ENDPOINTS__ENV=off` |
 | `[terminology.external.providers.default] url = "…"` | `FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__DEFAULT__URL=…` |
 
 Scalars are typed automatically (bool / int / float, else string).
 **List-typed keys take comma-separated values**
-(`FERROEHR__AUTH__OIDC__AUDIENCES=ferroehr,other`). Map-keyed tables are
+(`FERROEHR__AUTH__AUDIENCE=ferroehr,other`). Map-keyed tables are
 reachable too: the map key is just another segment
 (`FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SNOMED__URL`). Arrays of tables (the
 Basic-auth user store) are **file-only**, because the environment grammar has

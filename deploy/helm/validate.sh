@@ -263,7 +263,6 @@ secret_leak_gate() {
     "db.url"
     "events.url"
     "audit.fhir_feed.url"
-    "auth.oidc.hmac_secret"
     "signing.key_passphrase"
     "multimedia.secret_access_key"
     "terminology.external.oauth2_clients.tx.client_secret"
@@ -570,7 +569,7 @@ refusal_registry_gate() {
   local bridge="${CI_DIR}/bridge-values.yaml"
   local tls="${CI_DIR}/server-tls-values.yaml"
   local -a registry=(
-    "deployment.yaml|no authentication mechanism is configured|${base}|--set config.auth.oidc.issuer=null|config.auth.basic.users;config.auth.oidc.issuer"
+    "deployment.yaml|no authentication mechanism is configured|${base}|--set config.auth.issuer=null|config.auth.basic.users;config.auth.issuer"
     "migration-job.yaml|requires migrations.job.existingSecret|${base}|--set migrations.job.enabled=true|migrations.job.existingSecret"
     "deployment.yaml|server.tls.client_auth is|${tls}|--set config.server.tls.client_auth=required|config.server.tls.client_auth;optional"
     "ingress.yaml|ingress.backendTlsAnnotations is empty|${tls}|--set ingress.backendTlsAnnotations=null|ingress.backendTlsAnnotations;nginx.ingress.kubernetes.io/backend-protocol"
@@ -594,7 +593,7 @@ refusal_registry_gate() {
     "_helpers.tpl|sets a key the chart already writes|${bridge}|--set-string bridge.config.mappings.directory=/srv/mappings|bridge.config.mappings.directory;bridge.mappings.existingConfigMap"
     "_helpers.tpl|sets a key the chart already writes|${bridge}|--set-string bridge.config.server.listen=[::]:9090|bridge.config.server.listen"
     "bridge.yaml|with an empty bridge.networkPolicy.ingressFrom|${bridge}|--set bridge.networkPolicy.ingressFrom=null|bridge.networkPolicy.ingressFrom;FerroBRIDGE#400"
-    "bridge.yaml|with an empty bridge.cdr.existingSecret|${bridge}|--set bridge.cdr.existingSecret=|bridge.cdr.existingSecret;bearer_token"
+    "bridge.yaml|with an empty bridge.cdr.existingSecret|${bridge}|--set bridge.cdr.existingSecret=|bridge.cdr.existingSecret;password"
     "bridge.yaml|with an empty bridge.mappings.files|${bridge}|--set bridge.mappings.files=null|bridge.mappings.files;..data"
     "bridge.yaml|with an empty bridge.mappings.existingConfigMap|${bridge}|--set bridge.mappings.existingConfigMap=|bridge.mappings.existingConfigMap"
     "_helpers.tpl|service.tls.caExistingSecret is empty|${bridge}|--set config.server.tls.enabled=true|FerroBRIDGE (bridge.enabled);service.tls.caExistingSecret;DNS SAN"
@@ -753,7 +752,7 @@ schema_gate() {
     "bridge.ingress.enabled=true|additional properties 'ingress' not allowed"
     "bridge.service.type=NodePort|additional properties 'type' not allowed"
     "bridge.networkPolicy.ingressAllowAll=true|additional properties 'ingressAllowAll' not allowed"
-    "bridge.cdr.auth=oauth|/bridge/cdr/auth"
+    "bridge.cdr.auth=bearer|/bridge/cdr"
     "bridge.cdr.password=SENTINEL_PROBE|additional properties 'password' not allowed"
     "bridge.image.digest=sha256:nothex|/bridge/image/digest"
     "bridge.mappings.files[0]=..|/bridge/mappings/files/0"
@@ -1341,7 +1340,7 @@ cat <<'BOUNDARY'
 
     * that the server ACCEPTS the rendered ferroehr.toml — the keys it carries,
       their types, and the semantic rules validated at boot (an auth mechanism,
-      the RFC 8725 32-byte HMAC floor, a real Argon2id PHC string, the SMART
+      a real Argon2id PHC string, the SMART
       requirements). Run: deploy/helm/ci/boot-check.sh   [CI: chart-boot]
     * that the image the chart selects UNDERSTANDS those keys. `appVersion` and
       the chart's config defaults move on different clocks, so a key added

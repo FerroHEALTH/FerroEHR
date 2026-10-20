@@ -16,9 +16,9 @@ available as an explicit, visible choice.
 */}}
 {{- if .Values.config.auth.enabled }}
 {{- $basic := (.Values.config.auth.basic).users }}
-{{- $issuer := (.Values.config.auth.oidc).issuer }}
+{{- $issuer := .Values.config.auth.issuer }}
 {{- if and (empty $basic) (empty $issuer) }}
-{{- fail "config.auth.enabled is true but no authentication mechanism is configured, so the server would refuse to start (RFC 9110 §11.6.1: a 401 challenge must name a scheme the server implements).\n\nConfigure one:\n  config.auth.basic.users  — see deploy/helm/ci/basic-auth-values.yaml\n  config.auth.oidc.issuer  — with config.auth.oidc.audiences\n\nOr, for a development install only, set config.auth.enabled=false to serve every request unauthenticated." }}
+{{- fail "config.auth.enabled is true but no authentication mechanism is configured, so the server would refuse to start (RFC 9110 §11.6.1: a 401 challenge must name a scheme the server implements).\n\nConfigure one:\n  config.auth.basic.users  — see deploy/helm/ci/basic-auth-values.yaml\n  config.auth.issuer       — with config.auth.audience\n\nOr, for a development install only, set config.auth.enabled=false to serve every request unauthenticated." }}
 {{- end }}
 {{- end }}
 {{- /* The kubelet's HTTPS probes present no client certificate
@@ -165,10 +165,6 @@ spec:
                    preparation falls back to the clinical DSN. */}}
             - name: FERROEHR__DB__MIGRATE_URL_FILE
               value: {{ printf "%s/db.migrate_url" (include "ferroehr.secretMountPath" .) | quote }}
-            {{- end }}
-            {{- if .Values.secrets.authOidcHmacSecret }}
-            - name: FERROEHR__AUTH__OIDC__HMAC_SECRET_FILE
-              value: {{ printf "%s/auth.oidc.hmac_secret" (include "ferroehr.secretMountPath" .) | quote }}
             {{- end }}
             {{- if .Values.secrets.signingKeyPassphrase }}
             - name: FERROEHR__SIGNING__KEY_PASSPHRASE_FILE
@@ -392,10 +388,6 @@ spec:
               {{- if .Values.secrets.eventsUrl }}
                     - key: events.url
                       path: events.url
-              {{- end }}
-              {{- if .Values.secrets.authOidcHmacSecret }}
-                    - key: auth.oidc.hmac_secret
-                      path: auth.oidc.hmac_secret
               {{- end }}
               {{- if .Values.secrets.signingKeyPassphrase }}
                     - key: signing.key_passphrase

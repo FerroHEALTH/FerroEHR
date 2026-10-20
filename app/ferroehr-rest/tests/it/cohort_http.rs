@@ -185,7 +185,7 @@ async fn a_bound_deployment_serves_a_cohort() {
     );
     seed(&service, "Groningen", &["Ada", "Bram", "Cato"]).await;
     seed(&service, "Assen", &["Daan"]).await;
-    let app = common::router_with(common::api_config(false), service);
+    let app = common::router_with(common::api_config(false), service).await;
 
     let (status, text) = common::send_body(
         &app,
@@ -227,7 +227,7 @@ async fn an_unbound_predicate_is_refused() {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_cohort(bound_config()),
     );
-    let app = common::router_with(common::api_config(false), service);
+    let app = common::router_with(common::api_config(false), service).await;
 
     let (status, text) = common::send_body(
         &app,
@@ -256,7 +256,7 @@ async fn an_unbound_predicate_is_refused() {
 async fn an_unconfigured_deployment_answers_not_found() {
     let (db, service) = common::test_service().await;
     assert!(!service.cohort_enabled(), "nothing is bound by default");
-    let app = common::router_with(common::api_config(false), service);
+    let app = common::router_with(common::api_config(false), service).await;
 
     let (status, text) = common::send_body(
         &app,

@@ -7,9 +7,11 @@
 //! (`ferroehr::config` — one TOML, one schema); this module holds only the
 //! adapter-side assembly the router consumes.
 
-use ferroehr::config::auth::AuthConfig;
+use ferroehr::config::auth::{AssuranceConfig, ProfessionalConfig};
+use ferroehr::config::authz::RbacConfig;
 use ferroehr::config::server::{AdminConfig, ServerConfig};
 use ferroehr::config::smart::SmartConfig;
+use ferrohealth_smart::config::AuthSection;
 
 /// The REST adapter's runtime configuration view, assembled by the binary
 /// from the root [`ferroehr::config::FerroEhrConfig`].
@@ -21,8 +23,9 @@ use ferroehr::config::smart::SmartConfig;
 pub struct AppConfig {
     /// `[server]` — listener + REST surface + System-Options identity.
     pub server: ServerConfig,
-    /// `[auth]` — authentication (Basic + OAuth2/OIDC).
-    pub auth: AuthConfig,
+    /// `[auth]` — authentication: the `ferrohealth-smart` section (issuers,
+    /// Basic users, product scope).
+    pub auth: AuthSection,
     /// `[admin]` — the ADMIN API group toggle.
     pub admin: AdminConfig,
     /// `[smart]` — SMART App Launch resource-server posture.
@@ -40,6 +43,16 @@ pub struct AppConfig {
     /// extraction reads, lifted here because the authenticator applies them
     /// whether or not any authorization gate is switched on.
     pub role_claims: Vec<String>,
+    /// `[authz.rbac]` — the role rules a Basic user's roles are read from
+    /// (`basic_roles`, `user_role`).
+    pub rbac: RbacConfig,
+    /// `[authz] basic_cache_ttl_seconds` — how long a verified Basic
+    /// credential is reused before its hash is checked again.
+    pub basic_cache_ttl_seconds: u64,
+    /// `[authz.assurance]` — the assurance a patient-data request must carry.
+    pub assurance: AssuranceConfig,
+    /// `[authz.professional]` — how a token names the natural person behind it.
+    pub professional: Option<ProfessionalConfig>,
     /// `spec_profile` — the openEHR specification generation set the server
     /// runs; the demographic ingress boundary reads it (the stable
     /// generation's released surface differs from the typed core's).
@@ -50,13 +63,17 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             server: ServerConfig::default(),
-            auth: AuthConfig::default(),
+            auth: AuthSection::default(),
             admin: AdminConfig::default(),
             smart: SmartConfig::default(),
             terminology_api_enabled: false,
             events_admin_api: false,
             audit_organization_claim: None,
-            role_claims: ferroehr::config::authz::RbacConfig::default().role_claims,
+            role_claims: RbacConfig::default().role_claims,
+            rbac: RbacConfig::default(),
+            basic_cache_ttl_seconds: 60,
+            assurance: AssuranceConfig::default(),
+            professional: None,
             spec_profile: ferroehr::config::profile::SpecProfile::default(),
         }
     }
@@ -97,9 +114,6 @@ mod tests {
         assert!(!c.smart.enabled);
         assert!(!c.terminology_api_enabled);
         assert!(!c.events_admin_api);
-        assert_eq!(
-            c.role_claims,
-            ferroehr::config::authz::RbacConfig::default().role_claims
-        );
+        assert_eq!(c.role_claims, RbacConfig::default().role_claims);
     }
 }

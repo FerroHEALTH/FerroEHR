@@ -38,10 +38,12 @@ enabled = true
 # The demo user: ferroehr / ferroehr (the hash is Argon2id of "ferroehr").
 # Public by design; the sandbox holds demo data only and is wiped on a
 # schedule.
+# Its scopes grant every SMART on openEHR resource family, and the product
+# scope admits the ADMIN and DEMOGRAPHIC APIs.
 [[auth.basic.users]]
-username = "ferroehr"
+user = "ferroehr"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-roles = ["USER"]
+scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
 
 # Authentication only, no role gate — the one demo user deliberately reaches
 # every enabled surface, the admin group included (#2965).

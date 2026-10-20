@@ -117,7 +117,7 @@ lives in the record:
 
 | NEN 7513 asks for | FerroEHR records it as |
 |---|---|
-| The identity of the person who accessed the record | `principal` — the authenticated Basic username or OAuth `sub`; an unattributable denial is recorded as unattributed, never under a fabricated identity. With `[auth.oidc.professional]` configured, `professional_id` names the natural person when the token names a client application |
+| The identity of the person who accessed the record | `principal` — the authenticated Basic username or OAuth `sub`; an unattributable denial is recorded as unattributed, never under a fabricated identity. With `[authz.professional]` configured, `professional_id` names the natural person when the token names a client application |
 | The identity of the patient whose record was accessed | `patient_id` — the resolved EHR subject, which under the pseudonymisation boundary is an opaque pseudonym |
 | Which record, or which part of it | `resource_class` + `resource_id`: the version uid, party uid or EHR id the operation touched |
 | The date and time | `recorded_at`, the event time; `stored_at` is when the row was persisted |
@@ -148,7 +148,7 @@ the authority and the wording below is a paraphrase.
 | Annex II 3.2 | Access-event field | DICOM PS3.15 | FHIR `AuditEvent` | State |
 |---|---|---|---|---|
 | (a) the healthcare provider or other individuals having accessed | `organisation` | — (no such attribute) | a second `agent` with `who` referencing `Organization/…` | Recorded |
-| (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`), and with `[auth.oidc.professional]` configured `professional_id` + `acting_mode` | `ActiveParticipant/@UserID` (the professional; a client application acting for one is a second, non-requesting participant; the token subject is `@AlternativeUserID` when it differs) | `agent.who` (the same split: the professional as requestor, the client application as a second agent; the token subject as `agent.altId` when it differs) | Recorded |
+| (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`), and with `[authz.professional]` configured `professional_id` + `acting_mode` | `ActiveParticipant/@UserID` (the professional; a client application acting for one is a second, non-requesting participant; the token subject is `@AlternativeUserID` when it differs) | `agent.who` (the same split: the professional as requestor, the client application as a second agent; the token subject as `agent.altId` when it differs) | Recorded |
 | (c) the categories of data accessed | `categories` + `category_basis` + `category_evidence` + `category_map_digest`, classified through the `[audit.categories]` map (beside `resource_class`, `domain` and `result_count`) | none (no such element) | an `entity` named "categories of the data accessed", with one `detail` per category, the basis, each piece of evidence and the map digest | Recorded |
 | (d) the time and date of access | `recorded_at` | `EventIdentification/@EventDateTime` | `recorded` | Recorded |
 | (e) the origin or origins of data | `origins` + `origin_count` (the `FEEDER_AUDIT` originating systems of the served version bodies, or the server that created them, derived at commit onto `version.origins`) | — (no such element) | one `entity` per origin, named "origin of the served data" | Recorded |
@@ -171,7 +171,7 @@ caller authenticated with Basic, the field stays empty rather than being
 guessed.
 
 Element (b) asks for a **natural person**, and a bearer token can name a client
-application instead. With [`[auth.oidc.professional]`](security.md#assurance-level-and-the-natural-person-on-patient-data)
+application instead. With [`[authz.professional]`](security.md#assurance-level-and-the-natural-person-on-patient-data)
 configured, every record says which it was and who stood behind it:
 
 | Field | Meaning | DICOM PS3.15 | FHIR `AuditEvent` |
@@ -179,7 +179,7 @@ configured, every record says which it was and who stood behind it:
 | `acting_mode` | `person` when the token names a natural person, `client` when it names a client application | the participant split below | the agent split below |
 | `professional_id` | the natural person: the person's own claim, or the professional a client token acts for | `ActiveParticipant/@UserID` of the requesting participant | `agent.who` of the requesting agent |
 | `principal` | the token subject, as before: the client application in `client` mode | a second `ActiveParticipant` with `UserIsRequestor="false"` and the network address; `@AlternativeUserID` in `person` mode when it differs from the professional | a second `agent` with `requestor: false` and the network address; `agent.altId` in `person` mode when it differs |
-| `assurance_level` | the eIDAS level (`low`, `substantial`, `high`) the token's assurance claim maps to under `[auth.oidc.assurance]` | none (no such attribute) | none (no such element) |
+| `assurance_level` | the eIDAS level (`low`, `substantial`, `high`) the token's assurance claim maps to under `[authz.assurance]` | none (no such attribute) | none (no such element) |
 | `assurance_value` | the raw claim value the level was read from, usually `acr` | none | none |
 
 The assurance level is the one value neither export carries.
@@ -194,9 +194,9 @@ gap. The tamper-evidence digest covers both columns, like every other column of
 the record (see [Tamper evidence](#tamper-evidence) for records written before
 the digest was versioned).
 
-Without `[auth.oidc.professional]` the mode and the professional stay empty and
+Without `[authz.professional]` the mode and the professional stay empty and
 (b) is answered by `principal`, which names a client application when the token
-names no person. Without `[auth.oidc.assurance] levels` the level stays empty;
+names no person. Without `[authz.assurance] levels` the level stays empty;
 the raw value is still recorded when the token carries the claim. A Basic
 credential records none of the four.
 

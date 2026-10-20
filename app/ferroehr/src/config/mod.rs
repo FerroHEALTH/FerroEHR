@@ -75,8 +75,10 @@ pub struct FerroEhrConfig {
     pub log: crate::telemetry::config::LogConfig,
     /// `[telemetry]` — OpenTelemetry export.
     pub telemetry: crate::telemetry::config::OtelConfig,
-    /// `[auth]` — authentication.
-    pub auth: auth::AuthConfig,
+    /// `[auth]` — authentication: the `ferrohealth-smart` section, rendered
+    /// into the redacted views by [`auth::redacted`].
+    #[serde(skip_serializing)]
+    pub auth: ferrohealth_smart::config::AuthSection,
     /// `[authz]` — RBAC + ABAC.
     pub authz: authz::AuthzConfig,
     /// `[admin]` — the ADMIN API group.
@@ -526,22 +528,43 @@ impl FerroEhrConfig {
 
     /// The per-mechanism rules each security section owns.
     ///
-    /// Authentication contributes the RFC-grounded shape of each configured
-    /// mechanism (issuer, audience, leeway, key entropy, KDF cost floor);
-    /// SMART adds the deprecated-grant rule plus everything the discovery
-    /// document publishes (endpoint scheme, the RFC 8414 §2 required fields,
-    /// PKCE).
+    /// Authentication contributes the shape of each configured mechanism (the
+    /// `ferrohealth-smart` section rules plus FerroEHR's issuer, key-set and
+    /// KDF-floor rules); authorization its roles, policies and the
+    /// patient-data assurance blocks; SMART what the discovery document
+    /// publishes.
     fn validate_mechanisms(&self, errors: &mut Vec<ConfigError>) {
-        if let Err(e) = self.auth.validate() {
-            errors.push(ConfigError::semantic(format!("auth: {e}")));
+        if let Err(e) = auth::validate(&self.auth) {
+            errors.push(ConfigError::semantic(format!(
+                "auth: {}",
+                crate::service::error::ErrorChain::new(&e)
+            )));
         }
         if let Err(e) = self.authz.validate() {
+            errors.push(ConfigError::semantic(format!("authz: {e}")));
+        }
+        if let Err(e) = self.authz.assurance.validate() {
+            errors.push(ConfigError::semantic(format!("authz: {e}")));
+        }
+        if let Some(Err(e)) = self
+            .authz
+            .professional
+            .as_ref()
+            .map(auth::ProfessionalConfig::validate)
+        {
             errors.push(ConfigError::semantic(format!("authz: {e}")));
         }
         if let Err(e) = self.smart.validate() {
             errors.push(ConfigError::semantic(format!("smart: {e}")));
         }
-        self.validate_smart_issuer(errors);
+        if self.smart.enabled && !auth::has_bearer(&self.auth) {
+            errors.push(ConfigError::semantic(
+                "smart.enabled = true requires an [auth] issuer: the discovery document is \
+                 built from the issuer's metadata, and it directs applications to an \
+                 authorization server whose tokens this server must accept"
+                    .to_owned(),
+            ));
+        }
     }
 
     /// The signing section's own rules: a PGP mode needs a key, and a
@@ -564,34 +587,8 @@ impl FerroEhrConfig {
     }
 
     /// Every secret that can be given inline or by file is given exactly one
-    /// way, and the OIDC key material names exactly one source.
-    ///
-    /// A symmetric secret and a static JWKS are competing explicit key
-    /// sources; both configured is a contradiction, never resolved by silent
-    /// precedence.
+    /// way.
     fn validate_key_sources(&self, errors: &mut Vec<ConfigError>) {
-        if let Some(oidc) = &self.auth.oidc {
-            if oidc.hmac_secret.is_some() && oidc.hmac_secret_file.is_some() {
-                errors.push(ConfigError::semantic(
-                    "set only one of auth.oidc.hmac_secret / auth.oidc.hmac_secret_file".to_owned(),
-                ));
-            }
-            if oidc.jwks_json.is_some() && oidc.jwks_json_file.is_some() {
-                errors.push(ConfigError::semantic(
-                    "set only one of auth.oidc.jwks_json / auth.oidc.jwks_json_file".to_owned(),
-                ));
-            }
-            let hmac_configured = oidc.hmac_secret.is_some() || oidc.hmac_secret_file.is_some();
-            let jwks_configured = oidc.jwks_json.is_some() || oidc.jwks_json_file.is_some();
-            if hmac_configured && jwks_configured {
-                errors.push(ConfigError::semantic(
-                    "auth.oidc configures BOTH a symmetric secret (hmac_secret[_file]) and a \
-                     static JWKS (jwks_json[_file]) — these are competing key sources; set \
-                     exactly one, or neither to use issuer discovery"
-                        .to_owned(),
-                ));
-            }
-        }
         if self.multimedia.secret_access_key.is_some()
             && self.multimedia.secret_access_key_file.is_some()
         {
@@ -600,40 +597,6 @@ impl FerroEhrConfig {
                  multimedia.secret_access_key_file"
                     .to_owned(),
             ));
-        }
-    }
-
-    /// The two issuers must agree. `smart.endpoints.issuer` tells third-party
-    /// applications where to OBTAIN a token; `auth.oidc.issuer` is what this
-    /// server will ACCEPT one from. Configured independently and left
-    /// unchecked, a mismatch is silently broken in the most confusing way
-    /// available: every app obtains a valid token and every request is
-    /// refused as an invalid one. Both values are known here, so it is a boot
-    /// error.
-    fn validate_smart_issuer(&self, errors: &mut Vec<ConfigError>) {
-        if !self.smart.enabled {
-            return;
-        }
-        match (&self.smart.endpoints.issuer, &self.auth.oidc) {
-            (_, None) => errors.push(ConfigError::semantic(
-                "smart.enabled = true requires an [auth.oidc] issuer: the CDR directs \
-                 applications to an authorization server, so it must be able to validate \
-                 the tokens they come back with"
-                    .to_owned(),
-            )),
-            (Some(advertised), Some(oidc))
-                if advertised.trim().trim_end_matches('/')
-                    != oidc.issuer.trim().trim_end_matches('/') =>
-            {
-                errors.push(ConfigError::semantic(format!(
-                    "smart.endpoints.issuer ({:?}) and auth.oidc.issuer ({:?}) \
-                     name different authorization servers: applications would obtain tokens \
-                     from the first and every request would be refused by the second",
-                    secret::redact_userinfo(advertised),
-                    secret::redact_userinfo(&oidc.issuer)
-                )));
-            }
-            _ => {}
         }
     }
 
@@ -677,22 +640,25 @@ impl FerroEhrConfig {
     /// [`secret::SecretUrl`], whose [`Serialize`] masks the URL `userinfo`
     /// component. Every URL key that may carry `userinfo` is a `SecretUrl`;
     /// a URL key whose value is an identifier or is published
-    /// (`auth.oidc.issuer`, the `smart` URLs) is refused at boot when it
+    /// (`auth.issuer`, the `smart` URLs) is refused at boot when it
     /// carries `userinfo`. A field therefore cannot leak by being renamed, and
     /// the `redacted_json_masks_every_secret_field` test enumerates the current
     /// secret set as the standing backstop. On top of the types, every string
     /// leaf of the tree passes [`secret::redact_userinfo`], so a URL in a key
     /// that is not typed `SecretUrl`, or in a configuration no validation has
-    /// run over, is masked too. Non-secret identifiers, such as a Basic user's
-    /// `username` and `roles`, an OIDC `issuer` without `userinfo`, or
-    /// `auth.oidc.jwks_json` (public verification material only, since boot
-    /// refuses a symmetric or private key in it), stay visible.
+    /// run over, is masked too. `[auth]` is the `ferrohealth-smart` section,
+    /// rendered by [`auth::redacted`], which masks each Basic password hash.
+    /// Non-secret identifiers, such as a Basic user's `user` and `scopes`, an
+    /// `issuer` without `userinfo`, or `auth.jwks_file` (a path), stay visible.
     ///
     /// # Errors
     /// [`ConfigError`] if the tree cannot be serialized to JSON.
     pub fn to_redacted_json(&self) -> Result<serde_json::Value, ConfigError> {
         let mut tree = serde_json::to_value(self)
             .map_err(|e| ConfigError::semantic(format!("rendering config as JSON: {e}")))?;
+        if let serde_json::Value::Object(members) = &mut tree {
+            members.insert("auth".to_owned(), auth::redacted(&self.auth));
+        }
         mask_url_userinfo(&mut tree);
         Ok(tree)
     }
@@ -892,21 +858,6 @@ pub fn load(
         );
     }
 
-    // RFC 8725 §2.2: a symmetric signing key is shared with the authorization
-    // server, so this resource server could mint the very tokens it accepts.
-    if config
-        .auth
-        .oidc
-        .as_ref()
-        .is_some_and(auth::OidcConfig::uses_symmetric_key)
-    {
-        tracing::warn!(
-            "auth.oidc uses a SYMMETRIC signing key (hmac_secret): a DEVELOPMENT posture. The \
-             key is shared with the authorization server, so this server can mint the tokens it \
-             accepts, and it cannot rotate without a restart. Use the issuer's OIDC discovery \
-             document or auth.oidc.jwks_json for any non-dev deployment."
-        );
-    }
     Ok(config)
 }
 
@@ -1336,25 +1287,20 @@ mod tests {
         let c = assemble_ok(
             None,
             &env(&[
-                ("FERROEHR__AUTH__OIDC__ISSUER", "https://idp"),
-                ("FERROEHR__AUTH__OIDC__ASSURANCE__CLAIM", "loa"),
-                ("FERROEHR__AUTH__OIDC__ASSURANCE__MINIMUM", "high"),
-                ("FERROEHR__AUTH__OIDC__PROFESSIONAL__CLAIM", "uzi"),
+                ("FERROEHR__AUTHZ__ASSURANCE__CLAIM", "loa"),
+                ("FERROEHR__AUTHZ__ASSURANCE__MINIMUM", "high"),
+                ("FERROEHR__AUTHZ__PROFESSIONAL__CLAIM", "uzi"),
                 (
-                    "FERROEHR__AUTH__OIDC__PROFESSIONAL__CLIENT_TOKENS",
+                    "FERROEHR__AUTHZ__PROFESSIONAL__CLIENT_TOKENS",
                     "claim_absent",
                 ),
-                (
-                    "FERROEHR__AUTH__OIDC__PROFESSIONAL__ACTING_FOR_CLAIM",
-                    "act.sub",
-                ),
+                ("FERROEHR__AUTHZ__PROFESSIONAL__ACTING_FOR_CLAIM", "act.sub"),
             ]),
             &[],
         );
-        let oidc = c.auth.oidc.expect("oidc table materialised from env");
-        assert_eq!(oidc.assurance.claim, "loa");
-        assert_eq!(oidc.assurance.minimum, Some(auth::AssuranceLevel::High));
-        let professional = oidc.professional.expect("professional table from env");
+        assert_eq!(c.authz.assurance.claim, "loa");
+        assert_eq!(c.authz.assurance.minimum, Some(auth::AssuranceLevel::High));
+        let professional = c.authz.professional.expect("professional table from env");
         assert_eq!(professional.claim, "uzi");
         assert_eq!(
             professional.client_tokens,
@@ -1369,9 +1315,9 @@ mod tests {
             None,
             &env(&[
                 ("FERROEHR__SERVER__MAX_IN_FLIGHT", "64"),
-                ("FERROEHR__AUTH__OIDC__ISSUER", "https://idp"),
-                ("FERROEHR__AUTH__OIDC__AUDIENCES", "ferroehr,other"),
-                ("FERROEHR__AUTH__OIDC__REQUEST_TIMEOUT_MS", "1500"),
+                ("FERROEHR__AUTH__ISSUER", "https://idp"),
+                ("FERROEHR__AUTH__AUDIENCE", "ferroehr,other"),
+                ("FERROEHR__AUTH__TIMEOUT_MS", "1500"),
                 (
                     "FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__ONTO__URL",
                     "https://onto/fhir",
@@ -1380,17 +1326,18 @@ mod tests {
             &[],
         );
         assert_eq!(c.server.max_in_flight, 64);
-        let oidc = c.auth.oidc.expect("oidc table materialised from env");
-        assert_eq!(oidc.issuer, "https://idp");
+        assert!(
+            matches!(&c.auth.issuer, ferrohealth_smart::config::IssuerKey::Flat(issuer) if issuer == "https://idp")
+        );
         assert_eq!(
-            oidc.audiences,
+            c.auth.audience,
             vec!["ferroehr".to_owned(), "other".to_owned()]
         );
-        // The discovery-client hardening keys: one overridden from the env, the
-        // other two at their documented defaults.
-        assert_eq!(oidc.request_timeout_ms, 1_500);
-        assert_eq!(oidc.connect_timeout_ms, 3_000);
-        assert_eq!(oidc.negative_cache_ttl_seconds, 10);
+        // The key-set client keys: one overridden from the env, the other two at
+        // their documented defaults.
+        assert_eq!(c.auth.timeout_ms, 1_500);
+        assert_eq!(c.auth.jwks_max_age_seconds, 600);
+        assert_eq!(c.auth.jwks_refresh_interval_seconds, 60);
         assert_eq!(
             c.terminology
                 .external
@@ -1409,7 +1356,7 @@ mod tests {
     /// A list-typed key missing from `alias::LIST_KEYS` is not mis-split — it is
     /// REFUSED, `invalid type: string …, expected a sequence`, so its documented
     /// env spelling is dead on arrival. Two shipped keys were in exactly that
-    /// state (`signing.retired_key_paths`, `smart.endpoints.capabilities`) and
+    /// state (`signing.retired_key_paths`, the former `smart.endpoints.capabilities`) and
     /// neither was noticed until a live deployment probe hit the boot refusal:
     /// the value that carries a whole feature is only reachable from a TOML
     /// file, which no test asserted and no reader could tell.
@@ -1426,7 +1373,13 @@ mod tests {
                     "FERROEHR__SIGNING__RETIRED_KEY_PATHS",
                     "/etc/ferroehr/retired-2025.pub.asc",
                 ),
-                ("FERROEHR__SMART__ENDPOINTS__CAPABILITIES", "launch-ehr"),
+                ("FERROEHR__AUTH__CAPABILITIES", "launch-ehr"),
+                ("FERROEHR__AUTH__AUDIENCE", "ferroehr"),
+                ("FERROEHR__AUTH__ALGORITHMS", "ES256"),
+                ("FERROEHR__AUTH__SCOPES_SUPPORTED", "openid"),
+                ("FERROEHR__SMART__BACKEND_CLIENTS", "etl"),
+                ("FERROEHR__SMART__PATIENT_ISSUERS", "https://as.example"),
+                ("FERROEHR__SMART__DEMOGRAPHIC_CLIENTS", "mpi"),
             ]),
             &[],
         );
@@ -1435,10 +1388,16 @@ mod tests {
             vec![PathBuf::from("/etc/ferroehr/retired-2025.pub.asc")],
             "a single retired key path must parse as a one-element list"
         );
+        assert_eq!(c.auth.capabilities, vec!["launch-ehr".to_owned()]);
+        assert_eq!(c.auth.audience, vec!["ferroehr".to_owned()]);
+        assert_eq!(c.auth.algorithms.len(), 1);
+        assert_eq!(c.auth.scopes_supported, vec!["openid".to_owned()]);
+        assert_eq!(c.smart.backend_clients, vec!["etl".to_owned()]);
         assert_eq!(
-            c.smart.endpoints.capabilities,
-            vec!["launch-ehr".to_owned()]
+            c.smart.patient_issuers,
+            vec!["https://as.example".to_owned()]
         );
+        assert_eq!(c.smart.demographic_clients, vec!["mpi".to_owned()]);
     }
 
     /// A list nested under a MAP key is addressable from the environment too,
@@ -1480,7 +1439,7 @@ mod tests {
                     "/keys/a.pub.asc,/keys/b.pub.asc",
                 ),
                 (
-                    "FERROEHR__SMART__ENDPOINTS__CAPABILITIES",
+                    "FERROEHR__AUTH__CAPABILITIES",
                     "launch-ehr,sso-openid-connect",
                 ),
             ]),
@@ -1494,23 +1453,23 @@ mod tests {
             ]
         );
         assert_eq!(
-            c.smart.endpoints.capabilities,
+            c.auth.capabilities,
             vec!["launch-ehr".to_owned(), "sso-openid-connect".to_owned()]
         );
     }
 
-    /// The `[auth.oidc]` RFC-posture keys, the ABAC directory switch and the
-    /// ABAC patient namespace are reachable through the one env grammar — a
-    /// documented env spelling that binds nothing would ship dead.
+    /// The `[auth]` posture keys, the ABAC directory switch and the ABAC patient
+    /// namespace are reachable through the one env grammar — a documented env
+    /// spelling that binds nothing would ship dead.
     #[test]
     fn env_mapping_auth_and_authz_posture_keys() {
         let c = assemble_ok(
             None,
             &env(&[
-                ("FERROEHR__AUTH__OIDC__ISSUER", "https://idp"),
-                ("FERROEHR__AUTH__OIDC__AUDIENCES", "ferroehr"),
-                ("FERROEHR__AUTH__OIDC__CLOCK_SKEW_LEEWAY_SECONDS", "120"),
-                ("FERROEHR__AUTH__OIDC__ALLOW_INSECURE_ISSUER", "true"),
+                ("FERROEHR__AUTH__ISSUER", "https://idp"),
+                ("FERROEHR__AUTH__AUDIENCE", "ferroehr"),
+                ("FERROEHR__AUTH__CLOCK_SKEW_SECONDS", "120"),
+                ("FERROEHR__AUTH__TOKEN_PROFILE", "jwt"),
                 ("FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY", "true"),
                 (
                     "FERROEHR__AUTHZ__ABAC__PATIENT_NAMESPACE",
@@ -1519,9 +1478,11 @@ mod tests {
             ]),
             &[],
         );
-        let oidc = c.auth.oidc.expect("oidc table materialised from env");
-        assert_eq!(oidc.clock_skew_leeway_seconds, 120);
-        assert!(oidc.allow_insecure_issuer);
+        assert_eq!(c.auth.clock_skew_seconds, 120);
+        assert_eq!(
+            c.auth.token_profile,
+            ferrohealth_smart::resource::TokenProfile::Jwt
+        );
         assert!(c.authz.abac.check_directory);
         assert_eq!(
             c.authz.abac.patient_namespace(),
@@ -1533,11 +1494,13 @@ mod tests {
         assert!(!d.authz.abac.check_directory);
         assert_eq!(d.authz.abac.patient_namespace(), None);
         assert_eq!(
-            auth::OidcConfig::default().clock_skew_leeway_seconds,
-            60,
+            d.auth.clock_skew_seconds, 60,
             "the default leeway is the conventional 60 s"
         );
-        assert!(!auth::OidcConfig::default().allow_insecure_issuer);
+        assert_eq!(
+            d.auth.token_profile,
+            ferrohealth_smart::resource::TokenProfile::Rfc9068
+        );
     }
 
     /// `[server] system_id` — the CDR's own openEHR system identifier (stamped
@@ -1639,10 +1602,15 @@ mod tests {
 
     #[test]
     fn secrets_never_render_and_file_resolves() {
-        let file = toml_file("[auth.oidc]\nissuer = \"x\"\nhmac_secret = \"topsecret\"\n");
+        let file =
+            toml_file("[[auth.basic.users]]\nuser = \"alice\"\npassword_hash = \"topsecret\"\n");
         let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
         let rendered = c.to_redacted_toml().expect("toml");
         assert!(!rendered.contains("topsecret"), "secret leaked: {rendered}");
+        assert!(
+            rendered.contains("***"),
+            "the hash renders masked: {rendered}"
+        );
         assert!(!serde_json::to_string(&c).unwrap().contains("topsecret"));
         let secret = assert_fs::NamedTempFile::new("pass").expect("temp");
         secret.write_str("s3cret\n").expect("write");
@@ -1697,7 +1665,7 @@ mod tests {
         let from_files = toml_file(&format!(
             "[db]\nurl_file = \"{}\"\n\
              [events]\nurl_file = \"{}\"\n\
-             [[auth.basic.users]]\nusername = \"alice\"\npassword_hash_file = \"{}\"\n",
+             [[auth.basic.users]]\nuser = \"alice\"\npassword_hash_file = \"{}\"\n",
             dsn.path().display(),
             broker.path().display(),
             hash.path().display(),
@@ -1707,7 +1675,7 @@ mod tests {
         let inline = toml_file(&format!(
             "[db]\nurl = \"{DSN}\"\n\
              [events]\nurl = \"{BROKER}\"\n\
-             [[auth.basic.users]]\nusername = \"alice\"\npassword_hash = \"{HASH}\"\n"
+             [[auth.basic.users]]\nuser = \"alice\"\npassword_hash = \"{HASH}\"\n"
         ));
         let via_inline = assemble_ok(Some(inline.path()), &env(&[]), &[]);
 
@@ -1715,7 +1683,12 @@ mod tests {
         assert_eq!(via_file.db.url.expose(), via_inline.db.url.expose());
         assert_eq!(via_file.events.url.expose(), BROKER);
         let user = &via_file.auth.basic.as_ref().expect("basic").users[0];
-        assert_eq!(user.password_hash.expose(), HASH);
+        assert_eq!(
+            user.password_hash
+                .as_ref()
+                .map(secrecy::ExposeSecret::expose_secret),
+            Some(HASH)
+        );
 
         // And a file-delivered DSN redacts exactly like an inline one — the
         // whole point of the `SecretUrl` type is that redaction is a property of
@@ -1752,7 +1725,7 @@ mod tests {
             "[storage.migrate.party]\nurl = \"postgres://u:p@h:5432/d\"\n\
              url_file = \"/dev/null\"\n",
             "[events]\nurl = \"amqp://u:p@h:5672/%2f\"\nurl_file = \"/dev/null\"\n",
-            "[[auth.basic.users]]\nusername = \"a\"\npassword_hash = \"x\"\n\
+            "[[auth.basic.users]]\nuser = \"a\"\npassword_hash = \"x\"\n\
              password_hash_file = \"/dev/null\"\n",
         ];
         for case in cases {
@@ -1899,18 +1872,17 @@ mod tests {
         }
     }
 
-    /// The SMART/OIDC issuer mismatch refusal quotes both issuers, so it masks
-    /// any userinfo in them rather than printing it.
+    /// A refusal of an issuer or a published SMART URL never prints the
+    /// userinfo it carries.
     #[test]
-    fn the_issuer_mismatch_refusal_masks_userinfo() {
-        use crate::config::auth::OidcConfig;
+    fn an_issuer_refusal_masks_userinfo() {
         let mut c = FerroEhrConfig::default();
         c.smart.enabled = true;
-        c.smart.endpoints.issuer = Some("https://a:SMART_PW_SENTINEL@as.example/r".to_owned());
-        c.auth.oidc = Some(OidcConfig {
-            issuer: "https://b:OIDC_PW_SENTINEL@idp.example/r".to_owned(),
-            ..OidcConfig::default()
-        });
+        c.smart.public_base_url = Some("https://a:SMART_PW_SENTINEL@cdr.example".to_owned());
+        c.auth.issuer = ferrohealth_smart::config::IssuerKey::Flat(
+            "https://b:OIDC_PW_SENTINEL@idp.example/r".to_owned(),
+        );
+        c.auth.audience = vec!["ferroehr".to_owned()];
         let text = c.validate().expect_err("refused").to_string();
         assert!(!text.contains("SMART_PW_SENTINEL"), "{text}");
         assert!(!text.contains("OIDC_PW_SENTINEL"), "{text}");
@@ -1919,19 +1891,18 @@ mod tests {
     /// `to_redacted_json` masks EVERY secret-bearing leaf in the whole config
     /// tree — the body `GET /admin/config` returns. Each secret is populated
     /// with a unique high-entropy sentinel; none may appear in the rendered
-    /// JSON, while non-secret siblings (a Basic user's `username`/`roles`) stay
+    /// JSON, while non-secret siblings (a Basic user's `user`/`scopes`) stay
     /// visible. This is the standing enumeration of the current secret set: a
     /// new secret field added without redaction is caught here once wired
     /// into the fixture.
     #[test]
     fn redacted_json_masks_every_secret_field() {
-        use crate::config::auth::{BasicConfig, BasicUser, OidcConfig};
         use crate::config::secret::{Secret, SecretUrl};
+        use ferrohealth_smart::config::{BasicSection, BasicUser};
 
         // Each sentinel is unique so a leak is unambiguously attributable.
         const DB_PW: &str = "DB_PW_SENTINEL_9a1c";
         const BASIC_HASH: &str = "$argon2id$BASIC_HASH_SENTINEL_7b2d";
-        const HMAC: &str = "HMAC_SENTINEL_4e3f";
         const PASSPHRASE: &str = "PASSPHRASE_SENTINEL_1d5a";
         const S3_KEY: &str = "S3_SECRET_SENTINEL_8c6b";
         const EVENTS_PW: &str = "EVENTS_PW_SENTINEL_2f7e";
@@ -1940,19 +1911,16 @@ mod tests {
         c.db.url = SecretUrl::new(format!(
             "postgres://dbuser:{DB_PW}@db.internal:5432/ferroehr"
         ));
-        c.auth.basic = Some(BasicConfig {
+        c.auth.basic = Some(BasicSection {
             users: vec![BasicUser {
-                username: "alice".to_owned(),
-                password_hash: Secret::new(BASIC_HASH),
+                user: "alice".to_owned(),
+                password_hash: Some(secrecy::SecretString::from(BASIC_HASH)),
                 password_hash_file: None,
-                roles: vec!["ADMIN".to_owned()],
+                scopes: vec!["user/composition-*.r".to_owned()],
             }],
         });
-        c.auth.oidc = Some(OidcConfig {
-            issuer: "https://idp.example".to_owned(),
-            hmac_secret: Some(Secret::new(HMAC)),
-            ..OidcConfig::default()
-        });
+        c.auth.issuer =
+            ferrohealth_smart::config::IssuerKey::Flat("https://idp.example".to_owned());
         c.signing.key_passphrase = Some(Secret::new(PASSPHRASE));
         c.multimedia.secret_access_key = Some(Secret::new(S3_KEY));
         c.multimedia.access_key_id = Some("AKIA_PUBLIC_ID".to_owned());
@@ -1961,7 +1929,7 @@ mod tests {
         let value = c.to_redacted_json().expect("render redacted json");
         let rendered = serde_json::to_string(&value).expect("stringify");
 
-        for sentinel in [DB_PW, BASIC_HASH, HMAC, PASSPHRASE, S3_KEY, EVENTS_PW] {
+        for sentinel in [DB_PW, BASIC_HASH, PASSPHRASE, S3_KEY, EVENTS_PW] {
             assert!(
                 !rendered.contains(sentinel),
                 "secret leaked into GET /admin/config body: {sentinel} in {rendered}"
@@ -1970,7 +1938,6 @@ mod tests {
 
         // Structural placeholders present where a secret was set.
         assert_eq!(value["auth"]["basic"]["users"][0]["password_hash"], "***");
-        assert_eq!(value["auth"]["oidc"]["hmac_secret"], "***");
         assert_eq!(value["signing"]["key_passphrase"], "***");
         assert_eq!(value["multimedia"]["secret_access_key"], "***");
         assert_eq!(
@@ -1980,9 +1947,12 @@ mod tests {
         assert_eq!(value["events"]["url"], "amqp://***@broker:5672/vh");
 
         // Non-secret identifiers stay visible (they are not credentials).
-        assert_eq!(value["auth"]["basic"]["users"][0]["username"], "alice");
-        assert_eq!(value["auth"]["basic"]["users"][0]["roles"][0], "ADMIN");
-        assert_eq!(value["auth"]["oidc"]["issuer"], "https://idp.example");
+        assert_eq!(value["auth"]["basic"]["users"][0]["user"], "alice");
+        assert_eq!(
+            value["auth"]["basic"]["users"][0]["scopes"][0],
+            "user/composition-*.r"
+        );
+        assert_eq!(value["auth"]["issuer"], "https://idp.example");
         assert_eq!(value["multimedia"]["access_key_id"], "AKIA_PUBLIC_ID");
     }
 
@@ -2497,16 +2467,16 @@ mod tests {
     fn template_declares_every_optional_field_of_the_secret_bearing_sections() {
         let sections = [
             (
-                "auth.oidc",
-                accepted_fields::<auth::OidcConfig>("auth.oidc"),
+                "auth",
+                accepted_fields::<ferrohealth_smart::config::AuthSection>("auth"),
             ),
             (
-                "auth.oidc.assurance",
-                accepted_fields::<auth::AssuranceConfig>("auth.oidc.assurance"),
+                "authz.assurance",
+                accepted_fields::<auth::AssuranceConfig>("authz.assurance"),
             ),
             (
-                "auth.oidc.professional",
-                accepted_fields::<auth::ProfessionalConfig>("auth.oidc.professional"),
+                "authz.professional",
+                accepted_fields::<auth::ProfessionalConfig>("authz.professional"),
             ),
             ("db", accepted_fields::<crate::db::DbConfig>("db")),
             (
@@ -2524,12 +2494,14 @@ mod tests {
             .iter()
             .flat_map(|(section, fields)| {
                 // A sub-table field is declared by its own `[section.field]`
-                // header, exactly as the serialized-field walk accepts one.
+                // header, exactly as the serialized-field walk accepts one, or
+                // by the `[[section.field.…]]` header of the array it holds.
                 fields
                     .iter()
                     .filter(move |f| {
                         !template_declares(f)
                             && !DEFAULT_TEMPLATE.contains(&format!("[{section}.{f}]"))
+                            && !DEFAULT_TEMPLATE.contains(&format!("[[{section}.{f}."))
                     })
                     .map(move |f| format!("{section}.{f}"))
             })
@@ -2580,136 +2552,82 @@ mod tests {
         assert!(c.validate().is_ok());
     }
 
-    /// `smart.endpoints.issuer` tells applications where to OBTAIN a token;
-    /// `auth.oidc.issuer` is what this server will ACCEPT one from. A mismatch is
-    /// silently broken in the most confusing way available — every app obtains a
-    /// valid token and every request is refused as invalid — so it is a boot
-    /// error naming both keys.
+    /// The discovery document is built from the `[auth]` issuer's metadata and
+    /// sends applications to that issuer, so serving it without an issuer whose
+    /// tokens this server accepts is refused.
     #[test]
-    fn a_smart_issuer_that_disagrees_with_the_oidc_issuer_is_refused() {
-        let publishable_smart = |issuer: &str| smart::SmartConfig {
-            enabled: true,
-            public_base_url: Some("https://cdr.example.com".to_owned()),
-            endpoints: smart::SmartEndpoints {
-                issuer: Some(issuer.to_owned()),
-                authorization_endpoint: Some("https://as.example/authorize".to_owned()),
-                token_endpoint: Some("https://as.example/token".to_owned()),
-                response_types_supported: vec!["code".to_owned()],
-                token_endpoint_auth_methods_supported: vec!["client_secret_basic".to_owned()],
-                code_challenge_methods_supported: vec!["S256".to_owned()],
-                ..smart::SmartEndpoints::default()
-            },
-            ..smart::SmartConfig::default()
-        };
-        let oidc = |issuer: &str| auth::OidcConfig {
-            issuer: issuer.to_owned(),
-            audiences: vec!["ferroehr".to_owned()],
-            jwks_json: Some("{\"keys\":[]}".to_owned()),
-            ..auth::OidcConfig::default()
-        };
-
-        let tree = |smart_issuer: &str, oidc_issuer: Option<&str>| FerroEhrConfig {
-            smart: publishable_smart(smart_issuer),
-            auth: auth::AuthConfig {
-                oidc: oidc_issuer.map(oidc),
-                ..auth::AuthConfig::default()
-            },
-            ..FerroEhrConfig::default()
-        };
-
-        let err = tree(
-            "https://as.example/realms/ferroehr",
-            Some("https://other-as.example/realms/ferroehr"),
-        )
-        .validate()
-        .expect_err("two different authorization servers must be refused");
-        let text = format!("{err:?}");
-        assert!(text.contains("smart.endpoints.issuer"), "{text}");
-        assert!(text.contains("auth.oidc.issuer"), "{text}");
-
-        // Agreeing issuers — a trailing slash is the same identity.
-        assert!(
-            tree(
-                "https://as.example/realms/ferroehr/",
-                Some("https://as.example/realms/ferroehr"),
-            )
-            .validate()
-            .is_ok(),
-            "a trailing slash is not a mismatch",
-        );
-
-        // SMART enabled with no bearer validation at all: the CDR would send apps
-        // to an authorization server whose tokens it cannot check.
-        let err = tree("https://as.example/realms/ferroehr", None)
-            .validate()
-            .expect_err("SMART without [auth.oidc] must refuse");
-        assert!(format!("{err:?}").contains("auth.oidc"), "{err:?}");
-    }
-
-    #[test]
-    fn validate_hmac_and_jwks_together_is_refused() {
+    fn a_served_smart_document_needs_an_issuer() {
         let mut c = FerroEhrConfig::default();
-        c.auth.oidc = Some(auth::OidcConfig {
-            issuer: "https://idp.example.test".to_owned(),
-            audiences: vec!["ferroehr".to_owned()],
-            // `HS256`, because the fixture carries a symmetric secret and the
-            // algorithm set is boot-bound to its key source.
-            algorithms: vec!["HS256".to_owned()],
-            hmac_secret: Some(Secret::new("0123456789abcdef0123456789abcdef")),
-            jwks_json: Some("{\"keys\":[]}".to_owned()),
-            ..auth::OidcConfig::default()
-        });
-        let err = c.validate().expect_err("competing key sources must refuse");
-        assert!(err.to_string().contains("competing key sources"), "{err}");
-        // Each source alone stays valid.
-        if let Some(oidc) = c.auth.oidc.as_mut() {
-            oidc.jwks_json = None;
-        }
+        c.smart.enabled = true;
+        c.smart.public_base_url = Some("https://cdr.example.com".to_owned());
+        let err = c
+            .validate()
+            .expect_err("SMART without an [auth] issuer must refuse");
+        assert!(format!("{err:?}").contains("[auth] issuer"), "{err:?}");
+        c.auth.issuer = ferrohealth_smart::config::IssuerKey::Flat(
+            "https://as.example/realms/ferroehr".to_owned(),
+        );
+        c.auth.audience = vec!["ferroehr".to_owned()];
         assert!(c.validate().is_ok());
     }
 
-    /// RFC 7518 §6.4: a symmetric key in `auth.oidc.jwks_json` refuses the
-    /// whole tree, so neither the boot path nor `ferroehr config check` nor
+    /// The HMAC key source and the inline key set are gone: both are unknown
+    /// keys, refused by the loader like any typo, so no tree carries competing
+    /// key sources.
+    #[test]
+    fn the_removed_key_sources_are_unknown_keys() {
+        for body in [
+            "[auth]\nhmac_secret = \"0123456789abcdef0123456789abcdef\"\n",
+            "[auth]\njwks_json = \"{}\"\n",
+            "[auth.oidc]\nissuer = \"https://idp.example.test\"\n",
+        ] {
+            let file = toml_file(body);
+            assert!(
+                assemble(Some(file.path()), &env(&[]), &[]).is_err(),
+                "{body} must be refused"
+            );
+        }
+    }
+
+    /// RFC 7518 §6.4: a symmetric key in `auth.jwks_file` refuses the whole
+    /// tree, so neither the boot path nor `ferroehr config check` nor
     /// `ferroehr report` (each validates before rendering) can print it.
     #[test]
     fn a_symmetric_jwks_key_refuses_the_tree_before_any_rendering() {
         let secret_k = "b2N0LWtleS1tYXRlcmlhbC10aGF0LW11c3QtbmV2ZXItcHJpbnQ";
+        let jwks = assert_fs::NamedTempFile::new("jwks.json").expect("temp");
+        jwks.write_str(&format!(r#"{{"keys":[{{"kty":"oct","k":"{secret_k}"}}]}}"#))
+            .expect("write");
         let mut c = FerroEhrConfig::default();
-        c.auth.oidc = Some(auth::OidcConfig {
-            issuer: "https://idp.example.test".to_owned(),
-            audiences: vec!["ferroehr".to_owned()],
-            jwks_json: Some(format!(r#"{{"keys":[{{"kty":"oct","k":"{secret_k}"}}]}}"#)),
-            ..auth::OidcConfig::default()
-        });
+        c.auth.issuer =
+            ferrohealth_smart::config::IssuerKey::Flat("https://idp.example.test".to_owned());
+        c.auth.audience = vec!["ferroehr".to_owned()];
+        c.auth.jwks_file = jwks.path().display().to_string();
         let err = c.validate().expect_err("an oct key must refuse the tree");
         let text = err.to_string();
-        assert!(text.contains("auth.oidc.jwks_json"), "{text}");
+        assert!(text.contains("auth.jwks_file"), "{text}");
         assert!(!text.contains(secret_k), "{text}");
     }
 
-    /// The `[auth.oidc]` boot rules reach the aggregated tree validation, so
+    /// The `[auth]` boot rules reach the aggregated tree validation, so
     /// `ferroehr config check` and the boot path refuse the same shapes the
-    /// section's own unit tests pin (RFC 7519 §4.1.3, RFC 8414 §2,
-    /// RFC 8725 §3.5, RFC 9068 §4 step 6).
+    /// section's own unit tests pin (RFC 7519 §4.1.3, RFC 8414 §2, RFC 9068 §4).
     #[test]
     fn validate_reports_auth_section_errors() {
         let mut c = FerroEhrConfig::default();
-        c.auth.oidc = Some(auth::OidcConfig {
-            issuer: "http://idp.example.test".to_owned(),
-            ..auth::OidcConfig::default()
-        });
+        c.auth.issuer =
+            ferrohealth_smart::config::IssuerKey::Flat("http://idp.example.test".to_owned());
+        c.auth.audience = vec!["ferroehr".to_owned()];
         let err = c.validate().expect_err("an http issuer must refuse");
-        assert!(err.to_string().contains("auth: auth.oidc.issuer"), "{err}");
+        assert!(err.to_string().contains("auth:"), "{err}");
 
-        if let Some(oidc) = c.auth.oidc.as_mut() {
-            oidc.issuer = "https://idp.example.test".to_owned();
-        }
-        let err = c.validate().expect_err("no audiences must refuse");
-        assert!(err.to_string().contains("auth.oidc.audiences"), "{err}");
+        c.auth.issuer =
+            ferrohealth_smart::config::IssuerKey::Flat("https://idp.example.test".to_owned());
+        c.auth.audience = Vec::new();
+        let err = c.validate().expect_err("no audience must refuse");
+        assert!(err.to_string().contains("audience"), "{err}");
 
-        if let Some(oidc) = c.auth.oidc.as_mut() {
-            oidc.audiences = vec!["ferroehr".to_owned()];
-        }
+        c.auth.audience = vec!["ferroehr".to_owned()];
         assert!(c.validate().is_ok());
     }
 

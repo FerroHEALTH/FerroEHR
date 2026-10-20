@@ -142,11 +142,11 @@ the harness.
 ### B2 — Authentication
 
 **Control.** Two mechanisms: HTTP Basic against Argon2id PHC hashes with a
-verified-credential cache, and OAuth2/OIDC bearer tokens validated against the
-issuer. Configuration is validated **at boot**, not on the first request: a
-mandatory audience list, an `https` issuer, an algorithm set bound to its key
-source (with `none` refused outright and two competing key sources refused as a
-contradiction), an HMAC entropy floor, and the OWASP Argon2id parameter floor. A
+verified-credential cache, and OAuth 2.0 bearer tokens validated against the
+issuer's key set by `ferrohealth-smart`. Configuration is validated **at boot**,
+not on the first request: a mandatory audience list, an `https` issuer whose
+metadata and key set are read at start, asymmetric algorithms only (with `none`
+and every `HS*` algorithm refused), and the OWASP Argon2id parameter floor. A
 malformed `Authorization` header is a `400`, not a `401`: the server never read
 a credential. An unreachable issuer is a `503`, never a silent pass. A `401` body
 names no reason, so it is not an oracle for expired-versus-forged.

@@ -85,7 +85,7 @@ output.
 
 4. **A secret in `config:` is refused, not rendered.** The chart classifies every
    key it renders: one with a `secrets:` route (the DSN, the AMQP URLs, a Basic
-   user's hash, the OIDC HMAC secret, a signing passphrase, a terminology client
+   user's hash, a signing passphrase, a terminology client
    secret) **fails the render** naming the key that carries it. One with no route
    at all would move the whole `ferroehr.toml` into a Secret and render no
    ConfigMap — but no key reaches that branch today, so a normal run has a
@@ -300,7 +300,7 @@ A file-borne secret, checked on the node rather than in the template:
 PU=$(kubectl -n ferroehr-test get pod $P -o jsonpath='{.metadata.uid}')
 docker exec desktop-control-plane \
   ls -lnL /var/lib/kubelet/pods/$PU/volumes/kubernetes.io~secret/secrets/
-# -r--r----- 1 0 65532 48 … auth.oidc.hmac_secret
+# -r--r----- 1 0 65532 97 … auth.basic.users.ferroehr.password_hash
 ```
 
 Owner root, group `fsGroup`, mode 0440 — the process reads it through the group
@@ -575,7 +575,7 @@ objects — the observability fixture and metrics-server both leave some behind.
 |---|---|---|
 | `Error: 16 configuration error(s): unknown configuration environment variable FERROEHR_SERVICE_HOST` (+ `FERROEHR_PORT_8080_TCP…`, `FERROEHR_POSTGRES_…`) then `CrashLoopBackOff` | The kubelet's Service link variables collide with the reserved `FERROEHR_` prefix for any Service named `ferroehr*` | `enableServiceLinks: false` on the pod spec. The chart pins it and `validate.sh` asserts it — if you see this, someone removed it |
 | `unknown configuration key spec_profile (line 1)` / `statement_timeout_ms` / `limits` / `connection` | The chart's `config:` defaults are newer than the image `appVersion` names | Diff the key sets against the image itself: `kubectl -n default run cfg --image=ghcr.io/ferrohealth/ferroehr:<tag> --restart=Never --attach --rm --quiet --command -- /usr/local/bin/ferroehr config default`. Then either use an image that has the keys, or null them for the test (`--set config.spec_profile=null`, `--set config.db.statement_timeout_ms=null`, `--set config.server.limits=null`, …). Do NOT delete the keys from `values.yaml` — they are correct for the next release |
-| Every request `401` with `WWW-Authenticate: Basic realm="ferroehr"` | Chart default is `auth.enabled: true` with NO mechanism configured — it boots and refuses everything | Supply `config.auth.basic.users` (as `test-values.yaml` does) or `config.auth.oidc` |
+| Every request `401` with `WWW-Authenticate: Basic realm="ferroehr"` | Chart default is `auth.enabled: true` with NO mechanism configured — it boots and refuses everything | Supply `config.auth.basic.users` (as `test-values.yaml` does) or `config.auth.issuer` with `config.auth.audience` |
 | `Upgrade failed: … .env: duplicate entries for key [name="FERROEHR__…"]` | `extraEnv` repeated a name the chart already emits | Set the value through its own key, not `extraEnv` |
 | Pods stay NotReady with `migrations` DOWN / `core schema tables missing (migrations not applied)` while `db: UP` | The database was replaced/wiped under a running pod; migrations run only at boot | `kubectl rollout restart deploy/ferroehr` (a running pod also recovers by itself once anything else migrates — step 6) |
 | A replacement pod crash-loops on `relation "vo_version" already exists`, `_sqlx_migrations` stuck at 6 | Only the `ehr` schema was dropped; `cold.vo_version` survived and migration 7 creates it unguarded | Recreate the whole database, not one schema (step 6) |

@@ -44,9 +44,9 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferroehr::config::auth::AuthConfig;
 use ferroehr::config::server::ServerConfig;
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 
@@ -64,11 +64,10 @@ fn config(max_in_flight: usize) -> AppConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
-        auth: AuthConfig {
+        auth: AuthSection {
             enabled: false,
             basic: None,
-            oidc: None,
-            ..AuthConfig::default()
+            ..AuthSection::default()
         },
         ..Default::default()
     }
@@ -78,7 +77,9 @@ async fn app(max_in_flight: usize) -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
     (
         pg,
-        ferroehr_rest::build_with(config(max_in_flight), service).expect("router builds"),
+        ferroehr_rest::build_with(config(max_in_flight), service)
+            .await
+            .expect("router builds"),
     )
 }
 

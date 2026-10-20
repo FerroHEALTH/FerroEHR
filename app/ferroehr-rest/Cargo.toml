@@ -80,13 +80,14 @@ opentelemetry_sdk = { workspace = true }
 opentelemetry-otlp = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 
-# Authentication: Basic (argon2) + OAuth2/OIDC bearer (jsonwebtoken over a JWKS,
-# issuer discovery via openidconnect over the workspace reqwest).
-# See src/auth for the resource-server scope decision.
-jsonwebtoken = { workspace = true }
-argon2 = { workspace = true }
-base64 = { workspace = true }       # RFC 7617 Basic-credential decode (never hand-rolled)
-openidconnect = { workspace = true }
+# Authentication and the SMART on openEHR scopes: the FerroHEALTH resource-server
+# crate checks every bearer token and Basic credential and enforces the route
+# table's `Requirement`s (`extensions::access::authn`, `smart`); `smart-grammar`
+# is the openehr-sdt release those requirements are typed over. The verified
+# Basic credential cache keys on the SHA-256 of the header.
+ferrohealth-smart = { workspace = true, features = ["axum", "openehr"] }
+smart-grammar = { workspace = true }
+base64 = { workspace = true }
 moka = { workspace = true }
 sha2 = { workspace = true }
 
@@ -96,7 +97,6 @@ sha2 = { workspace = true }
 # `thiserror`/`tracing`/`metrics`/`async-trait`/`tokio` are already deps above.)
 cedar-policy = { workspace = true }
 reqwest = { workspace = true }
-ferrohealth-smart = { workspace = true }
 arc-swap = { workspace = true }
 
 # OpenAPI / Swagger UI. This server serves ONLY the document it generates from
@@ -126,6 +126,9 @@ http-body-util = { workspace = true }
 serde_json = { workspace = true }
 jsonwebtoken = { workspace = true }
 argon2 = { workspace = true }
+# The `[[auth.basic.users]]` password hash the test configurations build is a
+# `secrecy::SecretString`, the crate section's type.
+secrecy = { workspace = true }
 assert_fs = { workspace = true }
 reqwest = { workspace = true }
 base64 = { workspace = true }

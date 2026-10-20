@@ -35,9 +35,9 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferroehr::config::auth::AuthConfig;
 use ferroehr::config::server::ServerConfig;
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 
@@ -67,11 +67,10 @@ fn config() -> AppConfig {
             cors_permissive: false,
             ..Default::default()
         },
-        auth: AuthConfig {
+        auth: AuthSection {
             enabled: false,
             basic: None,
-            oidc: None,
-            ..AuthConfig::default()
+            ..AuthSection::default()
         },
         ..Default::default()
     }
@@ -80,7 +79,7 @@ fn config() -> AppConfig {
 /// A router over a fresh real service with the Demo Vitals OPT already uploaded.
 async fn app_with_template() -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
-    let app = common::router_with(config(), service);
+    let app = common::router_with(config(), service).await;
     let req = Request::builder()
         .method("POST")
         .uri(format!("{BASE}/definition/template/adl1.4"))

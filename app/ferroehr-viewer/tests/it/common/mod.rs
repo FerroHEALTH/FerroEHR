@@ -116,6 +116,10 @@ impl Harness {
         // mapped port. A no-op in host mode (nothing references the name).
         caps.add_arg("--host-resolver-rules=MAP keycloak 127.0.0.1")
             .expect("caps");
+        // The dev Keycloak serves its issuer over TLS with the development CA
+        // the stack generates (docker-compose.dev.yml `keycloak-tls`), which no
+        // browser trust store holds.
+        caps.accept_insecure_certs(true).expect("caps");
         caps.set_logging_prefs("browser", thirtyfour::LoggingPrefsLogLevel::All)
             .expect("logging prefs");
         // NOTE: session creation keeps thirtyfour's own 120 s request timeout —
@@ -274,6 +278,10 @@ impl Harness {
         // mapped port. A no-op in host mode (nothing references the name).
         caps.add_arg("--host-resolver-rules=MAP keycloak 127.0.0.1")
             .expect("caps");
+        // The dev Keycloak serves its issuer over TLS with the development CA
+        // the stack generates (docker-compose.dev.yml `keycloak-tls`), which no
+        // browser trust store holds.
+        caps.accept_insecure_certs(true).expect("caps");
         // Chrome content-settings: 2 = block JavaScript.
         caps.add_experimental_option(
             "prefs",

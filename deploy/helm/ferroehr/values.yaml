@@ -506,21 +506,19 @@ backup:
 # here that carries it securely.
 # ─────────────────────────────────────────────────────────────────────────────
 secrets:
-  # -- Symmetric HS256 secret for [auth.oidc] (dev/test). MOUNTED as
-  # /etc/ferroehr-secrets/auth.oidc.hmac_secret (auth.oidc.hmac_secret_file).
-  authOidcHmacSecret: ""
   # -- PGP key passphrase (config.signing.mode=pgp). MOUNTED as
   # /etc/ferroehr-secrets/signing.key_passphrase (signing.key_passphrase_file).
   signingKeyPassphrase: ""
   # -- AMQP broker URL for [events] (carries credentials). MOUNTED as
   # /etc/ferroehr-secrets/events.url (events.url_file).
   eventsUrl: ""
-  # -- Argon2id password hashes for [[auth.basic.users]], keyed by username. Each
-  # is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<username>.password_hash
+  # -- Argon2id password hashes for [[auth.basic.users]], keyed by user-id. Each
+  # is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<user>.password_hash
   # and the chart injects the matching `password_hash_file` into the rendered TOML.
-  # Declare the user itself — `username`, `roles` — under
-  # config.auth.basic.users; a username with no matching entry is a render error.
-  # A hash under `config:` is refused: it would reach the ConfigMap.
+  # Declare the user itself — `user`, `scopes` — under config.auth.basic.users,
+  # and its RBAC roles under config.authz.rbac.basic_roles.<user>; a user-id with
+  # no matching entry is a render error. A hash under `config:` is refused: it
+  # would reach the ConfigMap.
   basicUserPasswordHashes: {}
   # -- FHIR base URL of the external Audit Record Repository for
   # [audit.fhir_feed] (may carry basic-auth credentials in its userinfo) →
@@ -689,17 +687,20 @@ config:
   log:
     format: json
 
-  # [auth] — authentication (Basic + OAuth2/OIDC bearer). Enabled by default.
+  # [auth] — authentication: the FerroHEALTH family's shared section (bearer
+  # tokens of the trusted issuers, Basic users). Enabled by default.
   # auth.enabled=true with NO mechanism is REFUSED BY THIS CHART AT RENDER TIME,
   # because the server refuses to boot on it (RFC 9110 §11.6.1: a 401 challenge
   # must name a scheme the server implements) and a crash-loop hides the reason
   # in a pod log. So a stock `helm install` stops with an actionable error rather
-  # than appearing to succeed. Add an [auth.oidc] issuer, an [[auth.basic.users]]
-  # entry, or set enabled=false — the last serves EVERY request unauthenticated
-  # and is a development-only choice the chart makes you state explicitly.
-  # An [auth.oidc] table additionally requires `audiences` (at least one) and an
-  # https `issuer` with no query/fragment; every [[auth.basic.users]]
+  # than appearing to succeed. Add an `issuer` (with `audience`), an
+  # [[auth.basic.users]] entry, or set enabled=false — the last serves EVERY
+  # request unauthenticated and is a development-only choice the chart makes you
+  # state explicitly. The issuer is an https URL with no query/fragment, only
+  # asymmetric algorithms are accepted, and every [[auth.basic.users]]
   # password_hash must be argon2id at m>=19456,t=2,p=1. All checked at boot.
+  # Every route enforces SMART on openEHR scopes: a Basic user's `scopes` and a
+  # token's `scope` claim must grant what it calls.
   auth:
     enabled: true
 
@@ -832,7 +833,7 @@ config:
   # `*_file` key points at: the PGP key (signing.key_path), Cedar policies
   # (authz.abac.cedar.policy_dir), ATNA PEMs, terminology-server mutual-TLS PEMs
   # (terminology.external.providers.<name>.client_cert_path / client_key_path /
-  # ca_bundle_path), a JWKS blob (auth.oidc.jwks_json_file), the commercial
+  # ca_bundle_path), a JWKS file (auth.jwks_file), the commercial
   # licence token (licence.file).
   files: {}
   # signing.asc: |
@@ -1561,18 +1562,13 @@ bridge:
     port: 8080
   cdr:
     # -- Name of an EXISTING Secret holding FerroBRIDGE's credential for this
-    # release's CDR. Required. With `auth: basic` it must carry the keys `user`
-    # and `password`; with `auth: bearer`, the key `bearer_token`. The password
-    # or token is mounted as a FILE and named by its `_file` key in
-    # config.toml, so it never enters the ConfigMap or the pod's environment;
-    # the user name, which FerroBRIDGE does not treat as a secret, reaches the
-    # container as `FERROBRIDGE__CDR__CREDENTIALS__USER`.
+    # release's CDR. Required. It must carry the keys `user` and `password`, a
+    # user of the CDR's `config.auth.basic.users` (RFC 7617) whose `scopes`
+    # grant what FerroBRIDGE calls. The password is mounted as a FILE and named
+    # by its `_file` key in config.toml, so it never enters the ConfigMap or the
+    # pod's environment; the user name, which FerroBRIDGE does not treat as a
+    # secret, reaches the container as `FERROBRIDGE__CDR__CREDENTIALS__USER`.
     existingSecret: ""
-    # -- How FerroBRIDGE authenticates to the CDR: `basic` (RFC 7617, a user of
-    # the CDR's `config.auth.basic.users`) or `bearer` (RFC 6750, a token the
-    # CDR accepts). FerroBRIDGE sends a bearer token as it is and cannot renew
-    # one, so `bearer` suits only a token that does not expire.
-    auth: basic
   mappings:
     # -- Name of an EXISTING ConfigMap holding the FHIRconnect mapping files
     # FerroBRIDGE serves `$tofhir` and `$toopenehr` with. Empty means no mapping

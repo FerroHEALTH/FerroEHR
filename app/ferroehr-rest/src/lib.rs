@@ -87,12 +87,12 @@ pub enum ServeError {
 /// application injects its DB-backed service here).
 ///
 /// # Errors
-/// [`ServeError::Auth`] if the OIDC key material/algorithms are invalid.
-pub fn build_with(
+/// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
+pub async fn build_with(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(&config)?;
+    let authenticator = build_authenticator(&config).await?;
     let state = AppState::with_backend(config, backend);
     Ok(router(state, authenticator))
 }
@@ -113,7 +113,7 @@ pub async fn serve_with(
     let bind = config.server.bind.clone();
     let tls = config.server.tls.clone();
     let connection = config.server.connection;
-    let app = build_with(config, backend)?;
+    let app = build_with(config, backend).await?;
     run_server(app, &bind, &tls, connection).await
 }
 
@@ -124,30 +124,46 @@ pub async fn serve_with(
 /// and not bound to a separate port.
 ///
 /// # Errors
-/// [`ServeError::Auth`] if the OIDC key material/algorithms are invalid.
-pub fn build_full(
+/// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
+pub async fn build_full(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(&config)?;
+    let authenticator = build_authenticator(&config).await?;
     let state = AppState::with_parts(config, backend, authz, observability);
     Ok(router(state, authenticator))
 }
 
-/// Builds the [`Authenticator`] with the configured role-claim paths.
+/// Builds the [`Authenticator`] of `config`, reading each `[auth]` issuer's
+/// metadata and key set.
 ///
-/// The paths are `[authz.rbac] role_claims` as lifted into
+/// The role-claim paths are `[authz.rbac] role_claims` as lifted into
 /// [`AppConfig::role_claims`], whether or not an authorization gate is wired,
 /// so Bearer role extraction never falls back to the defaults behind the
-/// operator's back.
+/// operator's back. A served SMART discovery document needs the issuer's
+/// metadata to name a `token_endpoint`, which the document requires (SMART App
+/// Launch 2.2.0, Conformance, §Metadata), so a `jwks_file` issuer refuses it.
 ///
 /// # Errors
-/// [`ServeError::Auth`] if the OIDC key material/algorithms are invalid.
-fn build_authenticator(config: &AppConfig) -> Result<Arc<Authenticator>, ServeError> {
-    Authenticator::with_role_claims(config.auth.clone(), config.role_claims.clone())
-        .map_err(ServeError::Auth)
+/// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
+async fn build_authenticator(config: &AppConfig) -> Result<Arc<Authenticator>, ServeError> {
+    let authenticator = Authenticator::new(config).await.map_err(ServeError::Auth)?;
+    if config.smart.enabled
+        && config.auth.enabled
+        && authenticator
+            .smart_configuration(&smart::discovery::options(config))
+            .is_none_or(|document| document.get("token_endpoint").is_none())
+    {
+        return Err(ServeError::Auth(
+            "smart.enabled = true needs an [auth] issuer whose metadata names a \
+             token_endpoint (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer \
+             read from a jwks_file carries no metadata"
+                .to_owned(),
+        ));
+    }
+    Ok(authenticator)
 }
 
 /// Builds and serves the application with full observability.
@@ -166,7 +182,7 @@ pub async fn serve_full(
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<(), ServeError> {
-    let authenticator = build_authenticator(&config)?;
+    let authenticator = build_authenticator(&config).await?;
     let bind = config.server.bind.clone();
     let tls = config.server.tls.clone();
     let connection = config.server.connection;
@@ -368,22 +384,87 @@ async fn shutdown_signal() {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use ferroehr::config::auth::{AuthConfig, OidcConfig};
+pub(crate) mod test_support {
+    //! The committed CNF test issuer (`docs/conformance/party/smart/`) as the
+    //! key the unit tests mint RS256 access tokens with.
+
+    #![expect(
+        clippy::disallowed_types,
+        reason = "a test builds a token's claim set directly; the claim set is RFC 7519-open"
+    )]
+
+    use std::path::PathBuf;
+    use std::sync::OnceLock;
+
+    use ferrohealth_smart::config::{AuthSection, IssuerKey};
     use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 
-    const SECRET: &str = "role-claims-secret";
+    /// The issuer the test tokens name.
+    pub(crate) const ISSUER: &str = "https://issuer.example";
+    /// The audience the test tokens name.
+    pub(crate) const AUDIENCE: &str = "ferroehr";
+    /// The `kid` of the committed test key.
+    const KID: &str = "cnf-smart-test";
 
-    /// The claim set the test token carries, roles under a custom path.
-    #[derive(serde::Serialize)]
-    struct Claims {
-        sub: &'static str,
-        iss: &'static str,
-        aud: &'static str,
-        exp: i64,
-        app_roles: [&'static str; 1],
+    /// The public key set, written once to a file the resource server reads.
+    pub(crate) fn jwks_file() -> PathBuf {
+        static FILE: OnceLock<PathBuf> = OnceLock::new();
+        FILE.get_or_init(|| {
+            let path = std::env::temp_dir().join(format!(
+                "ferroehr-rest-unit-jwks-{}.json",
+                std::process::id()
+            ));
+            std::fs::write(
+                &path,
+                include_str!("../../../docs/conformance/party/smart/jwks.json"),
+            )
+            .expect("write the test key set");
+            path
+        })
+        .clone()
     }
+
+    /// An `[auth]` section trusting the test issuer from its key-set file.
+    pub(crate) fn bearer_auth() -> AuthSection {
+        AuthSection {
+            issuer: IssuerKey::Flat(ISSUER.to_owned()),
+            audience: vec![AUDIENCE.to_owned()],
+            jwks_file: jwks_file().display().to_string(),
+            ..AuthSection::default()
+        }
+    }
+
+    /// An RFC 9068 access token carrying `claims`, signed with the test key.
+    pub(crate) fn token(claims: &serde_json::Value) -> String {
+        let mut header = Header::new(Algorithm::RS256);
+        header.typ = Some("at+jwt".to_owned());
+        header.kid = Some(KID.to_owned());
+        let key = EncodingKey::from_rsa_pem(include_bytes!(
+            "../../../docs/conformance/party/smart/cnf-smart-test.key.pem"
+        ))
+        .expect("the committed test key");
+        encode(&header, claims, &key).expect("encode")
+    }
+
+    /// The claims of a valid access token for `sub` granting `scope`.
+    pub(crate) fn claims(sub: &str, scope: &str) -> serde_json::Value {
+        let now = jiff::Timestamp::now().as_second();
+        serde_json::json!({
+            "iss": ISSUER,
+            "aud": AUDIENCE,
+            "sub": sub,
+            "client_id": "unit-test-client",
+            "scope": scope,
+            "iat": now,
+            "exp": now + 3600,
+            "jti": format!("{sub}-{now}"),
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
 
     /// The configured `[authz.rbac] role_claims` reach the authenticator with
     /// no authorization handle wired (RBAC, ABAC and the per-EHR default all
@@ -391,40 +472,18 @@ mod tests {
     #[tokio::test]
     async fn configured_role_claims_apply_without_an_authz_handle() {
         let config = AppConfig {
-            auth: AuthConfig {
-                enabled: true,
-                basic: None,
-                oidc: Some(OidcConfig {
-                    issuer: "https://issuer.example".to_owned(),
-                    audiences: vec!["ferroehr".to_owned()],
-                    algorithms: vec!["HS256".to_owned()],
-                    hmac_secret: Some(ferroehr::config::secret::Secret::new(SECRET.to_owned())),
-                    jwks_json: None,
-                    ..OidcConfig::default()
-                }),
-                ..AuthConfig::default()
-            },
+            auth: test_support::bearer_auth(),
             role_claims: vec!["app_roles".to_owned()],
             ..AppConfig::default()
         };
-        let authenticator = build_authenticator(&config).expect("authenticator");
-        let exp = jiff::Timestamp::now().as_second() + 3600;
-        let token = encode(
-            &Header::new(Algorithm::HS256),
-            &Claims {
-                sub: "alice",
-                iss: "https://issuer.example",
-                aud: "ferroehr",
-                exp,
-                app_roles: ["CLINICIAN"],
-            },
-            &EncodingKey::from_secret(SECRET.as_bytes()),
-        )
-        .expect("encode");
+        let authenticator = build_authenticator(&config).await.expect("authenticator");
+        let mut claims = test_support::claims("alice", "user/composition-*.r");
+        claims["app_roles"] = serde_json::json!(["CLINICIAN"]);
         let mut headers = http::HeaderMap::new();
         headers.insert(
             http::header::AUTHORIZATION,
-            http::HeaderValue::from_str(&format!("Bearer {token}")).expect("header"),
+            http::HeaderValue::from_str(&format!("Bearer {}", test_support::token(&claims)))
+                .expect("header"),
         );
         let authenticated = authenticator.authenticate(&headers).await.expect("valid");
         assert_eq!(authenticated.principal.roles, vec!["CLINICIAN".to_owned()]);

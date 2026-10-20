@@ -16,7 +16,7 @@
 #     `runtime-from-source`, CI builds `runtime-prebuilt`), so a plain
 #     `docker compose up --build` runs the CURRENT sources;
 #   * the server config swaps from the inline quickstart posture to
-#     docker/ferroehr.dev.toml (three users, RBAC on, the dev OIDC trust);
+#     docker/ferroehr.dev.toml (three users, RBAC on);
 #   * the dev `keycloak` profile lives here (it bind-mounts the full exported
 #     realm from docker/keycloak/import — the ui-e2e lane and local OIDC work
 #     use it; the standalone docker-compose.keycloak.yml overlay carries its
@@ -81,9 +81,33 @@ services:
 
   # Keycloak for OAuth2/OIDC bearer auth (the "ferroehr" realm is imported from
   # docker/keycloak/import), behind the `keycloak` profile. The app defaults to
-  # Basic auth, so it does NOT depend on Keycloak; docker/ferroehr.dev.toml's
-  # [auth.oidc] block points at the realm below, and the OIDC lanes start it
-  # with `docker compose --profile keycloak up`.
+  # Basic auth, so it does NOT depend on Keycloak; the viewer's OIDC login
+  # points at the realm below, and the OIDC lanes start it with
+  # `docker compose --profile keycloak up`.
+  #
+  # The CDR accepts a token issuer only over https, or plain http on a
+  # loopback host (RFC 8414 §3, §6.2), so Keycloak serves its issuer over TLS
+  # at https://keycloak:8443 with a certificate from a development CA that
+  # `keycloak-tls` generates on the first `up` (the same script as
+  # docker-compose.keycloak.yml). The CDR reads the issuer's metadata at boot,
+  # so its trust of this realm rides docker/viewer/e2e-env.yml, the overlay
+  # the OIDC lanes add, rather than this file, where Keycloak is optional.
+  keycloak-tls:
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    profiles: [keycloak]
+    image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
+    # Root only because a fresh named volume is root-owned; no capability.
+    user: "0"
+    entrypoint: ["bash", "/usr/local/bin/keycloak-tls.sh"]
+    configs:
+      - source: keycloak-tls-script
+        target: /usr/local/bin/keycloak-tls.sh
+    volumes:
+      - keycloak-tls:/tls
+    restart: "no"
+
   keycloak:
     cap_drop: [ALL]
     security_opt:
@@ -93,26 +117,35 @@ services:
     # 2026-07-24 (docs.docker.com/build/building/best-practices).
     image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
     command: ["start-dev", "--import-realm"]
+    depends_on:
+      keycloak-tls:
+        condition: service_completed_successfully
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HTTP_RELATIVE_PATH: /auth
-      # In-network port == default host port (8081): one issuer hostname:port
-      # (http://keycloak:8081) is then valid from BOTH the docker network and
-      # the host (the E2E browser maps `keycloak` to 127.0.0.1), so the
-      # containerized viewer and a host browser can share one OIDC issuer.
+      # Plain HTTP for the admin API calls of scripts/ui-e2e.sh and the
+      # healthcheck. In-network port == default host port (8081).
       KC_HTTP_PORT: 8081
-      # ONE canonical issuer regardless of which host the caller used —
-      # token `iss` claims stay stable, so the CDR can validate bearer
-      # tokens against a single configured issuer (ferroehr.dev.toml
-      # [auth.oidc]). Override for human viewer browsing if needed.
+      # The issuer, over TLS. In-network port == default host port (8443), so
+      # https://keycloak:8443 is valid from BOTH the docker network and the
+      # host (the E2E browser maps `keycloak` to 127.0.0.1), and the
+      # containerized viewer and a host browser share one OIDC issuer.
+      KC_HTTPS_PORT: 8443
+      KC_HTTPS_KEY_STORE_FILE: /opt/keycloak/conf/tls/keycloak.p12
+      KC_HTTPS_KEY_STORE_PASSWORD: ferroehr-dev-tls
+      # ONE canonical issuer regardless of which host the caller used:
+      # token `iss` claims stay stable, so a client can validate bearer
+      # tokens against a single configured issuer.
       # NOTE: a URL-form KC_HOSTNAME replaces the whole base — Keycloak does
       # NOT append KC_HTTP_RELATIVE_PATH to it, so /auth must be included.
-      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-http://keycloak:8081/auth}
+      KC_HOSTNAME: https://keycloak:8443/auth
     volumes:
       - ./docker/keycloak/import:/opt/keycloak/data/import:ro
+      - keycloak-tls:/opt/keycloak/conf/tls:ro
     ports:
       - "${FERROEHR_BIND_HOST:-127.0.0.1}:${KEYCLOAK_PORT:-8081}:8081"
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:8443:8443"
     deploy:
       resources:
         limits:
@@ -132,11 +165,44 @@ services:
       retries: 30
       start_period: 20s
 
+volumes:
+  keycloak-tls:
+
 configs:
   # The dev-lane server config replaces the ENTIRE inline quickstart config
   # (`!override` — docs.docker.com/reference/compose-file/merge §Replace value):
-  # three users, RBAC on (the ADMIN/USER/READONLY split), the dev Keycloak
-  # OIDC trust, and the disabled terminology providers the CNF stack's
-  # overlays switch on.
+  # three users, RBAC on (the ADMIN/USER/READONLY split), and the disabled
+  # terminology providers the CNF stack's overlays switch on.
   ferroehr-config: !override
     file: ./docker/ferroehr.dev.toml
+
+  keycloak-tls-script:
+    content: |
+      set -eu
+      tls=/tls
+      if [ -s "$$tls/keycloak.p12" ] && [ -s "$$tls/ca/ca.crt" ]; then
+        echo "development TLS material present"
+        exit 0
+      fi
+      work="$$(mktemp -d)"
+      pass=ferroehr-dev-tls
+      keytool -genkeypair -alias ca -keyalg EC -groupname secp256r1 -sigalg SHA256withECDSA \
+        -dname "CN=FerroEHR development CA" -ext bc:c=ca:true,pathlen:0 -ext ku:c=keyCertSign,cRLSign \
+        -validity 825 -storetype PKCS12 -keystore "$$work/ca.p12" -storepass "$$pass"
+      keytool -exportcert -rfc -alias ca -keystore "$$work/ca.p12" -storepass "$$pass" -file "$$work/ca.crt"
+      keytool -genkeypair -alias keycloak -keyalg EC -groupname secp256r1 -sigalg SHA256withECDSA \
+        -dname "CN=keycloak" -validity 825 -storetype PKCS12 -keystore "$$work/keycloak.p12" -storepass "$$pass"
+      keytool -certreq -alias keycloak -keystore "$$work/keycloak.p12" -storepass "$$pass" -file "$$work/keycloak.csr"
+      keytool -gencert -alias ca -keystore "$$work/ca.p12" -storepass "$$pass" -infile "$$work/keycloak.csr" \
+        -outfile "$$work/keycloak.crt" -rfc -validity 825 -sigalg SHA256withECDSA \
+        -ext san=dns:keycloak,dns:localhost,ip:127.0.0.1 -ext ku:c=digitalSignature -ext eku=serverAuth
+      keytool -importcert -noprompt -alias ca -file "$$work/ca.crt" -keystore "$$work/keycloak.p12" -storepass "$$pass"
+      keytool -importcert -noprompt -alias keycloak -file "$$work/keycloak.crt" -keystore "$$work/keycloak.p12" -storepass "$$pass"
+      keytool -delete -alias ca -keystore "$$work/keycloak.p12" -storepass "$$pass"
+      mkdir -p "$$tls/ca"
+      cp "$$work/keycloak.p12" "$$tls/keycloak.p12"
+      cp "$$work/ca.crt" "$$tls/ca/ca.crt"
+      chmod 0755 "$$tls" "$$tls/ca"
+      chmod 0644 "$$tls/keycloak.p12" "$$tls/ca/ca.crt"
+      rm -r "$$work"
+      echo "development TLS material written"

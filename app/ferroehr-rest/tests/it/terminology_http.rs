@@ -24,8 +24,6 @@
               intended shape here (the Rust Book ch11)"
 )]
 
-use argon2::Argon2;
-use argon2::password_hash::PasswordHasher;
 use axum::Router;
 use axum::body::Body;
 use base64::Engine;
@@ -34,9 +32,9 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferroehr::config::auth::{AuthConfig, BasicConfig, BasicUser};
 use ferroehr::config::server::ServerConfig;
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 
@@ -58,11 +56,10 @@ fn config(terminology_enabled: bool) -> AppConfig {
             cors_permissive: false,
             ..Default::default()
         },
-        auth: AuthConfig {
+        auth: AuthSection {
             enabled: false,
             basic: None,
-            oidc: None,
-            ..AuthConfig::default()
+            ..AuthSection::default()
         },
         terminology_api_enabled: terminology_enabled,
         ..Default::default()
@@ -74,7 +71,9 @@ async fn app(terminology_enabled: bool) -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
     (
         pg,
-        ferroehr_rest::build_with(config(terminology_enabled), service).expect("router builds"),
+        ferroehr_rest::build_with(config(terminology_enabled), service)
+            .await
+            .expect("router builds"),
     )
 }
 
@@ -116,21 +115,11 @@ async fn disabled_terminology_is_404() {
 #[tokio::test]
 async fn disabled_group_answers_401_before_404_when_unauthenticated() {
     let mut cfg = config(false);
-    cfg.auth = AuthConfig {
-        enabled: true,
-        basic: Some(BasicConfig {
-            users: vec![BasicUser {
-                username: "alice".to_owned(),
-                password_hash: ferroehr::config::secret::Secret::new(argon2_hash("pw")),
-                password_hash_file: None,
-                roles: vec!["USER".to_owned()],
-            }],
-        }),
-        oidc: None,
-        ..AuthConfig::default()
-    };
+    common::with_basic_users(&mut cfg, &[("alice", &["USER"])]);
     let (_pg, service) = common::test_service().await;
-    let app = ferroehr_rest::build_with(cfg, service).expect("router builds");
+    let app = ferroehr_rest::build_with(cfg, service)
+        .await
+        .expect("router builds");
 
     let (status, _) = send(app, get(format!("{BASE}/terminology"))).await;
     assert_eq!(
@@ -146,21 +135,11 @@ async fn disabled_group_answers_401_before_404_when_unauthenticated() {
 #[tokio::test]
 async fn disabled_group_answers_404_when_authenticated() {
     let mut cfg = config(false);
-    cfg.auth = AuthConfig {
-        enabled: true,
-        basic: Some(BasicConfig {
-            users: vec![BasicUser {
-                username: "alice".to_owned(),
-                password_hash: ferroehr::config::secret::Secret::new(argon2_hash("pw")),
-                password_hash_file: None,
-                roles: vec!["USER".to_owned()],
-            }],
-        }),
-        oidc: None,
-        ..AuthConfig::default()
-    };
+    common::with_basic_users(&mut cfg, &[("alice", &["USER"])]);
     let (_pg, service) = common::test_service().await;
-    let app = ferroehr_rest::build_with(cfg, service).expect("router builds");
+    let app = ferroehr_rest::build_with(cfg, service)
+        .await
+        .expect("router builds");
 
     let req = Request::builder()
         .method("GET")
@@ -176,14 +155,6 @@ async fn disabled_group_answers_404_when_authenticated() {
         .unwrap();
     let (status, _) = send(app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-}
-
-/// Argon2 hash of a test password (the Basic-auth user store stores hashes).
-fn argon2_hash(pw: &str) -> String {
-    Argon2::default()
-        .hash_password_with_salt(pw.as_bytes(), b"1234567890123456")
-        .unwrap()
-        .to_string()
 }
 
 #[tokio::test]

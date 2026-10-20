@@ -1,14 +1,22 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 
-# Compose override for the image-mode E2E run (scripts/ui-e2e.sh with
-# UI_E2E_IMAGE=1): the composed viewer image receives the same OIDC test
-# wiring the host-mode harness passes as process env. The issuer uses the
-# in-network hostname at the aligned port (docker-compose.dev.yml keycloak
-# KC_HTTP_PORT) so the SAME URL resolves for the container (docker DNS)
-# and for the E2E browser (a chromedriver host-resolver mapping of
-# `keycloak` to 127.0.0.1). The client secret is the shipped DEV realm's
-# (docker/keycloak/import) — test-only, never a production credential.
+# Compose override for the E2E runs (scripts/ui-e2e.sh). The composed viewer
+# image (UI_E2E_IMAGE=1) receives the same OIDC test wiring the host-mode
+# harness passes as process env. The issuer uses the in-network hostname at
+# the aligned port (docker-compose.dev.yml keycloak KC_HTTPS_PORT) so the SAME
+# URL resolves for the container (docker DNS) and for the E2E browser (a
+# chromedriver host-resolver mapping of `keycloak` to 127.0.0.1). The client
+# secret is the shipped DEV realm's (docker/keycloak/import), test-only, never
+# a production credential.
+#
+# The CDR trusts the dev realm here, in both modes: Keycloak serves the issuer
+# over TLS with the development CA `keycloak-tls` generates
+# (docker-compose.dev.yml), and the CDR and the viewer add that CA beside
+# their own trust store (rustls reads SSL_CERT_FILE and SSL_CERT_DIR
+# together). The CDR reads the issuer's metadata at boot, so it waits for
+# Keycloak. Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068
+# profile the CDR expects by default, hence `token_profile = "jwt"`.
 #
 # The CDR block turns two opt-in extensions on for the run, both of which
 # answer `404` as if unmounted while they are off — so the viewer's journeys
@@ -23,9 +31,19 @@
 # the run.
 services:
   ferroehr:
+    depends_on:
+      keycloak:
+        condition: service_healthy
     environment:
       FERROEHR__TERMINOLOGY__API_ENABLED: "true"
       FERROEHR__EVENTS__ADMIN_API: "true"
+      FERROEHR__AUTH__ISSUER: https://keycloak:8443/auth/realms/ferroehr
+      FERROEHR__AUTH__AUDIENCE: ferroehr
+      FERROEHR__AUTH__TOKEN_PROFILE: jwt
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      SSL_CERT_DIR: /run/ferroehr-dev-tls/ca
+    volumes:
+      - keycloak-tls:/run/ferroehr-dev-tls:ro
 
   ferroehr-viewer:
     environment:
@@ -34,7 +52,11 @@ services:
       # cookie flag opts out here (production behind TLS needs nothing).
       FERROEHR_VIEWER__SESSION__COOKIE_SECURE: "false"
       FERROEHR_VIEWER__AUTH__OIDC__ENABLED: "true"
-      FERROEHR_VIEWER__AUTH__OIDC__ISSUER: http://keycloak:8081/auth/realms/ferroehr
+      FERROEHR_VIEWER__AUTH__OIDC__ISSUER: https://keycloak:8443/auth/realms/ferroehr
       FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID: ferroehr
       FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET: bT5T4oWn3xNdBytQsl2cfpBDi1pp15Va
       FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL: http://127.0.0.1:3000
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      SSL_CERT_DIR: /run/ferroehr-dev-tls/ca
+    volumes:
+      - keycloak-tls:/run/ferroehr-dev-tls:ro

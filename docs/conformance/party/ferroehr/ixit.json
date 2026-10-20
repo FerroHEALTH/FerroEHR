@@ -11,7 +11,9 @@
         ],
         "default_scopes": [
           "user/template-*.cruds",
-          "user/aql-*.cruds"
+          "user/aql-*.cruds",
+          "user/composition-*.cruds",
+          "__ferroehr.platform"
         ]
       }
     },
@@ -27,7 +29,9 @@
         ],
         "default_scopes": [
           "user/template-*.cruds",
-          "user/aql-*.cruds"
+          "user/aql-*.cruds",
+          "user/composition-*.cruds",
+          "__ferroehr.platform"
         ]
       }
     },
@@ -42,7 +46,9 @@
         ],
         "default_scopes": [
           "user/template-*.r",
-          "user/aql-*.r"
+          "user/aql-*.r",
+          "user/composition-*.r",
+          "__ferroehr.platform"
         ]
       }
     },
@@ -75,7 +81,9 @@
         ],
         "default_scopes": [
           "user/template-*.cruds",
-          "user/aql-*.cruds"
+          "user/aql-*.cruds",
+          "user/composition-*.cruds",
+          "__ferroehr.platform"
         ]
       },
       "terminology": {
@@ -126,7 +134,9 @@
         ],
         "default_scopes": [
           "user/template-*.cruds",
-          "user/aql-*.cruds"
+          "user/aql-*.cruds",
+          "user/composition-*.cruds",
+          "__ferroehr.platform"
         ]
       },
       "spec_profile": "stable"

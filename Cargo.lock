@@ -2637,7 +2637,6 @@ dependencies = [
  "jsonschema",
  "lapin",
  "moka",
- "oauth2",
  "object_store",
  "openehr-adl",
  "openehr-am",
@@ -2646,7 +2645,7 @@ dependencies = [
  "openehr-lang",
  "openehr-query",
  "openehr-rm",
- "openehr-sdt",
+ "openehr-sdt 0.0.90",
  "openehr-term",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -2742,8 +2741,8 @@ dependencies = [
  "openehr-its",
  "openehr-lang",
  "openehr-rm",
- "openehr-sdt",
- "openidconnect",
+ "openehr-sdt 0.0.89",
+ "openehr-sdt 0.0.90",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
@@ -2751,6 +2750,7 @@ dependencies = [
  "prometheus",
  "reqwest",
  "rustls",
+ "secrecy",
  "serde",
  "serde_json",
  "serde_path_to_error",
@@ -2785,7 +2785,7 @@ dependencies = [
  "ferroehr",
  "ferroehr-rest",
  "openehr-its",
- "openehr-sdt",
+ "openehr-sdt 0.0.90",
  "reqwest",
  "serde_json",
  "sqlx",
@@ -2818,7 +2818,7 @@ dependencies = [
  "openehr-am",
  "openehr-its",
  "openehr-query",
- "openehr-sdt",
+ "openehr-sdt 0.0.90",
  "openidconnect",
  "reqwest",
  "serde",
@@ -2842,16 +2842,19 @@ checksum = "36d40787a48114fadf34df5bc696989c8b077732317cad06ddd2a3a1d7243e7a"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
+ "axum",
  "base64 0.23.1",
  "http",
  "jiff",
  "jsonwebtoken",
+ "openehr-sdt 0.0.89",
  "reqwest",
  "secrecy",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
  "tokio",
+ "tower",
  "tracing",
  "url",
 ]
@@ -5497,6 +5500,12 @@ dependencies = [
  "thiserror 2.0.21",
  "uuid",
 ]
+
+[[package]]
+name = "openehr-sdt"
+version = "0.0.89"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e07cae457af09d08cb9362c5d0ce8e81201c7fcde855e56823d6c5bb3715bad"
 
 [[package]]
 name = "openehr-sdt"

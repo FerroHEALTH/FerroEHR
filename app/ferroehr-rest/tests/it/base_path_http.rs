@@ -48,7 +48,7 @@ async fn short_base_router() -> (testkit::TestDb, Router) {
         ..common::api_config(false)
     };
     let (db, service) = common::test_service().await;
-    (db, common::router_with(config, service))
+    (db, common::router_with(config, service).await)
 }
 
 /// The shortened base path is a value boot validation ACCEPTS — the wire

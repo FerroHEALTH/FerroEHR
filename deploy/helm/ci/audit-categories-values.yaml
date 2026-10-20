@@ -17,9 +17,8 @@ database:
 
 config:
   auth:
-    oidc:
-      issuer: https://idp.example.com/realms/ferroehr
-      audiences: [ferroehr]
+    issuer: https://idp.example.com/realms/ferroehr
+    audience: [ferroehr]
   privacy:
     identifier_scan:
       rules: [de-kvnr]

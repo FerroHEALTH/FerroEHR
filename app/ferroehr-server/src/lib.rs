@@ -526,8 +526,7 @@ fn run_config(
         ConfigCmd::Check => {
             let cfg = ferroehr::config::load(config, set).map_err(|e| anyhow::anyhow!("{e}"))?;
             cfg.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
-            cfg.auth
-                .require_mechanism()
+            ferroehr::config::auth::require_mechanism(&cfg.auth)
                 .map_err(|e| anyhow::anyhow!("{e}"))?;
             let rendered = cfg.to_redacted_toml().map_err(|e| anyhow::anyhow!("{e}"))?;
             println!("{rendered}");
@@ -759,7 +758,7 @@ fn log_resolved_posture(
     management: &ManagementConfig,
 ) {
     tracing::info!(
-        mechanisms = %app_config.auth.advertised_mechanisms(),
+        mechanisms = %ferroehr::config::auth::advertised_mechanisms(&app_config.auth),
         enabled = app_config.auth.enabled,
         "authentication configured"
     );
@@ -1274,14 +1273,16 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         events_admin_api: config.events.admin_api,
         audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
         role_claims: config.authz.rbac.role_claims.clone(),
+        rbac: config.authz.rbac.clone(),
+        basic_cache_ttl_seconds: config.authz.basic_cache_ttl_seconds,
+        assurance: config.authz.assurance.clone(),
+        professional: config.authz.professional.clone(),
         spec_profile: config.spec_profile,
     };
 
     // RFC 9110 §11.6.1: a 401 challenge must name a scheme applicable to the
     // target resource, and a server with no mechanism has none to name.
-    app_config
-        .auth
-        .require_mechanism()
+    ferroehr::config::auth::require_mechanism(&app_config.auth)
         .map_err(|e| anyhow::anyhow!("{e}"))?;
     log_resolved_posture(
         &app_config,

@@ -59,7 +59,8 @@ use crate::service::terminology::types::{
 };
 
 use super::config::{FhirOperation, FhirProviderConfig};
-use super::oauth2::TokenSource;
+use ferrohealth_smart::client::CallError;
+use ferrohealth_smart::client::cache::TokenSource;
 
 /// The `Term_relationship.relation_name` under which a FHIR `$expand`
 /// parent→child `contains` nesting is preserved (`terminology_extract.adoc`).
@@ -85,7 +86,7 @@ pub struct FhirTerminologyProvider {
     /// "not found" outcome — so a validation burst over the same codes costs
     /// one remote round trip per TTL window.
     cache: Option<moka::future::Cache<String, Fetched>>,
-    /// The `OAuth2` client-credentials token source whose bearer credential
+    /// The OAuth 2.0 client-credentials token source whose bearer credential
     /// authenticates every request, when the provider configures one. `None` =
     /// unauthenticated requests.
     token: Option<Arc<TokenSource>>,
@@ -188,20 +189,34 @@ impl FhirTerminologyProvider {
             return Ok(hit);
         }
         let cache_key = url.as_str().to_owned();
-        let mut request = self
-            .client
-            .get(url)
-            .header(reqwest::header::ACCEPT, "application/fhir+json");
+        let request = |bearer: Option<reqwest::header::HeaderValue>| {
+            let mut request = self
+                .client
+                .get(url.clone())
+                .header(reqwest::header::ACCEPT, "application/fhir+json");
+            if let Some(bearer) = bearer {
+                request = request.header(reqwest::header::AUTHORIZATION, bearer);
+            }
+            request.send()
+        };
         // The bearer is resolved per request (the token source serves it from
-        // its cache and re-grants only around expiry), so a rotated credential
-        // takes effect without a restart.
-        if let Some(token) = &self.token {
-            request = request.bearer_auth(token.bearer().await?);
-        }
-        let response = request
-            .send()
-            .await
-            .map_err(|e| self.transport_error(op_path, &e))?;
+        // its cache, renews it around expiry, and once more when the server
+        // answers `401`), so a rotated credential takes effect without a
+        // restart.
+        let response = match &self.token {
+            None => request(None)
+                .await
+                .map_err(|e| self.transport_error(op_path, &e))?,
+            Some(token) => {
+                token
+                    .call(|bearer| request(Some(bearer)))
+                    .await
+                    .map_err(|e| match e {
+                        CallError::Call { source } => self.transport_error(op_path, &source),
+                        refused => self.token_failure(&refused),
+                    })?
+            }
+        };
         let status = response.status();
         let body = response
             .bytes()
@@ -299,6 +314,20 @@ impl FhirTerminologyProvider {
                 }
             }
         }
+    }
+
+    /// The refusal of a request whose bearer token could not be obtained: the
+    /// operator detail (the provider and the authorization server's own error)
+    /// goes to the trace record, the wire body stays the curated 500 message,
+    /// so a client cannot read the credential configuration out of a response.
+    /// No openEHR spec governs 500 body content — our own design.
+    fn token_failure(&self, error: &CallError<reqwest::Error>) -> SmError {
+        tracing::error!(
+            provider = %self.name,
+            error = %crate::service::error::ErrorChain::new(error),
+            "terminology oauth2 client-credentials grant failed → 500"
+        );
+        SmError::exception(crate::service::error::INTERNAL_MESSAGE.to_owned())
     }
 
     /// A classified transport-fault exception (timeout / connect / other).

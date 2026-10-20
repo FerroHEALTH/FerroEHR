@@ -2,7 +2,7 @@
 
 FerroEHR does not manage users. There is no user table, no user API, and no
 plan to add one: **identity administration is delegated to your identity
-provider (IdP)**, and the CDR consumes standard OIDC bearer tokens. This page
+provider (IdP)**, and the CDR consumes standard OAuth 2.0 bearer tokens. This page
 records that posture and walks through connecting the two enterprise IdPs we
 are asked about most, **Microsoft Entra ID** (Azure AD) and **AD FS**, plus
 the answer for plain-LDAP directories.
@@ -23,9 +23,8 @@ existing governance. So the split is deliberate and permanent:
   its claims, and enforces [RBAC/ABAC and per-EHR access
   control](security.md#authorization) on every request.
 
-The HTTP Basic user list in `ferroehr.toml` is a bootstrap/dev convenience,
-not a user store; production deployments authenticate with OIDC bearer
-tokens.
+The HTTP Basic user list in `ferroehr.toml` is for machines and bootstrap,
+not a user store; people authenticate with bearer tokens from the IdP.
 
 > [!NOTE]
 > The viewer follows the same rule: it authenticates against the same
@@ -35,14 +34,14 @@ tokens.
 
 ## How the CDR consumes an IdP
 
-Two configuration groups do all the work:
+Three things do all the work:
 
-1. **Token validation** (`[auth.oidc]`): the server discovers the JWKS from
-   the issuer's `.well-known/openid-configuration` and validates each
-   bearer token's signature, `iss`, `exp`/`nbf`, and `aud`; the audience list
-   is mandatory, so a server with none refuses to boot rather than accepting
-   another service's token. See the
-   [OIDC settings table](security.md#authentication).
+1. **Token validation** (`[auth]`): the server reads the issuer's metadata
+   and key set at boot and validates each bearer token's signature
+   (asymmetric algorithms only), `iss`, `exp`/`nbf`, `aud` and `typ`; the
+   audience list is mandatory, so a server with none refuses to boot rather
+   than accepting another service's token. See the
+   [bearer settings table](security.md#authentication).
 2. **Role mining** (`[authz.rbac]`): `FERROEHR__AUTHZ__RBAC__ROLE_CLAIMS`
    (default `["roles","groups","entitlements","realm_access.roles"]`, the RFC 9068
    §2.2.3.1 carriers, then the Keycloak shape) names the
@@ -50,8 +49,14 @@ Two configuration groups do all the work:
    [role layer](security.md#authorization). A path may be dotted to walk nested
    claims, and a claim holding a single string is accepted as readily as an
    array.
+3. **SMART on openEHR scopes**: every route requires a scope from the
+   token's `scope` claim (`user/composition-*.cruds`, `user/aql-*.s` and so
+   on; see [SMART App Launch](smart-app-launch.md)). Your IdP has to mint
+   them, for example as Keycloak client scopes assigned to the client. A token
+   with roles and no SMART on openEHR scope authenticates and is then refused
+   with `403` on every route.
 
-Everything below is just those two groups pointed at a different issuer.
+Everything below is those three pointed at a different issuer.
 
 ## Microsoft Entra ID (Azure AD)
 
@@ -68,8 +73,10 @@ Entra ID exposes a standards-compliant OIDC issuer per tenant.
 4. **Point the CDR at the tenant issuer** and mine the `roles` claim:
 
    ```bash
-   export FERROEHR__AUTH__OIDC__ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
-   export FERROEHR__AUTH__OIDC__AUDIENCES=api://ferroehr
+   export FERROEHR__AUTH__ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
+   export FERROEHR__AUTH__AUDIENCE=api://ferroehr
+   # Entra ID mints no RFC 9068 tokens (`typ` JWT, the scopes in `scp`).
+   export FERROEHR__AUTH__TOKEN_PROFILE=jwt
    export FERROEHR__AUTHZ__RBAC__ROLE_CLAIMS='["roles"]'
    ```
 
@@ -80,9 +87,9 @@ Entra ID exposes a standards-compliant OIDC issuer per tenant.
    |---|---|
    | `200`-family | roles arrived and the operation was permitted |
    | `401` | no credential, or one the server rejected (the body deliberately never says which) |
-   | `403` | the token is valid but carries no role the operation needs: a clinical call needs at least one role, an admin call needs the admin role |
+   | `403` | the token is valid but carries no role or SMART on openEHR scope the operation needs: a clinical call needs at least one role and a matching scope, an admin call needs the admin role and the product scope |
    | `400` | the `Authorization` header itself is malformed; no credential was ever read |
-   | `503` | the CDR could not reach your issuer's JWKS, so the token was never judged: check network egress and the discovery document, not the token |
+   | `503` | the CDR could not read your issuer's key set again, so the token was never judged: check network egress, not the token |
 
 > [!IMPORTANT]
 > A role must arrive in a **role claim**, not in `scope`. The OAuth2 `scope`
@@ -102,8 +109,8 @@ Entra ID exposes a standards-compliant OIDC issuer per tenant.
 > you will find them the first time you start the server: an issuer that is not
 > an `https` URL with no query or fragment, and an empty audience list. Both are
 > deliberate: the second is what stops this server accepting a token minted for
-> a different service. Do not reach for `ALLOW_INSECURE_ISSUER` or a shared
-> `HMAC_SECRET` to get past them; both are development-only postures.
+> a different service. An issuer the server cannot reach at boot refuses the
+> start too.
 
 ## AD FS (on-premises Active Directory)
 
@@ -120,8 +127,10 @@ broker) rather than pointing anything at LDAP.
 3. **Point the CDR at the AD FS issuer** and mine the `role` claim:
 
    ```bash
-   export FERROEHR__AUTH__OIDC__ISSUER=https://adfs.example.com/adfs
-   export FERROEHR__AUTH__OIDC__AUDIENCES=ferroehr-api
+   export FERROEHR__AUTH__ISSUER=https://adfs.example.com/adfs
+   export FERROEHR__AUTH__AUDIENCE=ferroehr-api
+   # AD FS mints no RFC 9068 tokens.
+   export FERROEHR__AUTH__TOKEN_PROFILE=jwt
    export FERROEHR__AUTHZ__RBAC__ROLE_CLAIMS='["role"]'
    ```
 
@@ -149,7 +158,7 @@ The broker owns the LDAP bind; the CDR sees only signed tokens.
 ## Serving SMART apps
 
 If your IdP is also the authorization server for SMART App Launch apps, the same
-`[auth.oidc]` block does double duty: the CDR must be able to validate the tokens
-those apps come back with, so SMART cannot be enabled without it, and the issuer
-the CDR *advertises* to apps must be the same one it *accepts* tokens from; a
-mismatch is refused at boot. See [SMART App Launch](smart-app-launch.md).
+`[auth]` issuer does double duty: the CDR validates the tokens those apps come
+back with, and the discovery document it serves is built from that issuer's
+metadata, so the server it *advertises* to apps is the one it *accepts* tokens
+from. See [SMART App Launch](smart-app-launch.md).

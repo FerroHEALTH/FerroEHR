@@ -5,28 +5,21 @@
 //! DEVELOPMENT status)
 //! — `docs/specs/openehr/ITS-REST/docs/smart_app_launch/master00-09*.adoc`.
 //!
-//! This server is
-//! the SMART *Platform's openEHR CDR* (the `org.openehr.rest` resource
-//! server) — the three capabilities that belong here (master02 §Overview
-//! capability split):
+//! This server is the SMART platform's openEHR CDR (the `org.openehr.rest`
+//! resource server), on the FerroHEALTH family's `ferrohealth-smart` crate,
+//! which parses the master08 scope grammar and checks every requirement:
 //!
 //! - [`discovery`] — the `/.well-known/smart-configuration` document
-//!   (master04 §Service Discovery), served pre-auth;
-//! - the master08 resource-scope grammar
-//!   (`compartment/resource.permission`, `*`/`**`/`ns::*` patterns) —
-//!   `openehr_sdt::smart_scopes`, parsed from the validated token's
-//!   `scope` claim;
-//! - [`enforce`] — scope enforcement riding the existing ABAC PEP
-//!   ([`crate::extensions::access::pep`]), AND-composed after RBAC/Cedar, plus the
-//!   `ehrId`/`patient` launch-context binding (master07/master09).
+//!   (master04 §Service Discovery), served pre-auth when `smart.enabled`;
+//! - `routes` — the SMART on openEHR requirement of every route, checked by
+//!   the authentication middleware after RBAC, and for a COMPOSITION by the
+//!   policy-enforcement point once its template is known, with the `ehrId`
+//!   launch-context binding of a `patient/` grant (master07 §Context
+//!   Selection, master08 §Resource Scopes).
 //!
-//! Registration (master03), token issuance/grants/PKCE (master06), and
-//! launch-sequence UI (master07) are Authorization-Server/Launcher duties —
-//! out of scope for a CDR, a settled adjudication (out of scope for a CDR).
-//! Config-gated (`ferroehr::config::smart::SmartConfig`): off by default, zero
-//! wire drift when disabled.
+//! Registration (master03), token issuance, grants and PKCE (master06), and
+//! the launch-sequence UI (master07) are the authorization server's and the
+//! launcher's; the CDR checks tokens and never issues them.
 
 pub mod discovery;
-pub mod enforce;
-// The scope grammar itself lives in `openehr_sdt::smart_scopes` (one
-// grammar for the gate here and for REST clients previewing grants).
+pub(crate) mod routes;

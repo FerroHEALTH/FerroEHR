@@ -21,28 +21,23 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
-use argon2::Argon2;
-use argon2::password_hash::PasswordHasher;
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
-use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 use serde_json::json;
 use tower::ServiceExt;
 
-use ferroehr::config::auth::{AuthConfig, BasicConfig, BasicUser, OidcConfig};
 use ferroehr::config::server::{AdminConfig, BodyLimits, RateLimitConfig, ServerConfig};
 use ferroehr_rest::config::AppConfig;
 
 use crate::common;
 
 const ISSUER: &str = "https://issuer.test";
-/// The audience every fixture token is minted for: `audiences` is mandatory
-/// whenever `[auth.oidc]` is present, so a token for another resource server
+/// The audience every fixture token is minted for: `audience` is mandatory
+/// whenever `[auth]` names an issuer, so a token for another resource server
 /// can never authenticate here.
 const AUDIENCE: &str = "ferroehr";
-const SECRET: &str = "integration-secret";
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 /// A syntactically valid EHR id that does not exist: the EHR dispatcher decodes
 /// `ehr_id` into a `Uuid` and consults the backend, so a "reaches the handler"
@@ -50,15 +45,8 @@ const BASE: &str = "/ferroehr/rest/openehr/v1";
 /// database has no such EHR → the real handler answers `404`.
 const EHR: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
-fn argon2_hash(pw: &str) -> String {
-    Argon2::default()
-        .hash_password_with_salt(pw.as_bytes(), b"1234567890123456")
-        .unwrap()
-        .to_string()
-}
-
 fn config(enabled: bool) -> AppConfig {
-    AppConfig {
+    let mut config = AppConfig {
         server: ServerConfig {
             bind: "127.0.0.1:0".to_owned(),
             base_path: BASE.to_owned(),
@@ -67,37 +55,27 @@ fn config(enabled: bool) -> AppConfig {
             cors_permissive: false,
             ..Default::default()
         },
-        auth: AuthConfig {
-            enabled,
-            basic: Some(BasicConfig {
-                users: vec![BasicUser {
-                    username: "alice".to_owned(),
-                    password_hash: ferroehr::config::secret::Secret::new(argon2_hash("pw")),
-                    password_hash_file: None,
-                    roles: vec!["USER".to_owned()],
-                }],
-            }),
-            oidc: Some(OidcConfig {
-                issuer: ISSUER.to_owned(),
-                audiences: vec![AUDIENCE.to_owned()],
-                algorithms: vec!["HS256".to_owned()],
-                hmac_secret: Some(ferroehr::config::secret::Secret::new(SECRET.to_owned())),
-                jwks_json: None,
-                ..OidcConfig::default()
-            }),
-            ..AuthConfig::default()
-        },
         // The admin group must be reachable here: `admin_route_reachable_without_rbac`
         // exercises the real admin delete (not the config gate's 404).
         admin: AdminConfig { enabled: true },
         ..Default::default()
-    }
+    };
+    // Basic and bearer together: Basic users from `with_basic_users`, the
+    // bearer issuer beside them.
+    common::with_basic_users(&mut config, &[("alice", &["USER"])]);
+    let basic = config.auth.basic.take();
+    config.auth = ferrohealth_smart::config::AuthSection {
+        enabled,
+        basic,
+        ..common::issuer_auth(ISSUER, AUDIENCE)
+    };
+    config
 }
 
 /// Build the router over a fresh real service (unique database per test).
 async fn app(enabled: bool) -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
-    (pg, common::router_with(config(enabled), service))
+    (pg, common::router_with(config(enabled), service).await)
 }
 
 /// The current POSIX second — the unit JWT `exp`/`iat` claims use (RFC 7519
@@ -108,20 +86,13 @@ fn now() -> i64 {
 }
 
 fn bearer(scope: &str) -> String {
-    let claims = serde_json::json!({
+    common::bearer(&serde_json::json!({
         "sub": "alice",
         "iss": ISSUER,
         "aud": AUDIENCE,
         "exp": now() + 3600,
         "scope": scope,
-    });
-    let token = encode(
-        &Header::new(Algorithm::HS256),
-        &claims,
-        &EncodingKey::from_secret(SECRET.as_bytes()),
-    )
-    .unwrap();
-    format!("Bearer {token}")
+    }))
 }
 
 fn basic(user: &str, pw: &str) -> String {
@@ -305,11 +276,37 @@ async fn valid_bearer_reaches_handler() {
     let req = Request::builder()
         .method("GET")
         .uri(format!("{BASE}/ehr/{EHR}"))
-        .header(header::AUTHORIZATION, bearer("openid"))
+        .header(header::AUTHORIZATION, bearer(common::FULL_SCOPES))
         .body(Body::empty())
         .unwrap();
     let (status, _h, _b) = send(app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+/// SMART on openEHR scopes are enforced on every route (master08 §Resource
+/// Scopes): a valid token that grants no openEHR resource is refused with
+/// `403` and the RFC 6750 §3.1 `insufficient_scope` challenge, which names no
+/// scope.
+#[tokio::test]
+async fn a_bearer_without_a_resource_scope_is_403() {
+    let (_pg, app) = app(true).await;
+    let req = Request::builder()
+        .method("GET")
+        .uri(format!("{BASE}/ehr/{EHR}"))
+        .header(header::AUTHORIZATION, bearer("openid"))
+        .body(Body::empty())
+        .unwrap();
+    let (status, headers, _b) = send(app, req).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let challenge = headers
+        .get(header::WWW_AUTHENTICATE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default();
+    assert!(
+        challenge.contains(r#"error="insufficient_scope""#),
+        "{challenge}"
+    );
+    assert!(!challenge.contains("scope=\""), "{challenge}");
 }
 
 #[tokio::test]
@@ -336,7 +333,7 @@ async fn admin_route_reachable_without_rbac() {
     let req = Request::builder()
         .method("DELETE")
         .uri(format!("{BASE}/admin/ehr/{ehr_id}"))
-        .header(header::AUTHORIZATION, bearer("openid"))
+        .header(header::AUTHORIZATION, bearer(common::FULL_SCOPES))
         .body(Body::empty())
         .unwrap();
     let (status, _h, _b) = send(app, req).await;
@@ -691,21 +688,21 @@ async fn implemented_groups_are_reachable() {
         (
             "GET",
             format!("{BASE}/demographic/agent/{EHR}"),
-            "openid",
+            common::FULL_SCOPES,
             None,
             StatusCode::NOT_FOUND,
         ),
         (
             "GET",
             format!("{BASE}/query/aql?q=SELECT%20c"),
-            "openid",
+            common::FULL_SCOPES,
             None,
             StatusCode::BAD_REQUEST,
         ),
         (
             "DELETE",
             format!("{BASE}/admin/ehr/{EHR}"),
-            "ferroehr:admin",
+            common::FULL_SCOPES,
             None,
             StatusCode::NOT_FOUND,
         ),
@@ -906,7 +903,7 @@ async fn app_with_swagger() -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
     cfg.server.swagger_ui = ferroehr::config::management::AccessLevel::Public;
-    (pg, common::router_with(cfg, service))
+    (pg, common::router_with(cfg, service).await)
 }
 
 /// Swagger UI must get a policy it can actually run under.
@@ -1067,7 +1064,7 @@ async fn an_over_limit_chunked_body_is_413_not_400() {
         body_bytes: 1024,
         bulk_body_bytes: 1024,
     };
-    let app = common::router_with(cfg, service);
+    let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
     // A stream body has no Content-Length, so the declared-size check cannot
@@ -1104,7 +1101,7 @@ async fn the_bulk_tier_accepts_what_the_clinical_tier_refuses() {
         body_bytes: 512,
         bulk_body_bytes: 65536,
     };
-    let app = common::router_with(cfg, service);
+    let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
     let payload = vec![b'x'; 4096];
@@ -1147,7 +1144,7 @@ async fn past_the_rate_a_caller_is_429_with_retry_after() {
         address_per_second: 1,
         address_burst: 1,
     };
-    let app = common::router_with(cfg, service);
+    let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
     let mut refused = None;
@@ -1190,7 +1187,7 @@ async fn a_disabled_limiter_leaves_no_trace_on_the_wire() {
         address_per_second: 1,
         address_burst: 1,
     };
-    let app = common::router_with(cfg, service);
+    let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
     for _ in 0..4 {
@@ -1246,7 +1243,7 @@ async fn the_served_document_omits_paths_whose_features_are_off() {
     let mut cfg = config(false);
     cfg.server.swagger_ui = ferroehr::config::management::AccessLevel::Off;
     cfg.smart.enabled = false;
-    let app = common::router_with(cfg, service);
+    let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
     let req = Request::builder()

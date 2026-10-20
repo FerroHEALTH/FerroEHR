@@ -98,10 +98,17 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
             authenticator: Arc::clone(&authenticator),
             authz: state.authz(),
             patient_data: authn::assurance::PatientDataGate::new(
-                authenticator.config(),
+                authenticator.bearer_admitted(),
+                &cfg.assurance,
+                cfg.professional.as_ref(),
                 &cfg.server.base_path,
             )
             .map(Arc::new),
+            smart: Arc::new(smart::routes::SmartRoutes::new(
+                &cfg.server.base_path,
+                ferroehr::config::auth::product_scope(&cfg.auth),
+                cfg.smart.demographic_clients.clone(),
+            )),
         },
         authn::middleware,
     ));
@@ -392,7 +399,7 @@ fn mount_public_surface(
     rest_root: &str,
 ) -> Router<AppState> {
     // A pure function of static configuration, built once inside the router.
-    let discovery = smart::discovery::router(cfg, rest_root);
+    let discovery = smart::discovery::router(cfg, rest_root, authenticator);
 
     let mut inner = Router::new()
         .nest(&cfg.server.base_path, api)

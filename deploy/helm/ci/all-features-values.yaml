@@ -30,7 +30,6 @@ secrets:
   # keyed-MAC key and the server enforces it at boot, so a short "dev-hmac-secret"
   # renders fine and refuses to start. Low-entropy on purpose: it must read as a
   # fixture to a human and to a secret scanner alike.
-  authOidcHmacSecret: ci-fixture-not-a-secret-0000000000000000
   signingKeyPassphrase: ci-fixture-not-a-secret-passphrase
   eventsUrl: amqps://user:pass@rabbitmq:5671/%2f
   auditFhirFeedUrl: https://arr:arr-password@arr.example.com/fhir
@@ -69,19 +68,12 @@ config:
     metrics_push: true
   auth:
     enabled: true
-    # No [[auth.basic.users]] here: a Basic user's Argon2id hash has no `*_file`
-    # sibling in the server's config tree, so the only way to configure one
-    # through this chart would be the ConfigMap — an offline cracking target in a
-    # non-sensitive object. The chart refuses to render it; OIDC below is the
-    # supported mechanism.
-    oidc:
-      issuer: https://keycloak.example.com/realms/ferroehr
-      audiences: [ferroehr]
-      # HS256, not the RS256 default, because this overlay carries
-      # secrets.authOidcHmacSecret to exercise that route: the server binds the
-      # accepted algorithm set to the key source (RFC 8725 §3.1), so a symmetric
-      # key plus RS256 is refused as the algorithm-confusion setup it is.
-      algorithms: [HS256]
+    # A token issuer, the mechanism a real deployment supplies; the server reads
+    # its metadata and key set at boot and accepts asymmetric algorithms only.
+    issuer: https://keycloak.example.com/realms/ferroehr
+    audience: [ferroehr]
+    # FerroEHR's product scope, which admits the ADMIN and DEMOGRAPHIC APIs.
+    product_scope: __ferroehr.platform
   authz:
     rbac:
       enabled: true
@@ -97,29 +89,15 @@ config:
   admin:
     enabled: true
   smart:
+    # Serves the discovery document, built at boot from the [auth] issuer's
+    # metadata, so it needs no endpoint list of its own.
     enabled: true
     # Required whenever SMART is on: the launch context's service URLs are
-    # absolute, so the server has to be told the origin clients reach it at —
+    # absolute, so the server has to be told the origin clients reach it at;
     # it cannot infer one from a request. Matches the ingress host below.
     public_base_url: https://ferroehr.example.com
-    ehr_id_claim: ehrId
-    patient_claim: patient
-    # Published verbatim at /.well-known/smart-configuration, so these are
-    # boot-validated rather than free text: absolute https endpoints, a
-    # non-empty response/auth-method set, PKCE S256 (SMART App Launch §7.2),
-    # and an `issuer` equal to auth.oidc.issuer above — one says where apps get
-    # tokens, the other says which tokens this server accepts.
-    endpoints:
-      issuer: https://keycloak.example.com/realms/ferroehr
-      jwks_uri: https://keycloak.example.com/realms/ferroehr/protocol/openid-connect/certs
-      authorization_endpoint: https://keycloak.example.com/realms/ferroehr/protocol/openid-connect/auth
-      token_endpoint: https://keycloak.example.com/realms/ferroehr/protocol/openid-connect/token
-      token_endpoint_auth_methods_supported: [client_secret_basic, private_key_jwt]
-      grant_types_supported: [authorization_code, client_credentials]
-      response_types_supported: [code]
-      code_challenge_methods_supported: [S256]
-      scopes_supported: [openid, fhirUser, launch, "patient/*.rs"]
-      capabilities: [launch-ehr, sso-openid-connect]
+    demographic_clients: [ferroehr-mpi]
+    patient_issuers: [https://keycloak.example.com/realms/ferroehr]
   management:
     enabled: true
     base_path: /management
@@ -335,7 +313,7 @@ terminology:
     minAvailable: 1
 
 # FerroBRIDGE beside the CDR and FerroTERM, on the branches the bridge overlay
-# leaves unrendered: a bearer credential, no mapping set, two replicas under a
+# leaves unrendered: no mapping set, two replicas under a
 # disruption budget, and an extra egress rule. The narrowed CDR policy above
 # gains its rule admitting these pods from the chart.
 bridge:
@@ -343,7 +321,6 @@ bridge:
   replicaCount: 2
   cdr:
     existingSecret: ferroehr-bridge-cdr
-    auth: bearer
   podDisruptionBudget:
     enabled: true
     minAvailable: 1

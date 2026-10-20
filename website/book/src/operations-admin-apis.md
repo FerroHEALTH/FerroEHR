@@ -109,7 +109,7 @@ Details that decide behaviour:
 - **A stored-query delete removes exactly one `(name, version)` row.** The
   query's other versions survive.
 - **The config view is redacted structurally, not by key name.** Passwords and
-  password hashes, HMAC and signing-key secrets and S3 secret keys render as
+  password hashes, signing-key secrets and S3 secret keys render as
   `***`; every URL that can carry credentials (database, AMQP, the FHIR audit
   feed, terminology servers and their token endpoints, the remote policy
   server, the OTLP collector, the object store, the usage-report endpoint)

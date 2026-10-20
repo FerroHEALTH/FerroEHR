@@ -5,9 +5,8 @@
 # deploy/helm/ci/boot-check.sh.
 #
 # Nothing here is a credential. The DSN comes from a Secret the operator already
-# owns, and the OIDC block below carries no key material at all: with neither
-# `hmac_secret` nor `jwks_json` set, the server resolves signing keys from the
-# issuer's discovery document at first use, so an issuer URL and the audience
+# owns, and the issuer below carries no key material at all: the server reads
+# the issuer's metadata and key set at boot, so an issuer URL and the audience
 # this deployment answers to are the whole configuration.
 database:
   existingSecret: ferroehr-db
@@ -21,6 +20,5 @@ config:
     # production-minimal has to name one. An IdP is the mechanism a real
     # deployment supplies; Basic would mean shipping a password hash, which
     # this file has no business carrying.
-    oidc:
-      issuer: https://idp.example.com/realms/ferroehr
-      audiences: [ferroehr]
+    issuer: https://idp.example.com/realms/ferroehr
+    audience: [ferroehr]

@@ -35,7 +35,10 @@ use crate::common::BASE;
 
 async fn app() -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
-    (pg, common::router_with(common::api_config(false), service))
+    (
+        pg,
+        common::router_with(common::api_config(false), service).await,
+    )
 }
 
 async fn send(app: &Router, req: Request<Body>) -> (StatusCode, header::HeaderMap, String) {

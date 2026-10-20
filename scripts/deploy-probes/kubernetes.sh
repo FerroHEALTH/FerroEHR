@@ -347,8 +347,8 @@ probes_k8s_boot() {
     "without this the stock install boots into a crash loop and explains itself in a log"
   assert_contains "$guard" "config.auth.basic.users" \
     "a refusal that does not name the Basic route leaves an operator guessing"
-  assert_contains "$guard" "config.auth.oidc.issuer" \
-    "the OIDC route is the other real answer and must be named too"
+  assert_contains "$guard" "config.auth.issuer" \
+    "the token-issuer route is the other real answer and must be named too"
   assert_contains "$guard" "config.auth.enabled=false" \
     "the development escape must be stated as such, not discovered"
   probe_done

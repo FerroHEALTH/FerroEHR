@@ -43,9 +43,9 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferroehr::config::auth::AuthConfig;
 use ferroehr::config::server::ServerConfig;
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 
@@ -90,11 +90,10 @@ fn config() -> AppConfig {
             cors_permissive: false,
             ..Default::default()
         },
-        auth: AuthConfig {
+        auth: AuthSection {
             enabled: false,
             basic: None,
-            oidc: None,
-            ..AuthConfig::default()
+            ..AuthSection::default()
         },
         ..Default::default()
     }
@@ -184,7 +183,7 @@ struct World {
 
 async fn world() -> World {
     let (pg, service) = common::test_service().await;
-    let app = common::router_with(config(), service);
+    let app = common::router_with(config(), service).await;
     upload_opt(&app).await;
     let ehr_a = create_ehr(&app).await;
     let uid_a = commit_composition(&app, &ehr_a).await;

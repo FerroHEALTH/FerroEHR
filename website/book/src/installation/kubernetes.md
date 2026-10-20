@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.1.7 -n ferroehr \
+  --version 12.0.0 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.0.0
 ```
@@ -55,7 +55,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.7
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.0.0
 ```
 
 ### Pin two versions, not one
@@ -68,7 +68,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 11.1.7` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 12.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.0.0` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -168,7 +168,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.7 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -186,8 +186,10 @@ image, and FerroTERM.
 
 That install alone **boots but answers `401` to everything**, deliberately:
 `config.auth.enabled` is on and no mechanism is configured yet, and a server that
-authenticates nothing is not a safe default. Add a `config.auth.oidc` issuer or
-a `config.auth.basic.users` entry before expecting a request to succeed.
+authenticates nothing is not a safe default. Add a `config.auth.issuer` (with
+`config.auth.audience`) or a `config.auth.basic.users` entry before expecting a
+request to succeed. Every route also checks the SMART on openEHR scopes of the
+caller: a Basic user's `scopes`, a token's `scope` claim.
 
 ## Configuration: one key, one file
 
@@ -204,7 +206,7 @@ read, quoted wholesale into issues and support tickets, collected by backup tool
 that skips Secrets, and not covered by Secret encryption at rest. The chart
 therefore classifies every key it renders and takes one of two actions.
 
-**A secret the chart routes:** `auth.oidc.hmac_secret`, `signing.key_passphrase`,
+**A secret the chart routes:** `signing.key_passphrase`,
 `multimedia.secret_access_key`, a Basic user's `password_hash`, a terminology
 `client_secret`, and the three URL-shaped ones (`db.url`, `events.url`,
 `audit.fhir_feed.url`) has a `secrets:` key of its own, so
@@ -214,7 +216,7 @@ belongs there:
 ```text
 Error: execution error at (ferroehr/templates/deployment.yaml:…):
   refusing to render a secret into the ConfigMap (a ConfigMap is not a sensitive object …):
-  - config.auth.oidc.hmac_secret: set `secrets.authOidcHmacSecret` instead
+  - config.signing.key_passphrase: set `secrets.signingKeyPassphrase` instead
 ```
 
 **A secret the chart cannot route** moves the **whole rendered `ferroehr.toml` into
@@ -304,7 +306,7 @@ the TLS Secret and the ingress controller's namespace in it are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.7 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -451,7 +453,7 @@ the same way: put the token the licensor issued under `config.files` as
 `GET /management/status` then reports `licence.use = "commercial"`. Without
 it the pod runs under the `non-commercial` grant every build embeds (see
 [Licensing & legal](../licensing.md#installing-a-commercial-licence)). Secret-bearing scalar values go under
-`secrets:`: `authOidcHmacSecret`, `signingKeyPassphrase`, `eventsUrl`,
+`secrets:`: `signingKeyPassphrase`, `eventsUrl`,
 `auditFhirFeedUrl`, `basicUserPasswordHashes`,
 `multimediaAccessKeyId`, `multimediaSecretAccessKey`,
 `terminologyOauth2ClientSecrets`, and the database DSN comes from
@@ -469,10 +471,9 @@ asks for a read-only volume instead.
 | Secret | How the chart delivers it |
 |---|---|
 | the database DSN | mounted at `/etc/ferroehr-secrets/db.url`, reached through `FERROEHR__DB__URL_FILE`, projected from `database.existingSecret` when you supply one, so **the credential that reaches patient data never enters the pod's environment** |
-| `secrets.authOidcHmacSecret` | mounted at `/etc/ferroehr-secrets/auth.oidc.hmac_secret`; only the path is env |
 | `secrets.signingKeyPassphrase` | mounted at `/etc/ferroehr-secrets/signing.key_passphrase` |
 | `secrets.multimediaSecretAccessKey` | mounted at `/etc/ferroehr-secrets/multimedia.secret_access_key` |
-| `secrets.basicUserPasswordHashes` (per username) | mounted at `/etc/ferroehr-secrets/auth.basic.users.<username>.password_hash`; the chart injects the matching `password_hash_file` |
+| `secrets.basicUserPasswordHashes` (per user-id) | mounted at `/etc/ferroehr-secrets/auth.basic.users.<user>.password_hash`; the chart injects the matching `password_hash_file` |
 | `secrets.terminologyOauth2ClientSecrets` (per client) | mounted at `/etc/ferroehr-secrets/terminology.external.oauth2_clients.<name>.client_secret`; the chart injects the matching `client_secret_file` |
 | `secrets.eventsUrl` | mounted at `/etc/ferroehr-secrets/events.url` |
 | `secrets.auditFhirFeedUrl` | env; `audit.fhir_feed.url` is the only credential-bearing key with no `*_file` sibling |
@@ -485,8 +486,9 @@ not propagate.
 
 > [!NOTE]
 > A Basic user's Argon2id hash is delivered as a mounted file like the others: put
-> it in `secrets.basicUserPasswordHashes` under the username, and declare only the
-> `username` and `roles` under `config.auth.basic.users`. Setting `password_hash`
+> it in `secrets.basicUserPasswordHashes` under the user-id, declare only the
+> `user` and its `scopes` under `config.auth.basic.users`, and its roles under
+> `config.authz.rbac.basic_roles`. Setting `password_hash`
 > under `config:` is refused, and the error names the key that carries it. An
 > Argon2id hash is not a plaintext password, but it is an offline cracking target,
 > which is what the boot-time OWASP parameter floor exists to make expensive.
@@ -741,13 +743,13 @@ Pick one:
 ```yaml
 config:
   auth:
-    oidc:
-      issuer: https://keycloak.example.org/realms/ferroehr
-      audiences: [ferroehr]
+    issuer: https://keycloak.example.org/realms/ferroehr
+    audience: [ferroehr]
 ```
 
 or Basic auth, whose password hashes go in `secrets.basicUserPasswordHashes`
-while the username and roles stay under `config.auth.basic.users`.
+while the user and its scopes stay under `config.auth.basic.users` and its roles
+under `config.authz.rbac.basic_roles`.
 
 > [!WARNING]
 > `config.auth.enabled: false` makes the chart render, and serves **every**
@@ -774,7 +776,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.1.7 -n ferroehr --reuse-values \
+  --version 12.0.0 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -808,7 +810,7 @@ is an explicit, auditable decision:
 | ADMIN API | `config.admin.enabled` | off | Physical, irreversible delete. Gate behind admin RBAC. |
 | Terminology extension API | `config.terminology.api_enabled` | off | 404 when off. |
 | Event-subscription API | `config.events.admin_api` | off | Admin CRUD over event filters. |
-| OAuth2/OIDC auth | `config.auth.oidc.issuer` | unset | Prefer JWKS/discovery over the HS256 `secrets.authOidcHmacSecret`. |
+| Bearer tokens | `config.auth.issuer` | unset | With `config.auth.audience`; the issuer's metadata and key set are read at boot, asymmetric algorithms only. |
 | RBAC | `config.authz.rbac.enabled` | **on** | The coarse role gate (active while `config.auth.enabled`). |
 | ABAC | `config.authz.abac.enabled` | off | Cedar (policies via a `config.files` mount) or a remote policy decision point. |
 | Eventing → AMQP | `config.events.enabled` | off | Envelopes are **PHI-free** by design. Use `config.events.tls: true`; URL via `secrets.eventsUrl`. |
@@ -873,7 +875,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 11.1.7 -n ferroehr --reuse-values \
+  --version 12.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1029,16 +1031,15 @@ The chart writes three sections of that file for you:
 - **`[mappings]`:** `directory` is where the mapping files below are mounted.
 
 **The CDR credential comes from a Secret you create.** The chart never takes it
-as a value. With `bridge.cdr.auth: basic` (the default) the Secret carries the
-keys `user` and `password`, for a user of the CDR's `config.auth.basic.users`;
-with `bridge.cdr.auth: bearer` it carries `bearer_token`. The password or token
-is mounted as a file and named by its `_file` key, so it is in neither the
-ConfigMap nor the environment. FerroBRIDGE does not treat the username as a
+as a value. The Secret carries the keys `user` and `password`, for a user of the
+CDR's `config.auth.basic.users` whose `scopes` grant what FerroBRIDGE calls. The
+password is mounted as a file and named by its `_file` key, so it is in neither
+the ConfigMap nor the environment. FerroBRIDGE does not treat the username as a
 secret, and the chart passes it as `FERROBRIDGE__CDR__CREDENTIALS__USER`.
 FerroBRIDGE reads an environment value as TOML when it parses as TOML, so a
-username made only of digits arrives as a number and is refused at boot. A bearer
-token is sent as it is and never renewed, so `bearer` suits only a token that
-does not expire.
+username made only of digits arrives as a number and is refused at boot. A static
+bearer token is no longer a choice: machine-to-machine authentication is HTTP
+Basic or the OAuth 2.0 client credentials grant.
 
 ```shell
 kubectl -n ferroehr create secret generic ferroehr-bridge-cdr \
@@ -1219,7 +1220,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 11.1.7 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 
@@ -1234,9 +1235,8 @@ construction.
 
 A render that lints is not a deployment that boots. `validate.sh` never runs the
 server, so it cannot see a configuration the server refuses: a missing
-authentication mechanism, an HMAC secret under the 32-byte floor, a password
-hash that is not a real Argon2id PHC string, SMART enabled without its public
-base URL. Every one of those renders perfectly and crash-loops the pod. The
+authentication mechanism, an `HS*` algorithm, a password hash that is not a
+real Argon2id PHC string, SMART enabled without its public base URL. Every one of those renders perfectly and crash-loops the pod. The
 script prints exactly which properties it does not check, on success as well as
 on failure, so a green run is not mistaken for a working deployment.
 

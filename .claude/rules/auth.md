@@ -4,12 +4,13 @@ paths: ["app/ferroehr-rest/**", "app/ferroehr/src/config/**", "app/ferroehr/src/
 
 # Authentication & authorization (rewritten 2026-07-13 — authn + access module are SHIPPED)
 
-**State:** Basic + OAuth2/OIDC authentication is shipped and live.
-Authorization lives in the **`ferroehr-rest::access` module** (the RBAC/ABAC
-policy-enforcement point; the old `ferroehr-authz` crate was dissolved into
-it), with **SMART resource-scope enforcement** (`ferroehr-rest::smart`)
-AND-composed onto that PEP — config-gated, off by default. This rule governs
-maintenance and extension, not initial build.
+**State:** Basic and OAuth 2.0 bearer authentication run on
+`ferrohealth-smart` (the crate every FerroHEALTH product shares; it checks
+tokens and never issues them). Authorization lives in the
+**`ferroehr-rest::access` module** (the RBAC/ABAC policy-enforcement point),
+with **SMART on openEHR scope enforcement** (`ferroehr-rest::smart`)
+AND-composed onto that PEP and always on while `[auth]` is on. This rule
+governs maintenance and extension, not initial build.
 
 ## Spec authority
 
@@ -31,20 +32,24 @@ maintenance and extension, not initial build.
 
 ## Rules
 
-- **Use the pinned crates, never hand-roll crypto or token parsing:**
-  `argon2` (+`password-hash`) for Basic-auth password verification,
-  `jsonwebtoken` for JWT validation, `oauth2` + `openidconnect` for
-  OAuth2/OIDC + JWKS/issuer discovery (Keycloak-style), `tower-sessions`
-  where session state helps, `secrecy`/`zeroize` for secret material.
+- **Use `ferrohealth-smart`, never hand-roll crypto or token parsing:** its
+  `Gate` checks bearer tokens (issuer metadata, JWKS, RFC 9068 profile) and
+  Basic credentials (Argon2id), its `Requirement` and `openehr` module carry
+  the SMART on openEHR grammar, and its `TokenSource` fetches outbound OAuth
+  2.0 client-credentials tokens. Machine-to-machine authentication is HTTP
+  Basic or the client credentials grant, never a static bearer token. A gap
+  in the crate is fixed in the crate, never copied into FerroEHR.
+  `secrecy`/`zeroize` for secret material.
 - **Auth is a `tower`/axum middleware + extractor** on the generated router
   — one place, never per-handler. The authenticated principal goes into
   request extensions; the `access` PEP consumes it.
 - **Config-driven** (one TOML file, `ferroehr.toml`, with environment-variable
-  overrides): enabled modes, OIDC issuer/JWKS, audience, the Basic user store.
+  overrides): the crate's `[auth]` section (issuers, audience, the Basic user
+  store, the product scope), FerroEHR's `[authz]` and `[smart]`.
   Config changes are user-visible → same-PR website-book + changelog entries.
 - **Layer order is load-bearing:** authn → `access` (RBAC/ABAC) → SMART
-  scopes (AND-composed — SMART can only narrow, never widen). Disabled
-  SMART must produce zero wire drift.
+  scopes (AND-composed — SMART can only narrow, never widen). `[smart]
+  enabled` switches only the discovery document.
 - Errors map through `openehr-its::rest::runtime::ApiError`; never invent
   an error body shape.
 - Every auth change lands with tests (401/403 paths, valid/expired/wrong-

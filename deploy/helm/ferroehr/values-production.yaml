@@ -109,11 +109,10 @@ config:
 
   auth:
     enabled: true
-    oidc:
-      # Your identity provider. The server fetches its signing keys from the
-      # issuer's discovery document.
-      issuer: https://idp.example.com/realms/ferroehr
-      audiences: [ferroehr]
+    # Your identity provider. The server reads its metadata and signing keys
+    # at boot (RFC 8414 §3, OpenID Connect Discovery 1.0 §4).
+    issuer: https://idp.example.com/realms/ferroehr
+    audience: [ferroehr]
 
   authz:
     rbac:

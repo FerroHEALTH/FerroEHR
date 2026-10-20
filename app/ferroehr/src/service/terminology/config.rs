@@ -37,7 +37,6 @@ use crate::config::secret::{Secret, SecretUrl};
 use crate::service::status::SmError;
 
 use super::fhir::FhirTerminologyProvider;
-use super::oauth2::TokenSource;
 
 /// The provider name the router falls back to when no route matches
 /// (or the sole configured provider when there is exactly one).
@@ -255,7 +254,7 @@ impl ExternalTerminologyConfig {
     }
 
     /// Build one provider from its config: the FHIR client plus, when
-    /// `oauth2_client` is set, the client-credentials [`TokenSource`] whose
+    /// `oauth2_client` is set, the client-credentials token source whose
     /// bearer token every request carries.
     pub(super) fn build_provider(
         &self,
@@ -272,7 +271,7 @@ impl ExternalTerminologyConfig {
                  configured under [terminology.external.oauth2_clients]"
             ))
         })?;
-        let token = TokenSource::new(client_name, client_cfg)?;
+        let token = super::oauth2::token_source(client_name, client_cfg)?;
         Ok(provider.with_token(std::sync::Arc::new(token)))
     }
 }

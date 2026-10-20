@@ -1,605 +1,443 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Authentication configuration (Basic + OAuth2/OIDC bearer).
+//! Authentication configuration: the `[auth]` section and the rules FerroEHR
+//! adds to it.
 //!
-//! No openEHR spec governs authentication mechanics, ITS-REST leaving the scheme
-//! open — our own design, with the IETF OAuth2/JOSE RFCs as the authority for
-//! every rule enforced here. This is the `[auth]` section of the one server
-//! configuration tree and carries no loader of its own.
-//!
-//! Secrets use the shared [`crate::config::secret::Secret`] newtype: a password
-//! hash or HMAC secret deserializes from a plain string but never renders itself
-//! (`Debug`, `/management/env` and `ferroehr config check` all show `***`). Each
-//! secret key has a `*_file` sibling for file-based indirection, resolved by the
-//! loader.
-//!
-//! Boot validation lives in [`AuthConfig::validate`] and
-//! [`AuthConfig::require_mechanism`]: a configuration a resource server cannot
-//! honour is refused at startup rather than degraded at the first request.
+//! `[auth]` is the `ferrohealth-smart` crate's [`AuthSection`], the section
+//! every FerroHEALTH product embeds: the trusted issuers and their key sets,
+//! the accepted algorithms (asymmetric only, RFC 8725 §3.1 and §3.2), the
+//! audiences (RFC 9068 §4), the Basic users of `[[auth.basic.users]]` with
+//! the scopes each holds, and the product scope. The crate checks tokens and
+//! never issues them. This module holds what FerroEHR adds on top: a
+//! Basic-only surface, the Argon2id cost floor, the issuer `userinfo` rule,
+//! the refusal of private or symmetric key material in a `jwks_file`, and the
+//! patient-data assurance types of `[authz.assurance]` and
+//! `[authz.professional]`. No openEHR spec governs authentication mechanics,
+//! ITS-REST leaving the scheme open — our own design, with the IETF OAuth and
+//! JOSE RFCs as the authority for every rule enforced here.
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::Path;
 
 use argon2::{Algorithm, Params, PasswordHash};
+use ferrohealth_smart::config::{AuthSection, ConfigError, IssuerKey, Resolved};
+use secrecy::ExposeSecret;
 use serde::de::IgnoredAny;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::config::secret::{Secret, redact_userinfo};
+use crate::config::secret::redact_userinfo;
 
-/// Top-level authentication settings (`[auth]`).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct AuthConfig {
-    /// Master switch. When `false`, all requests pass unauthenticated (dev only).
-    pub enabled: bool,
-    /// Basic-auth user store (username → Argon2 PHC hash). Absent → Basic disabled.
-    pub basic: Option<BasicConfig>,
-    /// Verified Basic-credential cache TTL in seconds (`0` disables the cache).
-    /// Argon2 verification costs tens of milliseconds of CPU **per call by
-    /// design**; re-running it on every request of a busy client turns the
-    /// KDF's work factor into a self-inflicted throughput ceiling. A credential
-    /// that has verified successfully is therefore remembered — as a SHA-256
-    /// digest of the presented header, never plaintext — and re-verified only
-    /// after the TTL (which bounds credential-revocation lag exactly like a
-    /// session lifetime).
-    pub verified_cache_ttl_seconds: u64,
-    /// OAuth2/OIDC bearer validation. Absent → bearer disabled.
-    pub oidc: Option<OidcConfig>,
-}
+/// The protection space every challenge names when `[auth] realm` is empty
+/// (RFC 6750 §3, RFC 7617 §2).
+pub const DEFAULT_REALM: &str = "ferroehr";
 
-impl Default for AuthConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            basic: None,
-            oidc: None,
-            // 60 s: long enough that a busy client pays the KDF once a minute
-            // instead of per request, short enough that a revoked credential
-            // dies within a minute.
-            verified_cache_ttl_seconds: 60,
-        }
+/// The product scope when `[auth] product_scope` is empty: the scope that
+/// admits the surfaces no SMART on openEHR resource family covers.
+///
+/// SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility gives an
+/// extension scope the form "any string starting with `__`".
+pub const DEFAULT_PRODUCT_SCOPE: &str = "__ferroehr.platform";
+
+/// The minimum Argon2 memory cost, in KiB (OWASP Password Storage Cheat Sheet
+/// §Argon2id).
+pub const MIN_ARGON2_M_COST: u32 = 19 * 1024;
+/// The minimum Argon2 iteration count.
+pub const MIN_ARGON2_T_COST: u32 = 2;
+/// The minimum Argon2 parallelism.
+pub const MIN_ARGON2_P_COST: u32 = 1;
+
+/// Returns whether `[auth]` names at least one token issuer.
+#[must_use]
+pub fn has_bearer(section: &AuthSection) -> bool {
+    match &section.issuer {
+        IssuerKey::Flat(issuer) => !issuer.trim().is_empty(),
+        IssuerKey::List(entries) => !entries.is_empty(),
     }
 }
 
-impl AuthConfig {
-    /// Whether at least one authentication mechanism is configured.
-    #[must_use]
-    pub fn has_mechanism(&self) -> bool {
-        self.basic.is_some() || self.oidc.is_some()
-    }
+/// Returns whether `[auth]` admits at least one Basic user.
+#[must_use]
+pub fn has_basic(section: &AuthSection) -> bool {
+    section
+        .basic
+        .as_ref()
+        .is_some_and(|basic| !basic.users.is_empty())
+}
 
-    /// The authentication schemes this deployment can name in a `401`
-    /// challenge, in the order it offers them.
-    ///
-    /// RFC 9110 §11.6.1 requires a challenge to name a scheme applicable to the
-    /// target resource, so this is exactly the set a `WWW-Authenticate` may
-    /// carry. Returned as display text for the boot log: an operator reading
-    /// `Basic, Bearer` can see at a glance which tables actually took effect.
-    /// `none` when no mechanism is configured (only reachable with
-    /// [`Self::enabled`] off — [`Self::require_mechanism`] refuses that
-    /// combination at boot).
-    #[must_use]
-    pub fn advertised_mechanisms(&self) -> String {
-        let mut schemes: Vec<&str> = Vec::new();
-        if self.basic.is_some() {
-            schemes.push("Basic");
-        }
-        if self.oidc.is_some() {
-            schemes.push("Bearer");
-        }
-        if schemes.is_empty() {
-            "none".to_owned()
-        } else {
-            schemes.join(", ")
-        }
+/// Returns the schemes the server advertises, `Bearer, Basic` or `none`.
+#[must_use]
+pub fn advertised_mechanisms(section: &AuthSection) -> String {
+    let mut schemes: Vec<&str> = Vec::new();
+    if has_bearer(section) {
+        schemes.push("Bearer");
     }
-
-    /// Validates the configured mechanisms at boot.
-    ///
-    /// Each present mechanism table is judged on its own terms, whatever
-    /// [`Self::enabled`] says: a table an operator wrote must be honourable, so
-    /// flipping the master switch on can never newly break the deployment.
-    ///
-    /// # Errors
-    /// [`AuthConfigError`] for the first failing rule: an unusable `[auth.oidc]`
-    /// issuer, audience, leeway or symmetric secret, or a Basic password hash
-    /// below the OWASP Argon2id floor.
-    pub fn validate(&self) -> Result<(), AuthConfigError> {
-        if let Some(basic) = &self.basic {
-            basic.validate()?;
-        }
-        if let Some(oidc) = &self.oidc {
-            oidc.validate()?;
-        }
-        Ok(())
+    if has_basic(section) {
+        schemes.push("Basic");
     }
-
-    /// Requires an authentication mechanism whenever authentication is enabled.
-    ///
-    /// RFC 9110 §11.6.1 requires a `401` challenge to name a scheme *applicable
-    /// to the target resource*, and a server with no mechanism has none: it
-    /// could only refuse every request while advertising a scheme it does not
-    /// implement.
-    ///
-    /// # Errors
-    /// [`AuthConfigError::NoMechanism`] when [`Self::enabled`] is set and
-    /// neither `[auth.basic]` nor `[auth.oidc]` is configured.
-    pub fn require_mechanism(&self) -> Result<(), AuthConfigError> {
-        if self.enabled && !self.has_mechanism() {
-            return Err(AuthConfigError::NoMechanism);
-        }
-        Ok(())
+    if schemes.is_empty() {
+        "none".to_owned()
+    } else {
+        schemes.join(", ")
     }
 }
 
-/// A boot-time authentication-configuration error — a hard error that aborts
-/// startup rather than letting the server run a posture it cannot honour.
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+/// Returns the realm every challenge names: `[auth] realm`, or
+/// [`DEFAULT_REALM`].
+#[must_use]
+pub fn realm(section: &AuthSection) -> &str {
+    if section.realm.is_empty() {
+        DEFAULT_REALM
+    } else {
+        &section.realm
+    }
+}
+
+/// Returns the product scope: `[auth] product_scope`, or
+/// [`DEFAULT_PRODUCT_SCOPE`].
+#[must_use]
+pub fn product_scope(section: &AuthSection) -> &str {
+    if section.product_scope.is_empty() {
+        DEFAULT_PRODUCT_SCOPE
+    } else {
+        &section.product_scope
+    }
+}
+
+/// Resolves `[auth]` into the issuers and the Basic store the crate checks
+/// credentials against.
+///
+/// A section with no issuer is a Basic-only surface: the crate refuses an
+/// enabled section without one, so it is resolved with its issuers off and
+/// its Basic users kept (no specification governs this: our own design).
+///
+/// # Errors
+/// [`AuthConfigError::Section`] when the crate refuses the section.
+pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
+    if has_bearer(section) || !section.enabled {
+        return section
+            .resolve()
+            .map_err(|source| AuthConfigError::Section { source });
+    }
+    let mut basic_only = section.clone();
+    basic_only.enabled = false;
+    let mut resolved = basic_only
+        .resolve()
+        .map_err(|source| AuthConfigError::Section { source })?;
+    resolved.enabled = true;
+    Ok(resolved)
+}
+
+/// Validates `[auth]` at boot: the rules FerroEHR adds, then the crate's.
+///
+/// # Errors
+/// The [`AuthConfigError`] naming the first rule the section breaks.
+pub fn validate(section: &AuthSection) -> Result<(), AuthConfigError> {
+    if !section.scopeless_subjects.is_empty() {
+        return Err(AuthConfigError::ScopelessSubjects);
+    }
+    for entry in section.issuers() {
+        check_issuer_userinfo(&entry.issuer)?;
+        if let Some(path) = entry.jwks_file.as_deref().filter(|path| !path.is_empty()) {
+            check_jwks_file(Path::new(path))?;
+        }
+    }
+    if !section.jwks_file.is_empty() {
+        check_jwks_file(Path::new(&section.jwks_file))?;
+    }
+    if let Some(basic) = &section.basic {
+        for user in &basic.users {
+            if let Some(hash) = &user.password_hash {
+                check_password_hash(&user.user, hash.expose_secret())?;
+            }
+        }
+    }
+    resolve(section).map(|_resolved| ())
+}
+
+/// Refuses an enabled `[auth]` that names neither an issuer nor a Basic user.
+///
+/// RFC 9110 §11.6.1: a `401` challenge must name a scheme applicable to the
+/// target resource, so authentication with no mechanism cannot be honoured.
+///
+/// # Errors
+/// [`AuthConfigError::NoMechanism`].
+pub fn require_mechanism(section: &AuthSection) -> Result<(), AuthConfigError> {
+    if section.enabled && !has_bearer(section) && !has_basic(section) {
+        return Err(AuthConfigError::NoMechanism);
+    }
+    Ok(())
+}
+
+/// Returns `[auth]` as the redacted configuration views render it
+/// (`ferroehr config check`, `/management/env`, `ferroehr report`): every key
+/// with its value, a password hash as `***`.
+///
+/// The crate's section types implement no `Serialize`, so the tree is written
+/// here, key for key.
+#[must_use]
+pub fn redacted(section: &AuthSection) -> serde_json::Value {
+    let issuer = match &section.issuer {
+        IssuerKey::Flat(issuer) => serde_json::Value::String(issuer.clone()),
+        IssuerKey::List(entries) => entries
+            .iter()
+            .map(|entry| {
+                serde_json::json!({
+                    "issuer": entry.issuer,
+                    "audience": entry.audience,
+                    "algorithms": entry.algorithms,
+                    "token_profile": entry.token_profile,
+                    "clock_skew_seconds": entry.clock_skew_seconds,
+                    "jwks_max_age_seconds": entry.jwks_max_age_seconds,
+                    "jwks_refresh_interval_seconds": entry.jwks_refresh_interval_seconds,
+                    "jwks_file": entry.jwks_file,
+                })
+            })
+            .collect(),
+    };
+    let basic = section.basic.as_ref().map(|basic| {
+        serde_json::json!({
+            "users": basic
+                .users
+                .iter()
+                .map(|user| serde_json::json!({
+                    "user": user.user,
+                    "password_hash": user.password_hash.as_ref().map(|_set| "***"),
+                    "password_hash_file": user.password_hash_file,
+                    "scopes": user.scopes,
+                }))
+                .collect::<Vec<_>>(),
+        })
+    });
+    serde_json::json!({
+        "enabled": section.enabled,
+        "issuer": issuer,
+        "audience": section.audience,
+        "algorithms": section.algorithms,
+        "token_profile": section.token_profile,
+        "clock_skew_seconds": section.clock_skew_seconds,
+        "jwks_max_age_seconds": section.jwks_max_age_seconds,
+        "jwks_refresh_interval_seconds": section.jwks_refresh_interval_seconds,
+        "jwks_file": section.jwks_file,
+        "timeout_ms": section.timeout_ms,
+        "realm": section.realm,
+        "scopeless_subjects": section.scopeless_subjects,
+        "capabilities": section.capabilities,
+        "scopes_supported": section.scopes_supported,
+        "product_scope": section.product_scope,
+        "basic": basic,
+    })
+}
+
+/// An `[auth]`, `[authz.assurance]` or `[authz.professional]` setting the
+/// server refuses to start with.
+#[derive(Debug, thiserror::Error)]
 pub enum AuthConfigError {
-    /// `auth.enabled` with no mechanism configured (RFC 9110 §11.6.1).
+    /// Authentication is on and nothing can authenticate a caller.
     #[error(
         "auth.enabled = true but no authentication mechanism is configured: add \
-         [[auth.basic.users]] entries or an [auth.oidc] issuer, or set auth.enabled = false"
+         [[auth.basic.users]] entries or an [auth] issuer, or set auth.enabled = false"
     )]
     NoMechanism,
-    /// `auth.oidc.issuer` is blank.
-    #[error("auth.oidc.issuer is required when the [auth.oidc] table is present")]
-    IssuerMissing,
-    /// `auth.oidc.issuer` does not parse as an absolute URL (RFC 8414 §2).
-    #[error("auth.oidc.issuer {issuer:?} is not an absolute URL (RFC 8414 §2): {reason}")]
-    IssuerNotAUrl {
-        /// The rejected issuer value.
-        issuer: String,
-        /// The URL parse failure, as reported by `url`.
-        reason: String,
+    /// The `ferrohealth-smart` crate refuses the section.
+    #[error("the shared [auth] section is refused")]
+    Section {
+        /// The rule the crate reports broken.
+        #[source]
+        source: ConfigError,
     },
-    /// `auth.oidc.issuer` carries a `userinfo` component (OpenID Connect Core
-    /// 1.0 §1.2 "Issuer Identifier").
-    ///
-    /// Carries the issuer with the `userinfo` masked, so the refusal never
-    /// prints the credential it refuses.
+    /// `[auth] scopeless_subjects` is set, and no FerroEHR route honours it.
     #[error(
-        "auth.oidc.issuer {0:?} must carry no userinfo: an issuer identifier holds only \
+        "auth.scopeless_subjects is set, but every FerroEHR route carries a SMART on openEHR \
+         requirement, which the allowlist does not satisfy: grant the subject the openEHR \
+         scopes it needs (for example system/composition-*.cruds) and remove the key"
+    )]
+    ScopelessSubjects,
+    /// The issuer carries `userinfo`; the value is shown masked.
+    #[error(
+        "auth.issuer {0:?} must carry no userinfo: an issuer identifier holds only \
          scheme, host, port and path components (OpenID Connect Core 1.0 §1.2)"
     )]
     IssuerHasUserinfo(String),
-    /// `auth.oidc.issuer` carries a query component (RFC 8414 §2).
-    #[error("auth.oidc.issuer {0:?} must have no query component (RFC 8414 §2)")]
-    IssuerHasQuery(String),
-    /// `auth.oidc.issuer` carries a fragment component (RFC 8414 §2).
-    #[error("auth.oidc.issuer {0:?} must have no fragment component (RFC 8414 §2)")]
-    IssuerHasFragment(String),
-    /// `auth.oidc.issuer` does not use the `https` scheme (RFC 8414 §2, §6.2).
+    /// The `jwks_file` is not a JWK Set.
     #[error(
-        "auth.oidc.issuer {0:?} must use the https scheme (RFC 8414 §2, §6.2); set \
-         auth.oidc.allow_insecure_issuer = true for a development issuer"
-    )]
-    IssuerNotHttps(String),
-    /// `auth.oidc.audiences` is empty or all-blank (RFC 7519 §4.1.3).
-    #[error(
-        "auth.oidc.audiences must list at least one accepted audience: a token whose `aud` \
-         does not name this resource server MUST be rejected (RFC 7519 §4.1.3, RFC 9068 §4)"
-    )]
-    AudiencesRequired,
-    /// `auth.oidc.clock_skew_leeway_seconds` exceeds the cap.
-    #[error(
-        "auth.oidc.clock_skew_leeway_seconds = {0} exceeds the {1} s cap: expiry leeway may be \
-         no more than a few minutes (RFC 9068 §4 step 6)"
-    )]
-    LeewayTooLarge(u64, u64),
-    /// A symmetric (`HS*`) algorithm is declared without a symmetric key, or an
-    /// asymmetric one with only a symmetric key.
-    #[error(
-        "auth.oidc.algorithms lists {algorithm:?} but the configured key source is \
-         {key_source}: a \
-         key is bound to ONE algorithm family, and accepting an algorithm the key material \
-         cannot verify invites algorithm-confusion (RFC 8725 §3.1, RFC 7515 §10.4)"
-    )]
-    AlgorithmKeySourceMismatch {
-        /// The offending entry of `auth.oidc.algorithms`.
-        algorithm: String,
-        /// Which key source is configured (`hmac_secret`, `jwks_json`, or
-        /// issuer discovery). Not named `source`: `thiserror` reads a field of
-        /// that name as the error's `Error::source`.
-        key_source: &'static str,
-    },
-    /// `auth.oidc.jwks_json` is not a JWK Set document.
-    ///
-    /// Only the failure class and position are kept: the parser's own message
-    /// can quote the offending value, which may be key material.
-    #[error(
-        "auth.oidc.jwks_json is not a JWK Set (RFC 7517 §5): {category:?} error at line {line}, \
+        "auth.jwks_file is not a JWK Set (RFC 7517 §5): {category:?} error at line {line}, \
          column {column}"
     )]
     JwksUnparsable {
-        /// What kind of failure the parser reported.
+        /// The JSON error class.
         category: serde_json::error::Category,
-        /// The 1-based line of the failure.
+        /// The line the parse stopped at.
         line: usize,
-        /// The 1-based column of the failure.
+        /// The column the parse stopped at.
         column: usize,
     },
-    /// `auth.oidc.jwks_json` carries a symmetric (`kty: "oct"`) key.
+    /// The `jwks_file` holds a symmetric key.
     #[error(
-        "auth.oidc.jwks_json key #{index} (kid {kid:?}) is a symmetric key (kty \"oct\", \
-         RFC 7517 §4.1, RFC 7518 §6.4): a static JWKS holds public keys that verify \
-         RS*/ES*/PS* only, and a symmetric key is a secret; configure it as \
-         auth.oidc.hmac_secret instead"
+        "auth.jwks_file key #{index} (kid {kid:?}) is a symmetric key (kty \"oct\", \
+         RFC 7517 §4.1, RFC 7518 §6.4): a key set handed to a resource server holds public \
+         keys only, and the server accepts asymmetric algorithms only (RFC 8725 §3.1)"
     )]
     JwksSymmetricKey {
-        /// The zero-based position of the key in the set's `keys` array.
+        /// The key's position in the set.
         index: usize,
-        /// The key's `kid`, a public identifier, when it has one.
+        /// The key's `kid`, when it has one.
         kid: Option<String>,
     },
-    /// `auth.oidc.jwks_json` carries private key material.
+    /// The `jwks_file` holds private key material.
     #[error(
-        "auth.oidc.jwks_json key #{index} (kid {kid:?}) carries the private-key member \
+        "auth.jwks_file key #{index} (kid {kid:?}) carries the private-key member \
          {member:?} (RFC 7518 §6.2.2, §6.3.2, RFC 8037 §2): a verifier needs the public key \
          only, so private material is never configured here"
     )]
     JwksPrivateKeyMaterial {
-        /// The zero-based position of the key in the set's `keys` array.
+        /// The key's position in the set.
         index: usize,
-        /// The key's `kid`, a public identifier, when it has one.
+        /// The key's `kid`, when it has one.
         kid: Option<String>,
-        /// The name of the first private-key member found (never its value).
+        /// The private member it carries.
         member: &'static str,
     },
-    /// `auth.oidc.algorithms` names `none` — an unsigned token.
+    /// The assurance claim name is blank.
     #[error(
-        "auth.oidc.algorithms may not contain {0:?}: an unsigned token proves nothing, and \
-         `alg: none` is the canonical JWT forgery (RFC 8725 §3.2, RFC 9068 §4 step 5)"
-    )]
-    AlgorithmNoneRejected(String),
-    /// `auth.oidc.hmac_secret` is shorter than the entropy floor (RFC 8725 §3.5).
-    #[error(
-        "auth.oidc.hmac_secret is {0} bytes; a keyed-MAC key must be at least {1} bytes of \
-         high-entropy material and never a human-memorizable password (RFC 8725 §3.5)"
-    )]
-    HmacSecretTooShort(usize, usize),
-    /// `auth.oidc.assurance.claim` is blank while the table declares levels or
-    /// a minimum.
-    #[error(
-        "auth.oidc.assurance.claim is blank: name the token claim that carries the \
+        "authz.assurance.claim is blank: name the token claim that carries the \
          authentication assurance level (usually `acr`, OpenID Connect Core 1.0 §2)"
     )]
     AssuranceClaimBlank,
-    /// `auth.oidc.assurance.minimum` is set but `levels` maps no claim value.
+    /// A minimum is set and no claim value maps to a level.
     #[error(
-        "auth.oidc.assurance.minimum = {0:?} but auth.oidc.assurance.levels maps no claim \
+        "authz.assurance.minimum = {0:?} but authz.assurance.levels maps no claim \
          value to a level: every patient-data request would be refused"
     )]
     AssuranceMinimumWithoutLevels(String),
-    /// No value in `auth.oidc.assurance.levels` reaches the configured minimum.
+    /// No mapped value reaches the minimum.
     #[error(
-        "auth.oidc.assurance.minimum = {0:?} but no value in auth.oidc.assurance.levels maps \
+        "authz.assurance.minimum = {0:?} but no value in authz.assurance.levels maps \
          to that level or above: every patient-data request would be refused"
     )]
     AssuranceMinimumUnreachable(String),
-    /// A key of `auth.oidc.assurance.levels` cannot be named in an `acr_values`
-    /// challenge parameter.
+    /// A level value cannot be quoted in the step-up challenge.
     #[error(
-        "auth.oidc.assurance.levels key {0:?} is blank or carries whitespace, a quote, a \
+        "authz.assurance.levels key {0:?} is blank or carries whitespace, a quote, a \
          backslash or a control character: the refusal names the accepted values in a \
          space-separated quoted `acr_values` parameter (RFC 9470 §3, RFC 9110 §5.6.4)"
     )]
     AssuranceValueUnquotable(String),
-    /// `auth.oidc.professional.claim` is blank.
+    /// The professional claim name is blank.
     #[error(
-        "auth.oidc.professional.claim is blank: name the token claim that identifies the \
+        "authz.professional.claim is blank: name the token claim that identifies the \
          natural person (for example `sub`)"
     )]
     ProfessionalClaimBlank,
-    /// `auth.oidc.professional.acting_for_claim` is set but blank.
+    /// The acting-for claim name is blank.
     #[error(
-        "auth.oidc.professional.acting_for_claim is blank: remove it, or name the claim a \
+        "authz.professional.acting_for_claim is blank: remove it, or name the claim a \
          client token carries the professional's identifier in"
     )]
     ActingForClaimBlank,
-    /// A `[[auth.basic.users]]` entry carries no `username`.
-    #[error("every [[auth.basic.users]] entry requires a non-blank username")]
-    BasicUserWithoutUsername,
-    /// A Basic user's `password_hash` is not a parsable PHC string.
+    /// A Basic user's hash is no PHC string.
     #[error("auth.basic.users[{username:?}].password_hash is not a PHC hash string: {reason}")]
     PasswordHashUnparsable {
-        /// The offending user's login name (never the hash itself).
+        /// The user.
         username: String,
-        /// The PHC parse failure, as reported by `argon2`.
+        /// What the PHC parser reported.
         reason: String,
     },
-    /// A Basic user's `password_hash` uses an algorithm other than Argon2id.
+    /// A Basic user's hash is of another algorithm.
     #[error(
         "auth.basic.users[{username:?}].password_hash uses {algorithm:?}; only argon2id is \
          accepted (OWASP Password Storage Cheat Sheet §Argon2id)"
     )]
     PasswordHashNotArgon2id {
-        /// The offending user's login name.
+        /// The user.
         username: String,
-        /// The PHC algorithm identifier found in the hash.
+        /// The algorithm the hash names.
         algorithm: String,
     },
-    /// A Basic user's Argon2 cost parameters are below the OWASP floor.
+    /// A Basic user's hash is cheaper than the floor.
     #[error(
         "auth.basic.users[{username:?}].password_hash has m={m},t={t},p={p}, below the minimum \
          m={min_m},t={min_t},p={min_p} (OWASP Password Storage Cheat Sheet §Argon2id)"
     )]
     PasswordHashTooWeak {
-        /// The offending user's login name.
+        /// The user.
         username: String,
-        /// The configured memory cost, in KiB.
+        /// The memory cost.
         m: u32,
-        /// The configured time cost (iterations).
+        /// The iteration count.
         t: u32,
-        /// The configured degree of parallelism.
+        /// The parallelism.
         p: u32,
-        /// The required minimum memory cost, in KiB.
+        /// The memory floor.
         min_m: u32,
-        /// The required minimum time cost.
+        /// The iteration floor.
         min_t: u32,
-        /// The required minimum parallelism.
+        /// The parallelism floor.
         min_p: u32,
     },
 }
 
-/// The minimum Argon2id memory cost, in KiB, the OWASP Password Storage Cheat
-/// Sheet §Argon2id prescribes (19 MiB) — also `argon2` 0.6.0's
-/// `Params::DEFAULT_M_COST`.
-pub const MIN_ARGON2_M_COST: u32 = 19 * 1024;
-
-/// The minimum Argon2id time cost (iterations) per the OWASP Password Storage
-/// Cheat Sheet §Argon2id.
-pub const MIN_ARGON2_T_COST: u32 = 2;
-
-/// The minimum Argon2id degree of parallelism per the OWASP Password Storage
-/// Cheat Sheet §Argon2id.
-pub const MIN_ARGON2_P_COST: u32 = 1;
-
-/// Basic-auth user store.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct BasicConfig {
-    /// The configured users. Passwords are stored only as Argon2 PHC hashes.
-    pub users: Vec<BasicUser>,
-}
-
-impl BasicConfig {
-    /// Validate every stored password hash against the OWASP Argon2id floor.
-    ///
-    /// The verifier takes its cost parameters from the stored PHC string
-    /// (`argon2` 0.6.0 `impl TryFrom<&PasswordHash> for Params`), so a
-    /// deliberately cheap hash would verify happily; the floor is therefore
-    /// judged here, through the same parse the verifier uses.
-    fn validate(&self) -> Result<(), AuthConfigError> {
-        for user in &self.users {
-            if user.username.trim().is_empty() {
-                return Err(AuthConfigError::BasicUserWithoutUsername);
-            }
-            let hash = PasswordHash::new(user.password_hash.expose()).map_err(|e| {
-                AuthConfigError::PasswordHashUnparsable {
-                    username: user.username.clone(),
-                    reason: e.to_string(),
-                }
-            })?;
-            if !matches!(
-                Algorithm::try_from(hash.algorithm.as_str()),
-                Ok(Algorithm::Argon2id)
-            ) {
-                return Err(AuthConfigError::PasswordHashNotArgon2id {
-                    username: user.username.clone(),
-                    algorithm: hash.algorithm.as_str().to_owned(),
-                });
-            }
-            let params =
-                Params::try_from(&hash).map_err(|e| AuthConfigError::PasswordHashUnparsable {
-                    username: user.username.clone(),
-                    reason: e.to_string(),
-                })?;
-            if params.m_cost() < MIN_ARGON2_M_COST
-                || params.t_cost() < MIN_ARGON2_T_COST
-                || params.p_cost() < MIN_ARGON2_P_COST
-            {
-                return Err(AuthConfigError::PasswordHashTooWeak {
-                    username: user.username.clone(),
-                    m: params.m_cost(),
-                    t: params.t_cost(),
-                    p: params.p_cost(),
-                    min_m: MIN_ARGON2_M_COST,
-                    min_t: MIN_ARGON2_T_COST,
-                    min_p: MIN_ARGON2_P_COST,
-                });
-            }
-        }
-        Ok(())
+/// Refuses an issuer that carries `userinfo`, before the crate's own refusal
+/// could quote it.
+fn check_issuer_userinfo(issuer: &str) -> Result<(), AuthConfigError> {
+    // NOTE: OpenID Connect Core 1.0 §1.2, an issuer identifier holds scheme,
+    // host, port and path only; a value that is no URL is the crate's to refuse.
+    let Ok(url) = Url::parse(issuer.trim()) else {
+        return Ok(());
+    };
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(AuthConfigError::IssuerHasUserinfo(redact_userinfo(
+            issuer.trim(),
+        )));
     }
+    Ok(())
 }
 
-/// One Basic-auth principal (`[[auth.basic.users]]`).
-///
-/// `username` and `password_hash` are mandatory, enforced by
-/// [`AuthConfig::validate`] rather than by serde: an omitted one lands here as
-/// the empty [`Default`] value and is then refused at boot by name, which reads
-/// better than a bare missing-field error and cannot be mistaken for a usable
-/// credential.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct BasicUser {
-    /// The login name presented in the `Authorization: Basic` header.
-    pub username: String,
-    /// Argon2 PHC hash string (`$argon2id$v=19$...`). Never a plaintext password.
-    pub password_hash: Secret,
-    /// Path to a file holding the PHC hash, read at boot in place of
-    /// [`Self::password_hash`].
-    ///
-    /// A hash is an offline cracking target, so it belongs in a mounted secret
-    /// rather than inline in a configuration file that deployment tooling may
-    /// treat as non-sensitive. The same Argon2id parameter floor is enforced
-    /// either way, because validation runs after the file is resolved. Setting
-    /// both is a boot error.
-    pub password_hash_file: Option<PathBuf>,
-    /// Roles granted to this user (normalized to upper-case when authenticated),
-    /// feeding the RBAC gate. Defaults to `["USER"]` — the baseline clinical
-    /// role — when unspecified; configure `["ADMIN"]` for an administrative
-    /// account.
-    pub roles: Vec<String>,
-}
-
-impl Default for BasicUser {
-    fn default() -> Self {
-        Self {
-            username: String::new(),
-            password_hash: Secret::new(String::new()),
-            password_hash_file: None,
-            roles: vec!["USER".to_owned()],
-        }
-    }
-}
-
-/// OAuth2/OIDC bearer configuration.
-///
-/// Validation happens as a resource server: the token's signature is checked
-/// against a key source and the `iss`/`aud` claims validated. The
-/// authorization-code client flow (the `oauth2` crate) is a client concern,
-/// not a CDR's, so it is out of scope here.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct OidcConfig {
-    /// Expected token issuer (`iss`). Also the OIDC discovery base when no
-    /// static key material is supplied. Required when the table is present.
-    ///
-    /// Boot-validated as an RFC 8414 §2 issuer identifier: an absolute `https`
-    /// URL with no query and no fragment component, and no `userinfo` (OpenID
-    /// Connect Core 1.0 §1.2 names scheme, host, port and path as its only
-    /// components), so it never carries a credential and renders verbatim. The
-    /// scheme requirement is relaxed only by [`Self::allow_insecure_issuer`].
-    pub issuer: String,
-    /// Accepted audiences (`aud`) — at least one is required.
-    ///
-    /// RFC 7519 §4.1.3 obliges a recipient that does not identify itself with a
-    /// value in a present `aud` claim to reject the JWT, and RFC 9068 §4 step 4
-    /// makes the check unconditional for an access token; a resource server with
-    /// no declared audience would therefore accept tokens minted for a different
-    /// resource server, and OpenID Connect ID tokens (whose `aud` is a client
-    /// id) alongside them (RFC 8725 §3.9, §3.12).
-    pub audiences: Vec<String>,
-    /// Accepted signature algorithms (e.g. `["RS256"]`). Defaults to `RS256`.
-    pub algorithms: Vec<String>,
-    /// Accepted clock-skew leeway, in seconds, on the time-based claims
-    /// (default 60; boot error above [`MAX_CLOCK_SKEW_LEEWAY_SECONDS`]).
-    ///
-    /// RFC 7519 §4.1.4 permits "some small leeway, usually no more than a few
-    /// minutes, to account for clock skew", and RFC 9068 §4 step 6 repeats the
-    /// bound for access tokens — so the key is capped rather than free, since a
-    /// large leeway silently extends every token's life.
-    pub clock_skew_leeway_seconds: u64,
-    /// Require every bearer token to claim the RFC 9068 access-token profile
-    /// (`typ: at+jwt`); default `false`.
-    ///
-    /// RFC 9068 §2.1 makes `at+jwt` a SHOULD for the AUTHORIZATION SERVER, and
-    /// §4 step 1's MUST attaches to tokens claiming the profile — the RFC
-    /// prescribes nothing for a token that does not claim it. So a token
-    /// carrying the type gets the full §4 rule set (`iat`, `jti` and `client_id`
-    /// required) whatever this key says, while turning it on additionally
-    /// REFUSES a token that omits the type. Off by default because requiring it
-    /// rejects issuers that do not set it, including the identity provider the
-    /// quickstart overlay ships.
-    pub require_at_jwt: bool,
-    /// Accepts a non-`https` [`Self::issuer`] (default `false`).
-    ///
-    /// RFC 8414 §6.2 requires TLS for issuer metadata, so this is a development
-    /// and test affordance only — a plain-HTTP issuer exposes token
-    /// verification material to a network attacker. The no-query/no-fragment
-    /// structural rules of RFC 8414 §2 still apply.
-    pub allow_insecure_issuer: bool,
-    /// A symmetric HS256 secret — the simplest key source (tests/dev).
-    pub hmac_secret: Option<Secret>,
-    /// File-based indirection for [`Self::hmac_secret`] (K8s/Docker secrets).
-    /// Exactly one of the pair may be set; the loader reads and trims the file.
-    pub hmac_secret_file: Option<PathBuf>,
-    /// A static JWKS document (JSON). Preferred over discovery when present.
-    ///
-    /// Public verification material only: boot refuses a set carrying a
-    /// symmetric key or a private-key member, so the value is shown in clear
-    /// on every configuration rendering.
-    pub jwks_json: Option<String>,
-    /// File-based indirection for [`Self::jwks_json`] — a JWKS is a file-shaped
-    /// blob that never belonged in an env var. The loader reads the file.
-    pub jwks_json_file: Option<PathBuf>,
-    /// TCP connect timeout in milliseconds for the OIDC discovery + JWKS
-    /// fetches (default 3000).
-    ///
-    /// Applies to the discovery key source only (no [`Self::hmac_secret`], no
-    /// [`Self::jwks_json`]): without it an issuer that blackholes packets parks
-    /// the bearer request until the OS TCP timeout, holding a request slot.
-    pub connect_timeout_ms: u64,
-    /// Whole-request timeout in milliseconds for the OIDC discovery + JWKS
-    /// fetches (default 5000), covering connect, TLS, and body read.
-    pub request_timeout_ms: u64,
-    /// How long a FAILED discovery/JWKS fetch is remembered, in seconds
-    /// (default 10; `0` disables negative caching).
-    ///
-    /// Without it every bearer request during an issuer outage re-attempts
-    /// discovery, so an unreachable issuer produces one outbound connection
-    /// attempt per incoming request. Remembering the failure degrades the outage to
-    /// fast `401`s instead. Keep it short — it is also the recovery lag once
-    /// the issuer returns. Successfully fetched key material keeps its own,
-    /// longer lifetime and is unaffected.
-    pub negative_cache_ttl_seconds: u64,
-    /// The authentication assurance level patient-data requests must carry
-    /// (`[auth.oidc.assurance]`); off by default.
-    pub assurance: AssuranceConfig,
-    /// How a token names the natural person behind it
-    /// (`[auth.oidc.professional]`); absent means tokens are not judged on it.
-    pub professional: Option<ProfessionalConfig>,
-}
-
-/// The members of a JWK Set document [`OidcConfig::validate_jwks`] judges
-/// (RFC 7517 §5); every other member is ignored.
+/// The shape of a JWK Set, read only to refuse what a verifier must never
+/// hold.
 #[derive(Deserialize)]
 struct JwkSetShape {
-    /// The `keys` array.
+    /// The keys.
     keys: Vec<JwkShape>,
 }
 
-/// The members of one JWK [`OidcConfig::validate_jwks`] judges: the key type,
-/// the key id, and the presence (never the value) of every private-key member.
+/// One JWK, by the members that make it secret.
 #[derive(Deserialize)]
 struct JwkShape {
-    /// `kty` (RFC 7517 §4.1), compared case-sensitively.
+    /// The key type.
     kty: String,
-    /// `kid` (RFC 7517 §4.5).
+    /// The key id.
     #[serde(default)]
     kid: Option<String>,
-    /// `d`: the EC, RSA or OKP private key (RFC 7518 §6.2.2.1, §6.3.2.1; RFC 8037 §2).
+    /// The RSA or EC private exponent.
     #[serde(default)]
     d: Option<IgnoredAny>,
-    /// `p`: the RSA first prime factor (RFC 7518 §6.3.2.2).
+    /// An RSA prime.
     #[serde(default)]
     p: Option<IgnoredAny>,
-    /// `q`: the RSA second prime factor (RFC 7518 §6.3.2.3).
+    /// An RSA prime.
     #[serde(default)]
     q: Option<IgnoredAny>,
-    /// `dp`: the RSA first factor CRT exponent (RFC 7518 §6.3.2.4).
+    /// An RSA CRT exponent.
     #[serde(default)]
     dp: Option<IgnoredAny>,
-    /// `dq`: the RSA second factor CRT exponent (RFC 7518 §6.3.2.5).
+    /// An RSA CRT exponent.
     #[serde(default)]
     dq: Option<IgnoredAny>,
-    /// `qi`: the RSA first CRT coefficient (RFC 7518 §6.3.2.6).
+    /// The RSA CRT coefficient.
     #[serde(default)]
     qi: Option<IgnoredAny>,
-    /// `oth`: the RSA other primes info (RFC 7518 §6.3.2.7).
+    /// Further RSA primes.
     #[serde(default)]
     oth: Option<IgnoredAny>,
-    /// `k`: the symmetric key value (RFC 7518 §6.4.1).
+    /// A symmetric key value.
     #[serde(default)]
     k: Option<IgnoredAny>,
 }
 
 impl JwkShape {
-    /// Returns the name of the first private-key member the key carries.
+    /// The first private member the key carries.
     fn private_member(&self) -> Option<&'static str> {
         [
             ("d", self.d.is_some()),
@@ -616,201 +454,82 @@ impl JwkShape {
     }
 }
 
-/// The largest accepted [`OidcConfig::clock_skew_leeway_seconds`] (5 minutes) —
-/// the outer edge of RFC 9068 §4 step 6's "no more than a few minutes".
-pub const MAX_CLOCK_SKEW_LEEWAY_SECONDS: u64 = 300;
-
-/// The smallest accepted [`OidcConfig::hmac_secret`], in bytes.
+/// Refuses a `jwks_file` holding a symmetric key or private key material.
 ///
-/// RFC 8725 §3.5 forbids a human-memorizable password as a keyed-MAC key; 32
-/// bytes is the output size of the SHA-256 the smallest supported HS\* algorithm
-/// uses, so a shorter key adds no strength over one at the floor.
-pub const MIN_HMAC_SECRET_BYTES: usize = 32;
-
-impl Default for OidcConfig {
-    fn default() -> Self {
-        Self {
-            issuer: String::new(),
-            audiences: Vec::new(),
-            // RS256 is the one algorithm OpenID Connect Discovery §4.2 makes
-            // mandatory to implement, so it is the only safe starting set.
-            algorithms: vec!["RS256".to_owned()],
-            // 60 s: the conventional clock-skew allowance, well inside
-            // RFC 9068 §4 step 6's "no more than a few minutes".
-            clock_skew_leeway_seconds: 60,
-            // RFC 9068 §2.1 makes `at+jwt` a SHOULD for the authorization
-            // server, so requiring it would refuse conforming issuers.
-            require_at_jwt: false,
-            allow_insecure_issuer: false,
-            hmac_secret: None,
-            hmac_secret_file: None,
-            jwks_json: None,
-            jwks_json_file: None,
-            // 3 s: ample for a TCP+TLS handshake to a healthy issuer on any
-            // realistic network, short enough that a blackholed one fails fast.
-            connect_timeout_ms: 3_000,
-            // 5 s: the whole-request budget the remote-PDP and terminology
-            // clients use, so one outbound-HTTP posture spans the server.
-            request_timeout_ms: 5_000,
-            // 10 s: long enough that an outage costs one discovery attempt per
-            // issuer rather than one per request, short enough that recovery is
-            // barely noticed.
-            negative_cache_ttl_seconds: 10,
-            assurance: AssuranceConfig::default(),
-            professional: None,
-        }
-    }
+/// A file that cannot be read is left to the crate, which refuses the start
+/// when it reads the key set.
+fn check_jwks_file(path: &Path) -> Result<(), AuthConfigError> {
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return Ok(());
+    };
+    check_jwks(&text)
 }
 
-impl OidcConfig {
-    /// Whether a symmetric key is the configured signing-key source.
-    ///
-    /// The boot path warns on this: an HS\* key shared with the authorization
-    /// server lets this resource server MINT tokens it would then accept, which
-    /// no asymmetric key source allows (RFC 8725 §2.2, §3.5).
-    #[must_use]
-    pub fn uses_symmetric_key(&self) -> bool {
-        self.hmac_secret.is_some() || self.hmac_secret_file.is_some()
-    }
-
-    /// Validate the `[auth.oidc]` table at boot.
-    fn validate(&self) -> Result<(), AuthConfigError> {
-        self.validate_issuer()?;
-        if self.audiences.iter().all(|a| a.trim().is_empty()) {
-            return Err(AuthConfigError::AudiencesRequired);
-        }
-        if self.clock_skew_leeway_seconds > MAX_CLOCK_SKEW_LEEWAY_SECONDS {
-            return Err(AuthConfigError::LeewayTooLarge(
-                self.clock_skew_leeway_seconds,
-                MAX_CLOCK_SKEW_LEEWAY_SECONDS,
-            ));
-        }
-        if let Some(secret) = &self.hmac_secret {
-            let len = secret.expose().len();
-            if len < MIN_HMAC_SECRET_BYTES {
-                return Err(AuthConfigError::HmacSecretTooShort(
-                    len,
-                    MIN_HMAC_SECRET_BYTES,
-                ));
-            }
-        }
-        self.validate_algorithms()?;
-        self.validate_jwks()?;
-        self.assurance.validate()?;
-        if let Some(professional) = &self.professional {
-            professional.validate()?;
-        }
-        Ok(())
-    }
-
-    /// Refuses a static JWK Set that carries secret key material.
-    ///
-    /// The JWKS key source verifies `RS*`/`ES*`/`PS*` only (see
-    /// [`Self::validate_algorithms`]), so it needs public keys alone. A
-    /// symmetric key (`kty: "oct"`, RFC 7518 §6.4) or a private-key member
-    /// (RFC 7518 §6.2.2, §6.3.2; RFC 8037 §2) could never verify a token here
-    /// and is a secret, so it is refused at boot; what remains is public
-    /// verification material that every configuration rendering shows in clear.
-    fn validate_jwks(&self) -> Result<(), AuthConfigError> {
-        let Some(jwks) = &self.jwks_json else {
-            return Ok(());
-        };
-        let set: JwkSetShape =
-            serde_json::from_str(jwks).map_err(|e| AuthConfigError::JwksUnparsable {
-                category: e.classify(),
-                line: e.line(),
-                column: e.column(),
-            })?;
-        for (index, key) in set.keys.into_iter().enumerate() {
-            if key.kty == "oct" {
-                return Err(AuthConfigError::JwksSymmetricKey {
-                    index,
-                    kid: key.kid,
-                });
-            }
-            if let Some(member) = key.private_member() {
-                return Err(AuthConfigError::JwksPrivateKeyMaterial {
-                    index,
-                    kid: key.kid,
-                    member,
-                });
-            }
-        }
-        Ok(())
-    }
-
-    /// Bind the accepted algorithm set to the configured key source.
-    ///
-    /// A key belongs to ONE algorithm family: an HMAC secret can verify `HS*`
-    /// and nothing else, and a JWKS carries public keys that verify `RS*`/`ES*`/
-    /// `PS*` and nothing else. Accepting an algorithm the key material cannot
-    /// verify is the algorithm-confusion setup RFC 8725 §3.1 and RFC 7515 §10.4
-    /// warn about — most famously an `RS256` deployment that also accepts
-    /// `HS256`, letting an attacker sign with the PUBLIC key as if it were a
-    /// shared secret.
-    ///
-    /// `none` is refused outright: an unsigned token proves nothing.
-    fn validate_algorithms(&self) -> Result<(), AuthConfigError> {
-        let symmetric_key = self.hmac_secret.is_some() || self.hmac_secret_file.is_some();
-        let source = if symmetric_key {
-            "auth.oidc.hmac_secret (a symmetric key, which verifies HS* only)"
-        } else if self.jwks_json.is_some() || self.jwks_json_file.is_some() {
-            "auth.oidc.jwks_json (public keys, which verify RS*/ES*/PS* only)"
-        } else {
-            "the issuer's discovered JWKS (public keys, which verify RS*/ES*/PS* only)"
-        };
-        for declared in &self.algorithms {
-            let name = declared.trim();
-            if name.eq_ignore_ascii_case("none") {
-                return Err(AuthConfigError::AlgorithmNoneRejected(name.to_owned()));
-            }
-            // The JOSE `HS*` family, matched without slicing: a byte range into a
-            // `str` panics on a UTF-8 boundary, and an operator's typo is
-            // arbitrary text.
-            let mut chars = name.chars();
-            let is_symmetric = matches!(
-                (chars.next(), chars.next()),
-                (Some('H' | 'h'), Some('S' | 's'))
-            );
-            if is_symmetric != symmetric_key {
-                return Err(AuthConfigError::AlgorithmKeySourceMismatch {
-                    algorithm: name.to_owned(),
-                    key_source: source,
-                });
-            }
-        }
-        Ok(())
-    }
-
-    /// Judges [`Self::issuer`] against the issuer-identifier rules of RFC 8414
-    /// §2 and OpenID Connect Core 1.0 §1.2.
-    ///
-    /// The `userinfo` check runs before every rule whose refusal quotes the
-    /// issuer, and the parse refusal quotes it masked, so no refusal prints a
-    /// credential.
-    fn validate_issuer(&self) -> Result<(), AuthConfigError> {
-        let issuer = self.issuer.trim();
-        if issuer.is_empty() {
-            return Err(AuthConfigError::IssuerMissing);
-        }
-        let url = Url::parse(issuer).map_err(|e| AuthConfigError::IssuerNotAUrl {
-            issuer: redact_userinfo(issuer),
-            reason: e.to_string(),
+/// Refuses a JWK Set holding a symmetric key or private key material, never
+/// quoting the input.
+fn check_jwks(text: &str) -> Result<(), AuthConfigError> {
+    let set: JwkSetShape =
+        serde_json::from_str(text).map_err(|e| AuthConfigError::JwksUnparsable {
+            category: e.classify(),
+            line: e.line(),
+            column: e.column(),
         })?;
-        if !url.username().is_empty() || url.password().is_some() {
-            return Err(AuthConfigError::IssuerHasUserinfo(redact_userinfo(issuer)));
+    for (index, key) in set.keys.into_iter().enumerate() {
+        if key.kty == "oct" {
+            return Err(AuthConfigError::JwksSymmetricKey {
+                index,
+                kid: key.kid,
+            });
         }
-        if url.query().is_some() {
-            return Err(AuthConfigError::IssuerHasQuery(issuer.to_owned()));
+        if let Some(member) = key.private_member() {
+            return Err(AuthConfigError::JwksPrivateKeyMaterial {
+                index,
+                kid: key.kid,
+                member,
+            });
         }
-        if url.fragment().is_some() {
-            return Err(AuthConfigError::IssuerHasFragment(issuer.to_owned()));
-        }
-        if url.scheme() != "https" && !self.allow_insecure_issuer {
-            return Err(AuthConfigError::IssuerNotHttps(issuer.to_owned()));
-        }
-        Ok(())
     }
+    Ok(())
+}
+
+/// Holds a Basic user's PHC string to Argon2id at the OWASP floor.
+///
+/// The verifier reads its cost parameters from the stored string, so a
+/// cheaper hash would verify; the crate checks the algorithm, and the floor
+/// is FerroEHR's.
+fn check_password_hash(username: &str, phc: &str) -> Result<(), AuthConfigError> {
+    let hash = PasswordHash::new(phc).map_err(|e| AuthConfigError::PasswordHashUnparsable {
+        username: username.to_owned(),
+        reason: e.to_string(),
+    })?;
+    if !matches!(
+        Algorithm::try_from(hash.algorithm.as_str()),
+        Ok(Algorithm::Argon2id)
+    ) {
+        return Err(AuthConfigError::PasswordHashNotArgon2id {
+            username: username.to_owned(),
+            algorithm: hash.algorithm.as_str().to_owned(),
+        });
+    }
+    let params = Params::try_from(&hash).map_err(|e| AuthConfigError::PasswordHashUnparsable {
+        username: username.to_owned(),
+        reason: e.to_string(),
+    })?;
+    if params.m_cost() < MIN_ARGON2_M_COST
+        || params.t_cost() < MIN_ARGON2_T_COST
+        || params.p_cost() < MIN_ARGON2_P_COST
+    {
+        return Err(AuthConfigError::PasswordHashTooWeak {
+            username: username.to_owned(),
+            m: params.m_cost(),
+            t: params.t_cost(),
+            p: params.p_cost(),
+            min_m: MIN_ARGON2_M_COST,
+            min_t: MIN_ARGON2_T_COST,
+            min_p: MIN_ARGON2_P_COST,
+        });
+    }
+    Ok(())
 }
 
 /// An electronic-identification level of assurance.
@@ -845,7 +564,7 @@ impl AssuranceLevel {
 }
 
 /// The authentication assurance level a bearer token carries, and the floor a
-/// patient-data request must meet (`[auth.oidc.assurance]`).
+/// patient-data request must meet (`[authz.assurance]`).
 ///
 /// Off by default: with no `minimum` nothing is refused, and with an empty
 /// `levels` map no level is recorded. EHDS Annex II 3.1 asks an EHR system
@@ -895,7 +614,10 @@ impl AssuranceConfig {
     }
 
     /// Validates the table at boot.
-    fn validate(&self) -> Result<(), AuthConfigError> {
+    ///
+    /// # Errors
+    /// The [`AuthConfigError`] naming the first rule the table breaks.
+    pub fn validate(&self) -> Result<(), AuthConfigError> {
         if self.minimum.is_none() && self.levels.is_empty() {
             return Ok(());
         }
@@ -927,7 +649,7 @@ impl AssuranceConfig {
 }
 
 /// How a client-credentials token is told apart from a token that names a
-/// natural person (`auth.oidc.professional.client_tokens`).
+/// natural person (`authz.professional.client_tokens`).
 ///
 /// A token that lacks [`ProfessionalConfig::claim`] names no natural person
 /// under either rule.
@@ -944,7 +666,7 @@ pub enum ClientTokenRule {
 }
 
 /// How a bearer token names the natural person behind it
-/// (`[auth.oidc.professional]`).
+/// (`[authz.professional]`).
 ///
 /// Present, a patient-data request whose token names no natural person is
 /// refused, unless the token is a client token acting for a professional named
@@ -979,7 +701,10 @@ impl Default for ProfessionalConfig {
 
 impl ProfessionalConfig {
     /// Validates the table at boot.
-    fn validate(&self) -> Result<(), AuthConfigError> {
+    ///
+    /// # Errors
+    /// The [`AuthConfigError`] naming the first rule the table breaks.
+    pub fn validate(&self) -> Result<(), AuthConfigError> {
         if self.claim.trim().is_empty() {
             return Err(AuthConfigError::ProfessionalClaimBlank);
         }
@@ -996,71 +721,70 @@ impl ProfessionalConfig {
 
 #[cfg(test)]
 mod tests {
+    use ferrohealth_smart::config::{BasicSection, BasicUser};
+    use secrecy::SecretString;
+
     use super::*;
 
-    /// A 32-byte high-entropy secret — exactly at the RFC 8725 §3.5 floor.
-    const GOOD_SECRET: &str = "0123456789abcdef0123456789abcdef";
-
-    /// An `[auth.oidc]` table that satisfies every boot rule.
-    fn valid_oidc() -> OidcConfig {
-        OidcConfig {
-            issuer: "https://idp.example/realms/ferroehr".to_owned(),
-            audiences: vec!["ferroehr".to_owned()],
-            ..OidcConfig::default()
+    /// An `[auth]` section trusting `issuer` for the `ferroehr` audience.
+    fn section(issuer: &str) -> AuthSection {
+        AuthSection {
+            issuer: IssuerKey::Flat(issuer.to_owned()),
+            audience: vec!["ferroehr".to_owned()],
+            ..AuthSection::default()
         }
     }
 
-    /// A key belongs to ONE algorithm family, so accepting an algorithm the key
-    /// material cannot verify is the algorithm-confusion setup RFC 8725 §3.1 and
-    /// RFC 7515 §10.4 warn about: most famously an `RS256` deployment that also
-    /// accepts `HS256`, letting an attacker sign with the PUBLIC key as if it
-    /// were a shared secret.
-    #[test]
-    fn hs256_with_a_public_key_source_is_a_boot_error() {
-        // Discovery (no local key material) verifies public keys only.
-        let discovery = OidcConfig {
-            algorithms: vec!["HS256".to_owned()],
-            ..valid_oidc()
-        };
-        assert!(matches!(
-            discovery.validate(),
-            Err(AuthConfigError::AlgorithmKeySourceMismatch { .. })
-        ));
-
-        // And the mirror: a symmetric secret cannot verify RS256.
-        let symmetric = OidcConfig {
-            algorithms: vec!["RS256".to_owned()],
-            hmac_secret: Some(Secret::new(GOOD_SECRET.to_owned())),
-            ..valid_oidc()
-        };
-        assert!(matches!(
-            symmetric.validate(),
-            Err(AuthConfigError::AlgorithmKeySourceMismatch { .. })
-        ));
-
-        // The matching pairs both boot.
-        let hmac_ok = OidcConfig {
-            algorithms: vec!["HS256".to_owned()],
-            hmac_secret: Some(Secret::new(GOOD_SECRET.to_owned())),
-            ..valid_oidc()
-        };
-        assert!(hmac_ok.validate().is_ok());
-        assert!(valid_oidc().validate().is_ok(), "RS256 + discovery");
+    /// A section that satisfies every boot rule.
+    fn valid() -> AuthSection {
+        section("https://idp.example/realms/ferroehr")
     }
 
-    /// RFC 7517 §4.1 / RFC 7518 §6.4: a symmetric key in the static JWKS is a
-    /// secret the public-key source can never use, so boot refuses it before
-    /// any rendering could print it.
+    /// Parses an `[auth]` table body.
+    fn parse(body: &str) -> Result<AuthSection, toml::de::Error> {
+        toml::from_str(body)
+    }
+
+    /// RFC 8725 §3.1, §3.2 and RFC 9068 §4: the resource server accepts
+    /// asymmetric algorithms only, so an `HS*` algorithm, which an HMAC secret
+    /// would have verified, is refused at boot whatever the key source.
     #[test]
-    fn a_symmetric_key_in_jwks_json_is_refused_at_boot() {
+    fn a_symmetric_algorithm_is_a_boot_error() {
+        let cfg = parse(
+            "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nalgorithms = [\"HS256\"]\n",
+        )
+        .expect("HS256 is a JOSE algorithm name");
+        assert!(matches!(
+            validate(&cfg),
+            Err(AuthConfigError::Section { .. })
+        ));
+        assert!(validate(&valid()).is_ok(), "the asymmetric default boots");
+    }
+
+    /// The HMAC key source is gone with the move to the shared crate: an
+    /// `hmac_secret` is an unknown key, refused like any typo.
+    #[test]
+    fn an_hmac_secret_is_refused_as_an_unknown_key() {
+        for body in [
+            "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nhmac_secret = \"0123456789abcdef0123456789abcdef\"\n",
+            "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nhmac_secret_file = \"/run/secrets/hmac\"\n",
+            "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\njwks_json = \"{}\"\n",
+        ] {
+            let err = parse(body).expect_err("an unknown key must be refused");
+            assert!(err.to_string().contains("unknown field"), "{err}");
+        }
+    }
+
+    /// RFC 7517 §4.1 / RFC 7518 §6.4: a symmetric key in the handed-over key
+    /// set is a secret the resource server can never use, so boot refuses it
+    /// before any rendering could print it.
+    #[test]
+    fn a_symmetric_key_in_the_jwks_file_is_refused_at_boot() {
         let secret_k = "c3VwZXItc2VjcmV0LXN5bW1ldHJpYy1rZXktbWF0ZXJpYWw";
-        let cfg = OidcConfig {
-            jwks_json: Some(format!(
-                r#"{{"keys":[{{"kty":"oct","kid":"shared","k":"{secret_k}"}}]}}"#
-            )),
-            ..valid_oidc()
-        };
-        let err = cfg.validate().expect_err("an oct key must be refused");
+        let err = check_jwks(&format!(
+            r#"{{"keys":[{{"kty":"oct","kid":"shared","k":"{secret_k}"}}]}}"#
+        ))
+        .expect_err("an oct key must be refused");
         assert!(matches!(
             err,
             AuthConfigError::JwksSymmetricKey { index: 0, .. }
@@ -1070,30 +794,33 @@ mod tests {
             "the refusal must not quote the key"
         );
 
-        let auth = AuthConfig {
-            oidc: Some(cfg),
-            ..AuthConfig::default()
-        };
+        let dir = std::env::temp_dir().join(format!("ferroehr-jwks-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("oct.json");
+        std::fs::write(
+            &path,
+            format!(r#"{{"keys":[{{"kty":"oct","kid":"shared","k":"{secret_k}"}}]}}"#),
+        )
+        .expect("write");
+        let mut cfg = valid();
+        cfg.jwks_file = path.display().to_string();
         assert!(
-            auth.validate().is_err(),
+            matches!(
+                validate(&cfg),
+                Err(AuthConfigError::JwksSymmetricKey { .. })
+            ),
             "the [auth] section refuses it too"
         );
     }
 
     /// RFC 7518 §6.3.2: a private RSA member makes the key a private key, which
-    /// a verifier never needs; a public key set boots.
+    /// a verifier never needs; a public key set passes.
     #[test]
-    fn private_key_material_in_jwks_json_is_refused_and_public_keys_boot() {
-        let private = OidcConfig {
-            jwks_json: Some(
-                r#"{"keys":[{"kty":"RSA","kid":"k1","n":"AQAB","e":"AQAB","d":"cHJpdmF0ZQ"}]}"#
-                    .to_owned(),
-            ),
-            ..valid_oidc()
-        };
-        let err = private
-            .validate()
-            .expect_err("a private member must be refused");
+    fn private_key_material_in_the_jwks_file_is_refused_and_public_keys_pass() {
+        let err = check_jwks(
+            r#"{"keys":[{"kty":"RSA","kid":"k1","n":"AQAB","e":"AQAB","d":"cHJpdmF0ZQ"}]}"#,
+        )
+        .expect_err("a private member must be refused");
         assert!(matches!(
             err,
             AuthConfigError::JwksPrivateKeyMaterial { member: "d", .. }
@@ -1102,29 +829,14 @@ mod tests {
             !err.to_string().contains("cHJpdmF0ZQ"),
             "the refusal must not quote the private member"
         );
-
-        let public = OidcConfig {
-            jwks_json: Some(
-                r#"{"keys":[{"kty":"RSA","kid":"k1","n":"AQAB","e":"AQAB"}]}"#.to_owned(),
-            ),
-            ..valid_oidc()
-        };
-        assert!(public.validate().is_ok());
-
-        let garbage = OidcConfig {
-            jwks_json: Some("not json".to_owned()),
-            ..valid_oidc()
-        };
+        assert!(check_jwks(r#"{"keys":[{"kty":"RSA","kid":"k1","n":"AQAB","e":"AQAB"}]}"#).is_ok());
         assert!(matches!(
-            garbage.validate(),
+            check_jwks("not json"),
             Err(AuthConfigError::JwksUnparsable { .. })
         ));
         // A parse failure never quotes the value it choked on.
-        let wrong_shape = OidcConfig {
-            jwks_json: Some(r#"{"keys":"c2VjcmV0LWtleS1tYXRlcmlhbA"}"#.to_owned()),
-            ..valid_oidc()
-        };
-        let err = wrong_shape.validate().expect_err("not a JWK Set");
+        let err =
+            check_jwks(r#"{"keys":"c2VjcmV0LWtleS1tYXRlcmlhbA"}"#).expect_err("not a JWK Set");
         assert!(
             !err.to_string().contains("c2VjcmV0"),
             "the refusal must not quote the input"
@@ -1132,234 +844,136 @@ mod tests {
     }
 
     /// RFC 8725 §3.2 / RFC 9068 §4 step 5: an unsigned token proves nothing, and
-    /// `alg: none` is the canonical JWT forgery. The refusal was implicit in the
-    /// crate's algorithm parser; it is now a boot error naming the key.
+    /// `alg: none` is the canonical JWT forgery, so no spelling of it parses as
+    /// an accepted algorithm.
     #[test]
     fn algorithm_none_is_unconfigurable() {
         for spelling in ["none", "None", "NONE"] {
-            let cfg = OidcConfig {
-                algorithms: vec![spelling.to_owned()],
-                ..valid_oidc()
-            };
+            let body = format!(
+                "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nalgorithms = [\"{spelling}\"]\n"
+            );
             assert!(
-                matches!(
-                    cfg.validate(),
-                    Err(AuthConfigError::AlgorithmNoneRejected(_))
-                ),
-                "`{spelling}` must be refused at boot",
+                parse(&body).is_err(),
+                "`{spelling}` must be refused at boot"
             );
         }
     }
 
-    /// An Argon2id PHC string at the OWASP floor, with the given costs.
+    /// An Argon2id PHC string with the given costs.
     fn phc(m: u32, t: u32, p: u32) -> String {
         format!("$argon2id$v=19$m={m},t={t},p={p}$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYQ")
     }
 
-    fn basic(hash: String) -> BasicConfig {
-        BasicConfig {
-            users: vec![BasicUser {
-                username: "clinician".to_owned(),
-                password_hash: Secret::new(hash),
-                ..BasicUser::default()
-            }],
+    /// A Basic-only section with one user holding `hash`.
+    fn basic(hash: &str) -> AuthSection {
+        AuthSection {
+            basic: Some(BasicSection {
+                users: vec![BasicUser {
+                    user: "clinician".to_owned(),
+                    password_hash: Some(SecretString::from(hash.to_owned())),
+                    password_hash_file: None,
+                    scopes: vec!["user/composition-*.cruds".to_owned()],
+                }],
+            }),
+            ..AuthSection::default()
         }
     }
 
-    /// The one `impl Default` is the single source of every default: serde's
-    /// container-level `default` fills each omitted field from it, so a
-    /// partially-specified entry keeps the baseline `["USER"]` role, and the two
-    /// mandatory fields are enforced by boot validation instead.
+    /// A Basic entry with no user-id, or with no hash, is refused at boot
+    /// rather than passing as a usable credential.
     #[test]
-    fn a_partial_basic_user_falls_back_to_the_default_impl() {
-        let user: BasicUser = toml::from_str(
-            "username = \"alice\"\npassword_hash = \"$argon2id$v=19$m=19456,t=2,p=1$c2FsdA$aA\"\n",
-        )
-        .expect("partial user table");
-        assert_eq!(user.roles, vec!["USER".to_owned()]);
-
-        let cfg = AuthConfig {
-            basic: Some(BasicConfig {
-                users: vec![BasicUser::default()],
-            }),
-            ..AuthConfig::default()
-        };
-        assert_eq!(
-            cfg.validate(),
-            Err(AuthConfigError::BasicUserWithoutUsername),
-            "an entry with no username must not pass as a usable credential"
-        );
-
-        let cfg = AuthConfig {
-            basic: Some(BasicConfig {
-                users: vec![BasicUser {
-                    username: "alice".to_owned(),
-                    ..BasicUser::default()
-                }],
-            }),
-            ..AuthConfig::default()
-        };
+    fn a_partial_basic_user_is_a_boot_error() {
+        let floor = phc(MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, MIN_ARGON2_P_COST);
+        let mut no_user = basic(&floor);
+        if let Some(section) = no_user.basic.as_mut() {
+            section.users.iter_mut().for_each(|user| user.user.clear());
+        }
+        assert!(matches!(
+            validate(&no_user),
+            Err(AuthConfigError::Section { .. })
+        ));
+        let mut no_hash = basic(&floor);
+        if let Some(section) = no_hash.basic.as_mut() {
+            section
+                .users
+                .iter_mut()
+                .for_each(|user| user.password_hash = None);
+        }
+        assert!(matches!(
+            validate(&no_hash),
+            Err(AuthConfigError::Section { .. })
+        ));
         assert!(
-            matches!(
-                cfg.validate(),
-                Err(AuthConfigError::PasswordHashUnparsable { .. })
-            ),
-            "an entry with no password hash must not pass either"
+            validate(&basic(&floor)).is_ok(),
+            "a Basic-only section boots"
         );
     }
 
     #[test]
-    fn a_valid_oidc_table_boots() {
-        let cfg = AuthConfig {
-            oidc: Some(valid_oidc()),
-            ..AuthConfig::default()
-        };
-        assert_eq!(cfg.validate(), Ok(()));
-        assert_eq!(cfg.require_mechanism(), Ok(()));
+    fn a_valid_issuer_boots() {
+        assert!(validate(&valid()).is_ok());
+        assert!(require_mechanism(&valid()).is_ok());
+        assert_eq!(advertised_mechanisms(&valid()), "Bearer");
     }
 
     /// RFC 7519 §4.1.3 + RFC 9068 §4 step 4: a resource server that declares no
-    /// audience cannot reject a token minted for a different one, so an
-    /// `[auth.oidc]` table without `audiences` is refused at boot.
+    /// audience cannot reject a token minted for a different one.
     #[test]
-    fn oidc_without_audiences_is_a_boot_error() {
-        for audiences in [vec![], vec![String::new()], vec!["  ".to_owned()]] {
-            let cfg = AuthConfig {
-                oidc: Some(OidcConfig {
-                    audiences,
-                    ..valid_oidc()
-                }),
-                ..AuthConfig::default()
-            };
-            assert_eq!(cfg.validate(), Err(AuthConfigError::AudiencesRequired));
+    fn an_issuer_without_an_audience_is_a_boot_error() {
+        for audience in [vec![], vec![String::new()]] {
+            let mut cfg = valid();
+            cfg.audience = audience;
+            assert!(matches!(
+                validate(&cfg),
+                Err(AuthConfigError::Section { .. })
+            ));
         }
     }
 
     /// RFC 9068 §4 step 6: expiry leeway may be "no more than a few minutes".
     #[test]
-    fn leeway_above_the_cap_is_a_boot_error() {
-        let cfg = AuthConfig {
-            oidc: Some(OidcConfig {
-                clock_skew_leeway_seconds: MAX_CLOCK_SKEW_LEEWAY_SECONDS + 1,
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
-        };
-        assert_eq!(
-            cfg.validate(),
-            Err(AuthConfigError::LeewayTooLarge(
-                MAX_CLOCK_SKEW_LEEWAY_SECONDS + 1,
-                MAX_CLOCK_SKEW_LEEWAY_SECONDS
-            ))
-        );
-
-        // The cap itself is accepted, as is the default.
-        let cfg = AuthConfig {
-            oidc: Some(OidcConfig {
-                clock_skew_leeway_seconds: MAX_CLOCK_SKEW_LEEWAY_SECONDS,
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
-        };
-        assert_eq!(cfg.validate(), Ok(()));
-        assert_eq!(OidcConfig::default().clock_skew_leeway_seconds, 60);
+    fn a_clock_skew_above_the_cap_is_a_boot_error() {
+        let mut cfg = valid();
+        cfg.clock_skew_seconds = 301;
+        assert!(matches!(
+            validate(&cfg),
+            Err(AuthConfigError::Section { .. })
+        ));
+        cfg.clock_skew_seconds = 300;
+        assert!(validate(&cfg).is_ok(), "the cap itself is accepted");
+        assert_eq!(AuthSection::default().clock_skew_seconds, 60);
     }
 
-    /// RFC 8725 §3.5: a human-memorizable password must not be a keyed-MAC key.
+    /// RFC 8414 §2 + §6.2: the issuer identifier is an `https` URL. Plain HTTP
+    /// is accepted on a loopback host alone, the crate's rule, which replaces
+    /// the former `allow_insecure_issuer` switch.
     #[test]
-    fn short_hmac_secret_is_a_boot_error() {
-        let cfg = AuthConfig {
-            oidc: Some(OidcConfig {
-                hmac_secret: Some(Secret::new("correct horse battery")),
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
-        };
-        assert_eq!(
-            cfg.validate(),
-            Err(AuthConfigError::HmacSecretTooShort(
-                21,
-                MIN_HMAC_SECRET_BYTES
-            ))
-        );
-
-        let cfg = AuthConfig {
-            oidc: Some(OidcConfig {
-                hmac_secret: Some(Secret::new(GOOD_SECRET)),
-                // A symmetric key verifies `HS*` only, and the algorithm set is
-                // boot-bound to its key source.
-                algorithms: vec!["HS256".to_owned()],
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
-        };
-        assert_eq!(cfg.validate(), Ok(()));
-        assert!(
-            cfg.oidc
-                .as_ref()
-                .is_some_and(OidcConfig::uses_symmetric_key)
-        );
-    }
-
-    /// RFC 8414 §2 + §6.2: the issuer identifier is an `https` URL, so a
-    /// plain-HTTP issuer is refused unless explicitly opted into for dev/test.
-    #[test]
-    fn http_issuer_is_a_boot_error() {
-        let cfg = AuthConfig {
-            oidc: Some(OidcConfig {
-                issuer: "http://keycloak:8081/auth/realms/ferroehr".to_owned(),
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
-        };
-        assert_eq!(
-            cfg.validate(),
-            Err(AuthConfigError::IssuerNotHttps(
-                "http://keycloak:8081/auth/realms/ferroehr".to_owned()
-            ))
-        );
-
-        let cfg = AuthConfig {
-            oidc: Some(OidcConfig {
-                issuer: "http://keycloak:8081/auth/realms/ferroehr".to_owned(),
-                allow_insecure_issuer: true,
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
-        };
-        assert_eq!(cfg.validate(), Ok(()));
+    fn a_non_loopback_http_issuer_is_a_boot_error() {
+        let cfg = section("http://keycloak:8081/auth/realms/ferroehr");
+        assert!(matches!(
+            validate(&cfg),
+            Err(AuthConfigError::Section { .. })
+        ));
+        assert!(validate(&section("http://localhost:8081/auth/realms/ferroehr")).is_ok());
+        assert!(validate(&section("http://127.0.0.1:8081/realms/ferroehr")).is_ok());
     }
 
     /// RFC 8414 §2: the issuer identifier "has no query or fragment
-    /// components" — a structural rule `allow_insecure_issuer` does not relax.
+    /// components".
     #[test]
-    fn issuer_with_query_is_a_boot_error() {
-        let with_query = "https://idp.example/realms/ferroehr?tenant=a";
-        let cfg = AuthConfig {
-            oidc: Some(OidcConfig {
-                issuer: with_query.to_owned(),
-                allow_insecure_issuer: true,
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
-        };
-        assert_eq!(
-            cfg.validate(),
-            Err(AuthConfigError::IssuerHasQuery(with_query.to_owned()))
-        );
-
-        let with_fragment = "https://idp.example/realms/ferroehr#frag";
-        let cfg = AuthConfig {
-            oidc: Some(OidcConfig {
-                issuer: with_fragment.to_owned(),
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
-        };
-        assert_eq!(
-            cfg.validate(),
-            Err(AuthConfigError::IssuerHasFragment(with_fragment.to_owned()))
-        );
+    fn an_issuer_with_a_query_or_a_fragment_is_a_boot_error() {
+        for issuer in [
+            "https://idp.example/realms/ferroehr?tenant=a",
+            "https://idp.example/realms/ferroehr#frag",
+        ] {
+            assert!(
+                matches!(
+                    validate(&section(issuer)),
+                    Err(AuthConfigError::Section { .. })
+                ),
+                "{issuer}"
+            );
+        }
     }
 
     /// OpenID Connect Core 1.0 §1.2: an issuer identifier "contains scheme,
@@ -1370,61 +984,32 @@ mod tests {
         for issuer in [
             "https://idp:hunter2@idp.example/realms/ferroehr",
             "https://idp@idp.example/realms/ferroehr",
+            "https://idp:hunter2@idp.example/r?tenant=a",
         ] {
-            let cfg = AuthConfig {
-                oidc: Some(OidcConfig {
-                    issuer: issuer.to_owned(),
-                    ..valid_oidc()
-                }),
-                ..AuthConfig::default()
-            };
-            let err = cfg
-                .validate()
-                .expect_err("userinfo in an issuer is refused");
-            assert_eq!(
-                err,
-                AuthConfigError::IssuerHasUserinfo(
-                    "https://***@idp.example/realms/ferroehr".to_owned()
-                )
+            let err = validate(&section(issuer)).expect_err("userinfo in an issuer is refused");
+            assert!(
+                matches!(err, AuthConfigError::IssuerHasUserinfo(_)),
+                "{err}"
             );
             let shown = err.to_string();
             assert!(!shown.contains("hunter2"), "{shown}");
             assert!(!shown.contains("idp@"), "{shown}");
         }
-        // The userinfo rule fires before the query rule, whose refusal quotes
-        // the issuer.
-        let cfg = AuthConfig {
-            oidc: Some(OidcConfig {
-                issuer: "https://idp:hunter2@idp.example/r?tenant=a".to_owned(),
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
-        };
-        let shown = cfg.validate().expect_err("refused").to_string();
-        assert!(!shown.contains("hunter2"), "{shown}");
     }
 
+    /// A blank issuer names no issuer, so an enabled section without a Basic
+    /// user has no mechanism; text that is no URL is refused.
     #[test]
     fn blank_and_unparsable_issuers_are_boot_errors() {
-        let cfg = AuthConfig {
-            oidc: Some(OidcConfig {
-                issuer: "   ".to_owned(),
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
-        };
-        assert_eq!(cfg.validate(), Err(AuthConfigError::IssuerMissing));
-
-        let cfg = AuthConfig {
-            oidc: Some(OidcConfig {
-                issuer: "idp.example".to_owned(),
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
-        };
+        let blank = section("   ");
+        assert!(!has_bearer(&blank));
         assert!(matches!(
-            cfg.validate(),
-            Err(AuthConfigError::IssuerNotAUrl { ref issuer, .. }) if issuer == "idp.example"
+            require_mechanism(&blank),
+            Err(AuthConfigError::NoMechanism)
+        ));
+        assert!(matches!(
+            validate(&section("idp.example")),
+            Err(AuthConfigError::Section { .. })
         ));
     }
 
@@ -1434,63 +1019,41 @@ mod tests {
     #[test]
     fn weak_argon2_params_are_a_boot_error() {
         for (m, t, p) in [(4_096, 2, 1), (16 * 1024, 2, 1), (MIN_ARGON2_M_COST, 1, 1)] {
-            let cfg = AuthConfig {
-                basic: Some(basic(phc(m, t, p))),
-                ..AuthConfig::default()
-            };
             assert!(
                 matches!(
-                    cfg.validate(),
+                    validate(&basic(&phc(m, t, p))),
                     Err(AuthConfigError::PasswordHashTooWeak { .. })
                 ),
                 "m={m},t={t},p={p} is below the OWASP floor and must be refused"
             );
         }
-
         // `p=0` is not even a representable Argon2 parameter set, so it is
         // refused one step earlier, by the PHC parse itself.
-        let cfg = AuthConfig {
-            basic: Some(basic(phc(MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, 0))),
-            ..AuthConfig::default()
-        };
         assert!(matches!(
-            cfg.validate(),
+            validate(&basic(&phc(MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, 0))),
             Err(AuthConfigError::PasswordHashUnparsable { .. })
         ));
-
-        // At the floor, and above it, the store boots.
         for (m, t, p) in [
             (MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, MIN_ARGON2_P_COST),
             (65_536, 3, 4),
         ] {
-            let cfg = AuthConfig {
-                basic: Some(basic(phc(m, t, p))),
-                ..AuthConfig::default()
-            };
-            assert_eq!(cfg.validate(), Ok(()), "m={m},t={t},p={p} meets the floor");
+            assert!(
+                validate(&basic(&phc(m, t, p))).is_ok(),
+                "m={m},t={t},p={p} meets the floor"
+            );
         }
     }
 
     #[test]
     fn a_non_argon2id_password_hash_is_a_boot_error() {
-        let cfg = AuthConfig {
-            basic: Some(basic(
-                "$argon2i$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYQ"
-                    .to_owned(),
-            )),
-            ..AuthConfig::default()
-        };
         assert!(matches!(
-            cfg.validate(),
+            validate(&basic(
+                "$argon2i$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYQ"
+            )),
             Err(AuthConfigError::PasswordHashNotArgon2id { .. })
         ));
-
-        let cfg = AuthConfig {
-            basic: Some(basic("not-a-phc-string".to_owned())),
-            ..AuthConfig::default()
-        };
         assert!(matches!(
-            cfg.validate(),
+            validate(&basic("not-a-phc-string")),
             Err(AuthConfigError::PasswordHashUnparsable { .. })
         ));
     }
@@ -1499,45 +1062,64 @@ mod tests {
     /// target resource, so authentication with no mechanism cannot be honoured.
     #[test]
     fn auth_enabled_without_a_mechanism_is_a_boot_error() {
-        let cfg = AuthConfig::default();
-        assert!(cfg.enabled && !cfg.has_mechanism());
-        assert_eq!(cfg.require_mechanism(), Err(AuthConfigError::NoMechanism));
-
-        // Either mechanism satisfies it, and a disabled switch is exempt.
-        let with_basic = AuthConfig {
-            basic: Some(basic(phc(
-                MIN_ARGON2_M_COST,
-                MIN_ARGON2_T_COST,
-                MIN_ARGON2_P_COST,
-            ))),
-            ..AuthConfig::default()
-        };
-        assert_eq!(with_basic.require_mechanism(), Ok(()));
-        let disabled = AuthConfig {
+        let cfg = AuthSection::default();
+        assert!(cfg.enabled && !has_bearer(&cfg) && !has_basic(&cfg));
+        assert!(matches!(
+            require_mechanism(&cfg),
+            Err(AuthConfigError::NoMechanism)
+        ));
+        let floor = phc(MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, MIN_ARGON2_P_COST);
+        assert!(require_mechanism(&basic(&floor)).is_ok());
+        let disabled = AuthSection {
             enabled: false,
-            ..AuthConfig::default()
+            ..AuthSection::default()
         };
-        assert_eq!(disabled.require_mechanism(), Ok(()));
+        assert!(require_mechanism(&disabled).is_ok());
     }
 
-    /// An `[auth.oidc]` table whose assurance block maps the given values.
+    /// The crate's scopeless allowlist admits a token on SMART on FHIR routes
+    /// only, and FerroEHR's routes are SMART on openEHR, so a configured
+    /// allowlist would promise access no route grants: it is refused.
+    #[test]
+    fn a_scopeless_subject_allowlist_is_a_boot_error() {
+        let mut cfg = valid();
+        cfg.scopeless_subjects = vec!["svc".to_owned()];
+        assert!(matches!(
+            validate(&cfg),
+            Err(AuthConfigError::ScopelessSubjects)
+        ));
+    }
+
+    /// The realm and the product scope fall back to FerroEHR's when unset, and
+    /// a product scope outside the two SMART extension forms is refused.
+    #[test]
+    fn the_realm_and_the_product_scope_default_to_ferroehr_s() {
+        let cfg = valid();
+        assert_eq!(realm(&cfg), DEFAULT_REALM);
+        assert_eq!(product_scope(&cfg), DEFAULT_PRODUCT_SCOPE);
+        let mut named = valid();
+        named.product_scope = "ferroehr/admin".to_owned();
+        assert!(matches!(
+            validate(&named),
+            Err(AuthConfigError::Section { .. })
+        ));
+        named.product_scope = "__ferroehr.ops".to_owned();
+        assert!(validate(&named).is_ok());
+        assert_eq!(product_scope(&named), "__ferroehr.ops");
+    }
+
+    /// An assurance block mapping the given values.
     fn with_assurance(
         levels: &[(&str, AssuranceLevel)],
         minimum: Option<AssuranceLevel>,
-    ) -> AuthConfig {
-        AuthConfig {
-            oidc: Some(OidcConfig {
-                assurance: AssuranceConfig {
-                    levels: levels
-                        .iter()
-                        .map(|(value, level)| ((*value).to_owned(), *level))
-                        .collect(),
-                    minimum,
-                    ..AssuranceConfig::default()
-                },
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
+    ) -> AssuranceConfig {
+        AssuranceConfig {
+            levels: levels
+                .iter()
+                .map(|(value, level)| ((*value).to_owned(), *level))
+                .collect(),
+            minimum,
+            ..AssuranceConfig::default()
         }
     }
 
@@ -1549,34 +1131,30 @@ mod tests {
         assert!(assurance.levels.is_empty());
         assert_eq!(assurance.minimum, None);
         assert!(assurance.accepted_values().is_empty());
-        assert_eq!(with_assurance(&[], None).validate(), Ok(()));
+        assert!(with_assurance(&[], None).validate().is_ok());
     }
 
     /// A minimum with no mapped value would refuse every patient-data request,
     /// so it is refused at boot instead.
     #[test]
     fn a_minimum_without_levels_is_a_boot_error() {
-        assert_eq!(
+        assert!(matches!(
             with_assurance(&[], Some(AssuranceLevel::Substantial)).validate(),
-            Err(AuthConfigError::AssuranceMinimumWithoutLevels(
-                "substantial".to_owned()
-            ))
-        );
+            Err(AuthConfigError::AssuranceMinimumWithoutLevels(level)) if level == "substantial"
+        ));
     }
 
     /// A minimum no mapped value reaches is the same dead configuration.
     #[test]
     fn a_minimum_no_value_reaches_is_a_boot_error() {
-        assert_eq!(
+        assert!(matches!(
             with_assurance(
                 &[("urn:loa:low", AssuranceLevel::Low)],
                 Some(AssuranceLevel::High)
             )
             .validate(),
-            Err(AuthConfigError::AssuranceMinimumUnreachable(
-                "high".to_owned()
-            ))
-        );
+            Err(AuthConfigError::AssuranceMinimumUnreachable(level)) if level == "high"
+        ));
     }
 
     /// RFC 9470 §3 names the accepted values in one space-separated quoted
@@ -1584,10 +1162,12 @@ mod tests {
     #[test]
     fn an_unquotable_level_value_is_a_boot_error() {
         for bad in ["", "two words", "quo\"te", "back\\slash"] {
-            assert_eq!(
-                with_assurance(&[(bad, AssuranceLevel::High)], Some(AssuranceLevel::High))
-                    .validate(),
-                Err(AuthConfigError::AssuranceValueUnquotable(bad.to_owned())),
+            assert!(
+                matches!(
+                    with_assurance(&[(bad, AssuranceLevel::High)], Some(AssuranceLevel::High))
+                        .validate(),
+                    Err(AuthConfigError::AssuranceValueUnquotable(value)) if value == bad
+                ),
                 "{bad:?}"
             );
         }
@@ -1597,10 +1177,11 @@ mod tests {
     #[test]
     fn a_blank_assurance_claim_is_a_boot_error() {
         let mut cfg = with_assurance(&[("x", AssuranceLevel::High)], None);
-        if let Some(oidc) = cfg.oidc.as_mut() {
-            oidc.assurance.claim = " ".to_owned();
-        }
-        assert_eq!(cfg.validate(), Err(AuthConfigError::AssuranceClaimBlank));
+        cfg.claim = " ".to_owned();
+        assert!(matches!(
+            cfg.validate(),
+            Err(AuthConfigError::AssuranceClaimBlank)
+        ));
     }
 
     /// The accepted values are those at or above the minimum, in map order.
@@ -1614,12 +1195,8 @@ mod tests {
             ],
             Some(AssuranceLevel::Substantial),
         );
-        assert_eq!(cfg.validate(), Ok(()));
-        let oidc = cfg.oidc.expect("oidc");
-        assert_eq!(
-            oidc.assurance.accepted_values(),
-            vec!["loa-high", "loa-substantial"]
-        );
+        assert!(cfg.validate().is_ok());
+        assert_eq!(cfg.accepted_values(), vec!["loa-high", "loa-substantial"]);
         assert!(AssuranceLevel::High > AssuranceLevel::Substantial);
         assert!(AssuranceLevel::Substantial > AssuranceLevel::Low);
     }
@@ -1627,26 +1204,20 @@ mod tests {
     /// The professional block refuses blank claim names at boot.
     #[test]
     fn blank_professional_claims_are_boot_errors() {
-        let professional = |claim: &str, acting_for: Option<&str>| AuthConfig {
-            oidc: Some(OidcConfig {
-                professional: Some(ProfessionalConfig {
-                    claim: claim.to_owned(),
-                    acting_for_claim: acting_for.map(str::to_owned),
-                    ..ProfessionalConfig::default()
-                }),
-                ..valid_oidc()
-            }),
-            ..AuthConfig::default()
+        let professional = |claim: &str, acting_for: Option<&str>| ProfessionalConfig {
+            claim: claim.to_owned(),
+            acting_for_claim: acting_for.map(str::to_owned),
+            ..ProfessionalConfig::default()
         };
-        assert_eq!(
+        assert!(matches!(
             professional("", None).validate(),
             Err(AuthConfigError::ProfessionalClaimBlank)
-        );
-        assert_eq!(
+        ));
+        assert!(matches!(
             professional("sub", Some(" ")).validate(),
             Err(AuthConfigError::ActingForClaimBlank)
-        );
-        assert_eq!(professional("sub", Some("act.sub")).validate(), Ok(()));
+        ));
+        assert!(professional("sub", Some("act.sub")).validate().is_ok());
         assert_eq!(
             ProfessionalConfig::default().client_tokens,
             ClientTokenRule::SubIsClient
@@ -1656,25 +1227,25 @@ mod tests {
     /// Both blocks deserialize from TOML in the documented spelling.
     #[test]
     fn the_blocks_deserialize_from_toml() {
-        let oidc: OidcConfig = toml::from_str(
+        let assurance: AssuranceConfig = toml::from_str(
             r#"
-            issuer = "https://idp.example"
-            audiences = ["ferroehr"]
-            [assurance]
             minimum = "substantial"
-            [assurance.levels]
+            [levels]
             "http://eidas.europa.eu/LoA/substantial" = "substantial"
             "http://eidas.europa.eu/LoA/high" = "high"
-            [professional]
+            "#,
+        )
+        .expect("parses");
+        assert_eq!(assurance.minimum, Some(AssuranceLevel::Substantial));
+        assert_eq!(assurance.levels.len(), 2);
+        let professional: ProfessionalConfig = toml::from_str(
+            r#"
             claim = "professional_id"
             client_tokens = "claim_absent"
             acting_for_claim = "act.sub"
             "#,
         )
         .expect("parses");
-        assert_eq!(oidc.assurance.minimum, Some(AssuranceLevel::Substantial));
-        assert_eq!(oidc.assurance.levels.len(), 2);
-        let professional = oidc.professional.expect("professional");
         assert_eq!(professional.client_tokens, ClientTokenRule::ClaimAbsent);
         assert_eq!(professional.acting_for_claim.as_deref(), Some("act.sub"));
     }

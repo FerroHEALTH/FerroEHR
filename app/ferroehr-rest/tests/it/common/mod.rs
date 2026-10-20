@@ -25,13 +25,13 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::auth::{AuthConfig, OidcConfig};
 use ferroehr::config::server::{AdminConfig, ServerConfig};
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
 use ferroehr_rest::extensions::access::authz::{AuthzResolvers, ResolveError};
 use ferroehr_rest::state::AppState;
+use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser, IssuerKey};
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
@@ -69,8 +69,10 @@ pub(crate) async fn test_service() -> (testkit::TestDb, Arc<FerroEhrService>) {
 /// The assembled router over a real service with the given configuration —
 /// the same wiring as [`ferroehr_rest::build_with`], split open so tests can
 /// hand-tune `AppConfig` (auth modes, admin/extension toggles).
-pub(crate) fn router_with(config: AppConfig, service: Arc<FerroEhrService>) -> Router {
-    let authenticator = Authenticator::new(config.auth.clone()).expect("test auth config is valid");
+pub(crate) async fn router_with(config: AppConfig, service: Arc<FerroEhrService>) -> Router {
+    let authenticator = Authenticator::new(&config)
+        .await
+        .expect("test auth config is valid");
     let state = AppState::with_backend(config, service);
     ferroehr_rest::router::router(state, authenticator)
 }
@@ -82,7 +84,7 @@ pub(crate) async fn test_router() -> (testkit::TestDb, Router) {
     let mut config = AppConfig::default();
     config.auth.enabled = false;
     let (db, service) = test_service().await;
-    (db, router_with(config, service))
+    (db, router_with(config, service).await)
 }
 
 /// The unauthenticated API configuration the wire suites drive: [`BASE`] as the
@@ -98,11 +100,9 @@ pub(crate) fn api_config(admin_enabled: bool) -> AppConfig {
             cors_permissive: false,
             ..Default::default()
         },
-        auth: AuthConfig {
+        auth: AuthSection {
             enabled: false,
-            basic: None,
-            oidc: None,
-            ..AuthConfig::default()
+            ..AuthSection::default()
         },
         admin: AdminConfig {
             enabled: admin_enabled,
@@ -111,33 +111,168 @@ pub(crate) fn api_config(admin_enabled: bool) -> AppConfig {
     }
 }
 
-/// Bearer-only authentication against an HS256 issuer — orders of magnitude
-/// cheaper than an Argon2 verification for suites that issue many requests.
-pub(crate) fn hs256_auth_config(issuer: &str, audience: &str, secret: &str) -> AuthConfig {
-    AuthConfig {
-        enabled: true,
-        basic: None,
-        oidc: Some(OidcConfig {
-            issuer: issuer.to_owned(),
-            audiences: vec![audience.to_owned()],
-            algorithms: vec!["HS256".to_owned()],
-            hmac_secret: Some(ferroehr::config::secret::Secret::new(secret.to_owned())),
-            jwks_json: None,
-            ..OidcConfig::default()
-        }),
-        ..AuthConfig::default()
+/// The scopes a test token or a test Basic user carries when the test is not
+/// about SMART: every SMART on openEHR family with every permission, and the
+/// product scope that admits the ADMIN and DEMOGRAPHIC APIs. Every route then
+/// passes the SMART layer, and the test exercises the layer it is about.
+pub(crate) const FULL_SCOPES: &str =
+    "user/composition-*.cruds user/template-*.cruds user/aql-*.cruds __ferroehr.platform";
+
+/// The `kid` of the committed CNF test key the fixtures sign with.
+const TEST_KID: &str = "cnf-smart-test";
+
+/// The committed CNF test issuer's public key set
+/// (`docs/conformance/party/smart/`), written once to a file the resource
+/// server reads.
+pub(crate) fn jwks_file() -> PathBuf {
+    static FILE: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    FILE.get_or_init(|| {
+        let path =
+            std::env::temp_dir().join(format!("ferroehr-rest-it-jwks-{}.json", std::process::id()));
+        std::fs::write(
+            &path,
+            include_str!("../../../../../docs/conformance/party/smart/jwks.json"),
+        )
+        .expect("write the test key set");
+        path
+    })
+    .clone()
+}
+
+/// Bearer authentication trusting `issuer` for `audience`, its key set read
+/// from the committed test key's file — no authorization server is reached.
+pub(crate) fn issuer_auth(issuer: &str, audience: &str) -> AuthSection {
+    AuthSection {
+        issuer: IssuerKey::Flat(issuer.to_owned()),
+        audience: vec![audience.to_owned()],
+        jwks_file: jwks_file().display().to_string(),
+        ..AuthSection::default()
     }
 }
 
-/// An `Authorization` field value carrying `claims` as an HS256 token signed
-/// with `secret`.
-pub(crate) fn hs256_bearer(secret: &str, claims: &Value) -> String {
-    let token = encode(
-        &Header::new(Algorithm::HS256),
-        claims,
-        &EncodingKey::from_secret(secret.as_bytes()),
-    )
-    .expect("encode");
+static METADATA_ISSUER: tokio::sync::OnceCell<String> = tokio::sync::OnceCell::const_new();
+
+/// The URI of an authorization server shared by the whole test binary: it
+/// serves RFC 8414 metadata naming a `token_endpoint` and the committed test
+/// key set, so a server that serves the SMART discovery document can boot
+/// against it. `wiremock` runs each server on a thread of its own, so the one
+/// started here outlives the runtime of the test that started it.
+pub(crate) async fn metadata_issuer() -> &'static str {
+    METADATA_ISSUER
+        .get_or_init(|| async {
+            use wiremock::matchers::{method, path};
+            use wiremock::{Mock, MockServer, ResponseTemplate};
+            let server = MockServer::start().await;
+            let uri = server.uri();
+            Mock::given(method("GET"))
+                .and(path("/.well-known/oauth-authorization-server"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "issuer": uri,
+                    "jwks_uri": format!("{uri}/jwks"),
+                    "authorization_endpoint": format!("{uri}/authorize"),
+                    "token_endpoint": format!("{uri}/token"),
+                    "grant_types_supported": ["authorization_code", "client_credentials"],
+                    "token_endpoint_auth_methods_supported": ["client_secret_basic"],
+                    "response_types_supported": ["code"],
+                    "code_challenge_methods_supported": ["S256"],
+                })))
+                .mount(&server)
+                .await;
+            Mock::given(method("GET"))
+                .and(path("/jwks"))
+                .respond_with(ResponseTemplate::new(200).set_body_string(include_str!(
+                    "../../../../../docs/conformance/party/smart/jwks.json"
+                )))
+                .mount(&server)
+                .await;
+            Box::leak(Box::new(server));
+            uri
+        })
+        .await
+}
+
+/// The URI [`metadata_issuer`] started; call it only after that has run.
+pub(crate) fn started_metadata_issuer() -> &'static str {
+    METADATA_ISSUER
+        .get()
+        .expect("metadata_issuer runs before a token names it")
+}
+
+/// Basic authentication admitting each `(user, Argon2id PHC hash, scopes)`.
+pub(crate) fn basic_auth(users: &[(&str, &str, &str)]) -> AuthSection {
+    AuthSection {
+        basic: Some(BasicSection {
+            users: users
+                .iter()
+                .map(|(user, hash, scopes)| BasicUser {
+                    user: (*user).to_owned(),
+                    password_hash: Some(secrecy::SecretString::from((*hash).to_owned())),
+                    password_hash_file: None,
+                    scopes: scopes.split_whitespace().map(str::to_owned).collect(),
+                })
+                .collect(),
+        }),
+        ..AuthSection::default()
+    }
+}
+
+/// The Argon2id PHC hash of `password`, under a fixed salt so the fixtures
+/// stay hermetic, at the default (OWASP-floor) costs.
+pub(crate) fn hash_password(password: &str) -> String {
+    use argon2::password_hash::PasswordHasher as _;
+    argon2::Argon2::default()
+        .hash_password_with_salt(password.as_bytes(), b"1234567890123456")
+        .expect("hash")
+        .to_string()
+}
+
+/// Turns Basic authentication on in `config` for each `(user, roles)`, every
+/// user with the password `pw` and [`FULL_SCOPES`]; the roles go to
+/// `[authz.rbac.basic_roles]`, where the RBAC gate reads a Basic user's roles.
+pub(crate) fn with_basic_users(config: &mut AppConfig, users: &[(&str, &[&str])]) {
+    let hash = hash_password("pw");
+    let entries: Vec<(&str, &str, &str)> = users
+        .iter()
+        .map(|(user, _roles)| (*user, hash.as_str(), FULL_SCOPES))
+        .collect();
+    config.auth = basic_auth(&entries);
+    for (user, roles) in users {
+        config.rbac.basic_roles.insert(
+            (*user).to_owned(),
+            roles.iter().map(|role| (*role).to_owned()).collect(),
+        );
+    }
+}
+
+/// An `Authorization` field value carrying `claims` as an RFC 9068 access
+/// token (`typ` `at+jwt`) signed with the committed test key.
+///
+/// The RFC 9068 §2.2 claims a test leaves out are filled in (`iat`, `jti`,
+/// `client_id`), and a token whose claims name no `scope` carries
+/// [`FULL_SCOPES`], so only a test about the scopes needs to name them.
+pub(crate) fn bearer(claims: &Value) -> String {
+    let mut claims = claims.clone();
+    let now = jiff::Timestamp::now().as_second();
+    if let Some(object) = claims.as_object_mut() {
+        object.entry("iat").or_insert(serde_json::json!(now));
+        object
+            .entry("jti")
+            .or_insert_with(|| serde_json::json!(uuid::Uuid::now_v7().to_string()));
+        object
+            .entry("client_id")
+            .or_insert(serde_json::json!("ferroehr-test-client"));
+        object
+            .entry("scope")
+            .or_insert(serde_json::json!(FULL_SCOPES));
+    }
+    let mut header = Header::new(Algorithm::RS256);
+    header.typ = Some("at+jwt".to_owned());
+    header.kid = Some(TEST_KID.to_owned());
+    let key = EncodingKey::from_rsa_pem(include_bytes!(
+        "../../../../../docs/conformance/party/smart/cnf-smart-test.key.pem"
+    ))
+    .expect("the committed test key");
+    let token = encode(&header, &claims, &key).expect("encode");
     format!("Bearer {token}")
 }
 
