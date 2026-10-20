@@ -15,6 +15,21 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Added
+
+- **AQL rooted at `PERSON`, `ORGANISATION` or `ROLE`** (#3818), the subset of
+  the experimental AQL demographic extension a client needs to find a party by
+  what it holds. `POST /query/aql` answers rows over the latest version of
+  each party, leaving out logically deleted ones, with paths inside the party
+  in `SELECT`, `WHERE` and `ORDER BY` (its `details` tree, its `identities`,
+  `contacts` and `capabilities`, `p/uid/value`), `CONTAINS CLUSTER` and the
+  other content classes inside a party, named parameters, and the `offset`
+  and `fetch` paging. It runs under the authorisation of a Demographic API
+  read, on the demographic database credential. `GROUP`, `AGENT`,
+  `PARTY_RELATIONSHIP`, a demographic class below the root, a query that also
+  names `EHR` or clinical content, and an `ehr_id` scope each answer `400`
+  naming the construct.
+
 ### Changed
 
 - **The viewer takes FerroUI 0.2.0 and reads every word it draws from its

@@ -645,9 +645,28 @@ pub struct OrderKey {
 
 // ── The query IR ─────────────────────────────────────────────────────────────
 
+/// The storage domain a query reads, decided by its outermost FROM class.
+///
+/// QUERY master03 §FROM lets the `FROM` clause name any class the RM defines,
+/// but the released text gives semantics only to the clinical repository, so a
+/// root at a demographic class is the Cadasto experimental demographic
+/// extension. No openEHR spec governs it: the population, the version and
+/// deletion gating and the authorisation are our own design.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum QueryDomain {
+    /// The clinical repository: `EHR` and the content classes.
+    #[default]
+    Clinical,
+    /// The demographic repository: a query rooted at `PERSON`,
+    /// `ORGANISATION` or `ROLE`, over the latest version of each party.
+    Demographic,
+}
+
 /// A fully lowered, typed AQL query.
 #[derive(Debug, Clone, PartialEq)]
 pub struct QueryIr {
+    /// The storage domain the query reads.
+    pub domain: QueryDomain,
     /// Every FROM operand, addressable by [`SourceId`] (= index).
     pub sources: Vec<Source>,
     /// The FROM containment tree over `sources`.

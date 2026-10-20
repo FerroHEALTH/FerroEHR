@@ -25,9 +25,18 @@ use super::analyze::{
 use super::error::{AnalysisError, AqlError, AqlFeatureError};
 use super::ir::{
     AggFunc, Bind, Coercion, Contained, ContainsTree, EhrPredicate, EhrSource, Expr, LikePattern,
-    Link, Operand, OrderKey, PathTarget, QueryIr, RmSource, SelectColumn, SelectValue, Source,
-    SourceId, TypeSet, TypedLit, VersionScope, VersionSource,
+    Link, Operand, OrderKey, PathTarget, QueryDomain, QueryIr, RmSource, SelectColumn, SelectValue,
+    Source, SourceId, TypeSet, TypedLit, VersionScope, VersionSource,
 };
+use crate::versioning::Kind;
+
+/// The demographic roots the experimental demographic extension serves.
+///
+/// No openEHR spec governs AQL over a demographic repository (QUERY master03
+/// §FROM names only clinical classes), so the served set is our own design:
+/// the three roots the extension's consumers issue. `GROUP`, `AGENT` and
+/// `PARTY_RELATIONSHIP` answer a typed refusal.
+const SERVED_PARTY_ROOTS: [&str; 3] = ["PERSON", "ORGANISATION", "ROLE"];
 
 /// Lowers one parsed [`SelectQuery`] into a [`QueryIr`] (without parameter-
 /// presence validation, which [`super::plan`] performs).
@@ -37,6 +46,7 @@ pub(crate) fn lower(
 ) -> Result<QueryIr, AqlError> {
     let mut planner = Planner::for_profile(profile);
     let contains = planner.lower_from(&query.from, None)?;
+    let domain = planner.domain(&contains)?;
 
     let select = query
         .select
@@ -61,6 +71,7 @@ pub(crate) fn lower(
     let (limit, offset, limit_is_top) = lower_limit(query)?;
 
     Ok(QueryIr {
+        domain,
         sources: planner.sources,
         contains,
         filter,
@@ -98,6 +109,12 @@ fn refuse_mixed_aggregates(select: &[SelectColumn]) -> Result<(), AqlError> {
 struct Planner {
     sources: Vec<Source>,
     bindings: Bindings,
+    /// Every operand whose concrete types are all served demographic roots,
+    /// with the class it names.
+    party_roots: Vec<(SourceId, String)>,
+    /// The class of every operand whose concrete types are all clinical
+    /// versioned-object roots (`COMPOSITION`, `FOLDER`, …), and `EHR`.
+    clinical_classes: Vec<String>,
 }
 
 impl Planner {
@@ -111,6 +128,56 @@ impl Planner {
 impl Planner {
     fn next_id(&self) -> SourceId {
         SourceId(self.sources.len())
+    }
+
+    /// Decides the domain the lowered FROM tree reads.
+    ///
+    /// A query with no demographic root is clinical. A demographic root makes
+    /// the query demographic when it is the outermost class (optionally under
+    /// `VERSION`), the only demographic root, and the query names no `EHR` or
+    /// clinical versioned object. No openEHR spec governs AQL over a
+    /// demographic repository: our own design.
+    ///
+    /// # Errors
+    /// [`AqlFeatureError::DemographicWithClinical`] when the query also names
+    /// a clinical class, and [`AqlFeatureError::DemographicRootPlacement`]
+    /// for any other placement of a demographic root.
+    fn domain(&self, contains: &ContainsTree) -> Result<QueryDomain, AqlError> {
+        let Some((root, class)) = self.party_roots.first() else {
+            return Ok(QueryDomain::Clinical);
+        };
+        if let Some(other) = self.clinical_classes.first() {
+            return Err(AqlFeatureError::DemographicWithClinical {
+                party: class.clone(),
+                other: other.clone(),
+            }
+            .into());
+        }
+        if let Some((_, second)) = self.party_roots.get(1) {
+            return Err(AqlFeatureError::DemographicRootPlacement(second.clone()).into());
+        }
+        if self.outermost(contains) != Some(*root) {
+            return Err(AqlFeatureError::DemographicRootPlacement(class.clone()).into());
+        }
+        Ok(QueryDomain::Demographic)
+    }
+
+    /// The outermost class operand of `tree`, looking through `VERSION`
+    /// envelopes; `None` for a top-level `AND`/`OR`.
+    fn outermost(&self, tree: &ContainsTree) -> Option<SourceId> {
+        let ContainsTree::Operand { source, contained } = tree else {
+            return None;
+        };
+        match self.sources.get(source.0) {
+            Some(Source::Version(_)) => match contained.as_deref() {
+                Some(Contained {
+                    link: Link::Contains,
+                    tree,
+                }) => self.outermost(tree),
+                _ => None,
+            },
+            _ => Some(*source),
+        }
     }
 
     // ── FROM ────────────────────────────────────────────────────────────────
@@ -163,6 +230,7 @@ impl Planner {
             } => {
                 let id = self.next_id();
                 if rm_type == "EHR" {
+                    self.clinical_classes.push(rm_type.clone());
                     self.lower_ehr_operand(id, variable.as_deref(), predicate.as_ref())?;
                 } else {
                     self.lower_rm_operand(
@@ -232,14 +300,19 @@ impl Planner {
     /// its variable.
     ///
     /// The class must be addressable in the node store: at least one concrete
-    /// descendant is a structure root.
+    /// descendant is a structure type (the node codec's set, demographic
+    /// containers included). A class whose concrete descendants are all
+    /// demographic versioned objects is a demographic root, served when each
+    /// of them is in [`SERVED_PARTY_ROOTS`].
     ///
     /// # Errors
     /// [`AnalysisError::UnknownClass`] for a class the RM model does not
     /// declare, [`AnalysisError::ClassNotInProfile`] for one outside the
     /// active `spec_profile`'s generation set,
+    /// [`AqlFeatureError::UnsupportedDemographicClass`] for a demographic
+    /// class outside the served roots,
     /// [`AqlFeatureError::UnsupportedSourceClass`] for a class no concrete
-    /// descendant of which is a structure root, plus the node-predicate
+    /// descendant of which is a structure type, plus the node-predicate
     /// rejections and a duplicate variable binding.
     fn lower_rm_operand(
         &mut self,
@@ -260,8 +333,30 @@ impl Planner {
             .into());
         }
         let concrete = TypeSet::new(class.descendants.iter().map(|s| (*s).to_owned()).collect());
-        if !concrete.names().iter().any(|t| model::is_structure_root(t)) {
+        let kinds: Vec<Option<Kind>> = concrete
+            .names()
+            .iter()
+            .map(|t| Kind::from_type(t))
+            .collect();
+        if kinds.iter().all(|k| k.is_some_and(Kind::is_demographic)) {
+            if !concrete
+                .names()
+                .iter()
+                .all(|t| SERVED_PARTY_ROOTS.contains(&t.as_str()))
+            {
+                return Err(
+                    AqlFeatureError::UnsupportedDemographicClass(rm_type.to_owned()).into(),
+                );
+            }
+            self.party_roots.push((id, rm_type.to_owned()));
+        } else if !concrete
+            .names()
+            .iter()
+            .any(|t| crate::storage::structure::is_structure_type(t))
+        {
             return Err(AqlFeatureError::UnsupportedSourceClass(rm_type.to_owned()).into());
+        } else if kinds.iter().all(|k| k.is_some_and(|k| !k.is_demographic())) {
+            self.clinical_classes.push(rm_type.to_owned());
         }
         let constraint = predicate
             .map(resolve_node_predicate)

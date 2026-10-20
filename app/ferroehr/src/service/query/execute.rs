@@ -28,7 +28,7 @@ use openehr_query::parser::parse_str;
 
 use crate::aql;
 use crate::aql::error::{AqlError, ExecError};
-use crate::aql::ir::{Params, QueryIr};
+use crate::aql::ir::{Params, QueryDomain, QueryIr};
 use crate::aql::sql::SqlCtx;
 use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
@@ -148,6 +148,17 @@ impl FerroEhrService {
         let ir = self.plan_query(aql, &params).await?;
         record_phase("plan", plan_start);
 
+        // A demographic query reads no EHR, so an EHR scope cannot apply to it;
+        // ignoring the scope would answer rows the caller asked to exclude.
+        // No openEHR spec governs AQL over a demographic repository: our own
+        // design.
+        if ir.domain == QueryDomain::Demographic && !request.ehr_ids.is_empty() {
+            return Err(Failure::analysis(SmError::precondition(
+                "a query rooted at a demographic class reads no EHR, so an `ehr_id` scope \
+                 cannot apply to it; send the query without one"
+                    .to_owned(),
+            )));
+        }
         let (limit, offset) = compose_paging(ir.limit, ir.offset, ir.limit_is_top, request)?;
         let limit = apply_result_ceiling(limit, self.query_result_ceiling)?;
         // Multi-EHR scoping (`ehr_ids: List<UUID>`): a malformed id is a
@@ -179,13 +190,17 @@ impl FerroEhrService {
         // scope collection stays a separate statement — the main query is paged,
         // so folding the sets in would scope only the served page — but runs
         // concurrently under the same budget (our own extension).
+        // The demographic domain runs the same SQL on the party pool, whose
+        // `search_path` names the `party` schema.
+        let pool = match ir.domain {
+            QueryDomain::Clinical => &self.pool,
+            QueryDomain::Demographic => &self.demographic_pool,
+        };
         let run = async {
-            let exec = aql::exec::execute(&self.pool, &ir, &params, &ctx, self.spec_profile);
+            let exec = aql::exec::execute(pool, &ir, &params, &ctx, self.spec_profile);
             if request.collect_attributes {
-                let (result, scope) = tokio::try_join!(
-                    exec,
-                    aql::exec::collect_scope(&self.pool, &ir, &params, &ctx)
-                )?;
+                let (result, scope) =
+                    tokio::try_join!(exec, aql::exec::collect_scope(pool, &ir, &params, &ctx))?;
                 Ok((result, Some(scope)))
             } else {
                 Ok((exec.await?, None))
@@ -219,6 +234,7 @@ impl FerroEhrService {
         outcome.origin_count = origin_count;
         outcome.accessed = Some(accessed);
         outcome.served_ehr_content = served_ehr_content;
+        outcome.domain = ir.domain;
         if let Some(scope) = scope {
             outcome.ehr_ids = scope.ehr_ids;
             outcome.template_ids = scope.template_ids;

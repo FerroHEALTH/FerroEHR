@@ -428,6 +428,62 @@ and EHR indexes on the clinical side); no sequential scan appears in any of the
 recorded plans. The record names the commit it was measured at; a re-run
 replaces it rather than appending.
 
+## Queries rooted at a demographic class
+
+The Demographic API reads a party by its identifier and has no search. To find
+a person, an organisation or a role by what it holds, such as an identifier in
+its `details`, FerroEHR serves a subset of the experimental AQL demographic
+extension on the same `POST /query/aql` and `GET /query/aql` routes. No openEHR
+specification governs it: QUERY 1.1 lets `FROM` name any Reference Model class
+but gives semantics only to the clinical repository, so everything below is
+FerroEHR's own design, and the extension may change.
+
+```
+SELECT p/uid/value
+FROM PERSON p
+WHERE p/details[at0001]/items[at0002]/value/id = $identifier
+ORDER BY p/uid/value
+```
+
+**The grammar served.** The query is ordinary AQL 1.1 syntax with these rules on
+the `FROM` clause:
+
+- The outermost class is `PERSON`, `ORGANISATION` or `ROLE`, optionally under a
+  `VERSION` class. It is the only demographic class at the root of the query.
+- Below it, `CONTAINS` may name the content classes a party holds: `CLUSTER`,
+  `ELEMENT`, the item structures, and the party containers `PARTY_IDENTITY`,
+  `CONTACT`, `ADDRESS` and `CAPABILITY`, with archetype and node predicates as
+  usual, for example
+  `CONTAINS CLUSTER c[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]`.
+- `SELECT`, `WHERE` and `ORDER BY` take paths inside the party: its `details`
+  tree, its `identities`, `contacts` and `capabilities`, `p/uid/value`, and
+  the whole party (`SELECT p`). Named parameters, `LIMIT`/`OFFSET`, the REST
+  `offset` and `fetch`, and the functions and aggregates of the clinical
+  envelope apply unchanged.
+
+**What a row is.** The query reads the latest trunk version of each party. A
+logically deleted party, and a party under a restriction of processing, answers
+no row. `p/uid/value` is the version identifier the Demographic API returns.
+
+**What is refused.** Each of these is a **400 Bad Request** naming the
+construct, so you can tell a refusal from an empty result:
+
+- `GROUP`, `AGENT`, `PARTY_RELATIONSHIP`, and the abstract `PARTY` and `ACTOR`;
+- a demographic class anywhere but the root, or a second one;
+- a query that also names `EHR` or a clinical versioned object such as
+  `COMPOSITION`. Joining a party to the EHR it is the subject of is not served;
+  read the EHR with `GET /ehr?subject_id=…&subject_namespace=…` instead;
+- an `ehr_id` scope (query parameter or `openehr-ehr-id` header), because a
+  party is in no EHR.
+
+**Who may run it.** The query runs under the authorisation of a Demographic API
+read: the role check that admits a party read admits the query, and the per-EHR
+access decision and the attribute-based patient scope, which govern EHR
+content, do not apply to parties. The SMART `aql-…` scopes that govern every
+query still apply. The query runs on the demographic database credential, and
+its access record is filed under the demographic domain with the number of rows
+served.
+
 ## Version scope: LATEST_VERSION and ALL_VERSIONS
 
 By default a query sees the **latest** version of each object. FerroEHR also
@@ -532,7 +588,8 @@ results. Supported today includes:
   order their operand by type (a quantity by its openEHR magnitude, a date/time
   chronologically, text lexically) so they work over non-numeric leaves;
 - `FROM` over `EHR`, `VERSION` (`LATEST_VERSION` / `ALL_VERSIONS`), and the RM
-  structure classes, with archetype and name predicates;
+  structure classes, with archetype and name predicates, and over `PERSON`,
+  `ORGANISATION` and `ROLE` as the experimental demographic extension;
 - `CONTAINS` trees with `AND`, `OR`, and `NOT CONTAINS`;
 - `WHERE` comparisons on typed leaves (with openEHR magnitude ordering for
   quantities), `EXISTS`, `LIKE`, `MATCHES` value lists, and range predicates;
@@ -549,9 +606,10 @@ results. Supported today includes:
 Every refusal below is a typed error naming the construct, so you never get a
 silently incorrect answer:
 
-- **Demographic sources.** `FROM PARTY`/`ROLE`/`ACTOR` and the other demographic
-  classes are out of the query engine's scope; the demographic API serves them
-  directly.
+- **Demographic forms outside the served subset.** `GROUP`, `AGENT`,
+  `PARTY_RELATIONSHIP`, `PARTY` and `ACTOR`, a demographic class below the root,
+  and a query mixing a demographic root with `EHR` or clinical content (see
+  [Queries rooted at a demographic class](#queries-rooted-at-a-demographic-class)).
 - **`TOP … BACKWARD`.** `TOP` is deprecated as of AQL 1.1.0 and the direction
   variant is not implemented; the error carries the specification's own rewrite
   (`ORDER BY <path> DESC LIMIT n`). `TOP` and `LIMIT` in one query are also

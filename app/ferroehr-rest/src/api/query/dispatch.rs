@@ -98,6 +98,10 @@ async fn run(
     }
 
     let mut resp = response::respond_result_set(&parts.headers, &outcome.result_set);
+    // A query rooted at a demographic class reads the party domain, and its
+    // record is filed there with no clinical category, as a Demographic API
+    // read is (no openEHR spec governs access logging: our own design).
+    let demographic = outcome.domain == ferroehr::aql::ir::QueryDomain::Demographic;
     // The access log records one access per EHR the statement served, plus the
     // statement's own operation record. Both ride the response extensions the
     // ATNA middleware reads, so the caller identity stays in one place.
@@ -106,10 +110,14 @@ async fn run(
             ehr_id: None,
             uid: None,
             result_count: Some(outcome.served_rows),
-            domain: None,
+            domain: demographic.then_some(ferroehr::system_log::event::AccessDomain::Demographic),
             origins: outcome.served_origins.clone(),
             origin_count: (!outcome.served_origins.is_empty()).then_some(outcome.origin_count),
-            content: outcome.accessed.clone(),
+            content: if demographic {
+                None
+            } else {
+                outcome.accessed.clone()
+            },
         });
     if !outcome.served_ehrs.is_empty() {
         resp.extensions_mut()
