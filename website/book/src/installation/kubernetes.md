@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 12.1.3 -n ferroehr \
+  --version 13.0.0 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.2.0
 ```
@@ -55,7 +55,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.1.3
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 13.0.0
 ```
 
 ### Pin two versions, not one
@@ -68,7 +68,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 12.1.3` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 13.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.2.0` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -168,7 +168,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.1.3 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 13.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -293,7 +293,7 @@ separation that profile checks made, except one it accepts by name:
 | `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so the separation is four DSNs on four PostgreSQL clusters. Each cluster is prepared on its own migrator: the migration Job applies the schema in every cluster, and the server verifies it there, on `database.<domain>.migrateExistingSecret` (`database.migrateExistingSecret` for the clinical cluster). The linkage cluster also receives the party migration set, schema only, because the linkage set names a function the party set creates |
 | `migrate_on_runtime_credential` | `config.db.migrate: verify`, with `migrations.job.enabled` preparing the schema on `database.migrateExistingSecret` |
 | `open_subject_namespace` | `config.privacy.subject_namespaces` declared |
-| `audit_off`, `audit_fails_open`, `audit_syslog_udp` | the audit trail on with its local store, `config.audit.fail_mode: closed`, no UDP syslog sink |
+| `audit_off`, `audit_fails_open` | the audit trail on with its local store, `config.audit.fail_mode: closed` |
 | `open_ehr_access_default` | `config.authz.rbac.ehr_access_default: restricted` |
 | `auth_off` | OIDC authentication on |
 | `rbac_off` | the role gate on (`config.authz.rbac.enabled: true`, the chart's default) |
@@ -315,7 +315,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.1.3 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 13.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -787,7 +787,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 12.1.3 -n ferroehr --reuse-values \
+  --version 13.0.0 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -886,7 +886,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 12.1.3 -n ferroehr --reuse-values \
+  --version 13.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1231,7 +1231,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 12.1.3 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 13.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

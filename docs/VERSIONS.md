@@ -40,7 +40,7 @@ releases never ride the product version.
 | Item | Pin |
 |---|---|
 | Rust toolchain | stable 1.98 (1.98.1) |
-| MSRV | 1.97 |  <!-- deliberately behind the toolchain: see the MSRV bump policy below -->
+| MSRV | 1.98 |  <!-- deliberately behind the toolchain: see the MSRV bump policy below -->
 | Edition | 2024 |
 | Cargo resolver | v3 |
 

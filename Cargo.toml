@@ -14,7 +14,7 @@ members = ["crates/*", "app/*", "tools/*"]
 [workspace.package]
 version = "5.2.0"
 edition = "2024"
-rust-version = "1.97"
+rust-version = "1.98"
 license = "BUSL-1.1"
 repository = "https://github.com/FerroHEALTH/FerroEHR"
 # No `authors`, deliberately. The cargo manifest reference opens that section
@@ -61,7 +61,7 @@ missing_assert_message = "deny"     # production asserts carry a message (lint i
 dbg_macro = "deny"
 print_stdout = "deny"               # libraries speak tracing; binaries/tools relax per-crate
 print_stderr = "deny"
-incompatible_msrv = "deny"          # MSRV 1.97 is a hard pin
+incompatible_msrv = "deny"          # MSRV 1.98 is a hard pin
 unchecked_time_subtraction = "deny" # std::time::Duration::sub panics on negative durations; jiff is the safe alternative
 as_conversions = "deny"             # `as` silently truncates; use TryFrom/TryInto or explicit casts
 
@@ -222,6 +222,17 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # document and the client credentials grant. It checks tokens and never issues
 # them.
 ferrohealth-smart = { version = "=0.4.0", default-features = false, features = ["fetch"] }
+
+# ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
+# The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
+# integrates it. `ihe-atna` is the IHE ATNA Record Audit Event sender (ITI-20:
+# the DICOM PS3.15 audit message, RFC 5424 syslog over RFC 5425 TLS, the ATX:
+# FHIR Feed) and the BALP `AuditEvent`; `ehds-logging` is the European logging
+# software component of Regulation (EU) 2025/327 (the Annex II 3.2 access
+# record, the Art 14(1) categories and their classification map, the Art 9(2)
+# retention floor). Features are chosen per member.
+ihe-atna = { version = "=0.1.1", default-features = false }
+ehds-logging = { version = "=0.1.1", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 openidconnect = { version = "4", default-features = false }   # OIDC discovery + code flow; HTTP-client agnostic: we supply the pinned reqwest (platform trust store)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
@@ -411,9 +422,9 @@ criterion = { version = "0.8.2", features = ["html_reports"] }
 #   cargo-nextest, cargo-audit, cargo-deny, cargo-machete, cargo-hakari,
 #   cargo-llvm-cov, sccache ; linker: mold (Linux).
 #
-# Toolchain: Rust stable 1.98.1, edition 2024; the MSRV steps to 1.97 with it.
-# Nothing here uses a 1.98 feature, and the nine published crates are the only
-# artifacts whose consumers would feel a bump (docs/VERSIONS.md §MSRV policy).
+# Toolchain: Rust stable 1.98.1, edition 2024; the MSRV is 1.98.
+# The floor is fhir-types, which ihe-atna's `balp` feature pulls and which declares
+# 1.98; the nine published crates feel the bump (docs/VERSIONS.md §MSRV policy).
 # Database: PostgreSQL 18 (target 18.6+; 18.x is the current stable line; PG 19 in beta — do not target).
 
 # ── Build-speed profiles ─────────────────────────────────────────────────────

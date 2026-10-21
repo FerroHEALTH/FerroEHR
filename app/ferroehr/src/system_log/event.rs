@@ -44,8 +44,6 @@ pub enum EventOutcome {
     MinorFailure,
     /// `8` — serious failure (the action was not performed; e.g. 5xx).
     SeriousFailure,
-    /// `12` — major failure (the node/service is compromised/unavailable).
-    MajorFailure,
 }
 
 /// The class of resource an operation touches — determines the DICOM `EventID`
@@ -125,6 +123,12 @@ pub struct AuditEvent {
     pub outcome: EventOutcome,
     /// The requesting user (Basic username / OAuth `sub`; `UNKNOWN` when absent).
     pub user_id: String,
+    /// The issuer of the bearer token that authenticated the user (`iss`,
+    /// RFC 7519 §4.1.1); `None` for a Basic-authenticated or anonymous caller.
+    pub issuer: Option<String>,
+    /// The client application the bearer token was issued to (`client_id`,
+    /// RFC 9068 §2.2, or `azp`); `None` when the token names none.
+    pub client_id: Option<String>,
     /// Whether the source participant is the requestor (always true here).
     pub user_is_requestor: bool,
     /// The organisation the requesting user acted for, when the deployment
@@ -146,6 +150,9 @@ pub struct AuditEvent {
     pub client_ip: Option<String>,
     /// The owning EHR id, for optional background subject enrichment.
     pub ehr_id: Option<String>,
+    /// The namespace of the EHR subject's id, as `EHR_STATUS.subject` names
+    /// it, filled by the drain beside the subject it resolves.
+    pub subject_namespace: Option<String>,
     /// The resolved object identifier (resource URI / version uid / query name).
     pub object_id: Option<String>,
     /// The bearer token's `jti` claim when the request was Bearer-authenticated
@@ -337,11 +344,14 @@ impl AuditEvent {
             event_type: None,
             outcome,
             user_id: String::new(),
+            issuer: None,
+            client_id: None,
             user_is_requestor: true,
             organisation: None,
             roles: Vec::new(),
             client_ip: None,
             ehr_id: None,
+            subject_namespace: None,
             object_id: None,
             token_id: None,
             domain: AccessDomain::of(object),

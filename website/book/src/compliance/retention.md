@@ -26,7 +26,7 @@ legal citation the period rests on.
 | Column | Meaning |
 |---|---|
 | `kind` | The content category: `COMPOSITION`, `EHR_STATUS`, `FOLDER`, or `EHR` for the whole record |
-| `category` | Optional: the EHDS priority category the period is keyed on (`patient-summary`, `eprescription`, `edispensation`, `imaging`, `test-results`, `discharge-report`, `national:<code>` or `none`); empty keys the period on every object of the kind |
+| `category` | Optional: the EHDS category the period is keyed on, named as `[audit.categories]` names it: a priority category by its code (`Patient-Summaries`, `Electronic-Prescriptions`, `Electronic-Dispensations`, `Medical-Imaging`, `Laboratory-Reports`, `Discharge-Reports`) or as `<system>\|<code>`, a declared national category as its `<system>\|<code>`, or `none`; stored as the `<system>\|<code>` token; empty keys the period on every object of the kind |
 | `jurisdiction` | ISO 3166-1 alpha-2, the same key the [identifier scanner](../installation/config-privacy.md) rules use |
 | `period` | How long content of that category is kept |
 | `anchor` | What the period is measured from: `last_commit`, `death`, or `majority` |
@@ -73,7 +73,7 @@ whole register back, which is what an access answer and an audit both cite.
 
 EHDS Annex II 3.4 asks the storing components to support retention periods
 "that take into account the origins and categories of electronic health data".
-Add `"category": "test-results"` to the body above and the period covers only
+Add `"category": "Laboratory-Reports"` to the body above and the period covers only
 the objects your [`[audit.categories]`](../installation/config-audit.md#auditcategories)
 map places in that category. The server mirrors the map into the clinical
 domain at every boot, so the due list reads the map in force. An object's

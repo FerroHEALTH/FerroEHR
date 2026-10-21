@@ -32,8 +32,6 @@
 #   open_subject_namespace       made: privacy.subject_namespaces is declared.
 #   audit_off                    made: the audit trail is on with its local store.
 #   audit_fails_open             made: audit.fail_mode is `closed`.
-#   audit_syslog_udp             made: no UDP syslog sink (syslog is off; turn it
-#                                on with transport = "tls").
 #   open_ehr_access_default      made: authz.rbac.ehr_access_default is `restricted`.
 #   migrate_on_runtime_credential made: db.migrate is `verify`; the migration Job
 #                                prepares the schema on its own credential.

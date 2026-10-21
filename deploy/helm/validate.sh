@@ -957,9 +957,9 @@ config_keys_gate() {
     '^ *retention_years = 3(\.0)?$' \
     '^ *sgb_v_309_controller = true$' \
     '^ *\[audit\.categories\.templates\]$' \
-    '^ *"International Patient Summary" = \["patient-summary"\]$' \
+    '^ *"International Patient Summary" = \["Patient-Summaries"\]$' \
     '^ *\[audit\.categories\.archetypes\]$' \
-    '^ *"openEHR-EHR-COMPOSITION\.encounter\.v1" = \["none"\]$'; do
+    '^ *"openEHR-EHR-COMPOSITION\.encounter\.v1" = "none"$'; do
     grep -qE "$want" <<<"$toml" || { red "  audit-categories render lacks a line matching: ${want}"; missing=1; }
   done
   if [[ "$missing" -eq 0 ]]; then
@@ -1010,8 +1010,6 @@ events|enabled|false
 CLAIMS
   grep -qE '^ *subject_namespaces = \[".+"' <<<"$toml" \
     || { red "  privacy.subject_namespaces is empty: open_subject_namespace would refuse the boot"; missing=1; }
-  ! grep -qE '^ *transport = "udp"' <<<"$toml" \
-    || { red "  an audit syslog sink renders transport = \"udp\": audit_syslog_udp would refuse the boot"; missing=1; }
   local file
   for file in DB__URL_FILE STORAGE__PARTY__URL_FILE STORAGE__LINKAGE__URL_FILE STORAGE__AUDIT__URL_FILE DB__MIGRATE_URL_FILE \
     STORAGE__MIGRATE__PARTY__URL_FILE STORAGE__MIGRATE__LINKAGE__URL_FILE STORAGE__MIGRATE__AUDIT__URL_FILE; do

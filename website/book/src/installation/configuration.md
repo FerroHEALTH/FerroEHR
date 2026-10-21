@@ -260,7 +260,6 @@ ticked by being present:
 | `open_subject_namespace` | `[privacy] subject_namespaces` declared, so an `EHR_STATUS` subject is an opaque pseudonym |
 | `audit_off` | `[audit]` enabled with a durable sink (the local store, syslog or the FHIR feed) |
 | `audit_fails_open` | `[audit] fail_mode = "closed"`, so an operation whose access record cannot be taken is refused instead of succeeding unlogged |
-| `audit_syslog_udp` | `[audit.syslog] transport = "tls"` (RFC 5425) whenever the syslog feed is on, so the access log reaches the repository encrypted and with delivery confirmation (EHDS Annex II 1.4). A deployment whose UDP path stays on a trusted segment, with the local store or the FHIR feed holding the durable copy, accepts `audit_syslog_udp` by name |
 | `open_ehr_access_default` | `[authz.rbac] ehr_access_default = "restricted"`, so an EHR carrying no `ACCESS_CONTROL_SETTINGS` is reachable only by an admin. The shipped default is `open`. The setting is enforced with `[authz.rbac] enabled` on or off |
 | `migrate_on_runtime_credential` | `[db] migrate_url` set, or `migrate = "verify"`, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on `[storage.migrate.<domain>] url` when that is set, and on that domain's runtime DSN, which opens the gap, when it is not |
 | `auth_off` | `[auth] enabled = true`, so no request is served unauthenticated (CRA Annex I Part I(2)(d)) |

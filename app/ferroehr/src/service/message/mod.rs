@@ -87,7 +87,7 @@ impl FerroEhrService {
         let id = ehr_id.to_string();
         event.ehr_id = Some(id.clone());
         event.object_id = Some(id);
-        event.category = content.and_then(|content| self.audit_classify(&content));
+        event.category = content.and_then(|content| self.audit_classify(&content, action));
         self.record_access(event)
     }
 }

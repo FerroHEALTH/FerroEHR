@@ -130,17 +130,6 @@ pub enum DeploymentGap {
     /// cannot take is dropped and the request succeeds: the access happened and
     /// nothing says so.
     AuditFailsOpen,
-    /// The audit trail ships to a syslog Audit Record Repository over UDP
-    /// (`audit.syslog.transport = "udp"`, RFC 5426), which delivers no record
-    /// reliably and encrypts none.
-    ///
-    /// `docs/law/eu/ehds/text.html Annex II 1.4`: components operated together
-    /// with other products are designed so that "interoperability and
-    /// compatibility are reliable and secure"; RFC 5425 TLS is the transport
-    /// that is. Accepting the gap by name records that the UDP path never leaves
-    /// a trusted segment, or that the local store or the FHIR feed carries the
-    /// durable copy.
-    AuditSyslogUdp,
     /// `authz.rbac.ehr_access_default` is `open`, so an EHR carrying no
     /// `ACCESS_CONTROL_SETTINGS` — which every new EHR does — admits any caller
     /// the coarse layers already let through.
@@ -218,7 +207,6 @@ impl DeploymentGap {
             Self::OpenSubjectNamespace => "open_subject_namespace",
             Self::AuditOff => "audit_off",
             Self::AuditFailsOpen => "audit_fails_open",
-            Self::AuditSyslogUdp => "audit_syslog_udp",
             Self::OpenEhrAccessDefault => "open_ehr_access_default",
             Self::MigrateOnRuntimeCredential => "migrate_on_runtime_credential",
             Self::AuthOff => "auth_off",
@@ -257,13 +245,6 @@ impl DeploymentGap {
                 "[audit] fail_mode is `open`, so a record the audit queue cannot take is dropped \
                  and the request succeeds; set [audit] fail_mode = \"closed\" to refuse the \
                  operation instead"
-            }
-            Self::AuditSyslogUdp => {
-                "[audit.syslog] transport is `udp`, so the access log reaches the Audit Record \
-                 Repository without delivery confirmation or encryption; set [audit.syslog] \
-                 transport = \"tls\" (RFC 5425), or accept audit_syslog_udp by name where the \
-                 path stays on a trusted segment and the local store or the FHIR feed carries \
-                 the durable copy"
             }
             Self::OpenEhrAccessDefault => {
                 "[authz.rbac] ehr_access_default is `open`, so an EHR carrying no \
@@ -416,12 +397,6 @@ impl DeploymentPosture {
             // Only while a trail exists: a disabled trail makes the fail mode
             // moot, and naming both would report one posture twice.
             gaps.push(DeploymentGap::AuditFailsOpen);
-        }
-        if audit.enabled
-            && audit.syslog.enabled
-            && audit.syslog.transport == crate::system_log::config::Transport::Udp
-        {
-            gaps.push(DeploymentGap::AuditSyslogUdp);
         }
         // NOTE: no openEHR spec governs this, our own design/extension; the configured default is the
         // effective one: the REST layer applies it with RBAC off, and validation refuses it unenforced.
@@ -720,7 +695,6 @@ mod tests {
             DeploymentGap::OpenSubjectNamespace,
             DeploymentGap::AuditOff,
             DeploymentGap::AuditFailsOpen,
-            DeploymentGap::AuditSyslogUdp,
             DeploymentGap::OpenEhrAccessDefault,
             DeploymentGap::MigrateOnRuntimeCredential,
             DeploymentGap::AuthOff,
@@ -748,15 +722,14 @@ mod tests {
             DeploymentGap::OpenSubjectNamespace => 2,
             DeploymentGap::AuditOff => 3,
             DeploymentGap::AuditFailsOpen => 4,
-            DeploymentGap::AuditSyslogUdp => 5,
-            DeploymentGap::OpenEhrAccessDefault => 6,
-            DeploymentGap::MigrateOnRuntimeCredential => 7,
-            DeploymentGap::AuthOff => 8,
-            DeploymentGap::RbacOff => 9,
-            DeploymentGap::PlaintextListener => 10,
-            DeploymentGap::PlaintextBroker => 11,
-            DeploymentGap::PlaintextAuditFeed => 12,
-            DeploymentGap::PlaintextObjectStore => 13,
+            DeploymentGap::OpenEhrAccessDefault => 5,
+            DeploymentGap::MigrateOnRuntimeCredential => 6,
+            DeploymentGap::AuthOff => 7,
+            DeploymentGap::RbacOff => 8,
+            DeploymentGap::PlaintextListener => 9,
+            DeploymentGap::PlaintextBroker => 10,
+            DeploymentGap::PlaintextAuditFeed => 11,
+            DeploymentGap::PlaintextObjectStore => 12,
         };
         for (i, token) in DEPLOYMENT_GAPS.iter().enumerate() {
             let gap: DeploymentGap =
@@ -1006,44 +979,6 @@ mod tests {
         assert!(accepted.permits_boot());
         assert_eq!(accepted.accepted, [DeploymentGap::PlaintextListener]);
         assert_eq!(accepted.gaps, [DeploymentGap::PlaintextListener]);
-    }
-
-    /// `production` refuses an audit feed shipped over UDP syslog, never a TLS
-    /// one or a disabled one, and boots once `audit_syslog_udp` is accepted by
-    /// name (EHDS Annex II 1.4).
-    #[test]
-    fn production_refuses_a_udp_audit_syslog_unless_accepted_by_name() {
-        let mut config = production(separated());
-        config.audit.syslog.enabled = true;
-        config.audit.syslog.transport = crate::system_log::config::Transport::Udp;
-        let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
-        assert_eq!(posture.gaps, [DeploymentGap::AuditSyslogUdp]);
-        assert!(!posture.permits_boot());
-        let message = posture.refusal_message();
-        assert!(message.contains("audit_syslog_udp"), "{message}");
-        assert!(
-            message.contains(DeploymentGap::AuditSyslogUdp.describe()),
-            "{message}"
-        );
-
-        config.audit.syslog.transport = crate::system_log::config::Transport::Tls;
-        let tls = DeploymentPosture::evaluate(&config, &distinct_clusters());
-        assert!(tls.gaps.is_empty(), "TLS syslog is no gap: {tls:?}");
-
-        config.audit.syslog.transport = crate::system_log::config::Transport::Udp;
-        config.audit.syslog.enabled = false;
-        let off = DeploymentPosture::evaluate(&config, &distinct_clusters());
-        assert!(
-            off.gaps.is_empty(),
-            "a disabled sink ships nothing: {off:?}"
-        );
-
-        config.audit.syslog.enabled = true;
-        config.deployment_accepts = vec![DeploymentGap::AuditSyslogUdp];
-        let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
-        assert!(accepted.permits_boot());
-        assert_eq!(accepted.accepted, [DeploymentGap::AuditSyslogUdp]);
-        assert_eq!(accepted.gaps, [DeploymentGap::AuditSyslogUdp]);
     }
 
     /// `production` refuses the separate management listener, which binds every

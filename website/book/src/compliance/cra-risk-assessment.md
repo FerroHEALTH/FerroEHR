@@ -101,7 +101,7 @@ on three levels (high, medium, low).
 |---|---|---|---|---|---|
 | C1 | An unauthenticated caller reads or writes clinical data | high | low under the intended purpose; high when `auth.enabled = false` is misused under `sandbox` or accepted by name under `production` | authentication on by default with a boot refusal when no mechanism is configured; `production` refuses `auth.enabled = false` unless `auth_off` is accepted by name; per-request authorisation | (b), (d) |
 | C2 | An authenticated caller reaches EHRs outside their remit | high | medium: the shipped `EHR_ACCESS` default is `open`, which `production` refuses unless accepted by name | RBAC, ABAC, per-EHR `EHR_ACCESS`; `production` refuses the role gate off (`rbac_off`) and an `open` `EHR_ACCESS` default (`open_ehr_access_default`) unless each is accepted by name; every access recorded | (d), (l) |
-| C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address, a separate plain-HTTP management listener, a UDP syslog audit feed, and an AMQP integration on a plaintext `amqp://` broker, unless `plaintext_listener`, `audit_syslog_udp` or `plaintext_broker` is accepted by name; a boot warning on a plaintext routable bind | (e) |
+| C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address, a separate plain-HTTP management listener, and an AMQP integration on a plaintext `amqp://` broker, unless `plaintext_listener` or `plaintext_broker` is accepted by name; the syslog audit feed sends over TLS only (`ihe-atna`); a boot warning on a plaintext routable bind | (e) |
 | C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the hash-chained access log | (e), (f) |
 | C5 | An access happens and the log does not show it, or the log is altered | high | low with `fail_mode = "closed"` and an off-box sink; medium with the shipped `fail_mode = "open"` | refusals always recorded; `production` refuses audit off and audit failing open unless accepted; the hash chain | (f), (l) |
 | C6 | A national identifier or identifying content leaks into the clinical record, telemetry or a report | high | low | the identifier scanner in `strict` mode; log sanitising; reports with no identifiers | (e), (g) |
@@ -362,9 +362,10 @@ transit by state of the art mechanisms, and by using other technical means"
   `production_refuses_a_routable_plaintext_listener_and_exempts_loopback`).
   The separate management listener (`management.port`) binds every interface
   in plain HTTP, so setting it opens the same gap
-  (`production_refuses_a_plain_management_listener_on_its_own_port`), and a
-  syslog audit feed over UDP opens `audit_syslog_udp`
-  (`production_refuses_a_udp_audit_syslog_unless_accepted_by_name`). An
+  (`production_refuses_a_plain_management_listener_on_its_own_port`). The
+  syslog audit feed sends over RFC 5425 TLS only, through `ihe-atna`
+  (`app/ferroehr/tests/it/system_log_tls_roundtrip.rs`,
+  `tls_octet_counted_frame_round_trips`). An
   enabled change-event outbox publishing to a plain `amqp://` broker opens
   `plaintext_broker` (#3676,
   `production_refuses_a_plaintext_amqp_broker_unless_accepted_by_name`).

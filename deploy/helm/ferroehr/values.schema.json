@@ -620,7 +620,7 @@
               }
             },
             "categories": {
-              "description": "[audit.categories]: template id and root archetype id to the EHDS priority categories each holds. Empty by default. The category vocabulary is the server's and is judged at boot; only the shape is typed here.",
+              "description": "[audit.categories]: the national categories, and template id and root archetype id to the EHDS categories each holds, classified by ehds-logging. Empty by default. The category vocabulary is the server's and is judged at boot; only the shape is typed here.",
               "type": [
                 "object",
                 "null"
@@ -630,13 +630,27 @@
                 "archetypes": {}
               },
               "properties": {
+                "national": {
+                  "description": "The national categories (EHDS Art. 14(1) third subparagraph), each <system>|<code>.",
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "templates": {
                   "type": [
                     "object",
                     "null"
                   ],
                   "additionalProperties": {
-                    "type": "array",
+                    "description": "A list of categories, or the word none for data of no category.",
+                    "type": [
+                      "array",
+                      "string"
+                    ],
                     "items": {
                       "type": "string"
                     }
@@ -648,7 +662,11 @@
                     "null"
                   ],
                   "additionalProperties": {
-                    "type": "array",
+                    "description": "A list of categories, or the word none for data of no category.",
+                    "type": [
+                      "array",
+                      "string"
+                    ],
                     "items": {
                       "type": "string"
                     }

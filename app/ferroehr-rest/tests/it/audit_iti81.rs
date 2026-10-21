@@ -78,6 +78,7 @@ fn ctx() -> AuditContext {
         enterprise_site_id: "site-1".to_owned(),
         server_ip: "10.42.23.77".to_owned(),
         value_if_missing: "UNKNOWN".to_owned(),
+        ..AuditContext::default()
     }
 }
 
@@ -310,9 +311,14 @@ async fn the_subject_audit_role_reads_one_subjects_log_and_nothing_else() {
     assert_eq!(resp.status(), StatusCode::OK);
     let bundle = body_json(resp).await;
     assert_eq!(bundle["total"], 1, "{bundle}");
-    assert_eq!(
-        bundle["entry"][0]["resource"]["agent"][0]["who"]["identifier"]["value"],
-        "alice"
+    assert!(
+        bundle["entry"][0]["resource"]["agent"]
+            .as_array()
+            .expect("agents")
+            .iter()
+            .any(|agent| agent["requestor"] == true
+                && agent["who"]["identifier"]["value"] == "alice"),
+        "{bundle}"
     );
 
     // Unscoped: the same role is refused, with the reason naming the parameter.

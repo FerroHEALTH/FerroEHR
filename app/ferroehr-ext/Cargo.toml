@@ -1,6 +1,6 @@
 [package]
 name = "ferroehr-ext"
-description = "FerroEHR optional-integration extensions (FHIR audit and terminology, events, multimedia), feature-gated"
+description = "FerroEHR optional-integration extensions (FHIR terminology, events, multimedia), feature-gated"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,11 +11,9 @@ publish = false
 [features]
 default = []
 # One additive feature per integration (#1890). `fhir` covers the typed FHIR
-# surface the platform keeps: the ATNA AuditEvent renderer and the
-# terminology-response decoder.
+# surface the platform keeps: the terminology-response decoder.
 fhir = [
     "dep:fhir-model",
-    "dep:jiff",
     "dep:serde",
     "dep:serde_json",
     "dep:thiserror",
@@ -53,7 +51,6 @@ async-trait = { workspace = true, optional = true }
 base64 = { workspace = true, optional = true }
 bytes = { workspace = true, optional = true }
 fhir-model = { workspace = true, optional = true }
-jiff = { workspace = true, optional = true }
 lapin = { workspace = true, optional = true }
 object_store = { workspace = true, optional = true }
 secrecy = { workspace = true, optional = true }

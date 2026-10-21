@@ -39,7 +39,7 @@ use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::server::ServerConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::status::SmError;
-use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig, Transport};
+use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::engine::{AuthzError, PolicyEngine};
@@ -52,7 +52,7 @@ use ferroehr_rest::{build_full, build_with};
 use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode};
 use serde_json::{Value, json};
-use tokio::net::UdpSocket;
+use testkit::syslog_tls::SyslogTlsListener;
 use tower::ServiceExt;
 
 use crate::common;
@@ -276,9 +276,9 @@ async fn seed_composition(seed: &Router, ehr_id: &str) -> String {
 
 // ── ATNA capture ───────────────────────────────────────────────────────────────
 
-async fn audit_capture() -> (UdpSocket, AuditSender) {
-    let socket = UdpSocket::bind("127.0.0.1:0").await.expect("bind udp");
-    let port = socket.local_addr().expect("addr").port();
+async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
+    let socket = SyslogTlsListener::bind().await.expect("syslog listener");
+    let port = socket.port;
     let cfg = AuditConfig {
         enabled: true,
         store: StoreConfig {
@@ -290,9 +290,9 @@ async fn audit_capture() -> (UdpSocket, AuditSender) {
         },
         syslog: SyslogConfig {
             enabled: true,
-            transport: Transport::Udp,
             host: "127.0.0.1".to_owned(),
             port,
+            tls_ca_file: Some(socket.ca_file.display().to_string()),
             ..SyslogConfig::default()
         },
         suppress_login_events: true,
@@ -304,14 +304,13 @@ async fn audit_capture() -> (UdpSocket, AuditSender) {
     (socket, sender)
 }
 
-/// Collect DICOM audit datagrams until the window elapses.
-async fn drain_audit(socket: &UdpSocket) -> Vec<String> {
+/// Collect DICOM audit frames until the window elapses.
+async fn drain_audit(socket: &mut SyslogTlsListener) -> Vec<String> {
     let mut out = Vec::new();
-    let mut buf = vec![0u8; 65_536];
-    while let Ok(Ok((n, _))) =
-        tokio::time::timeout(Duration::from_millis(800), socket.recv_from(&mut buf)).await
-    {
-        out.push(String::from_utf8_lossy(&buf[..n]).into_owned());
+    // The sink opens its TLS connection on the first record, so the window is
+    // the silence after the last frame, long enough for a handshake.
+    while let Some(frame) = socket.recv(Duration::from_secs(2)).await {
+        out.push(String::from_utf8_lossy(&frame).into_owned());
     }
     out
 }
@@ -513,9 +512,9 @@ async fn abac_disabled_restores_behaviour() {
 async fn abac_deny_is_audited() {
     // A 403 from the ABAC gate carries the Principal, so the ATNA layer records a
     // failure audit for the denied caller. The emitter ships a DICOM record
-    // over syslog/UDP; we assert on the datagrams: a minor-failure outcome
+    // over syslog/TLS; we assert on the frames: a minor-failure outcome
     // (`EventOutcomeIndicator="4"`) attributed to `svc`.
-    let (socket, sender) = audit_capture().await;
+    let (mut socket, sender) = audit_capture().await;
     let (_pg, svc) = service(Some(sender)).await;
     let app = abac_app(svc, true).await;
 
@@ -528,7 +527,7 @@ async fn abac_deny_is_audited() {
     .await;
     assert_eq!(s, StatusCode::FORBIDDEN);
 
-    let records = drain_audit(&socket).await;
+    let records = drain_audit(&mut socket).await;
     assert!(
         records
             .iter()

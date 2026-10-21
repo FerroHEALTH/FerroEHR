@@ -94,8 +94,8 @@ deployment_accepts = []
 The shipped default is `sandbox`, which must not hold real personal data.
 `production` refuses to start while a separation is open and not accepted by
 name in `deployment_accepts`: shared database credentials or clusters, an
-undeclared pseudonym namespace, the access log off, failing open or shipped
-over UDP syslog, the open per-EHR access default, migrations on a runtime
+undeclared pseudonym namespace, the access log off or failing open, the open
+per-EHR access default, migrations on a runtime
 credential, authentication off, the role gate off while authentication is
 on, a plaintext listener on a routable address
 (the separate management port included), change events published to a plain
@@ -127,9 +127,9 @@ legal_basis = "gdpr-art-9-2-h"
 enabled = true
 retention_years = 5                   # at or above the floor that applies to you
 
-[audit.syslog]
+[audit.syslog]                        # or [audit.fhir_feed] for a FHIR ARR
 enabled = true
-transport = "tls"                     # or [audit.fhir_feed] for a FHIR ARR
+host = "arr.example.org"              # RFC 5425 TLS on port 6514
 ```
 
 - **Fail closed.** `fail_mode = "closed"` refuses an operation whose access
@@ -137,9 +137,7 @@ transport = "tls"                     # or [audit.fhir_feed] for a FHIR ARR
   counts the loss.
 - **Forward a copy off the box.** The local store shares the database it
   audits. Forward the log to a sink the server's own credentials cannot
-  rewrite, over TLS syslog or the FHIR feed. The syslog sink ships with UDP
-  transport, which loses records silently; set `tls`. `production` refuses
-  UDP unless `audit_syslog_udp` is accepted by name
+  rewrite, over TLS syslog or the FHIR feed
   ([getting the log out](../audit.md#getting-the-log-out)).
 - **Retention.** Set `[audit.store] retention_years` (or `retention_days`).
   In every EU Member State the server refuses a horizon shorter than three

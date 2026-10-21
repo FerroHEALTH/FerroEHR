@@ -290,7 +290,7 @@ unless its key is set, so add only the rows you have switched on:
 | Terminology token endpoint | `config.terminology.external.oauth2_clients.<name>.token_url` | 443 | off-cluster |
 | AMQP broker (events) | `config.events.enabled` plus `secrets.eventsUrl` | 5672, or 5671 with `config.events.tls` | in-cluster |
 | Object store | `config.multimedia.enabled` plus `config.multimedia.endpoint` (unset means AWS regional resolution) | 443, or the endpoint's | off-cluster |
-| Syslog audit repository | `config.audit.syslog.enabled` | 514 UDP, or 6514 TCP with `config.audit.syslog.transport: tls` | off-cluster |
+| Syslog audit repository | `config.audit.syslog.enabled` | 6514 TCP (TLS) | off-cluster |
 | FHIR audit repository | `config.audit.fhir_feed.enabled` plus `secrets.auditFhirFeedUrl` | 443 | off-cluster |
 | FerroPULSE usage report | `usageReport.enabled`, **on by default** | 443 | off-cluster, `report.ferropulse.eu`. Without the rule the report fails quietly and nothing else is affected; see [Usage report](../usage-report.md#network) |
 

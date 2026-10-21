@@ -44,7 +44,9 @@ pub fn positive_constraints(ir: &QueryIr, params: &Params) -> QueryConstraints {
         params,
         positive: &positive,
         out: QueryConstraints::default(),
+        bound: BTreeSet::new(),
     };
+    let mut content = BTreeSet::new();
     for id in &positive {
         match ir.sources.get(*id) {
             Some(Source::Ehr(_)) => {
@@ -66,12 +68,17 @@ pub fn positive_constraints(ir: &QueryIr, params: &Params) -> QueryConstraints {
                     walk.out.resource_kinds.extend(kinds.into_iter().flatten());
                 } else {
                     walk.out.reaches_content = true;
+                    content.insert(*id);
                 }
+                let mut bound = false;
                 if let Some(archetype) = &rm.archetype {
-                    walk.archetype(archetype);
+                    bound |= walk.archetype(archetype);
                 }
                 for predicate in &rm.standard {
-                    walk.standard(predicate);
+                    bound |= walk.standard(predicate);
+                }
+                if bound {
+                    walk.bound.insert(*id);
                 }
             }
             Some(Source::Version(_)) | None => {}
@@ -93,6 +100,7 @@ pub fn positive_constraints(ir: &QueryIr, params: &Params) -> QueryConstraints {
     if let Some(filter) = &ir.filter {
         walk.expr(filter, false);
     }
+    walk.out.every_root_bound = content.is_subset(&walk.bound);
     walk.out
 }
 
@@ -114,12 +122,13 @@ fn collect_positive(tree: &ContainsTree, out: &mut BTreeSet<usize>) {
     }
 }
 
-/// The walk state: the bound parameters, the positive operands and the
-/// constraints found so far.
+/// The walk state: the bound parameters, the positive operands, the
+/// constraints found so far and the operands an id binds.
 struct Walk<'a> {
     params: &'a Params,
     positive: &'a BTreeSet<usize>,
     out: QueryConstraints,
+    bound: BTreeSet<usize>,
 }
 
 impl Walk<'_> {
@@ -135,7 +144,9 @@ impl Walk<'_> {
         }
     }
 
-    fn archetype(&mut self, constraint: &ArchetypeConstraint) {
+    /// Records the archetype id `constraint` names, returning whether it named
+    /// one.
+    fn archetype(&mut self, constraint: &ArchetypeConstraint) -> bool {
         let id = match constraint {
             ArchetypeConstraint::Archetype(id) => Some(id.clone()),
             ArchetypeConstraint::Param(name) => self.bound(&Bind::Param(name.clone())),
@@ -144,7 +155,9 @@ impl Walk<'_> {
         // NOTE: a node code is an at-code, not an archetype id; only a full HRID constrains content.
         if let Some(id) = id.filter(|id| id.parse::<openehr_base::prelude::ArchetypeId>().is_ok()) {
             self.out.archetype_ids.insert(id);
+            return true;
         }
+        false
     }
 
     fn node(&mut self, constraint: &NodeConstraint) {
@@ -156,13 +169,17 @@ impl Walk<'_> {
         }
     }
 
-    fn standard(&mut self, predicate: &StdPredicate) {
+    /// Records the template id `predicate` names, returning whether it named
+    /// one.
+    fn standard(&mut self, predicate: &StdPredicate) -> bool {
         if predicate.op == CompOp::Eq
             && predicate.path.iter().map(String::as_str).eq(TEMPLATE_PATH)
             && let Some(template) = self.bound(&predicate.value)
         {
             self.out.template_ids.insert(template);
+            return true;
         }
+        false
     }
 
     /// The archetype predicates on a path rooted at a positive operand.
@@ -202,6 +219,13 @@ impl Walk<'_> {
                 && leaf.fragment.iter().map(|s| s.name.as_str()).eq(TEMPLATE_PATH))
     }
 
+    /// Marks the operand `target` is rooted at as bound to a template id.
+    fn bind_root(&mut self, target: &PathTarget) {
+        if let PathTarget::Data(leaf) = target {
+            self.bound.insert(leaf.source.0);
+        }
+    }
+
     fn operand_bind(operand: &Operand) -> Option<Bind> {
         match operand {
             Operand::Literal(literal) => Some(Bind::Literal(literal.clone())),
@@ -228,12 +252,15 @@ impl Walk<'_> {
                     (Operand::Path(path), other) | (other, Operand::Path(path))
                         if self.is_template_path(path) =>
                     {
-                        Self::operand_bind(other)
+                        Self::operand_bind(other).map(|bind| (path, bind))
                     }
                     _ => None,
                 };
-                if let Some(template) = value.and_then(|bind| self.bound(&bind)) {
+                if let Some((path, template)) =
+                    value.and_then(|(path, bind)| Some((path, self.bound(&bind)?)))
+                {
                     self.out.template_ids.insert(template);
+                    self.bind_root(path);
                 }
             }
             Expr::Matches { path, values, .. } => {
@@ -241,6 +268,9 @@ impl Walk<'_> {
                 if self.is_template_path(path) {
                     let templates: Vec<String> =
                         values.iter().filter_map(|v| self.bound(v)).collect();
+                    if !templates.is_empty() {
+                        self.bind_root(path);
+                    }
                     self.out.template_ids.extend(templates);
                 }
             }
@@ -273,6 +303,10 @@ mod tests {
             BTreeSet::from(["openEHR-EHR-COMPOSITION.report.v1".to_owned()])
         );
         assert!(c.reaches_content);
+        assert!(
+            c.every_root_bound,
+            "the one positive content operand is bound"
+        );
     }
 
     #[test]
@@ -284,6 +318,21 @@ mod tests {
             &Params::new(),
         );
         assert_eq!(c.template_ids, BTreeSet::from(["Lab Report".to_owned()]));
+        assert!(
+            c.every_root_bound,
+            "the template equality binds the composition"
+        );
+    }
+
+    #[test]
+    fn an_operand_no_id_binds_leaves_the_query_unbound() {
+        let c = constraints(
+            "SELECT o/data FROM EHR e CONTAINS COMPOSITION c[openEHR-EHR-COMPOSITION.report.v1] \
+             CONTAINS OBSERVATION o",
+            &Params::new(),
+        );
+        assert!(c.reaches_content);
+        assert!(!c.every_root_bound, "the observation is bound to no id");
     }
 
     #[test]

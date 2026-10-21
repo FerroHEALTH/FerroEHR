@@ -41,6 +41,9 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use backon::{ExponentialBuilder, Retryable};
+
+#[cfg(feature = "fhir")]
+use crate::system_log::feed::FeedClient;
 use sqlx::PgPool;
 use tokio::sync::{Notify, mpsc};
 use tokio::task::JoinHandle;
@@ -49,16 +52,31 @@ use super::event::{AuditEvent, EmitOutcome};
 
 use crate::system_log::AuditError;
 use crate::system_log::chain_check::ChainCheck;
-use crate::system_log::config::{AuditConfig, FailMode, FhirFeedConfig, Retention, StoreConfig};
-use crate::system_log::message::{AuditContext, AuditMessage};
+#[cfg(feature = "fhir")]
+use crate::system_log::config::FhirFeedConfig;
+use crate::system_log::config::{AuditConfig, FailMode, Retention, StoreConfig};
+use crate::system_log::message::AuditContext;
 use crate::system_log::store::AuditStore;
-use crate::system_log::syslog::{Transport, assemble_syslog};
+use crate::system_log::syslog::SyslogSink;
 
-/// A background-only, indexed lookup of the EHR's patient subject id
-/// (`ehr.subject_id`). Supplied by the binary (keeps the request path
-/// DB-free); given an `ehr_id`, resolves the subject id or `None`.
-pub type SubjectResolver =
-    Arc<dyn Fn(String) -> Pin<Box<dyn Future<Output = Option<String>> + Send>> + Send + Sync>;
+/// The patient subject of an EHR: `EHR_STATUS.subject.external_ref`'s id and
+/// namespace.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedSubject {
+    /// The subject's id value (`ehr.subject_id`).
+    pub id: String,
+    /// The namespace that issued it (`ehr.subject_namespace`), when stored.
+    pub namespace: Option<String>,
+}
+
+/// A background-only, indexed lookup of the EHR's patient subject.
+///
+/// Reads `ehr.subject_id` and `ehr.subject_namespace`. Supplied by the binary
+/// (keeps the request path DB-free); given an `ehr_id`, resolves the subject
+/// or `None`.
+pub type SubjectResolver = Arc<
+    dyn Fn(String) -> Pin<Box<dyn Future<Output = Option<ResolvedSubject>> + Send>> + Send + Sync,
+>;
 
 /// `metrics` counter names.
 pub const METRIC_EMITTED: &str = "atna_audit_emitted_total";
@@ -111,11 +129,12 @@ struct SenderInner {
     /// any), and the legal basis it processes under.
     purpose_header: String,
     purpose_codes: Vec<String>,
-    /// The purpose codes that mark an access as an emergency access.
-    emergency_purpose_codes: Vec<String>,
+    /// The purposes of use that mark an access as an emergency access, held
+    /// by `ehds-logging`.
+    emergency: ehds_logging::emergency::EmergencyPurposes,
     legal_basis: Option<String>,
     /// The compiled `[audit.categories]` map every record is classified through.
-    categories: crate::system_log::categories::CategoryMap,
+    categories: crate::system_log::categories::Classifier,
     /// Whether the local store is currently accepting writes (`true` when the
     /// store is disabled — health then rides on the queue alone). Written by
     /// the drain, read by [`AuditSender::emit`] under `fail_mode = closed`.
@@ -195,9 +214,12 @@ impl AuditSender {
     pub fn is_emergency_purpose(&self, purpose: Option<&str>) -> bool {
         purpose.is_some_and(|code| {
             self.inner
-                .emergency_purpose_codes
-                .iter()
-                .any(|known| known == code)
+                .emergency
+                .mark(&[ehds_logging::record::Purpose {
+                    system: None,
+                    code: code.to_owned(),
+                }])
+                .is_some()
         })
     }
 
@@ -209,7 +231,7 @@ impl AuditSender {
 
     /// The category map every access record is classified through.
     #[must_use]
-    pub fn categories(&self) -> &crate::system_log::categories::CategoryMap {
+    pub fn categories(&self) -> &crate::system_log::categories::Classifier {
         &self.inner.categories
     }
 
@@ -310,9 +332,10 @@ impl AuditHandle {
 /// The resolved sink set the drain fans out to.
 struct Sinks {
     store: Option<AuditStore>,
-    syslog: Option<Transport>,
+    syslog: Option<SyslogSink>,
     /// The in-drain FHIR feed (store OFF only; with the store on the outbox
     /// worker owns delivery).
+    #[cfg(feature = "fhir")]
     direct_feed: Option<FeedClient>,
     /// Wakes the outbox worker after a store insert.
     feed_notify: Option<Arc<Notify>>,
@@ -324,91 +347,7 @@ type DrainRecord = (AuditEvent, Option<String>, Option<serde_json::Value>);
 
 /// The drain's `ehr_id` → subject-id memo (an EHR's subject is immutable for
 /// audit purposes, so one lookup serves every later record).
-type SubjectCache = moka::future::Cache<String, Option<String>>;
-
-/// The ITI-20 ATX:FHIR Feed HTTP client.
-#[derive(Clone)]
-struct FeedClient {
-    client: reqwest::Client,
-    endpoint: String,
-    max_retries: usize,
-    /// The bearer token of `[audit.fhir_feed.oauth]`, the IHE IUA authorized
-    /// client; `None` sends the Basic credentials of the URL, if any.
-    token: Option<ferrohealth_smart::client::cache::TokenSource>,
-}
-
-impl FeedClient {
-    /// The feed client for `config`.
-    ///
-    /// # Errors
-    /// [`AuditError::Transport`] when the configured grant is incomplete or
-    /// its HTTP engine cannot be built; boot validation refuses an incomplete
-    /// grant first.
-    fn new(config: &FhirFeedConfig) -> Result<Self, AuditError> {
-        let token = config
-            .oauth
-            .as_ref()
-            .map(|oauth| {
-                let grant = oauth
-                    .grant("audit.fhir_feed.oauth")
-                    .map_err(|e| AuditError::Transport(e.into()))?;
-                ferrohealth_smart::client::cache::TokenSource::new(grant)
-                    .map_err(|e| AuditError::Transport(Box::new(e)))
-            })
-            .transpose()?;
-        Ok(FeedClient {
-            client: reqwest::Client::new(),
-            endpoint: format!("{}/AuditEvent", config.url.expose().trim_end_matches('/')),
-            max_retries: config.max_retries,
-            token,
-        })
-    }
-
-    /// One `POST` of `body`, under the feed's bearer token when it has one,
-    /// sent once more under a new token when the ARR refuses the held one
-    /// with `401` (RFC 6750 §3.1).
-    async fn send_once(&self, body: &serde_json::Value) -> Result<reqwest::Response, AuditError> {
-        let request = |bearer: Option<http::HeaderValue>| {
-            let mut request = self
-                .client
-                .post(&self.endpoint)
-                .header(http::header::CONTENT_TYPE, "application/fhir+json")
-                .json(body);
-            if let Some(bearer) = bearer {
-                request = request.header(http::header::AUTHORIZATION, bearer);
-            }
-            request.send()
-        };
-        let Some(token) = &self.token else {
-            return request(None)
-                .await
-                .map_err(|e| AuditError::Transport(Box::new(e)));
-        };
-        token
-            .call(|bearer| request(Some(bearer)))
-            .await
-            .map_err(|e| AuditError::Transport(Box::new(e)))
-    }
-
-    /// POST one FHIR `AuditEvent` (ITI-20 ATX:FHIR Feed) with bounded jittered
-    /// retries.
-    async fn post(&self, body: &serde_json::Value) -> Result<(), AuditError> {
-        let send = || async {
-            let resp = self.send_once(body).await?;
-            if resp.status().is_success() {
-                Ok(())
-            } else {
-                Err(AuditError::FeedRejected(resp.status()))
-            }
-        };
-        send.retry(
-            ExponentialBuilder::default()
-                .with_jitter()
-                .with_max_times(self.max_retries),
-        )
-        .await
-    }
-}
+type SubjectCache = moka::future::Cache<String, Option<ResolvedSubject>>;
 
 /// Start the audit subsystem: resolve the sinks and spawn the drain plus any
 /// forwarding/retention workers. `pool` backs the local store (`None` in
@@ -424,9 +363,12 @@ pub async fn start(
 ) -> Result<(AuditSender, AuditHandle), AuditError> {
     let syslog = if config.syslog.enabled {
         Some(
-            Transport::connect(&config.syslog)
-                .await
-                .map_err(|e| AuditError::Transport(Box::new(e)))?,
+            SyslogSink::new(
+                &config.syslog,
+                config.server_host.as_deref().unwrap_or_default(),
+                &config.source_id,
+            )
+            .await?,
         )
     } else {
         None
@@ -446,24 +388,10 @@ pub async fn start(
     };
 
     let mut workers = Vec::new();
-    let mut feed_notify = None;
-    let mut direct_feed = None;
-    if config.fhir_feed.enabled {
-        let feed = FeedClient::new(&config.fhir_feed)?;
-        if let Some(store) = store.clone() {
-            // Outbox-durable delivery: the worker polls undelivered rows.
-            let notify = Arc::new(Notify::new());
-            feed_notify = Some(Arc::clone(&notify));
-            workers.push(tokio::spawn(feed_outbox(
-                store,
-                feed,
-                config.fhir_feed.clone(),
-                notify,
-            )));
-        } else {
-            direct_feed = Some(feed);
-        }
-    }
+    #[cfg(feature = "fhir")]
+    let (feed_notify, direct_feed) = start_feed(&config, store.as_ref(), &mut workers)?;
+    #[cfg(not(feature = "fhir"))]
+    let feed_notify = None;
     let chain_check = store
         .as_ref()
         .and_then(|store| spawn_store_upkeep(store, &config.store, &mut workers));
@@ -474,23 +402,27 @@ pub async fn start(
         );
     }
 
+    let categories = config
+        .categories
+        .compile()
+        .map_err(AuditError::CategoryMap)?;
+    let emergency = emergency_purposes(&config)?;
+
     let ctx = AuditContext {
         source_id: config.source_id.clone(),
         enterprise_site_id: config.enterprise_site_id.clone().unwrap_or_default(),
         server_ip: config.server_host.clone().unwrap_or_default(),
         value_if_missing: config.value_if_missing.clone(),
+        #[cfg(feature = "fhir")]
+        recording: recording(&config, &categories, &emergency)?,
     };
-
-    let categories = config
-        .categories
-        .compile()
-        .map_err(AuditError::CategoryMap)?;
 
     let store_healthy = Arc::new(AtomicBool::new(true));
     let (tx, rx) = mpsc::channel(config.queue_capacity.max(1));
     let sinks = Sinks {
         store,
         syslog,
+        #[cfg(feature = "fhir")]
         direct_feed,
         feed_notify,
     };
@@ -510,7 +442,7 @@ pub async fn start(
             suppress_login_events: config.suppress_login_events,
             purpose_header: config.purpose_header.to_ascii_lowercase(),
             purpose_codes: config.purpose_codes.clone(),
-            emergency_purpose_codes: config.emergency_purpose_codes.clone(),
+            emergency,
             legal_basis: config.legal_basis.clone(),
             categories,
             fail_mode: config.fail_mode,
@@ -528,6 +460,104 @@ pub async fn start(
             chain_check,
         },
     ))
+}
+
+/// Starts the ITI-20 ATX:FHIR Feed when it is on: an outbox worker onto
+/// `workers` when the store is on, returning the notify that wakes it, else
+/// the in-drain client.
+///
+/// # Errors
+/// [`AuditError::Transport`] when the feed client cannot be built.
+#[cfg(feature = "fhir")]
+fn start_feed(
+    config: &AuditConfig,
+    store: Option<&AuditStore>,
+    workers: &mut Vec<JoinHandle<()>>,
+) -> Result<(Option<Arc<Notify>>, Option<FeedClient>), AuditError> {
+    if !config.fhir_feed.enabled {
+        return Ok((None, None));
+    }
+    let feed = FeedClient::new(&config.fhir_feed)?;
+    let Some(store) = store else {
+        return Ok((None, Some(feed)));
+    };
+    // Outbox-durable delivery: the worker polls undelivered rows.
+    let notify = Arc::new(Notify::new());
+    workers.push(tokio::spawn(feed_outbox(
+        store.clone(),
+        feed,
+        config.fhir_feed.clone(),
+        Arc::clone(&notify),
+    )));
+    Ok((Some(notify), None))
+}
+
+/// The purposes of use `[audit] emergency_purpose_codes` declares, held by
+/// `ehds-logging`.
+///
+/// # Errors
+/// [`AuditError::Emergency`] for an empty code; boot validation refuses one
+/// first.
+fn emergency_purposes(
+    config: &AuditConfig,
+) -> Result<ehds_logging::emergency::EmergencyPurposes, AuditError> {
+    let purposes: Vec<ehds_logging::record::Purpose> = config
+        .emergency_purpose_codes
+        .iter()
+        .map(|code| ehds_logging::record::Purpose {
+            system: None,
+            code: code.clone(),
+        })
+        .collect();
+    ehds_logging::emergency::EmergencyPurposes::declare(&purposes).map_err(AuditError::Emergency)
+}
+
+/// The policies the EHDS access record is written under: the store's horizon
+/// as the record's retention, the categories' and origins' labels, and the
+/// emergency purposes.
+///
+/// A horizon in days states the whole years it keeps at least (366 days a
+/// year), and keeping forever states the longest period `ehds-logging` can
+/// write. A horizon under the three years of EHDS Art. 9(2), which a
+/// deployment outside the Union may keep, states the floor, and the boot log
+/// says so.
+///
+/// # Errors
+/// [`AuditError::Policy`] when `ehds-logging` refuses the label policy of the
+/// map, which a compiled map does not cause.
+#[cfg(feature = "fhir")]
+fn recording(
+    config: &AuditConfig,
+    categories: &crate::system_log::categories::Classifier,
+    emergency: &ehds_logging::emergency::EmergencyPurposes,
+) -> Result<crate::system_log::fhir::Recording, AuditError> {
+    use ehds_logging::retention::{FLOOR_YEARS, RetentionPolicy};
+    let none = std::collections::BTreeMap::new();
+    let years = match config.store.retention() {
+        Retention::Forever => u16::MAX,
+        Retention::Days(days) => u16::try_from(days.div_euclid(366)).unwrap_or(u16::MAX),
+        Retention::Years(years) => u16::try_from(years).unwrap_or(u16::MAX),
+    };
+    let retention = if years < FLOOR_YEARS {
+        tracing::warn!(
+            horizon = %config.store.retention().describe(),
+            "the audit store keeps records under the three years of EHDS Art. 9(2); every \
+             access record states the floor of three years, which this store does not keep"
+        );
+        RetentionPolicy::default()
+    } else {
+        RetentionPolicy::declare(years, &none, &none, categories.map())
+            .map_err(|e| AuditError::Policy(Box::new(e)))?
+    };
+    let unlabelled = std::collections::BTreeMap::new();
+    let labels =
+        ehds_logging::label::LabelPolicy::declare(None, &unlabelled, &unlabelled, categories.map())
+            .map_err(|e| AuditError::Policy(Box::new(e)))?;
+    Ok(crate::system_log::fhir::Recording {
+        retention,
+        labels,
+        emergency: emergency.clone(),
+    })
 }
 
 /// Spawns the local store's upkeep workers onto `workers`: the retention
@@ -591,6 +621,7 @@ async fn drain(
         if let Some(transport) = &mut sinks.syslog {
             send_to_syslog(transport, &records, &row_ids, sinks.store.as_ref(), &ctx).await;
         }
+        #[cfg(feature = "fhir")]
         if let Some(feed) = &sinks.direct_feed {
             send_to_direct_feed(feed, &records).await;
         }
@@ -632,13 +663,21 @@ async fn render_batch(
     resolve_subject: bool,
     sinks: &Sinks,
 ) -> Vec<DrainRecord> {
+    #[cfg(feature = "fhir")]
     let render_fhir = sinks.store.is_some() || sinks.direct_feed.is_some();
+    #[cfg(not(feature = "fhir"))]
+    let render_fhir = sinks.store.is_some();
     let mut records: Vec<DrainRecord> = Vec::with_capacity(batch.len());
     for event in batch.drain(..) {
-        let subject = match (resolve_subject, &event.ehr_id) {
+        let mut event = event;
+        let resolved = match (resolve_subject, &event.ehr_id) {
             (true, Some(ehr_id)) => subject_cache.get(ehr_id).await.flatten(),
             _ => None,
         };
+        event
+            .subject_namespace
+            .clone_from(&resolved.as_ref().and_then(|s| s.namespace.clone()));
+        let subject = resolved.map(|s| s.id);
         let rendered = render_fhir
             .then(|| render_audit_event(&event, ctx, subject.as_deref()))
             .flatten();
@@ -759,7 +798,7 @@ async fn store_each_record(
 /// Feeds every record to the classic ITI-20 syslog sink, which is inherently
 /// sequential: one datagram or frame per record.
 async fn send_to_syslog(
-    transport: &mut Transport,
+    transport: &mut SyslogSink,
     records: &[DrainRecord],
     row_ids: &[Option<uuid::Uuid>],
     store: Option<&AuditStore>,
@@ -774,14 +813,14 @@ async fn send_to_syslog(
 /// Sends one record as DICOM PS3.15 §A.5 XML and, on success, stamps
 /// `delivered_syslog_at` on the row the store already holds for it.
 async fn send_one_to_syslog(
-    transport: &mut Transport,
+    transport: &mut SyslogSink,
     event: &AuditEvent,
     subject: Option<&str>,
     row_id: Option<uuid::Uuid>,
     store: Option<&AuditStore>,
     ctx: &AuditContext,
 ) {
-    let xml = match AuditMessage::build(event, ctx, subject).to_xml() {
+    let xml = match crate::system_log::message::to_xml(event, ctx, subject) {
         Ok(xml) => xml,
         Err(e) => {
             crate::telemetry::metrics::metrics()
@@ -791,8 +830,7 @@ async fn send_one_to_syslog(
             return;
         }
     };
-    let syslog = assemble_syslog(&ctx.server_ip, &ctx.source_id, &event.timestamp, &xml);
-    match transport.send(&syslog).await {
+    match transport.send(event.timestamp, &xml).await {
         Ok(()) => {
             crate::telemetry::metrics::metrics()
                 .atna_audit_sent
@@ -812,6 +850,7 @@ async fn send_one_to_syslog(
 
 /// Ships every rendered document to the ITI-20 ATX:FHIR Feed in-drain, the
 /// store-off path (with the store on, the outbox worker owns delivery).
+#[cfg(feature = "fhir")]
 async fn send_to_direct_feed(feed: &FeedClient, records: &[DrainRecord]) {
     for (_, _, rendered) in records {
         let Some(body) = rendered else {
@@ -869,6 +908,7 @@ fn render_audit_event(
 /// stamping `delivered_fhir_feed_at` per success. On a delivery failure the
 /// batch stops (rows stay pending — durable) and the worker backs off one poll
 /// interval.
+#[cfg(feature = "fhir")]
 async fn feed_outbox(
     store: AuditStore,
     feed: FeedClient,
@@ -950,7 +990,7 @@ mod tests {
     use crate::system_log::config::{StoreConfig, SyslogConfig};
     use crate::system_log::event::{EventActionCode, EventOutcome, ObjectClass};
 
-    fn udp_config() -> AuditConfig {
+    fn syslog_config() -> AuditConfig {
         AuditConfig {
             enabled: true,
             // No DB pool in these tests — exercise the transport path alone.
@@ -963,9 +1003,8 @@ mod tests {
             },
             syslog: SyslogConfig {
                 enabled: true,
-                transport: crate::system_log::config::Transport::Udp,
-                // A port nothing listens on is fine: connected UDP send does
-                // not fail.
+                // A port nothing listens on is fine: the sink connects on the
+                // first send, which fails and is metered.
                 host: "127.0.0.1".to_owned(),
                 port: 1,
                 ..SyslogConfig::default()
@@ -1002,9 +1041,15 @@ mod tests {
                 suppress_login_events: true,
                 purpose_header: "x-purpose-of-use".to_owned(),
                 purpose_codes: Vec::new(),
-                emergency_purpose_codes: vec!["ETREAT".to_owned()],
+                emergency: ehds_logging::emergency::EmergencyPurposes::declare(&[
+                    ehds_logging::record::Purpose {
+                        system: None,
+                        code: "ETREAT".to_owned(),
+                    },
+                ])
+                .expect("one declared purpose"),
                 legal_basis: None,
-                categories: crate::system_log::categories::CategoryMap::default(),
+                categories: crate::system_log::categories::Classifier::default(),
                 fail_mode,
                 store_healthy: Arc::new(AtomicBool::new(store_healthy)),
                 dropped_since_warn: AtomicU64::new(0),
@@ -1016,7 +1061,7 @@ mod tests {
 
     #[tokio::test]
     async fn emit_enqueues_and_drains_on_shutdown() {
-        let (sender, handle) = start(udp_config(), None, None).await.expect("start");
+        let (sender, handle) = start(syslog_config(), None, None).await.expect("start");
         assert!(sender.enabled());
         assert_eq!(sender.emit(event()), EmitOutcome::Enqueued);
         drop(sender);

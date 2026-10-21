@@ -1,45 +1,38 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The DICOM Audit Message model (DICOM PS3.15 §A.5) + a `quick-xml` serializer.
+//! The DICOM audit message (DICOM PS3.15 §A.5) of one audit record, built on
+//! `ihe-atna`'s message model, which writes the XML (ITI TF-2 §3.20.4.1.2).
 //!
-//! This is the **DICOM audit schema**, not openEHR ITS-XML — it lives in its own
-//! module and shares nothing with `openehr-its`. Plain structs mirror the schema
-//! elements (`EventIdentification`, `ActiveParticipant`,
-//! `AuditSourceIdentification`, `ParticipantObjectIdentification`; DICOM PS3.15
-//! §A.5); [`AuditMessage::to_xml`] renders canonical (indented) XML with
-//! `quick-xml`, which escapes all attribute/text values. The golden vector
-//! snapshotted in the tests is a PS3.15 §A.5 EHR-create success record.
+//! FerroEHR decides what the message says: the event id per resource class,
+//! the participants and their data-flow roles, the participant objects. The
+//! shared crate holds the model and the writer.
 //!
-//! The record's EHDS priority categories ([`AuditEvent::category`]) have no
+//! The record's EHDS categories, the accessing organisation, the purpose of
+//! use, the authentication assurance level and the emergency mark have no
 //! element in the PS3.15 §A.5 schema, so this rendering omits them; the local
-//! store and the FHIR `AuditEvent` carry them.
-//!
-//! The authentication assurance level has no element either: PS3.15 §A.5.1
-//! gives `ActiveParticipant` no assurance attribute, so only the local store
-//! carries it. The natural person behind a client application is a second
-//! `ActiveParticipant`.
-//!
-//! The emergency-access mark ([`AuditEvent::emergency_access`], EHDS
-//! Art. 11(5)) has no element either: the schema defines no purpose of use in
-//! any of its four element groups, so the local store and the FHIR
-//! `AuditEvent` carry the mark and this rendering does not.
+//! store and the FHIR `AuditEvent` carry them. The natural person behind a
+//! client application is a second `ActiveParticipant`.
 
-use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
-use quick_xml::writer::Writer;
-
-use crate::system_log::event::{ActingMode, AuditEvent};
+use ihe_atna::atna::message::{
+    AccessPoint, ActiveParticipant, AuditMessage, AuditSource, CodedValue, EventIdentification,
+    ParticipantObject,
+};
+use secrecy::{SecretSlice, SecretString};
 
 use crate::system_log::AuditError;
 use crate::system_log::codes::{
     self, AtnaAction, AtnaEventType, AtnaObject, AtnaOutcome, Code, NETWORK_ACCESS_POINT_IP,
     OBJECT_ROLE_PATIENT, OBJECT_ROLE_QUERY, OBJECT_TYPE_PERSON, OBJECT_TYPE_SYSTEM,
 };
+use crate::system_log::event::{ActingMode, AuditEvent};
 
-/// The server-side identity shared by every emitted record (the destination
-/// node + audit source). Built once by the sender from
+/// The server-side identity shared by every emitted record.
+///
+/// The destination node and audit source, and the policies an access record
+/// is written under. Built once by the sender from
 /// [`super::config::AuditConfig`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AuditContext {
     /// `AuditSourceID` and the destination `ActiveParticipant.UserID`.
     pub source_id: String,
@@ -49,192 +42,76 @@ pub struct AuditContext {
     pub server_ip: String,
     /// Fill for empty mandatory fields (default `UNKNOWN`).
     pub value_if_missing: String,
+    /// The retention, label and emergency policies of the EHDS access record.
+    #[cfg(feature = "fhir")]
+    pub recording: crate::system_log::fhir::Recording,
 }
 
-/// A DICOM `ActiveParticipant` (a human/system actor in the event).
-#[derive(Debug, Clone)]
-struct ActiveParticipant {
-    user_id: String,
-    /// `AlternativeUserID` (PS3.15 §A.5.1): the authentication system's
-    /// identifier when `UserID` names the person by another one.
-    alternative_user_id: Option<String>,
-    user_is_requestor: bool,
-    network_access_point_id: Option<String>,
-    /// The participation `RoleIDCode`; `None` for a person who reached the
-    /// server through a client application, which carries the code itself.
-    role: Option<Code>,
-    /// The security roles the person acted under, each a further `RoleIDCode`
-    /// (PS3.15 §A.5.1 makes the element 0..*), coded in the deployment's own
-    /// role vocabulary (#3239).
-    roles: Vec<String>,
-}
+/// The `codeSystemName` of the deployment's own role vocabulary on a
+/// `RoleIDCode`: the RBAC roles a caller held, which no published code system
+/// names.
+const ROLE_VOCABULARY: &str = "urn:ferroehr:role";
 
-/// A DICOM `ParticipantObjectIdentification` (a data object the event touched).
-#[derive(Debug, Clone)]
-struct ParticipantObject {
-    id: String,
-    type_code: &'static str,
-    type_code_role: Option<&'static str>,
-    data_life_cycle: Option<&'static str>,
-    id_type_code: Code,
-}
-
-/// A DICOM Audit Message (PS3.15 §A.5) ready to serialize.
-#[derive(Debug, Clone)]
-pub struct AuditMessage {
-    action: char,
-    event_datetime: String,
-    outcome: i32,
-    event_id: Code,
-    event_type: Option<Code>,
-    outcome_description: &'static str,
-    participants: Vec<ActiveParticipant>,
-    enterprise_site_id: String,
-    source_id: String,
-    source_type: Code,
-    objects: Vec<ParticipantObject>,
-}
-
-impl AuditMessage {
-    /// Build a DICOM Audit Message from a resolved [`AuditEvent`], the server
-    /// [`AuditContext`], and the optionally-resolved patient subject id
-    /// (`None` → `ctx.value_if_missing`).
-    #[must_use]
-    pub fn build(event: &AuditEvent, ctx: &AuditContext, subject: Option<&str>) -> Self {
-        let missing = ctx.value_if_missing.as_str();
-        let (event_code, event_text) = event.object.event_id(event.action);
-        let event_id = Code {
-            csd_code: event_code,
-            code_system: codes::DCM,
-            original_text: event_text,
-        };
-        let event_type = event.event_type.as_ref().map(AtnaEventType::code);
-
-        let client_ip = event
-            .client_ip
-            .clone()
-            .unwrap_or_else(|| missing.to_owned());
-        let user_id = if event.user_id.is_empty() {
-            missing.to_owned()
-        } else {
-            event.user_id.clone()
-        };
-
-        // The accessing organisation, the declared purpose of use and the
-        // authentication assurance level stay out of this rendering: PS3.15
-        // §A.5 gives `ActiveParticipant` no organisation or assurance
-        // attribute and defines no purpose element anywhere, and
-        // `AuditEnterpriseSiteID` names the REPORTING source's site rather
-        // than the caller's organisation
-        // (https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html).
-        let (client_role, server_role) = if event.server_is_data_source() {
-            (codes::ROLE_DESTINATION, codes::ROLE_SOURCE)
-        } else {
-            (codes::ROLE_SOURCE, codes::ROLE_DESTINATION)
-        };
-        let mut participants = requesting_participants(event, user_id, client_ip, client_role);
-        // This server.
-        participants.push(ActiveParticipant {
-            user_id: nonempty(&ctx.source_id, missing),
-            alternative_user_id: None,
-            user_is_requestor: false,
-            network_access_point_id: Some(nonempty(&ctx.server_ip, missing)),
-            role: Some(server_role),
-            roles: Vec::new(),
-        });
-
-        let objects = build_objects(event, subject, missing);
-
-        Self {
-            action: event.action.as_char(),
-            event_datetime: event.timestamp.to_string(),
-            outcome: event.outcome.as_i32(),
-            event_id,
-            event_type,
-            outcome_description: event.outcome.description(),
-            participants,
-            enterprise_site_id: nonempty(&ctx.enterprise_site_id, missing),
-            source_id: nonempty(&ctx.source_id, missing),
-            source_type: codes::SOURCE_TYPE_APPLICATION_SERVER,
-            objects,
-        }
+/// Builds the DICOM audit message of a resolved [`AuditEvent`], with the server
+/// [`AuditContext`] and the optionally-resolved patient subject id (`None` →
+/// `ctx.value_if_missing`).
+#[must_use]
+pub fn build(event: &AuditEvent, ctx: &AuditContext, subject: Option<&str>) -> AuditMessage {
+    let missing = ctx.value_if_missing.as_str();
+    let (event_code, event_text) = event.object.event_id(event.action);
+    let client_ip = event
+        .client_ip
+        .clone()
+        .unwrap_or_else(|| missing.to_owned());
+    let user_id = nonempty(&event.user_id, missing);
+    let (client_role, server_role) = if event.server_is_data_source() {
+        (codes::ROLE_DESTINATION, codes::ROLE_SOURCE)
+    } else {
+        (codes::ROLE_SOURCE, codes::ROLE_DESTINATION)
+    };
+    let mut participants = requesting_participants(event, user_id, client_ip, client_role);
+    participants.push(ActiveParticipant {
+        user_id: nonempty(&ctx.source_id, missing),
+        alternative_user_id: None,
+        user_name: None,
+        user_is_requestor: false,
+        role_id_codes: vec![coded(server_role)],
+        access_point: Some(ip_point(nonempty(&ctx.server_ip, missing))),
+    });
+    AuditMessage {
+        event: EventIdentification {
+            event_id: CodedValue::new(event_code, codes::DCM, event_text),
+            action: event.action.as_code(),
+            date_time: event.timestamp,
+            outcome: event.outcome.as_code(),
+            type_codes: event
+                .event_type
+                .as_ref()
+                .map(|kind| coded(kind.code()))
+                .into_iter()
+                .collect(),
+        },
+        participants,
+        source: AuditSource {
+            id: nonempty(&ctx.source_id, missing),
+            enterprise_site: Some(nonempty(&ctx.enterprise_site_id, missing)),
+        },
+        objects: build_objects(event, subject, missing),
     }
+}
 
-    /// Serialize to indented canonical XML.
-    ///
-    /// # Errors
-    /// [`AuditError::Xml`] if the writer fails (only on an I/O fault of the
-    /// in-memory buffer, which does not occur in practice).
-    pub fn to_xml(&self) -> Result<String, AuditError> {
-        let mut w = Writer::new_with_indent(Vec::new(), b' ', 2);
-        w.write_event(Event::Start(BytesStart::new("AuditMessage")))?;
-
-        let mut ev = BytesStart::new("EventIdentification");
-        ev.push_attribute(("EventActionCode", self.action.to_string().as_str()));
-        ev.push_attribute(("EventDateTime", self.event_datetime.as_str()));
-        ev.push_attribute(("EventOutcomeIndicator", self.outcome.to_string().as_str()));
-        w.write_event(Event::Start(ev))?;
-        write_code(&mut w, "EventID", &self.event_id)?;
-        // EventTypeCode follows EventID inside EventIdentification
-        // (DICOM PS3.15 §A.5 message schema element order).
-        if let Some(event_type) = &self.event_type {
-            write_code(&mut w, "EventTypeCode", event_type)?;
-        }
-        w.write_event(Event::Start(BytesStart::new("EventOutcomeDescription")))?;
-        w.write_event(Event::Text(BytesText::new(self.outcome_description)))?;
-        w.write_event(Event::End(BytesEnd::new("EventOutcomeDescription")))?;
-        w.write_event(Event::End(BytesEnd::new("EventIdentification")))?;
-
-        for p in &self.participants {
-            let mut ap = BytesStart::new("ActiveParticipant");
-            ap.push_attribute(("UserID", p.user_id.as_str()));
-            if let Some(alternative) = &p.alternative_user_id {
-                ap.push_attribute(("AlternativeUserID", alternative.as_str()));
-            }
-            ap.push_attribute(("UserIsRequestor", bool_str(p.user_is_requestor)));
-            if let Some(address) = &p.network_access_point_id {
-                ap.push_attribute(("NetworkAccessPointID", address.as_str()));
-                ap.push_attribute(("NetworkAccessPointTypeCode", NETWORK_ACCESS_POINT_IP));
-            }
-            w.write_event(Event::Start(ap))?;
-            if let Some(role) = &p.role {
-                write_code(&mut w, "RoleIDCode", role)?;
-            }
-            for role in &p.roles {
-                let mut c = BytesStart::new("RoleIDCode");
-                c.push_attribute(("csd-code", role.as_str()));
-                c.push_attribute(("codeSystemName", ROLE_VOCABULARY));
-                c.push_attribute(("originalText", role.as_str()));
-                w.write_event(Event::Empty(c))?;
-            }
-            w.write_event(Event::End(BytesEnd::new("ActiveParticipant")))?;
-        }
-
-        let mut src = BytesStart::new("AuditSourceIdentification");
-        src.push_attribute(("AuditEnterpriseSiteID", self.enterprise_site_id.as_str()));
-        src.push_attribute(("AuditSourceID", self.source_id.as_str()));
-        w.write_event(Event::Start(src))?;
-        write_code(&mut w, "AuditSourceTypeCode", &self.source_type)?;
-        w.write_event(Event::End(BytesEnd::new("AuditSourceIdentification")))?;
-
-        for obj in &self.objects {
-            let mut po = BytesStart::new("ParticipantObjectIdentification");
-            po.push_attribute(("ParticipantObjectID", obj.id.as_str()));
-            po.push_attribute(("ParticipantObjectTypeCode", obj.type_code));
-            if let Some(role) = obj.type_code_role {
-                po.push_attribute(("ParticipantObjectTypeCodeRole", role));
-            }
-            if let Some(dlc) = obj.data_life_cycle {
-                po.push_attribute(("ParticipantObjectDataLifeCycle", dlc));
-            }
-            w.write_event(Event::Start(po))?;
-            write_code(&mut w, "ParticipantObjectIDTypeCode", &obj.id_type_code)?;
-            w.write_event(Event::End(BytesEnd::new("ParticipantObjectIdentification")))?;
-        }
-
-        w.write_event(Event::End(BytesEnd::new("AuditMessage")))?;
-        String::from_utf8(w.into_inner()).map_err(|e| AuditError::Xml(Box::new(e)))
-    }
+/// The message of `event` as UTF-8 XML, ready for the syslog frame.
+///
+/// # Errors
+/// [`AuditError::Xml`] when the writer fails, which writing to memory does not.
+pub fn to_xml(
+    event: &AuditEvent,
+    ctx: &AuditContext,
+    subject: Option<&str>,
+) -> Result<SecretSlice<u8>, AuditError> {
+    build(event, ctx, subject)
+        .to_xml()
+        .map_err(|e| AuditError::Xml(Box::new(e)))
 }
 
 /// The requesting side's `ActiveParticipant`s (PS3.15 §A.5.1).
@@ -251,6 +128,11 @@ fn requesting_participants(
     client_ip: String,
     client_role: Code,
 ) -> Vec<ActiveParticipant> {
+    let roles: Vec<CodedValue> = event
+        .roles
+        .iter()
+        .map(|role| CodedValue::new(role, ROLE_VOCABULARY, role))
+        .collect();
     let professional = event
         .actor
         .professional_id
@@ -261,18 +143,18 @@ fn requesting_participants(
             ActiveParticipant {
                 user_id: person.to_owned(),
                 alternative_user_id: None,
+                user_name: None,
                 user_is_requestor: event.user_is_requestor,
-                network_access_point_id: None,
-                role: None,
-                roles: event.roles.clone(),
+                role_id_codes: roles,
+                access_point: None,
             },
             ActiveParticipant {
                 user_id,
                 alternative_user_id: None,
+                user_name: None,
                 user_is_requestor: false,
-                network_access_point_id: Some(client_ip),
-                role: Some(client_role),
-                roles: Vec::new(),
+                role_id_codes: vec![coded(client_role)],
+                access_point: Some(ip_point(client_ip)),
             },
         ];
     }
@@ -280,13 +162,15 @@ fn requesting_participants(
         Some(person) if person != user_id => (person.to_owned(), Some(user_id)),
         _ => (user_id, None),
     };
+    let mut role_id_codes = vec![coded(client_role)];
+    role_id_codes.extend(roles);
     vec![ActiveParticipant {
         user_id,
         alternative_user_id,
+        user_name: None,
         user_is_requestor: event.user_is_requestor,
-        network_access_point_id: Some(client_ip),
-        role: Some(client_role),
-        roles: event.roles.clone(),
+        role_id_codes,
+        access_point: Some(ip_point(client_ip)),
     }]
 }
 
@@ -302,28 +186,25 @@ fn build_objects(
 
     if object_class.is_query() {
         // A single Search-Criteria object (ad-hoc → UNKNOWN; stored → query name).
-        objects.push(ParticipantObject {
-            id: event
+        objects.push(object(
+            event
                 .object_id
                 .clone()
                 .unwrap_or_else(|| missing.to_owned()),
-            type_code: OBJECT_TYPE_SYSTEM,
-            type_code_role: Some(OBJECT_ROLE_QUERY),
-            data_life_cycle: None,
-            id_type_code: codes::OBJ_ID_SEARCH_CRITERIA,
-        });
+            OBJECT_TYPE_SYSTEM,
+            Some(OBJECT_ROLE_QUERY),
+            codes::OBJ_ID_SEARCH_CRITERIA,
+        ));
         return objects;
     }
 
     if object_class.is_patient_centric() {
-        // The patient (EHR subject) participant.
-        objects.push(ParticipantObject {
-            id: subject.map_or_else(|| missing.to_owned(), str::to_owned),
-            type_code: OBJECT_TYPE_PERSON,
-            type_code_role: Some(OBJECT_ROLE_PATIENT),
-            data_life_cycle: Some(event.action.data_life_cycle()),
-            id_type_code: codes::OBJ_ID_PATIENT_NUMBER,
-        });
+        objects.push(object(
+            subject.map_or_else(|| missing.to_owned(), str::to_owned),
+            OBJECT_TYPE_PERSON,
+            Some(OBJECT_ROLE_PATIENT),
+            codes::OBJ_ID_PATIENT_NUMBER,
+        ));
     }
 
     if object_class.has_object_uri() {
@@ -331,47 +212,45 @@ fn build_objects(
         // add the URI object when the id is known; non-patient classes always
         // carry it, filled with `value_if_missing` when unknown, so no required
         // element is absent (DICOM PS3.15 §A.5).
-        let id = event.object_id.clone();
-        if let Some(id) = id {
-            objects.push(uri_object(id, event));
+        if let Some(id) = event.object_id.clone() {
+            objects.push(uri_object(id));
         } else if !object_class.is_patient_centric() {
-            objects.push(uri_object(missing.to_owned(), event));
+            objects.push(uri_object(missing.to_owned()));
         }
     }
 
     objects
 }
 
-fn uri_object(id: String, event: &AuditEvent) -> ParticipantObject {
+fn uri_object(id: String) -> ParticipantObject {
+    object(id, OBJECT_TYPE_SYSTEM, None, codes::OBJ_ID_URI)
+}
+
+fn object(
+    id: String,
+    type_code: &'static str,
+    type_code_role: Option<&'static str>,
+    id_type_code: Code,
+) -> ParticipantObject {
     ParticipantObject {
-        id,
-        type_code: OBJECT_TYPE_SYSTEM,
-        type_code_role: None,
-        data_life_cycle: Some(event.action.data_life_cycle()),
-        id_type_code: codes::OBJ_ID_URI,
+        id: SecretString::from(id),
+        type_code: Some(type_code),
+        type_code_role,
+        id_type_code: coded(id_type_code),
+        query: None,
+        details: Vec::new(),
     }
 }
 
-fn write_code<W: std::io::Write>(
-    w: &mut Writer<W>,
-    element: &str,
-    code: &Code,
-) -> Result<(), AuditError> {
-    let mut c = BytesStart::new(element);
-    c.push_attribute(("csd-code", code.csd_code));
-    c.push_attribute(("codeSystemName", code.code_system));
-    c.push_attribute(("originalText", code.original_text));
-    w.write_event(Event::Empty(c))?;
-    Ok(())
+fn coded(code: Code) -> CodedValue {
+    CodedValue::new(code.csd_code, code.code_system, code.original_text)
 }
 
-/// The `codeSystemName` of the deployment's own role vocabulary on a
-/// `RoleIDCode`: the RBAC roles a caller held, which no published code system
-/// names.
-const ROLE_VOCABULARY: &str = "urn:ferroehr:role";
-
-const fn bool_str(b: bool) -> &'static str {
-    if b { "true" } else { "false" }
+fn ip_point(id: String) -> AccessPoint {
+    AccessPoint {
+        type_code: NETWORK_ACCESS_POINT_IP,
+        id,
+    }
 }
 
 fn nonempty(value: &str, fallback: &str) -> String {
@@ -384,6 +263,8 @@ fn nonempty(value: &str, fallback: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use secrecy::ExposeSecret as _;
+
     use super::*;
     use crate::system_log::event::{EventActionCode, EventOutcome, EventType, ObjectClass};
     use jiff::Timestamp;
@@ -394,6 +275,7 @@ mod tests {
             enterprise_site_id: "1f332a66-0000-0000-0000-000000000001".to_owned(),
             server_ip: "10.42.23.77".to_owned(),
             value_if_missing: "UNKNOWN".to_owned(),
+            ..AuditContext::default()
         }
     }
 
@@ -403,6 +285,11 @@ mod tests {
         e.client_ip = Some("10.216.24.150".to_owned());
         e.timestamp = "2026-07-06T12:00:00Z".parse::<Timestamp>().unwrap();
         e
+    }
+
+    fn xml(event: &AuditEvent, subject: Option<&str>) -> String {
+        let bytes = to_xml(event, &ctx(), subject).expect("xml");
+        String::from_utf8(bytes.expose_secret().to_vec()).expect("utf-8")
     }
 
     // Redact the volatile EventDateTime before snapshotting.
@@ -425,8 +312,7 @@ mod tests {
             EventOutcome::Success,
         );
         e.ehr_id = Some("7d44b88c-4199-4bad-9765-99c1b0a5f9d3".to_owned());
-        let msg = AuditMessage::build(&e, &ctx(), Some("patient-42"));
-        let xml = msg.to_xml().expect("xml");
+        let xml = xml(&e, Some("patient-42"));
         assert!(xml.contains(r#"EventActionCode="C""#));
         assert!(xml.contains(r#"EventOutcomeIndicator="0""#));
         assert!(xml.contains(r#"csd-code="110110""#));
@@ -446,8 +332,7 @@ mod tests {
             EventOutcome::Success,
         );
         e.object_id = Some("8fa1::ferroehr::1".to_owned());
-        let msg = AuditMessage::build(&e, &ctx(), Some("patient-42"));
-        let xml = msg.to_xml().expect("xml");
+        let xml = xml(&e, Some("patient-42"));
         assert!(xml.contains(r#"EventActionCode="R""#));
         assert!(xml.contains(r#"originalText="composition""#));
         // Both the patient participant and the object URI participant.
@@ -465,11 +350,9 @@ mod tests {
             EventOutcome::Success,
         );
         e.object_id = Some("8fa1::ferroehr::2".to_owned());
-        let xml = AuditMessage::build(&e, &ctx(), Some("patient-42"))
-            .to_xml()
-            .expect("xml");
+        let xml = xml(&e, Some("patient-42"));
         assert!(xml.contains(r#"EventActionCode="U""#));
-        assert!(xml.contains(r#"ParticipantObjectDataLifeCycle="3""#));
+        assert!(xml.contains(r#"ParticipantObjectID="8fa1::ferroehr::2""#));
         assert_audit_snapshot!("composition_update_U", xml);
     }
 
@@ -481,11 +364,9 @@ mod tests {
             EventOutcome::Success,
         );
         e.object_id = Some("8fa1::ferroehr::3".to_owned());
-        let xml = AuditMessage::build(&e, &ctx(), Some("patient-42"))
-            .to_xml()
-            .expect("xml");
+        let xml = xml(&e, Some("patient-42"));
         assert!(xml.contains(r#"EventActionCode="D""#));
-        assert!(xml.contains(r#"ParticipantObjectDataLifeCycle="14""#));
+        assert!(xml.contains(r#"ParticipantObjectID="8fa1::ferroehr::3""#));
         assert_audit_snapshot!("composition_delete_D", xml);
     }
 
@@ -497,7 +378,7 @@ mod tests {
             ObjectClass::Query,
             EventOutcome::Success,
         );
-        let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
+        let xml = xml(&e, None);
         assert!(xml.contains(r#"EventActionCode="E""#));
         // Query has the dedicated DICOM EventID 110112 "Query".
         assert!(xml.contains(r#"csd-code="110112""#));
@@ -515,7 +396,7 @@ mod tests {
             EventOutcome::Success,
         );
         e.object_id = Some("vital_signs.v1".to_owned());
-        let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
+        let xml = xml(&e, None);
         assert!(xml.contains(r#"EventActionCode="C""#));
         assert!(xml.contains(r#"csd-code="110100""#));
         assert!(xml.contains(r#"originalText="template""#));
@@ -532,8 +413,7 @@ mod tests {
             ObjectClass::Template,
             EventOutcome::Success,
         );
-        let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
-        assert!(xml.contains(r#"ParticipantObjectID="UNKNOWN""#));
+        assert!(xml(&e, None).contains(r#"ParticipantObjectID="UNKNOWN""#));
     }
 
     #[test]
@@ -544,7 +424,7 @@ mod tests {
             EventOutcome::Success,
         );
         e.object_id = Some("party-77".to_owned());
-        let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
+        let xml = xml(&e, None);
         assert!(xml.contains(r#"csd-code="110110""#));
         assert!(xml.contains(r#"originalText="demographic""#));
         assert!(xml.contains(r#"ParticipantObjectID="party-77""#));
@@ -564,15 +444,13 @@ mod tests {
             EventOutcome::Success,
         );
         e.object_id = Some("extract::ferroehr::1".to_owned());
-        let xml = AuditMessage::build(&e, &ctx(), Some("patient-42"))
-            .to_xml()
-            .expect("xml");
-        assert!(xml.contains(r#"csd-code="110106""#));
-        assert!(xml.contains(r#"originalText="Export""#));
-        assert!(xml.contains(r#"originalText="Patient Number""#));
-        assert!(xml.contains(r#"originalText="URI""#));
-        assert!(xml.contains(r#"ParticipantObjectID="patient-42""#));
-        assert!(xml.contains(r#"ParticipantObjectID="extract::ferroehr::1""#));
+        let out = xml(&e, Some("patient-42"));
+        assert!(out.contains(r#"csd-code="110106""#));
+        assert!(out.contains(r#"originalText="Export""#));
+        assert!(out.contains(r#"originalText="Patient Number""#));
+        assert!(out.contains(r#"originalText="URI""#));
+        assert!(out.contains(r#"ParticipantObjectID="patient-42""#));
+        assert!(out.contains(r#"ParticipantObjectID="extract::ferroehr::1""#));
 
         // The inbound direction resolves to Import (110107).
         let mut imp = event(
@@ -581,11 +459,9 @@ mod tests {
             EventOutcome::Success,
         );
         imp.object_id = Some("extract::ferroehr::2".to_owned());
-        let xml = AuditMessage::build(&imp, &ctx(), Some("patient-42"))
-            .to_xml()
-            .expect("xml");
-        assert!(xml.contains(r#"csd-code="110107""#));
-        assert!(xml.contains(r#"originalText="Import""#));
+        let inbound = xml(&imp, Some("patient-42"));
+        assert!(inbound.contains(r#"csd-code="110107""#));
+        assert!(inbound.contains(r#"originalText="Import""#));
     }
 
     #[test]
@@ -598,7 +474,7 @@ mod tests {
             EventOutcome::Success,
         );
         e.event_type = Some(EventType::Login);
-        let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
+        let xml = xml(&e, None);
         assert!(xml.contains(r#"csd-code="110114""#));
         assert!(xml.contains(r#"originalText="User Authentication""#));
         assert!(xml.contains(r#"csd-code="110122""#));
@@ -618,9 +494,7 @@ mod tests {
         );
         e.object_id = Some("8fa1::ferroehr::1".to_owned());
         e.event_type = Some(EventType::RestOperation("composition_get"));
-        let xml = AuditMessage::build(&e, &ctx(), Some("patient-42"))
-            .to_xml()
-            .expect("xml");
+        let xml = xml(&e, Some("patient-42"));
         assert!(xml.contains(r#"csd-code="composition_get""#));
         assert!(xml.contains(r#"codeSystemName="openEHR-ITS-REST""#));
     }
@@ -634,21 +508,21 @@ mod tests {
             EventOutcome::Success,
         );
         e.timestamp = "2026-07-06T12:00:00Z".parse::<Timestamp>().unwrap();
-        let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
+        let xml = xml(&e, None);
         assert!(xml.contains(r#"ParticipantObjectID="UNKNOWN""#));
         assert!(xml.contains(r#"UserID="UNKNOWN""#));
     }
 
+    /// A failed access carries its outcome indicator; ITI TF-2 §3.20.7 and the
+    /// `ihe-atna` writer leave the optional `EventOutcomeDescription` out.
     #[test]
-    fn failed_outcome_description() {
+    fn failed_outcome_indicator() {
         let e = event(
             EventActionCode::Read,
             ObjectClass::Ehr,
             EventOutcome::MinorFailure,
         );
-        let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
-        assert!(xml.contains(r#"EventOutcomeIndicator="4""#));
-        assert!(xml.contains("Operation failed"));
+        assert!(xml(&e, None).contains(r#"EventOutcomeIndicator="4""#));
     }
 
     /// A client application acting for a named professional renders the
@@ -667,7 +541,7 @@ mod tests {
             assurance_value: Some("loa-high".to_owned()),
             professional_id: Some("prof-007".to_owned()),
         };
-        let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
+        let xml = xml(&e, None);
         assert!(
             xml.contains(r#"<ActiveParticipant UserID="prof-007" UserIsRequestor="true">"#),
             "{xml}"
@@ -693,10 +567,9 @@ mod tests {
         );
         e.actor.mode = Some(ActingMode::Person);
         e.actor.professional_id = Some("uzi-12345".to_owned());
-        let xml = AuditMessage::build(&e, &ctx(), None).to_xml().expect("xml");
         assert!(
-            xml.contains(r#"UserID="uzi-12345" AlternativeUserID="john doe""#),
-            "{xml}"
+            xml(&e, None).contains(r#"UserID="uzi-12345" AlternativeUserID="john doe""#),
+            "{e:?}"
         );
     }
 }

@@ -21,7 +21,7 @@ publish = false
 # terminology client. FHIR R4 resource mapping is FerroBRIDGE's, outside this
 # workspace.
 default = ["fhir", "events", "multimedia"]
-fhir = ["dep:ferroehr-ext", "ferroehr-ext/fhir"]
+fhir = ["dep:ferroehr-ext", "ferroehr-ext/fhir", "ehds-logging/balp", "ihe-atna/balp"]
 events = ["dep:ferroehr-ext", "ferroehr-ext/events"]
 multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 
@@ -112,9 +112,16 @@ sevenz-rust2.workspace = true
 # hands `rand::rngs::OsRng` to `pgp`'s DetachedSignature signing call, so the
 # types must come from the same rand major. `pgp 0.20` requires rand 0.8.7.
 rand = "0.8"
-# `system_log` module (IHE ATNA audit trail, SM `I_SYSTEM_LOG`; moved from the
-# former ferroehr-audit crate): TLS syslog transport.
-tokio-rustls.workspace = true
+# `system_log` module (IHE ATNA audit trail, SM `I_SYSTEM_LOG`): the shared
+# FerroAUDIT crates write it. `ihe-atna` (`atna`) builds the DICOM audit
+# message and sends it as RFC 5424 syslog over RFC 5425 TLS; `ehds-logging`
+# classifies each access by the Art 14(1) categories and holds the Art 9(2)
+# floor. The `fhir` feature adds their `balp` features: the access record and
+# the other audit records written as the BALP `AuditEvent`, and the ATX: FHIR
+# Feed.
+ihe-atna = { workspace = true, features = ["atna"] }
+ehds-logging.workspace = true
+# The terminology client's mutual-TLS identity is read with rustls' PEM reader.
 rustls.workspace = true
 
 openehr-base = { path = "../../crates/openehr-base" }
@@ -136,6 +143,10 @@ openehr-query = { path = "../../crates/openehr-query" }
 # building these targets with the library's `fhir` feature off.
 ferroehr-ext = { path = "../ferroehr-ext", features = ["multimedia", "events", "fhir"] }
 testkit = { path = "../../tools/testkit" }
+# The access-record tests read what `ehds-logging` writes by its names.
+ehds-logging = { workspace = true, features = ["balp"] }
+# The in-process TLS listeners of the syslog and terminology mutual-TLS tests.
+tokio-rustls.workspace = true
 serde_norway.workspace = true
 # Temp config files for the pure-loader (`config` module) tests.
 assert_fs.workspace = true

@@ -38,7 +38,8 @@ SHEET="website/book/src/compliance/information-sheet.md"
 IFU="website/book/src/compliance/instructions-for-use.md"
 USERINFO="website/book/src/compliance/cra-user-information.md"
 # The logging component, as docs/architecture.md lists it. Keep the two lists
-# equal: a module added there is added here in the same change.
+# equal: a module added there is added here in the same change. The shared
+# crates it is built on are read from their pins in the root Cargo.toml below.
 LOGGING_PATHS=(
   "app/ferroehr/src/system_log"
   "app/ferroehr-rest/src/system_log"
@@ -106,6 +107,12 @@ if [[ -n "$since" ]]; then
   git rev-parse --verify --quiet "${since}^{commit}" >/dev/null \
     || { report "--since $since is not a commit"; exit 1; }
   changed="$(git diff --name-only "$since" HEAD -- "${LOGGING_PATHS[@]}")"
+  # The shared crates the component is built on (ehds-logging, ihe-atna) are
+  # part of it too: a moved pin in the root Cargo.toml is a change to it.
+  pins() { git show "$1:Cargo.toml" 2>/dev/null | grep -E '^(ehds-logging|ihe-atna) = ' || true; }
+  if [[ "$(pins "$since")" != "$(pins HEAD)" ]]; then
+    changed="$(printf '%s\n%s' "$changed" "Cargo.toml (the ehds-logging or ihe-atna pin)" | sed '/^$/d')"
+  fi
   if [[ -n "$changed" ]]; then
     if [[ -z "$(git diff --name-only "$since" HEAD -- "$TREE")" ]]; then
       report "the logging component changed since $since and $TREE did not (EHDS Art. 30(2)):"

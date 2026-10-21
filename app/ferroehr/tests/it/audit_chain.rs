@@ -44,6 +44,7 @@ fn ctx() -> AuditContext {
         enterprise_site_id: "site-1".to_owned(),
         server_ip: "10.42.23.77".to_owned(),
         value_if_missing: "UNKNOWN".to_owned(),
+        ..AuditContext::default()
     }
 }
 

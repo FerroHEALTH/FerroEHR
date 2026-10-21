@@ -5,7 +5,8 @@
 //!
 //! Values are the well-known DICOM PS3.15 §A.5 and IETF RFC 3881 audit code
 //! sets. Only the codes the CDR emits are listed; each carries its code system
-//! and display text so the serializer never hard-codes a string twice.
+//! and display text, and [`super::message`] hands them to `ihe-atna`'s message
+//! model, which writes them.
 
 /// A coded value: `csd-code` + `codeSystemName` + `originalText`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -89,15 +90,6 @@ pub const ROLE_DESTINATION: Code = Code {
     original_text: "Destination Role ID",
 };
 
-// ── AuditSourceTypeCode (DICOM PS3.15 §A.5.3) ────────────────────────────────
-
-/// "Application Server Process or Thread" (code 4).
-pub const SOURCE_TYPE_APPLICATION_SERVER: Code = Code {
-    csd_code: "4",
-    code_system: DCM,
-    original_text: "Application Server Process or Thread",
-};
-
 // ── ParticipantObjectIDTypeCode (RFC 3881 §5.5.1) ────────────────────────────
 
 /// Patient Number (RFC-3881 code 2) — the EHR subject id participant.
@@ -146,18 +138,14 @@ use super::event::{EventActionCode, EventOutcome, EventType, ObjectClass};
 
 /// ATNA (DICOM PS3.15 §A.5.1) rendering of an [`EventActionCode`].
 pub(crate) trait AtnaAction {
-    /// The single-character DICOM `EventActionCode`.
-    fn as_char(&self) -> char;
-    /// The DICOM `ParticipantObjectDataLifeCycle` most fitting for the action.
-    fn data_life_cycle(&self) -> &'static str;
+    /// The `EventActionCode` (`C`, `R`, `U`, `D`, `E`).
+    fn as_code(&self) -> &'static str;
 }
 
 /// ATNA (DICOM PS3.15 §A.5.1) rendering of an [`EventOutcome`].
 pub(crate) trait AtnaOutcome {
-    /// The numeric DICOM `EventOutcomeIndicator`.
-    fn as_i32(&self) -> i32;
-    /// The `EventOutcomeDescription` text.
-    fn description(&self) -> &'static str;
+    /// The `EventOutcomeIndicator` (`0`, `4`, `8`).
+    fn as_code(&self) -> &'static str;
 }
 
 /// ATNA (DICOM PS3.15 §A.5.1) rendering of an [`EventType`].
@@ -199,46 +187,23 @@ pub(crate) trait AtnaObject {
 }
 
 impl AtnaAction for EventActionCode {
-    /// `C`/`R`/`U`/`D`/`E` (DICOM PS3.15 §A.5.1).
-    fn as_char(&self) -> char {
+    fn as_code(&self) -> &'static str {
         match self {
-            EventActionCode::Create => 'C',
-            EventActionCode::Read => 'R',
-            EventActionCode::Update => 'U',
-            EventActionCode::Delete => 'D',
-            EventActionCode::Execute => 'E',
-        }
-    }
-
-    /// The DICOM `ParticipantObjectDataLifeCycle` (RFC 3881 §5.5.5):
-    /// create→origination(1), update→amendment(3), read/execute→access-use(6),
-    /// delete→logical-deletion(14).
-    fn data_life_cycle(&self) -> &'static str {
-        match self {
-            EventActionCode::Create => "1",
-            EventActionCode::Update => "3",
-            EventActionCode::Read | EventActionCode::Execute => "6",
-            EventActionCode::Delete => "14",
+            EventActionCode::Create => "C",
+            EventActionCode::Read => "R",
+            EventActionCode::Update => "U",
+            EventActionCode::Delete => "D",
+            EventActionCode::Execute => "E",
         }
     }
 }
 
 impl AtnaOutcome for EventOutcome {
-    /// The numeric DICOM indicator (`0`/`4`/`8`/`12`).
-    fn as_i32(&self) -> i32 {
+    fn as_code(&self) -> &'static str {
         match self {
-            EventOutcome::Success => 0,
-            EventOutcome::MinorFailure => 4,
-            EventOutcome::SeriousFailure => 8,
-            EventOutcome::MajorFailure => 12,
-        }
-    }
-
-    /// The `EventOutcomeDescription` text.
-    fn description(&self) -> &'static str {
-        match self {
-            EventOutcome::Success => "Operation performed successfully",
-            _ => "Operation failed",
+            EventOutcome::Success => "0",
+            EventOutcome::MinorFailure => "4",
+            EventOutcome::SeriousFailure => "8",
         }
     }
 }

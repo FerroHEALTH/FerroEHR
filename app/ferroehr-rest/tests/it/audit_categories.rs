@@ -54,16 +54,27 @@ const BASE: &str = "/ferroehr/rest/openehr/v1";
 const IPS: &str = "International Patient Summary";
 const ENCOUNTER: &str = "openEHR-EHR-COMPOSITION.encounter.v1";
 const REPORT: &str = "openEHR-EHR-COMPOSITION.report.v1";
+/// The root archetype of the IPS composition, in comparison form.
+const HEALTH_SUMMARY: &str = "openehr-ehr-composition.health_summary.v1";
+/// The code system of the Art. 14(1) priority categories, HL7 Europe's
+/// `EEHRxFDocumentPriorityCategoryCS`, as `ehds-logging` writes it.
+const PRIORITY: &str =
+    "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs";
+
+/// The stored token of the priority category `code`.
+fn token(code: &str) -> String {
+    format!("{PRIORITY}|{code}")
+}
 
 /// The archetype map every case runs under, beside any template entries.
 fn map(templates: &Value) -> Value {
     json!({
         "templates": templates,
         "archetypes": {
-            "openEHR-EHR-COMPOSITION.encounter.v1": ["test-results"],
-            "openEHR-EHR-COMPOSITION.report.v1": ["imaging"],
-            "openEHR-EHR-COMPOSITION.discharge.v1": ["discharge-report"],
-            "openEHR-EHR-OBSERVATION.imaging_exam_result.v0": ["imaging"]
+            "openEHR-EHR-COMPOSITION.encounter.v1": ["Laboratory-Reports"],
+            "openEHR-EHR-COMPOSITION.report.v1": ["Medical-Imaging"],
+            "openEHR-EHR-COMPOSITION.discharge.v1": ["Discharge-Reports"],
+            "openEHR-EHR-OBSERVATION.imaging_exam_result.v0": ["Medical-Imaging"]
         }
     })
 }
@@ -305,8 +316,11 @@ async fn a_multi_category_query_records_every_category_it_served() {
     query(&app, "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c").await;
 
     let statement = classified(&pool, "query_execute_adhoc_query_body", "query").await;
-    assert_eq!(statement.categories, json!(["imaging", "test-results"]));
-    assert_eq!(statement.basis.as_deref(), Some("archetype"));
+    assert_eq!(
+        statement.categories,
+        json!([token("Laboratory-Reports"), token("Medical-Imaging")])
+    );
+    assert_eq!(statement.basis.as_deref(), Some("returned"));
     assert_eq!(
         statement.evidence,
         json!([ENCOUNTER.to_ascii_lowercase(), REPORT.to_ascii_lowercase()])
@@ -316,29 +330,32 @@ async fn a_multi_category_query_records_every_category_it_served() {
     let entities = statement.fhir["entity"].as_array().expect("entities");
     let category_entity = entities
         .iter()
-        .find(|e| e["name"] == "categories of the data accessed")
+        .find(|e| e["name"] == "ehds-categories")
         .expect("the FHIR rendering carries the categories");
     let details = category_entity["detail"].as_array().expect("details");
     assert!(
         details
             .iter()
-            .any(|d| d["type"] == "category" && d["valueString"] == "imaging"),
+            .any(|d| d["type"] == "ehds-category" && d["valueString"] == token("Medical-Imaging")),
         "{category_entity}"
     );
     assert!(
         details
             .iter()
-            .any(|d| d["type"] == "category-map" && d["valueString"] == digest.as_str()),
+            .any(|d| d["type"] == "category-map-digest" && d["valueString"] == digest.as_str()),
         "{category_entity}"
     );
 
     let per_ehr = classified(&pool, "query_execute_adhoc_query_body", "ehr").await;
-    assert_eq!(per_ehr.categories, json!(["imaging", "test-results"]));
+    assert_eq!(
+        per_ehr.categories,
+        json!([token("Laboratory-Reports"), token("Medical-Imaging")])
+    );
 }
 
 /// A template the map does not name, on a root archetype it does not name
-/// either, is recorded `unclassified` with both ids as evidence, and the read
-/// is served.
+/// either, is recorded `unclassified` with both ids as evidence, in the
+/// comparison form the map is read in, and the read is served.
 #[tokio::test]
 async fn an_unmapped_template_is_unclassified_with_its_ids_as_evidence() {
     let (_db, pool, app, ehr) = app(map(&json!({})), Observability::default()).await;
@@ -358,10 +375,10 @@ async fn an_unmapped_template_is_unclassified_with_its_ids_as_evidence() {
 
     let read = classified(&pool, "composition_get", "composition").await;
     assert_eq!(read.categories, json!(["unclassified"]));
-    assert_eq!(read.basis.as_deref(), Some("archetype"));
+    assert_eq!(read.basis.as_deref(), Some("returned"));
     assert_eq!(
         read.evidence,
-        json!([IPS, "openehr-ehr-composition.health_summary.v1"])
+        json!([IPS.to_ascii_lowercase(), HEALTH_SUMMARY])
     );
 }
 
@@ -380,9 +397,9 @@ async fn a_leaf_only_query_is_classified_from_its_constraints() {
     .await;
 
     let statement = classified(&pool, "query_execute_adhoc_query_body", "query").await;
-    assert_eq!(statement.categories, json!(["test-results"]));
-    assert_eq!(statement.basis.as_deref(), Some("query"));
-    assert_eq!(statement.evidence, json!([ENCOUNTER]));
+    assert_eq!(statement.categories, json!([token("Laboratory-Reports")]));
+    assert_eq!(statement.basis.as_deref(), Some("queried"));
+    assert_eq!(statement.evidence, json!([ENCOUNTER.to_ascii_lowercase()]));
 }
 
 /// A query that serves nothing is still classified by what it asked for.
@@ -397,8 +414,8 @@ async fn a_zero_row_query_is_classified_from_its_constraints() {
     .await;
 
     let statement = classified(&pool, "query_execute_adhoc_query_body", "query").await;
-    assert_eq!(statement.categories, json!(["discharge-report"]));
-    assert_eq!(statement.basis.as_deref(), Some("query"));
+    assert_eq!(statement.categories, json!([token("Discharge-Reports")]));
+    assert_eq!(statement.basis.as_deref(), Some("queried"));
 }
 
 /// An operand under `NOT CONTAINS` is excluded content, so its category never
@@ -417,14 +434,14 @@ async fn a_not_contains_operand_never_counts() {
     .await;
 
     let statement = classified(&pool, "query_execute_adhoc_query_body", "query").await;
-    assert_eq!(statement.categories, json!(["test-results"]));
-    assert_eq!(statement.basis.as_deref(), Some("query"));
+    assert_eq!(statement.categories, json!([token("Laboratory-Reports")]));
+    assert_eq!(statement.basis.as_deref(), Some("queried"));
 }
 
 /// A FLAT write is classified by the template it was committed against.
 #[tokio::test]
 async fn a_flat_write_is_classified_by_its_template() {
-    let templates = json!({ IPS: ["patient-summary"] });
+    let templates = json!({ IPS: ["Patient-Summaries"] });
     let (_db, pool, app, ehr) = app(map(&templates), Observability::default()).await;
 
     let opt = openehr_its::opt14::from_xml(&opt_xml()).expect("parse OPT");
@@ -445,9 +462,12 @@ async fn a_flat_write_is_classified_by_its_template() {
     assert_eq!(status, StatusCode::CREATED, "flat commit: {text}");
 
     let write = classified(&pool, "composition_create", "composition").await;
-    assert_eq!(write.categories, json!(["patient-summary"]));
-    assert_eq!(write.basis.as_deref(), Some("template"));
-    assert_eq!(write.evidence, json!([IPS]));
+    assert_eq!(write.categories, json!([token("Patient-Summaries")]));
+    assert_eq!(write.basis.as_deref(), Some("written"));
+    assert_eq!(
+        write.evidence,
+        json!([IPS.to_ascii_lowercase(), HEALTH_SUMMARY])
+    );
 }
 
 /// Commit a canonical composition; returns its full version uid.
@@ -480,8 +500,8 @@ async fn a_logical_delete_is_classified_by_the_version_it_deletes() {
     assert_eq!(status, StatusCode::NO_CONTENT, "delete: {text}");
 
     let delete = classified(&pool, "composition_delete", "composition").await;
-    assert_eq!(delete.categories, json!(["test-results"]));
-    assert_eq!(delete.basis.as_deref(), Some("archetype"));
+    assert_eq!(delete.categories, json!([token("Laboratory-Reports")]));
+    assert_eq!(delete.basis.as_deref(), Some("written"));
 }
 
 /// A `VERSIONED_COMPOSITION` read is classified by the COMPOSITION it holds
@@ -500,15 +520,15 @@ async fn a_versioned_composition_read_is_classified_by_its_composition() {
     assert_eq!(status, StatusCode::OK, "versioned composition: {text}");
 
     let read = classified(&pool, "versioned_composition_get", "composition").await;
-    assert_eq!(read.categories, json!(["imaging"]));
-    assert_eq!(read.basis.as_deref(), Some("archetype"));
+    assert_eq!(read.categories, json!([token("Medical-Imaging")]));
+    assert_eq!(read.basis.as_deref(), Some("returned"));
 }
 
 /// A CONTRIBUTION read is classified by the versions it committed, with and
 /// without `Prefer: resolve_refs` (#3653).
 #[tokio::test]
 async fn a_contribution_read_is_classified_by_its_versions() {
-    let templates = json!({ IPS: ["patient-summary"] });
+    let templates = json!({ IPS: ["Patient-Summaries"] });
     let (_db, pool, app, ehr) = app(map(&templates), Observability::default()).await;
     let uid = commit_version(&app, &ehr, &ips_composition()).await;
     let vo = uid.split("::").next().unwrap().to_owned();
@@ -537,9 +557,17 @@ async fn a_contribution_read_is_classified_by_its_versions() {
         assert_eq!(status, StatusCode::OK, "contribution {prefer:?}: {text}");
 
         let read = classified(&pool, "contribution_get", "contribution").await;
-        assert_eq!(read.categories, json!(["patient-summary"]), "{prefer:?}");
-        assert_eq!(read.basis.as_deref(), Some("template"), "{prefer:?}");
-        assert_eq!(read.evidence, json!([IPS]), "{prefer:?}");
+        assert_eq!(
+            read.categories,
+            json!([token("Patient-Summaries")]),
+            "{prefer:?}"
+        );
+        assert_eq!(read.basis.as_deref(), Some("returned"), "{prefer:?}");
+        assert_eq!(
+            read.evidence,
+            json!([IPS.to_ascii_lowercase(), HEALTH_SUMMARY]),
+            "{prefer:?}"
+        );
     }
 }
 
@@ -610,8 +638,8 @@ async fn a_contribution_delete_is_classified_by_the_version_it_deletes() {
     assert_eq!(status, StatusCode::CREATED, "contribution delete: {text}");
 
     let write = classified(&pool, "contribution_create", "contribution").await;
-    assert_eq!(write.categories, json!(["imaging"]));
-    assert_eq!(write.basis.as_deref(), Some("archetype"));
+    assert_eq!(write.categories, json!([token("Medical-Imaging")]));
+    assert_eq!(write.basis.as_deref(), Some("written"));
 }
 
 /// A tracing layer recording every span field and event field it sees.
@@ -688,7 +716,7 @@ async fn the_classification_never_reaches_spans_logs_or_metrics() {
         prometheus: Some(registry().clone()),
         ..Observability::default()
     };
-    let templates = json!({ IPS: ["patient-summary"] });
+    let templates = json!({ IPS: ["Patient-Summaries"] });
     let (_db, pool, app, ehr) = app(map(&templates), observability).await;
     let vo = commit(&app, &ehr, &ips_composition()).await;
 
@@ -708,7 +736,7 @@ async fn the_classification_never_reaches_spans_logs_or_metrics() {
     let record = classified(&pool, "composition_get", "composition").await;
     assert_eq!(
         record.categories,
-        json!(["patient-summary"]),
+        json!([token("Patient-Summaries")]),
         "the record itself is classified"
     );
 
@@ -716,7 +744,7 @@ async fn the_classification_never_reaches_spans_logs_or_metrics() {
     assert!(!lines.is_empty(), "the capture saw the request");
     for line in &lines {
         assert!(
-            !line.contains(IPS) && !line.contains("patient-summary"),
+            !line.contains(IPS) && !line.contains("Patient-Summaries"),
             "the classification leaked into telemetry: {line}"
         );
     }
@@ -730,7 +758,7 @@ async fn the_classification_never_reaches_spans_logs_or_metrics() {
     .await;
     assert_eq!(status, StatusCode::OK, "the exposition is served");
     assert!(!exposition.is_empty(), "the exposition carries metrics");
-    for needle in [IPS, "patient-summary", "health_summary"] {
+    for needle in [IPS, "Patient-Summaries", "health_summary"] {
         assert!(
             !exposition.contains(needle),
             "a metric label carries {needle}: {exposition}"

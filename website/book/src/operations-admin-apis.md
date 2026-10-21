@@ -233,9 +233,12 @@ is **404**, and a body without `Content-Type: application/json` is **415**, in
 each case before anything is recorded. Setting or lifting a mark is an access
 record of its own.
 
-A `category` is spelled as `[audit.categories]` spells it (`patient-summary`,
-`eprescription`, `edispensation`, `imaging`, `test-results`, `discharge-report`,
-`national:<code>` or `none`; an unknown spelling is **400**), which serves EHDS
+A `category` is named as `[audit.categories]` names it (a priority category by
+its code, `Patient-Summaries`, `Electronic-Prescriptions`,
+`Electronic-Dispensations`, `Medical-Imaging`, `Laboratory-Reports` or
+`Discharge-Reports`, or as `<system>|<code>`; a declared national category as
+its `<system>|<code>`; or `none`; an unknown one is **400**) and stored as its
+`<system>|<code>` token, which serves EHDS
 Annex II 3.4: retention periods that take the categories of the data into
 account. The server mirrors the map into the register at every boot. A period
 keyed on a category lists the objects the map places in it; an object the map

@@ -31,17 +31,27 @@ reads and rejected attempts.
 ## The record, in both official formats
 
 Every audited operation produces one record, rendered in the two formats the
-IHE standards define:
+IHE standards define. Both are written by the shared audit crates of the
+FerroHEALTH products (FerroAUDIT): `ehds-logging` writes the EHDS access
+record, and `ihe-atna` writes the BALP `AuditEvent` and the DICOM audit
+message and sends them. FerroEHR decides which accesses are logged, what each
+record says and where it is stored.
 
-- **FHIR R4 `AuditEvent`** following the IHE **BALP** (Basic Audit Log
+- **FHIR R4 `AuditEvent`** following the IHE **BALP** 1.1.4 (Basic Audit Log
   Patterns) content profiles: the modern RESTful-ATNA form and the canonical
-  stored form. Patient-centric operations carry the resolved EHR subject as
-  the patient entity (`PatientRead`/`PatientCreate`/… profile claims); query
-  executions carry the search expression; Bearer-authenticated requests
-  record the token's `jti` (and never the token itself) per
-  `OAUTHaccessTokenUse.Minimal`.
+  stored form. An access to clinical content is the EHDS access record:
+  `ehds-logging` writes it on the `RESTful` pattern of its action, with the
+  patient behind the EHR as the patient entity (`PatientRead`,
+  `PatientCreate` and the other `Patient*` claims), the categories, the
+  retention, the security labels and the origins. Every other record (an
+  authentication, a template or party operation, a refused access) is a BALP
+  exchange FerroEHR fills directly. The person is the `agent:user` slice,
+  named by the token's issuer and subject, with the client application as an
+  agent of its own (BALP 1.1.4 §3:5.7.5.4); query executions carry the search
+  expression.
 - **DICOM Audit Message** (DICOM PS3.15 §A.5 XML): the classic ATNA form,
-  shipped over syslog per IHE ITI-20 when the syslog sink is enabled.
+  shipped as RFC 5424 syslog over RFC 5425 TLS per IHE ITI-20 when the syslog
+  sink is enabled.
   Dedicated DICOM event ids are used throughout: Patient Record (110110),
   Query (110112), Export/Import (110106/110107, the EHR-Extract directions),
   User Authentication (110114, with the Login `EventTypeCode` 110122).
@@ -147,11 +157,11 @@ the authority and the wording below is a paraphrase.
 
 | Annex II 3.2 | Access-event field | DICOM PS3.15 | FHIR `AuditEvent` | State |
 |---|---|---|---|---|
-| (a) the healthcare provider or other individuals having accessed | `organisation` | — (no such attribute) | a second `agent` with `who` referencing `Organization/…` | Recorded |
-| (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`), and with `[authz.professional]` configured `professional_id` + `acting_mode` | `ActiveParticipant/@UserID` (the professional; a client application acting for one is a second, non-requesting participant; the token subject is `@AlternativeUserID` when it differs) | `agent.who` (the same split: the professional as requestor, the client application as a second agent; the token subject as `agent.altId` when it differs) | Recorded |
-| (c) the categories of data accessed | `categories` + `category_basis` + `category_evidence` + `category_map_digest`, classified through the `[audit.categories]` map (beside `resource_class`, `domain` and `result_count`) | none (no such element) | an `entity` named "categories of the data accessed", with one `detail` per category, the basis, each piece of evidence and the map digest | Recorded |
+| (a) the healthcare provider or other individuals having accessed | `organisation` | — (no such attribute) | an `agent` whose `who` is a logical reference to an `Organization` | Recorded |
+| (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`), and with `[authz.professional]` configured `professional_id` + `acting_mode` | `ActiveParticipant/@UserID` (the professional; a client application acting for one is a second, non-requesting participant; the token subject is `@AlternativeUserID` when it differs) | the `agent:user` slice, `who` the token's issuer and subject, the professional's identifier as its `ihe-otherId`, and the client application as an agent of its own (BALP 1.1.4 §3:5.7.5.4) | Recorded |
+| (c) the categories of data accessed | `categories` + `category_basis` + `category_evidence` + `category_map_digest`, classified by `ehds-logging` through the `[audit.categories]` map (beside `resource_class`, `domain` and `result_count`) | none (no such element) | the `entity` named `ehds-categories`, with one `ehds-category` detail per category and its basis, each id the classification read and the map digest; each category is also a `meta.security` label | Recorded |
 | (d) the time and date of access | `recorded_at` | `EventIdentification/@EventDateTime` | `recorded` | Recorded |
-| (e) the origin or origins of data | `origins` + `origin_count` (the `FEEDER_AUDIT` originating systems of the served version bodies, or the server that created them, derived at commit onto `version.origins`) | — (no such element) | one `entity` per origin, named "origin of the served data" | Recorded |
+| (e) the origin or origins of data | `origins` + `origin_count` (the `FEEDER_AUDIT` originating systems of the served version bodies, or the server that created them, derived at commit onto `version.origins`) | — (no such element) | one `entity` named `origin` per origin, its `system-id` detail the originating system | Recorded |
 
 Read (a) beside (b): they are both about the accessing side, and the pair
 distinguishes the **organisation** on whose behalf the access happened from the
@@ -161,9 +171,9 @@ reads (`[authz.abac] organization_claim`) rather than from a second setting
 that could name a different claim. Sharing the setting is not sharing the
 switch: the organisation is recorded whether or not the ABAC gate is enabled,
 because the trail describes a caller rather than deciding anything about them.
-The FHIR rendering carries it as a second `agent` referencing an
-`Organization`, with no participation code, because `AuditEvent.agent.type` is
-optional and inventing a code would be worse than omitting one. The DICOM
+The FHIR rendering carries it as an `agent` of its own, a logical reference to
+an `Organization`, with no participation code, because `AuditEvent.agent.type`
+is optional and inventing a code would be worse than omitting one. The DICOM
 rendering carries nothing: PS3.15 §A.5 defines no organisation attribute on
 `ActiveParticipant`, and `AuditEnterpriseSiteID` is the reporting node's own
 site rather than the caller's organisation. Where no claim is configured or the
@@ -177,20 +187,16 @@ configured, every record says which it was and who stood behind it:
 | Field | Meaning | DICOM PS3.15 | FHIR `AuditEvent` |
 |---|---|---|---|
 | `acting_mode` | `person` when the token names a natural person, `client` when it names a client application | the participant split below | the agent split below |
-| `professional_id` | the natural person: the person's own claim, or the professional a client token acts for | `ActiveParticipant/@UserID` of the requesting participant | `agent.who` of the requesting agent |
-| `principal` | the token subject, as before: the client application in `client` mode | a second `ActiveParticipant` with `UserIsRequestor="false"` and the network address; `@AlternativeUserID` in `person` mode when it differs from the professional | a second `agent` with `requestor: false` and the network address; `agent.altId` in `person` mode when it differs |
-| `assurance_level` | the eIDAS level (`low`, `substantial`, `high`) the token's assurance claim maps to under `[authz.assurance]` | none (no such attribute) | none (no such element) |
+| `professional_id` | the natural person: the person's own claim, or the professional a client token acts for | `ActiveParticipant/@UserID` of the requesting participant | the `ihe-otherId` extension of the `agent:user`, typed `NPI` |
+| `principal` | the token subject, as before: the client application in `client` mode | a second `ActiveParticipant` with `UserIsRequestor="false"` and the network address; `@AlternativeUserID` in `person` mode when it differs from the professional | `agent:user` `who.identifier`, with the issuer as its system; the acting mode is its first `role` |
+| `assurance_level` | the eIDAS level (`low`, `substantial`, `high`) the token's assurance claim maps to under `[authz.assurance]` | none (no such attribute) | the `ihe-assuranceLevel` extension of the `agent:user` |
 | `assurance_value` | the raw claim value the level was read from, usually `acr` | none | none |
 
-The assurance level is the one value neither export carries.
 [PS3.15 §A.5](https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html)
-gives `ActiveParticipant` no assurance attribute. FHIR R4 has no element for it
-either: `agent.policy` holds the
-["policy or plan that authorized the activity"](https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.agent.policy),
-which a level of assurance is not, and BALP already uses it for the token
-`jti`. The level and its raw value therefore live in the local store's columns only;
-ITI-81 serves the FHIR document, so it does not return them either. The syslog feed carries the DICOM message, so it has the same
-gap. The tamper-evidence digest covers both columns, like every other column of
+gives `ActiveParticipant` no assurance attribute, so the DICOM message and the
+syslog feed carry no level. The FHIR export carries the level as the BALP
+`ihe-assuranceLevel` extension (BALP 1.1.4 §3:5.7.5.4) and never the raw claim
+value, which lives in the local store's column only. The tamper-evidence digest covers both columns, like every other column of
 the record (see [Tamper evidence](#tamper-evidence) for records written before
 the digest was versioned).
 
@@ -208,9 +214,11 @@ and templates, never categories, and no openEHR specification maps the one
 onto the other, so the deployment declares the mapping in
 [`[audit.categories]`](installation/config-audit.md#auditcategories): a
 template id, or failing that the root archetype id, maps to a set of categories
-(`patient-summary`, `eprescription`, `edispensation`, `imaging`,
-`test-results`, `discharge-report`, `national:<code>`, or `none` for content
-that holds no priority-category data). FerroEHR ships no map.
+(a priority category by its code in HL7 Europe's
+`EEHRxFDocumentPriorityCategoryCS`, such as `Patient-Summaries` or
+`Laboratory-Reports`, a national category as its `<system>|<code>`), or to
+`none` for content that holds no data of any category. FerroEHR ships no map,
+and `ehds-logging` classifies each access through it.
 
 Each record is classified when the access happens, from what it served or
 wrote, and never at commit, because the map is your reading of your templates
@@ -222,7 +230,9 @@ and can change:
   versions its result page came from; where the answer carries no version (a
   `DISTINCT` or aggregate projection, or zero rows) by the query's positive
   archetype and template constraints, so an operand under `NOT CONTAINS` or a
-  predicate under `NOT` never counts. Each per-EHR record of a query carries
+  predicate under `NOT` never counts. Every id the query constrains to must be
+  mapped, and every content operand bound to an id, or the record is
+  `unclassified` beside what did map. Each per-EHR record of a query carries
   the categories that EHR disclosed;
 - a logical delete writes no content, so it is classified by the version it
   deleted; a `VERSIONED_COMPOSITION` read by the composition it holds;
@@ -235,10 +245,13 @@ and can change:
   histories are recorded as `none`, by resource kind.
 
 An access the map cannot classify is recorded `unclassified`, with the
-template and archetype ids as evidence, and is never refused.
-`category_basis` says what the classification rests on (`template`,
-`archetype`, `query` or `resource-kind`), and `category_map_digest` names the
-map that produced it, so a later map never rereads an old record. The map's
+template and archetype ids as evidence, and is never refused; the FHIR record
+says why (`unmapped`, `unbound`, `named-nothing`). A stored category is its
+`<system>|<code>` token. `category_basis` says what the classification was read
+from (`returned`, `written`, `queried` or `resource-kind`; records written
+before 5.3.0 carry `template`, `archetype` or `query` and the earlier
+spellings), and `category_map_digest` names the map that produced it, so a
+later map never rereads an old record. The map's
 digest is also on the boot line and on `GET /management/info` under
 `audit.category_map`. The classification stays in the access log: it is never
 written to the request log, a span or a metric label. The DICOM rendering has
@@ -302,14 +315,14 @@ whose declared purpose is one of them carries the emergency mark:
 - **The stored record:** the `emergency_access` column is `true`. It is
   `false` for every other access and for records written before the column
   existed.
-- **The FHIR `AuditEvent`:** a
-  [`purposeOfEvent`](https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.purposeOfEvent)
-  with the HL7 v3 `ActReason` code `ETREAT` ("Emergency Treatment", system
-  `http://terminology.hl7.org/CodeSystem/v3-ActReason`) and the mark in plain
-  words as its text: "Emergency access: declared as necessary to protect the
-  vital interests of the patient (Regulation (EU) 2025/327 Art. 11(5))". The
-  declared code stays on `agent.purposeOfUse`. A patient portal keys on the
-  `ETREAT` coding and shows the text.
+- **The FHIR `AuditEvent`:** the `entity` named `ehds-emergency-access` that
+  `ehds-logging` writes, whose `description` states the mark in plain words
+  ("Emergency access: the accessor declared that the access was necessary to
+  protect the vital interests of the data subject (Regulation (EU) 2025/327
+  Art 11(5)).") and whose `ehds-emergency-purpose` details name the purposes
+  that marked it. The declared code stays on `agent.purposeOfUse` and on
+  `purposeOfEvent`. A patient portal keys on the entity and shows its
+  description.
 - **The DICOM syslog feed:** no mark. The PS3.15 schema has no purpose
   element.
 
@@ -411,7 +424,7 @@ Records fan out to independently configured sinks (`[audit]` in
 | Sink | Default | What it does |
 |---|---|---|
 | `[audit.store]` | **on** | The local **Audit Record Repository**: records persist in the dedicated `audit` PostgreSQL schema (append-only and tamper-evident, strictly outside the EHR content), served back via the ITI-81 search below. `retention_days` prunes old records hourly (`0` = keep forever). |
-| `[audit.syslog]` | off | The classic ATNA feed: DICOM PS3.15 XML over syslog (RFC 5424; UDP or TLS transport) to an external ARR, per IHE ITI-20. |
+| `[audit.syslog]` | off | The classic ATNA feed: DICOM PS3.15 XML as RFC 5424 syslog over RFC 5425 TLS to an external ARR, per IHE ITI-20. |
 | `[audit.fhir_feed]` | off | The RESTful-ATNA feed (ITI-20 **ATX: FHIR Feed**): each FHIR `AuditEvent` is `POST`ed to an external FHIR ARR. With the local store on, delivery is **outbox-driven**: an ARR outage loses nothing, pending records ship on recovery. |
 
 Emission never blocks the request path: a record is handed to a bounded queue
@@ -524,7 +537,7 @@ newest first, with the full match `total`. Supported search parameters:
 | `patient` | the recorded patient (EHR subject) id |
 | `agent` | the authenticated principal |
 | `entity` | the touched resource id |
-| `outcome` | the outcome indicator: `0`, `4`, `8` or `12` |
+| `outcome` | the outcome indicator: `0`, `4`, `8` or `12` (FerroEHR records `0`, `4` and `8`) |
 | `action` | the action code: `C`, `R`, `U`, `D` or `E` |
 | `_count` / `_offset` | paging; page size defaults to 50, capped at 1000 |
 
@@ -536,7 +549,7 @@ required, and is refused with a `403` that names the parameter when it omits
 it. Reading a subject's log is itself recorded as an access naming that
 subject and the record count served. An
 [emergency access](#emergency-access-ehds-art-115) in the subject's log
-carries its mark as `purposeOfEvent`. The surface answers `404` when the local
+carries its mark as the `ehds-emergency-access` entity. The surface answers `404` when the local
 store is disabled.
 
 ```bash
@@ -594,7 +607,7 @@ NTP/chrony on every node so audit timestamps align across systems.
 Auditing defaults to on with the local store only; see the
 [configuration reference](installation/config-audit.md#audit) for every
 `[audit]` key and its `FERROEHR__AUDIT__*` environment form. The syslog sink's
-own keys are `host` / `port` / `transport` / `tls_ca_file` /
+own keys are `host` / `port` / `tls_ca_file` /
 `tls_identity_cert_file` / `tls_identity_key_file` under `[audit.syslog]`; the
 switches shared by every sink stay directly under `[audit]`.
 

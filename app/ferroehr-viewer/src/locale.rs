@@ -2077,8 +2077,6 @@ messages! {
     NoSubjectPseudonymNamespaceDeclaredSo = "no-subject-pseudonym-namespace-declared-so",
     /// `an access record the audit queue cannot take is dropped and the request still succeeds`
     AccessRecordAuditQueueCannotTake = "access-record-audit-queue-cannot-take",
-    /// `the access log is shipped over UDP syslog, unencrypted and without delivery confirmation`
-    AccessLogShippedOverUdpSyslog = "access-log-shipped-over-udp-syslog",
     /// `an EHR without its own access settings admits every caller the role checks let through`
     EhrWithoutOwnAccessSettingsAdmits = "ehr-without-own-access-settings-admits",
     /// `role checks are off, so every signed-in caller may use every enabled surface, the...`

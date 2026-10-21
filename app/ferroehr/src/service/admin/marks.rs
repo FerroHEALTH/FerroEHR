@@ -191,9 +191,10 @@ impl FerroEhrService {
     /// `docs/law/ch/fadp/text-de.html`). EHDS Annex II 3.4 asks the storing
     /// components to support retention periods that "take into account the
     /// origins and categories of electronic health data"
-    /// (`docs/law/eu/ehds/text.html`); `category` is that dimension, spelled
-    /// as `[audit.categories]` spells it, and `None` keys the period on every
-    /// object of the kind. The register is where those answers come from.
+    /// (`docs/law/eu/ehds/text.html`); `category` is that dimension, named as
+    /// `[audit.categories]` names a category and stored as its
+    /// `<system>|<code>` token, and `None` keys the period on every object of
+    /// the kind. The register is where those answers come from.
     ///
     /// # Errors
     /// - `precondition_violation` (`400`) — a kind, category, anchor rule or
@@ -208,17 +209,34 @@ impl FerroEhrService {
         anchor: &str,
         source: &str,
     ) -> Result<(), SmError> {
-        if let Some(category) = category {
-            crate::system_log::categories::Category::parse(category)
-                .map_err(|e| SmError::precondition(e.to_string()).with_source(e))?;
-        }
+        let category = category
+            .map(|reference| {
+                let fallback = crate::system_log::categories::Classifier::default();
+                let map = self.audit.as_ref().map_or(
+                    &fallback,
+                    crate::system_log::sender::AuditSender::categories,
+                );
+                if reference == crate::system_log::categories::NONE {
+                    return Ok(reference.to_owned());
+                }
+                map.category_token(reference).ok_or_else(|| {
+                    SmError::precondition(format!(
+                        "{reference:?} is not an audit category: a priority category of EHDS \
+                         Art. 14(1) by its code (Patient-Summaries, Electronic-Prescriptions, \
+                         Electronic-Dispensations, Medical-Imaging, Laboratory-Reports, \
+                         Discharge-Reports) or as <system>|<code>, or a national category \
+                         [audit.categories] national declares, or none"
+                    ))
+                })
+            })
+            .transpose()?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         marks::put_retention_policy(
             &mut tx,
             kind,
             jurisdiction,
-            category,
+            category.as_deref(),
             period,
             anchor,
             source,
@@ -242,9 +260,9 @@ impl FerroEhrService {
     /// `exception` — a database fault (rolled back).
     pub async fn mirror_category_map(
         &self,
-        map: &crate::system_log::categories::CategoryMap,
+        map: &crate::system_log::categories::Classifier,
     ) -> Result<(), SmError> {
-        Ok(marks::replace_category_map(&self.pool, &map.rows())
+        Ok(marks::replace_category_map(&self.pool, map.rows())
             .await
             .map_err(ServiceError::Storage)?)
     }

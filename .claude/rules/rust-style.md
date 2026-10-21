@@ -182,7 +182,7 @@ checked. New code carries the source; the sweep is tracked.
   renaming. Only alias in highly exceptional cases where no other solution
   exists, with a comment saying why. (Trait imports as `use Trait as _;`
   are not renames and are fine.)
-- Edition 2024, resolver v3, MSRV 1.97. `cargo fmt` clean; run `cargo clippy` on
+- Edition 2024, resolver v3, MSRV 1.98. `cargo fmt` clean; run `cargo clippy` on
   the crate you touched before considering it done.
 - **Suppressions are `#[expect(lint, reason = "…")]`**, scoped to the smallest
   item; `#[allow(lint, reason = "…")]` only for cfg/feature-conditional fire

@@ -73,7 +73,7 @@ in deployment_accepts (which is then stated on every boot and on /management/sta
 ```
 
 The gaps are `shared_credential`, `shared_cluster`, `open_subject_namespace`,
-`audit_off`, `audit_fails_open`, `audit_syslog_udp`, `open_ehr_access_default`,
+`audit_off`, `audit_fails_open`, `open_ehr_access_default`,
 `migrate_on_runtime_credential`, `auth_off`, `rbac_off`, `plaintext_listener`,
 `plaintext_broker`, `plaintext_audit_feed` and `plaintext_object_store`. `shared_cluster` is read from
 `pg_control_system().system_identifier` on each pool, the audit pool included,
@@ -93,10 +93,7 @@ listener binds every interface and never speaks TLS: unset the port so the
 surface shares the main listener, or accept the gap by name and keep that port
 off any network clinical clients or the internet reach.
 
-`audit_syslog_udp` opens when the syslog feed is on with `transport = "udp"`,
-which ships the access log unencrypted and without delivery confirmation. Set
-`transport = "tls"`, or accept the gap by name where the UDP path stays on a
-trusted segment and the local store or the FHIR feed holds the durable copy.
+The syslog feed has no gap of its own: it sends over RFC 5425 TLS only.
 
 `plaintext_broker` opens when the change-event outbox (`[events]`) is on with an
 `amqp://` URL and `tls = false`, which publishes change events to the broker
@@ -222,7 +219,6 @@ blast radius of the database it audits:
 ```toml
 [audit.syslog]
 enabled = true
-transport = "tls"
 
 # or, for a RESTful ARR
 [audit.fhir_feed]

@@ -29,8 +29,12 @@ versioned with the release like every page of this book.
 
 ## The component and the surface it records
 
-The component is, in the code: `ferroehr::system_log` (the access-event model,
-the audit store, the DICOM and FHIR renderings and the sinks),
+The component is, in the code: the FerroHEALTH products' shared crates
+`ehds-logging` 0.1.1 (the Annex II 3.2 access record, the Art. 14(1)
+categories and their classification, the Art. 9(2) retention floor and the
+emergency mark) and `ihe-atna` 0.1.1 (the BALP and DICOM renderings and the
+ATNA sender), from FerroAUDIT; `ferroehr::system_log` (the access-event model,
+the audit store, what each rendering says and the sinks),
 `ferroehr-rest::system_log` (the middleware that records every API access and
 classifies it), the ITI-81 `GET /fhir/r4/AuditEvent` retrieval, and the
 retention register in `ferroehr::storage::marks`. The middleware is installed
@@ -138,7 +142,7 @@ record of a delete carries the agent types the BALP `Delete` profile fixes
   `element_a_the_accessing_organisation_is_recorded_and_rendered_in_fhir`,
   `element_b_the_person_who_accessed_is_recorded_and_rendered`,
   `element_b_the_professional_behind_a_client_is_recorded_and_rendered`,
-  `the_assurance_level_is_recorded_and_reaches_neither_rendering`,
+  `the_assurance_level_is_recorded_and_reaches_the_fhir_rendering_as_a_level`,
   `nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats`;
 - `app/ferroehr/tests/it/audit_store.rs`:
   `access_fields_round_trip_on_both_write_paths`,
@@ -163,9 +167,10 @@ record of a delete carries the agent types the BALP `Delete` profile fixes
 configures `[authz.professional]` a client application's credential is
 recorded as that application, not as the professional behind it. A shared
 Basic account names the account; with either block configured, Basic is
-refused on patient data. The assurance level reaches the local store's columns only, because neither
-the DICOM nor the FHIR R4 audit format has an element for it, and ITI-81 serves
-the FHIR document.
+refused on patient data. The DICOM format has no element for the assurance
+level, so the syslog feed carries none; the FHIR record carries the level as
+the BALP `ihe-assuranceLevel` extension, and the raw claim value stays in the
+local store's column.
 
 ## H3: the category of the data is not recorded
 
@@ -176,8 +181,9 @@ the FHIR document.
 summary, a prescription or a test result, which Annex II 3.2(c) asks for
 and the patient's information under EHDS Art. 9(2)(c) depends on.
 
-**Control:** each access is classified when it happens, by template id, then
-root archetype id, then the query's positive constraints. A logical delete is
+**Control:** each access is classified when it happens by `ehds-logging`, by
+template id, then root archetype id, then the query's positive constraints,
+every one of which must be mapped. A logical delete is
 classified by the version it deleted, a `VERSIONED_COMPOSITION` read by the
 composition it holds, a `CONTRIBUTION` read (with or without
 `Prefer: resolve_refs`) by the versions it committed, and an EHR Extract
@@ -381,8 +387,9 @@ happened.
 **Control:** a deployment names the purpose-of-use codes its callers declare
 for an emergency (`[audit] emergency_purpose_codes`, each also on
 `purpose_codes`). An access declaring one carries the emergency mark in its
-access record: the `emergency_access` column, and in the FHIR `AuditEvent` a
-`purposeOfEvent` with the HL7 v3 code `ETREAT` and the mark in plain words.
+access record: the `emergency_access` column, and in the FHIR `AuditEvent` the
+`ehds-logging` entity `ehds-emergency-access`, which states the mark in plain
+words and names the purposes that marked it.
 The person's own subject-scoped ITI-81 retrieval serves that document. The
 mark lifts no restriction: an object restricted under GDPR Art. 18 is refused
 with an emergency purpose exactly as without one, and the refused attempt is
@@ -422,3 +429,4 @@ EHDS-side risk assessment of the component.
 | 4 | 2026-10-15 | Reviewed for release 4.3.9 (changes since 4.3.6: digest version 2 of the audit chain over every column, audit migration 0011 (#3686); one data-flow direction for the DICOM and FHIR renderings (#3687) and the BALP `Delete` agent types (#3750); the physical party delete classified and its party named (#3683); every audit-store and retention-register checkout through the typed database acquire (#3749)); every named test exists and asserts its control; H1, H2 and H7 name the new tests, H7 the version 1 records; no hazard added |
 | 5 | 2026-10-20 | Reviewed for release 5.1.0 (changes since 5.0.0: the audit FHIR feed authenticates with an OAuth 2.0 client-credentials token, and a token endpoint that refuses or cannot be reached is a transport error, so the records stay pending and are delivered on recovery as H5 states (#3829); the assurance and professional rules the access record carries move under `[authz]` (#3872)); every named test exists and asserts its control; no hazard added |
 | 6 | 2026-10-20 | Reviewed for release 5.2.0 (changes since 5.1.0: the EHDS Art. 8 restriction of access lands, so H9's control is the restriction with its emergency override and the mark on that access record (#3682); a read of a party's protected identifiers is recorded per scheme (#3776); the access context carries whether a request enforces the restriction); every named test exists and asserts its control; no hazard added |
+| 7 | 2026-10-20 | Reviewed for the move onto FerroAUDIT (#3887): the access record, its categories and their classification, the retention floor and the emergency mark come from `ehds-logging` 0.1.1, the BALP and DICOM renderings and the ATNA sender from `ihe-atna` 0.1.1; the syslog feed sends over TLS only; H2, H3 and H9 name the moved tests; every named test exists and asserts its control; no hazard added |

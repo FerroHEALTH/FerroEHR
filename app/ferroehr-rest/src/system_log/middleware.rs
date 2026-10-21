@@ -194,7 +194,7 @@ fn emit_served_ehr_records(
         event.category = content.get(ehr_id).and_then(|objects| {
             state
                 .backend()
-                .audit_classify(&AccessedContent::Objects(objects.clone()))
+                .audit_classify(&AccessedContent::Objects(objects.clone()), event.action)
         });
         fill_access(&mut event, access, state);
         rejected |= state.backend().emit(event) == EmitOutcome::Rejected;
@@ -311,7 +311,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
                 object.as_ref().and_then(|o| o.content.clone()),
             )
         {
-            event.category = state.backend().audit_classify(&accessed);
+            event.category = state.backend().audit_classify(&accessed, action);
         }
         // A handler that knows its domain better than the resource class does
         // says so; the class decides for everything else.
@@ -437,6 +437,11 @@ fn fill_common(
 ) {
     let principal = caller.principal;
     event.user_id = principal.map(|p| p.subject.clone()).unwrap_or_default();
+    // The token's issuer and client (RFC 7519 §4.1.1, RFC 9068 §2.2): who
+    // vouched for the person and which application they used, as the BALP
+    // `agent:user` names them.
+    event.issuer = principal.and_then(|p| claim(p, "iss"));
+    event.client_id = principal.and_then(|p| claim(p, "client_id").or_else(|| claim(p, "azp")));
     // The roles the person held (NEN 7513's role element, #3239): the RFC 9068
     // §2.2.3.1 claim carriers for a bearer, the user definition for Basic.
     event.roles = principal.map(|p| p.roles.clone()).unwrap_or_default();
@@ -455,9 +460,15 @@ fn fill_common(
 /// Returns the `jti` claim of a Bearer principal's validated token, if present
 /// and a non-empty string.
 fn token_id(principal: &Principal) -> Option<String> {
+    claim(principal, "jti")
+}
+
+/// Returns the string claim `name` of a Bearer principal's validated token,
+/// if present and non-empty.
+fn claim(principal: &Principal, name: &str) -> Option<String> {
     principal
         .claims
-        .get("jti")
+        .get(name)
         .and_then(serde_json::Value::as_str)
         .filter(|s| !s.is_empty())
         .map(str::to_owned)

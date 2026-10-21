@@ -89,6 +89,11 @@ module.**
 - **System log** (`src/system_log/`): the ARR drain batches (`recv_many` → one
   multi-row UNNEST INSERT when syslog is off) with concurrent memoized subject
   resolution and rate-limited drop warnings; default `audit.queue_capacity` 8192.
+  The EHDS access record, the categories, the classification, the retention
+  floor and the emergency mark come from `ehds-logging`; the BALP and DICOM
+  renderings, the syslog TLS sender and the FHIR feed client from `ihe-atna`
+  (FerroAUDIT, pinned exactly). Never re-implement what those crates hold: a
+  missing field or shape is a FerroAUDIT issue, not local code.
 - **Consume `openehr-*` types directly** — never re-model the RM or re-serialize;
   canonical JSON/XML goes through `openehr-its`.
 - DB tests take their database from the shared harness — `testkit::db()`

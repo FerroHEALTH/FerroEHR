@@ -1,600 +1,535 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! FHIR R4 `AuditEvent` rendering of the audit event model, following the
-//! IHE **BALP** (Basic Audit Log Patterns) content profiles.
+//! The FHIR R4 `AuditEvent` of one audit record, written by the shared
+//! FerroAUDIT crates on the IHE BALP 1.1.4 patterns.
 //!
-//! This is the modern half of the dual ATNA rendering, the classic half being
-//! the DICOM PS3.15 §A.5 XML in [`super::message`]: the same resolved
-//! [`super::event::AuditEvent`] renders to one FHIR R4 `AuditEvent` JSON
-//! document. This module decides the BALP content and
-//! [`ferroehr_ext::fhir::audit`] builds and serializes the resource. The BALP
-//! profiles pin the codings emitted here (IHE BALP v1.1.4, `IHE.BasicAudit.*`
-//! StructureDefinitions):
+//! An access to clinical content the middleware classified is the EHDS access
+//! record of Regulation (EU) 2025/327 Annex II 3.2: FerroEHR builds the
+//! `ehds-logging` [`AccessRecord`] from it and `ehds-logging` writes the BALP
+//! `AuditEvent` (the `RESTful` pattern of its action, the categories, the
+//! retention, the security labels, the origins and the emergency mark). Every
+//! other record (an authentication, a template or party operation, a failed
+//! access, an extract) is an `ihe-atna` BALP [`Exchange`] FerroEHR fills
+//! directly. Both are written by `ihe-atna`.
 //!
-//! - `RESTful` operations: `type` = `rest`, `subtype` = the FHIR
-//!   restful-interaction class + the concrete ITS-REST operation id.
-//! - Role direction per BALP, shared with the DICOM message: on a **Read**
-//!   the server is the *source* of the data (DCM 110153) and the client the
-//!   *destination* (DCM 110152); on a query, a create and an update the
-//!   client is the source (`IHE.BasicAudit.PatientRead` vs
-//!   `IHE.BasicAudit.PatientQuery` agent:client/agent:server fixed codings).
-//!   On a **Delete** `IHE.BasicAudit.Delete` types the client DCM 110150
-//!   (Application) and the server `custodian` (provenance-participant-type)
-//!   instead; the DICOM message keeps its PS3.15 source/destination roles.
-//! - Patient entity: `audit-entity-type` code `1` (Person) +
-//!   `object-role` code `1` (Patient), the resolved EHR subject as an
-//!   identifier-only reference.
-//! - Query entity: `audit-entity-type` `2` + `object-role` `24`, the search
-//!   expression base64-encoded in `entity.query`
-//!   (`IHE.BasicAudit.Query`/`PatientQuery`).
-//! - Bearer token identity: an `agent` typed
-//!   `UserAgentTypes#UserOauthAgent` carrying the token `jti` in
-//!   `agent.policy` (`IHE.BasicAudit.OAUTHaccessTokenUse.Minimal` — minimal
-//!   by design: never the token itself).
-//! - The natural person (EHDS Annex II 3.2(b)): a client application acting
-//!   for a named professional renders as two agents, the person as requestor
-//!   and the application beside it; a professional identifier other than the
-//!   token subject is `who`, with the subject as `agent.altId`.
-//! - The authentication assurance level has no FHIR R4 `AuditEvent` element:
-//!   `agent.policy` is the "policy or plan that authorized the activity"
-//!   (<https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.agent.policy>),
-//!   which a level of assurance is not, so the level lives in the store's
-//!   columns only.
-//! - The emergency-access mark (EHDS Art. 11(5)): `purposeOfEvent`, "the
-//!   purposeOfUse (reason) that was used during the event being recorded"
-//!   (<https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.purposeOfEvent>),
-//!   carries the HL7 v3 `ActReason` code `ETREAT` with the mark in plain words
-//!   as its text, beside the declared code on `agent.purposeOfUse`.
-//!
-//! `meta.profile` claims the matching BALP profile only when the record
-//! actually satisfies it (the BALP `RESTful` profiles fix `outcome` = `0`, so
-//! failures carry no claim; the `Patient*` variants additionally require the
-//! resolved patient entity).
+//! FerroEHR decides what the record says: the action, the participants as the
+//! authentication layer judged them, the patient its subject resolver found,
+//! the objects and the origins its storage read. The shared crates decide how
+//! it is written.
 
-use ferroehr_ext::fhir::audit::{
-    AuditAction, AuditAgent, AuditCoding, AuditConcept, AuditEntityRef, AuditOutcome, AuditRecord,
-    AuditSourceRef, AuditWho,
+use std::net::IpAddr;
+
+use ehds_logging::emergency::EmergencyPurposes;
+use ehds_logging::label::LabelPolicy;
+use ehds_logging::record::{
+    AccessRecord, Accessor, Acting, Action, AssuranceLevel, DataSubject, EhrAt, Origin, Outcome,
+    PatientIdentifier, PatientLookup, Professional, Purpose, Request,
 };
+use ehds_logging::retention::RetentionPolicy;
+use ihe_atna::balp::{
+    APPLICATION, CREATE, CUSTODIAN, Coded, DELETE, DESTINATION_ROLE, Described, Direction, Entity,
+    EventKind, Exchange, NetworkAddress, Observer, Peer, READ, REST, SEARCH, SOURCE_ROLE,
+    SYSTEM_OBJECT, UPDATE, What,
+};
+use ihe_atna::user::{Code, OnBehalfOf, PurposeOfUse, User};
+use secrecy::{ExposeSecret as _, SecretString};
+use url::Url;
 
 use crate::system_log::AuditError;
+use crate::system_log::codes::AtnaObject;
 use crate::system_log::event::{
     ActingMode, AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
 use crate::system_log::message::AuditContext;
 
-// ── Code systems (FHIR R4 / IHE BALP fixed bindings) ──────────────────────────
-
-/// FHIR `audit-event-type` code system (`rest`).
-pub const SYS_AUDIT_EVENT_TYPE: &str = "http://terminology.hl7.org/CodeSystem/audit-event-type";
-/// FHIR restful-interaction code system (`create`/`read`/…).
-pub const SYS_RESTFUL_INTERACTION: &str = "http://hl7.org/fhir/restful-interaction";
-/// DICOM controlled terminology (DCM) system URI.
-pub const SYS_DCM: &str = "http://dicom.nema.org/resources/ontology/DCM";
-/// FHIR `provenance-participant-type` code system (`custodian`).
-pub const SYS_PROVENANCE_PARTICIPANT_TYPE: &str =
-    "http://terminology.hl7.org/CodeSystem/provenance-participant-type";
-/// FHIR `audit-entity-type` code system (`1` person / `2` system object).
-pub const SYS_AUDIT_ENTITY_TYPE: &str = "http://terminology.hl7.org/CodeSystem/audit-entity-type";
-/// FHIR `object-role` code system (`1` patient / `24` query).
-pub const SYS_OBJECT_ROLE: &str = "http://terminology.hl7.org/CodeSystem/object-role";
-/// FHIR `security-source-type` code system (`4` application server).
-pub const SYS_SECURITY_SOURCE_TYPE: &str =
-    "http://terminology.hl7.org/CodeSystem/security-source-type";
-/// IHE BALP `UserAgentTypes` code system (`UserOauthAgent`).
-pub const SYS_BALP_USER_AGENT_TYPES: &str =
-    "https://profiles.ihe.net/ITI/BALP/CodeSystem/UserAgentTypes";
-/// The HL7 v3 `ActReason` code system, home of the `PurposeOfUse` codes the
-/// FHIR R4 `AuditEvent.purposeOfEvent` binding draws on.
-pub const SYS_V3_ACT_REASON: &str = "http://terminology.hl7.org/CodeSystem/v3-ActReason";
-
-/// The system for ITS-REST operation-id subtype codings.
-///
-/// NOTE: no external code system governs openEHR REST operations — our own
-/// design/extension (the same ids the DICOM rendering emits under the
-/// `openEHR-ITS-REST` `codeSystemName`).
-pub const SYS_OPENEHR_ITS_REST: &str = "urn:openehr:its-rest:operation";
-
 /// The canonical-URL prefix of the IHE BALP profiles (v1.1.4).
 pub const BALP_PROFILE_BASE: &str = "https://profiles.ihe.net/ITI/BALP/StructureDefinition";
 
-/// A BALP coding with display text.
-fn coding(system: &str, code: &str, display: &str) -> AuditCoding {
-    AuditCoding {
-        system: Some(system.to_owned()),
-        code: code.to_owned(),
-        display: Some(display.to_owned()),
-    }
+/// The DICOM controlled terminology system URI.
+const DCM: &str = "http://dicom.nema.org/resources/ontology/DCM";
+
+/// DICOM `110114` User Authentication, the type of an authentication record.
+const USER_AUTHENTICATION: Coded = Coded {
+    system: DCM,
+    code: "110114",
+    display: "User Authentication",
+};
+
+/// DICOM `110122` Login.
+const LOGIN: Coded = Coded {
+    system: DCM,
+    code: "110122",
+    display: "Login",
+};
+
+/// DICOM `110123` Logout.
+const LOGOUT: Coded = Coded {
+    system: DCM,
+    code: "110123",
+    display: "Logout",
+};
+
+/// DICOM `110106` Export, the type of an outbound EHR extract.
+const EXPORT: Coded = Coded {
+    system: DCM,
+    code: "110106",
+    display: "Export",
+};
+
+/// DICOM `110107` Import, the type of an inbound EHR extract.
+const IMPORT: Coded = Coded {
+    system: DCM,
+    code: "110107",
+    display: "Import",
+};
+
+/// The `restful-interaction` subtype `operation`, of an operation that is no
+/// read, write or search.
+const OPERATION: Coded = Coded {
+    system: "http://hl7.org/fhir/restful-interaction",
+    code: "operation",
+    display: "operation",
+};
+
+/// The policies an access record is written under: how long the store keeps
+/// it, the security labels of its categories and origins, and the purposes of
+/// use that mark an emergency access.
+#[derive(Debug, Clone, Default)]
+pub struct Recording {
+    /// The retention every record states (Art. 9(2), Annex II 3.4).
+    pub retention: RetentionPolicy,
+    /// The labels of each category and origin (Annex II 3.4).
+    pub labels: LabelPolicy,
+    /// The purposes of use that mark an emergency access (Art. 11(5)).
+    pub emergency: EmergencyPurposes,
 }
 
 /// Renders a resolved [`AuditEvent`] as a FHIR R4 `AuditEvent` document.
 ///
-/// The content follows the IHE BALP patterns, with the server identity from
-/// the [`AuditContext`] and the optionally-resolved patient subject id.
+/// A classified access is written as the EHDS access record through
+/// `ehds-logging`; every other record as a BALP exchange through `ihe-atna`.
+/// `subject` is the patient the subject resolver found behind the record's
+/// EHR, `(id, namespace)`.
 ///
 /// # Errors
 ///
-/// [`AuditError::Render`] when the typed FHIR resource cannot be built or
-/// serialized (an unrepresentable instant, or a serializer fault).
+/// [`AuditError::Render`] when the endpoint the record names is not a URL or
+/// the document cannot be written as JSON.
 pub fn to_fhir(
     event: &AuditEvent,
     ctx: &AuditContext,
     subject: Option<&str>,
 ) -> Result<serde_json::Value, AuditError> {
-    let missing = ctx.value_if_missing.as_str();
-
-    let (event_type, interaction) = type_and_interaction(event);
-
-    let mut subtypes = Vec::new();
-    if let Some(i) = interaction {
-        subtypes.push(i);
-    }
-    match event.event_type {
-        Some(EventType::Login) => subtypes.push(coding(SYS_DCM, "110122", "Login")),
-        Some(EventType::Logout) => subtypes.push(coding(SYS_DCM, "110123", "Logout")),
-        Some(EventType::RestOperation(op)) => {
-            subtypes.push(coding(SYS_OPENEHR_ITS_REST, op, op));
-        }
-        None => {}
-    }
-
-    let record = AuditRecord {
-        profiles: claimed_profiles(event, subject),
-        event_type,
-        subtypes,
-        action: action_code(event.action),
-        recorded: event.timestamp,
-        outcome: outcome_code(event.outcome),
-        outcome_desc: match event.outcome {
-            EventOutcome::Success => None,
-            _ => Some("Operation failed".to_owned()),
-        },
-        purpose_of_event: emergency_purpose(event),
-        agents: build_agents(event, ctx, missing),
-        source: AuditSourceRef {
-            site: nonempty_opt(&ctx.enterprise_site_id),
-            observer: nonempty(&ctx.source_id, missing),
-            types: vec![coding(SYS_SECURITY_SOURCE_TYPE, "4", "Application Server")],
-        },
-        entities: build_entities(event, subject, missing),
+    let endpoint = endpoint(ctx)?;
+    let observer = Observer {
+        source_id: nonempty(&ctx.source_id, &ctx.value_if_missing),
+        site: (!ctx.enterprise_site_id.is_empty()).then(|| ctx.enterprise_site_id.clone()),
+        host: NetworkAddress::host(&nonempty(&ctx.server_ip, &ctx.value_if_missing)),
     };
-
-    ferroehr_ext::fhir::audit::render(&record).map_err(|e| AuditError::Render(Box::new(e)))
-}
-
-/// The `type` coding + the restful-interaction `subtype` for the event.
-/// REST-dispatched resource operations are `rest`; the service-level events
-/// keep their DICOM event id as the `type` (extract export/import, user
-/// authentication) — the BALP `RESTful` patterns do not cover them.
-fn type_and_interaction(event: &AuditEvent) -> (AuditCoding, Option<AuditCoding>) {
-    match event.object {
-        ObjectClass::Authentication => (coding(SYS_DCM, "110114", "User Authentication"), None),
-        ObjectClass::Extract => match event.action {
-            EventActionCode::Create | EventActionCode::Update => {
-                (coding(SYS_DCM, "110107", "Import"), None)
-            }
-            _ => (coding(SYS_DCM, "110106", "Export"), None),
-        },
-        ObjectClass::Query => (
-            coding(SYS_AUDIT_EVENT_TYPE, "rest", "RESTful Operation"),
-            Some(coding(
-                SYS_RESTFUL_INTERACTION,
-                "search-type",
-                "search-type",
-            )),
-        ),
-        _ => (
-            coding(SYS_AUDIT_EVENT_TYPE, "rest", "RESTful Operation"),
-            Some(match event.action {
-                EventActionCode::Create => coding(SYS_RESTFUL_INTERACTION, "create", "create"),
-                EventActionCode::Read => coding(SYS_RESTFUL_INTERACTION, "read", "read"),
-                EventActionCode::Update => coding(SYS_RESTFUL_INTERACTION, "update", "update"),
-                EventActionCode::Delete => coding(SYS_RESTFUL_INTERACTION, "delete", "delete"),
-                EventActionCode::Execute => {
-                    coding(SYS_RESTFUL_INTERACTION, "operation", "operation")
-                }
-            }),
-        ),
-    }
-}
-
-/// Returns the client/server agents, plus the OAuth token agent when a `jti`
-/// is known.
-///
-/// A delete of the BALP `RESTful` family types the client DCM 110150
-/// "Application" and the server `custodian`, the `agent:client.type` and
-/// `agent:server.type` patterns `IHE.BasicAudit.Delete` fixes and
-/// `IHE.BasicAudit.PatientDelete` inherits
-/// (<https://profiles.ihe.net/ITI/BALP/1.1.4/StructureDefinition-IHE.BasicAudit.Delete.html>).
-/// Every other record follows [`AuditEvent::server_is_data_source`], the rule
-/// the DICOM message applies too: on a read the server is the source of the
-/// data (DCM 110153 "Source Role ID") and the client the destination
-/// (110152), as the BALP `Read`/`PatientRead` agent slices fix; on a query, a
-/// create and an update the client is the source, as the `Query`, `Create`
-/// and `Update` slices fix.
-fn build_agents(event: &AuditEvent, ctx: &AuditContext, missing: &str) -> Vec<AuditAgent> {
-    let (client_role, server_role) = if is_balp_delete(event) {
-        (
-            coding(SYS_DCM, "110150", "Application"),
-            coding(SYS_PROVENANCE_PARTICIPANT_TYPE, "custodian", "Custodian"),
-        )
-    } else if event.server_is_data_source() {
-        (
-            coding(SYS_DCM, "110152", "Destination Role ID"),
-            coding(SYS_DCM, "110153", "Source Role ID"),
-        )
-    } else {
-        (
-            coding(SYS_DCM, "110153", "Source Role ID"),
-            coding(SYS_DCM, "110152", "Destination Role ID"),
-        )
+    let exchange = match access_record(event, ctx, subject, &endpoint) {
+        Some(record) => with_roles(ehds_logging::balp::exchange(&record, &endpoint), event),
+        None => exchange(event, ctx, subject, &endpoint),
     };
-
-    let mut agents = requesting_agents(event, client_role, missing);
-    // This server.
-    agents.push(AuditAgent {
-        role: Some(server_role),
-        roles: Vec::new(),
-        who: Some(AuditWho::Identifier(nonempty(&ctx.source_id, missing))),
-        alt_id: None,
-        requestor: false,
-        policy: Vec::new(),
-        network_address: Some(nonempty(&ctx.server_ip, missing)),
-        purpose_of_use: Vec::new(),
-    });
-
-    if let Some(organisation) = event.organisation.as_deref().filter(|s| !s.is_empty()) {
-        // The organisation the caller acted for, as a second participant:
-        // FHIR R4 `agent.who` may reference an `Organization` and
-        // `agent.type` is 0..1, so the organisation needs no participation
-        // code and none is invented for it
-        // (<https://hl7.org/fhir/R4/auditevent.html>). It did not initiate the
-        // request — the natural person did — so it is not the requestor.
-        agents.push(AuditAgent {
-            role: None,
-            roles: Vec::new(),
-            who: Some(AuditWho::Reference(format!("Organization/{organisation}"))),
-            alt_id: None,
-            requestor: false,
-            policy: Vec::new(),
-            network_address: None,
-            purpose_of_use: Vec::new(),
-        });
-    }
-
-    if let Some(jti) = event.token_id.as_deref().filter(|s| !s.is_empty()) {
-        // IHE.BasicAudit.OAUTHaccessTokenUse.Minimal: the token identity is
-        // ONLY the jti, carried in agent.policy — never the token contents.
-        agents.push(AuditAgent {
-            role: Some(coding(
-                SYS_BALP_USER_AGENT_TYPES,
-                "UserOauthAgent",
-                "User OAuth Agent participant",
-            )),
-            roles: Vec::new(),
-            who: None,
-            alt_id: None,
-            requestor: true,
-            policy: vec![jti.to_owned()],
-            network_address: None,
-            purpose_of_use: Vec::new(),
-        });
-    }
-
-    agents
+    let written = exchange
+        .audit_event(&observer)
+        .map_err(|e| AuditError::Render(Box::new(e)))?;
+    serde_json::from_slice(written.into_bytes().expose_secret())
+        .map_err(|e| AuditError::Render(Box::new(e)))
 }
 
-/// Whether `event` is a delete of the BALP `RESTful` family, whose agent types
-/// `IHE.BasicAudit.Delete` fixes.
-fn is_balp_delete(event: &AuditEvent) -> bool {
-    event.action == EventActionCode::Delete
-        && balp_profile_name(event.object, event.action, false).is_some()
+/// `exchange` with the security roles the person acted under beside the
+/// acting mode `ehds-logging` writes as the user's role: NEN 7513 asks for the
+/// role or authority under which the record was accessed.
+fn with_roles(mut exchange: Exchange, event: &AuditEvent) -> Exchange {
+    if let OnBehalfOf::User(user) = &exchange.on_behalf {
+        let mut roles = user.roles().to_vec();
+        roles.extend(event.roles.iter().map(|role| Code {
+            system: None,
+            code: role.clone(),
+        }));
+        exchange.on_behalf = OnBehalfOf::User(user.clone().with_roles(roles));
+    }
+    exchange
 }
 
-/// The requesting side's agents.
-///
-/// A client application acting for a named professional yields two: the person
-/// as requestor with the security roles and the purpose, and the application
-/// as a non-requesting participant at the network address (FHIR R4
-/// `agent.requestor`, "whether user is initiator",
-/// <https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.agent.requestor>).
-/// Otherwise one requesting client carries the authenticated user identity
-/// (the FHIR twin of the DICOM source `ActiveParticipant`); a professional
-/// identifier other than the token subject names the person there, with the
-/// subject as the authentication system's identifier, `agent.altId`.
-fn requesting_agents(
+/// The endpoint the record names FerroEHR by: `urn:ferroehr:<source id>`.
+fn endpoint(ctx: &AuditContext) -> Result<Url, AuditError> {
+    let source = nonempty(&ctx.source_id, &ctx.value_if_missing);
+    Url::parse(&format!("urn:ferroehr:{source}")).map_err(|e| AuditError::Render(Box::new(e)))
+}
+
+/// The EHDS access record of `event`, when it is a classified access.
+fn access_record(
     event: &AuditEvent,
-    client_role: AuditCoding,
-    missing: &str,
-) -> Vec<AuditAgent> {
-    let user = nonempty(&event.user_id, missing);
-    let client_ip = event
-        .client_ip
-        .clone()
-        .unwrap_or_else(|| missing.to_owned());
-    let professional = event
-        .actor
-        .professional_id
-        .as_deref()
-        .filter(|id| !id.is_empty());
-    if let (Some(ActingMode::Client), Some(person)) = (event.actor.mode, professional) {
-        return vec![
-            AuditAgent {
-                role: None,
-                roles: event.roles.clone(),
-                who: Some(AuditWho::Identifier(person.to_owned())),
-                alt_id: None,
-                requestor: true,
-                policy: Vec::new(),
-                network_address: None,
-                purpose_of_use: purpose_codings(event),
-            },
-            AuditAgent {
-                role: Some(client_role),
-                roles: Vec::new(),
-                who: Some(AuditWho::Identifier(user)),
-                alt_id: None,
-                requestor: false,
-                policy: Vec::new(),
-                network_address: Some(client_ip),
-                purpose_of_use: Vec::new(),
-            },
-        ];
-    }
-    let (who, alt_id) = match professional {
-        Some(person) if person != user => (person.to_owned(), Some(user)),
-        _ => (user, None),
+    ctx: &AuditContext,
+    subject: Option<&str>,
+    endpoint: &Url,
+) -> Option<AccessRecord> {
+    let category = event.category.as_ref()?;
+    let missing = ctx.value_if_missing.as_str();
+    let action = match (event.object, event.action) {
+        (ObjectClass::Query, _) | (_, EventActionCode::Execute) => Action::Query,
+        (_, EventActionCode::Read) => Action::Read,
+        (_, EventActionCode::Create) => Action::Create,
+        (_, EventActionCode::Update) => Action::Update,
+        (_, EventActionCode::Delete) => Action::Delete,
     };
-    vec![AuditAgent {
-        role: Some(client_role),
-        // The roles the person held, as `agent.role` (0..*): "the security role
-        // that the user was acting under"
-        // (<https://hl7.org/fhir/R4/auditevent-definitions.html#AuditEvent.agent.role>),
-        // the NEN 7513 role element. The deployment's own vocabulary, so text
-        // without a code system. FHIR R4 puts `purposeOfUse` on the agent
-        // (<https://hl7.org/fhir/R4/auditevent.html>), and the requestor is the
-        // agent whose purpose it is.
-        roles: event.roles.clone(),
-        who: Some(AuditWho::Identifier(who)),
-        alt_id,
-        requestor: true,
-        policy: Vec::new(),
-        network_address: Some(client_ip),
-        purpose_of_use: purpose_codings(event),
-    }]
-}
-
-/// The declared purpose of use as `agent.purposeOfUse` codings.
-///
-/// The code comes from the vocabulary the deployment agrees with its callers
-/// (`[audit] purpose_codes`), which has no published code system, so the
-/// coding carries the code alone: FHIR R4 makes `Coding.system` optional
-/// (<https://hl7.org/fhir/R4/datatypes.html>) and naming a system the code
-/// does not come from would misdescribe it.
-fn purpose_codings(event: &AuditEvent) -> Vec<AuditCoding> {
-    event
+    let endpoint = endpoint.to_string();
+    let purposes: Vec<Purpose> = event
         .purpose
         .iter()
-        .filter(|code| !code.is_empty())
-        .map(|code| AuditCoding {
+        .map(|code| Purpose {
             system: None,
             code: code.clone(),
-            display: None,
         })
-        .collect()
-}
-
-/// The plain-words text of the emergency-access mark, the line a
-/// patient-facing view of the access log shows.
-pub const EMERGENCY_ACCESS_TEXT: &str = "Emergency access: declared as necessary to protect \
-     the vital interests of the patient (Regulation (EU) 2025/327 Art. 11(5))";
-
-/// The emergency-access mark as `AuditEvent.purposeOfEvent`: the fixed HL7 v3
-/// `ETREAT` coding a patient-facing view keys on, with the mark in plain words.
-///
-/// Empty for an access without the mark. The declared code itself stays on
-/// `agent.purposeOfUse`.
-fn emergency_purpose(event: &AuditEvent) -> Vec<AuditConcept> {
-    if !event.emergency_access {
-        return Vec::new();
-    }
-    // NOTE: `ETREAT` (http://terminology.hl7.org/CodeSystem/v3-ActReason) over `BTG`: the mark
-    // records care declared for an emergent condition and overrides no access control, which is
-    // what `BTG` would claim.
-    vec![AuditConcept {
-        coding: coding(SYS_V3_ACT_REASON, "ETREAT", "Emergency Treatment"),
-        text: Some(EMERGENCY_ACCESS_TEXT.to_owned()),
-    }]
-}
-
-/// The entity list: the patient (when resolved), the touched data object
-/// and/or the query expression, the origins of the served data, and the
-/// categories of the data accessed.
-fn build_entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> Vec<AuditEntityRef> {
-    use crate::system_log::codes::AtnaObject;
-
-    let mut entities = Vec::new();
-
-    if event.object.is_query() {
-        // NOTE: the audit layer carries the qualified stored-query name, not
-        // ad-hoc AQL text; it is base64-encoded per the BALP query pattern
-        // ("base64 encoding preserves exactly what was requested").
-        let expression = event
-            .object_id
-            .clone()
-            .unwrap_or_else(|| missing.to_owned());
-        entities.push(AuditEntityRef {
-            what: None,
-            entity_type: Some(coding(SYS_AUDIT_ENTITY_TYPE, "2", "System Object")),
-            role: Some(coding(SYS_OBJECT_ROLE, "24", "Query")),
-            name: None,
-            query: Some(expression),
-            details: Vec::new(),
-        });
-        entities.extend(origin_entities(event));
-        entities.extend(category_entity(event));
-        return entities;
-    }
-
-    if event.object.is_patient_centric()
-        && let Some(subject) = subject
-    {
-        entities.push(AuditEntityRef {
-            what: Some(subject.to_owned()),
-            entity_type: Some(coding(SYS_AUDIT_ENTITY_TYPE, "1", "Person")),
-            role: Some(coding(SYS_OBJECT_ROLE, "1", "Patient")),
-            name: None,
-            query: None,
-            details: Vec::new(),
-        });
-    }
-
-    if let Some(id) = event.object_id.as_deref().filter(|s| !s.is_empty()) {
-        entities.push(AuditEntityRef {
-            what: Some(id.to_owned()),
-            entity_type: Some(coding(SYS_AUDIT_ENTITY_TYPE, "2", "System Object")),
-            role: None,
-            name: None,
-            query: None,
-            details: Vec::new(),
-        });
-    }
-
-    entities.extend(origin_entities(event));
-    entities.extend(category_entity(event));
-    entities
-}
-
-/// The origins of the served data (EHDS Annex II 3.2(e), #3212), one entity
-/// per originating system, for a document read and a query alike.
-///
-/// Each entity is named so a reader can tell it from the object entity; the
-/// first carries the true distinct count when the recorded set was capped.
-fn origin_entities(event: &AuditEvent) -> impl Iterator<Item = AuditEntityRef> + '_ {
-    let recorded = event.origins.len();
-    let capped = event
-        .origin_count
-        .filter(|count| *count > u64::try_from(recorded).unwrap_or(u64::MAX));
-    event
+        .collect();
+    let origins: Vec<Origin> = event
         .origins
         .iter()
-        .enumerate()
-        .map(move |(index, origin)| {
-            let name = match (index, capped) {
-                (0, Some(total)) => format!(
-                    "origin of the served data ({total} distinct, first {recorded} recorded)"
-                ),
-                _ => "origin of the served data".to_owned(),
-            };
-            AuditEntityRef {
-                what: Some(origin.clone()),
-                entity_type: Some(coding(SYS_AUDIT_ENTITY_TYPE, "2", "System Object")),
-                role: None,
-                name: Some(name),
-                query: None,
-                details: Vec::new(),
-            }
+        .map(|system_id| Origin {
+            endpoint: endpoint.clone(),
+            node: None,
+            system_id: Some(system_id.clone()),
+            status: "active".to_owned(),
+            rows: None,
+            version: None,
+            created_ehr: None,
+            categories: None,
         })
-}
-
-/// The categories of the data accessed (EHDS Annex II 3.2(c), #3621), as one
-/// named entity whose details carry each category, the basis, each piece of
-/// evidence and the digest of the map that classified the record.
-///
-/// FHIR R4 `AuditEvent.entity.detail` is a `(type, value[x])` pair
-/// (<https://hl7.org/fhir/R4/auditevent.html>); the detail type names are our
-/// own. `None` when the record carries no classification.
-fn category_entity(event: &AuditEvent) -> Option<AuditEntityRef> {
-    let record = event.category.as_ref()?;
-    let mut details: Vec<(String, String)> = record
-        .categories
-        .iter()
-        .map(|category| ("category".to_owned(), category.clone()))
         .collect();
-    details.push((
-        "category-basis".to_owned(),
-        record.basis.as_str().to_owned(),
-    ));
-    details.extend(
-        record
-            .evidence
-            .iter()
-            .map(|id| ("category-evidence".to_owned(), id.clone())),
+    let ehrs = event
+        .ehr_id
+        .iter()
+        .map(|ehr_id| EhrAt {
+            endpoint: endpoint.clone(),
+            ehr_id: ehr_id.clone(),
+            patient: patient_lookup(event, subject),
+        })
+        .collect();
+    let classification = category.classification.clone();
+    let retention = ctx.recording.retention.retain(
+        event.timestamp,
+        &classification,
+        origins.iter().map(|origin| origin.endpoint.as_str()),
     );
-    if let Some(digest) = event.category_map_digest {
-        details.push(("category-map".to_owned(), digest.to_string()));
-    }
-    Some(AuditEntityRef {
-        what: None,
-        entity_type: Some(coding(SYS_AUDIT_ENTITY_TYPE, "2", "System Object")),
-        role: None,
-        name: Some("categories of the data accessed".to_owned()),
-        query: None,
-        details,
+    let labels = ctx.recording.labels.label(
+        &classification,
+        origins.iter().map(|origin| origin.endpoint.as_str()),
+    );
+    Some(AccessRecord {
+        action,
+        recorded: event.timestamp,
+        outcome: outcome(event.outcome),
+        accessor: accessor(event, missing, &endpoint, purposes.clone()),
+        subject: DataSubject {
+            patient: None,
+            ehrs,
+            population: None,
+        },
+        categories: classification,
+        delivered: event
+            .result_count
+            .and_then(|count| usize::try_from(count).ok()),
+        origins,
+        request: Request {
+            id: event
+                .request_id
+                .clone()
+                .unwrap_or_else(|| missing.to_owned()),
+            operation: operation(event),
+            resource: event.object_id.clone(),
+            query: (action == Action::Query).then(|| {
+                SecretString::from(
+                    event
+                        .object_id
+                        .clone()
+                        .unwrap_or_else(|| missing.to_owned()),
+                )
+            }),
+            stored_query: None,
+            client_address: client_address(event),
+            correlation: None,
+        },
+        retention,
+        labels,
+        emergency: event
+            .emergency_access
+            .then(|| ctx.recording.emergency.mark(&purposes))
+            .flatten(),
+        inserted: None,
+        transformations: Vec::new(),
     })
 }
 
-/// The BALP profile(s) this record actually satisfies. The `RESTful` profiles
-/// fix `outcome = 0`, so failures claim nothing; the `Patient*` variants
-/// require the resolved patient entity.
-fn claimed_profiles(event: &AuditEvent, subject: Option<&str>) -> Vec<String> {
-    use crate::system_log::codes::AtnaObject;
-
-    let mut profiles = Vec::new();
-    if event.outcome == EventOutcome::Success {
-        let patient = event.object.is_patient_centric() && subject.is_some();
-        if let Some(name) = balp_profile_name(event.object, event.action, patient) {
-            profiles.push(format!("{BALP_PROFILE_BASE}/IHE.BasicAudit.{name}"));
-        }
+/// Who accessed the data (Annex II 3.2(a), (b)), as the authentication layer
+/// judged them; a Basic user's issuer is FerroEHR itself, at `endpoint`.
+fn accessor(event: &AuditEvent, missing: &str, endpoint: &str, purposes: Vec<Purpose>) -> Accessor {
+    Accessor {
+        issuer: event.issuer.clone().unwrap_or_else(|| endpoint.to_owned()),
+        subject: nonempty(&event.user_id, missing),
+        client_id: event
+            .client_id
+            .clone()
+            .unwrap_or_else(|| missing.to_owned()),
+        audience: None,
+        provider: event.organisation.clone(),
+        acting: match event.actor.mode {
+            Some(ActingMode::Client) => Acting::Client,
+            Some(ActingMode::Person) | None => Acting::Person,
+        },
+        assurance: event.actor.assurance_level.map(assurance),
+        professional: Professional {
+            name: None,
+            identifier: event.actor.professional_id.clone(),
+        },
+        alt_id: None,
+        purposes,
+        relayed: None,
     }
-    if event.token_id.as_deref().is_some_and(|s| !s.is_empty()) {
-        profiles.push(format!(
-            "{BALP_PROFILE_BASE}/IHE.BasicAudit.OAUTHaccessTokenUse.Minimal"
-        ));
-    }
-    profiles
 }
 
-/// The BALP basic-audit profile name one successful record claims, or `None`
-/// where the profile family defines none for that action.
-///
-/// `patient` selects the `Patient*` variant, which requires a resolved patient
-/// entity.
-const fn balp_profile_name(
-    object: ObjectClass,
-    action: EventActionCode,
-    patient: bool,
-) -> Option<&'static str> {
-    let (plain, patient_variant) = match (object, action) {
-        (ObjectClass::Authentication | ObjectClass::Extract, _) => return None,
-        (ObjectClass::Query, _) => ("Query", "PatientQuery"),
-        (_, EventActionCode::Create) => ("Create", "PatientCreate"),
-        (_, EventActionCode::Read) => ("Read", "PatientRead"),
-        (_, EventActionCode::Update) => ("Update", "PatientUpdate"),
-        (_, EventActionCode::Delete) => ("Delete", "PatientDelete"),
-        (_, EventActionCode::Execute) => return None,
+/// Whether the patient behind the record's EHR is named: the subject resolver
+/// found `(id, namespace)`, or found none.
+fn patient_lookup(event: &AuditEvent, subject: Option<&str>) -> PatientLookup {
+    if !event.object.is_patient_centric() && event.object != ObjectClass::Query {
+        return PatientLookup::Unsupported;
+    }
+    match subject {
+        Some(value) => PatientLookup::Found(vec![PatientIdentifier {
+            namespace: event
+                .subject_namespace
+                .clone()
+                .unwrap_or_else(|| SUBJECT_NAMESPACE.to_owned()),
+            value: SecretString::from(value.to_owned()),
+        }]),
+        None => PatientLookup::NotFound,
+    }
+}
+
+/// The namespace a patient id is written under when the EHR names none.
+const SUBJECT_NAMESPACE: &str = "urn:ferroehr:subject";
+
+/// The BALP exchange of a record that is no classified access.
+fn exchange(
+    event: &AuditEvent,
+    ctx: &AuditContext,
+    subject: Option<&str>,
+    endpoint: &Url,
+) -> Exchange {
+    let missing = ctx.value_if_missing.as_str();
+    let user = (!event.user_id.is_empty()).then(|| {
+        User::new(
+            event.issuer.clone().unwrap_or_else(|| endpoint.to_string()),
+            event.user_id.clone(),
+            event
+                .client_id
+                .clone()
+                .unwrap_or_else(|| missing.to_owned()),
+        )
+        .with_purposes(
+            event
+                .purpose
+                .iter()
+                .map(|code| PurposeOfUse {
+                    system: None,
+                    code: code.clone(),
+                })
+                .collect(),
+        )
+        .with_organisation(event.organisation.clone())
+        .with_provider_identifier(event.actor.professional_id.clone())
+        .with_assurance(event.actor.assurance_level.map(|level| Code {
+            system: None,
+            code: level.as_str().to_owned(),
+        }))
+        .with_roles(
+            event
+                .roles
+                .iter()
+                .map(|role| Code {
+                    system: None,
+                    code: role.clone(),
+                })
+                .collect(),
+        )
+    });
+    let client = Peer {
+        who: event
+            .client_id
+            .clone()
+            .unwrap_or_else(|| nonempty(&event.user_id, missing)),
+        network: client_address(event).map_or_else(
+            || NetworkAddress::MachineName(missing.to_owned()),
+            NetworkAddress::Ip,
+        ),
     };
-    Some(if patient { patient_variant } else { plain })
-}
-
-/// The FHIR action code for an audited action.
-const fn action_code(action: EventActionCode) -> AuditAction {
-    match action {
-        EventActionCode::Create => AuditAction::Create,
-        EventActionCode::Read => AuditAction::Read,
-        EventActionCode::Update => AuditAction::Update,
-        EventActionCode::Delete => AuditAction::Delete,
-        EventActionCode::Execute => AuditAction::Execute,
+    Exchange {
+        kind: kind(event, subject.is_some()),
+        recorded: event.timestamp,
+        outcome: balp_outcome(event.outcome),
+        direction: Direction::Received {
+            client,
+            endpoint: endpoint.clone(),
+        },
+        on_behalf: user.map_or(OnBehalfOf::System, OnBehalfOf::User),
+        entities: entities(event, subject, missing),
+        security: Vec::new(),
     }
 }
 
-/// The FHIR outcome indicator for an audited outcome.
-const fn outcome_code(outcome: EventOutcome) -> AuditOutcome {
+/// What the BALP pattern of `event` fixes; `patient` selects the `Patient*`
+/// variant, which requires the patient entity.
+fn kind(event: &AuditEvent, patient: bool) -> EventKind {
+    let patient = patient && event.object.is_patient_centric();
+    let success = event.outcome == EventOutcome::Success;
+    let profile = |plain: &'static str, with_patient: &'static str| match (success, patient) {
+        (false, _) => "",
+        (true, true) => with_patient,
+        (true, false) => plain,
+    };
+    let (client, server) = if event.server_is_data_source() {
+        (DESTINATION_ROLE, SOURCE_ROLE)
+    } else {
+        (SOURCE_ROLE, DESTINATION_ROLE)
+    };
+    let fixed = |event_type: Coded, subtypes: &'static [Coded], action: &'static str| EventKind {
+        profile: "",
+        event_type,
+        subtypes,
+        action,
+        client,
+        server,
+    };
+    match (event.object, event.action) {
+        (ObjectClass::Authentication, _) => fixed(
+            USER_AUTHENTICATION,
+            match event.event_type {
+                Some(EventType::Login) => &[LOGIN],
+                Some(EventType::Logout) => &[LOGOUT],
+                Some(EventType::RestOperation(_)) | None => &[],
+            },
+            "E",
+        ),
+        (ObjectClass::Extract, EventActionCode::Create | EventActionCode::Update) => {
+            fixed(IMPORT, &[], "C")
+        }
+        (ObjectClass::Extract, _) => fixed(EXPORT, &[], "R"),
+        (ObjectClass::Query, _) => EventKind {
+            profile: profile(
+                "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Query",
+                "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientQuery",
+            ),
+            ..fixed(REST, &[SEARCH], "E")
+        },
+        (_, EventActionCode::Read) => EventKind {
+            profile: profile(
+                "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Read",
+                "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientRead",
+            ),
+            ..fixed(REST, &[READ], "R")
+        },
+        (_, EventActionCode::Create) => EventKind {
+            profile: profile(
+                "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Create",
+                "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientCreate",
+            ),
+            ..fixed(REST, &[CREATE], "C")
+        },
+        (_, EventActionCode::Update) => EventKind {
+            profile: profile(
+                "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Update",
+                "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientUpdate",
+            ),
+            ..fixed(REST, &[UPDATE], "U")
+        },
+        (_, EventActionCode::Delete) => EventKind {
+            profile: profile(
+                "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Delete",
+                "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientDelete",
+            ),
+            client: APPLICATION,
+            server: CUSTODIAN,
+            ..fixed(REST, &[DELETE], "D")
+        },
+        (_, EventActionCode::Execute) => fixed(REST, &[OPERATION], "E"),
+    }
+}
+
+/// The entities of a record that is no classified access: the query, or the
+/// patient and the object the record names.
+fn entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> Vec<Entity> {
+    if event.object.is_query() {
+        return vec![Entity::Query(SecretString::from(
+            event
+                .object_id
+                .clone()
+                .unwrap_or_else(|| missing.to_owned()),
+        ))];
+    }
+    let mut entities = Vec::new();
+    if event.object.is_patient_centric()
+        && let Some(value) = subject
+    {
+        entities.push(Entity::Patient {
+            system: event
+                .subject_namespace
+                .clone()
+                .unwrap_or_else(|| SUBJECT_NAMESPACE.to_owned()),
+            value: SecretString::from(value.to_owned()),
+        });
+    }
+    if let Some(id) = event.object_id.as_deref().filter(|id| !id.is_empty()) {
+        entities.push(Entity::Described(Described {
+            what: Some(What::Identifier {
+                system: None,
+                value: id.to_owned(),
+            }),
+            kind: SYSTEM_OBJECT,
+            role: None,
+            name: Some(operation(event)),
+            description: None,
+            details: Vec::new(),
+            security_labels: Vec::new(),
+        }));
+    }
+    entities
+}
+
+/// The operation a record names: the ITS-REST operation id, else the DICOM
+/// event the resource class audits as.
+fn operation(event: &AuditEvent) -> String {
+    match event.event_type {
+        Some(EventType::RestOperation(op)) => op.to_owned(),
+        _ => event.object.event_id(event.action).1.to_owned(),
+    }
+}
+
+fn client_address(event: &AuditEvent) -> Option<IpAddr> {
+    event.client_ip.as_deref()?.parse().ok()
+}
+
+const fn outcome(outcome: EventOutcome) -> Outcome {
     match outcome {
-        EventOutcome::Success => AuditOutcome::Success,
-        EventOutcome::MinorFailure => AuditOutcome::MinorFailure,
-        EventOutcome::SeriousFailure => AuditOutcome::SeriousFailure,
-        EventOutcome::MajorFailure => AuditOutcome::MajorFailure,
+        EventOutcome::Success => Outcome::Success,
+        EventOutcome::MinorFailure => Outcome::MinorFailure,
+        EventOutcome::SeriousFailure => Outcome::SeriousFailure,
+    }
+}
+
+const fn balp_outcome(outcome: EventOutcome) -> ihe_atna::balp::Outcome {
+    match outcome {
+        EventOutcome::Success => ihe_atna::balp::Outcome::Success,
+        EventOutcome::MinorFailure => ihe_atna::balp::Outcome::MinorFailure,
+        EventOutcome::SeriousFailure => ihe_atna::balp::Outcome::SeriousFailure,
+    }
+}
+
+const fn assurance(level: crate::config::auth::AssuranceLevel) -> AssuranceLevel {
+    match level {
+        crate::config::auth::AssuranceLevel::Low => AssuranceLevel::Low,
+        crate::config::auth::AssuranceLevel::Substantial => AssuranceLevel::Substantial,
+        crate::config::auth::AssuranceLevel::High => AssuranceLevel::High,
     }
 }
 
@@ -606,17 +541,16 @@ fn nonempty(value: &str, fallback: &str) -> String {
     }
 }
 
-fn nonempty_opt(value: &str) -> Option<String> {
-    (!value.is_empty()).then(|| value.to_owned())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::auth::AssuranceLevel;
+    use crate::config::auth::AssuranceLevel as Level;
+    use crate::system_log::categories::{AccessedContent, Classifier, QueryConstraints};
     use crate::system_log::event::ActorAuthentication;
     use base64::Engine;
     use jiff::Timestamp;
+
+    const OTHER_ID: &str = "https://profiles.ihe.net/ITI/BALP/StructureDefinition/ihe-otherId";
 
     fn ctx() -> AuditContext {
         AuditContext {
@@ -624,6 +558,7 @@ mod tests {
             enterprise_site_id: "1f332a66-0000-0000-0000-000000000001".to_owned(),
             server_ip: "10.42.23.77".to_owned(),
             value_if_missing: "UNKNOWN".to_owned(),
+            ..AuditContext::default()
         }
     }
 
@@ -637,6 +572,26 @@ mod tests {
 
     fn json(event: &AuditEvent, subject: Option<&str>) -> serde_json::Value {
         to_fhir(event, &ctx(), subject).expect("render")
+    }
+
+    /// The agent whose `who.identifier.value` is `value`.
+    fn agent<'a>(v: &'a serde_json::Value, value: &str) -> &'a serde_json::Value {
+        v["agent"]
+            .as_array()
+            .expect("agents")
+            .iter()
+            .find(|a| a["who"]["identifier"]["value"] == value)
+            .unwrap_or_else(|| panic!("no agent {value}: {v}"))
+    }
+
+    /// The `ihe-otherId` value of `agent`, the professional identifier BALP
+    /// 1.1.4 §3:5.7.5.4 maps the IUA `national_provider_identifier` to.
+    fn other_id(agent: &serde_json::Value) -> Option<&str> {
+        agent["extension"]
+            .as_array()?
+            .iter()
+            .find(|x| x["url"] == OTHER_ID)?["valueIdentifier"]["value"]
+            .as_str()
     }
 
     #[test]
@@ -741,9 +696,8 @@ mod tests {
             );
 
             let xml =
-                crate::system_log::message::AuditMessage::build(&e, &ctx(), Some("patient-42"))
-                    .to_xml()
-                    .expect("xml");
+                crate::system_log::message::to_xml(&e, &ctx(), Some("patient-42")).expect("xml");
+            let xml = String::from_utf8(xml.expose_secret().to_vec()).expect("utf-8");
             let roles: Vec<&str> = xml
                 .split("<RoleIDCode csd-code=\"")
                 .skip(1)
@@ -778,7 +732,9 @@ mod tests {
     /// `IHE.BasicAudit.Delete` (and `PatientDelete`, derived from it) fixes
     /// `agent:client.type` to DCM 110150 and `agent:server.type` to
     /// provenance-participant-type `custodian`
-    /// (<https://profiles.ihe.net/ITI/BALP/1.1.4/StructureDefinition-IHE.BasicAudit.Delete.html>).
+    /// (<https://profiles.ihe.net/ITI/BALP/1.1.4/StructureDefinition-IHE.BasicAudit.Delete.html>);
+    /// the person is the `agent:user` slice, the requestor (BALP 1.1.4
+    /// §3:5.7.5.4).
     #[test]
     fn delete_carries_the_agent_types_balp_delete_fixes() {
         for (subject, profile) in [
@@ -803,7 +759,6 @@ mod tests {
                 "http://dicom.nema.org/resources/ontology/DCM"
             );
             assert_eq!(client["code"], "110150");
-            assert_eq!(v["agent"][0]["requestor"], true);
             let server = &v["agent"][1]["type"]["coding"][0];
             assert_eq!(
                 server["system"],
@@ -811,6 +766,7 @@ mod tests {
             );
             assert_eq!(server["code"], "custodian");
             assert_eq!(v["agent"][1]["requestor"], false);
+            assert_eq!(agent(&v, "john doe")["requestor"], true);
         }
     }
 
@@ -830,10 +786,10 @@ mod tests {
         assert!(v["entity"].as_array().is_none_or(Vec::is_empty));
     }
 
+    /// The BALP `RESTful` profiles fix outcome = 0; a failure record keeps the
+    /// shape but claims nothing.
     #[test]
     fn failure_claims_no_profile() {
-        // The BALP RESTful profiles fix outcome = 0; a failure record keeps
-        // the shape but claims nothing.
         let e = event(
             EventActionCode::Read,
             ObjectClass::Composition,
@@ -842,9 +798,10 @@ mod tests {
         let v = json(&e, Some("patient-42"));
         assert!(v.get("meta").is_none());
         assert_eq!(v["outcome"], "4");
-        assert_eq!(v["outcomeDesc"], "Operation failed");
     }
 
+    /// A query is `rest` with the `search` subtype `IHE.BasicAudit.Query`
+    /// fixes (`subtype:anySearch`), and its entity the base64 request.
     #[test]
     fn query_entity_is_base64_search_criteria() {
         let mut e = event(
@@ -855,7 +812,7 @@ mod tests {
         e.object_id = Some("eu.ferroehr::q1".to_owned());
         let v = json(&e, None);
         assert_eq!(v["type"]["code"], "rest");
-        assert_eq!(v["subtype"][0]["code"], "search-type");
+        assert_eq!(v["subtype"][0]["code"], "search");
         assert_eq!(v["entity"][0]["role"]["code"], "24");
         let decoded = base64::engine::general_purpose::STANDARD
             .decode(v["entity"][0]["query"].as_str().expect("query"))
@@ -867,8 +824,8 @@ mod tests {
         );
     }
 
-    /// A query record renders one origin entity per recorded origin, in the
-    /// shape a document read uses, with the capped-count marker (#3654).
+    /// A classified query renders one origin entity per recorded origin, each
+    /// naming the system the data came from (EHDS Annex II 3.2(e)).
     #[test]
     fn query_record_carries_the_origins_of_the_served_data() {
         let mut e = event(
@@ -878,99 +835,88 @@ mod tests {
         );
         e.object_id = Some("eu.ferroehr::q1".to_owned());
         e.record_origins(vec!["system-a".to_owned(), "system-b".to_owned()], Some(7));
+        e.category = Some(Classifier::default().classify(
+            &AccessedContent::Query(QueryConstraints {
+                reaches_content: true,
+                ..QueryConstraints::default()
+            }),
+            false,
+        ));
         let v = json(&e, None);
         let entities = v["entity"].as_array().expect("entities");
-        let origins: Vec<&serde_json::Value> = entities
+        let mut served: Vec<&str> = entities
             .iter()
-            .filter(|entity| {
-                entity["name"]
-                    .as_str()
-                    .is_some_and(|name| name.starts_with("origin of the served data"))
-            })
-            .collect();
-        assert_eq!(origins.len(), 2, "{v}");
-        let mut served: Vec<&str> = origins
-            .iter()
-            .map(|entity| {
-                entity["what"]["identifier"]["value"]
-                    .as_str()
-                    .expect("what")
-            })
+            .filter(|entity| entity["name"] == "origin")
+            .flat_map(|entity| entity["detail"].as_array().expect("details"))
+            .filter(|detail| detail["type"] == "system-id")
+            .filter_map(|detail| detail["valueString"].as_str())
             .collect();
         served.sort_unstable();
-        assert_eq!(served, ["system-a", "system-b"]);
-        assert_eq!(
-            origins[0]["name"],
-            "origin of the served data (7 distinct, first 2 recorded)"
+        assert_eq!(served, ["system-a", "system-b"], "{v}");
+        assert!(
+            entities.iter().any(|entity| entity["role"]["code"] == "24"),
+            "the query entity stays: {v}"
         );
-        assert_eq!(origins[1]["name"], "origin of the served data");
-        assert_eq!(origins[0]["type"]["code"], "2");
-        // The query entity keeps the first position.
-        assert_eq!(entities[0]["role"]["code"], "24");
     }
 
+    /// The token identity is the issuer and the subject on the `agent:user`
+    /// slice and the client on the Application agent (BALP 1.1.4 §3:5.7.5.4).
     #[test]
-    fn bearer_token_adds_oauth_minimal_agent() {
+    fn the_token_identity_is_the_issuer_subject_and_client() {
         let mut e = event(
             EventActionCode::Read,
             ObjectClass::Composition,
             EventOutcome::Success,
         );
-        e.token_id = Some("jti-abc-123".to_owned());
+        e.issuer = Some("https://idp.example".to_owned());
+        e.client_id = Some("ward-app".to_owned());
         let v = json(&e, Some("patient-42"));
-        let agents = v["agent"].as_array().expect("agents");
-        assert_eq!(agents.len(), 3);
-        assert_eq!(agents[2]["type"]["coding"][0]["code"], "UserOauthAgent");
-        assert_eq!(agents[2]["policy"][0], "jti-abc-123");
-        assert_eq!(agents[2]["requestor"], true);
-        // Both the activity profile and the token-use profile are claimed.
-        let profiles = v["meta"]["profile"].as_array().expect("profiles");
-        assert!(profiles.iter().any(|p| {
-            p.as_str()
-                .is_some_and(|s| s.ends_with("IHE.BasicAudit.OAUTHaccessTokenUse.Minimal"))
-        }));
+        let user = agent(&v, "john doe");
+        assert_eq!(user["who"]["identifier"]["system"], "https://idp.example");
+        assert_eq!(user["requestor"], true);
+        assert_eq!(agent(&v, "ward-app")["requestor"], false);
     }
 
-    /// A client application acting for a named professional renders as two
-    /// agents: the person as requestor, the application beside it.
+    /// A client application acting for a named professional names the token's
+    /// subject as the `agent:user`, with the professional's identifier as its
+    /// `ihe-otherId` and the assurance level as `ihe-assuranceLevel` (BALP
+    /// 1.1.4 §3:5.7.5.4), never the raw claim value.
     #[test]
-    fn a_client_acting_for_a_professional_renders_two_agents() {
+    fn a_client_acting_for_a_professional_names_the_professional() {
         let mut e = event(
             EventActionCode::Read,
             ObjectClass::Composition,
             EventOutcome::Success,
         );
         e.user_id = "scheduler-app".to_owned();
+        e.client_id = Some("scheduler-app".to_owned());
         e.roles = vec!["CLINICIAN".to_owned()];
         e.actor = ActorAuthentication {
             mode: Some(ActingMode::Client),
-            assurance_level: Some(AssuranceLevel::Substantial),
+            assurance_level: Some(Level::Substantial),
             assurance_value: Some("loa-substantial".to_owned()),
             professional_id: Some("prof-007".to_owned()),
         };
         let v = json(&e, Some("patient-42"));
-        let agents = v["agent"].as_array().expect("agents");
-        assert_eq!(agents.len(), 3, "{v}");
-        assert_eq!(agents[0]["who"]["identifier"]["value"], "prof-007");
-        assert_eq!(agents[0]["requestor"], true);
-        assert_eq!(agents[0]["role"][0]["text"], "CLINICIAN");
-        assert!(agents[0].get("type").is_none(), "{v}");
-        assert_eq!(agents[1]["who"]["identifier"]["value"], "scheduler-app");
-        assert_eq!(agents[1]["requestor"], false);
-        assert_eq!(agents[1]["network"]["address"], "10.216.24.150");
-        assert_eq!(agents[1]["type"]["coding"][0]["code"], "110152");
-        // The server stays the last fixed participant.
-        assert_eq!(agents[2]["who"]["identifier"]["value"], "ferroehr");
-        // No FHIR R4 AuditEvent element carries the assurance level.
+        let user = v["agent"]
+            .as_array()
+            .expect("agents")
+            .iter()
+            .find(|a| a["requestor"] == true)
+            .expect("the agent:user");
+        assert_eq!(other_id(user), Some("prof-007"), "{v}");
+        assert_eq!(user["role"][0]["coding"][0]["code"], "CLINICIAN");
+        assert_eq!(v["agent"][0]["network"]["address"], "10.216.24.150");
+        assert_eq!(v["agent"][0]["type"]["coding"][0]["code"], "110152");
+        assert_eq!(v["agent"][1]["who"]["display"], "ferroehr");
         let rendered = v.to_string();
         assert!(!rendered.contains("loa-substantial"), "{rendered}");
-        assert!(!rendered.contains("substantial"), "{rendered}");
     }
 
-    /// A professional identifier other than the token subject names the
-    /// person, and the subject becomes the authentication system's `altId`.
+    /// A professional identifier other than the token subject is the
+    /// `ihe-otherId` of the `agent:user`, whose `who` stays the subject.
     #[test]
-    fn a_person_with_a_professional_identifier_carries_the_subject_as_alt_id() {
+    fn a_person_with_a_professional_identifier_carries_it_as_other_id() {
         let mut e = event(
             EventActionCode::Read,
             ObjectClass::Composition,
@@ -982,21 +928,13 @@ mod tests {
             ..ActorAuthentication::default()
         };
         let v = json(&e, Some("patient-42"));
-        let agents = v["agent"].as_array().expect("agents");
-        assert_eq!(agents.len(), 2, "{v}");
-        assert_eq!(agents[0]["who"]["identifier"]["value"], "uzi-12345");
-        assert_eq!(agents[0]["altId"], "john doe");
-        assert_eq!(agents[0]["requestor"], true);
-
-        // The same identifier as the subject adds nothing.
-        e.actor.professional_id = Some("john doe".to_owned());
-        let v = json(&e, Some("patient-42"));
-        assert_eq!(v["agent"][0]["who"]["identifier"]["value"], "john doe");
-        assert!(v["agent"][0].get("altId").is_none(), "{v}");
+        let user = agent(&v, "john doe");
+        assert_eq!(other_id(user), Some("uzi-12345"));
+        assert_eq!(user["requestor"], true);
     }
 
-    /// A client token naming no professional renders as before: one requesting
-    /// client agent, never an invented person.
+    /// A client token naming no professional renders one `agent:user`, never
+    /// an invented person.
     #[test]
     fn a_client_without_a_professional_renders_the_client_alone() {
         let mut e = event(
@@ -1006,10 +944,15 @@ mod tests {
         );
         e.actor.mode = Some(ActingMode::Client);
         let v = json(&e, None);
-        let agents = v["agent"].as_array().expect("agents");
-        assert_eq!(agents.len(), 2, "{v}");
-        assert_eq!(agents[0]["who"]["identifier"]["value"], "john doe");
-        assert_eq!(agents[0]["requestor"], true);
+        let requestors: Vec<_> = v["agent"]
+            .as_array()
+            .expect("agents")
+            .iter()
+            .filter(|a| a["requestor"] == true)
+            .collect();
+        assert_eq!(requestors.len(), 1, "{v}");
+        assert_eq!(requestors[0]["who"]["identifier"]["value"], "john doe");
+        assert!(other_id(requestors[0]).is_none());
     }
 
     #[test]
@@ -1060,27 +1003,51 @@ mod tests {
         assert_eq!(json(&e, None)["recorded"], "2026-07-06T12:00:00.5Z");
     }
 
-    /// The emergency mark (EHDS Art. 11(5)) renders as `purposeOfEvent` with
-    /// the fixed `ETREAT` coding and the plain-words text; an unmarked access
-    /// renders no `purposeOfEvent`, whatever purpose it declared.
+    /// The emergency mark (EHDS Art. 11(5)) renders as the `ehds-logging`
+    /// entity that states it in words, beside the declared purpose; an
+    /// unmarked access renders no such entity, whatever purpose it declared.
     #[test]
-    fn the_emergency_mark_renders_as_purpose_of_event() {
+    fn the_emergency_mark_renders_as_its_entity() {
+        let etreat = Purpose {
+            system: None,
+            code: "ETREAT".to_owned(),
+        };
+        let marking = AuditContext {
+            recording: Recording {
+                emergency: EmergencyPurposes::declare(&[etreat]).expect("one purpose"),
+                ..Recording::default()
+            },
+            ..ctx()
+        };
         let mut e = event(
             EventActionCode::Read,
             ObjectClass::Composition,
             EventOutcome::Success,
         );
         e.purpose = Some("ETREAT".to_owned());
-        assert!(json(&e, None).get("purposeOfEvent").is_none());
+        e.category =
+            Some(Classifier::default().classify(&AccessedContent::Objects(Vec::new()), false));
+        let mark = |v: &serde_json::Value| {
+            v["entity"]
+                .as_array()
+                .expect("entities")
+                .iter()
+                .find(|entity| entity["name"] == ehds_logging::balp::EMERGENCY_ENTITY)
+                .cloned()
+        };
+        let unmarked = to_fhir(&e, &marking, None).expect("render");
+        assert!(mark(&unmarked).is_none(), "{unmarked}");
 
         e.emergency_access = true;
-        let rendered = json(&e, None);
-        let concept = &rendered["purposeOfEvent"][0];
-        assert_eq!(concept["coding"][0]["system"], SYS_V3_ACT_REASON);
-        assert_eq!(concept["coding"][0]["code"], "ETREAT");
-        assert_eq!(concept["text"], EMERGENCY_ACCESS_TEXT);
+        let rendered = to_fhir(&e, &marking, None).expect("render");
+        let entity = mark(&rendered).expect("the mark");
         assert_eq!(
-            rendered["agent"][0]["purposeOfUse"][0]["coding"][0]["code"], "ETREAT",
+            entity["description"],
+            ehds_logging::balp::EMERGENCY_DESCRIPTION
+        );
+        assert_eq!(
+            agent(&rendered, "john doe")["purposeOfUse"][0]["coding"][0]["code"],
+            "ETREAT",
             "the declared code stays on the requesting agent"
         );
     }

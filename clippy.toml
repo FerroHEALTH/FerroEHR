@@ -27,7 +27,7 @@ avoid-breaking-exported-api = false
 # ── clippy::doc_markdown domain vocabulary (".." appends to the defaults) ────
 doc-valid-idents = [
   "..",
-  "openEHR", "EHRbase", "FerroEHR", "FerroUI", "FerroHEALTH", "OpenAPI", "PostgreSQL", "JSONB",
+  "openEHR", "EHRbase", "FerroEHR", "FerroUI", "FerroHEALTH", "FerroAUDIT", "OpenAPI", "PostgreSQL", "JSONB",
   "AQL", "cADL", "dADL", "ODIN", "WebTemplate", "GraphQL",
   "FHIR", "SNOMED", "LOINC", "DICOM", "IANA", "OAuth2", "OpenID",
 ]
