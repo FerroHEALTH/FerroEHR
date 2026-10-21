@@ -17,6 +17,9 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The minimum supported Rust version is 1.98** (was 1.97), the version
+  `fhir-types`, pulled by `ihe-atna`'s FHIR writer, declares. The nine
+  `openehr-*` crates move to 0.0.93 with it.
 - **`ferrohealth-smart` 0.4.0** (#3895), the version every FerroHEALTH
   product pins. The refusal statuses and challenges do not change.
 - **The access log is written through the FerroHEALTH products' shared audit

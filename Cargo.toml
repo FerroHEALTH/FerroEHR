@@ -14,7 +14,7 @@ members = ["crates/*", "app/*", "tools/*"]
 [workspace.package]
 version = "5.2.0"
 edition = "2024"
-rust-version = "1.97"
+rust-version = "1.98"
 license = "BUSL-1.1"
 repository = "https://github.com/FerroHEALTH/FerroEHR"
 # No `authors`, deliberately. The cargo manifest reference opens that section
@@ -61,7 +61,7 @@ missing_assert_message = "deny"     # production asserts carry a message (lint i
 dbg_macro = "deny"
 print_stdout = "deny"               # libraries speak tracing; binaries/tools relax per-crate
 print_stderr = "deny"
-incompatible_msrv = "deny"          # MSRV 1.97 is a hard pin
+incompatible_msrv = "deny"          # MSRV 1.98 is a hard pin
 unchecked_time_subtraction = "deny" # std::time::Duration::sub panics on negative durations; jiff is the safe alternative
 as_conversions = "deny"             # `as` silently truncates; use TryFrom/TryInto or explicit casts
 
@@ -422,9 +422,9 @@ criterion = { version = "0.8.2", features = ["html_reports"] }
 #   cargo-nextest, cargo-audit, cargo-deny, cargo-machete, cargo-hakari,
 #   cargo-llvm-cov, sccache ; linker: mold (Linux).
 #
-# Toolchain: Rust stable 1.98.1, edition 2024; the MSRV steps to 1.97 with it.
-# Nothing here uses a 1.98 feature, and the nine published crates are the only
-# artifacts whose consumers would feel a bump (docs/VERSIONS.md §MSRV policy).
+# Toolchain: Rust stable 1.98.1, edition 2024; the MSRV is 1.98.
+# The floor is fhir-types, which ihe-atna's `balp` feature pulls and which declares
+# 1.98; the nine published crates feel the bump (docs/VERSIONS.md §MSRV policy).
 # Database: PostgreSQL 18 (target 18.6+; 18.x is the current stable line; PG 19 in beta — do not target).
 
 # ── Build-speed profiles ─────────────────────────────────────────────────────

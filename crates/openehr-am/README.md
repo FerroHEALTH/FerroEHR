@@ -45,7 +45,7 @@ and `Display`/`FromStr` round-trip the generation-module token (`"v2_4"`).
 
 ## Minimum supported Rust version
 
-Rust 1.97 (edition 2024).
+Rust 1.98 (edition 2024).
 
 ## License
 
