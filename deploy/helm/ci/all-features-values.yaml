@@ -131,7 +131,6 @@ config:
       enabled: true
       host: arr.example.com
       port: 6514
-      transport: tls
     fhir_feed:
       enabled: true
       # url is a SecretUrl (its userinfo may carry ARR basic-auth credentials),

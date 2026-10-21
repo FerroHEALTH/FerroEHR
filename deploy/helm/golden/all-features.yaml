@@ -509,7 +509,6 @@ data:
         enabled = true
         host = "arr.example.com"
         port = 6514.0
-        transport = "tls"
     
     [auth]
       audience = ["ferroehr"]
@@ -1289,7 +1288,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 6e33030bcfe54deaa4d55f43cfd22f6bc48b5cb0e80a6ed2b7fabf283fcef0b6
+        checksum/config: 19e1781aa6d0561b10e1c14ddf333374a3c5a53d25e2182c8d17c0bade022a87
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"

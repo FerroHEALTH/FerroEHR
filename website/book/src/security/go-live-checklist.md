@@ -219,7 +219,6 @@ blast radius of the database it audits:
 ```toml
 [audit.syslog]
 enabled = true
-transport = "tls"
 
 # or, for a RESTful ARR
 [audit.fhir_feed]
