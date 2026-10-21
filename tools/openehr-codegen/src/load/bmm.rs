@@ -855,7 +855,10 @@ mod tests {
                 .invariants
                 .is_empty()
         );
-        assert!(s.classes["DV_IDENTIFIER"].constants.is_empty());
+        assert_eq!(
+            s.classes["DV_IDENTIFIER"].constants,
+            Vec::<BmmConstant>::new()
+        );
     }
 
     #[test]

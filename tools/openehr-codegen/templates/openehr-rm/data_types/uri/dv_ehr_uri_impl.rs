@@ -58,7 +58,10 @@ mod tests {
 
     #[test]
     fn valid() {
-        assert!(ehr_uri("ehr://something/something").is_empty());
+        assert_eq!(
+            ehr_uri("ehr://something/something"),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

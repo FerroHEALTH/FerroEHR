@@ -1121,7 +1121,10 @@ mod wire_tests {
         // The routes address the CONTAINER; the served uid is a version id.
         assert_eq!(state.versioned_object_uid, "8849182c");
         assert_eq!(state.identity_count, 1);
-        assert!(state.relationships.is_empty());
+        assert_eq!(
+            state.relationships,
+            Vec::<crate::pages::demographics::relationship::InlineRelationship>::new()
+        );
         // The body is kept VERBATIM — it is the merge base of every edit.
         assert_eq!(state.body, PERSON);
         // Both drafts reach their textareas pretty-printed.

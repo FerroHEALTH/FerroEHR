@@ -46,7 +46,10 @@ mod tests {
 
     #[test]
     fn valid_details() {
-        assert!(details("/activities[at0001]").invariants().is_empty());
+        assert_eq!(
+            details("/activities[at0001]").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

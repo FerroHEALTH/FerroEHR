@@ -573,7 +573,7 @@ mod tests {
             },
             Page::all(),
         );
-        assert!(out.is_empty());
+        assert_eq!(out, Vec::<Value>::new());
     }
 
     #[test]

@@ -8,7 +8,7 @@ published container images ([Docker Compose](compose.md),
 
 ## Prerequisites
 
-- **The pinned Rust toolchain.** The repository pins Rust **1.98.1** (edition
+- **The pinned Rust toolchain.** The repository pins Rust **1.99.1** (edition
   2024) via `rust-toolchain.toml`, so `rustup` installs and selects it
   automatically the first time you build in the checkout; you do not choose a
   version by hand.

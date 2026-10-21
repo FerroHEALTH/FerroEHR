@@ -870,7 +870,7 @@ mod tests {
         assert_eq!(plain.to_string(), "contribution must contain versions");
         assert_eq!(plain.path(), None);
         assert_eq!(plain.invariant(), None);
-        assert!(plain.causes().is_empty());
+        assert_eq!(plain.causes(), []);
 
         let rule = Violation::new("must be a non-empty list when present")
             .with_path("ATTESTATION.items")

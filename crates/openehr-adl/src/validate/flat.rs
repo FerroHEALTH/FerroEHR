@@ -938,6 +938,6 @@ terminology
 \t\t>
 \t>
 ";
-        assert!(codes(src).is_empty());
+        assert_eq!(codes(src), Vec::<ValidationCode>::new());
     }
 }

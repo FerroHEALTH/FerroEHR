@@ -147,9 +147,9 @@ mod tests {
         assert!(c.public_base_url.is_none());
         assert!(!c.episode.enabled);
         assert!(!c.launch_base64_json);
-        assert!(c.backend_clients.is_empty());
-        assert!(c.patient_issuers.is_empty());
-        assert!(c.demographic_clients.is_empty());
+        assert_eq!(c.backend_clients, Vec::<String>::new());
+        assert_eq!(c.patient_issuers, Vec::<String>::new());
+        assert_eq!(c.demographic_clients, Vec::<String>::new());
         assert!(c.validate().is_ok());
     }
 

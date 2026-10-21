@@ -253,7 +253,10 @@ mod outcome_tests {
     #[test]
     fn an_outcome_without_details_classifies_nothing() {
         let body = br#"{"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"not-found","diagnostics":"Unknown code"}]}"#;
-        assert!(decode_outcome_issue_types(body).unwrap().is_empty());
+        assert_eq!(
+            decode_outcome_issue_types(body).unwrap(),
+            Vec::<String>::new()
+        );
     }
 
     #[test]

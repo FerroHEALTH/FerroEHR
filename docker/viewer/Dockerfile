@@ -35,16 +35,16 @@
 # (that compiles a vendored OpenSSL C tree — ~10 min per cold build); the same
 # prebuilt path the CI workflows use.
 
-ARG RUST_VERSION=1.98.1
+ARG RUST_VERSION=1.99.1
 ARG CARGO_LEPTOS_VERSION=0.3.7
 ARG WASM_BINDGEN_VERSION=0.2.128
 ARG TAILWIND_VERSION=v4.3.3
 
 # ── builder: toolchain + prebuilt tools, then cargo-leptos under the cache ─────
-# Digest-pinned rust:1.98.1-slim-trixie (Debian 13, glibc 2.41), resolved
-# 2026-09-10 — same base + rationale as docker/Dockerfile
+# Digest-pinned rust:1.99.1-slim-trixie (Debian 13, glibc 2.41), resolved
+# 2026-10-21 — same base + rationale as docker/Dockerfile
 # (docs.docker.com/build/building/best-practices — pin by digest).
-FROM rust:${RUST_VERSION}-slim-trixie@sha256:ce84a5edd80c5f91e05c5533b1e53eb1da54028f33734dc06aa6b49fa190462d AS builder
+FROM rust:${RUST_VERSION}-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d AS builder
 WORKDIR /app
 ARG CARGO_LEPTOS_VERSION
 ARG WASM_BINDGEN_VERSION

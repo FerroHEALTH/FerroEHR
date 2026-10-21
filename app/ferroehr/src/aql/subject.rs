@@ -215,7 +215,7 @@ mod tests {
         let subjects = [unique("b", "a"), shared("x", "a"), shared("x", "other")];
         let touched = TouchedSubjects::fold(&subjects, Some("a"));
         assert_eq!(touched.ids, vec!["b".to_owned(), "x".to_owned()]);
-        assert!(touched.shared.is_empty());
+        assert_eq!(touched.shared, Vec::<String>::new());
         assert!(touched.unnamed, "the other namespace's subject is unnamed");
     }
 }

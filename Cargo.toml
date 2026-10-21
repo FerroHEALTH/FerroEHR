@@ -422,7 +422,7 @@ criterion = { version = "0.8.2", features = ["html_reports"] }
 #   cargo-nextest, cargo-audit, cargo-deny, cargo-machete, cargo-hakari,
 #   cargo-llvm-cov, sccache ; linker: mold (Linux).
 #
-# Toolchain: Rust stable 1.98.1, edition 2024; the MSRV is 1.98.
+# Toolchain: Rust stable 1.99.1, edition 2024; the MSRV is 1.98.
 # The floor is fhir-types, which ihe-atna's `balp` feature pulls and which declares
 # 1.98; the nine published crates feel the bump (docs/VERSIONS.md §MSRV policy).
 # Database: PostgreSQL 18 (target 18.6+; 18.x is the current stable line; PG 19 in beta — do not target).

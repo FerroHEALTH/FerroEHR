@@ -1146,15 +1146,13 @@ mod tests {
                 .refusal_message()
                 .contains(DeploymentGap::PlaintextObjectStore.describe())
         );
-        assert!(
-            DeploymentPosture::evaluate(&store(true, false), &distinct_clusters())
-                .gaps
-                .is_empty()
+        assert_eq!(
+            DeploymentPosture::evaluate(&store(true, false), &distinct_clusters()).gaps,
+            Vec::<DeploymentGap>::new()
         );
-        assert!(
-            DeploymentPosture::evaluate(&store(false, true), &distinct_clusters())
-                .gaps
-                .is_empty()
+        assert_eq!(
+            DeploymentPosture::evaluate(&store(false, true), &distinct_clusters()).gaps,
+            Vec::<DeploymentGap>::new()
         );
         let accepted = FerroEhrConfig {
             deployment_accepts: vec![DeploymentGap::PlaintextObjectStore],

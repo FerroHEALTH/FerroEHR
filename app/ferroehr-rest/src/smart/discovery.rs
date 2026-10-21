@@ -358,7 +358,7 @@ mod tests {
             options.permissions,
             BTreeSet::from([PermissionCapability::User])
         );
-        assert!(!options.scopes_supported.is_empty());
+        assert_ne!(options.scopes_supported, Vec::<String>::new());
         assert!(
             !options
                 .scopes_supported

@@ -50,7 +50,10 @@ mod tests {
 
     #[test]
     fn valid_section() {
-        assert!(section("at0001").invariants().is_empty());
+        assert_eq!(
+            section("at0001").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

@@ -52,7 +52,7 @@ mod tests {
 
     #[test]
     fn valid_item_passes_and_absent_optionals_are_legal() {
-        assert!(item().invariants().is_empty());
+        assert_eq!(item().invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]
@@ -77,6 +77,6 @@ mod tests {
         // Populated optionals pass.
         let mut ok = item();
         ok.use_ = Some("clinical care".to_owned());
-        assert!(ok.invariants().is_empty());
+        assert_eq!(ok.invariants(), Vec::<InvariantViolation>::new());
     }
 }

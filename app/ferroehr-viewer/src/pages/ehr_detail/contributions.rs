@@ -511,7 +511,10 @@ mod tests {
     #[test]
     fn parse_contributions_defaults_absent_rows_and_total() {
         let page = parse_contributions("{}").expect("empty object parses");
-        assert!(page.rows.is_empty());
+        assert_eq!(
+            page.rows,
+            Vec::<crate::pages::ehr_detail::contributions::ContributionRow>::new()
+        );
         assert_eq!(page.total, 0);
     }
 

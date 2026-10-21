@@ -204,8 +204,14 @@ mod tests {
 
     #[test]
     fn valid_tag() {
-        assert!(tag("problem-list", None).invariants().is_empty());
-        assert!(tag("severity", Some("high")).invariants().is_empty());
+        assert_eq!(
+            tag("problem-list", None).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
+        assert_eq!(
+            tag("severity", Some("high")).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

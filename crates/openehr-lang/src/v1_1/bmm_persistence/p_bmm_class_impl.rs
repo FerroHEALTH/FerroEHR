@@ -278,8 +278,11 @@ mod tests {
         assert_eq!(class.name(), "ELEMENT");
         assert_eq!(class.source_schema_id(), Some("openehr_test_1.0.0"));
         assert_eq!(class.uid(), Some(1));
-        assert!(class.ancestors().is_empty());
-        assert!(class.ancestor_defs().is_empty());
+        assert_eq!(class.ancestors(), Vec::<String>::new());
+        assert_eq!(
+            class.ancestor_defs(),
+            Vec::<crate::v1_1::bmm_persistence::p_bmm_generic_type::PBmmGenericType>::new()
+        );
         assert!(class.properties().is_none());
         assert!(class.functions().is_none());
         assert!(class.constants().is_none());
@@ -314,8 +317,11 @@ mod tests {
         );
         assert!(interface.functions().is_some());
         // An interface declares only functions and carries no state.
-        assert!(interface.ancestors().is_empty());
-        assert!(interface.ancestor_defs().is_empty());
+        assert_eq!(interface.ancestors(), Vec::<String>::new());
+        assert_eq!(
+            interface.ancestor_defs(),
+            Vec::<crate::v1_1::bmm_persistence::p_bmm_generic_type::PBmmGenericType>::new()
+        );
         assert!(interface.properties().is_none());
         assert!(interface.constants().is_none());
         assert!(interface.invariants().is_none());

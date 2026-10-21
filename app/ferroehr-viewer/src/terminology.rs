@@ -469,7 +469,10 @@ mod tests {
                 "ISO_3166-1".to_owned()
             ]
         );
-        assert!(terminology_ids(&serde_json::json!({})).is_empty());
+        assert_eq!(
+            terminology_ids(&serde_json::json!({})),
+            Vec::<String>::new()
+        );
     }
 
     #[test]
@@ -524,8 +527,11 @@ mod tests {
         assert!(view.terms[2].preferred);
         // The bare code carries no text, so its rubric IS the code.
         assert_eq!(view.terms[0].rubric(), "111");
-        assert!(view.terms[0].language.is_empty());
-        assert!(view.relationships.is_empty());
+        assert_eq!(view.terms[0].language, "");
+        assert_eq!(
+            view.relationships,
+            Vec::<crate::terminology::TermRelationshipRow>::new()
+        );
     }
 
     #[test]
@@ -556,7 +562,7 @@ mod tests {
             vec!["250".to_owned(), "251".to_owned()]
         );
         // An absent `target_codes` (0..1) is an empty list, never a panic.
-        assert!(view.relationships[1].target_codes.is_empty());
+        assert_eq!(view.relationships[1].target_codes, Vec::<String>::new());
     }
 
     #[test]

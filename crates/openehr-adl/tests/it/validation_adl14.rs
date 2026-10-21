@@ -273,7 +273,7 @@ fn use_node_target_leaving_the_archetype_raises_vdfpt() {
 #[test]
 fn resource_meta_rows_bind_a_14_source() {
     let valid = use_node_archetype("ELEMENT");
-    assert!(adl14_codes(&valid).is_empty());
+    assert_eq!(adl14_codes(&valid), Vec::<String>::new());
 
     // RESOURCE_DESCRIPTION.Details_valid: a description with no details.
     let no_details = valid.replace(

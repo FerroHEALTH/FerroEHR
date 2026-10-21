@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn valid_action() {
-        assert!(action().invariants().is_empty());
+        assert_eq!(action().invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

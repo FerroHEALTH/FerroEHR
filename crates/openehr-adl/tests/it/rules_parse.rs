@@ -295,7 +295,7 @@ fn declared_variable_type_is_recovered_by_a_later_reference() {
 fn invalid_rule_expression_is_typed_error() {
     // An unparsable rule expression surfaces a typed error, never a panic.
     let err = parse_rules_body("exists").unwrap_err();
-    assert!(!err.is_empty());
+    assert_ne!(err, Vec::<openehr_adl::error::SyntaxError>::new());
 }
 
 #[test]

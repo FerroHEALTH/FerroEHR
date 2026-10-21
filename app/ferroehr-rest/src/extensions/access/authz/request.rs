@@ -251,6 +251,6 @@ mod tests {
     fn empty_set_yields_no_combinations() {
         // An empty result set → vacuous permit at the engine.
         let r = req(Some(Attr::Set(vec![])), Some(Attr::One("t1".to_owned())));
-        assert!(r.combinations().is_empty());
+        assert_eq!(r.combinations(), Vec::<Combination<'_>>::new());
     }
 }

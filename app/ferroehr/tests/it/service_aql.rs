@@ -29,12 +29,6 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 #![expect(
-    clippy::float_cmp,
-    reason = "the asserted magnitudes are integral DV_QUANTITY values, exactly \
-              representable in f64 and returned verbatim by the query, so exact \
-              equality is the assertion the test intends"
-)]
-#![expect(
     clippy::too_many_lines,
     reason = "an end-to-end suite drives one long lifecycle per test on purpose: \
               splitting a case would hide the order its assertions depend on"

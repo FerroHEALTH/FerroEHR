@@ -722,7 +722,7 @@ mod tests {
         });
         let parsed = super::subscription_row(&minimal);
         assert_eq!(parsed.name, "probe-min");
-        assert!(parsed.kind.is_empty());
+        assert_eq!(parsed.kind, "");
         assert!(parsed.enabled);
     }
 

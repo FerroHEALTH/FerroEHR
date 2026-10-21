@@ -160,6 +160,6 @@ mod tests {
         assert_eq!(info.manufacturer, crate::manufacturer::MANUFACTURER);
         // build_date parses to a real timestamp (not the "unknown" fallback) in
         // a normal build where build.rs ran.
-        assert!(!info.build_date.is_empty());
+        assert_ne!(info.build_date, "");
     }
 }

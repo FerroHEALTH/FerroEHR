@@ -55,7 +55,7 @@ fn parameters_scalars_are_read_by_name_and_kind() {
         view.strings.get("message").map(String::as_str),
         Some("matched")
     );
-    assert!(view.matches.is_empty());
+    assert_eq!(view.matches, Vec::<TranslateMatch>::new());
     assert_eq!(
         view.booleans.len() + view.codes.len() + view.strings.len(),
         4
@@ -67,7 +67,7 @@ fn an_empty_parameters_body_is_an_empty_view_not_a_refusal() {
     let body = bytes(&json!({"resourceType": "Parameters"}));
     let view = decode_parameters(&body).expect("a Parameters without parameters is valid");
     assert!(view.booleans.is_empty() && view.codes.is_empty() && view.strings.is_empty());
-    assert!(view.matches.is_empty());
+    assert_eq!(view.matches, Vec::<TranslateMatch>::new());
 }
 
 #[test]
@@ -212,12 +212,18 @@ fn an_expansion_is_read_with_its_nesting() {
 #[test]
 fn a_value_set_without_an_expansion_has_no_members() {
     let body = bytes(&json!({"resourceType": "ValueSet", "status": "active"}));
-    assert!(decode_expansion(&body).expect("valid").is_empty());
+    assert_eq!(
+        decode_expansion(&body).expect("valid"),
+        Vec::<ExpansionMember>::new()
+    );
     let body = bytes(&json!({
         "resourceType": "ValueSet", "status": "active",
         "expansion": {"timestamp": "2026-01-01T00:00:00Z"}
     }));
-    assert!(decode_expansion(&body).expect("valid").is_empty());
+    assert_eq!(
+        decode_expansion(&body).expect("valid"),
+        Vec::<ExpansionMember>::new()
+    );
 }
 
 #[test]

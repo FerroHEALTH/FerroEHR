@@ -670,7 +670,7 @@ async fn party_tags_crud() {
         .party_tags_get(PartyKind::Person, vo)
         .await
         .expect("get tags after delete");
-    assert!(empty.is_empty());
+    assert_eq!(empty, Vec::<openehr_rm::prelude::ItemTag>::new());
 }
 
 /// The `If-Match` precondition compares the FULL `OBJECT_VERSION_ID`

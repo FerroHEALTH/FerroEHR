@@ -928,7 +928,7 @@ async fn a_head_answer_is_not_measured_by_its_declared_length() -> TestResult {
         .forward(Request::new(Method::HEAD, format!("/ehr/{EHR_ID}")))
         .await?;
     assert_eq!(answer.status(), StatusCode::OK);
-    assert!(answer.body().is_empty());
+    assert_eq!(answer.body(), b"");
     Ok(())
 }
 

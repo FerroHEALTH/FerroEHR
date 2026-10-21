@@ -197,7 +197,7 @@ async fn ehr_status_update_default_is_204_with_headers() {
         location(&h),
         Some(format!("{BASE}/ehr/{ehr_id}/ehr_status/{new_ovid}").as_str())
     );
-    assert!(body.is_empty());
+    assert_eq!(body, "");
 }
 
 #[tokio::test]
@@ -305,7 +305,7 @@ async fn composition_delete_is_204_with_headers() {
         None,
         "the OAS marks Location on this response Location_deprecated — not emitted"
     );
-    assert!(body.is_empty());
+    assert_eq!(body, "");
 }
 
 // ── Last-Modified (overview §"ETag and Last-Modified") ───────────────────────

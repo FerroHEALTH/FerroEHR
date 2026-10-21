@@ -1057,9 +1057,9 @@ mod tests {
         let sparse = serde_json::json!({ "template_id": "only-the-id" });
         let row = crate::pages::templates::template_row(&sparse);
         assert_eq!(row.template_id, "only-the-id");
-        assert!(row.concept.is_empty());
-        assert!(row.archetype_id.is_empty());
-        assert!(row.created.is_empty());
+        assert_eq!(row.concept, "");
+        assert_eq!(row.archetype_id, "");
+        assert_eq!(row.created, "");
     }
 
     #[cfg(not(target_arch = "wasm32"))]

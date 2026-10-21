@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn plain_scale_valid() {
-        assert!(scale(0.5).invariants().is_empty());
+        assert_eq!(scale(0.5).invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

@@ -305,7 +305,10 @@ async fn an_erasure_empties_the_relocated_database() {
     ferroehr::db::erase_schema(&settings, &storage)
         .await
         .expect("the erasure runs");
-    assert!(schemas_of_this_build(&second.pool()).await.is_empty());
+    assert_eq!(
+        schemas_of_this_build(&second.pool()).await,
+        Vec::<String>::new()
+    );
     assert_eq!(
         schemas_of_this_build(&db.pool()).await,
         vec!["linkage".to_owned()]

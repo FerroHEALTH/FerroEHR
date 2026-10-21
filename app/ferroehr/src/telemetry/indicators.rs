@@ -325,7 +325,7 @@ mod tests {
             fail_mode: FailMode::Closed,
             ..AuditConfig::default()
         });
-        assert!(closed.cautions().is_empty());
+        assert_eq!(closed.cautions(), Vec::<&str>::new());
         assert!(
             closed.summary().starts_with("fail_mode=closed"),
             "{}",

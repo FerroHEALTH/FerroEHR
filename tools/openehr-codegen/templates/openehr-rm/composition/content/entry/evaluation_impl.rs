@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn valid_evaluation() {
-        assert!(evaluation().invariants().is_empty());
+        assert_eq!(evaluation().invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

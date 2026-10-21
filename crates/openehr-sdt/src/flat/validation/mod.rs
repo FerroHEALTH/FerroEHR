@@ -1625,7 +1625,7 @@ mod tests {
     fn range_ok_in_bounds() {
         let n = count_node_range(0, 10);
         let inst = json!({"_type": "DV_COUNT", "magnitude": 5});
-        assert!(walk_only(&inst, &n).is_empty());
+        assert_eq!(walk_only(&inst, &n), Vec::<ValidationMessage>::new());
     }
 
     // ── DV_MULTIMEDIA.size (C_INTEGER list / range) ──────────────────────────
@@ -1651,7 +1651,7 @@ mod tests {
             vec![ValidationKind::RangeError]
         );
         let good = json!({"_type": "DV_MULTIMEDIA", "uri": "http://x", "size": 500});
-        assert!(walk_only(&good, &n).is_empty());
+        assert_eq!(walk_only(&good, &n), Vec::<ValidationMessage>::new());
     }
 
     #[test]
@@ -1665,7 +1665,7 @@ mod tests {
             vec![ValidationKind::CodedValue]
         );
         let good = json!({"_type": "DV_MULTIMEDIA", "uri": "http://x", "size": 100});
-        assert!(walk_only(&good, &n).is_empty());
+        assert_eq!(walk_only(&good, &n), Vec::<ValidationMessage>::new());
     }
 
     // ── DV_IDENTIFIER mandatory (existence 1..1) constrained sub-attribute ────
@@ -1696,7 +1696,7 @@ mod tests {
         assert!(kinds(&walk_only(&wrong, &n)).contains(&ValidationKind::CodedValue));
         // issuer present and conforming → clean.
         let ok = json!({"_type": "DV_IDENTIFIER", "id": "x", "issuer": "XYZ"});
-        assert!(walk_only(&ok, &n).is_empty());
+        assert_eq!(walk_only(&ok, &n), Vec::<ValidationMessage>::new());
     }
 
     // ── DV_SCALE generic (C_REAL value list + symbol C_CODE_PHRASE) ───────────
@@ -1782,7 +1782,7 @@ mod tests {
             vec![ValidationKind::PatternError]
         );
         let good = json!({"_type": "DV_TEXT", "value": "ABC"});
-        assert!(walk_only(&good, &n).is_empty());
+        assert_eq!(walk_only(&good, &n), Vec::<ValidationMessage>::new());
     }
 
     // ── coded value membership ─────────────────────────────────────────────────
@@ -1818,7 +1818,7 @@ mod tests {
                 "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "local"},
                 "code_string": "at0001"}
         });
-        assert!(walk_only(&good, &n).is_empty());
+        assert_eq!(walk_only(&good, &n), Vec::<ValidationMessage>::new());
     }
 
     #[test]
@@ -1831,7 +1831,7 @@ mod tests {
                 "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "SNOMED-CT"},
                 "code_string": "999"}
         });
-        assert!(walk_only(&external, &n).is_empty());
+        assert_eq!(walk_only(&external, &n), Vec::<ValidationMessage>::new());
     }
 
     // ── type conformance ───────────────────────────────────────────────────────
@@ -2026,7 +2026,7 @@ mod tests {
             "expected CodedValue for magnitude off the list, got {msgs:?}"
         );
         let good = json!({"_type": "DV_COUNT", "magnitude": 3});
-        assert!(walk_only(&good, &count).is_empty());
+        assert_eq!(walk_only(&good, &count), Vec::<ValidationMessage>::new());
     }
 
     /// `DV_PROPORTION` `type` kind membership (master17.3 CONT-DV_PROPORTION-*).
@@ -2047,7 +2047,7 @@ mod tests {
         );
         let good =
             json!({"_type": "DV_PROPORTION", "numerator": 42.0, "denominator": 100.0, "type": 2});
-        assert!(walk_only(&good, &prop).is_empty());
+        assert_eq!(walk_only(&good, &prop), Vec::<ValidationMessage>::new());
     }
 
     /// `C_QUANTITY_ITEM.precision` (`OpenehrProfile.xsd`, surfaced as
@@ -2077,7 +2077,7 @@ mod tests {
             "precision 3 violates [0, 1]"
         );
         let ok = json!({"_type": "DV_QUANTITY", "magnitude": 5.2, "units": "kg", "precision": 1});
-        assert!(walk_only(&ok, &q).is_empty());
+        assert_eq!(walk_only(&ok, &q), Vec::<ValidationMessage>::new());
         let absent = json!({"_type": "DV_QUANTITY", "magnitude": 5.2, "units": "kg"});
         assert!(
             walk_only(&absent, &q).is_empty(),
@@ -2110,7 +2110,7 @@ mod tests {
         );
         let ok = json!({"_type": "DV_PROPORTION", "numerator": 42.0, "denominator": 100.0,
             "type": 2, "precision": 0});
-        assert!(walk_only(&ok, &prop).is_empty());
+        assert_eq!(walk_only(&ok, &prop), Vec::<ValidationMessage>::new());
     }
 
     /// `C_DATE` pattern + range (master17.4 CONT-DV_DATE-validate_constraint/-range).
@@ -2141,7 +2141,7 @@ mod tests {
             "date outside the range"
         );
         let ok = json!({"_type": "DV_DATE", "value": "2021-10-18"});
-        assert!(walk_only(&ok, &date).is_empty());
+        assert_eq!(walk_only(&ok, &date), Vec::<ValidationMessage>::new());
     }
 
     /// `C_TIME` pattern: a partial time violates HH:MM:SS (master17.4 CONT-DV_TIME).
@@ -2162,7 +2162,10 @@ mod tests {
             ))
             .contains(&ValidationKind::PatternError)
         );
-        assert!(walk_only(&json!({"_type": "DV_TIME", "value": "22:18:16"}), &time).is_empty());
+        assert_eq!(
+            walk_only(&json!({"_type": "DV_TIME", "value": "22:18:16"}), &time),
+            Vec::<ValidationMessage>::new()
+        );
     }
 
     /// `C_DURATION` allowed fields + range (master17.4 CONT-DV_DURATION-*).
@@ -2195,7 +2198,10 @@ mod tests {
             .contains(&ValidationKind::RangeError),
             "PT5H outside [PT0S,PT1H]"
         );
-        assert!(walk_only(&json!({"_type": "DV_DURATION", "value": "PT30M"}), &dur).is_empty());
+        assert_eq!(
+            walk_only(&json!({"_type": "DV_DURATION", "value": "PT30M"}), &dur),
+            Vec::<ValidationMessage>::new()
+        );
     }
 
     /// An enumerated **external** `C_CODE_PHRASE` list constrains membership
@@ -2216,11 +2222,11 @@ mod tests {
         );
         let good = json!({"_type": "DV_CODED_TEXT", "value": "x", "defining_code": {
             "terminology_id": {"value": "SNOMED-CT"}, "code_string": "73211009"}});
-        assert!(walk_only(&good, &coded).is_empty());
+        assert_eq!(walk_only(&good, &coded), Vec::<ValidationMessage>::new());
         // A code from a different terminology than the constraint's is not judged.
         let other = json!({"_type": "DV_CODED_TEXT", "value": "x", "defining_code": {
             "terminology_id": {"value": "ICD10"}, "code_string": "A00"}});
-        assert!(walk_only(&other, &coded).is_empty());
+        assert_eq!(walk_only(&other, &coded), Vec::<ValidationMessage>::new());
     }
 
     /// `C_CODE_PHRASE` on a coded attribute outside `defining_code`
@@ -2242,7 +2248,7 @@ mod tests {
         );
         let good = json!({"_type": "DV_MULTIMEDIA", "size": 1, "media_type": {
             "terminology_id": {"value": "IANA_media-types"}, "code_string": "image/png"}});
-        assert!(walk_only(&good, &mm).is_empty());
+        assert_eq!(walk_only(&good, &mm), Vec::<ValidationMessage>::new());
     }
 
     // ── closed-archetype walk ─────────────────────────────────────────────────
@@ -2442,7 +2448,10 @@ mod tests {
     #[test]
     fn ordinal_pair_must_match() {
         let n = ordinal_node("DV_ORDINAL", false);
-        assert!(walk_only(&ordinal_value("DV_ORDINAL", &json!(0), "at0014"), &n).is_empty());
+        assert_eq!(
+            walk_only(&ordinal_value("DV_ORDINAL", &json!(0), "at0014"), &n),
+            Vec::<ValidationMessage>::new()
+        );
         assert!(
             kinds(&walk_only(
                 &ordinal_value("DV_ORDINAL", &json!(1), "at0014"),
@@ -2464,7 +2473,10 @@ mod tests {
     #[test]
     fn scale_pair_must_match() {
         let n = ordinal_node("DV_SCALE", true);
-        assert!(walk_only(&ordinal_value("DV_SCALE", &json!(0.0), "at0014"), &n).is_empty());
+        assert_eq!(
+            walk_only(&ordinal_value("DV_SCALE", &json!(0.0), "at0014"), &n),
+            Vec::<ValidationMessage>::new()
+        );
         assert!(
             kinds(&walk_only(
                 &ordinal_value("DV_SCALE", &json!(1.0), "at0014"),
@@ -2493,7 +2505,10 @@ mod tests {
                 .contains(&ValidationKind::PatternError),
             "`ab` must fail the backreference pattern rather than silently pass"
         );
-        assert!(walk_only(&json!({"_type": "DV_TEXT", "value": "aa"}), &n).is_empty());
+        assert_eq!(
+            walk_only(&json!({"_type": "DV_TEXT", "value": "aa"}), &n),
+            Vec::<ValidationMessage>::new()
+        );
     }
 
     // ── C_TIME / C_DATE_TIME timezone_validity ────────────────────────────────
@@ -2512,7 +2527,10 @@ mod tests {
             .contains(&ValidationKind::PatternError),
             "a missing mandatory timezone is rejected"
         );
-        assert!(walk_only(&json!({"_type": "DV_TIME", "value": "10:30:00Z"}), &n).is_empty());
+        assert_eq!(
+            walk_only(&json!({"_type": "DV_TIME", "value": "10:30:00Z"}), &n),
+            Vec::<ValidationMessage>::new()
+        );
         // 1003 = disallowed timezone.
         n.tz_validity = Some(1003);
         assert!(
@@ -2523,7 +2541,10 @@ mod tests {
             .contains(&ValidationKind::PatternError),
             "a present disallowed timezone is rejected"
         );
-        assert!(walk_only(&json!({"_type": "DV_TIME", "value": "10:30:00"}), &n).is_empty());
+        assert_eq!(
+            walk_only(&json!({"_type": "DV_TIME", "value": "10:30:00"}), &n),
+            Vec::<ValidationMessage>::new()
+        );
     }
 
     // ── name-differentiated same-archetype-id siblings ────────────────────────

@@ -932,7 +932,7 @@ mod tests {
         }
         let absent = AttestationInput::from_update(&update_attestation(&base))
             .expect("an absent items list is legal");
-        assert!(absent.parts.items.is_empty());
+        assert_eq!(absent.parts.items, Vec::<DvEhrUri>::new());
     }
 
     /// A native partial completes into the same `ATTESTATION` shape the body

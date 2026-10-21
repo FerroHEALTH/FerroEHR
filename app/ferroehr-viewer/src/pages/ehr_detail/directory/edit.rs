@@ -524,7 +524,7 @@ mod tests {
         stamp_keys(&mut tree, &mut counter);
         assert_eq!(child_node_keys(&tree, &[]).len(), 2);
         assert_eq!(child_node_keys(&tree, &[0]).len(), 1);
-        assert!(child_node_keys(&tree, &[1]).is_empty());
+        assert_eq!(child_node_keys(&tree, &[1]), Vec::<String>::new());
         // The child keys are the children's stamped identities, in order.
         let keys = child_node_keys(&tree, &[]);
         assert_eq!(keys[0], node_key_at(&tree, &[0]).unwrap());

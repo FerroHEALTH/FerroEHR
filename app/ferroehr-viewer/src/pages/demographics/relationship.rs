@@ -1716,6 +1716,9 @@ mod wire_tests {
         // A party with no relationships attribute is an empty list, not a
         // failure — the attribute is 0..1.
         let bare: Value = serde_json::from_str(r#"{"_type":"PERSON"}"#).expect("a valid party");
-        assert!(inline_relationships_of(&bare).is_empty());
+        assert_eq!(
+            inline_relationships_of(&bare),
+            Vec::<crate::pages::demographics::relationship::InlineRelationship>::new()
+        );
     }
 }

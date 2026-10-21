@@ -147,7 +147,10 @@ fn an_unbound_template_raises_no_check() {
     );
 
     let unbound = build(&corpus_opt());
-    assert!(collect_constraint_binding_checks(&composition, &unbound).is_empty());
+    assert_eq!(
+        collect_constraint_binding_checks(&composition, &unbound),
+        Vec::<openehr_sdt::flat::validation::ConstraintBindingCheck>::new()
+    );
 }
 
 /// A composition that leaves the bound node uncoded raises no question — the
@@ -160,7 +163,10 @@ fn an_absent_coded_value_raises_no_check() {
         "archetype_node_id": "openEHR-EHR-COMPOSITION.minimal.v1",
         "name": { "_type": "DV_TEXT", "value": "minimal" }
     });
-    assert!(collect_constraint_binding_checks(&composition, &wt).is_empty());
+    assert_eq!(
+        collect_constraint_binding_checks(&composition, &wt),
+        Vec::<openehr_sdt::flat::validation::ConstraintBindingCheck>::new()
+    );
 }
 
 /// The two COMMITTED bound corpus templates carry their binding in the file,

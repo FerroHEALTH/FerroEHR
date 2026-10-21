@@ -276,22 +276,22 @@ mod tests {
 
     #[test]
     fn valid_proportions() {
-        assert!(
-            proportion(5.0, 1.0, PK_UNITARY, None)
-                .invariants()
-                .is_empty()
+        assert_eq!(
+            proportion(5.0, 1.0, PK_UNITARY, None).invariants(),
+            Vec::<InvariantViolation>::new()
         );
-        assert!(
-            proportion(1.0, 100.0, PK_PERCENT, None)
-                .invariants()
-                .is_empty()
+        assert_eq!(
+            proportion(1.0, 100.0, PK_PERCENT, None).invariants(),
+            Vec::<InvariantViolation>::new()
         );
-        assert!(
-            proportion(5.0, 100.0, PK_FRACTION, None)
-                .invariants()
-                .is_empty()
+        assert_eq!(
+            proportion(5.0, 100.0, PK_FRACTION, None).invariants(),
+            Vec::<InvariantViolation>::new()
         );
-        assert!(proportion(0.5, 100.6, 0, None).invariants().is_empty()); // ratio
+        assert_eq!(
+            proportion(0.5, 100.6, 0, None).invariants(),
+            Vec::<InvariantViolation>::new()
+        ); // ratio
     }
 
     #[test]
@@ -338,15 +338,13 @@ mod tests {
         );
         // Precision 0 with integer numerator/denominator is the valid fraction
         // shape (CNF `type 3, 10/100, precision 0 | accepted`).
-        assert!(
-            proportion(10.0, 100.0, PK_FRACTION, Some(0))
-                .invariants()
-                .is_empty()
+        assert_eq!(
+            proportion(10.0, 100.0, PK_FRACTION, Some(0)).invariants(),
+            Vec::<InvariantViolation>::new()
         );
-        assert!(
-            proportion(10.0, 100.0, PK_INTEGER_FRACTION, Some(0))
-                .invariants()
-                .is_empty()
+        assert_eq!(
+            proportion(10.0, 100.0, PK_INTEGER_FRACTION, Some(0)).invariants(),
+            Vec::<InvariantViolation>::new()
         );
     }
 
@@ -416,7 +414,7 @@ mod tests {
         let sum = half.add(&third).expect("same kind");
         assert!((sum.numerator - 5.0).abs() < f64::EPSILON);
         assert!((sum.denominator - 6.0).abs() < f64::EPSILON);
-        assert!(sum.invariants().is_empty());
+        assert_eq!(sum.invariants(), Vec::<InvariantViolation>::new());
     }
 
     /// A scaled fraction whose numerator stops being whole is refused rather

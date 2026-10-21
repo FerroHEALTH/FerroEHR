@@ -136,8 +136,14 @@ mod tests {
 
     #[test]
     fn valid_date_time() {
-        assert!(date_time("2021-05-17T10:30:00").invariants().is_empty());
-        assert!(date_time("2021-05-17T10:30:00Z").invariants().is_empty());
+        assert_eq!(
+            date_time("2021-05-17T10:30:00").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
+        assert_eq!(
+            date_time("2021-05-17T10:30:00Z").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

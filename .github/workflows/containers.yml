@@ -209,7 +209,7 @@ jobs:
     # Digest-pinned, not tag-pinned: a tag is mutable, so a re-run of an
     # already-reviewed commit could build against different bytes. The index
     # digest (not a per-platform one) so both runner architectures resolve.
-    container: rust:1.98.1-slim-trixie@sha256:ce84a5edd80c5f91e05c5533b1e53eb1da54028f33734dc06aa6b49fa190462d
+    container: rust:1.99.1-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -340,7 +340,7 @@ jobs:
     # Digest-pinned, not tag-pinned: a tag is mutable, so a re-run of an
     # already-reviewed commit could build against different bytes. The index
     # digest (not a per-platform one) so both runner architectures resolve.
-    container: rust:1.98.1-slim-trixie@sha256:ce84a5edd80c5f91e05c5533b1e53eb1da54028f33734dc06aa6b49fa190462d
+    container: rust:1.99.1-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

@@ -73,7 +73,7 @@ async fn prune_stops_at_the_lowest_active_reader_cursor() {
         .await
         .expect("advance to the end");
     assert_eq!(prune(&pool, 7).await.expect("prune"), 3);
-    assert!(seqs(&pool).await.is_empty());
+    assert_eq!(seqs(&pool).await, Vec::<i64>::new());
 }
 
 #[tokio::test]
@@ -91,7 +91,7 @@ async fn an_inactive_reader_holds_no_floor() {
         .expect("reconcile inactive");
 
     assert_eq!(prune(&pool, 7).await.expect("prune"), 5);
-    assert!(seqs(&pool).await.is_empty());
+    assert_eq!(seqs(&pool).await, Vec::<i64>::new());
     // Reconciling keeps the cursor: switching the reader back on resumes
     // where it left off.
     assert_eq!(cursor(&pool, READER).await.expect("cursor"), seeded[0]);

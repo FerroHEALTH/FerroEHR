@@ -44,7 +44,10 @@ mod tests {
 
     #[test]
     fn named_party_valid() {
-        assert!(party(Some("Dr Jones")).invariants().is_empty());
+        assert_eq!(
+            party(Some("Dr Jones")).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

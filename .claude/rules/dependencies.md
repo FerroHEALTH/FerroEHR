@@ -4,7 +4,7 @@ paths: ["Cargo.toml", "**/Cargo.toml", "Cargo.lock", "deny.toml", "rust-toolchai
 
 # Dependencies: the pinned set and the vetted menu
 
-Toolchain: Rust stable **1.98** (1.98.1), MSRV 1.98, **edition 2024**,
+Toolchain: Rust stable **1.99** (1.99.1), MSRV 1.98, **edition 2024**,
 resolver v3. Pin via `rust-toolchain.toml`.
 Database: **PostgreSQL 18** (target 18.6+): `uuidv7()`, the temporal `WITHOUT
 OVERLAPS` key on `linkage.subject_ehr`, the SQL/JSON path functions, and the

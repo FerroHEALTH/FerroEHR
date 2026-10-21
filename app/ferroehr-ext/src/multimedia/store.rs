@@ -272,7 +272,7 @@ mod tests {
         expected.sort_unstable();
         assert_eq!(s.content_keys().await.unwrap(), expected);
         assert_eq!(s.delete_all_content().await.unwrap(), 2);
-        assert!(s.content_keys().await.unwrap().is_empty());
+        assert_eq!(s.content_keys().await.unwrap(), Vec::<String>::new());
         assert!(inner.head(&Path::from("README")).await.is_ok());
         assert!(inner.head(&Path::from(upper.as_str())).await.is_ok());
         // A second run finds nothing to delete.

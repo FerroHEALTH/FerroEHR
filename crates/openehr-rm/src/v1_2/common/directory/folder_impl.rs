@@ -54,7 +54,10 @@ mod tests {
 
     #[test]
     fn valid_folder() {
-        assert!(folder("at0001").invariants().is_empty());
+        assert_eq!(
+            folder("at0001").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

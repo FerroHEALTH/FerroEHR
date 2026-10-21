@@ -214,8 +214,8 @@ mod tests {
 
     #[test]
     fn invariant_included_flags_valid_for_normal_ranges() {
-        assert!(range(0, 1).invariants().is_empty());
-        assert!(from(0).invariants().is_empty());
+        assert_eq!(range(0, 1).invariants(), Vec::<InvariantViolation>::new());
+        assert_eq!(from(0).invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

@@ -106,10 +106,9 @@ mod tests {
 
     #[test]
     fn simple_range_valid() {
-        assert!(
-            range_with(quantity(0.0), quantity(10.0))
-                .invariants()
-                .is_empty()
+        assert_eq!(
+            range_with(quantity(0.0), quantity(10.0)).invariants(),
+            Vec::<InvariantViolation>::new()
         );
     }
 

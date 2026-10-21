@@ -164,8 +164,11 @@ mod tests {
 
     #[test]
     fn valid_date() {
-        assert!(date("2021-05-17").invariants().is_empty());
-        assert!(date("2021").invariants().is_empty());
+        assert_eq!(
+            date("2021-05-17").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
+        assert_eq!(date("2021").invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

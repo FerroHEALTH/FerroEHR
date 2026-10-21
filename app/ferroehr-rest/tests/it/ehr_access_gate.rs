@@ -488,13 +488,15 @@ async fn aql_withholds_an_ehr_the_caller_may_not_read() {
         &json!({ "q": population }).to_string(),
     );
 
-    assert!(ehr_ids_of(&app, aql(&by_where, "carol")).await.is_empty());
-    assert!(
-        ehr_ids_of(&app, aql(&by_predicate, "carol"))
-            .await
-            .is_empty()
+    assert_eq!(
+        ehr_ids_of(&app, aql(&by_where, "carol")).await,
+        Vec::<String>::new()
     );
-    assert!(ehr_ids_of(&app, by_parameter).await.is_empty());
+    assert_eq!(
+        ehr_ids_of(&app, aql(&by_predicate, "carol")).await,
+        Vec::<String>::new()
+    );
+    assert_eq!(ehr_ids_of(&app, by_parameter).await, Vec::<String>::new());
     assert_eq!(
         ehr_ids_of(&app, aql(population, "carol")).await,
         vec![OPEN_EHR_ID.to_owned()],

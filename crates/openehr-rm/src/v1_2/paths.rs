@@ -1563,7 +1563,7 @@ mod tests {
         let p = path("/data/events[at0099]/data");
         assert!(!path_exists(&obs, &p));
         assert!(item_at_path(&obs, &p).is_none());
-        assert!(items_at_path(&obs, &p).is_empty());
+        assert_eq!(items_at_path(&obs, &p), Vec::<&Value>::new());
     }
 
     #[test]

@@ -130,7 +130,10 @@ mod tests {
             state: None,
             data: 1,
         });
-        assert!(history(vec![event]).invariants().is_empty());
+        assert_eq!(
+            history(vec![event]).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]
@@ -196,7 +199,7 @@ mod tests {
                 event_at("2021-01-01T05:00:00"),
             ],
         );
-        assert!(h.invariants().is_empty());
+        assert_eq!(h.invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]
@@ -220,6 +223,6 @@ mod tests {
     fn period_consistency_skips_malformed_times() {
         // A malformed event time is a Value_valid problem, not periodicity.
         let h = periodic_history("PT1H", vec![event_at("garbage")]);
-        assert!(h.invariants().is_empty());
+        assert_eq!(h.invariants(), Vec::<InvariantViolation>::new());
     }
 }

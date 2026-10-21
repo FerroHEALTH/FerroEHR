@@ -34,7 +34,10 @@ mod tests {
 
     #[test]
     fn valid_code_string() {
-        assert!(code_phrase("at0001").invariants().is_empty());
+        assert_eq!(
+            code_phrase("at0001").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

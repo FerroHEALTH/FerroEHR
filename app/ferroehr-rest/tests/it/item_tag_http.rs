@@ -728,7 +728,7 @@ async fn an_empty_target_path_is_stored_as_absent_and_stays_deletable() {
         StatusCode::NO_CONTENT,
         "the key-only DELETE must reach a tag posted with target_path \"\": {body}"
     );
-    assert!(ehr_tags(&app, &ehr).await.is_empty());
+    assert_eq!(ehr_tags(&app, &ehr).await, Vec::<Value>::new());
 
     // The released 404 trigger set includes "when the ITEM_TAG identified by
     // the `key` does not exist", so the second identical DELETE is a miss.

@@ -985,7 +985,7 @@ mod tests {
         assert_eq!(root["name"]["_type"], "DV_TEXT");
         assert_eq!(root["folders"][0]["name"]["value"], "2026");
         assert!(root.get("uid").is_none());
-        assert!(root["items"].as_array().unwrap().is_empty());
+        assert_eq!(root["items"], serde_json::json!([]));
     }
 
     #[test]
@@ -993,7 +993,7 @@ mod tests {
         let root = empty_root_folder();
         assert_eq!(root["_type"], "FOLDER");
         assert_eq!(root["archetype_node_id"], DIRECTORY_ARCHETYPE);
-        assert!(root["folders"].as_array().unwrap().is_empty());
+        assert_eq!(root["folders"], serde_json::json!([]));
     }
 
     #[test]

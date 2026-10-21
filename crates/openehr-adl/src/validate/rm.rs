@@ -902,7 +902,7 @@ mod tests {
             generic_arguments("Map<String, List<Item>>"),
             vec!["String", "List<Item>"]
         );
-        assert!(generic_arguments("OBSERVATION").is_empty());
+        assert_eq!(generic_arguments("OBSERVATION"), Vec::<String>::new());
         assert_eq!(
             normalise_type_name("Interval <Quantity>"),
             "INTERVAL<QUANTITY>"

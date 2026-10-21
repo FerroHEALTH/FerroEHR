@@ -816,7 +816,7 @@ mod tests {
         // the model defines its own Any → returned as-is.
         assert_eq!(model.any_class_definition().name(), "Any");
         assert_eq!(model.all_ancestor_classes("ITEM"), vec!["Any".to_owned()]);
-        assert!(model.all_ancestor_classes("Any").is_empty());
+        assert_eq!(model.all_ancestor_classes("Any"), Vec::<String>::new());
 
         // no own Any → the standard default (abstract, parentless).
         let bare = super::super::bmm_model_impl::tests::model(
@@ -893,7 +893,7 @@ mod tests {
             model.all_ancestor_classes("DATA_VALUE"),
             vec!["Any".to_owned()]
         );
-        assert!(model.all_ancestor_classes("MISSING").is_empty());
+        assert_eq!(model.all_ancestor_classes("MISSING"), Vec::<String>::new());
     }
 
     #[test]

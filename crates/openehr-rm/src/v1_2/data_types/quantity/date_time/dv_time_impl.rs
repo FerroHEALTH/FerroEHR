@@ -136,8 +136,14 @@ mod tests {
 
     #[test]
     fn valid_time() {
-        assert!(time("10:30:00").invariants().is_empty());
-        assert!(time("10:30:00+01:00").invariants().is_empty());
+        assert_eq!(
+            time("10:30:00").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
+        assert_eq!(
+            time("10:30:00+01:00").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

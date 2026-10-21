@@ -299,7 +299,7 @@ mod tests {
         q.magnitude_status = Some("=".to_owned());
         q.accuracy = Some(100.0);
         q.accuracy_is_percent = Some(true);
-        assert!(q.invariants().is_empty());
+        assert_eq!(q.invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]
@@ -367,7 +367,7 @@ mod tests {
         let mut q = quantity(); // magnitude 43.0
         q.normal_range = Some(range(0.0, 100.0));
         q.normal_status = Some(status("N"));
-        assert!(q.invariants().is_empty());
+        assert_eq!(q.invariants(), Vec::<InvariantViolation>::new());
 
         // In range + status "H": inconsistent.
         let mut q = quantity();
@@ -389,7 +389,7 @@ mod tests {
         let mut q = quantity();
         q.normal_range = Some(range(100.0, 200.0));
         q.normal_status = Some(status("H"));
-        assert!(q.invariants().is_empty());
+        assert_eq!(q.invariants(), Vec::<InvariantViolation>::new());
     }
 
     fn quantity_with(magnitude: f64) -> DvQuantity {

@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn valid_admin_entry() {
-        assert!(admin_entry().invariants().is_empty());
+        assert_eq!(admin_entry().invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

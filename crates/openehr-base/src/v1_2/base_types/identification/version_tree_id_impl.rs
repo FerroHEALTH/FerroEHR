@@ -217,9 +217,9 @@ mod tests {
 
     #[test]
     fn valid_forms() {
-        assert!(vtid("1").is_empty());
-        assert!(vtid("42").is_empty());
-        assert!(vtid("1.2.3").is_empty());
+        assert_eq!(vtid("1"), Vec::<InvariantViolation>::new());
+        assert_eq!(vtid("42"), Vec::<InvariantViolation>::new());
+        assert_eq!(vtid("1.2.3"), Vec::<InvariantViolation>::new());
     }
 
     #[test]

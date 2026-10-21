@@ -68,7 +68,7 @@ mod tests {
 
     #[test]
     fn valid_description_passes() {
-        assert!(description().invariants().is_empty());
+        assert_eq!(description().invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

@@ -129,7 +129,7 @@ async fn a_small_value_and_a_disabled_engine_leave_the_document_untouched() {
     let before = small.clone();
     engine.offload(&mut small).await.expect("offload");
     assert_eq!(small, before, "below the threshold nothing moves");
-    assert!(engine.referenced_keys(&small).is_empty());
+    assert_eq!(engine.referenced_keys(&small), Vec::<String>::new());
 
     let disabled = engine.with_offload_enabled(false);
     assert!(!disabled.offload_enabled());

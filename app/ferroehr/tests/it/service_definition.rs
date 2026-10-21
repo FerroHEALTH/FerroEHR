@@ -87,7 +87,7 @@ async fn archetype_upload_get_list_match_replace_delete() {
         .list_matching_archetypes("OBSERVATION".to_owned(), Page::all())
         .await
         .unwrap();
-    assert!(none.is_empty());
+    assert_eq!(none, Vec::<String>::new());
 
     // upload_archetype replaces if the id already exists (spec: "replace it").
     let replacement = format!("{adl}\n-- replaced\n");
@@ -1072,7 +1072,10 @@ async fn query_valid_store_list_match_delete() {
         .list_matching_queries(".*".to_owned(), Some("OBSERVATION".to_owned()), Page::all())
         .await
         .unwrap();
-    assert!(by_artefact_none.is_empty());
+    assert_eq!(
+        by_artefact_none,
+        Vec::<ferroehr::service::definition::types::QueryDescriptor>::new()
+    );
 
     // delete_query removes by name → Post_query_deleted.
     svc.delete_query("ehr::over_50".to_owned())

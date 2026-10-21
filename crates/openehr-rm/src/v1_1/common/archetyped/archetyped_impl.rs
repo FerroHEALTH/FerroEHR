@@ -34,7 +34,10 @@ mod tests {
 
     #[test]
     fn valid_rm_version() {
-        assert!(archetyped("1.1.0").invariants().is_empty());
+        assert_eq!(
+            archetyped("1.1.0").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

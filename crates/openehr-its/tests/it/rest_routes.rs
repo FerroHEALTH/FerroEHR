@@ -682,7 +682,7 @@ fn routes_name_their_request_media() {
     assert_eq!(m.request_media, ["text/plain"]);
     assert!(m.header_param("Content-Type").is_none());
     let m = matched(&Method::GET, "/query/aql").unwrap();
-    assert!(m.request_media.is_empty());
+    assert_eq!(m.request_media, Vec::<&str>::new());
     for (method, path) in [
         (
             Method::POST,

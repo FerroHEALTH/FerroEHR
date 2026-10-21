@@ -1707,7 +1707,7 @@ mod tests {
         assert_eq!(full.validation_errors(), ["/content: no template"]);
         let prose = ErrorBody::from_bytes(br#"{"message":"malformed body"}"#.to_vec());
         assert_eq!(prose.message(), Some("malformed body"));
-        assert!(prose.validation_errors().is_empty());
+        assert_eq!(prose.validation_errors(), Vec::<String>::new());
         let other = ErrorBody::from_bytes(b"<html>gateway</html>".to_vec());
         assert!(other.error().is_none());
         assert_eq!(other.text(), Some("<html>gateway</html>"));

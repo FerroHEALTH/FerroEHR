@@ -228,7 +228,10 @@ async fn ehr_composition_lifecycle_end_to_end() {
         .expect("contribution_get");
     assert_eq!(contribution["_type"], "CONTRIBUTION");
     assert_eq!(contribution["audit"]["change_type"]["value"], "creation");
-    assert!(!contribution["versions"].as_array().unwrap().is_empty());
+    assert_ne!(
+        contribution["versions"].as_array().unwrap().as_slice(),
+        Vec::<Value>::new()
+    );
 
     // ── logical delete ──────────────────────────────────────────────────────
     // A stale preceding_version_uid (v1, but latest is v2) → 409 Conflict.
@@ -1243,7 +1246,7 @@ async fn item_tag_crud() {
         .target_tags_get(ehr_uuid, vo_id.clone(), "COMPOSITION")
         .await
         .expect("comp tags after");
-    assert!(after.is_empty());
+    assert_eq!(after, Vec::<ItemTag>::new());
 }
 
 #[tokio::test]

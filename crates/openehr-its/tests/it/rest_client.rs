@@ -457,7 +457,7 @@ async fn a_prose_bad_request_decodes_as_the_error() -> TestResult {
         other => panic!("expected the 400 answer, got {other:?}"),
     };
     assert_eq!(body.message(), Some("the body is not JSON"));
-    assert!(body.validation_errors().is_empty());
+    assert_eq!(body.validation_errors(), Vec::<String>::new());
     assert_eq!(body.text(), Some(r#"{"message":"the body is not JSON"}"#));
     Ok(())
 }

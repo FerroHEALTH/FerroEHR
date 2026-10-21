@@ -825,7 +825,7 @@ mod tests {
         let t = openehr();
         assert_eq!(t.concepts_in_group("composition_category").len(), 4);
         assert_eq!(t.concepts_in_group("null_flavours").len(), 4);
-        assert!(t.concepts_in_group("no_such_group").is_empty());
+        assert_eq!(t.concepts_in_group("no_such_group"), []);
     }
 
     #[test]
@@ -894,7 +894,7 @@ mod tests {
         let length = t.property_by_openehr_code("122").expect("Length property");
         assert_eq!(length.text, "Length");
         let units = t.units_for_property("122");
-        assert!(!units.is_empty());
+        assert_ne!(units, Vec::<&Unit>::new());
         // The primary SI unit for Length is the meter (symbol "m", UCUM "m").
         let meter = units
             .iter()
@@ -903,7 +903,7 @@ mod tests {
         assert!(meter.primary);
         assert_eq!(meter.ucum.as_deref(), Some("m"));
         assert!(t.property_by_openehr_code("does-not-exist").is_none());
-        assert!(t.units_for_property("does-not-exist").is_empty());
+        assert_eq!(t.units_for_property("does-not-exist"), Vec::<&Unit>::new());
     }
 
     #[test]
@@ -994,6 +994,6 @@ mod tests {
         let t = openehr();
         assert_eq!(t.terminology().language, "en");
         assert!(t.languages.contains_key("zh"));
-        assert!(!t.property_units().properties.is_empty());
+        assert_ne!(t.property_units().properties, Vec::<Property>::new());
     }
 }

@@ -1351,12 +1351,12 @@ mod tests {
     #[test]
     fn extract_roles_missing_paths_yields_empty() {
         let claims = json!({ "sub": "x" }).as_object().cloned().unwrap();
-        assert!(
+        assert_eq!(
             extract_roles(
                 &claims,
                 &ferroehr::config::authz::RbacConfig::default().role_claims
-            )
-            .is_empty()
+            ),
+            Vec::<String>::new()
         );
     }
 

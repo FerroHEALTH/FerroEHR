@@ -517,7 +517,10 @@ async fn ehr_index_update_status_loc_and_remove() {
     svc.remove_ehr_subject(ehr.to_string(), subject.clone())
         .await
         .expect("remove");
-    assert!(svc.ehr_subjects(ehr.to_string()).await.unwrap().is_empty());
+    assert_eq!(
+        svc.ehr_subjects(ehr.to_string()).await.unwrap(),
+        Vec::<ferroehr::service::ehr_index::types::EhrIndexEntry>::new()
+    );
 
     // removing again → the precise SM subject_id_does_not_exist (404) — the
     // index chapter maps its own errors instead of the generic collapse
@@ -552,7 +555,10 @@ async fn ehr_index_remove_subject_wide_and_unknown_ehr() {
     svc.remove_subject(subject.clone())
         .await
         .expect("remove subject-wide");
-    assert!(svc.subject_ehrs(subject.clone()).await.unwrap().is_empty());
+    assert_eq!(
+        svc.subject_ehrs(subject.clone()).await.unwrap(),
+        Vec::<ferroehr::service::ehr_index::types::EhrIndexEntry>::new()
+    );
 
     // unknown EHR → ehr_id_does_not_exist (404)
     let unknown = svc
