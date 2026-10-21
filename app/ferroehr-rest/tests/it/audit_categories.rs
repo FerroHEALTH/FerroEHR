@@ -54,7 +54,9 @@ const BASE: &str = "/ferroehr/rest/openehr/v1";
 const IPS: &str = "International Patient Summary";
 const ENCOUNTER: &str = "openEHR-EHR-COMPOSITION.encounter.v1";
 const REPORT: &str = "openEHR-EHR-COMPOSITION.report.v1";
-/// The root archetype of the IPS composition, in comparison form.
+/// The root archetype of the IPS composition as a stored composition names
+/// it: the node table holds archetype ids in comparison form, and the
+/// evidence keeps the id as the access named it.
 const HEALTH_SUMMARY: &str = "openehr-ehr-composition.health_summary.v1";
 /// The code system of the Art. 14(1) priority categories, HL7 Europe's
 /// `EEHRxFDocumentPriorityCategoryCS`, as `ehds-logging` writes it.
@@ -376,10 +378,7 @@ async fn an_unmapped_template_is_unclassified_with_its_ids_as_evidence() {
     let read = classified(&pool, "composition_get", "composition").await;
     assert_eq!(read.categories, json!(["unclassified"]));
     assert_eq!(read.basis.as_deref(), Some("returned"));
-    assert_eq!(
-        read.evidence,
-        json!([IPS.to_ascii_lowercase(), HEALTH_SUMMARY])
-    );
+    assert_eq!(read.evidence, json!([IPS, HEALTH_SUMMARY]));
 }
 
 /// A leaf-only answer of a `DISTINCT` projection carries no object, so the
@@ -399,7 +398,7 @@ async fn a_leaf_only_query_is_classified_from_its_constraints() {
     let statement = classified(&pool, "query_execute_adhoc_query_body", "query").await;
     assert_eq!(statement.categories, json!([token("Laboratory-Reports")]));
     assert_eq!(statement.basis.as_deref(), Some("queried"));
-    assert_eq!(statement.evidence, json!([ENCOUNTER.to_ascii_lowercase()]));
+    assert_eq!(statement.evidence, json!([ENCOUNTER]));
 }
 
 /// A query that serves nothing is still classified by what it asked for.
@@ -464,10 +463,7 @@ async fn a_flat_write_is_classified_by_its_template() {
     let write = classified(&pool, "composition_create", "composition").await;
     assert_eq!(write.categories, json!([token("Patient-Summaries")]));
     assert_eq!(write.basis.as_deref(), Some("written"));
-    assert_eq!(
-        write.evidence,
-        json!([IPS.to_ascii_lowercase(), HEALTH_SUMMARY])
-    );
+    assert_eq!(write.evidence, json!([IPS, HEALTH_SUMMARY]));
 }
 
 /// Commit a canonical composition; returns its full version uid.
@@ -563,11 +559,7 @@ async fn a_contribution_read_is_classified_by_its_versions() {
             "{prefer:?}"
         );
         assert_eq!(read.basis.as_deref(), Some("returned"), "{prefer:?}");
-        assert_eq!(
-            read.evidence,
-            json!([IPS.to_ascii_lowercase(), HEALTH_SUMMARY]),
-            "{prefer:?}"
-        );
+        assert_eq!(read.evidence, json!([IPS, HEALTH_SUMMARY]), "{prefer:?}");
     }
 }
 

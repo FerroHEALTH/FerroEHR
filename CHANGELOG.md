@@ -18,6 +18,29 @@ workflow refuses a tag that has no matching section here.
 ### Changed
 
 - **The Rust toolchain moves to 1.99.1.** The pinned channel, both container base images (digest re-resolved to the `rust:1.99.1-slim-trixie` index) and the CI job containers move together; the MSRV stays at 1.98, the toolchain minus one, the rule `docs/VERSIONS.md` now states for the whole FerroHEALTH family. Clippy 1.99's new `assert_is_empty` lint is answered at every site with an `assert_eq!` or `assert_ne!` that prints the value on failure, two `float_cmp` expectations it no longer needs are removed, and the unit tests under the published crates' `src/` (and the codegen templates they are emitted from) change with it, so the `openehr-*` crates move to 0.0.94 with no API change.
+
+- **The access log moves to FerroAUDIT 0.2.4** (`ihe-atna` and
+  `ehds-logging` `=0.2.4`), and the record writes again what #3897 had to drop:
+  the token's `jti` at `agent[user].policy`, the ITS-REST operation id as a
+  second `subtype`, `outcomeDesc`, `source.type`, and in the DICOM message the
+  optional `EventOutcomeDescription`, `AuditSourceTypeCode` and
+  `ParticipantObjectDataLifeCycle`. A Basic user is recorded with no issuer
+  and no client instead of FerroEHR's own URN and `UNKNOWN`, an acting mode
+  the deployment did not establish adds no `person` role, the caller's roles
+  are written by the crate, an origin names its originating system with no
+  invented endpoint or status, and FerroEHR's own agent is addressed by its
+  `server_host`. A record kept without end (`retention_days = 0`) says so and
+  names no end date, a day-counted horizon is stated in days, and a horizon
+  under three years, which only a deployment under no Union jurisdiction
+  passes, names that horizon as the ground of its floor instead of claiming
+  Art. 9(2). The category map takes every archetype id openEHR BASE 1.3.0
+  admits, a CKM draft's `.v0` and the namespaced ADL 2 form among them, and
+  compares ids as openEHR BASE asks, so the evidence keeps each id as the
+  access named it: a template id keeps its case (records written before keep
+  the folded form), and a stored composition's root archetype stays in the
+  node table's comparison form, and the map's digest moves once with the upgrade: records keep the
+  digest of the map that classified them (#3902).
+
 - **The minimum supported Rust version is 1.98** (was 1.97), the version
   `fhir-types`, pulled by `ihe-atna`'s FHIR writer, declares. The nine
   `openehr-*` crates move to 0.0.93 with it.

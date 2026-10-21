@@ -516,39 +516,47 @@ fn emergency_purposes(
 /// as the record's retention, the categories' and origins' labels, and the
 /// emergency purposes.
 ///
-/// A horizon in days states the whole years it keeps at least (366 days a
-/// year), and keeping forever states the longest period `ehds-logging` can
-/// write. A horizon under the three years of EHDS Art. 9(2), which a
-/// deployment outside the Union may keep, states the floor, and the boot log
-/// says so.
+/// The record states the horizon as configured: years, days, or without end
+/// for `retention_days = 0`. A horizon under the three years of EHDS Art. 9(2)
+/// passes the boot validation only where no Union jurisdiction is in force,
+/// so its record names the deployment's own retention as the ground of its
+/// floor, never Art. 9(2).
 ///
 /// # Errors
-/// [`AuditError::Policy`] when `ehds-logging` refuses the label policy of the
-/// map, which a compiled map does not cause.
+/// [`AuditError::Policy`] when `ehds-logging` refuses the retention or the
+/// label policy, which a validated configuration does not cause.
 #[cfg(feature = "fhir")]
 fn recording(
     config: &AuditConfig,
     categories: &crate::system_log::categories::Classifier,
     emergency: &ehds_logging::emergency::EmergencyPurposes,
 ) -> Result<crate::system_log::fhir::Recording, AuditError> {
-    use ehds_logging::retention::{FLOOR_YEARS, RetentionPolicy};
+    use ehds_logging::retention::{Bounds, FLOOR_YEARS, Period, RetentionPolicy};
     let none = std::collections::BTreeMap::new();
-    let years = match config.store.retention() {
-        Retention::Forever => u16::MAX,
-        Retention::Days(days) => u16::try_from(days.div_euclid(366)).unwrap_or(u16::MAX),
-        Retention::Years(years) => u16::try_from(years).unwrap_or(u16::MAX),
+    let period = match config.store.retention() {
+        Retention::Forever => Period::Indefinite,
+        Retention::Days(days) => Period::Days(days),
+        Retention::Years(years) => Period::Years(u16::try_from(years).unwrap_or(u16::MAX)),
     };
-    let retention = if years < FLOOR_YEARS {
-        tracing::warn!(
-            horizon = %config.store.retention().describe(),
-            "the audit store keeps records under the three years of EHDS Art. 9(2); every \
-             access record states the floor of three years, which this store does not keep"
-        );
-        RetentionPolicy::default()
+    let bounds = if matches!(period, Period::Years(years) if years < FLOOR_YEARS)
+        || matches!(period, Period::Days(days) if days < 1096)
+    {
+        // NOTE: EHDS Art. 9(2) binds the Member States; the boot validation refuses a horizon
+        // under a Union floor, so one under three years runs under no Union jurisdiction.
+        Bounds::outside_union(
+            period,
+            format!(
+                "the audit.store horizon ({}), under no Union jurisdiction",
+                config.store.retention().describe()
+            ),
+        )
+        .map_err(|e| AuditError::Policy(Box::new(e)))?
     } else {
-        RetentionPolicy::declare(years, &none, &none, categories.map())
-            .map_err(|e| AuditError::Policy(Box::new(e)))?
+        Bounds::union()
     };
+    let retention =
+        RetentionPolicy::declare_within(&bounds, period, &none, &none, categories.map())
+            .map_err(|e| AuditError::Policy(Box::new(e)))?;
     let unlabelled = std::collections::BTreeMap::new();
     let labels =
         ehds_logging::label::LabelPolicy::declare(None, &unlabelled, &unlabelled, categories.map())

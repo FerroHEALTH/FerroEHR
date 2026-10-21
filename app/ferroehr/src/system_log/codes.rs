@@ -3,10 +3,10 @@
 
 //! DICOM (DCM) / RFC-3881 code constants used in the DICOM Audit Message.
 //!
-//! Values are the well-known DICOM PS3.15 §A.5 and IETF RFC 3881 audit code
-//! sets. Only the codes the CDR emits are listed; each carries its code system
-//! and display text, and [`super::message`] hands them to `ihe-atna`'s message
-//! model, which writes them.
+//! The DICOM PS3.15 §A.5 and RFC 3881 codes come from `ihe-atna`'s code tables
+//! (`ihe_atna::atna::codes`); this module names the ones the CDR emits and
+//! adds what is FerroEHR's own: the per-resource `originalText` of
+//! "Patient Record" and the ITS-REST operation code system.
 
 /// A coded value: `csd-code` + `codeSystemName` + `originalText`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,10 +25,21 @@ pub struct Code {
     pub original_text: &'static str,
 }
 
+use ihe_atna::atna::codes::{self as atna, Triple};
+
+impl Code {
+    /// The code of an `ihe-atna` table entry.
+    const fn of((csd_code, code_system, original_text): Triple) -> Self {
+        Self {
+            csd_code,
+            code_system,
+            original_text,
+        }
+    }
+}
+
 /// DICOM Controlled Terminology code system name.
-pub const DCM: &str = "DCM";
-/// IETF RFC 3881 code system name (the older audit code set DICOM inherited).
-pub const RFC_3881: &str = "RFC-3881";
+pub const DCM: &str = atna::DCM;
 
 // ── EventID (DICOM PS3.15 §A.5.1, `DCM`) ─────────────────────────────────────
 // EHR / clinical-data ops use "Patient Record" (110110, DICOM PS3.15 §A.5.1);
@@ -40,32 +51,24 @@ pub const RFC_3881: &str = "RFC-3881";
 // 110107 "Import", user authentication → 110114 "User Authentication".
 
 /// DICOM `EventID` `csd-code` for "Patient Record".
-pub const EVENT_PATIENT_RECORD_CODE: &str = "110110";
+pub const EVENT_PATIENT_RECORD_CODE: &str = atna::EVENT_PATIENT_RECORD.0;
 /// DICOM `EventID` `csd-code` for "Application Activity".
-pub const EVENT_APPLICATION_ACTIVITY_CODE: &str = "110100";
+pub const EVENT_APPLICATION_ACTIVITY_CODE: &str = atna::EVENT_APPLICATION_ACTIVITY.0;
 /// DICOM `EventID` `csd-code` for "Query" (110112).
-pub const EVENT_QUERY_CODE: &str = "110112";
+pub const EVENT_QUERY_CODE: &str = atna::EVENT_QUERY.0;
 /// DICOM `EventID` `csd-code` for "Export" (110106) — data leaving the system.
-pub const EVENT_EXPORT_CODE: &str = "110106";
+pub const EVENT_EXPORT_CODE: &str = atna::EVENT_EXPORT.0;
 /// DICOM `EventID` `csd-code` for "Import" (110107) — data entering the system.
-pub const EVENT_IMPORT_CODE: &str = "110107";
+pub const EVENT_IMPORT_CODE: &str = atna::EVENT_IMPORT.0;
 /// DICOM `EventID` `csd-code` for "User Authentication" (110114).
-pub const EVENT_USER_AUTHENTICATION_CODE: &str = "110114";
+pub const EVENT_USER_AUTHENTICATION_CODE: &str = atna::EVENT_USER_AUTHENTICATION.0;
 
 // ── EventTypeCode (DICOM PS3.15 §A.5.1, `DCM` / our own) ─────────────────────
 
 /// DCM 110122 "Login" — the `EventTypeCode` of a user-authentication attempt.
-pub const TYPE_LOGIN: Code = Code {
-    csd_code: "110122",
-    code_system: DCM,
-    original_text: "Login",
-};
+pub const TYPE_LOGIN: Code = Code::of(atna::TYPE_LOGIN);
 /// DCM 110123 "Logout" — the `EventTypeCode` of a session end.
-pub const TYPE_LOGOUT: Code = Code {
-    csd_code: "110123",
-    code_system: DCM,
-    original_text: "Logout",
-};
+pub const TYPE_LOGOUT: Code = Code::of(atna::TYPE_LOGOUT);
 /// The `codeSystemName` for ITS-REST operation-id `EventTypeCode`s.
 ///
 /// NOTE: no external code system governs openEHR REST operations — our own
@@ -77,39 +80,19 @@ pub const OPENEHR_ITS_REST: &str = "openEHR-ITS-REST";
 
 /// "Source Role ID": the participant the information originates from
 /// (PS3.15 §A.5.2.7), the server on a read and the client otherwise.
-pub const ROLE_SOURCE: Code = Code {
-    csd_code: "110153",
-    code_system: DCM,
-    original_text: "Source Role ID",
-};
+pub const ROLE_SOURCE: Code = Code::of(atna::ROLE_SOURCE_ROLE_ID);
 /// "Destination Role ID": the participant the information is directed to
 /// (PS3.15 §A.5.2.7), the client on a read and the server otherwise.
-pub const ROLE_DESTINATION: Code = Code {
-    csd_code: "110152",
-    code_system: DCM,
-    original_text: "Destination Role ID",
-};
+pub const ROLE_DESTINATION: Code = Code::of(atna::ROLE_DESTINATION_ROLE_ID);
 
 // ── ParticipantObjectIDTypeCode (RFC 3881 §5.5.1) ────────────────────────────
 
 /// Patient Number (RFC-3881 code 2) — the EHR subject id participant.
-pub const OBJ_ID_PATIENT_NUMBER: Code = Code {
-    csd_code: "2",
-    code_system: RFC_3881,
-    original_text: "Patient Number",
-};
+pub const OBJ_ID_PATIENT_NUMBER: Code = Code::of(atna::OBJECT_ID_PATIENT_NUMBER);
 /// Search Criteria (RFC-3881 code 10) — the AQL query participant.
-pub const OBJ_ID_SEARCH_CRITERIA: Code = Code {
-    csd_code: "10",
-    code_system: RFC_3881,
-    original_text: "Search Criteria",
-};
+pub const OBJ_ID_SEARCH_CRITERIA: Code = Code::of(atna::OBJECT_ID_SEARCH_CRITERIA);
 /// URI (RFC-3881 code 12) — a clinical object's resource URI participant.
-pub const OBJ_ID_URI: Code = Code {
-    csd_code: "12",
-    code_system: RFC_3881,
-    original_text: "URI",
-};
+pub const OBJ_ID_URI: Code = Code::of(atna::OBJECT_ID_URI);
 
 // ── NetworkAccessPointTypeCode (RFC 3881 §5.3) ───────────────────────────────
 
@@ -138,6 +121,10 @@ use super::event::{EventActionCode, EventOutcome, EventType, ObjectClass};
 
 /// ATNA (DICOM PS3.15 §A.5.1) rendering of an [`EventActionCode`].
 pub(crate) trait AtnaAction {
+    /// The `ParticipantObjectDataLifeCycle` most fitting for the action
+    /// (DICOM PS3.15 §A.5.1): create is origination, update amendment, read
+    /// and execute access or use, delete logical deletion.
+    fn data_life_cycle(&self) -> &'static str;
     /// The `EventActionCode` (`C`, `R`, `U`, `D`, `E`).
     fn as_code(&self) -> &'static str;
 }
@@ -146,6 +133,8 @@ pub(crate) trait AtnaAction {
 pub(crate) trait AtnaOutcome {
     /// The `EventOutcomeIndicator` (`0`, `4`, `8`).
     fn as_code(&self) -> &'static str;
+    /// The `EventOutcomeDescription` text.
+    fn description(&self) -> &'static str;
 }
 
 /// ATNA (DICOM PS3.15 §A.5.1) rendering of an [`EventType`].
@@ -187,6 +176,15 @@ pub(crate) trait AtnaObject {
 }
 
 impl AtnaAction for EventActionCode {
+    fn data_life_cycle(&self) -> &'static str {
+        match self {
+            EventActionCode::Create => atna::LIFE_CYCLE_ORIGINATION,
+            EventActionCode::Update => atna::LIFE_CYCLE_AMENDMENT,
+            EventActionCode::Read | EventActionCode::Execute => atna::LIFE_CYCLE_ACCESS,
+            EventActionCode::Delete => atna::LIFE_CYCLE_LOGICAL_DELETION,
+        }
+    }
+
     fn as_code(&self) -> &'static str {
         match self {
             EventActionCode::Create => "C",
@@ -204,6 +202,13 @@ impl AtnaOutcome for EventOutcome {
             EventOutcome::Success => "0",
             EventOutcome::MinorFailure => "4",
             EventOutcome::SeriousFailure => "8",
+        }
+    }
+
+    fn description(&self) -> &'static str {
+        match self {
+            EventOutcome::Success => "Operation performed successfully",
+            EventOutcome::MinorFailure | EventOutcome::SeriousFailure => "Operation failed",
         }
     }
 }

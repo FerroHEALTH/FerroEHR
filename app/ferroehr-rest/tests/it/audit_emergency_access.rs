@@ -242,9 +242,9 @@ async fn an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log(
         .iter()
         .map(|entry| &entry["resource"])
         .filter(|resource| {
-            resource["entity"]
+            resource["subtype"]
                 .as_array()
-                .is_some_and(|e| e.iter().any(|entity| entity["name"] == "composition_get"))
+                .is_some_and(|s| s.iter().any(|c| c["code"] == "composition_get"))
         })
         .collect();
     assert_eq!(reads.len(), 2, "{bundle}");

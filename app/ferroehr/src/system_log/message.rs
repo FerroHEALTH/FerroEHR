@@ -14,9 +14,10 @@
 //! store and the FHIR `AuditEvent` carry them. The natural person behind a
 //! client application is a second `ActiveParticipant`.
 
+use ihe_atna::atna::codes as atna;
 use ihe_atna::atna::message::{
     AccessPoint, ActiveParticipant, AuditMessage, AuditSource, CodedValue, EventIdentification,
-    ParticipantObject,
+    ParticipantObject, SourceType,
 };
 use secrecy::{SecretSlice, SecretString};
 
@@ -90,13 +91,25 @@ pub fn build(event: &AuditEvent, ctx: &AuditContext, subject: Option<&str>) -> A
                 .map(|kind| coded(kind.code()))
                 .into_iter()
                 .collect(),
+            outcome_description: Some(event.outcome.description().to_owned()),
         },
         participants,
         source: AuditSource {
             id: nonempty(&ctx.source_id, missing),
             enterprise_site: Some(nonempty(&ctx.enterprise_site_id, missing)),
+            type_codes: vec![SourceType {
+                code: atna::SOURCE_APPLICATION_SERVER.to_owned(),
+                system_name: None,
+                original_text: Some("Application Server process or thread".to_owned()),
+            }],
         },
-        objects: build_objects(event, subject, missing),
+        objects: build_objects(event, subject, missing)
+            .into_iter()
+            .map(|object| ParticipantObject {
+                data_life_cycle: Some(event.action.data_life_cycle()),
+                ..object
+            })
+            .collect(),
     }
 }
 
@@ -236,6 +249,7 @@ fn object(
         id: SecretString::from(id),
         type_code: Some(type_code),
         type_code_role,
+        data_life_cycle: None,
         id_type_code: coded(id_type_code),
         query: None,
         details: Vec::new(),
@@ -513,8 +527,9 @@ mod tests {
         assert!(xml.contains(r#"UserID="UNKNOWN""#));
     }
 
-    /// A failed access carries its outcome indicator; ITI TF-2 §3.20.7 and the
-    /// `ihe-atna` writer leave the optional `EventOutcomeDescription` out.
+    /// A failed access carries its outcome indicator and the optional
+    /// `EventOutcomeDescription` (DICOM PS3.15 §A.5.1), which ITI TF-2 §3.20.7
+    /// leaves not specialized.
     #[test]
     fn failed_outcome_indicator() {
         let e = event(
@@ -522,7 +537,42 @@ mod tests {
             ObjectClass::Ehr,
             EventOutcome::MinorFailure,
         );
-        assert!(xml(&e, None).contains(r#"EventOutcomeIndicator="4""#));
+        let xml = xml(&e, None);
+        assert!(xml.contains(r#"EventOutcomeIndicator="4""#), "{xml}");
+        assert!(
+            xml.contains("<EventOutcomeDescription>Operation failed</EventOutcomeDescription>"),
+            "{xml}"
+        );
+    }
+
+    /// The optional DICOM PS3.15 §A.5.1 elements: the audit source type (`4`,
+    /// an application server) and each participant object's data life cycle
+    /// by action (`1` creation, `3` amendment, `6` access, `14` logical
+    /// deletion).
+    #[test]
+    fn the_optional_dicom_elements_are_written() {
+        for (action, stage) in [
+            (EventActionCode::Create, "1"),
+            (EventActionCode::Update, "3"),
+            (EventActionCode::Read, "6"),
+            (EventActionCode::Delete, "14"),
+        ] {
+            let mut e = event(action, ObjectClass::Composition, EventOutcome::Success);
+            e.object_id = Some("8fa1::ferroehr::1".to_owned());
+            let xml = xml(&e, Some("patient-42"));
+            assert!(
+                xml.contains(r#"<AuditSourceTypeCode csd-code="4""#),
+                "{action:?}: {xml}"
+            );
+            assert!(
+                xml.contains(&format!(r#"ParticipantObjectDataLifeCycle="{stage}""#)),
+                "{action:?}: {xml}"
+            );
+            assert!(
+                xml.contains("<EventOutcomeDescription>Operation performed successfully</EventOutcomeDescription>"),
+                "{action:?}: {xml}"
+            );
+        }
     }
 
     /// A client application acting for a named professional renders the

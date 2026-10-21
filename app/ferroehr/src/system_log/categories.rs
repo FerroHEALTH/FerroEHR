@@ -26,7 +26,7 @@ use std::fmt;
 
 use ehds_logging::category::Category;
 use ehds_logging::classify::{Basis, Classification, Evidence, Queried, RootObject};
-use ehds_logging::map::{CategoryMap, Declared, MapError, Table};
+use ehds_logging::map::{CategoryMap, Declared, MapError, Mapping, Matching};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -56,28 +56,10 @@ pub struct CategoryMapConfig {
     pub national: Vec<String>,
     /// Template id → categories (`[audit.categories.templates]`), consulted
     /// first.
-    #[serde(serialize_with = "serialize_table")]
     pub templates: BTreeMap<String, Declared>,
     /// Archetype id → categories (`[audit.categories.archetypes]`), consulted
     /// for an object whose template the map does not name.
-    #[serde(serialize_with = "serialize_table")]
     pub archetypes: BTreeMap<String, Declared>,
-}
-
-/// Writes a table the way it is configured: `"none"` or a list of codes.
-fn serialize_table<S: serde::Serializer>(
-    table: &BTreeMap<String, Declared>,
-    serializer: S,
-) -> Result<S::Ok, S::Error> {
-    use serde::ser::SerializeMap as _;
-    let mut map = serializer.serialize_map(Some(table.len()))?;
-    for (key, declared) in table {
-        match declared {
-            Declared::Word(word) => map.serialize_entry(key, word)?,
-            Declared::Codes(codes) => map.serialize_entry(key, codes)?,
-        }
-    }
-    map.end()
 }
 
 /// A map entry the boot validation refuses.
@@ -105,6 +87,19 @@ pub enum CategoryMapError {
     NotAnArchetypeId(String),
 }
 
+impl From<MapError> for CategoryMapError {
+    fn from(error: MapError) -> Self {
+        match error {
+            MapError::DuplicateKey { table, second, .. } => CategoryMapError::DuplicateKey {
+                table: table.name(),
+                key: second,
+            },
+            MapError::ArchetypeId { key } => CategoryMapError::NotAnArchetypeId(key),
+            other => CategoryMapError::Map(other),
+        }
+    }
+}
+
 impl CategoryMapConfig {
     /// Validates the map and compiles it for classification.
     ///
@@ -115,35 +110,36 @@ impl CategoryMapConfig {
     /// # Errors
     /// Every [`CategoryMapError`] the map carries.
     pub fn compile(&self) -> Result<Classifier, Vec<CategoryMapError>> {
-        let mut errors = Vec::new();
-        let none = BTreeMap::new();
-        if let Err(error) = CategoryMap::declare(&self.national, &none, &none) {
-            errors.push(CategoryMapError::Map(error));
-            return Err(errors);
-        }
-        for key in self.archetypes.keys() {
-            if !key.trim().is_empty() && key.parse::<openehr_base::prelude::ArchetypeId>().is_err()
-            {
-                errors.push(CategoryMapError::NotAnArchetypeId(key.clone()));
-            }
-        }
-        let templates = self.folded(Table::Templates, &self.templates, &mut errors);
-        let archetypes = self.folded(Table::Archetypes, &self.archetypes, &mut errors);
-        if !errors.is_empty() {
-            return Err(errors);
-        }
-        let map = CategoryMap::declare(&self.national, &templates, &archetypes)
-            .map_err(|error| vec![CategoryMapError::Map(error)])?;
+        // NOTE: openEHR BASE 1.1.0 Base Types, Composite Identifiers and Case: ids compare
+        // case-insensitively and keep their case, which ehds-logging's OpenEhr matching does.
+        let map = CategoryMap::declare_with(
+            Matching::OpenEhr,
+            &self.national,
+            &self.templates,
+            &self.archetypes,
+        )
+        .map_err(|errors| {
+            errors
+                .into_iter()
+                .map(CategoryMapError::from)
+                .collect::<Vec<_>>()
+        })?
+        .with_evidence_limit(crate::versioning::origins::RECORD_CAP);
         let digest = MapDigest::of(&map);
         let mut rows = Vec::new();
-        for (kind, table) in [("template", &templates), ("archetype", &archetypes)] {
-            for (key, declared) in table {
-                match declared {
-                    Declared::Word(_) => rows.push((kind, key.clone(), NONE.to_owned())),
-                    Declared::Codes(codes) => rows.extend(codes.iter().filter_map(|code| {
-                        map.category(code)
-                            .map(|category| (kind, key.clone(), category.token()))
-                    })),
+        for (kind, keys) in [
+            ("template", map.templates().collect::<Vec<_>>()),
+            ("archetype", map.archetypes().collect::<Vec<_>>()),
+        ] {
+            for (key, mapping) in keys {
+                let key = fold(key);
+                match mapping {
+                    Mapping::NoCategory => rows.push((kind, key, NONE.to_owned())),
+                    Mapping::Categories(categories) => rows.extend(
+                        categories
+                            .iter()
+                            .map(|category| (kind, key.clone(), category.token())),
+                    ),
                 }
             }
         }
@@ -156,36 +152,6 @@ impl CategoryMapConfig {
         })
     }
 
-    /// One table with its keys case-folded, each declaration checked on its
-    /// own against the national categories.
-    fn folded(
-        &self,
-        table: Table,
-        entries: &BTreeMap<String, Declared>,
-        errors: &mut Vec<CategoryMapError>,
-    ) -> BTreeMap<String, Declared> {
-        let mut out = BTreeMap::new();
-        let none = BTreeMap::new();
-        for (key, declared) in entries {
-            let one = BTreeMap::from([(key.clone(), declared.clone())]);
-            let checked = match table {
-                Table::Templates => CategoryMap::declare(&self.national, &one, &none),
-                Table::Archetypes => CategoryMap::declare(&self.national, &none, &one),
-            };
-            if let Err(error) = checked {
-                errors.push(CategoryMapError::Map(error));
-                continue;
-            }
-            if out.insert(fold(key), declared.clone()).is_some() {
-                errors.push(CategoryMapError::DuplicateKey {
-                    table: table.name(),
-                    key: key.clone(),
-                });
-            }
-        }
-        out
-    }
-
     /// The boot validation's findings, as messages; empty when the map compiles.
     #[must_use]
     pub fn errors(&self) -> Vec<String> {
@@ -196,11 +162,9 @@ impl CategoryMapConfig {
     }
 }
 
-/// The comparison form of an identifier: ASCII-lowercased, the form the node
-/// table stores archetype ids in.
-///
-/// NOTE: BASE `base_types` master05 §Composite Identifiers and Case makes
-/// identifier equality case-insensitive; template ids are compared the same way.
+/// The comparison form of an identifier, which the retention register's
+/// mirror rows store: ASCII-lowercased, the form the node table stores
+/// archetype ids in (openEHR BASE 1.1.0, Composite Identifiers and Case).
 fn fold(id: &str) -> String {
     id.to_ascii_lowercase()
 }
@@ -259,37 +223,9 @@ impl Default for Classifier {
     }
 }
 
-/// The resource kinds that hold no data of any category.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum ResourceKind {
-    /// The `EHR` itself.
-    Ehr,
-    /// `EHR_STATUS`.
-    EhrStatus,
-    /// `EHR_ACCESS`.
-    EhrAccess,
-    /// The EHR directory (`FOLDER`).
-    Folder,
-    /// `ITEM_TAG`s.
-    ItemTag,
-    /// A `REVISION_HISTORY`.
-    RevisionHistory,
-}
-
-impl ResourceKind {
-    /// The RM class name the record carries as evidence.
-    #[must_use]
-    pub fn rm_name(self) -> &'static str {
-        match self {
-            ResourceKind::Ehr => "EHR",
-            ResourceKind::EhrStatus => "EHR_STATUS",
-            ResourceKind::EhrAccess => "EHR_ACCESS",
-            ResourceKind::Folder => "FOLDER",
-            ResourceKind::ItemTag => "ITEM_TAG",
-            ResourceKind::RevisionHistory => "REVISION_HISTORY",
-        }
-    }
-}
+/// The resource kinds that hold no data of any category, as `ehds-logging`
+/// names them.
+pub type ResourceKind = ehds_logging::classify::ResourceKind;
 
 /// The identifiers of one object an access delivered, read or wrote.
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -326,9 +262,10 @@ impl ContentIds {
     /// The root object `ehds-logging` classifies, its ids in comparison form.
     fn root_object(&self) -> RootObject {
         RootObject {
-            template_id: self.template_id.as_deref().map(fold),
-            archetype_id: self.archetype_id.as_deref().map(fold),
+            template_id: self.template_id.clone(),
+            archetype_id: self.archetype_id.clone(),
             version_uid: None,
+            kind: self.resource_kind.clone(),
         }
     }
 }
@@ -365,32 +302,10 @@ pub enum AccessedContent {
     ResourceKind(ResourceKind),
 }
 
-/// What a stored classification was read from.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ReadFrom {
-    /// The objects the access delivered or read.
-    Returned,
-    /// The objects the access wrote.
-    Written,
-    /// The bound query's positive constraints.
-    Queried,
-    /// The resource kind alone.
-    ResourceKind,
-}
-
-impl ReadFrom {
-    /// The stored spelling, matching the `ck_audit_event_category_basis`
-    /// constraint.
-    #[must_use]
-    pub fn as_str(self) -> &'static str {
-        match self {
-            ReadFrom::Returned => "returned",
-            ReadFrom::Written => "written",
-            ReadFrom::Queried => "queried",
-            ReadFrom::ResourceKind => "resource-kind",
-        }
-    }
-}
+/// What a stored classification was read from, as `ehds-logging` names it;
+/// its code is the stored spelling the `ck_audit_event_category_basis`
+/// constraint admits.
+pub type ReadFrom = Basis;
 
 /// The classification one access record carries: what `ehds-logging` made of
 /// it, and what FerroEHR read it from.
@@ -401,8 +316,6 @@ pub struct CategoryRecord {
     pub classification: Classification,
     /// What the classification was read from.
     pub read_from: ReadFrom,
-    /// The resource kinds of no category the access reached, as evidence.
-    pub resource_kinds: BTreeSet<ResourceKind>,
 }
 
 impl CategoryRecord {
@@ -427,8 +340,8 @@ impl CategoryRecord {
     }
 
     /// The stored evidence, sorted and capped at the record cap: the template
-    /// and archetype ids the classification read, in comparison form, and the
-    /// RM class names of the resource kinds of no category.
+    /// and archetype ids the classification read, as the access named them,
+    /// and the RM class names of the resource kinds of no category.
     #[must_use]
     pub fn stored_evidence(&self) -> Vec<String> {
         let mut evidence: BTreeSet<String> = self
@@ -439,9 +352,10 @@ impl CategoryRecord {
             .cloned()
             .collect();
         evidence.extend(
-            self.resource_kinds
+            self.classification
+                .no_category_kinds()
                 .iter()
-                .map(|kind| kind.rm_name().to_owned()),
+                .map(|kind| kind.code().to_owned()),
         );
         let mut evidence: Vec<String> = evidence.into_iter().collect();
         evidence.truncate(crate::versioning::origins::RECORD_CAP);
@@ -495,54 +409,63 @@ impl Classifier {
     /// constraints.
     #[must_use]
     pub fn classify(&self, content: &AccessedContent, written: bool) -> CategoryRecord {
-        let mut resource_kinds = BTreeSet::new();
+        let kinds_only = |kinds: Vec<ResourceKind>| {
+            Evidence::reached(
+                Basis::ResourceKind,
+                kinds
+                    .into_iter()
+                    .map(|kind| RootObject {
+                        kind: Some(kind),
+                        ..RootObject::default()
+                    })
+                    .collect(),
+            )
+        };
         let (evidence, read_from) = match content {
             AccessedContent::ResourceKind(kind) => {
-                resource_kinds.insert(*kind);
-                (Evidence::no_category(), ReadFrom::ResourceKind)
+                (Evidence::resource(kind.clone()), Basis::ResourceKind)
             }
             AccessedContent::Objects(objects) => {
-                let (basis, read_from) = if written {
-                    (Basis::Written, ReadFrom::Written)
+                let basis = if written {
+                    Basis::Written
                 } else {
-                    (Basis::Returned, ReadFrom::Returned)
+                    Basis::Returned
                 };
-                let mut roots = Vec::new();
-                for object in objects {
-                    match object.resource_kind {
-                        Some(kind) => {
-                            resource_kinds.insert(kind);
-                        }
-                        None => roots.push(object.root_object()),
-                    }
-                }
-                if roots.is_empty() && !resource_kinds.is_empty() {
-                    (Evidence::no_category(), ReadFrom::ResourceKind)
+                let content = objects.iter().any(|object| object.resource_kind.is_none());
+                let roots: Vec<RootObject> = objects.iter().map(ContentIds::root_object).collect();
+                if content || roots.is_empty() {
+                    (Evidence::reached(basis, roots), basis)
                 } else {
-                    (Evidence::reached(basis, roots), read_from)
+                    (
+                        Evidence::reached(Basis::ResourceKind, roots),
+                        Basis::ResourceKind,
+                    )
                 }
             }
             AccessedContent::Query(constraints) => {
                 if constraints.reaches_content {
                     let queried = Queried {
-                        templates: constraints.template_ids.iter().map(|t| fold(t)).collect(),
-                        archetypes: constraints.archetype_ids.iter().map(|a| fold(a)).collect(),
+                        templates: constraints.template_ids.clone(),
+                        archetypes: constraints.archetype_ids.clone(),
                         every_root_bound: constraints.every_root_bound,
                     };
                     (
                         Evidence::reached(Basis::Returned, Vec::new()).queried(queried),
-                        ReadFrom::Queried,
+                        Basis::Queried,
                     )
+                } else if constraints.resource_kinds.is_empty() {
+                    (Evidence::no_category(), Basis::ResourceKind)
                 } else {
-                    resource_kinds.extend(constraints.resource_kinds.iter().copied());
-                    (Evidence::no_category(), ReadFrom::ResourceKind)
+                    (
+                        kinds_only(constraints.resource_kinds.iter().cloned().collect()),
+                        Basis::ResourceKind,
+                    )
                 }
             }
         };
         CategoryRecord {
             classification: self.map.classify(&evidence),
             read_from,
-            resource_kinds,
         }
     }
 }
@@ -673,9 +596,10 @@ mod tests {
             false,
         );
         assert_eq!(record.stored_categories(), [SUMMARY, UNCLASSIFIED]);
+        // NOTE: openEHR BASE 1.1.0, Composite Identifiers and Case: ids keep their case.
         assert_eq!(
             record.stored_evidence(),
-            ["ips", "openehr-ehr-composition.encounter.v1", "vitals"]
+            ["IPS", "Vitals", "openEHR-EHR-COMPOSITION.encounter.v1"]
         );
     }
 
@@ -740,7 +664,7 @@ mod tests {
             false,
         );
         assert_eq!(none_mapped.stored_categories(), [UNCLASSIFIED]);
-        assert_eq!(none_mapped.stored_evidence(), ["vitals"]);
+        assert_eq!(none_mapped.stored_evidence(), ["Vitals"]);
 
         let ehr_only = m.classify(
             &AccessedContent::Query(QueryConstraints {

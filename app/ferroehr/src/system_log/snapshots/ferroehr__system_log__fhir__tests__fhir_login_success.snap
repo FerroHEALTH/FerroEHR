@@ -26,8 +26,8 @@ expression: v
     },
     {
       "network": {
-        "address": "urn:ferroehr:ferroehr",
-        "type": "5"
+        "address": "10.42.23.77",
+        "type": "2"
       },
       "requestor": false,
       "type": {
@@ -56,37 +56,27 @@ expression: v
       },
       "who": {
         "identifier": {
-          "system": "urn:ferroehr:ferroehr",
           "value": "john doe"
-        }
-      }
-    },
-    {
-      "requestor": false,
-      "type": {
-        "coding": [
-          {
-            "code": "110150",
-            "display": "Application",
-            "system": "http://dicom.nema.org/resources/ontology/DCM"
-          }
-        ]
-      },
-      "who": {
-        "identifier": {
-          "value": "UNKNOWN"
         }
       }
     }
   ],
   "outcome": "0",
+  "outcomeDesc": "Operation performed successfully",
   "recorded": "2026-07-06T12:00:00Z",
   "resourceType": "AuditEvent",
   "source": {
     "observer": {
       "display": "ferroehr"
     },
-    "site": "1f332a66-0000-0000-0000-000000000001"
+    "site": "1f332a66-0000-0000-0000-000000000001",
+    "type": [
+      {
+        "code": "4",
+        "display": "Application Server",
+        "system": "http://terminology.hl7.org/CodeSystem/security-source-type"
+      }
+    ]
   },
   "subtype": [
     {
