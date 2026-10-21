@@ -258,7 +258,7 @@ sha2 = "0.11.0"
 aes-gcm = "0.11.1"
 hmac = "0.13.0"
 object_store = { version = "0.14.0", features = ["aws"] }   # S3-compatible blob backend for DV_MULTIMEDIA externalization; SeaweedFS in dev/test
-pgp = { version = "0.20.0", default-features = false }   # rPGP — pure-Rust OpenPGP (RFC 4880/9580); version signing (no OpenSSL/C, fits the rustls-only stack). default-features off drops the bzip2 (libbz2-rs-sys) dep — detached signatures need no compression, and it fails the cargo-deny license gate.
+pgp = { version = "0.21.0", default-features = false }   # rPGP — pure-Rust OpenPGP (RFC 4880/9580); version signing (no OpenSSL/C, fits the rustls-only stack). default-features off drops the bzip2 (libbz2-rs-sys) dep — detached signatures need no compression, and it fails the cargo-deny license gate.
 
 # ── OpenAPI / Swagger (code-first) ───────────────────────────────────────────
 utoipa = { version = "6.0.0", features = ["axum_extras", "chrono", "uuid", "decimal"] }
