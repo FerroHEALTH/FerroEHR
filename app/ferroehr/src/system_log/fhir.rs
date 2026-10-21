@@ -28,13 +28,13 @@ use ehds_logging::record::{
 };
 use ehds_logging::retention::RetentionPolicy;
 use ihe_atna::balp::{
-    APPLICATION, CREATE, CUSTODIAN, Coded, DELETE, DESTINATION_ROLE, Described, Direction, Entity,
-    EventKind, Exchange, NetworkAddress, Observer, Peer, READ, REST, SEARCH, SOURCE_ROLE,
-    SYSTEM_OBJECT, UPDATE, What,
+    APPLICATION, CREATE, CUSTODIAN, Coded, DELETE, DESTINATION_ROLE, Described, Direction, EXPORT,
+    Entity, EventKind, Exchange, IMPORT, LOGIN, LOGOUT, NetworkAddress, OPERATION, Observer, Peer,
+    READ, REST, SEARCH, SOURCE_APPLICATION_SERVER, SOURCE_ROLE, SYSTEM_OBJECT, UPDATE,
+    USER_AUTHENTICATION, What,
 };
 use ihe_atna::user::{Code, OnBehalfOf, PurposeOfUse, User};
-use secrecy::{ExposeSecret as _, SecretString};
-use url::Url;
+use secrecy::SecretString;
 
 use crate::system_log::AuditError;
 use crate::system_log::codes::AtnaObject;
@@ -46,51 +46,11 @@ use crate::system_log::message::AuditContext;
 /// The canonical-URL prefix of the IHE BALP profiles (v1.1.4).
 pub const BALP_PROFILE_BASE: &str = "https://profiles.ihe.net/ITI/BALP/StructureDefinition";
 
-/// The DICOM controlled terminology system URI.
-const DCM: &str = "http://dicom.nema.org/resources/ontology/DCM";
-
-/// DICOM `110114` User Authentication, the type of an authentication record.
-const USER_AUTHENTICATION: Coded = Coded {
-    system: DCM,
-    code: "110114",
-    display: "User Authentication",
-};
-
-/// DICOM `110122` Login.
-const LOGIN: Coded = Coded {
-    system: DCM,
-    code: "110122",
-    display: "Login",
-};
-
-/// DICOM `110123` Logout.
-const LOGOUT: Coded = Coded {
-    system: DCM,
-    code: "110123",
-    display: "Logout",
-};
-
-/// DICOM `110106` Export, the type of an outbound EHR extract.
-const EXPORT: Coded = Coded {
-    system: DCM,
-    code: "110106",
-    display: "Export",
-};
-
-/// DICOM `110107` Import, the type of an inbound EHR extract.
-const IMPORT: Coded = Coded {
-    system: DCM,
-    code: "110107",
-    display: "Import",
-};
-
-/// The `restful-interaction` subtype `operation`, of an operation that is no
-/// read, write or search.
-const OPERATION: Coded = Coded {
-    system: "http://hl7.org/fhir/restful-interaction",
-    code: "operation",
-    display: "operation",
-};
+/// The code system of the ITS-REST operation ids a record writes as its
+/// operation subtype.
+// NOTE: no specification governs this: our own design; no external code system names the
+// openEHR REST operations, and the DICOM rendering names them `openEHR-ITS-REST`.
+pub const OPERATION_SYSTEM: &str = "urn:openehr:its-rest:operation";
 
 /// The policies an access record is written under: how long the store keeps
 /// it, the security labels of its categories and origins, and the purposes of
@@ -121,42 +81,39 @@ pub fn to_fhir(
     ctx: &AuditContext,
     subject: Option<&str>,
 ) -> Result<serde_json::Value, AuditError> {
-    let endpoint = endpoint(ctx)?;
+    let endpoint = endpoint(ctx);
     let observer = Observer {
         source_id: nonempty(&ctx.source_id, &ctx.value_if_missing),
         site: (!ctx.enterprise_site_id.is_empty()).then(|| ctx.enterprise_site_id.clone()),
         host: NetworkAddress::host(&nonempty(&ctx.server_ip, &ctx.value_if_missing)),
+        source_types: vec![SOURCE_APPLICATION_SERVER],
     };
-    let exchange = match access_record(event, ctx, subject, &endpoint) {
-        Some(record) => with_roles(ehds_logging::balp::exchange(&record, &endpoint), event),
+    let exchange = match access_record(event, ctx, subject) {
+        Some(record) => ehds_logging::balp::exchange(&record, &endpoint),
         None => exchange(event, ctx, subject, &endpoint),
     };
-    let written = exchange
-        .audit_event(&observer)
-        .map_err(|e| AuditError::Render(Box::new(e)))?;
-    serde_json::from_slice(written.into_bytes().expose_secret())
+    exchange
+        .audit_event_value(&observer)
+        .map(ihe_atna::balp::AuditEventValue::into_value)
         .map_err(|e| AuditError::Render(Box::new(e)))
 }
 
-/// `exchange` with the security roles the person acted under beside the
-/// acting mode `ehds-logging` writes as the user's role: NEN 7513 asks for the
-/// role or authority under which the record was accessed.
-fn with_roles(mut exchange: Exchange, event: &AuditEvent) -> Exchange {
-    if let OnBehalfOf::User(user) = &exchange.on_behalf {
-        let mut roles = user.roles().to_vec();
-        roles.extend(event.roles.iter().map(|role| Code {
-            system: None,
-            code: role.clone(),
-        }));
-        exchange.on_behalf = OnBehalfOf::User(user.clone().with_roles(roles));
-    }
-    exchange
+/// The address the record names FerroEHR's own agent by: its
+/// `[audit] server_host`, a machine name or an IP address, else its source id
+/// as a machine name (FHIR R4 `network-type`).
+fn endpoint(ctx: &AuditContext) -> NetworkAddress {
+    NetworkAddress::host(&nonempty(
+        &ctx.server_ip,
+        &nonempty(&ctx.source_id, &ctx.value_if_missing),
+    ))
 }
 
-/// The endpoint the record names FerroEHR by: `urn:ferroehr:<source id>`.
-fn endpoint(ctx: &AuditContext) -> Result<Url, AuditError> {
-    let source = nonempty(&ctx.source_id, &ctx.value_if_missing);
-    Url::parse(&format!("urn:ferroehr:{source}")).map_err(|e| AuditError::Render(Box::new(e)))
+/// The text the record states an outcome in.
+const fn outcome_description(outcome: EventOutcome) -> &'static str {
+    match outcome {
+        EventOutcome::Success => "Operation performed successfully",
+        EventOutcome::MinorFailure | EventOutcome::SeriousFailure => "Operation failed",
+    }
 }
 
 /// The EHDS access record of `event`, when it is a classified access.
@@ -164,7 +121,6 @@ fn access_record(
     event: &AuditEvent,
     ctx: &AuditContext,
     subject: Option<&str>,
-    endpoint: &Url,
 ) -> Option<AccessRecord> {
     let category = event.category.as_ref()?;
     let missing = ctx.value_if_missing.as_str();
@@ -175,7 +131,7 @@ fn access_record(
         (_, EventActionCode::Update) => Action::Update,
         (_, EventActionCode::Delete) => Action::Delete,
     };
-    let endpoint = endpoint.to_string();
+    let holder = nonempty(&ctx.source_id, missing);
     let purposes: Vec<Purpose> = event
         .purpose
         .iter()
@@ -184,14 +140,16 @@ fn access_record(
             code: code.clone(),
         })
         .collect();
+    // NOTE: Regulation (EU) 2025/327 Annex II 3.2(e): the origin of stored data is the system
+    // its FEEDER_AUDIT names, which FerroEHR did not ask, so an origin names no endpoint.
     let origins: Vec<Origin> = event
         .origins
         .iter()
         .map(|system_id| Origin {
-            endpoint: endpoint.clone(),
+            endpoint: None,
             node: None,
             system_id: Some(system_id.clone()),
-            status: "active".to_owned(),
+            status: None,
             rows: None,
             version: None,
             created_ehr: None,
@@ -202,7 +160,7 @@ fn access_record(
         .ehr_id
         .iter()
         .map(|ehr_id| EhrAt {
-            endpoint: endpoint.clone(),
+            endpoint: holder.clone(),
             ehr_id: ehr_id.clone(),
             patient: patient_lookup(event, subject),
         })
@@ -211,17 +169,18 @@ fn access_record(
     let retention = ctx.recording.retention.retain(
         event.timestamp,
         &classification,
-        origins.iter().map(|origin| origin.endpoint.as_str()),
+        origins.iter().filter_map(Origin::key),
     );
-    let labels = ctx.recording.labels.label(
-        &classification,
-        origins.iter().map(|origin| origin.endpoint.as_str()),
-    );
+    let labels = ctx
+        .recording
+        .labels
+        .label(&classification, origins.iter().filter_map(Origin::key));
     Some(AccessRecord {
         action,
         recorded: event.timestamp,
         outcome: outcome(event.outcome),
-        accessor: accessor(event, missing, &endpoint, purposes.clone()),
+        outcome_description: Some(outcome_description(event.outcome).to_owned()),
+        accessor: accessor(event, missing, purposes.clone()),
         subject: DataSubject {
             patient: None,
             ehrs,
@@ -231,22 +190,20 @@ fn access_record(
         delivered: event
             .result_count
             .and_then(|count| usize::try_from(count).ok()),
+        origin_count: event
+            .origin_count
+            .and_then(|count| usize::try_from(count).ok())
+            .filter(|count| *count > origins.len()),
         origins,
         request: Request {
-            id: event
-                .request_id
-                .clone()
-                .unwrap_or_else(|| missing.to_owned()),
+            id: event.request_id.clone(),
             operation: operation(event),
+            operation_system: matches!(event.event_type, Some(EventType::RestOperation(_)))
+                .then(|| OPERATION_SYSTEM.to_owned()),
             resource: event.object_id.clone(),
-            query: (action == Action::Query).then(|| {
-                SecretString::from(
-                    event
-                        .object_id
-                        .clone()
-                        .unwrap_or_else(|| missing.to_owned()),
-                )
-            }),
+            query: (action == Action::Query)
+                .then(|| event.object_id.clone().map(SecretString::from))
+                .flatten(),
             stored_query: None,
             client_address: client_address(event),
             correlation: None,
@@ -263,21 +220,30 @@ fn access_record(
 }
 
 /// Who accessed the data (Annex II 3.2(a), (b)), as the authentication layer
-/// judged them; a Basic user's issuer is FerroEHR itself, at `endpoint`.
-fn accessor(event: &AuditEvent, missing: &str, endpoint: &str, purposes: Vec<Purpose>) -> Accessor {
+/// judged them: a Basic user has no issuer and no client, and an acting mode
+/// the deployment did not establish is none.
+fn accessor(event: &AuditEvent, missing: &str, purposes: Vec<Purpose>) -> Accessor {
     Accessor {
-        issuer: event.issuer.clone().unwrap_or_else(|| endpoint.to_owned()),
+        issuer: event.issuer.clone(),
         subject: nonempty(&event.user_id, missing),
-        client_id: event
-            .client_id
-            .clone()
-            .unwrap_or_else(|| missing.to_owned()),
+        client_id: event.client_id.clone(),
         audience: None,
         provider: event.organisation.clone(),
-        acting: match event.actor.mode {
-            Some(ActingMode::Client) => Acting::Client,
-            Some(ActingMode::Person) | None => Acting::Person,
-        },
+        acting: event.actor.mode.map(|mode| match mode {
+            ActingMode::Client => Acting::Client,
+            ActingMode::Person => Acting::Person,
+        }),
+        // NOTE: NEN 7513:2018 §5 (not vendored, NEN copyright) asks for the role or authority
+        // under which the record was accessed, which BALP 1.1.4 §3:5.7.5.4 writes at role.
+        roles: event
+            .roles
+            .iter()
+            .map(|role| ehds_logging::record::Coded {
+                system: None,
+                code: role.clone(),
+            })
+            .collect(),
+        token_id: event.token_id.clone(),
         assurance: event.actor.assurance_level.map(assurance),
         professional: Professional {
             name: None,
@@ -297,62 +263,52 @@ fn patient_lookup(event: &AuditEvent, subject: Option<&str>) -> PatientLookup {
     }
     match subject {
         Some(value) => PatientLookup::Found(vec![PatientIdentifier {
-            namespace: event
-                .subject_namespace
-                .clone()
-                .unwrap_or_else(|| SUBJECT_NAMESPACE.to_owned()),
+            namespace: event.subject_namespace.clone(),
             value: SecretString::from(value.to_owned()),
         }]),
         None => PatientLookup::NotFound,
     }
 }
 
-/// The namespace a patient id is written under when the EHR names none.
-const SUBJECT_NAMESPACE: &str = "urn:ferroehr:subject";
-
 /// The BALP exchange of a record that is no classified access.
 fn exchange(
     event: &AuditEvent,
     ctx: &AuditContext,
     subject: Option<&str>,
-    endpoint: &Url,
+    endpoint: &NetworkAddress,
 ) -> Exchange {
     let missing = ctx.value_if_missing.as_str();
     let user = (!event.user_id.is_empty()).then(|| {
-        User::new(
-            event.issuer.clone().unwrap_or_else(|| endpoint.to_string()),
-            event.user_id.clone(),
-            event
-                .client_id
-                .clone()
-                .unwrap_or_else(|| missing.to_owned()),
-        )
-        .with_purposes(
-            event
-                .purpose
-                .iter()
-                .map(|code| PurposeOfUse {
-                    system: None,
-                    code: code.clone(),
-                })
-                .collect(),
-        )
-        .with_organisation(event.organisation.clone())
-        .with_provider_identifier(event.actor.professional_id.clone())
-        .with_assurance(event.actor.assurance_level.map(|level| Code {
-            system: None,
-            code: level.as_str().to_owned(),
-        }))
-        .with_roles(
-            event
-                .roles
-                .iter()
-                .map(|role| Code {
-                    system: None,
-                    code: role.clone(),
-                })
-                .collect(),
-        )
+        User::local(event.user_id.clone())
+            .with_issuer(event.issuer.clone())
+            .with_client_id(event.client_id.clone())
+            .with_token_id(event.token_id.clone())
+            .with_purposes(
+                event
+                    .purpose
+                    .iter()
+                    .map(|code| PurposeOfUse {
+                        system: None,
+                        code: code.clone(),
+                    })
+                    .collect(),
+            )
+            .with_organisation(event.organisation.clone())
+            .with_provider_identifier(event.actor.professional_id.clone())
+            .with_assurance(event.actor.assurance_level.map(|level| Code {
+                system: None,
+                code: level.as_str().to_owned(),
+            }))
+            .with_roles(
+                event
+                    .roles
+                    .iter()
+                    .map(|role| Code {
+                        system: None,
+                        code: role.clone(),
+                    })
+                    .collect(),
+            )
     });
     let client = Peer {
         who: event
@@ -368,6 +324,7 @@ fn exchange(
         kind: kind(event, subject.is_some()),
         recorded: event.timestamp,
         outcome: balp_outcome(event.outcome),
+        outcome_description: Some(outcome_description(event.outcome).to_owned()),
         direction: Direction::Received {
             client,
             endpoint: endpoint.clone(),
@@ -393,55 +350,59 @@ fn kind(event: &AuditEvent, patient: bool) -> EventKind {
     } else {
         (SOURCE_ROLE, DESTINATION_ROLE)
     };
-    let fixed = |event_type: Coded, subtypes: &'static [Coded], action: &'static str| EventKind {
+    let operation = match event.event_type {
+        Some(EventType::RestOperation(op)) => Some(Coded::fixed(OPERATION_SYSTEM, op, op)),
+        _ => None,
+    };
+    let fixed = |event_type: Coded, subtypes: Vec<Coded>, action: &'static str| EventKind {
         profile: "",
         event_type,
-        subtypes,
+        subtypes: subtypes.into_iter().chain(operation.clone()).collect(),
         action,
-        client,
-        server,
+        client: client.clone(),
+        server: server.clone(),
     };
     match (event.object, event.action) {
         (ObjectClass::Authentication, _) => fixed(
             USER_AUTHENTICATION,
             match event.event_type {
-                Some(EventType::Login) => &[LOGIN],
-                Some(EventType::Logout) => &[LOGOUT],
-                Some(EventType::RestOperation(_)) | None => &[],
+                Some(EventType::Login) => vec![LOGIN],
+                Some(EventType::Logout) => vec![LOGOUT],
+                Some(EventType::RestOperation(_)) | None => Vec::new(),
             },
             "E",
         ),
         (ObjectClass::Extract, EventActionCode::Create | EventActionCode::Update) => {
-            fixed(IMPORT, &[], "C")
+            fixed(IMPORT, Vec::new(), "C")
         }
-        (ObjectClass::Extract, _) => fixed(EXPORT, &[], "R"),
+        (ObjectClass::Extract, _) => fixed(EXPORT, Vec::new(), "R"),
         (ObjectClass::Query, _) => EventKind {
             profile: profile(
                 "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Query",
                 "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientQuery",
             ),
-            ..fixed(REST, &[SEARCH], "E")
+            ..fixed(REST, vec![SEARCH], "E")
         },
         (_, EventActionCode::Read) => EventKind {
             profile: profile(
                 "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Read",
                 "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientRead",
             ),
-            ..fixed(REST, &[READ], "R")
+            ..fixed(REST, vec![READ], "R")
         },
         (_, EventActionCode::Create) => EventKind {
             profile: profile(
                 "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Create",
                 "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientCreate",
             ),
-            ..fixed(REST, &[CREATE], "C")
+            ..fixed(REST, vec![CREATE], "C")
         },
         (_, EventActionCode::Update) => EventKind {
             profile: profile(
                 "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Update",
                 "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientUpdate",
             ),
-            ..fixed(REST, &[UPDATE], "U")
+            ..fixed(REST, vec![UPDATE], "U")
         },
         (_, EventActionCode::Delete) => EventKind {
             profile: profile(
@@ -450,9 +411,9 @@ fn kind(event: &AuditEvent, patient: bool) -> EventKind {
             ),
             client: APPLICATION,
             server: CUSTODIAN,
-            ..fixed(REST, &[DELETE], "D")
+            ..fixed(REST, vec![DELETE], "D")
         },
-        (_, EventActionCode::Execute) => fixed(REST, &[OPERATION], "E"),
+        (_, EventActionCode::Execute) => fixed(REST, vec![OPERATION], "E"),
     }
 }
 
@@ -471,12 +432,14 @@ fn entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> Vec<Ent
     if event.object.is_patient_centric()
         && let Some(value) = subject
     {
+        let namespace = event.subject_namespace.clone();
+        let uri = namespace
+            .as_deref()
+            .is_some_and(|namespace| url::Url::parse(namespace).is_ok());
         entities.push(Entity::Patient {
-            system: event
-                .subject_namespace
-                .clone()
-                .unwrap_or_else(|| SUBJECT_NAMESPACE.to_owned()),
+            system: namespace.clone().filter(|_| uri),
             value: SecretString::from(value.to_owned()),
+            namespace: namespace.filter(|_| !uri),
         });
     }
     if let Some(id) = event.object_id.as_deref().filter(|id| !id.is_empty()) {
@@ -549,6 +512,7 @@ mod tests {
     use crate::system_log::event::ActorAuthentication;
     use base64::Engine;
     use jiff::Timestamp;
+    use secrecy::ExposeSecret as _;
 
     const OTHER_ID: &str = "https://profiles.ihe.net/ITI/BALP/StructureDefinition/ihe-otherId";
 
@@ -953,6 +917,85 @@ mod tests {
         assert_eq!(requestors.len(), 1, "{v}");
         assert_eq!(requestors[0]["who"]["identifier"]["value"], "john doe");
         assert!(other_id(requestors[0]).is_none());
+    }
+
+    /// BALP 1.1.4 §3:5.7.5.4 writes the token's `jti` at `agent[user].policy`,
+    /// on a classified access and on every other record.
+    #[test]
+    fn the_token_id_is_the_users_policy() {
+        let mut e = event(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        e.token_id = Some("jti-1".to_owned());
+        let v = json(&e, Some("patient-42"));
+        assert_eq!(agent(&v, "john doe")["policy"][0], "jti-1", "{v}");
+        e.category =
+            Some(Classifier::default().classify(&AccessedContent::Objects(Vec::new()), false));
+        let classified = json(&e, Some("patient-42"));
+        assert_eq!(
+            agent(&classified, "john doe")["policy"][0],
+            "jti-1",
+            "{classified}"
+        );
+    }
+
+    /// The ITS-REST operation id is a subtype in its own code system, after
+    /// the restful-interaction code (every BALP `RESTful` pattern slices
+    /// `subtype` openly), on a classified access and on every other record.
+    #[test]
+    fn the_operation_id_is_a_subtype() {
+        let mut e = event(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        e.event_type = Some(EventType::RestOperation("composition_get"));
+        for v in [json(&e, Some("patient-42")), {
+            e.category =
+                Some(Classifier::default().classify(&AccessedContent::Objects(Vec::new()), false));
+            json(&e, Some("patient-42"))
+        }] {
+            assert_eq!(v["subtype"][0]["code"], "read", "{v}");
+            assert_eq!(v["subtype"][1]["code"], "composition_get", "{v}");
+            assert_eq!(v["subtype"][1]["system"], OPERATION_SYSTEM, "{v}");
+        }
+    }
+
+    /// FHIR R4 `AuditEvent.outcomeDesc` and `AuditEvent.source.type`
+    /// (`security-source-type` `4`, an application server).
+    #[test]
+    fn the_outcome_description_and_the_source_type_are_written() {
+        let e = event(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::MinorFailure,
+        );
+        let v = json(&e, Some("patient-42"));
+        assert_eq!(v["outcomeDesc"], "Operation failed", "{v}");
+        assert_eq!(
+            v["source"]["type"][0]["system"],
+            "http://terminology.hl7.org/CodeSystem/security-source-type"
+        );
+        assert_eq!(v["source"]["type"][0]["code"], "4");
+    }
+
+    /// A Basic user names no issuer and no client: the record writes neither,
+    /// never FerroEHR's own URN or `UNKNOWN` in their place.
+    #[test]
+    fn a_basic_user_writes_no_issuer_and_no_client() {
+        let e = event(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        let v = json(&e, Some("patient-42"));
+        let user = agent(&v, "john doe");
+        assert!(user["who"]["identifier"].get("system").is_none(), "{v}");
+        let text = v.to_string();
+        assert!(!text.contains("urn:ferroehr"), "{text}");
+        assert!(!text.contains("UNKNOWN"), "{text}");
     }
 
     #[test]

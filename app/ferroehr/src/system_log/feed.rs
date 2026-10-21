@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The ITI-20 ATX: FHIR Feed client (`[audit.fhir_feed]`): `ihe-atna`'s
-//! [`FeedRepository`](ihe_atna::atna::feed::FeedRepository) under the feed's
-//! IHE IUA bearer token, renewed once on a `401` (RFC 6750 §3.1).
+//! [`FeedRepository`](ihe_atna::atna::feed::FeedRepository), which asks the
+//! feed's IHE IUA bearer token for each request and renews it once on a `401`
+//! (RFC 6750 §3.1).
 
 #![expect(
     clippy::disallowed_types,
@@ -16,6 +17,8 @@ use std::time::Duration;
 
 use backon::{ExponentialBuilder, Retryable};
 
+use ihe_atna::atna::feed::{Credentials, CredentialsError, FeedError, FeedRepository};
+
 use crate::system_log::AuditError;
 use crate::system_log::config::FhirFeedConfig;
 
@@ -23,21 +26,9 @@ use crate::system_log::config::FhirFeedConfig;
 /// [`FeedRepository`](ihe_atna::atna::feed::FeedRepository).
 #[derive(Clone)]
 pub(super) struct FeedClient {
-    base: url::Url,
-    cleartext: bool,
+    repository: FeedRepository,
     max_retries: usize,
-    /// The bearer token of `[audit.fhir_feed.oauth]`, the IHE IUA authorized
-    /// client; `None` sends the Basic credentials of the URL, if any.
-    token: Option<ferrohealth_smart::client::cache::TokenSource>,
-    /// The repository under the token it was built with, so a new client is
-    /// built only when the token is renewed.
-    held: Arc<std::sync::Mutex<Option<HeldRoute>>>,
 }
-
-type FeedRoute = ihe_atna::atna::feed::FeedRepository;
-
-/// The repository route and the bearer token it was built under.
-type HeldRoute = (Option<http::HeaderValue>, FeedRoute);
 
 /// How long one `POST` may take.
 ///
@@ -65,84 +56,39 @@ impl FeedClient {
             .transpose()?;
         let base =
             url::Url::parse(config.url.expose()).map_err(|e| AuditError::Transport(Box::new(e)))?;
-        // NOTE: an `http` feed opens the `plaintext_audit_feed` deployment gap, which
-        // production refuses unless it is accepted by name.
-        let cleartext = base.scheme() == "http";
-        Ok(FeedClient {
-            base,
-            cleartext,
-            max_retries: config.max_retries,
-            token,
-            held: Arc::new(std::sync::Mutex::new(None)),
-        })
-    }
-
-    /// The repository route under `bearer`, built once per token.
-    fn route(&self, bearer: Option<&http::HeaderValue>) -> Result<FeedRoute, AuditError> {
-        let mut held = self
-            .held
-            .lock()
-            .map_err(|poisoned| AuditError::Transport(poisoned.to_string().into()))?;
-        if let Some((token, route)) = held.as_ref()
-            && token.as_ref() == bearer
-        {
-            return Ok(route.clone());
-        }
-        let mut headers = http::HeaderMap::new();
-        if let Some(bearer) = bearer {
-            headers.insert(http::header::AUTHORIZATION, bearer.clone());
-        }
         let http = reqwest::Client::builder()
-            .default_headers(headers)
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|e| AuditError::Transport(Box::new(e)))?;
-        let route = if self.cleartext {
-            FeedRoute::cleartext_for_development(self.base.clone(), http, FEED_TIMEOUT)
+        // NOTE: an `http` feed opens the `plaintext_audit_feed` deployment gap, which
+        // production refuses unless it is accepted by name.
+        let repository = if base.scheme() == "http" {
+            FeedRepository::cleartext(base, http, FEED_TIMEOUT)
         } else {
-            FeedRoute::new(self.base.clone(), http, FEED_TIMEOUT)
+            FeedRepository::new(base, http, FEED_TIMEOUT)
         }
         .map_err(|e| AuditError::Transport(Box::new(e)))?;
-        *held = Some((bearer.cloned(), route.clone()));
-        Ok(route)
-    }
-
-    /// One `POST` of `body`, under the feed's bearer token when it has one,
-    /// sent once more under a new token when the ARR refuses the held one
-    /// with `401` (RFC 6750 §3.1).
-    async fn send_once(&self, body: &secrecy::SecretSlice<u8>) -> Result<(), AuditError> {
-        let Some(token) = &self.token else {
-            return self.post_under(None, body).await;
+        let repository = match token {
+            Some(token) => repository.with_credentials(Arc::new(Bearer(token))),
+            None => repository,
         };
-        let first = token
-            .token()
-            .await
-            .map_err(|e| AuditError::Transport(Box::new(SharedError(e))))?;
-        match self.post_under(Some(first.header()), body).await {
-            Err(AuditError::FeedRejected(status)) if status == http::StatusCode::UNAUTHORIZED => {
-                token.invalidate(first.header());
-                let renewed = token
-                    .token()
-                    .await
-                    .map_err(|e| AuditError::Transport(Box::new(SharedError(e))))?;
-                self.post_under(Some(renewed.header()), body).await
-            }
-            other => other,
-        }
+        Ok(FeedClient {
+            repository,
+            max_retries: config.max_retries,
+        })
     }
 
-    /// One `POST` of `body` under `bearer`, a refused or unavailable answer
-    /// carrying its status.
-    async fn post_under(
-        &self,
-        bearer: Option<&http::HeaderValue>,
-        body: &secrecy::SecretSlice<u8>,
-    ) -> Result<(), AuditError> {
-        use ihe_atna::atna::feed::FeedError;
-        match self.route(bearer)?.send(body).await {
+    /// One `POST` of `body`; `ihe-atna` sends it under the feed's bearer
+    /// token when it has one, once more under a new token on a `401` (RFC
+    /// 6750 §3.1).
+    async fn send_once(&self, body: &secrecy::SecretSlice<u8>) -> Result<(), AuditError> {
+        match self.repository.send(body).await {
             Ok(()) => Ok(()),
             Err(FeedError::Rejected { status } | FeedError::Unavailable { status }) => {
                 Err(AuditError::FeedRejected(status))
+            }
+            Err(FeedError::Unauthorized) => {
+                Err(AuditError::FeedRejected(http::StatusCode::UNAUTHORIZED))
             }
             Err(e) => Err(AuditError::Transport(Box::new(e))),
         }
@@ -160,6 +106,35 @@ impl FeedClient {
                 .with_max_times(self.max_retries),
         )
         .await
+    }
+}
+
+/// The feed's IHE IUA bearer token, as `ihe-atna` asks for the value of each
+/// request and tells of a refused one.
+struct Bearer(ferrohealth_smart::client::cache::TokenSource);
+
+#[async_trait::async_trait]
+impl Credentials for Bearer {
+    async fn authorization(&self) -> Result<secrecy::SecretString, CredentialsError> {
+        let token = self
+            .0
+            .token()
+            .await
+            .map_err(|e| CredentialsError(Box::new(SharedError(e))))?;
+        let value = token
+            .header()
+            .to_str()
+            .map_err(|e| CredentialsError(Box::new(e)))?;
+        Ok(secrecy::SecretString::from(value.to_owned()))
+    }
+
+    async fn refused(&self, refused: &secrecy::SecretString) {
+        use secrecy::ExposeSecret as _;
+        // NOTE: a value this source gave is a header value, so a parse failure names none it
+        // holds and there is nothing to invalidate.
+        if let Ok(stale) = http::HeaderValue::from_str(refused.expose_secret()) {
+            self.0.invalidate(&stale);
+        }
     }
 }
 

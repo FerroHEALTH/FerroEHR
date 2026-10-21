@@ -61,7 +61,7 @@ pub fn positive_constraints(ir: &QueryIr, params: &Params) -> QueryConstraints {
                         NO_CATEGORY_TYPES
                             .iter()
                             .find(|(rm_name, _)| rm_name == name)
-                            .map(|(_, kind)| *kind)
+                            .map(|(_, kind)| kind.clone())
                     })
                     .collect();
                 if kinds.iter().all(Option::is_some) && !kinds.is_empty() {

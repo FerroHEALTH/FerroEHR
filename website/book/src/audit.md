@@ -46,12 +46,18 @@ record says and where it is stored.
   retention, the security labels and the origins. Every other record (an
   authentication, a template or party operation, a refused access) is a BALP
   exchange FerroEHR fills directly. The person is the `agent:user` slice,
-  named by the token's issuer and subject, with the client application as an
-  agent of its own (BALP 1.1.4 §3:5.7.5.4); query executions carry the search
-  expression.
+  named by the token's issuer and subject, with the token's `jti` as its
+  `policy`, the caller's roles as its `role` and the client application as an
+  agent of its own (BALP 1.1.4 §3:5.7.5.4); a Basic user is named by the
+  account alone, with no issuer and no client. The ITS-REST operation id is a
+  second `subtype` (`urn:openehr:its-rest:operation`), the outcome is stated
+  in `outcomeDesc`, and `source.type` names an application server. Query
+  executions carry the search expression.
 - **DICOM Audit Message** (DICOM PS3.15 §A.5 XML): the classic ATNA form,
   shipped as RFC 5424 syslog over RFC 5425 TLS per IHE ITI-20 when the syslog
-  sink is enabled.
+  sink is enabled, with the optional `EventOutcomeDescription`,
+  `AuditSourceTypeCode` (`4`, an application server) and each participant
+  object's `ParticipantObjectDataLifeCycle`.
   Dedicated DICOM event ids are used throughout: Patient Record (110110),
   Query (110112), Export/Import (110106/110107, the EHR-Extract directions),
   User Authentication (110114, with the Login `EventTypeCode` 110122).

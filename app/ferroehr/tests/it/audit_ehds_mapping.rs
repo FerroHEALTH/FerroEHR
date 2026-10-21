@@ -455,9 +455,10 @@ fn every_resource_class_answers_which_domain_it_touched() {
 /// NEN 7513 lists the role or authority under which the person accessed the
 /// record among what a logged event has to contain. The record carries the
 /// caller's roles and both renderings show them: FHIR `agent.role` on the
-/// requestor ("the security role that the user was acting under"), beside
-/// the acting mode `ehds-logging` writes there, and a `RoleIDCode` per role on
-/// the DICOM source participant (PS3.15 §A.5.1 makes the element 0..*).
+/// requestor ("the security role that the user was acting under"), and a
+/// `RoleIDCode` per role on the DICOM source participant (PS3.15 §A.5.1 makes
+/// the element 0..*). An acting mode the deployment did not establish adds no
+/// role of its own.
 #[test]
 fn nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats() {
     let event = access_event();
@@ -473,7 +474,7 @@ fn nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats() {
         .iter()
         .filter_map(|r| r["coding"][0]["code"].as_str())
         .collect();
-    assert_eq!(roles, ["person", "USER", "clinician"], "{requestor}");
+    assert_eq!(roles, ["USER", "clinician"], "{requestor}");
 
     let (xml, _json) = renderings(&event);
     assert!(
@@ -481,8 +482,8 @@ fn nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats() {
         "the role must reach the DICOM source participant as a RoleIDCode: {xml}"
     );
 
-    // No roles: the requestor carries the acting mode alone, never an
-    // invented role.
+    // No principal, no roles: the requestor carries no role element rather
+    // than an empty one, and no invented role.
     let mut anonymous = access_event();
     anonymous.roles.clear();
     let agents = fhir_agents(&anonymous);
@@ -490,10 +491,9 @@ fn nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats() {
         .iter()
         .find(|a| a["requestor"] == true)
         .expect("the requesting person is an agent");
-    assert_eq!(
-        requestor["role"],
-        serde_json::json!([{"coding": [{"code": "person"}]}]),
-        "an empty role set adds no role: {requestor}"
+    assert!(
+        requestor["role"].as_array().is_none_or(Vec::is_empty),
+        "an unknown role set renders as absent: {requestor}"
     );
 }
 

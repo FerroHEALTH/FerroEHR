@@ -683,7 +683,7 @@ fn category_basis(event: &AuditEvent) -> Option<&'static str> {
     event
         .category
         .as_ref()
-        .map(|record| record.read_from.as_str())
+        .map(|record| record.read_from.code())
 }
 
 /// The `category_evidence` column value: the identifiers the classification
