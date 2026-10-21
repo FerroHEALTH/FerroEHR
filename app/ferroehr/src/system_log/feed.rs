@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The ITI-20 ATX: FHIR Feed client (`[audit.fhir_feed]`): `ihe-atna`'s
-//! [`FeedRepository`](ihe_atna::atna::feed::FeedRepository), which asks the
+//! [`FeedRepository`], which asks the
 //! feed's IHE IUA bearer token for each request and renews it once on a `401`
 //! (RFC 6750 §3.1).
 
@@ -23,7 +23,7 @@ use crate::system_log::AuditError;
 use crate::system_log::config::FhirFeedConfig;
 
 /// The ITI-20 ATX:FHIR Feed, posted through `ihe-atna`'s
-/// [`FeedRepository`](ihe_atna::atna::feed::FeedRepository).
+/// [`FeedRepository`].
 #[derive(Clone)]
 pub(super) struct FeedClient {
     repository: FeedRepository,
