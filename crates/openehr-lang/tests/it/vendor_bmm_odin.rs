@@ -169,7 +169,7 @@ fn test_bmm1_structure() {
     let inc1 = keyed_str(includes, "1");
     assert_eq!(as_str(field(inc1, "id")), "my_include.2.1.12");
     // packages holds the top-level package keyed list.
-    assert!(!keyed(field(&v, "packages")).is_empty());
+    assert_ne!(keyed(field(&v, "packages")), []);
 }
 
 // ---------------------------------------------------------------------------
@@ -183,7 +183,7 @@ fn openehr_rm_102_schema() {
     assert_eq!(as_str(field(&v, "schema_name")), "rm");
     assert_eq!(as_str(field(&v, "rm_release")), "1.0.2");
     // openehr_rm composes sub-schemas via `includes`.
-    assert!(!keyed(field(&v, "includes")).is_empty());
+    assert_ne!(keyed(field(&v, "includes")), []);
 }
 
 #[test]
@@ -209,7 +209,7 @@ fn duplicate_class_parses_at_odin_layer_and_is_reported_by_the_validity_pass() {
     let rel = "bmm/org/openehr/bmm/v2/persistence/validation/duplicate_class.bmm";
     let v = parse_ok(rel);
     assert_eq!(as_str(field(&v, "schema_name")), "duplicate_class");
-    assert!(!keyed(field(&v, "packages")).is_empty());
+    assert_ne!(keyed(field(&v, "packages")), []);
 
     // Above the ODIN layer: the schema reads and materialises — a duplicate
     // package listing breaks no BMM_* construction — and the collecting
@@ -236,7 +236,7 @@ fn include_not_found_parses_at_odin_layer_and_is_refused_by_inclusion_resolution
     // nothing to construct and inclusion resolution refuses fail-fast.
     let rel = "bmm/org/openehr/bmm/v2/persistence/validation/include_not_found.bmm";
     let v = parse_ok(rel);
-    assert!(!keyed(field(&v, "includes")).is_empty());
+    assert_ne!(keyed(field(&v, "includes")), []);
 
     let schema = read_schema(&read(rel)).expect("the fixture reads as a P_BMM schema");
     let requester = schema.schema_id();
@@ -258,5 +258,5 @@ fn valid_reference_schema_parses() {
     // valid BMM.
     let v = parse_ok("bmm/org/openehr/bmm/v2/persistence/validation/valid.bmm");
     assert_eq!(as_str(field(&v, "rm_publisher")), "My publisher");
-    assert!(!keyed(field(&v, "packages")).is_empty());
+    assert_ne!(keyed(field(&v, "packages")), []);
 }

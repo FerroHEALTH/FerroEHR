@@ -74,7 +74,10 @@ mod tests {
 
     #[test]
     fn valid_audit() {
-        assert!(audit("system-1").invariants().is_empty());
+        assert_eq!(
+            audit("system-1").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

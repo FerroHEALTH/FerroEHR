@@ -1808,10 +1808,6 @@ mod tests {
     }
 
     #[test]
-    #[expect(
-        clippy::float_cmp,
-        reason = "the example picker returns exactly representable values, so bit-equality is the intended test"
-    )]
     fn pick_decimal_is_non_zero_and_in_range() {
         // Unconstrained: a plausible non-zero default, not 0.0.
         assert_eq!(pick_decimal(None), 10.0);

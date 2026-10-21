@@ -289,7 +289,7 @@ async fn deleted_person_read_is_204() {
         .unwrap();
     let (status, _h, body) = send(&app, get).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    assert!(body.is_empty());
+    assert_eq!(body, "");
 }
 
 /// A `204` delete carries the deleted version's weak `ETag` and **no**
@@ -317,7 +317,7 @@ async fn person_delete_is_204_with_etag_and_no_location() {
         None,
         "ITS-REST overview §Deprecated headers: Location is deprecated on DELETE responses"
     );
-    assert!(body.is_empty());
+    assert_eq!(body, "");
 }
 
 /// The versioned-object-uid delete shape (ECC-DEM-005 family): the path is the
@@ -337,7 +337,7 @@ async fn person_delete_by_versioned_uid_with_if_match_is_204() {
     let (status, _h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::NO_CONTENT);
-    assert!(body.is_empty());
+    assert_eq!(body, "");
 }
 
 /// A stale `If-Match` is `412` echoing the latest `version_uid` in `ETag`

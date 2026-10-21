@@ -74,7 +74,7 @@ fn dispatch_unknown_or_untyped_is_noop() {
     let mut out = Vec::new();
     validate_rm_value(&json!({"value": "x"}), &mut out);
     validate_rm_value(&json!({"_type": "NOT_A_REAL_TYPE"}), &mut out);
-    assert!(out.is_empty());
+    assert_eq!(out, Vec::<InvariantViolation>::new());
 }
 
 #[test]
@@ -808,7 +808,10 @@ fn terminology_code_set_enforcement() {
         "language": code_phrase("ISO_639-1", "en"),
         "territory": code_phrase("ISO_3166-1", "US"),
     });
-    assert!(terminology_of("COMPOSITION", &good).is_empty());
+    assert_eq!(
+        terminology_of("COMPOSITION", &good),
+        Vec::<InvariantViolation>::new()
+    );
 
     // DV_TEXT.encoding (IANA character sets), DV_QUANTITY.normal_status,
     // DV_MULTIMEDIA.media_type + compression/integrity algorithms.
@@ -850,11 +853,17 @@ fn terminology_uncoded_and_absent_slots_are_skipped() {
         "_type": "PARTICIPATION",
         "function": {"_type": "DV_TEXT", "value": "attending physician"},
     });
-    assert!(terminology_of("PARTICIPATION", &plain).is_empty());
+    assert_eq!(
+        terminology_of("PARTICIPATION", &plain),
+        Vec::<InvariantViolation>::new()
+    );
     // Absent optional slot (ISM_TRANSITION.transition): skipped.
     let no_transition =
         json!({"_type": "ISM_TRANSITION", "current_state": coded("openehr", "245")});
-    assert!(terminology_of("ISM_TRANSITION", &no_transition).is_empty());
+    assert_eq!(
+        terminology_of("ISM_TRANSITION", &no_transition),
+        Vec::<InvariantViolation>::new()
+    );
 }
 
 /// A half-open `DV_INTERVAL` is ACCEPTED whether or not its boundary flags

@@ -81,10 +81,10 @@ mod tests {
 
     #[test]
     fn no_timestamps_is_no_points() {
-        assert!(bucket_by_day(&[]).is_empty());
+        assert_eq!(bucket_by_day(&[]), Vec::<ActivityPoint>::new());
         // A row whose timestamp the CDR left empty contributes nothing at all,
         // rather than a bogus bucket.
-        assert!(bucket_by_day(&[String::new()]).is_empty());
+        assert_eq!(bucket_by_day(&[String::new()]), Vec::<ActivityPoint>::new());
     }
 
     #[test]

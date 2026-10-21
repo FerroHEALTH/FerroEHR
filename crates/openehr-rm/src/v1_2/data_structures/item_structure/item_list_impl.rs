@@ -152,14 +152,14 @@ mod tests {
     fn an_absent_list_and_an_empty_list_agree() {
         let mut empty = list(&[]);
         assert_eq!(empty.item_count(), 0);
-        assert!(empty.names().is_empty());
+        assert_eq!(empty.names(), Vec::<DvText>::new());
         assert!(empty.named_item("x").is_none());
         assert!(empty.ith_item(1).is_none());
         assert!(empty.as_hierarchy().is_none());
 
         empty.items = None;
         assert_eq!(empty.item_count(), 0);
-        assert!(empty.names().is_empty());
+        assert_eq!(empty.names(), Vec::<DvText>::new());
         assert!(empty.named_item("x").is_none());
         assert!(empty.ith_item(1).is_none());
         assert!(empty.as_hierarchy().is_none());

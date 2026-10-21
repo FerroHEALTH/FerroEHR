@@ -178,8 +178,8 @@ mod tests {
 
     #[test]
     fn parses_comma_separated_and_repeated() {
-        assert!(ehr_id_list(None).is_empty());
-        assert!(ehr_id_list(Some("")).is_empty());
+        assert_eq!(ehr_id_list(None), Vec::<String>::new());
+        assert_eq!(ehr_id_list(Some("")), Vec::<String>::new());
         assert_eq!(ehr_id_list(Some("ehr_id=a")), vec!["a".to_owned()]);
         assert_eq!(
             ehr_id_list(Some("ehr_id=a,b")),
@@ -194,7 +194,7 @@ mod tests {
             vec!["a".to_owned(), "b".to_owned(), "c".to_owned()]
         );
         // A present-but-empty value contributes nothing.
-        assert!(ehr_id_list(Some("ehr_id=")).is_empty());
+        assert_eq!(ehr_id_list(Some("ehr_id=")), Vec::<String>::new());
         // Each item is form-decoded after the comma split (WHATWG URL §5.1).
         assert_eq!(
             ehr_id_list(Some("ehr_id=a%2Db,+c+")),

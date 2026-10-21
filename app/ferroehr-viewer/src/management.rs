@@ -855,7 +855,7 @@ mod tests {
         let audit = &view.components[0];
         assert_eq!(audit.status, "DOWN");
         assert_eq!(audit.detail, "sender queue full");
-        assert!(view.components[1].detail.is_empty());
+        assert_eq!(view.components[1].detail, "");
     }
 
     #[test]

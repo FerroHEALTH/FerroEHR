@@ -409,8 +409,8 @@ mod tests {
                 Item::Element(element("id8")),
             ]),
         ]);
-        assert!(t.invariants().is_empty());
-        assert!(table(vec![]).invariants().is_empty()); // empty table is valid
+        assert_eq!(t.invariants(), Vec::<InvariantViolation>::new());
+        assert_eq!(table(vec![]).invariants(), Vec::<InvariantViolation>::new()); // empty table is valid
     }
 
     #[test]

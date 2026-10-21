@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn value_only_valid() {
-        assert!(element().invariants().is_empty());
+        assert_eq!(element().invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]
@@ -136,7 +136,7 @@ mod tests {
         let mut e = element();
         e.value = None;
         e.null_flavour = Some(null_flavour());
-        assert!(e.invariants().is_empty());
+        assert_eq!(e.invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

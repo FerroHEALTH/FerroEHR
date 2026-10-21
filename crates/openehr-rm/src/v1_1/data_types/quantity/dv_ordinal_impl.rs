@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn plain_ordinal_valid() {
-        assert!(ordinal(2).invariants().is_empty());
+        assert_eq!(ordinal(2).invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

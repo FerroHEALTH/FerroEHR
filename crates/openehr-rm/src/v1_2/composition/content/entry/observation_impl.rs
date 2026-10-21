@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn valid_observation() {
-        assert!(observation().invariants().is_empty());
+        assert_eq!(observation().invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

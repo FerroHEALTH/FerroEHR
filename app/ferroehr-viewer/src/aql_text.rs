@@ -131,14 +131,17 @@ mod tests {
         // The lexer tokenizes the literal as one STRING, so its `$total` is
         // never read as a parameter.
         let aql = "SELECT c FROM COMPOSITION c WHERE c/name/value='cost in $total'";
-        assert!(placeholders(aql).is_empty());
+        assert_eq!(placeholders(aql), Vec::<String>::new());
     }
 
     #[test]
     fn placeholders_of_untokenizable_text_is_empty() {
         // A stray character the lexer rejects: no guessed parameter list.
-        assert!(placeholders("SELECT ↯ FROM COMPOSITION c WHERE x=$a").is_empty());
-        assert!(placeholders("").is_empty());
+        assert_eq!(
+            placeholders("SELECT ↯ FROM COMPOSITION c WHERE x=$a"),
+            Vec::<String>::new()
+        );
+        assert_eq!(placeholders(""), Vec::<String>::new());
     }
 
     #[test]

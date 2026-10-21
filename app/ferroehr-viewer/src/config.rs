@@ -385,8 +385,8 @@ mod tests {
         assert_eq!(parsed.login.links[0].href, "https://example.org/swagger");
 
         let defaults = ViewerConfig::default();
-        assert!(defaults.login.notice.is_empty());
-        assert!(defaults.login.links.is_empty());
+        assert_eq!(defaults.login.notice, "");
+        assert_eq!(defaults.login.links, Vec::<crate::auth::LoginLink>::new());
     }
 
     #[test]

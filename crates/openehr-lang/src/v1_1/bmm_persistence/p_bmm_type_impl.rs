@@ -403,10 +403,9 @@ mod tests {
             ["Integer".to_owned(), "DV_INTERVAL<DV_QUANTITY>".to_owned()]
         );
         // A root type with no stated parameters has no refs.
-        assert!(
-            generic("DV_INTERVAL", &[])
-                .generic_parameter_refs()
-                .is_empty()
+        assert_eq!(
+            generic("DV_INTERVAL", &[]).generic_parameter_refs(),
+            Vec::<PBmmType>::new()
         );
     }
 

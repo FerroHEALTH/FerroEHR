@@ -289,7 +289,7 @@ fn master04_node_id_table_ids_are_legal_flat_segments() {
         let k = FlatKey::parse(id).unwrap_or_else(|e| panic!("node id {id:?} must parse: {e}"));
         assert_eq!(k.segments.len(), 1);
         assert_eq!(k.segments[0].name, id);
-        assert!(k.suffixes.is_empty());
+        assert_eq!(k.suffixes, Vec::<openehr_sdt::flat::path::Suffix>::new());
         assert_eq!(&k.to_string(), id);
     }
 }
@@ -562,7 +562,10 @@ fn context_present_via_ctx_passes() {
         r#"{ "ctx/language": "de", "ctx/territory": "US" }"#,
     ))
     .unwrap();
-    assert!(validate_context(&doc).is_empty());
+    assert_eq!(
+        validate_context(&doc),
+        Vec::<openehr_sdt::rm_instance::ValidationMessage>::new()
+    );
 }
 
 /// master04 §Validation — both mandatory fields absent yields two `Required`
@@ -597,7 +600,10 @@ fn context_present_via_root_path_spelling_passes() {
         }"#,
     ))
     .unwrap();
-    assert!(validate_context(&doc).is_empty());
+    assert_eq!(
+        validate_context(&doc),
+        Vec::<openehr_sdt::rm_instance::ValidationMessage>::new()
+    );
 }
 // ═══════════════════════════════════════════════════════════════════════════
 // master05 — RM mappings: structural (ENTRY / structure) types
@@ -1895,7 +1901,10 @@ fn master06_language_and_territory() {
     assert_flat_vector(json);
     // These are the mandatory fields; validate_context accepts them.
     let doc = parse_flat(&flat_of(json)).unwrap();
-    assert!(validate_context(&doc).is_empty());
+    assert_eq!(
+        validate_context(&doc),
+        Vec::<openehr_sdt::rm_instance::ValidationMessage>::new()
+    );
 }
 
 /// master06 §Workflow ID — the example block.

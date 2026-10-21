@@ -81,6 +81,6 @@ async fn two_pools_on_one_server_report_one_cluster_identity() {
     let b = db::cluster_identity(&db::domain_pool_from(&db.pool(), db::domain::Domain::Party))
         .await
         .expect("identity on pool b");
-    assert!(!a.is_empty());
+    assert_ne!(a, "");
     assert_eq!(a, b, "the same server answers with one system_identifier");
 }

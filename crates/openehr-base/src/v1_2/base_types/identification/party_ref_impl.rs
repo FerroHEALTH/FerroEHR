@@ -76,14 +76,20 @@ mod tests {
 
     #[test]
     fn valid_party_ref() {
-        assert!(party_ref("local", "PERSON").invariants().is_empty());
+        assert_eq!(
+            party_ref("local", "PERSON").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     /// `ANY` (the universal supertype) is admitted — the value the CNF positive
     /// commit corpus uses (see `VALID_PARTY_TYPES` doc; CNF wins).
     #[test]
     fn valid_party_ref_any_supertype() {
-        assert!(party_ref("local", "ANY").invariants().is_empty());
+        assert_eq!(
+            party_ref("local", "ANY").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

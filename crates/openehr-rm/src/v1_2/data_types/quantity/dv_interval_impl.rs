@@ -146,9 +146,15 @@ mod tests {
 
     #[test]
     fn valid_interval() {
-        assert!(interval(1.0, 4.0).invariants().is_empty());
+        assert_eq!(
+            interval(1.0, 4.0).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
         // Equal limits are consistent (lower <= upper).
-        assert!(interval(4.0, 4.0).invariants().is_empty());
+        assert_eq!(
+            interval(4.0, 4.0).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]
@@ -177,7 +183,7 @@ mod tests {
             lower_included: false,
             upper_included: false,
         };
-        assert!(half_open.invariants().is_empty());
+        assert_eq!(half_open.invariants(), Vec::<InvariantViolation>::new());
         // The flagged half-open form is equally clean.
         let proper = DvInterval::<DvQuantity> {
             lower: None,
@@ -187,7 +193,7 @@ mod tests {
             lower_included: false,
             upper_included: true,
         };
-        assert!(proper.invariants().is_empty());
+        assert_eq!(proper.invariants(), Vec::<InvariantViolation>::new());
         // Mirror on the upper side.
         let no_upper = DvInterval::<DvQuantity> {
             lower: Some(quantity(1.0, "s")),
@@ -197,7 +203,7 @@ mod tests {
             lower_included: true,
             upper_included: false,
         };
-        assert!(no_upper.invariants().is_empty());
+        assert_eq!(no_upper.invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]
@@ -228,7 +234,7 @@ mod tests {
         i.upper_unbounded = true;
         i.upper_included = false;
         i.upper = None;
-        assert!(i.invariants().is_empty());
+        assert_eq!(i.invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]
@@ -243,7 +249,7 @@ mod tests {
             lower_included: true,
             upper_included: true,
         };
-        assert!(i.invariants().is_empty());
+        assert_eq!(i.invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]
@@ -273,6 +279,6 @@ mod tests {
             i.has(&DvOrdered::DvQuantity(quantity(3.0, "kg"))),
             Some(true)
         );
-        assert!(i.invariants().is_empty());
+        assert_eq!(i.invariants(), Vec::<InvariantViolation>::new());
     }
 }

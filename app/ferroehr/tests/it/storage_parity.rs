@@ -93,7 +93,10 @@ async fn a_committed_composition_sweeps_clean() {
         report.is_clean(),
         "a repository written through the commit path must be parity-clean: {report:?}"
     );
-    assert!(report.mismatches.is_empty());
+    assert_eq!(
+        report.mismatches,
+        Vec::<ferroehr::service::admin::integrity::StorageParityMismatch>::new()
+    );
     assert!(
         report.versions_checked >= 3,
         "the EHR create plus one composition commit stores at least three versions, saw {}",
@@ -520,7 +523,10 @@ async fn a_rebuild_over_an_undamaged_repository_writes_nothing() {
     assert!(report.is_complete(), "nothing to refuse: {report:?}");
     assert_eq!(report.versions_damaged, 0, "nothing was damaged");
     assert_eq!(report.versions_rebuilt, 0, "so nothing was written");
-    assert!(report.records.is_empty());
+    assert_eq!(
+        report.records,
+        Vec::<ferroehr::service::admin::integrity::rebuild::NodeRebuildRecord>::new()
+    );
     assert!(
         report.versions_checked >= 3,
         "the sweep behind it still read the scope: {report:?}"

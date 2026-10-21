@@ -32,7 +32,10 @@ mod tests {
 
     #[test]
     fn valid_id() {
-        assert!(identifier("NHS-12345").invariants().is_empty());
+        assert_eq!(
+            identifier("NHS-12345").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

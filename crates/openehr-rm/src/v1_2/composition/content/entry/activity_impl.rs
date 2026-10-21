@@ -69,7 +69,10 @@ mod tests {
 
     #[test]
     fn valid_activity() {
-        assert!(activity("/.*/").invariants().is_empty());
+        assert_eq!(
+            activity("/.*/").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

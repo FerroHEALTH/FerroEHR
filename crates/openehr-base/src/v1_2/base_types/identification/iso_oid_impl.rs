@@ -102,12 +102,12 @@ mod tests {
 
     #[test]
     fn value_valid() {
-        assert!(
+        assert_eq!(
             IsoOid {
                 value: "1.2.840".to_owned()
             }
-            .invariants()
-            .is_empty()
+            .invariants(),
+            Vec::<InvariantViolation>::new()
         );
         let v = IsoOid {
             value: String::new(),

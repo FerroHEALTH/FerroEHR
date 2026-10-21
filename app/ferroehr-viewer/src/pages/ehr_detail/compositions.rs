@@ -57,7 +57,7 @@ use crate::pages::ehrs::{aql_request_body, parse_result_set};
 ///
 /// Every argument is operator input and every one of them travels as an AQL
 /// `query_parameters` binding — see
-/// [`composition_query`](super::composition_filter::composition_query), which
+/// [`composition_query`], which
 /// builds the statement and the bindings together.
 ///
 /// # Errors

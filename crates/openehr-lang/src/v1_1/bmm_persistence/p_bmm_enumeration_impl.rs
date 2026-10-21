@@ -165,7 +165,7 @@ mod tests {
         assert_eq!(enumeration.underlying_type_name(), "INTEGER");
         assert_eq!(enumeration.item_names().len(), 2);
         assert_eq!(enumeration.item_values().len(), 2);
-        assert!(enumeration.item_documentations().is_empty());
+        assert_eq!(enumeration.item_documentations(), Vec::<String>::new());
     }
 
     #[test]

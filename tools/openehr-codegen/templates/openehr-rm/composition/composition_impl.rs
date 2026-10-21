@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn valid_composition() {
-        assert!(composition().invariants().is_empty());
+        assert_eq!(composition().invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

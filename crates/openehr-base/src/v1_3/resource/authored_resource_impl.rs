@@ -212,14 +212,17 @@ mod tests {
         let mut authored = resource(&[]);
         authored.translations = Some(translation_map(&["en"]));
         assert_eq!(authored.languages_available(), ["en", "en"]);
-        assert!(!authored.invariants().is_empty());
+        assert_ne!(authored.invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]
     fn a_valid_translation_list_reports_nothing() {
         // No list at all: both rules are vacuous.
-        assert!(resource(&[]).invariants().is_empty());
-        assert!(resource(&["de", "pt"]).invariants().is_empty());
+        assert_eq!(resource(&[]).invariants(), Vec::<InvariantViolation>::new());
+        assert_eq!(
+            resource(&["de", "pt"]).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     /// `Description_valid`: a detail written in a language the resource

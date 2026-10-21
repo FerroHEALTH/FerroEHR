@@ -118,7 +118,7 @@ mod tests {
 
     #[test]
     fn valid_multimedia() {
-        assert!(valid().invariants().is_empty());
+        assert_eq!(valid().invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]
@@ -159,7 +159,7 @@ mod tests {
     fn zero_size_valid_per_spec() {
         let mut m = valid();
         m.size = 0;
-        assert!(m.invariants().is_empty());
+        assert_eq!(m.invariants(), Vec::<InvariantViolation>::new());
     }
 
     /// The four §Functions predicates, each "computed from the value of" one
@@ -187,6 +187,6 @@ mod tests {
             m.is_inline() && m.is_external(),
             "Not_empty is an OR: a value stored both ways answers true to both"
         );
-        assert!(m.invariants().is_empty());
+        assert_eq!(m.invariants(), Vec::<InvariantViolation>::new());
     }
 }

@@ -176,7 +176,7 @@ fn adl14_section_keywords_are_case_insensitive() -> Result<(), Vec<SyntaxError>>
     assert_eq!(authored(&mixed).archetype_id, authored(&lower).archetype_id);
     assert_eq!(authored(&mixed).definition, authored(&lower).definition);
     assert_eq!(authored(&mixed).terminology, authored(&lower).terminology);
-    assert!(error_codes(MIXED_CASE_14).is_empty());
+    assert_eq!(error_codes(MIXED_CASE_14), Vec::<ValidationCode>::new());
     Ok(())
 }
 

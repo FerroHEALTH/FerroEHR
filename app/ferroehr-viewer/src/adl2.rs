@@ -413,7 +413,10 @@ mod tests {
             vec!["1.0.0", "1.9.0", "1.10.0"]
         );
         // A family nothing in the listing belongs to yields nothing.
-        assert!(family_versions(&ids, "openEHR-EHR-COMPOSITION.absent").is_empty());
+        assert_eq!(
+            family_versions(&ids, "openEHR-EHR-COMPOSITION.absent"),
+            Vec::<String>::new()
+        );
     }
 
     #[test]

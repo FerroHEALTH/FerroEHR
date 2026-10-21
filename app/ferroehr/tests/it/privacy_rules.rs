@@ -74,7 +74,7 @@ fn the_configuration_default_is_the_minimising_posture_and_scans_strictly() {
     );
     // The subject rule is the one that waits for a deployment fact: there is no
     // pseudonym namespace a server could invent for an operator.
-    assert!(default.subject_namespaces.is_empty());
+    assert_eq!(default.subject_namespaces, Vec::<String>::new());
     let compiled = policy(&default);
     assert!(!compiled.subject_rule_in_force());
     assert!(!compiled.identified_parties_allowed());
@@ -135,13 +135,12 @@ fn a_non_uuid_subject_id_is_refused_and_the_value_never_travels() {
 #[test]
 fn the_subject_rule_waits_for_a_configured_namespace() {
     let unconfigured = policy(&PrivacyConfig::default());
-    assert!(
-        unconfigured
-            .findings(
-                "EHR_STATUS",
-                &status_with_subject("uk.org.nmc", "patient-42")
-            )
-            .is_empty()
+    assert_eq!(
+        unconfigured.findings(
+            "EHR_STATUS",
+            &status_with_subject("uk.org.nmc", "patient-42")
+        ),
+        Vec::<Finding>::new()
     );
 }
 
@@ -156,7 +155,10 @@ fn an_ehr_status_with_no_subject_reference_is_the_spec_baseline_and_passes() {
         "is_queryable": true,
         "is_modifiable": true
     });
-    assert!(enforcing().findings("EHR_STATUS", &bare).is_empty());
+    assert_eq!(
+        enforcing().findings("EHR_STATUS", &bare),
+        Vec::<Finding>::new()
+    );
 }
 
 #[test]
@@ -169,7 +171,10 @@ fn the_subject_rule_binds_ehr_status_only() {
             "_type": "PARTY_REF", "namespace": "elsewhere", "type": "PERSON",
             "id": { "_type": "GENERIC_ID", "value": "not-a-uuid", "scheme": "local" } } }
     });
-    assert!(enforcing().findings("COMPOSITION", &composition).is_empty());
+    assert_eq!(
+        enforcing().findings("COMPOSITION", &composition),
+        Vec::<Finding>::new()
+    );
 }
 
 // ── rule 2: identified parties ────────────────────────────────────────────────
@@ -319,10 +324,9 @@ fn an_identified_party_reduced_to_its_external_ref_passes() {
             "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
             "id": { "_type": "HIER_OBJECT_ID", "value": OPAQUE_SUBJECT } } }
     });
-    assert!(
-        policy(&PrivacyConfig::default())
-            .findings("COMPOSITION", &composition)
-            .is_empty()
+    assert_eq!(
+        policy(&PrivacyConfig::default()).findings("COMPOSITION", &composition),
+        Vec::<Finding>::new()
     );
 }
 
@@ -357,7 +361,10 @@ fn identifiers_on_a_party_related_are_refused_too_and_the_opt_in_accepts_both() 
         allow_identified_parties_in_ehr: true,
         ..PrivacyConfig::default()
     });
-    assert!(permitted.findings("COMPOSITION", &composition).is_empty());
+    assert_eq!(
+        permitted.findings("COMPOSITION", &composition),
+        Vec::<Finding>::new()
+    );
 }
 
 /// The opt-in accepts every cell of the matrix, both classes and both
@@ -398,10 +405,9 @@ fn a_party_self_carries_no_name_slot_and_is_untouched() {
         "_type": "COMPOSITION",
         "composer": { "_type": "PARTY_SELF" }
     });
-    assert!(
-        policy(&PrivacyConfig::default())
-            .findings("COMPOSITION", &composition)
-            .is_empty()
+    assert_eq!(
+        policy(&PrivacyConfig::default()).findings("COMPOSITION", &composition),
+        Vec::<Finding>::new()
     );
 }
 
@@ -440,10 +446,9 @@ fn a_terminology_code_that_satisfies_a_checksum_by_chance_is_not_a_finding() {
             "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "SNOMED-CT" },
             "code_string": "288526004" } } // privacy-allow: a terminology code from the vendored fixtures
     });
-    assert!(
-        policy(&PrivacyConfig::default())
-            .findings("COMPOSITION", &composition)
-            .is_empty()
+    assert_eq!(
+        policy(&PrivacyConfig::default()).findings("COMPOSITION", &composition),
+        Vec::<Finding>::new()
     );
     // The same digits in a free-text slot are still a finding: the carve-out is
     // the slot, so it cannot blind the scanner anywhere else.
@@ -467,10 +472,9 @@ fn an_object_version_id_and_an_archetype_id_are_not_findings() {
                  "value": "018f3c2a-7b41-7c2e-9a55-6d1e4f80b2c3::ferroehr.local::1" },
         "archetype_node_id": "openEHR-EHR-COMPOSITION.encounter.v1"
     });
-    assert!(
-        policy(&PrivacyConfig::default())
-            .findings("COMPOSITION", &composition)
-            .is_empty()
+    assert_eq!(
+        policy(&PrivacyConfig::default()).findings("COMPOSITION", &composition),
+        Vec::<Finding>::new()
     );
 }
 
@@ -564,7 +568,10 @@ fn narrowing_the_rule_list_narrows_what_is_caught() {
         "_type": "COMPOSITION",
         "name": { "_type": "DV_TEXT", "value": "note 15038545660" }
     });
-    assert!(nl_only.findings("COMPOSITION", &norwegian).is_empty());
+    assert_eq!(
+        nl_only.findings("COMPOSITION", &norwegian),
+        Vec::<Finding>::new()
+    );
     assert_eq!(
         paths(&policy(&PrivacyConfig::default()).findings("COMPOSITION", &norwegian)),
         ["COMPOSITION/name/value"]
@@ -612,10 +619,9 @@ fn warn_mode_still_reports_the_finding_and_keeps_its_class() {
 #[test]
 fn a_uuid_subject_is_accepted_in_either_case() {
     let upper = OPAQUE_SUBJECT.to_ascii_uppercase();
-    assert!(
-        enforcing()
-            .findings("EHR_STATUS", &status_with_subject(PSEUDONYM_NS, &upper))
-            .is_empty()
+    assert_eq!(
+        enforcing().findings("EHR_STATUS", &status_with_subject(PSEUDONYM_NS, &upper)),
+        Vec::<Finding>::new()
     );
     // The braced and URN spellings the uuid parser also accepts are refused:
     // the promoted column compares as text.

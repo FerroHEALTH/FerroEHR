@@ -69,7 +69,10 @@ mod tests {
 
     #[test]
     fn valid_event() {
-        assert!(point_event("at0002").invariants().is_empty());
+        assert_eq!(
+            point_event("at0002").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

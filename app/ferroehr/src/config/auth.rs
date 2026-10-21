@@ -1018,7 +1018,10 @@ mod tests {
         let floor = phc(MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, MIN_ARGON2_P_COST);
         let resolved = resolve(&basic(&floor)).expect("a Basic-only section resolves");
         assert!(resolved.enabled);
-        assert!(resolved.issuers.is_empty());
+        assert_eq!(
+            resolved.issuers,
+            Vec::<ferrohealth_smart::resource::Settings>::new()
+        );
         assert!(resolved.basic.is_some());
         assert!(matches!(
             resolve(&AuthSection::default()),
@@ -1070,7 +1073,7 @@ mod tests {
         assert_eq!(assurance.claim, "acr");
         assert!(assurance.levels.is_empty());
         assert_eq!(assurance.minimum, None);
-        assert!(assurance.accepted_values().is_empty());
+        assert_eq!(assurance.accepted_values(), Vec::<&str>::new());
         assert!(with_assurance(&[], None).validate().is_ok());
     }
 

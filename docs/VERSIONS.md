@@ -39,23 +39,24 @@ releases never ride the product version.
 
 | Item | Pin |
 |---|---|
-| Rust toolchain | stable 1.98 (1.98.1) |
-| MSRV | 1.98 |  <!-- deliberately behind the toolchain: see the MSRV bump policy below -->
+| Rust toolchain | stable 1.99 (1.99.1) |
+| MSRV | 1.98 |  <!-- the toolchain minus one: see the MSRV bump policy below -->
 | Edition | 2024 |
 | Cargo resolver | v3 |
 
-Rationale: the deliverable is a binary/service, not a published library, so
-MSRV can track current stable rather than trailing it. A crate later split out
-for standalone publication may relax to 1.94/1.95 at that time.
+The toolchain is the newest stable Rust release and the MSRV is the
+toolchain minus one minor release, the rule every FerroHEALTH repository
+follows; an MSRV is only ever raised.
 
-MSRV bump policy (the documented policy the Cargo book asks for — an MSRV
+MSRV bump policy (the documented policy the Cargo book asks for; an MSRV
 change is "possibly-breaking", semver class `env-new-rust`,
-https://doc.rust-lang.org/cargo/reference/semver.html#env-new-rust): the
-workspace `rust-version` and `rust-toolchain.toml` bump together, in their
-own PR, with a `CHANGELOG.md` `### Changed` entry; the declared MSRV is
-verified in CI by the `msrv` job (`cargo hack check --rust-version` — the
-book's named tool), not just by `clippy::incompatible_msrv`. Consumers can
-escape with `cargo build --ignore-rust-version`.
+https://doc.rust-lang.org/cargo/reference/semver.html#env-new-rust): when a
+new stable release ships, `rust-toolchain.toml` moves to it and the workspace
+`rust-version` to the release before it, with a `CHANGELOG.md` `### Changed`
+entry; the declared MSRV is verified in CI by the `msrv` job (`cargo hack
+check --rust-version`, the book's named tool), not just by
+`clippy::incompatible_msrv`. Consumers can escape with
+`cargo build --ignore-rust-version`.
 
 ## Database
 

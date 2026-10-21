@@ -160,7 +160,7 @@ mod tests {
         assert_eq!(parsed.solution, "otherEHR");
         assert_eq!(parsed.vendor, String::new());
         assert_eq!(parsed.restapi_specs_version, String::new());
-        assert!(parsed.endpoints.is_empty());
+        assert_eq!(parsed.endpoints, Vec::<String>::new());
         // An empty list is an honest "advertises nothing", not a parse failure.
         assert!(!parsed.advertises("/admin"));
         // The empty document is the same story.

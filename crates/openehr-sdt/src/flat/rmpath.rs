@@ -282,7 +282,10 @@ mod tests {
         assert_eq!(step[0]["name"]["value"], "Runtime Name");
         // Fallback disallowed (same-id siblings distinguished by name): strict
         // only, nothing matches.
-        assert!(select_children_matched(&rm, &segs[0], false).is_empty());
+        assert_eq!(
+            select_children_matched(&rm, &segs[0], false),
+            Vec::<&Value>::new()
+        );
     }
 
     #[test]
@@ -377,7 +380,7 @@ mod tests {
             "items": [{"archetype_node_id": "at0001", "name": {"value": "Other"},
                        "value": {"_type": "DV_TEXT", "value": "x"}}]
         });
-        assert!(resolve_matched(&rm, &segs, &table).is_empty());
+        assert_eq!(resolve_matched(&rm, &segs, &table), Vec::<&Value>::new());
     }
 
     #[test]

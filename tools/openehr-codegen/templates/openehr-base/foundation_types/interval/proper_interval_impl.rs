@@ -76,12 +76,18 @@ mod tests {
 
     #[test]
     fn valid_interval_has_no_violations() {
-        assert!(interval(Some(1), Some(3)).invariants().is_empty());
-        assert!(interval(Some(3), Some(3)).invariants().is_empty());
+        assert_eq!(
+            interval(Some(1), Some(3)).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
+        assert_eq!(
+            interval(Some(3), Some(3)).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
         let mut open = interval(None, Some(3));
         open.lower_unbounded = true;
         open.lower_included = false;
-        assert!(open.invariants().is_empty());
+        assert_eq!(open.invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

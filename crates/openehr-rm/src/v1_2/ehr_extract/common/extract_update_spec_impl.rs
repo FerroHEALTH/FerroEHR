@@ -75,6 +75,9 @@ mod tests {
             v.iter().any(|m| m.message.contains("Overall_validity")),
             "got {v:?}"
         );
-        assert!(spec(true, None).invariants().is_empty());
+        assert_eq!(
+            spec(true, None).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 }

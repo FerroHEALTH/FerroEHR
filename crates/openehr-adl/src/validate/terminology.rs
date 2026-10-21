@@ -528,7 +528,7 @@ mod constraint_code_tests {
     fn adl2_single_code_and_binding_suffix() {
         assert_eq!(constraint_codes("at1"), vec!["at1".to_owned()]);
         assert_eq!(constraint_codes("ac1@snomed"), vec!["ac1".to_owned()]);
-        assert!(constraint_codes("").is_empty());
+        assert_eq!(constraint_codes(""), Vec::<String>::new());
     }
 
     /// The ADL 1.4 spelling (`ADL1.4/master09-customising_adl.adoc` §Custom
@@ -556,8 +556,11 @@ mod constraint_code_tests {
     /// archetype's own terminology) does not apply to them.
     #[test]
     fn external_terminology_codes_are_not_archetype_terms() {
-        assert!(constraint_codes("openehr::127").is_empty());
-        assert!(constraint_codes("openehr::253,271,273").is_empty());
-        assert!(constraint_codes("ISO_639-1::en").is_empty());
+        assert_eq!(constraint_codes("openehr::127"), Vec::<String>::new());
+        assert_eq!(
+            constraint_codes("openehr::253,271,273"),
+            Vec::<String>::new()
+        );
+        assert_eq!(constraint_codes("ISO_639-1::en"), Vec::<String>::new());
     }
 }

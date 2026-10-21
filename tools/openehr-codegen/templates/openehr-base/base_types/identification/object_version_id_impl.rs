@@ -390,7 +390,10 @@ mod tests {
 
     #[test]
     fn validate_format() {
-        assert!(ovid("a::b::1").invariants().is_empty());
+        assert_eq!(
+            ovid("a::b::1").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
         let bad = ovid("a::b");
         assert!(
             bad.invariants()

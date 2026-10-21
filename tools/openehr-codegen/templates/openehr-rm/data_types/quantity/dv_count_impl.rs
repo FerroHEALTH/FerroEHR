@@ -258,7 +258,7 @@ mod tests {
 
     #[test]
     fn valid_count() {
-        assert!(count().invariants().is_empty());
+        assert_eq!(count().invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

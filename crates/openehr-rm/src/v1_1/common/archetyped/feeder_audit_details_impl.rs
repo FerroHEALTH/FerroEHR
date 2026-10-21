@@ -39,7 +39,10 @@ mod tests {
 
     #[test]
     fn valid_details() {
-        assert!(details("legacy-system").invariants().is_empty());
+        assert_eq!(
+            details("legacy-system").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

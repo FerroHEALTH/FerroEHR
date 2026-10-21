@@ -44,14 +44,17 @@ mod tests {
     #[test]
     fn valid_parsable() {
         let p = parsable("<gdl/>", "GLIF 1.0");
-        assert!(p.invariants().is_empty());
+        assert_eq!(p.invariants(), Vec::<InvariantViolation>::new());
         assert_eq!(p.size(), 6);
     }
 
     #[test]
     fn empty_value_is_allowed_but_empty_formalism_is_not() {
         // "The string, which may validly be empty in some syntaxes."
-        assert!(parsable("", "proforma").invariants().is_empty());
+        assert_eq!(
+            parsable("", "proforma").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
         let v = parsable("x", "").invariants();
         assert!(
             v.iter()

@@ -77,8 +77,11 @@ mod tests {
 
     #[test]
     fn valid_context() {
-        assert!(context(Some("ward A3")).invariants().is_empty());
-        assert!(context(None).invariants().is_empty());
+        assert_eq!(
+            context(Some("ward A3")).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
+        assert_eq!(context(None).invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

@@ -845,7 +845,7 @@ async fn load_from_an_archive_with_a_mangled_manifest_is_file_not_writable() {
         .export_ehrs(dir.clone(), ExportSpec::canonical_json(1024))
         .await
         .expect("export");
-    assert!(reports.is_empty());
+    assert_eq!(reports, Vec::<DumpLoadFailReport>::new());
 
     // Truncate the manifest mid-object: readable bytes, unparseable JSON.
     let manifest = std::path::Path::new(&dir).join("manifest.json");
@@ -897,7 +897,7 @@ async fn load_from_a_truncated_container_is_file_not_writable() {
         .export_ehrs(dir.clone(), spec)
         .await
         .unwrap_or_else(|e| panic!("export: {}", source_chain(&e)));
-    assert!(reports.is_empty());
+    assert_eq!(reports, Vec::<DumpLoadFailReport>::new());
 
     // Drop the ZIP central directory (the trailing bytes): the file still
     // exists, so detection picks it, but it is no longer an archive.

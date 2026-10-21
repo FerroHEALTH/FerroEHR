@@ -203,8 +203,8 @@ fn demo_vitals_shapes() {
     // Root is a COMPOSITION with the format version and a template id.
     assert_eq!(wt.tree.rm_type, "COMPOSITION");
     assert_eq!(wt.version, "2.3");
-    assert!(!wt.template_id.is_empty());
-    assert!(!wt.default_language.is_empty());
+    assert_ne!(wt.template_id, "");
+    assert_ne!(wt.default_language, "");
     assert!(wt.languages.contains(&wt.default_language));
 
     // Every node has a non-empty snake-cased id; occurrences are consistent

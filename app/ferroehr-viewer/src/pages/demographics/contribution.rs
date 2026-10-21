@@ -389,7 +389,10 @@ mod wire_tests {
     fn a_sparse_contribution_reads_as_empty_facts_and_a_bad_body_errors() {
         let state = parse_contribution("{}").expect("an object parses");
         assert_eq!(state.uid, "");
-        assert!(state.versions.is_empty());
+        assert_eq!(
+            state.versions,
+            Vec::<crate::pages::demographics::contribution::ContributionVersion>::new()
+        );
         assert!(parse_contribution("not json").is_err());
     }
 }

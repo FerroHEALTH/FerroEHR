@@ -390,7 +390,7 @@ mod tests {
         let violations = service
             .constraint_binding_violations(&coded_instance("999999"), &wt)
             .await;
-        assert!(violations.is_empty());
+        assert_eq!(violations, Vec::<ValidationMessage>::new());
         assert_eq!(ts.received_requests().await.unwrap().len(), 0);
     }
 }

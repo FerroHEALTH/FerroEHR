@@ -177,8 +177,14 @@ mod tests {
 
     #[test]
     fn valid_duration() {
-        assert!(duration("P1Y2M10DT2H30M").invariants().is_empty());
-        assert!(duration("PT10H").invariants().is_empty());
+        assert_eq!(
+            duration("P1Y2M10DT2H30M").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
+        assert_eq!(
+            duration("PT10H").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

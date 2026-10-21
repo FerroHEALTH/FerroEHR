@@ -94,7 +94,10 @@ mod tests {
 
     #[test]
     fn valid_attestation() {
-        assert!(attestation("system-1").invariants().is_empty());
+        assert_eq!(
+            attestation("system-1").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

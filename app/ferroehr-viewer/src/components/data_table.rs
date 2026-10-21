@@ -267,7 +267,7 @@ mod tests {
         // A window computed against a bigger total than the slice holds is
         // empty rather than a panic.
         let wide = Window::over(70, Paging { page: 6, size: 10 });
-        assert!(page_rows(&rows(), wide).is_empty());
+        assert_eq!(page_rows(&rows(), wide), Vec::<u32>::new());
     }
 
     #[test]

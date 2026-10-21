@@ -137,7 +137,10 @@ mod tests {
 
     #[test]
     fn uncontrolled_without_history_passes() {
-        assert!(resource(Some(false)).invariants().is_empty());
+        assert_eq!(
+            resource(Some(false)).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]
@@ -152,7 +155,10 @@ mod tests {
 
     #[test]
     fn absent_is_controlled_asserts_nothing() {
-        assert!(resource(None).invariants().is_empty());
+        assert_eq!(
+            resource(None).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     /// A history whose most recent item carries `version_id`.

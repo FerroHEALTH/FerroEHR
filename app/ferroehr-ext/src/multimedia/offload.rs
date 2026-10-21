@@ -330,7 +330,7 @@ mod tests {
         let mut comp = wrap(multimedia(100));
         let before = comp.clone();
         let pending = plan_offload(&mut comp, 256, &s).unwrap();
-        assert!(pending.is_empty());
+        assert_eq!(pending, Vec::<(String, Vec<u8>)>::new());
         assert_eq!(comp, before, "small inline media must be byte-identical");
     }
 
@@ -383,7 +383,7 @@ mod tests {
         let mut comp = wrap(node);
         let before = comp.clone();
         let pending = plan_offload(&mut comp, 256, &s).unwrap();
-        assert!(pending.is_empty());
+        assert_eq!(pending, Vec::<(String, Vec<u8>)>::new());
         assert_eq!(
             comp, before,
             "client-managed external media stored verbatim"

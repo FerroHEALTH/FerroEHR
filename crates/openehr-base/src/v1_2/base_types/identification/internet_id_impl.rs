@@ -115,12 +115,12 @@ mod tests {
 
     #[test]
     fn value_valid() {
-        assert!(
+        assert_eq!(
             InternetId {
                 value: "org.openehr".to_owned()
             }
-            .invariants()
-            .is_empty()
+            .invariants(),
+            Vec::<InvariantViolation>::new()
         );
         assert_eq!(
             InternetId {

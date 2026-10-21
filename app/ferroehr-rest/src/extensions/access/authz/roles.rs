@@ -215,7 +215,10 @@ mod tests {
     #[test]
     fn missing_paths_yield_empty() {
         let c = claims(&json!({ "sub": "x" }));
-        assert!(extract_roles(&c, &RbacConfig::default().role_claims).is_empty());
+        assert_eq!(
+            extract_roles(&c, &RbacConfig::default().role_claims),
+            Vec::<String>::new()
+        );
     }
 
     #[test]

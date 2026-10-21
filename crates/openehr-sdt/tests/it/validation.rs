@@ -534,7 +534,7 @@ fn matched_violation_paths_are_archetype_paths() {
             )
         })
         .collect();
-    assert!(!arche.is_empty());
+    assert_ne!(arche, Vec::<&ValidationMessage>::new());
     for m in arche {
         assert!(
             m.path.starts_with("/content["),

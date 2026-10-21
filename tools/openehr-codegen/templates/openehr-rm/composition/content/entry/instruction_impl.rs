@@ -91,7 +91,7 @@ mod tests {
 
     #[test]
     fn valid_instruction() {
-        assert!(instruction().invariants().is_empty());
+        assert_eq!(instruction().invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]

@@ -17,6 +17,7 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The Rust toolchain moves to 1.99.1.** The pinned channel, both container base images (digest re-resolved to the `rust:1.99.1-slim-trixie` index) and the CI job containers move together; the MSRV stays at 1.98, the toolchain minus one, the rule `docs/VERSIONS.md` now states for the whole FerroHEALTH family. Clippy 1.99's new `assert_is_empty` lint is answered at every site with an `assert_eq!` or `assert_ne!` that prints the value on failure, two `float_cmp` expectations it no longer needs are removed, and the unit tests under the published crates' `src/` (and the codegen templates they are emitted from) change with it, so the `openehr-*` crates move to 0.0.94 with no API change.
 - **The minimum supported Rust version is 1.98** (was 1.97), the version
   `fhir-types`, pulled by `ihe-atna`'s FHIR writer, declares. The nine
   `openehr-*` crates move to 0.0.93 with it.

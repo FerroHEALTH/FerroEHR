@@ -107,7 +107,10 @@ mod tests {
 
     #[test]
     fn value_valid() {
-        assert!(uri("http://example.org/x").invariants().is_empty());
+        assert_eq!(
+            uri("http://example.org/x").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
         // An empty value is both empty and scheme-less; both are `Value_valid`,
         // which is the only invariant `dv_uri.adoc` §Invariants declares.
         assert!(messages("").contains(&"Invariant Value_valid failed on type DV_URI".to_owned()));
@@ -121,21 +124,35 @@ mod tests {
     #[test]
     fn scheme_less_and_plain_text_values_are_accepted() {
         // Absolute references are accepted.
-        assert!(
-            uri("ftp://ftp.is.co.za/rfc/rfc1808.txt")
-                .invariants()
-                .is_empty()
+        assert_eq!(
+            uri("ftp://ftp.is.co.za/rfc/rfc1808.txt").invariants(),
+            Vec::<InvariantViolation>::new()
         );
-        assert!(uri("mailto:someone@example.org").invariants().is_empty());
+        assert_eq!(
+            uri("mailto:someone@example.org").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
         // Plain-text URIs (RFC-3986-forbidden characters such as spaces) and
         // scheme-less relative references are all admitted: the class's only
         // invariant is non-emptiness, and the §Design plain-text allowance
         // covers exactly these forms.
-        assert!(uri("http://example.org/a b").invariants().is_empty());
-        assert!(uri("see the attached guideline").invariants().is_empty());
-        assert!(uri("xyz").invariants().is_empty());
-        assert!(uri("www.iana.org").invariants().is_empty());
-        assert!(uri("content/items").invariants().is_empty());
+        assert_eq!(
+            uri("http://example.org/a b").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
+        assert_eq!(
+            uri("see the attached guideline").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
+        assert_eq!(uri("xyz").invariants(), Vec::<InvariantViolation>::new());
+        assert_eq!(
+            uri("www.iana.org").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
+        assert_eq!(
+            uri("content/items").invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     #[test]

@@ -569,7 +569,10 @@ mod tests {
 
     #[test]
     fn group_by_namespace_of_nothing_is_no_groups() {
-        assert!(group_by_namespace(&[]).is_empty());
+        assert_eq!(
+            group_by_namespace(&[]),
+            Vec::<crate::query_namespace::QueryNamespaceGroup>::new()
+        );
     }
 
     #[test]
@@ -691,7 +694,7 @@ mod tests {
     fn resolution_form_values_round_trip() {
         for mode in VersionResolution::ALL {
             assert_eq!(VersionResolution::from_str_or_exact(mode.as_str()), mode);
-            assert!(!crate::locale::tr(mode.label()).is_empty());
+            assert_ne!(crate::locale::tr(mode.label()), "");
         }
         // Unknown input falls back to the exact form.
         assert_eq!(

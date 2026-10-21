@@ -247,7 +247,7 @@ async fn a_reachable_database_gives_levels_and_no_patient_identifier() {
     assert_eq!(entry(&report, "schema").status, PartStatus::Included);
     assert_eq!(entry(&report, "deployment").status, PartStatus::Included);
     let databases = report.schema.as_ref().expect("schema levels");
-    assert!(!databases.is_empty());
+    assert_ne!(databases.as_slice(), []);
     for set in databases.iter().flat_map(|database| &database.sets) {
         assert_eq!(set.applied, set.embedded, "{set:?}");
     }

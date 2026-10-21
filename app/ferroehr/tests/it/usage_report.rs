@@ -547,7 +547,7 @@ async fn the_preview_writes_nothing() {
         .await
         .expect("read the instance");
     assert_eq!(stored, None);
-    assert!(received(&server).await.is_empty());
+    assert_eq!(received(&server).await, Vec::<Value>::new());
 }
 
 /// With the switch off, nothing is started, sent or stored.
@@ -567,7 +567,7 @@ async fn nothing_is_sent_when_disabled() {
         .await
         .expect("read the instance");
     assert_eq!(stored, None, "a disabled report stores no instance id");
-    assert!(received(&server).await.is_empty());
+    assert_eq!(received(&server).await, Vec::<Value>::new());
 }
 
 /// In a CI run the report stays off with the switch on: nothing is started,
@@ -589,7 +589,7 @@ async fn nothing_is_sent_in_ci() {
         .await
         .expect("read the instance");
     assert_eq!(stored, None, "a CI run stores no instance id");
-    assert!(received(&server).await.is_empty());
+    assert_eq!(received(&server).await, Vec::<Value>::new());
 }
 
 /// A collector that never answers holds up neither boot nor readiness: the

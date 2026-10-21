@@ -661,7 +661,10 @@ mod tests {
             row("flag", "8849182c::sys::1"),
         ]);
         assert_eq!(split.len(), 2);
-        assert!(group_by_target(Vec::new()).is_empty());
+        assert_eq!(
+            group_by_target(Vec::new()),
+            Vec::<crate::components::item_tags::TagGroup>::new()
+        );
     }
 }
 
@@ -690,7 +693,10 @@ mod wire_tests {
         assert_eq!(rows[1].value, "");
         assert_eq!(rows[1].target_path, "/context/start_time/value");
         // An empty collection is a first-class answer, not an error.
-        assert!(parse_item_tags("[]").expect("empty list").is_empty());
+        assert_eq!(
+            parse_item_tags("[]").expect("empty list"),
+            Vec::<ItemTagRow>::new()
+        );
         assert!(parse_item_tags("not json").is_err());
     }
 

@@ -1898,7 +1898,7 @@ jobs:
     # runner: glibc compatibility runs forward only, so a runner image with a
     # newer glibc than the runtime image ships yields a binary that image
     # cannot load.
-    container: rust:1.98.1-slim-trixie@sha256:ce84a5edd80c5f91e05c5533b1e53eb1da54028f33734dc06aa6b49fa190462d
+    container: rust:1.99.1-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d
     env:
       # Fixed build timestamp — reproducible, and the precondition for the
       # compile to be cacheable at all (see the block above; build.rs honours
@@ -1935,7 +1935,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: bin/amd64/ferroehr
-          key: ui-e2e-server-bin-1.98.1-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/**', 'crates/**', 'app/ferroehr/**', 'app/ferroehr-rest/**', 'app/ferroehr-server/**', 'tools/**') }}
+          key: ui-e2e-server-bin-1.99.1-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/**', 'crates/**', 'app/ferroehr/**', 'app/ferroehr-rest/**', 'app/ferroehr-server/**', 'tools/**') }}
       # Registry cache only, for the reason the ui-e2e job spells out below:
       # rust-cache's key hashes every manifest, so a lockfile bump rotates a
       # whole target archive and pays a cold build, while sccache degrades to
@@ -2018,7 +2018,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ui-e2e-console-stage
-          key: ui-e2e-console-1.98.1-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/**', 'crates/**', 'app/ferroehr-viewer/**', 'scripts/cargo-leptos.sh') }}
+          key: ui-e2e-console-1.99.1-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/**', 'crates/**', 'app/ferroehr-viewer/**', 'scripts/cargo-leptos.sh') }}
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         if: steps.viewer-cache.outputs.cache-hit != 'true'
         with:

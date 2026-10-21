@@ -80,15 +80,21 @@ mod tests {
             lower_included: true,
             upper_included: true,
         };
-        assert!(p.invariants().is_empty());
+        assert_eq!(p.invariants(), Vec::<InvariantViolation>::new());
     }
 
     /// `point_interval.adoc` §Invariants `Inv_point` (`lower = upper`) holds for
     /// equal bounds and for both bounds absent.
     #[test]
     fn inv_point_accepts_equal_and_both_absent_bounds() {
-        assert!(point(Some(5), Some(5)).invariants().is_empty());
-        assert!(point(None, None).invariants().is_empty());
+        assert_eq!(
+            point(Some(5), Some(5)).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
+        assert_eq!(
+            point(None, None).invariants(),
+            Vec::<InvariantViolation>::new()
+        );
     }
 
     /// `point_interval.adoc` §Invariants `Inv_point` fails when the two bounds

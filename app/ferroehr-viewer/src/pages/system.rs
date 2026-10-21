@@ -1281,8 +1281,14 @@ mod tests {
 
     #[test]
     fn empty_document_yields_no_groups() {
-        assert!(group_openapi_paths(&serde_json::json!({})).is_empty());
-        assert!(group_openapi_paths(&serde_json::json!({"paths": {}})).is_empty());
+        assert_eq!(
+            group_openapi_paths(&serde_json::json!({})),
+            Vec::<(String, Vec<(String, String)>)>::new()
+        );
+        assert_eq!(
+            group_openapi_paths(&serde_json::json!({"paths": {}})),
+            Vec::<(String, Vec<(String, String)>)>::new()
+        );
     }
 
     #[test]

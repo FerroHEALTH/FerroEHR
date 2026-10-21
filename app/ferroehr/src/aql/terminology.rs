@@ -424,7 +424,7 @@ mod tests {
         expand_matches(&mut q, &Fixed(vec![]))
             .await
             .expect("expand");
-        assert!(matches_values(&q).is_empty());
+        assert_eq!(matches_values(&q), Vec::<String>::new());
     }
 
     #[tokio::test]
