@@ -54,9 +54,10 @@ const BASE: &str = "/ferroehr/rest/openehr/v1";
 const IPS: &str = "International Patient Summary";
 const ENCOUNTER: &str = "openEHR-EHR-COMPOSITION.encounter.v1";
 const REPORT: &str = "openEHR-EHR-COMPOSITION.report.v1";
-/// The root archetype of the IPS composition, as it names it: the evidence
-/// keeps an id's case (openEHR BASE 1.1.0, Composite Identifiers and Case).
-const HEALTH_SUMMARY: &str = "openEHR-EHR-COMPOSITION.health_summary.v1";
+/// The root archetype of the IPS composition as a stored composition names
+/// it: the node table holds archetype ids in comparison form, and the
+/// evidence keeps the id as the access named it.
+const HEALTH_SUMMARY: &str = "openehr-ehr-composition.health_summary.v1";
 /// The code system of the Art. 14(1) priority categories, HL7 Europe's
 /// `EEHRxFDocumentPriorityCategoryCS`, as `ehds-logging` writes it.
 const PRIORITY: &str =
@@ -322,7 +323,10 @@ async fn a_multi_category_query_records_every_category_it_served() {
         json!([token("Laboratory-Reports"), token("Medical-Imaging")])
     );
     assert_eq!(statement.basis.as_deref(), Some("returned"));
-    assert_eq!(statement.evidence, json!([ENCOUNTER, REPORT]));
+    assert_eq!(
+        statement.evidence,
+        json!([ENCOUNTER.to_ascii_lowercase(), REPORT.to_ascii_lowercase()])
+    );
     let digest = statement.digest.expect("the map digest");
     assert!(digest.starts_with("sha256:"), "{digest}");
     let entities = statement.fhir["entity"].as_array().expect("entities");

@@ -35,9 +35,10 @@ workflow refuses a tag that has no matching section here.
   passes, names that horizon as the ground of its floor instead of claiming
   Art. 9(2). The category map takes every archetype id openEHR BASE 1.3.0
   admits, a CKM draft's `.v0` and the namespaced ADL 2 form among them, and
-  compares ids as openEHR BASE asks, so stored
-  evidence keeps each id's case (records written before keep the folded
-  form), and the map's digest moves once with the upgrade: records keep the
+  compares ids as openEHR BASE asks, so the evidence keeps each id as the
+  access named it: a template id keeps its case (records written before keep
+  the folded form), and a stored composition's root archetype stays in the
+  node table's comparison form, and the map's digest moves once with the upgrade: records keep the
   digest of the map that classified them (#3902).
 
 - **The minimum supported Rust version is 1.98** (was 1.97), the version
