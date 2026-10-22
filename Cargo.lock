@@ -2287,7 +2287,7 @@ dependencies = [
 
 [[package]]
 name = "docs-meta"
-version = "5.3.0"
+version = "5.3.1"
 
 [[package]]
 name = "dotenvy"
@@ -2627,7 +2627,7 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferroehr"
-version = "5.3.0"
+version = "5.3.1"
 dependencies = [
  "aes-gcm 0.11.1",
  "argon2 0.6.0",
@@ -2707,7 +2707,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-ext"
-version = "5.3.0"
+version = "5.3.1"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -2729,7 +2729,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-rest"
-version = "5.3.0"
+version = "5.3.1"
 dependencies = [
  "arc-swap",
  "argon2 0.6.0",
@@ -2792,7 +2792,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-server"
-version = "5.3.0"
+version = "5.3.1"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2811,7 +2811,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-viewer"
-version = "5.3.0"
+version = "5.3.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -5469,7 +5469,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-codegen"
-version = "5.3.0"
+version = "5.3.1"
 dependencies = [
  "http",
  "roxmltree",
@@ -8457,7 +8457,7 @@ dependencies = [
 
 [[package]]
 name = "testkit"
-version = "5.3.0"
+version = "5.3.1"
 dependencies = [
  "ferroehr",
  "jiff",

@@ -255,7 +255,7 @@ template and archetype ids as evidence, and is never refused; the FHIR record
 says why (`unmapped`, `unbound`, `named-nothing`). A stored category is its
 `<system>|<code>` token. `category_basis` says what the classification was read
 from (`returned`, `written`, `queried` or `resource-kind`; records written
-before 5.3.0 carry `template`, `archetype` or `query` and the earlier
+before 5.3.1 carry `template`, `archetype` or `query` and the earlier
 spellings), and `category_map_digest` names the map that produced it, so a
 later map never rereads an old record. The map's
 digest is also on the boot line and on `GET /management/info` under
