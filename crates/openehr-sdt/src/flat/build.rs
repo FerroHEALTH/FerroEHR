@@ -309,6 +309,14 @@ fn check_party_decodes(value: &Value, class: &str) -> Result<(), FlatError> {
 /// attributes into the `ctx` tree (`master05 §COMPOSITION` rows spell the
 /// same data as paths; `master06` gives the `ctx/` shortcut). An explicit
 /// `ctx/…` key always wins; the path spellings only fill gaps.
+///
+/// The event-context spellings of `master05 §EVENT_CONTEXT` merge the same
+/// way: `/context/start_time` feeds `ctx/time`, `/context/_end_time` feeds
+/// `ctx/end_time`, `/context/_location` feeds `ctx/location` and
+/// `/context/setting|code` (else `|value`) feeds `ctx/setting` (master06
+/// §§time, end_time, location, setting), so the defaults hung off the context
+/// time (`OBSERVATION.history.origin`, `EVENT.time`, `ACTION.time`) do not
+/// depend on which spelling the client chose.
 fn merge_root_ctx_spellings(ctx_node: Option<&SimNode>, data_root: &SimNode) -> Option<SimNode> {
     let mut merged = ctx_node.cloned().unwrap_or_default();
     let mut fill = |key: &str, value: Option<&Value>| {
@@ -328,6 +336,19 @@ fn merge_root_ctx_spellings(ctx_node: Option<&SimNode>, data_root: &SimNode) -> 
     fill("composer_id", attr("composer", "id"));
     fill("id_namespace", attr("composer", "id_namespace"));
     fill("id_scheme", attr("composer", "id_scheme"));
+    let context = data_root.child("context");
+    let context_attr = |name: &str, suffix: &str| {
+        context
+            .and_then(|c| c.child(name))
+            .and_then(|n| n.attrs.get(suffix))
+    };
+    fill("time", context_attr("start_time", ""));
+    fill("end_time", context_attr("_end_time", ""));
+    fill("location", context_attr("_location", ""));
+    fill(
+        "setting",
+        context_attr("setting", "code").or_else(|| context_attr("setting", "value")),
+    );
     if merged.is_empty() {
         None
     } else {

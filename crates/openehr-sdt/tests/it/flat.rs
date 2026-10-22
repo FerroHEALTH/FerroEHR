@@ -1255,3 +1255,223 @@ fn a_name_discriminated_sibling_set_takes_no_id_only_fallback() {
         "and the renamed section is claimed by no name-differentiated sibling at all"
     );
 }
+
+// ── one archetype filling two slots under different names (#3920) ────────────
+//
+// A template may fill the same archetype at two places, each fill an overlay
+// with its own root rubric (AOM 2 `master10-templates.adoc` §Overview); each
+// fill's node id comes from its own name (simplified_formats `master04`
+// §Node ID Generation Rules). Carrier: `slot_fill_twice.en.v1`, whose first
+// fill is renamed "Genome assembly" and whose nested second fill keeps
+// "Reference sequence".
+
+const RENAMED_FILL: &str =
+    "slot_fill_twice/slot_fill_twice_observation:0/genome_assembly/source_name";
+const NESTED_FILL: &str = "slot_fill_twice/slot_fill_twice_observation:0/substitution_variant/reference_sequence/source_name";
+
+fn slot_fill_twice_wt() -> WebTemplate {
+    let opt_xml = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/slot_fill_twice/slot_fill_twice.opt"
+    ))
+    .unwrap_or_else(|e| panic!("read slot_fill_twice OPT: {e}"));
+    let opt = opt14::from_xml(&opt_xml).unwrap_or_else(|e| panic!("parse OPT: {e}"));
+    build_web_template(&opt).unwrap_or_else(|e| panic!("build WT: {e}"))
+}
+
+/// The FLAT example names each fill by its own root rubric.
+#[test]
+fn each_slot_fill_takes_its_own_root_rubric_as_node_id() {
+    let wt = slot_fill_twice_wt();
+    for level in [DetailLevel::Medium, DetailLevel::Complete] {
+        let example = example_composition(&wt, level).expect("the example builds");
+        let flat = composition_to_flat(&example, &wt).expect("to_flat");
+        let keys: Vec<&String> = flat.keys().collect();
+        assert!(
+            flat.contains_key(NESTED_FILL),
+            "the nested fill is named by its own rubric: {keys:?}"
+        );
+        assert!(
+            flat.contains_key(RENAMED_FILL),
+            "the renamed fill keeps its template name: {keys:?}"
+        );
+        assert!(
+            !keys
+                .iter()
+                .any(|k| k.contains("substitution_variant/genome_assembly")),
+            "the nested fill never borrows the other fill's rubric: {keys:?}"
+        );
+    }
+}
+
+/// A FLAT document addressing both fills builds, stamps each fill's own name,
+/// and reads back unchanged.
+#[test]
+fn a_flat_round_trip_through_both_slot_fills_is_stable() {
+    let wt = slot_fill_twice_wt();
+    let mut flat = serde_json::Map::new();
+    flat.insert("ctx/language".to_owned(), Value::String("en".into()));
+    flat.insert("ctx/territory".to_owned(), Value::String("US".into()));
+    flat.insert(
+        "ctx/composer_name".to_owned(),
+        Value::String("Dr. Marcus Johnson".into()),
+    );
+    flat.insert(RENAMED_FILL.to_owned(), Value::String("GRCh38".into()));
+    flat.insert(NESTED_FILL.to_owned(), Value::String("RefSeq".into()));
+    let rm = composition_from_flat(&flat, &wt, NOW).expect("from_flat");
+
+    let items = rm
+        .pointer("/content/0/data/events/0/data/items")
+        .and_then(Value::as_array)
+        .unwrap_or_else(|| panic!("the built observation carries its items"));
+    let names: Vec<Option<&str>> = items
+        .iter()
+        .map(|i| i.pointer("/name/value").and_then(Value::as_str))
+        .collect();
+    assert_eq!(
+        names,
+        vec![Some("Genome assembly"), Some("Substitution variant")],
+        "each top-level item takes its own name"
+    );
+    assert_eq!(
+        items
+            .get(1)
+            .and_then(|v| v.pointer("/items/0/name/value"))
+            .and_then(Value::as_str),
+        Some("Reference sequence"),
+        "the nested fill takes its own root rubric as its name"
+    );
+
+    let flat_again = composition_to_flat(&rm, &wt).expect("to_flat");
+    assert_eq!(
+        flat_again.get(NESTED_FILL).and_then(Value::as_str),
+        Some("RefSeq"),
+        "the nested fill reads back: {:?}",
+        flat_again.keys().collect::<Vec<_>>()
+    );
+    assert_eq!(
+        flat_again.get(RENAMED_FILL).and_then(Value::as_str),
+        Some("GRCh38"),
+        "the renamed fill reads back"
+    );
+}
+
+// ── the event-context path spellings feed the ctx/ defaults (#3919) ──────────
+//
+// `<root>/context/start_time` (master05 §EVENT_CONTEXT) and `ctx/time`
+// (master06 §time) name one value, and master06 §time makes it the default of
+// `OBSERVATION.history.origin`, from which each `EVENT.time` follows. Carrier:
+// the `named_event.en.v1` fixture, whose single event the FLAT input never
+// times.
+
+const START_TIME: &str = "2022-02-03T04:05:06Z";
+
+fn named_event_flat(extra: &[(&str, &str)]) -> serde_json::Map<String, Value> {
+    let mut flat = serde_json::Map::new();
+    flat.insert("ctx/language".to_owned(), Value::String("en".into()));
+    flat.insert("ctx/territory".to_owned(), Value::String("US".into()));
+    flat.insert(
+        "ctx/composer_name".to_owned(),
+        Value::String("Dr. Marcus Johnson".into()),
+    );
+    flat.insert(
+        "named_event/named_event_observation:0/reading".to_owned(),
+        Value::String("120 over 80".into()),
+    );
+    for (k, v) in extra {
+        flat.insert((*k).to_owned(), Value::String((*v).into()));
+    }
+    flat
+}
+
+fn observation_times(rm: &Value) -> (Option<&str>, Option<&str>, Option<&str>) {
+    (
+        rm.pointer("/context/start_time/value")
+            .and_then(Value::as_str),
+        rm.pointer("/content/0/data/origin/value")
+            .and_then(Value::as_str),
+        rm.pointer("/content/0/data/events/0/time/value")
+            .and_then(Value::as_str),
+    )
+}
+
+/// The path spelling alone sets the start time, the history origin and the
+/// event time.
+#[test]
+fn the_context_start_time_path_feeds_the_history_origin() {
+    let wt = named_event_wt();
+    let flat = named_event_flat(&[("named_event/context/start_time", START_TIME)]);
+    let rm = composition_from_flat(&flat, &wt, NOW).expect("from_flat");
+    assert_eq!(
+        observation_times(&rm),
+        (Some(START_TIME), Some(START_TIME), Some(START_TIME)),
+        "start time, history origin and event time all take the submitted start time"
+    );
+}
+
+/// The other event-context path spellings with a `ctx/` shortcut feed the
+/// same defaults.
+#[test]
+fn the_context_end_time_location_and_setting_paths_feed_the_defaults() {
+    let wt = named_event_wt();
+    let flat = named_event_flat(&[
+        ("named_event/context/start_time", START_TIME),
+        ("named_event/context/_end_time", "2022-02-03T05:05:06Z"),
+        ("named_event/context/_location", "Ward A3"),
+        ("named_event/context/setting|code", "229"),
+        ("named_event/context/setting|value", "primary medical care"),
+        ("named_event/context/setting|terminology", "openehr"),
+    ]);
+    let rm = composition_from_flat(&flat, &wt, NOW).expect("from_flat");
+    assert_eq!(
+        rm.pointer("/context/end_time/value")
+            .and_then(Value::as_str),
+        Some("2022-02-03T05:05:06Z")
+    );
+    assert_eq!(
+        rm.pointer("/context/location").and_then(Value::as_str),
+        Some("Ward A3")
+    );
+    assert_eq!(
+        rm.pointer("/context/setting/defining_code/code_string")
+            .and_then(Value::as_str),
+        Some("229")
+    );
+}
+
+/// With both spellings present, `ctx/time` wins for the defaults, as it does
+/// for the language and composer spellings.
+#[test]
+fn an_explicit_ctx_time_wins_over_the_context_start_time_path() {
+    let wt = named_event_wt();
+    let ctx_time = "2023-03-04T05:06:07Z";
+    let flat = named_event_flat(&[
+        ("named_event/context/start_time", START_TIME),
+        ("ctx/time", ctx_time),
+    ]);
+    let rm = composition_from_flat(&flat, &wt, NOW).expect("from_flat");
+    let (_, origin, event) = observation_times(&rm);
+    assert_eq!(
+        (origin, event),
+        (Some(ctx_time), Some(ctx_time)),
+        "the history origin and event time follow ctx/time"
+    );
+}
+
+/// A composition built from the path spelling reads back as FLAT and builds
+/// again to the same composition.
+#[test]
+fn a_flat_round_trip_from_the_context_start_time_path_is_stable() {
+    let wt = named_event_wt();
+    let flat = named_event_flat(&[("named_event/context/start_time", START_TIME)]);
+    let rm1 = composition_from_flat(&flat, &wt, NOW).expect("from_flat");
+    let flat1 = composition_to_flat(&rm1, &wt).expect("to_flat");
+    let rm2 = composition_from_flat(&flat1, &wt, NOW).expect("from_flat again");
+    let flat2 = composition_to_flat(&rm2, &wt).expect("to_flat again");
+    assert_eq!(sorted(&flat1), sorted(&flat2), "FLAT is round-trip stable");
+    assert_eq!(
+        observation_times(&rm2),
+        (Some(START_TIME), Some(START_TIME), Some(START_TIME)),
+        "the rebuilt composition keeps the submitted times"
+    );
+}

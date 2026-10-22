@@ -401,7 +401,11 @@ accepted on input too, and take precedence over the shortcut defaults:
 `…/context/start_time`, `…/context/setting`, the `_end_time` and `_location`
 forms, and an entry's `…/language` and `…/encoding`. A bare
 `…/context/setting|code` is resolved against the openEHR *setting* value set,
-exactly as `ctx/setting` is. Output always uses the `ctx/` form for these, so a
+exactly as `ctx/setting` is. A full path also feeds the defaults its shortcut
+feeds: `…/context/start_time` sets the default history origin of every
+observation and the time of every event that gives none, exactly as `ctx/time`
+does. When you give both spellings, the full path sets the stored field and the
+`ctx/` key sets the defaults. Output always uses the `ctx/` form for these, so a
 round trip through FLAT is stable. A path the Simplified Formats specification
 does not define is rejected with an error, never silently dropped.
 
@@ -460,6 +464,29 @@ rule that matched, never the offending value. That pass is configured
 independently of the template, and the shipped default already refuses a
 national identifier anywhere in clinical content. See
 [Privacy & data minimisation](installation/config-privacy.md).
+
+### Date and time patterns
+
+A template can constrain which parts of a date, time or date-time value must be
+present. The pattern takes the form `yyyy-mm-ddTHH:MM:SS`, and each part is
+written one of three ways:
+
+| In the pattern | Meaning |
+|---|---|
+| a letter field (`yyyy`, `mm`, `dd`, `HH`, `MM`, `SS`) | the part is required |
+| `??` | the part is optional |
+| `XX` | the part is not allowed |
+
+So `yyyy-mm-ddTXX:XX:XX` accepts `2022-02-03` and refuses
+`2022-02-03T04:05:06`, and `HH:MM:??` accepts both `10:30` and `10:30:15`.
+A refusal names the parts in words and repeats the pattern with this key:
+
+```text
+temporal value '2022-02-03T04:05:06' does not satisfy the pattern
+'yyyy-mm-ddTXX:XX:XX': the template allows a date only; a time is not allowed
+here. Pattern key: a letter field (yyyy, mm, dd, HH, MM, SS) is required, ?? is
+optional, XX is not allowed.
+```
 
 If a composition is well-formed but breaks its template, the commit fails with
 **422 Unprocessable Entity** and a `validationErrors` list (one entry per
