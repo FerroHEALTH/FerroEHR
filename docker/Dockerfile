@@ -89,7 +89,7 @@ RUN --mount=type=cache,target=/app/target,sharing=locked \
 
 # ── runtime-base: the SHARED final base (digest-pinned distroless, non-root) ───
 # gcr.io/distroless/cc-debian13:nonroot (glibc + libgcc_s + CA certs; non-root
-# 65532, Helm-aligned), digest-pinned, resolved 2026-09-01. `cc` (not the
+# 65532, Helm-aligned), digest-pinned, resolved 2026-10-22 (ca-certificates 20250419+deb13u1, DSA-6572-1). `cc` (not the
 # smaller base-nossl) is REQUIRED: the Rust binary dynamically links
 # libgcc_s.so.1 for stack unwinding, which the base-nossl image does not ship
 # (verified 2026-07-24: base-nossl fails at load with "libgcc_s.so.1: cannot
@@ -97,7 +97,7 @@ RUN --mount=type=cache,target=/app/target,sharing=locked \
 # Both final targets inherit this stage's EXPOSE/HEALTHCHECK/ENTRYPOINT/LABELs,
 # so they are byte-for-byte identical except the one binary-provenance layer
 # (D5 — zero drift).
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2 AS runtime-base
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:83b9b50586253821cf63ffcec87d3d94265a093ad30da232039af962dd8f4edf AS runtime-base
 # The `:nonroot` tag already runs as uid 65532, but a scanner reading the
 # Dockerfile cannot see a base image.s user — and neither can a reader. Stating
 # it makes the posture a property of this file rather than of a tag someone
@@ -139,7 +139,7 @@ LABEL org.opencontainers.image.title="FerroEHR" \
       org.opencontainers.image.authors="Cadasto B.V. <https://www.cadasto.com/contact/>" \
       org.opencontainers.image.licenses="BUSL-1.1" \
       org.opencontainers.image.base.name="gcr.io/distroless/cc-debian13:nonroot" \
-      org.opencontainers.image.base.digest="sha256:e792ab3d241a468a4fd7519ddbbebe66b49b5f365771716ea688ad40b6c6f1c2" \
+      org.opencontainers.image.base.digest="sha256:83b9b50586253821cf63ffcec87d3d94265a093ad30da232039af962dd8f4edf" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}" \
       eu.ferroehr.image.carries-sandbox-posture="true" \

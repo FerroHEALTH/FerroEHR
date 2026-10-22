@@ -15,7 +15,9 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
-## [5.3.0] - 2026-10-22
+## [5.3.1] - 2026-10-22
+
+The v5.3.0 tag was pushed but its release never published: the release scan refused the container base's `ca-certificates` (DSA-6572-1). 5.3.1 is the same release on the rebuilt base, and no 5.3.0 artifacts exist.
 
 ### Changed
 
@@ -182,13 +184,18 @@ workflow refuses a tag that has no matching section here.
 
 ### Security
 
-Shipped with functional changes because: only the newest release is supported (SECURITY.md), so a separate 5.2.1 published beside 5.3.0 would be out of support the moment 5.3.0 lands and give no one a release to stay on; the fix is a dependency bump with no behaviour change of its own.
+Shipped with functional changes because: only the newest release is supported (SECURITY.md), so a separate 5.2.1 published beside 5.3.1 would be out of support the moment 5.3.1 lands and give no one a release to stay on; the fix is a dependency and base-image bump with no behaviour change of its own.
 
 - **`rustls-webpki` 0.103.16 and `webpki-roots` / `webpki-root-certs`
   1.0.10** (RUSTSEC-2026-0381, RUSTSEC-2026-0382, RUSTSEC-2026-0383,
   GHSA-pmpg-vfwr-99qv). The
   outbound TLS client no longer accepts certificate paths through the
   distrusted emSign intermediates.
+- **The `ferroehr` and `ferroehr-viewer` images move to the distroless base
+  with `ca-certificates` 20250419+deb13u1** (DSA-6572-1, GHSA-pmpg-vfwr-99qv,
+  #3926). The system trust store no longer holds the compromised eMudhra
+  (emSign) intermediates; it is the only package that differs from the
+  previous base.
 
 ## [5.2.0] - 2026-10-20
 
@@ -11808,8 +11815,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.0...HEAD
-[5.3.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.2.0...v5.3.0
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.1...HEAD
+[5.3.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.2.0...v5.3.1
 [5.2.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.1.0...v5.2.0
 [5.1.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.0.0...v5.1.0
 [5.0.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.11...v5.0.0
