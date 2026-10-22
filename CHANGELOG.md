@@ -132,6 +132,7 @@ workflow refuses a tag that has no matching section here.
   recorded the path and route without the query string. The book's Security
   page says that the identifier travels in the URL and that a proxy in front
   of FerroEHR must not log query strings.
+
 - **An archetype that fills two slots under different names gets the right
   path id in each** (#3920). The web template took a slot fill's name from
   whichever fill of the same archetype came first, so in a template that
@@ -163,6 +164,19 @@ workflow refuses a tag that has no matching section here.
   a date only; a time is not allowed here", "the template requires the
   second, which the value lacks") and ends with a key to the pattern symbols.
   The book's Templates & validation page explains them.
+
+- **A stored composition's archetype id keeps its case in the access log**
+  (#3908). The access record named a stored composition's root archetype in
+  lowercase, so a read of an `openEHR-EHR-COMPOSITION.report.v1` composition
+  recorded `openehr-ehr-composition.report.v1` as its evidence, while template
+  ids and ids taken from AQL text kept theirs. openEHR BASE asks identifiers
+  to be case-preserving through persistence and case-insensitive in
+  comparison (Composite Identifiers and Case). The node table keeps the
+  lowercase id only as its comparison key beside the stored fragment, which
+  has always held the id as written; the access log now reads the id from the
+  fragment, so the evidence names the archetype as the composition wrote it,
+  and AQL predicates and the category map still match in any case. Records
+  written before keep the lowercase form.
 
 ### Security
 

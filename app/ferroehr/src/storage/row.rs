@@ -35,7 +35,8 @@ pub struct NodeRow {
     pub parent_num: i32,
     /// The RM `_type`, verbatim (e.g. `OBSERVATION`).
     pub rm_type: String,
-    /// `archetype_node_id`, verbatim.
+    /// `archetype_node_id` in comparison form, lowercased (BASE `base_types`
+    /// master05 §Composite Identifiers and Case); `data` keeps it as written.
     pub archetype: Option<String>,
     /// `qualified_rm_entity` of a full archetype HRID, lowercased for
     /// comparison; `None` on at/id-code nodes (BASE `base_types` master05

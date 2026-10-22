@@ -82,9 +82,10 @@ pub struct StoredVersion {
     pub time_committed: jiff::Timestamp,
     /// The OPT `template_id` a COMPOSITION was committed against (else `None`).
     pub template_id: Option<String>,
-    /// The archetype id of the version's root node (`node.archetype` at
-    /// `num = 0`, case-folded), read in the same statement; `None` on a
-    /// logically deleted version. The access log classifies by it when the
+    /// The archetype id of the version's root node as the composition wrote
+    /// it (the `archetype_node_id` of the root fragment, `node.data` at
+    /// `num = 0`), read in the same statement; `None` on a logically deleted
+    /// version. The access log classifies by it when the
     /// template id does not.
     pub root_archetype: Option<String>,
     /// `VERSION.signature` (0..1), opaque radix-64 — on an imported row the
@@ -175,7 +176,7 @@ macro_rules! version_select {
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, v.origins, ",
             "v.body, h.restricted_at, h.access_restricted_at, ",
-            "(SELECT n.archetype FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
+            "(SELECT n.data->>'archetype_node_id' FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
             "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
             "a.time_committed, ",
@@ -207,7 +208,7 @@ macro_rules! version_select_raw {
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, ",
             "v.origins, v.body, h.restricted_at, h.access_restricted_at, ",
-            "(SELECT n.archetype FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
+            "(SELECT n.data->>'archetype_node_id' FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
             "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
             "a.time_committed, ",
@@ -837,7 +838,7 @@ pub struct ServedContent {
     pub kind: String,
     /// The `template_id` the version was committed against.
     pub template_id: Option<String>,
-    /// The archetype id of the version's root node, case-folded.
+    /// The archetype id of the version's root node, as the composition wrote it.
     pub root_archetype: Option<String>,
 }
 
@@ -862,7 +863,7 @@ pub async fn content_of_objects(
         "SELECT DISTINCT c.ehr_id, c.kind, c.template_id, c.archetype \
          FROM unnest($1::uuid[]) AS a(vo_id) \
          CROSS JOIN LATERAL ( \
-             SELECT v.ehr_id, v.kind, v.template_id, n.archetype \
+             SELECT v.ehr_id, v.kind, v.template_id, n.data->>'archetype_node_id' AS archetype \
              FROM version v \
              LEFT JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
                   AND n.sys_version = v.sys_version AND n.num = 0 \
@@ -890,7 +891,7 @@ pub async fn content_of_contribution(
         "SELECT DISTINCT v.ehr_id, v.kind, c.template_id, c.archetype \
          FROM version v \
          LEFT JOIN LATERAL ( \
-             SELECT p.template_id, n.archetype \
+             SELECT p.template_id, n.data->>'archetype_node_id' AS archetype \
              FROM version p \
              LEFT JOIN node n ON n.tier = p.tier AND n.vo_id = p.vo_id \
                   AND n.sys_version = p.sys_version AND n.num = 0 \
@@ -950,7 +951,8 @@ pub async fn read_served(
              FROM s CROSS JOIN LATERAL jsonb_array_elements_text( \
                  coalesce(s.origins, jsonb_build_array(s.creating_system_id))) AS e(origin) \
          ), c AS ( \
-             SELECT DISTINCT s.ehr_id, s.kind, s.template_id, n.archetype \
+             SELECT DISTINCT s.ehr_id, s.kind, s.template_id, \
+                    n.data->>'archetype_node_id' AS archetype \
              FROM s LEFT JOIN node n ON n.tier = s.tier AND n.vo_id = s.vo_id \
                   AND n.sys_version = s.sys_version AND n.num = 0 \
          ) \
