@@ -772,6 +772,16 @@ and consults no map. It records a linkage-domain access event all the same,
 because who resolved a subject to a record is worth knowing wherever it
 happened.
 
+The lookup puts the subject identifier in the URL, because ITS-REST passes it
+as a query parameter. FerroEHR keeps it out of everything it writes: the
+request log and every trace span record the path and the matched route without
+the query string, and the `404` for an unknown subject names only the
+namespace. A reverse proxy or load balancer in front of FerroEHR sees the whole
+URL, so configure it not to log query strings on this route, or not at all.
+FerroPIX as the EHR index provider (IHE PIXm, planned in
+[#3380](https://github.com/FerroHEALTH/FerroEHR/issues/3380)) resolves a
+patient identifier to an EHR without putting it in a FerroEHR URL.
+
 ### Declaring the posture
 
 The separations above are each a configuration key, and a deployment that has
