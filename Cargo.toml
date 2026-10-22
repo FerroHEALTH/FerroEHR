@@ -258,7 +258,7 @@ sha2 = "0.11.0"
 aes-gcm = "0.11.1"
 hmac = "0.13.0"
 object_store = { version = "0.14.0", features = ["aws"] }   # S3-compatible blob backend for DV_MULTIMEDIA externalization; SeaweedFS in dev/test
-pgp = { version = "0.20.0", default-features = false }   # rPGP — pure-Rust OpenPGP (RFC 4880/9580); version signing (no OpenSSL/C, fits the rustls-only stack). default-features off drops the bzip2 (libbz2-rs-sys) dep — detached signatures need no compression, and it fails the cargo-deny license gate.
+pgp = { version = "0.21.0", default-features = false }   # rPGP — pure-Rust OpenPGP (RFC 4880/9580); version signing (no OpenSSL/C, fits the rustls-only stack). default-features off drops the bzip2 (libbz2-rs-sys) dep — detached signatures need no compression, and it fails the cargo-deny license gate.
 
 # ── OpenAPI / Swagger (code-first) ───────────────────────────────────────────
 utoipa = { version = "6.0.0", features = ["axum_extras", "chrono", "uuid", "decimal"] }
@@ -308,7 +308,7 @@ zip = { version = "9.0.4", default-features = false, features = ["deflate-flate2
 # (0.21.3, actively maintained).
 # default features off: the bzip2/aes side-codecs drag deps we neither need
 # nor allow (bzip2-1.0.6 license); 7z's native LZMA2 rides `compress` alone.
-sevenz-rust2 = { version = "0.23", default-features = false, features = ["compress"] }
+sevenz-rust2 = { version = "0.24", default-features = false, features = ["compress"] }
 rust_decimal = { version = "1", features = ["serde-with-str"] }   # BigDecimal replacement (DV_QUANTITY)
 # canonical JSON (RFC 8785 JCS) for hashing/audit — small, pick one or hand-roll:
 serde_jcs = "0.2.0"                  # verify; otherwise implement ~150 LoC
