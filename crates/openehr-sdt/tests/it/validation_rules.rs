@@ -1004,6 +1004,116 @@ fn time_pattern_partial_rejected() {
     );
 }
 
+/// A temporal node constrained by `pattern` (AOM 1.4 `C_DATE`/`C_TIME`/
+/// `C_DATE_TIME`, ADL 1.4 `master05-cadl.adoc` §"Date, Time and Date/Time"
+/// Patterns).
+fn temporal_node(
+    rm_type: &str,
+    input_type: WebTemplateInputType,
+    pattern: &str,
+) -> WebTemplateNode {
+    let mut leaf = node(rm_type, "/value");
+    let mut input = WebTemplateInput::new(input_type, None);
+    input.validation = Some(WebTemplateValidation {
+        pattern: Some(pattern.to_owned()),
+        range: None,
+        precision: None,
+    });
+    leaf.inputs = vec![input];
+    leaf
+}
+
+fn pattern_messages(instance: &Value, leaf: &WebTemplateNode) -> Vec<String> {
+    walk_only(instance, leaf)
+        .into_iter()
+        .filter(|m| m.kind == ValidationKind::PatternError)
+        .map(|m| m.message)
+        .collect()
+}
+
+/// A time on a date-only date-time pattern is refused in words, with the key
+/// to the pattern symbols: `XX` marks a part as not allowed.
+#[test]
+fn a_prohibited_time_part_is_named_in_the_refusal() {
+    let leaf = temporal_node(
+        "DV_DATE_TIME",
+        WebTemplateInputType::Datetime,
+        "yyyy-mm-ddTXX:XX:XX",
+    );
+    let msgs = pattern_messages(
+        &json!({"_type": "DV_DATE_TIME", "value": "2022-02-03T04:05:06"}),
+        &leaf,
+    );
+    assert_eq!(msgs.len(), 1, "one pattern refusal: {msgs:?}");
+    let msg = &msgs[0];
+    assert!(
+        msg.contains("the template allows a date only; a time is not allowed here"),
+        "the refusal says the time is not allowed: {msg}"
+    );
+    assert!(
+        msg.contains("'yyyy-mm-ddTXX:XX:XX'") && msg.contains("XX is not allowed"),
+        "the refusal keeps the pattern and its key: {msg}"
+    );
+    assert!(
+        pattern_messages(
+            &json!({"_type": "DV_DATE_TIME", "value": "2022-02-03"}),
+            &leaf
+        )
+        .is_empty(),
+        "a date alone satisfies the pattern"
+    );
+}
+
+/// A part the pattern disallows beside an allowed one is named by itself.
+#[test]
+fn a_prohibited_seconds_part_is_named_in_the_refusal() {
+    let leaf = temporal_node("DV_TIME", WebTemplateInputType::Time, "HH:MM:XX");
+    let msgs = pattern_messages(&json!({"_type": "DV_TIME", "value": "10:30:15"}), &leaf);
+    assert_eq!(msgs.len(), 1, "one pattern refusal: {msgs:?}");
+    assert!(
+        msgs[0].contains("the value carries the second, which the template does not allow here"),
+        "the refusal names the second: {}",
+        msgs[0]
+    );
+}
+
+/// A missing required part is named in the refusal.
+#[test]
+fn a_missing_required_part_is_named_in_the_refusal() {
+    let leaf = temporal_node("DV_TIME", WebTemplateInputType::Time, "HH:MM:SS");
+    let msgs = pattern_messages(&json!({"_type": "DV_TIME", "value": "22:18"}), &leaf);
+    assert_eq!(msgs.len(), 1, "one pattern refusal: {msgs:?}");
+    assert!(
+        msgs[0].contains("the template requires the second, which the value lacks"),
+        "the refusal names the missing second: {}",
+        msgs[0]
+    );
+    let date = temporal_node("DV_DATE", WebTemplateInputType::Date, "yyyy-mm-dd");
+    let msgs = pattern_messages(&json!({"_type": "DV_DATE", "value": "2021"}), &date);
+    assert!(
+        msgs.first()
+            .is_some_and(|m| m.contains("the template requires the month and day")),
+        "the refusal names the missing month and day: {msgs:?}"
+    );
+}
+
+/// An optional (`??`) part is accepted present or absent.
+#[test]
+fn an_optional_part_is_accepted_either_way() {
+    let leaf = temporal_node(
+        "DV_DATE_TIME",
+        WebTemplateInputType::Datetime,
+        "yyyy-mm-ddTHH:MM:??",
+    );
+    for value in ["2022-02-03T04:05", "2022-02-03T04:05:06"] {
+        assert_eq!(
+            pattern_messages(&json!({"_type": "DV_DATE_TIME", "value": value}), &leaf),
+            Vec::<String>::new(),
+            "{value} satisfies the optional seconds"
+        );
+    }
+}
+
 /// `C_DURATION` allowed fields + range (master17.4 CONT-DV_DURATION-*).
 #[test]
 fn duration_fields_and_range() {

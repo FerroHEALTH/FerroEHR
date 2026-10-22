@@ -584,11 +584,15 @@ fn check_temporal(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
     };
     if let Some(validation) = wt.inputs.first().and_then(|i| i.validation.as_ref()) {
         if let Some(pattern) = &validation.pattern
-            && !temporal_pattern_ok(pattern, value)
+            && let Some(breach) = temporal_pattern_breach(pattern, value)
         {
             v.push(
                 &wt.aql_path,
-                format!("temporal value '{value}' does not satisfy the pattern '{pattern}'"),
+                format!(
+                    "temporal value '{value}' does not satisfy the pattern '{pattern}': {}. \
+                     {PATTERN_KEY}",
+                    breach.explain(pattern)
+                ),
                 ValidationKind::PatternError,
             );
         }
@@ -795,20 +799,84 @@ fn duration_seconds(fields: &[(&'static str, f64)]) -> f64 {
         .sum()
 }
 
-/// Whether a date/time/datetime instance value satisfies an AOM 1.4 temporal
-/// pattern (`yyyy-mm-dd`, `HH:MM:SS`, `yyyy-mm-ddTHH:MM:SS`, with `??` =
-/// optional and `XX` = prohibited parts). Only field *presence* is judged —
-/// value well-formedness is the RM-invariant pass's job.
-fn temporal_pattern_ok(pattern: &str, value: &str) -> bool {
+/// The one-line key to the temporal pattern symbols a refusal quotes (ADL 1.4
+/// `master05-cadl.adoc` §"Date, Time and Date/Time" Patterns).
+const PATTERN_KEY: &str = "Pattern key: a letter field (yyyy, mm, dd, HH, MM, SS) is required, \
+                           ?? is optional, XX is not allowed.";
+
+/// The date and time fields of a temporal pattern, in pattern order.
+const DATE_FIELDS: [&str; 3] = ["year", "month", "day"];
+const TIME_FIELDS: [&str; 3] = ["hour", "minute", "second"];
+
+/// How a temporal value breaks its pattern: the fields it carries that the
+/// pattern marks `XX`, and the fields the pattern requires that it lacks.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct PatternBreach {
+    not_allowed: Vec<&'static str>,
+    missing: Vec<&'static str>,
+}
+
+impl PatternBreach {
+    /// Explains the breach in plain words.
+    fn explain(&self, pattern: &str) -> String {
+        let mut parts = Vec::new();
+        let (pat_date, pat_time) = split_date_time(pattern);
+        let time_disallowed = !pat_time.is_empty() && pat_time.split(':').all(|seg| seg == "XX");
+        if time_disallowed && self.not_allowed.iter().any(|f| TIME_FIELDS.contains(f)) {
+            if pat_date.is_empty() {
+                parts.push("the template allows no time here".to_owned());
+            } else {
+                parts
+                    .push("the template allows a date only; a time is not allowed here".to_owned());
+            }
+            let date_extra: Vec<&str> = self
+                .not_allowed
+                .iter()
+                .copied()
+                .filter(|f| DATE_FIELDS.contains(f))
+                .collect();
+            if !date_extra.is_empty() {
+                parts.push(format!("{} not allowed here", fields_phrase(&date_extra)));
+            }
+        } else if !self.not_allowed.is_empty() {
+            parts.push(format!(
+                "the value carries {}, which the template does not allow here",
+                fields_phrase(&self.not_allowed)
+            ));
+        }
+        if !self.missing.is_empty() {
+            parts.push(format!(
+                "the template requires {}, which the value lacks",
+                fields_phrase(&self.missing)
+            ));
+        }
+        parts.join("; ")
+    }
+}
+
+/// Joins field names as an English list: `hour`, `hour and minute`, `hour,
+/// minute and second`.
+fn fields_phrase(fields: &[&str]) -> String {
+    match fields {
+        [] => String::new(),
+        [one] => format!("the {one}"),
+        [init @ .., last] => format!("the {} and {last}", init.join(", ")),
+    }
+}
+
+/// How a date/time/datetime instance value breaks an AOM 1.4 temporal pattern
+/// (`yyyy-mm-dd`, `HH:MM:SS`, `yyyy-mm-ddTHH:MM:SS`, with `??` = optional and
+/// `XX` = not allowed parts), or `None` when it satisfies it. Only field
+/// *presence* is judged; value well-formedness is the RM-invariant pass's job.
+fn temporal_pattern_breach(pattern: &str, value: &str) -> Option<PatternBreach> {
     let (pat_date, pat_time) = split_date_time(pattern);
     let (val_date, val_time) = split_date_time(value);
     // A colon-less bare DV_TIME value (e.g. "10" = hour only) has no `:` and is
     // classified as a date part by `split_date_time`; but a pure-time pattern
-    // ("HH:??:??" / "HH:XX:XX") means the value IS a time — reclassify it so the
-    // hour-only value is judged against the time segments, not demanded as a date.
-    // ADL 1.4 `master05-cadl.adoc` §"Date, Time and Date/Time" Patterns (L847-910):
-    // `?` = optional field, `X` = disallowed field, so a value carrying only the
-    // hour satisfies both "HH:??:??" and "HH:XX:XX".
+    // ("HH:??:??" / "HH:XX:XX") means the value IS a time, so reclassify it and
+    // judge the hour-only value against the time segments. ADL 1.4
+    // `master05-cadl.adoc` §"Date, Time and Date/Time" Patterns: `?` = optional
+    // field, `X` = disallowed field.
     let (val_date, val_time) = if pat_date.is_empty()
         && !pat_time.is_empty()
         && !val_date.is_empty()
@@ -818,42 +886,51 @@ fn temporal_pattern_ok(pattern: &str, value: &str) -> bool {
     } else {
         (val_date, val_time)
     };
+    let mut breach = PatternBreach::default();
     // Date part: year is always required, so its segment is skipped;
     // month/day are judged per the pattern segment. Time part: hours, minutes
     // and seconds are all judged.
-    segments_match(pat_date, val_date, '-', 1) && segments_match(pat_time, val_time, ':', 0)
+    judge_segments(pat_date, val_date, '-', 1, &DATE_FIELDS, &mut breach);
+    judge_segments(pat_time, val_time, ':', 0, &TIME_FIELDS, &mut breach);
+    (breach != PatternBreach::default()).then_some(breach)
 }
 
-/// Whether the field presence of one temporal half satisfies its pattern half.
+/// Records which fields of one temporal half break its pattern half.
 ///
 /// The two are split on `sep` into at most three segments; `skip` drops the
 /// leading segments that carry no optionality (the year). A `??` segment
 /// accepts either presence, an `XX` segment requires absence, and any other
 /// segment requires presence (ADL 1.4 `master05-cadl.adoc` §"Date, Time and
 /// Date/Time" Patterns).
-fn segments_match(pattern: &str, value: &str, sep: char, skip: usize) -> bool {
-    let pat_segs: Vec<&str> = if pattern.is_empty() {
-        Vec::new()
-    } else {
-        pattern.splitn(3, sep).collect()
-    };
+fn judge_segments(
+    pattern: &str,
+    value: &str,
+    sep: char,
+    skip: usize,
+    fields: &[&'static str; 3],
+    breach: &mut PatternBreach,
+) {
+    if pattern.is_empty() {
+        return;
+    }
     let val_count = if value.is_empty() {
         0
     } else {
         value.splitn(3, sep).count()
     };
-    for (i, seg) in pat_segs.iter().enumerate().skip(skip) {
+    for (i, (seg, field)) in pattern
+        .splitn(3, sep)
+        .zip(fields.iter().copied())
+        .enumerate()
+        .skip(skip)
+    {
         let present = val_count > i;
-        let ok = match *seg {
-            "??" => true,
-            "XX" => !present,
-            _ => present,
-        };
-        if !ok {
-            return false;
+        match (seg, present) {
+            ("XX", true) => breach.not_allowed.push(field),
+            ("??" | "XX", _) | (_, true) => {}
+            (_, false) => breach.missing.push(field),
         }
     }
-    true
 }
 
 /// Split a temporal string/pattern into its date and time parts. A value with
