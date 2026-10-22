@@ -79,7 +79,7 @@ components:
     status: partial
     note: >-
       Shipped by FerroEHR on the FerroHEALTH products' shared logging crate
-      `ehds-logging` 0.1.1 and audit crate `ihe-atna` 0.1.1 (FerroAUDIT):
+      `ehds-logging` 0.2.4 and audit crate `ihe-atna` 0.2.4 (FerroAUDIT):
       `ehds-logging` holds the Annex II 3.2 access record, the Art. 14(1)
       categories and the classification, the retention floor of Art. 9(2)
       and the emergency mark, and `ihe-atna` writes the BALP and DICOM

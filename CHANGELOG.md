@@ -15,6 +15,8 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [5.3.0] - 2026-10-22
+
 ### Changed
 
 - **The Rust toolchain moves to 1.99.1.** The pinned channel, both container base images (digest re-resolved to the `rust:1.99.1-slim-trixie` index) and the CI job containers move together; the MSRV stays at 1.98, the toolchain minus one, the rule `docs/VERSIONS.md` now states for the whole FerroHEALTH family. Clippy 1.99's new `assert_is_empty` lint is answered at every site with an `assert_eq!` or `assert_ne!` that prints the value on failure, two `float_cmp` expectations it no longer needs are removed, and the unit tests under the published crates' `src/` (and the codegen templates they are emitted from) change with it, so the `openehr-*` crates move to 0.0.94 with no API change.
@@ -180,8 +182,11 @@ workflow refuses a tag that has no matching section here.
 
 ### Security
 
+Shipped with functional changes because: only the newest release is supported (SECURITY.md), so a separate 5.2.1 published beside 5.3.0 would be out of support the moment 5.3.0 lands and give no one a release to stay on; the fix is a dependency bump with no behaviour change of its own.
+
 - **`rustls-webpki` 0.103.16 and `webpki-roots` / `webpki-root-certs`
-  1.0.10** (RUSTSEC-2026-0381, RUSTSEC-2026-0382, RUSTSEC-2026-0383). The
+  1.0.10** (RUSTSEC-2026-0381, RUSTSEC-2026-0382, RUSTSEC-2026-0383,
+  GHSA-pmpg-vfwr-99qv). The
   outbound TLS client no longer accepts certificate paths through the
   distrusted emSign intermediates.
 
@@ -11803,7 +11808,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.1.0...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.0...HEAD
+[5.3.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.2.0...v5.3.0
 [5.2.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.1.0...v5.2.0
 [5.1.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.0.0...v5.1.0
 [5.0.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v4.3.11...v5.0.0
