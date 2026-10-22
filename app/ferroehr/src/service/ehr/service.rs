@@ -270,10 +270,12 @@ impl FerroEhrService {
             other => other,
         };
         self.emit_subject_resolution(namespace, found)?;
+        // NOTE: no openEHR spec governs this message, our own design: the subject
+        // id is an external patient identifier, so the refusal names only its namespace.
         let ehr_id = found.ok_or_else(|| {
             ServiceError::sm(
                 CallStatusType::EhrIdDoesNotExist,
-                format!("EHR for subject {subject_id}@{namespace}"),
+                format!("no EHR names the requested subject in namespace {namespace}"),
             )
         })?;
         self.ehr_summary(ehr_id).await

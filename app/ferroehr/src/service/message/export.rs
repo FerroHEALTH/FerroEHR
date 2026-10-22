@@ -1124,8 +1124,7 @@ async fn resolve_entity_ehr(
         .fetch_optional(&mut *acquire(&svc.pool).await?)
         .await
         .map_err(ServiceError::from)?;
-        return id
-            .ok_or_else(|| SmError::ehr_not_found(format!("no EHR for subject_id {subject:?}")));
+        return id.ok_or_else(|| SmError::ehr_not_found("no EHR names the requested subject_id"));
     }
     Err(SmError::precondition(
         "EXTRACT_ENTITY_MANIFEST identifies no entity (neither ehr_id nor subject_id)",

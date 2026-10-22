@@ -122,6 +122,17 @@ workflow refuses a tag that has no matching section here.
   the cache hit apart: one login record per credential verification, as
   `[auth.basic] cache_ttl_seconds` documents.
 
+- **A lookup by subject no longer echoes the subject id** (#3906). The `404`
+  of `GET /ehr?subject_id=…&subject_namespace=…` for a subject with no EHR,
+  and the message extension's refusal for an unknown `subject_id`, named the
+  identifier, a national patient number in many deployments. Both now name
+  only the namespace or the parameter. A test drives the lookup under a
+  subscriber that records every log line and span attribute and asserts the
+  identifier reaches none of them; the request log and traces already
+  recorded the path and route without the query string. The book's Security
+  page says that the identifier travels in the URL and that a proxy in front
+  of FerroEHR must not log query strings.
+
 ### Security
 
 - **`rustls-webpki` 0.103.16 and `webpki-roots` / `webpki-root-certs`
