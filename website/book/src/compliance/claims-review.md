@@ -438,7 +438,7 @@ cut, after the texts in scope have been read.
 | 2026-10-19 | 5.0.0, after `ec78e7f40` | 2 claims, in two book pages | nothing |
 | 2026-10-20 | 5.1.0, after `18097c6f1` | 2 claims, in the README and one book page | nothing |
 | 2026-10-20 | 5.2.0, after `e5aa1902b` | 1 claim, in one book page | nothing |
-| 2026-10-22 | 5.3.1, after `434cd351e` | 4 claims, in four book pages and the technical documentation | nothing |
+| 2026-10-22 | 5.3.2, after `434cd351e` | 4 claims, in four book pages and the technical documentation | nothing |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -472,9 +472,9 @@ the earliest event (#3888); the nine `openehr-*` crates at `0.0.91`.
 
 Nothing.
 
-## The review of 2026-10-22, for 5.3.1
+## The review of 2026-10-22, for 5.3.2
 
-Read on the tree after commit `434cd351e`, for FerroEHR 5.3.1. The facts of this
+Read on the tree after commit `434cd351e`, for FerroEHR 5.3.2. The facts of this
 release checked in every text in scope: the access log written through
 FerroAUDIT's `ehds-logging` and `ihe-atna` 0.2.4, with the categories named by
 their HL7 Europe codes, `category_basis`, and the record's `jti`, operation
@@ -486,7 +486,7 @@ query string read as a space (#3891); the subject id of a lookup by subject
 kept out of every log, span and error body (#3906); Rust 1.99.1 with the MSRV
 at 1.98; the nine `openehr-*` crates at `0.0.95`.
 
-### Changed on 2026-10-22, for 5.3.1
+### Changed on 2026-10-22, for 5.3.2
 
 - **[The Rust crates](../crates.md)**: the dependency examples named the crates
   at `0.0.91`; they name `0.0.95`.
@@ -498,7 +498,7 @@ at 1.98; the nine `openehr-*` crates at `0.0.95`.
 - **The technical documentation's scope** (`docs/technical-documentation/README.md`):
   as the row above.
 
-### Read and kept on 2026-10-22, for 5.3.1
+### Read and kept on 2026-10-22, for 5.3.2
 
 - **The audit statements**: the README, [security](../security.md), the
   [audit trail](../audit.md), [audit configuration](../installation/config-audit.md),
@@ -511,6 +511,6 @@ at 1.98; the nine `openehr-*` crates at `0.0.95`.
 - **The landing page, `SECURITY.md`, the crate READMEs, the image labels and
   the chart description** make no claim this release changes.
 
-### Left open on 2026-10-22, for 5.3.1
+### Left open on 2026-10-22, for 5.3.2
 
 Nothing.

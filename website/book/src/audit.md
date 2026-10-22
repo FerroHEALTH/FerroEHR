@@ -66,7 +66,7 @@ Both formats give the client and the server the same data-flow role: on a
 read the server is Source (DCM 110153) and the client Destination (110152),
 because the data moves from the server to the client (DICOM PS3.15 §A.5.2.7,
 the BALP `Read` profiles); on a create, an update and a query the client is
-Source (PS3.15 §A.5.3.10 for a query, the BALP `Create`, `Update` and `Query`
+Source (PS3.15 §A.5.3.20 for a query, the BALP `Create`, `Update` and `Query`
 profiles).
 
 Every server operation is audited (an unrecognised extension operation fails
@@ -255,7 +255,7 @@ template and archetype ids as evidence, and is never refused; the FHIR record
 says why (`unmapped`, `unbound`, `named-nothing`). A stored category is its
 `<system>|<code>` token. `category_basis` says what the classification was read
 from (`returned`, `written`, `queried` or `resource-kind`; records written
-before 5.3.1 carry `template`, `archetype` or `query` and the earlier
+before 5.3.2 carry `template`, `archetype` or `query` and the earlier
 spellings), and `category_map_digest` names the map that produced it, so a
 later map never rereads an old record. The map's
 digest is also on the boot line and on `GET /management/info` under
