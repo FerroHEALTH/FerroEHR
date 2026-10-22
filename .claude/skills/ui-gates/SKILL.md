@@ -3,7 +3,8 @@ name: ui-gates
 description: >
   Runs the full viewer quality-gate battery for app/ferroehr-viewer:
   clippy on native AND wasm32 targets, nextest, leptosfmt + cargo fmt,
-  and a cargo-leptos build. Use before committing any viewer change,
+  a cargo-leptos build, the bundle budget and the journeys, and names the
+  FerroUI checks the viewer inherits from the library that leads its UI. Use before committing any viewer change,
   when the user asks to "check the UI", or as the done-gate a ui-implementer
   task must pass.
 allowed-tools: [Bash, Read, Grep, Glob]
@@ -12,8 +13,28 @@ allowed-tools: [Bash, Read, Grep, Glob]
 # /ui-gates
 
 Run every gate the viewer must pass (defined in
-`.claude/rules/leptos-ui.md` §10). Stop and report on the first hard
+`.claude/rules/leptos-ui.md` §6 and §7). Stop and report on the first hard
 failure; run the cheap gates first.
+
+## What FerroUI already checks (inherited, not re-run here)
+
+FerroUI leads the viewer's UI, and its gates hold every component the
+viewer draws before a release reaches the pin (`ferrohealth-ui` in the root
+`Cargo.toml`, `=0.2.0` today):
+
+- the library gates of FerroUI's `.claude/rules/leptos-ui.md` §10 (fmt,
+  clippy on the host and wasm32, nextest, the gallery journeys and
+  screenshots) and its no-inline-style and no-WebAssembly tests
+  (`crates/ferrohealth-ui/tests/it/stylesheet.rs` and, on `main`,
+  `app/ferrohealth-ui-gallery/tests/it/no_wasm.rs`);
+- the design checks of `design/COMPONENTS.md` § Checks every console runs
+  (`render.py`, `overflow.py`, `hover.py`, `contrast.py`, `selects.py`,
+  `popups.py`, `forms.py`, run by `design/tools/check.sh` over the viewer's
+  mockup in `design/consoles/ferroehr/`).
+
+A gate failure that comes from a FerroUI part is reported as a FerroUI
+issue (FerroHEALTH/FerroUI, label `component`), never fixed by a local
+override. The viewer's own gates follow.
 
 ## Preconditions
 
@@ -51,7 +72,7 @@ cargo nextest run -p ferroehr-viewer
 bash scripts/cargo-leptos.sh build
 
 # 5. E2E journeys (merge-gating in CI; local requires Docker) — Rust-native
-#    thirtyfour/WebDriver over the composed stack (.claude/rules/leptos-ui.md §10)
+#    thirtyfour/WebDriver over the composed stack (.claude/rules/leptos-ui.md §6)
 bash scripts/ui-e2e.sh
 ```
 
@@ -59,8 +80,14 @@ Stage 5 locally: run when Docker is available (`docker info`); otherwise
 report `SKIPPED(no docker)` — but state explicitly that CI's `ui-e2e` job
 WILL run it and gates the merge, so a skip here is not a pass.
 
-Adjust the exact feature flags to the crate's `Cargo.toml` (read it first —
-the `ssr`/`hydrate` feature names are the convention, not a guess).
+The two halves are chosen by compilation target, never by a feature pair
+(`.claude/rules/leptos-ui.md` §1); read the crate's `Cargo.toml` before
+adding any flag.
+
+The bundle budget (`.claude/rules/leptos-ui.md` §7) runs after a release
+build: `bash scripts/checks/viewer-bundle.sh`. The string catalog check runs
+in CI as `bash scripts/checks/stray-literals.sh app/ferroehr-viewer/src`
+(§8); run it when the change touches drawn words.
 
 ## Report
 
