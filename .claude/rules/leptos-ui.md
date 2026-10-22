@@ -4,24 +4,54 @@ paths: ["app/ferroehr-viewer/**"]
 
 # Leptos viewer rules (`app/ferroehr-viewer`)
 
-**The component rules are FerroUI's.** The FerroHEALTH consoles share one
-component library, FerroUI (`ferrohealth-ui` on crates.io, repository
-FerroHEALTH/FerroUI), and one component rule set, its
-`.claude/rules/leptos-ui.md`: the two tiers (static views and widgets),
-render-mode agnostic components, reactivity and props, `<For>` keys, valid
-HTML, forms, the one table and paging model, accessibility to WCAG 2.2 AA,
-the role tokens and themes, Lucide icons, and the bundle. Read it before any
-viewer change. This file keeps only what is particular to the FerroEHR
-Viewer. The oracle for every Leptos question is the official Leptos book
-(leptos-rs/book `main`, Leptos 0.8; `/leptos-lookup`), never memory.
+**FerroUI leads the viewer's UI.** FerroUI (`ferrohealth-ui` on crates.io,
+repository FerroHEALTH/FerroUI) is the family's component library and the
+one source of its console design and its Leptos rules. Read these first,
+before any viewer change:
 
-## 0. Owner mandates (absolute)
+- the consumer guide, [`docs/consoles.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/docs/consoles.md):
+  how a console takes the library, what it keeps local, how it moves to a
+  new release;
+- the component rules, [`.claude/rules/leptos-ui.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.2.0/.claude/rules/leptos-ui.md):
+  the mandates (§0), the two tiers (§1), reactivity, views, forms, tables
+  and paging, accessibility to WCAG 2.2 AA, tokens and themes, icons, the
+  bundle (§12) and the catalogs (§13); on `main` the same file adds the
+  four-layer interaction contract (§1), the book's rules (§14) and the
+  island rules (§15);
+- the crate discipline, [`crates/ferrohealth-ui/CLAUDE.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/crates/ferrohealth-ui/CLAUDE.md):
+  the interaction contract, islands mode and the list of ready islands;
+- the reviewed design, [`design/README.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/design/README.md),
+  [`design/COMPONENTS.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/design/COMPONENTS.md)
+  (the component IDs such as R9, F13 and E1 to E8, the family rules, the
+  page templates) and the viewer's mockup under
+  [`design/consoles/ferroehr/`](https://github.com/FerroHEALTH/FerroUI/tree/main/design/consoles/ferroehr).
 
-- **Rust only, zero hand-written JavaScript.** No authored `.js`, no inline
-  `<script>` bodies, no `onxxx="..."` attributes (the book's
-  `oninput="this.form.requestSubmit()"` trick in `router/20_form` is
-  forbidden; use an `on:` listener). The only JS is the generated
-  `wasm-bindgen` bootstrap. JS-wrapping crates are banned.
+**The pin decides the version you read.** The viewer pins `ferrohealth-ui =
+"=0.2.0"` (root `Cargo.toml`), so its component rules are read at the tag
+`v0.2.0`. The guide, the crate discipline and the design entered FerroUI
+after that tag and are read on `main` until the viewer's pin reaches a tag
+that carries them. The viewer moves to FerroUI 0.3.x, islands mode and the
+four-layer interaction contract in the console rollout
+(FerroHEALTH/FerroUI#161, after FerroUI 0.3.2); new UI work waits for it.
+FerroUI's `design/` is the only design source: a design folder anywhere
+else is stale and never synced from.
+
+**Nothing FerroUI has or should have is built here.** A missing component,
+a wrong behaviour in one, a stylesheet override or a script the viewer
+would need is filed on FerroHEALTH/FerroUI (label `component`) and linked
+from the viewer's issue; the viewer keeps its current part meanwhile and
+takes the library's when the pin moves. Never a local copy, a shadow
+component, a local stylesheet override or a hand-written script.
+
+This file keeps only what is particular to the FerroEHR Viewer. The oracle
+for every Leptos question FerroUI does not settle is the official Leptos
+book (leptos-rs/book `main`, Leptos 0.8; `/leptos-lookup`), never memory.
+
+## 0. Viewer mandates (absolute)
+
+- **No hand-written JavaScript:** FerroUI's mandate (its `leptos-ui.md` §0)
+  binds the viewer whole. The only JS is the generated `wasm-bindgen`
+  bootstrap.
 - **REST boundary:** the viewer reaches the CDR only over ITS-REST from the
   BFF (server functions → `reqwest`). It may depend on `crates/openehr-*`;
   it must NEVER depend on `app/ferroehr` or `app/ferroehr-rest`.
@@ -29,10 +59,6 @@ Viewer. The oracle for every Leptos question is the official Leptos book
   Every `#[server]` fn enforces the viewer's session itself and is declared
   `#[server(client = crate::session_client::SessionAwareClient)]` (the crate
   `CLAUDE.md`). CDR credentials never leave the server.
-- **No component is built here that FerroUI should draw.** A component the
-  viewer needs that FerroUI lacks is filed on FerroHEALTH/FerroUI (label
-  `component`) and added there in a FerroUI release; the viewer keeps its
-  current one meanwhile and moves to the library's when the pin moves.
 
 ## 1. Two halves, chosen by target
 
@@ -43,17 +69,15 @@ Viewer. The oracle for every Leptos question is the official Leptos book
   dependencies sit under `[target.'cfg(not(target_arch = "wasm32"))'.dependencies]`.
 - WASM is 32-bit: never `usize`/`isize` in a server-fn argument, return type
   or any serialized shared type (`server/25` quirks).
-- Signals hold `Send + Sync` values; the `_local` variants only for genuinely
-  `!Send` browser types.
 - **Views are built in `.into_any()`-erased sections**: plain `cargo` builds
   have no `erase_components`, and a monolithic `view!` blows rustc's layout
   recursion in `cargo test` codegen.
 
 ## 2. Reactivity the viewer learned the hard way
 
-- Writing one signal from an `Effect` that reads another is forbidden
-  (`working_with_signals` §4). The two sanctioned async-answer-into-signal
-  shapes: an Action's answer is written in the action's own continuation; a
+- FerroUI's reactivity rules (its `leptos-ui.md` §3, and §14.2 on `main`)
+  forbid writing one signal from an `Effect` that reads another. The
+  viewer's two sanctioned async-answer-into-signal shapes: an Action's answer is written in the action's own continuation; a
   Resource seeding editable local state stays a one-shot resource-reading
   `Effect` with a written justification whenever any seed target renders
   outside the resource's own `Suspend` (seeding inside it writes during the
@@ -89,8 +113,9 @@ Viewer. The oracle for every Leptos question is the official Leptos book
 - Filter, search and paging state of a listing that names no patient lives in
   the URL (`<Form method="GET">` → `use_query_map` → resource source).
 - **No patient identifier and no position in a listing that can show patient
-  data goes in a URL**: those listings page with
-  `components::data_table::paging_in_session` (FerroUI's session pager).
+  data goes in a URL** (FerroUI's mandate, its `leptos-ui.md` §0): those
+  listings page with `components::data_table::paging_in_session` (FerroUI's
+  session pager).
 
 ## 5. Theme and styles
 
@@ -106,6 +131,10 @@ Viewer. The oracle for every Leptos question is the official Leptos book
 
 ## 6. Testing and gates
 
+- FerroUI's own gates (its `leptos-ui.md` §10) hold the library; the
+  design checks of the viewer's mockup (`design/COMPONENTS.md` § Checks every
+  console runs, `design/tools/check.sh`) run in FerroUI. The viewer runs the
+  gates below over its own code.
 - Business logic lives out of components in plain types with unit tests.
 - SSR render tests (`tests/it/ssr_*.rs`) render with `RenderHtml::to_html`
   in an `Owner`.
