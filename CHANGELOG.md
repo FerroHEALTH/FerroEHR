@@ -132,6 +132,37 @@ workflow refuses a tag that has no matching section here.
   recorded the path and route without the query string. The book's Security
   page says that the identifier travels in the URL and that a proxy in front
   of FerroEHR must not log query strings.
+- **An archetype that fills two slots under different names gets the right
+  path id in each** (#3920). The web template took a slot fill's name from
+  whichever fill of the same archetype came first, so in a template that
+  fills `openEHR-EHR-CLUSTER.reference_sequence.v1` once as "Genome assembly"
+  and once as "Reference sequence", both fills were named `genome_assembly`
+  and a FLAT path through the second, such as
+  `…/genomic_substitution_variant/reference_sequence/source_name`, was refused
+  as an unknown simplified path. Each fill now takes its node id from its own
+  root term (ITS-REST Simplified Formats, Node ID Generation Rules). Web
+  templates, FLAT and STRUCTURED examples, and FLAT paths change for templates
+  that fill one archetype under two names. The `openehr-*` crates move to
+  0.0.95.
+
+- **`<root>/context/start_time` sets the history origin and event times**
+  (#3919). A FLAT composition that gave its start time by path, without
+  `ctx/time`, stored that start time but timed every untimed observation
+  history and event with the commit time. The path spellings
+  `…/context/start_time`, `…/context/_end_time`, `…/context/_location` and
+  `…/context/setting` now feed the same defaults as `ctx/time`,
+  `ctx/end_time`, `ctx/location` and `ctx/setting` (Simplified Formats,
+  `ctx/` vocabulary and RM mappings, EVENT_CONTEXT). An explicit `ctx/` key
+  still wins for the defaults.
+
+- **A date or time pattern refusal says which parts are required, optional
+  or not allowed** (#3918). A value that breaks its template's date, time or
+  date-time pattern used to be refused with only the pattern, such as
+  `yyyy-mm-ddTXX:XX:XX`, which reads as a match to anyone who takes `XX` for
+  two digits. The refusal now names the parts in words ("the template allows
+  a date only; a time is not allowed here", "the template requires the
+  second, which the value lacks") and ends with a key to the pattern symbols.
+  The book's Templates & validation page explains them.
 
 ### Security
 

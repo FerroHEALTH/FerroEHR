@@ -75,6 +75,19 @@ type TermBindings = HashMap<String, Vec<Termbindingset>>;
 /// `AM/docs/ADL1.4/master08-adl.adoc` §Constraint_bindings).
 type ConstraintBindings = HashMap<String, Vec<Constraintbindingset>>;
 
+/// The ontology scope of one `C_ARCHETYPE_ROOT` instance in the walk.
+///
+/// A template may fill the same archetype at several places, each fill an
+/// overlay with its own terminology (AOM 2 `master10-templates.adoc`
+/// §Overview, §Template Identifiers), so the inline `term_definitions` of an
+/// OPT 1.4 archetype root belong to that root instance, never to its archetype
+/// id; the bindings stay keyed by archetype id.
+#[derive(Clone, Copy)]
+struct Scope<'a> {
+    archetype_id: &'a str,
+    inline: &'a HashMap<String, Rubric>,
+}
+
 /// Build context shared across the walk.
 struct Ctx {
     default_language: String,
@@ -85,30 +98,40 @@ struct Ctx {
 }
 
 impl Ctx {
-    fn rubric(&self, arch_id: &str, lang: &str, code: &str) -> Option<&Rubric> {
-        self.ontology.get(arch_id)?.get(lang)?.get(code)
+    /// The rubric of `code` in `lang`: the flat ontology's entry for the
+    /// scope's archetype, else, in the default language, the scope's own inline
+    /// `term_definitions`.
+    fn rubric<'s>(&'s self, scope: Scope<'s>, lang: &str, code: &str) -> Option<&'s Rubric> {
+        self.ontology
+            .get(scope.archetype_id)
+            .and_then(|langs| langs.get(lang))
+            .and_then(|codes| codes.get(code))
+            .or_else(|| {
+                (lang == self.default_language)
+                    .then(|| scope.inline.get(code))
+                    .flatten()
+            })
     }
 
-    fn text(&self, arch_id: &str, code: &str, lang: &str) -> Option<String> {
-        self.rubric(arch_id, lang, code)
-            .and_then(|r| r.text.clone())
+    fn text(&self, scope: Scope<'_>, code: &str, lang: &str) -> Option<String> {
+        self.rubric(scope, lang, code).and_then(|r| r.text.clone())
     }
 
-    /// The external term bindings for `code` within `arch_id`'s archetype
+    /// The external term bindings for `code` within the scope's archetype
     /// (master04 §"Web Template Metadata": a node/coded-value `termBindings` map):
     /// for every terminology whose binding set has an item matching `code`, the
     /// bound code phrase as a `{value, terminologyId}`. Keyed by terminology,
     /// first match per terminology wins, in binding-set order.
     fn term_bindings_for(
         &self,
-        arch_id: &str,
+        scope: Scope<'_>,
         code: &str,
     ) -> IndexMap<String, WebTemplateBindingCodedValue> {
         let mut out = IndexMap::new();
         if code.is_empty() {
             return out;
         }
-        let Some(sets) = self.term_bindings.get(arch_id) else {
+        let Some(sets) = self.term_bindings.get(scope.archetype_id) else {
             return out;
         };
         for set in sets {
@@ -124,7 +147,7 @@ impl Ctx {
         out
     }
 
-    /// The external constraint bindings of `ac_code` within `arch_id`'s
+    /// The external constraint bindings of `ac_code` within the scope's
     /// archetype: one entry per terminology whose `ConstraintBindingSet` binds
     /// the ac-code to a query URI (`AM/docs/ADL1.4/master08-adl.adoc`
     /// §Constraint_bindings). `attr` is the RM attribute of the leaf carrying
@@ -132,7 +155,7 @@ impl Ctx {
     /// ac-code constrains nothing resolvable.
     fn constraint_bindings_for(
         &self,
-        arch_id: &str,
+        scope: Scope<'_>,
         ac_code: &str,
         attr: &str,
     ) -> Vec<WebTemplateConstraintBinding> {
@@ -140,7 +163,7 @@ impl Ctx {
         if ac_code.is_empty() {
             return out;
         }
-        let Some(sets) = self.constraint_bindings.get(arch_id) else {
+        let Some(sets) = self.constraint_bindings.get(scope.archetype_id) else {
             return out;
         };
         for set in sets {
@@ -169,17 +192,17 @@ impl Ctx {
 fn constraint_bindings_of(
     ctx: &Ctx,
     co: &CObject,
-    arch_id: &str,
+    scope: Scope<'_>,
 ) -> Vec<WebTemplateConstraintBinding> {
     let mut out = Vec::new();
     if let CObject::ConstraintRef(cr) = co {
-        out.extend(ctx.constraint_bindings_for(arch_id, &cr.reference, ""));
+        out.extend(ctx.constraint_bindings_for(scope, &cr.reference, ""));
     }
     for attr in inputs::attributes(co) {
         let attr_name = inputs::attribute_name(attr);
         for child in inputs::attribute_children(attr) {
             if let CObject::ConstraintRef(cr) = child {
-                out.extend(ctx.constraint_bindings_for(arch_id, &cr.reference, attr_name));
+                out.extend(ctx.constraint_bindings_for(scope, &cr.reference, attr_name));
             }
         }
     }
@@ -209,7 +232,7 @@ fn binding_coded_value(item: &TermBindingItem) -> Option<WebTemplateBindingCoded
 /// A [`Labels`] view bound to the current archetype, for coded-value rubrics.
 struct ArchetypeLabels<'a> {
     ctx: &'a Ctx,
-    arch_id: &'a str,
+    scope: Scope<'a>,
 }
 
 impl Labels for ArchetypeLabels<'_> {
@@ -220,10 +243,10 @@ impl Labels for ArchetypeLabels<'_> {
         // the local at-codes. Try bare first (the overwhelmingly common
         // case), then qualified.
         self.ctx
-            .text(self.arch_id, code, &self.ctx.default_language)
+            .text(self.scope, code, &self.ctx.default_language)
             .or_else(|| {
                 self.ctx.text(
-                    self.arch_id,
+                    self.scope,
                     &format!("{terminology}::{code}"),
                     &self.ctx.default_language,
                 )
@@ -233,9 +256,9 @@ impl Labels for ArchetypeLabels<'_> {
     fn localized(&self, terminology: &str, code: &str) -> IndexMap<String, String> {
         let mut out = IndexMap::new();
         for lang in &self.ctx.languages {
-            if let Some(t) = self.ctx.text(self.arch_id, code, lang).or_else(|| {
+            if let Some(t) = self.ctx.text(self.scope, code, lang).or_else(|| {
                 self.ctx
-                    .text(self.arch_id, &format!("{terminology}::{code}"), lang)
+                    .text(self.scope, &format!("{terminology}::{code}"), lang)
             }) {
                 out.insert(lang.clone(), t);
             }
@@ -244,7 +267,7 @@ impl Labels for ArchetypeLabels<'_> {
     }
 
     fn term_bindings(&self, code: &str) -> IndexMap<String, WebTemplateBindingCodedValue> {
-        self.ctx.term_bindings_for(self.arch_id, code)
+        self.ctx.term_bindings_for(self.scope, code)
     }
 }
 
@@ -270,20 +293,24 @@ pub fn build_web_template(
     let default_language = opt.language.code_string.clone();
     let ctx = Ctx {
         languages: collect_languages(opt, &default_language),
-        ontology: collect_ontology(opt, &default_language),
+        ontology: collect_ontology(opt),
         term_bindings: collect_term_bindings(opt),
         constraint_bindings: collect_constraint_bindings(opt),
         default_language,
     };
 
-    let root_arch_id = opt.definition.archetype_id.value.clone();
     let root_co = CObject::CArchetypeRoot(opt.definition.clone());
+    let no_inline = HashMap::new();
+    let outer = Scope {
+        archetype_id: opt.definition.archetype_id.value.as_str(),
+        inline: &no_inline,
+    };
     let mut tree = build_node(
         &ctx,
         None,
         &root_co,
         "",
-        &root_arch_id,
+        outer,
         None,
         shape::Identity::Archetyped,
     );
@@ -321,17 +348,24 @@ fn build_node(
     owner: Option<&openehr_its::opt14::types::CAttribute>,
     co: &CObject,
     parent_path: &str,
-    parent_arch_id: &str,
+    parent_scope: Scope<'_>,
     group: Option<&str>,
     identity: shape::Identity,
 ) -> WebTemplateNode {
-    // A C_ARCHETYPE_ROOT switches the ontology scope to its own archetype.
-    let node_arch_id = match co {
-        CObject::CArchetypeRoot(r) => r.archetype_id.value.as_str(),
-        _ => parent_arch_id,
+    // A C_ARCHETYPE_ROOT switches the ontology scope to its own instance.
+    let inline;
+    let scope = match co {
+        CObject::CArchetypeRoot(r) => {
+            inline = inline_rubrics(r);
+            Scope {
+                archetype_id: r.archetype_id.value.as_str(),
+                inline: &inline,
+            }
+        }
+        _ => parent_scope,
     };
-    let mut node = create_node(ctx, owner, co, parent_path, node_arch_id, identity);
-    build_children(ctx, co, &mut node, node_arch_id, group);
+    let mut node = create_node(ctx, owner, co, parent_path, scope, identity);
+    build_children(ctx, co, &mut node, scope, group);
     node
 }
 
@@ -340,7 +374,7 @@ fn create_node(
     owner: Option<&openehr_its::opt14::types::CAttribute>,
     co: &CObject,
     parent_path: &str,
-    arch_id: &str,
+    scope: Scope<'_>,
     identity: shape::Identity,
 ) -> WebTemplateNode {
     let attr_name = owner.map(inputs::attribute_name);
@@ -380,12 +414,12 @@ fn create_node(
     // the `defining_code` the composition builder must stamp; it takes
     // precedence over the plain `name/value` and node-rubric name.
     let coded_name = archetyped
-        .then(|| coded_name_constraint(co, ctx, arch_id, name_constraint.as_deref()))
+        .then(|| coded_name_constraint(co, ctx, scope, name_constraint.as_deref()))
         .flatten();
     apply_node_naming(
         &mut node,
         ctx,
-        arch_id,
+        scope,
         name_code,
         name_constraint.as_deref(),
         coded_name,
@@ -393,13 +427,13 @@ fn create_node(
     // Node-level external term bindings: the archetype root's `term_bindings`
     // whose item code matches this node's constraint node id (master04
     // §"Web Template Metadata": the node-level `termBindings` map).
-    node.term_bindings = ctx.term_bindings_for(arch_id, name_code);
+    node.term_bindings = ctx.term_bindings_for(scope, name_code);
     // Archetype constraint bindings (ac-code → external terminology query) in
     // force on this node's coded value — resolvable only by a terminology
     // service, so recorded rather than checked here (BASE
     // `architecture_overview/master12-terminology.adoc` §"Binding Terminology
     // Value-sets to Archetypes").
-    node.constraint_bindings = constraint_bindings_of(ctx, co, arch_id);
+    node.constraint_bindings = constraint_bindings_of(ctx, co, scope);
     node
 }
 
@@ -410,7 +444,7 @@ fn create_node(
 fn apply_node_naming(
     node: &mut WebTemplateNode,
     ctx: &Ctx,
-    arch_id: &str,
+    scope: Scope<'_>,
     name_code: &str,
     name_constraint: Option<&str>,
     coded_name: Option<(String, CodedName)>,
@@ -423,9 +457,9 @@ fn apply_node_naming(
         node.name = Some(nc.to_owned());
         node.localized_name = Some(nc.to_owned());
     } else if !name_code.is_empty() {
-        node.name = ctx.text(arch_id, name_code, &ctx.default_language);
+        node.name = ctx.text(scope, name_code, &ctx.default_language);
         node.localized_name.clone_from(&node.name);
-        apply_localized_rubrics(node, ctx, arch_id, name_code);
+        apply_localized_rubrics(node, ctx, scope, name_code);
     }
     node.name_code = if name_code.is_empty() {
         None
@@ -435,9 +469,14 @@ fn apply_node_naming(
 }
 
 /// Records the node rubric's per-language text and description.
-fn apply_localized_rubrics(node: &mut WebTemplateNode, ctx: &Ctx, arch_id: &str, name_code: &str) {
+fn apply_localized_rubrics(
+    node: &mut WebTemplateNode,
+    ctx: &Ctx,
+    scope: Scope<'_>,
+    name_code: &str,
+) {
     for lang in &ctx.languages {
-        let Some(r) = ctx.rubric(arch_id, lang, name_code) else {
+        let Some(r) = ctx.rubric(scope, lang, name_code) else {
             continue;
         };
         if let Some(t) = &r.text {
@@ -461,7 +500,7 @@ fn build_attribute_children(
     ctx: &Ctx,
     attr: &openehr_its::opt14::types::CAttribute,
     node: &WebTemplateNode,
-    arch_id: &str,
+    scope: Scope<'_>,
     children: &mut Vec<WebTemplateNode>,
 ) {
     let attr_name = inputs::attribute_name(attr);
@@ -488,7 +527,7 @@ fn build_attribute_children(
             Some(attr),
             child_co,
             &node.aql_path,
-            arch_id,
+            scope,
             child_group,
             identity,
         ));
@@ -509,7 +548,7 @@ fn build_children(
     ctx: &Ctx,
     co: &CObject,
     node: &mut WebTemplateNode,
-    arch_id: &str,
+    scope: Scope<'_>,
     group: Option<&str>,
 ) {
     let is_data_value = node.rm_type.starts_with("DV_");
@@ -521,7 +560,7 @@ fn build_children(
             // The `name` attribute is never a child node — it names the node
             // (master04 §"Field Identifiers": names generate the node id).
             if inputs::attribute_name(attr) != "name" {
-                build_attribute_children(ctx, attr, node, arch_id, &mut children);
+                build_attribute_children(ctx, attr, node, scope, &mut children);
             }
         }
     }
@@ -534,7 +573,7 @@ fn build_children(
     // history Summary` templates use) still owns every party suffix. For every
     // other leaf family a child means the node is a container, not a datum.
     if has_inputs(&node.rm_type) && (children.is_empty() || is_party(&node.rm_type)) {
-        let labels = ArchetypeLabels { ctx, arch_id };
+        let labels = ArchetypeLabels { ctx, scope };
         let (built, ptypes) = inputs::build_inputs(&node.rm_type, co, &labels, group);
         node.inputs = built;
         node.proportion_types = ptypes;
@@ -549,7 +588,7 @@ fn build_children(
     if recurse_attrs {
         node.existence = existence_constraints(co, &node.aql_path);
         node.closed_attributes = closed_attributes(co, &node.aql_path);
-        node.structural_stubs = structural_stubs(ctx, co, arch_id, &node.aql_path);
+        node.structural_stubs = structural_stubs(ctx, co, scope, &node.aql_path);
     }
     node.children = children;
     shape::post_process(node);
@@ -1035,7 +1074,7 @@ const STRUCTURAL_ATTRS: [&str; 4] = ["data", "description", "protocol", "state"]
 fn structural_stubs(
     ctx: &Ctx,
     co: &CObject,
-    arch_id: &str,
+    scope: Scope<'_>,
     node_path: &str,
 ) -> Vec<WebTemplateStructuralStub> {
     let mut out = Vec::new();
@@ -1064,7 +1103,7 @@ fn structural_stubs(
                 path: format!("{node_path}/{attr_name}"),
                 rm_type: object_rm_type(child).to_owned(),
                 node_id,
-                name: ctx.text(arch_id, object_node_id(child), &ctx.default_language),
+                name: ctx.text(scope, object_node_id(child), &ctx.default_language),
             });
             break; // first node-identified structural child under this attribute
         }
@@ -1228,7 +1267,7 @@ fn collect_languages(opt: &OperationalTemplate, default_language: &str) -> Vec<S
     langs
 }
 
-fn collect_ontology(opt: &OperationalTemplate, default_language: &str) -> Ontology {
+fn collect_ontology(opt: &OperationalTemplate) -> Ontology {
     let mut ontology: Ontology = HashMap::new();
 
     let mut register_flat = |flat: &openehr_its::opt14::types::FlatArchetypeOntology| {
@@ -1247,31 +1286,18 @@ fn collect_ontology(opt: &OperationalTemplate, default_language: &str) -> Ontolo
     for o in &opt.component_ontologies {
         register_flat(o);
     }
-
-    // Inline C_ARCHETYPE_ROOT term_definitions are the flattened default-language
-    // rubrics; register them (without overwriting an explicit ontology entry).
-    collect_inline_terms(&opt.definition, default_language, &mut ontology);
     ontology
 }
 
-fn collect_inline_terms(root: &CArchetypeRoot, default_language: &str, ontology: &mut Ontology) {
-    let arch = ontology.entry(root.archetype_id.value.clone()).or_default();
-    let lang = arch.entry(default_language.to_owned()).or_default();
+/// The default-language rubrics of one archetype root's inline
+/// `term_definitions`, first entry per code winning.
+fn inline_rubrics(root: &CArchetypeRoot) -> HashMap<String, Rubric> {
+    let mut out = HashMap::new();
     for term in &root.term_definitions {
-        lang.entry(term.code.clone())
+        out.entry(term.code.clone())
             .or_insert_with(|| rubric_of(term));
     }
-    // Recurse into nested archetype roots (each registers its own subtree's
-    // rubrics under its own archetype id). Walk by reference — no cloning.
-    let mut nested = Vec::new();
-    for attr in &root.attributes {
-        for child in inputs::attribute_children(attr) {
-            collect_nested_roots(child, &mut nested);
-        }
-    }
-    for r in nested {
-        collect_inline_terms(r, default_language, ontology);
-    }
+    out
 }
 
 /// Collect archetype roots at or below `co`, without descending past a root
@@ -1496,7 +1522,7 @@ fn name_constraint(co: &CObject) -> Option<String> {
 fn coded_name_constraint(
     co: &CObject,
     ctx: &Ctx,
-    arch_id: &str,
+    scope: Scope<'_>,
     explicit: Option<&str>,
 ) -> Option<(String, CodedName)> {
     let name_child =
@@ -1518,7 +1544,7 @@ fn coded_name_constraint(
     let matched = explicit.and_then(|v| {
         std::iter::once(first)
             .chain(rest)
-            .find(|c| ctx.text(arch_id, c, &ctx.default_language).as_deref() == Some(v))
+            .find(|c| ctx.text(scope, c, &ctx.default_language).as_deref() == Some(v))
             .cloned()
     });
     // A fixed value with NO rubric-matching candidate (and more than one
@@ -1528,7 +1554,7 @@ fn coded_name_constraint(
     let code = matched.unwrap_or_else(|| first.clone());
     let value = explicit
         .map(str::to_owned)
-        .or_else(|| ctx.text(arch_id, &code, &ctx.default_language))
+        .or_else(|| ctx.text(scope, &code, &ctx.default_language))
         .unwrap_or_else(|| code.clone());
     Some((
         value,
