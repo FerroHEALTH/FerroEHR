@@ -1104,7 +1104,9 @@ async fn commit_resolved(
                 .rows
                 .first()
                 .filter(|root| root.num == 0)
-                .and_then(|root| root.archetype.clone()),
+                .and_then(|root| root.data.get("archetype_node_id"))
+                .and_then(Value::as_str)
+                .map(str::to_owned),
             time_committed,
         },
         contribution_id,

@@ -54,10 +54,11 @@ const BASE: &str = "/ferroehr/rest/openehr/v1";
 const IPS: &str = "International Patient Summary";
 const ENCOUNTER: &str = "openEHR-EHR-COMPOSITION.encounter.v1";
 const REPORT: &str = "openEHR-EHR-COMPOSITION.report.v1";
-/// The root archetype of the IPS composition as a stored composition names
-/// it: the node table holds archetype ids in comparison form, and the
-/// evidence keeps the id as the access named it.
-const HEALTH_SUMMARY: &str = "openehr-ehr-composition.health_summary.v1";
+/// The root archetype of the IPS composition as the composition writes it:
+/// identifiers are case-preserving through persistence (BASE `base_types`
+/// master05 §Composite Identifiers and Case), and the evidence keeps the id as
+/// the stored composition names it.
+const HEALTH_SUMMARY: &str = "openEHR-EHR-COMPOSITION.health_summary.v1";
 /// The code system of the Art. 14(1) priority categories, HL7 Europe's
 /// `EEHRxFDocumentPriorityCategoryCS`, as `ehds-logging` writes it.
 const PRIORITY: &str =
@@ -323,10 +324,7 @@ async fn a_multi_category_query_records_every_category_it_served() {
         json!([token("Laboratory-Reports"), token("Medical-Imaging")])
     );
     assert_eq!(statement.basis.as_deref(), Some("returned"));
-    assert_eq!(
-        statement.evidence,
-        json!([ENCOUNTER.to_ascii_lowercase(), REPORT.to_ascii_lowercase()])
-    );
+    assert_eq!(statement.evidence, json!([ENCOUNTER, REPORT]));
     let digest = statement.digest.expect("the map digest");
     assert!(digest.starts_with("sha256:"), "{digest}");
     let entities = statement.fhir["entity"].as_array().expect("entities");
@@ -518,6 +516,72 @@ async fn a_versioned_composition_read_is_classified_by_its_composition() {
     let read = classified(&pool, "versioned_composition_get", "composition").await;
     assert_eq!(read.categories, json!([token("Medical-Imaging")]));
     assert_eq!(read.basis.as_deref(), Some("returned"));
+}
+
+/// An archetype id keeps the case it was committed with on every read path,
+/// and still compares case-insensitively (BASE `base_types` master05
+/// §Composite Identifiers and Case: identifiers are case-preserving through
+/// persistence and case-insensitive in comparison) (#3908).
+#[tokio::test]
+async fn a_mixed_case_archetype_id_keeps_its_case_on_every_read_path() {
+    const MIXED: &str = "openEHR-EHR-COMPOSITION.Report.v1";
+    let (_db, pool, app, ehr) = app(map(&json!({})), Observability::default()).await;
+    let vo = commit(&app, &ehr, &composition(MIXED)).await;
+
+    let (status, _, text) = send(
+        &app,
+        Request::get(format!("{BASE}/ehr/{ehr}/composition/{vo}"))
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "composition read: {text}");
+    let read: Value = serde_json::from_str(&text).expect("composition JSON");
+    assert_eq!(
+        read["archetype_node_id"],
+        json!(MIXED),
+        "the RM read keeps the case"
+    );
+
+    let record = classified(&pool, "composition_get", "composition").await;
+    assert_eq!(
+        record.categories,
+        json!([token("Medical-Imaging")]),
+        "the map entry in another case still classifies the composition"
+    );
+    assert_eq!(
+        record.evidence,
+        json!([MIXED]),
+        "the access record keeps the case"
+    );
+
+    let (status, _, text) = send(
+        &app,
+        Request::post(format!("{BASE}/query/aql"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(
+                json!({
+                    "q": "SELECT c/archetype_node_id FROM EHR e \
+                          CONTAINS COMPOSITION c[openehr-ehr-composition.report.v1]"
+                })
+                .to_string(),
+            ))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "query: {text}");
+    let result: Value = serde_json::from_str(&text).expect("result set JSON");
+    assert_eq!(
+        result["rows"],
+        json!([[MIXED]]),
+        "a predicate in another case matches, and the result keeps the stored case"
+    );
+    let statement = classified(&pool, "query_execute_adhoc_query_body", "query").await;
+    assert_eq!(
+        statement.evidence,
+        json!([MIXED]),
+        "the query record keeps the case"
+    );
 }
 
 /// A CONTRIBUTION read is classified by the versions it committed, with and
