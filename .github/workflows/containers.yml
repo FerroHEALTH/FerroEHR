@@ -391,7 +391,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      # The site bundle (wasm32 + Tailwind CSS + JS glue) — built once, on
+      # The site bundle (wasm32 + JS glue) — built once, on
       # amd64 only; it is byte-identical regardless of the server arch.
       # NEVER `cargo install cargo-leptos` here: it unconditionally builds
       # OpenSSL from vendored C source (its cargo-generate dependency pins
@@ -418,10 +418,7 @@ jobs:
         run: |
           set -euo pipefail
           rustup target add wasm32-unknown-unknown
-          curl -sSfL -o /usr/local/bin/tailwindcss \
-            https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.3/tailwindcss-linux-x64
-          chmod +x /usr/local/bin/tailwindcss
-          LEPTOS_TAILWIND_VERSION=v4.3.3 bash scripts/cargo-leptos.sh build --release
+          bash scripts/cargo-leptos.sh build --release
           # hash.txt names the content hashes of the files in this bundle, so
           # it travels WITH the bundle; the image COPYs it beside the binary,
           # which is where leptos reads it from.

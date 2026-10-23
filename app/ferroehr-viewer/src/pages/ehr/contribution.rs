@@ -956,3 +956,42 @@ pub fn NewContributionPage() -> impl IntoView {
         <div class="fui-stack">{body}</div>
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::drafts;
+    use crate::bff::ehr_detail::commit::staged::StagedKind;
+    use crate::posted::Posted;
+
+    fn posted(fields: &[(&str, &str)]) -> Posted {
+        Posted::new(fields.iter().map(|(name, value)| ((*name).to_owned(), (*value).to_owned())).collect())
+    }
+
+    #[test]
+    fn staging_and_removing_change_the_form_and_a_changed_kind_starts_again() {
+        assert_eq!(drafts(None).len(), 1, "a new form holds one change");
+        let staged = drafts(Some(&posted(&[
+            ("seq", "1"),
+            ("was-1", "create"),
+            ("kind-1", "create"),
+            ("staged-1", "{}"),
+            ("intent", "stage"),
+        ])));
+        assert_eq!(staged.iter().map(|draft| draft.number).collect::<Vec<_>>(), vec![1, 2]);
+        assert_eq!(staged.first().map(|draft| draft.body.as_str()), Some("{}"));
+        let removed = drafts(Some(&posted(&[("seq", "1"), ("seq", "2"), ("intent", "remove:1")])));
+        assert_eq!(removed.iter().map(|draft| draft.number).collect::<Vec<_>>(), vec![2]);
+        let changed = drafts(Some(&posted(&[
+            ("seq", "1"),
+            ("was-1", "create"),
+            ("kind-1", "status"),
+            ("staged-1", "{\"old\": true}"),
+            ("intent", "edit"),
+        ])));
+        let first = changed.first().expect("the change");
+        assert_eq!(first.kind, StagedKind::StatusModify);
+        assert!(first.body.is_empty(), "a new kind starts from what it loads");
+        let forged = drafts(Some(&posted(&[("seq", "99"), ("seq", "x")])));
+        assert_eq!(forged.iter().map(|draft| draft.number).collect::<Vec<_>>(), vec![1], "out-of-range numbers name no change");
+    }
+}

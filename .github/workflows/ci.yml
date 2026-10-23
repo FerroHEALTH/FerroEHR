@@ -2035,16 +2035,9 @@ jobs:
         with:
           # wasm-bindgen pinned to the workspace's wasm-bindgen version;
           # cargo-leptos resolves its external tools from PATH before its
-          # own downloader (which failed opaque on a runner), so both it
-          # and Tailwind are preinstalled deterministically.
+          # own downloader (which failed opaque on a runner), so it is
+          # preinstalled deterministically.
           tool: cargo-nextest,cargo-leptos@0.3.7,wasm-bindgen@0.2.129
-      - name: Install the Tailwind v4 standalone binary
-        if: steps.viewer-cache.outputs.cache-hit != 'true'
-        run: |
-          curl -sSfL -o /usr/local/bin/tailwindcss \
-            https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.3/tailwindcss-linux-x64
-          chmod +x /usr/local/bin/tailwindcss
-          tailwindcss --help | head -1
       - name: Build the viewer + archive the e2e test binaries
         if: steps.viewer-cache.outputs.cache-hit != 'true'
         env:
@@ -2058,7 +2051,6 @@ jobs:
           # "Incrementally compiled crates cannot be cached"
           # (github.com/mozilla/sccache#known-caveats).
           CARGO_INCREMENTAL: "0"
-          LEPTOS_TAILWIND_VERSION: v4.3.3
         run: |
           set -euo pipefail
           # ORDER IS LOAD-BEARING: the nextest archive step compiles the

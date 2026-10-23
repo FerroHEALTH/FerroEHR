@@ -476,7 +476,7 @@ async fn directory_history_load_older_journey() {
 
     // Two versions past one window, so the first page stops at v3 and the
     // oldest two are only reachable through "load older".
-    let deepest = ferroehr_viewer::components::data_table::PAGE_SIZE + 2;
+    let deepest = ferroehr_viewer::bff::PAGE_SIZE + 2;
     let mut previous: Option<String> = None;
     for number in 1..=deepest {
         let uid = commit_directory_version(

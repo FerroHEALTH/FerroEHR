@@ -582,7 +582,6 @@ mod tests {
         split_version_uid,
         summarize_directory_version, version_window,
     };
-    use crate::error::ViewerError;
 
     /// A served directory answer carrying `etag` and a FOLDER body whose own
     /// `uid` deliberately names a DIFFERENT version, so the two are told apart.

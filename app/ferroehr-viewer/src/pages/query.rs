@@ -1058,10 +1058,12 @@ pub fn BuildTab() -> impl IntoView {
                 Some(refused(tr(Msg::QueryCatalogRefused), &error, None)),
             ),
         };
-        if posted.is_none() && draft.shape == "data" && draft.columns.is_empty() {
-            if let Some(first) = leaves.first() {
-                draft.columns.push((first.path.clone(), String::new()));
-            }
+        if posted.is_none()
+            && draft.shape == "data"
+            && draft.columns.is_empty()
+            && let Some(first) = leaves.first()
+        {
+            draft.columns.push((first.path.clone(), String::new()));
         }
         let built = query_of(&draft, &leaves)
             .map_err(|error| error.to_string())
@@ -1489,4 +1491,102 @@ pub fn AqlTab() -> impl IntoView {
         .into_any()
     });
     view! { {page} }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        Draft, Leaf, UiCond, UiGroup, draft_of_query, kind_of, query_of, restructure, step, Step,
+    };
+    use crate::builder::model::{CriterionKind, CriterionNode};
+    use crate::posted::Posted;
+
+    /// The data points of the fixture template.
+    fn leaves() -> Vec<Leaf> {
+        vec![
+            Leaf {
+                path: "/content[openEHR-EHR-OBSERVATION.bp.v2]/data[at0001]/items[at0004]/value".to_owned(),
+                label: "Blood pressure › Systolic".to_owned(),
+                rm_type: "DV_QUANTITY".to_owned(),
+                codes: Vec::new(),
+                unit: Some("mm[Hg]".to_owned()),
+            },
+            Leaf {
+                path: "/content[openEHR-EHR-OBSERVATION.bp.v2]/data[at0001]/items[at0008]/value".to_owned(),
+                label: "Blood pressure › Position".to_owned(),
+                rm_type: "DV_CODED_TEXT".to_owned(),
+                codes: vec![("at1001".to_owned(), "Sitting".to_owned())],
+                unit: None,
+            },
+        ]
+    }
+
+    fn cond(path_of: usize, op: &str, value: &str) -> UiCond {
+        UiCond {
+            path: leaves().get(path_of).map(|leaf| leaf.path.clone()).unwrap_or_default(),
+            op: op.to_owned(),
+            value: value.to_owned(),
+        }
+    }
+
+    #[test]
+    fn a_condition_takes_the_constraint_its_type_and_operator_name() {
+        let (kind, negated) = kind_of(&cond(0, "ge", "140"), "DV_QUANTITY", "Systolic").expect("a number");
+        assert!(!negated);
+        assert_eq!(kind, CriterionKind::QuantityRange { min: Some(140.0), max: None, units: String::new() });
+        let (kind, _) = kind_of(&cond(0, "eq", "120"), "DV_QUANTITY", "Systolic").expect("a number");
+        assert_eq!(kind, CriterionKind::QuantityRange { min: Some(120.0), max: Some(120.0), units: String::new() });
+        let (kind, negated) = kind_of(&cond(1, "ne", "at1001"), "DV_CODED_TEXT", "Position").expect("a code");
+        assert!(negated);
+        assert_eq!(kind, CriterionKind::CodedIn { codes: vec!["at1001".to_owned()], terminology: String::new() });
+        assert!(kind_of(&cond(0, "ge", "high"), "DV_QUANTITY", "Systolic").is_err(), "a value that is no number is refused, never dropped");
+    }
+
+    #[test]
+    fn a_draft_lowers_to_aql_and_lifts_back_to_the_same_draft() {
+        let draft = Draft {
+            template: "Vital signs.v1".to_owned(),
+            shape: "data".to_owned(),
+            columns: vec![(leaves().first().map(|leaf| leaf.path.clone()).unwrap_or_default(), "systolic".to_owned())],
+            root: UiGroup {
+                any: false,
+                not: false,
+                conditions: vec![cond(0, "ge", "140"), cond(1, "eq", "at1001")],
+                groups: vec![UiGroup { any: true, not: true, conditions: vec![cond(0, "le", "90")], groups: Vec::new() }],
+            },
+            order: String::new(),
+            descending: true,
+            limit: "50".to_owned(),
+        };
+        let query = query_of(&draft, &leaves()).expect("the draft is whole");
+        let Some(CriterionNode::Group { children, .. }) = &query.criteria else {
+            panic!("the root is a group");
+        };
+        assert_eq!(children.len(), 3);
+        let aql = crate::builder::lower::to_aql(&query).expect("the query lowers");
+        assert!(aql.contains(">=140"), "{aql}");
+        let lifted = crate::builder::lift::from_aql(&aql).expect("the builder's own AQL lifts");
+        let back = draft_of_query(&lifted);
+        assert_eq!(back.columns, draft.columns);
+        assert_eq!(back.root.conditions.len(), 2);
+        assert_eq!(back.root.groups.len(), 1);
+    }
+
+    #[test]
+    fn an_add_or_remove_names_what_it_acts_on_and_is_never_a_run() {
+        let mut root = UiGroup { conditions: vec![cond(0, "ge", "1")], ..UiGroup::default() };
+        let posted = Posted::new(vec![("intent".to_owned(), "run".to_owned()), ("add-group".to_owned(), "g".to_owned())]);
+        assert_eq!(step(Some(&posted)), Step::Edit);
+        restructure(&mut root, &posted, "/x");
+        assert_eq!(root.groups.len(), 1);
+        let posted = Posted::new(vec![("remove".to_owned(), "g.c0".to_owned())]);
+        restructure(&mut root, &posted, "/x");
+        assert_eq!(root.conditions, Vec::new());
+        let posted = Posted::new(vec![("remove-group".to_owned(), "g.0".to_owned())]);
+        restructure(&mut root, &posted, "/x");
+        assert_eq!(root.groups, Vec::new());
+        let run = Posted::new(vec![("intent".to_owned(), "run".to_owned())]);
+        assert_eq!(step(Some(&run)), Step::Run);
+        assert_eq!(step(None), Step::Edit);
+    }
 }

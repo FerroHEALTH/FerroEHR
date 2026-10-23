@@ -484,7 +484,11 @@ pub struct LastDays {
 /// it and 0 for a day it holds none.
 #[must_use]
 pub fn last_days(points: &[crate::activity::ActivityPoint], days: u16) -> LastDays {
-    let today = jiff::Zoned::now().date();
+    last_days_to(points, days, jiff::Zoned::now().date())
+}
+
+/// [`last_days`] up to `today`.
+fn last_days_to(points: &[crate::activity::ActivityPoint], days: u16, today: jiff::civil::Date) -> LastDays {
     let span = i64::from(days.max(1)) - 1;
     let first = today
         .checked_sub(jiff::Span::new().days(span))
@@ -613,7 +617,9 @@ fn locate(text: &str, path: &str) -> Option<ferrohealth_ui::view::diagnostics::P
 
 #[cfg(test)]
 mod tests {
-    use super::{relative_words, shortened, status_words};
+    use super::{findings_of, last_days_to, locate, path_in, relative_words, shortened, status_words};
+    use crate::activity::ActivityPoint;
+    use crate::error::ViewerError;
 
     #[test]
     fn an_identifier_is_shortened_to_its_ends() {
@@ -635,5 +641,42 @@ mod tests {
         let now: jiff::Timestamp = "2026-10-21T09:42:11Z".parse().expect("an instant");
         assert!(relative_words("2026-10-21T09:41:58Z", now).is_some());
         assert!(relative_words("not a time", now).is_none());
+    }
+
+    #[test]
+    fn the_activity_window_counts_every_day_and_zero_for_a_quiet_one() {
+        let today = jiff::civil::date(2026, 10, 23);
+        let points = vec![
+            ActivityPoint { day: "2026-10-23".to_owned(), count: 3 },
+            ActivityPoint { day: "2026-10-20".to_owned(), count: 1 },
+            ActivityPoint { day: "2026-08-01".to_owned(), count: 9 },
+        ];
+        let days = last_days_to(&points, 30, today);
+        assert_eq!(days.counts.len(), 30);
+        assert_eq!(days.first, "2026-09-24");
+        assert_eq!(days.last, "2026-10-23");
+        assert_eq!(days.counts.last(), Some(&(29, 3)));
+        assert_eq!(days.counts.get(26), Some(&(26, 1)));
+        let total: u32 = days.counts.iter().map(|(_, count)| *count).sum();
+        assert_eq!(total, 4, "a day before the window is left out");
+    }
+
+    #[test]
+    fn a_diagnostic_lands_on_the_line_its_path_reaches() {
+        let text = "{\n  \"context\": {\n    \"setting\": {}\n  }\n}";
+        assert_eq!(path_in("/context/setting needs its defining_code"), Some("/context/setting".to_owned()));
+        assert_eq!(path_in("no path here"), None);
+        let at = locate(text, "/context/setting").expect("the path is in the document");
+        assert_eq!((at.line, at.column), (3, 5));
+        assert!(locate(text, "/territory").is_none());
+        let refused = ViewerError::Cdr {
+            status: 422,
+            message: "/context/setting needs its defining_code\nthe composer is missing".to_owned(),
+        };
+        let (_, file) = findings_of(&refused, text, "document").expect("a 422 is about the document");
+        assert_eq!(file.findings.len(), 2);
+        assert_eq!(file.findings.first().and_then(|finding| finding.at.as_ref()).map(|at| at.line), Some(3));
+        let elsewhere = ViewerError::Cdr { status: 409, message: "conflict".to_owned() };
+        assert!(findings_of(&elsewhere, text, "document").is_none(), "a 409 is not about the document");
     }
 }

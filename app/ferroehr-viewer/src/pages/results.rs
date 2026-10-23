@@ -251,3 +251,22 @@ pub fn results(answered: &Answered<'_>) -> AnyView {
 pub fn not_run(line: String) -> AnyView {
     section(Some(tr(Msg::ResultsTitle)), None, None, quiet(line))
 }
+
+#[cfg(test)]
+#[expect(
+    clippy::disallowed_types,
+    reason = "a RESULT_SET cell is the CDR's untyped JSON"
+)]
+mod tests {
+    use super::cell_words;
+
+    #[test]
+    fn a_data_value_reads_as_a_person_reads_it() {
+        let quantity = serde_json::json!({"_type": "DV_QUANTITY", "magnitude": 38.2, "units": "kg"});
+        assert_eq!(cell_words(&quantity), "38.2 kg");
+        let time = serde_json::json!({"_type": "DV_DATE_TIME", "value": "2026-10-20T08:00:00Z"});
+        assert_eq!(cell_words(&time), "2026-10-20T08:00:00Z");
+        assert_eq!(cell_words(&serde_json::json!("text")), "text");
+        assert_eq!(cell_words(&serde_json::json!({"a": 1})), r#"{"a":1}"#);
+    }
+}

@@ -97,18 +97,6 @@ pub fn apply_status_edits(
     })
 }
 
-/// The edit card: the two capability toggles, the `other_details` editor, the
-/// save button, and the two inline feedback places (the client-side complaint and
-/// the CDR's verbatim diagnostic).
-///
-/// Always mounted with a constant structure, so the server HTML and the client
-/// view match; every value comes from the long-lived [`StatusForm`], so the card
-/// survives the facts section's Suspend re-runs. The save is an `Action`, and
-/// its outcome toasts in [`status_section`](super::status_section); the inline
-/// pane keeps the diagnostic beside the input that caused it.
-///
-/// Every control is DISABLED until [`seed`] has loaded a document into the
-/// form: the card is mounted before the read resolves, and an edit made in it
 
 #[cfg(test)]
 mod tests {
