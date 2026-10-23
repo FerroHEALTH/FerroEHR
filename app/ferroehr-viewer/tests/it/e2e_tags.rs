@@ -37,7 +37,7 @@
 
 use crate::common;
 
-use common::{Harness, login_basic, retype, wait_css_absent, wait_text};
+use common::{Harness, fill, login_basic, wait_main_contains, wait_text_contains};
 
 /// The CDR base URL the harness exports for REST-side test setup; `None` skips
 /// with a reason.
@@ -139,27 +139,18 @@ async fn create_composition(http: &reqwest::Client, v1: &str, ehr_id: &str) -> S
         .to_owned()
 }
 
-/// Set one tag through whichever tag panel is on screen.
-///
-/// # Panics
-/// When the panel never reports the write.
+/// Set the tag `key` to `value` on the Tags tab on screen.
 async fn set_tag(h: &Harness, key: &str, value: &str) {
-    // A visible toast overlays the bottom-right corner and intercepts clicks.
-    h.wait_toasts_cleared().await;
-    retype(h, "#tag-key", key).await;
-    retype(h, "#tag-value", value).await;
-    h.wait_css("#tag-save").await.click().await;
-    assert!(
-        wait_text(h, "Tag saved").await,
-        "saving tag `{key}` never reported the replaced collection: {}",
-        h.evidence_dump("tag-save").await
-    );
-    h.wait_css(&format!("[data-tag-key='{key}']")).await;
+    fill(h, "#tk", key).await;
+    fill(h, "#tv", value).await;
+    common::submit(h, "button[value='set-tag']").await;
+    h.wait_css(".fui-toast-text").await;
+    wait_text_contains(h, "main table", key).await;
 }
 
-/// Tags on a composition: set two through the viewer's panel, find them in the
-/// EHR-wide browser grouped under their target, open the composition back from
-/// that group, and delete one by key.
+/// Tags on a composition: set two on its Tags tab, find one in the EHR's Tags
+/// tab filtered by key, open the composition back from that row, and remove
+/// the other by key.
 #[tokio::test]
 async fn composition_tags_are_set_browsed_and_deleted() {
     let Some(h) = Harness::start("ehr-tags").await else {
@@ -173,69 +164,41 @@ async fn composition_tags_are_set_browsed_and_deleted() {
     let v1 = format!("{cdr}/ferroehr/rest/openehr/v1");
     let ehr_id = create_ehr(&http, &v1).await;
     let composition = create_composition(&http, &v1, &ehr_id).await;
-    // Unique keys, so the browser's filter finds exactly this journey's tags.
     let kept = format!("viewer-kept-{}", jitter());
     let removed = format!("viewer-removed-{}", jitter());
 
     login_basic(&h).await;
-    h.goto(&format!("/ehrs/{ehr_id}/compositions/{composition}"))
-        .await;
-    // The panel names the collection it edits: on Latest that is the
-    // VERSIONED_COMPOSITION container, never a version.
-    h.wait_css("#composition-tag-set").await;
-    h.wait_css(&format!("[data-tag-collection='{composition}']"))
-        .await;
-    assert!(
-        wait_text(&h, "No tags on this collection").await,
-        "a fresh composition carries no tags: {}",
-        h.evidence_dump("tags-empty").await
-    );
+    let tags = format!("/ehrs/{ehr_id}/compositions/{composition}?tab=tags");
+    h.goto(&tags).await;
+    wait_main_contains(&h, "carries no tag").await;
     h.shot(1, "composition-tags-empty").await;
 
     set_tag(&h, &kept, "follow-up").await;
     set_tag(&h, &removed, "true").await;
-    // Both rows are on screen — the second save merged rather than replaced,
-    // which is what the read-modify-write around the whole-collection PUT is
-    // for.
-    h.wait_css(&format!("[data-tag-key='{kept}']")).await;
-    h.wait_css(&format!("[data-tag-key='{removed}']")).await;
     h.shot(2, "composition-tags-set").await;
 
-    // The EHR-wide browser lists both, grouped under the composition they are
-    // on. The filter is URL state and keeps the tab.
-    h.wait_toasts_cleared().await;
-    h.goto(&format!("/ehrs/{ehr_id}?tab=tags&tag_key={kept}"))
-        .await;
-    h.wait_css("#ehr-tag-browser").await;
-    let group = format!("[data-tag-target='{composition}']");
-    h.wait_css(&group).await;
-    h.wait_css(&format!("[data-tag-key='{kept}']")).await;
-    // The filter really filtered: the other key is not in this window.
-    wait_css_absent(&h, &format!("[data-tag-key='{removed}']")).await;
+    h.goto(&format!("/ehrs/{ehr_id}/tags?key={kept}")).await;
+    wait_text_contains(&h, "main table", &kept).await;
+    let listed = h.wait_css("main table").await.text().await;
+    assert!(
+        !listed.contains(&removed),
+        "the key filter leaves `{removed}` out: {listed}"
+    );
     h.shot(3, "ehr-tag-browser").await;
-
-    // Opening the group resolves the tagged id back to its owner — a tag names
-    // its target without naming that target's kind, so this is a CDR question.
-    h.wait_css(&group).await.click().await;
-    h.wait_url_contains(&format!("/ehrs/{ehr_id}/compositions/{composition}"))
-        .await;
-    h.wait_css("#composition-tag-set").await;
-    h.shot(4, "tag-target-opened").await;
-
-    // Deleting addresses the KEY alone, which is what the openEHR tag delete
-    // does — and the other tag stays.
-    h.wait_toasts_cleared().await;
-    h.wait_css(&format!("[data-tag-delete='{removed}']"))
+    h.wait_css(&format!("main table a[href*='{composition}']"))
         .await
         .click()
         .await;
-    assert!(
-        wait_text(&h, "Tag deleted").await,
-        "deleting the tag never reported: {}",
-        h.evidence_dump("tag-delete").await
-    );
-    wait_css_absent(&h, &format!("[data-tag-key='{removed}']")).await;
-    h.wait_css(&format!("[data-tag-key='{kept}']")).await;
+    h.wait_url_contains(&format!("/compositions/{composition}"))
+        .await;
+    h.shot(4, "tag-target-opened").await;
+
+    h.goto(&tags).await;
+    common::submit(&h, &format!("button[value='remove-tag:{removed}']")).await;
+    h.wait_css(".fui-toast-text").await;
+    wait_text_contains(&h, "main table", &kept).await;
+    let left = h.wait_css("main table").await.text().await;
+    assert!(!left.contains(&removed), "`{removed}` is gone: {left}");
     h.shot(5, "composition-tag-deleted").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
@@ -243,10 +206,9 @@ async fn composition_tags_are_set_browsed_and_deleted() {
     h.finish().await;
 }
 
-/// The EHR status's own tag collection: the Status tab's panel sets a tag on
-/// the `VERSIONED_EHR_STATUS` container, and the EHR-wide browser then lists it
-/// under a DIFFERENT target than the composition's — the two objects hold
-/// separate collections.
+/// The EHR status's own tag collection: a tag on the `VERSIONED_EHR_STATUS`
+/// is listed on the EHR's Tags tab under the EHR status, a different target
+/// from any composition, and its row opens the Status tab.
 #[tokio::test]
 async fn ehr_status_tags_are_their_own_collection() {
     let Some(h) = Harness::start("ehr-status-tags").await else {
@@ -260,34 +222,55 @@ async fn ehr_status_tags_are_their_own_collection() {
     let v1 = format!("{cdr}/ferroehr/rest/openehr/v1");
     let ehr_id = create_ehr(&http, &v1).await;
     let key = format!("viewer-status-{}", jitter());
+    set_status_tag(&http, &v1, &ehr_id, &key).await;
 
     login_basic(&h).await;
-    h.goto(&format!("/ehrs/{ehr_id}?tab=status")).await;
-    h.wait_css("#ehr-status-tag-set").await;
-    set_tag(&h, &key, "reviewed").await;
-    h.shot(1, "status-tag-set").await;
-
-    // The EHR-wide browser finds it — on the status container, not on any
-    // composition.
-    h.wait_toasts_cleared().await;
-    h.goto(&format!("/ehrs/{ehr_id}?tab=tags&tag_key={key}"))
+    h.goto(&format!("/ehrs/{ehr_id}/tags?key={key}")).await;
+    wait_text_contains(&h, "main table", &key).await;
+    wait_text_contains(&h, "main table", "EHR status").await;
+    h.shot(1, "status-tag-browsed").await;
+    h.wait_css(&format!("main table a[href='/ehrs/{ehr_id}/status']"))
+        .await
+        .click()
         .await;
-    h.wait_css("#ehr-tag-browser").await;
-    h.wait_css(&format!("[data-tag-key='{key}']")).await;
-    h.shot(2, "status-tag-browsed").await;
-
-    // Opening the group lands back on the Status tab, which is the screen that
-    // owns the EHR_STATUS.
-    h.wait_css("[data-tag-target]").await.click().await;
-    h.wait_url_contains("tab=status").await;
-    h.wait_css("#ehr-status-tag-set").await;
-    h.wait_css(&format!("[data-tag-key='{key}']")).await;
-    h.shot(3, "status-tag-target-opened").await;
+    h.wait_url_contains(&format!("/ehrs/{ehr_id}/status")).await;
+    h.shot(2, "status-tag-target-opened").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;
     h.finish().await;
 }
+
+/// Tag the EHR's current `EHR_STATUS` container with `key` over ITS-REST.
+async fn set_status_tag(http: &reqwest::Client, v1: &str, ehr_id: &str, key: &str) {
+    let (user, pass) = basic_credentials();
+    let status: serde_json::Value = http
+        .get(format!("{v1}/ehr/{ehr_id}/ehr_status"))
+        .basic_auth(&user, Some(&pass))
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .expect("read the EHR_STATUS")
+        .json()
+        .await
+        .expect("EHR_STATUS body");
+    let uid = status["uid"]["value"].as_str().expect("its uid");
+    let container = uid.split("::").next().expect("the versioned object id");
+    let answer = http
+        .put(format!("{v1}/ehr/{ehr_id}/ehr_status/{container}/tags"))
+        .basic_auth(&user, Some(&pass))
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!([{ "key": key, "value": "reviewed" }]))
+        .send()
+        .await
+        .expect("tag the EHR status");
+    assert!(
+        answer.status().is_success(),
+        "the CDR takes the status tag (got {})",
+        answer.status()
+    );
+}
+
 
 /// A run-unique suffix for the fixtures a journey creates, so a shared stack
 /// can hold several runs' tags without collision.

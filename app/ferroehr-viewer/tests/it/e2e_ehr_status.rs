@@ -22,19 +22,16 @@
 )]
 // e2e journeys are assertive by design; skip-with-reason prints; the shared
 // harness module is per-test-binary (the corpus.rs test-file precedent)
-//! End-to-end journeys over the viewer's **`EHR_STATUS` write path** — the
-//! openEHR operation every client has (`PUT /ehr/{ehr_id}/ehr_status` with
-//! `If-Match`), plus the `VERSIONED_EHR_STATUS` history it produces:
+//! End-to-end journeys over the `EHR_STATUS` write path (`PUT
+//! /ehr/{ehr_id}/ehr_status` with `If-Match`) and the `VERSIONED_EHR_STATUS`
+//! history it produces:
 //!
-//! - **the edit round trip**: unticking `is_queryable` on the Status tab commits
-//!   a new version, the viewer reports the commit, the capability badge flips,
-//!   and the Status-history tab lists a second version whose document opens by
-//!   its own `OBJECT_VERSION_ID`;
-//! - **the mid-air collision**: after that edit, another client commits a third
-//!   version over REST while the screen still holds version 2 as its `If-Match`;
-//!   saving again must be REFUSED with the CDR's `412` surfaced as actionable
-//!   copy (nothing silently overwritten), and version 1 must still read by its
-//!   own uid afterwards.
+//! - the edit round trip: unticking `is_queryable` on Edit status commits a new
+//!   version, the toast says so, the badge goes, and version 2 reads by its
+//!   number;
+//! - the mid-air collision: another client commits a version while the editor
+//!   still holds version 1 as its `If-Match`; the save is refused with the
+//!   CDR's `412`, nothing is overwritten, and version 1 still reads.
 //!
 //! Isolation: each journey creates its OWN EHR over ITS-REST, so neither touches
 //! the seeded fixtures the other journeys and the documentation-screenshot pass
@@ -42,13 +39,7 @@
 
 use crate::common;
 
-use std::time::Duration;
-
-use common::{
-    Element, Harness, click_until_css, env, is_present_by, login_basic, poll_until, poll_until_for,
-    wait_enabled, wait_text_suffix,
-};
-use thirtyfour::prelude::*;
+use common::{Harness, env, login_basic, wait_main_contains, wait_text_contains};
 
 /// The CDR base URL the harness exports for REST-side test setup; `None` skips
 /// with a reason.
@@ -143,90 +134,19 @@ async fn put_status(
     );
 }
 
-/// Drive the checkbox at `css` to `desired`, clicking only when it differs, and
-/// report whether it ends up there.
-///
-/// A checkbox flips natively on click, so its state proves nothing about
-/// hydration — which is why the caller reaches hydration first
-/// ([`wait_checkbox`]) and then waits for the mutation's own outcome
-/// ([`save_queryable`]).
-async fn set_checkbox(h: &Harness, css: &str, desired: bool) -> bool {
-    for _ in 0..10 {
-        let field = h.wait_css(css).await;
-        if checkbox_state(&field).await == desired {
-            return true;
-        }
+/// Open Edit status, set `is_queryable` to `queryable`, and save.
+async fn save_queryable(h: &Harness, ehr_id: &str, queryable: bool) {
+    h.goto(&format!("/ehrs/{ehr_id}/status/edit")).await;
+    let field = h.wait_css("#is_queryable").await;
+    if field.selected().await != queryable {
         field.click().await;
-        if poll_until_for(Duration::from_millis(200), async || {
-            checkbox_state(&h.wait_css(css).await).await == desired
-        })
-        .await
-        {
-            return true;
-        }
     }
-    false
+    h.shot(1, "status-edit").await;
+    common::submit(h, "#editor-dock button[value='save']").await;
 }
 
-/// The live `checked` property of a checkbox element.
-///
-/// # Panics
-/// When the property cannot be read (a dead session, not a state).
-async fn checkbox_state(field: &Element) -> bool {
-    field.prop("checked").await == "true"
-}
-
-/// Wait until the checkbox at `css` reports `expected`; returns whether it did.
-///
-/// This is also the journey's HYDRATION signal for the edit form: the
-/// server-rendered checkbox carries no `checked` attribute (the viewer drives it
-/// with `prop:checked`, which is applied when the WASM bundle hydrates), so the
-/// box reporting the value the CDR served proves the form is live. Interacting
-/// before that would flip the DOM checkbox natively while the viewer's own state
-/// stayed untouched — and the save would then commit the value the operator
-/// thought they had changed.
-async fn wait_checkbox(h: &Harness, css: &str, expected: bool) -> bool {
-    poll_until(async || checkbox_state(&h.wait_css(css).await).await == expected).await
-}
-
-/// Set `is_queryable` to `desired` and save, retrying until the viewer reports
-/// the commit; returns whether it did.
-///
-/// The toggle is an `on:change` listener and the save an `on:click` one, so an
-/// interaction landing before hydration is simply lost — the bounded retry is the
-/// login-submit precedent. A retry after a save that DID land is harmless: the
-/// form re-seeds from the freshly committed version, and the checkbox is only
-/// clicked when it does not already hold the wanted value.
-///
-/// The success toast is the mutation's OWN outcome and is awaited here, before
-/// the journey does anything else — a navigation would abort the in-flight
-/// server-fn call (the hardening the admin-ops journeys established).
-async fn save_queryable(h: &Harness, desired: bool) -> bool {
-    for _ in 0..5 {
-        // A visible toast overlays the bottom-right corner and intercepts clicks.
-        h.wait_toasts_cleared().await;
-        if !set_checkbox(h, "#status-queryable", desired).await {
-            continue;
-        }
-        h.wait_css("#status-save").await.click().await;
-        if poll_until_for(Duration::from_secs(10), async || {
-            is_present_by(
-                h,
-                By::XPath("//*[contains(normalize-space(.), 'EHR status updated')]"),
-            )
-            .await
-        })
-        .await
-        {
-            return true;
-        }
-    }
-    false
-}
-
-/// The `EHR_STATUS` edit round trip: unticking `is_queryable` commits a new
-/// version, the badge flips, and the Status-history tab lists version 2 and
-/// opens its document by `OBJECT_VERSION_ID`.
+/// The `EHR_STATUS` edit round trip: unticking `is_queryable` commits
+/// version 2, the badge goes, and the Versions table opens version 2.
 #[tokio::test]
 async fn ehr_status_edit_commits_a_version_and_flips_the_badge() {
     let Some(h) = Harness::start("ehr-status-edit").await else {
@@ -241,54 +161,31 @@ async fn ehr_status_edit_commits_a_version_and_flips_the_badge() {
     let ehr_id = create_ehr(&http, &v1).await;
 
     login_basic(&h).await;
-    h.goto(&format!("/ehrs/{ehr_id}?tab=status")).await;
-    // A fresh EHR is queryable; the badge proves the current-status read landed
-    // and the edit form was seeded from it.
-    h.wait_css("[data-status-flag='queryable'][data-status-value='true']")
+    h.goto(&format!("/ehrs/{ehr_id}/status")).await;
+    wait_text_contains(&h, ".fui-subject", "Queryable").await;
+    h.wait_css(&format!("main a[href='/ehrs/{ehr_id}/status/edit']"))
+        .await
+        .click()
         .await;
-    h.wait_css("#status-edit").await;
-    // Every control stays disabled until the loaded document has been seeded
-    // into the form, so nothing entered here can be lost to the seed.
-    wait_enabled(&h, "#status-queryable").await;
-    wait_enabled(&h, "#status-other-details").await;
-    wait_enabled(&h, "#status-save").await;
-    // The form is live once the checkbox reports the SERVED value (see
-    // `wait_checkbox`) — only then does clicking it change what the save sends.
     assert!(
-        wait_checkbox(&h, "#status-queryable", true).await,
-        "the edit form never hydrated with the loaded is_queryable"
+        h.wait_css("#is_queryable").await.selected().await,
+        "the edit form opens with the loaded is_queryable"
     );
-    h.shot(1, "status-before-edit").await;
-
+    save_queryable(&h, &ehr_id, false).await;
+    h.wait_url_contains(&format!("/ehrs/{ehr_id}/status")).await;
+    h.wait_css(".fui-toast-text").await;
+    wait_main_contains(&h, "Not queryable").await;
+    let header = h.wait_css(".fui-subject").await.text().await;
     assert!(
-        save_queryable(&h, false).await,
-        "unticking is_queryable and saving never reported a committed version"
+        !header.contains("Queryable"),
+        "the header drops the Queryable badge: {header}"
     );
     h.shot(2, "status-saved").await;
-    // The refetched facts card reports the NEW state — the write really landed.
-    h.wait_css("[data-status-flag='queryable'][data-status-value='false']")
-        .await;
-    // …and the screen now warns that AQL cannot see this EHR.
-    h.wait_xpath("//*[contains(., 'not queryable')]").await;
 
-    // The history tab: the versioned family, not the current-status endpoint.
-    h.wait_toasts_cleared().await;
-    h.goto(&format!("/ehrs/{ehr_id}?tab=status-history")).await;
-    h.wait_css("[data-versioned-fact='version']").await;
-    // A SECOND version exists: version 1 came with the EHR, version 2 is the
-    // edit above.
-    h.wait_css("[data-status-version$='::2']").await;
-    assert!(
-        click_until_css(
-            &h,
-            "[data-status-version$='::2']",
-            "#status-version-document",
-        )
-        .await,
-        "opening version 2 never rendered its document"
-    );
-    // The pinned VERSION's envelope facts follow the selection.
-    wait_text_suffix(&h, "[data-versioned-fact='version']", "::2").await;
+    h.goto(&format!("/ehrs/{ehr_id}/status?version=2")).await;
+    wait_main_contains(&h, "EHR_STATUS, version 2").await;
+    h.goto(&format!("/ehrs/{ehr_id}/status?version=1")).await;
+    wait_main_contains(&h, "EHR_STATUS, version 1").await;
     h.shot(3, "status-history").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
@@ -296,9 +193,9 @@ async fn ehr_status_edit_commits_a_version_and_flips_the_badge() {
     h.finish().await;
 }
 
-/// The mid-air collision: a save whose `If-Match` names a superseded version is
-/// refused with the CDR's `412`, the viewer says so with the next action, and
-/// the earlier version still reads by its own uid.
+/// The mid-air collision: a save whose `If-Match` names a superseded version
+/// is refused with the CDR's `412`, the editor offers to reload the newer
+/// version, and the earlier version still reads by its own number.
 #[tokio::test]
 async fn a_stale_if_match_is_refused_and_the_old_version_still_reads() {
     let Some(h) = Harness::start("ehr-status-conflict").await else {
@@ -313,70 +210,29 @@ async fn a_stale_if_match_is_refused_and_the_old_version_still_reads() {
     let ehr_id = create_ehr(&http, &v1).await;
 
     login_basic(&h).await;
-    h.goto(&format!("/ehrs/{ehr_id}?tab=status")).await;
-    h.wait_css("[data-status-flag='queryable'][data-status-value='true']")
-        .await;
-    // The whole card is disabled until the loaded document is seeded into it.
-    wait_enabled(&h, "#status-queryable").await;
-    assert!(
-        wait_checkbox(&h, "#status-queryable", true).await,
-        "the edit form never hydrated with the loaded is_queryable"
-    );
-    assert!(
-        save_queryable(&h, false).await,
-        "the first edit never reported a committed version"
-    );
-    h.wait_css("[data-status-flag='queryable'][data-status-value='false']")
-        .await;
-
-    // The viewer's screen now holds version 2 as its If-Match. Another client
-    // commits version 3 on top of it.
+    // The editor opens on version 1 ...
+    h.goto(&format!("/ehrs/{ehr_id}/status/edit")).await;
+    h.wait_css("#is_queryable").await;
+    // ... and version 2 is committed out of band before it saves.
     let mut status = current_status(&http, &v1, &ehr_id).await;
-    let version_two = status["uid"]["value"]
+    let version_one = status["uid"]["value"]
         .as_str()
         .expect("the current EHR_STATUS uid")
         .to_owned();
-    assert!(
-        version_two.ends_with("::2"),
-        "the viewer's edit must have produced version 2 (got {version_two})"
-    );
     status["is_modifiable"] = serde_json::Value::Bool(false);
-    put_status(&http, &v1, &ehr_id, &version_two, &status).await;
+    put_status(&http, &v1, &ehr_id, &version_one, &status).await;
 
-    // Saving again from the stale screen must be REFUSED, not silently applied.
-    h.wait_toasts_cleared().await;
-    h.wait_css("#status-save").await.click().await;
-    h.wait_xpath("//*[contains(normalize-space(.), 'EHR status changed on the server')]")
-        .await;
-    // The CDR's own diagnostic stays beside the form as well.
-    h.wait_css("#status-diagnostic").await;
+    h.wait_css("#is_queryable").await.click().await;
+    common::submit(&h, "#editor-dock button[value='save']").await;
+    wait_main_contains(&h, "412").await;
+    wait_main_contains(&h, "Reload version 2").await;
     h.shot(1, "status-conflict").await;
 
-    // The superseded versions are still readable by their own uid — a refused
-    // update changes nothing, and the history keeps every version.
-    h.wait_toasts_cleared().await;
-    h.goto(&format!("/ehrs/{ehr_id}?tab=status-history")).await;
-    h.wait_css("[data-status-version$='::1']").await;
-    assert!(
-        click_until_css(
-            &h,
-            "[data-status-version$='::1']",
-            "#status-version-document",
-        )
-        .await,
-        "version 1 must still open by its own OBJECT_VERSION_ID"
-    );
-    wait_text_suffix(&h, "[data-versioned-fact='version']", "::1").await;
+    h.goto(&format!("/ehrs/{ehr_id}/status?version=1")).await;
+    wait_main_contains(&h, "EHR_STATUS, version 1").await;
     h.shot(2, "status-version-one").await;
 
-    // The deliberate 412 reaches the browser as a failed server-fn call.
-    h.assert_console_clean(&[
-        "412",
-        "401",
-        "500",
-        "server function",
-        "Failed to load resource",
-    ])
-    .await;
+    h.assert_console_clean(&["401", "Failed to load resource"])
+        .await;
     h.finish().await;
 }

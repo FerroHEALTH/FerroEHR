@@ -704,13 +704,16 @@ fn relationships(kind: PartyKind, uid: &str, state: &PartyState) -> AnyView {
             .relationships
             .iter()
             .map(|relationship| {
-                let href = relationship_href(&relationship.uid);
-                let sub = view! { <span class="fui-row-sub"><code>{relationship.archetype_node_id.clone()}</code></span> }.into_any();
-                let title = title_cell(Some(&href), relationship.name.clone(), Some(sub));
-                let target = match ref_href(&relationship.target) {
-                    Some(href) => view! { <a href=href>{shortened(&relationship.target.id)}</a> }.into_any(),
-                    None => shortened(&relationship.target.id).into_any(),
+                // NOTE: R9: a row is one link; a relationship held inline in the party has no uid of
+                // its own, so its row opens the target instead of a relationship page.
+                let href = if relationship.uid.is_empty() {
+                    ref_href(&relationship.target)
+                } else {
+                    Some(relationship_href(&relationship.uid))
                 };
+                let sub = view! { <span class="fui-row-sub"><code>{relationship.archetype_node_id.clone()}</code></span> }.into_any();
+                let title = title_cell(href.as_deref(), relationship.name.clone(), Some(sub));
+                let target = shortened(&relationship.target.id).into_any();
                 let target_kind = PartyKind::from_rm_type(&relationship.target.rm_type)
                     .map_or_else(|| relationship.target.rm_type.clone(), kind_words);
                 view! { <tr>{title} {cell(&columns[1], target)} {cell(&columns[2], target_kind)}</tr> }.into_any()
@@ -1596,7 +1599,13 @@ pub fn NewRelationshipPage() -> impl IntoView {
         let _dock_promise = dock_promise;
         let mut top = None;
         let mut line = (Glyph::FILE_PLUS, tr(Msg::PartyNotYet));
-        if saving {
+        // NOTE: the fields are not `required` in the markup: Discard posts the same form, and the
+        // browser would refuse it too; an empty type or target is answered here instead.
+        let missing = kind_type.trim().is_empty() || target.trim().is_empty();
+        if saving && missing {
+            line = (Glyph::CIRCLE_X, tr(Msg::PartyNotCreated));
+            top = Some(crate::pages::common::quiet(tr(Msg::RelationshipNeedsTypeAndTarget)));
+        } else if saving {
             let node = format!(
                 "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.{}.v1",
                 kind_type.trim()
@@ -1666,7 +1675,7 @@ pub fn NewRelationshipPage() -> impl IntoView {
                 <div class="fui-span-2">
                     {Field::new("r-type", tr(Msg::RelationshipType))
                         .help(tr(Msg::RelationshipTypeHelp))
-                        .view(view! { <input id="r-type" name="type" type="text" class="fui-input fui-mono" value=kind_type.clone() required /> })}
+                        .view(view! { <input id="r-type" name="type" type="text" class="fui-input fui-mono" value=kind_type.clone() /> })}
                 </div>
                 <div class="fui-span-2">
                     {Field::new("r-tk", tr(Msg::RelationshipTargetKind))
@@ -1675,7 +1684,7 @@ pub fn NewRelationshipPage() -> impl IntoView {
                 <div class="fui-span-2">
                     {Field::new("r-tid", tr(Msg::RelationshipTargetUid))
                         .holds_id()
-                        .view(view! { <input id="r-tid" name="target" type="text" class="fui-input fui-mono" spellcheck="false" value=target.clone() required /> })}
+                        .view(view! { <input id="r-tid" name="target" type="text" class="fui-input fui-mono" spellcheck="false" value=target.clone() /> })}
                 </div>
             </div>
         };
@@ -1745,10 +1754,13 @@ pub fn EditRelationshipPage() -> impl IntoView {
         } else {
             (Glyph::PENCIL, tr(Msg::EditorOpened))
         };
-        if posted
+        let saving = posted
             .as_ref()
-            .is_some_and(|posted| posted.intent() == "save")
-        {
+            .is_some_and(|posted| posted.intent() == "save");
+        if saving && name.trim().is_empty() {
+            line = (Glyph::CIRCLE_X, tr(Msg::EditorNotSaved));
+            top = Some(crate::pages::common::quiet(tr(Msg::RelationshipNeedsType)));
+        } else if saving {
             match update_relationship(
                 uid.clone(),
                 opened.clone(),
@@ -1829,7 +1841,7 @@ pub fn EditRelationshipPage() -> impl IntoView {
                             <div class="fui-form-grid">
                                 <div class="fui-span-2">
                                     {Field::new("re-ty", tr(Msg::RelationshipType))
-                                        .view(view! { <input id="re-ty" name="type" type="text" class="fui-input fui-mono" value=name.clone() required /> })}
+                                        .view(view! { <input id="re-ty" name="type" type="text" class="fui-input fui-mono" value=name.clone() /> })}
                                 </div>
                             </div>
                         })}

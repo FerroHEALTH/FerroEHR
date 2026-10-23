@@ -1705,15 +1705,22 @@ pub(crate) async fn fill(h: &Harness, css: &str, text: &str) {
 }
 
 /// Click the submit control at `css` and wait for the page that answers the
-/// post: the old `main` goes stale and a new one renders.
+/// post: the document is marked before the click, and the answer is a new
+/// document without the mark.
 ///
 /// # Panics
 /// When the click fails or no page answers within 15 s.
 pub(crate) async fn submit(h: &Harness, css: &str) {
-    let before = h.wait_css("main").await;
+    bounded(
+        "execute(mark the document)",
+        h.driver
+            .execute("document.documentElement.dataset.e2eLeft = '1';", Vec::new()),
+    )
+    .await
+    .expect("mark the document before the post");
     h.wait_css(css).await.click().await;
     let moved = poll_until_for(Duration::from_secs(15), async || {
-        before.read_text().await.is_none()
+        !is_present(h, "html[data-e2e-left]").await
     })
     .await;
     assert!(moved, "the click on `{css}` never brought a new page");

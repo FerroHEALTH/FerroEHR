@@ -4303,6 +4303,10 @@ messages! {
     TemplateDeleteRow = "template-delete-row",
     /// `Name the query to save it.`
     QuerySaveNameMissing = "query-save-name-missing",
+    /// `Give the relationship a type.`
+    RelationshipNeedsType = "relationship-needs-type",
+    /// `Give the relationship a type and a target party.`
+    RelationshipNeedsTypeAndTarget = "relationship-needs-type-and-target",
 }
 
 /// The viewer's message `msg` in the page's locale.

@@ -20,22 +20,17 @@
     reason = "test fixtures and wire assertions are raw JSON by the testing rule \
               (.claude/rules/testing.md §Test-fixture construction)"
 )]
-//! End-to-end journeys over the viewer's **demographics** section — the
-//! openEHR Demographic API plus this CDR's `PARTY_RELATIONSHIP` extension:
+//! End-to-end journeys over Parties: the openEHR Demographic API plus this
+//! CDR's `PARTY_RELATIONSHIP` extension.
 //!
-//! - **the party lifecycle**: creating a PERSON from the viewer's minimal
-//!   skeleton, reading it, committing a second version through the edit form,
-//!   and finding both versions in the History tab, each opening its own
-//!   document;
-//! - **relating two parties**: creating an ORGANISATION, relating the PERSON to
-//!   it from the party's Relationships tab, and confirming the relationship
-//!   resource names BOTH ends and that each end's link resolves to that party's
-//!   screen;
-//! - **tags**: setting and deleting a party tag, and finding that tag in the
-//!   space-wide demographic tag index, whose "Open party" resolves the tagged
-//!   id back to its kind;
-//! - **the no-JavaScript contract**: the by-id lookup as a plain HTML round
-//!   trip, and an unknown `:kind` answered as a not-found screen.
+//! - the party lifecycle: New party, the party's page, Edit committing a
+//!   second version, and both versions on the Versions tab;
+//! - relating two parties from the PERSON's Relationships tab, with both ends
+//!   linked from the relationship's page;
+//! - tags: setting and removing a party tag, and finding it in the tag index
+//!   on Parties;
+//! - the no-WebAssembly contract: Open as a plain GET form, and an unknown
+//!   kind answered as a not-found page.
 //!
 //! Isolation: every journey creates its OWN parties (over the viewer for the
 //! lifecycle one, over ITS-REST for the others), so none touches the fixtures
@@ -43,10 +38,7 @@
 
 use crate::common;
 
-use common::{
-    Harness, click_until_css, login_basic, poll_until, read_prop, read_text, retype, wait_enabled,
-    wait_text, wait_text_suffix,
-};
+use common::{Harness, fill, login_basic, wait_main_contains, wait_text_contains};
 
 /// The CDR base URL the harness exports for REST-side test setup; `None` skips
 /// with a reason.
@@ -230,132 +222,69 @@ async fn add_inline_relationship(
     );
 }
 
-/// Wait until the browser screen has re-rendered for `plural` (its page
-/// heading) AND its create card seeds that kind's document, returning whether
-/// both landed.
-///
-/// Both halves matter: the heading proves the screen re-rendered at all, and the
-/// seeded skeleton proves the UNCONTROLLED create textarea was replaced rather
-/// than left holding the previous kind's document — which is what a
-/// patched-in-place rebuild leaves behind.
-async fn wait_kind_screen(h: &Harness, plural: &str, rm_type: &str) -> bool {
-    let needle = format!("\"_type\": \"{rm_type}\"");
-    poll_until(async || {
-        // NOTE: a heading or body detached by a re-render is "not yet" for this
-        // poll; a driver that fails to answer panics inside read_text/read_prop.
-        let heading = read_text(h, "h1").await.unwrap_or_default();
-        heading.trim() == plural
-            && read_prop(h, "#party-create-body", "value")
-                .await
-                .unwrap_or_default()
-                .contains(&needle)
-    })
-    .await
+/// The party page of `uid` of the kind `segment`.
+fn party_path(segment: &str, uid: &str) -> String {
+    format!("/parties/{segment}/{uid}")
 }
 
-/// The party lifecycle through the viewer alone: create a PERSON from the
-/// seeded skeleton, read it, commit a second version, and walk both versions in
-/// the History tab.
+/// The party's lifecycle through the viewer alone: create a PERSON on New
+/// party, read it, commit a second version from Edit, and read both versions
+/// on the Versions tab.
 #[tokio::test]
 async fn party_create_read_update_and_history() {
     let Some(h) = Harness::start("demographics-party").await else {
         return;
     };
     login_basic(&h).await;
-    h.goto("/demographics/person").await;
-    // The kind switcher and the wire-honest lookup are the screen's spine.
-    h.wait_css("[data-tab='organisation']").await;
-    h.wait_css("#party-lookup").await;
-    h.shot(1, "party-browser").await;
+    h.goto("/parties").await;
+    h.wait_css("#p-kind").await;
+    h.shot(1, "parties").await;
 
-    // Switching kind is a SAME-ROUTE navigation, which leptos_router answers by
-    // updating the params without re-running the page body — so the whole screen
-    // has to be driven off the param reactively. Clicking a pill and reading the
-    // create skeleton back is what proves it: a screen that read its kind once
-    // would still say PERSON here.
-    h.wait_css("[data-tab='organisation']").await.click().await;
-    h.wait_url_contains("/demographics/organisation").await;
+    // Start over swaps the starting document for the kind chosen.
+    h.wait_css("main a[href='/parties/new']").await.click().await;
+    h.wait_css("#pk").await.select_by_value("organisation").await;
+    common::submit(&h, "button[value='kind']").await;
+    let starting = h.wait_css("#document").await.prop("value").await;
     assert!(
-        wait_kind_screen(&h, "Organisations", "ORGANISATION").await,
-        "the kind switcher must re-render the screen for the new kind: {}",
-        h.evidence_dump("kind-switch").await
+        starting.contains("\"_type\": \"ORGANISATION\""),
+        "Start over puts the organisation's starting document in the editor: {starting}"
     );
-    h.shot(2, "kind-switched").await;
-    // …and back, so the rest of the journey runs on the person screen.
-    h.wait_css("[data-tab='person']").await.click().await;
-    h.wait_url_contains("/demographics/person").await;
-    assert!(
-        wait_kind_screen(&h, "People", "PERSON").await,
-        "switching back must re-render the PERSON screen"
-    );
+    h.wait_css("#pk").await.select_by_value("person").await;
+    common::submit(&h, "button[value='kind']").await;
 
-    // Create from the viewer's own minimal skeleton, with a unique identity so
-    // the created party is recognizable in its own document.
     let label = format!("viewer-person-{}", jitter());
     let body = serde_json::to_string(&party_body("PERSON", "person", &label))
         .expect("serialize the party");
-    retype(&h, "#party-create-body", &body).await;
-    h.wait_css("#party-create-submit").await.click().await;
-    assert!(
-        wait_text(&h, "Party created").await,
-        "creating a PERSON never reported a committed version: {}",
-        h.evidence_dump("party-create").await
-    );
-    h.wait_url_contains("/demographics/person/").await;
-    h.wait_css("#party-facts").await;
-    // A first version, and the document really carries what was created.
-    wait_text_suffix(&h, "[data-demographic-fact='version']", "::1").await;
-    h.wait_css("#party-document").await;
-    assert!(
-        wait_text(&h, &label).await,
-        "the created identity is not in the served document"
-    );
+    fill(&h, "#document", &body).await;
+    common::submit(&h, "#editor-dock button[value='save']").await;
+    h.wait_url_contains("/parties/person/").await;
+    h.wait_css(".fui-toast-text").await;
+    wait_main_contains(&h, &label).await;
+    wait_main_contains(&h, "version 1").await;
     h.shot(2, "party-created").await;
+    let party = current_party_uid(&h).await;
 
-    // Commit a second version through the edit form: `details` is the party's
-    // optional ITEM_STRUCTURE, and the form re-sends everything else verbatim.
-    h.wait_toasts_cleared().await;
-    // The form stays disabled until it is seeded; typing before that would be
-    // overwritten by the seed.
-    wait_enabled(&h, "#party-identities").await;
-    wait_enabled(&h, "#party-details").await;
-    retype(
-        &h,
-        "#party-details",
-        r#"{"_type":"ITEM_TREE","name":{"_type":"DV_TEXT","value":"details"},"archetype_node_id":"at0004","items":[]}"#,
-    )
-    .await;
-    h.wait_css("#party-save").await.click().await;
-    assert!(
-        wait_text(&h, "Party updated").await,
-        "the edit never reported a committed version: {}",
-        h.evidence_dump("party-update").await
-    );
-    // The refetched facts report the NEW version — the write really landed.
-    wait_text_suffix(&h, "[data-demographic-fact='version']", "::2").await;
+    h.wait_css(&format!("main a[href='{}/edit']", party_path("person", &party)))
+        .await
+        .click()
+        .await;
+    let document = h.wait_css("#document").await.prop("value").await;
+    let edited = document.replacen(&label, &format!("{label} edited"), 1);
+    assert_ne!(edited, document, "the opened document carries the identity");
+    fill(&h, "#document", &edited).await;
+    common::submit(&h, "#editor-dock button[value='save']").await;
+    h.wait_url_not_contains("/edit").await;
+    wait_main_contains(&h, "version 2").await;
+    wait_main_contains(&h, &format!("{label} edited")).await;
     h.shot(3, "party-updated").await;
 
-    // History: the versioned family, never the current-party route.
-    h.wait_toasts_cleared().await;
-    let party = current_party_uid(&h).await;
-    h.goto(&format!("/demographics/person/{party}?tab=history"))
+    h.goto(&format!("{}?tab=versions", party_path("person", &party)))
         .await;
-    h.wait_css("[data-demographic-fact='object-uid']").await;
-    // Two versions: the create and the edit.
-    h.wait_css("[data-demographic-version$='::2']").await;
-    h.wait_css("[data-demographic-version$='::1']").await;
-    assert!(
-        click_until_css(
-            &h,
-            "[data-demographic-version$='::1']",
-            "#demographic-version-document",
-        )
-        .await,
-        "opening version 1 never rendered its document"
-    );
-    wait_text_suffix(&h, "[data-demographic-fact='version-id']", "::1").await;
-    // The version's envelope names its contribution, linked to its own viewer.
-    h.wait_css("[data-demographic-fact='contribution']").await;
+    wait_main_contains(&h, "Version 2").await;
+    h.wait_css("main a.fui-row-link[href*='version=1']").await;
+    h.goto(&format!("{}?tab=versions&version=1", party_path("person", &party)))
+        .await;
+    wait_main_contains(&h, "None: this is the first version").await;
     h.shot(4, "party-history").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
@@ -363,9 +292,9 @@ async fn party_create_read_update_and_history() {
     h.finish().await;
 }
 
-/// Relating two parties: an ORGANISATION target, a relationship created from
-/// the PERSON's Relationships tab, and both ends linked from the relationship
-/// resource — then the same link followed party → party from the inline list.
+/// Relating two parties: a relationship created from the PERSON's
+/// Relationships tab links both ends from its own page, and the PERSON's
+/// relationships list then links its target.
 #[tokio::test]
 async fn relating_two_parties_links_both_ends() {
     let Some(h) = Harness::start("demographics-relationship").await else {
@@ -383,99 +312,56 @@ async fn relating_two_parties_links_both_ends() {
         create_party_over_rest(&http, &v1, "organisation", "ORGANISATION", "employer").await;
 
     login_basic(&h).await;
-    h.goto(&format!("/demographics/person/{person}?tab=relationships"))
+    h.goto(&format!("{}?tab=relationships", party_path("person", &person)))
         .await;
-    // A fresh party is the source of nothing yet, and the tab says why the other
-    // direction cannot be listed at all.
-    h.wait_css("#party-relationships").await;
-    assert!(
-        wait_text(&h, "point AT this party").await,
-        "the tab must state that incoming relationships are not enumerable"
-    );
+    wait_main_contains(&h, "cannot list the ones that point at it").await;
     h.shot(1, "relationships-empty").await;
 
-    // "Relate this party" carries the source into the create form as URL state.
-    h.wait_css("#party-relate").await.click().await;
-    h.wait_url_contains("/demographics/relationship?source=")
-        .await;
-    let prefilled = h.wait_css("#relationship-source").await.prop("value").await;
-    assert_eq!(
-        prefilled, person,
-        "the source party must arrive prefilled from the URL"
-    );
-
-    retype(&h, "#relationship-type", "employment").await;
-    retype(&h, "#relationship-target", &organisation).await;
-    h.wait_css("#relationship-target-kind")
-        .await
-        .select_by_value("organisation")
-        .await;
-    h.wait_css("#relationship-create-submit")
+    h.wait_css("main a.fui-button[href^='/parties/relationships/new']")
         .await
         .click()
         .await;
-    assert!(
-        wait_text(&h, "Relationship created").await,
-        "creating the relationship never reported a committed version: {}",
-        h.evidence_dump("relationship-create").await
-    );
-    h.wait_url_contains("/demographics/relationship/").await;
+    h.wait_url_contains("/parties/relationships/new?").await;
+    // Discard leaves without asking anything of the empty fields.
+    common::submit(&h, "#editor-dock button[value='discard']").await;
+    h.wait_url_contains("tab=relationships").await;
+    h.wait_css("main a.fui-button[href^='/parties/relationships/new']")
+        .await
+        .click()
+        .await;
 
-    // The relationship resource names BOTH ends, each linked to its party.
-    h.wait_css("#relationship-facts").await;
-    let source_link = h
-        .wait_css("[data-relationship-end='source']")
-        .await
-        .attr("href")
+    fill(&h, "#r-type", "employment").await;
+    h.wait_css("#r-tk").await.select_by_value("organisation").await;
+    fill(&h, "#r-tid", &organisation).await;
+    common::submit(&h, "#editor-dock button[value='save']").await;
+    h.wait_url_contains("/parties/relationships/").await;
+    h.wait_css(".fui-toast-text").await;
+    h.wait_css(&format!("main a[href='{}']", party_path("person", &person)))
         .await;
-    let target_link = h
-        .wait_css("[data-relationship-end='target']")
-        .await
-        .attr("href")
-        .await;
-    assert_eq!(source_link, format!("/demographics/person/{person}"));
-    assert_eq!(
-        target_link,
-        format!("/demographics/organisation/{organisation}")
-    );
+    let target = format!("main a[href='{}']", party_path("organisation", &organisation));
+    h.wait_css(&target).await;
     h.shot(2, "relationship-created").await;
 
-    // …and following the target end lands on that party's own screen.
-    h.wait_toasts_cleared().await;
-    h.wait_css("[data-relationship-end='target']")
-        .await
-        .click()
+    h.wait_css(&target).await.click().await;
+    h.wait_url_contains(&party_path("organisation", &organisation))
         .await;
-    h.wait_url_contains(&format!("/demographics/organisation/{organisation}"))
-        .await;
-    h.wait_css("#party-facts").await;
-    assert!(
-        wait_text(&h, "ORGANISATION").await,
-        "the target party's own screen must load"
-    );
+    wait_main_contains(&h, "Organisation").await;
     h.shot(3, "relationship-target-party").await;
 
-    // The inline relationship on the source party's tab links party → party —
-    // the one same-route navigation on the party detail, which leptos_router
-    // answers by updating params without re-running the page body. A screen that
-    // read its kind once would keep addressing the previous family, so drive the
-    // link and assert the new screen really is the ORGANISATION's. The inline
-    // list is a DIFFERENT record from the resource created above (the two
-    // representations are disjoint), so it is put there over REST first.
     add_inline_relationship(&http, &v1, "person", &person, "ORGANISATION", &organisation).await;
-    h.wait_toasts_cleared().await;
-    h.goto(&format!("/demographics/person/{person}?tab=relationships"))
+    h.goto(&format!("{}?tab=relationships", party_path("person", &person)))
         .await;
-    let inline = h.wait_css("[data-relationship-end='inline-target']").await;
-    assert_eq!(
-        inline.attr("href").await,
-        format!("/demographics/organisation/{organisation}"),
-        "the party's own relationships list must link its target"
-    );
-    inline.click().await;
-    h.wait_url_contains(&format!("/demographics/organisation/{organisation}"))
+    // A relationship held inline in the party has no page of its own, so its
+    // row opens the target.
+    h.wait_css(&format!(
+        "main a.fui-row-link[href='{}']",
+        party_path("organisation", &organisation)
+    ))
+    .await
+    .click()
+    .await;
+    h.wait_url_contains(&party_path("organisation", &organisation))
         .await;
-    wait_text_suffix(&h, "[data-demographic-fact='type']", "ORGANISATION").await;
     h.shot(4, "inline-relationship-followed").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
@@ -483,8 +369,8 @@ async fn relating_two_parties_links_both_ends() {
     h.finish().await;
 }
 
-/// Tags: set one on a party, find it in the space-wide index, open the party
-/// back from that index row, and delete it.
+/// Tags on a party: set one on its Tags tab, find it in the tag index on
+/// Parties, open the party from that row, and remove the tag.
 #[tokio::test]
 async fn party_tags_are_set_indexed_and_deleted() {
     let Some(h) = Harness::start("demographics-tags").await else {
@@ -497,54 +383,31 @@ async fn party_tags_are_set_indexed_and_deleted() {
     let http = reqwest::Client::new();
     let v1 = format!("{cdr}/ferroehr/rest/openehr/v1");
     let person = create_party_over_rest(&http, &v1, "person", "PERSON", "tagged-person").await;
-    // A unique key, so the index filter finds exactly this journey's tag.
     let key = format!("viewer-tag-{}", jitter());
 
     login_basic(&h).await;
-    h.goto(&format!("/demographics/person/{person}?tab=tags"))
-        .await;
-    h.wait_css("#party-tag-set").await;
-    retype(&h, "#tag-key", &key).await;
-    retype(&h, "#tag-value", "follow-up").await;
-    h.wait_css("#tag-save").await.click().await;
-    assert!(
-        wait_text(&h, "Tag saved").await,
-        "saving a tag never reported the replaced collection: {}",
-        h.evidence_dump("tag-save").await
-    );
-    h.wait_css(&format!("[data-tag-key='{key}']")).await;
+    let tags = format!("{}?tab=tags", party_path("person", &person));
+    h.goto(&tags).await;
+    fill(&h, "#tk", &key).await;
+    fill(&h, "#tv", "follow-up").await;
+    common::submit(&h, "button[value='set-tag']").await;
+    h.wait_css(".fui-toast-text").await;
+    wait_text_contains(&h, "main table", &key).await;
     h.shot(1, "tag-set").await;
 
-    // The space-wide index lists it, and "Open party" resolves the tagged id
-    // back to the kind that holds it.
-    h.wait_toasts_cleared().await;
-    h.goto(&format!("/demographics/person?tag_key={key}")).await;
-    h.wait_css("#demographic-tag-index").await;
-    let row = format!("[data-tag-target='{person}']");
-    h.wait_css(&row).await;
+    h.goto("/parties").await;
+    wait_text_contains(&h, "main table", &key).await;
     h.shot(2, "tag-index").await;
-    h.wait_css(&row).await.click().await;
-    h.wait_url_contains(&format!("/demographics/person/{person}"))
-        .await;
-    h.wait_css("#party-facts").await;
-
-    // Deleting addresses the key alone, which is what the openEHR tag delete
-    // does — and the party is then untagged.
-    h.goto(&format!("/demographics/person/{person}?tab=tags"))
-        .await;
-    h.wait_css(&format!("[data-tag-delete='{key}']"))
+    h.wait_css(&format!("main table a[href^='{}']", party_path("person", &person)))
         .await
         .click()
         .await;
-    assert!(
-        wait_text(&h, "Tag deleted").await,
-        "deleting the tag never reported: {}",
-        h.evidence_dump("tag-delete").await
-    );
-    assert!(
-        wait_text(&h, "No tags on this party").await,
-        "the party must be untagged after the delete"
-    );
+    h.wait_url_contains(&party_path("person", &person)).await;
+
+    h.goto(&tags).await;
+    common::submit(&h, &format!("button[value='remove-tag:{key}']")).await;
+    h.wait_css(".fui-toast-text").await;
+    wait_main_contains(&h, "carries no tag").await;
     h.shot(3, "tag-deleted").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
@@ -552,9 +415,9 @@ async fn party_tags_are_set_indexed_and_deleted() {
     h.finish().await;
 }
 
-/// The progressive-enhancement contract: the by-id lookup is a plain HTML GET
-/// that works with JavaScript disabled, and an unknown `:kind` is a not-found
-/// screen rather than a wall of failing reads.
+/// The no-WebAssembly contract: Open on Parties is a plain GET form that
+/// opens the party, and an unknown kind is a not-found page rather than a wall
+/// of failing reads.
 #[tokio::test]
 async fn lookup_and_unknown_kind_work_without_javascript() {
     let Some(h) = Harness::start_without_javascript("demographics-nojs").await else {
@@ -569,23 +432,19 @@ async fn lookup_and_unknown_kind_work_without_javascript() {
     let person = create_party_over_rest(&http, &v1, "person", "PERSON", "nojs-person").await;
 
     login_basic(&h).await;
-    h.goto("/demographics/person").await;
-    h.wait_css("#party-lookup").await.send_keys(&person).await;
-    h.wait_css("#party-find").await.click().await;
-    // With no JavaScript this is a full GET to `?find=…`, which the screen
-    // answers with a server-side redirect to the party's own route.
-    h.wait_url_contains(&format!("/demographics/person/{person}"))
-        .await;
-    h.wait_css("#party-facts").await;
+    h.goto("/parties").await;
+    fill(&h, "#p-id", &person).await;
+    common::submit(&h, "form[action='/parties'] button[type=submit]").await;
+    h.wait_url_contains(&party_path("person", &person)).await;
+    wait_main_contains(&h, "nojs-person").await;
     h.shot(1, "nojs-lookup").await;
 
-    // A `:kind` outside the closed five-kind set is a not-found screen.
-    h.goto("/demographics/patients").await;
-    h.wait_css("#demographics-unknown-kind").await;
+    h.goto(&party_path("patients", &person)).await;
+    wait_main_contains(&h, "404").await;
     h.shot(2, "nojs-unknown-kind").await;
-
     h.finish().await;
 }
+
 
 /// A run-unique suffix for the fixtures a journey creates, so a shared stack
 /// can hold several runs' parties and tags without collision.
