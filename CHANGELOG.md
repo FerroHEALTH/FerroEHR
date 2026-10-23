@@ -15,6 +15,78 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Changed
+
+- **The viewer is rebuilt on FerroUI 0.3.2** (#3932, FerroHEALTH/FerroUI#161).
+  Every screen follows the FerroEHR mockups of FerroUI's
+  `design/consoles/ferroehr/` at 1440 and 390 px, light and dark, with
+  FerroUI's components and none of the viewer's own copies. The viewer now
+  runs in islands mode: the server draws every page whole, every link is a
+  link and every action a form that posts to its page, so the whole viewer
+  works with JavaScript off, and the browser hydrates only the parts that add
+  behaviour (the code editor, path trees, the chart legend, date pickers, the
+  user menu's keyboard pattern, the subject reveal and Copy). Editors end in a
+  docked decision bar; a refused save keeps what you typed beside the CDR's
+  words. The navigation is Dashboard, EHRs, Parties, Templates, Terminology,
+  Stored queries, Query, Server, Audit log, Subscriptions, Configuration and
+  About, with search in the top bar.
+- **Breaking: the viewer's addresses change.** `/demographics/…` is
+  `/parties` (`/parties/{kind}/{uid}`, `/parties/relationships/{uid}`,
+  `/parties/contributions/{uid}`); an EHR's tabs are paths
+  (`/ehrs/{id}/status`, `/directory`, `/contributions`, `/tags`) instead of
+  `?tab=`; `/queries/builder` and `/queries/aql` are `/query` and
+  `/query/aql`; `/queries/stored?load=…` is `/queries/{name}/{version}/run`;
+  `/system` and `/operations` are `/server` with its tabs, the conformance
+  manifest moves to `/about`, the runtime configuration to `/configuration`;
+  an ADL 2 release is `/templates/adl2/{stem}/{release}`. Upgrade: update
+  bookmarks and links into the viewer; an old address answers `404`.
+- **Breaking: display preferences are cookies of their own.** The theme is set
+  in the user menu and on Your preferences (`/preferences`), and each
+  preference is its own `ferroehr-viewer-*` cookie; the `ferroehr-theme`
+  cookie and the `/theme` route are gone, so a theme chosen before the upgrade
+  falls back to the system's until it is chosen again.
+- **Breaking: a listing that can show patient data keeps its page out of the
+  address** (FerroUI `leptos-ui.md` §0): the EHRs, an EHR's compositions and
+  contributions and the audit log page through a session cookie (`/paging`);
+  `?offset=` and `?page=` on them are ignored. Filters stay in the address.
+- **An open tab now idles out** (#3057). The viewer polls nothing in the
+  background, so `session.idle_minutes` measures the requests the browser
+  makes, and a tab left untouched signs out like a closed one; the next page
+  asked for is the sign-in page saying the session ended, and signing in
+  returns to it. A revoked session is noticed on the next request.
+- **The viewer's site is built with `cargo leptos build --split`**
+  (`scripts/cargo-leptos.sh` adds it): FerroUI's lazy islands load from chunks
+  of their own, and without the split no island hydrates (FerroUI #331). A
+  deployment that serves the site from its own web server serves the whole
+  `pkg/` directory, chunks included; the image already does.
+- **The dashboard's compositions per day count commits**, read from each
+  version's `commit_audit/time_committed`, as its note says; it counted
+  context start times before.
+
+### Added
+
+- **Your preferences**: the theme, density, reduced motion, the language, the
+  first day of the week, how long a revealed subject id stays shown, and the
+  keyboard shortcut hints, each kept in its own cookie.
+- **Older versions on an EHR's directory** reads further back than the newest
+  ten versions, and a version reached that way restores.
+- **The viewer's journeys run at a phone's 390 px in CI** beside 1440 px, and
+  the screenshot pass captures every route in both widths and both themes as
+  the `ui-route-shots` artifact (#3910). Keyboard journeys cover where the
+  focus lands after a route change, the query builder by keyboard, and the user
+  menu's keyboard pattern (#2793).
+
+### Removed
+
+- **The viewer's Tailwind build and its own stylesheet.** The viewer serves
+  FerroUI's stylesheet and its FerroEHR theme only; the image build no longer
+  runs the Tailwind standalone binary.
+- **The EHR status's own tag panel.** A tag on the EHR status is still listed
+  on the EHR's Tags tab and opens the Status tab; setting one is done over the
+  API, as the mockup has no panel for it.
+- **The stored-query listing's pager**: every stored query is listed, grouped
+  by namespace.
+
 ## [5.3.3] - 2026-10-23
 
 ### Fixed
