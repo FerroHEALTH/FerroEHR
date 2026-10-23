@@ -45,6 +45,8 @@
 # regardless of `cancel-in-progress` (workflow-syntax docs §concurrency), which
 # is exactly how the v4.0.5 release commit's main CI run — the whole guard
 # tier — was cancelled and never reported.
+# The list is scripts/release/plan.sh, which scripts/release/preflight.sh
+# runs before the tag is pushed.
 #
 # RE-RUNNING is the recovery for every partial failure, and each leg is
 # idempotent by construction: images push by digest and are re-tagged, the
@@ -158,28 +160,6 @@ jobs:
         with:
           tag: ${{ steps.tag.outputs.tag }}
 
-      # A release is cut only when its milestone is empty
-      # (.claude/rules/issue-workflow.md), so this refuses the tag before
-      # anything is built and names every open item.
-      - name: The milestone titled as the tag holds no open item
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.tag.outputs.tag }}
-        run: bash scripts/release/milestone.sh check "$TAG"
-
-      - name: Verify the tag matches the workspace version
-        run: |
-          set -euo pipefail
-          manifest=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
-          if [ "$manifest" != "$VERSION" ]; then
-            echo "::error::Tag $TAG does not match workspace version $manifest in Cargo.toml." >&2
-            exit 1
-          fi
-          echo "workspace version $manifest matches $TAG"
-        env:
-          TAG: ${{ steps.tag.outputs.tag }}
-          VERSION: ${{ steps.tag.outputs.version }}
-
       # The crates the crates.io leg publishes, for the per-crate SBOM matrix:
       # the one list publish-crates.sh keeps, so the two cannot disagree.
       - id: crates
@@ -191,148 +171,22 @@ jobs:
             echo "version=$(bash scripts/release/publish-crates.sh version)"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Changelog structure (no duplicate subsections, canonical types)
-        run: bash scripts/checks/changelog-structure.sh
-
-      # EHDS Art. 30(2): a release that changes the logging component carries
-      # its technical documentation; the previous release is taken by version.
-      - name: The technical documentation follows the logging component
-        env:
-          TAG: ${{ steps.tag.outputs.tag }}
-        run: |
-          set -euo pipefail
-          base="${TAG%%-*}"
-          prev="$(git ls-remote --tags --refs origin 'v*' | sed 's#.*refs/tags/##' \
-            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -vxF "$base" \
-            | { cat; echo "$base"; } | sort -V | awk -v t="$base" '$0==t{print p; exit} {p=$0}')"
-          [ -n "$prev" ] || { echo "::error::no release tag below $base"; exit 1; }
-          git fetch --no-tags --depth=1 origin "+refs/tags/${prev}:refs/tags/${prev}"
-          bash scripts/checks/technical-documentation.sh --since "$prev"
-          # CRA Art. 13(3) and 13(14): a release that changes a declared
-          # security-relevant path revises the risk assessment.
-          bash scripts/checks/cra-risk-assessment.sh --self-test
-          bash scripts/checks/cra-risk-assessment.sh --since "$prev"
-
-      # The release NOTES are produced here, not at publish time: the section
-      # existing and being non-empty is a release fact like any other, and the
-      # extraction that proves it may as well hand the result on. The artifact
-      # is what github-release attaches.
-      - name: Extract the changelog section for this tag
-        run: |
-          set -euo pipefail
-          if ! grep -q "^## \[$VERSION\]" CHANGELOG.md; then
-            echo "::error::CHANGELOG.md has no section for $VERSION — releases are changelog-driven (Keep a Changelog). Add '## [$VERSION] - YYYY-MM-DD' first." >&2
-            exit 1
-          fi
-          # Everything between "## [<version>]" and the next "## [" heading.
-          awk -v ver="$VERSION" '
-            $0 ~ "^## \\[" ver "\\]" {found=1; next}
-            found && /^## \[/ {exit}
-            found {print}
-          ' CHANGELOG.md > release-notes.md
-          if ! grep -q '[^[:space:]]' release-notes.md; then
-            echo "::error::The [$VERSION] changelog section is empty." >&2
-            exit 1
-          fi
-          # CRA Art 13(19) and Annex II point 7: the end of the support
-          # commitment, at least month and year, five years from the release date.
-          released="$(sed -n "s/^## \[$VERSION\] - \([0-9-]*\).*/\1/p" CHANGELOG.md)"
-          if ! end="$(date -u -d "$released +5 years" '+%B %Y')"; then
-            echo "::error::The [$VERSION] heading carries no release date to count the support period from." >&2
-            exit 1
-          fi
-          {
-            echo
-            echo "### Support period"
-            echo
-            echo "Only the newest release is supported. When a new release is published, every earlier release stops receiving fixes: there are no maintenance branches, no long-term-support line and no backports. If you are not on the newest release, upgrade; upgrading is free. Under the Cyber Resilience Act, Cadasto B.V. commits to keep publishing security fixes for at least five years after each release (Art 13(8)) and ships them only in the newest release (Art 13(10)). For this release that commitment runs until the end of $end (Regulation (EU) 2024/2847 Art 13(19)); see [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)."
-          } >> release-notes.md
-          # CRA Art 13(18): the Annex II information and instructions to the
-          # user, in the book the docs-freeze leg cuts for this tag.
-          url="$(bash scripts/checks/release-notes.sh --url "$TAG")"
-          {
-            echo
-            echo "### Information and instructions to the user (CRA Annex II)"
-            echo
-            echo "[CRA information and instructions to the user for $TAG]($url): the manufacturer, the vulnerability contact, the support period, secure use, updates and decommissioning (Regulation (EU) 2024/2847 Art 13(18) and Annex II)."
-          } >> release-notes.md
-          echo "Release notes for $VERSION:"; cat release-notes.md
-        env:
-          TAG: ${{ steps.tag.outputs.tag }}
-          VERSION: ${{ steps.tag.outputs.version }}
-
-      # A release whose notes do not link its CRA user information, or do not
-      # state its support period, is refused before anything is built.
-      - name: The release notes carry the CRA user information and the support period
-        env:
-          TAG: ${{ steps.tag.outputs.tag }}
-        run: |
-          set -euo pipefail
-          bash scripts/checks/release-notes.sh --self-test
-          if ! bash scripts/checks/release-notes.sh release-notes.md "$TAG"; then
-            echo "::error::The release notes for $TAG do not carry the CRA Annex II user information link or the support period (Regulation (EU) 2024/2847 Art 13(18) and (19))." >&2
-            exit 1
-          fi
-
-      # The hand-edited pin sites, every one of them, at the commit being
-      # released. Each of these guards exists because its site shipped stale
-      # once; they ran on pull requests only, so a cut whose main CI run was
-      # cancelled re-verified nothing.
-      # The committed appVersion equals the workspace version (#2890, the
-      # compose treatment), and this plan job has already asserted the tag
-      # equals the workspace version above — so re-running the guard here
-      # transitively pins appVersion == ${TAG#v}. The chart leg's
-      # `helm package --app-version ${TAG#v}` injection stays as belt-and-braces
-      # and keeps the between-releases dispatch lane correct. One script, so
-      # this and the `chart-appversion` CI job cannot drift apart.
-      - name: The committed chart release facts are coherent
-        run: bash scripts/checks/chart-appversion.sh
-
-      # Every release publishes a DIFFERENT packaged chart (appVersion, image
-      # tags and changes are injected at package time, #2779), so every release
-      # needs its own chart version — and since the injection, no diff-guard
-      # forces the bump. Refusing here costs seconds; the chart leg refusing
-      # after the images published costs a red release (v4.0.6-rc3, #2818).
+      # The chart-version check of the list below reads the registry with helm.
       - uses: ./.github/actions/helm-pinned
-      - name: The chart version is not already published
+
+      # Every release fact, as ONE list: the milestone, the workspace version,
+      # the changelog's structure and Security rules for this section, the
+      # change control since the previous tag (taken by version from
+      # `git ls-remote`), the release notes with the support period and the
+      # CRA user information, and the hand-edited pin sites. The list is
+      # scripts/release/plan.sh; scripts/release/preflight.sh runs the same
+      # list before the tag is pushed, so the two cannot drift. It names every
+      # refused check, and writes release-notes.md for github-release.
+      - name: Every release fact holds at the tagged commit
         env:
-          CHART_REF: ghcr.io/ferrohealth/charts/ferroehr
-        run: |
-          ver=$(awk '$1 == "version:" {print $2; exit}' deploy/helm/ferroehr/Chart.yaml)
-          if helm show chart "oci://${CHART_REF}" --version "$ver" >/dev/null 2>&1; then
-            echo "::error::chart version ${ver} is already published at ${CHART_REF} — every release ships a distinct packaged chart (injected release facts), so bump deploy/helm/ferroehr/Chart.yaml version in the release PR." >&2
-            exit 1
-          fi
-          echo "chart ${ver} is unpublished — the chart leg can ship it"
-
-      - name: The ferroehr party statement's product version matches the workspace
-        run: bash scripts/checks/statement-version.sh
-
-      - name: CITATION.cff version matches the workspace version
-        env:
-          VERSION: ${{ steps.tag.outputs.version }}
-        run: |
-          set -euo pipefail
-          cff_ver=$(sed -nE 's/^version:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/p' CITATION.cff)
-          if [ "$cff_ver" != "$VERSION" ]; then
-            echo "::error::CITATION.cff version ($cff_ver) != released version ($VERSION) — the release cut bumps CITATION.cff version and date-released together." >&2
-            exit 1
-          fi
-          echo "CITATION.cff version $cff_ver matches the released version."
-
-      # `.zenodo.json` is GENERATED from CITATION.cff, because Zenodo ignores
-      # CITATION.cff entirely whenever a .zenodo.json is present
-      # (https://help.zenodo.org/docs/github/describe-software/zenodo-json/).
-      # The deposit's FILES freeze at publication, so a drifted copy is archived
-      # under a DOI nobody can correct — this is the last moment it can be seen.
-      - name: .zenodo.json is in sync with CITATION.cff
-        run: bash scripts/render/zenodo-json.sh --check
-
-      - name: docker-compose.yml and the hosted compose image tags match their policy
-        run: bash scripts/checks/compose-image-tags.sh
-
-      - name: Documented keys resolve in their source
-        run: bash scripts/checks/docs-claims.sh --all
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: bash scripts/release/plan.sh checks "$TAG" --notes release-notes.md
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

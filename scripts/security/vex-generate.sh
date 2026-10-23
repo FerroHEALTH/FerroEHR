@@ -19,7 +19,7 @@
 #
 # OpenVEX specification: https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md
 #
-# One key per statement is NOT OpenVEX: `ferroehr:reachability`, carrying the
+# One key per statement is NOT OpenVEX: the reachability key, carrying the
 # dependency path the impact statement argues about as data
 # (`scripts/checks/vex-reachability.sh` compares it against `cargo tree`). The
 # specification defines no extension mechanism and no such field, so this is
@@ -30,12 +30,17 @@
 # Usage: scripts/security/vex-generate.sh [--write | --stdout]
 #   --write   (default) overwrite security/vex/rust-advisories.openvex.json
 #   --stdout  print the document instead, changing nothing on disk
+#
+# VEX_DIR moves the VEX directory (default security/vex) and
+# VEX_REACHABILITY_KEY names the extension key (default ferroehr:reachability).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-readonly PROSE='security/vex/rust-advisories.toml'
+readonly VEX_DIR="${VEX_DIR:-security/vex}"
+readonly PROSE="$VEX_DIR/rust-advisories.toml"
 readonly GATE='deny.toml'
-readonly OUT='security/vex/rust-advisories.openvex.json'
+readonly OUT="$VEX_DIR/rust-advisories.openvex.json"
+readonly REACHABILITY_KEY="${VEX_REACHABILITY_KEY:-ferroehr:reachability}"
 
 mode="${1:---write}"
 case "$mode" in
@@ -152,7 +157,7 @@ done < <(jq -c '((.accepted // []) + (.lockfile_only // []))[]' <<<"$prose_json"
 
 [[ "$fail" -eq 0 ]] || exit 1
 
-document="$(jq -S '
+document="$(jq -S --arg key "$REACHABILITY_KEY" '
   .document as $d
   | (((.accepted // []) + (.lockfile_only // [])) | sort_by(.id)) as $entries
   | {
@@ -173,7 +178,7 @@ document="$(jq -S '
           status: $e.status,
           justification: $e.justification,
           impact_statement: $e.impact,
-          "ferroehr:reachability": {
+          ($key): {
             package: ($e.crate + (if ($e.version // "") == "" then "" else "@" + $e.version end)),
             direct_dependents: ($e.carriers | sort),
             workspace_roots: ($e.workspace_roots | sort),

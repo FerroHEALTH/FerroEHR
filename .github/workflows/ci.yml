@@ -584,6 +584,8 @@ jobs:
         run: bash scripts/checks/release-notes.sh --self-test
       - name: The release milestone check refuses open items and closes only after every leg
         run: bash scripts/release/milestone.sh --self-test
+      - name: The release plan orders tags by version and counts the support period as GNU date does
+        run: bash scripts/release/plan.sh --self-test
 
   # The tracker helpers set the native issue type and the Priority and Effort
   # fields, and declare the label taxonomy (.claude/rules/issue-workflow.md).
@@ -2712,6 +2714,13 @@ jobs:
       # section shipped into release notes twice before this guard).
       - name: Changelog structure (no duplicate subsections, canonical types)
         run: bash scripts/checks/changelog-structure.sh
+      # CRA Annex I Part II(2), (4) and (8): a Security entry names its GHSA
+      # advisory or VEX statement, and a Security section beside other changes
+      # says why. The release plan runs the same check over the section it cuts.
+      - name: The Unreleased Security section names its advisories and its reason
+        run: |
+          bash scripts/checks/changelog-security.sh --self-test
+          bash scripts/checks/changelog-security.sh
       - name: Require a CHANGELOG entry for user-visible changes
         env:
           BASE: ${{ github.event.pull_request.base.sha }}

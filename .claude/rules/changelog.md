@@ -74,9 +74,11 @@ optional:
   tags in its examples; `docs-claims` catches all of them, the chart/image pins
   since the v4.0.0 cut shipped them stale and the verifying-releases asset names
   and substitution note since v4.0.5 froze two stale attestation examples into
-  `/docs/v4.0.5/` (#2779)), merge the release PR, then tag
-  `vX.Y.Z` on the merge commit. The release workflow publishes the GitHub
-  Release from the matching changelog section and **fails if the section or
+  `/docs/v4.0.5/` (#2779)), run `bash scripts/release/preflight.sh vX.Y.Z`
+  (the release `plan` job's checks, `docs/release.md`), merge the release PR,
+  run the preflight again on the merge commit, then tag `vX.Y.Z` on it. The
+  release workflow publishes the GitHub Release from the matching changelog
+  section and **fails if the section or
   version match is missing**. Releases publish as OFFICIAL
   releases — `prerelease` is true only for an explicitly suffixed tag
   (`vX.Y.Z-rc1`, ...) — owner sign-off 2026-07-31.
@@ -233,14 +235,19 @@ optional:
 Manufacturer duties under the CRA (`docs/law/eu/cra/text.html` Annex I Part
 II) and the EHDS (`docs/law/eu/ehds/text.html` Art. 28, Annex II 1.1), checked
 by whoever cuts the release, on the `release/vX.Y.Z` branch, before the tag.
-The documentation checks at the end of this list run in the release lane; the
-others have no CI check yet, and the cut is refused by hand.
+The first two rules are checked by `scripts/checks/changelog-security.sh`: the
+CI `changelog-guard` job runs it over `[Unreleased]` on every pull request,
+and the release `plan` job over the section being cut. The documentation checks at
+the end of this list run in the release lane. The hazard-log and claims reviews
+have no check and are refused by hand. `scripts/release/preflight.sh vX.Y.Z`
+runs every check of the release lane before the tag (`docs/release.md`).
 
 - **A security fix ships alone, or says why not** (Annex I Part II(2): "where
   technically feasible, new security updates shall be provided separately
   from functionality updates"; `SECURITY.md` §Supported versions). A release
-  whose `### Security` entries sit beside `### Added` or `### Changed` entries
-  is refused unless its `### Security` section opens with a line
+  whose `### Security` entries sit beside any other change subsection
+  (`### Added`, `### Changed`, `### Fixed` and the rest) is refused unless its
+  `### Security` section opens with a line
   `Shipped with functional changes because: <reason>`, naming why a
   security-only patch was technically infeasible (the fix is only correct
   with a behavioural change; the code it fixes was already replaced on
@@ -251,10 +258,11 @@ others have no CI check yet, and the cut is refused by hand.
   (8); `SECURITY.md` §Security advisories). Each entry carries the `GHSA-…`
   identifier of the repository advisory published with the release, or, for
   a dependency bump that the OpenVEX documents show does not affect any
-  shipped artefact, the path of that VEX statement. An entry with neither
-  refuses the cut. Publishing the drafted advisories is a step of the cut, in
-  the same hour the GitHub release is published (`docs/post-market.md`, "A
-  fixed vulnerability's advisory").
+  shipped artefact, the path of that VEX statement under `security/vex/`,
+  which must exist. An entry with neither refuses the cut. Publishing the
+  drafted advisories is a step of the cut, in the same hour the GitHub
+  release is published (`docs/post-market.md`, "A fixed vulnerability's
+  advisory").
 - **The hazard log is reviewed when the logging component changes** (EHDS
   Annex II 1.1). A release whose diff since the previous tag touches
   `app/ferroehr/src/system_log/`, `app/ferroehr-rest/src/system_log/`, the
@@ -277,10 +285,11 @@ others have no CI check yet, and the cut is refused by hand.
   the release PR, the tree file the change affects and adds a row to the
   revision table in `docs/technical-documentation/README.md`. The cut runs
   `bash scripts/checks/technical-documentation.sh --since <previous tag>`,
-  with the previous tag taken by version order (`git tag -l 'v*'
-  --sort=-v:refname`, the first below the new one), never by ancestry, and a
-  failure refuses the cut. A module added to or removed from the logging
-  component changes all three lists in the same PR.
+  with the previous tag taken by version order from `git ls-remote` of
+  origin (`bash scripts/release/plan.sh prev-tag vX.Y.Z`, the first below the
+  new one; a pushed tag counts whether or not its release published), never by
+  ancestry, and a failure refuses the cut. A module added to or removed from
+  the logging component changes all three lists in the same PR.
 - **The CRA risk assessment follows the security-relevant paths** (CRA Art.
   13(3): the assessment "updated as appropriate during a support period";
   Art. 13(14): products of a series "remain in conformity" as their design

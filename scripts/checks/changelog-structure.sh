@@ -9,7 +9,9 @@
 #      (each type appears at most once per section — new entries merge into
 #      the existing subsection, they never append a second header);
 #   2. a subsection header outside the canonical type set
-#      (Added / Changed / Deprecated / Removed / Fixed / Security).
+#      (Added / Changed / Deprecated / Removed / Fixed / Security), plus any
+#      type a product adds deliberately in CHANGELOG_EXTRA_TYPES (comma-separated,
+#      empty by default; e.g. "Upgrade notes").
 #
 # Wired into the CI changelog-guard job; runs unconditionally (the
 # `no-changelog` escape label waives the entry REQUIREMENT, never the
@@ -25,7 +27,15 @@ file="${1:-CHANGELOG.md}"
 # awk, not python: this repository ships no Python, and the check is a line scan
 # over one file — exactly what awk is for. The quote character arrives as a
 # variable because an awk string constant cannot portably escape it.
-awk -v path="$file" -v q="'" '
+awk -v path="$file" -v q="'" -v extra="${CHANGELOG_EXTRA_TYPES:-}" '
+  BEGIN {
+    allowed = "Added, Changed, Deprecated, Fixed, Removed, Security"
+    n_extra = split(extra, extras, /[[:space:]]*,[[:space:]]*/)
+    for (i = 1; i <= n_extra; i++) {
+      sub(/^[[:space:]]+/, "", extras[i]); sub(/[[:space:]]+$/, "", extras[i])
+      if (extras[i] != "") { extra_type[extras[i]] = 1; allowed = allowed ", " extras[i] }
+    }
+  }
   # A release heading opens a new section and resets what has been seen in it.
   /^## \[/ {
     section = $0
@@ -40,10 +50,10 @@ awk -v path="$file" -v q="'" '
     sub(/^### /, "", heading)
     sub(/[[:space:]]+$/, "", heading)
     if (heading != "Added" && heading != "Changed" && heading != "Deprecated" \
-        && heading != "Removed" && heading != "Fixed" && heading != "Security") {
+        && heading != "Removed" && heading != "Fixed" && heading != "Security" \
+        && !(heading in extra_type)) {
       errors[++n] = path ":" FNR ": " q "### " heading q " in [" section \
-        "] is not a Keep-a-Changelog type (allowed: Added, Changed, " \
-        "Deprecated, Fixed, Removed, Security)"
+        "] is not a Keep-a-Changelog type (allowed: " allowed ")"
     }
     if (heading in seen) {
       errors[++n] = path ":" FNR ": duplicate " q "### " heading q " in [" \

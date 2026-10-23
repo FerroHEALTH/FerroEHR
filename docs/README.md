@@ -54,6 +54,8 @@ externalization; acceptance is the openEHR conformance suite. See
   PG, openEHR spec components) except third-party Rust crates (root `Cargo.toml`
   wins for those).
 - `postgres-features.md` — the PG 17/18 feature delta this CDR exploits.
+- `release.md` — the release preflight: `scripts/release/preflight.sh` runs the
+  release `plan` job's checks before the tag is pushed.
 - `conformance/` — CNF 2.0 pipeline artifacts, one directory per SUT
   (`ferroehr/`: `results.json`, `verdicts.json`). `ehrbase/` +
   `COMPARISON.md` are frozen comparison data until the CNF pipeline re-bases
