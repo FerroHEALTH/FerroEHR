@@ -103,7 +103,10 @@ expected="$(jq -r '.statements | length' "$DOC")"
 
 # One set per file, so `comm` can do the two-direction difference; `comm`
 # requires sorted input and treats a blank line as an element, hence the filter.
-setfile() { sort -u | sed '/^$/d' > "$1"; }
+setfile() {
+  local out="$1"
+  sort -u | sed '/^$/d' > "$out"
+}
 
 statements=0
 while read -r statement; do

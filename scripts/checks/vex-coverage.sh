@@ -226,10 +226,10 @@ JSON
 
   # report <file> <id> [vendor-id]: a one-finding Trivy report.
   report() {
-    local vendor="null"
-    [[ -z "${3:-}" ]] || vendor="[\"$3\"]"
+    local file="$1" id="$2" vendor_id="${3:-}" vendor="null"
+    [[ -z "$vendor_id" ]] || vendor="[\"$vendor_id\"]"
     printf '{"SchemaVersion":2,"ArtifactName":"self-test","Results":[{"Target":"t","Class":"os-pkgs","Vulnerabilities":[{"VulnerabilityID":"%s","VendorIDs":%s,"PkgName":"p","InstalledVersion":"1","FixedVersion":"","Severity":"LOW","Status":"affected"}]}]}\n' \
-      "$2" "$vendor" > "$1"
+      "$id" "$vendor" > "$file"
   }
 
   local failed=0 label want args out status
@@ -303,7 +303,7 @@ JSON
     echo "self-test FAILED: an unknown flag exited ${rc}, expected 2" >&2
     failed=1
   else
-    echo "  self-test: an unknown flag is a usage error"
+    echo "  self-test: an unknown flag exits 2 (usage)"
   fi
 
   if [[ "$failed" -ne 0 ]]; then

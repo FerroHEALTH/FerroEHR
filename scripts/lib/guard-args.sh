@@ -36,6 +36,7 @@ guard_no_args() {
     echo "error: $0 takes no arguments (got: $*)" >&2
     guard_usage "(no arguments — this guard's scope is fixed)"
   }
+  return 0
 }
 
 # Refuse any dash-led argument outside the guard's own vocabulary, for a guard
@@ -57,4 +58,5 @@ guard_known_flags() {
     *) ;;
     esac
   done
+  return 0
 }
