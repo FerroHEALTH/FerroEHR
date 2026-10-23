@@ -42,7 +42,9 @@ openehr-query = { path = "../../crates/openehr-query" }
 openehr-its = { path = "../../crates/openehr-its", default-features = false }
 openehr-sdt = { path = "../../crates/openehr-sdt", default-features = false }
 
-leptos.workspace = true
+# Islands mode (FerroUI `crates/ferrohealth-ui/CLAUDE.md`): the server draws
+# every page whole and the browser hydrates only the islands.
+leptos = { workspace = true, features = ["islands"] }
 leptos_meta.workspace = true
 leptos_router.workspace = true
 # The shared FerroHEALTH console components, tokens, stylesheet, highlighters

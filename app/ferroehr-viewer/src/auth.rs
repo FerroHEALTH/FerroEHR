@@ -102,30 +102,33 @@ pub fn refused_login_url(next: Option<&str>) -> String {
     }
 }
 
-/// Basic login: validates the credentials against the CDR (an authenticated
-/// ITS-REST call), then stores them in the server-side session.
+/// What a Basic sign-in came to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SignedIn {
+    /// The CDR accepted the credentials: the session is kept, and the reader
+    /// goes on to the page named, filtered through `same_origin_next`.
+    Accepted(String),
+    /// The CDR refused the username or password (`401`).
+    Refused,
+}
+
+/// Basic sign-in: checks the credentials against the CDR with an
+/// authenticated ITS-REST read, then keeps them in the sealed session.
 ///
-/// Accepted credentials land on `next`, filtered through
-/// `same_origin_next` so a crafted link cannot send a freshly signed-in user
-/// to another site. Credentials the CDR refuses are not an error: the call succeeds and
-/// redirects to [`refused_login_url`], so the login screen renders the
-/// refusal from its URL — a document `302` for a form posted without
-/// JavaScript, the server-function redirect for a hydrated one — and never a
-/// `500`, which is how a server function transports an error value.
+/// Credentials the CDR refuses are not an error: the answer says so, and the
+/// sign-in page draws the refusal with the username kept. The session cookie
+/// is appended to the response of the page being drawn.
 ///
 /// # Errors
-/// [`ViewerError::Invalid`] when Basic login is disabled,
+/// [`ViewerError::Invalid`] when Basic sign-in is off,
 /// [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`] when the CDR
-/// misbehaves.
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn login_basic(
-    /// The CDR username the viewer authenticates as.
+/// misbehaves, [`ViewerError::Internal`] outside a request.
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn sign_in_basic(
     username: String,
-    /// The matching CDR password; it never leaves the server.
     password: String,
-    /// Where to land after a successful login; the dashboard when absent.
     next: Option<String>,
-) -> Result<(), ViewerError> {
+) -> Result<SignedIn, ViewerError> {
     let state: crate::state::AppState = leptos::prelude::expect_context();
     if !state.config.auth.basic_enabled {
         return Err(ViewerError::Invalid("Basic login is disabled".to_owned()));
@@ -140,8 +143,7 @@ pub async fn login_basic(
     let url = state.cdr.rest_v1("definition/template/adl1.4");
     let probe = state.cdr.get(&credential, &url, "application/json").await?;
     if probe.is(http::StatusCode::UNAUTHORIZED) {
-        leptos_axum::redirect(&refused_login_url(next.as_deref()));
-        return Ok(());
+        return Ok(SignedIn::Refused);
     }
     if probe.status.is_server_error() {
         return Err(ViewerError::Cdr {
@@ -160,28 +162,7 @@ pub async fn login_basic(
         },
     )?;
     crate::session::commit(&session)?;
-
-    leptos_axum::redirect(&same_origin_next(next.as_deref()));
-    Ok(())
-}
-
-/// Destroy the session and land on `/login`.
-///
-/// NOTE: deliberately not guarded by `require_session` — flushing the
-/// caller's own cookie-scoped session is idempotent and leaks nothing; an
-/// unauthenticated call is a harmless no-op redirect.
-///
-/// # Errors
-/// [`ViewerError::Internal`] outside a request or on a sealing failure.
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn logout() -> Result<(), ViewerError> {
-    // The extraction is the in-request proof (it fails outside one); its
-    // decoded content is irrelevant — sign-out overwrites the cookie.
-    crate::session::http_session().await?;
-    // Committing the EMPTY session sets the removal cookie.
-    crate::session::commit(&crate::session::CookieSession::default())?;
-    leptos_axum::redirect("/login");
-    Ok(())
+    Ok(SignedIn::Accepted(same_origin_next(next.as_deref())))
 }
 
 /// The current session, if any — drives the shell's user menu and the

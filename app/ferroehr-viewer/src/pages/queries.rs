@@ -1,565 +1,723 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `/queries` screen: the CDR's stored queries (left) and those same
-//! queries grouped by the namespace of their qualified name (right).
+//! Stored queries: the CDR's stored queries grouped by the namespace of
+//! their name, and one stored query with Definition, Run and Versions
+//! (FerroUI `design/consoles/ferroehr/`, pages 18.1 to 18.7).
 //!
-//! No openEHR spec governs the viewer — our own design / product extension.
-//! The stored-query surface is the ITS-REST Definition/Query API
-//! (`docs/specs/openehr/ITS-REST/specifications/docs/definition/`). The
-//! grouping is **derived, never stored**: a query's group IS its namespace
-//! (`crate::query_namespace`, which cites the name format), so the right pane
-//! is a projection of the very listing the left pane shows — one round trip,
-//! no viewer-local state, and the same grouping every API client sees. There
-//! is therefore no group CRUD: a query joins a group by being saved under that
-//! namespace.
-//!
-//! All data flows through the [`crate::queries_api`] server fns plus the admin
-//! gate + stored-query delete in [`crate::admin`] — each guards the session
-//! itself; this screen declares no server fn of its own.
+//! A stored query is a qualified name and an immutable version (ITS-REST
+//! `docs/query/Qualified_query_name.md`); Run sends the latest version, a
+//! version prefix or an exact version, as the reader picks
+//! ([`crate::query_namespace::VersionResolution`]). Deleting one version is
+//! the CDR's admin operation. No openEHR spec governs the viewer's pages: our
+//! own design.
 
-use leptos::component;
+use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::table::view::{
+    Body, Column, DataTable, Role, Sorting, cell, data_table, group_row, menu_cell, title_cell,
+};
+use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::dialog::{Confirmation, danger_dialog};
+use ferrohealth_ui::view::form::Field;
+use ferrohealth_ui::view::segmented::choice_group;
+use ferrohealth_ui::view::surface::{Crumb, Header, definitions, page_heading};
+use ferrohealth_ui::view::tabs::{Tab, binder};
+use ferrohealth_ui::view::template::list::{
+    ActiveFilters, FilterChip, ListCard, active_filters, list_card, list_empty,
+};
+use ferrohealth_ui::view::versions::{Standing, version_cell};
+use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu, row_menu};
 use leptos::prelude::*;
 use leptos_meta::Title;
-use leptos_router::NavigateOptions;
-use leptos_router::hooks::use_navigate;
+use leptos_router::hooks::use_params_map;
 
-use crate::admin::AdminAvailability;
-use crate::components::data_table::{
-    CELL, CELL_MONO, ROW, TablePaging, page_rows, paging_from_url, row_total, table_footer,
-    table_shell, table_skeleton,
+use crate::flash::{Done, redirect_with};
+use crate::locale::{Msg, tr, tr_with};
+use crate::pages::common::{
+    awaited, count, document_section, info_note, panel, plain_section, refused, section, when,
 };
-use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_DANGER_SMALL, BTN_PRIMARY, BTN_SECONDARY, BTN_SECONDARY_SMALL};
-use crate::components::format_view::DocumentPane;
-use crate::components::page_header::PageHeader;
-use crate::components::surface::{CARD_PAD, CARD_TITLE};
-use crate::components::toast::{toast_error, toast_success};
-use crate::error::ViewerError;
-use crate::locale::{Msg, message, tr, tr_with};
-use crate::queries_api::{StoredQueryRow, fetch_stored_query, list_stored_queries};
-use crate::query_namespace::{QueryNamespaceGroup, bare_name_of, group_by_namespace, group_label};
+use crate::pages::results::{Answered, chart_asked, not_run, results, shown_choice};
+use crate::queries_api::{
+    StoredQueryRow, fetch_stored_query, list_stored_queries, run_stored_query,
+};
+use crate::query_namespace::{
+    VersionResolution, bare_name_of, group_by_namespace, resolve_version,
+};
 
-/// The stored-query delete action: the `(name, version)` it was dispatched
-/// with, paired with the CDR's answer, so both toasts can name the exact
-/// query. This deletes from the **CDR's** stored-query store; the namespace
-/// panel has no destructive action at all (see [`namespaces_panel`]).
-type CdrQueryDelete = Action<(String, String), ((String, String), Result<(), ViewerError>)>;
+/// The key the dashboard's namespace tile names the unqualified queries by.
+pub const UNQUALIFIED: &str = "-";
 
-/// The `/queries` screen: a stored-queries table with an on-demand AQL detail,
-/// alongside the read-only namespace grouping derived from the same listing.
+/// The id of Delete version's confirmation dialog.
+const DELETE_DIALOG: &str = "delete-stored-query";
+
+/// The id of Run's form.
+const RUN_FORM: &str = "stored-query-run";
+
+/// The page of version `version` of the stored query `name`.
+#[must_use]
+pub fn stored_query_href(name: &str, version: &str) -> String {
+    format!(
+        "/queries/{}/{}",
+        urlencoding::encode(name),
+        urlencoding::encode(version)
+    )
+}
+
+/// The Versions tab of the stored query `name`.
+fn versions_href(name: &str) -> String {
+    format!("/queries/{}/versions", urlencoding::encode(name))
+}
+
+/// Query's AQL tab with version `version` of `name` loaded.
+fn open_in_query(name: &str, version: &str) -> String {
+    format!(
+        "/query/aql?name={}&version={}",
+        urlencoding::encode(name),
+        urlencoding::encode(version)
+    )
+}
+
+/// The order of two semantic versions, newest first.
+fn newest_first(a: &str, b: &str) -> std::cmp::Ordering {
+    let key = |version: &str| -> Vec<u64> {
+        version
+            .split('.')
+            .map(|part| part.parse::<u64>().unwrap_or(0))
+            .collect()
+    };
+    key(b).cmp(&key(a))
+}
+
+/// The parameters a query text names, as code, or a dash for none.
+fn parameters(aql: &str) -> AnyView {
+    let names = crate::aql_text::placeholders(aql);
+    if names.is_empty() {
+        return view! { <span class="fui-muted">{tr(Msg::RelationshipNone)}</span> }.into_any();
+    }
+    names
+        .into_iter()
+        .map(|name| view! { <code>{name}</code> " " })
+        .collect_view()
+        .into_any()
+}
+
+/// The stored queries grouped by namespace, as a table.
+fn table(rows: &[StoredQueryRow], only: Option<&str>) -> (AnyView, usize, usize) {
+    let columns = [
+        Column::text("name", tr(Msg::QueryName)).role(Role::Title),
+        Column::text("version", tr(Msg::ColumnVersion)).role(Role::Sub),
+        Column::text("parameters", tr(Msg::QueryParameters)).role(Role::Meta),
+        Column::text("menu", tr(Msg::ColumnActions)).role(Role::Menu),
+    ];
+    let mut body = Vec::new();
+    let mut names = 0;
+    let mut versions = 0;
+    let mut index = 0_usize;
+    for group in group_by_namespace(rows) {
+        let key = group
+            .namespace
+            .clone()
+            .unwrap_or_else(|| UNQUALIFIED.to_owned());
+        if only.is_some_and(|only| only != key) {
+            continue;
+        }
+        let mut distinct: Vec<&str> = group.members.iter().map(|row| row.name.as_str()).collect();
+        distinct.sort_unstable();
+        distinct.dedup();
+        names += distinct.len();
+        versions += group.members.len();
+        let label = match &group.namespace {
+            Some(namespace) => view! { <code>{namespace.clone()}</code> }.into_any(),
+            None => tr(Msg::QueriesUnqualified).into_any(),
+        };
+        body.push(group_row(
+            &columns,
+            view! {
+                {label}
+                <span class="fui-small fui-muted">
+                    {format!(
+                        " · {}",
+                        tr_with(Msg::QueriesGroupCount, &[("names", count(distinct.len())), ("versions", count(group.members.len()))]),
+                    )}
+                </span>
+            },
+        ));
+        for row in &group.members {
+            let older = group.members.iter().any(|other| {
+                other.name == row.name && newest_first(&other.version, &row.version).is_lt()
+            });
+            let href = stored_query_href(&row.name, &row.version);
+            let sub = older.then(|| {
+                view! { <span class="fui-row-sub">{tr(Msg::QueriesOlderVersion)}</span> }.into_any()
+            });
+            let menu = row_menu(
+                Menu::new(
+                    format!("stored-{index}"),
+                    tr_with(
+                        Msg::TemplateActionsFor,
+                        &[("name", bare_name_of(&row.name).to_owned().into())],
+                    ),
+                    vec![
+                        Item::new(Action::new(
+                            Some(Glyph::PLAY),
+                            tr(Msg::QueryRun),
+                            Act::Link(format!("{href}/run")),
+                        )),
+                        Item::new(Action::new(
+                            Some(Glyph::SQUARE_TERMINAL),
+                            tr(Msg::QueriesOpenInQuery),
+                            Act::Link(open_in_query(&row.name, &row.version)),
+                        )),
+                    ],
+                )
+                .destructive(vec![Item::new(Action::new(
+                    Some(Glyph::TRASH),
+                    tr(Msg::QueriesDeleteVersion),
+                    Act::Link(format!("{href}?confirm=delete")),
+                ))]),
+            );
+            body.push(
+                view! {
+                    <tr>
+                        {title_cell(Some(&href), bare_name_of(&row.name).to_owned(), sub)}
+                        {cell(&columns[1], row.version.clone())}
+                        {cell(&columns[2], parameters(&row.query))}
+                        {menu_cell(menu)}
+                    </tr>
+                }
+                .into_any(),
+            );
+            index = index.saturating_add(1);
+        }
+    }
+    let caption = tr(Msg::NavStoredQueries);
+    let table = data_table(DataTable {
+        caption: &caption,
+        columns: &columns,
+        sorting: Sorting::default(),
+        body: Body::Rows(body.collect_view().into_any()),
+    })
+    .into_any();
+    (table, names, versions)
+}
+
+/// Stored queries.
 #[expect(
     clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; view!/mount always consumes the value"
+    reason = "#[component] rewrites the fn; the router always consumes the value"
 )]
 #[component]
-pub fn QueriesPage() -> impl IntoView {
-    let toaster = crate::components::toast::toaster();
-    // The admin probe and the CDR stored-query delete it gates (discover-and-hide:
-    // no advertised admin group, no delete affordance). Created in setup so the
-    // gated view can re-render without re-creating them.
-    let gate = crate::admin::admin_gate();
-    let cdr_delete: CdrQueryDelete = Action::new(|key: &(String, String)| {
-        let key = key.clone();
-        async move {
-            let outcome =
-                crate::admin::admin_delete_stored_query(key.0.clone(), key.1.clone()).await;
-            (key, outcome)
-        }
-    });
-    // ONE listing feeds both panes — the table (left) and the derived namespace
-    // grouping (right); a Resource is Copy so both read it. A CDR delete bumps
-    // the action's version, which is the resource's source, so the grouping
-    // re-derives with the table.
-    let stored = Resource::new(
-        move || cdr_delete.version().get(),
-        |_| async move { list_stored_queries().await },
-    );
-    // The CDR stored-query delete reports as a toast — its copy names the
-    // query, and a failure carries the actionable next action.
-    Effect::new(move |_| match cdr_delete.value().get() {
-        Some(((name, version), Ok(()))) => toast_success(
-            toaster,
-            &tr(Msg::StoredQueryDeleted),
-            &tr_with(
-                Msg::VWasRemovedFromCdr,
-                &[
-                    ("name", name.clone().into()),
-                    ("version", version.clone().into()),
-                ],
-            ),
-        ),
-        Some(((name, version), Err(error))) => toast_error(
-            toaster,
-            &tr(Msg::DeleteFailed),
-            &crate::admin::delete_failure_copy(
-                &tr_with(
-                    Msg::StoredQueryV,
-                    &[
-                        ("name", name.clone().into()),
-                        ("version", version.clone().into()),
-                    ],
-                ),
-                &error,
-            ),
-        ),
-        None => {}
-    });
-
-    let table = stored_queries_panel(stored, gate, cdr_delete);
-    let namespaces = namespaces_panel(stored);
-
-    view! {
-        <Title text="Stored queries" />
-        <div>
-            <PageHeader title=tr(Msg::Queries) subtitle=tr(Msg::CdrSStoredQueriesGroupedNamespace)>
-                <a href="/queries/builder" class=BTN_PRIMARY>
-                    {tr(Msg::NewQuery)}
-                </a>
-                <a href="/queries/aql" class=BTN_SECONDARY>
-                    {tr(Msg::RawAql)}
-                </a>
-            </PageHeader>
-            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(16rem,1fr)] gap-6 items-start">
-                {table} {namespaces}
-            </div>
-        </div>
-    }
-}
-
-// ── Stored queries (left) ────────────────────────────────────────────────
-
-/// The stored-queries panel: the list table plus the single-select AQL detail
-/// shown below it.
-fn stored_queries_panel(
-    stored: Resource<Result<Vec<StoredQueryRow>, ViewerError>>,
-    gate: Resource<Result<AdminAvailability, ViewerError>>,
-    cdr_delete: CdrQueryDelete,
-) -> AnyView {
-    // The table's page window, read from the URL here in SETUP — never inside
-    // the `Suspend` that awaits the listing. Turning the page therefore
-    // re-renders the row window without refetching the listing.
-    let paging = paging_from_url();
-    // The row (name, version) whose AQL detail is currently expanded.
-    let selected = RwSignal::new(Option::<(String, String)>::None);
-    // The selected query's AQL, fetched on demand; `None` source → no call.
-    let detail = Resource::new(
-        move || selected.get(),
-        |key| async move {
-            match key {
-                Some((name, version)) => fetch_stored_query(name, version).await.map(Some),
-                None => Ok(None),
-            }
+pub fn StoredQueriesPage() -> impl IntoView {
+    let only = crate::request::query("namespace").filter(|namespace| !namespace.is_empty());
+    let heading = page_heading(
+        Header {
+            title: tr(Msg::NavStoredQueries).into(),
+            subtitle: Some(tr(Msg::QueriesSubtitle).into()),
+            crumbs: Vec::new(),
+            mono: false,
+            badge: None,
         },
+        ActionGroup::none(),
     );
-    // The `(name, version)` awaiting confirmation in the modal (`None` = no
-    // dialog). ONE dialog serves every row — the signal is both "which row" and
-    // "open".
-    let pending_delete = RwSignal::new(Option::<(String, String)>::None);
-    let table = stored_table(stored, selected, paging, gate, cdr_delete, pending_delete);
-    let detail_view = stored_detail(detail);
-    let confirm = cdr_delete_dialog(pending_delete, cdr_delete);
+    let body = awaited(async move {
+        let write = ferrohealth_ui::view::button::link_button(
+            "/query/aql".to_owned(),
+            ferrohealth_ui::view::button::Variant::Ghost,
+            Some(Glyph::SQUARE_TERMINAL),
+            tr(Msg::DashboardWriteOne),
+        );
+        let (list, total) = match list_stored_queries().await {
+            Ok(rows) if rows.is_empty() => {
+                (list_empty(tr(Msg::DashboardNoStoredQuery), None), Some(0))
+            }
+            Ok(rows) => {
+                let (table, names, _versions) = table(&rows, only.as_deref());
+                (table, u64::try_from(names).ok())
+            }
+            Err(error) => (refused(tr(Msg::QueriesRefused), &error, None), None),
+        };
+        let chips = only.as_ref().map(|namespace| {
+            let words = if namespace == UNQUALIFIED {
+                tr(Msg::QueriesUnqualified)
+            } else {
+                namespace.clone()
+            };
+            active_filters(
+                ActiveFilters {
+                    chips: vec![FilterChip {
+                        label: tr_with(Msg::QueriesNamespaceChip, &[("value", words.into())]),
+                        remove: "/queries".to_owned(),
+                    }],
+                    clear: "/queries".to_owned(),
+                    shown: None,
+                },
+                None,
+            )
+        });
+        let card = list_card(ListCard {
+            title: tr(Msg::NavStoredQueries),
+            count: total,
+            order: None,
+            tabs: None,
+            actions: Some(write),
+            body: list,
+            pager: None,
+        });
+        view! { <div class="fui-list-page">{chips} {card}</div> }.into_any()
+    });
     view! {
-        <section class="space-y-3">
-            <h2 class=CARD_TITLE>{tr(Msg::StoredQueries)}</h2>
-            {table}
-            {detail_view}
-            {confirm}
-        </section>
+        <Title text=tr(Msg::NavStoredQueries) />
+        {heading}
+        {body}
     }
-    .into_any()
 }
 
-/// The panel's ONE CDR-delete confirmation modal, driven by `pending_delete`
-/// (which stored-query version triggered it). Rendered once outside the table so
-/// a list refetch never re-creates it, and inert while nothing is pending —
-/// which is why it needs no admin gate of its own: only an admin-gated trigger
-/// can set the signal. The copy is explicit that this removes the version from
-/// the CDR for every client.
-fn cdr_delete_dialog(
-    pending_delete: RwSignal<Option<(String, String)>>,
-    cdr_delete: CdrQueryDelete,
-) -> AnyView {
-    let message = Signal::derive(move || {
-        pending_delete
-            .get()
-            .map_or_else(String::new, |(name, version)| {
+/// The name and the version the route names.
+fn params() -> (String, String) {
+    use_params_map().with_untracked(|params| {
+        (
+            params.get("name").unwrap_or_default(),
+            params.get("version").unwrap_or_default(),
+        )
+    })
+}
+
+/// The tabs of a stored query.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum QueryTab {
+    /// The definition.
+    Definition,
+    /// Run it.
+    Run,
+    /// Its versions.
+    Versions,
+}
+
+impl QueryTab {
+    /// The tab's key.
+    const fn key(self) -> &'static str {
+        match self {
+            Self::Definition => "definition",
+            Self::Run => "run",
+            Self::Versions => "versions",
+        }
+    }
+}
+
+/// A stored query's page: its header with Open in Query and Delete version,
+/// its tabs over `body`, and the delete confirmation.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
+)]
+async fn query_page<F, Fut>(name: String, version: String, tab: QueryTab, body: F) -> AnyView
+where
+    F: FnOnce(Vec<StoredQueryRow>, String) -> Fut,
+    Fut: Future<Output = AnyView>,
+{
+    let acted = match crate::posted::posted_for("delete-version") {
+        Some(posted) => {
+            match crate::admin::admin_delete_stored_query(name.clone(), posted.text("version"))
+                .await
+            {
+                Ok(()) => {
+                    redirect_with(
+                        "/queries",
+                        &Done::ok(tr(Msg::QueriesDeleted))
+                            .line(format!("{name} {}", posted.text("version"))),
+                    );
+                    return ().into_any();
+                }
+                Err(error) => Some(refused(tr(Msg::QueriesDeleteRefused), &error, None)),
+            }
+        }
+        None => None,
+    };
+    let rows = list_stored_queries().await;
+    let mut versions: Vec<StoredQueryRow> = rows
+        .as_ref()
+        .map(|rows| {
+            rows.iter()
+                .filter(|row| row.name == name)
+                .cloned()
+                .collect()
+        })
+        .unwrap_or_default();
+    versions.sort_by(|a, b| newest_first(&a.version, &b.version));
+    let latest = versions
+        .first()
+        .map(|row| row.version.clone())
+        .unwrap_or_default();
+    let version = if version.is_empty() {
+        latest.clone()
+    } else {
+        version
+    };
+    let older = !latest.is_empty() && version != latest;
+    let mut tabs = vec![Tab::new(
+        QueryTab::Definition.key(),
+        stored_query_href(&name, &version),
+        tr(Msg::QueriesDefinition),
+    )];
+    if !older {
+        tabs.push(Tab::new(
+            QueryTab::Run.key(),
+            format!("{}/run", stored_query_href(&name, &version)),
+            tr(Msg::QueryRun),
+        ));
+    }
+    tabs.push(
+        Tab::new(
+            QueryTab::Versions.key(),
+            versions_href(&name),
+            tr(Msg::CompositionVersions),
+        )
+        .count(
+            u64::try_from(versions.len()).unwrap_or(u64::MAX),
+            tr(Msg::CompositionVersions),
+        ),
+    );
+    let more =
+        Menu::new("stored-more", tr(Msg::QueriesMore), Vec::new()).destructive(vec![Item::new(
+            Action::new(
+                Some(Glyph::TRASH),
                 tr_with(
-                    Msg::PermanentlyDeleteStoredQueryVersionFrom,
+                    Msg::QueriesDeleteNamed,
+                    &[("version", version.clone().into())],
+                ),
+                Act::Dialog(DELETE_DIALOG.to_owned()),
+            ),
+        )]);
+    let heading = page_heading(
+        Header {
+            title: bare_name_of(&name).to_owned().into(),
+            subtitle: Some(
+                tr_with(
+                    Msg::QueriesLine,
                     &[
                         ("name", name.clone().into()),
                         ("version", version.clone().into()),
                     ],
                 )
-            })
-    });
-    view! {
-        <crate::components::confirm_dialog::ConfirmDialog
-            open=Signal::derive(move || pending_delete.get().is_some())
-            title=tr(Msg::DeleteStoredQueryFromCdr)
-            message=message
-            confirm_label=tr(Msg::DeleteFromCdr)
-            dialog_id="stored-query-delete-confirm-dialog"
-            confirm_id="stored-query-delete-confirm"
-            on_cancel=Callback::new(move |()| pending_delete.set(None))
-            on_confirm=Callback::new(move |()| {
-                if let Some(key) = pending_delete.get_untracked() {
-                    cdr_delete.dispatch(key);
-                }
-                pending_delete.set(None);
-            })
-        />
-    }
-    .into_any()
-}
-
-/// The stored-queries table, read under `<Transition>` (a CDR delete refetches
-/// the list — keep the current rows visible instead of flashing the skeleton).
-/// The admin probe is awaited in the SAME `Suspend` as the list, so every row
-/// agrees on whether the delete affordance exists.
-fn stored_table(
-    stored: Resource<Result<Vec<StoredQueryRow>, ViewerError>>,
-    selected: RwSignal<Option<(String, String)>>,
-    paging: TablePaging,
-    gate: Resource<Result<AdminAvailability, ViewerError>>,
-    cdr_delete: CdrQueryDelete,
-    pending_delete: RwSignal<Option<(String, String)>>,
-) -> AnyView {
-    view! {
-        <Transition fallback=table_skeleton>
-            {move || Suspend::new(async move {
-                let admin = crate::admin::renders_admin_ops(&gate.await);
-                match stored.await {
-                    Ok(rows) => {
-                        stored_rows_view(rows, selected, paging, admin, cdr_delete, pending_delete)
-                    }
-                    Err(e) => crate::components::notice::inline_error(&e),
-                }
-            })}
-        </Transition>
-    }
-    .into_any()
-}
-
-/// Render the stored-query rows (or the empty state): one page of the listing
-/// plus the shared pagination footer. The row list is a `<For>` keyed by
-/// `name@version` (a stable, data-derived key), and its `each` closure is what
-/// tracks the URL's page window, so paging re-renders the rows without
-/// touching the listing resource. `data-stored-query` is the stable E2E hook
-/// for a row.
-fn stored_rows_view(
-    rows: Vec<StoredQueryRow>,
-    selected: RwSignal<Option<(String, String)>>,
-    paging: TablePaging,
-    admin: bool,
-    cdr_delete: CdrQueryDelete,
-    pending_delete: RwSignal<Option<(String, String)>>,
-) -> AnyView {
-    if rows.is_empty() {
-        return view! {
-            <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::SEARCH_CODE
-                message=tr(Msg::NoStoredQueries)
-                hint=tr(Msg::BuildOneQueryBuilderWriteRaw)
-            />
-        }
-        .into_any();
-    }
-    // The CDR returned the whole listing, so the total is known and the window
-    // is pure view state: total is fixed for this render, page/size reactive.
-    let total = row_total(rows.len());
-    let body = view! {
-        <For
-            each=move || {
-                let window = paging.window(total);
-                page_rows(&rows, window)
-            }
-            key=|row| format!("{}@{}", row.name, row.version)
-            let:row
-        >
-            {stored_row(row, selected, admin, cdr_delete, pending_delete)}
-        </For>
-    }
-    .into_any();
-    let footer = table_footer(
-        "/queries",
-        tr(Msg::StoredQueryPages),
-        ferrohealth_ui::table::model::Noun::new(message(Msg::NounStoredQueries)),
-        paging,
-        Signal::derive(move || total),
+                .into(),
+            ),
+            crumbs: vec![Crumb::new(tr(Msg::NavStoredQueries), "/queries")],
+            mono: false,
+            badge: None,
+        },
+        ActionGroup::primary(Action::new(
+            Some(Glyph::SQUARE_TERMINAL),
+            tr(Msg::QueriesOpenInQuery),
+            Act::Link(open_in_query(&name, &version)),
+        ))
+        .more(more),
     );
+    let confirm = (crate::request::query("confirm").as_deref() == Some("delete"))
+        .then(|| delete_form(&name, &version));
+    let dialog = danger_dialog(
+        Confirmation {
+            id: DELETE_DIALOG,
+            title: tr_with(
+                Msg::QueriesDeleteTitle,
+                &[
+                    ("name", bare_name_of(&name).to_owned().into()),
+                    ("version", version.clone().into()),
+                ],
+            )
+            .into(),
+            message: tr(Msg::QueriesDeleteMessage).into(),
+        },
+        delete_button(&name, &version),
+    );
+    let panel = match rows {
+        Ok(_) => body(versions, version.clone()).await,
+        Err(error) => refused(tr(Msg::QueriesRefused), &error, None),
+    };
     view! {
-        {table_shell(
-            &tr(Msg::StoredQueries),
-            &[&tr(Msg::Name), &tr(Msg::Version), &tr(Msg::Saved), ""],
-            body,
-        )}
-        {footer}
+        <Title text=bare_name_of(&name).to_owned() />
+        {heading}
+        <div class="fui-stack">
+            {acted}
+            {confirm}
+            {binder(tr(Msg::QueriesViews), tabs, tab.key(), panel)}
+        </div>
+        {dialog}
     }
     .into_any()
 }
 
-/// One stored-query row. Clicking it toggles the single-select detail below the
-/// table (`on:click` is a Rust listener — zero authored JS).
-fn stored_row(
-    row: StoredQueryRow,
-    selected: RwSignal<Option<(String, String)>>,
-    admin: bool,
-    cdr_delete: CdrQueryDelete,
-    pending_delete: RwSignal<Option<(String, String)>>,
-) -> impl IntoView {
-    let key_for_class = (row.name.clone(), row.version.clone());
-    let key_for_click = (row.name.clone(), row.version.clone());
-    let is_selected = move || selected.with(|current| current.as_ref() == Some(&key_for_class));
-    let on_click = move |_| {
-        let key = key_for_click.clone();
-        selected.update(|current| {
-            if current.as_ref() == Some(&key) {
-                *current = None;
-            } else {
-                *current = Some(key);
-            }
-        });
-    };
-    // The three per-row hand-offs, all carrying `?load=name@version` (percent-
-    // encoded as ONE value): the raw editor seeds its textarea from it, the
-    // builder LIFTS the AQL back into the point-and-click state, and the runner
-    // executes it with parameters. Each click is stopped from bubbling to the
-    // row's toggle handler (so it never also expands the detail); with no router
-    // delegation reached, the browser does a plain navigation to the fresh page.
-    let load_href = crate::pages::query_aql::load_href(&row.name, &row.version);
-    let builder_href = crate::pages::query_builder::load_href(&row.name, &row.version);
-    let run_href = crate::pages::query_stored::run_href(&row.name, &row.version);
-    let delete_button = if admin {
-        cdr_delete_button(&row.name, &row.version, cdr_delete, pending_delete)
-    } else {
-        ().into_any()
-    };
-    // The row's stable E2E key (`name@version`), reused by each hand-off link so
-    // a journey can address the exact row's action.
-    let row_hook = format!("{}@{}", row.name, row.version);
-    let run_hook = row_hook.clone();
-    let builder_hook = row_hook.clone();
+/// The form that deletes version `version` of `name`.
+fn delete_button(name: &str, version: &str) -> AnyView {
     view! {
-        <tr
-            class=format!("{ROW} cursor-pointer")
-            class=("bg-accent-subtle", is_selected)
-            data-stored-query=row_hook
-            on:click=on_click
-        >
-            <td class=CELL_MONO>{row.name}</td>
-            <td class=CELL_MONO data-label=tr(Msg::Version)>
-                {row.version}
-            </td>
-            <td
-                class=format!("{CELL} text-xs text-ink-muted whitespace-nowrap")
-                data-label=tr(Msg::Saved)
-            >
-                {ferrohealth_ui::view::time::timestamp(&row.saved)}
-            </td>
-            <td class=format!("{CELL} min-w-[15rem]") data-label=tr(Msg::Actions)>
-                // The row wraps between whole actions, never inside a label.
-                <div class="flex flex-wrap items-center gap-2 whitespace-nowrap">
-                    <a
-                        href=run_href
-                        class=BTN_SECONDARY_SMALL
-                        data-run-stored=run_hook
-                        on:click=|ev| ev.stop_propagation()
-                    >
-                        {tr(Msg::Run)}
-                    </a>
-                    <a href=load_href class=BTN_SECONDARY_SMALL on:click=|ev| ev.stop_propagation()>
-                        {tr(Msg::OpenInEditor)}
-                    </a>
-                    <a
-                        href=builder_href
-                        class=BTN_SECONDARY_SMALL
-                        data-open-in-builder=builder_hook
-                        on:click=|ev| ev.stop_propagation()
-                    >
-                        {tr(Msg::OpenInBuilder)}
-                    </a>
-                    {delete_button}
-                </div>
-            </td>
-        </tr>
-    }
-}
-
-/// The admin **Delete from CDR** button for one stored-query version: it opens
-/// the panel's confirmation modal for THIS `(name, version)` (only the dialog's
-/// confirm dispatches). Deliberately labelled: it removes the query VERSION
-/// from the CDR's stored-query store for every client — the only destructive
-/// action on this screen. The click never bubbles to the row's detail toggle.
-/// `data-query-delete` (`name@version`) is the stable E2E hook.
-fn cdr_delete_button(
-    name: &str,
-    version: &str,
-    cdr_delete: CdrQueryDelete,
-    pending_delete: RwSignal<Option<(String, String)>>,
-) -> AnyView {
-    let key = format!("{name}@{version}");
-    let target = (name.to_owned(), version.to_owned());
-    let on_click = move |ev: leptos::ev::MouseEvent| {
-        ev.stop_propagation();
-        pending_delete.set(Some(target.clone()));
-    };
-    view! {
-        <button
-            type="button"
-            class=BTN_DANGER_SMALL
-            data-query-delete=key
-            disabled=Signal::derive(move || cdr_delete.pending().get())
-            on:click=on_click
-        >
-            {tr(Msg::DeleteFromCdr)}
-        </button>
+        <form method="post" action=stored_query_href(name, version)>
+            <input type="hidden" name="intent" value="delete-version" />
+            <input type="hidden" name="version" value=version.to_owned() />
+            <button type="submit" class="fui-button fui-button-danger">
+                {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
+                {tr_with(Msg::QueriesDeleteConfirm, &[("version", version.to_owned().into())])}
+            </button>
+        </form>
     }
     .into_any()
 }
 
-/// The AQL detail below the table: the selected query's AQL in a
-/// [`DocumentPane`] plus a Run button. Read under `<Transition>` so the old
-/// detail stays visible while a new selection loads.
-fn stored_detail(detail: Resource<Result<Option<String>, ViewerError>>) -> AnyView {
-    view! {
-        <div class="mt-3">
-            <Transition fallback=|| {
-                view! { <p class="text-sm text-ink-muted">{tr(Msg::LoadingQuery)}</p> }
-            }>
-                {move || Suspend::new(async move {
-                    match detail.await {
-                        Ok(Some(text)) => detail_panel(text),
-                        Ok(None) => ().into_any(),
-                        Err(e) => crate::components::notice::inline_error(&e),
+/// The delete confirmation drawn in the page, for a reader who came from a
+/// list row's Delete version….
+// NOTE: FerroUI `view::dialog::Confirmation::id` is `&'static str`, so a list draws no dialog per row.
+fn delete_form(name: &str, version: &str) -> AnyView {
+    crate::pages::common::warn_note(view! {
+        <p>
+            <strong>{tr_with(Msg::QueriesDeleteTitle, &[("name", bare_name_of(name).to_owned().into()), ("version", version.to_owned().into())])}</strong>
+            " "
+            {tr(Msg::QueriesDeleteMessage)}
+        </p>
+        <div class="fui-cluster">
+            {delete_button(name, version)}
+            <a class="fui-button fui-button-secondary" href=stored_query_href(name, version)>{tr(Msg::Cancel)}</a>
+        </div>
+    })
+}
+
+/// A stored query's Definition.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the router always consumes the value"
+)]
+#[component]
+pub fn StoredQueryPage() -> impl IntoView {
+    let (name, version) = params();
+    let page = awaited(query_page(
+        name.clone(),
+        version,
+        QueryTab::Definition,
+        move |versions, version| async move {
+            let aql = match fetch_stored_query(name.clone(), version.clone()).await {
+                Ok(aql) => aql,
+                Err(error) => {
+                    if crate::pages::common::is_status(&error, http::StatusCode::NOT_FOUND) {
+                        crate::request::set_status(http::StatusCode::NOT_FOUND);
                     }
-                })}
-            </Transition>
-        </div>
-    }
-    .into_any()
-}
-
-/// The expanded detail for one stored query: its AQL and a button that navigates
-/// to the raw-AQL screen with the query pre-filled via `?aql=` — an AD-HOC run
-/// of that text, deliberately distinct from the row's **Run**, which executes the
-/// STORED definition (and can bind its parameters).
-fn detail_panel(aql: String) -> AnyView {
-    let navigate = use_navigate();
-    let aql_for_run = aql.clone();
-    let on_run = move |_| {
-        navigate(
-            &crate::pages::query_aql::aql_href(&aql_for_run),
-            NavigateOptions::default(),
-        );
-    };
-    let body = Signal::derive(move || aql.clone());
-    view! {
-        <div class=CARD_PAD>
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                    "AQL"
-                </span>
-                <button type="button" class=BTN_PRIMARY on:click=on_run>
-                    {tr(Msg::RunAdHocAql)}
-                </button>
-            </div>
-            <DocumentPane id="stored-query-pane" body=body />
-        </div>
-    }
-    .into_any()
-}
-
-// ── Derived namespace grouping (right) ───────────────────────────────────
-
-/// The namespace panel: the SAME stored-query listing the table shows, grouped
-/// by the namespace of each qualified name. Read-only by construction — a query
-/// joins a group by being saved under that namespace, so there is nothing to
-/// create, edit, or remove here (and nothing stored viewer-side).
-fn namespaces_panel(stored: Resource<Result<Vec<StoredQueryRow>, ViewerError>>) -> AnyView {
-    // `<Transition>`: the listing refetches after a CDR delete — keep the
-    // current grouping visible instead of flashing a fallback. The `Result`
-    // resolves INSIDE the `Suspend`.
-    let list = view! {
-        <Transition fallback=|| {
-            view! { <p class="text-sm text-ink-muted">{tr(Msg::LoadingNamespaces)}</p> }
-        }>
-            {move || Suspend::new(async move {
-                match stored.await {
-                    Ok(rows) => namespace_cards(&rows),
-                    Err(e) => crate::components::notice::inline_error(&e),
+                    return panel(plain_section(refused(
+                        tr(Msg::QueriesStoredRefused),
+                        &error,
+                        None,
+                    )));
                 }
-            })}
-        </Transition>
-    }
-    .into_any();
-    view! {
-        <section class="space-y-3">
-            <h2 class=CARD_TITLE>{tr(Msg::Namespaces)}</h2>
-            <p class="text-sm text-ink-muted">
-                {tr(Msg::QuerySGroupNamespaceQualifiedName)}
-                <span class="font-mono">"namespace::name"</span>
-                {tr(Msg::ChosenWhenYouSaveViewerStores)}
-            </p>
-            {list}
-        </section>
-    }
-    .into_any()
-}
-
-/// Render one card per derived namespace group, or the empty state when the CDR
-/// holds no stored queries at all.
-fn namespace_cards(rows: &[StoredQueryRow]) -> AnyView {
-    let groups = group_by_namespace(rows);
-    if groups.is_empty() {
-        return view! {
-            <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::INBOX
-                message=tr(Msg::NoNamespacesYet)
-                hint=tr(Msg::SaveQueryNamespaceNameNamespaceBecomes)
-            />
-        }
-        .into_any();
-    }
-    let cards = groups.iter().map(namespace_card).collect::<Vec<_>>();
-    view! { <div class="flex flex-col gap-2">{cards}</div> }.into_any()
-}
-
-/// One namespace card: the namespace heading (or the unqualified-bucket label),
-/// how many member queries it covers, and a chip per member showing the bare
-/// name and version. `data-query-namespace` is the stable E2E hook.
-fn namespace_card(group: &QueryNamespaceGroup) -> AnyView {
-    let label = group_label(group.namespace.as_deref()).to_owned();
-    let label_hook = label.clone();
-    let count = group.members.len();
-    let summary = if count == 1 {
-        tr(Msg::N1Query)
-    } else {
-        tr_with(Msg::Queries3, &[("count", (count).to_string().into())])
-    };
-    let chips = group
-        .members
-        .iter()
-        .map(|row| {
-            let name = bare_name_of(&row.name).to_owned();
-            let version = row.version.clone();
-            view! {
-                <span class="inline-flex items-center rounded-control bg-accent-subtle px-2 py-0.5 text-xs text-accent-ink">
-                    <span class="font-mono">{name}</span>
-                    {(!version.is_empty())
-                        .then(|| view! { <span class="opacity-60">" @"{version}</span> })}
-                </span>
+            };
+            let row = versions.iter().find(|row| row.version == version);
+            let latest = versions.first().map(|row| row.version.clone());
+            let older = latest.as_ref().filter(|latest| **latest != version).map(|latest| {
+            plain_section(info_note(view! {
+                {tr_with(Msg::QueriesReadingOlder, &[("version", version.clone().into()), ("latest", latest.clone().into())])}
+                " "
+                <a href=stored_query_href(&name, latest)>{tr_with(Msg::QueriesReadVersion, &[("version", latest.clone().into())])}</a>
+            }))
+        });
+            let mut facts = vec![(tr(Msg::QueriesType), "AQL".into_any())];
+            if let Some(row) = row.filter(|row| !row.saved.is_empty()) {
+                facts.push((tr(Msg::QueriesSaved), when(&row.saved)));
             }
-        })
-        .collect::<Vec<_>>();
-    view! {
-        <div class=CARD_PAD data-query-namespace=label_hook>
-            <div class="flex items-center justify-between gap-2 mb-2">
-                <span class="font-mono font-medium text-ink truncate">{label}</span>
-                <span class="text-xs text-ink-muted whitespace-nowrap">{summary}</span>
-            </div>
-            <div class="flex flex-wrap gap-1">{chips}</div>
-        </div>
-    }
-    .into_any()
+            facts.push((tr(Msg::QueryParameters), parameters(&aql)));
+            panel(view! {
+                {older}
+                {section(Some(tr(Msg::PartyFacts)), None, None, definitions(facts))}
+                {document_section(
+                    tr_with(Msg::QueriesAqlTitle, &[("name", bare_name_of(&name).to_owned().into()), ("version", version.clone().into())]),
+                    Language::Aql,
+                    aql,
+                    "stored-aql",
+                )}
+            })
+        },
+    ));
+    view! { {page} }
+}
+
+/// A stored query's Run.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the router always consumes the value"
+)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
+)]
+#[component]
+pub fn StoredQueryRunTab() -> impl IntoView {
+    let (name, version) = params();
+    let posted = crate::posted::posted();
+    let page = awaited(query_page(
+        name.clone(),
+        version,
+        QueryTab::Run,
+        move |_versions, version| async move {
+            let aql = match fetch_stored_query(name.clone(), version.clone()).await {
+                Ok(aql) => aql,
+                Err(error) => {
+                    return panel(plain_section(refused(
+                        tr(Msg::QueriesStoredRefused),
+                        &error,
+                        None,
+                    )));
+                }
+            };
+            let mode = posted
+                .as_ref()
+                .map_or(VersionResolution::Latest, |posted| VersionResolution::from_str_or_exact(&posted.text("res")));
+            let typed = posted
+                .as_ref()
+                .map(|posted| posted.text("run_version"))
+                .unwrap_or_default();
+            let names = crate::aql_text::placeholders(&aql);
+            let values: Vec<(String, String)> = names
+                .iter()
+                .map(|param| {
+                    (
+                        param.clone(),
+                        posted
+                            .as_ref()
+                            .map(|posted| posted.text(&format!("p-{param}")))
+                            .unwrap_or_default(),
+                    )
+                })
+                .collect();
+            let bindings = values.iter().cloned().collect();
+            let parameters_json = crate::aql_text::parameters_json(&bindings).to_string();
+            let chart = chart_asked();
+            let mut version_error = None;
+            let answer = if posted
+                .as_ref()
+                .is_some_and(|posted| posted.intent() == "run")
+            {
+                match resolve_version(mode, &typed) {
+                    Ok(sent) => Some(
+                        match run_stored_query(
+                            name.clone(),
+                            sent.unwrap_or_default(),
+                            parameters_json.clone(),
+                            0,
+                            true,
+                        )
+                        .await
+                        {
+                            Ok(page) => results(&Answered {
+                                page: &page,
+                                aql: &aql,
+                                parameters: &parameters_json,
+                                chart,
+                            }),
+                            Err(error) => section(
+                                Some(tr(Msg::ResultsTitle)),
+                                None,
+                                None,
+                                refused(tr(Msg::QueryRunRefused), &error, None),
+                            ),
+                        },
+                    ),
+                    Err(error) => {
+                        version_error = Some(error.to_string());
+                        Some(not_run(tr(Msg::QueriesFixVersion)))
+                    }
+                }
+            } else {
+                None
+            };
+            let modes: Vec<(&'static str, String)> = VersionResolution::ALL
+                .iter()
+                .map(|each| (each.as_str(), tr(each.label())))
+                .collect();
+            let version_field = (mode != VersionResolution::Latest).then(|| {
+            Field::new("rv", tr(Msg::ColumnVersion))
+                .after(version_error.clone().map(|error| view! { <p class="fui-field-error">{error}</p> }))
+                .view(view! { <input id="rv" name="run_version" type="text" class="fui-input fui-mono" value=typed.clone() placeholder="1 or 1.1" /> })
+        });
+            let fields = values
+            .iter()
+            .map(|(param, value)| {
+                let id = format!("p-{param}");
+                Field::new(id.clone(), param.clone())
+                    .help(tr(Msg::QueriesParamHelp))
+                    .view(view! { <input id=id.clone() name=id type="text" class="fui-input fui-mono" spellcheck="false" value=value.clone() /> })
+            })
+            .collect_view();
+            panel(view! {
+                <form id=RUN_FORM method="post" action=format!("{}/run", stored_query_href(&name, &version))>
+                    <input type="hidden" name="intent" value="run" />
+                    {section(Some(tr(Msg::ColumnVersion)), None, None, view! {
+                        {choice_group("res", tr(Msg::QueriesWhichVersion), &modes, mode.as_str())}
+                        {version_field}
+                    })}
+                    {section(Some(tr(Msg::QueryParameters)), u64::try_from(names.len()).ok(), None, view! {
+                        <div class="fui-form-grid">{fields}</div>
+                        {shown_choice(chart)}
+                        <div class="fui-transform-run">
+                            <button type="submit" class="fui-button fui-button-primary">
+                                {ferrohealth_ui::icon::icon(Glyph::PLAY, "16")}
+                                {tr(Msg::QueryRun)}
+                            </button>
+                        </div>
+                    })}
+                    {answer.unwrap_or_else(|| not_run(tr(Msg::ResultsNotRun)))}
+                </form>
+            })
+        },
+    ));
+    view! { {page} }
+}
+
+/// A stored query's Versions.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the router always consumes the value"
+)]
+#[component]
+pub fn StoredQueryVersionsTab() -> impl IntoView {
+    let (name, _) = params();
+    let page = awaited(query_page(
+        name.clone(),
+        String::new(),
+        QueryTab::Versions,
+        move |versions, _| async move {
+            let columns = [
+                Column::text("version", tr(Msg::ColumnVersion)).role(Role::Title),
+                Column::text("saved", tr(Msg::QueriesSaved)).role(Role::Sub),
+                Column::text("parameters", tr(Msg::QueryParameters)).role(Role::Meta),
+            ];
+            let rows = versions
+            .iter()
+            .enumerate()
+            .map(|(place, row)| {
+                let standing = if place == 0 { Standing::Current } else { Standing::Older };
+                let href = stored_query_href(&name, &row.version);
+                view! {
+                    <tr>
+                        {title_cell(Some(&href), version_cell(&row.version, standing), None)}
+                        {cell(&columns[1], if row.saved.is_empty() { ().into_any() } else { when(&row.saved) })}
+                        {cell(&columns[2], parameters(&row.query))}
+                    </tr>
+                }
+                .into_any()
+            })
+            .collect_view()
+            .into_any();
+            let caption = tr(Msg::CompositionVersions);
+            let table = data_table(DataTable {
+                caption: &caption,
+                columns: &columns,
+                sorting: Sorting::default(),
+                body: Body::Rows(rows),
+            });
+            panel(section(
+                Some(tr(Msg::CompositionVersions)),
+                u64::try_from(versions.len()).ok(),
+                None,
+                view! {
+                    {ferrohealth_ui::view::surface::section_intro(tr(Msg::QueriesVersionsIntro))}
+                    {table}
+                },
+            ))
+        },
+    ));
+    view! { {page} }
 }

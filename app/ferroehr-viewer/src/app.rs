@@ -1,53 +1,60 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The root Leptos application: the HTML document shell, the theme provider,
-//! and the route tree.
+//! The HTML document the server draws, and the route tree.
 //!
-//! `/login` is public; every other screen is nested under the session-guarded
-//! [`crate::pages::shell::AppShell`] layout, which renders the matched child
-//! through its `<Outlet/>`.
-//!
-//! Every routed view sets a `<Title/>` carrying its BARE section name; the
-//! product suffix is appended in exactly one place, `viewer_title`, through
-//! the root `<Title formatter=…/>`.
+//! The viewer renders in Leptos islands mode (FerroUI
+//! `crates/ferrohealth-ui/CLAUDE.md`): every page is drawn whole on the
+//! server, and the browser hydrates only the islands. Navigation is plain
+//! links and forms, with no client router. The document carries the reader's
+//! preferences as `data-theme`, `data-density`, `data-motion` and `data-hints`
+//! and the page's language as `lang`, so the first paint is right with no
+//! script. `/login` is public; every other page is drawn in the shell
+//! ([`crate::shell::AppShell`]). Each page sets a bare `<Title>`, and
+//! `viewer_title` adds the product name once. No openEHR spec governs the
+//! viewer: our own design.
+
+use ferrohealth_ui::island::ToastRegion;
+use ferrohealth_ui::widget::toast::RegionWords;
+use leptos::prelude::*;
+use leptos_meta::{MetaTags, Title, provide_meta_context};
+use leptos_router::components::{ParentRoute, Route, Router, Routes};
+use leptos_router::{SsrMode, path};
 
 use crate::locale::{Msg, tr};
-use leptos::prelude::*;
-use leptos_meta::{HashedStylesheet, MetaTags, Title, provide_meta_context};
-use leptos_router::components::{ParentRoute, Route, Router, Routes};
-use leptos_router::path;
 
-/// The full HTML document shell rendered by the server.
-///
-/// The stylesheet link is emitted HERE, not from a component body, because it
-/// is the one `<head>` element whose href depends on the build's content
-/// hashes: `HashedStylesheet` reads the cargo-leptos hash manifest through
-/// [`LeptosOptions`], which exists only on the server
-/// (<https://docs.rs/leptos_meta/0.8/leptos_meta/fn.HashedStylesheet.html>).
+/// The path the server serves FerroUI's stylesheet at.
+pub const STYLESHEET_PATH: &str = "/ferrohealth-ui.css";
+
+/// The path the server serves FerroUI's FerroEHR theme file at.
+pub const THEME_PATH: &str = "/theme.css";
+
+/// The path the FerroEHR mark is served at as the tab icon.
+pub const ICON_PATH: &str = "/favicon.svg";
+
+/// The whole document around [`App`], in the reader's theme, density,
+/// motion and hint preferences and in the page's language.
 #[must_use]
-pub fn shell(options: LeptosOptions) -> impl IntoView {
-    // The theme the request's cookie names, written on <html> so the first
-    // paint is already in it (no script, no flash).
-    let theme = crate::theme::current_theme();
+pub fn document(options: LeptosOptions) -> impl IntoView {
+    let preferences = crate::prefs::current();
     let lang = crate::locale::current().tag();
     view! {
         <!DOCTYPE html>
-        // The request's locale (`crate::locale`), which the browser reads back.
-        <html lang=lang data-theme=theme.key()>
+        <html
+            lang=lang
+            data-theme=preferences.theme.key()
+            data-density=preferences.density.key()
+            data-motion=preferences.motion.key()
+            data-hints=preferences.hints.key()
+        >
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
-                <AutoReload options=options.clone() />
-                <HydrationScripts options=options.clone() />
-                // The viewer's own utilities first, then FerroUI's stylesheet,
-                // whose base layer then wins over Tailwind's preflight, then
-                // the FerroEHR brand theme over FerroUI's roles.
-                <HashedStylesheet options id="leptos" />
-                <MetaTags />
+                <link rel="icon" type="image/svg+xml" href=ICON_PATH />
                 <link rel="stylesheet" href=STYLESHEET_PATH />
                 <link rel="stylesheet" href=THEME_PATH />
-                <link rel="icon" type="image/svg+xml" href=ICON_PATH />
+                <HydrationScripts options islands=true />
+                <MetaTags />
             </head>
             <body>
                 <App />
@@ -56,231 +63,200 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
     }
 }
 
-/// The product name as a human reads it — the viewer's own display name.
-///
-/// Lowercase `ferroehr-viewer` stays reserved for technical identifiers (the
-/// crate, the asset paths).
-const PRODUCT: &str = "FerroEHR Viewer";
+/// The product name as a reader sees it.
+#[must_use]
+pub fn product() -> String {
+    tr(Msg::ProductName)
+}
 
-/// The path the server serves FerroUI's stylesheet at.
-pub const STYLESHEET_PATH: &str = "/ferrohealth-ui.css";
-
-/// The path the server serves the FerroEHR brand theme at.
-pub const THEME_PATH: &str = "/theme.css";
-
-/// The path the FerroEHR mark is served at as the tab icon.
-pub const ICON_PATH: &str = "/favicon.svg";
-
-/// Formats one screen's section name into the document title.
-///
-/// Every routed screen sets a BARE section name (`"Templates"`), and this is
-/// the single place the product name is appended — so a new screen cannot
-/// forget the suffix and no screen can spell it differently. The product name
-/// itself passes through unchanged rather than doubling: it is the root
-/// `<Title/>`'s own text, shown until a screen pushes its section.
-///
-/// The owned `String` argument is `leptos_meta::Formatter`'s own signature
-/// (`Fn(String) -> String`), so the suffix is appended in place.
+/// The document title of a page whose bare title is `section`: the section,
+/// then the product name, once.
 fn viewer_title(mut section: String) -> String {
-    if section.is_empty() || section == PRODUCT {
-        return PRODUCT.to_owned();
+    let product = product();
+    if section.is_empty() || section == product {
+        return product;
     }
     section.push_str(" · ");
-    section.push_str(PRODUCT);
+    section.push_str(&product);
     section
 }
 
-/// Marks the page hydrated: `data-hydrated` on `<body>` for the E2E harness,
-/// and the page-wide [`Hydrated`](crate::components::field::Hydrated) the
-/// code editors read.
-fn mark_hydration() {
-    // Hydration-completion marker: effects run only in the browser (Leptos
-    // book, reactivity/14), so `data-hydrated` lands on `<body>` exactly when
-    // the client runtime is live and hydrated listeners exist. The E2E
-    // harness waits on it before driving hydration-dependent controls — a
-    // file set on the upload input BEFORE its listener exists fires no later
-    // event. Set post-hydration, it cannot mismatch the SSR document.
-    let hydrated = RwSignal::new(false);
-    provide_context(crate::components::field::Hydrated {
-        signal: hydrated,
-        no_marks: Signal::stored(Vec::new()),
-        owner: Owner::current(),
-    });
-    Effect::new(move |_| {
-        if let Some(body) = document().body() {
-            drop(body.set_attribute("data-hydrated", "true"));
-        }
-        hydrated.set(true);
-    });
-}
-
-/// The root component: the meta context and the router.
+/// The route tree, the one title format and the toast region.
+///
+/// It runs on the server alone: the browser hydrates the islands of a page
+/// and nothing else.
 #[expect(
     clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; view!/mount always consumes the value"
+    reason = "#[component] rewrites the fn; the router always consumes the value"
+)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
 )]
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
     ferrohealth_ui::i18n::provide_locale(crate::locale::current());
-    mark_hydration();
-    view! {
-        <Title formatter=viewer_title text=PRODUCT />
-        <Router>
-            <Routes fallback=|| view! { <NotFound /> }>
-                // NOTE: /login uses SsrMode::Async so the sign-in form
-                // works with JavaScript disabled (Leptos book, ssr/23
-                // "Async Rendering": "Works if JavaScript is disabled").
+    let flash = crate::flash::take();
+    let routes = view! {
+        <Routes fallback=crate::pages::errors::not_found_page>
+            <Route path=path!("/login") view=crate::pages::login::LoginPage ssr=SsrMode::Async />
+            <ParentRoute path=path!("") view=crate::shell::AppShell ssr=SsrMode::Async>
+                <Route path=path!("") view=crate::pages::dashboard::DashboardPage />
+                <Route path=path!("find") view=crate::pages::find::FindPage />
+                <Route path=path!("ehrs") view=crate::pages::ehrs::EhrsPage />
+                <Route path=path!("ehrs/new") view=crate::pages::ehrs::NewEhrPage />
+                <Route path=path!("ehrs/:ehr_id") view=crate::pages::ehr::compositions::CompositionsTab />
+                <Route path=path!("ehrs/:ehr_id/directory") view=crate::pages::ehr::directory::DirectoryTab />
                 <Route
-                    path=path!("/login")
-                    view=crate::pages::login::LoginPage
-                    ssr=leptos_router::SsrMode::Async
+                    path=path!("ehrs/:ehr_id/directory/edit")
+                    view=crate::pages::ehr::directory::DirectoryEditPage
                 />
-                // NOTE: every authenticated screen uses SsrMode::Async on
-                // the PARENT route — streamed fragments race WASM init and
-                // crash hydration (Leptos book, ssr/23 "Async Rendering").
-                <ParentRoute
-                    path=path!("")
-                    view=crate::pages::shell::AppShell
-                    ssr=leptos_router::SsrMode::Async
-                >
-                    <Route path=path!("") view=crate::pages::dashboard::DashboardPage />
-                    <Route path=path!("templates") view=crate::pages::templates::TemplatesPage />
-                    <Route
-                        path=path!("templates/adl2/:template_id")
-                        view=crate::pages::template_adl2::Adl2TemplateDetailPage
-                    />
-                    <Route
-                        path=path!("templates/:template_id")
-                        view=crate::pages::template_detail::TemplateDetailPage
-                    />
-                    <Route path=path!("queries") view=crate::pages::queries::QueriesPage />
-                    <Route
-                        path=path!("queries/builder")
-                        view=crate::pages::query_builder::QueryBuilderPage
-                    />
-                    <Route path=path!("queries/aql") view=crate::pages::query_aql::QueryAqlPage />
-                    <Route
-                        path=path!("queries/stored")
-                        view=crate::pages::query_stored::QueryStoredPage
-                    />
-                    <Route path=path!("ehrs") view=crate::pages::ehrs::EhrsPage />
-                    <Route
-                        path=path!("ehrs/:ehr_id")
-                        view=crate::pages::ehr_detail::EhrDetailPage
-                    />
-                    <Route
-                        path=path!("ehrs/:ehr_id/compositions/:uid")
-                        view=crate::pages::composition::CompositionPage
-                    />
-                    // The demographic routes are declared BEFORE the
-                    // `:kind` ones on purpose: leptos_router matches a
-                    // route tuple in declaration order and takes the first
-                    // hit, so `relationship`/`contribution` would otherwise
-                    // be read as a party kind.
-                    <Route
-                        path=path!("demographics")
-                        view=crate::pages::demographics::browse::DemographicsPage
-                    />
-                    <Route
-                        path=path!("demographics/relationship")
-                        view=crate::pages::demographics::relationship::RelationshipsPage
-                    />
-                    <Route
-                        path=path!("demographics/relationship/:uid")
-                        view=crate::pages::demographics::relationship::RelationshipDetailPage
-                    />
-                    <Route
-                        path=path!("demographics/contribution/:uid")
-                        view=crate::pages::demographics::contribution::DemographicContributionPage
-                    />
-                    <Route
-                        path=path!("demographics/:kind")
-                        view=crate::pages::demographics::browse::PartyBrowserPage
-                    />
-                    <Route
-                        path=path!("demographics/:kind/:uid")
-                        view=crate::pages::demographics::party::PartyDetailPage
-                    />
-                    <Route
-                        path=path!("terminology")
-                        view=crate::pages::terminology::TerminologyPage
-                    />
-                    <Route path=path!("audit") view=crate::pages::audit::AuditPage />
-                    <Route path=path!("system") view=crate::pages::system::SystemPage />
-                    <Route
-                        path=path!("subscriptions")
-                        view=crate::pages::subscriptions::SubscriptionsPage
-                    />
-                    <Route path=path!("operations") view=crate::pages::operations::OperationsPage />
-                </ParentRoute>
-            </Routes>
-        </Router>
+                <Route path=path!("ehrs/:ehr_id/status") view=crate::pages::ehr::status::StatusTab />
+                <Route
+                    path=path!("ehrs/:ehr_id/status/edit")
+                    view=crate::pages::ehr::status::StatusEditPage
+                />
+                <Route
+                    path=path!("ehrs/:ehr_id/contributions")
+                    view=crate::pages::ehr::contribution::ContributionsTab
+                />
+                <Route
+                    path=path!("ehrs/:ehr_id/contributions/:uid")
+                    view=crate::pages::ehr::contribution::ContributionPage
+                />
+                <Route
+                    path=path!("ehrs/:ehr_id/contribution/new")
+                    view=crate::pages::ehr::contribution::NewContributionPage
+                />
+                <Route path=path!("ehrs/:ehr_id/tags") view=crate::pages::ehr::tags::TagsTab />
+                <Route
+                    path=path!("ehrs/:ehr_id/compositions/new")
+                    view=crate::pages::composition::NewCompositionPage
+                />
+                <Route
+                    path=path!("ehrs/:ehr_id/compositions/:uid")
+                    view=crate::pages::composition::CompositionPage
+                />
+                <Route
+                    path=path!("ehrs/:ehr_id/compositions/:uid/edit")
+                    view=crate::pages::composition::EditCompositionPage
+                />
+                <Route path=path!("parties") view=crate::pages::parties::PartiesPage />
+                <Route path=path!("parties/new") view=crate::pages::parties::NewPartyPage />
+                <Route
+                    path=path!("parties/relationships/new")
+                    view=crate::pages::parties::NewRelationshipPage
+                />
+                <Route
+                    path=path!("parties/relationships/:uid")
+                    view=crate::pages::parties::RelationshipPage
+                />
+                <Route
+                    path=path!("parties/relationships/:uid/edit")
+                    view=crate::pages::parties::EditRelationshipPage
+                />
+                <Route
+                    path=path!("parties/contributions/:uid")
+                    view=crate::pages::parties::PartyContributionPage
+                />
+                <Route path=path!("parties/:kind/:uid") view=crate::pages::parties::PartyPage />
+                <Route
+                    path=path!("parties/:kind/:uid/edit")
+                    view=crate::pages::parties::EditPartyPage
+                />
+                <Route path=path!("templates") view=crate::pages::templates::TemplatesPage />
+                <Route
+                    path=path!("templates/upload")
+                    view=crate::pages::templates::UploadTemplatePage
+                />
+                <Route
+                    path=path!("templates/adl2/:template_id")
+                    view=crate::pages::templates::Adl2TemplatePage
+                />
+                <Route
+                    path=path!("templates/adl2/:template_id/:release")
+                    view=crate::pages::templates::Adl2TemplatePage
+                />
+                <Route path=path!("templates/:template_id") view=crate::pages::templates::TemplatePage />
+                <Route path=path!("terminology") view=crate::pages::terminology::TerminologiesTab />
+                <Route path=path!("terminology/lookup") view=crate::pages::terminology::LookupTab />
+                <Route
+                    path=path!("terminology/valuesets")
+                    view=crate::pages::terminology::ValueSetsTab
+                />
+                <Route
+                    path=path!("terminology/subsumption")
+                    view=crate::pages::terminology::SubsumptionTab
+                />
+                <Route path=path!("terminology/:id") view=crate::pages::terminology::TerminologyPage />
+                <Route path=path!("queries") view=crate::pages::queries::StoredQueriesPage />
+                <Route
+                    path=path!("queries/:name/versions")
+                    view=crate::pages::queries::StoredQueryVersionsTab
+                />
+                <Route path=path!("queries/:name/:version") view=crate::pages::queries::StoredQueryPage />
+                <Route
+                    path=path!("queries/:name/:version/run")
+                    view=crate::pages::queries::StoredQueryRunTab
+                />
+                <Route path=path!("query") view=crate::pages::query::BuildTab />
+                <Route path=path!("query/aql") view=crate::pages::query::AqlTab />
+                <Route path=path!("server") view=crate::pages::server::OverviewTab />
+                <Route path=path!("server/health") view=crate::pages::server::HealthTab />
+                <Route path=path!("server/metrics") view=crate::pages::server::MetricsTab />
+                <Route path=path!("server/logging") view=crate::pages::server::LoggingTab />
+                <Route path=path!("server/api") view=crate::pages::server::ApiTab />
+                <Route path=path!("server/smart") view=crate::pages::server::SmartTab />
+                <Route path=path!("audit") view=crate::pages::audit::AuditPage />
+                <Route path=path!("audit/:id") view=crate::pages::audit::AuditRecordPage />
+                <Route path=path!("subscriptions") view=crate::pages::subscriptions::SubscriptionsPage />
+                <Route
+                    path=path!("subscriptions/new")
+                    view=crate::pages::subscriptions::NewSubscriptionPage
+                />
+                <Route
+                    path=path!("subscriptions/:name/edit")
+                    view=crate::pages::subscriptions::EditSubscriptionPage
+                />
+                <Route
+                    path=path!("configuration")
+                    view=crate::pages::configuration::ConfigurationPage
+                />
+                <Route
+                    path=path!("configuration/:section")
+                    view=crate::pages::configuration::ConfigurationPage
+                />
+                <Route path=path!("preferences") view=crate::pages::preferences::PreferencesPage />
+                <Route
+                    path=path!("preferences/:section")
+                    view=crate::pages::preferences::PreferencesPage
+                />
+                <Route path=path!("access") view=crate::pages::access::AccessPage />
+                <Route path=path!("about") view=crate::pages::about::AboutPage />
+            </ParentRoute>
+        </Routes>
     }
-}
-
-/// The router's real 404 fallback: sets a distinct title and offers a link
-/// back to the dashboard.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; view!/mount always consumes the value"
-)]
-#[component]
-pub fn NotFound() -> impl IntoView {
-    let content = ferrohealth_ui::view::surface::panel(ferrohealth_ui::view::empty::empty_state(
-        ferrohealth_ui::icon::Glyph::COMPASS,
-        tr(Msg::Heading404),
-        tr(Msg::Body404),
-        ferrohealth_ui::view::button::link_button(
-            "/".to_owned(),
-            ferrohealth_ui::view::button::Variant::Primary,
-            None,
-            tr(Msg::ReturnToTheDashboard),
-        ),
-    ))
     .into_any();
     view! {
-        <Title text=tr(Msg::Title404) />
-        {ferrohealth_ui::view::shell::centred(
-            content,
-            ferrohealth_ui::view::shell::Footer {
-                product: PRODUCT.into(),
-                version: env!("CARGO_PKG_VERSION"),
-                about: "/system#manufacturer",
-            },
-        )}
+        <Title formatter=viewer_title text=product() />
+        <Router>{routes}</Router>
+        <ToastRegion words=RegionWords::of_page() flash=flash />
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{PRODUCT, viewer_title};
+    use super::viewer_title;
 
     #[test]
-    fn a_section_name_gains_the_product_suffix() {
+    fn a_section_name_gains_the_product_suffix_once() {
+        let titled = viewer_title("Templates".to_owned());
+        assert!(titled.starts_with("Templates · "), "{titled}");
+        assert_eq!(1, titled.matches(" · ").count(), "{titled}");
         assert_eq!(
-            viewer_title("Templates".to_owned()),
-            "Templates · FerroEHR Viewer"
+            viewer_title(String::new()),
+            viewer_title(viewer_title(String::new()))
         );
-        assert_eq!(
-            viewer_title("Not found".to_owned()),
-            "Not found · FerroEHR Viewer"
-        );
-        // The per-object screens format their own prefix; the suffix still
-        // lands exactly once, at the end.
-        assert_eq!(
-            viewer_title("Template · vitals.v1".to_owned()),
-            "Template · vitals.v1 · FerroEHR Viewer"
-        );
-    }
-
-    /// `leptos_meta` applies the formatter to whatever text is on top of the
-    /// title stack — including the root `<Title/>`'s own product name, which
-    /// is what the viewer shows before a screen pushes its section. Suffixing
-    /// that would read `FerroEHR Viewer · FerroEHR Viewer`.
-    #[test]
-    fn the_product_name_is_never_suffixed_with_itself() {
-        assert_eq!(viewer_title(PRODUCT.to_owned()), PRODUCT);
-        assert_eq!(viewer_title(String::new()), PRODUCT);
     }
 }

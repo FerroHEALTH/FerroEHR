@@ -9,9 +9,9 @@
 
 ## The page for a path the viewer does not serve
 
-not-found-title = Not found
+not-found-title = No such screen
 not-found-heading = Page not found
-not-found-body = The page you requested does not exist.
+not-found-body = The viewer has no page at { $path }. EHRs live under /ehrs.
 
 example = Example
 path-catalog = Path catalog
@@ -240,10 +240,10 @@ relate-this-party = Relate this party
 these-come-from-party-document-itself = These come from the party document itself, which carries the relationships this party is the source of. openEHR models the other direction as a derived attribute the CDR leaves unpopulated, so no request can list the relationships that point AT this party: open those by their own id.
 relationships-as-source = Relationships (as source)
 party-s-current-version-deleted-so = This party's current version is deleted, so it has no relationships to show and cannot be related to another party.
-relationship-deleted = Relationship deleted
+relationship-deleted = This relationship is deleted; its versions stay readable.
 delete-relationship = Delete relationship
 save-relationship = Save relationship
-relationship-type = Relationship type
+relationship-type = Type
 commits-new-version-top-one-loaded = Commits a new version on top of the one loaded above (If-Match). The two ends and the time validity travel back exactly as the CDR served them: a relationship between different parties is a different relationship.
 edit-relationship = Edit relationship
 relationship-needs-type-openehr-stores-relationship = A relationship needs a type: openEHR stores it as the relationship's name.
@@ -266,7 +266,7 @@ relationship-created = Relationship created
 relationship-reached-own-id-demographic-api = A relationship is reached by its own id: the demographic API publishes no way to ask which relationships point at a given party.
 party-relationship-id = PARTY_RELATIONSHIP id
 open-a-relationship = Open a relationship
-party-relationships = Party relationships
+party-relationships = Relationships
 abstract-party-type-has-no-per = (an abstract party type has no per-kind route)
 loaded-relationship-document-not-json-object = the loaded relationship document is not a JSON object: reload this screen and retry
 relationship-type-required-party-relationship-invariant = a relationship type is required (PARTY_RELATIONSHIP invariant Type_validity)
@@ -323,7 +323,7 @@ creation-commits-new-versioned-object-so = a creation commits a NEW versioned ob
 no-preceding-version-known-yet-pick = no preceding version is known yet: pick the target and wait for it to load
 document-must-json-object-canonical-openehr = the document must be a JSON object: a canonical openEHR document
 document-empty-paste-load-body-commit = the document is empty: paste or load the body to commit
-new-composition = new COMPOSITION
+new-composition = New composition
 ehr-status-modify = EHR status: modify
 composition-amend = Composition: amend
 composition-create = Composition: create
@@ -584,7 +584,7 @@ export-json = Export JSON
 export-csv = Export CSV
 saves-as = Saves as{" "}
 version-optional = Version (optional)
-query-name = Query name
+query-name = Name
 namespace-optional = Namespace (optional)
 server-assigns-version-replacing-query-stored = the server assigns the version, replacing the query stored at it
 open-in-raw-editor = Open in raw editor{" "}
@@ -740,7 +740,7 @@ adl-1-4-templates = ADL 1.4 templates
 template-pages = Template pages
 template-id-2 = Template ID
 upload-template = Upload template
-template-source = Template source
+template-source = Source
 template-families = Template families
 the-adl2-operational-template = the ADL2 operational template
 upload-failed = Upload failed
@@ -1218,3 +1218,1165 @@ noun-adl2-templates =
     .opening = ADL 2 templates
 flag-queryable = queryable
 flag-modifiable = modifiable
+
+## Numbers: the marks FerroUI's formatter groups a number with
+
+number-group = ,
+number-decimal = .
+
+## The product and the shell
+
+product-name = FerroEHR Viewer
+brand-name = FerroEHR
+brand-word = Viewer
+nav-label = Viewer
+nav-group-overview = Overview
+nav-group-records = Records
+nav-group-definitions = Definitions
+nav-group-queries = Queries
+nav-group-console = Console
+nav-dashboard = Dashboard
+nav-ehrs = EHRs
+nav-parties = Parties
+nav-templates = Templates
+nav-terminology = Terminology
+nav-stored-queries = Stored queries
+nav-query = Query
+nav-server = Server
+nav-audit = Audit log
+nav-subscriptions = Subscriptions
+nav-configuration = Configuration
+nav-about = About
+pill-up = CDR up
+pill-unreachable = CDR unreachable
+pill-unknown = CDR unknown
+pill-refused = CDR refused 401
+pill-detail = FerroEHR { $version } at { $address }
+pill-detail-profile = FerroEHR { $version } at { $address } · { $profile } deployment
+pill-unreachable-detail = No answer from { $address }
+unknown-version = an unknown version
+sandbox-title = Sandbox
+sandbox-gaps = { $count ->
+    [one] 1 production safeguard is off; Server › Overview names it.
+   *[other] { $count } production safeguards are off; Server › Overview names them.
+}
+sandbox-no-gaps = This deployment must not hold real patient data.
+signed-in-basic = Signed in with a CDR account
+signed-in-oidc = Signed in at the identity provider
+your-menu = Your menu
+your-access = Your access
+search-label = Find in the CDR
+search-placeholder = Id, name or subject id
+search-submit = Find
+search-waits = Search waits for the CDR
+dock-label = Decision
+discard = Discard
+just-now = just now
+seconds-ago = { $count } s ago
+minutes-ago = { $count } min ago
+hours-ago = { $count } h ago
+days-ago = { $count ->
+    [one] 1 day ago
+   *[other] { $count } days ago
+}
+cdr-unreachable-code = CDR unreachable
+invalid-code = Not sent
+session-ended-code = Session ended
+internal-code = Viewer error
+
+## The error pages
+
+forbidden-body = You are signed in as { $who }, and the CDR shows this only to { $needs }.
+
+## Sign in
+
+sign-in-title = Sign in
+sign-in-at = Sign in at { $host }
+sign-in-redirecting = Taking you to { $host }…
+sign-in-identity-provider = the identity provider
+sign-in-basic-submit = Sign in with a CDR account
+sign-in-caption = The viewer of the FerroEHR clinical data repository.
+sign-in-expired = Your session ended. Sign in again to return to the page you were on.
+sign-in-signed-out = You are signed out.
+sign-in-refused-provider = The identity provider did not sign you in.
+sign-in-refused = Not signed in: the CDR refused that username or password.
+sign-in-failed = Not signed in: { $error }
+sign-in-cdr-unreachable = The CDR did not answer. You can still try to sign in.
+
+## Common words
+
+try-again = Try again
+unknown-count = —
+upload-a-template = Upload a template
+your-preferences = Your preferences
+brand-accent = Teal
+column-namespace = Namespace
+column-matches = Matches
+
+## The dashboard
+
+stat-ehrs = EHRs
+stat-compositions = Compositions, found in Query
+stat-templates = Templates
+stat-stored-queries = Stored queries
+dashboard-subtitle = What { $host } holds, as it answered just now.
+dashboard-no-answer = The CDR did not answer.
+dashboard-refused = The CDR did not answer, so the dashboard cannot be shown. Your session is kept.
+dashboard-per-day = Compositions per day
+dashboard-per-day-summary = { $total } compositions from { $first } to { $last }, at most { $most } on one day.
+dashboard-per-day-note = By commit time, over the newest compositions; read with one AQL query.
+dashboard-per-day-refused = The compositions per day could not be read.
+dashboard-no-compositions = No composition is committed yet.
+dashboard-create-first-ehr = Create the first EHR
+dashboard-by-namespace = Matches by namespace
+dashboard-queries = { $count ->
+    [one] 1 query
+   *[other] { $count } queries
+}
+dashboard-matches = { $count ->
+    [one] 1 match
+   *[other] { $count } matches
+}
+dashboard-no-total = No total
+dashboard-namespaces-refused = The stored queries could not be read.
+dashboard-no-stored-query = No stored query yet.
+dashboard-write-one = Write one in Query
+
+## About
+
+about-subtitle = The viewer, the CDR it reads, and the manufacturer.
+about-cdr = CDR
+about-cdr-version = FerroEHR { $version }
+about-open-ehr-rest = openEHR REST
+about-rest-version = ITS-REST { $version }
+about-ferro-ui = FerroUI
+about-ferro-ui-version = ferrohealth-ui { $version }
+about-licence = Business Source License 1.1
+about-book = The FerroEHR book
+about-manifest = The conformance manifest
+about-manifest-line = What the CDR answers at OPTIONS on its base path.
+about-manifest-refused = The conformance manifest could not be read.
+about-no-state = The viewer's state is not in reach.
+
+## Your preferences
+
+reveal-label = Show a revealed identifier for
+reveal-description = How long a subject id stays shown after you reveal it; the viewer caps it at 2 minutes.
+reveal-seconds = { $count } seconds
+reveal-minutes = { $count ->
+    [one] 1 minute
+   *[other] { $count } minutes
+}
+
+## Your access
+
+access-subtitle = What this session may do.
+access-who = Who you are
+access-signed-in-as = Signed in as
+access-how = How
+access-how-basic = Basic sign-in with a CDR account
+access-how-oidc = OIDC at the identity provider
+access-decides = What decides
+access-session = Session
+access-session-ends = Ends after { $minutes } minutes without a request
+access-scopes = Scopes
+access-no-scopes = A Basic session carries no SMART scopes; the CDR checks the account's role.
+access-preview = Read a scope
+access-preview-intro = Paste a scope to see what it allows.
+access-scope-field = Scope or claim
+access-scope-placeholder = patient/composition-*.rs
+access-read-it = Read it
+access-preview-empty = Paste a scope to read it here.
+access-previewed = Previewed scopes
+scope-not-recognised = Not a SMART on openEHR scope.
+scope-resource = { $family } { $pattern }
+
+## Common words
+
+yes = Yes
+no = No
+none-shown = Not recorded
+column-created = Created
+column-ehr = EHR
+
+## Find
+
+find-title = Find
+find-subtitle = One answer for an id, a subject, a template or a stored query.
+find-empty = Type an id, a subject, a template or a query name in the search field above.
+find-no-id-holds = No EHR, composition or party has the id { $id }.
+find-nothing-for = Nothing matches “{ $typed }”.
+find-found-some = { $count ->
+    [one] 1 record matches.
+   *[other] { $count } records match.
+}
+find-matches = { $count ->
+    [one] 1 match for “{ $typed }”
+   *[other] { $count } matches for “{ $typed }”
+}
+find-other-ways = Other ways to find a record
+find-compositions = Compositions
+find-ehr = EHR { $id }
+find-ehr-line = Created { $created }
+find-composition-line = In EHR { $ehr }
+find-party-line = { $kind }
+find-query-line = Stored query, version { $version }
+find-template-line = Template: { $concept }
+find-nothing-title = Nothing found
+find-nothing-line = Check the spelling, or open the list of the kind of record you look for.
+find-unfinished-title = Part of the search did not finish
+find-unfinished-line = The CDR refused the search over { $kinds }; the answer may be incomplete.
+find-way-ehr = EHRs
+find-way-ehr-line = Every EHR, with the subject search.
+find-way-subject = By subject
+find-way-subject-line = An EHR by its subject id and namespace.
+find-way-party = Parties
+find-way-party-line = A party by its id or its tags.
+
+## EHRs
+
+ehrs-subtitle = Every EHR the CDR holds, newest first.
+ehrs-find-label = Subject id
+ehrs-namespace = Namespace
+ehrs-subject-chip = Subject: { $subject }
+ehrs-subject-needs-namespace = A subject search needs the namespace the subject id belongs to.
+ehrs-find-refused = The subject search could not be finished.
+ehrs-refused = The EHRs could not be read.
+ehrs-empty = The CDR holds no EHR yet.
+ehrs-no-match = No EHR belongs to this subject.
+ehrs-create-first = Create the first EHR
+ehrs-pages = EHR pages
+ehr-open = Open EHR { $id }
+ehr-new-subtitle = An EHR with its status; the subject is optional.
+ehr-new-ehr-id = EHR id
+ehr-new-ehr-id-help = Leave it empty and the CDR mints a UUID.
+ehr-new-ehr-id-placeholder = UUID, or empty
+ehr-new-subject = Subject
+ehr-new-subject-intro = The person this EHR is about, as an id the CDR keeps without reading it.
+ehr-new-subject-id = Subject id
+ehr-new-namespace = Namespace
+ehr-new-create = Create EHR
+ehr-new-not-yet = Not created yet
+ehr-new-not-created = EHR not created
+ehr-new-not-uuid = An EHR id is a UUID, such as 7d44aa01-0f9e-4a2c-9a0f-2a6a5f9b1c3d.
+ehr-new-in-use = An EHR with this id exists already.
+ehr-new-refused = The CDR refused to create the EHR.
+
+## One EHR
+
+ehr-title = EHR { $id }
+ehr-subtitle = Created { $created } in { $system }.
+ehr-not-found-title = No EHR { $id }
+ehr-refused = The EHR could not be read.
+ehr-back = Back to EHRs
+ehr-more = More actions
+ehr-commit-several = Commit several changes
+ehr-create-directory = Create the directory
+ehr-delete = Delete EHR…
+ehr-delete-title = Delete EHR { $id }?
+ehr-delete-message = The EHR and every composition, directory and status version in it are removed from the CDR. This cannot be undone.
+ehr-delete-confirm-label = Type the first 8 characters of the EHR id to confirm
+ehr-delete-confirm = Delete EHR
+ehr-delete-mismatch = The characters you typed are not the start of this EHR id.
+ehr-delete-refused = The CDR refused to delete the EHR.
+ehr-tab-compositions = Compositions
+ehr-tab-directory = Directory
+ehr-tab-status = Status
+ehr-tab-contributions = Contributions
+ehr-tab-tags = Tags
+directory-create-refused = The CDR refused to create the directory.
+fact-version = Version
+fact-contribution = Contribution
+fact-lifecycle = Lifecycle
+fact-signed = Committed
+
+## Editors
+
+editor-title = Edit
+editor-opened = Opened at the latest version
+editor-not-saved = Not saved
+editor-save = Save
+editor-save-as-version = Save as version { $version }
+editor-reload-version = Reload version { $version }
+editor-reload-first = Reload the latest version before you save.
+editor-reload-replaces = Reloading replaces your edits with the version on the server.
+editor-json = The document is not valid JSON.
+editor-utf-8 = The document is not valid UTF-8.
+
+## EHR status
+
+status-title = Status of EHR { $id }
+status-this-version = This version
+status-capabilities = Capabilities
+status-queryable-help = AQL over the population includes this EHR.
+status-not-queryable = Not queryable: AQL over the population leaves this EHR out.
+status-modifiable-help = Clients may commit to this EHR.
+status-other-details = Other details
+status-other-details-intro = The ITEM_STRUCTURE the status carries beside its flags.
+status-document = Document
+status-document-title = EHR_STATUS, version { $version }
+status-document-intro = The status as the CDR holds it.
+status-versions = Versions
+status-at-time-opens = Opens the version that was current at that moment.
+status-edit = Edit status
+status-edit-title = Edit the EHR status
+status-edit-subtitle = Saved as one new version.
+status-saved = Status saved
+status-saved-line = Saved as a new version.
+status-saved-version = Saved as version { $version }.
+status-save-refused = The CDR refused the status.
+status-refused = The EHR status could not be read.
+status-history-refused = The status history could not be read.
+status-version-refused = This version could not be read.
+
+## Directory
+
+directory-folders-title = Folders
+directory-empty = Empty
+directory-folders = { $count ->
+    [one] 1 folder
+   *[other] { $count } folders
+}
+directory-items = { $count ->
+    [one] 1 reference
+   *[other] { $count } references
+}
+directory-folders-items = { $folders ->
+    [one] 1 folder
+   *[other] { $folders } folders
+}, { $items ->
+    [one] 1 reference
+   *[other] { $items } references
+}
+directory-saved-version = Saved as version { $version }.
+directory-edit-title = Edit the directory
+directory-edit-subtitle = Saved as one new version.
+directory-edit-intro = Add, rename and remove folders, and add references to the EHR's compositions. Nothing reaches the CDR until you save.
+directory-add-reference = Add the reference
+directory-reference-label = Composition
+directory-keep-name = Keep this name
+directory-save-refused = The CDR refused the directory.
+directory-reload-or-overwrite = Reload the latest version, or overwrite it.
+directory-overwrite = Overwrite
+directory-overwrite-note = Overwrite replaces the other change with yours.
+directory-title = Directory of EHR { $id }
+directory-tree-label = The directory's folders
+directory-unnamed = (no name)
+directory-new-folder = New folder
+directory-none = This EHR has no directory. Create it from the EHR's actions.
+directory-refused = The directory could not be read.
+directory-none-at-time = The EHR had no directory at that moment.
+directory-changed = Changed, not saved
+directory-at-time-opens = Opens the version that was current at that moment.
+directory-versions = Versions
+directory-versions-intro = Every version of the directory; restoring one writes it back as a new version.
+directory-version-holds = { $folders ->
+    [one] 1 folder
+   *[other] { $folders } folders
+}, { $items ->
+    [one] 1 reference
+   *[other] { $items } references
+}
+directory-history-refused = The directory's versions could not be read.
+directory-show-path = Show one folder by path
+directory-path-placeholder = episodes/2026
+directory-show = Show
+directory-showing-path = Showing the folder at { $path }.
+directory-no-path = The directory has no folder at { $path }; the whole tree is shown.
+directory-path-refused = The folder at this path could not be read.
+directory-edit = Edit
+directory-more = More directory actions
+directory-delete = Delete the directory…
+directory-delete-title = Delete the directory?
+directory-delete-message = The directory is marked deleted; its versions stay in the history and the compositions it references are kept.
+directory-delete-confirm = Delete the directory
+directory-delete-refused = The CDR refused to delete the directory.
+directory-restore = Restore…
+directory-restore-version = Restore version { $version }
+directory-restore-title = Restore version { $version }?
+directory-restore-message = The tree of version { $version } is written back as version { $next }. The versions in between stay in the history.
+directory-restore-as = Restore as version { $next }
+directory-restore-refused = The CDR refused to restore this version.
+directory-reload = Reload the directory
+directory-saved = Directory saved
+
+## Compositions
+
+column-composition = Composition
+column-start-time = Start time
+column-composer = Composer
+column-version = Version
+compositions-empty = This EHR holds no composition yet.
+compositions-no-match = No composition matches these filters.
+compositions-pages = Composition pages
+compositions-refused = The compositions could not be read.
+filter-template = Template
+filter-start-time = Start time
+filter-from = From
+filter-to = To
+filter-composer = Composer
+filter-apply = Apply
+chip-template = Template: { $value }
+chip-from = From { $value }
+chip-to = To { $value }
+chip-composer = Composer: { $value }
+reveal-no-subject = This EHR has no subject.
+
+## Contributions
+
+contributions-title = Contributions to EHR { $id }
+contributions-per-day = Contributions per day
+contributions-per-day-title = Contributions per day, last 30 days
+contributions-per-day-summary = Contributions per day, { $first } to { $last }: { $total } contributions, at most { $most } on one day.
+contributions-activity-refused = The contributions per day could not be read.
+contributions-empty = This EHR has no contribution yet.
+contributions-pages = Contribution pages
+contributions-refused = The contributions could not be read.
+column-contribution = Contribution
+column-committed = Committed
+column-committer = Committer
+column-change = Change
+column-object = Object
+column-kind = Kind
+change-creation = Creation
+change-amendment = Amendment
+change-modification = Modification
+change-deleted = Deleted
+change-attestation = Attestation
+change-synthesis = Synthesis
+contribution-title = Contribution { $id }
+contribution-subtitle = One change set, committed together.
+contribution-refused = The contribution could not be read.
+contribution-audit = Audit
+contribution-versions = Versions
+contribution-record = Record
+fact-committed = Committed
+fact-committer = Committer
+fact-change = Change
+fact-description = Description
+fact-system = System
+contribution-new-title = { $mode ->
+    [new] New contribution
+   *[edit] Edit
+}
+contribution-new-subtitle = Several changes, committed together: all of them or none.
+contribution-committed = Contribution committed
+contribution-made-versions = { $count ->
+    [one] It made 1 version.
+   *[other] It made { $count } versions.
+}
+contribution-not-committed = Not committed
+contribution-commit-refused = The CDR refused the contribution, so nothing was committed.
+contribution-choices-refused = The templates or compositions to pick from could not be read.
+contribution-composition-refused = The composition to amend could not be read.
+contribution-committer-placeholder = Leave empty to commit as yourself
+contribution-commit = { $count ->
+    [one] Commit 1 change
+   *[other] Commit { $count } changes
+}
+staged-count = { $count ->
+    [one] 1 change staged.
+   *[other] { $count } changes staged.
+}
+staged-title = { $number }. { $what }
+staged-what = What changes
+staged-recorded-as = Recorded as the audit change type { $change }.
+staged-apply = Apply
+staged-create = A new composition
+staged-amend = An amended composition
+staged-status = The EHR status
+staged-from-document = The one the document names
+staged-composition = Composition
+staged-composition-help = Its latest version is the one the change supersedes.
+staged-pick = Pick a composition
+staged-status-from = Loaded from version { $version }, which it supersedes.
+staged-document = The document of change { $number }
+staged-remove = Remove change { $number }
+staged-stage = Stage a change
+
+## EHR tags
+
+tags-title = Tags in EHR { $id }
+tags-intro = A tag is set on its object, on that object's Tags tab; this list reads them all.
+tags-key = Key
+tags-value = Value
+tags-target-path = Target path
+tags-whole-object = the whole object
+tags-caption = Tags in this EHR
+tags-empty = No object in this EHR carries a tag.
+tags-no-match = No tag matches these filters.
+tags-refused = The tags could not be read.
+tags-composition = Composition { $id }
+tags-ehr-status = EHR status
+tags-versioned-composition = versioned composition
+tags-versioned-status = versioned EHR status
+tags-versioned-directory = versioned directory
+tags-unknown-object = an object the CDR did not name
+tags-one-version = version { $version }
+chip-key = Key: { $value }
+chip-value = Value: { $value }
+
+## Compositions: one composition
+
+composition-title = Composition { $id }
+composition-refused = The composition could not be read.
+composition-views = Views of this composition
+composition-reading = Reading
+composition-document = Document
+composition-versions = Versions
+composition-more = More actions for the composition
+composition-edit = Edit as a new version
+composition-edit-latest = Edit the latest
+composition-line = { $template } · version { $version } · started { $started } by { $composer }.
+composition-line-older = { $template } · started { $started } by { $composer }.
+composition-deleted-line = { $template } · deleted { $when } by { $who } as version { $version }.
+composition-deleted-mark = Deleted
+composition-read-version = Read version { $version }
+composition-context = Context
+composition-no-reading = This document is not a canonical composition the reading understands; the Document tab shows it as sent.
+composition-show-document = Show the full document
+composition-format = Format
+composition-converts = The CDR converts; the viewer shows its answer as sent.
+composition-document-title = COMPOSITION · { $format }
+composition-document-refused = The CDR could not send the document in this format.
+composition-deleted-version = This version is the deletion; it holds no document.
+composition-at-time-opens = Opens the version that was current at that moment.
+composition-history-refused = The versions could not be read.
+composition-version-refused = This version could not be read.
+composition-version-n = Version { $version }
+composition-preceding = Preceding version
+composition-first-version = None: this is the first version
+composition-holds-content = Holds content
+composition-versioned = The versioned composition
+composition-versioned-object = Versioned object
+composition-first-committed = First committed
+composition-last-before-deletion = You are reading version { $version }, the last before the deletion; it is read-only.
+composition-delete = Delete composition…
+composition-delete-title = Delete the composition { $name }?
+composition-delete-message = { $count ->
+    [one] Marks the composition deleted with a new version { $next }; its version and its audit stay readable, and it leaves the EHR's composition list.
+   *[other] Marks the composition deleted with a new version { $next }; its { $count } versions and their audit stay readable, and it leaves the EHR's composition list.
+}
+composition-delete-confirm = Delete the composition
+composition-delete-refused = The CDR refused to delete the composition.
+composition-deleted-no-edit = This composition is deleted; there is no version to edit.
+composition-edit-title = Edit { $name }
+composition-edit-subtitle = Version { $version }, opened now.
+composition-editor-label = The composition, canonical JSON
+composition-saved = Composition saved
+composition-saved-version = Saved as version { $version }.
+composition-save-refused = The CDR refused the document, so no version was saved.
+composition-new-title = { $mode ->
+    [new] New composition
+   *[edit] Edit
+}
+composition-new-page-title = New composition
+composition-new-subtitle = A document committed as version 1 under a template.
+composition-new-editor-label = The new composition
+composition-template-help = The template the document is committed against; FLAT needs it.
+composition-templates-refused = The templates could not be read.
+composition-not-yet = Not committed yet.
+composition-commit = Commit this composition
+composition-commit-refused = The CDR refused the document, so nothing was committed.
+editor-refused-heading = { $count ->
+    [one] What the CDR refused · 1
+   *[other] What the CDR refused · { $count }
+}
+editor-xml = XML
+
+## Tags of one object
+
+tag-collection-composition = composition
+tags-of = Tags of the { $object }
+tag-intro = Tags stay on the { $object } across its versions; setting one commits no version.
+tag-none = The { $object } carries no tag.
+tag-whole = the whole { $object }
+tag-remove-column = Remove
+tag-remove = Remove the tag { $key }
+tag-value-optional = Value (optional)
+tag-path-optional = Target path (optional)
+tag-set-title = Set a tag
+tag-set-action = Set the tag
+tag-refused = The CDR refused the tag.
+tag-set = Tag set
+tag-set-line = { $key } is on { $object }.
+tag-removed = Tag removed
+tag-removed-line = { $key } is gone from { $object }.
+tag-count = { $count ->
+    [one] 1 tag
+   *[other] { $count } tags
+}
+composition-not-committed = Not committed
+
+## Parties
+
+kind-person = Person
+kind-organisation = Organisation
+kind-group = Group
+kind-agent = Agent
+kind-role = Role
+parties-subtitle = People, organisations, groups, agents and roles, opened by their id.
+parties-new = New party
+parties-note = Parties follow the released RM 1.1.0 demographic model; the REST API for them is still in development, and FerroEHR adds the relationship routes it does not define yet.
+parties-uid = Party uid
+parties-open = Open
+parties-open-refused = The party could not be opened.
+parties-none-holds = No party has this uid.
+parties-no-kind-holds = No { $kind } and no other kind of party has this uid.
+parties-tags-title = Tags on parties
+parties-tag-index = The demographic tag index
+parties-tag-on = On
+parties-no-tags = No party carries a tag yet.
+parties-tags-refused = The tags on parties could not be read.
+party-title = Party { $id }
+party-refused = The party could not be read.
+party-views = Views of this party
+party-line = { $kind } · version { $version } · { $id }
+party-deleted-line = { $kind } · deleted { $when } by { $who } as version { $version }
+party-more = More actions for the party
+party-edit = Edit
+party-relate = Relate this party
+party-delete = Delete party…
+party-delete-title = Delete { $name }?
+party-delete-message = The party is marked deleted. { $count ->
+    [one] Its version stays readable,
+   *[other] Its { $count } versions stay readable,
+} { $relationships ->
+    [0] and nothing else changes.
+    [one] and its relationship stays.
+   *[other] and its { $relationships } relationships stay.
+}
+party-delete-confirm = Delete the party
+party-delete-refused = The CDR refused to delete the party.
+party-deleted-intro = The party is deleted; its versions stay readable, and its relationships stay.
+party-deleted-no-edit = This party is deleted; there is no version to edit.
+party-overview = Overview
+party-facts = Facts
+party-archetype = Archetype
+party-current-version = Current version
+party-identities = Identities
+party-no-identities = This party carries no identity the reading understands.
+party-relationships-from = Relationships from this party
+party-relationships-intro = The relationships this party is the source of; the CDR cannot list the ones that point at it.
+party-no-relationships = This party is the source of no relationship.
+party-document-title = { $type } · version { $version }
+party-version-document = The party at version { $version }
+party-at-time-opens = Opens the party as it stood then.
+party-new-title = { $mode ->
+    [new] New party
+   *[edit] Edit
+}
+party-new-subtitle = A starting document for a { $kind }.
+party-kind-help = Start over puts this kind's starting document in the editor.
+party-start-over = Start over
+party-new-editor-label = The new party
+party-not-yet = Not created yet.
+party-not-created = Not created.
+party-create = Create this party
+party-create-refused = The CDR refused the party, so nothing was created.
+party-edit-intro = The whole party as JSON, as New party takes it; it must keep at least one identity.
+party-editor-label = The party
+party-saved = Party saved
+party-save-refused = The CDR refused the party, so no version was saved.
+tag-collection-party = party
+
+## Relationships
+
+relationship-title = Relationship
+relationship-line = Relationship · version { $version } · { $id }
+relationship-refused = The relationship could not be read.
+relationship-more = More actions for the relationship
+relationship-delete = Delete relationship…
+relationship-delete-title = Delete the relationship { $name }?
+relationship-delete-message = The relationship is marked deleted; both parties stay, and its versions stay readable.
+relationship-delete-confirm = Delete the relationship
+relationship-delete-refused = The CDR refused to delete the relationship.
+relationship-deleted-toast = Relationship deleted
+relationship-source = Source
+relationship-target = Target
+relationship-target-kind = Target kind
+relationship-target-uid = Target party uid
+relationship-details = Details
+relationship-details-intro = Optional extra details, as JSON.
+relationship-none = none
+relationship-validity = Time validity
+relationship-new-title = { $mode ->
+    [new] New relationship
+   *[edit] Edit
+}
+relationship-new-page-title = New relationship
+relationship-new-subtitle = From this party to another.
+relationship-from = From
+relationship-type-help = The type as a key, for example employment.
+relationship-create = Create this relationship
+relationship-create-refused = The CDR refused the relationship, so nothing was created.
+relationship-ends = Ends
+relationship-ends-intro = The two ends are fixed; other parties make another relationship.
+relationship-saved = Relationship saved
+relationship-save-refused = The CDR refused the relationship, so no version was saved.
+
+## Templates
+
+templates-subtitle = The operational templates the CDR validates compositions against.
+templates-upload = Upload a template
+templates-find = Id, concept or archetype
+templates-families = Template families
+templates-family = Family
+templates-empty = No template is uploaded yet.
+templates-no-match = No template matches.
+templates-refused = The templates could not be read.
+chip-contains = Contains: { $value }
+column-template = Template
+column-root-archetype = Root archetype
+column-uploaded = Uploaded
+column-actions = Actions
+template-actions-for = Actions for { $name }
+template-build-query = Build a query
+template-delete = Delete…
+template-delete-title = Delete the template { $name }?
+template-delete-message = The CDR refuses while compositions use the template; delete or migrate them first.
+template-delete-confirm = Delete the template
+template-delete-refused = The CDR refused to delete the template.
+template-more = More actions for the template
+template-views = Views of this template
+template-refused = The template could not be read.
+template-adl-14-line = ADL 1.4
+template-adl-14-subtitle = { $concept } · ADL 1.4
+template-adl-2-subtitle = { $hrid } · ADL 2
+template-paths = Paths
+template-json = JSON
+template-example = Example
+template-paths-of = The paths of { $name }
+template-node = Node
+template-pick-node = Pick a node in the tree to read its path, type and codes.
+template-adl-2-paths = The viewer builds these paths itself: the CDR has no web template for ADL 2.
+template-no-catalog = The CDR sent no operational template to build paths from.
+template-no-source = The CDR holds no source for this release.
+template-source-title = Source
+template-json-title = JSON · release { $release }
+template-example-type = Type
+template-example-detail = Detail level
+template-show-example = Show the example
+template-example-title = Example · { $format }
+template-no-example = The CDR built no example for these options.
+template-example-refused = The CDR could not build an example for these options.
+template-identity = Identity
+template-use = Use
+template-use-line = Query the compositions committed under it
+template-concept = Concept
+template-version = Template version
+template-default-language = Default language
+template-languages = Languages
+template-uid = UID
+template-release = Release
+template-releases = Releases
+template-release-count = { $count ->
+    [one] 1 release
+   *[other] { $count } releases
+}
+template-reading-release = You are reading release { $release }.
+template-read-latest = Read { $release }, the latest
+template-upload-title = { $mode ->
+    [new] Upload a template
+   *[edit] Edit
+}
+template-upload-subtitle = Choose a file or paste the source; the CDR validates it on upload.
+template-opt-source = The operational template
+template-adl-2-source = The ADL 2 source
+template-choose-file = Choose a file
+template-opt-placeholder = <?xml version="1.0" encoding="UTF-8"?>
+template-adl-2-placeholder = template (adl_version=2.4.0; rm_release=1.1.0)
+template-not-yet = Not uploaded yet.
+template-not-uploaded = Not uploaded.
+template-upload = Upload this template
+template-upload-refused = The CDR refused the template, so nothing was uploaded.
+
+## Terminology
+
+term-subtitle = What the CDR can answer about the code sets it serves.
+term-operations = Terminology operations
+term-terminologies = Terminologies
+term-lookup = Look up
+term-value-sets = Value sets
+term-hierarchy = Hierarchy
+term-off = The CDR's terminology API is off.
+term-off-line = Set in ferroehr.toml and read at start; the Configuration page shows the running value.
+term-refused = The terminologies could not be read.
+term-terminology = Terminology
+term-publisher = Publisher
+term-served = Terminologies the CDR serves
+term-id = Id
+term-uri = Identifying URI
+term-fields = Fields you can ask for
+term-descriptor = Descriptor
+term-lookup-in = Look up a code in it
+term-expand-group = Expand one of its groups
+term-code = Code
+term-effective-date = Effective date (optional)
+term-look-up = Look up
+term-defined = Defined:
+term-undefined = The terminology { $terminology } does not define { $code }.
+term-language = Language
+term-preferred = Preferred term
+term-lookup-refused = The CDR could not look the code up.
+term-value-set = Value set
+term-expand = Expand
+term-members = Members
+term-no-value-set = The terminology has no value set { $set }.
+term-value-set-refused = The CDR could not expand the value set.
+term-validate-title = Validate a code
+term-validate = Validate
+term-member = { $code } is a member of { $set }.
+term-not-member = { $code } is not a member of { $set }.
+term-validate-refused = The CDR could not validate the code.
+term-broader = Broader code
+term-narrower = Narrower code
+term-test = Test
+term-subsumes = { $broader } is broader than { $narrower }.
+term-not-subsumes = { $broader } is not broader than { $narrower }.
+term-flat = The openEHR vocabulary has no broader or narrower codes, so it always answers no; a terminology server bound to the CDR can answer otherwise.
+term-subsumption-refused = The CDR could not test the codes.
+
+## Stored queries
+
+queries-subtitle = The CDR's stored queries, grouped by the namespace of their name.
+queries-unqualified = Unqualified
+queries-group-count = { $names ->
+    [one] 1 query
+   *[other] { $names } queries
+}{ $versions ->
+    [one] {""}
+   *[other] , { $versions } versions
+}
+queries-older-version = older version
+queries-open-in-query = Open in Query
+queries-delete-version = Delete this version…
+queries-namespace-chip = Namespace { $value }
+queries-refused = The stored queries could not be read.
+queries-views = Views of this stored query
+queries-more = More actions for the stored query
+queries-line = { $name } · version { $version }
+queries-delete-named = Delete version { $version }…
+queries-delete-title = Delete { $name } version { $version }?
+queries-delete-message = Removes this version from the CDR's stored queries for good, for every client; its other versions stay.
+queries-delete-confirm = Delete version { $version }
+queries-deleted = Stored query version deleted
+queries-delete-refused = The CDR refused to delete the version.
+queries-definition = Definition
+queries-stored-refused = The stored query could not be read.
+queries-reading-older = You are reading version { $version }; Latest runs { $latest }.
+queries-read-version = Read { $version }
+queries-type = Type
+queries-saved = Saved
+queries-aql-title = { $name } { $version }
+queries-which-version = Which version runs
+queries-param-help = Numbers and true or false are sent as they are; quote a number to send it as text.
+queries-fix-version = Nothing was sent: fix the version first.
+queries-versions-intro = Each version is its own immutable definition; Latest runs the highest.
+
+## Query
+
+query-subtitle = Build AQL from a template, or write it; run it against the CDR.
+query-run = Run
+query-save = Save to the CDR
+query-save-action = Save
+query-namespace = Namespace
+query-version-help = Empty writes the version the CDR assigns.
+query-version-taken = This version of this name already exists, and a saved version cannot change.
+query-save-refused = The CDR refused to store the query.
+query-open-stored = Open it
+query-build = Build
+query-aql = AQL
+query-aql-title = Query · AQL
+query-ways = Ways to write the query
+query-returns = Returns
+query-shape-data = Data points
+query-shape-compositions = Whole compositions
+query-shape-count = A count
+query-shape-ehrs = EHRs (cohort)
+query-data-points = Data points
+query-data-point = Data point
+query-column-name = Column name
+query-data-point-n = Data point { $number }
+query-column-name-n = Column name of data point { $number }
+query-remove-data-point = Remove the data point { $name }
+query-add-data-point = Add a data point
+query-no-data-points = No data point yet; the query returns nothing until you add one.
+query-conditions = Conditions
+query-order-limit = Order and limit
+query-order-by = Order by
+query-no-order = No order
+query-direction = Direction
+query-newest-first = Newest first
+query-oldest-first = Oldest first
+query-limit = Row limit
+query-bad-limit = The row limit is not a whole number.
+query-it-builds = The AQL it builds
+query-built-aql = Built AQL
+query-open-in-aql = Open in AQL
+query-open-in-build = Open in Build
+query-not-built = The builder cannot write this query yet: { $reason }
+query-cannot-build = This AQL cannot be opened in Build: { $reason }
+query-not-number = The value of { $path }, { $value }, is not a number.
+query-unknown-path = The template has no data point at { $path }.
+query-catalog-refused = The template's data points could not be read.
+query-run-refused = The CDR refused the query.
+query-the-aql = The AQL
+query-opened-stored = Opened from the stored query { $name } { $version }.
+query-stored-refused = The stored query could not be read.
+query-build-made = The AQL Build made, as it runs; edits here leave Build behind.
+query-nothing-to-run = Nothing to run: write a query first.
+query-grammar-stops = Nothing was sent: the grammar check found an error.
+query-grammar-heading = { $count ->
+    [one] Grammar check · 1
+   *[other] Grammar check · { $count }
+}
+query-unexpected = Unexpected { $token } here.
+query-ended-early = The query ends before it is complete.
+query-parameters = Parameters
+query-param-name-n = Name of parameter { $number }
+query-param-value-n = Value of parameter { $number }
+query-remove-param = Remove the parameter { $name }
+query-add-param = Add a parameter
+query-no-params = No parameter.
+
+## Results
+
+results-title = Results
+results-show-as = Show as
+results-table = Table
+results-chart = Chart
+results-chart-label = The numeric columns over the results
+results-chart-summary = { $series } over { $axis }.
+results-axis = The x axis is { $axis }, at its true spacing.
+results-no-chart = These results have no numbers to draw, so they are shown as a table.
+results-none = The query matched no row.
+results-not-run = Run the query to see its rows here.
+results-csv = CSV
+results-json = JSON
+results-window = { $count ->
+    [one] 1 row. No LIMIT in the query, so the CDR returns at most its own page.
+   *[other] { $count } rows. No LIMIT in the query, so the CDR returns at most its own page.
+}
+results-window-own = { $count ->
+    [one] 1 row, inside the query's own LIMIT.
+   *[other] { $count } rows, inside the query's own LIMIT.
+}
+
+## Server
+
+server-subtitle = The CDR this viewer reads: what it is, how it runs, and what it serves.
+server-sections = Server sections
+server-overview = Overview
+server-overview-line = How the CDR was built and deployed.
+server-health = Health
+server-health-line = What the CDR depends on, and whether each part is healthy.
+server-metrics = Metrics
+server-metrics-line = Counters since the last start.
+server-logging = Logging
+server-logging-line = The live log filter of the instance that answered.
+server-api = API
+server-api-line = The OpenAPI documents the CDR serves for itself, by API family.
+server-smart = SMART
+server-smart-line = The scopes the CDR supports; Your access shows the ones you hold.
+server-no-management = The CDR has no management endpoints turned on, so Health, Metrics and Logging are not offered.
+server-status = Status
+server-state = State
+server-up = Up
+server-unknown = Unknown
+server-unreachable = Unreachable
+server-deployment = Deployment
+server-production = Production
+server-sandbox = Sandbox
+server-version = Version
+server-conformance = Versions and conformance
+server-safeguard = Safeguard
+server-safeguards-off = Production safeguards that are off
+server-sandbox-intro = A sandbox must not hold real patient data.
+server-build = Build
+server-no-build-info = The CDR serves no build information.
+server-build-refused = The build information could not be read.
+server-dependencies = Dependencies
+server-dependency = Dependency
+server-detail = Detail
+server-public-readiness = The CDR serves only each dependency's state, not its detail.
+server-health-refused = The dependencies could not be read.
+server-now = Now
+server-metrics-refused = The metrics could not be read.
+server-metric = Metric
+server-show = Show
+server-labels = Labels
+server-samples-of = Samples of { $metric }
+server-no-metric = The CDR has no such metric.
+server-registry = The metric registry
+server-metric-count = { $count ->
+    [one] 1 metric
+   *[other] { $count } metrics
+}
+server-filter = Filter
+server-in-effect = In effect
+server-at-boot = At boot
+server-change-filter = Change the log filter
+server-change-filter-intro = Applies to this instance until it restarts.
+server-new-filter = New filter
+server-apply = Apply…
+server-reset = Reset to the boot filter
+server-at-boot-already = The filter in effect is the boot filter.
+server-apply-title = Apply the new log filter?
+server-apply-message = It applies to this instance until it restarts.
+server-apply-confirm = Apply the filter
+server-filter-applied = Log filter applied
+server-filter-reset = Log filter reset to the boot filter
+server-filter-refused = The CDR refused the log filter.
+server-no-logging = The CDR serves no log filter control.
+server-logging-refused = The log filter could not be read.
+server-api-family = API family
+server-method-path = Method and path
+server-summary = Summary
+server-endpoint-count = { $count ->
+    [one] 1 endpoint
+   *[other] { $count } endpoints
+}
+server-endpoints-of = Endpoints of { $family }
+server-open-api = The OpenAPI document
+server-api-refused = The OpenAPI document could not be read.
+server-scopes = Scopes it supports
+server-sign-in = Sign-in
+server-also = Also
+server-grant-types = Grant types
+server-pkce = PKCE
+server-no-smart = The CDR serves no SMART discovery document.
+server-smart-refused = The SMART discovery document could not be read.
+api-all = The complete surface
+api-ehr = openEHR: EHR
+api-query = openEHR: Query
+api-definition = openEHR: Definition
+api-demographic = openEHR: Demographic (in development)
+api-admin = openEHR: Admin (in development)
+api-management = FerroEHR: Status and Management
+api-terminology = FerroEHR: Terminology
+api-relationships = FerroEHR: Party Relationships
+api-events = FerroEHR: Event Subscriptions
+api-audit = FerroEHR: Audit
+api-smart = FerroEHR: SMART Discovery
+
+## Audit log
+
+audit-subtitle = The CDR's security audit log: who accessed what, and with what outcome.
+audit-find = Principal
+audit-outcome = Outcome
+audit-action = Action
+audit-when = When
+audit-patient = Patient
+audit-event = Event
+audit-principal = Principal
+audit-records = Audit records
+audit-pages = Audit pages
+audit-success = Success
+audit-unknown = Unknown
+audit-no-patient = No patient
+audit-empty = The CDR has recorded no audit event yet.
+audit-no-match = No audit record matches these filters.
+audit-refused = The audit log could not be read.
+audit-store-off = The CDR keeps no local audit store; its records go only to the forwarding target, so there is nothing to read here.
+audit-store-off-line = Set in ferroehr.toml; the Configuration page shows the running value.
+audit-chip-agent = Principal: { $value }
+audit-chip-outcome = Outcome: { $value }
+audit-chip-action = Action: { $value }
+audit-chip-patient = Patient: { $value }
+audit-record-gone = This record is no longer on the page it was listed on; open it from the audit log again.
+audit-what = What
+audit-stored-as = Stored as a FHIR AuditEvent (IHE ITI-81).
+audit-the-event = The event
+audit-as-stored = As stored
+
+## Subscriptions
+
+sub-subtitle = Get a message on the event queue for each change that matches.
+sub-new = New subscription
+sub-off = The CDR's subscription API is off, so there is nothing to list.
+sub-off-line = Set in ferroehr.toml; the Configuration page shows the running value.
+sub-refused = The subscriptions could not be read.
+sub-empty = No subscription yet.
+sub-state-enabled = Enabled
+sub-state-disabled = Disabled
+sub-enable = Enable
+sub-disable = Disable
+sub-enabled = Subscription enabled
+sub-disabled = Subscription disabled
+sub-save-refused = The CDR refused the subscription.
+sub-any-kind = Any kind
+sub-composition = Composition
+sub-ehr-status = EHR status
+sub-folder = Folder
+sub-any-change = Any change
+sub-any-template = Any template
+sub-every-version = Every committed version of any kind.
+sub-every-of-kind = Every committed { $kind }.
+sub-every-change = Every { $change } of any kind.
+sub-every-change-of-kind = Every { $change } of a { $kind }.
+sub-under-template = { $line } Under { $template } only.
+sub-queue = Queue
+sub-name-fixed = The name cannot change: a new name would be a different queue.
+sub-name-help = Letters, digits, dots, dashes and underscores. The name cannot change later.
+sub-name-invalid = Use letters, digits, dots, dashes and underscores only.
+sub-name-taken = The CDR already has a subscription called { $name }. Choose another name.
+sub-fix-name = Fix the name first.
+sub-change-name = Change the name first.
+sub-selects = What it selects
+sub-change-type = Change type
+sub-delivery = Delivery
+sub-deliver = Deliver messages
+sub-deliver-help = When off, the subscription is kept but sends nothing.
+sub-create = Create subscription
+sub-created = Subscription created
+sub-created-line = { $name } · queue ferroehr.events.{ $name }
+sub-editor-title = { $mode ->
+    [new] New subscription
+   *[edit] Edit { $name }
+}
+sub-edit-subtitle = Saving replaces what this subscription selects.
+sub-none = The CDR has no subscription called { $name }.
+sub-saved = Subscription saved
+sub-more = More actions for the subscription
+sub-delete = Delete the subscription…
+sub-delete-title = Delete the subscription { $name }?
+sub-delete-message = Removes the subscription for good. The queue and its messages stay on the broker; remove them there.
+sub-delete-confirm = Delete the subscription
+sub-deleted = Subscription deleted
+sub-delete-refused = The CDR refused to delete the subscription.
+
+## Configuration
+
+config-subtitle = The CDR's settings as it serves them, redacted, and the viewer's own.
+config-sections = Configuration sections
+config-how = read at start; change the file and restart to change a setting
+config-deployment = Deployment
+config-server = Server and database
+config-access = Access
+config-records = Records
+config-integrations = Integrations
+config-operations = Operations
+config-viewer = Viewer
+config-refused = The CDR's configuration could not be read.
+config-on = On
+config-off = Off
+config-minutes = { $count } min
+config-cdr-address = CDR address
+config-cdr-address-line = The address the viewer calls for every CDR request.
+config-cdr-base-path = CDR base path
+config-cdr-base-path-line = Must match the base path the CDR serves its API under.
+config-management-address = Management address
+config-management-address-line = Where the viewer reads health, metrics and logging.
+config-basic-sign-in = Basic sign-in
+config-basic-sign-in-line = Offers the username and password form; the CDR checks the account.
+config-oidc-sign-in = OIDC sign-in
+config-oidc-sign-in-line = The identity provider that signs people in.
+config-oidc-secret = OIDC client secret
+config-oidc-secret-line = Proves the viewer to the identity provider; read from a file and never shown.
+config-idle = Session idle time
+config-idle-line = A session ends after this long without a request.
+config-session-key = Session key
+config-session-key-line = Seals the session cookie; every replica holds the same key.
+config-language = Language
+config-language-line = Used when the browser asks for a language the viewer does not have.

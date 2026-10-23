@@ -1,1500 +1,1223 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `/ehrs/{ehr_id}/compositions/{uid}` screen — the composition viewer.
+//! One composition with its tabs, Reading, Document, Versions and Tags, its
+//! delete, and its editors, Edit as a new version and New composition
+//! (FerroUI `design/consoles/ferroehr/`, pages 14.1 to 14.14).
 //!
-//! A view of one COMPOSITION: a format toggle (canonical JSON/XML and the
-//! Simplified FLAT/STRUCTURED renderings — the CDR converts, the BFF forwards
-//! and pretty-prints), a version selector fed by the versioned object's
-//! revision history, a per-version audit card, the `VERSIONED_COMPOSITION`
-//! container + selected-VERSION envelope card, and the two write paths (commit
-//! a new version, logically delete the latest one). The document resource is
-//! keyed on `(version, format)` so either switch refetches, under a
-//! `<Transition>`.
-//!
-//! One reader per claim: the document CONTENT comes from the COMPOSITION
-//! resource (the only one that negotiates the simplified formats), the commit
-//! history from the revision history, and the VERSION's own envelope facts from
-//! the `VERSIONED_COMPOSITION` version read.
-//!
-//! No openEHR spec governs the viewer — our own design; the wire it reads is
-//! spec-bound (`Accept` negotiation per
-//! `docs/specs/openehr/ITS-REST/docs/simplified_formats/`). Every co-located
-//! `#[server]` fn guards with
-//! [`require_session`](crate::session::require_session) first, and the CDR
-//! credential never reaches client-visible state.
+//! The Reading tab draws the canonical document as FerroUI's clinical
+//! reading (E3), template-free ([`crate::clinical`]). The Document tab shows
+//! the document in the representation the reader picks, as the CDR converts
+//! it. The Versions tab is the revision history with At a time, and an older
+//! version opens read-only. A deleted composition says so in its header and
+//! keeps its versions readable (ITS-REST `composition_get` answers `204` for
+//! a deleted version). The tab is the address's `tab`, the version its
+//! `version`, so every view keeps its own address. No openEHR spec governs
+//! the viewer's pages: our own design.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer reads the CDR's COMPOSITION JSON wire for the header's name, template and context"
 )]
 
+use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::coding::{Coding, Layout, coding};
+use ferrohealth_ui::view::diagnostics::DiagnosticsWords;
+use ferrohealth_ui::view::dialog::{Confirmation, danger_dialog};
+use ferrohealth_ui::view::flow::FlowState;
+use ferrohealth_ui::view::form::Field;
+use ferrohealth_ui::view::reading::{Element, Level, Reading, Section, Value as Shown, reading};
+use ferrohealth_ui::view::segmented::{choice_group, segmented_links};
+use ferrohealth_ui::view::surface::{
+    Crumb, Header, Mode, definitions, editor_heading, page_heading,
+};
+use ferrohealth_ui::view::tabs::{Tab, binder};
+use ferrohealth_ui::view::versions::{
+    Standing, Version, VersionHistory, older_version, version_history,
+};
+use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
+use ferrohealth_ui::widget::editor::EditorWords;
 use leptos::prelude::*;
-use leptos::{component, server};
 use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
+use leptos_router::hooks::use_params_map;
 use serde_json::Value;
 
-use crate::components::empty_state::EmptyState;
-use crate::components::field::{
-    BTN_DANGER, BTN_PRIMARY, BTN_SECONDARY, Height, INPUT, LABEL, SELECT, code_field, pretty_json,
+use crate::bff::composition::{
+    VersionedCompositionDetails, delete_composition, fetch_composition, fetch_version_at_time,
+    fetch_versioned_composition, fetch_versions, update_composition,
 };
-use crate::components::format_view::{DocumentPane, FormatSelector, PaneView};
-use crate::components::page_header::{Crumb, PageHeader};
-use crate::components::surface::{CARD_PAD, CARD_TITLE, WELL};
-use crate::components::toast::{toast_error, toast_success};
-use crate::components::wire::VersionEntry;
-use ferrohealth_ui::highlight::Language;
-// Server-side pretty-printing happens in the #[server] body only.
-#[cfg(not(target_arch = "wasm32"))]
-use crate::components::format_view::pretty_body;
+use crate::bff::ehr_tags::{delete_ehr_tag, fetch_ehr_tags, set_ehr_tag};
+use crate::bff::wire::VersionEntry;
+use crate::clinical::{RenderedNode, RenderedSection};
 use crate::error::ViewerError;
+use crate::flash::{Done, redirect_with};
 use crate::format::ReprFormat;
-use crate::locale::{Msg, tr, tr_with};
-#[cfg(not(target_arch = "wasm32"))]
-use crate::locale::{tr_served, tr_served_with};
+use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
+use crate::locale::{Msg, message, tr, tr_with};
+use crate::pages::common::{
+    EditorDock, ago, at_time_row, awaited, card_panel, discarded, dock_editor, document_section,
+    findings_of, info_note, is_status, marks_of, panel, plain_section, refused, section, short,
+    shortened, state_mark, version_number, version_uid_at, when,
+};
+use crate::pages::ehr::{crumbs, ehr_href, ehr_id_param};
+use crate::pages::item_tags::{TagAct, TagPanel, tag_act, tag_done, tag_panel};
 
-/// The revision history of a versioned composition, newest-first.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the history is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn fetch_versions(
-    /// The EHR holding the versioned composition.
-    ehr_id: String,
-    /// The `VERSIONED_COMPOSITION` uid whose revision history to read.
-    uid: String,
-) -> Result<Vec<VersionEntry>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1(&format!(
-        "ehr/{}/versioned_composition/{}/revision_history",
-        urlencoding::encode(&ehr_id),
-        urlencoding::encode(&uid)
-    ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    // NOTE: REVISION_HISTORY.items arrives most-recent-LAST on the wire (RM
-    // common, generic package — the `items` attribute documentation); the
-    // selector presents newest-first, so reverse here.
-    parse_versions(&response.body).map(|mut entries| {
-        entries.reverse();
-        entries
-    })
+/// The id of Delete composition's confirmation dialog.
+const DELETE_DIALOG: &str = "delete-composition";
+
+/// The id of the editors' form.
+const EDIT_FORM: &str = "composition-edit";
+
+/// The page of the composition `uid` of the EHR `ehr_id`.
+#[must_use]
+pub fn composition_href(ehr_id: &str, uid: &str) -> String {
+    format!(
+        "{}/compositions/{}",
+        ehr_href(ehr_id),
+        urlencoding::encode(uid)
+    )
 }
 
-/// One representation of a composition version, pretty-printed for display, or
-/// `None` when the addressed version is deleted. `version_uid` may be the bare
-/// versioned-object id (the latest version) or a full `OBJECT_VERSION_ID` (that
-/// exact version).
-///
-/// The `204` branch is `composition_get`'s own declared answer for a version
-/// deleted at the specified time
-/// (`docs/specs/openehr/ITS-REST/specifications/responses/204_deleted_at_time.yaml`,
-/// referenced from `operations/composition_get.yaml`), so it is a rendered
-/// absence rather than a failure.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer (a `406` for a declined
-/// representation included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn fetch_composition(
-    /// The EHR holding the composition.
-    ehr_id: String,
-    /// The version to read: a full `OBJECT_VERSION_ID`, or the object uid
-    /// for the latest version.
-    version_uid: String,
-    /// Which representation to negotiate for the document body.
-    format: ReprFormat,
-) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1(&format!(
-        "ehr/{}/composition/{}",
-        urlencoding::encode(&ehr_id),
-        urlencoding::encode(&version_uid)
-    ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, format.media_type())
-        .await?;
-    if response.is(http::StatusCode::NO_CONTENT) {
-        return Ok(None);
-    }
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    Ok(Some(pretty_body(&response.body, format)))
+/// The tabs of a composition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CompTab {
+    /// The clinical reading.
+    Reading,
+    /// The document as the CDR sends it.
+    Document,
+    /// The revision history.
+    Versions,
+    /// The tags.
+    Tags,
 }
 
-/// Resolve the `OBJECT_VERSION_ID` of the VERSION of a `VERSIONED_COMPOSITION`
-/// that was extant at `at_time` (a browser `datetime-local` value):
-/// `GET /ehr/{ehr}/versioned_composition/{uid}/version?version_at_time=…`
-/// (ITS-REST `VERSIONED_COMPOSITION` API `versioned_composition_version_get_at_time`
-/// — "if `version_at_time` is supplied, retrieves the VERSION extant at
-/// specified time"). The 200 body is a VERSION envelope whose `uid.value` is
-/// the `OBJECT_VERSION_ID` (RM common — a VERSION's `uid` is an
-/// `OBJECT_VERSION_ID`); that string is returned so the caller can select it.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when `at_time` is empty; CDR transport errors pass
-/// through; a non-2xx CDR answer (a `404` for no version at that time included,
-/// which the UI renders as an inline note) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn fetch_version_at_time(
-    /// The EHR holding the versioned composition.
-    ehr_id: String,
-    /// The `VERSIONED_COMPOSITION` uid to read a version of.
-    versioned_object_uid: String,
-    /// The instant to resolve, as a `datetime-local` input value.
-    at_time: String,
-) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
-    let at_time = crate::format::datetime_local_to_rfc3339(&at_time);
-    if at_time.is_empty() {
-        return Err(ViewerError::Invalid(tr_served(Msg::PickDateTimeTravel)));
-    }
-    let url = state.cdr.rest_v1(&format!(
-        "ehr/{}/versioned_composition/{}/version?version_at_time={}",
-        urlencoding::encode(&ehr_id),
-        urlencoding::encode(&versioned_object_uid),
-        urlencoding::encode(&at_time),
-    ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    // The VERSION envelope's `uid.value` is the `OBJECT_VERSION_ID`.
-    Ok(crate::uid::uid_value_of(&response.body))
-}
-
-/// Commit a new version of a COMPOSITION
-/// (`PUT /ehr/{ehr_id}/composition/{versioned_object_uid}`). `If-Match` carries
-/// the CURRENT (latest) `version_uid` — the `preceding_version_uid` — so the
-/// update is conditional (ITS-REST COMPOSITION API `composition_update`; the
-/// header value is the `version_uid` enclosed in double quotes). Canonical
-/// JSON body; `Prefer: return=representation` yields the new `uid.value`.
-///
-/// This is the one update whose precondition is NOT a served `ETag`: the
-/// document pane may be showing an older version, so the value comes from the
-/// revision history's newest entry instead — the `ETag` of the read that filled
-/// the editor would name the wrong version.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an empty body, a missing current version, or a
-/// `412` mid-air collision (prefixed with a reload hint, the CDR diagnostic
-/// appended); CDR transport errors pass through; any other non-2xx CDR answer
-/// (its validation diagnostics included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn update_composition(
-    /// The EHR holding the composition.
-    ehr_id: String,
-    /// The `VERSIONED_COMPOSITION` uid being updated.
-    versioned_object_uid: String,
-    /// The version this edit is based on, sent as `If-Match`.
-    current_version_uid: String,
-    /// The replacement composition document, as canonical JSON text.
-    body: String,
-) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
-    if body.trim().is_empty() {
-        return Err(ViewerError::Invalid(tr_served(Msg::CompositionBodyEmpty)));
-    }
-    let current_version_uid = current_version_uid.trim();
-    if current_version_uid.is_empty() {
-        return Err(ViewerError::Invalid(tr_served(
-            Msg::NoCurrentVersionKnownReloadPage,
-        )));
-    }
-    // If-Match value is the version_uid in double quotes (composition_update).
-    let if_match = format!("\"{current_version_uid}\"");
-    let url = state.cdr.rest_v1(&format!(
-        "ehr/{}/composition/{}",
-        urlencoding::encode(&ehr_id),
-        urlencoding::encode(&versioned_object_uid)
-    ));
-    let response = state
-        .cdr
-        .put(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[("Prefer", "return=representation"), ("If-Match", &if_match)],
-            body,
-        )
-        .await?;
-    // 412 Precondition Failed = a mid-air collision (the latest version moved
-    // since this page loaded); give it a friendly prefix, the CDR diagnostic
-    // appended verbatim.
-    if response.is(http::StatusCode::PRECONDITION_FAILED) {
-        let detail = crate::cdr::CdrClient::expect_success(response)
-            .err()
-            .map(|e| e.to_string())
-            .unwrap_or_default();
-        return Err(ViewerError::Invalid(tr_served_with(
-            Msg::CompositionChangedSincePageLoadedReload,
-            &[("detail", detail.clone().into())],
-        )));
-    }
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    Ok(crate::uid::uid_value_of(&response.body))
-}
-
-/// Logically delete a COMPOSITION
-/// (`DELETE /ehr/{ehr_id}/composition/{version_uid}`).
-///
-/// `version_uid` MUST be a full `OBJECT_VERSION_ID` — the path id is "in a form
-/// of an OBJECT_VERSION_ID identifier taken from the last (most recent)
-/// VERSION.uid.value, representing the `preceding_version_uid` to be deleted"
-/// (`docs/specs/openehr/ITS-REST/specifications/operations/composition_delete.yaml`)
-/// — so a bare versioned-object id is rejected here rather than sent. No
-/// `If-Match` is sent: the operation declares none, and latest-ness is enforced
-/// by its own `409`, "supplied `uid_based_id` doesn't match the latest version".
-/// The success answer is `204`; an already-deleted version is `400`.
-///
-/// This is the openEHR LOGICAL delete: a new deleted-lifecycle version is
-/// committed and the history stays readable.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when no full `OBJECT_VERSION_ID` is known; CDR
-/// transport errors pass through; a non-2xx CDR answer (the `409` stale-uid
-/// branch and the `400` for an already-deleted version included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn delete_composition(
-    /// The EHR holding the composition.
-    ehr_id: String,
-    /// The latest version's full `OBJECT_VERSION_ID`, which the delete requires.
-    version_uid: String,
-) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
-    let version_uid = version_uid.trim();
-    if version_uid.is_empty() || !version_uid.contains("::") {
-        return Err(ViewerError::Invalid(tr_served(
-            Msg::LatestVersionSFullObjectVersion,
-        )));
-    }
-    let url = state.cdr.rest_v1(&format!(
-        "ehr/{}/composition/{}",
-        urlencoding::encode(&ehr_id),
-        urlencoding::encode(version_uid)
-    ));
-    let response = state.cdr.delete(&session.credential, &url, &[]).await?;
-    drop(crate::cdr::CdrClient::expect_success(response)?);
-    Ok(())
-}
-
-/// The `VERSIONED_COMPOSITION` container plus the selected VERSION's envelope
-/// facts, flattened for the versioned-object card.
-///
-/// The attributes are the RM classes' own (files under
-/// `docs/specs/openehr/RM/docs/UML/classes/`): `VERSIONED_OBJECT._uid_`,
-/// `_owner_id_` and `_time_created_` (`org.openehr.rm.common.versioned_object.adoc`);
-/// `VERSION._contribution_` and `_signature_` ("`OpenPGP` digital signature or
-/// digest of content committed in this Version") plus
-/// `_preceding_version_uid_`, whose invariant
-/// `Preceding_version_uid_validity` makes it absent exactly for a first
-/// version (`org.openehr.rm.common.version.adoc`); and
-/// `ORIGINAL_VERSION._lifecycle_state_`
-/// (`org.openehr.rm.common.original_version.adoc`).
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct VersionedCompositionDetails {
-    /// `VERSIONED_OBJECT.uid.value` — the versioned-object id.
-    pub object_uid: String,
-    /// `VERSIONED_OBJECT.owner_id.id.value` — the owning EHR.
-    pub owner_id: String,
-    /// `VERSIONED_OBJECT.time_created.value` — when the object's first version
-    /// was committed.
-    pub time_created: String,
-    /// The read VERSION's `uid.value` (`OBJECT_VERSION_ID`).
-    pub version_id: String,
-    /// `ORIGINAL_VERSION.lifecycle_state.value` (the coded text's rubric).
-    pub lifecycle_state: String,
-    /// `VERSION.preceding_version_uid.value` — empty for a first version.
-    pub preceding_version_uid: String,
-    /// `VERSION.contribution.id.value` — the CONTRIBUTION this version was
-    /// committed under.
-    pub contribution_uid: String,
-    /// Whether the VERSION carries a `signature`.
-    pub signed: bool,
-    /// Whether the VERSION carries `data` — a logically deleted version does
-    /// not (`docs/specs/openehr/RM/docs/common/master06-change_control_package.adoc`
-    /// §Logical Deletion).
-    pub has_data: bool,
-}
-
-/// Read the `VERSIONED_COMPOSITION` container and one of its VERSIONS.
-///
-/// Two reads, one resource: `GET /ehr/{ehr}/versioned_composition/{uid}` for the
-/// container (`versioned_composition_get`) and the direct VERSION read for the
-/// envelope — `…/version/{version_uid}` for an explicitly selected version
-/// (`versioned_composition_version_get_by_id`) or `…/version` for the current
-/// one when the selector says "Latest": with no `version_at_time`, that
-/// operation "retrieves the _latest_ VERSION"
-/// (`docs/specs/openehr/ITS-REST/specifications/operations/versioned_composition_version_get_at_time.yaml`
-/// §description).
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer (a `404` for an unknown
-/// object/version included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when either body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn fetch_versioned_composition(
-    /// The EHR holding the versioned composition.
-    ehr_id: String,
-    /// The `VERSIONED_COMPOSITION` uid whose envelope facts to read.
-    versioned_object_uid: String,
-    /// The specific version within that versioned object.
-    version_uid: String,
-) -> Result<VersionedCompositionDetails, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
-    let ehr = urlencoding::encode(&ehr_id);
-    let object = urlencoding::encode(&versioned_object_uid);
-    let object_url = state
-        .cdr
-        .rest_v1(&format!("ehr/{ehr}/versioned_composition/{object}"));
-    let object_response = state
-        .cdr
-        .get(&session.credential, &object_url, "application/json")
-        .await?;
-    let object_body = crate::cdr::CdrClient::expect_success(object_response)?.body;
-
-    let version_uid = version_uid.trim();
-    let version_url = if version_uid.is_empty() {
-        state
-            .cdr
-            .rest_v1(&format!("ehr/{ehr}/versioned_composition/{object}/version"))
-    } else {
-        state.cdr.rest_v1(&format!(
-            "ehr/{ehr}/versioned_composition/{object}/version/{}",
-            urlencoding::encode(version_uid)
-        ))
-    };
-    let version_response = state
-        .cdr
-        .get(&session.credential, &version_url, "application/json")
-        .await?;
-    let version_body = crate::cdr::CdrClient::expect_success(version_response)?.body;
-    parse_versioned_details(&object_body, &version_body)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// Flatten a `VERSIONED_COMPOSITION` body plus a VERSION body into
-/// [`VersionedCompositionDetails`]. Defensive throughout — an absent attribute
-/// reads as empty rather than failing the card.
-///
-/// # Errors
-/// [`ViewerError::Internal`] when either body is not valid JSON.
-fn parse_versioned_details(
-    object_body: &str,
-    version_body: &str,
-) -> Result<VersionedCompositionDetails, ViewerError> {
-    let object: Value = serde_json::from_str(object_body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::VersionedCompositionJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
-    let version: Value = serde_json::from_str(version_body).map_err(|e| {
-        ViewerError::Internal(tr_with(Msg::VersionJson, &[("e", (e).to_string().into())]))
-    })?;
-    Ok(VersionedCompositionDetails {
-        object_uid: crate::uid::uid_value_of_document(&object),
-        owner_id: json_str(&object, &["owner_id", "id", "value"]),
-        time_created: json_str(&object, &["time_created", "value"]),
-        version_id: crate::uid::uid_value_of_document(&version),
-        lifecycle_state: json_str(&version, &["lifecycle_state", "value"]),
-        preceding_version_uid: json_str(&version, &["preceding_version_uid", "value"]),
-        contribution_uid: json_str(&version, &["contribution", "id", "value"]),
-        signed: version
-            .get("signature")
-            .and_then(Value::as_str)
-            .is_some_and(|signature| !signature.is_empty()),
-        has_data: version.get("data").is_some_and(|data| !data.is_null()),
-    })
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// Parse a `REVISION_HISTORY` body (either the canonical `{ "items": [...] }`
-/// wrapper or a bare array) into version entries. Defensive throughout — a
-/// missing field reads as empty rather than failing.
-///
-/// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
-pub(crate) fn parse_versions(body: &str) -> Result<Vec<VersionEntry>, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::RevisionHistoryJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
-    let items = doc
-        .get("items")
-        .and_then(Value::as_array)
-        .or_else(|| doc.as_array())
-        .cloned()
-        .unwrap_or_default();
-    Ok(items.iter().map(version_entry).collect())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// Flatten one `REVISION_HISTORY_ITEM` (`version_id` + `audits`) into a
-/// [`VersionEntry`], reading the first audit for the commit metadata.
-fn version_entry(item: &Value) -> VersionEntry {
-    let version_id = json_str(item, &["version_id", "value"]);
-    let audit = item
-        .get("audits")
-        .and_then(Value::as_array)
-        .and_then(|audits| audits.first());
-    VersionEntry {
-        version_id,
-        committed: audit
-            .map(|a| json_str(a, &["time_committed", "value"]))
-            .unwrap_or_default(),
-        change_type: audit
-            .map(|a| json_str(a, &["change_type", "value"]))
-            .unwrap_or_default(),
-        committer: audit
-            .map(|a| json_str(a, &["committer", "name"]))
-            .unwrap_or_default(),
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// Follow a chain of object keys and return the terminal string value, or an
-/// empty string if any hop is missing / not a string.
-fn json_str(value: &Value, path: &[&str]) -> String {
-    let mut current = value;
-    for key in path {
-        match current.get(*key) {
-            Some(next) => current = next,
-            None => return String::new(),
+impl CompTab {
+    /// The tab the address names, the Reading for none.
+    fn asked() -> Self {
+        match crate::request::query("tab").as_deref() {
+            Some("document") => Self::Document,
+            Some("versions") => Self::Versions,
+            Some("tags") => Self::Tags,
+            _ => Self::Reading,
         }
     }
-    current.as_str().unwrap_or_default().to_owned()
+
+    /// The tab's key.
+    const fn key(self) -> &'static str {
+        match self {
+            Self::Reading => "reading",
+            Self::Document => "document",
+            Self::Versions => "versions",
+            Self::Tags => "tags",
+        }
+    }
 }
 
-/// The document pane's OPENING mode, from `?view=` — how the compositions
-/// tab's rows link straight to the rendered clinical reading.
-///
-/// Read UNTRACKED at setup: the pane's own tabs own the mode from then on, and
-/// an effect chasing the address bar would be the signal-writes-signal shape
-/// the reactivity rules forbid. Untracked is sound because every way of
-/// arriving with a `?view=` is a fresh render of this route. Anything that adds
-/// an in-app link toggling `?view=` on THIS path must make the pane's mode
-/// reactive instead.
-fn pane_view_from_url() -> PaneView {
-    leptos_router::hooks::use_query_map()
-        .with_untracked(|q| q.get("view"))
-        .as_deref()
-        .and_then(PaneView::from_param)
+/// The address of the tab `tab` of the composition, at `version` when it is
+/// an older one.
+fn tab_href(ehr_id: &str, uid: &str, tab: CompTab, version: Option<&str>) -> String {
+    let base = composition_href(ehr_id, uid);
+    let mut pairs = Vec::new();
+    if tab != CompTab::Reading {
+        pairs.push(format!("tab={}", tab.key()));
+    }
+    if let Some(version) = version {
+        pairs.push(format!("version={}", urlencoding::encode(version)));
+    }
+    if pairs.is_empty() {
+        base
+    } else {
+        format!("{base}?{}", pairs.join("&"))
+    }
+}
+
+/// The header facts of a composition document.
+#[derive(Debug, Clone, Default)]
+struct Head {
+    /// `name.value`.
+    name: String,
+    /// `archetype_details.template_id.value`.
+    template: String,
+    /// `context.start_time.value`.
+    started: String,
+    /// `composer.name`.
+    composer: String,
+}
+
+impl Head {
+    /// The facts of the canonical JSON `body`; a body that is not JSON names
+    /// none of them.
+    fn of(body: &str) -> Self {
+        // NOTE: the header facts are a projection of a document the CDR accepted; one it sends unparsable is shown in the Document tab as sent.
+        let Ok(doc) = serde_json::from_str::<Value>(body) else {
+            return Self::default();
+        };
+        let text = |pointer: &str| {
+            doc.pointer(pointer)
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_owned()
+        };
+        Self {
+            name: text("/name/value"),
+            template: text("/archetype_details/template_id/value"),
+            started: text("/context/start_time/value"),
+            composer: text("/composer/name"),
+        }
+    }
+}
+
+/// The FerroUI reading section of a rendered RM section.
+pub(crate) fn reading_section(rendered: &RenderedSection) -> Section {
+    let mut elements = Vec::new();
+    let mut sections = Vec::new();
+    for child in &rendered.children {
+        match child {
+            RenderedNode::Row(row) => {
+                let value = match &row.code {
+                    Some(code) => {
+                        let (system, code) = code.split_once("::").unwrap_or(("", code));
+                        let mut coded = Coding::new(code, row.value.clone());
+                        if !system.is_empty() {
+                            coded = coded.system(system);
+                        }
+                        Shown::Coded(coding(coded, Layout::Inline))
+                    }
+                    None => Shown::Text(row.value.clone()),
+                };
+                elements.push(Element {
+                    label: row.label.clone(),
+                    value,
+                });
+            }
+            RenderedNode::Section(section) => sections.push(reading_section(section)),
+        }
+    }
+    Section {
+        title: rendered.title.clone(),
+        node: rendered.archetype_node_id.clone(),
+        elements,
+        sections,
+    }
+}
+
+/// The Reading tab: the document as a clinical reading, or a note when it
+/// is not a canonical document the reading understands.
+fn reading_panel(ehr_id: &str, uid: &str, body: &str, older: Option<AnyView>) -> AnyView {
+    let drawn = match crate::clinical::render(body) {
+        Some(document) => {
+            let section = reading_section(&document);
+            let mut sections = section.sections;
+            if !section.elements.is_empty() {
+                sections.insert(
+                    0,
+                    Section {
+                        title: tr(Msg::CompositionContext),
+                        node: None,
+                        elements: section.elements,
+                        sections: Vec::new(),
+                    },
+                );
+            }
+            reading(Reading {
+                sections,
+                level: Level::Two,
+                folded: None,
+            })
+        }
+        None => plain_section(info_note(tr(Msg::CompositionNoReading))),
+    };
+    let full = older.is_none().then(|| {
+        plain_section(ferrohealth_ui::view::button::link_button(
+            tab_href(ehr_id, uid, CompTab::Document, None),
+            ferrohealth_ui::view::button::Variant::Ghost,
+            Some(Glyph::FILE_CODE),
+            tr(Msg::CompositionShowDocument),
+        ))
+    });
+    panel(view! {
+        {older.map(plain_section)}
+        {drawn}
+        {full}
+    })
+}
+
+/// The representations the Document tab offers.
+const FORMATS: [(&str, ReprFormat); 4] = [
+    ("json", ReprFormat::CanonicalJson),
+    ("xml", ReprFormat::CanonicalXml),
+    ("flat", ReprFormat::Flat),
+    ("structured", ReprFormat::Structured),
+];
+
+/// The representation the address names, canonical JSON for none.
+fn asked_format() -> (usize, ReprFormat) {
+    let asked = crate::request::query("format").unwrap_or_default();
+    FORMATS
+        .iter()
+        .position(|(key, _)| *key == asked)
+        .and_then(|index| FORMATS.get(index).map(|(_, format)| (index, *format)))
+        .unwrap_or((0, ReprFormat::CanonicalJson))
+}
+
+/// The Document tab: the representation switch and the document as the CDR
+/// converted it.
+async fn document_panel(
+    ehr_id: &str,
+    uid: &str,
+    version_uid: &str,
+    version: Option<&str>,
+) -> AnyView {
+    let (current, format) = asked_format();
+    let base = tab_href(ehr_id, uid, CompTab::Document, version);
+    let joiner = if base.contains('?') { '&' } else { '?' };
+    let choices = FORMATS
+        .iter()
+        .map(|(key, format)| (format!("{base}{joiner}format={key}"), format.label()))
+        .collect();
+    let switch = view! {
+        <div class="fui-cluster">
+            {segmented_links(tr(Msg::CompositionFormat), choices, current)}
+            <span class="fui-small fui-muted">{tr(Msg::CompositionConverts)}</span>
+        </div>
+    };
+    let shown = match fetch_composition(ehr_id.to_owned(), version_uid.to_owned(), format).await {
+        Ok(Some(body)) => document_section(
+            tr_with(
+                Msg::CompositionDocumentTitle,
+                &[("format", format.label().into())],
+            ),
+            if format == ReprFormat::CanonicalXml {
+                Language::Xml
+            } else {
+                Language::Json
+            },
+            crate::bff::pretty_body(&body, format),
+            "composition-document",
+        ),
+        Ok(None) => plain_section(info_note(tr(Msg::CompositionDeletedVersion))),
+        Err(error) => plain_section(refused(tr(Msg::CompositionDocumentRefused), &error, None)),
+    };
+    panel(view! {
+        {plain_section(switch)}
+        {shown}
+    })
+}
+
+/// The revision history of the composition, the version in view marked.
+fn history(
+    ehr_id: &str,
+    uid: &str,
+    versions: &[VersionEntry],
+    reading: Option<&str>,
+    deleted: bool,
+) -> AnyView {
+    let latest = versions.first().map(|version| version.version_id.clone());
+    let rows = versions
+        .iter()
+        .map(|version| {
+            let number = version_number(&version.version_id);
+            let current = Some(&version.version_id) == latest.as_ref();
+            let standing = match (current, deleted) {
+                (true, true) => Standing::Deleted,
+                (true, false) => Standing::Current,
+                _ => Standing::Older,
+            };
+            Version {
+                href: (!(current && deleted)).then(|| {
+                    if current {
+                        tab_href(ehr_id, uid, CompTab::Versions, None)
+                    } else {
+                        tab_href(ehr_id, uid, CompTab::Reading, Some(&number))
+                    }
+                }),
+                standing,
+                read: reading == Some(number.as_str()),
+                number,
+                change: version.change_type.clone(),
+                committer: version.committer.clone(),
+                when: ago(&version.committed),
+                contribution: ().into_any(),
+            }
+        })
+        .collect();
+    version_history(VersionHistory {
+        caption: tr(Msg::CompositionVersions),
+        versions: rows,
+        at_time: Some(at_time_row(
+            composition_href(ehr_id, uid),
+            &crate::request::query("at").unwrap_or_default(),
+            tr(Msg::CompositionAtTimeOpens),
+        )),
+    })
+}
+
+/// The Versions tab: the history, the version in view's envelope and the
+/// versioned composition.
+fn versions_panel(
+    ehr_id: &str,
+    uid: &str,
+    versions: &Result<Vec<VersionEntry>, ViewerError>,
+    details: Result<VersionedCompositionDetails, ViewerError>,
+    reading: Option<&str>,
+    deleted: bool,
+) -> AnyView {
+    let count = versions
+        .as_ref()
+        .map_or(None, |versions| u64::try_from(versions.len()).ok());
+    let history = match versions {
+        Ok(versions) => history(ehr_id, uid, versions, reading, deleted),
+        Err(error) => refused(tr(Msg::CompositionHistoryRefused), error, None),
+    };
+    let facts = match details {
+        Ok(details) => {
+            let yes_no = |yes: bool| tr(if yes { Msg::Yes } else { Msg::No }).into_any();
+            let version = section(
+                Some(tr_with(
+                    Msg::CompositionVersionN,
+                    &[("version", version_number(&details.version_id).into())],
+                )),
+                None,
+                None,
+                definitions(vec![
+                    (
+                        tr(Msg::FactLifecycle),
+                        details.lifecycle_state.clone().into_any(),
+                    ),
+                    (
+                        tr(Msg::CompositionPreceding),
+                        if details.preceding_version_uid.is_empty() {
+                            tr(Msg::CompositionFirstVersion).into_any()
+                        } else {
+                            short(&details.preceding_version_uid)
+                        },
+                    ),
+                    (tr(Msg::FactContribution), short(&details.contribution_uid)),
+                    (tr(Msg::FactSigned), yes_no(details.signed)),
+                    (tr(Msg::CompositionHoldsContent), yes_no(details.has_data)),
+                ]),
+            );
+            let object = section(
+                Some(tr(Msg::CompositionVersioned)),
+                None,
+                None,
+                definitions(vec![
+                    (
+                        tr(Msg::CompositionVersionedObject),
+                        short(&details.object_uid),
+                    ),
+                    (
+                        tr(Msg::ColumnEhr),
+                        view! { <a href=ehr_href(ehr_id)>{short(ehr_id)}</a> }.into_any(),
+                    ),
+                    (
+                        tr(Msg::CompositionFirstCommitted),
+                        when(&details.time_created),
+                    ),
+                ]),
+            );
+            view! { {version} {object} }.into_any()
+        }
+        Err(error) => plain_section(refused(tr(Msg::CompositionVersionRefused), &error, None)),
+    };
+    panel(view! {
+        {section(Some(tr(Msg::CompositionVersions)), count, None, history)}
+        {facts}
+    })
+}
+
+/// What a post to the composition's page asks, done: delete, set or remove a
+/// tag. `Some` holds the refusal to draw, and for a tag the draft it keeps.
+async fn act(
+    ehr_id: &str,
+    uid: &str,
+    name: &str,
+) -> (Option<AnyView>, Option<(ViewerError, TagAct)>) {
+    let Some(posted) = crate::posted::posted() else {
+        return (None, None);
+    };
+    if posted.intent() == "delete-composition" {
+        return match delete_composition(ehr_id.to_owned(), posted.text("version")).await {
+            Ok(()) => {
+                redirect_with(
+                    &ehr_href(ehr_id),
+                    &Done::ok(tr(Msg::CompositionDeleted)).line(name.to_owned()),
+                );
+                (None, None)
+            }
+            Err(error) => (
+                Some(refused(tr(Msg::CompositionDeleteRefused), &error, None)),
+                None,
+            ),
+        };
+    }
+    let Some(act) = tag_act() else {
+        return (None, None);
+    };
+    let kind = "composition".to_owned();
+    let done = match &act {
+        TagAct::Set { key, value, path } => {
+            set_ehr_tag(
+                ehr_id.to_owned(),
+                kind,
+                uid.to_owned(),
+                key.clone(),
+                value.clone(),
+                path.clone(),
+            )
+            .await
+        }
+        TagAct::Remove(key) => {
+            delete_ehr_tag(ehr_id.to_owned(), kind, uid.to_owned(), key.clone()).await
+        }
+    };
+    match done {
+        Ok(()) => {
+            redirect_with(
+                &tab_href(ehr_id, uid, CompTab::Tags, None),
+                &tag_done(&act, name),
+            );
+            (None, None)
+        }
+        Err(error) => (None, Some((error, act))),
+    }
+}
+
+/// The composition's header: its name, its template and context line, and
+/// Edit with the More menu; a deleted composition says when it was deleted.
+fn header(
+    ehr_id: &str,
+    uid: &str,
+    head: &Head,
+    latest: &str,
+    reading: Option<&str>,
+    deleted: Option<&VersionEntry>,
+) -> AnyView {
+    let more = Menu::new("composition-more", tr(Msg::CompositionMore), Vec::new());
+    let (actions, subtitle, badge) = if let Some(deletion) = deleted {
+        let last = version_number(&deletion.version_id)
+            .parse::<u32>()
+            .ok()
+            .and_then(|number| number.checked_sub(1))
+            .map_or_else(String::new, |number| number.to_string());
+        (
+            ActionGroup::primary(Action::new(
+                Some(Glyph::ROTATE_CCW_CLOCK),
+                tr_with(
+                    Msg::CompositionReadVersion,
+                    &[("version", last.clone().into())],
+                ),
+                Act::Link(tab_href(ehr_id, uid, CompTab::Reading, Some(&last))),
+            )),
+            tr_with(
+                Msg::CompositionDeletedLine,
+                &[
+                    ("template", head.template.clone().into()),
+                    (
+                        "when",
+                        ferrohealth_ui::view::time::reading(&deletion.committed).into(),
+                    ),
+                    ("who", deletion.committer.clone().into()),
+                    ("version", version_number(&deletion.version_id).into()),
+                ],
+            ),
+            Some(state_mark(
+                FlowState::Off,
+                &tr(Msg::CompositionDeletedMark),
+            )),
+        )
+    } else {
+        let primary = if reading.is_some() {
+            tr(Msg::CompositionEditLatest)
+        } else {
+            tr(Msg::CompositionEdit)
+        };
+        let menu = more.destructive(vec![Item::new(Action::new(
+            Some(Glyph::TRASH),
+            tr(Msg::CompositionDelete),
+            Act::Dialog(DELETE_DIALOG.to_owned()),
+        ))]);
+        let line = match reading {
+            Some(_) => tr_with(
+                Msg::CompositionLineOlder,
+                &[
+                    ("template", head.template.clone().into()),
+                    (
+                        "started",
+                        ferrohealth_ui::view::time::reading(&head.started).into(),
+                    ),
+                    ("composer", head.composer.clone().into()),
+                ],
+            ),
+            None => tr_with(
+                Msg::CompositionLine,
+                &[
+                    ("template", head.template.clone().into()),
+                    ("version", version_number(latest).into()),
+                    (
+                        "started",
+                        ferrohealth_ui::view::time::reading(&head.started).into(),
+                    ),
+                    ("composer", head.composer.clone().into()),
+                ],
+            ),
+        };
+        (
+            ActionGroup::primary(Action::new(
+                Some(Glyph::PENCIL),
+                primary,
+                Act::Link(format!("{}/edit", composition_href(ehr_id, uid))),
+            ))
+            .more(menu),
+            line,
+            None,
+        )
+    };
+    let name = if head.name.is_empty() {
+        shortened(uid)
+    } else {
+        head.name.clone()
+    };
+    page_heading(
+        Header {
+            title: name.into(),
+            subtitle: Some(subtitle.into()),
+            crumbs: crumbs(ehr_id),
+            mono: false,
+            badge,
+        },
+        actions,
+    )
+    .into_any()
+}
+
+/// The confirmation of Delete composition.
+fn delete_dialog(ehr_id: &str, uid: &str, name: &str, latest: &str, count: usize) -> AnyView {
+    let next = version_number(latest).parse::<u32>().map_or_else(
+        |_| String::new(),
+        |number| number.saturating_add(1).to_string(),
+    );
+    danger_dialog(
+        Confirmation {
+            id: DELETE_DIALOG,
+            title: tr_with(
+                Msg::CompositionDeleteTitle,
+                &[("name", name.to_owned().into())],
+            )
+            .into(),
+            message: tr_with(
+                Msg::CompositionDeleteMessage,
+                &[
+                    ("next", next.into()),
+                    ("count", crate::pages::common::count(count)),
+                ],
+            )
+            .into(),
+        },
+        view! {
+            <form method="post" action=composition_href(ehr_id, uid)>
+                <input type="hidden" name="intent" value="delete-composition" />
+                <input type="hidden" name="version" value=latest.to_owned() />
+                <button type="submit" class="fui-button fui-button-danger">
+                    {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
+                    {tr(Msg::CompositionDeleteConfirm)}
+                </button>
+            </form>
+        },
+    )
+    .into_any()
+}
+
+/// The composition id the route names.
+fn uid_param() -> String {
+    use_params_map()
+        .with_untracked(|params| params.get("uid"))
         .unwrap_or_default()
 }
 
-/// Toasts the commit's outcome.
-///
-/// Both outcomes toast; the resources refetch via `update.version()` in their
-/// own sources, and the CDR's diagnostic also stays inline in the editor.
-fn wire_commit_toast<I: Send + Sync + 'static>(
-    toaster: ferrohealth_ui::widget::toast::Toasts,
-    update: Action<I, Result<String, ViewerError>>,
-) {
-    Effect::new(move |_| match update.value().get() {
-        Some(Ok(uid)) => {
-            let detail = if uid.is_empty() {
-                tr(Msg::NewVersionWasCommitted)
-            } else {
-                tr_with(Msg::NewVersion, &[("uid", uid.clone().into())])
-            };
-            toast_success(toaster, &tr(Msg::NewVersionCommitted), &detail);
-        }
-        Some(Err(error)) => crate::feedback::toast_write_failure(
-            toaster,
-            &tr(Msg::CommitFailed),
-            &tr(Msg::TheNewCompositionVersion),
-            &error,
-        ),
-        None => {}
-    });
-}
-
-/// Toasts the logical delete's outcome and leaves the screen on success.
-///
-/// A success returns to the EHR's compositions tab, whose list then reloads
-/// with the deleted composition gone. Navigation is an outside-world
-/// side-effect, so an `Effect` is its correct home; it never runs on the
-/// server.
-fn wire_delete_outcome<I: Send + Sync + 'static>(
-    toaster: ferrohealth_ui::widget::toast::Toasts,
-    delete: Action<I, Result<(), ViewerError>>,
-    ehr_id: Signal<String>,
-) {
-    let navigate = leptos_router::hooks::use_navigate();
-    Effect::new(move |_| match delete.value().get() {
-        Some(Ok(())) => {
-            toast_success(
-                toaster,
-                &tr(Msg::CompositionDeleted),
-                &tr(Msg::CompositionWasLogicallyDeletedVersionHistory),
-            );
-            // The route param is percent-encoded through the shared href
-            // builder — all percent-coding goes through `urlencoding`.
-            navigate(
-                &format!(
-                    "{}?tab=compositions",
-                    crate::pages::ehrs::ehr_detail_href(&ehr_id.get_untracked())
-                ),
-                leptos_router::NavigateOptions::default(),
-            );
-        }
-        Some(Err(error)) => toast_error(
-            toaster,
-            &tr(Msg::DeleteFailed),
-            &crate::feedback::logical_delete_failure_copy(&tr(Msg::ThisComposition), &error),
-        ),
-        None => {}
-    });
-}
-
-/// The composition viewer screen.
+/// One composition.
 #[expect(
     clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; view!/mount always consumes the value"
+    reason = "#[component] rewrites the fn; the router always consumes the value"
 )]
-#[component]
 #[expect(
     clippy::too_many_lines,
-    reason = "resource/action setup plus the erased section locals — one screen, one function (rules §1)"
+    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
 )]
+#[component]
 pub fn CompositionPage() -> impl IntoView {
-    let params = leptos_router::hooks::use_params_map();
-    let ehr_id = Signal::derive(move || params.with(|p| p.get("ehr_id").unwrap_or_default()));
-    let uid = Signal::derive(move || params.with(|p| p.get("uid").unwrap_or_default()));
-
-    let format = RwSignal::new(ReprFormat::CanonicalJson);
-    let initial_view = pane_view_from_url();
-    // Empty = "latest" (fetch by the bare versioned-object id); a non-empty
-    // value is a specific OBJECT_VERSION_ID.
-    let selected_version = RwSignal::new(String::new());
-
-    // The version_at_time picker: a `datetime-local` value resolves server-side
-    // to the VERSION extant at that instant; on success its OBJECT_VERSION_ID
-    // becomes the shared `selected_version` and the document pane refetches. A
-    // `404` (no version at that time) stays an inline note in the toolbar.
-    let at_time_input = RwSignal::new(String::new());
-    let version_at_time = Action::new(
-        move |(ehr_id, versioned_object_uid, at_time): &(String, String, String)| {
-            let ehr_id = ehr_id.clone();
-            let versioned_object_uid = versioned_object_uid.clone();
-            let at_time = at_time.clone();
-            async move {
-                let resolved = fetch_version_at_time(ehr_id, versioned_object_uid, at_time).await;
-                // The write rides the dispatched event's own continuation: an
-                // event write, not an Effect write.
-                if let Ok(version) = &resolved {
-                    selected_version.set(version.clone());
+    let ehr_id = ehr_id_param();
+    let uid = uid_param();
+    let tab = CompTab::asked();
+    let asked = crate::request::query("version");
+    let at = crate::request::query("at");
+    let page = awaited(async move {
+        let mut versions = fetch_versions(ehr_id.clone(), uid.clone()).await;
+        if let Ok(versions) = &mut versions {
+            versions.sort_by_key(|version| {
+                std::cmp::Reverse(
+                    version_number(&version.version_id)
+                        .parse::<u64>()
+                        .unwrap_or(0),
+                )
+            });
+        }
+        let latest_entry = versions
+            .as_ref()
+            .ok()
+            .and_then(|versions| versions.first().cloned());
+        let latest = latest_entry
+            .as_ref()
+            .map_or_else(String::new, |entry| entry.version_id.clone());
+        let current =
+            fetch_composition(ehr_id.clone(), uid.clone(), ReprFormat::CanonicalJson).await;
+        let current = match current {
+            Ok(current) => current,
+            Err(error) => {
+                if is_status(&error, http::StatusCode::NOT_FOUND) {
+                    crate::request::set_status(http::StatusCode::NOT_FOUND);
                 }
-                resolved
+                let heading = page_heading(
+                    Header {
+                        title: tr_with(Msg::CompositionTitle, &[("id", shortened(&uid).into())])
+                            .into(),
+                        subtitle: None,
+                        crumbs: crumbs(&ehr_id),
+                        mono: false,
+                        badge: None,
+                    },
+                    ActionGroup::none(),
+                );
+                return view! {
+                    <Title text=tr(Msg::CompositionRefused) />
+                    {heading}
+                    {refused(tr(Msg::CompositionRefused), &error, None)}
+                }
+                .into_any();
             }
-        },
-    );
-
-    // The "Edit as new version" affordance state and its commit action, created
-    // before the resources so its `version()` can trigger their refetch.
-    let edit_open = RwSignal::new(false);
-    let editor_body = RwSignal::new(String::new());
-    let update = Action::new(
-        |(ehr_id, versioned_object_uid, current_version_uid, body): &(
-            String,
-            String,
-            String,
-            String,
-        )| {
-            let ehr_id = ehr_id.clone();
-            let versioned_object_uid = versioned_object_uid.clone();
-            let current_version_uid = current_version_uid.clone();
-            let body = body.clone();
-            async move {
-                update_composition(ehr_id, versioned_object_uid, current_version_uid, body).await
+        };
+        let deleted = current.is_none().then(|| latest_entry.clone()).flatten();
+        let latest_number = version_number(&latest);
+        let default_reading = deleted.as_ref().and_then(|entry| {
+            version_number(&entry.version_id)
+                .parse::<u32>()
+                .ok()
+                .and_then(|number| number.checked_sub(1))
+                .map(|number| number.to_string())
+        });
+        let reading_number = match (&at, &asked) {
+            (Some(_), _) => None,
+            (None, Some(number)) if *number != latest_number => Some(number.clone()),
+            _ => default_reading.clone(),
+        };
+        let shown: Result<Option<String>, ViewerError> = match (&at, &reading_number) {
+            (Some(at), _) => fetch_version_at_time(ehr_id.clone(), uid.clone(), at.clone())
+                .await
+                .map(Some),
+            (None, Some(number)) => {
+                fetch_composition(
+                    ehr_id.clone(),
+                    version_uid_at(&latest, number),
+                    ReprFormat::CanonicalJson,
+                )
+                .await
             }
-        },
-    );
-
-    // The logical-delete action + its confirmation state, created before the
-    // resources so its `version()` is a refetch trigger.
-    let confirming_delete = RwSignal::new(false);
-    let delete = Action::new(|(ehr_id, version_uid): &(String, String)| {
-        let ehr_id = ehr_id.clone();
-        let version_uid = version_uid.clone();
-        async move { delete_composition(ehr_id, version_uid).await }
-    });
-
-    let versions = Resource::new(
-        move || (ehr_id.get(), uid.get(), update.version().get()),
-        |(ehr_id, uid, _)| async move { fetch_versions(ehr_id, uid).await },
-    );
-    let versioned = Resource::new(
-        move || {
-            (
-                ehr_id.get(),
-                uid.get(),
-                selected_version.get(),
-                update.version().get(),
-            )
-        },
-        |(ehr_id, uid, version_uid, _)| async move {
-            fetch_versioned_composition(ehr_id, uid, version_uid).await
-        },
-    );
-    let document = Resource::new(
-        move || {
-            let chosen = selected_version.get();
-            let version_uid = if chosen.is_empty() { uid.get() } else { chosen };
-            (
-                ehr_id.get(),
-                version_uid,
-                format.get(),
-                update.version().get(),
-            )
-        },
-        |(ehr_id, version_uid, format, _)| async move {
-            fetch_composition(ehr_id, version_uid, format).await
-        },
-    );
-
-    // Both outcomes toast; the resources refetch via `update.version()` in
-    // their sources above, and the CDR's diagnostic also stays inline in the
-    // editor, next to the edited body.
-    let toaster = crate::components::toast::toaster();
-    wire_commit_toast(toaster, update);
-    wire_delete_outcome(toaster, delete, ehr_id);
-
-    let toolbar = toolbar_section(
-        format,
-        versions,
-        selected_version,
-        ehr_id,
-        uid,
-        version_at_time,
-        at_time_input,
-    );
-    let body = document_section(document, initial_view);
-    let edit = edit_section(
-        ehr_id,
-        uid,
-        format,
-        versions,
-        document,
-        edit_open,
-        editor_body,
-        update,
-    );
-    let timeline = timeline_section(versions, selected_version);
-    let audit = audit_section(versions, selected_version);
-    let versioned_card = versioned_section(versioned);
-    let delete_action = delete_section(ehr_id, versions, confirming_delete, delete);
-    // The tag panel edits whichever collection the viewer is showing: the
-    // VERSIONED_COMPOSITION container on "Latest", that one version once it is
-    // pinned. The two are disjoint on the wire, so the addressed id is derived
-    // from the same selection the document pane uses.
-    let tags = crate::pages::ehr_tags::composition_tags_section(
-        ehr_id,
-        Signal::derive(move || {
-            let chosen = selected_version.get();
-            if chosen.is_empty() { uid.get() } else { chosen }
-        }),
-    );
-
-    let title = Signal::derive(move || {
-        let short: String = uid.get().chars().take(8).collect();
-        tr_with(Msg::Composition, &[("short", short.clone().into())])
-    });
-
-    // The parent-EHR crumb href/label reads the route param once at setup (a
-    // composition route instance keeps its `ehr_id` for its lifetime).
-    let ehr_id_value = ehr_id.get_untracked();
-    let ehr_short: String = ehr_id_value.chars().take(8).collect();
-    let crumbs = vec![
-        Crumb::new(tr(Msg::Ehrs), "/ehrs"),
-        Crumb::new(
-            tr_with(Msg::Ehr, &[("ehr_short", ehr_short.clone().into())]),
-            format!("/ehrs/{ehr_id_value}"),
-        ),
-    ];
-
-    view! {
-        <Title text="Composition" />
-        <div>
-            <PageHeader title=Signal::derive(move || title.get()) crumbs=crumbs mono=true>
-                {delete_action}
-            </PageHeader>
-            {toolbar}
-            {body}
-            {edit}
-            {timeline}
-            {audit}
-            {versioned_card}
-            <div class="mt-4">{tags}</div>
-        </div>
-    }
-}
-
-/// The **Delete composition** affordance: the openEHR logical delete of the
-/// LATEST version, behind the shared confirmation modal
-/// ([`ConfirmDialog`](crate::components::confirm_dialog::ConfirmDialog)) whose
-/// copy says what a logical delete does and does not destroy.
-///
-/// Not admin-gated: this is the ordinary COMPOSITION API operation every
-/// openEHR client has, unlike the physical EHR delete on the EHR-detail screen.
-/// The version it deletes is always the newest one the revision history reports
-/// (the `preceding_version_uid` the spec requires in the path), never the
-/// version the selector happens to be showing.
-fn delete_section(
-    ehr_id: Signal<String>,
-    versions: Resource<Result<Vec<VersionEntry>, ViewerError>>,
-    confirming: RwSignal<bool>,
-    delete: Action<(String, String), Result<(), ViewerError>>,
-) -> AnyView {
-    // Reading a resource in an EVENT HANDLER is untracked — it takes the value
-    // already loaded for the version selector. Deliberately not read into the
-    // dialog copy: a resource read in a rendered signal would differ between the
-    // server pass and hydration, so the copy names the object structurally.
-    let latest = move || {
-        versions
-            .get()
-            .and_then(Result::ok)
-            .and_then(|entries| entries.first().map(|entry| entry.version_id.clone()))
-            .unwrap_or_default()
-    };
-    let message = Signal::derive(|| tr(Msg::LogicallyDeleteLatestVersionCompositionCdr));
-    view! {
-        <div class="contents">
-            <span id="composition-delete-help" class="fui-sr-only">
-                {tr(Msg::DeletesTheLatestVersion2)}
-            </span>
-            <button
-                id="composition-delete"
-                type="button"
-                class=BTN_DANGER
-                title=tr(Msg::DeletesTheLatestVersion)
-                aria-describedby="composition-delete-help"
-                disabled=Signal::derive(move || delete.pending().get())
-                on:click=move |_| confirming.set(true)
-            >
-                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::TRASH, "14")}
-                {tr(Msg::DeleteComposition)}
-            </button>
-            <crate::components::confirm_dialog::ConfirmDialog
-                open=confirming
-                title=tr(Msg::DeleteComposition)
-                message=message
-                confirm_label=tr(Msg::DeleteComposition)
-                dialog_id="composition-delete-confirm-dialog"
-                confirm_id="composition-delete-confirm"
-                on_cancel=Callback::new(move |()| confirming.set(false))
-                on_confirm=Callback::new(move |()| {
-                    delete.dispatch((ehr_id.get_untracked(), latest()));
-                    confirming.set(false);
-                })
-            />
-        </div>
-    }
-    .into_any()
-}
-
-/// The versioned-object card: the `VERSIONED_COMPOSITION` container's own facts
-/// (uid, owning EHR, first-version time) plus the SELECTED version's envelope
-/// facts read directly from the VERSION resource — lifecycle state, preceding
-/// version, contribution, whether it is signed, and whether it still carries
-/// data (a logically deleted version does not).
-/// A pure read under a `<Transition>` so the previous version's facts stay
-/// visible while another version loads, resolving its `Result` INSIDE the
-/// transition: a failure renders inline where the data would be, never through
-/// an `<ErrorBoundary>`, whose SSR'd fallback mismatches at hydration in
-/// leptos 0.8.
-fn versioned_section(
-    versioned: Resource<Result<VersionedCompositionDetails, ViewerError>>,
-) -> AnyView {
-    view! {
-        <div class="mt-3">
-            <Transition fallback=|| {
-                view! { {ferrohealth_ui::view::empty::skeleton(4, tr(Msg::Loading))} }
-            }>
-                {move || Suspend::new(async move {
-                    match versioned.await {
-                        Ok(details) => versioned_card(&details),
-                        Err(e) => crate::components::notice::inline_error(&e),
-                    }
-                })}
-            </Transition>
-        </div>
-    }
-    .into_any()
-}
-
-/// Render the versioned-object + version-envelope facts as a card.
-fn versioned_card(details: &VersionedCompositionDetails) -> AnyView {
-    let content = if details.has_data {
-        "present".to_owned()
-    } else {
-        tr(Msg::NoneDeletedVersion)
-    };
-    let signature = if details.signed {
-        "present".to_owned()
-    } else {
-        "none".to_owned()
-    };
-    view! {
-        <section class=CARD_PAD id="versioned-composition">
-            <h2 class=CARD_TITLE>{tr(Msg::VersionedObject2)}</h2>
-            <dl class="fui-facts text-sm">
-                {versioned_row(tr(Msg::VersionedObject), "object-uid", details.object_uid.clone())}
-                {versioned_row(tr(Msg::OwnerEhr), "owner", details.owner_id.clone())}
-                {versioned_row("created".to_owned(), "created", details.time_created.clone())}
-                {versioned_row("version".to_owned(), "version", details.version_id.clone())}
-                {versioned_row(
-                    "lifecycle".to_owned(),
-                    "lifecycle",
-                    details.lifecycle_state.clone(),
-                )}
-                {versioned_row(
-                    tr(Msg::PrecedingVersion),
-                    "preceding",
-                    details.preceding_version_uid.clone(),
-                )}
-                {versioned_row(
-                    "contribution".to_owned(),
-                    "contribution",
-                    details.contribution_uid.clone(),
-                )} {versioned_row("signature".to_owned(), "signature", signature)}
-                {versioned_row("content".to_owned(), "content", content)}
-            </dl>
-        </section>
-    }
-    .into_any()
-}
-
-/// One label/value line of the versioned-object card. `hook` is the row's
-/// `data-versioned-fact` value — the stable E2E hook; an absent value shows an
-/// em dash.
-fn versioned_row(label: String, hook: &'static str, value: String) -> AnyView {
-    let shown = crate::components::facts::fact_value(value);
-    view! {
-        <div>
-            <dt>{label}</dt>
-            <dd class="font-mono wrap-break-word text-ink" data-versioned-fact=hook>
-                {shown}
-            </dd>
-        </div>
-    }
-    .into_any()
-}
-
-/// The "Edit as new version" affordance: a toggle button opening a
-/// prefilled-from-the-current-document editor that PUTs a new version. Editing
-/// is offered only when the current format is canonical JSON (the other formats
-/// show a switch hint). The `If-Match` always targets the NEWEST version (a
-/// muted hint says so), never the version selected in the dropdown. Structure
-/// is constant (visibility toggled with `class:hidden`) so server and client
-/// views match.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the section wires several page-level signals + two resources"
-)]
-fn edit_section(
-    ehr_id: Signal<String>,
-    uid: Signal<String>,
-    format: RwSignal<ReprFormat>,
-    versions: Resource<Result<Vec<VersionEntry>, ViewerError>>,
-    document: Resource<Result<Option<String>, ViewerError>>,
-    edit_open: RwSignal<bool>,
-    editor_body: RwSignal<String>,
-    update: Action<(String, String, String, String), Result<String, ViewerError>>,
-) -> AnyView {
-    let is_json = move || format.get() == ReprFormat::CanonicalJson;
-    // Opening the editor prefills the textarea from the currently displayed
-    // document (canonical JSON only). Reading a resource in an event handler
-    // is untracked — it takes the value already loaded for the pane.
-    let toggle = move |_| {
-        let opening = !edit_open.get();
-        if opening
-            && format.get() == ReprFormat::CanonicalJson
-            && let Some(Ok(Some(current))) = document.get()
-        {
-            editor_body.set(pretty_json(current));
-        }
-        edit_open.set(opening);
-    };
-    let commit_toaster = crate::components::toast::toaster();
-    let on_commit = move |_| {
-        // If-Match the NEWEST version (entries are newest-first), regardless of
-        // which version the dropdown shows. An unresolved history refuses the
-        // click loudly — dispatching an empty precondition would surface as a
-        // generic invalid-input failure instead of the real reason.
-        let Some(current) = versions
-            .get()
-            .and_then(Result::ok)
-            .and_then(|entries| entries.first().map(|entry| entry.version_id.clone()))
-        else {
-            toast_error(
-                commit_toaster,
-                &tr(Msg::VersionHistoryStillLoading),
-                &tr(Msg::CommitNeedsLatestVersionIdPrecondition),
-            );
-            return;
+            _ => Ok(current.clone()),
         };
-        update.dispatch((ehr_id.get(), uid.get(), current, editor_body.get()));
-    };
-    view! {
-        <div class="mt-3">
-            <button id="edit-new-version" type="button" class=BTN_SECONDARY on:click=toggle>
-                {move || {
-                    if edit_open.get() { tr(Msg::CloseEditor) } else { tr(Msg::EditAsNewVersion) }
-                }}
-            </button>
-            <div class:hidden=move || !edit_open.get()>
-                <section class=format!("{CARD_PAD} mt-3")>
-                    <h2 class=CARD_TITLE>{tr(Msg::CommitNewVersion)}</h2>
-                    <p class="mb-2 fui-help">{tr(Msg::CommitsTopLatestVersion)}</p>
-                    <div class:hidden=move || is_json()>
-                        <p class="text-sm text-ink-muted">{tr(Msg::SwitchCanonicalJsonEdit)}</p>
-                    </div>
-                    <div class:hidden=move || !is_json() class="flex flex-col gap-3">
-                        <label class=LABEL r#for="edit-body">
-                            {tr(Msg::CompositionCanonicalJson)}
-                        </label>
-                        {code_field(
-                            "edit-body",
-                            Language::Json,
-                            editor_body,
-                            None,
-                            Height::Document,
-                        )}
-                        <div class="flex items-center gap-3">
-                            <button
-                                id="edit-commit"
-                                type="button"
-                                class=BTN_PRIMARY
-                                disabled=Signal::derive(move || update.pending().get())
-                                on:click=on_commit
-                            >
-                                {tr(Msg::CommitNewVersion)}
-                            </button>
-                            <Show when=move || update.pending().get()>
-                                <span class="text-sm text-ink-muted">{tr(Msg::Committing)}</span>
-                            </Show>
-                        </div>
-                        {move || match update.value().get() {
-                            Some(Err(error)) => {
-                                view! {
-                                    <div class=WELL>
-                                        <pre class="overflow-auto max-h-[40vh] whitespace-pre-wrap font-mono text-xs text-danger">
-                                            {error.to_string()}
-                                        </pre>
-                                    </div>
-                                }
-                                    .into_any()
-                            }
-                            _ => ().into_any(),
-                        }}
-                    </div>
-                </section>
-            </div>
-        </div>
-    }
-    .into_any()
-}
-
-/// The toolbar: the shared [`FormatSelector`], the version `<select>`
-/// (populated from the revision history under `<Suspense>`), and the
-/// `version_at_time` picker (a `datetime-local` input + an "At time" button that
-/// resolves the version extant at that instant into the shared selection).
-fn toolbar_section(
-    format: RwSignal<ReprFormat>,
-    versions: Resource<Result<Vec<VersionEntry>, ViewerError>>,
-    selected_version: RwSignal<String>,
-    ehr_id: Signal<String>,
-    uid: Signal<String>,
-    version_at_time: Action<(String, String, String), Result<String, ViewerError>>,
-    at_time_input: RwSignal<String>,
-) -> AnyView {
-    let select = view! {
-        <Suspense fallback=|| {
-            ferrohealth_ui::view::empty::busy(
-                tr(Msg::ReadingTheVersions),
-                ferrohealth_ui::view::empty::Busy::Inline,
-            )
-        }>
-            {move || Suspend::new(async move {
-                match versions.await {
-                    Ok(entries) => version_select(entries, selected_version),
-                    Err(_) => {
-                        // Resolve inside the Suspense: an SSR'd ErrorBoundary fallback
-                        // mismatches at hydration in leptos 0.8.
-                        view! {
-                            <span class="text-xs text-danger">{tr(Msg::VersionsUnavailable)}</span>
-                        }
-                            .into_any()
-                    }
-                }
-            })}
-        </Suspense>
-    }
-    .into_any();
-    // Dispatch the at-time resolution (server-fn does the RFC 3339 completion);
-    // skip an empty input so no needless round-trip is made.
-    let on_at_time = move |_| {
-        let at_time = at_time_input.get();
-        if !at_time.trim().is_empty() {
-            version_at_time.dispatch((ehr_id.get(), uid.get(), at_time));
-        }
-    };
-    // A 404 (no version at that time) is a neutral note; any other failure
-    // renders through the normal inline-error path. Deliberately not an
-    // `EmptyState`: this answers the time-travel control beside it, not a data
-    // region that came back empty.
-    let note = move || {
-        match version_at_time.value().get() {
-        Some(Err(ref e)) if e.status_code() == Some(http::StatusCode::NOT_FOUND) => view! { <p class="mt-2 text-sm text-ink-muted">{tr(Msg::NoVersionCompositionExistedTime)}</p> }
-        .into_any(),
-        Some(Err(error)) => crate::components::notice::inline_error(&error),
-        _ => ().into_any(),
-    }
-    };
-    view! {
-        <section class=format!("{CARD_PAD} mb-3")>
-            <div class="fui-field-flow">
-                <FormatSelector selected=format />
-                <div class="flex items-center gap-2">
-                    <label class=LABEL r#for="version-select">
-                        {tr(Msg::Version)}
-                    </label>
-                    {select}
-                </div>
-                <div class="flex items-end gap-2">
-                    <div class="flex flex-col gap-1">
-                        <label class=LABEL r#for="version-at-time">
-                            {tr(Msg::TimeTravelInterpretedUtc)}
-                        </label>
-                        <input
-                            id="version-at-time"
-                            type="datetime-local"
-                            class=INPUT
-                            prop:value=move || at_time_input.get()
-                            on:input:target=move |ev| at_time_input.set(ev.target().value())
-                        />
-                    </div>
-                    <button
-                        id="version-at-time-go"
-                        type="button"
-                        class=BTN_SECONDARY
-                        disabled=Signal::derive(move || version_at_time.pending().get())
-                        on:click=on_at_time
-                    >
-                        {tr(Msg::AtTime)}
-                    </button>
-                </div>
-            </div>
-            {note}
-        </section>
-    }
-    .into_any()
-}
-
-/// The version `<select>`: a "Latest" option (empty value) plus one option per
-/// version, driven by `prop:value` + `on:change`.
-fn version_select(entries: Vec<VersionEntry>, selected: RwSignal<String>) -> AnyView {
-    let mut options = vec![view! { <option value="">{tr(Msg::Latest)}</option> }.into_any()];
-    options.extend(entries.into_iter().map(|entry| {
-        let value = entry.version_id.clone();
-        let label = format!("{} · {}", short_version(&entry.version_id), entry.committed);
-        view! { <option value=value>{label}</option> }.into_any()
-    }));
-    view! {
-        <select
-            id="version-select"
-            class=SELECT
-            prop:value=move || selected.get()
-            on:change=move |ev| selected.set(event_target_value(&ev))
-        >
-            {options}
-        </select>
-    }
-    .into_any()
-}
-
-/// The document pane: the pretty-printed representation for the current
-/// `(version, format)` selection, under a `<Transition>` so switching either
-/// keeps the prior document visible. A deleted version (`Ok(None)` — the
-/// operation's `204`) is a first-class rendered absence; a `406` (declined
-/// representation) or any other CDR error renders through the boundary.
-///
-/// `initial_view` is the deep-linked opening mode (`?view=`), read in the
-/// screen's setup — a plain value, so every Suspend re-run mounts the pane the
-/// same way on both sides of hydration.
-fn document_section(
-    document: Resource<Result<Option<String>, ViewerError>>,
-    initial_view: PaneView,
-) -> AnyView {
-    view! {
-        <Transition fallback=|| {
-            view! { {ferrohealth_ui::view::empty::skeleton(8, tr(Msg::Loading))} }
-        }>
-            {move || Suspend::new(async move {
-                match document.await {
-                    Ok(Some(body)) => {
-                        let body_sig = RwSignal::new(body);
-                        // Resolve inside the Transition: an SSR'd ErrorBoundary fallback
-                        // mismatches at hydration in leptos 0.8.
-                        view! {
-                            <DocumentPane
-                                id="composition-pane"
-                                body=body_sig
-                                initial_view=initial_view
-                            />
-                        }
-                            .into_any()
-                    }
-                    Ok(None) => deleted_pane(),
-                    Err(e) => crate::components::notice::inline_error(&e),
-                }
-            })}
-        </Transition>
-    }
-    .into_any()
-}
-
-/// The document pane for a version the CDR reports as deleted (`204`).
-///
-/// A rendered absence, not an error: the logical delete commits a
-/// deleted-lifecycle version, so the pane says so and points at the history
-/// strip, where every earlier version is still readable by its own uid.
-fn deleted_pane() -> AnyView {
-    view! {
-        <div id="composition-version-deleted">
-            <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::TRASH
-                message=tr(Msg::VersionWasDeletedSelectedInstant)
-                hint=tr(Msg::DeleteCommittedDeletedLifecycleVersionPick)
-            />
-        </div>
-    }
-    .into_any()
-}
-
-/// The version timeline strip above the audit card: one chip per version,
-/// oldest→newest left-to-right, the selected chip accented and the newest
-/// tagged "current". Clicking a chip sets the shared selection (the newest →
-/// empty string = Latest, matching the dropdown).
-fn timeline_section(
-    versions: Resource<Result<Vec<VersionEntry>, ViewerError>>,
-    selected: RwSignal<String>,
-) -> AnyView {
-    view! {
-        <div class="mt-3">
-            <Suspense fallback=|| {
-                ().into_any()
-            }>
-                {move || Suspend::new(async move {
-                    match versions.await {
-                        Ok(entries) => {
-                            let stored = StoredValue::new(entries);
-                            // Resolve inside the Suspense: an SSR'd ErrorBoundary fallback
-                            // mismatches at hydration in leptos 0.8. A
-                            // failed history renders nothing here (the document/toolbar
-                            // sections surface the error).
-                            view! {
-                                {move || {
-                                    stored.with_value(|entries| timeline_strip(entries, selected))
-                                }}
-                            }
-                                .into_any()
-                        }
-                        Err(_) => ().into_any(),
-                    }
-                })}
-            </Suspense>
-        </div>
-    }
-    .into_any()
-}
-
-/// Render the timeline chips. `entries` is newest-first (the revision-history
-/// order the selector uses), so the strip displays it reversed (oldest→newest).
-fn timeline_strip(entries: &[VersionEntry], selected: RwSignal<String>) -> AnyView {
-    if entries.is_empty() {
-        return ().into_any();
-    }
-    let newest = entries
-        .first()
-        .map(|entry| entry.version_id.clone())
-        .unwrap_or_default();
-    let mut ordered: Vec<VersionEntry> = entries.to_vec();
-    ordered.reverse();
-    let chips = view! {
-        <For each=move || ordered.clone() key=|entry| entry.version_id.clone() let:entry>
-            {timeline_chip(&entry, &newest, selected)}
-        </For>
-    };
-    view! {
-        <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>{tr(Msg::VersionTimeline)}</h2>
-            <div class="flex flex-wrap items-center gap-2">{chips}</div>
-        </section>
-    }
-    .into_any()
-}
-
-/// One timeline chip: a `rounded-full border` button labelled with the short
-/// `vN`, accented while it is the current selection, and suffixed "· current"
-/// for the newest version. Clicking selects it — the newest selects Latest
-/// (empty string), the others their `OBJECT_VERSION_ID`.
-fn timeline_chip(entry: &VersionEntry, newest: &str, selected: RwSignal<String>) -> AnyView {
-    let version_id = entry.version_id.clone();
-    let is_newest = version_id == newest;
-    let target = if is_newest {
-        String::new()
-    } else {
-        version_id.clone()
-    };
-    let label = short_version(&version_id);
-    let newest_owned = newest.to_owned();
-    let version_for_class = version_id.clone();
-    let class = move || {
-        let current = selected.get();
-        let is_selected = if is_newest {
-            current.is_empty() || current == newest_owned
-        } else {
-            current == version_for_class
+        let head_body = match (&shown, &current) {
+            (Ok(Some(body)), _) | (_, Some(body)) => body.clone(),
+            _ => String::new(),
         };
-        if is_selected {
-            "rounded-full border border-accent bg-accent-subtle px-3 py-1 text-xs font-medium text-accent-ink"
+        let head = Head::of(&head_body);
+        let name = if head.name.is_empty() {
+            shortened(&uid)
         } else {
-            "rounded-full border border-edge px-3 py-1 text-xs font-medium text-ink-muted hover:bg-sunken"
-        }
-    };
-    view! {
-        <button type="button" class=class on:click=move |_| selected.set(target.clone())>
-            {label}
-            {is_newest.then_some(tr(Msg::Current))}
-        </button>
-    }
-    .into_any()
-}
-
-/// The audit card for the currently selected version (or the latest when
-/// "Latest" is selected), derived reactively from the loaded history.
-fn audit_section(
-    versions: Resource<Result<Vec<VersionEntry>, ViewerError>>,
-    selected: RwSignal<String>,
-) -> AnyView {
-    view! {
-        <div class="mt-3">
-            <Suspense fallback=|| {
-                ().into_any()
-            }>
-                {move || Suspend::new(async move {
-                    match versions.await {
-                        Ok(entries) => {
-                            let stored = StoredValue::new(entries);
-                            // Resolve inside the Suspense: an SSR'd ErrorBoundary fallback
-                            // mismatches at hydration in leptos 0.8. A
-                            // failed history renders nothing here (the document/toolbar
-                            // sections surface the error).
-                            view! {
-                                {move || {
-                                    let chosen = selected.get();
-                                    stored
-                                        .with_value(|entries| {
-                                            let entry = if chosen.is_empty() {
-                                                entries.first()
-                                            } else {
-                                                entries.iter().find(|e| e.version_id == chosen)
-                                            };
-                                            audit_card(entry)
-                                        })
-                                }}
-                            }
-                                .into_any()
-                        }
-                        Err(_) => ().into_any(),
-                    }
-                })}
-            </Suspense>
-        </div>
-    }
-    .into_any()
-}
-
-/// Render the audit metadata for one version as a card, or the empty state when
-/// no matching version is found.
-fn audit_card(entry: Option<&VersionEntry>) -> AnyView {
-    let Some(entry) = entry else {
-        return view! {
-            <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::SHIELD_CHECK
-                message=tr(Msg::NoAuditSelectedVersion)
-                hint=tr(Msg::PickAnotherVersionAboveEveryCommitted)
-            />
-        }
-        .into_any();
-    };
-    let version_id = entry.version_id.clone();
-    let committed_at = entry.committed.clone();
-    let change_type = entry.change_type.clone();
-    let committer = entry.committer.clone();
-    view! {
-        <section class=CARD_PAD>
-            <h2 class=CARD_TITLE>{tr(Msg::Audit)}</h2>
-            <dl class="fui-facts text-sm">
-                {audit_row("version".to_owned(), version_id)}
-                {audit_row("committed".to_owned(), committed_at)}
-                {audit_row(tr(Msg::ChangeType2), change_type)}
-                {audit_row("committer".to_owned(), committer)}
-            </dl>
-        </section>
-    }
-    .into_any()
-}
-
-/// One label/value line in the audit card (empty values shown as an em dash).
-fn audit_row(label: String, value: String) -> AnyView {
-    let shown = crate::components::facts::fact_value(value);
-    view! {
-        <div>
-            <dt>{label}</dt>
-            <dd class="font-mono wrap-break-word text-ink">{shown}</dd>
-        </div>
-    }
-    .into_any()
-}
-
-/// The short `vN` label from an `OBJECT_VERSION_ID` (the segment after the
-/// last `::`), or the whole id when there is no version segment.
-fn short_version(version_id: &str) -> String {
-    version_id
-        .rsplit_once("::")
-        .map_or_else(|| version_id.to_owned(), |(_, v)| format!("v{v}"))
-}
-
-#[cfg(all(test, not(target_arch = "wasm32")))]
-mod tests {
-    use super::{parse_versioned_details, parse_versions, short_version};
-
-    /// A `VERSIONED_COMPOSITION` container body, as the wire carries it.
-    const VERSIONED_OBJECT: &str = r#"{
-        "_type": "VERSIONED_COMPOSITION",
-        "uid": {"_type": "HIER_OBJECT_ID", "value": "7d44aa01"},
-        "owner_id": {
-            "_type": "OBJECT_REF",
-            "namespace": "local",
-            "type": "EHR",
-            "id": {"_type": "HIER_OBJECT_ID", "value": "e1"}
-        },
-        "time_created": {"_type": "DV_DATE_TIME", "value": "2026-07-12T10:00:00Z"}
-    }"#;
-
-    #[test]
-    fn parses_the_versioned_object_and_its_version_envelope() {
-        let version = r#"{
-            "_type": "ORIGINAL_VERSION",
-            "uid": {"_type": "OBJECT_VERSION_ID", "value": "7d44aa01::sys::2"},
-            "contribution": {
-                "_type": "OBJECT_REF",
-                "id": {"_type": "HIER_OBJECT_ID", "value": "c9"}
+            head.name.clone()
+        };
+        let (acted, tag_refusal) = act(&ehr_id, &uid, &name).await;
+        let count = versions.as_ref().map_or(0, Vec::len);
+        let reading = reading_number.as_deref().filter(|_| deleted.is_none());
+        let older = reading_number.as_deref().map(|number| {
+            if deleted.is_some() {
+                info_note(tr_with(
+                    Msg::CompositionLastBeforeDeletion,
+                    &[("version", number.to_owned().into())],
+                ))
+            } else {
+                older_version(
+                    number,
+                    u32::try_from(count).unwrap_or(u32::MAX),
+                    composition_href(&ehr_id, &uid),
+                )
+            }
+        });
+        let tabs = if deleted.is_some() {
+            vec![
+                Tab::new(
+                    CompTab::Reading.key(),
+                    tab_href(&ehr_id, &uid, CompTab::Reading, reading_number.as_deref()),
+                    tr_with(
+                        Msg::CompositionVersionN,
+                        &[("version", reading_number.clone().unwrap_or_default().into())],
+                    ),
+                ),
+                Tab::new(
+                    CompTab::Versions.key(),
+                    tab_href(&ehr_id, &uid, CompTab::Versions, None),
+                    tr(Msg::CompositionVersions),
+                )
+                .count(
+                    u64::try_from(count).unwrap_or(u64::MAX),
+                    tr(Msg::CompositionVersions),
+                ),
+            ]
+        } else if reading.is_some() {
+            vec![
+                Tab::new(
+                    CompTab::Reading.key(),
+                    tab_href(&ehr_id, &uid, CompTab::Reading, reading),
+                    tr(Msg::CompositionReading),
+                ),
+                Tab::new(
+                    CompTab::Versions.key(),
+                    tab_href(&ehr_id, &uid, CompTab::Versions, None),
+                    tr(Msg::CompositionVersions),
+                )
+                .count(
+                    u64::try_from(count).unwrap_or(u64::MAX),
+                    tr(Msg::CompositionVersions),
+                ),
+            ]
+        } else {
+            vec![
+                Tab::new(
+                    CompTab::Reading.key(),
+                    tab_href(&ehr_id, &uid, CompTab::Reading, None),
+                    tr(Msg::CompositionReading),
+                ),
+                Tab::new(
+                    CompTab::Document.key(),
+                    tab_href(&ehr_id, &uid, CompTab::Document, None),
+                    tr(Msg::CompositionDocument),
+                ),
+                Tab::new(
+                    CompTab::Versions.key(),
+                    tab_href(&ehr_id, &uid, CompTab::Versions, None),
+                    tr(Msg::CompositionVersions),
+                )
+                .count(
+                    u64::try_from(count).unwrap_or(u64::MAX),
+                    tr(Msg::CompositionVersions),
+                ),
+                Tab::new(
+                    CompTab::Tags.key(),
+                    tab_href(&ehr_id, &uid, CompTab::Tags, None),
+                    tr(Msg::EhrTabTags),
+                ),
+            ]
+        };
+        let tab = if tags_allowed(deleted.is_some(), reading) || tab != CompTab::Tags {
+            tab
+        } else {
+            CompTab::Reading
+        };
+        let version_uid = reading_number
+            .as_deref()
+            .map_or_else(|| latest.clone(), |number| version_uid_at(&latest, number));
+        let body = match tab {
+            CompTab::Reading => match &shown {
+                Ok(Some(body)) => reading_panel(&ehr_id, &uid, body, older),
+                Ok(None) => panel(plain_section(info_note(tr(Msg::CompositionDeletedVersion)))),
+                Err(error) => panel(plain_section(refused(
+                    tr(Msg::CompositionVersionRefused),
+                    error,
+                    None,
+                ))),
             },
-            "lifecycle_state": {"_type": "DV_CODED_TEXT", "value": "complete"},
-            "preceding_version_uid": {"_type": "OBJECT_VERSION_ID", "value": "7d44aa01::sys::1"},
-            "signature": "-----BEGIN PGP SIGNATURE-----",
-            "data": {"_type": "COMPOSITION"}
-        }"#;
-        let details = parse_versioned_details(VERSIONED_OBJECT, version).expect("valid bodies");
-        assert_eq!(details.object_uid, "7d44aa01");
-        assert_eq!(details.owner_id, "e1");
-        assert_eq!(details.time_created, "2026-07-12T10:00:00Z");
-        assert_eq!(details.version_id, "7d44aa01::sys::2");
-        assert_eq!(details.lifecycle_state, "complete");
-        assert_eq!(details.preceding_version_uid, "7d44aa01::sys::1");
-        assert_eq!(details.contribution_uid, "c9");
-        assert!(details.signed);
-        assert!(details.has_data);
-    }
+            CompTab::Document => document_panel(&ehr_id, &uid, &version_uid, reading).await,
+            CompTab::Versions => {
+                let details =
+                    fetch_versioned_composition(ehr_id.clone(), uid.clone(), version_uid.clone())
+                        .await;
+                versions_panel(
+                    &ehr_id,
+                    &uid,
+                    &versions,
+                    details,
+                    reading,
+                    deleted.is_some(),
+                )
+            }
+            CompTab::Tags => {
+                let stored_tags =
+                    fetch_ehr_tags(ehr_id.clone(), "composition".to_owned(), uid.clone()).await;
+                panel(tag_panel(TagPanel {
+                    collection: tr(Msg::TagCollectionComposition),
+                    tags: stored_tags,
+                    action: tab_href(&ehr_id, &uid, CompTab::Tags, None),
+                    refused: tag_refusal,
+                }))
+            }
+        };
+        let current_tab = tab.key();
+        let dialog = deleted
+            .is_none()
+            .then(|| delete_dialog(&ehr_id, &uid, &name, &latest, count));
+        view! {
+            <Title text=name.clone() />
+            {header(&ehr_id, &uid, &head, &latest, reading, deleted.as_ref())}
+            <div class="fui-stack">
+                {acted}
+                {binder(tr(Msg::CompositionViews), tabs, current_tab, body)}
+            </div>
+            {dialog}
+        }
+        .into_any()
+    });
+    view! { {page} }
+}
 
-    #[test]
-    fn a_deleted_first_version_carries_no_data_no_preceding_and_no_signature() {
-        // RM common master06 §Logical Deletion: the deleted version has no
-        // `data`; a first version has no `preceding_version_uid`.
-        let version = r#"{
-            "_type": "ORIGINAL_VERSION",
-            "uid": {"_type": "OBJECT_VERSION_ID", "value": "7d44aa01::sys::1"},
-            "lifecycle_state": {"_type": "DV_CODED_TEXT", "value": "deleted"}
-        }"#;
-        let details = parse_versioned_details(VERSIONED_OBJECT, version).expect("valid bodies");
-        assert_eq!(details.lifecycle_state, "deleted");
-        assert_eq!(details.preceding_version_uid, "");
-        assert_eq!(details.contribution_uid, "");
-        assert!(!details.signed);
-        assert!(!details.has_data);
-    }
+/// Whether the Tags tab is offered: on the latest version of a composition
+/// that is not deleted.
+const fn tags_allowed(deleted: bool, reading: Option<&str>) -> bool {
+    !deleted && reading.is_none()
+}
 
-    #[test]
-    fn versioned_details_reject_a_non_json_body_on_either_side() {
-        assert!(parse_versioned_details("not json", "{}").is_err());
-        assert!(parse_versioned_details(VERSIONED_OBJECT, "not json").is_err());
+/// The editor of a composition document: its toolbar, its gutter marks and
+/// the CDR's findings beside it.
+fn document_editor(
+    text: String,
+    opened: Option<String>,
+    language: EditorLanguage,
+    findings: Option<(String, ferrohealth_ui::view::diagnostics::FileFindings)>,
+    label: String,
+) -> AnyView {
+    let lead = match language {
+        EditorLanguage::Xml => tr(Msg::EditorXml),
+        _ => tr(Msg::EditorJson),
+    };
+    view! {
+        <CodeEditor
+            setup=EditorSetup {
+                field: EditorField::Document,
+                language,
+                text,
+                opened,
+                marks: marks_of(findings.as_ref()),
+                label,
+                lead,
+                facts: vec![tr(Msg::EditorUtf8)],
+                findings,
+            }
+            words=EditorWords::of_page()
+            diagnostics=DiagnosticsWords::of_page()
+        />
     }
+    .into_any()
+}
 
-    #[test]
-    fn parses_revision_history_wrapper_and_bare_array() {
-        let wrapper = r#"{
-            "items": [{
-                "version_id": {"value": "7d44::sys::2"},
-                "audits": [{
-                    "time_committed": {"value": "2026-07-12T10:00:00Z"},
-                    "change_type": {"value": "creation"},
-                    "committer": {"name": "Dr Bob"}
-                }]
-            }]
-        }"#;
-        let entries = parse_versions(wrapper).expect("valid history");
-        assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].version_id, "7d44::sys::2");
-        assert_eq!(entries[0].committed, "2026-07-12T10:00:00Z");
-        assert_eq!(entries[0].change_type, "creation");
-        assert_eq!(entries[0].committer, "Dr Bob");
-
-        // A bare array (no wrapper) parses identically.
-        let bare = r#"[{"version_id":{"value":"a::b::1"},"audits":[]}]"#;
-        let entries = parse_versions(bare).expect("valid bare history");
-        assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].version_id, "a::b::1");
-        assert_eq!(entries[0].committed, "");
+/// Edit as a new version.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the router always consumes the value"
+)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
+)]
+#[component]
+pub fn EditCompositionPage() -> impl IntoView {
+    let ehr_id = ehr_id_param();
+    let uid = uid_param();
+    let posted = crate::posted::posted();
+    if discarded(posted.as_ref()) {
+        leptos_axum::redirect(&composition_href(&ehr_id, &uid));
     }
+    let page = awaited(async move {
+        let current =
+            match fetch_composition(ehr_id.clone(), uid.clone(), ReprFormat::CanonicalJson).await {
+                Ok(Some(body)) => crate::bff::pretty_body(&body, ReprFormat::CanonicalJson),
+                Ok(None) => return info_note(tr(Msg::CompositionDeletedNoEdit)),
+                Err(error) => return refused(tr(Msg::CompositionRefused), &error, None),
+            };
+        let latest = match fetch_versions(ehr_id.clone(), uid.clone()).await {
+            Ok(versions) => versions
+                .into_iter()
+                .max_by_key(|version| {
+                    version_number(&version.version_id)
+                        .parse::<u64>()
+                        .unwrap_or(0)
+                })
+                .map(|version| version.version_id)
+                .unwrap_or_default(),
+            Err(error) => return refused(tr(Msg::CompositionHistoryRefused), &error, None),
+        };
+        let opened = posted
+            .as_ref()
+            .map(|posted| posted.text("version"))
+            .filter(|uid| !uid.is_empty())
+            .unwrap_or_else(|| latest.clone());
+        let text = posted
+            .as_ref()
+            .and_then(|posted| posted.get(EditorField::Document.name()))
+            .unwrap_or_else(|| current.clone());
+        let head = Head::of(&current);
+        let mut top = None;
+        let mut blocked = None;
+        let mut findings = None;
+        let mut line = (Glyph::PENCIL, tr(Msg::EditorOpened));
+        if posted
+            .as_ref()
+            .is_some_and(|posted| posted.intent() == "save")
+        {
+            match update_composition(ehr_id.clone(), uid.clone(), opened.clone(), text.clone())
+                .await
+            {
+                Ok(saved) => {
+                    redirect_with(
+                        &composition_href(&ehr_id, &uid),
+                        &Done::ok(tr(Msg::CompositionSaved)).line(tr_with(
+                            Msg::CompositionSavedVersion,
+                            &[("version", version_number(&saved).into())],
+                        )),
+                    );
+                    return ().into_any();
+                }
+                Err(error) => {
+                    line = (Glyph::CIRCLE_X, tr(Msg::EditorNotSaved));
+                    findings = findings_of(&error, &text, EditorField::Document.name());
+                    let conflict = is_status(&error, http::StatusCode::PRECONDITION_FAILED);
+                    if conflict {
+                        blocked = Some(tr(Msg::EditorReloadFirst));
+                    }
+                    let reload = conflict.then(|| {
+                        view! {
+                            <div class="fui-cluster">
+                                {ferrohealth_ui::view::button::link_button(
+                                    format!("{}/edit", composition_href(&ehr_id, &uid)),
+                                    ferrohealth_ui::view::button::Variant::Secondary,
+                                    Some(Glyph::REFRESH_CW),
+                                    tr_with(Msg::EditorReloadVersion, &[("version", version_number(&latest).into())]),
+                                )}
+                                <span class="fui-small fui-muted">{tr(Msg::EditorReloadReplaces)}</span>
+                            </div>
+                        }
+                    });
+                    top = Some(
+                        view! {
+                            {refused(tr(Msg::CompositionSaveRefused), &error, None)}
+                            {reload}
+                        }
+                        .into_any(),
+                    );
+                }
+            }
+        }
+        let save = version_number(&opened).parse::<u32>().map_or_else(
+            |_| tr(Msg::EditorSave),
+            |number| {
+                tr_with(
+                    Msg::EditorSaveAsVersion,
+                    &[("version", number.saturating_add(1).into())],
+                )
+            },
+        );
+        dock_editor(EditorDock {
+            form: EDIT_FORM.to_owned(),
+            line: line.1,
+            glyph: line.0,
+            save,
+            blocked,
+        });
+        let mut trail = crumbs(&ehr_id);
+        trail.push(Crumb::new(
+            if head.name.is_empty() {
+                shortened(&uid)
+            } else {
+                head.name.clone()
+            },
+            composition_href(&ehr_id, &uid),
+        ));
+        let heading = editor_heading(
+            message(Msg::EditorTitle),
+            &Mode::Editing(head.name.clone()),
+            Header {
+                title: String::new().into(),
+                subtitle: Some(
+                    tr_with(
+                        Msg::CompositionEditSubtitle,
+                        &[("version", version_number(&opened).into())],
+                    )
+                    .into(),
+                ),
+                crumbs: trail,
+                mono: false,
+                badge: None,
+            },
+            ActionGroup::none(),
+        );
+        view! {
+            <Title text=tr_with(Msg::CompositionEditTitle, &[("name", head.name.clone().into())]) />
+            {heading}
+            <div class="fui-stack">
+                {top}
+                <form id=EDIT_FORM method="post" action=format!("{}/edit", composition_href(&ehr_id, &uid))>
+                    <input type="hidden" name="version" value=opened.clone() />
+                    {document_editor(text, Some(current), EditorLanguage::Json, findings, tr(Msg::CompositionEditorLabel))}
+                </form>
+            </div>
+        }
+        .into_any()
+    });
+    view! { {page} }
+}
 
-    #[test]
-    fn short_version_takes_the_trailing_segment() {
-        assert_eq!(short_version("7d44::example.org::3"), "v3");
-        assert_eq!(short_version("no-version"), "no-version");
+/// The formats New composition commits in.
+const NEW_FORMATS: [(&str, ReprFormat); 3] = [
+    ("json", ReprFormat::CanonicalJson),
+    ("xml", ReprFormat::CanonicalXml),
+    ("flat", ReprFormat::Flat),
+];
+
+/// New composition.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the router always consumes the value"
+)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
+)]
+#[component]
+pub fn NewCompositionPage() -> impl IntoView {
+    let ehr_id = ehr_id_param();
+    let posted = crate::posted::posted();
+    if discarded(posted.as_ref()) {
+        leptos_axum::redirect(&ehr_href(&ehr_id));
     }
+    let page = awaited(async move {
+        let format_key = posted
+            .as_ref()
+            .map(|posted| posted.text("format"))
+            .filter(|key| NEW_FORMATS.iter().any(|(known, _)| known == key))
+            .unwrap_or_else(|| "json".to_owned());
+        let format = NEW_FORMATS
+            .iter()
+            .find(|(key, _)| *key == format_key)
+            .map_or(ReprFormat::CanonicalJson, |(_, format)| *format);
+        let template = posted
+            .as_ref()
+            .map(|posted| posted.text("template"))
+            .or_else(|| crate::request::query("template"))
+            .unwrap_or_default();
+        let text = posted
+            .as_ref()
+            .and_then(|posted| posted.get(EditorField::Document.name()))
+            .unwrap_or_default();
+        let mut top = None;
+        let mut findings = None;
+        let mut line = (Glyph::FILE_PLUS, tr(Msg::CompositionNotYet));
+        if posted
+            .as_ref()
+            .is_some_and(|posted| posted.intent() == "save")
+        {
+            match crate::bff::ehr_detail::compositions::commit_composition(
+                ehr_id.clone(),
+                format,
+                template.clone(),
+                text.clone(),
+            )
+            .await
+            {
+                Ok(uid) => {
+                    let object = crate::uid::container_uid_of(&uid);
+                    redirect_with(
+                        &composition_href(&ehr_id, &object),
+                        &Done::ok(tr(Msg::CompositionCommitted)).line(shortened(&object)),
+                    );
+                    return ().into_any();
+                }
+                Err(error) => {
+                    line = (Glyph::CIRCLE_X, tr(Msg::CompositionNotCommitted));
+                    findings = findings_of(&error, &text, EditorField::Document.name());
+                    top = Some(refused(tr(Msg::CompositionCommitRefused), &error, None));
+                }
+            }
+        }
+        let templates = crate::bff::templates::list_templates().await;
+        let template_field = match templates {
+            Ok(rows) => {
+                let mut ids: Vec<String> = rows.into_iter().map(|row| row.template_id).collect();
+                ids.sort();
+                ids.dedup();
+                let options = ids
+                    .into_iter()
+                    .map(|id| {
+                        let selected = id == template;
+                        let value = id.clone();
+                        view! { <option value=value selected=selected>{id}</option> }
+                    })
+                    .collect_view();
+                Field::new("nt", tr(Msg::FilterTemplate))
+                    .help(tr(Msg::CompositionTemplateHelp))
+                    .view(view! {
+                        <select id="nt" name="template" class="fui-select">
+                            <option value="">{tr(Msg::StagedFromDocument)}</option>
+                            {options}
+                        </select>
+                    })
+            }
+            Err(error) => refused(tr(Msg::CompositionTemplatesRefused), &error, None),
+        };
+        let formats: Vec<(&'static str, String)> = NEW_FORMATS
+            .iter()
+            .map(|(key, format)| (*key, format.label().to_owned()))
+            .collect();
+        dock_editor(EditorDock {
+            form: EDIT_FORM.to_owned(),
+            line: line.1,
+            glyph: line.0,
+            save: tr(Msg::CompositionCommit),
+            blocked: None,
+        });
+        let heading = editor_heading(
+            message(Msg::CompositionNewTitle),
+            &Mode::Creating,
+            Header {
+                title: String::new().into(),
+                subtitle: Some(tr(Msg::CompositionNewSubtitle).into()),
+                crumbs: crumbs(&ehr_id),
+                mono: false,
+                badge: None,
+            },
+            ActionGroup::none(),
+        );
+        let language = if format == ReprFormat::CanonicalXml {
+            EditorLanguage::Xml
+        } else {
+            EditorLanguage::Json
+        };
+        view! {
+            <Title text=tr(Msg::CompositionNewPageTitle) />
+            {heading}
+            <div class="fui-stack">
+                {top}
+                <form id=EDIT_FORM method="post" action=format!("{}/compositions/new", ehr_href(&ehr_id))>
+                    {card_panel(section(None, None, None, view! {
+                        <div class="fui-form-grid">
+                            <div class="fui-span-2">{template_field}</div>
+                            <div class="fui-span-2">
+                                {choice_group("format", tr(Msg::CompositionFormat), &formats, &format_key)}
+                            </div>
+                        </div>
+                    }))}
+                    {document_editor(text, None, language, findings, tr(Msg::CompositionNewEditorLabel))}
+                </form>
+            </div>
+        }
+        .into_any()
+    });
+    view! { {page} }
 }

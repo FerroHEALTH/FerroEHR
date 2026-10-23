@@ -1,494 +1,283 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `/` dashboard: headline stat tiles, per-namespace stored-query match
-//! tiles, and a commit-activity trend chart.
+//! The dashboard: four stat cards, compositions per day, and the matches of
+//! each stored-query namespace, as the viewer's mockup draws it (FerroUI
+//! `design/consoles/ferroehr/`, page 01).
 //!
-//! No openEHR spec governs the viewer — our own design / product extension.
-//! The wire it reads IS spec-bound: every count and the trend run against
-//! `POST query/aql` (`docs/specs/openehr/ITS-REST/docs/query/`) with fixed,
-//! parse-validated AQL consts — user input never reaches the query text.
-//!
-//! Every co-located `#[server]` fn guards with
-//! [`require_session`](crate::session::require_session) first, and the CDR
-//! credential never reaches client-visible state. Each tile resolves its
-//! `Result` inside its own suspense rather than through an `<ErrorBoundary>`,
-//! whose SSR'd fallback mismatches at hydration in leptos 0.8, so one failing
-//! section never blanks the dashboard.
+//! The counts come from fixed AQL and the template and stored-query lists
+//! ([`crate::bff::dashboard`]); a namespace whose stored query did not run
+//! shows no total rather than a short one. A CDR that does not answer turns
+//! the page into its refusal. No openEHR spec governs the viewer: our own
+//! design.
 
-#![allow(
-    clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
-)]
-
+use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::table::view::{
+    Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
+};
+use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::chart::{ActivityChart, activity_chart};
+use ferrohealth_ui::view::surface::{Header, Stat, page_heading, stat_card};
+use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
+use ferrohealth_ui::widget::action_menu::{Act, Action};
 use leptos::prelude::*;
-use leptos::{component, server};
 use leptos_meta::Title;
-use leptos_router::components::A;
-use serde::{Deserialize, Serialize};
 
-use crate::activity::ActivityPoint;
-use crate::components::activity_chart::activity_chart;
-use crate::components::empty_state::EmptyState;
-use crate::components::field::BTN_SECONDARY;
-use crate::components::page_header::PageHeader;
-use crate::components::stat_card::StatCard;
-use crate::components::surface::{CARD_PAD, CARD_TITLE};
-use crate::error::ViewerError;
+use crate::bff::dashboard::{NamespaceTile, commit_trend, dashboard_counts, namespace_tiles};
 use crate::locale::{Msg, tr, tr_with};
+use crate::pages::common::{awaited, refused, state_mark};
 
-/// Total EHRs — a fixed count AQL. Validated by [`tests::dashboard_aql_consts_parse`].
-#[cfg(not(target_arch = "wasm32"))]
-const EHR_COUNT_AQL: &str = "SELECT COUNT(*) FROM EHR e";
-/// Total compositions — a fixed count AQL.
-#[cfg(not(target_arch = "wasm32"))]
-const COMPOSITION_COUNT_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c";
-/// Recent composition commit times, newest first, for the day-bucketed trend.
-#[cfg(not(target_arch = "wasm32"))]
-const TREND_AQL: &str = "SELECT c/context/start_time/value FROM EHR e CONTAINS COMPOSITION c ORDER BY c/context/start_time/value DESC";
-/// Rows pulled for the commit-activity trend before day-bucketing.
-#[cfg(not(target_arch = "wasm32"))]
-const TREND_FETCH: u32 = 500;
-
-/// Run a `SELECT COUNT(*)`-shaped AQL and read its single numeric cell (0 when
-/// the result set is not the expected 1×1 numeric shape).
-#[cfg(not(target_arch = "wasm32"))]
-async fn run_count_aql(
-    state: &crate::state::AppState,
-    session: &crate::session::ViewerSession,
-    aql: &str,
-) -> Result<i64, ViewerError> {
-    let url = state.cdr.rest_v1("query/aql");
-    let body = serde_json::json!({ "q": aql, "query_parameters": {} }).to_string();
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            body,
-        )
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    let page = crate::pages::ehrs::parse_result_set(&response.body, 0)?;
-    Ok(page
-        .rows
-        .first()
-        .and_then(|row| row.first())
-        .and_then(serde_json::Value::as_i64)
-        .unwrap_or(0))
+/// The link that opens Stored queries on the namespace of `tile`.
+fn namespace_href(tile: &NamespaceTile) -> String {
+    let unqualified = crate::query_namespace::group_label(None);
+    let key = if tile.label == unqualified {
+        crate::pages::queries::UNQUALIFIED.to_owned()
+    } else {
+        tile.label.clone()
+    };
+    format!("/queries?namespace={}", urlencoding::encode(&key))
 }
 
-/// The dashboard's three headline counts: total EHRs, total compositions, and
-/// the number of stored operational templates.
-///
-/// Runs the two fixed count AQLs against `POST query/aql` and reads the
-/// template count from
-/// [`list_templates`](crate::pages::templates::list_templates).
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR errors
-/// normalized via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] on an unparseable result set.
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn dashboard_counts() -> Result<(i64, i64, u32), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
-    let ehrs = run_count_aql(&state, &session, EHR_COUNT_AQL).await?;
-    let compositions = run_count_aql(&state, &session, COMPOSITION_COUNT_AQL).await?;
-    let templates =
-        u32::try_from(crate::pages::templates::list_templates().await?.len()).unwrap_or(u32::MAX);
-    Ok((ehrs, compositions, templates))
+/// A count grouped in the page's language.
+fn grouped(count: i64) -> String {
+    ferrohealth_ui::i18n::number::grouped(u64::try_from(count).unwrap_or_default())
 }
 
-/// One dashboard namespace tile: the derived group's heading, the summed match
-/// count of its member stored queries, and how many members that sum covers.
-///
-/// Fixed-size ints only, so it is WASM-safe over the server-fn boundary.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct NamespaceTile {
-    /// The namespace, or the label for the bucket of names that carry none
-    /// ([`group_label`](crate::query_namespace::group_label)).
-    pub label: String,
-    /// The summed match count of the member queries, or `None` when a member
-    /// failed to run — the tile then reads as an error instead of showing a
-    /// silently short count.
-    pub matches: Option<i64>,
-    /// How many member stored queries the group holds.
-    pub members: u32,
-}
-
-/// The dashboard's per-namespace match tiles: the CDR's stored queries grouped
-/// by the namespace of their qualified name
-/// ([`group_by_namespace`](crate::query_namespace::group_by_namespace)), each
-/// group's members run through
-/// [`run_stored_count`](crate::queries_api::run_stored_count) and summed.
-///
-/// One round trip for the whole tile row (and no per-tile resource created
-/// inside a `Suspend`). A member query the CDR refuses degrades only its
-/// own tile.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR errors from
-/// the stored-query LISTING normalized (a failure there means no grouping at
-/// all); a failing member RUN is confined to its own tile's `matches: None`.
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn namespace_tiles() -> Result<Vec<NamespaceTile>, ViewerError> {
-    use futures::stream::StreamExt;
-
-    crate::session::require_session().await?;
-    let rows = crate::queries_api::list_stored_queries().await?;
-    let groups = crate::query_namespace::group_by_namespace(&rows);
-
-    // The grouping is DERIVED — there is no stored member list to narrow by —
-    // so every member runs, and ONE bounded stream drives every count across
-    // ALL groups. The identifiers are collected into owned, group-indexed
-    // triples BEFORE the stream: an async block borrowing out of `groups` is
-    // not general enough over lifetimes for the `#[server]` boundary's future.
-    let members: Vec<(usize, String, String)> = groups
-        .iter()
-        .enumerate()
-        .flat_map(|(index, group)| {
-            group
-                .members
-                .iter()
-                .map(move |member| (index, member.name.clone(), member.version.clone()))
-        })
-        .collect();
-    let counts = futures::stream::iter(members.into_iter().map(
-        |(index, name, version)| async move {
-            let counted = crate::queries_api::run_stored_count(name.clone(), version.clone())
-                .await
-                .ok();
-            (index, name, version, counted)
+/// The four stat cards.
+fn stats(ehrs: i64, compositions: i64, templates: u32, stored: Option<u32>) -> AnyView {
+    let cards = [
+        Stat {
+            glyph: Glyph::DATABASE,
+            value: grouped(ehrs),
+            label: tr(Msg::StatEhrs).into(),
+            href: Some("/ehrs".to_owned()),
         },
-    ))
-    .buffered(crate::cdr::FANOUT_CONCURRENCY)
-    .collect::<Vec<_>>()
-    .await;
-
-    let mut matches: Vec<Option<i64>> = vec![Some(0); groups.len()];
-    for (index, name, version, counted) in counts {
-        let Some(slot) = matches.get_mut(index) else {
-            continue;
-        };
-        let Some(count) = counted else {
-            // Identifiers only, never the diagnostic: a CDR error body can
-            // quote the query text, and query text can carry clinical
-            // values — logs name shapes, not payloads. Naming the query is
-            // enough for an operator to run it and read the CDR's answer.
-            tracing::warn!(
-                query = %name,
-                version = %version,
-                "stored query failed to run for its dashboard namespace tile"
-            );
-            *slot = None;
-            continue;
-        };
-        *slot = slot.map(|total| total.saturating_add(count));
-    }
-
-    Ok(groups
-        .iter()
-        .zip(matches)
-        .map(|(group, matches)| NamespaceTile {
-            label: crate::query_namespace::group_label(group.namespace.as_deref()).to_owned(),
-            matches,
-            members: u32::try_from(group.members.len()).unwrap_or(u32::MAX),
-        })
-        .collect())
+        Stat {
+            glyph: Glyph::FILE_TEXT,
+            value: grouped(compositions),
+            label: tr(Msg::StatCompositions).into(),
+            href: Some("/query".to_owned()),
+        },
+        Stat {
+            glyph: Glyph::FILE_CODE,
+            value: grouped(i64::from(templates)),
+            label: tr(Msg::StatTemplates).into(),
+            href: Some("/templates".to_owned()),
+        },
+        Stat {
+            glyph: Glyph::SEARCH_CODE,
+            value: stored.map_or_else(|| tr(Msg::UnknownCount), |stored| grouped(i64::from(stored))),
+            label: tr(Msg::StatStoredQueries).into(),
+            href: Some("/queries".to_owned()),
+        },
+    ]
+    .into_iter()
+    .map(|stat| stat_card(stat).into_any())
+    .collect_view();
+    view! { <div class="fui-grid fui-grid-stats">{cards}</div> }.into_any()
 }
 
-/// The recent commit-activity trend, one [`ActivityPoint`] per calendar day
-/// ascending. Pulls the most recent composition commit times (fetch
-/// `TREND_FETCH`) and buckets them per day BFF-side with the shared
-/// [`bucket_by_day`](crate::activity::bucket_by_day).
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR errors
-/// normalized; [`ViewerError::Internal`] on an unparseable result set.
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn commit_trend() -> Result<Vec<ActivityPoint>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1("query/aql");
-    let body = serde_json::json!({
-        "q": TREND_AQL,
-        "query_parameters": {},
-        "fetch": TREND_FETCH,
+/// How many days the activity chart covers.
+const ACTIVITY_DAYS: u16 = 30;
+
+/// The compositions-per-day card.
+fn activity_card(
+    points: Result<Vec<crate::activity::ActivityPoint>, crate::error::ViewerError>,
+) -> AnyView {
+    let body = match points {
+        Ok(points) if points.is_empty() => list_empty(
+            tr(Msg::DashboardNoCompositions),
+            Some((tr(Msg::DashboardCreateFirstEhr), "/ehrs/new".to_owned())),
+        ),
+        Ok(points) => {
+            let days = crate::pages::common::last_days(&points, ACTIVITY_DAYS);
+            let total: u32 = days.counts.iter().map(|(_, count)| *count).sum();
+            let most = days.counts.iter().map(|(_, count)| *count).max().unwrap_or(0);
+            let chart = ActivityChart {
+                name: "compositions-per-day",
+                label: tr(Msg::DashboardPerDay),
+                summary: tr_with(
+                    Msg::DashboardPerDaySummary,
+                    &[
+                        ("total", u64::from(total).into()),
+                        ("most", u64::from(most).into()),
+                        ("first", days.first.clone().into()),
+                        ("last", days.last.clone().into()),
+                    ],
+                ),
+                points: days.counts,
+                ends: (days.first, days.last),
+            };
+            view! {
+                <div class="fui-panel-body">
+                    {activity_chart(&chart)}
+                    <p class="fui-small fui-muted">{tr(Msg::DashboardPerDayNote)}</p>
+                </div>
+            }
+            .into_any()
+        }
+        Err(error) => refused(tr(Msg::DashboardPerDayRefused), &error, None),
+    };
+    list_card(ListCard {
+        title: tr(Msg::DashboardPerDay),
+        count: None,
+        order: None,
+        tabs: None,
+        actions: None,
+        body,
+        pager: None,
     })
-    .to_string();
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            body,
-        )
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    let page = crate::pages::ehrs::parse_result_set(&response.body, 0)?;
-    let times: Vec<String> = page
-        .rows
-        .iter()
-        .filter_map(|row| row.first())
-        .map(crate::pages::ehrs::cell_text)
-        .collect();
-    Ok(crate::activity::bucket_by_day(&times))
 }
 
-/// The `/` dashboard: headline counts, per-namespace stored-query match tiles,
-/// and a commit-activity trend — each an independently-failing section.
+/// The matches-by-namespace card.
+fn namespaces_card(tiles: Result<Vec<NamespaceTile>, crate::error::ViewerError>) -> AnyView {
+    let (count, body) = match tiles {
+        Ok(tiles) if tiles.is_empty() => (
+            None,
+            list_empty(
+                tr(Msg::DashboardNoStoredQuery),
+                Some((tr(Msg::DashboardWriteOne), "/query/aql".to_owned())),
+            ),
+        ),
+        Ok(tiles) => {
+            let columns = [
+                Column::text("namespace", tr(Msg::ColumnNamespace)).role(Role::Title),
+                Column::text("matches", tr(Msg::ColumnMatches))
+                    .numeric()
+                    .role(Role::Meta),
+            ];
+            let rows = tiles
+                .iter()
+                .map(|tile| {
+                    let sub = tr_with(
+                        Msg::DashboardQueries,
+                        &[("count", u64::from(tile.members).into())],
+                    );
+                    let matches = match tile.matches {
+                        Some(matches) => tr_with(
+                            Msg::DashboardMatches,
+                            &[("count", u64::try_from(matches).unwrap_or(0).into())],
+                        )
+                        .into_any(),
+                        None => state_mark(
+                            ferrohealth_ui::view::flow::FlowState::Degraded,
+                            &tr(Msg::DashboardNoTotal),
+                        ),
+                    };
+                    let href = namespace_href(tile);
+                    let label = tile.label.clone();
+                    let sub = view! { <span class="fui-row-sub">{sub}</span> }.into_any();
+                    let title = title_cell(Some(&href), label, Some(sub));
+                    let matches = cell(&columns[1], matches);
+                    view! { <tr>{title} {matches}</tr> }.into_any()
+                })
+                .collect_view()
+                .into_any();
+            let total = u64::try_from(tiles.len()).unwrap_or_default();
+            let caption = tr(Msg::DashboardByNamespace);
+            (
+                Some(total),
+                data_table(DataTable {
+                    caption: &caption,
+                    columns: &columns,
+                    sorting: Sorting::default(),
+                    body: Body::Rows(rows),
+                })
+                .into_any(),
+            )
+        }
+        Err(error) => (
+            None,
+            refused(tr(Msg::DashboardNamespacesRefused), &error, None),
+        ),
+    };
+    list_card(ListCard {
+        title: tr(Msg::DashboardByNamespace),
+        count,
+        order: None,
+        tabs: None,
+        actions: None,
+        body,
+        pager: None,
+    })
+}
+
+/// The page's heading.
+fn heading(subtitle: String, actions: ActionGroup) -> AnyView {
+    page_heading(
+        Header {
+            title: tr(Msg::NavDashboard).into(),
+            subtitle: Some(subtitle.into()),
+            crumbs: Vec::new(),
+            mono: false,
+            badge: None,
+        },
+        actions,
+    )
+    .into_any()
+}
+
+/// The dashboard.
 #[expect(
     clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; view!/mount always consumes the value"
+    reason = "#[component] rewrites the fn; the router always consumes the value"
 )]
 #[component]
 pub fn DashboardPage() -> impl IntoView {
-    let counts = counts_section();
-    let stored = stored_queries_tile();
-    let namespaces = namespaces_section();
-    let trend = trend_section();
-
-    view! {
-        <Title text="Dashboard" />
-        <div>
-            <PageHeader
-                title=tr(Msg::Dashboard)
-                subtitle=tr(Msg::RepositoryOverviewQueryCohortsRecentCommit)
-            />
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                {counts} {stored}
+    let body = awaited(async move {
+        let host = crate::request::state()
+            .map(|state| state.config.cdr.base_url.clone())
+            .unwrap_or_default();
+        let (ehrs, compositions, templates) = match dashboard_counts().await {
+            Ok(counts) => counts,
+            Err(error) => {
+                let retry = ferrohealth_ui::view::button::link_button(
+                    "/".to_owned(),
+                    ferrohealth_ui::view::button::Variant::Primary,
+                    Some(Glyph::REFRESH_CW),
+                    tr(Msg::TryAgain),
+                );
+                return view! {
+                    {heading(tr(Msg::DashboardNoAnswer), ActionGroup::none())}
+                    <div class="fui-stack">
+                        {refused(tr(Msg::DashboardRefused), &error, None)}
+                        <div class="fui-cluster">{retry}</div>
+                    </div>
+                }
+                .into_any();
+            }
+        };
+        // NOTE: no openEHR spec governs this: our own design; a stored-query list
+        // the CDR refused is an unknown count, drawn as the dash (R12), never 0.
+        let stored = crate::queries_api::list_stored_queries()
+            .await
+            .ok()
+            .map(|rows| u32::try_from(rows.len()).unwrap_or(u32::MAX));
+        let trend = commit_trend().await;
+        let tiles = namespace_tiles().await;
+        let actions = if ehrs == 0 && compositions == 0 && templates == 0 {
+            ActionGroup::primary(Action::new(
+                Some(Glyph::UPLOAD),
+                tr(Msg::UploadATemplate),
+                Act::Link("/templates/upload".to_owned()),
+            ))
+        } else {
+            ActionGroup::none()
+        };
+        let subtitle = tr_with(Msg::DashboardSubtitle, &[("host", host.into())]);
+        view! {
+            {heading(subtitle, actions)}
+            <div class="fui-stack fui-gap-section">
+                {stats(ehrs, compositions, templates, stored)}
+                <div class="fui-grid fui-grid-start">
+                    {activity_card(trend)} {namespaces_card(tiles)}
+                </div>
             </div>
-            <section class=format!("{CARD_PAD} mb-6")>
-                <h2 class=CARD_TITLE>{tr(Msg::QueryNamespaces)}</h2>
-                {namespaces}
-            </section>
-            <section class=CARD_PAD>
-                <h2 class=CARD_TITLE>{tr(Msg::CommitActivity)}</h2>
-                {trend}
-            </section>
-        </div>
-    }
-}
-
-/// One headline stat tile as a design-system [`StatCard`] — an icon, the
-/// tabular-nums value, and a muted label; the whole tile navigates when a
-/// `href` is given.
-fn stat_tile(
-    label: String,
-    value: String,
-    icon: ferrohealth_ui::icon::Glyph,
-    href: Option<String>,
-) -> AnyView {
-    match href {
-        Some(href) => view! { <StatCard label=label value=value icon=icon href=href /> }.into_any(),
-        None => view! { <StatCard label=label value=value icon=icon /> }.into_any(),
-    }
-}
-
-/// A single stat-tile skeleton (a card-shaped placeholder).
-fn tile_skeleton() -> AnyView {
-    view! { <div class=CARD_PAD>{ferrohealth_ui::view::empty::skeleton(2, tr(Msg::Loading))}</div> }
-        .into_any()
-}
-
-/// Three stat-tile skeletons for the counts section's loading state (keeps the
-/// tile grid stable while the counts load).
-fn tiles_skeleton() -> impl IntoView {
-    view! { <>{tile_skeleton()} {tile_skeleton()} {tile_skeleton()}</> }
-}
-
-/// The EHR / composition / template count tiles, all from one
-/// [`dashboard_counts`] round trip.
-fn counts_section() -> AnyView {
-    let resource = Resource::new(|| (), |()| async move { dashboard_counts().await });
-    view! {
-        <Suspense fallback=tiles_skeleton>
-            {move || Suspend::new(async move {
-                match resource.await {
-                    Ok((ehrs, compositions, templates)) => {
-                        // Resolve the Result INSIDE the suspense and render
-                        // either branch as one erased view: hydrating an SSR'd
-                        // ErrorBoundary fallback mismatches in leptos 0.8, and
-                        // this keeps server/client structure identical while
-                        // errors stay visible.
-                        view! {
-                            <>
-                                {stat_tile(
-                                    tr(Msg::Ehrs),
-                                    ehrs.to_string(),
-                                    ferrohealth_ui::icon::Glyph::DATABASE,
-                                    Some("/ehrs".to_owned()),
-                                )}
-                                {stat_tile(
-                                    tr(Msg::Compositions),
-                                    compositions.to_string(),
-                                    ferrohealth_ui::icon::Glyph::FILE_TEXT,
-                                    None,
-                                )}
-                                {stat_tile(
-                                    tr(Msg::Templates),
-                                    templates.to_string(),
-                                    ferrohealth_ui::icon::Glyph::FILE_CODE,
-                                    Some("/templates".to_owned()),
-                                )}
-                            </>
-                        }
-                            .into_any()
-                    }
-                    Err(e) => crate::components::notice::inline_error(&e),
-                }
-            })}
-        </Suspense>
-    }
-    .into_any()
-}
-
-/// The stored-query count tile (its own round trip so a Definition-API failure
-/// doesn't take the count tiles down with it).
-fn stored_queries_tile() -> AnyView {
-    let resource = Resource::new(
-        || (),
-        |()| async move { crate::queries_api::list_stored_queries().await },
-    );
-    view! {
-        <Suspense fallback=tile_skeleton>
-            {move || Suspend::new(async move {
-                match resource.await {
-                    Ok(rows) => {
-                        let count = u32::try_from(rows.len()).unwrap_or(u32::MAX);
-                        stat_tile(
-                            tr(Msg::StoredQueries),
-                            count.to_string(),
-                            ferrohealth_ui::icon::Glyph::SEARCH_CODE,
-                            Some("/queries".to_owned()),
-                        )
-                    }
-                    Err(e) => crate::components::notice::inline_error(&e),
-                }
-            })}
-        </Suspense>
-    }
-    .into_any()
-}
-
-/// The per-namespace match-count tiles, each linking to the stored-queries
-/// screen. ONE round trip builds the whole row ([`namespace_tiles`]), so no
-/// resource is created inside the `Suspend`.
-fn namespaces_section() -> AnyView {
-    let resource = Resource::new(|| (), |()| async move { namespace_tiles().await });
-    view! {
-        <Transition fallback=tile_skeleton>
-            {move || Suspend::new(async move {
-                match resource.await {
-                    Ok(tiles) => namespace_tiles_view(tiles),
-                    Err(e) => crate::components::notice::inline_error(&e),
-                }
-            })}
-        </Transition>
-    }
-    .into_any()
-}
-
-/// Render the namespace tiles, or the empty-state hint.
-fn namespace_tiles_view(tiles: Vec<NamespaceTile>) -> AnyView {
-    if tiles.is_empty() {
-        return view! {
-            <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::SEARCH_CODE
-                message=tr(Msg::NoStoredQueriesYet)
-                hint=tr(Msg::SaveQueryNamespaceNameEachNamespace)
-            >
-                <A href="/queries" attr:class=BTN_SECONDARY>
-                    {tr(Msg::GoToStoredQueries)}
-                </A>
-            </EmptyState>
         }
-        .into_any();
-    }
-    let tiles = tiles.into_iter().map(namespace_tile).collect::<Vec<_>>();
-    view! { <div class="grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-3">{tiles}</div> }
         .into_any()
-}
-
-/// One namespace tile: the namespace (or the unqualified-bucket label), the
-/// summed match count of its stored queries, and a link to the stored-queries
-/// screen. The whole tile is an `<A>` styled as a design-system card (block
-/// content only, so the anchor stays valid HTML). A group whose member query
-/// the CDR refused shows "error" instead of a short count.
-/// `data-namespace-tile` is the stable E2E hook.
-fn namespace_tile(tile: NamespaceTile) -> AnyView {
-    let value = tile.matches.map_or_else(
-        || view! { <span class="text-sm text-danger">"error"</span> }.into_any(),
-        |total| view! { <span>{total.to_string()}</span> }.into_any(),
-    );
-    let hook = tile.label.clone();
-    let members = tile.members;
-    let summary = if members == 1 {
-        tr(Msg::N1Query)
-    } else {
-        tr_with(Msg::Queries2, &[("members", (members).to_string().into())])
-    };
+    });
     view! {
-        <A
-            href="/queries"
-            attr:class=format!(
-                "block {CARD_PAD} no-underline transition-colors hover:border-accent",
-            )
-        >
-            <div class="font-mono font-medium truncate text-ink" data-namespace-tile=hook>
-                {tile.label}
-            </div>
-            <div class="text-2xl font-semibold tabular-nums mt-1 text-ink">{value}</div>
-            <div class="text-xs text-ink-muted mt-1">{summary}</div>
-        </A>
-    }
-    .into_any()
-}
-
-/// The commit-activity trend section: commits per day through the shared
-/// [`activity_chart`] kit (the same chart an EHR's contribution timeline draws).
-fn trend_section() -> AnyView {
-    let resource = Resource::new(|| (), |()| async move { commit_trend().await });
-    view! {
-        <Suspense fallback=|| {
-            view! { {ferrohealth_ui::view::empty::skeleton(1, tr(Msg::Loading))} }
-        }>
-            {move || Suspend::new(async move {
-                match resource.await {
-                    Ok(points) => {
-                        activity_chart(
-                            &points,
-                            "commits",
-                            tr(Msg::NoCommitActivityYet),
-                            tr(Msg::CommitCompositionTrendAppearsHereFrom),
-                        )
-                    }
-                    Err(e) => crate::components::notice::inline_error(&e),
-                }
-            })}
-        </Suspense>
-    }
-    .into_any()
-}
-
-#[cfg(all(test, not(target_arch = "wasm32")))]
-mod tests {
-    use super::{COMPOSITION_COUNT_AQL, EHR_COUNT_AQL, TREND_AQL};
-
-    #[test]
-    fn dashboard_aql_consts_parse() {
-        for aql in [EHR_COUNT_AQL, COMPOSITION_COUNT_AQL, TREND_AQL] {
-            openehr_query::parser::parse_str(aql).expect("dashboard AQL const must parse");
-        }
+        <Title text=tr(Msg::NavDashboard) />
+        {body}
     }
 }

@@ -16,11 +16,17 @@ use leptos_axum::LeptosRoutes;
 use crate::session::{SESSION_KEY, ViewerSession};
 use crate::state::AppState;
 
+/// The most bytes a page's form post may carry: an operational template or a
+/// composition document of a few megabytes posts whole.
+const FORM_LIMIT: usize = 16 * 1024 * 1024;
+
 /// Assembles the viewer's full axum service.
 ///
-/// OIDC routes, the export POST, the Leptos routes with the per-request
-/// context, the static-file fallback, and the layer stack (state → session
-/// guard → security headers). Sessions are a sealed cookie
+/// The OIDC routes, the export post, the preference, sidebar and sign-out
+/// posts, FerroUI's stylesheet and the FerroEHR theme, the Leptos routes with
+/// the per-request context, each route's form post drawn by the same page
+/// ([`post_page`]), the static-file fallback, and the layer stack (state →
+/// session guard → security headers). Sessions are a sealed cookie
 /// ([`crate::session`]) — no session-store layer exists, so no state is
 /// bound to any one instance.
 pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Router {
@@ -38,7 +44,7 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
         "{}/{}",
         leptos_options.site_root, leptos_options.site_pkg_dir
     );
-    let service = axum::Router::new()
+    let mut service = axum::Router::new()
         // The hydration bundle, served on its own: a file the bundle lacks
         // answers 404 and a read failure 500, never the rendered app or the
         // sign-in guard's redirect, and either is logged with its status.
@@ -54,34 +60,65 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
             "/export/aql",
             axum::routing::post(crate::export::export_aql),
         )
-        // FerroUI's stylesheet and the FerroEHR brand theme, served from this
-        // origin so `style-src 'self'` holds, and the theme toggle's post.
+        // FerroUI's stylesheet and its FerroEHR theme, served from this origin
+        // so `style-src 'self'` holds.
         .route(
             crate::app::STYLESHEET_PATH,
             axum::routing::get(|| async { css(ferrohealth_ui::style::STYLESHEET) }),
         )
         .route(
             crate::app::THEME_PATH,
-            axum::routing::get(|| async { css(BRAND_THEME) }),
+            axum::routing::get(|| async { css(ferrohealth_ui::style::Brand::Ehr.theme()) }),
         )
-        .route(crate::theme::THEME_ROUTE, axum::routing::post(choose_theme))
-        // The FerroEHR mark as the tab icon: the SVG the shell links, and the
-        // raster set at the path a browser requests unasked.
+        .route(
+            crate::prefs::PREFERENCE_ROUTE,
+            axum::routing::post(crate::prefs::choose_preference),
+        )
+        .route(
+            crate::prefs::RESET_ROUTE,
+            axum::routing::post(crate::prefs::reset_preferences),
+        )
+        .route(
+            crate::prefs::SIDEBAR_ROUTE,
+            axum::routing::post(crate::prefs::choose_sidebar),
+        )
+        .route(crate::shell::SIGN_OUT_ROUTE, axum::routing::post(sign_out))
+        .route(
+            crate::paging::PAGING_ROUTE,
+            axum::routing::post(crate::paging::choose_paging),
+        )
+        .route(
+            crate::pages::about::DOWNLOAD_ROUTE,
+            axum::routing::get(download_manifest),
+        )
+        // The FerroEHR mark as the tab icon and in the lockup: the SVGs the
+        // pages link, and the raster set at the path a browser requests
+        // unasked.
         .route(
             crate::app::ICON_PATH,
             axum::routing::get(|| async { icon("image/svg+xml", FAVICON_SVG) }),
         )
         .route(
+            crate::shell::MARK_PATH,
+            axum::routing::get(|| async { icon("image/svg+xml", MARK_SVG) }),
+        )
+        .route(
             FAVICON_ICO_PATH,
             axum::routing::get(|| async { icon("image/x-icon", FAVICON_ICO) }),
-        )
+        );
+    // Every page answers its own form posts: the same page drawn again with
+    // the posted fields in context (`crate::posted`).
+    for listing in &routes {
+        service = service.route(listing.path(), axum::routing::post(post_page));
+    }
+    let service = service
         .leptos_routes_with_context(&leptos_options, routes, provide_viewer_context.clone(), {
             let options = leptos_options.clone();
-            move || crate::app::shell(options.clone())
+            move || crate::app::document(options.clone())
         })
         .fallback(leptos_axum::file_and_error_handler_with_context(
             provide_viewer_context,
-            crate::app::shell,
+            crate::app::document,
         ))
         // Ahead of every render: a document request without a session never
         // reaches Leptos, and an authenticated response leaves with a
@@ -89,6 +126,130 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
         .layer(axum::middleware::from_fn(login_guard))
         .layer(Extension(app_state));
     with_security_headers(service).with_state(leptos_options)
+}
+
+/// Draws the page a form posted to, with the posted fields in context.
+///
+/// The fields are read as `application/x-www-form-urlencoded`, at most
+/// [`FORM_LIMIT`] bytes; the page reads them through [`crate::posted::posted`]
+/// and answers with a redirect when its work succeeded or with itself, the
+/// fields as posted and the refusal beside them, when it did not. A post from
+/// another origin is refused, and a post without a session (but to the
+/// sign-in page) goes to the sign-in page, the place it came from kept.
+async fn post_page(
+    axum::extract::State(options): axum::extract::State<LeptosOptions>,
+    Extension(state): Extension<AppState>,
+    request: axum::extract::Request,
+) -> axum::response::Response {
+    use axum::response::IntoResponse as _;
+    let (parts, body) = request.into_parts();
+    if !same_origin(&parts.headers) {
+        return (http::StatusCode::FORBIDDEN, "a form of another origin").into_response();
+    }
+    let path = parts.uri.path().to_owned();
+    let signed_in = crate::session::unseal(
+        &state.session_keys,
+        &parts.headers,
+        state.config.session.idle_minutes,
+    )
+    .get::<ViewerSession>(SESSION_KEY)
+    .is_some();
+    if !signed_in && path != "/login" {
+        let back = crate::request::return_path(
+            parts
+                .headers
+                .get(http::header::REFERER)
+                .and_then(|value| value.to_str().ok())
+                .and_then(|value| value.parse::<http::Uri>().ok())
+                .map(|uri| uri.path().to_owned())
+                .as_deref()
+                .unwrap_or("/"),
+        )
+        .to_owned();
+        let to = crate::session_client::signed_out_url(&back, "");
+        return axum::response::Redirect::to(&to).into_response();
+    }
+    let Ok(bytes) = axum::body::to_bytes(body, FORM_LIMIT).await else {
+        return (http::StatusCode::PAYLOAD_TOO_LARGE, "the form is too large").into_response();
+    };
+    let form = axum::extract::Request::from_parts(parts.clone(), axum::body::Body::from(bytes));
+    let fields = match <axum::extract::Form<Vec<(String, String)>> as axum::extract::FromRequest<()>>::from_request(form, &()).await {
+        Ok(axum::extract::Form(fields)) => fields,
+        Err(rejection) => return rejection.into_response(),
+    };
+    let posted = crate::posted::Posted::new(fields);
+    let request = axum::extract::Request::from_parts(parts, axum::body::Body::empty());
+    let handler = leptos_axum::render_app_async_with_context(
+        move || {
+            leptos::context::provide_context(state.clone());
+            leptos::context::provide_context(posted.clone());
+            provide_request_nonce();
+        },
+        move || crate::app::document(options.clone()),
+    );
+    handler(request).await
+}
+
+/// Whether a form post comes from this origin: its `Origin`, when sent,
+/// names the host the request was sent to. The session cookie is
+/// `SameSite=Lax`, so another site's post carries no session either.
+fn same_origin(headers: &http::HeaderMap) -> bool {
+    let Some(origin) = headers.get(http::header::ORIGIN) else {
+        return true;
+    };
+    let host = headers
+        .get(http::header::HOST)
+        .and_then(|value| value.to_str().ok());
+    let origin_host = origin
+        .to_str()
+        .ok()
+        .and_then(|value| value.parse::<http::Uri>().ok())
+        .and_then(|uri| uri.authority().map(|authority| authority.as_str().to_owned()));
+    matches!((host, origin_host), (Some(host), Some(origin)) if host == origin)
+}
+
+/// Answers About's Download: the CDR's conformance manifest as it sent it,
+/// as a file. The guard has already refused a request without a session.
+async fn download_manifest(Extension(state): Extension<AppState>) -> axum::response::Response {
+    use axum::response::IntoResponse as _;
+    match crate::system_api::fetch_conformance_document(&state).await {
+        Ok(body) => (
+            [
+                (
+                    http::header::CONTENT_TYPE,
+                    http::HeaderValue::from_static("application/json"),
+                ),
+                (
+                    http::header::CONTENT_DISPOSITION,
+                    http::HeaderValue::from_static("attachment; filename=\"options.json\""),
+                ),
+            ],
+            body,
+        )
+            .into_response(),
+        Err(error) => (http::StatusCode::BAD_GATEWAY, error.to_string()).into_response(),
+    }
+}
+
+/// Signs the reader out: the session cookie is cleared and the browser goes
+/// to the sign-in page, which says the reader signed out.
+async fn sign_out(Extension(state): Extension<AppState>) -> axum::response::Response {
+    use axum::response::IntoResponse as _;
+    let mut response = axum::response::Redirect::to("/login?signed-out=1").into_response();
+    match crate::session::set_cookie(
+        &state.session_keys,
+        &crate::session::CookieSession::default(),
+        state.config.session.cookie_secure,
+        state.config.session.idle_minutes,
+    ) {
+        Ok(cookie) => {
+            response
+                .headers_mut()
+                .append(http::header::SET_COOKIE, cookie);
+            response
+        }
+        Err(_failed) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }
 
 /// The service of the hydration bundle under `dir`: its files as they stand,
@@ -129,14 +290,14 @@ async fn warn_unserved_asset(
     response
 }
 
-/// The FerroEHR brand theme: FerroEHR's palette over FerroUI's roles.
-const BRAND_THEME: &str = include_str!("../style/theme.css");
-
 /// The path a browser requests the tab icon from when a page links none.
 const FAVICON_ICO_PATH: &str = "/favicon.ico";
 
 /// The FerroEHR favicon master, the tile with `Fe` (`assets/brand/README.md`).
 const FAVICON_SVG: &[u8] = include_bytes!("../../../assets/brand/favicon.svg");
+
+/// The FerroEHR icon the lockup draws (`assets/brand/README.md`).
+const MARK_SVG: &[u8] = include_bytes!("../../../assets/brand/ferroehr-icon.svg");
 
 /// The raster favicon set (48, 32 and 16 px) rendered from [`FAVICON_SVG`].
 const FAVICON_ICO: &[u8] = include_bytes!("../../../assets/brand/favicon.ico");
@@ -163,66 +324,14 @@ fn css(text: &'static str) -> axum::response::Response {
     ))
 }
 
-/// What a theme choice posts.
-#[derive(Debug, serde::Deserialize)]
-struct ThemeChoice {
-    /// The key of the theme chosen.
-    theme: String,
-    /// The page to return to.
-    back: String,
-}
-
-/// Keeps the theme a plain form post chose in its cookie and sends the
-/// browser back to the page it came from (one of the viewer's own).
-async fn choose_theme(
-    axum::extract::Form(choice): axum::extract::Form<ThemeChoice>,
-) -> axum::response::Response {
-    use axum::response::IntoResponse as _;
-    let Some(theme) = ferrohealth_ui::theme::Theme::parse(&choice.theme) else {
-        return (
-            http::StatusCode::BAD_REQUEST,
-            "the theme is not light, dark or system",
-        )
-            .into_response();
-    };
-    let cookie = format!(
-        "{}={}; Path=/; SameSite=Lax; HttpOnly; Max-Age=31536000",
-        crate::theme::THEME_COOKIE,
-        theme.key()
-    );
-    let mut response =
-        axum::response::Redirect::to(crate::theme::return_path(&choice.back)).into_response();
-    match http::HeaderValue::from_str(&cookie) {
-        Ok(value) => {
-            response
-                .headers_mut()
-                .insert(http::header::SET_COOKIE, value);
-            response
-        }
-        Err(_invalid) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
-}
-
-/// The pre-render session guard: an unauthenticated document request to a
-/// guarded path answers `302 → /login` with an EMPTY body, before Leptos
-/// renders anything.
+/// The pre-render session guard.
 ///
-/// The in-view guard (`crate::pages::shell::AppShell`) sets the same redirect on
-/// the response line, but it cannot suppress the body: the chrome and
-/// `<Outlet/>` deliberately live outside its `Suspense`, so without this layer a
-/// signed-out hit renders the whole viewer and serializes every screen's
-/// server-function failures into the response. The in-view guard remains the
-/// client-side navigation gate.
-///
-/// Scope: `GET`/`HEAD` on everything except the public paths
-/// (`is_public_path`). Server-function calls (`/api/…`) keep their own
-/// typed refusals; the export POST enforces its own session.
-///
-/// Fail-closed: a request that reaches this layer without the app state
-/// redirects rather than renders. This layer is also the sliding-expiry
-/// writer: every response to an authenticated request leaves with a
-/// re-sealed cookie carrying a fresh idle anchor — unless the handler
-/// already set our cookie itself (login and logout do).
+/// A document request (`GET`/`HEAD`) for a guarded path without a live
+/// session goes to the sign-in page, which returns the reader to the page
+/// they asked for after signing in, and says the session ended when the
+/// request carried a session cookie that no longer opens. An authenticated
+/// response leaves with the sliding idle anchor moved, unless the handler
+/// wrote the session itself.
 pub async fn login_guard(
     request: axum::extract::Request,
     next: axum::middleware::Next,
@@ -243,12 +352,25 @@ pub async fn login_guard(
     let guarded = (method == http::Method::GET || method == http::Method::HEAD)
         && !is_public_path(request.uri().path());
     if guarded && !authenticated {
+        let had_cookie = carries_session_cookie(request.headers());
+        let path_and_query = request
+            .uri()
+            .path_and_query()
+            .map_or_else(|| "/".to_owned(), ToString::to_string);
+        let location = sign_in_location(&path_and_query, had_cookie);
         let mut response = axum::response::Response::new(axum::body::Body::empty());
         *response.status_mut() = http::StatusCode::FOUND;
-        response.headers_mut().insert(
-            http::header::LOCATION,
-            http::HeaderValue::from_static("/login"),
-        );
+        match http::HeaderValue::from_str(&location) {
+            Ok(value) => {
+                response.headers_mut().insert(http::header::LOCATION, value);
+            }
+            Err(_invalid) => {
+                response.headers_mut().insert(
+                    http::header::LOCATION,
+                    http::HeaderValue::from_static("/login"),
+                );
+            }
+        }
         return response;
     }
 
@@ -270,6 +392,29 @@ pub async fn login_guard(
     response
 }
 
+/// Whether a request carries the viewer's session cookie at all.
+fn carries_session_cookie(headers: &http::HeaderMap) -> bool {
+    headers
+        .get_all(http::header::COOKIE)
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .any(|cookies| ferrohealth_ui::theme::cookie(cookies, crate::session::SESSION_COOKIE).is_some())
+}
+
+/// The sign-in page a guarded request without a session goes to: it keeps
+/// the page asked for as `next`, and says the session ended when the request
+/// carried a session cookie.
+#[must_use]
+pub fn sign_in_location(path_and_query: &str, had_cookie: bool) -> String {
+    let next = crate::auth::same_origin_next(Some(path_and_query));
+    let expired = if had_cookie { "expired=1&" } else { "" };
+    if next == "/" && !had_cookie {
+        "/login".to_owned()
+    } else {
+        format!("/login?{expired}next={}", urlencoding::encode(&next))
+    }
+}
+
 /// Whether a response already sets our session cookie (the handler wrote the
 /// session itself — its value wins over the guard's sliding refresh).
 fn sets_session_cookie(headers: &http::HeaderMap) -> bool {
@@ -289,6 +434,7 @@ fn is_public_path(path: &str) -> bool {
         || path == crate::app::ICON_PATH
         || path == crate::app::STYLESHEET_PATH
         || path == crate::app::THEME_PATH
+        || path == crate::shell::MARK_PATH
         || path.starts_with("/auth/")
         || path.starts_with("/pkg/")
         || path.starts_with("/api/")
