@@ -48,10 +48,9 @@ pub const MARK_PATH: &str = "/ferroehr-icon.svg";
 /// The route the top bar's search posts to.
 pub const FIND_ROUTE: &str = "/find";
 
-// TODO(#3946): Stored queries takes `scroll-text` with FerroHEALTH/FerroUI#376.
 /// The glyph of Stored queries in the navigation, on the dashboard and in
 /// the search's answers.
-pub const STORED_QUERIES_GLYPH: Glyph = Glyph::SEARCH_CODE;
+pub const STORED_QUERIES_GLYPH: Glyph = Glyph::SCROLL_TEXT;
 
 /// Server › Overview, where the sandbox band's Details lead.
 const SERVER_ROUTE: &str = "/server";

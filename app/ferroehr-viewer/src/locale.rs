@@ -4317,6 +4317,32 @@ messages! {
     QueriesVersionHelp = "queries-version-help",
     /// `Older versions`
     DirectoryOlderVersions = "directory-older-versions",
+    /// `{ $day } { $month }`
+    ChartDay = "chart-day",
+    /// `Jan`
+    MonthShort1 = "month-short-1",
+    /// `Feb`
+    MonthShort2 = "month-short-2",
+    /// `Mar`
+    MonthShort3 = "month-short-3",
+    /// `Apr`
+    MonthShort4 = "month-short-4",
+    /// `May`
+    MonthShort5 = "month-short-5",
+    /// `Jun`
+    MonthShort6 = "month-short-6",
+    /// `Jul`
+    MonthShort7 = "month-short-7",
+    /// `Aug`
+    MonthShort8 = "month-short-8",
+    /// `Sep`
+    MonthShort9 = "month-short-9",
+    /// `Oct`
+    MonthShort10 = "month-short-10",
+    /// `Nov`
+    MonthShort11 = "month-short-11",
+    /// `Dec`
+    MonthShort12 = "month-short-12",
 }
 
 /// The viewer's message `msg` in the page's locale.

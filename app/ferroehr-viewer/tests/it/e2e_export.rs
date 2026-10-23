@@ -23,16 +23,16 @@
 //! End-to-end journey over the `RESULT_SET` **export** — the one viewer
 //! surface whose outcome is a file rather than a screen.
 //!
-//! Each export is a submit of the page's own form sent to the viewer's
-//! `/export/aql/<format>` route (`formaction`, `ferroehr_viewer::export`), so a
-//! browser click hands the bytes to the download manager and `WebDriver` never
-//! sees them. The journey therefore does what the button does: it runs the
-//! query on screen, reads the two fields the export reads (`q`,
-//! `parameters_json`) and the button's own target out of the DOM, lifts the
-//! browser's own session cookie off the
-//! `WebDriver`, and re-posts exactly that request — so what it asserts is the
-//! button's own target answering the button's own request, under the button's
-//! own session.
+//! Each item of the Results heading's Export menu is a submit of the page's
+//! own form sent to the viewer's `/export/aql/<format>` route (`formaction`,
+//! `ferroehr_viewer::export`), so a browser click hands the bytes to the
+//! download manager and `WebDriver` never sees them. The journey therefore
+//! does what the item does: it runs the query on screen, opens Export and
+//! checks its two items, reads the two fields the export reads (`q`,
+//! `parameters_json`) and the item's own target out of the DOM, lifts the
+//! browser's own session cookie off the `WebDriver`, and re-posts exactly
+//! that request — so what it asserts is the item's own target answering the
+//! item's own request, under the item's own session.
 //!
 //! What it asserts: the CSV carries the column aliases as its header row and
 //! then the very rows the table shows; the JSON carries the same `RESULT_SET`;
@@ -74,18 +74,49 @@ struct PostedForm {
     q: String,
     /// The `parameters_json` field: the bindings object, empty when none.
     parameters_json: String,
-    /// The button's own target: `/export/aql/csv` or `/export/aql/json`.
+    /// The item's own target: `/export/aql/csv` or `/export/aql/json`.
     action: String,
 }
 
-/// What the export button `format` would post: the run's hidden `q` and
-/// `parameters_json` in the Results section, to its own target.
+/// The Results heading's Export menu (E7): its trigger and its items.
+const EXPORT_TRIGGER: &str = "summary[aria-controls^='results-export-']";
+
+/// Opens Export and asserts its items: CSV then JSON, each a menu item that
+/// submits the run's form to its own export route.
+///
+/// # Panics
+/// When the menu does not open or its items are not the two formats in order.
+async fn open_export_menu(h: &Harness) {
+    let trigger = h.wait_css(EXPORT_TRIGGER).await;
+    assert_eq!(
+        trigger.attr("aria-haspopup").await,
+        "menu",
+        "Export opens a menu"
+    );
+    trigger.click().await;
+    let items = "[role='menu'][id^='results-export-'] [role='menuitem']";
+    common::wait_visible(h, items).await;
+    let mut actions = Vec::new();
+    for item in find_all(h, items).await {
+        assert_eq!(item.attr("type").await, "submit", "an export item submits");
+        actions.push(item.attr("formaction").await);
+    }
+    assert_eq!(
+        actions,
+        ["/export/aql/csv", "/export/aql/json"],
+        "Export lists CSV then JSON, each posting to its own route"
+    );
+}
+
+/// What the Export menu's item `format` would post: the run's hidden `q`
+/// and `parameters_json` in the Results section, to its own target.
 async fn posted_form(h: &Harness, format: &str) -> PostedForm {
     let action = format!("/export/aql/{format}");
-    // NOTE: the button carries no `formmethod`, so the method is its form's, which must post.
-    h.wait_css(&format!(
-        "form[method='post' i] button[type='submit'][formaction='{action}']"
-    ))
+    // NOTE: the item carries no `formmethod`, so the method is its form's, which must post.
+    common::wait_visible(
+        h,
+        &format!("form[method='post' i] [role='menuitem'][type='submit'][formaction='{action}']"),
+    )
     .await;
     let field = async |name: &str| {
         h.wait_css(&format!("main input[type='hidden'][name='{name}']"))
@@ -120,7 +151,7 @@ async fn session_cookie_header(h: &Harness) -> String {
         .join("; ")
 }
 
-/// POST the form to the export button's target, optionally carrying a
+/// POST the form to the export item's target, optionally carrying a
 /// session cookie.
 ///
 /// Redirects are NOT followed: the route answers an unauthenticated caller with
@@ -193,7 +224,7 @@ async fn run_export_query(h: &Harness) {
     h.wait_css("main table tbody tr").await;
 }
 
-/// The export buttons serve the rows on screen: CSV as a header row plus those
+/// The Export menu's items serve the rows on screen: CSV as a header row plus those
 /// rows, JSON as the same `RESULT_SET`, both as named downloads — and neither
 /// to a caller with no session.
 #[tokio::test]
@@ -232,7 +263,10 @@ async fn the_result_export_serves_the_rows_on_screen() {
     let base = h.base.clone();
     let cookie = session_cookie_header(&h).await;
 
-    // ── CSV: the button's own request, answered as a download ───────────────
+    open_export_menu(&h).await;
+    h.shot(2, "export-menu").await;
+
+    // ── CSV: the item's own request, answered as a download ───────────────
     let csv_form = posted_form(&h, "csv").await;
     assert_eq!(
         csv_form.q, EXPORT_AQL,
@@ -266,7 +300,7 @@ async fn the_result_export_serves_the_rows_on_screen() {
     let json_form = posted_form(&h, "json").await;
     assert_eq!(
         json_form.q, csv_form.q,
-        "both export buttons post the same query"
+        "both export items post the same query"
     );
     let response = post_export(&base, Some(&cookie), &json_form).await;
     assert_eq!(response.status(), StatusCode::OK, "the JSON export answers");
@@ -336,7 +370,7 @@ async fn the_result_export_serves_the_rows_on_screen() {
         "the refusal sends the caller to sign in"
     );
 
-    h.shot(2, "results-after-export").await;
+    h.shot(3, "results-after-export").await;
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;
     h.finish().await;

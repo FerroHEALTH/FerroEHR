@@ -479,6 +479,41 @@ pub struct LastDays {
     pub first: String,
     /// The window's last day, today, `YYYY-MM-DD`.
     pub last: String,
+    // TODO(#3957): the mockups label four days, FerroHEALTH/FerroUI#387.
+    /// The axis labels of the first and the last day, such as `22 Sep`.
+    pub ends: (String, String),
+}
+
+/// The axis label of `date`, its day and its month in short, such as
+/// `22 Sep`, as the FerroEHR mockups label an activity chart.
+#[must_use]
+pub fn axis_day(date: jiff::civil::Date) -> String {
+    const MONTHS: [Msg; 12] = [
+        Msg::MonthShort1,
+        Msg::MonthShort2,
+        Msg::MonthShort3,
+        Msg::MonthShort4,
+        Msg::MonthShort5,
+        Msg::MonthShort6,
+        Msg::MonthShort7,
+        Msg::MonthShort8,
+        Msg::MonthShort9,
+        Msg::MonthShort10,
+        Msg::MonthShort11,
+        Msg::MonthShort12,
+    ];
+    let month = usize::try_from(date.month())
+        .ok()
+        .and_then(|month| month.checked_sub(1))
+        .and_then(|place| MONTHS.get(place))
+        .map_or_else(|| date.month().to_string(), |month| tr(*month));
+    tr_with(
+        Msg::ChartDay,
+        &[
+            ("day", date.day().to_string().into()),
+            ("month", month.into()),
+        ],
+    )
 }
 
 /// The last `days` days up to today, each with the count `points` holds for
@@ -517,6 +552,7 @@ fn last_days_to(
         counts,
         first: first.to_string(),
         last: today.to_string(),
+        ends: (axis_day(first), axis_day(today)),
     }
 }
 
@@ -629,7 +665,9 @@ fn locate(text: &str, path: &str) -> Option<ferrohealth_ui::view::diagnostics::P
 
 #[cfg(test)]
 mod tests {
-    use super::{clock, findings_of, last_days_to, locate, path_in, shortened, status_words};
+    use super::{
+        axis_day, clock, findings_of, last_days_to, locate, path_in, shortened, status_words,
+    };
     use crate::activity::ActivityPoint;
     use crate::error::ViewerError;
     use ferrohealth_ui::view::time::relative_reading;
@@ -679,10 +717,26 @@ mod tests {
         assert_eq!(days.counts.len(), 30);
         assert_eq!(days.first, "2026-09-24");
         assert_eq!(days.last, "2026-10-23");
+        assert_eq!(days.ends, ("24 Sep".to_owned(), "23 Oct".to_owned()));
         assert_eq!(days.counts.last(), Some(&(29, 3)));
         assert_eq!(days.counts.get(26), Some(&(26, 1)));
         let total: u32 = days.counts.iter().map(|(_, count)| *count).sum();
         assert_eq!(total, 4, "a day before the window is left out");
+    }
+
+    #[test]
+    fn an_axis_day_reads_its_day_and_its_short_month() {
+        let words: Vec<String> = (1..=12)
+            .map(|month| axis_day(jiff::civil::date(2026, month, 1)))
+            .collect();
+        assert_eq!(
+            words,
+            [
+                "1 Jan", "1 Feb", "1 Mar", "1 Apr", "1 May", "1 Jun", "1 Jul", "1 Aug", "1 Sep",
+                "1 Oct", "1 Nov", "1 Dec"
+            ]
+        );
+        assert_eq!(axis_day(jiff::civil::date(2026, 9, 22)), "22 Sep");
     }
 
     #[test]

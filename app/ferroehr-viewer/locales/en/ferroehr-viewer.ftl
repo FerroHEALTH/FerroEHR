@@ -2380,3 +2380,18 @@ config-language-line = Used when the browser asks for a language the viewer does
 
 template-delete-row = Delete…
 sub-delete-row = Delete…
+
+# A day of an activity chart's axis, such as 22 Sep.
+chart-day = { $day } { $month }
+month-short-1 = Jan
+month-short-2 = Feb
+month-short-3 = Mar
+month-short-4 = Apr
+month-short-5 = May
+month-short-6 = Jun
+month-short-7 = Jul
+month-short-8 = Aug
+month-short-9 = Sep
+month-short-10 = Oct
+month-short-11 = Nov
+month-short-12 = Dec
