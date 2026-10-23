@@ -39,7 +39,7 @@ workflow refuses a tag that has no matching section here.
   written and read as `|raw` canonical JSON, and the FLAT and STRUCTURED
   examples leave it out. A canonical commit's `DV_STATE` is now checked
   against the template's code list on its `value`. The gap is reported
-  upstream in #3936.
+  upstream in #3936. The `openehr-*` crates move to 0.0.97.
 
 ### Security
 
