@@ -7,20 +7,20 @@ name: CI
 on:
   push:
     branches: [main]
-  # The types are spelled out (#2777) because the implicit default is
-  # `[opened, synchronize, reopened]` only: applying an escape-hatch label
-  # (`no-changelog`, `no-chart-bump`, `no-crate-bump`, `no-ui-visual-change`)
-  # re-ran nothing, so the documented remedy was to close and reopen the pull
-  # request to manufacture a fresh event. Every guard reads its label from the
-  # event payload (`github.event.pull_request.labels`), which the
-  # labeled/unlabeled payload carries CURRENT, so the label now takes effect on
-  # the run it triggers.
+  # One run per commit under test: only the activity types that change the
+  # code start CI. `edited`, `labeled` and `unlabeled` each start a run of
+  # their own on the SAME head commit ("By default, a workflow only runs when
+  # a pull_request event's activity type is opened, synchronize, or reopened",
+  # https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request),
+  # the concurrency group below then cancels the run in flight, and that run's
+  # `conclusion` reported a failure on the head commit (#3948).
   #
-  # `labeled`/`unlabeled` fire once PER LABEL, so editing three labels queues
-  # three runs — the concurrency group below collapses them, because PR runs
-  # supersede within the pull request.
+  # The guards that read an escape label or the description read it from the
+  # REST API when they run, because a re-run replays the original event
+  # payload; pr-guards.yml re-runs the guard a changed label or description
+  # affects in this run once it completes.
   pull_request:
-    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+    types: [opened, synchronize, reopened]
   # Declared before any merge queue exists, because a queue reports its checks
   # on this event alone: "you need to update the workflows to include the
   # merge_group event as an additional trigger. Otherwise, status checks will
@@ -1082,10 +1082,18 @@ jobs:
       - name: No book page says planned about a closed issue, or shipped about an open one
         env:
           GH_TOKEN: ${{ github.token }}
-          # The issues this PR closes count as closed; context reaches the shell
-          # through env, never `${{ }}`-inline (the template-injection rule).
-          PR_BODY: ${{ github.event.pull_request.body }}
-        run: bash scripts/checks/tracker-status.sh
+          GH_REPO: ${{ github.repository }}
+          # The issues this PR closes count as closed. `--closing` reads the
+          # body through the API, so a re-run by pr-guards.yml sees the
+          # description as it is then (#3948); a merge group has no body.
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [ -n "${PR}" ]; then
+            bash scripts/checks/tracker-status.sh --closing "${PR}"
+          else
+            bash scripts/checks/tracker-status.sh
+          fi
 
   # The two EHDS pages are GENERATED from website/book/ehds.yaml
   # (scripts/render/ehds-pages.sh), for the reason the control matrix is: a
@@ -2325,6 +2333,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read # the labels when the step runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -2334,9 +2343,13 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'no-ui-visual-change') }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+          # Read when the step runs: a re-run replays the event payload (#3948).
+          HAS_LABEL=$(gh api "repos/${GH_REPO}/pulls/${PR}" --jq 'any(.labels[].name; . == "no-ui-visual-change")')
           if [ "$HAS_LABEL" = "true" ]; then
             echo "no-ui-visual-change label set — guard skipped."; exit 0
           fi
@@ -2367,6 +2380,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read # the labels when the step runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -2376,9 +2390,13 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'no-crate-bump') }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+          # Read when the step runs: a re-run replays the event payload (#3948).
+          HAS_LABEL=$(gh api "repos/${GH_REPO}/pulls/${PR}" --jq 'any(.labels[].name; . == "no-crate-bump")')
           if [ "$HAS_LABEL" = "true" ]; then
             echo "no-crate-bump label set — guard skipped."; exit 0
           fi
@@ -2478,6 +2496,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read # the labels when the step runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -2487,9 +2506,13 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'no-chart-bump') }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+          # Read when the step runs: a re-run replays the event payload (#3948).
+          HAS_LABEL=$(gh api "repos/${GH_REPO}/pulls/${PR}" --jq 'any(.labels[].name; . == "no-chart-bump")')
           if [ "$HAS_LABEL" = "true" ]; then
             echo "no-chart-bump label set — guard skipped."; exit 0
           fi
@@ -2565,6 +2588,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read # the labels when the step runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -2576,10 +2600,13 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'no-conformance-run') }}
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+          # Read when the step runs: a re-run replays the event payload (#3948).
+          HAS_LABEL=$(gh api "repos/${GH_REPO}/pulls/${PR}" --jq 'any(.labels[].name; . == "no-conformance-run")')
           label=()
           if [ "$HAS_LABEL" = "true" ]; then
             label=(--no-conformance-run)
@@ -2626,7 +2653,8 @@ jobs:
   # terms (CONTRIBUTING.md § Licensing of contributions) through the template's
   # checkbox; this gate is what makes the checkbox binding. Bot authors are
   # skipped: a bot cannot accept terms and its bumps carry no expression of its
-  # own. `edited` is in the pull_request trigger so ticking the box re-runs it.
+  # own. The body is read when the step runs, and pr-guards.yml re-runs this
+  # job when the description changes, so ticking the box takes effect (#3948).
   contribution-licence:
     name: contribution-licence-guard
     if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot'
@@ -2634,14 +2662,21 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read # the description when the step runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: The pull request body accepts the contribution licensing terms
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
-        run: bash scripts/checks/contribution-licence.sh
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          PR_BODY=$(gh api "repos/${GH_REPO}/pulls/${PR}" --jq '.body // ""')
+          export PR_BODY
+          bash scripts/checks/contribution-licence.sh
 
   migration-immutability:
     name: migration-immutability
@@ -2672,10 +2707,11 @@ jobs:
   # A change that moves the pseudonymisation boundary is reviewed as one: the
   # template's 'Privacy boundary' checklist has to be ticked, and no added line
   # may carry a value shaped like a real Dutch identifier (CONTRIBUTING.md
-  # § Personal data). `edited` is in the pull_request trigger, so ticking a box
-  # re-runs this. Bot authors are skipped for the reason the licence gate skips
-  # them: a bot cannot make the claims the checklist records, and its bumps
-  # touch none of the boundary paths.
+  # § Personal data). The body is read when the step runs, and pr-guards.yml
+  # re-runs this job when the description changes (#3948). Bot authors are
+  # skipped for the reason the licence gate skips them: a bot cannot make the
+  # claims the checklist records, and its bumps touch none of the boundary
+  # paths.
   privacy-boundary:
     name: privacy-boundary-guard
     if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot'
@@ -2683,6 +2719,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read # the description when the step runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -2696,10 +2733,16 @@ jobs:
       # Context reaches the shell through env, never `${{ }}`-inline.
       - name: The privacy boundary is reviewed and the diff carries no personal data
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: bash scripts/checks/privacy-boundary.sh --diff "$PR_BASE" "$PR_HEAD"
+        run: |
+          set -euo pipefail
+          PR_BODY=$(gh api "repos/${GH_REPO}/pulls/${PR}" --jq '.body // ""')
+          export PR_BODY
+          bash scripts/checks/privacy-boundary.sh --diff "$PR_BASE" "$PR_HEAD"
 
   changelog:
     name: changelog-guard
@@ -2708,6 +2751,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read # the labels when the step runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -2730,9 +2774,13 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+          # Read when the step runs: a re-run replays the event payload (#3948).
+          HAS_LABEL=$(gh api "repos/${GH_REPO}/pulls/${PR}" --jq 'any(.labels[].name; . == "no-changelog")')
           if [ "$HAS_LABEL" = "true" ]; then
             echo "no-changelog label set — guard skipped."; exit 0
           fi
