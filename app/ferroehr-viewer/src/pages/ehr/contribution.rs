@@ -836,6 +836,9 @@ pub fn NewContributionPage() -> impl IntoView {
                 .as_ref()
                 .map(|posted| posted.text("committer"))
                 .unwrap_or_default();
+            let you = crate::request::session()
+                .map(|session| session.identity)
+                .unwrap_or_default();
             let mut top = None;
             let mut line = (
                 Glyph::GIT_COMMIT,
@@ -929,7 +932,10 @@ pub fn NewContributionPage() -> impl IntoView {
                                         type="text"
                                         class="fui-input"
                                         value=committer
-                                        placeholder=tr(Msg::ContributionCommitterPlaceholder)
+                                        placeholder=tr_with(
+                                            Msg::ContributionCommitterPlaceholder,
+                                            &[("name", you.clone().into())],
+                                        )
                                     />
                                 },
                             )}
@@ -955,7 +961,7 @@ pub fn NewContributionPage() -> impl IntoView {
                         view! {
                             {sections}
                             {crate::pages::common::plain_section(stage)}
-                            {section(Some(tr(Msg::ContributionAudit)), None, None, audit)}
+                            {section(Some(tr(Msg::ContributionNewAudit)), None, None, audit)}
                         },
                     )}
                 </form>

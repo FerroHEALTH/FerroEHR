@@ -48,6 +48,11 @@ pub const MARK_PATH: &str = "/ferroehr-icon.svg";
 /// The route the top bar's search posts to.
 pub const FIND_ROUTE: &str = "/find";
 
+// TODO(#3946): Stored queries takes `scroll-text` with FerroHEALTH/FerroUI#376.
+/// The glyph of Stored queries in the navigation, on the dashboard and in
+/// the search's answers.
+pub const STORED_QUERIES_GLYPH: Glyph = Glyph::SEARCH_CODE;
+
 /// Server › Overview, where the sandbox band's Details lead.
 const SERVER_ROUTE: &str = "/server";
 
@@ -224,14 +229,19 @@ fn groups(subscriptions: bool) -> Vec<Group> {
             title: tr(Msg::NavGroupDefinitions).into(),
             entries: vec![
                 entry("/templates", Msg::NavTemplates, Glyph::FILE_CODE, false),
-                entry("/terminology", Msg::NavTerminology, Glyph::BOOK_A, false),
+                entry("/terminology", Msg::NavTerminology, Glyph::BOOK_OPEN, false),
             ],
         },
         Group {
             id: "nav-queries",
             title: tr(Msg::NavGroupQueries).into(),
             entries: vec![
-                entry("/queries", Msg::NavStoredQueries, Glyph::SEARCH_CODE, false),
+                entry(
+                    "/queries",
+                    Msg::NavStoredQueries,
+                    STORED_QUERIES_GLYPH,
+                    false,
+                ),
                 entry("/query", Msg::NavQuery, Glyph::SQUARE_TERMINAL, false),
             ],
         },

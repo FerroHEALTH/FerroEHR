@@ -646,8 +646,10 @@ messages! {
     DefaultsYourViewerIdentity = "defaults-your-viewer-identity",
     /// `Committer (optional)`
     CommitterOptional = "committer-optional",
-    /// `Contribution audit`
+    /// `Audit`
     ContributionAudit = "contribution-audit",
+    /// `Contribution audit`
+    ContributionNewAudit = "contribution-new-audit",
     /// `Remove`
     Remove = "remove",
     /// `Preview`
@@ -3047,7 +3049,7 @@ messages! {
     ContributionCommit = "contribution-commit",
     /// `The CDR refused the contribution, so nothing was committed.`
     ContributionCommitRefused = "contribution-commit-refused",
-    /// `Leave empty to commit as yourself`
+    /// `Leave empty to commit as { $name }`
     ContributionCommitterPlaceholder = "contribution-committer-placeholder",
     /// `The composition to amend could not be read.`
     ContributionCompositionRefused = "contribution-composition-refused",

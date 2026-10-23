@@ -1635,6 +1635,7 @@ contribution-title = Contribution { $id }
 contribution-subtitle = One change set, committed together.
 contribution-refused = The contribution could not be read.
 contribution-audit = Audit
+contribution-new-audit = Contribution audit
 contribution-versions = Versions
 contribution-record = Record
 fact-committed = Committed
@@ -1656,7 +1657,7 @@ contribution-not-committed = Not committed
 contribution-commit-refused = The CDR refused the contribution, so nothing was committed.
 contribution-choices-refused = The templates or compositions to pick from could not be read.
 contribution-composition-refused = The composition to amend could not be read.
-contribution-committer-placeholder = Leave empty to commit as yourself
+contribution-committer-placeholder = Leave empty to commit as { $name }
 contribution-commit = { $count ->
     [one] Commit 1 change
    *[other] Commit { $count } changes

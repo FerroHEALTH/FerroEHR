@@ -95,6 +95,9 @@ workflow refuses a tag that has no matching section here.
 - **A template's Download** in its More menu (#3942): the stored ADL 1.4
   operational template (`.opt`) or ADL2 template (`.adlt`) as a file, read
   with your session from `/download/template/{family}/{id}`.
+- **New contribution follows its mockup more closely** (#3942): the audit
+  section is headed Contribution audit, the committer's placeholder names who
+  commits when it is left empty, and Terminology takes its book glyph.
 
 ### Removed
 

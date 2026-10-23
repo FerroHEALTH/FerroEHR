@@ -65,7 +65,7 @@ fn stats(ehrs: i64, compositions: i64, templates: u32, stored: Option<u32>) -> A
             href: Some("/templates".to_owned()),
         },
         Stat {
-            glyph: Glyph::SEARCH_CODE,
+            glyph: crate::shell::STORED_QUERIES_GLYPH,
             value: stored.map_or_else(
                 || tr(Msg::UnknownCount),
                 |stored| grouped(i64::from(stored)),
