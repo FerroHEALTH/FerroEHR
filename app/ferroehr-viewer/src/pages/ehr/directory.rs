@@ -64,8 +64,12 @@ const DELETE_DIALOG: &str = "delete-directory";
 /// The id of a restore's confirmation dialog.
 const RESTORE_DIALOG: &str = "restore-directory";
 
-/// How many versions the history reads at once.
+/// How many versions the history reads at once, and how many more Older
+/// versions reads.
 const HISTORY_WINDOW: u32 = 10;
+
+/// The most versions one page of the history reads.
+const HISTORY_MAX: u32 = 500;
 
 /// The display name of a `FOLDER` or `OBJECT_REF` node.
 fn folder_name(node: &Value) -> String {
@@ -284,15 +288,18 @@ fn history(
 /// The Restore… of an older version: the page with that version in view,
 /// whose header offers the restore.
 fn restore_button(number: &str) -> AnyView {
+    // NOTE: R9: the row's own link covers the row; a table action sits above it.
     view! {
-        <a
-            class="fui-button fui-button-ghost fui-button-small"
-            href=format!("?version={number}&restore=1")
-            aria-label=tr_with(Msg::DirectoryRestoreVersion, &[("version", number.to_owned().into())])
-        >
-            {ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "14")}
-            {tr(Msg::DirectoryRestore)}
-        </a>
+        <span class="fui-table-actions">
+            <a
+                class="fui-button fui-button-ghost fui-button-small"
+                href=format!("?version={number}&restore=1")
+                aria-label=tr_with(Msg::DirectoryRestoreVersion, &[("version", number.to_owned().into())])
+            >
+                {ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "14")}
+                {tr(Msg::DirectoryRestore)}
+            </a>
+        </span>
     }
     .into_any()
 }
@@ -458,8 +465,20 @@ pub fn DirectoryTab() -> impl IntoView {
                     Ok(None) => return panel(plain_section(quiet(tr(Msg::DirectoryNone)))),
                     Err(error) => return panel(plain_section(refused(tr(Msg::DirectoryRefused), &error, None))),
                 };
-                let versions = list_directory_versions(ehr_id.clone(), HISTORY_WINDOW).await;
                 let latest = version_number(&current.version_uid);
+                let latest_number = latest.parse::<u32>().unwrap_or(1);
+                // NOTE: ITS-REST 1.1.0 has no FOLDER revision history to page (AMB-24); the window
+                // widens instead, far enough to hold the version asked for.
+                let reach = asked
+                    .as_deref()
+                    .and_then(|number| number.parse::<u32>().ok())
+                    .map_or(0, |number| latest_number.saturating_sub(number).saturating_add(1));
+                let window = crate::request::query("versions")
+                    .and_then(|window| window.parse::<u32>().ok())
+                    .unwrap_or(HISTORY_WINDOW)
+                    .max(reach)
+                    .clamp(HISTORY_WINDOW, HISTORY_MAX);
+                let versions = list_directory_versions(ehr_id.clone(), window).await;
                 let shown: Result<Option<(DirectoryState, Option<String>)>, crate::error::ViewerError> = match (&at, &asked) {
                     (Some(at), _) => fetch_directory_at_time(ehr_id.clone(), at.clone()).await.map(|found| match found {
                         DirectoryAtTime::Present(state) => {
@@ -580,6 +599,16 @@ pub fn DirectoryTab() -> impl IntoView {
                         view! {
                             {ferrohealth_ui::view::surface::section_intro(tr(Msg::DirectoryVersionsIntro))}
                             {history(&ehr_id, history_data, reading)}
+                            {(count < latest_number && window < HISTORY_MAX).then(|| view! {
+                                <div class="fui-cluster">
+                                    {ferrohealth_ui::view::button::link_button(
+                                        format!("{}?versions={}", tab_href(&ehr_id, EhrTab::Directory), window.saturating_add(HISTORY_WINDOW)),
+                                        ferrohealth_ui::view::button::Variant::Ghost,
+                                        Some(Glyph::CHEVRON_DOWN),
+                                        tr(Msg::DirectoryOlderVersions),
+                                    )}
+                                </div>
+                            })}
                         },
                     ),
                     Err(error) => section(

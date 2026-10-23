@@ -2097,6 +2097,7 @@ relationship-needs-type-and-target = Give the relationship a type and a target p
 relationship-needs-type = Give the relationship a type.
 queries-version-help = Latest sends no version; Prefix and Exact send the one typed here.
 queries-sends = Sends
+directory-older-versions = Older versions
 query-save-name-missing = Name the query to save it.
 query-no-data-points = No data point yet; the query returns nothing until you add one.
 query-conditions = Conditions

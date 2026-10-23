@@ -4307,6 +4307,8 @@ messages! {
     QueriesSends = "queries-sends",
     /// `Latest sends no version; Prefix and Exact send the one typed here.`
     QueriesVersionHelp = "queries-version-help",
+    /// `Older versions`
+    DirectoryOlderVersions = "directory-older-versions",
 }
 
 /// The viewer's message `msg` in the page's locale.
