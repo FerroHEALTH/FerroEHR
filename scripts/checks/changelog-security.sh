@@ -154,8 +154,9 @@ run() {
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
     --section)
-      [[ "$#" -ge 2 && -n "$2" ]] || guard_usage "$GRAMMAR"
-      section="$2"
+      local value="${2:-}"
+      [[ "$#" -ge 2 && -n "$value" ]] || guard_usage "$GRAMMAR"
+      section="$value"
       shift 2
       ;;
     *)
