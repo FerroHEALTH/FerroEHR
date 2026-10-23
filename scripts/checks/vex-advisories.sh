@@ -25,6 +25,8 @@
 # the cargo-deny job, which is where the graph is resolvable.
 #
 # Usage: scripts/checks/vex-advisories.sh   (no arguments)
+# VEX_DIR moves the VEX directory (default security/vex); the generator reads
+# the same variable.
 set -euo pipefail
 
 # shellcheck source=scripts/lib/guard-args.sh
@@ -32,7 +34,8 @@ set -euo pipefail
 guard_no_args "$@"
 cd "$(dirname "$0")/../.."
 
-readonly OUT='security/vex/rust-advisories.openvex.json'
+readonly VEX_DIR="${VEX_DIR:-security/vex}"
+readonly OUT="$VEX_DIR/rust-advisories.openvex.json"
 
 [[ -f "$OUT" ]] || {
   echo "error: $OUT does not exist — run scripts/security/vex-generate.sh" >&2
@@ -52,7 +55,7 @@ if ! diff -u "$OUT" "$work/expected.json" > "$work/diff.txt"; then
   sed 's/^/  /' "$work/diff.txt" >&2
   echo >&2
   echo "The document is GENERATED — never hand-edit it. Change deny.toml or" >&2
-  echo "security/vex/rust-advisories.toml, then run:" >&2
+  echo "$VEX_DIR/rust-advisories.toml, then run:" >&2
   echo "  bash scripts/security/vex-generate.sh" >&2
   exit 1
 fi
@@ -61,7 +64,7 @@ fi
 # inherited container layers, where nothing in this repository resolves the
 # finding). They still have to be well-formed OpenVEX, so a typo does not ship
 # as a document a consumer's parser rejects.
-docs=(security/vex/*.openvex.json)
+docs=("$VEX_DIR"/*.openvex.json)
 for doc in "${docs[@]}"; do
   jq -e '
     (has("@context") and has("@id") and has("author") and has("timestamp")

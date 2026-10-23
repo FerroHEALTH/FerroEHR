@@ -5,7 +5,7 @@
 # carries an OpenVEX statement, or the release is refused.
 #
 # CRA Annex I Part I(2)(a) has products made available "without known
-# exploitable vulnerabilities" (docs/law/eu/cra/text.html). The image gate
+# exploitable vulnerabilities" (Regulation (EU) 2024/2847). The image gate
 # (trivy.yaml) blocks only HIGH and CRITICAL findings that have a fix, so a
 # lower or unfixed finding would ship with no recorded judgement. The release
 # lane therefore scans every image and binary with no severity floor and no
@@ -176,7 +176,7 @@ check() {
          then "\n    a statement exists but is no judgement: "
               + ([.refused_statements[] | "\(.document) status=\(.status)"] | join("; "))
          else "" end)' "$work/record.json" | sort -u
-  echo "Each finding needs an OpenVEX statement under ${vex_dir}/ (security/vex/README.md says how), or the fix." >&2
+  echo "Each finding needs an OpenVEX statement under ${vex_dir}/ (${vex_dir}/README.md says how), or the fix." >&2
   return 1
 }
 

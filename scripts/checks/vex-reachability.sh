@@ -50,6 +50,8 @@
 # fails naming it, and removing a real one fails naming the unlisted path.
 #
 # Usage: scripts/checks/vex-reachability.sh   (no arguments)
+# VEX_DIR moves the VEX directory (default security/vex) and
+# VEX_REACHABILITY_KEY names the extension key (default ferroehr:reachability).
 set -euo pipefail
 
 # shellcheck source=scripts/lib/guard-args.sh
@@ -57,7 +59,8 @@ set -euo pipefail
 guard_no_args "$@"
 cd "$(dirname "$0")/../.."
 
-readonly DOC='security/vex/rust-advisories.openvex.json'
+readonly DOC="${VEX_DIR:-security/vex}/rust-advisories.openvex.json"
+readonly KEY="${VEX_REACHABILITY_KEY:-ferroehr:reachability}"
 
 for tool in cargo jq comm; do
   command -v "$tool" >/dev/null || { echo "vex-reachability: $tool is required" >&2; exit 1; }
@@ -107,15 +110,15 @@ while read -r statement; do
   [[ -n "$statement" ]] || continue
   id="$(jq -r '.vulnerability.name // "<no id>"' <<<"$statement")"
 
-  if ! jq -e 'has("ferroehr:reachability")' <<<"$statement" > /dev/null; then
-    note "$id: no 'ferroehr:reachability' block — the statement's dependency-path claim is unchecked"
+  if ! jq -e --arg k "$KEY" 'has($k)' <<<"$statement" > /dev/null; then
+    note "$id: no '$KEY' block — the statement's dependency-path claim is unchecked"
     continue
   fi
   statements=$((statements + 1))
 
-  spec="$(jq -r '."ferroehr:reachability".package' <<<"$statement")"
-  jq -r '."ferroehr:reachability".direct_dependents[]?' <<<"$statement" | setfile "$work/said-direct"
-  jq -r '."ferroehr:reachability".workspace_roots[]?' <<<"$statement" | setfile "$work/said-roots"
+  spec="$(jq -r --arg k "$KEY" '.[$k].package' <<<"$statement")"
+  jq -r --arg k "$KEY" '.[$k].direct_dependents[]?' <<<"$statement" | setfile "$work/said-direct"
+  jq -r --arg k "$KEY" '.[$k].workspace_roots[]?' <<<"$statement" | setfile "$work/said-roots"
 
   # `--prefix depth` prints the depth as a bare number immediately before the
   # package, so a crate name starting with a digit would be unsplittable; the

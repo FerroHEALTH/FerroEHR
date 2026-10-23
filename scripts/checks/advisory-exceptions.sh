@@ -22,6 +22,7 @@
 # id, and removing it turns the gate green again.
 #
 # Usage: scripts/checks/advisory-exceptions.sh   (no arguments)
+# VEX_DIR names the VEX directory the refusal points at (default security/vex).
 set -euo pipefail
 
 # shellcheck source=scripts/lib/guard-args.sh
@@ -70,7 +71,7 @@ if [[ -n "$resolved" ]]; then
   echo "No crate in the dependency graph matches these any more — the finding is" >&2
   echo "resolved, so the exception records nothing. Drop each id from deny.toml's" >&2
   echo "[advisories].ignore AND remove its [[accepted]] entry from" >&2
-  echo "security/vex/rust-advisories.toml, then regenerate the VEX document:" >&2
+  echo "${VEX_DIR:-security/vex}/rust-advisories.toml, then regenerate the VEX document:" >&2
   echo "  bash scripts/security/vex-generate.sh" >&2
   exit 1
 fi
