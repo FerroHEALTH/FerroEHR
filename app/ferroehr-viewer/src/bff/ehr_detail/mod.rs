@@ -13,11 +13,11 @@
 //! only the visible tab fetches. The tab bodies are always mounted and toggled
 //! with `class:hidden`, keeping the server and client view structure identical.
 //!
-//! This module owns the [`EhrDetailPage`] shell, the EHR summary header and the
+//! This module owns the `EhrDetailPage` shell, the EHR summary header and the
 //! shared `tab_bar` strip. The header carries two reads, neither duplicated
 //! elsewhere on the screen: the EHR resource itself (`GET /ehr/{ehr_id}`, so an
 //! unknown id fails once at the top instead of once per tab) and — through
-//! [`status_feed`] — the current `EHR_STATUS`, which is the ONE read of the
+//! `status_feed` — the current `EHR_STATUS`, which is the ONE read of the
 //! subject and the capability flags the Status tab also renders. That one is
 //! therefore NOT tab-gated: the header shows on every tab.
 //!

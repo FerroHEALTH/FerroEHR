@@ -40,7 +40,7 @@
 //!    (`operations/ehr_tags_get.yaml`); a `404` means the EHR itself is unknown.
 //!
 //! The row type, the wire codec, the merge, the editor panel and the filter
-//! form are the shared kit ([`crate::components::item_tags`]) — the same one
+//! form are the shared kit (`crate::components::item_tags`) — the same one
 //! the demographic tag surfaces use.
 //!
 //! No openEHR spec governs the viewer — our own design / product extension.

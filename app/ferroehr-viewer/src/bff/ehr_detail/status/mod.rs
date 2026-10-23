@@ -8,9 +8,9 @@
 //!
 //! - **Status** — the CURRENT `EHR_STATUS` (`GET /ehr/{ehr_id}/ehr_status`):
 //!   the queryable/modifiable badges, the subject, the whole document in a
-//!   [`DocumentPane`], and the [`edit`] form that commits a new version
+//!   `DocumentPane`, and the [`edit`] form that commits a new version
 //!   (`PUT /ehr/{ehr_id}/ehr_status` with `If-Match`).
-//! - **Status history** — the `VERSIONED_EHR_STATUS` family ([`history`]): the
+//! - **Status history** — the `VERSIONED_EHR_STATUS` family (`history`): the
 //!   container + selected-VERSION envelope facts, the revision-history table, a
 //!   `version_at_time` lookup, and any version's document pinned by its
 //!   `OBJECT_VERSION_ID` (`GET /ehr/{ehr_id}/ehr_status/{version_uid}`).

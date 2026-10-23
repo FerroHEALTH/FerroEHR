@@ -5,7 +5,7 @@
 //!
 //! A screen's own flattened types live with that screen. These two carry what
 //! SEVERAL screens read from the CDR's versioned surfaces, and what the shared
-//! kit ([`version_history`](crate::components::version_history)) renders: a
+//! kit (`version_history`) renders: a
 //! `components` module reaching into `pages` for a type would invert the crate's
 //! one dependency arrow.
 //!

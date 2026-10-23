@@ -4,8 +4,8 @@
 //! The `/demographics` section — the CDR's demographic space.
 //!
 //! Five screens over one API group: the per-kind party browser
-//! ([`browse`]), the party detail with its edit / history / relationships /
-//! tags tabs ([`party`], [`history`], [`relationship`], [`tags`]), the
+//! (`browse`), the party detail with its edit / history / relationships /
+//! tags tabs ([`party`], `history`, [`relationship`], [`tags`]), the
 //! `PARTY_RELATIONSHIP` resource ([`relationship`]), and the demographic
 //! CONTRIBUTION viewer ([`contribution`]).
 //!

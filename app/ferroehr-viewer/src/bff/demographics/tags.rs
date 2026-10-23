@@ -13,7 +13,7 @@
 //! `{kind}_tags_delete` (`operations/person_tags_*.yaml`).
 //!
 //! The row type, the wire codec, the merge and the editor panel are the shared
-//! kit ([`crate::components::item_tags`]), which carries the tag model's own
+//! kit (`crate::components::item_tags`), which carries the tag model's own
 //! rules — whole-collection replace, `(key, target_path)` identity, no
 //! conditional header — so this module is only the demographic ROUTES.
 //!

@@ -25,7 +25,7 @@ const FORM_LIMIT: usize = 16 * 1024 * 1024;
 /// The OIDC routes, the export post, the preference, sidebar and sign-out
 /// posts, FerroUI's stylesheet and the FerroEHR theme, the Leptos routes with
 /// the per-request context, each route's form post drawn by the same page
-/// ([`post_page`]), the static-file fallback, and the layer stack (state →
+/// (`post_page`), the static-file fallback, and the layer stack (state →
 /// session guard → security headers). Sessions are a sealed cookie
 /// ([`crate::session`]) — no session-store layer exists, so no state is
 /// bound to any one instance.

@@ -9,9 +9,9 @@
 //! - **Party** (default) — the CURRENT version
 //!   (`GET /demographic/{kind}/{uid_based_id}`): its facts, the `edit_form`
 //!   that commits a new version (`PUT` with `If-Match`), and the whole document
-//!   in the shared [`document_section`].
+//!   in the shared `document_section`.
 //! - **History** — the `VERSIONED_PARTY` family
-//!   ([`history`](super::history)).
+//!   (`history`).
 //! - **Relationships** — the party's own `relationships` list
 //!   ([`relationship`](super::relationship)).
 //! - **Tags** — its `ITEM_TAG`s ([`tags`](super::tags)).

@@ -20,8 +20,8 @@
 //!
 //! This module owns the DIRECTORY `#[server]` fns, the shared wire types, and
 //! the `directory_section` orchestrator; the view is split across
-//! [`tree`] (the structured editor), [`panels`] (history / time / path /
-//! delete), [`create`] (the empty-directory create flow), and the pure
+//! `tree` (the structured editor), `panels` (history / time / path /
+//! delete), `create` (the empty-directory create flow), and the pure
 //! [`edit`] helpers.
 
 #![expect(
