@@ -15,6 +15,8 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [5.3.3] - 2026-10-23
+
 ### Fixed
 
 - **An element whose value the template leaves open keeps its FLAT path**
@@ -43,7 +45,9 @@ workflow refuses a tag that has no matching section here.
 
 ### Security
 
-- **`ctutils` 0.4.5** (RUSTSEC-2026-0385). Its `Choice` mask generation and
+Shipped with functional changes because: only the newest release is supported (SECURITY.md), so a separate 5.3.2 patch published beside 5.3.3 would be out of support the moment 5.3.3 lands and give no one a release to stay on; the fix is a dependency bump with no behaviour change of its own.
+
+- **`ctutils` 0.4.5** (RUSTSEC-2026-0385, GHSA-h46f-99p9-gwvf). Its `Choice` mask generation and
   its `u128` comparisons could compile to branches on secret values; the crate
   sits under the `aes-gcm`, `hmac` and `digest` implementations the server
   uses.
@@ -11848,7 +11852,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.2...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.3...HEAD
+[5.3.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.2...v5.3.3
 [5.3.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.2.0...v5.3.2
 [5.2.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.1.0...v5.2.0
 [5.1.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.0.0...v5.1.0
