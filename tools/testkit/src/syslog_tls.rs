@@ -8,7 +8,7 @@
 //! Both certificates are minted when the listener binds (`rcgen`): a CA
 //! (`CN=ferroehr-test-ca`) and a leaf (`CN=localhost`, SAN `localhost` and
 //! `127.0.0.1`, `serverAuth`) it signed, each valid from yesterday to
-//! [`VALIDITY_DAYS`] from today. A platform verifier refuses a TLS server
+//! 30 days from today. A platform verifier refuses a TLS server
 //! certificate valid for years (macOS caps it at 825 days), and nothing
 //! committed can expire. No openEHR spec governs test infrastructure: our own
 //! design/extension.
