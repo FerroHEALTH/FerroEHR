@@ -244,6 +244,7 @@ cedar-policy = "4"                  # alternative policy engine (verify latest)
 # ── TLS / crypto foundations ─────────────────────────────────────────────────
 rustls = "0.23"
 tokio-rustls = "0.26"
+rcgen = { version = "0.14.10", default-features = false, features = ["aws_lc_rs", "pem"] }   # the testkit's syslog listener mints its test CA and leaf at bind time (#3955); aws-lc-rs matches the rustls provider
 # NOTE: `app/ferroehr` deliberately pins rand 0.8 at the crate level instead of
 # using this one — it passes `OsRng` into `pgp`'s signing API, so its rand
 # generation must match pgp's (`pgp 0.20` requires rand 0.8.7). Bump that pin
