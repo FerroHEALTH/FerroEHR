@@ -40,7 +40,8 @@ uuid = { workspace = true, features = ["v4"] }   # random scratch-database names
 testcontainers = { workspace = true, features = ["reusable-containers"] }
 testcontainers-modules = { workspace = true }
 # `syslog_tls`: the in-process syslog-over-TLS repository the audit tests send
-# their ATNA trail to.
+# their ATNA trail to, with a CA and leaf `rcgen` mints at bind time.
+rcgen = { workspace = true }
 rustls = { workspace = true }
 tokio-rustls = { workspace = true }
 
