@@ -386,15 +386,6 @@ pub(crate) fn ehr_detail_href(ehr_id: &str) -> String {
     format!("/ehrs/{}", urlencoding::encode(ehr_id))
 }
 
-
-
-
-
-
-
-
-
-
 /// Render one raw AQL cell value as display text: strings verbatim, JSON null
 /// as empty, anything else as compact JSON.
 pub(crate) fn cell_text(value: &Value) -> String {

@@ -137,7 +137,12 @@ fn patient(row: &AuditRow) -> AnyView {
     if row.patient.is_empty() {
         return view! { <span class="fui-muted">{tr(Msg::AuditNoPatient)}</span> }.into_any();
     }
-    view! { <span class="fui-identifier"><code>{Masked::new(Domain::new(String::new()), &row.patient, KEEP).drawn()}</code></span> }.into_any()
+    view! {
+        <span class="fui-identifier">
+            <code>{Masked::new(Domain::new(String::new()), &row.patient, KEEP).drawn()}</code>
+        </span>
+    }
+    .into_any()
 }
 
 /// The stored record with its patient identifier masked as the list masks
@@ -147,7 +152,10 @@ fn masked_record(row: &AuditRow) -> String {
     if row.patient.is_empty() {
         return pretty;
     }
-    pretty.replace(&row.patient, &Masked::new(Domain::new(String::new()), &row.patient, KEEP).drawn())
+    pretty.replace(
+        &row.patient,
+        &Masked::new(Domain::new(String::new()), &row.patient, KEEP).drawn(),
+    )
 }
 
 /// The outcome of a record as a state.
@@ -177,18 +185,37 @@ fn toolbar(filters: &Filters) -> AnyView {
                   chosen: &str| {
         let options = choices
             .iter()
-            .map(|(value, words)| view! { <option value=(*value).to_owned() selected=*value == chosen>{tr(*words)}</option> })
+            .map(|(value, words)| {
+                view! {
+                    <option value=(*value).to_owned() selected=*value == chosen>
+                        {tr(*words)}
+                    </option>
+                }
+            })
             .collect_view();
-        Field::new(id, label)
-            .view(view! { <select id=id name=name class="fui-select">{options}</select> })
+        Field::new(id, label).view(view! {
+            <select id=id name=name class="fui-select">
+                {options}
+            </select>
+        })
     };
     let tools = view! {
         {select("a-outcome", "outcome", tr(Msg::AuditOutcome), &OUTCOMES, &filters.outcome)}
         {select("a-action", "action", tr(Msg::AuditAction), &ACTIONS, &filters.action)}
         {date_range("a-when", tr(Msg::AuditWhen), &filters.from, &filters.to)}
         <div class="fui-list-find">
-            <label for="a-patient" class="fui-sr-only">{tr(Msg::AuditPatient)}</label>
-            <input id="a-patient" name="patient" type="text" class="fui-input fui-mono" value=filters.patient.clone() placeholder=tr(Msg::AuditPatient) autocomplete="off" />
+            <label for="a-patient" class="fui-sr-only">
+                {tr(Msg::AuditPatient)}
+            </label>
+            <input
+                id="a-patient"
+                name="patient"
+                type="text"
+                class="fui-input fui-mono"
+                value=filters.patient.clone()
+                placeholder=tr(Msg::AuditPatient)
+                autocomplete="off"
+            />
         </div>
         <button type="submit" class="fui-button fui-button-secondary">
             {ferrohealth_ui::icon::icon(Glyph::FUNNEL, "16")}
@@ -262,10 +289,8 @@ fn table(page: &Listed, filters: &Filters) -> AnyView {
             view! {
                 <tr>
                     {title_cell(Some(&href), event(row), None)}
-                    {cell(&columns[1], ago(&row.recorded))}
-                    {cell(&columns[2], principal)}
-                    {cell(&columns[3], patient(row))}
-                    {cell(&columns[4], outcome(row))}
+                    {cell(&columns[1], ago(&row.recorded))} {cell(&columns[2], principal)}
+                    {cell(&columns[3], patient(row))} {cell(&columns[4], outcome(row))}
                 </tr>
             }
             .into_any()
@@ -369,14 +394,8 @@ pub fn AuditPage() -> impl IntoView {
             body: list,
             pager,
         });
-        view! {
-            <div class="fui-list-page">
-                {toolbar(&filters)}
-                {chips(&filters)}
-                {card}
-            </div>
-        }
-        .into_any()
+        view! { <div class="fui-list-page">{toolbar(&filters)} {chips(&filters)} {card}</div> }
+            .into_any()
     });
     view! {
         <Title text=tr(Msg::NavAudit) />
@@ -400,16 +419,29 @@ pub fn AuditRecordPage() -> impl IntoView {
     let page = awaited(async move {
         let Some(_place) = place else {
             crate::request::set_status(http::StatusCode::NOT_FOUND);
-            return view! { {heading()} {crate::pages::common::info_note(tr(Msg::AuditRecordGone))} }.into_any();
+            return view! {
+                {heading()}
+                {crate::pages::common::info_note(tr(Msg::AuditRecordGone))}
+            }
+            .into_any();
         };
         let mut bounded = filters.clone();
         bounded.to.clone_from(&at);
         let found = match bounded.search(0).await {
-            Ok(page) if !page.available => return view! { {heading()} {store_off()} }.into_any(),
+            Ok(page) if !page.available => {
+                return view! {
+                    {heading()}
+                    {store_off()}
+                }
+                .into_any();
+            }
             Ok(page) => page.rows.into_iter().find(|row| row.recorded == at),
             Err(error) => {
-                return view! { {heading()} {refused(tr(Msg::AuditRefused), &error, None)} }
-                    .into_any();
+                return view! {
+                    {heading()}
+                    {refused(tr(Msg::AuditRefused), &error, None)}
+                }
+                .into_any();
             }
         };
         let Some(row) = found else {
@@ -459,15 +491,17 @@ pub fn AuditRecordPage() -> impl IntoView {
             <Title text=event(&row) />
             {heading}
             <div class="fui-stack">
-                {card_panel(view! {
-                    {section(Some(tr(Msg::AuditTheEvent)), None, None, facts)}
-                    {document_section(
-                        tr(Msg::AuditAsStored),
-                        Language::Json,
-                        masked_record(&row),
-                        "audit-record",
-                    )}
-                })}
+                {card_panel(
+                    view! {
+                        {section(Some(tr(Msg::AuditTheEvent)), None, None, facts)}
+                        {document_section(
+                            tr(Msg::AuditAsStored),
+                            Language::Json,
+                            masked_record(&row),
+                            "audit-record",
+                        )}
+                    },
+                )}
             </div>
         }
         .into_any()

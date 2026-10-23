@@ -161,8 +161,18 @@ pub const MAX_STAGED: u8 = 12;
 /// The field names of the staged changes' documents, `staged-1` onward.
 // NOTE: FerroUI `widget::editor::Editor::id` takes `&'static str`, so the names are a fixed table.
 const STAGED_FIELDS: [&str; 12] = [
-    "staged-1", "staged-2", "staged-3", "staged-4", "staged-5", "staged-6", "staged-7",
-    "staged-8", "staged-9", "staged-10", "staged-11", "staged-12",
+    "staged-1",
+    "staged-2",
+    "staged-3",
+    "staged-4",
+    "staged-5",
+    "staged-6",
+    "staged-7",
+    "staged-8",
+    "staged-9",
+    "staged-10",
+    "staged-11",
+    "staged-12",
 ];
 
 impl EditorField {

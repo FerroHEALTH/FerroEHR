@@ -251,12 +251,8 @@ async fn set_tag_at(
     let response = state.cdr.get(credential, url, "application/json").await?;
     let response = crate::cdr::CdrClient::expect_success(response)?;
     let existing = crate::bff::item_tags::parse_item_tags(&response.body)?;
-    let body = crate::bff::item_tags::merged_tag_body(
-        &existing,
-        key,
-        value.trim(),
-        target_path.trim(),
-    );
+    let body =
+        crate::bff::item_tags::merged_tag_body(&existing, key, value.trim(), target_path.trim());
     // NOTE: clients are "strongly encouraged to always include the `Prefer`
     // request header explicitly" — ITS-REST
     // `specifications/docs/overview/Requests_and_responses.md` §Deprecated headers.
@@ -594,14 +590,6 @@ pub async fn delete_status_tag(
     let url = status_tags_url(&state, &session.credential, &ehr_id).await?;
     delete_tag_at(&state, &session.credential, &url, &key).await
 }
-
-
-
-
-
-
-
-
 
 #[cfg(test)]
 mod tests {

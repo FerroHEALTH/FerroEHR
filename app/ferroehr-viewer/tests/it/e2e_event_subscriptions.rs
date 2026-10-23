@@ -179,28 +179,49 @@ async fn the_viewer_creates_edits_and_deletes_a_subscription() {
 
     h.goto("/subscriptions").await;
     h.wait_css("nav a[href='/subscriptions']").await;
-    h.wait_css("main a[href='/subscriptions/new']").await.click().await;
+    h.wait_css("main a[href='/subscriptions/new']")
+        .await
+        .click()
+        .await;
     fill(&h, "#sn", ROUND_TRIP_SUBSCRIPTION).await;
     h.wait_css("#sk").await.select_by_value(CREATED_KIND).await;
-    h.wait_css("#sc").await.select_by_value(CREATED_CHANGE_TYPE).await;
-    h.wait_css("#st").await.select_by_value(CREATED_TEMPLATE).await;
+    h.wait_css("#sc")
+        .await
+        .select_by_value(CREATED_CHANGE_TYPE)
+        .await;
+    h.wait_css("#st")
+        .await
+        .select_by_value(CREATED_TEMPLATE)
+        .await;
     h.shot(1, "subscription-new").await;
     common::submit(&h, "#editor-dock button[value='save']").await;
     h.wait_url_contains("/subscriptions").await;
-    let created = h.wait_xpath(&row(ROUND_TRIP_SUBSCRIPTION)).await.text().await;
+    let created = h
+        .wait_xpath(&row(ROUND_TRIP_SUBSCRIPTION))
+        .await
+        .text()
+        .await;
     for words in ["Creation", "Composition", CREATED_TEMPLATE, "Enabled"] {
         assert!(created.contains(words), "the row says `{words}`: {created}");
     }
     h.shot(2, "subscription-created").await;
 
-    h.goto(&format!("/subscriptions/{ROUND_TRIP_SUBSCRIPTION}/edit")).await;
+    h.goto(&format!("/subscriptions/{ROUND_TRIP_SUBSCRIPTION}/edit"))
+        .await;
     h.wait_css("#sk").await.select_by_value(EDITED_KIND).await;
     h.wait_css("#st").await.select_by_value("").await;
     h.wait_css("#enabled").await.click().await;
     common::submit(&h, "#editor-dock button[value='save']").await;
-    let edited = h.wait_xpath(&row(ROUND_TRIP_SUBSCRIPTION)).await.text().await;
+    let edited = h
+        .wait_xpath(&row(ROUND_TRIP_SUBSCRIPTION))
+        .await
+        .text()
+        .await;
     assert!(edited.contains("EHR status"), "the kind changed: {edited}");
-    assert!(!edited.contains(CREATED_TEMPLATE), "the template cleared: {edited}");
+    assert!(
+        !edited.contains(CREATED_TEMPLATE),
+        "the template cleared: {edited}"
+    );
     assert!(!edited.contains("Enabled"), "delivery is off: {edited}");
     h.shot(3, "subscription-edited").await;
 
@@ -217,8 +238,11 @@ async fn the_viewer_creates_edits_and_deletes_a_subscription() {
     )
     .await;
     h.wait_url_contains("/subscriptions").await;
-    wait_css_absent(&h, &format!("main a[href='/subscriptions/{ROUND_TRIP_SUBSCRIPTION}/edit']"))
-        .await;
+    wait_css_absent(
+        &h,
+        &format!("main a[href='/subscriptions/{ROUND_TRIP_SUBSCRIPTION}/edit']"),
+    )
+    .await;
     h.shot(4, "subscription-deleted").await;
 
     remove_fixture_subscriptions(&cdr).await;

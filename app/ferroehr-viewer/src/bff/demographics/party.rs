@@ -43,11 +43,11 @@ use leptos::server;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::bff::demographics::PartyKind;
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
 use crate::locale::{Msg, tr, tr_with};
-use crate::bff::demographics::PartyKind;
 use crate::uid::container_uid_of;
 
 /// The viewer's view of one party version.

@@ -264,8 +264,6 @@ fn audit_row(resource: &serde_json::Value) -> AuditRow {
     }
 }
 
-
-
 /// The outcome choices of the filter, as the value the query carries and
 /// the words shown.
 pub(crate) const OUTCOMES: [(&str, Msg); 5] = [
@@ -286,12 +284,6 @@ pub(crate) const ACTIONS: [(&str, Msg); 6] = [
     ("D", Msg::ActionDelete),
     ("E", Msg::ActionExecute),
 ];
-
-
-
-
-
-
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {

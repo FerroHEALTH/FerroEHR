@@ -288,17 +288,6 @@ pub async fn delete_adl2_artefact(
     Ok(())
 }
 
-
-
-
-
-
-
-
-
-
-
-
 #[cfg(test)]
 mod tests {
 

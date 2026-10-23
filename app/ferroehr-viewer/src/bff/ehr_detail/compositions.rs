@@ -20,18 +20,18 @@ use leptos::server;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::uid::uid_value_of;
 
-use crate::error::ViewerError;
-use crate::format::ReprFormat;
 use crate::bff::ehr_detail::composition_filter::CompositionFilter;
 use crate::bff::ehrs::ResultPage;
+use crate::error::ViewerError;
+use crate::format::ReprFormat;
 // Server-side helpers, compiled only where the #[server] bodies exist.
-#[cfg(not(target_arch = "wasm32"))]
-use crate::locale::tr_served;
-use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::composition_filter::composition_query;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehrs::{aql_request_body, parse_result_set};
+use crate::locale::Msg;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_served;
 
 /// List an EHR's compositions newest-first, one page at `offset`, narrowed by
 /// whichever filters are filled.

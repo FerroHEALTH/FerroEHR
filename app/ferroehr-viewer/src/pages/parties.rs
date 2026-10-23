@@ -199,7 +199,9 @@ async fn tag_index() -> Result<Vec<Indexed>, ViewerError> {
     for tag in tags {
         let container = crate::uid::container_uid_of(&tag.target);
         let known = named.iter().find(|(uid, _, _)| *uid == container).cloned();
-        let (kind, name) = if let Some((_, kind, name)) = known { (kind, name) } else {
+        let (kind, name) = if let Some((_, kind, name)) = known {
+            (kind, name)
+        } else {
             let kind = resolve_party_kind(container.clone())
                 .await?
                 .as_deref()
@@ -236,10 +238,12 @@ fn index_table(rows: &[Indexed]) -> AnyView {
         .iter()
         .map(|row| {
             let on = match &row.href {
-                Some(href) => {
-                    view! { <a class="fui-row-link" href=href.clone()>{row.on.clone()}</a> }
-                        .into_any()
+                Some(href) => view! {
+                    <a class="fui-row-link" href=href.clone()>
+                        {row.on.clone()}
+                    </a>
                 }
+                .into_any(),
                 None => row.on.clone().into_any(),
             };
             view! {
@@ -330,35 +334,42 @@ pub fn PartiesPage() -> impl IntoView {
             },
             None => (None, None),
         };
-        let error = invalid
-            .clone()
-            .map(|message| view! { <p id="p-id-error" class="fui-field-error">{message}</p> });
+        let error = invalid.clone().map(|message| {
+            view! {
+                <p id="p-id-error" class="fui-field-error">
+                    {message}
+                </p>
+            }
+        });
         let form = view! {
             <form class="fui-card fui-panel" method="get" action="/parties">
                 <div class="fui-transform-options">
                     {Field::new("p-kind", tr(Msg::ColumnKind))
-                        .view(view! {
-                            <select id="p-kind" name="kind" class="fui-select">
-                                {kind_options(kind)}
-                            </select>
-                        })}
+                        .view(
+                            view! {
+                                <select id="p-kind" name="kind" class="fui-select">
+                                    {kind_options(kind)}
+                                </select>
+                            },
+                        )}
                     {Field::new("p-id", tr(Msg::PartiesUid))
                         .holds_id()
                         .after(error)
-                        .view(view! {
-                            <input
-                                id="p-id"
-                                name="uid"
-                                type="text"
-                                class="fui-input fui-mono"
-                                spellcheck="false"
-                                autocomplete="off"
-                                value=uid.clone().unwrap_or_default()
-                                aria-invalid=invalid.is_some().then_some("true")
-                                aria-describedby=invalid.is_some().then_some("p-id-error")
-                            />
-                        })}
-                    <div class="fui-transform-run">
+                        .view(
+                            view! {
+                                <input
+                                    id="p-id"
+                                    name="uid"
+                                    type="text"
+                                    class="fui-input fui-mono"
+                                    spellcheck="false"
+                                    autocomplete="off"
+                                    value=uid.clone().unwrap_or_default()
+                                    aria-invalid=invalid.is_some().then_some("true")
+                                    aria-describedby=invalid.is_some().then_some("p-id-error")
+                                />
+                            },
+                        )} <div class="fui-transform-run">
                         <button type="submit" class="fui-button fui-button-secondary">
                             {ferrohealth_ui::icon::icon(Glyph::ARROW_RIGHT, "16")}
                             {tr(Msg::PartiesOpen)}
@@ -381,14 +392,7 @@ pub fn PartiesPage() -> impl IntoView {
             body: index,
             pager: None,
         });
-        view! {
-            <div class="fui-list-page">
-                {info_note(tr(Msg::PartiesNote))}
-                {form}
-                {top}
-                {card}
-            </div>
-        }
+        view! { <div class="fui-list-page">{info_note(tr(Msg::PartiesNote))} {form} {top} {card}</div> }
         .into_any()
     });
     view! {
@@ -464,6 +468,10 @@ fn party_editor(
     reason = "#[component] rewrites the fn; the router always consumes the value"
 )]
 #[component]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page part: the reads it waits on and the view it draws"
+)]
 pub fn NewPartyPage() -> impl IntoView {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
@@ -531,26 +539,39 @@ pub fn NewPartyPage() -> impl IntoView {
             <Title text=tr(Msg::PartiesNew) />
             {heading}
             <div class="fui-stack">
-                {top}
-                <form id=EDIT_FORM method="post" action="/parties/new">
-                    {card_panel(section(None, None, None, view! {
-                        <div class="fui-form-grid">
-                            <div class="fui-span-2">
-                                {Field::new("pk", tr(Msg::ColumnKind))
-                                    .help(tr(Msg::PartyKindHelp))
-                                    .view(view! {
-                                        <div class="fui-cluster">
-                                            <select id="pk" name="kind" class="fui-select">
-                                                {kind_options(kind)}
-                                            </select>
-                                            <button type="submit" name="intent" value="kind" class="fui-button fui-button-secondary fui-button-small">
-                                                {tr(Msg::PartyStartOver)}
-                                            </button>
-                                        </div>
-                                    })}
-                            </div>
-                        </div>
-                    }))}
+                {top} <form id=EDIT_FORM method="post" action="/parties/new">
+                    {card_panel(
+                        section(
+                            None,
+                            None,
+                            None,
+                            view! {
+                                <div class="fui-form-grid">
+                                    <div class="fui-span-2">
+                                        {Field::new("pk", tr(Msg::ColumnKind))
+                                            .help(tr(Msg::PartyKindHelp))
+                                            .view(
+                                                view! {
+                                                    <div class="fui-cluster">
+                                                        <select id="pk" name="kind" class="fui-select">
+                                                            {kind_options(kind)}
+                                                        </select>
+                                                        <button
+                                                            type="submit"
+                                                            name="intent"
+                                                            value="kind"
+                                                            class="fui-button fui-button-secondary fui-button-small"
+                                                        >
+                                                            {tr(Msg::PartyStartOver)}
+                                                        </button>
+                                                    </div>
+                                                },
+                                            )}
+                                    </div>
+                                </div>
+                            },
+                        ),
+                    )}
                     {party_editor(text, None, findings, tr(Msg::PartyNewEditorLabel))}
                 </form>
             </div>
@@ -713,7 +734,11 @@ fn relationships(kind: PartyKind, uid: &str, state: &PartyState) -> AnyView {
                 } else {
                     Some(relationship_href(&relationship.uid))
                 };
-                let sub = view! { <span class="fui-row-sub"><code>{relationship.archetype_node_id.clone()}</code></span> }.into_any();
+                let sub = view! {
+                    <span class="fui-row-sub">
+                        <code>{relationship.archetype_node_id.clone()}</code>
+                    </span>
+                }.into_any();
                 let title = title_cell(href.as_deref(), relationship.name.clone(), Some(sub));
                 let target = shortened(&relationship.target.id).into_any();
                 let target_kind = PartyKind::from_rm_type(&relationship.target.rm_type)
@@ -1073,7 +1098,15 @@ pub fn PartyPage() -> impl IntoView {
                 });
                 panel(view! {
                     {older}
-                    {section(Some(tr(Msg::CompositionVersions)), u64::try_from(total).ok(), None, view! { {intro} {history} })}
+                    {section(
+                        Some(tr(Msg::CompositionVersions)),
+                        u64::try_from(total).ok(),
+                        None,
+                        view! {
+                            {intro}
+                            {history}
+                        },
+                    )}
                     {envelope(VersionedFamily::Party, &uid, &in_view).await}
                     {document}
                 })
@@ -1118,8 +1151,7 @@ pub fn PartyPage() -> impl IntoView {
             <Title text=name.clone() />
             {header}
             <div class="fui-stack">
-                {acted}
-                {binder(tr(Msg::PartyViews), tabs, tab.key(), body)}
+                {acted} {binder(tr(Msg::PartyViews), tabs, tab.key(), body)}
             </div>
             {dialog}
         }
@@ -1138,29 +1170,31 @@ fn party_header(
     deleted: Option<&VersionEntry>,
     last: Option<&str>,
 ) -> AnyView {
-    let (actions, subtitle, badge) = if let Some(deletion) = deleted { (
-        ActionGroup::primary(Action::new(
-            Some(Glyph::ROTATE_CCW_CLOCK),
-            tr_with(
-                Msg::CompositionReadVersion,
-                &[("version", last.unwrap_or_default().to_owned().into())],
-            ),
-            Act::Link(party_tab_href(kind, uid, PartyTab::Versions, last)),
-        )),
-        tr_with(
-            Msg::PartyDeletedLine,
-            &[
-                ("kind", kind_words(kind).into()),
-                (
-                    "when",
-                    ferrohealth_ui::view::time::reading(&deletion.committed).into(),
+    let (actions, subtitle, badge) = if let Some(deletion) = deleted {
+        (
+            ActionGroup::primary(Action::new(
+                Some(Glyph::ROTATE_CCW_CLOCK),
+                tr_with(
+                    Msg::CompositionReadVersion,
+                    &[("version", last.unwrap_or_default().to_owned().into())],
                 ),
-                ("who", deletion.committer.clone().into()),
-                ("version", version_number(&deletion.version_id).into()),
-            ],
-        ),
-        Some(state_mark(FlowState::Off, &tr(Msg::CompositionDeletedMark))),
-    ) } else {
+                Act::Link(party_tab_href(kind, uid, PartyTab::Versions, last)),
+            )),
+            tr_with(
+                Msg::PartyDeletedLine,
+                &[
+                    ("kind", kind_words(kind).into()),
+                    (
+                        "when",
+                        ferrohealth_ui::view::time::reading(&deletion.committed).into(),
+                    ),
+                    ("who", deletion.committer.clone().into()),
+                    ("version", version_number(&deletion.version_id).into()),
+                ],
+            ),
+            Some(state_mark(FlowState::Off, &tr(Msg::CompositionDeletedMark))),
+        )
+    } else {
         let more = Menu::new(
             "party-more",
             tr(Msg::PartyMore),
@@ -1311,15 +1345,23 @@ pub fn EditPartyPage() -> impl IntoView {
                                     format!("{}/edit", party_href(kind, &uid)),
                                     ferrohealth_ui::view::button::Variant::Secondary,
                                     Some(Glyph::REFRESH_CW),
-                                    tr_with(Msg::EditorReloadVersion, &[("version", version_number(&state.version_uid).into())]),
+                                    tr_with(
+                                        Msg::EditorReloadVersion,
+                                        &[("version", version_number(&state.version_uid).into())],
+                                    ),
                                 )}
-                                <span class="fui-small fui-muted">{tr(Msg::EditorReloadReplaces)}</span>
+                                <span class="fui-small fui-muted">
+                                    {tr(Msg::EditorReloadReplaces)}
+                                </span>
                             </div>
                         }
                     });
                     top = Some(
-                        view! { {refused(tr(Msg::PartySaveRefused), &error, None)} {reload} }
-                            .into_any(),
+                        view! {
+                            {refused(tr(Msg::PartySaveRefused), &error, None)}
+                            {reload}
+                        }
+                        .into_any(),
                     );
                 }
             }
@@ -1367,10 +1409,24 @@ pub fn EditPartyPage() -> impl IntoView {
                 {top}
                 <form id=EDIT_FORM method="post" action=format!("{}/edit", party_href(kind, &uid))>
                     <input type="hidden" name="version" value=opened.clone() />
-                    {card_panel(section(Some(tr(Msg::CompositionDocument)), None, None, view! {
-                        {ferrohealth_ui::view::surface::section_intro(tr(Msg::PartyEditIntro))}
-                        {party_editor(text, Some(current), findings, tr(Msg::PartyEditorLabel))}
-                    }))}
+                    {card_panel(
+                        section(
+                            Some(tr(Msg::CompositionDocument)),
+                            None,
+                            None,
+                            view! {
+                                {ferrohealth_ui::view::surface::section_intro(
+                                    tr(Msg::PartyEditIntro),
+                                )}
+                                {party_editor(
+                                    text,
+                                    Some(current),
+                                    findings,
+                                    tr(Msg::PartyEditorLabel),
+                                )}
+                            },
+                        ),
+                    )}
                 </form>
             </div>
         }
@@ -1386,8 +1442,16 @@ fn ends(relationship: &RelationshipState) -> Vec<(String, AnyView)> {
             .map_or_else(|| party.rm_type.clone(), kind_words);
         let name = shortened(&party.id);
         match ref_href(party) {
-            Some(href) => view! { <a href=href>{name}</a> {format!(" · {kind}")} }.into_any(),
-            None => view! { {name} {format!(" · {kind}")} }.into_any(),
+            Some(href) => view! {
+                <a href=href>{name}</a>
+                {format!(" · {kind}")}
+            }
+            .into_any(),
+            None => view! {
+                {name}
+                {format!(" · {kind}")}
+            }
+            .into_any(),
         }
     };
     vec![
@@ -1449,7 +1513,12 @@ pub fn RelationshipPage() -> impl IntoView {
         let mut facts = ends(&state);
         facts.push((
             tr(Msg::RelationshipType),
-            view! { {state.name.clone()} " " <code class="fui-small">{state.archetype_node_id.clone()}</code> }.into_any(),
+            view! {
+                {state.name.clone()}
+                " "
+                <code class="fui-small">{state.archetype_node_id.clone()}</code>
+            }
+            .into_any(),
         ));
         facts.push((
             tr(Msg::RelationshipDetails),
@@ -1526,10 +1595,17 @@ pub fn RelationshipPage() -> impl IntoView {
             <Title text=state.name.clone() />
             {heading}
             <div class="fui-stack">
-                {card_panel(view! {
-                    {section(Some(tr(Msg::PartyFacts)), None, None, definitions(facts))}
-                    {section(Some(tr(Msg::CompositionVersions)), u64::try_from(total).ok(), None, history)}
-                })}
+                {card_panel(
+                    view! {
+                        {section(Some(tr(Msg::PartyFacts)), None, None, definitions(facts))}
+                        {section(
+                            Some(tr(Msg::CompositionVersions)),
+                            u64::try_from(total).ok(),
+                            None,
+                            history,
+                        )}
+                    },
+                )}
             </div>
             {dialog}
         }
@@ -1606,7 +1682,9 @@ pub fn NewRelationshipPage() -> impl IntoView {
         let missing = kind_type.trim().is_empty() || target.trim().is_empty();
         if saving && missing {
             line = (Glyph::CIRCLE_X, tr(Msg::PartyNotCreated));
-            top = Some(crate::pages::common::quiet(tr(Msg::RelationshipNeedsTypeAndTarget)));
+            top = Some(crate::pages::common::quiet(tr(
+                Msg::RelationshipNeedsTypeAndTarget,
+            )));
         } else if saving {
             let node = format!(
                 "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.{}.v1",
@@ -1677,16 +1755,43 @@ pub fn NewRelationshipPage() -> impl IntoView {
                 <div class="fui-span-2">
                     {Field::new("r-type", tr(Msg::RelationshipType))
                         .help(tr(Msg::RelationshipTypeHelp))
-                        .view(view! { <input id="r-type" name="type" type="text" class="fui-input fui-mono" value=kind_type.clone() /> })}
+                        .view(
+                            view! {
+                                <input
+                                    id="r-type"
+                                    name="type"
+                                    type="text"
+                                    class="fui-input fui-mono"
+                                    value=kind_type.clone()
+                                />
+                            },
+                        )}
                 </div>
                 <div class="fui-span-2">
                     {Field::new("r-tk", tr(Msg::RelationshipTargetKind))
-                        .view(view! { <select id="r-tk" name="target_kind" class="fui-select">{kind_options(target_kind)}</select> })}
+                        .view(
+                            view! {
+                                <select id="r-tk" name="target_kind" class="fui-select">
+                                    {kind_options(target_kind)}
+                                </select>
+                            },
+                        )}
                 </div>
                 <div class="fui-span-2">
                     {Field::new("r-tid", tr(Msg::RelationshipTargetUid))
                         .holds_id()
-                        .view(view! { <input id="r-tid" name="target" type="text" class="fui-input fui-mono" spellcheck="false" value=target.clone() /> })}
+                        .view(
+                            view! {
+                                <input
+                                    id="r-tid"
+                                    name="target"
+                                    type="text"
+                                    class="fui-input fui-mono"
+                                    spellcheck="false"
+                                    value=target.clone()
+                                />
+                            },
+                        )}
                 </div>
             </div>
         };
@@ -1694,16 +1799,24 @@ pub fn NewRelationshipPage() -> impl IntoView {
             <Title text=tr(Msg::RelationshipNewPageTitle) />
             {heading}
             <div class="fui-stack">
-                {top}
-                <form id=EDIT_FORM method="post" action="/parties/relationships/new">
-                    {card_panel(view! {
-                        {section(Some(tr(Msg::RelationshipFrom)), None, None, from)}
-                        {section(Some(tr(Msg::RelationshipTitle)), None, None, grid)}
-                        {section(Some(tr(Msg::RelationshipDetails)), None, None, view! {
-                            {ferrohealth_ui::view::surface::section_intro(tr(Msg::RelationshipDetailsIntro))}
-                            {details_editor(details.clone(), None)}
-                        })}
-                    })}
+                {top} <form id=EDIT_FORM method="post" action="/parties/relationships/new">
+                    {card_panel(
+                        view! {
+                            {section(Some(tr(Msg::RelationshipFrom)), None, None, from)}
+                            {section(Some(tr(Msg::RelationshipTitle)), None, None, grid)}
+                            {section(
+                                Some(tr(Msg::RelationshipDetails)),
+                                None,
+                                None,
+                                view! {
+                                    {ferrohealth_ui::view::surface::section_intro(
+                                        tr(Msg::RelationshipDetailsIntro),
+                                    )}
+                                    {details_editor(details.clone(), None)}
+                                },
+                            )}
+                        },
+                    )}
                 </form>
             </div>
         }
@@ -1828,30 +1941,64 @@ pub fn EditRelationshipPage() -> impl IntoView {
             ActionGroup::none(),
         );
         view! {
-            <Title text=tr_with(Msg::CompositionEditTitle, &[("name", state.name.clone().into())]) />
+            <Title text=tr_with(
+                Msg::CompositionEditTitle,
+                &[("name", state.name.clone().into())],
+            ) />
             {heading}
             <div class="fui-stack">
                 {top}
                 <form id=EDIT_FORM method="post" action=format!("{}/edit", relationship_href(&uid))>
                     <input type="hidden" name="version" value=opened.clone() />
-                    {card_panel(view! {
-                        {section(Some(tr(Msg::RelationshipEnds)), None, None, view! {
-                            {ferrohealth_ui::view::surface::section_intro(tr(Msg::RelationshipEndsIntro))}
-                            {definitions(ends(&state))}
-                        })}
-                        {section(Some(tr(Msg::RelationshipTitle)), None, None, view! {
-                            <div class="fui-form-grid">
-                                <div class="fui-span-2">
-                                    {Field::new("re-ty", tr(Msg::RelationshipType))
-                                        .view(view! { <input id="re-ty" name="type" type="text" class="fui-input fui-mono" value=name.clone() /> })}
-                                </div>
-                            </div>
-                        })}
-                        {section(Some(tr(Msg::RelationshipDetails)), None, None, view! {
-                            {ferrohealth_ui::view::surface::section_intro(tr(Msg::RelationshipDetailsIntro))}
-                            {details_editor(details.clone(), Some(state.details.clone()))}
-                        })}
-                    })}
+                    {card_panel(
+                        view! {
+                            {section(
+                                Some(tr(Msg::RelationshipEnds)),
+                                None,
+                                None,
+                                view! {
+                                    {ferrohealth_ui::view::surface::section_intro(
+                                        tr(Msg::RelationshipEndsIntro),
+                                    )}
+                                    {definitions(ends(&state))}
+                                },
+                            )}
+                            {section(
+                                Some(tr(Msg::RelationshipTitle)),
+                                None,
+                                None,
+                                view! {
+                                    <div class="fui-form-grid">
+                                        <div class="fui-span-2">
+                                            {Field::new("re-ty", tr(Msg::RelationshipType))
+                                                .view(
+                                                    view! {
+                                                        <input
+                                                            id="re-ty"
+                                                            name="type"
+                                                            type="text"
+                                                            class="fui-input fui-mono"
+                                                            value=name.clone()
+                                                        />
+                                                    },
+                                                )}
+                                        </div>
+                                    </div>
+                                },
+                            )}
+                            {section(
+                                Some(tr(Msg::RelationshipDetails)),
+                                None,
+                                None,
+                                view! {
+                                    {ferrohealth_ui::view::surface::section_intro(
+                                        tr(Msg::RelationshipDetailsIntro),
+                                    )}
+                                    {details_editor(details.clone(), Some(state.details.clone()))}
+                                },
+                            )}
+                        },
+                    )}
                 </form>
             </div>
         }
@@ -1919,8 +2066,7 @@ pub fn PartyContributionPage() -> impl IntoView {
                 let title = title_cell(href.as_deref(), shortened(&object), None);
                 view! {
                     <tr>
-                        {title}
-                        {cell(&columns[1], version.rm_type.clone())}
+                        {title} {cell(&columns[1], version.rm_type.clone())}
                         {cell(&columns[2], version_number(&version.version_uid))}
                     </tr>
                 }
@@ -1937,7 +2083,12 @@ pub fn PartyContributionPage() -> impl IntoView {
         });
         card_panel(view! {
             {section(Some(tr(Msg::ContributionAudit)), None, None, definitions(rows))}
-            {section(Some(tr(Msg::ContributionVersions)), u64::try_from(state.versions.len()).ok(), None, table)}
+            {section(
+                Some(tr(Msg::ContributionVersions)),
+                u64::try_from(state.versions.len()).ok(),
+                None,
+                table,
+            )}
             {document_section(
                 tr(Msg::ContributionRecord),
                 Language::Json,

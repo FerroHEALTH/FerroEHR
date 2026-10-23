@@ -111,10 +111,12 @@ async fn composition_viewer_switches_formats_and_versions() {
         ("FLAT", "ctx/language", "flat"),
         ("STRUCTURED", "ctx", "structured"),
     ] {
-        h.wait_xpath(&format!("//main//a[contains(@class, 'fui-segment')][normalize-space(.)='{label}']"))
-            .await
-            .click()
-            .await;
+        h.wait_xpath(&format!(
+            "//main//a[contains(@class, 'fui-segment')][normalize-space(.)='{label}']"
+        ))
+        .await
+        .click()
+        .await;
         h.wait_url_contains(&format!("format={}", label.to_lowercase()))
             .await;
         wait_text_contains(&h, DOCUMENT, needle).await;
@@ -186,8 +188,7 @@ async fn composition_viewer_reads_versioned_object_and_version_envelope() {
     wait_main_contains(&h, "The versioned composition").await;
     wait_main_contains(&h, "Version 2").await;
     wait_main_contains(&h, "Preceding version").await;
-    h.wait_css(&format!("main a.fui-row-link[href$='?version=1']"))
-        .await;
+    h.wait_css("main a.fui-row-link[href$='?version=1']").await;
     h.shot(1, "versioned-object-latest").await;
 
     h.goto(&format!("{page}?tab=versions&version=1")).await;

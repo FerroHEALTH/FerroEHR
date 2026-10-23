@@ -186,10 +186,9 @@ fn node_of(
 
 /// The key of a child node: its `_key` in an edit, its place in a reading.
 fn node_key(node: &Value, parent: &str, kind: &str, index: usize, editing: bool) -> String {
-    if editing
-        && let Some(key) = node.get("_key").and_then(Value::as_str) {
-            return key.to_owned();
-        }
+    if editing && let Some(key) = node.get("_key").and_then(Value::as_str) {
+        return key.to_owned();
+    }
     format!("{parent}-{kind}{index}")
 }
 
@@ -253,14 +252,8 @@ fn history(
                 change: tr_with(
                     Msg::DirectoryVersionHolds,
                     &[
-                        (
-                            "folders",
-                            version.folder_count.into(),
-                        ),
-                        (
-                            "items",
-                            version.item_count.into(),
-                        ),
+                        ("folders", version.folder_count.into()),
+                        ("items", version.item_count.into()),
                     ],
                 ),
                 committer: String::new(),
@@ -294,7 +287,10 @@ fn restore_button(number: &str) -> AnyView {
             <a
                 class="fui-button fui-button-ghost fui-button-small"
                 href=format!("?version={number}&restore=1")
-                aria-label=tr_with(Msg::DirectoryRestoreVersion, &[("version", number.to_owned().into())])
+                aria-label=tr_with(
+                    Msg::DirectoryRestoreVersion,
+                    &[("version", number.to_owned().into())],
+                )
             >
                 {ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "14")}
                 {tr(Msg::DirectoryRestore)}
@@ -378,7 +374,11 @@ fn dialogs(
         )
         .into_any()
     });
-    view! { {delete} {restore} }.into_any()
+    view! {
+        {delete}
+        {restore}
+    }
+    .into_any()
 }
 
 /// What a post to the tab asks, done: delete the directory, restore a
@@ -505,9 +505,7 @@ pub fn DirectoryTab() -> impl IntoView {
                 let (shown, older) = match shown {
                     Ok(Some(shown)) => shown,
                     Ok(None) => {
-                        return panel(view! {
-                            {plain_section(info_note(tr(Msg::DirectoryNoneAtTime)))}
-                        });
+                        return panel(view! { {plain_section(info_note(tr(Msg::DirectoryNoneAtTime)))} });
                     }
                     Err(error) => {
                         return panel(plain_section(refused(tr(Msg::DirectoryRefused), &error, None)));
@@ -524,14 +522,24 @@ pub fn DirectoryTab() -> impl IntoView {
                 let shown_tree = match subtree {
                     Some(Ok(DirectorySubtree::Found(body))) => match serde_json::from_str::<Value>(&body) {
                         Ok(sub) => view! {
-                            {info_note(tr_with(Msg::DirectoryShowingPath, &[("path", folder_path.clone().unwrap_or_default().into())]))}
+                            {info_note(
+                                tr_with(
+                                    Msg::DirectoryShowingPath,
+                                    &[("path", folder_path.clone().unwrap_or_default().into())],
+                                ),
+                            )}
                             {tree(&ehr_id, &sub, None)}
                         }
                         .into_any(),
                         Err(error) => unreadable(&error),
                     },
                     Some(Ok(DirectorySubtree::Missing)) => view! {
-                        {info_note(tr_with(Msg::DirectoryNoPath, &[("path", folder_path.clone().unwrap_or_default().into())]))}
+                        {info_note(
+                            tr_with(
+                                Msg::DirectoryNoPath,
+                                &[("path", folder_path.clone().unwrap_or_default().into())],
+                            ),
+                        )}
                         {tree(&ehr_id, &root, None)}
                     }
                     .into_any(),
@@ -539,7 +547,11 @@ pub fn DirectoryTab() -> impl IntoView {
                     None => tree(&ehr_id, &root, None),
                 };
                 let path_form = view! {
-                    <form class="fui-at-time" method="get" action=tab_href(&ehr_id, EhrTab::Directory)>
+                    <form
+                        class="fui-at-time"
+                        method="get"
+                        action=tab_href(&ehr_id, EhrTab::Directory)
+                    >
                         <div class="fui-field">
                             <label for="d-path" class="fui-label">
                                 {tr(Msg::DirectoryShowPath)}
@@ -580,7 +592,10 @@ pub fn DirectoryTab() -> impl IntoView {
                             aria-haspopup="dialog"
                         >
                             {ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "16")}
-                            {tr_with(Msg::DirectoryRestoreVersion, &[("version", number.to_owned().into())])}
+                            {tr_with(
+                                Msg::DirectoryRestoreVersion,
+                                &[("version", number.to_owned().into())],
+                            )}
                         </button>
                     }
                 });
@@ -597,18 +612,27 @@ pub fn DirectoryTab() -> impl IntoView {
                         Some(u64::from(count)),
                         None,
                         view! {
-                            {ferrohealth_ui::view::surface::section_intro(tr(Msg::DirectoryVersionsIntro))}
+                            {ferrohealth_ui::view::surface::section_intro(
+                                tr(Msg::DirectoryVersionsIntro),
+                            )}
                             {history(&ehr_id, history_data, reading)}
-                            {(count < latest_number && window < HISTORY_MAX).then(|| view! {
-                                <div class="fui-cluster">
-                                    {ferrohealth_ui::view::button::link_button(
-                                        format!("{}?versions={}", tab_href(&ehr_id, EhrTab::Directory), window.saturating_add(HISTORY_WINDOW)),
-                                        ferrohealth_ui::view::button::Variant::Ghost,
-                                        Some(Glyph::CHEVRON_DOWN),
-                                        tr(Msg::DirectoryOlderVersions),
-                                    )}
-                                </div>
-                            })}
+                            {(count < latest_number && window < HISTORY_MAX)
+                                .then(|| {
+                                    view! {
+                                        <div class="fui-cluster">
+                                            {ferrohealth_ui::view::button::link_button(
+                                                format!(
+                                                    "{}?versions={}",
+                                                    tab_href(&ehr_id, EhrTab::Directory),
+                                                    window.saturating_add(HISTORY_WINDOW),
+                                                ),
+                                                ferrohealth_ui::view::button::Variant::Ghost,
+                                                Some(Glyph::CHEVRON_DOWN),
+                                                tr(Msg::DirectoryOlderVersions),
+                                            )}
+                                        </div>
+                                    }
+                                })}
                         },
                     ),
                     Err(error) => section(
@@ -626,7 +650,10 @@ pub fn DirectoryTab() -> impl IntoView {
                         Some(tr(Msg::DirectoryFoldersTitle)),
                         None,
                         Some(tools),
-                        view! { {shown_tree} {path_form} },
+                        view! {
+                            {shown_tree}
+                            {path_form}
+                        },
                     )}
                     {history_section}
                     {dialogs(&ehr_id, &current, restoring_state)}
@@ -669,8 +696,6 @@ fn working_tree(posted: Option<&crate::posted::Posted>, base: &Value) -> Value {
     tree
 }
 
-
-
 /// Applies the edit a post asks to `tree`; returns the folder now in a
 /// rename, if any, and how many edits the tree carries.
 fn apply(tree: &mut Value, posted: &crate::posted::Posted) -> Option<String> {
@@ -678,15 +703,17 @@ fn apply(tree: &mut Value, posted: &crate::posted::Posted) -> Option<String> {
     if let Some(key) = posted.get("renaming").filter(|key| !key.is_empty()) {
         let name = posted.text("new_name");
         if let Some(path) = find_path_by_key(tree, &key)
-            && !name.is_empty() {
-                rename_folder(tree, &path, &name);
-            }
+            && !name.is_empty()
+        {
+            rename_folder(tree, &path, &name);
+        }
     }
     if let Some(key) = posted.get(Edit::AddFolder.name())
-        && let Some(path) = find_path_by_key(tree, &key) {
-            add_subfolder(tree, &path, &tr(Msg::DirectoryNewFolder));
-            stamp_keys(tree, &mut counter);
-        }
+        && let Some(path) = find_path_by_key(tree, &key)
+    {
+        add_subfolder(tree, &path, &tr(Msg::DirectoryNewFolder));
+        stamp_keys(tree, &mut counter);
+    }
     if let Some(key) = posted.get(Edit::Rename.name()) {
         return Some(key);
     }
@@ -699,19 +726,20 @@ fn apply(tree: &mut Value, posted: &crate::posted::Posted) -> Option<String> {
     }
     if let (Some(key), Some(uid)) = (posted.get("reference_to"), posted.get("reference"))
         && let Some(path) = find_path_by_key(tree, &key)
-            && !uid.trim().is_empty() {
-                add_item(
-                    tree,
-                    &path,
-                    object_ref(
-                        "local",
-                        "VERSIONED_COMPOSITION",
-                        "HIER_OBJECT_ID",
-                        uid.trim(),
-                    ),
-                );
-                stamp_keys(tree, &mut counter);
-            }
+        && !uid.trim().is_empty()
+    {
+        add_item(
+            tree,
+            &path,
+            object_ref(
+                "local",
+                "VERSIONED_COMPOSITION",
+                "HIER_OBJECT_ID",
+                uid.trim(),
+            ),
+        );
+        stamp_keys(tree, &mut counter);
+    }
     None
 }
 
@@ -758,7 +786,9 @@ pub fn DirectoryEditPage() -> impl IntoView {
                 Err(error) => return unreadable(&error),
             };
             let mut working = working_tree(posted.as_ref(), &base);
-            let renaming = posted.as_ref().and_then(|posted| apply(&mut working, posted));
+            let renaming = posted
+                .as_ref()
+                .and_then(|posted| apply(&mut working, posted));
             let adding = posted
                 .as_ref()
                 .and_then(|posted| posted.get(Edit::AddReference.name()));
@@ -805,7 +835,10 @@ pub fn DirectoryEditPage() -> impl IntoView {
                                         format!("{}/edit", tab_href(&ehr_id, EhrTab::Directory)),
                                         ferrohealth_ui::view::button::Variant::Secondary,
                                         Some(Glyph::REFRESH_CW),
-                                        tr_with(Msg::EditorReloadVersion, &[("version", version_number(&current.version_uid).into())]),
+                                        tr_with(
+                                            Msg::EditorReloadVersion,
+                                            &[("version", version_number(&current.version_uid).into())],
+                                        ),
                                     )}
                                     <button
                                         type="submit"
@@ -817,7 +850,9 @@ pub fn DirectoryEditPage() -> impl IntoView {
                                         {ferrohealth_ui::icon::icon(Glyph::SAVE, "16")}
                                         {tr(Msg::DirectoryOverwrite)}
                                     </button>
-                                    <span class="fui-small fui-muted">{tr(Msg::DirectoryOverwriteNote)}</span>
+                                    <span class="fui-small fui-muted">
+                                        {tr(Msg::DirectoryOverwriteNote)}
+                                    </span>
                                 </div>
                             }
                         });
@@ -887,7 +922,12 @@ pub fn DirectoryEditPage() -> impl IntoView {
                                 </select>
                             </div>
                             <div class="fui-transform-run">
-                                <button type="submit" name="intent" value="edit" class="fui-button fui-button-secondary">
+                                <button
+                                    type="submit"
+                                    name="intent"
+                                    value="edit"
+                                    class="fui-button fui-button-secondary"
+                                >
                                     {ferrohealth_ui::icon::icon(Glyph::FILE_PLUS, "16")}
                                     {tr(Msg::DirectoryAddReference)}
                                 </button>
@@ -900,7 +940,12 @@ pub fn DirectoryEditPage() -> impl IntoView {
             let rename_keep = renaming.map(|key| {
                 view! {
                     <input type="hidden" name="renaming" value=key />
-                    <button type="submit" name="intent" value="edit" class="fui-button fui-button-secondary fui-button-small">
+                    <button
+                        type="submit"
+                        name="intent"
+                        value="edit"
+                        class="fui-button fui-button-secondary fui-button-small"
+                    >
                         {ferrohealth_ui::icon::icon(Glyph::CHECK, "14")}
                         {tr(Msg::DirectoryKeepName)}
                     </button>
@@ -908,20 +953,28 @@ pub fn DirectoryEditPage() -> impl IntoView {
             });
             view! {
                 {top}
-                <form id=EDIT_FORM method="post" action=format!("{}/edit", tab_href(&ehr_id, EhrTab::Directory))>
+                <form
+                    id=EDIT_FORM
+                    method="post"
+                    action=format!("{}/edit", tab_href(&ehr_id, EhrTab::Directory))
+                >
                     <input type="hidden" name="version" value=opened.clone() />
                     <input type="hidden" name="tree" value=working.to_string() />
-                    {card_panel(section(
-                        Some(tr(Msg::DirectoryFoldersTitle)),
-                        None,
-                        None,
-                        view! {
-                            {ferrohealth_ui::view::surface::section_intro(tr(Msg::DirectoryEditIntro))}
-                            {tree(&ehr_id, &working, Some(&edits))}
-                            {rename_keep}
-                            {picker}
-                        },
-                    ))}
+                    {card_panel(
+                        section(
+                            Some(tr(Msg::DirectoryFoldersTitle)),
+                            None,
+                            None,
+                            view! {
+                                {ferrohealth_ui::view::surface::section_intro(
+                                    tr(Msg::DirectoryEditIntro),
+                                )}
+                                {tree(&ehr_id, &working, Some(&edits))}
+                                {rename_keep}
+                                {picker}
+                            },
+                        ),
+                    )}
                 </form>
             }
             .into_any()

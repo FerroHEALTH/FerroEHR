@@ -144,7 +144,10 @@ async fn staged_rows(h: &Harness) -> usize {
 
 /// Fill change `n` as a new composition of the seeded template.
 async fn stage_composition_create(h: &Harness, n: u8, document: &str) {
-    h.wait_css(&format!("#kind-{n}")).await.select_by_value("create").await;
+    h.wait_css(&format!("#kind-{n}"))
+        .await
+        .select_by_value("create")
+        .await;
     h.wait_css(&format!("#template-{n}"))
         .await
         .select_by_value(SEED_TEMPLATE)
@@ -172,11 +175,16 @@ async fn two_staged_changes_commit_as_one_contribution_with_two_versions() {
 
     login_basic(&h).await;
     h.goto(&format!("/ehrs/{ehr_id}")).await;
-    h.wait_css("summary[aria-controls='ehr-more']").await.click().await;
-    h.wait_css(&format!("#ehr-more a[href='/ehrs/{ehr_id}/contribution/new']"))
+    h.wait_css("summary[aria-controls='ehr-more']")
         .await
         .click()
         .await;
+    h.wait_css(&format!(
+        "#ehr-more a[href='/ehrs/{ehr_id}/contribution/new']"
+    ))
+    .await
+    .click()
+    .await;
     h.shot(1, "contribution-new").await;
 
     stage_composition_create(&h, 1, &document).await;
@@ -189,20 +197,35 @@ async fn two_staged_changes_commit_as_one_contribution_with_two_versions() {
         .await
         .prop("value")
         .await;
-    assert!(preceding.contains("::"), "the status change names the version it supersedes: {preceding}");
+    assert!(
+        preceding.contains("::"),
+        "the status change names the version it supersedes: {preceding}"
+    );
     let status = h.wait_css("#staged-2").await.prop("value").await;
-    assert!(status.contains("EHR_STATUS"), "the status change opens the current status");
+    assert!(
+        status.contains("EHR_STATUS"),
+        "the status change opens the current status"
+    );
     h.shot(2, "two-staged").await;
 
-    fill(&h, "#au-d", "Encounter recorded at triage; EHR status refreshed").await;
+    fill(
+        &h,
+        "#au-d",
+        "Encounter recorded at triage; EHR status refreshed",
+    )
+    .await;
     let label = h
         .wait_css("#editor-dock button[value='save']")
         .await
         .text()
         .await;
-    assert!(label.contains("Commit 2 changes"), "the commit says the staged count: {label}");
+    assert!(
+        label.contains("Commit 2 changes"),
+        "the commit says the staged count: {label}"
+    );
     common::submit(&h, "#editor-dock button[value='save']").await;
-    h.wait_url_contains(&format!("/ehrs/{ehr_id}/contributions/")).await;
+    h.wait_url_contains(&format!("/ehrs/{ehr_id}/contributions/"))
+        .await;
     h.wait_css(".fui-toast-text").await;
     wait_main_contains(&h, "COMPOSITION").await;
     wait_main_contains(&h, "EHR_STATUS").await;

@@ -165,13 +165,17 @@ fn chart(page: &ResultPage) -> Option<AnyView> {
         x_ticks: ticks,
         y_range: None,
     };
-    Some(view! {
-        <div class="fui-panel-body">
-            {line_chart(&chart, ChartWords::of_page())}
-            <p class="fui-small fui-muted">{tr_with(Msg::ResultsAxis, &[("axis", axis.label.clone().into())])}</p>
-        </div>
-    }
-    .into_any())
+    Some(
+        view! {
+            <div class="fui-panel-body">
+                {line_chart(&chart, ChartWords::of_page())}
+                <p class="fui-small fui-muted">
+                    {tr_with(Msg::ResultsAxis, &[("axis", axis.label.clone().into())])}
+                </p>
+            </div>
+        }
+        .into_any(),
+    )
 }
 
 /// An export of the run in `format`: a submit of the page's own form, which
@@ -268,7 +272,8 @@ mod tests {
 
     #[test]
     fn a_data_value_reads_as_a_person_reads_it() {
-        let quantity = serde_json::json!({"_type": "DV_QUANTITY", "magnitude": 38.2, "units": "kg"});
+        let quantity =
+            serde_json::json!({"_type": "DV_QUANTITY", "magnitude": 38.2, "units": "kg"});
         assert_eq!(cell_words(&quantity), "38.2 kg");
         let time = serde_json::json!({"_type": "DV_DATE_TIME", "value": "2026-10-20T08:00:00Z"});
         assert_eq!(cell_words(&time), "2026-10-20T08:00:00Z");

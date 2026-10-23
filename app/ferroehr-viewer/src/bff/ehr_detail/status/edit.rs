@@ -97,7 +97,6 @@ pub fn apply_status_edits(
     })
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::parse_other_details;

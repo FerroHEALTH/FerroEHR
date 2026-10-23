@@ -29,8 +29,8 @@
 use crate::common;
 
 use common::{
-    Harness, confirm_in_dialog, count_matching, env, fill, is_present, login_basic,
-    login_basic_as, main_text, wait_main_contains, wait_text_contains,
+    Harness, confirm_in_dialog, count_matching, env, fill, is_present, login_basic, login_basic_as,
+    main_text, wait_main_contains, wait_text_contains,
 };
 use thirtyfour::prelude::*;
 

@@ -101,7 +101,10 @@ async fn ensure_template(h: &Harness, fixture: &str, id: &str) {
 async fn save_query(h: &Harness, name: &str, version: &str) {
     h.goto("/query/aql").await;
     fill(h, "#aql", AQL).await;
-    h.wait_css("button[commandfor='save-query']").await.click().await;
+    h.wait_css("button[commandfor='save-query']")
+        .await
+        .click()
+        .await;
     common::wait_visible(h, "#sv-n").await;
     fill(h, "#sv-ns", QUERY_NAMESPACE).await;
     fill(h, "#sv-n", name).await;
@@ -224,7 +227,11 @@ async fn admin_saves_a_namespaced_stored_query_and_deletes_it() {
     wait_main_contains(&h, QUERY_NAMESPACE).await;
     h.shot(1, "stored-query-listed").await;
     let href = row.attr("href").await;
-    let version = href.rsplit('/').next().expect("a version segment").to_owned();
+    let version = href
+        .rsplit('/')
+        .next()
+        .expect("a version segment")
+        .to_owned();
 
     delete_stored(&h, QUERY_NAME, &version).await;
     wait_css_absent(&h, &stored_link(QUERY_NAME, &version)).await;
@@ -249,7 +256,8 @@ async fn admin_versions_a_stored_query() {
     save_query(&h, VERSIONED_BARE_NAME, "1.0.0").await;
     h.wait_url_contains("version=1.0.0").await;
     h.goto("/queries").await;
-    h.wait_css(&stored_link(VERSIONED_QUERY_NAME, "1.0.0")).await;
+    h.wait_css(&stored_link(VERSIONED_QUERY_NAME, "1.0.0"))
+        .await;
     h.shot(1, "stored-query-v1").await;
 
     // The same pair again: the CDR refuses, and the popover says why.
@@ -260,8 +268,10 @@ async fn admin_versions_a_stored_query() {
     save_query(&h, VERSIONED_BARE_NAME, "1.1.0").await;
     h.wait_url_contains("version=1.1.0").await;
     h.goto("/queries").await;
-    h.wait_css(&stored_link(VERSIONED_QUERY_NAME, "1.0.0")).await;
-    h.wait_css(&stored_link(VERSIONED_QUERY_NAME, "1.1.0")).await;
+    h.wait_css(&stored_link(VERSIONED_QUERY_NAME, "1.0.0"))
+        .await;
+    h.wait_css(&stored_link(VERSIONED_QUERY_NAME, "1.1.0"))
+        .await;
     h.shot(3, "stored-query-two-versions").await;
 
     // Opening 1.0.0 in Query proposes 1.1.0, with the name split back.
@@ -316,10 +326,23 @@ async fn admin_deletes_an_ehr() {
     println!("created EHR {ehr_id}");
     h.shot(1, "ehr-created").await;
 
-    h.wait_css("summary[aria-controls='ehr-more']").await.click().await;
-    h.wait_css("button[commandfor='delete-ehr']").await.click().await;
+    h.wait_css("summary[aria-controls='ehr-more']")
+        .await
+        .click()
+        .await;
+    h.wait_css("button[commandfor='delete-ehr']")
+        .await
+        .click()
+        .await;
     common::wait_visible(&h, "#delete-confirm").await;
-    fill(&h, "#delete-confirm", ehr_id.get(..8).expect("an id of more than eight characters")).await;
+    fill(
+        &h,
+        "#delete-confirm",
+        ehr_id
+            .get(..8)
+            .expect("an id of more than eight characters"),
+    )
+    .await;
     common::submit(&h, "#delete-ehr button[type=submit]").await;
     h.wait_url_not_contains(&ehr_id).await;
     h.shot(2, "ehr-deleted").await;

@@ -22,10 +22,10 @@
 use leptos::server;
 use serde::{Deserialize, Serialize};
 
+use crate::bff::ehrs::ResultPage;
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_served, tr_served_with};
-use crate::bff::ehrs::ResultPage;
 
 /// A stored-query listing row (ITS-REST Definition API).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

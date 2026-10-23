@@ -241,8 +241,14 @@ async fn party_create_read_update_and_history() {
     h.shot(1, "parties").await;
 
     // Start over swaps the starting document for the kind chosen.
-    h.wait_css("main a[href='/parties/new']").await.click().await;
-    h.wait_css("#pk").await.select_by_value("organisation").await;
+    h.wait_css("main a[href='/parties/new']")
+        .await
+        .click()
+        .await;
+    h.wait_css("#pk")
+        .await
+        .select_by_value("organisation")
+        .await;
     common::submit(&h, "button[value='kind']").await;
     let starting = h.wait_css("#document").await.prop("value").await;
     assert!(
@@ -264,10 +270,13 @@ async fn party_create_read_update_and_history() {
     h.shot(2, "party-created").await;
     let party = current_party_uid(&h).await;
 
-    h.wait_css(&format!("main a[href='{}/edit']", party_path("person", &party)))
-        .await
-        .click()
-        .await;
+    h.wait_css(&format!(
+        "main a[href='{}/edit']",
+        party_path("person", &party)
+    ))
+    .await
+    .click()
+    .await;
     let document = h.wait_css("#document").await.prop("value").await;
     let edited = document.replacen(&label, &format!("{label} edited"), 1);
     assert_ne!(edited, document, "the opened document carries the identity");
@@ -282,8 +291,11 @@ async fn party_create_read_update_and_history() {
         .await;
     wait_main_contains(&h, "Version 2").await;
     h.wait_css("main a.fui-row-link[href*='version=1']").await;
-    h.goto(&format!("{}?tab=versions&version=1", party_path("person", &party)))
-        .await;
+    h.goto(&format!(
+        "{}?tab=versions&version=1",
+        party_path("person", &party)
+    ))
+    .await;
     wait_main_contains(&h, "None: this is the first version").await;
     h.shot(4, "party-history").await;
 
@@ -312,8 +324,11 @@ async fn relating_two_parties_links_both_ends() {
         create_party_over_rest(&http, &v1, "organisation", "ORGANISATION", "employer").await;
 
     login_basic(&h).await;
-    h.goto(&format!("{}?tab=relationships", party_path("person", &person)))
-        .await;
+    h.goto(&format!(
+        "{}?tab=relationships",
+        party_path("person", &person)
+    ))
+    .await;
     wait_main_contains(&h, "cannot list the ones that point at it").await;
     h.shot(1, "relationships-empty").await;
 
@@ -331,14 +346,20 @@ async fn relating_two_parties_links_both_ends() {
         .await;
 
     fill(&h, "#r-type", "employment").await;
-    h.wait_css("#r-tk").await.select_by_value("organisation").await;
+    h.wait_css("#r-tk")
+        .await
+        .select_by_value("organisation")
+        .await;
     fill(&h, "#r-tid", &organisation).await;
     common::submit(&h, "#editor-dock button[value='save']").await;
     h.wait_url_contains("/parties/relationships/").await;
     h.wait_css(".fui-toast-text").await;
     h.wait_css(&format!("main a[href='{}']", party_path("person", &person)))
         .await;
-    let target = format!("main a[href='{}']", party_path("organisation", &organisation));
+    let target = format!(
+        "main a[href='{}']",
+        party_path("organisation", &organisation)
+    );
     h.wait_css(&target).await;
     h.shot(2, "relationship-created").await;
 
@@ -349,8 +370,11 @@ async fn relating_two_parties_links_both_ends() {
     h.shot(3, "relationship-target-party").await;
 
     add_inline_relationship(&http, &v1, "person", &person, "ORGANISATION", &organisation).await;
-    h.goto(&format!("{}?tab=relationships", party_path("person", &person)))
-        .await;
+    h.goto(&format!(
+        "{}?tab=relationships",
+        party_path("person", &person)
+    ))
+    .await;
     // A relationship held inline in the party has no page of its own, so its
     // row opens the target.
     h.wait_css(&format!(
@@ -398,10 +422,13 @@ async fn party_tags_are_set_indexed_and_deleted() {
     h.goto("/parties").await;
     wait_text_contains(&h, "main table", &key).await;
     h.shot(2, "tag-index").await;
-    h.wait_css(&format!("main table a[href^='{}']", party_path("person", &person)))
-        .await
-        .click()
-        .await;
+    h.wait_css(&format!(
+        "main table a[href^='{}']",
+        party_path("person", &person)
+    ))
+    .await
+    .click()
+    .await;
     h.wait_url_contains(&party_path("person", &person)).await;
 
     h.goto(&tags).await;
@@ -444,7 +471,6 @@ async fn lookup_and_unknown_kind_work_without_javascript() {
     h.shot(2, "nojs-unknown-kind").await;
     h.finish().await;
 }
-
 
 /// A run-unique suffix for the fixtures a journey creates, so a shared stack
 /// can hold several runs' parties and tags without collision.

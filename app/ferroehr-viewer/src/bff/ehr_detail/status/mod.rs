@@ -36,7 +36,6 @@
               hydrate target"
 )]
 
-
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
@@ -475,11 +474,6 @@ fn json_str(value: &Value, path: &[&str]) -> String {
     current.as_str().unwrap_or_default().to_owned()
 }
 
-
-
-
-
-
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{parse_status_state, parse_versioned_status};
@@ -608,5 +602,4 @@ mod tests {
         assert!(parse_versioned_status("not json", "{}").is_err());
         assert!(parse_versioned_status("{}", "not json").is_err());
     }
-
 }

@@ -53,9 +53,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::ViewerError;
+use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_with;
-use crate::locale::Msg;
 
 /// One `ITEM_TAG` as the tag routes serve it.
 ///
@@ -137,12 +137,6 @@ pub struct TagPanelCopy {
     /// The set-a-tag section's DOM id — the panel's stable E2E hook.
     pub form_id: &'static str,
 }
-
-
-
-
-
-
 
 /// The three released tag filters as a query string, each sent only when
 /// non-empty.

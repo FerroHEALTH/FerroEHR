@@ -108,7 +108,12 @@ pub fn state_mark(state: ferrohealth_ui::view::flow::FlowState, word: &str) -> A
 pub fn short(id: &str) -> AnyView {
     let id = id.to_owned();
     let shown = shortened(&id);
-    view! { <code title=id class="fui-nowrap">{shown}</code> }.into_any()
+    view! {
+        <code title=id class="fui-nowrap">
+            {shown}
+        </code>
+    }
+    .into_any()
 }
 
 /// The words [`short`] shows for `id`.
@@ -245,7 +250,9 @@ pub fn warn_note(body: impl IntoView + 'static) -> AnyView {
     reason = "jiff's civil date is always a day of the proleptic Gregorian calendar with a year of 1 to 9999, which calendar::Day::new accepts"
 )]
 pub fn today() -> ferrohealth_ui::calendar::Day {
-    let date = jiff::Timestamp::now().to_zoned(jiff::tz::TimeZone::UTC).date();
+    let date = jiff::Timestamp::now()
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .date();
     let day = u16::try_from(date.year())
         .ok()
         .zip(u8::try_from(date.month()).ok())
@@ -337,13 +344,19 @@ pub fn date_field(id: &str, name: &str, label: String, value: &str, with_time: b
 /// The At a time row under a version history (E2): a date and time field
 /// and Open, a `GET` form to `action` that opens what `opens` says.
 #[must_use]
-pub fn at_time_row(action: String, value: &str, opens: String) -> ferrohealth_ui::view::versions::AtTime {
+pub fn at_time_row(
+    action: String,
+    value: &str,
+    opens: String,
+) -> ferrohealth_ui::view::versions::AtTime {
     ferrohealth_ui::view::versions::AtTime {
         action,
         field: date_field(
             "at",
             "at",
-            ferrohealth_ui::view::versions::at_time_label().text().to_owned(),
+            ferrohealth_ui::view::versions::at_time_label()
+                .text()
+                .to_owned(),
             value,
             true,
         ),
@@ -385,7 +398,11 @@ pub fn document_section(
 /// `uid::system::3`.
 #[must_use]
 pub fn version_number(version_uid: &str) -> String {
-    version_uid.rsplit("::").next().unwrap_or_default().to_owned()
+    version_uid
+        .rsplit("::")
+        .next()
+        .unwrap_or_default()
+        .to_owned()
 }
 
 /// The `OBJECT_VERSION_ID` of version `number` of the object whose version
@@ -488,7 +505,11 @@ pub fn last_days(points: &[crate::activity::ActivityPoint], days: u16) -> LastDa
 }
 
 /// [`last_days`] up to `today`.
-fn last_days_to(points: &[crate::activity::ActivityPoint], days: u16, today: jiff::civil::Date) -> LastDays {
+fn last_days_to(
+    points: &[crate::activity::ActivityPoint],
+    days: u16,
+    today: jiff::civil::Date,
+) -> LastDays {
     let span = i64::from(days.max(1)) - 1;
     let first = today
         .checked_sub(jiff::Span::new().days(span))
@@ -608,16 +629,25 @@ fn locate(text: &str, path: &str) -> Option<ferrohealth_ui::view::diagnostics::P
     }
     let at = found?;
     let before = text.get(..at)?;
-    let line = u32::try_from(before.matches('\n').count()).ok()?.checked_add(1)?;
-    let column = u32::try_from(before.rsplit('\n').next().map_or(0, |part| part.chars().count()))
+    let line = u32::try_from(before.matches('\n').count())
         .ok()?
         .checked_add(1)?;
+    let column = u32::try_from(
+        before
+            .rsplit('\n')
+            .next()
+            .map_or(0, |part| part.chars().count()),
+    )
+    .ok()?
+    .checked_add(1)?;
     Some(ferrohealth_ui::view::diagnostics::Position { line, column })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{findings_of, last_days_to, locate, path_in, relative_words, shortened, status_words};
+    use super::{
+        findings_of, last_days_to, locate, path_in, relative_words, shortened, status_words,
+    };
     use crate::activity::ActivityPoint;
     use crate::error::ViewerError;
 
@@ -647,9 +677,18 @@ mod tests {
     fn the_activity_window_counts_every_day_and_zero_for_a_quiet_one() {
         let today = jiff::civil::date(2026, 10, 23);
         let points = vec![
-            ActivityPoint { day: "2026-10-23".to_owned(), count: 3 },
-            ActivityPoint { day: "2026-10-20".to_owned(), count: 1 },
-            ActivityPoint { day: "2026-08-01".to_owned(), count: 9 },
+            ActivityPoint {
+                day: "2026-10-23".to_owned(),
+                count: 3,
+            },
+            ActivityPoint {
+                day: "2026-10-20".to_owned(),
+                count: 1,
+            },
+            ActivityPoint {
+                day: "2026-08-01".to_owned(),
+                count: 9,
+            },
         ];
         let days = last_days_to(&points, 30, today);
         assert_eq!(days.counts.len(), 30);
@@ -664,7 +703,10 @@ mod tests {
     #[test]
     fn a_diagnostic_lands_on_the_line_its_path_reaches() {
         let text = "{\n  \"context\": {\n    \"setting\": {}\n  }\n}";
-        assert_eq!(path_in("/context/setting needs its defining_code"), Some("/context/setting".to_owned()));
+        assert_eq!(
+            path_in("/context/setting needs its defining_code"),
+            Some("/context/setting".to_owned())
+        );
         assert_eq!(path_in("no path here"), None);
         let at = locate(text, "/context/setting").expect("the path is in the document");
         assert_eq!((at.line, at.column), (3, 5));
@@ -673,10 +715,23 @@ mod tests {
             status: 422,
             message: "/context/setting needs its defining_code\nthe composer is missing".to_owned(),
         };
-        let (_, file) = findings_of(&refused, text, "document").expect("a 422 is about the document");
+        let (_, file) =
+            findings_of(&refused, text, "document").expect("a 422 is about the document");
         assert_eq!(file.findings.len(), 2);
-        assert_eq!(file.findings.first().and_then(|finding| finding.at.as_ref()).map(|at| at.line), Some(3));
-        let elsewhere = ViewerError::Cdr { status: 409, message: "conflict".to_owned() };
-        assert!(findings_of(&elsewhere, text, "document").is_none(), "a 409 is not about the document");
+        assert_eq!(
+            file.findings
+                .first()
+                .and_then(|finding| finding.at.as_ref())
+                .map(|at| at.line),
+            Some(3)
+        );
+        let elsewhere = ViewerError::Cdr {
+            status: 409,
+            message: "conflict".to_owned(),
+        };
+        assert!(
+            findings_of(&elsewhere, text, "document").is_none(),
+            "a 409 is not about the document"
+        );
     }
 }

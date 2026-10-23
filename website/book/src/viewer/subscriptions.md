@@ -34,8 +34,7 @@ admin_api = true     # mount /admin/event_subscription
 ```
 
 Reaching `/subscriptions` on a deployment without it is not an error either:
-the screen renders one card naming that switch instead of a table that cannot
-be read.
+the screen names that switch instead of drawing a table that cannot be read.
 
 > [!NOTE]
 > `admin_api` and `enabled` are separate switches, and this screen needs only
@@ -52,7 +51,7 @@ be read.
 
 ## What a subscription is
 
-A subscription is a name plus four **predicates**, each of which matches one
+A subscription is a name plus three **predicates**, each of which matches one
 facet of a committed version:
 
 | Field | Matches | Example |
@@ -61,17 +60,15 @@ facet of a committed version:
 | Change type | the audit change-type code | `249` (creation), `251` (modification), `523` (deletion) |
 | Template id | the template a composition was committed against | `vital_signs.v2` |
 
-**A field left empty matches anything.** The viewer says so in every cell (an
-unset predicate reads `any`, never a blank) and each row carries a
-plain-words line saying what it selects, so "matches every committed version"
-is visible rather than inferred from four empty boxes.
+**A field left empty matches anything.** Each row says in words what it
+selects ("Every Creation of a Composition"), so a feed of every committed
+version reads as one.
 
 
 The **name** is unique on the CDR and is also the suffix of the queue the
 server declares for the subscription (`ferroehr.events.<name>` with the default
-exchange), so it may hold only letters, digits, and `_`, `.` or `-`. The create
-button stays disabled until the name you typed is one the CDR can accept, and
-the name cannot be changed afterwards; a rename would be a different queue.
+exchange), so it may hold only letters, digits, and `_`, `.` or `-`, and it
+cannot be changed afterwards; a rename would be a different queue.
 
 **State** is the `enabled` flag: an enabled subscription is one the server
 binds and delivers to; a disabled one is kept, exactly as you defined it, and
@@ -79,25 +76,27 @@ not delivered. Disabling is therefore the reversible way to stop a feed.
 
 ## Administering them
 
-The table lists every stored subscription, newest first, paged by the shared
-footer under the table (see [Paging](index.md#paging)).
+The list shows every stored subscription, newest first: its name, what it
+selects in words, its state and when it was created, with Edit, Disable or
+Enable, and Delete… in each row's menu.
 
-- **Create** with the card above the table: a name, and as many predicates as
-  you want to narrow by. Leave them all empty for a feed of everything.
-- **Edit** on a row opens an editor seeded with that subscription's current
-  values. Saving **replaces every predicate**, so a field you clear becomes
-  `any` on the CDR: that is the whole update, not a patch. The name is shown
-  and never editable.
-- **Delete** on a row asks for confirmation naming the subscription and what it
-  matches, and nothing is sent until you confirm there.
+- **New subscription** opens an editor: a name, and as many predicates as you
+  want to narrow by; leave them all empty for a feed of everything, and switch
+  delivery off to keep it without sending. A name the CDR cannot accept, or one
+  it already holds, is refused on the form, what you typed kept.
+- **Edit** opens the subscription's current values. Saving replaces every
+  predicate, so a field you clear becomes *any* on the CDR: the whole update,
+  not a patch. The name is shown and never editable.
+- **Delete…** opens the subscription with the confirmation, and nothing is sent
+  until you confirm.
 
-Every one of those writes reports both outcomes, and a success and a failure are
-equally visible, so a refused change never looks like nothing happened, and
-the CDR's own words (a duplicate name, a rejected value) are shown in full
-beside the failure notification.
+Every write reports its outcome as a notice, a failure as visibly as a
+success.
+
+![New subscription](img/subscriptions/new.png)
 
 > [!WARNING]
 > Deleting a subscription stops the server binding its queue; it does not
-> delete the queue from your broker. A durable queue left behind keeps whatever
-> it already holds and stops receiving new messages, so reap orphaned queues on
-> the broker side as part of the same change.
+> delete the queue from your broker. A durable queue left behind keeps what it
+> holds and stops receiving new messages, so remove orphaned queues on the
+> broker in the same change.

@@ -375,7 +375,10 @@ pub fn FindPage() -> impl IntoView {
                 order: None,
                 tabs: None,
                 actions: None,
-                body: ferrohealth_ui::view::search::search_answer("find-page", found.clone().answer()),
+                body: ferrohealth_ui::view::search::search_answer(
+                    "find-page",
+                    found.clone().answer(),
+                ),
                 pager: None,
             })
         };

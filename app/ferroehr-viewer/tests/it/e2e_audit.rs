@@ -63,7 +63,10 @@ async fn admin_browses_audit_records_and_the_empty_state() {
     h.shot(1, "audit-records").await;
 
     // A row opens its record, which shows the stored FHIR AuditEvent.
-    h.wait_css("main table tbody a.fui-row-link").await.click().await;
+    h.wait_css("main table tbody a.fui-row-link")
+        .await
+        .click()
+        .await;
     h.wait_url_contains("/audit/").await;
     wait_text_contains(&h, "#audit-record-text", "\"resourceType\": \"AuditEvent\"").await;
     // The hydrated copy button appears; it is hidden without WebAssembly.

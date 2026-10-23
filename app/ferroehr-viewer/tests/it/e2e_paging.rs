@@ -38,8 +38,9 @@ use crate::common;
 
 use reqwest::StatusCode;
 
-use common::{Harness, count_matching, env, login_basic, login_basic_as, poll_until, wait_text_contains};
-
+use common::{
+    Harness, count_matching, env, login_basic, login_basic_as, poll_until, wait_text_contains,
+};
 
 /// The viewer-wide page size — also the AQL fetch window the offset controls
 /// step by (`components::data_table::PAGE_SIZE`). A full page plus one is the
@@ -94,7 +95,6 @@ async fn ensure_paging_template(http: &reqwest::Client, v1: &str, user: &str, pa
     );
 }
 
-
 /// Create an EHR and return its id.
 ///
 /// # Panics
@@ -117,7 +117,6 @@ async fn create_ehr(http: &reqwest::Client, v1: &str, user: &str, pass: &str) ->
         .expect("the created ehr_id")
         .to_owned()
 }
-
 
 /// Commit the CDR's own example composition with `composer` and `start_time`
 /// rewritten.
@@ -176,7 +175,6 @@ async fn commit_paging_example(
     );
 }
 
-
 /// How many EHRs the CDR holds, over the Query API.
 ///
 /// # Panics
@@ -200,12 +198,10 @@ async fn ehr_count(http: &reqwest::Client, v1: &str, user: &str, pass: &str) -> 
     usize::try_from(count).unwrap_or(usize::MAX)
 }
 
-
 /// How many rows matching `css` are currently rendered.
 async fn link_count(h: &Harness, css: &str) -> usize {
     count_matching(h, css).await
 }
-
 
 /// Poll until exactly `expected` rows matching `css` are rendered.
 ///
@@ -223,7 +219,6 @@ async fn wait_link_count(h: &Harness, css: &str, expected: usize) {
         "`{css}` never settled on {expected} rows (last saw {last})"
     );
 }
-
 
 /// The listing's pager, which posts and comes back.
 const PAGER: &str = "nav.fui-pager";
@@ -327,7 +322,10 @@ async fn the_compositions_tab_pages_and_keeps_its_filter() {
     wait_link_count(&h, rows, PAGE_SIZE).await;
     let first = first_row(&h, rows).await;
     let page = h.wait_css("main table").await.text().await;
-    assert!(!page.contains(OTHER_COMPOSER), "the composer filter narrows the rows");
+    assert!(
+        !page.contains(OTHER_COMPOSER),
+        "the composer filter narrows the rows"
+    );
     h.shot(1, "compositions-first-page").await;
 
     step(&h, "next").await;
@@ -338,12 +336,19 @@ async fn the_compositions_tab_pages_and_keeps_its_filter() {
         h.current_url().await
     );
     let page = h.wait_css("main table").await.text().await;
-    assert!(!page.contains(OTHER_COMPOSER), "the filter still narrows the second page");
+    assert!(
+        !page.contains(OTHER_COMPOSER),
+        "the filter still narrows the second page"
+    );
     h.shot(2, "compositions-second-page").await;
 
     step(&h, "prev").await;
     wait_link_count(&h, rows, PAGE_SIZE).await;
-    assert_eq!(first_row(&h, rows).await, first, "paging back restores the first window");
+    assert_eq!(
+        first_row(&h, rows).await,
+        first,
+        "paging back restores the first window"
+    );
     assert!(h.current_url().await.ends_with(&filtered));
     h.shot(3, "compositions-back-on-the-first-page").await;
 
@@ -382,7 +387,9 @@ async fn the_ehrs_list_pages() {
     h.shot(1, "ehrs-first-page").await;
     step(&h, "next").await;
     let moved = poll_until(async || {
-        common::read_attr(&h, rows, "href").await.is_some_and(|href| href != first)
+        common::read_attr(&h, rows, "href")
+            .await
+            .is_some_and(|href| href != first)
     })
     .await;
     assert!(moved, "the window moved");
@@ -390,7 +397,11 @@ async fn the_ehrs_list_pages() {
     h.shot(2, "ehrs-second-page").await;
     step(&h, "prev").await;
     wait_link_count(&h, rows, PAGE_SIZE).await;
-    assert_eq!(first_row(&h, rows).await, first, "paging back restores the first window");
+    assert_eq!(
+        first_row(&h, rows).await,
+        first,
+        "paging back restores the first window"
+    );
     h.shot(3, "ehrs-back-on-the-first-page").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])

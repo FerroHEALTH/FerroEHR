@@ -140,7 +140,13 @@ where
 {
     let ids = match list_terminologies().await {
         Ok(Some(ids)) => ids,
-        Ok(None) => return view! { {heading()} <div class="fui-stack">{off()}</div> }.into_any(),
+        Ok(None) => {
+            return view! {
+                {heading()}
+                <div class="fui-stack">{off()}</div>
+            }
+            .into_any();
+        }
         Err(error) => {
             return view! {
                 {heading()}
@@ -165,7 +171,13 @@ where
 fn terminology_field(id: &'static str, ids: &[String], chosen: &str) -> AnyView {
     let options = ids
         .iter()
-        .map(|each| view! { <option value=each.clone() selected=*each == chosen>{each.clone()}</option> })
+        .map(|each| {
+            view! {
+                <option value=each.clone() selected=*each == chosen>
+                    {each.clone()}
+                </option>
+            }
+        })
         .collect_view();
     Field::new(id, tr(Msg::TermTerminology)).view(view! {
         <select id=id name="terminology" class="fui-select">
@@ -177,7 +189,14 @@ fn terminology_field(id: &'static str, ids: &[String], chosen: &str) -> AnyView 
 /// A code text field of a form.
 fn code_field(id: &'static str, name: &'static str, label: String, value: &str) -> AnyView {
     Field::new(id, label).view(view! {
-        <input id=id name=name type="text" class="fui-input fui-mono" spellcheck="false" value=value.to_owned() />
+        <input
+            id=id
+            name=name
+            type="text"
+            class="fui-input fui-mono"
+            spellcheck="false"
+            value=value.to_owned()
+        />
     })
 }
 
@@ -248,13 +267,16 @@ pub fn TerminologiesTab() -> impl IntoView {
                 _ => (id.clone(), String::new(), String::new()),
             };
             let href = terminology_href(id);
-            let sub =
-                view! { <span class="fui-row-sub"><code>{id.clone()}</code></span> }.into_any();
+            let sub = view! {
+                <span class="fui-row-sub">
+                    <code>{id.clone()}</code>
+                </span>
+            }
+            .into_any();
             rows.push(
                 view! {
                     <tr>
-                        {title_cell(Some(&href), name, Some(sub))}
-                        {cell(&columns[1], publisher)}
+                        {title_cell(Some(&href), name, Some(sub))} {cell(&columns[1], publisher)}
                         {cell(&columns[2], version)}
                     </tr>
                 }
@@ -354,17 +376,18 @@ pub fn TerminologyPage() -> impl IntoView {
                 });
                 card_panel(view! {
                     {section(Some(tr(Msg::TermDescriptor)), None, None, facts)}
-                    {plain_section(view! {
-                        <div class="fui-cluster">
-                            {ferrohealth_ui::view::button::link_button(
-                                lookup,
-                                ferrohealth_ui::view::button::Variant::Secondary,
-                                Some(Glyph::SEARCH),
-                                tr(Msg::TermLookupIn),
-                            )}
-                            {expand}
-                        </div>
-                    })}
+                    {plain_section(
+                        view! {
+                            <div class="fui-cluster">
+                                {ferrohealth_ui::view::button::link_button(
+                                    lookup,
+                                    ferrohealth_ui::view::button::Variant::Secondary,
+                                    Some(Glyph::SEARCH),
+                                    tr(Msg::TermLookupIn),
+                                )} {expand}
+                            </div>
+                        },
+                    )}
                 })
             }
             Ok(None) => off(),
@@ -400,7 +423,13 @@ pub fn LookupTab() -> impl IntoView {
             <form method="get" action="/terminology/lookup" class="fui-transform-options">
                 {terminology_field("l-t", &ids, &terminology)}
                 {code_field("l-c", "code", tr(Msg::TermCode), &code)}
-                {crate::pages::common::date_field("l-d", "at", tr(Msg::TermEffectiveDate), &at, false)}
+                {crate::pages::common::date_field(
+                    "l-d",
+                    "at",
+                    tr(Msg::TermEffectiveDate),
+                    &at,
+                    false,
+                )}
                 {run(Glyph::SEARCH, tr(Msg::TermLookUp))}
             </form>
         };
@@ -419,18 +448,22 @@ pub fn LookupTab() -> impl IntoView {
                                 ),
                             ]);
                             view! {
-                            {answer(
-                                Outcome::Ok,
-                                view! {
-                                    {tr(Msg::TermDefined)}
-                                    " "
-                                    {coding(Coding::new(term.code.clone(), term.text.clone()).system(terminology.clone()), Layout::Inline)}
-                                }
-                                .into_any(),
-                            )}
-                            {facts}
-                        }
-                        .into_any()
+                                {answer(
+                                    Outcome::Ok,
+                                    view! {
+                                        {tr(Msg::TermDefined)}
+                                        " "
+                                        {coding(
+                                            Coding::new(term.code.clone(), term.text.clone())
+                                                .system(terminology.clone()),
+                                            Layout::Inline,
+                                        )}
+                                    }
+                                        .into_any(),
+                                )}
+                                {facts}
+                            }
+                            .into_any()
                         }
                         None => answer(
                             Outcome::Warn,
@@ -488,7 +521,10 @@ pub fn ValueSetsTab() -> impl IntoView {
         let suggestions = (terminology == "openehr").then(|| {
             view! {
                 <datalist id="v-groups">
-                    {OPENEHR_GROUPS.iter().map(|group| view! { <option value=*group></option> }).collect_view()}
+                    {OPENEHR_GROUPS
+                        .iter()
+                        .map(|group| view! { <option value=*group></option> })
+                        .collect_view()}
                 </datalist>
             }
         });
@@ -496,9 +532,18 @@ pub fn ValueSetsTab() -> impl IntoView {
             <form method="get" action="/terminology/valuesets" class="fui-transform-options">
                 {terminology_field("v-t", &ids, &terminology)}
                 {Field::new("v-g", tr(Msg::TermValueSet))
-                    .view(view! {
-                        <input id="v-g" name="set" type="text" class="fui-input fui-mono" list="v-groups" value=set.clone() />
-                    })}
+                    .view(
+                        view! {
+                            <input
+                                id="v-g"
+                                name="set"
+                                type="text"
+                                class="fui-input fui-mono"
+                                list="v-groups"
+                                value=set.clone()
+                            />
+                        },
+                    )}
                 {suggestions}
                 {run(Glyph::LIST_CHECKS, tr(Msg::TermExpand))}
             </form>
@@ -514,7 +559,16 @@ pub fn ValueSetsTab() -> impl IntoView {
                         {extract
                             .terms
                             .iter()
-                            .map(|term| view! { <li>{coding(Coding::new(term.code.clone(), term.text.clone()), Layout::Inline)}</li> })
+                            .map(|term| {
+                                view! {
+                                    <li>
+                                        {coding(
+                                            Coding::new(term.code.clone(), term.text.clone()),
+                                            Layout::Inline,
+                                        )}
+                                    </li>
+                                }
+                            })
                             .collect_view()}
                     </ul>
                 };
@@ -589,7 +643,15 @@ pub fn ValueSetsTab() -> impl IntoView {
         panel(view! {
             {plain_section(form)}
             {members}
-            {section(Some(tr(Msg::TermValidateTitle)), None, None, view! { {validate_form} {verdict} })}
+            {section(
+                Some(tr(Msg::TermValidateTitle)),
+                None,
+                None,
+                view! {
+                    {validate_form}
+                    {verdict}
+                },
+            )}
         })
     }));
     view! {
@@ -634,7 +696,8 @@ pub fn SubsumptionTab() -> impl IntoView {
                 Ok(Some(true)) => answer(Outcome::Ok, words(Msg::TermSubsumes)),
                 Ok(Some(false)) => view! {
                     {answer(Outcome::Warn, words(Msg::TermNotSubsumes))}
-                    {(terminology == "openehr").then(|| view! { <p class="fui-small fui-muted">{tr(Msg::TermFlat)}</p> })}
+                    {(terminology == "openehr")
+                        .then(|| view! { <p class="fui-small fui-muted">{tr(Msg::TermFlat)}</p> })}
                 }
                 .into_any(),
                 Ok(None) => off(),

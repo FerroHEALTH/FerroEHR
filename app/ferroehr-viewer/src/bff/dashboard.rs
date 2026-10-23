@@ -236,16 +236,6 @@ pub async fn commit_trend() -> Result<Vec<ActivityPoint>, ViewerError> {
     Ok(crate::activity::bucket_by_day(&times))
 }
 
-
-
-
-
-
-
-
-
-
-
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{COMPOSITION_COUNT_AQL, EHR_COUNT_AQL, TREND_AQL};

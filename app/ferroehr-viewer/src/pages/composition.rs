@@ -418,7 +418,11 @@ fn versions_panel(
                     ),
                 ]),
             );
-            view! { {version} {object} }.into_any()
+            view! {
+                {version}
+                {object}
+            }
+            .into_any()
         }
         Err(error) => plain_section(refused(tr(Msg::CompositionVersionRefused), &error, None)),
     };
@@ -523,10 +527,7 @@ fn header(
                     ("version", version_number(&deletion.version_id).into()),
                 ],
             ),
-            Some(state_mark(
-                FlowState::Off,
-                &tr(Msg::CompositionDeletedMark),
-            )),
+            Some(state_mark(FlowState::Off, &tr(Msg::CompositionDeletedMark))),
         )
     } else {
         let primary = if reading.is_some() {
@@ -869,8 +870,7 @@ pub fn CompositionPage() -> impl IntoView {
             <Title text=name.clone() />
             {header(&ehr_id, &uid, &head, &latest, reading, deleted.as_ref())}
             <div class="fui-stack">
-                {acted}
-                {binder(tr(Msg::CompositionViews), tabs, current_tab, body)}
+                {acted} {binder(tr(Msg::CompositionViews), tabs, current_tab, body)}
             </div>
             {dialog}
         }
@@ -1001,9 +1001,14 @@ pub fn EditCompositionPage() -> impl IntoView {
                                     format!("{}/edit", composition_href(&ehr_id, &uid)),
                                     ferrohealth_ui::view::button::Variant::Secondary,
                                     Some(Glyph::REFRESH_CW),
-                                    tr_with(Msg::EditorReloadVersion, &[("version", version_number(&latest).into())]),
+                                    tr_with(
+                                        Msg::EditorReloadVersion,
+                                        &[("version", version_number(&latest).into())],
+                                    ),
                                 )}
-                                <span class="fui-small fui-muted">{tr(Msg::EditorReloadReplaces)}</span>
+                                <span class="fui-small fui-muted">
+                                    {tr(Msg::EditorReloadReplaces)}
+                                </span>
                             </div>
                         }
                     });
@@ -1065,9 +1070,19 @@ pub fn EditCompositionPage() -> impl IntoView {
             {heading}
             <div class="fui-stack">
                 {top}
-                <form id=EDIT_FORM method="post" action=format!("{}/edit", composition_href(&ehr_id, &uid))>
+                <form
+                    id=EDIT_FORM
+                    method="post"
+                    action=format!("{}/edit", composition_href(&ehr_id, &uid))
+                >
                     <input type="hidden" name="version" value=opened.clone() />
-                    {document_editor(text, Some(current), EditorLanguage::Json, findings, tr(Msg::CompositionEditorLabel))}
+                    {document_editor(
+                        text,
+                        Some(current),
+                        EditorLanguage::Json,
+                        findings,
+                        tr(Msg::CompositionEditorLabel),
+                    )}
                 </form>
             </div>
         }
@@ -1161,7 +1176,11 @@ pub fn NewCompositionPage() -> impl IntoView {
                     .map(|id| {
                         let selected = id == template;
                         let value = id.clone();
-                        view! { <option value=value selected=selected>{id}</option> }
+                        view! {
+                            <option value=value selected=selected>
+                                {id}
+                            </option>
+                        }
                     })
                     .collect_view();
                 Field::new("nt", tr(Msg::FilterTemplate))
@@ -1208,16 +1227,38 @@ pub fn NewCompositionPage() -> impl IntoView {
             {heading}
             <div class="fui-stack">
                 {top}
-                <form id=EDIT_FORM method="post" action=format!("{}/compositions/new", ehr_href(&ehr_id))>
-                    {card_panel(section(None, None, None, view! {
-                        <div class="fui-form-grid">
-                            <div class="fui-span-2">{template_field}</div>
-                            <div class="fui-span-2">
-                                {choice_group("format", tr(Msg::CompositionFormat), &formats, &format_key)}
-                            </div>
-                        </div>
-                    }))}
-                    {document_editor(text, None, language, findings, tr(Msg::CompositionNewEditorLabel))}
+                <form
+                    id=EDIT_FORM
+                    method="post"
+                    action=format!("{}/compositions/new", ehr_href(&ehr_id))
+                >
+                    {card_panel(
+                        section(
+                            None,
+                            None,
+                            None,
+                            view! {
+                                <div class="fui-form-grid">
+                                    <div class="fui-span-2">{template_field}</div>
+                                    <div class="fui-span-2">
+                                        {choice_group(
+                                            "format",
+                                            tr(Msg::CompositionFormat),
+                                            &formats,
+                                            &format_key,
+                                        )}
+                                    </div>
+                                </div>
+                            },
+                        ),
+                    )}
+                    {document_editor(
+                        text,
+                        None,
+                        language,
+                        findings,
+                        tr(Msg::CompositionNewEditorLabel),
+                    )}
                 </form>
             </div>
         }

@@ -66,7 +66,10 @@ fn stats(ehrs: i64, compositions: i64, templates: u32, stored: Option<u32>) -> A
         },
         Stat {
             glyph: Glyph::SEARCH_CODE,
-            value: stored.map_or_else(|| tr(Msg::UnknownCount), |stored| grouped(i64::from(stored))),
+            value: stored.map_or_else(
+                || tr(Msg::UnknownCount),
+                |stored| grouped(i64::from(stored)),
+            ),
             label: tr(Msg::StatStoredQueries).into(),
             href: Some("/queries".to_owned()),
         },
@@ -92,7 +95,12 @@ fn activity_card(
         Ok(points) => {
             let days = crate::pages::common::last_days(&points, ACTIVITY_DAYS);
             let total: u32 = days.counts.iter().map(|(_, count)| *count).sum();
-            let most = days.counts.iter().map(|(_, count)| *count).max().unwrap_or(0);
+            let most = days
+                .counts
+                .iter()
+                .map(|(_, count)| *count)
+                .max()
+                .unwrap_or(0);
             let chart = ActivityChart {
                 name: "compositions-per-day",
                 label: tr(Msg::DashboardPerDay),

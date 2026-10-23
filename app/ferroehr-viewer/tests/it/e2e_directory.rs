@@ -60,9 +60,13 @@ async fn create_ehr(h: &Harness) -> String {
 /// Create the EHR's empty directory from the EHR's More menu.
 async fn create_empty_directory(h: &Harness, ehr_id: &str) {
     h.goto(&format!("/ehrs/{ehr_id}")).await;
-    h.wait_css("summary[aria-controls='ehr-more']").await.click().await;
+    h.wait_css("summary[aria-controls='ehr-more']")
+        .await
+        .click()
+        .await;
     common::submit(h, "#ehr-more form button").await;
-    h.wait_url_contains(&format!("/ehrs/{ehr_id}/directory")).await;
+    h.wait_url_contains(&format!("/ehrs/{ehr_id}/directory"))
+        .await;
     h.wait_css(TREE).await;
 }
 
@@ -74,16 +78,15 @@ async fn open_editor(h: &Harness, ehr_id: &str) {
 
 /// The credentials and CDR the seeding needs, or `None` with a printed skip.
 fn seeding() -> Option<(String, String, String)> {
-    match (
+    if let (Some(cdr), Some(user), Some(pass)) = (
         env("UI_E2E_CDR_URL"),
         env("UI_E2E_BASIC_USER"),
         env("UI_E2E_BASIC_PASS"),
     ) {
-        (Some(cdr), Some(user), Some(pass)) => Some((cdr, user, pass)),
-        _ => {
-            println!("SKIP: seeding needs UI_E2E_CDR_URL/UI_E2E_BASIC_*");
-            None
-        }
+        Some((cdr, user, pass))
+    } else {
+        println!("SKIP: seeding needs UI_E2E_CDR_URL/UI_E2E_BASIC_*");
+        None
     }
 }
 
@@ -114,7 +117,6 @@ async fn directory_tree_edit_journey() {
 
 /// The template the picker's fixture compositions use.
 const PICKER_TEMPLATE: &str = "minimal_evaluation.en.v1";
-
 
 /// Commit one FLAT composition into `ehr_id` and return its VERSIONED-OBJECT
 /// id — the `HIER_OBJECT_ID` the directory's `OBJECT_REF` items carry, and
@@ -166,7 +168,6 @@ async fn seed_picker_composition(
         .to_owned()
 }
 
-
 /// The item ids the CDR's own directory read reports, in document order.
 ///
 /// The browser half of an assertion can only prove what the SCREEN shows; this
@@ -209,7 +210,10 @@ async fn stored_item_ids(cdr: &str, user: &str, pass: &str, ehr_id: &str) -> Vec
 /// Add a reference to the composition `object_id` at the root.
 async fn add_reference(h: &Harness, object_id: &str) {
     common::submit(h, "button[name='add_reference'][value='n0']").await;
-    h.wait_css("#d-reference").await.select_by_value(object_id).await;
+    h.wait_css("#d-reference")
+        .await
+        .select_by_value(object_id)
+        .await;
     common::submit(h, "button[name='intent'][value='edit']").await;
 }
 
@@ -228,8 +232,24 @@ async fn directory_item_picker_add_remove_journey() {
     };
     login_basic(&h).await;
     let ehr_id = create_ehr(&h).await;
-    let kept = seed_picker_composition(&cdr, &user, &pass, &ehr_id, "Picker kept", "2026-04-01T08:00:00Z").await;
-    let removed = seed_picker_composition(&cdr, &user, &pass, &ehr_id, "Picker removed", "2026-04-02T08:00:00Z").await;
+    let kept = seed_picker_composition(
+        &cdr,
+        &user,
+        &pass,
+        &ehr_id,
+        "Picker kept",
+        "2026-04-01T08:00:00Z",
+    )
+    .await;
+    let removed = seed_picker_composition(
+        &cdr,
+        &user,
+        &pass,
+        &ehr_id,
+        "Picker removed",
+        "2026-04-02T08:00:00Z",
+    )
+    .await;
     assert_ne!(kept, removed, "the two fixtures must be distinct objects");
     create_empty_directory(&h, &ehr_id).await;
 
@@ -288,7 +308,10 @@ async fn directory_history_and_restore_journey() {
     wait_main_contains(&h, "Version 2").await;
 
     h.goto(&format!("/ehrs/{ehr_id}/directory")).await;
-    h.wait_css("main a[aria-label='Restore version 1']").await.click().await;
+    h.wait_css("main a[aria-label='Restore version 1']")
+        .await
+        .click()
+        .await;
     h.wait_url_contains("restore=1").await;
     wait_main_contains(&h, "You are reading version 1 of 2").await;
     h.shot(1, "directory-version-1").await;
@@ -301,13 +324,15 @@ async fn directory_history_and_restore_journey() {
     h.wait_css(".fui-toast-text").await;
     wait_main_contains(&h, "Version 3").await;
     let tree = h.wait_css(TREE).await.text().await;
-    assert!(!tree.contains("New folder"), "version 1's empty tree is back: {tree}");
+    assert!(
+        !tree.contains("New folder"),
+        "version 1's empty tree is back: {tree}"
+    );
     h.shot(2, "directory-restored").await;
 
     h.assert_console_clean(&[]).await;
     h.finish().await;
 }
-
 
 /// Commit one version of the EHR's directory over ITS-REST and return the new
 /// `OBJECT_VERSION_ID`. `previous` is the `If-Match` precondition — `None`
@@ -398,10 +423,16 @@ async fn directory_history_load_older_journey() {
     );
     h.shot(1, "history-first-window").await;
 
-    h.wait_css(&format!("main a[href='{tab}?versions=20']")).await.click().await;
+    h.wait_css(&format!("main a[href='{tab}?versions=20']"))
+        .await
+        .click()
+        .await;
     h.wait_css(&format!("main a.fui-row-link[href='{tab}?version=1']"))
         .await;
-    h.wait_css("main a[aria-label='Restore version 1']").await.click().await;
+    h.wait_css("main a[aria-label='Restore version 1']")
+        .await
+        .click()
+        .await;
     wait_main_contains(&h, &format!("You are reading version 1 of {deepest}")).await;
     h.shot(2, "history-older-loaded").await;
     confirm_in_dialog(

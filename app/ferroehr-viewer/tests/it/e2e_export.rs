@@ -85,7 +85,11 @@ async fn posted_form(h: &Harness, format: &str) -> PostedForm {
             "button[formaction='/export/aql'][name='format'][value='{format}']"
         ))
         .await;
-    assert_eq!(button.attr("formmethod").await, "post");
+    assert_eq!(
+        button.attr("formmethod").await,
+        "post",
+        "the export posts the page's form"
+    );
     let field = async |name: &str| {
         h.wait_css(&format!("main input[type='hidden'][name='{name}']"))
             .await
@@ -98,7 +102,6 @@ async fn posted_form(h: &Harness, format: &str) -> PostedForm {
         format: format.to_owned(),
     }
 }
-
 
 /// The browser's cookies for the viewer origin, as one `Cookie` header.
 ///

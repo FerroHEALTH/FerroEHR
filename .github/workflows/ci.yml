@@ -2100,15 +2100,18 @@ jobs:
   # question of which journeys are order-dependent rather than answering it —
   # the answer is worth having, and it is not this file's to give.
   ui-e2e:
-    name: ui-e2e ${{ matrix.shard }}/${{ needs.changes.outputs.ui_e2e_shard_count }}
+    name: ui-e2e ${{ matrix.viewport }} ${{ matrix.shard }}/${{ needs.changes.outputs.ui_e2e_shard_count }}
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
     if: needs.changes.outputs.viewer == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The battery runs once at the desktop width and once at a phone's 390 px,
+    # by device emulation in the harness (UI_E2E_VIEWPORT, #3910).
     strategy:
       fail-fast: false
       matrix:
         shard: ${{ fromJSON(needs.changes.outputs.ui_e2e_shards) }}
+        viewport: [desktop, phone]
     # `contents: read` (now also the workflow-level default) is all it needs:
     # nothing here writes to a registry any more (the GHCR buildx layer cache
     # was removed, and the image is now packaged locally from a job artifact).
@@ -2189,12 +2192,13 @@ jobs:
           FERROEHR_IMAGE: ferroehr:ui-e2e
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:ui-e2e
           UI_E2E_PARTITION: hash:${{ matrix.shard }}/${{ needs.changes.outputs.ui_e2e_shard_count }}
+          UI_E2E_VIEWPORT: ${{ matrix.viewport }}
         run: bash scripts/ui-e2e.sh
       - name: Upload journey screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ui-e2e-screenshots-${{ matrix.shard }}
+          name: ui-e2e-screenshots-${{ matrix.viewport }}-${{ matrix.shard }}
           path: target/ui-e2e/screenshots/
           if-no-files-found: ignore
 
@@ -2266,6 +2270,15 @@ jobs:
         with:
           name: ui-docs-shots
           path: website/book/src/viewer/img/
+          if-no-files-found: error
+      # Every route at 1440 and 390 px, light and dark, for the family
+      # screenshot review (#3910); not committed.
+      - name: Upload the route screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ui-route-shots
+          path: target/ui-e2e/screenshots/routes/
           if-no-files-found: error
 
   # ── The compose/local image target (docker/Dockerfile runtime-from-source) ──

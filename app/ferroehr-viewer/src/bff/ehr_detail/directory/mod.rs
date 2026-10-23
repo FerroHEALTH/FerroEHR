@@ -41,9 +41,9 @@ use serde_json::{Value, json};
 use crate::uid::uid_value_of;
 
 use crate::error::ViewerError;
+use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
-use crate::locale::Msg;
 
 /// The EHR's directory as its canonical FOLDER JSON body plus the current
 /// version uid (the FOLDER's `uid.value`, an `OBJECT_VERSION_ID`).
@@ -569,18 +569,11 @@ fn summarize_directory_version(body: &str, number: i32, is_latest: bool) -> Dire
     }
 }
 
-
-
-
-
-
-
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{
         DIRECTORY_ARCHETYPE, FOLDER_NODE_ID, directory_state, empty_root_folder, folder_json,
-        split_version_uid,
-        summarize_directory_version, version_window,
+        split_version_uid, summarize_directory_version, version_window,
     };
 
     /// A served directory answer carrying `etag` and a FOLDER body whose own
@@ -684,5 +677,4 @@ mod tests {
         // A window past i32 clamps instead of overflowing the version numbers.
         assert_eq!(version_window(2, u32::MAX), vec![2, 1]);
     }
-
 }

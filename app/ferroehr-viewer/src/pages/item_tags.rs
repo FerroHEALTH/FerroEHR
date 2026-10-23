@@ -185,12 +185,42 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
     let set = view! {
         <form method="post" action=action.clone() class="fui-clause-filter">
             {Field::new("tk", tr(Msg::TagsKey))
-                .view(view! { <input id="tk" name="tag_key" type="text" class="fui-input fui-mono" value=key required /> })}
+                .view(
+                    view! {
+                        <input
+                            id="tk"
+                            name="tag_key"
+                            type="text"
+                            class="fui-input fui-mono"
+                            value=key
+                            required
+                        />
+                    },
+                )}
             {Field::new("tv", tr(Msg::TagValueOptional))
-                .view(view! { <input id="tv" name="tag_value" type="text" class="fui-input" value=value /> })}
+                .view(
+                    view! {
+                        <input id="tv" name="tag_value" type="text" class="fui-input" value=value />
+                    },
+                )}
             {Field::new("tp", tr(Msg::TagPathOptional))
-                .view(view! { <input id="tp" name="tag_path" type="text" class="fui-input fui-mono" value=path /> })}
-            <button type="submit" name="intent" value="set-tag" class="fui-button fui-button-secondary">
+                .view(
+                    view! {
+                        <input
+                            id="tp"
+                            name="tag_path"
+                            type="text"
+                            class="fui-input fui-mono"
+                            value=path
+                        />
+                    },
+                )}
+            <button
+                type="submit"
+                name="intent"
+                value="set-tag"
+                class="fui-button fui-button-secondary"
+            >
                 {ferrohealth_ui::icon::icon(Glyph::TAGS, "16")}
                 {tr(Msg::TagSetAction)}
             </button>

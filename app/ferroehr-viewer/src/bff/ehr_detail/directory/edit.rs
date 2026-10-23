@@ -131,9 +131,9 @@ pub(crate) fn find_item_by_key(root: &Value, key: &str) -> Option<(Vec<usize>, u
             && let Some(index) = items
                 .iter()
                 .position(|item| item.get("_key").and_then(Value::as_str) == Some(key))
-            {
-                return Some((path.clone(), index));
-            }
+        {
+            return Some((path.clone(), index));
+        }
         if let Some(folders) = node.get("folders").and_then(Value::as_array) {
             for (index, child) in folders.iter().enumerate() {
                 path.push(index);
@@ -345,14 +345,22 @@ mod tests {
 
     /// The name of the folder at `path`.
     fn name_at(tree: &Value, path: &[usize]) -> String {
-        folder(tree, path)["name"]["value"].as_str().unwrap_or_default().to_owned()
+        folder(tree, path)["name"]["value"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned()
     }
 
     /// The `_key` of every item of the folder at `path`.
     fn item_keys(tree: &Value, path: &[usize]) -> Vec<String> {
         folder(tree, path)["items"]
             .as_array()
-            .map(|items| items.iter().filter_map(|item| item["_key"].as_str().map(str::to_owned)).collect())
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| item["_key"].as_str().map(str::to_owned))
+                    .collect()
+            })
             .unwrap_or_default()
     }
 
@@ -385,7 +393,11 @@ mod tests {
         let mut all = items.clone();
         collect_keys(&tree, &mut all);
         let unique: std::collections::BTreeSet<_> = all.iter().collect();
-        assert_eq!(unique.len(), 7, "folder and item keys share one namespace and never collide");
+        assert_eq!(
+            unique.len(),
+            7,
+            "folder and item keys share one namespace and never collide"
+        );
         // Idempotent for items as well: a second pass re-stamps nothing.
         stamp_keys(&mut tree, &mut counter);
         assert_eq!(counter, 7);
@@ -446,10 +458,17 @@ mod tests {
     #[test]
     fn items_add_and_remove() {
         let mut tree = root();
-        add_item(&mut tree, &[0], object_ref("local", "COMPOSITION", "HIER_OBJECT_ID", "abc"));
+        add_item(
+            &mut tree,
+            &[0],
+            object_ref("local", "COMPOSITION", "HIER_OBJECT_ID", "abc"),
+        );
         assert_eq!(tree["folders"][0]["items"][0]["id"]["value"], "abc");
         remove_item(&mut tree, &[0], 0);
-        assert_eq!(tree["folders"][0]["items"].as_array().map(Vec::len), Some(0));
+        assert_eq!(
+            tree["folders"][0]["items"].as_array().map(Vec::len),
+            Some(0)
+        );
     }
 
     #[test]
@@ -464,7 +483,10 @@ mod tests {
         // captured positional index.
         let (path, doomed) = find_item_by_key(&tree, &before[1]).expect("the middle item");
         remove_item(&mut tree, &path, doomed);
-        assert_eq!(item_keys(&tree, &[0]), vec![before[0].clone(), before[2].clone()]);
+        assert_eq!(
+            item_keys(&tree, &[0]),
+            vec![before[0].clone(), before[2].clone()]
+        );
         assert_eq!(find_item_by_key(&tree, &before[1]), None);
         assert_eq!(find_item_by_key(&tree, &before[2]), Some((vec![0], 1)));
         assert_eq!(tree["folders"][0]["items"][1]["id"]["value"], "z");

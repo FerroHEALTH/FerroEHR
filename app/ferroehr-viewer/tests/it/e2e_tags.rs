@@ -254,7 +254,10 @@ async fn set_status_tag(http: &reqwest::Client, v1: &str, ehr_id: &str, key: &st
         .json()
         .await
         .expect("EHR_STATUS body");
-    let uid = status["uid"]["value"].as_str().expect("its uid");
+    let uid = status
+        .pointer("/uid/value")
+        .and_then(serde_json::Value::as_str)
+        .expect("its uid");
     let container = uid.split("::").next().expect("the versioned object id");
     let answer = http
         .put(format!("{v1}/ehr/{ehr_id}/ehr_status/{container}/tags"))
@@ -270,7 +273,6 @@ async fn set_status_tag(http: &reqwest::Client, v1: &str, ehr_id: &str, key: &st
         answer.status()
     );
 }
-
 
 /// A run-unique suffix for the fixtures a journey creates, so a shared stack
 /// can hold several runs' tags without collision.

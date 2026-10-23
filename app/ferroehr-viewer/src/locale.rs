@@ -27,10 +27,10 @@ fluent_templates::static_loader! {
         fallback_language: "en",
         // NOTE: Fluent's guide, "Bidirectionality": the isolation marks around a
         // placeable are for mixed-direction text; the English catalog draws none.
-        // FerroUI's formatter groups every number a message takes in the
-        // page's language, from each catalog's `number-group` (FerroUI #293).
         customise: |bundle| {
             bundle.set_use_isolating(false);
+            // FerroUI's formatter groups each number in the page's language,
+            // from each catalog's `number-group` (FerroUI #293).
             bundle.set_formatter(Some(ferrohealth_ui::i18n::number::format_number));
         },
     };
@@ -4390,8 +4390,11 @@ pub fn current() -> Locale {
                     .get(http::header::COOKIE)
                     .and_then(|value| value.to_str().ok())
                     .map(|cookies| {
-                        ferrohealth_ui::theme::Preferences::read(cookies, crate::prefs::COOKIE_PREFIX)
-                            .language
+                        ferrohealth_ui::theme::Preferences::read(
+                            cookies,
+                            crate::prefs::COOKIE_PREFIX,
+                        )
+                        .language
                     })
             })
             .and_then(|language| language.tag().map(str::to_owned))

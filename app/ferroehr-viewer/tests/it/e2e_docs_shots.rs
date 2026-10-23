@@ -140,6 +140,10 @@ fn directory(composition: &str) -> serde_json::Value {
 /// stored query, a subscription, a directory and a tag on the seeded EHR, and
 /// a party. Every seed is idempotent for a capture pass, and its status is
 /// printed rather than asserted: a missing fixture shows as an empty screen.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one seed per fixture, in the order the captures read them"
+)]
 async fn seed(cdr: &str, user: &str, pass: &str, ehr: String, composition: String) -> Seeded {
     let http = reqwest::Client::new();
     let root = v1(cdr);
@@ -277,6 +281,8 @@ struct Route {
     path: String,
     /// The image's path under a screenshot root, without `.png`.
     slug: &'static str,
+    /// Whether the book shows it at all.
+    in_book: bool,
     /// Whether the book shows it in dark beside light.
     dark_in_book: bool,
 }
@@ -286,6 +292,17 @@ fn light(path: impl Into<String>, slug: &'static str) -> Route {
     Route {
         path: path.into(),
         slug,
+        in_book: true,
+        dark_in_book: false,
+    }
+}
+
+/// A route only the review captures.
+fn review(path: impl Into<String>, slug: &'static str) -> Route {
+    Route {
+        path: path.into(),
+        slug,
+        in_book: false,
         dark_in_book: false,
     }
 }
@@ -295,11 +312,16 @@ fn both(path: impl Into<String>, slug: &'static str) -> Route {
     Route {
         path: path.into(),
         slug,
+        in_book: true,
         dark_in_book: true,
     }
 }
 
 /// Every route of the console, over the fixtures `seeded` names.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one list: every route the console serves, each on its own line"
+)]
 fn routes(seeded: &Seeded) -> Vec<Route> {
     let ehr = format!("/ehrs/{}", seeded.ehr);
     let composition = format!("{ehr}/compositions/{}", seeded.composition);
@@ -308,39 +330,39 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
     let mut all = vec![
         both("/", "dashboard/dashboard"),
         both("/ehrs", "ehrs/ehrs"),
-        light("/ehrs/new", "ehrs/new"),
+        review("/ehrs/new", "ehrs/new"),
         both(ehr.clone(), "ehrs/ehr"),
-        light(format!("{ehr}/status"), "ehrs/status"),
-        light(format!("{ehr}/status/edit"), "ehrs/status-edit"),
+        review(format!("{ehr}/status"), "ehrs/status"),
+        review(format!("{ehr}/status/edit"), "ehrs/status-edit"),
         light(format!("{ehr}/directory"), "ehrs/directory"),
-        light(format!("{ehr}/directory/edit"), "ehrs/directory-edit"),
-        light(format!("{ehr}/contributions"), "ehrs/contributions"),
-        light(format!("{ehr}/contribution/new"), "ehrs/contribution-new"),
-        light(format!("{ehr}/tags"), "ehrs/tags"),
-        light(format!("{ehr}/compositions/new"), "compositions/new"),
+        review(format!("{ehr}/directory/edit"), "ehrs/directory-edit"),
+        review(format!("{ehr}/contributions"), "ehrs/contributions"),
+        review(format!("{ehr}/contribution/new"), "ehrs/contribution-new"),
+        review(format!("{ehr}/tags"), "ehrs/tags"),
+        review(format!("{ehr}/compositions/new"), "compositions/new"),
         both(composition.clone(), "compositions/reading"),
-        light(
+        review(
             format!("{composition}?tab=document"),
             "compositions/document",
         ),
-        light(
+        review(
             format!("{composition}?tab=versions"),
             "compositions/versions",
         ),
-        light(format!("{composition}?tab=tags"), "compositions/tags"),
-        light(format!("{composition}/edit"), "compositions/edit"),
+        review(format!("{composition}?tab=tags"), "compositions/tags"),
+        review(format!("{composition}/edit"), "compositions/edit"),
         both("/parties", "parties/parties"),
-        light("/parties/new", "parties/new"),
+        review("/parties/new", "parties/new"),
         both("/templates", "templates/templates"),
-        light("/templates?family=adl2", "templates/templates-adl2"),
+        review("/templates?family=adl2", "templates/templates-adl2"),
         light("/templates/upload", "templates/upload"),
         light(template.clone(), "templates/template"),
         light(format!("{template}?tab=paths"), "templates/template-paths"),
-        light(
+        review(
             format!("{template}?tab=source"),
             "templates/template-source",
         ),
-        light(
+        review(
             format!("{template}?tab=example"),
             "templates/template-example",
         ),
@@ -349,7 +371,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
             "templates/template-adl2",
         ),
         both("/terminology", "terminology/terminology"),
-        light("/terminology/openehr", "terminology/openehr"),
+        review("/terminology/openehr", "terminology/openehr"),
         light(
             "/terminology/lookup?terminology=openehr&code=249",
             "terminology/lookup",
@@ -358,14 +380,14 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
             "/terminology/valuesets?terminology=openehr&set=audit_change_type",
             "terminology/valuesets",
         ),
-        light(
+        review(
             "/terminology/subsumption?terminology=openehr&broader=249&narrower=250",
             "terminology/subsumption",
         ),
         light("/queries", "queries/queries"),
         light(query.clone(), "queries/stored-query"),
         light(format!("{query}/run"), "queries/stored-query-run"),
-        light(
+        review(
             format!("/queries/{}/versions", urlencoding::encode(QUERY_NAME)),
             "queries/stored-query-versions",
         ),
@@ -377,26 +399,26 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
             "/server/metrics?metric=db_pool_connections",
             "server/metrics",
         ),
-        light("/server/logging", "server/logging"),
-        light("/server/api", "server/api"),
-        light("/server/smart", "server/smart"),
+        review("/server/logging", "server/logging"),
+        review("/server/api", "server/api"),
+        review("/server/smart", "server/smart"),
         both("/audit", "audit/audit"),
-        light("/audit?patient=no-such-patient", "audit/audit-empty"),
+        review("/audit?patient=no-such-patient", "audit/audit-empty"),
         both("/subscriptions", "subscriptions/subscriptions"),
         light("/subscriptions/new", "subscriptions/new"),
-        light(
+        review(
             format!("/subscriptions/{SUBSCRIPTION}/edit"),
             "subscriptions/edit",
         ),
-        light("/configuration", "configuration/configuration"),
+        review("/configuration", "configuration/configuration"),
         light("/preferences", "preferences/preferences"),
-        light("/preferences/reading", "preferences/reading"),
-        light("/preferences/keyboard", "preferences/keyboard"),
+        review("/preferences/reading", "preferences/reading"),
+        review("/preferences/keyboard", "preferences/keyboard"),
         light("/access", "access/access"),
-        light("/about", "about/about"),
+        review("/about", "about/about"),
     ];
     if !seeded.contribution.is_empty() {
-        all.push(light(
+        all.push(review(
             format!("{ehr}/contributions/{}", seeded.contribution),
             "ehrs/contribution",
         ));
@@ -404,11 +426,11 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
     if !seeded.party.is_empty() {
         let party = format!("/parties/person/{}", seeded.party);
         all.push(light(party.clone(), "parties/party"));
-        all.push(light(
+        all.push(review(
             format!("{party}?tab=versions"),
             "parties/party-versions",
         ));
-        all.push(light(format!("{party}/edit"), "parties/party-edit"));
+        all.push(review(format!("{party}/edit"), "parties/party-edit"));
     }
     all
 }
@@ -430,7 +452,7 @@ async fn capture_routes(h: &Harness, routes: &[Route], review: &Path, book: &Pat
             h.wait_css("main").await;
             shot_to(h, review, &format!("{}-{suffix}", route.slug)).await;
             match (width, dark) {
-                (1440, false) => shot_to(h, book, route.slug).await,
+                (1440, false) if route.in_book => shot_to(h, book, route.slug).await,
                 (1440, true) if route.dark_in_book => {
                     shot_to(h, book, &format!("{}-dark", route.slug)).await;
                 }

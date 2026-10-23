@@ -233,11 +233,10 @@ pub fn SubscriptionsPage() -> impl IntoView {
                     );
                     let name = view! { <code>{row.name.clone()}</code> }.into_any();
                     view! {
-                        <tr class:is-excluded=!row.enabled>
-                            {title_cell(Some(&href), name, Some(sub))}
-                            {cell(&columns[1], state)}
-                            {cell(&columns[2], ago(&row.created_at))}
-                            {menu_cell(menu)}
+                        <tr class:is-excluded=!row
+                            .enabled>
+                            {title_cell(Some(&href), name, Some(sub))} {cell(&columns[1], state)}
+                            {cell(&columns[2], ago(&row.created_at))} {menu_cell(menu)}
                         </tr>
                     }
                     .into_any()
@@ -326,6 +325,10 @@ impl Form {
 
 /// The editor's sections: the name (fixed once created), what it selects,
 /// and its delivery.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page part: the reads it waits on and the view it draws"
+)]
 async fn form_view(form: &Form, editing: bool, name_error: Option<String>) -> AnyView {
     let select = |id: &'static str,
                   name: &'static str,
@@ -334,10 +337,19 @@ async fn form_view(form: &Form, editing: bool, name_error: Option<String>) -> An
                   chosen: &str| {
         let options = choices
             .iter()
-            .map(|(value, words)| view! { <option value=(*value).to_owned() selected=*value == chosen>{tr(*words)}</option> })
+            .map(|(value, words)| {
+                view! {
+                    <option value=(*value).to_owned() selected=*value == chosen>
+                        {tr(*words)}
+                    </option>
+                }
+            })
             .collect_view();
-        Field::new(id, label)
-            .view(view! { <select id=id name=name class="fui-select">{options}</select> })
+        Field::new(id, label).view(view! {
+            <select id=id name=name class="fui-select">
+                {options}
+            </select>
+        })
     };
     let templates: Vec<String> = crate::bff::templates::list_templates()
         .await
@@ -345,7 +357,13 @@ async fn form_view(form: &Form, editing: bool, name_error: Option<String>) -> An
         .unwrap_or_default();
     let template_options = templates
         .iter()
-        .map(|template| view! { <option value=template.clone() selected=*template == form.template>{template.clone()}</option> })
+        .map(|template| {
+            view! {
+                <option value=template.clone() selected=*template == form.template>
+                    {template.clone()}
+                </option>
+            }
+        })
         .collect_view();
     let name = if editing {
         section(
@@ -353,8 +371,18 @@ async fn form_view(form: &Form, editing: bool, name_error: Option<String>) -> An
             None,
             None,
             view! {
-                <p><code>{form.name.clone()}</code></p>
-                {definitions(vec![(tr(Msg::SubQueue), view! { <code>{format!("ferroehr.events.{}", form.name)}</code> }.into_any())])}
+                <p>
+                    <code>{form.name.clone()}</code>
+                </p>
+                {definitions(
+                    vec![
+                        (
+                            tr(Msg::SubQueue),
+                            view! { <code>{format!("ferroehr.events.{}", form.name)}</code> }
+                                .into_any(),
+                        ),
+                    ],
+                )}
                 <p class="fui-help">{tr(Msg::SubNameFixed)}</p>
             },
         )
@@ -373,18 +401,20 @@ async fn form_view(form: &Form, editing: bool, name_error: Option<String>) -> An
                             .label_hidden()
                             .help(tr(Msg::SubNameHelp))
                             .after(error)
-                            .view(view! {
-                                <input
-                                    id="sn"
-                                    name="name"
-                                    type="text"
-                                    class="fui-input fui-mono"
-                                    spellcheck="false"
-                                    placeholder="vital-signs-feed"
-                                    value=form.name.clone()
-                                    aria-invalid=name_error.is_some().then_some("true")
-                                />
-                            })}
+                            .view(
+                                view! {
+                                    <input
+                                        id="sn"
+                                        name="name"
+                                        type="text"
+                                        class="fui-input fui-mono"
+                                        spellcheck="false"
+                                        placeholder="vital-signs-feed"
+                                        value=form.name.clone()
+                                        aria-invalid=name_error.is_some().then_some("true")
+                                    />
+                                },
+                            )}
                     </div>
                 </div>
             },
@@ -392,16 +422,22 @@ async fn form_view(form: &Form, editing: bool, name_error: Option<String>) -> An
     };
     let what = view! {
         <div class="fui-form-grid">
-            <div class="fui-span-2">{select("sk", "kind", tr(Msg::ColumnKind), &KINDS, &form.kind)}</div>
-            <div class="fui-span-2">{select("sc", "change", tr(Msg::SubChangeType), &CHANGES, &form.change)}</div>
+            <div class="fui-span-2">
+                {select("sk", "kind", tr(Msg::ColumnKind), &KINDS, &form.kind)}
+            </div>
+            <div class="fui-span-2">
+                {select("sc", "change", tr(Msg::SubChangeType), &CHANGES, &form.change)}
+            </div>
             <div class="fui-span-2">
                 {Field::new("st", tr(Msg::FilterTemplate))
-                    .view(view! {
-                        <select id="st" name="template" class="fui-select">
-                            <option value="">{tr(Msg::SubAnyTemplate)}</option>
-                            {template_options}
-                        </select>
-                    })}
+                    .view(
+                        view! {
+                            <select id="st" name="template" class="fui-select">
+                                <option value="">{tr(Msg::SubAnyTemplate)}</option>
+                                {template_options}
+                            </select>
+                        },
+                    )}
             </div>
         </div>
     };
@@ -411,7 +447,13 @@ async fn form_view(form: &Form, editing: bool, name_error: Option<String>) -> An
         tr(Msg::SubDeliverHelp),
         view! {
             <input type="hidden" name="enabled" value="off" />
-            <input type="checkbox" id="enabled" name="enabled" class="fui-switch" checked=form.enabled />
+            <input
+                type="checkbox"
+                id="enabled"
+                name="enabled"
+                class="fui-switch"
+                checked=form.enabled
+            />
         },
     );
     card_panel(view! {
@@ -496,8 +538,7 @@ pub fn NewSubscriptionPage() -> impl IntoView {
             <Title text=tr(Msg::SubNew) />
             {heading}
             <div class="fui-stack">
-                {top}
-                <form id=EDIT_FORM method="post" action="/subscriptions/new">
+                {top} <form id=EDIT_FORM method="post" action="/subscriptions/new">
                     {form_view(&form, false, name_error).await}
                 </form>
             </div>
@@ -530,12 +571,22 @@ pub fn EditSubscriptionPage() -> impl IntoView {
         let _dock_promise = dock_promise;
         let rows = match list_event_subscriptions().await {
             Ok(Some(rows)) => rows,
-            Ok(None) => return view! { {heading()} {off()} }.into_any(),
+            Ok(None) => {
+                return view! {
+                    {heading()}
+                    {off()}
+                }
+                .into_any();
+            }
             Err(error) => return refused(tr(Msg::SubRefused), &error, None),
         };
         let Some(row) = rows.into_iter().find(|row| row.name == name) else {
             crate::request::set_status(http::StatusCode::NOT_FOUND);
-            return view! { {heading()} {info_note(tr_with(Msg::SubNone, &[("name", name.clone().into())]))} }.into_any();
+            return view! {
+                {heading()}
+                {info_note(tr_with(Msg::SubNone, &[("name", name.clone().into())]))}
+            }
+            .into_any();
         };
         let form = Form::read(Some(&row));
         let mut top = None;
@@ -606,16 +657,22 @@ pub fn EditSubscriptionPage() -> impl IntoView {
         let confirm = (crate::request::query("confirm").as_deref() == Some("delete")).then(|| {
             crate::pages::common::warn_note(view! {
                 <p>
-                    <strong>{tr_with(Msg::SubDeleteTitle, &[("name", row.name.clone().into())])}</strong>
+                    <strong>
+                        {tr_with(Msg::SubDeleteTitle, &[("name", row.name.clone().into())])}
+                    </strong>
                     " "
                     {tr(Msg::SubDeleteMessage)}
                 </p>
                 <div class="fui-cluster">
                     <form method="post" action=edit_href(&row.name)>
                         <input type="hidden" name="intent" value="delete-subscription" />
-                        <button type="submit" class="fui-button fui-button-danger">{tr(Msg::SubDeleteConfirm)}</button>
+                        <button type="submit" class="fui-button fui-button-danger">
+                            {tr(Msg::SubDeleteConfirm)}
+                        </button>
                     </form>
-                    <a class="fui-button fui-button-secondary" href=edit_href(&row.name)>{tr(Msg::Cancel)}</a>
+                    <a class="fui-button fui-button-secondary" href=edit_href(&row.name)>
+                        {tr(Msg::Cancel)}
+                    </a>
                 </div>
             })
         });
@@ -631,9 +688,7 @@ pub fn EditSubscriptionPage() -> impl IntoView {
             <Title text=tr_with(Msg::CompositionEditTitle, &[("name", row.name.clone().into())]) />
             {heading}
             <div class="fui-stack">
-                {top}
-                {confirm}
-                <form id=EDIT_FORM method="post" action=edit_href(&row.name)>
+                {top} {confirm} <form id=EDIT_FORM method="post" action=edit_href(&row.name)>
                     {form_view(&form, true, None).await}
                 </form>
             </div>

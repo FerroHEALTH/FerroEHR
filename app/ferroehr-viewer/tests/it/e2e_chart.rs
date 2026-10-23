@@ -79,7 +79,8 @@ async fn results_chart_groups_series_and_toggles_them() {
 
     h.wait_css("label[for='shown-chart']").await.click().await;
     common::submit(&h, "header.fui-page-header button[form='query-form']").await;
-    h.wait_css(&format!("{CHART} [data-series-lines='1']")).await;
+    h.wait_css(&format!("{CHART} [data-series-lines='1']"))
+        .await;
     common::wait_main_contains(&h, "observed").await;
     h.wait_hydrated().await;
     let chips = find_all(&h, ".fui-legend button.fui-legend-chip").await;
@@ -99,7 +100,11 @@ async fn results_chart_groups_series_and_toggles_them() {
         .wait_css(".fui-legend button.fui-legend-chip[data-series='magnitude']")
         .await;
     chip.click().await;
-    assert_eq!(chip.attr("aria-pressed").await, "false", "the chip is released");
+    assert_eq!(
+        chip.attr("aria-pressed").await,
+        "false",
+        "the chip is released"
+    );
     let hidden = poll_until(async || {
         common::read_attr(&h, &format!("{CHART} [data-series-lines='0']"), "hidden")
             .await

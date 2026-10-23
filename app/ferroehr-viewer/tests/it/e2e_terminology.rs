@@ -60,11 +60,19 @@ async fn terminology_browser_defines_terms_and_expands_value_sets() {
 
     h.goto("/terminology/valuesets?terminology=openehr").await;
     fill(&h, "#v-g", "audit_change_type").await;
-    common::submit(&h, "form[action='/terminology/valuesets'] button[type=submit]").await;
+    common::submit(
+        &h,
+        "form[action='/terminology/valuesets'] button[type=submit]",
+    )
+    .await;
     wait_main_contains(&h, "amendment").await;
     h.shot(3, "terminology-value-set").await;
     fill(&h, "#v-c", "249").await;
-    common::submit(&h, "#v-c ~ * button[type=submit], form:has(#v-c) button[type=submit]").await;
+    common::submit(
+        &h,
+        "#v-c ~ * button[type=submit], form:has(#v-c) button[type=submit]",
+    )
+    .await;
     wait_main_contains(&h, "249 is a member of audit_change_type").await;
     fill(&h, "#v-c", "no-such-code-in-any-value-set").await;
     common::submit(&h, "form:has(#v-c) button[type=submit]").await;
@@ -73,10 +81,15 @@ async fn terminology_browser_defines_terms_and_expands_value_sets() {
     h.goto("/terminology/subsumption?terminology=openehr").await;
     fill(&h, "#s-a", "249").await;
     fill(&h, "#s-b", "250").await;
-    common::submit(&h, "form[action='/terminology/subsumption'] button[type=submit]").await;
+    common::submit(
+        &h,
+        "form[action='/terminology/subsumption'] button[type=submit]",
+    )
+    .await;
     wait_main_contains(&h, "249 is not broader than 250").await;
 
-    h.goto("/terminology/lookup?terminology=openehr&code=no-such-code").await;
+    h.goto("/terminology/lookup?terminology=openehr&code=no-such-code")
+        .await;
     wait_main_contains(&h, "does not define no-such-code").await;
     h.shot(4, "terminology-unknown-code").await;
 

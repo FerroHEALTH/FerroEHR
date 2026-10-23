@@ -176,7 +176,8 @@ async fn adl2_upload_lists_and_serves_source_and_json() {
     h.shot(3, "adl2-json").await;
 
     h.goto(&format!("{page}?tab=paths")).await;
-    h.wait_css("ul.fui-tree[role='tree'] li[role='treeitem']").await;
+    h.wait_css("ul.fui-tree[role='tree'] li[role='treeitem']")
+        .await;
     h.shot(4, "adl2-paths").await;
 
     remove_adl2_artefacts(&[VERSIONED_V100]).await;
@@ -211,7 +212,10 @@ async fn adl2_versioned_get_reaches_both_stored_versions() {
     wait_main_contains(&h, VERSIONED_V100).await;
     h.shot(2, "adl2-release-1-0-0").await;
 
-    h.wait_css(&format!("main a[href='{page}']")).await.click().await;
+    h.wait_css(&format!("main a[href='{page}']"))
+        .await
+        .click()
+        .await;
     wait_main_contains(&h, VERSIONED_V110).await;
     h.shot(3, "adl2-latest-again").await;
 
@@ -263,7 +267,11 @@ async fn an_unparseable_adl2_source_surfaces_the_engine_diagnostic() {
 
     h.goto(LIST_URL).await;
     assert!(
-        !is_present(&h, &row_link("openEHR-EHR-COMPOSITION.cnf_unparseable.v1.0.0")).await,
+        !is_present(
+            &h,
+            &row_link("openEHR-EHR-COMPOSITION.cnf_unparseable.v1.0.0")
+        )
+        .await,
         "a refused ADL2 source must not appear in the listing"
     );
     h.assert_console_clean(&["Failed to load resource"]).await;
@@ -289,10 +297,13 @@ async fn an_adl2_artefact_is_deleted_from_the_listing() {
     .await
     .click()
     .await;
-    h.wait_css(&format!("main a.fui-menu-danger[href*='{}']", stem(DELETABLE)))
-        .await
-        .click()
-        .await;
+    h.wait_css(&format!(
+        "main a.fui-menu-danger[href*='{}']",
+        stem(DELETABLE)
+    ))
+    .await
+    .click()
+    .await;
     h.wait_url_contains("confirm=delete").await;
     common::submit(&h, "main form.fui-cluster button.fui-button-danger").await;
     h.wait_css(".fui-toast-text").await;

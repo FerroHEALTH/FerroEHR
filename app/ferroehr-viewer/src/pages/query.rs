@@ -148,15 +148,55 @@ fn save_popover(
         title: tr(Msg::QuerySave).into(),
         body: view! {
             {Field::new("sv-ns", tr(Msg::QueryNamespace))
-                .view(view! { <input id="sv-ns" name="save_namespace" form=QUERY_FORM type="text" class="fui-input fui-mono" value=field("save_namespace") /> })}
+                .view(
+                    view! {
+                        <input
+                            id="sv-ns"
+                            name="save_namespace"
+                            form=QUERY_FORM
+                            type="text"
+                            class="fui-input fui-mono"
+                            value=field("save_namespace")
+                        />
+                    },
+                )}
             {Field::new("sv-n", tr(Msg::QueryName))
-                .view(view! { <input id="sv-n" name="save_name" form=QUERY_FORM type="text" class="fui-input fui-mono" value=field("save_name") /> })}
+                .view(
+                    view! {
+                        <input
+                            id="sv-n"
+                            name="save_name"
+                            form=QUERY_FORM
+                            type="text"
+                            class="fui-input fui-mono"
+                            value=field("save_name")
+                        />
+                    },
+                )}
             {Field::new("sv-v", tr(Msg::ColumnVersion))
                 .help(tr(Msg::QueryVersionHelp))
                 .after(error)
-                .view(view! { <input id="sv-v" name="save_version" form=QUERY_FORM type="text" class="fui-input fui-mono" value=field("save_version") placeholder="1.0.0" /> })}
+                .view(
+                    view! {
+                        <input
+                            id="sv-v"
+                            name="save_version"
+                            form=QUERY_FORM
+                            type="text"
+                            class="fui-input fui-mono"
+                            value=field("save_version")
+                            placeholder="1.0.0"
+                        />
+                    },
+                )}
             <div class="fui-cluster">
-                <button type="submit" form=QUERY_FORM name="intent" value="save" class="fui-button fui-button-primary">
+                <button
+                    type="submit"
+                    form=QUERY_FORM
+                    name="intent"
+                    value="save"
+                    class="fui-button fui-button-primary"
+                >
                     {ferrohealth_ui::icon::icon(Glyph::SAVE, "16")}
                     {tr(Msg::QuerySaveAction)}
                 </button>
@@ -317,7 +357,9 @@ fn leaves(node: &CatalogNode, trail: &[String], out: &mut Vec<Leaf>) {
             .code_options
             .iter()
             .map(|option| match option.ordinal {
-                Some(ordinal) if node.rm_type == "DV_ORDINAL" => (ordinal.to_string(), option.label.clone()),
+                Some(ordinal) if node.rm_type == "DV_ORDINAL" => {
+                    (ordinal.to_string(), option.label.clone())
+                }
                 _ => (option.code.clone(), option.label.clone()),
             })
             .collect();
@@ -397,34 +439,38 @@ fn group_at<'a>(root: &'a mut UiGroup, key: &str) -> Option<&'a mut UiGroup> {
 /// Applies the add or remove the post names to the groups.
 fn restructure(root: &mut UiGroup, posted: &crate::posted::Posted, first: &str) {
     if let Some(key) = posted.get(ADD_CONDITION)
-        && let Some(group) = group_at(root, &key) {
-            group.conditions.push(UiCond {
+        && let Some(group) = group_at(root, &key)
+    {
+        group.conditions.push(UiCond {
+            path: first.to_owned(),
+            ..UiCond::default()
+        });
+    }
+    if let Some(key) = posted.get(ADD_GROUP)
+        && let Some(group) = group_at(root, &key)
+    {
+        group.groups.push(UiGroup {
+            conditions: vec![UiCond {
                 path: first.to_owned(),
                 ..UiCond::default()
-            });
-        }
-    if let Some(key) = posted.get(ADD_GROUP)
-        && let Some(group) = group_at(root, &key) {
-            group.groups.push(UiGroup {
-                conditions: vec![UiCond {
-                    path: first.to_owned(),
-                    ..UiCond::default()
-                }],
-                ..UiGroup::default()
-            });
-        }
+            }],
+            ..UiGroup::default()
+        });
+    }
     if let Some(key) = posted.get(REMOVE_GROUP)
         && let Some((parent, place)) = key.rsplit_once('.')
-            && let (Some(group), Ok(place)) = (group_at(root, parent), place.parse::<usize>())
-                && place < group.groups.len() {
-                    drop(group.groups.remove(place));
-                }
+        && let (Some(group), Ok(place)) = (group_at(root, parent), place.parse::<usize>())
+        && place < group.groups.len()
+    {
+        drop(group.groups.remove(place));
+    }
     if let Some(key) = posted.get(REMOVE)
         && let Some((parent, place)) = key.rsplit_once(".c")
-            && let (Some(group), Ok(place)) = (group_at(root, parent), place.parse::<usize>())
-                && place < group.conditions.len() {
-                    drop(group.conditions.remove(place));
-                }
+        && let (Some(group), Ok(place)) = (group_at(root, parent), place.parse::<usize>())
+        && place < group.conditions.len()
+    {
+        drop(group.conditions.remove(place));
+    }
 }
 
 /// The builder as the post leaves it: the form's previous state, its fields
@@ -465,9 +511,10 @@ fn draft_of_post(posted: &crate::posted::Posted, offered: &[String]) -> Draft {
     if let Some(place) = intent
         .strip_prefix("remove-column:")
         .and_then(|place| place.parse::<usize>().ok())
-        && place < draft.columns.len() {
-            drop(draft.columns.remove(place));
-        }
+        && place < draft.columns.len()
+    {
+        drop(draft.columns.remove(place));
+    }
     read_group(&mut draft.root, "g", posted);
     restructure(
         &mut draft.root,
@@ -580,12 +627,18 @@ fn kind_of(
                 max: upper.then_some(number),
             }
         }
-        "DV_DATE_TIME" | "DV_DATE" | "DV_TIME" => {
-            CriterionKind::DateTimeRange {
-                from: if lower { value.to_owned() } else { String::new() },
-                to: if upper { value.to_owned() } else { String::new() },
-            }
-        }
+        "DV_DATE_TIME" | "DV_DATE" | "DV_TIME" => CriterionKind::DateTimeRange {
+            from: if lower {
+                value.to_owned()
+            } else {
+                String::new()
+            },
+            to: if upper {
+                value.to_owned()
+            } else {
+                String::new()
+            },
+        },
         "DV_CODED_TEXT" => CriterionKind::CodedIn {
             codes: vec![value.to_owned()],
             terminology: String::new(),
@@ -914,7 +967,13 @@ fn columns_view(draft: &Draft, offered: &[Leaf]) -> AnyView {
         .map(|(place, (path, alias))| {
             let options = offered
                 .iter()
-                .map(|leaf| view! { <option value=leaf.path.clone() selected=leaf.path == *path>{leaf.label.clone()}</option> })
+                .map(|leaf| {
+                    view! {
+                        <option value=leaf.path.clone() selected=leaf.path == *path>
+                            {leaf.label.clone()}
+                        </option>
+                    }
+                })
                 .collect_view();
             let path_id = format!("col-{place}-path");
             let alias_id = format!("col-{place}-alias");
@@ -923,20 +982,45 @@ fn columns_view(draft: &Draft, offered: &[Leaf]) -> AnyView {
                 fields: view! {
                     <div class="fui-field">
                         <label class="fui-sr-only" for=path_id.clone()>
-                            {tr_with(Msg::QueryDataPointN, &[("number", count(place.saturating_add(1)))])}
+                            {tr_with(
+                                Msg::QueryDataPointN,
+                                &[("number", count(place.saturating_add(1)))],
+                            )}
                         </label>
-                        <select id=path_id.clone() name=path_id class="fui-select">{options}</select>
+                        <select id=path_id.clone() name=path_id class="fui-select">
+                            {options}
+                        </select>
                     </div>
                     <div class="fui-field">
                         <label class="fui-sr-only" for=alias_id.clone()>
-                            {tr_with(Msg::QueryColumnNameN, &[("number", count(place.saturating_add(1)))])}
+                            {tr_with(
+                                Msg::QueryColumnNameN,
+                                &[("number", count(place.saturating_add(1)))],
+                            )}
                         </label>
-                        <input id=alias_id.clone() name=alias_id type="text" class="fui-input fui-mono" value=alias.clone() />
+                        <input
+                            id=alias_id.clone()
+                            name=alias_id
+                            type="text"
+                            class="fui-input fui-mono"
+                            value=alias.clone()
+                        />
                     </div>
                 }
                 .into_any(),
                 end: RowEnd::Remove {
-                    label: tr_with(Msg::QueryRemoveDataPoint, &[("name", if alias.is_empty() { path.clone() } else { alias.clone() }.into())]),
+                    label: tr_with(
+                        Msg::QueryRemoveDataPoint,
+                        &[(
+                            "name",
+                            if alias.is_empty() {
+                                path.clone()
+                            } else {
+                                alias.clone()
+                            }
+                            .into(),
+                        )],
+                    ),
                     name: "intent".to_owned(),
                     value: format!("remove-column:{place}"),
                 },
@@ -1136,20 +1220,48 @@ pub fn BuildTab() -> impl IntoView {
         }
         let template_options = ids
             .iter()
-            .map(|id| view! { <option value=id.clone() selected=*id == draft.template>{id.clone()}</option> })
+            .map(|id| {
+                view! {
+                    <option value=id.clone() selected=*id == draft.template>
+                        {id.clone()}
+                    </option>
+                }
+            })
             .collect_view();
         let shape_options = SHAPES
             .iter()
-            .map(|(key, words)| view! { <option value=*key selected=*key == draft.shape>{tr(*words)}</option> })
+            .map(|(key, words)| {
+                view! {
+                    <option value=*key selected=*key == draft.shape>
+                        {tr(*words)}
+                    </option>
+                }
+            })
             .collect_view();
         let options = view! {
             <div class="fui-transform-options">
                 {Field::new("q-t", tr(Msg::FilterTemplate))
-                    .view(view! { <select id="q-t" name="template" class="fui-select">{template_options}</select> })}
+                    .view(
+                        view! {
+                            <select id="q-t" name="template" class="fui-select">
+                                {template_options}
+                            </select>
+                        },
+                    )}
                 {Field::new("q-shape", tr(Msg::QueryReturns))
-                    .view(view! { <select id="q-shape" name="shape" class="fui-select">{shape_options}</select> })}
-                <div class="fui-transform-run">
-                    <button type="submit" name="intent" value="edit" class="fui-button fui-button-secondary">
+                    .view(
+                        view! {
+                            <select id="q-shape" name="shape" class="fui-select">
+                                {shape_options}
+                            </select>
+                        },
+                    )} <div class="fui-transform-run">
+                    <button
+                        type="submit"
+                        name="intent"
+                        value="edit"
+                        class="fui-button fui-button-secondary"
+                    >
                         {tr(Msg::StagedApply)}
                     </button>
                 </div>
@@ -1166,26 +1278,51 @@ pub fn BuildTab() -> impl IntoView {
         let conditions = condition_groups(view_group(&draft.root, "g", 1, &leaves));
         let order_options = leaves
             .iter()
-            .map(|leaf| view! { <option value=leaf.path.clone() selected=leaf.path == draft.order>{leaf.label.clone()}</option> })
+            .map(|leaf| {
+                view! {
+                    <option value=leaf.path.clone() selected=leaf.path == draft.order>
+                        {leaf.label.clone()}
+                    </option>
+                }
+            })
             .collect_view();
         let order = view! {
             <div class="fui-transform-options">
                 {Field::new("q-o", tr(Msg::QueryOrderBy))
-                    .view(view! {
-                        <select id="q-o" name="order" class="fui-select">
-                            <option value="">{tr(Msg::QueryNoOrder)}</option>
-                            {order_options}
-                        </select>
-                    })}
+                    .view(
+                        view! {
+                            <select id="q-o" name="order" class="fui-select">
+                                <option value="">{tr(Msg::QueryNoOrder)}</option>
+                                {order_options}
+                            </select>
+                        },
+                    )}
                 {Field::new("q-d", tr(Msg::QueryDirection))
-                    .view(view! {
-                        <select id="q-d" name="direction" class="fui-select">
-                            <option value="desc" selected=draft.descending>{tr(Msg::QueryNewestFirst)}</option>
-                            <option value="asc" selected=!draft.descending>{tr(Msg::QueryOldestFirst)}</option>
-                        </select>
-                    })}
+                    .view(
+                        view! {
+                            <select id="q-d" name="direction" class="fui-select">
+                                <option value="desc" selected=draft.descending>
+                                    {tr(Msg::QueryNewestFirst)}
+                                </option>
+                                <option value="asc" selected=!draft.descending>
+                                    {tr(Msg::QueryOldestFirst)}
+                                </option>
+                            </select>
+                        },
+                    )}
                 {Field::new("q-l", tr(Msg::QueryLimit))
-                    .view(view! { <input id="q-l" name="limit" type="text" inputmode="numeric" class="fui-input" value=draft.limit.clone() /> })}
+                    .view(
+                        view! {
+                            <input
+                                id="q-l"
+                                name="limit"
+                                type="text"
+                                inputmode="numeric"
+                                class="fui-input"
+                                value=draft.limit.clone()
+                            />
+                        },
+                    )}
             </div>
         };
         let built_section = match &built {
@@ -1206,23 +1343,29 @@ pub fn BuildTab() -> impl IntoView {
             <Title text=tr(Msg::NavQuery) />
             {heading(save_popover(posted.as_ref(), save_problem, None))}
             <div class="fui-stack">
-                {lifted}
-                {top}
-                {catalog_trouble}
-                <form id=QUERY_FORM method="post" action="/query">
+                {lifted} {top} {catalog_trouble} <form id=QUERY_FORM method="post" action="/query">
                     <input type="hidden" name="default-intent" value="run" />
-                    <button type="submit" class="fui-sr-only" tabindex="-1">{tr(Msg::QueryRun)}</button>
+                    <button type="submit" class="fui-sr-only" tabindex="-1">
+                        {tr(Msg::QueryRun)}
+                    </button>
                     <input type="hidden" name="state" value=state />
                     <input type="hidden" name="aql" value=aql />
-                    {binder(tr(Msg::QueryWays), tabs(), "build", panel(view! {
-                        {plain_section(options)}
-                        {points}
-                        {section(Some(tr(Msg::QueryConditions)), None, None, conditions)}
-                        {section(Some(tr(Msg::QueryOrderLimit)), None, None, order)}
-                        {built_section}
-                        {plain_section(shown_choice(chart))}
-                        {answer.unwrap_or_else(|| not_run(tr(Msg::ResultsNotRun)))}
-                    }))}
+                    {binder(
+                        tr(Msg::QueryWays),
+                        tabs(),
+                        "build",
+                        panel(
+                            view! {
+                                {plain_section(options)}
+                                {points}
+                                {section(Some(tr(Msg::QueryConditions)), None, None, conditions)}
+                                {section(Some(tr(Msg::QueryOrderLimit)), None, None, order)}
+                                {built_section}
+                                {plain_section(shown_choice(chart))}
+                                {answer.unwrap_or_else(|| not_run(tr(Msg::ResultsNotRun)))}
+                            },
+                        ),
+                    )}
                 </form>
             </div>
         }
@@ -1303,9 +1446,10 @@ fn parameters_of(posted: Option<&crate::posted::Posted>, aql: &str) -> Vec<(Stri
         if let Some(place) = intent
             .strip_prefix("remove-param:")
             .and_then(|place| place.parse::<usize>().ok())
-            && place < rows.len() {
-                drop(rows.remove(place));
-            }
+            && place < rows.len()
+        {
+            drop(rows.remove(place));
+        }
         if intent == "add-param" {
             rows.push((String::new(), String::new()));
         }
@@ -1331,15 +1475,34 @@ fn parameters_view(rows: &[(String, String)]) -> AnyView {
                 fields: view! {
                     <div class="fui-field">
                         <label class="fui-sr-only" for=name_id.clone()>
-                            {tr_with(Msg::QueryParamNameN, &[("number", count(place.saturating_add(1)))])}
+                            {tr_with(
+                                Msg::QueryParamNameN,
+                                &[("number", count(place.saturating_add(1)))],
+                            )}
                         </label>
-                        <input id=name_id.clone() name=name_id type="text" class="fui-input fui-mono" value=name.clone() />
+                        <input
+                            id=name_id.clone()
+                            name=name_id
+                            type="text"
+                            class="fui-input fui-mono"
+                            value=name.clone()
+                        />
                     </div>
                     <div class="fui-field">
                         <label class="fui-sr-only" for=value_id.clone()>
-                            {tr_with(Msg::QueryParamValueN, &[("number", count(place.saturating_add(1)))])}
+                            {tr_with(
+                                Msg::QueryParamValueN,
+                                &[("number", count(place.saturating_add(1)))],
+                            )}
                         </label>
-                        <input id=value_id.clone() name=value_id type="text" class="fui-input fui-mono" spellcheck="false" value=value.clone() />
+                        <input
+                            id=value_id.clone()
+                            name=value_id
+                            type="text"
+                            class="fui-input fui-mono"
+                            spellcheck="false"
+                            value=value.clone()
+                        />
                     </div>
                 }
                 .into_any(),
@@ -1472,7 +1635,14 @@ pub fn AqlTab() -> impl IntoView {
             && crate::builder::lift::from_aql(&aql).is_ok();
         let to_build = buildable.then(|| {
             view! {
-                <button type="submit" form=QUERY_FORM formaction="/query" name="intent" value="lift" class="fui-button fui-button-ghost fui-button-small">
+                <button
+                    type="submit"
+                    form=QUERY_FORM
+                    formaction="/query"
+                    name="intent"
+                    value="lift"
+                    class="fui-button fui-button-ghost fui-button-small"
+                >
                     {ferrohealth_ui::icon::icon(Glyph::LIST_CHECKS, "14")}
                     {tr(Msg::QueryOpenInBuild)}
                 </button>
@@ -1497,22 +1667,43 @@ pub fn AqlTab() -> impl IntoView {
         };
         view! {
             <Title text=tr(Msg::QueryAqlTitle) />
-            {heading(save_popover(posted.as_ref(), save_problem, loaded.as_ref().map(|(name, version)| (name.as_str(), version.as_str()))))}
+            {heading(
+                save_popover(
+                    posted.as_ref(),
+                    save_problem,
+                    loaded.as_ref().map(|(name, version)| (name.as_str(), version.as_str())),
+                ),
+            )}
             <div class="fui-stack">
-                {top}
-                <form id=QUERY_FORM method="post" action="/query/aql">
+                {top} <form id=QUERY_FORM method="post" action="/query/aql">
                     <input type="hidden" name="default-intent" value="run" />
-                    <button type="submit" class="fui-sr-only" tabindex="-1">{tr(Msg::QueryRun)}</button>
-                    {binder(tr(Msg::QueryWays), tabs(), "aql", panel(view! {
-                        {plain_section(view! {
-                            {note}
-                            <div class="fui-cluster">{to_build}</div>
-                            {editor}
-                        })}
-                        {section(Some(tr(Msg::QueryParameters)), u64::try_from(rows.len()).ok(), None, parameters_view(&rows))}
-                        {plain_section(shown_choice(chart))}
-                        {answer.unwrap_or_else(|| not_run(tr(Msg::ResultsNotRun)))}
-                    }))}
+                    <button type="submit" class="fui-sr-only" tabindex="-1">
+                        {tr(Msg::QueryRun)}
+                    </button>
+                    {binder(
+                        tr(Msg::QueryWays),
+                        tabs(),
+                        "aql",
+                        panel(
+                            view! {
+                                {plain_section(
+                                    view! {
+                                        {note}
+                                        <div class="fui-cluster">{to_build}</div>
+                                        {editor}
+                                    },
+                                )}
+                                {section(
+                                    Some(tr(Msg::QueryParameters)),
+                                    u64::try_from(rows.len()).ok(),
+                                    None,
+                                    parameters_view(&rows),
+                                )}
+                                {plain_section(shown_choice(chart))}
+                                {answer.unwrap_or_else(|| not_run(tr(Msg::ResultsNotRun)))}
+                            },
+                        ),
+                    )}
                 </form>
             </div>
         }
@@ -1524,7 +1715,7 @@ pub fn AqlTab() -> impl IntoView {
 #[cfg(test)]
 mod tests {
     use super::{
-        Draft, Leaf, UiCond, UiGroup, draft_of_query, kind_of, query_of, restructure, step, Step,
+        Draft, Leaf, Step, UiCond, UiGroup, draft_of_query, kind_of, query_of, restructure, step,
     };
     use crate::builder::model::{CriterionKind, CriterionNode};
     use crate::posted::Posted;
@@ -1533,14 +1724,16 @@ mod tests {
     fn leaves() -> Vec<Leaf> {
         vec![
             Leaf {
-                path: "/content[openEHR-EHR-OBSERVATION.bp.v2]/data[at0001]/items[at0004]/value".to_owned(),
+                path: "/content[openEHR-EHR-OBSERVATION.bp.v2]/data[at0001]/items[at0004]/value"
+                    .to_owned(),
                 label: "Blood pressure › Systolic".to_owned(),
                 rm_type: "DV_QUANTITY".to_owned(),
                 codes: Vec::new(),
                 unit: Some("mm[Hg]".to_owned()),
             },
             Leaf {
-                path: "/content[openEHR-EHR-OBSERVATION.bp.v2]/data[at0001]/items[at0008]/value".to_owned(),
+                path: "/content[openEHR-EHR-OBSERVATION.bp.v2]/data[at0001]/items[at0008]/value"
+                    .to_owned(),
                 label: "Blood pressure › Position".to_owned(),
                 rm_type: "DV_CODED_TEXT".to_owned(),
                 codes: vec![("at1001".to_owned(), "Sitting".to_owned())],
@@ -1551,7 +1744,10 @@ mod tests {
 
     fn cond(path_of: usize, op: &str, value: &str) -> UiCond {
         UiCond {
-            path: leaves().get(path_of).map(|leaf| leaf.path.clone()).unwrap_or_default(),
+            path: leaves()
+                .get(path_of)
+                .map(|leaf| leaf.path.clone())
+                .unwrap_or_default(),
             op: op.to_owned(),
             value: value.to_owned(),
         }
@@ -1559,15 +1755,41 @@ mod tests {
 
     #[test]
     fn a_condition_takes_the_constraint_its_type_and_operator_name() {
-        let (kind, negated) = kind_of(&cond(0, "ge", "140"), "DV_QUANTITY", "Systolic").expect("a number");
+        let (kind, negated) =
+            kind_of(&cond(0, "ge", "140"), "DV_QUANTITY", "Systolic").expect("a number");
         assert!(!negated);
-        assert_eq!(kind, CriterionKind::QuantityRange { min: Some(140.0), max: None, units: String::new() });
-        let (kind, _) = kind_of(&cond(0, "eq", "120"), "DV_QUANTITY", "Systolic").expect("a number");
-        assert_eq!(kind, CriterionKind::QuantityRange { min: Some(120.0), max: Some(120.0), units: String::new() });
-        let (kind, negated) = kind_of(&cond(1, "ne", "at1001"), "DV_CODED_TEXT", "Position").expect("a code");
+        assert_eq!(
+            kind,
+            CriterionKind::QuantityRange {
+                min: Some(140.0),
+                max: None,
+                units: String::new()
+            }
+        );
+        let (kind, _) =
+            kind_of(&cond(0, "eq", "120"), "DV_QUANTITY", "Systolic").expect("a number");
+        assert_eq!(
+            kind,
+            CriterionKind::QuantityRange {
+                min: Some(120.0),
+                max: Some(120.0),
+                units: String::new()
+            }
+        );
+        let (kind, negated) =
+            kind_of(&cond(1, "ne", "at1001"), "DV_CODED_TEXT", "Position").expect("a code");
         assert!(negated);
-        assert_eq!(kind, CriterionKind::CodedIn { codes: vec!["at1001".to_owned()], terminology: String::new() });
-        assert!(kind_of(&cond(0, "ge", "high"), "DV_QUANTITY", "Systolic").is_err(), "a value that is no number is refused, never dropped");
+        assert_eq!(
+            kind,
+            CriterionKind::CodedIn {
+                codes: vec!["at1001".to_owned()],
+                terminology: String::new()
+            }
+        );
+        assert!(
+            kind_of(&cond(0, "ge", "high"), "DV_QUANTITY", "Systolic").is_err(),
+            "a value that is no number is refused, never dropped"
+        );
     }
 
     #[test]
@@ -1575,12 +1797,23 @@ mod tests {
         let draft = Draft {
             template: "Vital signs.v1".to_owned(),
             shape: "data".to_owned(),
-            columns: vec![(leaves().first().map(|leaf| leaf.path.clone()).unwrap_or_default(), "systolic".to_owned())],
+            columns: vec![(
+                leaves()
+                    .first()
+                    .map(|leaf| leaf.path.clone())
+                    .unwrap_or_default(),
+                "systolic".to_owned(),
+            )],
             root: UiGroup {
                 any: false,
                 not: false,
                 conditions: vec![cond(0, "ge", "140"), cond(1, "eq", "at1001")],
-                groups: vec![UiGroup { any: true, not: true, conditions: vec![cond(0, "le", "90")], groups: Vec::new() }],
+                groups: vec![UiGroup {
+                    any: true,
+                    not: true,
+                    conditions: vec![cond(0, "le", "90")],
+                    groups: Vec::new(),
+                }],
             },
             order: String::new(),
             descending: true,
@@ -1602,8 +1835,14 @@ mod tests {
 
     #[test]
     fn an_add_or_remove_names_what_it_acts_on_and_is_never_a_run() {
-        let mut root = UiGroup { conditions: vec![cond(0, "ge", "1")], ..UiGroup::default() };
-        let posted = Posted::new(vec![("intent".to_owned(), "run".to_owned()), ("add-group".to_owned(), "g".to_owned())]);
+        let mut root = UiGroup {
+            conditions: vec![cond(0, "ge", "1")],
+            ..UiGroup::default()
+        };
+        let posted = Posted::new(vec![
+            ("intent".to_owned(), "run".to_owned()),
+            ("add-group".to_owned(), "g".to_owned()),
+        ]);
         assert_eq!(step(Some(&posted)), Step::Edit);
         restructure(&mut root, &posted, "/x");
         assert_eq!(root.groups.len(), 1);

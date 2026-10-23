@@ -174,7 +174,10 @@ pub fn StatusTab() -> impl IntoView {
                             tab_href(&ehr_id, EhrTab::Status),
                         ))
                     });
-                let mut rows = vec![(tr(Msg::FactVersion), version_number(&shown.version_uid).into_any())];
+                let mut rows = vec![(
+                    tr(Msg::FactVersion),
+                    version_number(&shown.version_uid).into_any(),
+                )];
                 if let Ok(facts) = &facts_of {
                     rows.push((tr(Msg::FactContribution), short(&facts.contribution_uid)));
                     rows.push((
@@ -229,10 +232,19 @@ pub fn StatusTab() -> impl IntoView {
                     plain_section(crate::pages::common::info_note(tr(Msg::StatusNotQueryable)))
                 });
                 panel(view! {
-                    {notice} {queryable} {this}
-                    {section(Some(tr(Msg::StatusDocument)), None, None, view! {
-                        {ferrohealth_ui::view::surface::section_intro(tr(Msg::StatusDocumentIntro))}
-                    })}
+                    {notice}
+                    {queryable}
+                    {this}
+                    {section(
+                        Some(tr(Msg::StatusDocument)),
+                        None,
+                        None,
+                        view! {
+                            {ferrohealth_ui::view::surface::section_intro(
+                                tr(Msg::StatusDocumentIntro),
+                            )}
+                        },
+                    )}
                     {document}
                     {history}
                 })
@@ -336,9 +348,14 @@ pub fn StatusEditPage() -> impl IntoView {
                                         format!("{}/edit", tab_href(&ehr_id, EhrTab::Status)),
                                         ferrohealth_ui::view::button::Variant::Secondary,
                                         Some(Glyph::REFRESH_CW),
-                                        tr_with(Msg::EditorReloadVersion, &[("version", version_number(&current.version_uid).into())]),
+                                        tr_with(
+                                            Msg::EditorReloadVersion,
+                                            &[("version", version_number(&current.version_uid).into())],
+                                        ),
                                     )}
-                                    <span class="fui-small fui-muted">{tr(Msg::EditorReloadReplaces)}</span>
+                                    <span class="fui-small fui-muted">
+                                        {tr(Msg::EditorReloadReplaces)}
+                                    </span>
                                 </div>
                             }
                         });
@@ -419,15 +436,28 @@ pub fn StatusEditPage() -> impl IntoView {
             };
             view! {
                 {top}
-                <form id=EDIT_FORM method="post" action=format!("{}/edit", tab_href(&ehr_id, EhrTab::Status))>
+                <form
+                    id=EDIT_FORM
+                    method="post"
+                    action=format!("{}/edit", tab_href(&ehr_id, EhrTab::Status))
+                >
                     <input type="hidden" name="version" value=opened_uid.clone() />
-                    {card_panel(view! {
-                        {section(Some(tr(Msg::StatusCapabilities)), None, None, flags)}
-                        {section(Some(tr(Msg::StatusOtherDetails)), None, None, view! {
-                            {ferrohealth_ui::view::surface::section_intro(tr(Msg::StatusOtherDetailsIntro))}
-                            {editor}
-                        })}
-                    })}
+                    {card_panel(
+                        view! {
+                            {section(Some(tr(Msg::StatusCapabilities)), None, None, flags)}
+                            {section(
+                                Some(tr(Msg::StatusOtherDetails)),
+                                None,
+                                None,
+                                view! {
+                                    {ferrohealth_ui::view::surface::section_intro(
+                                        tr(Msg::StatusOtherDetailsIntro),
+                                    )}
+                                    {editor}
+                                },
+                            )}
+                        },
+                    )}
                 </form>
             }
             .into_any()

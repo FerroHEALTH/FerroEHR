@@ -33,7 +33,6 @@
 use leptos::prelude::*;
 use leptos::server;
 
-
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
 use crate::served_vocabulary::OPENAPI_FAMILIES;
@@ -271,17 +270,6 @@ pub async fn template_usage() -> Result<(Vec<(String, i64)>, u32), ViewerError> 
     Ok((usage, total))
 }
 
-
-
-
-
-
-
-
-
-
-
-
 /// What to say when the SMART discovery probe could not be read.
 ///
 /// Component-free and unit-tested (the viewer's failure-copy convention —
@@ -339,11 +327,6 @@ pub fn smart_probe_failure_copy(error: &ViewerError) -> String {
         }
     }
 }
-
-
-
-
-
 
 /// One operation of an `OpenAPI` document: its method, its path and its
 /// summary.
@@ -592,5 +575,4 @@ mod tests {
             Vec::<(String, Vec<(String, String, String)>)>::new()
         );
     }
-
 }

@@ -147,13 +147,6 @@ fn json_path(value: &Value, path: &[&str]) -> String {
     current.as_str().unwrap_or_default().to_owned()
 }
 
-
-
-
-
-
-
-
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::parse_ehr_summary;

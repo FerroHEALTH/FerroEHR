@@ -322,7 +322,11 @@ fn new_form(draft: &Draft, ehr_id_error: Option<String>) -> AnyView {
         .help(tr(Msg::EhrNewEhrIdHelp))
         .holds_id()
         .after(ehr_id_error.map(|error| {
-            view! { <p class="fui-help fui-error" id="e-id-error">{error}</p> }
+            view! {
+                <p class="fui-help fui-error" id="e-id-error">
+                    {error}
+                </p>
+            }
         }))
         .view(view! {
             <input
@@ -339,18 +343,22 @@ fn new_form(draft: &Draft, ehr_id_error: Option<String>) -> AnyView {
         });
     view! {
         <form id=NEW_EHR_FORM method="post" action="/ehrs/new">
-            {card_panel(view! {
-                {section(
-                    Some(tr(Msg::EhrNewSubject)),
-                    None,
-                    None,
-                    view! {
-                        {ferrohealth_ui::view::surface::section_intro(tr(Msg::EhrNewSubjectIntro))}
-                        <div class="fui-form-grid">{subject} {namespace}</div>
-                    },
-                )}
-                {section(None, None, None, view! { <div class="fui-form-grid">{ehr_id}</div> })}
-            })}
+            {card_panel(
+                view! {
+                    {section(
+                        Some(tr(Msg::EhrNewSubject)),
+                        None,
+                        None,
+                        view! {
+                            {ferrohealth_ui::view::surface::section_intro(
+                                tr(Msg::EhrNewSubjectIntro),
+                            )}
+                            <div class="fui-form-grid">{subject} {namespace}</div>
+                        },
+                    )}
+                    {section(None, None, None, view! { <div class="fui-form-grid">{ehr_id}</div> })}
+                },
+            )}
         </form>
     }
     .into_any()

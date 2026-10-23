@@ -132,7 +132,10 @@ fn rows_table(family: TemplateFamily, rows: &[TemplateRow]) -> AnyView {
                 }
             };
             let sub = view! { <span class="fui-row-sub">{row.concept.clone()}</span> }.into_any();
-            let confirm = format!("{href}{}confirm=delete", if href.contains('?') { '&' } else { '?' });
+            let confirm = format!(
+                "{href}{}confirm=delete",
+                if href.contains('?') { '&' } else { '?' }
+            );
             let menu = row_menu(
                 Menu::new(
                     format!("template-{index}"),
@@ -156,8 +159,7 @@ fn rows_table(family: TemplateFamily, rows: &[TemplateRow]) -> AnyView {
                 <tr>
                     {title_cell(Some(&href), name, Some(sub))}
                     {cell(&columns[1], view! { <code>{row.archetype_id.clone()}</code> })}
-                    {cell(&columns[2], ago(&row.created))}
-                    {menu_cell(menu)}
+                    {cell(&columns[2], ago(&row.created))} {menu_cell(menu)}
                 </tr>
             }
             .into_any()
@@ -178,7 +180,12 @@ fn rows_table(family: TemplateFamily, rows: &[TemplateRow]) -> AnyView {
 
 /// The confirmation of deleting the template `template_id` of `family`,
 /// posting to `action`.
-fn delete_dialog(family: TemplateFamily, template_id: &str, id: &'static str, action: &str) -> AnyView {
+fn delete_dialog(
+    family: TemplateFamily,
+    template_id: &str,
+    id: &'static str,
+    action: &str,
+) -> AnyView {
     danger_dialog(
         Confirmation {
             id,
@@ -211,7 +218,9 @@ fn inline_confirm(family: TemplateFamily, template_id: &str, action: &str) -> Op
     (crate::request::query("confirm").as_deref() == Some("delete")).then(|| {
         crate::pages::common::warn_note(view! {
             <p>
-                <strong>{tr_with(Msg::TemplateDeleteTitle, &[("name", template_id.to_owned().into())])}</strong>
+                <strong>
+                    {tr_with(Msg::TemplateDeleteTitle, &[("name", template_id.to_owned().into())])}
+                </strong>
                 " "
                 {tr(Msg::TemplateDeleteMessage)}
             </p>
@@ -223,7 +232,9 @@ fn inline_confirm(family: TemplateFamily, template_id: &str, action: &str) -> Op
                     {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
                     {tr(Msg::TemplateDeleteConfirm)}
                 </button>
-                <a class="fui-button fui-button-secondary" href=action.to_owned()>{tr(Msg::Cancel)}</a>
+                <a class="fui-button fui-button-secondary" href=action.to_owned()>
+                    {tr(Msg::Cancel)}
+                </a>
             </form>
         })
     })
@@ -369,15 +380,7 @@ pub fn TemplatesPage() -> impl IntoView {
             body: list,
             pager: None,
         });
-        view! {
-            <div class="fui-list-page">
-                {acted}
-                {toolbar}
-                {chips}
-                {card}
-            </div>
-        }
-        .into_any()
+        view! { <div class="fui-list-page">{acted} {toolbar} {chips} {card}</div> }.into_any()
     });
     view! {
         <Title text=tr(Msg::NavTemplates) />
@@ -397,8 +400,9 @@ const UPLOAD_FORM: &str = "template-upload";
 #[component]
 pub fn UploadTemplatePage() -> impl IntoView {
     let posted = crate::posted::posted();
-    let family = posted
-        .as_ref().map_or_else(asked_family, |posted| TemplateFamily::from_query(&posted.text("family")));
+    let family = posted.as_ref().map_or_else(asked_family, |posted| {
+        TemplateFamily::from_query(&posted.text("family"))
+    });
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&format!("/templates?family={}", family.as_query()));
     }
@@ -484,25 +488,44 @@ pub fn UploadTemplatePage() -> impl IntoView {
             <Title text=tr(Msg::TemplatesUpload) />
             {heading}
             <div class="fui-stack">
-                {top}
-                <form id=UPLOAD_FORM method="post" action="/templates/upload">
+                {top} <form id=UPLOAD_FORM method="post" action="/templates/upload">
                     <input type="hidden" name="family" value=family.as_query() />
-                    {card_panel(view! {
-                        {plain_section(switch)}
-                        {plain_section(view! {
-                            <SourceUpload
-                                source=source
-                                label=tr(if adl2 { Msg::TemplateAdl2Source } else { Msg::TemplateOptSource })
-                                choose=tr(Msg::TemplateChooseFile)
-                                placeholder=tr(if adl2 { Msg::TemplateAdl2Placeholder } else { Msg::TemplateOptPlaceholder })
-                                adl2=adl2
-                                words=UploadWords::of_page(
-                                    if adl2 { &[".adl", ".adls", ".adlt", ".adl2", ".txt"] } else { &[".opt", ".xml"] },
-                                    crate::islands::SOURCE_MAX_BYTES,
-                                )
-                            />
-                        })}
-                    })}
+                    {card_panel(
+                        view! {
+                            {plain_section(switch)}
+                            {plain_section(
+                                view! {
+                                    <SourceUpload
+                                        source=source
+                                        label=tr(
+                                            if adl2 {
+                                                Msg::TemplateAdl2Source
+                                            } else {
+                                                Msg::TemplateOptSource
+                                            },
+                                        )
+                                        choose=tr(Msg::TemplateChooseFile)
+                                        placeholder=tr(
+                                            if adl2 {
+                                                Msg::TemplateAdl2Placeholder
+                                            } else {
+                                                Msg::TemplateOptPlaceholder
+                                            },
+                                        )
+                                        adl2=adl2
+                                        words=UploadWords::of_page(
+                                            if adl2 {
+                                                &[".adl", ".adls", ".adlt", ".adl2", ".txt"]
+                                            } else {
+                                                &[".opt", ".xml"]
+                                            },
+                                            crate::islands::SOURCE_MAX_BYTES,
+                                        )
+                                    />
+                                },
+                            )}
+                        },
+                    )}
                 </form>
             </div>
         }
@@ -622,7 +645,10 @@ fn paths_panel(template_id: &str, base: &str, root: &CatalogNode, note: Option<S
             <TreeView
                 tree=TreeData {
                     id: "template-paths".to_owned(),
-                    label: tr_with(Msg::TemplatePathsOf, &[("name", template_id.to_owned().into())]),
+                    label: tr_with(
+                        Msg::TemplatePathsOf,
+                        &[("name", template_id.to_owned().into())],
+                    ),
                     kind: TreeKind::Path,
                     editing: false,
                     nodes: vec![tree],
@@ -640,7 +666,8 @@ fn paths_panel(template_id: &str, base: &str, root: &CatalogNode, note: Option<S
             path: picked.aql_path.clone(),
             rm_type: picked.rm_type.clone(),
             occurrences: String::new(),
-            units: (!picked.unit_options.is_empty()).then(|| picked.unit_options.join(", ").into_any()),
+            units: (!picked.unit_options.is_empty())
+                .then(|| picked.unit_options.join(", ").into_any()),
             flat_path: None,
             codes: picked
                 .code_options
@@ -695,25 +722,65 @@ fn example_options(base: &str, adl2: bool) -> (AnyView, ReprFormat, ExampleDetai
     };
     let format_options = formats
         .iter()
-        .map(|(key, each)| view! { <option value=*key selected=*each == format>{each.label()}</option> })
+        .map(|(key, each)| {
+            view! {
+                <option value=*key selected=*each == format>
+                    {each.label()}
+                </option>
+            }
+        })
         .collect_view();
     let kind_options = [ExampleType::Input, ExampleType::Output]
         .into_iter()
-        .map(|each| view! { <option value=each.as_query() selected=each == kind>{tr(each.label())}</option> })
+        .map(|each| {
+            view! {
+                <option value=each.as_query() selected=each == kind>
+                    {tr(each.label())}
+                </option>
+            }
+        })
         .collect_view();
-    let detail_options = [ExampleDetail::Required, ExampleDetail::Medium, ExampleDetail::Complete]
-        .into_iter()
-        .map(|each| view! { <option value=each.as_query() selected=each == detail>{tr(each.label())}</option> })
-        .collect_view();
+    let detail_options = [
+        ExampleDetail::Required,
+        ExampleDetail::Medium,
+        ExampleDetail::Complete,
+    ]
+    .into_iter()
+    .map(|each| {
+        view! {
+            <option value=each.as_query() selected=each == detail>
+                {tr(each.label())}
+            </option>
+        }
+    })
+    .collect_view();
     let form = view! {
         <form method="get" action=base.to_owned() class="fui-transform-options">
             <input type="hidden" name="tab" value="example" />
             {Field::new("x-fmt", tr(Msg::CompositionFormat))
-                .view(view! { <select id="x-fmt" name="format" class="fui-select">{format_options}</select> })}
+                .view(
+                    view! {
+                        <select id="x-fmt" name="format" class="fui-select">
+                            {format_options}
+                        </select>
+                    },
+                )}
             {Field::new("x-typ", tr(Msg::TemplateExampleType))
-                .view(view! { <select id="x-typ" name="type" class="fui-select">{kind_options}</select> })}
+                .view(
+                    view! {
+                        <select id="x-typ" name="type" class="fui-select">
+                            {kind_options}
+                        </select>
+                    },
+                )}
             {Field::new("x-det", tr(Msg::TemplateExampleDetail))
-                .view(view! { <select id="x-det" name="detail" class="fui-select">{detail_options}</select> })}
+                .view(
+                    view! {
+                        <select id="x-det" name="detail" class="fui-select">
+                            {detail_options}
+                        </select>
+                    },
+                )}
             <div class="fui-transform-run">
                 <button type="submit" class="fui-button fui-button-secondary">
                     {ferrohealth_ui::icon::icon(Glyph::PLAY, "16")}
@@ -790,7 +857,11 @@ fn template_header(
         ))
         .more(more),
     );
-    view! { {heading} {after} }.into_any()
+    view! {
+        {heading}
+        {after}
+    }
+    .into_any()
 }
 
 /// One ADL 1.4 template.
@@ -819,7 +890,13 @@ pub fn TemplatePage() -> impl IntoView {
                 }
                 return view! {
                     <Title text=template_id.clone() />
-                    {template_header(template_id.clone(), tr(Msg::TemplateAdl14Line), &template_id, TemplateFamily::Adl14, None)}
+                    {template_header(
+                        template_id.clone(),
+                        tr(Msg::TemplateAdl14Line),
+                        &template_id,
+                        TemplateFamily::Adl14,
+                        None,
+                    )}
                     {acted}
                     {refused(tr(Msg::TemplateRefused), &error, None)}
                 }
@@ -887,11 +964,19 @@ pub fn TemplatePage() -> impl IntoView {
                 }
                 panel(view! {
                     {section(Some(tr(Msg::TemplateIdentity)), None, None, definitions(facts))}
-                    {section(Some(tr(Msg::TemplateUse)), None, None, view! {
-                        <p>
-                            <a href=query_href(&template_id, None)>{tr(Msg::TemplateUseLine)}</a>
-                        </p>
-                    })}
+                    {section(
+                        Some(tr(Msg::TemplateUse)),
+                        None,
+                        None,
+                        view! {
+                            <p>
+                                <a href=query_href(
+                                    &template_id,
+                                    None,
+                                )>{tr(Msg::TemplateUseLine)}</a>
+                            </p>
+                        },
+                    )}
                 })
             }
         };
@@ -904,14 +989,16 @@ pub fn TemplatePage() -> impl IntoView {
             <Title text=title.clone() />
             {template_header(
                 title,
-                tr_with(Msg::TemplateAdl14Subtitle, &[("concept", detail.meta.concept.clone().into())]),
+                tr_with(
+                    Msg::TemplateAdl14Subtitle,
+                    &[("concept", detail.meta.concept.clone().into())],
+                ),
                 &template_id,
                 TemplateFamily::Adl14,
                 None,
             )}
             <div class="fui-stack">
-                {acted}
-                {inline_confirm(TemplateFamily::Adl14, &template_id, &base)}
+                {acted} {inline_confirm(TemplateFamily::Adl14, &template_id, &base)}
                 {binder(tr(Msg::TemplateViews), tabs, tab.key(), body)}
             </div>
             {delete_dialog(TemplateFamily::Adl14, &template_id, DELETE_DIALOG, &base)}
@@ -965,24 +1052,52 @@ pub fn Adl2TemplatePage() -> impl IntoView {
         let older = release.is_some() && release != latest;
         let after = if older {
             Some(info_note(view! {
-                {tr_with(Msg::TemplateReadingRelease, &[("release", release.clone().unwrap_or_default().into())])}
+                {tr_with(
+                    Msg::TemplateReadingRelease,
+                    &[("release", release.clone().unwrap_or_default().into())],
+                )}
                 " "
-                <a href=adl2_href(&stem, None)>
-                    {tr_with(Msg::TemplateReadLatest, &[("release", latest.clone().unwrap_or_default().into())])}
+                <a href=adl2_href(
+                    &stem,
+                    None,
+                )>
+                    {tr_with(
+                        Msg::TemplateReadLatest,
+                        &[("release", latest.clone().unwrap_or_default().into())],
+                    )}
                 </a>
             }))
         } else if releases.len() > 1 {
             let options = releases
                 .iter()
                 .rev()
-                .map(|each| view! { <option value=each.clone() selected=Some(each) == release.as_ref()>{each.clone()}</option> })
+                .map(|each| {
+                    view! {
+                        <option value=each.clone() selected=Some(each) == release.as_ref()>
+                            {each.clone()}
+                        </option>
+                    }
+                })
                 .collect_view();
             Some(
                 view! {
-                    <form class="fui-cluster fui-title-select" method="get" action=adl2_href(&stem, None)>
-                        <label class="fui-label" for="ver">{tr(Msg::TemplateRelease)}</label>
-                        <select id="ver" name="release" class="fui-select">{options}</select>
-                        <button type="submit" class="fui-button fui-button-secondary fui-button-small">{tr(Msg::PartiesOpen)}</button>
+                    <form
+                        class="fui-cluster fui-title-select"
+                        method="get"
+                        action=adl2_href(&stem, None)
+                    >
+                        <label class="fui-label" for="ver">
+                            {tr(Msg::TemplateRelease)}
+                        </label>
+                        <select id="ver" name="release" class="fui-select">
+                            {options}
+                        </select>
+                        <button
+                            type="submit"
+                            class="fui-button fui-button-secondary fui-button-small"
+                        >
+                            {tr(Msg::PartiesOpen)}
+                        </button>
                     </form>
                 }
                 .into_any(),
@@ -1085,9 +1200,16 @@ pub fn Adl2TemplatePage() -> impl IntoView {
                 ));
                 panel(view! {
                     {section(Some(tr(Msg::TemplateIdentity)), None, None, definitions(facts))}
-                    {section(Some(tr(Msg::TemplateUse)), None, None, view! {
-                        <p><a href=query_href(&hrid, None)>{tr(Msg::TemplateUseLine)}</a></p>
-                    })}
+                    {section(
+                        Some(tr(Msg::TemplateUse)),
+                        None,
+                        None,
+                        view! {
+                            <p>
+                                <a href=query_href(&hrid, None)>{tr(Msg::TemplateUseLine)}</a>
+                            </p>
+                        },
+                    )}
                 })
             }
         };
@@ -1096,8 +1218,7 @@ pub fn Adl2TemplatePage() -> impl IntoView {
             <Title text=title.clone() />
             {template_header(title, subtitle, &hrid, TemplateFamily::Adl2, after)}
             <div class="fui-stack">
-                {acted}
-                {inline_confirm(TemplateFamily::Adl2, &hrid, &base)}
+                {acted} {inline_confirm(TemplateFamily::Adl2, &hrid, &base)}
                 {binder(tr(Msg::TemplateViews), tab_list, tab.key(), body)}
             </div>
             {delete_dialog(TemplateFamily::Adl2, &hrid, DELETE_DIALOG, &base)}

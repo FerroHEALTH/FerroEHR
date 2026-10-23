@@ -124,7 +124,10 @@ async fn signing_in_again_after_an_explicit_sign_out_renders_the_chrome() {
     };
     login_basic(&h).await;
     h.goto("/templates").await;
-    h.wait_css("button[popovertarget='user-menu']").await.click().await;
+    h.wait_css("button[popovertarget='user-menu']")
+        .await
+        .click()
+        .await;
     h.wait_css("#user-menu:popover-open").await;
     h.wait_css("#user-menu form[action='/logout'] button")
         .await

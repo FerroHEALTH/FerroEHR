@@ -130,10 +130,7 @@ fn parse_contribution(body: &str) -> Result<ContributionState, ViewerError> {
         })
         .unwrap_or_default();
     Ok(ContributionState {
-        body: crate::bff::pretty_body(
-            body,
-            crate::format::ReprFormat::CanonicalJson,
-        ),
+        body: crate::bff::pretty_body(body, crate::format::ReprFormat::CanonicalJson),
         uid: crate::uid::uid_value_of_document(&doc),
         committer: super::json_str(&doc, &["audit", "committer", "name"]),
         time_committed: super::json_str(&doc, &["audit", "time_committed", "value"]),
@@ -142,11 +139,6 @@ fn parse_contribution(body: &str) -> Result<ContributionState, ViewerError> {
         versions,
     })
 }
-
-
-
-
-
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod wire_tests {

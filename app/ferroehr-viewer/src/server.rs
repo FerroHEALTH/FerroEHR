@@ -173,7 +173,11 @@ async fn post_page(
         return (http::StatusCode::PAYLOAD_TOO_LARGE, "the form is too large").into_response();
     };
     let form = axum::extract::Request::from_parts(parts.clone(), axum::body::Body::from(bytes));
-    let fields = match <axum::extract::Form<Vec<(String, String)>> as axum::extract::FromRequest<()>>::from_request(form, &()).await {
+    let fields = match <axum::extract::Form<Vec<(String, String)>> as axum::extract::FromRequest<
+        (),
+    >>::from_request(form, &())
+    .await
+    {
         Ok(axum::extract::Form(fields)) => fields,
         Err(rejection) => return rejection.into_response(),
     };
@@ -204,7 +208,10 @@ fn same_origin(headers: &http::HeaderMap) -> bool {
         .to_str()
         .ok()
         .and_then(|value| value.parse::<http::Uri>().ok())
-        .and_then(|uri| uri.authority().map(|authority| authority.as_str().to_owned()));
+        .and_then(|uri| {
+            uri.authority()
+                .map(|authority| authority.as_str().to_owned())
+        });
     matches!((host, origin_host), (Some(host), Some(origin)) if host == origin)
 }
 
@@ -398,7 +405,9 @@ fn carries_session_cookie(headers: &http::HeaderMap) -> bool {
         .get_all(http::header::COOKIE)
         .iter()
         .filter_map(|value| value.to_str().ok())
-        .any(|cookies| ferrohealth_ui::theme::cookie(cookies, crate::session::SESSION_COOKIE).is_some())
+        .any(|cookies| {
+            ferrohealth_ui::theme::cookie(cookies, crate::session::SESSION_COOKIE).is_some()
+        })
 }
 
 /// The sign-in page a guarded request without a session goes to: it keeps

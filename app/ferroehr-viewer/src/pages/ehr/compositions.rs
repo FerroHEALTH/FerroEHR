@@ -105,7 +105,12 @@ fn toolbar(ehr_id: &str, filters: &Filters) -> AnyView {
                 autocomplete="off"
             />
         </div>
-        {crate::pages::common::date_range("f-start", tr(Msg::FilterStartTime), &filters.from, &filters.to)}
+        {crate::pages::common::date_range(
+            "f-start",
+            tr(Msg::FilterStartTime),
+            &filters.from,
+            &filters.to,
+        )}
         <button type="submit" class="fui-button fui-button-secondary">
             {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FUNNEL, "16")}
             {tr(Msg::FilterApply)}
@@ -174,97 +179,105 @@ pub fn CompositionsTab() -> impl IntoView {
     let body = awaited({
         let ehr_id = ehr_id.clone();
         async move {
-            ehr_page(ehr_id.clone(), EhrTab::Compositions, move |_facts| async move {
-                let window = OpenWindow::of(paging, 0);
-                let page = crate::bff::ehr_detail::compositions::list_compositions(
-                    ehr_id.clone(),
-                    filters.template.clone(),
-                    filters.from.clone(),
-                    filters.to.clone(),
-                    filters.composer.clone(),
-                    window.start,
-                    window.size,
-                )
-                .await;
-                let page = match page {
-                    Ok(page) => page,
-                    Err(error) => {
-                        return view! {
-                            <div class="fui-panel">
-                                <div class="fui-panel-body fui-stack">{toolbar(&ehr_id, &filters)}</div>
-                                {refused(tr(Msg::CompositionsRefused), &error, None)}
-                            </div>
-                        }
-                        .into_any();
-                    }
-                };
-                let held = u32::try_from(page.rows.len()).unwrap_or(u32::MAX);
-                let window = OpenWindow::of(paging, held);
-                let columns = [
-                    Column::text("composition", tr(Msg::ColumnComposition)).role(Role::Title),
-                    Column::text("start", tr(Msg::ColumnStartTime)).role(Role::Sub),
-                    Column::text("composer", tr(Msg::ColumnComposer)).role(Role::Meta),
-                    Column::text("version", tr(Msg::ColumnVersion)).role(Role::Meta),
-                ];
-                let rows = page
-                    .rows
-                    .iter()
-                    .map(|row| {
-                        let uid = row.first().map(cell_text).unwrap_or_default();
-                        let name = row.get(1).map(cell_text).unwrap_or_default();
-                        let template = row.get(2).map(cell_text).unwrap_or_default();
-                        let start = row.get(3).map(cell_text).unwrap_or_default();
-                        let composer = row.get(4).map(cell_text).unwrap_or_default();
-                        let version = uid.rsplit("::").next().unwrap_or_default().to_owned();
-                        let href = composition_href(&ehr_id, &crate::uid::container_uid_of(&uid));
-                        let sub = view! { <span class="fui-row-sub">{template}</span> }.into_any();
-                        let title = title_cell(Some(&href), name, Some(sub));
-                        let start = cell(&columns[1], ago(&start));
-                        let composer = cell(&columns[2], composer);
-                        let version = cell(&columns[3], version);
-                        view! { <tr>{title} {start} {composer} {version}</tr> }.into_any()
-                    })
-                    .collect_view()
-                    .into_any();
-                let table = if page.rows.is_empty() && window.page == 1 {
-                    let sentence = if filters.any() {
-                        tr(Msg::CompositionsNoMatch)
-                    } else {
-                        tr(Msg::CompositionsEmpty)
-                    };
-                    list_empty(sentence, None)
-                } else {
-                    let caption = tr(Msg::EhrTabCompositions);
-                    data_table(DataTable {
-                        caption: &caption,
-                        columns: &columns,
-                        sorting: Sorting::default(),
-                        body: Body::Rows(rows),
-                    })
-                    .into_any()
-                };
-                let pager = (window.page > 1 || window.has_next()).then(|| {
-                    post_open_pager(
-                        PagerListing::new(tr(Msg::CompositionsPages)),
-                        window,
-                        PostTo {
-                            id: "compositions-pager",
-                            action: crate::paging::PAGING_ROUTE,
-                            fields: &fields,
-                        },
+            ehr_page(
+                ehr_id.clone(),
+                EhrTab::Compositions,
+                move |_facts| async move {
+                    let window = OpenWindow::of(paging, 0);
+                    let page = crate::bff::ehr_detail::compositions::list_compositions(
+                        ehr_id.clone(),
+                        filters.template.clone(),
+                        filters.from.clone(),
+                        filters.to.clone(),
+                        filters.composer.clone(),
+                        window.start,
+                        window.size,
                     )
-                });
-                view! {
-                    <div class="fui-panel">
-                        <div class="fui-panel-body fui-stack">
-                            {toolbar(&ehr_id, &filters)} {chips(&ehr_id, &filters)}
+                    .await;
+                    let page = match page {
+                        Ok(page) => page,
+                        Err(error) => {
+                            return view! {
+                                <div class="fui-panel">
+                                    <div class="fui-panel-body fui-stack">
+                                        {toolbar(&ehr_id, &filters)}
+                                    </div>
+                                    {refused(tr(Msg::CompositionsRefused), &error, None)}
+                                </div>
+                            }
+                            .into_any();
+                        }
+                    };
+                    let held = u32::try_from(page.rows.len()).unwrap_or(u32::MAX);
+                    let window = OpenWindow::of(paging, held);
+                    let columns = [
+                        Column::text("composition", tr(Msg::ColumnComposition)).role(Role::Title),
+                        Column::text("start", tr(Msg::ColumnStartTime)).role(Role::Sub),
+                        Column::text("composer", tr(Msg::ColumnComposer)).role(Role::Meta),
+                        Column::text("version", tr(Msg::ColumnVersion)).role(Role::Meta),
+                    ];
+                    let rows = page
+                        .rows
+                        .iter()
+                        .map(|row| {
+                            let uid = row.first().map(cell_text).unwrap_or_default();
+                            let name = row.get(1).map(cell_text).unwrap_or_default();
+                            let template = row.get(2).map(cell_text).unwrap_or_default();
+                            let start = row.get(3).map(cell_text).unwrap_or_default();
+                            let composer = row.get(4).map(cell_text).unwrap_or_default();
+                            let version = uid.rsplit("::").next().unwrap_or_default().to_owned();
+                            let href =
+                                composition_href(&ehr_id, &crate::uid::container_uid_of(&uid));
+                            let sub =
+                                view! { <span class="fui-row-sub">{template}</span> }.into_any();
+                            let title = title_cell(Some(&href), name, Some(sub));
+                            let start = cell(&columns[1], ago(&start));
+                            let composer = cell(&columns[2], composer);
+                            let version = cell(&columns[3], version);
+                            view! { <tr>{title} {start} {composer} {version}</tr> }.into_any()
+                        })
+                        .collect_view()
+                        .into_any();
+                    let table = if page.rows.is_empty() && window.page == 1 {
+                        let sentence = if filters.any() {
+                            tr(Msg::CompositionsNoMatch)
+                        } else {
+                            tr(Msg::CompositionsEmpty)
+                        };
+                        list_empty(sentence, None)
+                    } else {
+                        let caption = tr(Msg::EhrTabCompositions);
+                        data_table(DataTable {
+                            caption: &caption,
+                            columns: &columns,
+                            sorting: Sorting::default(),
+                            body: Body::Rows(rows),
+                        })
+                        .into_any()
+                    };
+                    let pager = (window.page > 1 || window.has_next()).then(|| {
+                        post_open_pager(
+                            PagerListing::new(tr(Msg::CompositionsPages)),
+                            window,
+                            PostTo {
+                                id: "compositions-pager",
+                                action: crate::paging::PAGING_ROUTE,
+                                fields: &fields,
+                            },
+                        )
+                    });
+                    view! {
+                        <div class="fui-panel">
+                            <div class="fui-panel-body fui-stack">
+                                {toolbar(&ehr_id, &filters)} {chips(&ehr_id, &filters)}
+                            </div>
+                            {table}
+                            {pager.map(|pager| view! { <div class="fui-list-foot">{pager}</div> })}
                         </div>
-                        {table}
-                        {pager.map(|pager| view! { <div class="fui-list-foot">{pager}</div> })}
-                    </div>
-                }
-                .into_any()
-            })
+                    }
+                    .into_any()
+                },
+            )
             .await
         }
     });

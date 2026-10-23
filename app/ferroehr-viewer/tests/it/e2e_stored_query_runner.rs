@@ -82,7 +82,10 @@ fn admin_credentials() -> (String, String) {
 async fn store_query(h: &Harness, bare_name: &str, aql: &str) {
     h.goto("/query/aql").await;
     fill(h, "#aql", aql).await;
-    h.wait_css("button[commandfor='save-query']").await.click().await;
+    h.wait_css("button[commandfor='save-query']")
+        .await
+        .click()
+        .await;
     common::wait_visible(h, "#sv-n").await;
     fill(h, "#sv-ns", QUERY_NAMESPACE).await;
     fill(h, "#sv-n", bare_name).await;
@@ -174,16 +177,37 @@ async fn stored_query_runs_with_parameters_in_every_resolution_form() {
     login_basic_as(&h, &user, &pass).await;
     store_query(&h, RUNNER_BARE_NAME, RUNNER_AQL).await;
 
-    let run = format!("/queries/{}/1.0.0/run", urlencoding::encode(RUNNER_QUERY_NAME));
+    let run = format!(
+        "/queries/{}/1.0.0/run",
+        urlencoding::encode(RUNNER_QUERY_NAME)
+    );
     h.goto("/queries").await;
     h.wait_css(&format!("main a[href='{run}']")).await;
     for (mode, version, sends, slug) in [
-        ("exact", "1.0.0", format!("POST /query/{RUNNER_QUERY_NAME}/1.0.0"), "exact"),
-        ("prefix", "1", format!("POST /query/{RUNNER_QUERY_NAME}/1"), "prefix"),
-        ("latest", "", format!("POST /query/{RUNNER_QUERY_NAME}"), "latest"),
+        (
+            "exact",
+            "1.0.0",
+            format!("POST /query/{RUNNER_QUERY_NAME}/1.0.0"),
+            "exact",
+        ),
+        (
+            "prefix",
+            "1",
+            format!("POST /query/{RUNNER_QUERY_NAME}/1"),
+            "prefix",
+        ),
+        (
+            "latest",
+            "",
+            format!("POST /query/{RUNNER_QUERY_NAME}"),
+            "latest",
+        ),
     ] {
         h.goto(&run).await;
-        h.wait_css(&format!("label[for='res-{mode}']")).await.click().await;
+        h.wait_css(&format!("label[for='res-{mode}']"))
+            .await
+            .click()
+            .await;
         fill(&h, "#rv", version).await;
         fill(&h, "#p-template", SEEDED_TEMPLATE_ID).await;
         common::submit(&h, "#stored-query-run button[type=submit]").await;

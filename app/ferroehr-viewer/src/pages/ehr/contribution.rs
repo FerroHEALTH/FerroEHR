@@ -178,49 +178,56 @@ pub fn ContributionsTab() -> impl IntoView {
     let body = awaited({
         let ehr_id = ehr_id.clone();
         async move {
-            ehr_page(ehr_id.clone(), EhrTab::Contributions, move |_facts| async move {
-                let chart = activity(contribution_activity(ehr_id.clone()).await);
-                let list = match page_of(&ehr_id, paging).await {
-                    Ok((page, _)) if page.total == 0 => section(
-                        Some(tr(Msg::EhrTabContributions)),
-                        Some(0),
-                        None,
-                        list_empty(tr(Msg::ContributionsEmpty), None),
-                    ),
-                    Ok((page, window)) => {
-                        let pager = (window.pages > 1).then(|| {
-                            post_pager(
-                                PagerListing::new(tr(Msg::ContributionsPages)),
-                                window,
-                                PostTo {
-                                    id: "contributions-pager",
-                                    action: crate::paging::PAGING_ROUTE,
-                                    fields: &fields,
+            ehr_page(
+                ehr_id.clone(),
+                EhrTab::Contributions,
+                move |_facts| async move {
+                    let chart = activity(contribution_activity(ehr_id.clone()).await);
+                    let list = match page_of(&ehr_id, paging).await {
+                        Ok((page, _)) if page.total == 0 => section(
+                            Some(tr(Msg::EhrTabContributions)),
+                            Some(0),
+                            None,
+                            list_empty(tr(Msg::ContributionsEmpty), None),
+                        ),
+                        Ok((page, window)) => {
+                            let pager = (window.pages > 1).then(|| {
+                                post_pager(
+                                    PagerListing::new(tr(Msg::ContributionsPages)),
+                                    window,
+                                    PostTo {
+                                        id: "contributions-pager",
+                                        action: crate::paging::PAGING_ROUTE,
+                                        fields: &fields,
+                                    },
+                                )
+                            });
+                            section(
+                                Some(tr(Msg::EhrTabContributions)),
+                                Some(u64::from(page.total)),
+                                None,
+                                view! {
+                                    {listing(&ehr_id, &page)}
+                                    {pager
+                                        .map(|pager| {
+                                            view! { <div class="fui-list-foot">{pager}</div> }
+                                        })}
                                 },
                             )
-                        });
-                        section(
+                        }
+                        Err(error) => section(
                             Some(tr(Msg::EhrTabContributions)),
-                            Some(u64::from(page.total)),
                             None,
-                            view! {
-                                {listing(&ehr_id, &page)}
-                                {pager.map(|pager| view! { <div class="fui-list-foot">{pager}</div> })}
-                            },
-                        )
-                    }
-                    Err(error) => section(
-                        Some(tr(Msg::EhrTabContributions)),
-                        None,
-                        None,
-                        refused(tr(Msg::ContributionsRefused), &error, None),
-                    ),
-                };
-                panel(view! {
-                    {section(Some(tr(Msg::ContributionsPerDayTitle)), None, None, chart)}
-                    {list}
-                })
-            })
+                            None,
+                            refused(tr(Msg::ContributionsRefused), &error, None),
+                        ),
+                    };
+                    panel(view! {
+                        {section(Some(tr(Msg::ContributionsPerDayTitle)), None, None, chart)}
+                        {list}
+                    })
+                },
+            )
             .await
         }
     });
@@ -391,7 +398,12 @@ pub fn ContributionPage() -> impl IntoView {
             let made = u64::try_from(facts.made.len()).unwrap_or(u64::MAX);
             card_panel(view! {
                 {section(Some(tr(Msg::ContributionAudit)), None, None, definitions(rows))}
-                {section(Some(tr(Msg::ContributionVersions)), Some(made), None, made_table(&ehr_id, &facts.made))}
+                {section(
+                    Some(tr(Msg::ContributionVersions)),
+                    Some(made),
+                    None,
+                    made_table(&ehr_id, &facts.made),
+                )}
                 {document_section(
                     tr(Msg::ContributionRecord),
                     Language::Json,
@@ -894,28 +906,32 @@ pub fn NewContributionPage() -> impl IntoView {
                 <div class="fui-form-grid">
                     <div class="fui-span-2">
                         {Field::new("au-d", tr(Msg::FactDescription))
-                            .view(view! {
-                                <input
-                                    id="au-d"
-                                    name="description"
-                                    type="text"
-                                    class="fui-input"
-                                    value=description
-                                />
-                            })}
+                            .view(
+                                view! {
+                                    <input
+                                        id="au-d"
+                                        name="description"
+                                        type="text"
+                                        class="fui-input"
+                                        value=description
+                                    />
+                                },
+                            )}
                     </div>
                     <div class="fui-span-2">
                         {Field::new("au-c", tr(Msg::FactCommitter))
-                            .view(view! {
-                                <input
-                                    id="au-c"
-                                    name="committer"
-                                    type="text"
-                                    class="fui-input"
-                                    value=committer
-                                    placeholder=tr(Msg::ContributionCommitterPlaceholder)
-                                />
-                            })}
+                            .view(
+                                view! {
+                                    <input
+                                        id="au-c"
+                                        name="committer"
+                                        type="text"
+                                        class="fui-input"
+                                        value=committer
+                                        placeholder=tr(Msg::ContributionCommitterPlaceholder)
+                                    />
+                                },
+                            )}
                     </div>
                 </div>
             };
@@ -929,12 +945,18 @@ pub fn NewContributionPage() -> impl IntoView {
             view! {
                 {top}
                 {pick_trouble}
-                <form id=NEW_FORM method="post" action=format!("{}/contribution/new", ehr_href(&ehr_id))>
-                    {card_panel(view! {
-                        {sections}
-                        {crate::pages::common::plain_section(stage)}
-                        {section(Some(tr(Msg::ContributionAudit)), None, None, audit)}
-                    })}
+                <form
+                    id=NEW_FORM
+                    method="post"
+                    action=format!("{}/contribution/new", ehr_href(&ehr_id))
+                >
+                    {card_panel(
+                        view! {
+                            {sections}
+                            {crate::pages::common::plain_section(stage)}
+                            {section(Some(tr(Msg::ContributionAudit)), None, None, audit)}
+                        },
+                    )}
                 </form>
             }
             .into_any()
@@ -966,7 +988,12 @@ mod tests {
     use crate::posted::Posted;
 
     fn posted(fields: &[(&str, &str)]) -> Posted {
-        Posted::new(fields.iter().map(|(name, value)| ((*name).to_owned(), (*value).to_owned())).collect())
+        Posted::new(
+            fields
+                .iter()
+                .map(|(name, value)| ((*name).to_owned(), (*value).to_owned()))
+                .collect(),
+        )
     }
 
     #[test]
@@ -979,10 +1006,20 @@ mod tests {
             ("staged-1", "{}"),
             ("intent", "stage"),
         ])));
-        assert_eq!(staged.iter().map(|draft| draft.number).collect::<Vec<_>>(), vec![1, 2]);
+        assert_eq!(
+            staged.iter().map(|draft| draft.number).collect::<Vec<_>>(),
+            vec![1, 2]
+        );
         assert_eq!(staged.first().map(|draft| draft.body.as_str()), Some("{}"));
-        let removed = drafts(Some(&posted(&[("seq", "1"), ("seq", "2"), ("intent", "remove:1")])));
-        assert_eq!(removed.iter().map(|draft| draft.number).collect::<Vec<_>>(), vec![2]);
+        let removed = drafts(Some(&posted(&[
+            ("seq", "1"),
+            ("seq", "2"),
+            ("intent", "remove:1"),
+        ])));
+        assert_eq!(
+            removed.iter().map(|draft| draft.number).collect::<Vec<_>>(),
+            vec![2]
+        );
         let changed = drafts(Some(&posted(&[
             ("seq", "1"),
             ("was-1", "create"),
@@ -992,8 +1029,15 @@ mod tests {
         ])));
         let first = changed.first().expect("the change");
         assert_eq!(first.kind, StagedKind::StatusModify);
-        assert!(first.body.is_empty(), "a new kind starts from what it loads");
+        assert!(
+            first.body.is_empty(),
+            "a new kind starts from what it loads"
+        );
         let forged = drafts(Some(&posted(&[("seq", "99"), ("seq", "x")])));
-        assert_eq!(forged.iter().map(|draft| draft.number).collect::<Vec<_>>(), vec![1], "out-of-range numbers name no change");
+        assert_eq!(
+            forged.iter().map(|draft| draft.number).collect::<Vec<_>>(),
+            vec![1],
+            "out-of-range numbers name no change"
+        );
     }
 }

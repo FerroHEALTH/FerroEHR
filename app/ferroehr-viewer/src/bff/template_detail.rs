@@ -206,23 +206,10 @@ pub async fn fetch_example(
     Ok(crate::cdr::CdrClient::expect_success(response)?.body)
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 #[cfg(test)]
 mod tests {
-    use crate::example_options::{ExampleDetail, ExampleType};
     use crate::bff::template_detail::example_path;
+    use crate::example_options::{ExampleDetail, ExampleType};
 
     /// The operational template the viewer's own e2e stack is seeded with
     /// (`scripts/ui-e2e.sh`), so the derivation is pinned against the same
@@ -239,9 +226,8 @@ mod tests {
         // The screen's three panes come out of ONE parse: the source travels
         // verbatim, the identity card reads the typed OPT, and the path
         // catalog the Web Template built from it.
-        let detail =
-            crate::bff::template_detail::template_detail_from_opt(OPT_FIXTURE.to_owned())
-                .expect("the seeded OPT parses");
+        let detail = crate::bff::template_detail::template_detail_from_opt(OPT_FIXTURE.to_owned())
+            .expect("the seeded OPT parses");
         assert_eq!(detail.source, OPT_FIXTURE, "the source pane is verbatim");
         assert_eq!(detail.meta.template_id, "minimal_evaluation.en.v1");
         assert_eq!(detail.meta.concept, "Minimal evaluation");

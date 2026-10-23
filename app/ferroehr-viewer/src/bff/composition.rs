@@ -485,25 +485,6 @@ fn json_str(value: &Value, path: &[&str]) -> String {
     current.as_str().unwrap_or_default().to_owned()
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::{parse_versioned_details, parse_versions};
@@ -596,5 +577,4 @@ mod tests {
         assert_eq!(entries[0].version_id, "a::b::1");
         assert_eq!(entries[0].committed, "");
     }
-
 }

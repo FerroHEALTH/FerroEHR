@@ -159,10 +159,17 @@ where
         <Title text=tr(Msg::NavServer) />
         {heading}
         <div class="fui-stack">
-            {binder(tr(Msg::ServerSections), tabs, tab.key(), panel(view! {
-                {plain_section(intro)}
-                {content}
-            }))}
+            {binder(
+                tr(Msg::ServerSections),
+                tabs,
+                tab.key(),
+                panel(
+                    view! {
+                        {plain_section(intro)}
+                        {content}
+                    },
+                ),
+            )}
         </div>
     }
     .into_any()
@@ -176,9 +183,7 @@ fn smart_intro() -> AnyView {
     let (before, after) = line.split_once(MARK).unwrap_or((line.as_str(), ""));
     view! {
         <p class="fui-small fui-muted fui-section-intro">
-            {before.to_owned()}
-            <a href="/access">{tr(Msg::YourAccess)}</a>
-            {after.to_owned()}
+            {before.to_owned()} <a href="/access">{tr(Msg::YourAccess)}</a> {after.to_owned()}
         </p>
     }
     .into_any()
@@ -248,33 +253,41 @@ pub fn OverviewTab() -> impl IntoView {
         let gaps = deployment
             .filter(|deployment| sandbox && !deployment.gaps.is_empty())
             .map(|deployment| {
-            let columns = [Column::text("gap", tr(Msg::ServerSafeguard)).role(Role::Title)];
-            let rows = deployment
-                .gaps
-                .iter()
-                .map(|gap| {
+                let columns = [Column::text("gap", tr(Msg::ServerSafeguard)).role(Role::Title)];
+                let rows = deployment
+                    .gaps
+                    .iter()
+                    .map(|gap| {
+                        view! {
+                            <tr>
+                                <th scope="row" data-role="title">
+                                    {state_mark(
+                                        FlowState::Degraded,
+                                        &crate::deployment::gap_text(gap),
+                                    )}
+                                </th>
+                            </tr>
+                        }
+                        .into_any()
+                    })
+                    .collect_view()
+                    .into_any();
+                let caption = tr(Msg::ServerSafeguardsOff);
+                section(
+                    Some(tr(Msg::ServerSafeguardsOff)),
+                    u64::try_from(deployment.gaps.len()).ok(),
+                    None,
                     view! {
-                        <tr>
-                            <th scope="row" data-role="title">
-                                {state_mark(FlowState::Degraded, &crate::deployment::gap_text(gap))}
-                            </th>
-                        </tr>
-                    }
-                    .into_any()
-                })
-                .collect_view()
-                .into_any();
-            let caption = tr(Msg::ServerSafeguardsOff);
-            section(
-                Some(tr(Msg::ServerSafeguardsOff)),
-                u64::try_from(deployment.gaps.len()).ok(),
-                None,
-                view! {
-                    {ferrohealth_ui::view::surface::section_intro(tr(Msg::ServerSandboxIntro))}
-                    {data_table(DataTable { caption: &caption, columns: &columns, sorting: Sorting::default(), body: Body::Rows(rows) })}
-                },
-            )
-        });
+                        {ferrohealth_ui::view::surface::section_intro(tr(Msg::ServerSandboxIntro))}
+                        {data_table(DataTable {
+                            caption: &caption,
+                            columns: &columns,
+                            sorting: Sorting::default(),
+                            body: Body::Rows(rows),
+                        })}
+                    },
+                )
+            });
         let build = match fetch_build_info().await {
             Ok(Some(info)) => {
                 let mut parts = vec![section(
@@ -349,8 +362,13 @@ pub fn HealthTab() -> impl IntoView {
                     .map(|row| {
                         view! {
                             <tr>
-                                <th scope="row" data-role="title">{row.name.clone()}</th>
-                                {cell(&columns[1], state_mark(flow_of(&row.status), &row.status.clone()))}
+                                <th scope="row" data-role="title">
+                                    {row.name.clone()}
+                                </th>
+                                {cell(
+                                    &columns[1],
+                                    state_mark(flow_of(&row.status), &row.status.clone()),
+                                )}
                                 {cell(&columns[2], row.detail.clone())}
                             </tr>
                         }
@@ -365,7 +383,12 @@ pub fn HealthTab() -> impl IntoView {
                     None,
                     view! {
                         {(!readiness.detailed).then(|| info_note(tr(Msg::ServerPublicReadiness)))}
-                        {data_table(DataTable { caption: &caption, columns: &columns, sorting: Sorting::default(), body: Body::Rows(rows) })}
+                        {data_table(DataTable {
+                            caption: &caption,
+                            columns: &columns,
+                            sorting: Sorting::default(),
+                            body: Body::Rows(rows),
+                        })}
                     },
                 )
             }
@@ -381,106 +404,136 @@ pub fn HealthTab() -> impl IntoView {
     reason = "#[component] rewrites the fn; the router always consumes the value"
 )]
 #[component]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page part: the reads it waits on and the view it draws"
+)]
 pub fn MetricsTab() -> impl IntoView {
     let picked = crate::request::query("metric").filter(|metric| !metric.is_empty());
-    let page = awaited(server_page(ServerTab::Metrics, move || async move {
-        let headline = match fetch_headline_metrics().await {
-            Ok(Some(tiles)) => section(
-                Some(tr(Msg::ServerNow)),
-                None,
-                None,
-                stat_grid(
-                    tiles
-                        .into_iter()
-                        .map(|tile| {
-                            stat_card(Stat {
-                                glyph: Glyph::ACTIVITY,
-                                value: tile.value,
-                                label: tile.label.into(),
-                                href: None,
+    let page =
+        awaited(server_page(ServerTab::Metrics, move || async move {
+            let headline = match fetch_headline_metrics().await {
+                Ok(Some(tiles)) => section(
+                    Some(tr(Msg::ServerNow)),
+                    None,
+                    None,
+                    stat_grid(
+                        tiles
+                            .into_iter()
+                            .map(|tile| {
+                                stat_card(Stat {
+                                    glyph: Glyph::ACTIVITY,
+                                    value: tile.value,
+                                    label: tile.label.into(),
+                                    href: None,
+                                })
                             })
-                        })
-                        .collect_view(),
+                            .collect_view(),
+                    ),
                 ),
-            ),
-            Ok(None) => ().into_any(),
-            Err(error) => plain_section(refused(tr(Msg::ServerMetricsRefused), &error, None)),
-        };
-        let names = match fetch_metric_names().await {
-            Ok(Some(names)) => names,
-            Ok(None) => Vec::new(),
-            Err(error) => return view! { {headline} {plain_section(refused(tr(Msg::ServerMetricsRefused), &error, None))} }.into_any(),
-        };
-        let options = names
-            .iter()
-            .map(|name| view! { <option value=name.clone() selected=picked.as_deref() == Some(name.as_str())>{name.clone()}</option> })
-            .collect_view();
-        let pick = view! {
-            <form method="get" action="/server/metrics" class="fui-transform-options">
-                {Field::new("m-pick", tr(Msg::ServerMetric))
-                    .holds_id()
-                    .view(view! { <select id="m-pick" name="metric" class="fui-select">{options}</select> })}
-                <div class="fui-transform-run">
-                    <button type="submit" class="fui-button fui-button-secondary">
-                        {ferrohealth_ui::icon::icon(Glyph::CHART_LINE, "16")}
-                        {tr(Msg::ServerShow)}
-                    </button>
-                </div>
-            </form>
-        };
-        let samples = match &picked {
-            Some(metric) => match fetch_metric_detail(metric.clone()).await {
-                Ok(Some(detail)) => {
-                    let columns = [
-                        Column::text("labels", tr(Msg::ServerLabels)).role(Role::Title),
-                        Column::text("value", tr(Msg::TagsValue))
-                            .numeric()
-                            .role(Role::Sub),
-                    ];
-                    let rows = detail
-                        .samples
-                        .iter()
-                        .map(|sample| {
-                            view! {
-                                <tr>
-                                    <th scope="row" data-role="title"><code>{sample.labels.clone()}</code></th>
-                                    {cell(&columns[1], format_metric(sample.value))}
-                                </tr>
-                            }
-                            .into_any()
-                        })
-                        .collect_view()
-                        .into_any();
-                    let caption = tr_with(
-                        Msg::ServerSamplesOf,
-                        &[("metric", detail.name.clone().into())],
-                    );
-                    view! {
-                        <p class="fui-small fui-muted">{detail.help.clone()}</p>
-                        {data_table(DataTable { caption: &caption, columns: &columns, sorting: Sorting::default(), body: Body::Rows(rows) })}
+                Ok(None) => ().into_any(),
+                Err(error) => plain_section(refused(tr(Msg::ServerMetricsRefused), &error, None)),
+            };
+            let names = match fetch_metric_names().await {
+                Ok(Some(names)) => names,
+                Ok(None) => Vec::new(),
+                Err(error) => {
+                    return view! {
+                        {headline}
+                        {plain_section(refused(tr(Msg::ServerMetricsRefused), &error, None))}
                     }
-                    .into_any()
+                    .into_any();
                 }
-                Ok(None) => info_note(tr(Msg::ServerNoMetric)),
-                Err(error) => refused(tr(Msg::ServerMetricsRefused), &error, None),
-            },
-            None => ().into_any(),
-        };
-        view! {
-            {headline}
-            {section(
-                Some(tr(Msg::ServerRegistry)),
-                None,
-                None,
-                view! {
-                    <p class="fui-small fui-muted">{tr_with(Msg::ServerMetricCount, &[("count", count(names.len()))])}</p>
-                    {pick}
-                    {samples}
+            };
+            let options = names
+            .iter()
+            .map(|name| view! {
+                <option value=name.clone() selected=picked.as_deref() == Some(name.as_str())>
+                    {name.clone()}
+                </option>
+            })
+            .collect_view();
+            let pick = view! {
+                <form method="get" action="/server/metrics" class="fui-transform-options">
+                    {Field::new("m-pick", tr(Msg::ServerMetric))
+                        .holds_id()
+                        .view(
+                            view! {
+                                <select id="m-pick" name="metric" class="fui-select">
+                                    {options}
+                                </select>
+                            },
+                        )}
+                    <div class="fui-transform-run">
+                        <button type="submit" class="fui-button fui-button-secondary">
+                            {ferrohealth_ui::icon::icon(Glyph::CHART_LINE, "16")}
+                            {tr(Msg::ServerShow)}
+                        </button>
+                    </div>
+                </form>
+            };
+            let samples = match &picked {
+                Some(metric) => match fetch_metric_detail(metric.clone()).await {
+                    Ok(Some(detail)) => {
+                        let columns = [
+                            Column::text("labels", tr(Msg::ServerLabels)).role(Role::Title),
+                            Column::text("value", tr(Msg::TagsValue))
+                                .numeric()
+                                .role(Role::Sub),
+                        ];
+                        let rows = detail
+                            .samples
+                            .iter()
+                            .map(|sample| {
+                                view! {
+                                    <tr>
+                                        <th scope="row" data-role="title">
+                                            <code>{sample.labels.clone()}</code>
+                                        </th>
+                                        {cell(&columns[1], format_metric(sample.value))}
+                                    </tr>
+                                }
+                                .into_any()
+                            })
+                            .collect_view()
+                            .into_any();
+                        let caption = tr_with(
+                            Msg::ServerSamplesOf,
+                            &[("metric", detail.name.clone().into())],
+                        );
+                        view! {
+                            <p class="fui-small fui-muted">{detail.help.clone()}</p>
+                            {data_table(DataTable {
+                                caption: &caption,
+                                columns: &columns,
+                                sorting: Sorting::default(),
+                                body: Body::Rows(rows),
+                            })}
+                        }
+                        .into_any()
+                    }
+                    Ok(None) => info_note(tr(Msg::ServerNoMetric)),
+                    Err(error) => refused(tr(Msg::ServerMetricsRefused), &error, None),
                 },
-            )}
-        }
-        .into_any()
-    }));
+                None => ().into_any(),
+            };
+            view! {
+                {headline}
+                {section(
+                    Some(tr(Msg::ServerRegistry)),
+                    None,
+                    None,
+                    view! {
+                        <p class="fui-small fui-muted">
+                            {tr_with(Msg::ServerMetricCount, &[("count", count(names.len()))])}
+                        </p>
+                        {pick}
+                        {samples}
+                    },
+                )}
+            }
+            .into_any()
+        }));
     view! { {page} }
 }
 
@@ -553,9 +606,25 @@ pub fn LoggingTab() -> impl IntoView {
             <form id=LOG_FORM method="post" action="/server/logging" class="fui-transform-options">
                 {Field::new("lf", tr(Msg::ServerNewFilter))
                     .holds_id()
-                    .view(view! { <input id="lf" name="filter" type="text" class="fui-input fui-mono" value=typed.clone() /> })}
+                    .view(
+                        view! {
+                            <input
+                                id="lf"
+                                name="filter"
+                                type="text"
+                                class="fui-input fui-mono"
+                                value=typed.clone()
+                            />
+                        },
+                    )}
                 <div class="fui-transform-run fui-cluster">
-                    <button type="button" class="fui-button fui-button-primary" command="show-modal" commandfor=APPLY_DIALOG aria-haspopup="dialog">
+                    <button
+                        type="button"
+                        class="fui-button fui-button-primary"
+                        command="show-modal"
+                        commandfor=APPLY_DIALOG
+                        aria-haspopup="dialog"
+                    >
                         {ferrohealth_ui::icon::icon(Glyph::CHECK, "16")}
                         {tr(Msg::ServerApply)}
                     </button>
@@ -580,7 +649,13 @@ pub fn LoggingTab() -> impl IntoView {
                 message: tr(Msg::ServerApplyMessage).into(),
             },
             view! {
-                <button type="submit" form=LOG_FORM name="intent" value="apply-filter" class="fui-button fui-button-primary">
+                <button
+                    type="submit"
+                    form=LOG_FORM
+                    name="intent"
+                    value="apply-filter"
+                    class="fui-button fui-button-primary"
+                >
                     {ferrohealth_ui::icon::icon(Glyph::CHECK, "16")}
                     {tr(Msg::ServerApplyConfirm)}
                 </button>
@@ -589,10 +664,15 @@ pub fn LoggingTab() -> impl IntoView {
         view! {
             {top}
             {section(Some(tr(Msg::ServerFilter)), None, None, facts)}
-            {section(Some(tr(Msg::ServerChangeFilter)), None, None, view! {
-                {ferrohealth_ui::view::surface::section_intro(tr(Msg::ServerChangeFilterIntro))}
-                {form}
-            })}
+            {section(
+                Some(tr(Msg::ServerChangeFilter)),
+                None,
+                None,
+                view! {
+                    {ferrohealth_ui::view::surface::section_intro(tr(Msg::ServerChangeFilterIntro))}
+                    {form}
+                },
+            )}
             {dialog}
         }
         .into_any()
@@ -606,18 +686,34 @@ pub fn LoggingTab() -> impl IntoView {
     reason = "#[component] rewrites the fn; the router always consumes the value"
 )]
 #[component]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page part: the reads it waits on and the view it draws"
+)]
 pub fn ApiTab() -> impl IntoView {
     let family = crate::request::query("family")
         .filter(|family| crate::bff::system::openapi_families().any(|(key, _)| key == family))
         .unwrap_or_else(|| "ehr".to_owned());
     let page = awaited(server_page(ServerTab::Api, move || async move {
         let options = crate::bff::system::openapi_families()
-            .map(|(key, words)| view! { <option value=key selected=key == family>{words}</option> })
+            .map(|(key, words)| {
+                view! {
+                    <option value=key selected=key == family>
+                        {words}
+                    </option>
+                }
+            })
             .collect_view();
         let pick = view! {
             <form method="get" action="/server/api" class="fui-transform-options">
                 {Field::new("api-f", tr(Msg::ServerApiFamily))
-                    .view(view! { <select id="api-f" name="family" class="fui-select">{options}</select> })}
+                    .view(
+                        view! {
+                            <select id="api-f" name="family" class="fui-select">
+                                {options}
+                            </select>
+                        },
+                    )}
                 <div class="fui-transform-run">
                     <button type="submit" class="fui-button fui-button-secondary">
                         {ferrohealth_ui::icon::icon(Glyph::SEARCH, "16")}
@@ -644,7 +740,15 @@ pub fn ApiTab() -> impl IntoView {
                             &columns,
                             view! {
                                 {tag}
-                                <span class="fui-small fui-muted">{format!(" · {}", tr_with(Msg::ServerEndpointCount, &[("count", count(items.len()))]))}</span>
+                                <span class="fui-small fui-muted">
+                                    {format!(
+                                        " · {}",
+                                        tr_with(
+                                            Msg::ServerEndpointCount,
+                                            &[("count", count(items.len()))],
+                                        ),
+                                    )}
+                                </span>
                             },
                         ));
                         for (method, path, summary) in items {
@@ -670,9 +774,22 @@ pub fn ApiTab() -> impl IntoView {
                             Some(caption.clone()),
                             u64::try_from(total).ok(),
                             None,
-                            data_table(DataTable { caption: &caption, columns: &columns, sorting: Sorting::default(), body: Body::Rows(rows.collect_view().into_any()) }),
+                            data_table(DataTable {
+                                caption: &caption,
+                                columns: &columns,
+                                sorting: Sorting::default(),
+                                body: Body::Rows(rows.collect_view().into_any()),
+                            }),
                         )}
-                        {document_section(tr(Msg::ServerOpenApi), Language::Json, crate::bff::pretty_body(&body, crate::format::ReprFormat::CanonicalJson), "openapi")}
+                        {document_section(
+                            tr(Msg::ServerOpenApi),
+                            Language::Json,
+                            crate::bff::pretty_body(
+                                &body,
+                                crate::format::ReprFormat::CanonicalJson,
+                            ),
+                            "openapi",
+                        )}
                     }
                     .into_any()
                 }

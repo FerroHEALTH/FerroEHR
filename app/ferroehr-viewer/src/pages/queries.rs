@@ -97,12 +97,21 @@ fn parameters(aql: &str) -> AnyView {
     }
     names
         .into_iter()
-        .map(|name| view! { <code>{name}</code> " " })
+        .map(|name| {
+            view! {
+                <code>{name}</code>
+                " "
+            }
+        })
         .collect_view()
         .into_any()
 }
 
 /// The stored queries grouped by namespace, as a table.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page part: the reads it waits on and the view it draws"
+)]
 fn table(rows: &[StoredQueryRow], only: Option<&str>) -> (AnyView, usize, usize) {
     let columns = [
         Column::text("name", tr(Msg::QueryName)).role(Role::Title),
@@ -138,7 +147,13 @@ fn table(rows: &[StoredQueryRow], only: Option<&str>) -> (AnyView, usize, usize)
                 <span class="fui-small fui-muted">
                     {format!(
                         " · {}",
-                        tr_with(Msg::QueriesGroupCount, &[("names", count(distinct.len())), ("versions", count(group.members.len()))]),
+                        tr_with(
+                            Msg::QueriesGroupCount,
+                            &[
+                                ("names", count(distinct.len())),
+                                ("versions", count(group.members.len())),
+                            ],
+                        ),
                     )}
                 </span>
             },
@@ -182,8 +197,7 @@ fn table(rows: &[StoredQueryRow], only: Option<&str>) -> (AnyView, usize, usize)
                     <tr>
                         {title_cell(Some(&href), bare_name_of(&row.name).to_owned(), sub)}
                         {cell(&columns[1], row.version.clone())}
-                        {cell(&columns[2], parameters(&row.query))}
-                        {menu_cell(menu)}
+                        {cell(&columns[2], parameters(&row.query))} {menu_cell(menu)}
                     </tr>
                 }
                 .into_any(),
@@ -438,9 +452,7 @@ where
         <Title text=bare_name_of(&name).to_owned() />
         {heading}
         <div class="fui-stack">
-            {acted}
-            {confirm}
-            {binder(tr(Msg::QueriesViews), tabs, tab.key(), panel)}
+            {acted} {confirm} {binder(tr(Msg::QueriesViews), tabs, tab.key(), panel)}
         </div>
         {dialog}
     }
@@ -468,13 +480,23 @@ fn delete_button(name: &str, version: &str) -> AnyView {
 fn delete_form(name: &str, version: &str) -> AnyView {
     crate::pages::common::warn_note(view! {
         <p>
-            <strong>{tr_with(Msg::QueriesDeleteTitle, &[("name", bare_name_of(name).to_owned().into()), ("version", version.to_owned().into())])}</strong>
+            <strong>
+                {tr_with(
+                    Msg::QueriesDeleteTitle,
+                    &[
+                        ("name", bare_name_of(name).to_owned().into()),
+                        ("version", version.to_owned().into()),
+                    ],
+                )}
+            </strong>
             " "
             {tr(Msg::QueriesDeleteMessage)}
         </p>
         <div class="fui-cluster">
             {delete_button(name, version)}
-            <a class="fui-button fui-button-secondary" href=stored_query_href(name, version)>{tr(Msg::Cancel)}</a>
+            <a class="fui-button fui-button-secondary" href=stored_query_href(name, version)>
+                {tr(Msg::Cancel)}
+            </a>
         </div>
     })
 }
@@ -509,9 +531,15 @@ pub fn StoredQueryPage() -> impl IntoView {
             let latest = versions.first().map(|row| row.version.clone());
             let older = latest.as_ref().filter(|latest| **latest != version).map(|latest| {
             plain_section(info_note(view! {
-                {tr_with(Msg::QueriesReadingOlder, &[("version", version.clone().into()), ("latest", latest.clone().into())])}
+                {tr_with(
+                    Msg::QueriesReadingOlder,
+                    &[("version", version.clone().into()), ("latest", latest.clone().into())],
+                )}
                 " "
-                <a href=stored_query_href(&name, latest)>{tr_with(Msg::QueriesReadVersion, &[("version", latest.clone().into())])}</a>
+                <a href=stored_query_href(
+                    &name,
+                    latest,
+                )>{tr_with(Msg::QueriesReadVersion, &[("version", latest.clone().into())])}</a>
             }))
         });
             let mut facts = vec![(tr(Msg::QueriesType), "AQL".into_any())];
@@ -523,7 +551,13 @@ pub fn StoredQueryPage() -> impl IntoView {
                 {older}
                 {section(Some(tr(Msg::PartyFacts)), None, None, definitions(facts))}
                 {document_section(
-                    tr_with(Msg::QueriesAqlTitle, &[("name", bare_name_of(&name).to_owned().into()), ("version", version.clone().into())]),
+                    tr_with(
+                        Msg::QueriesAqlTitle,
+                        &[
+                            ("name", bare_name_of(&name).to_owned().into()),
+                            ("version", version.clone().into()),
+                        ],
+                    ),
                     Language::Aql,
                     aql,
                     "stored-aql",
@@ -562,9 +596,9 @@ pub fn StoredQueryRunTab() -> impl IntoView {
                     )));
                 }
             };
-            let mode = posted
-                .as_ref()
-                .map_or(VersionResolution::Latest, |posted| VersionResolution::from_str_or_exact(&posted.text("res")));
+            let mode = posted.as_ref().map_or(VersionResolution::Latest, |posted| {
+                VersionResolution::from_str_or_exact(&posted.text("res"))
+            });
             let typed = posted
                 .as_ref()
                 .map(|posted| posted.text("run_version"))
@@ -631,46 +665,83 @@ pub fn StoredQueryRunTab() -> impl IntoView {
             // WebAssembly can pick Prefix or Exact and type the version in one post.
             let version_field = Field::new("rv", tr(Msg::ColumnVersion))
                 .help(tr(Msg::QueriesVersionHelp))
-                .after(version_error.clone().map(|error| view! { <p class="fui-field-error">{error}</p> }))
-                .view(view! { <input id="rv" name="run_version" type="text" class="fui-input fui-mono" value=typed.clone() placeholder="1 or 1.1" /> });
+                .after(
+                    version_error
+                        .clone()
+                        .map(|error| view! { <p class="fui-field-error">{error}</p> }),
+                )
+                .view(view! {
+                    <input
+                        id="rv"
+                        name="run_version"
+                        type="text"
+                        class="fui-input fui-mono"
+                        value=typed.clone()
+                        placeholder="1 or 1.1"
+                    />
+                });
             let sends = match mode {
                 VersionResolution::Latest => format!("POST /query/{name}"),
                 VersionResolution::Prefix | VersionResolution::Exact => {
                     format!("POST /query/{name}/{}", typed.trim())
                 }
             };
-            let sends = view! {
-                <p class="fui-small fui-muted">
-                    {tr(Msg::QueriesSends)} " " <code>{sends}</code>
-                </p>
-            };
+            let sends = view! { <p class="fui-small fui-muted">{tr(Msg::QueriesSends)} " " <code>{sends}</code></p> };
             let fields = values
-            .iter()
-            .map(|(param, value)| {
-                let id = format!("p-{param}");
-                Field::new(id.clone(), param.clone())
-                    .help(tr(Msg::QueriesParamHelp))
-                    .view(view! { <input id=id.clone() name=id type="text" class="fui-input fui-mono" spellcheck="false" value=value.clone() /> })
-            })
-            .collect_view();
+                .iter()
+                .map(|(param, value)| {
+                    let id = format!("p-{param}");
+                    Field::new(id.clone(), param.clone())
+                        .help(tr(Msg::QueriesParamHelp))
+                        .view(view! {
+                            <input
+                                id=id.clone()
+                                name=id
+                                type="text"
+                                class="fui-input fui-mono"
+                                spellcheck="false"
+                                value=value.clone()
+                            />
+                        })
+                })
+                .collect_view();
             panel(view! {
-                <form id=RUN_FORM method="post" action=format!("{}/run", stored_query_href(&name, &version))>
+                <form
+                    id=RUN_FORM
+                    method="post"
+                    action=format!("{}/run", stored_query_href(&name, &version))
+                >
                     <input type="hidden" name="default-intent" value="run" />
-                    {section(Some(tr(Msg::ColumnVersion)), None, None, view! {
-                        {choice_group("res", tr(Msg::QueriesWhichVersion), &modes, mode.as_str())}
-                        {version_field}
-                        {sends}
-                    })}
-                    {section(Some(tr(Msg::QueryParameters)), u64::try_from(names.len()).ok(), None, view! {
-                        <div class="fui-form-grid">{fields}</div>
-                        {shown_choice(chart)}
-                        <div class="fui-transform-run">
-                            <button type="submit" class="fui-button fui-button-primary">
-                                {ferrohealth_ui::icon::icon(Glyph::PLAY, "16")}
-                                {tr(Msg::QueryRun)}
-                            </button>
-                        </div>
-                    })}
+                    {section(
+                        Some(tr(Msg::ColumnVersion)),
+                        None,
+                        None,
+                        view! {
+                            {choice_group(
+                                "res",
+                                tr(Msg::QueriesWhichVersion),
+                                &modes,
+                                mode.as_str(),
+                            )}
+                            {version_field}
+                            {sends}
+                        },
+                    )}
+                    {section(
+                        Some(tr(Msg::QueryParameters)),
+                        u64::try_from(names.len()).ok(),
+                        None,
+                        view! {
+                            <div class="fui-form-grid">{fields}</div>
+                            {shown_choice(chart)}
+                            <div class="fui-transform-run">
+                                <button type="submit" class="fui-button fui-button-primary">
+                                    {ferrohealth_ui::icon::icon(Glyph::PLAY, "16")}
+                                    {tr(Msg::QueryRun)}
+                                </button>
+                            </div>
+                        },
+                    )}
                     {answer.unwrap_or_else(|| not_run(tr(Msg::ResultsNotRun)))}
                 </form>
             })
@@ -698,22 +769,28 @@ pub fn StoredQueryVersionsTab() -> impl IntoView {
                 Column::text("parameters", tr(Msg::QueryParameters)).role(Role::Meta),
             ];
             let rows = versions
-            .iter()
-            .enumerate()
-            .map(|(place, row)| {
-                let standing = if place == 0 { Standing::Current } else { Standing::Older };
-                let href = stored_query_href(&name, &row.version);
-                view! {
-                    <tr>
-                        {title_cell(Some(&href), version_cell(&row.version, standing), None)}
-                        {cell(&columns[1], if row.saved.is_empty() { ().into_any() } else { when(&row.saved) })}
-                        {cell(&columns[2], parameters(&row.query))}
-                    </tr>
-                }
-                .into_any()
-            })
-            .collect_view()
-            .into_any();
+                .iter()
+                .enumerate()
+                .map(|(place, row)| {
+                    let standing = if place == 0 {
+                        Standing::Current
+                    } else {
+                        Standing::Older
+                    };
+                    let href = stored_query_href(&name, &row.version);
+                    view! {
+                        <tr>
+                            {title_cell(Some(&href), version_cell(&row.version, standing), None)}
+                            {cell(
+                                &columns[1],
+                                if row.saved.is_empty() { ().into_any() } else { when(&row.saved) },
+                            )} {cell(&columns[2], parameters(&row.query))}
+                        </tr>
+                    }
+                    .into_any()
+                })
+                .collect_view()
+                .into_any();
             let caption = tr(Msg::CompositionVersions);
             let table = data_table(DataTable {
                 caption: &caption,

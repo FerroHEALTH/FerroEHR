@@ -19,10 +19,9 @@ use serde_json::Value;
 
 use crate::activity::ActivityPoint;
 use crate::error::ViewerError;
+use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_with;
-use crate::locale::Msg;
-
 
 /// Contributions read for the activity timeline before day-bucketing. The
 /// timeline answers a different question than the list ("when was this EHR
@@ -215,12 +214,6 @@ pub async fn fetch_contribution(
         .await?;
     Ok(crate::cdr::CdrClient::expect_success(response)?.body)
 }
-
-
-
-
-
-
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {

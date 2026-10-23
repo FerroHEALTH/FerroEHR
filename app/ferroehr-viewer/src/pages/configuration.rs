@@ -18,8 +18,8 @@
     reason = "the viewer reads the CDR's configuration JSON tree to draw its leaves"
 )]
 
-use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::secret::{SecretState, secret_state};
 use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::Header;
@@ -114,12 +114,8 @@ fn is_redacted(text: &str) -> bool {
 /// The value of a setting as the row draws it.
 fn value_view(value: &Value) -> AnyView {
     match value {
-        Value::Bool(true) => {
-            badge(Tone::Ok, tr(Msg::ConfigOn)).into_any()
-        }
-        Value::Bool(false) => {
-            badge(Tone::Neutral, tr(Msg::ConfigOff)).into_any()
-        }
+        Value::Bool(true) => badge(Tone::Ok, tr(Msg::ConfigOn)).into_any(),
+        Value::Bool(false) => badge(Tone::Neutral, tr(Msg::ConfigOff)).into_any(),
         Value::String(text) if is_redacted(text) => secret_state(&SecretState::Redacted),
         Value::String(text) if text.is_empty() => {
             view! { <span class="fui-muted">{tr(Msg::RelationshipNone)}</span> }.into_any()
@@ -135,8 +131,16 @@ fn value_view(value: &Value) -> AnyView {
         Value::Array(items) => items
             .iter()
             .map(|item| match item {
-                Value::String(text) => view! { <code>{text.clone()}</code> " " }.into_any(),
-                other => view! { <code>{other.to_string()}</code> " " }.into_any(),
+                Value::String(text) => view! {
+                    <code>{text.clone()}</code>
+                    " "
+                }
+                .into_any(),
+                other => view! {
+                    <code>{other.to_string()}</code>
+                    " "
+                }
+                .into_any(),
             })
             .collect_view()
             .into_any(),

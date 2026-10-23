@@ -52,10 +52,7 @@ async fn access_drawer_shows_effective_identity_and_policy_source() {
 
     let text = main_text(&h).await;
     for fact in ["ferroehr", "Basic sign-in", "no SMART scopes", "privileges"] {
-        assert!(
-            text.contains(fact),
-            "Your access states `{fact}`: {text}"
-        );
+        assert!(text.contains(fact), "Your access states `{fact}`: {text}");
     }
 
     h.goto("/server/smart").await;

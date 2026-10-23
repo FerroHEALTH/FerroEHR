@@ -405,7 +405,10 @@ async fn the_ehr_header_names_the_subject_and_its_status_badges() {
             "the header names the namespace and masks the subject id (got `{header}`)"
         );
         for badge in ["Queryable", "Modifiable"] {
-            assert!(header.contains(badge), "the header shows `{badge}`: {header}");
+            assert!(
+                header.contains(badge),
+                "the header shows `{badge}`: {header}"
+            );
         }
     }
     h.shot(1, "header-masked").await;

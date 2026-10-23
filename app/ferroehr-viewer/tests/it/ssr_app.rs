@@ -94,12 +94,12 @@ fn answer<'a>(
         exchange["method"].as_str() == Some(method) && exchange["path"].as_str() == Some(path)
     };
     let wanted_status = |exchange: &&Value| {
-        let status = exchange["status"].as_u64().unwrap_or(0);
-        if credential_ok {
-            status != 401
-        } else {
-            status == 401
-        }
+        let refused = exchange["status"]
+            .as_u64()
+            .and_then(|status| u16::try_from(status).ok())
+            .and_then(|status| http::StatusCode::from_u16(status).ok())
+            == Some(http::StatusCode::UNAUTHORIZED);
+        credential_ok != refused
     };
     let query_of = |text: &str| {
         serde_json::from_str::<Value>(text)

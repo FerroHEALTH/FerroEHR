@@ -42,8 +42,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
-use crate::error::ViewerError;
 use crate::bff::ehr_detail::commit::staged::StagedChange;
+use crate::error::ViewerError;
 
 /// What a successful commit reports back.
 ///
@@ -149,25 +149,6 @@ fn parse_commit_outcome(body: &str) -> CommitOutcome {
         version_uids,
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod outcome_tests {

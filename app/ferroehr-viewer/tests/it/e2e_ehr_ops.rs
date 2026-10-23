@@ -100,7 +100,8 @@ async fn client_supplied_ehr_id_creates_that_ehr_and_then_conflicts() {
 
     create_ehr(&h, &ehr_id, None).await;
     h.wait_url_contains(&format!("/ehrs/{ehr_id}")).await;
-    h.wait_css(&format!("main a[href^='/ehrs/{ehr_id}/']")).await;
+    h.wait_css(&format!("main a[href^='/ehrs/{ehr_id}/']"))
+        .await;
     h.shot(2, "ehr-created-with-supplied-id").await;
 
     create_ehr(&h, &ehr_id, None).await;
@@ -136,11 +137,19 @@ async fn a_subject_bound_ehr_created_in_the_viewer_carries_its_subject() {
         header.contains(SUBJECT_NAMESPACE),
         "the header names the subject's namespace (got `{header}`)"
     );
-    let tail = subject_id.get(subject_id.len() - 3..).expect("a long subject id");
-    assert!(header.contains(tail), "the masked subject ends in `{tail}`: {header}");
+    let tail = subject_id
+        .get(subject_id.len() - 3..)
+        .expect("a long subject id");
+    assert!(
+        header.contains(tail),
+        "the masked subject ends in `{tail}`: {header}"
+    );
     h.shot(1, "ehr-created-with-subject").await;
 
-    h.wait_css("a.fui-tab[data-tab='status']").await.click().await;
+    h.wait_css("a.fui-tab[data-tab='status']")
+        .await
+        .click()
+        .await;
     h.wait_url_contains("/status").await;
     wait_main_contains(&h, SUBJECT_NAMESPACE).await;
     h.shot(2, "ehr-status-carries-the-subject").await;
@@ -152,7 +161,7 @@ async fn a_subject_bound_ehr_created_in_the_viewer_carries_its_subject() {
     // The list shows the subject masked, and the one EHR bound to it.
     wait_main_contains(&h, &format!("Subject: ••••••{tail}")).await;
     assert_eq!(common::count_matching(&h, "main table tbody tr").await, 1);
-    h.wait_css(&format!("main a.fui-row-link[href='{}']", ehr_path))
+    h.wait_css(&format!("main a.fui-row-link[href='{ehr_path}']"))
         .await;
     h.shot(3, "ehr-found-by-subject").await;
 

@@ -441,15 +441,17 @@ pub fn AppShell() -> impl IntoView {
         crate::pages::common::awaited(async move {
             let offered = crate::subscriptions::probe_event_subscriptions()
                 .await
-                .is_ok_and(|availability| availability == crate::subscriptions::SubscriptionAvailability::Available);
+                .is_ok_and(|availability| {
+                    availability == crate::subscriptions::SubscriptionAvailability::Available
+                });
             navigation(&current, offered)
         })
     };
     let docked = {
         let dock = dock.clone();
-        crate::pages::common::awaited(async move {
-            dock.settled().await.map(decision_bar).into_any()
-        })
+        crate::pages::common::awaited(
+            async move { dock.settled().await.map(decision_bar).into_any() },
+        )
     };
     shell(Shell {
         topbar: topbar(TopBar {

@@ -33,12 +33,12 @@
 use leptos::prelude::*;
 use leptos::server;
 
+use crate::bff::demographics::PartyKind;
 use crate::bff::item_tags::ItemTagRow;
 use crate::error::ViewerError;
+use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
-use crate::locale::Msg;
-use crate::bff::demographics::PartyKind;
 
 /// The demographic tag index (`GET /demographic/tags`), optionally filtered.
 ///
@@ -238,4 +238,3 @@ fn tags_url(state: &crate::state::AppState, kind: PartyKind, uid: &str) -> Strin
         urlencoding::encode(&crate::uid::container_uid_of(uid))
     ))
 }
-

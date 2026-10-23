@@ -232,7 +232,9 @@ fn subject(ehr_id: &str, status: &Result<EhrStatusState, ViewerError>) -> AnyVie
         );
         let revealed = crate::request::query("reveal").is_some();
         if revealed {
-            let reader = crate::request::session().map(|session| session.identity).unwrap_or_default();
+            let reader = crate::request::session()
+                .map(|session| session.identity)
+                .unwrap_or_default();
             tracing::info!(reader = %reader, ehr = %ehr_id, "revealed an EHR's subject id");
             Subject::External(
                 view! {
@@ -345,7 +347,8 @@ async fn act(ehr_id: &str) -> Option<AnyView> {
     match posted.intent().as_str() {
         "create-directory" => {
             let body = crate::bff::ehr_detail::directory::empty_root_folder().to_string();
-            match crate::bff::ehr_detail::directory::create_directory(ehr_id.to_owned(), body).await {
+            match crate::bff::ehr_detail::directory::create_directory(ehr_id.to_owned(), body).await
+            {
                 Ok(_) => {
                     redirect_with(
                         &tab_href(ehr_id, EhrTab::Directory),
@@ -394,10 +397,7 @@ where
     let body = panel(facts).await;
     view! {
         {header}
-        <div class="fui-stack">
-            {acted}
-            {binder(tr(Msg::EhrViews), tabs, tab.key(), body)}
-        </div>
+        <div class="fui-stack">{acted} {binder(tr(Msg::EhrViews), tabs, tab.key(), body)}</div>
     }
     .into_any()
 }
@@ -430,8 +430,7 @@ fn missing(ehr_id: &str, error: &ViewerError) -> AnyView {
     view! {
         {heading}
         <div class="fui-stack">
-            {refused(tr(Msg::EhrRefused), error, None)}
-            <div class="fui-cluster">{back}</div>
+            {refused(tr(Msg::EhrRefused), error, None)} <div class="fui-cluster">{back}</div>
         </div>
     }
     .into_any()

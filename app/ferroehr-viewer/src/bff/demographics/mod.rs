@@ -280,10 +280,7 @@ pub fn relationship_href(uid: &str) -> String {
 /// The `/parties/contributions/{uid}` page of a demographic contribution.
 #[must_use]
 pub fn contribution_href(uid: &str) -> String {
-    format!(
-        "/parties/contributions/{}",
-        urlencoding::encode(uid.trim())
-    )
+    format!("/parties/contributions/{}", urlencoding::encode(uid.trim()))
 }
 
 /// Read a demographic versioned-object container and one of its VERSIONs.

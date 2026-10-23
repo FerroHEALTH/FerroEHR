@@ -25,8 +25,7 @@
 use crate::common;
 
 use common::{
-    Harness, count_matching, fill, is_present, login_basic, wait_main_contains,
-    wait_text_contains,
+    Harness, count_matching, fill, is_present, login_basic, wait_main_contains, wait_text_contains,
 };
 
 /// The operational template these journeys use: a small SDK OPT, a minimal
@@ -59,7 +58,8 @@ pub(crate) async fn ensure_template_present(h: &Harness) -> bool {
         return false;
     }
     common::upload_template(h, "adl14", &fixture_path("minimal_evaluation.opt")).await;
-    h.wait_url_contains(&format!("/templates/{TEMPLATE_ID}")).await;
+    h.wait_url_contains(&format!("/templates/{TEMPLATE_ID}"))
+        .await;
     true
 }
 
@@ -90,8 +90,12 @@ async fn template_upload_lists_and_inspects_path_catalog() {
     wait_main_contains(&h, "openEHR-EHR-COMPOSITION.minimal.v1").await;
     h.shot(2, "template-overview").await;
 
-    h.wait_css("a.fui-tab[data-tab='paths']").await.click().await;
-    h.wait_css("ul.fui-tree[role='tree'] li[role='treeitem']").await;
+    h.wait_css("a.fui-tab[data-tab='paths']")
+        .await
+        .click()
+        .await;
+    h.wait_css("ul.fui-tree[role='tree'] li[role='treeitem']")
+        .await;
     h.wait_hydrated().await;
     // The hydrated tree expands in place: the toggle is live once the island
     // runs, and a collapsed branch opens on a click.
@@ -102,12 +106,18 @@ async fn template_upload_lists_and_inspects_path_catalog() {
     h.wait_css("li[aria-level='3']").await;
     h.shot(3, "template-paths").await;
     // A node's link opens its path, type and codes.
-    h.wait_css("a.fui-tree-label[href*='node=n-2']").await.click().await;
+    h.wait_css("a.fui-tree-label[href*='node=n-2']")
+        .await
+        .click()
+        .await;
     h.wait_url_contains("node=n-2").await;
     wait_main_contains(&h, "/category").await;
     h.shot(4, "template-path-node").await;
 
-    h.wait_css("a.fui-tab[data-tab='source']").await.click().await;
+    h.wait_css("a.fui-tab[data-tab='source']")
+        .await
+        .click()
+        .await;
     wait_text_contains(&h, "#template-source-text", "template_id").await;
     h.shot(5, "template-source").await;
 
@@ -131,7 +141,10 @@ async fn query_builder_generates_and_runs_aql() {
         .await;
     h.goto(&format!("/query?template={TEMPLATE_ID}")).await;
     let selected = h.wait_css("#q-t").await.prop("value").await;
-    assert_eq!(selected, TEMPLATE_ID, "the template link picks the template");
+    assert_eq!(
+        selected, TEMPLATE_ID,
+        "the template link picks the template"
+    );
     h.shot(1, "builder-template-picked").await;
 
     // A condition on the composition's start time. Add a condition posts the
@@ -144,7 +157,10 @@ async fn query_builder_generates_and_runs_aql() {
         .await
         .select_by_value("/context/start_time")
         .await;
-    h.wait_css("select[name='g.c0-op']").await.select_by_value("ge").await;
+    h.wait_css("select[name='g.c0-op']")
+        .await
+        .select_by_value("ge")
+        .await;
     fill(&h, "input[name='g.c0-value']", "2020-01-01T00:00:00Z").await;
     h.shot(2, "builder-condition-added").await;
 

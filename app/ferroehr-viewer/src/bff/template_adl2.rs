@@ -221,12 +221,3 @@ pub async fn fetch_adl2_example(
     }
     Ok(Some(crate::cdr::CdrClient::expect_success(response)?.body))
 }
-
-
-
-
-
-
-
-
-
