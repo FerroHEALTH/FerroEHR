@@ -231,6 +231,7 @@ pub fn StoredQueriesPage() -> impl IntoView {
             crumbs: Vec::new(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::none(),
     );
@@ -271,7 +272,7 @@ pub fn StoredQueriesPage() -> impl IntoView {
         });
         let card = list_card(ListCard {
             title: tr(Msg::NavStoredQueries),
-            count: total,
+            count: total.map(ferrohealth_ui::view::template::list::HeadingCount::All),
             order: None,
             tabs: None,
             actions: Some(write),
@@ -419,6 +420,7 @@ where
             crumbs: vec![Crumb::new(tr(Msg::NavStoredQueries), "/queries")],
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::SQUARE_TERMINAL),
@@ -431,7 +433,7 @@ where
         .then(|| delete_form(&name, &version));
     let dialog = danger_dialog(
         Confirmation {
-            id: DELETE_DIALOG,
+            id: DELETE_DIALOG.into(),
             title: tr_with(
                 Msg::QueriesDeleteTitle,
                 &[

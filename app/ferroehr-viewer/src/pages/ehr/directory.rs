@@ -323,7 +323,7 @@ fn dialogs(
     let action = tab_href(ehr_id, EhrTab::Directory);
     let delete = danger_dialog(
         Confirmation {
-            id: DELETE_DIALOG,
+            id: DELETE_DIALOG.into(),
             title: tr(Msg::DirectoryDeleteTitle).into(),
             message: tr(Msg::DirectoryDeleteMessage).into(),
         },
@@ -345,7 +345,7 @@ fn dialogs(
             .map_or_else(|_| String::new(), |latest| (latest + 1).to_string());
         confirm_dialog(
             Confirmation {
-                id: RESTORE_DIALOG,
+                id: RESTORE_DIALOG.into(),
                 title: tr_with(
                     Msg::DirectoryRestoreTitle,
                     &[("version", number.to_owned().into())],
@@ -994,6 +994,7 @@ pub fn DirectoryEditPage() -> impl IntoView {
             crumbs: trail,
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::none(),
     );

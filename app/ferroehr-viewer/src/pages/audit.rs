@@ -316,6 +316,7 @@ fn heading() -> AnyView {
             crumbs: Vec::new(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::none(),
     )
@@ -387,7 +388,9 @@ pub fn AuditPage() -> impl IntoView {
         });
         let card = list_card(ListCard {
             title: tr(Msg::AuditRecords),
-            count: Some(u64::from(page.total)),
+            count: Some(ferrohealth_ui::view::template::list::HeadingCount::All(
+                u64::from(page.total),
+            )),
             order: None,
             tabs: None,
             actions: None,
@@ -484,6 +487,7 @@ pub fn AuditRecordPage() -> impl IntoView {
                 crumbs: vec![Crumb::new(tr(Msg::NavAudit), back)],
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::none(),
         );

@@ -117,6 +117,7 @@ fn heading() -> AnyView {
             crumbs: Vec::new(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::PLUS),
@@ -254,7 +255,9 @@ pub fn SubscriptionsPage() -> impl IntoView {
         };
         let card = list_card(ListCard {
             title: tr(Msg::NavSubscriptions),
-            count: u64::try_from(rows.len()).ok(),
+            count: u64::try_from(rows.len())
+                .ok()
+                .map(ferrohealth_ui::view::template::list::HeadingCount::All),
             order: None,
             tabs: None,
             actions: None,
@@ -531,6 +534,7 @@ pub fn NewSubscriptionPage() -> impl IntoView {
                 crumbs: vec![Crumb::new(tr(Msg::NavSubscriptions), "/subscriptions")],
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::none(),
         );
@@ -642,6 +646,7 @@ pub fn EditSubscriptionPage() -> impl IntoView {
                 crumbs: vec![Crumb::new(tr(Msg::NavSubscriptions), "/subscriptions")],
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::more_only(more),
         );
@@ -678,7 +683,7 @@ pub fn EditSubscriptionPage() -> impl IntoView {
         });
         let dialog = danger_dialog(
             Confirmation {
-                id: DELETE_DIALOG,
+                id: DELETE_DIALOG.into(),
                 title: tr_with(Msg::SubDeleteTitle, &[("name", row.name.clone().into())]).into(),
                 message: tr(Msg::SubDeleteMessage).into(),
             },

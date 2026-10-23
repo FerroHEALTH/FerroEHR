@@ -147,6 +147,7 @@ where
             crumbs: Vec::new(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::none(),
     );
@@ -644,7 +645,7 @@ pub fn LoggingTab() -> impl IntoView {
         };
         let dialog = confirm_dialog(
             Confirmation {
-                id: APPLY_DIALOG,
+                id: APPLY_DIALOG.into(),
                 title: tr(Msg::ServerApplyTitle).into(),
                 message: tr(Msg::ServerApplyMessage).into(),
             },

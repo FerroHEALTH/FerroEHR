@@ -155,6 +155,7 @@ pub enum EditorField {
     Staged(u8),
 }
 
+// TODO(#3942): the cap goes with FerroHEALTH/FerroUI#353.
 /// The most changes one new contribution stages.
 pub const MAX_STAGED: u8 = 12;
 
@@ -254,6 +255,7 @@ pub fn CodeEditor(
         marks,
         // NOTE: leptos-ui.md §15.8: a page works with no WebAssembly, so the text area is editable
         // from the first paint and never waits for the island.
+        // TODO(#3942): the editor's own contract replaces this with FerroHEALTH/FerroUI#356.
         editable: Signal::stored(true),
     };
     let panel = editor_panel(

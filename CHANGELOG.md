@@ -17,7 +17,7 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
-- **The viewer is rebuilt on FerroUI 0.3.2** (#3932, FerroHEALTH/FerroUI#161).
+- **The viewer is rebuilt on FerroUI 0.3.3** (#3932, FerroHEALTH/FerroUI#161).
   Every screen follows the FerroEHR mockups of FerroUI's
   `design/consoles/ferroehr/` at 1440 and 390 px, light and dark, with
   FerroUI's components and none of the viewer's own copies. The viewer now
@@ -55,10 +55,11 @@ workflow refuses a tag that has no matching section here.
   asked for is the sign-in page saying the session ended, and signing in
   returns to it. A revoked session is noticed on the next request.
 - **The viewer's site is built with `cargo leptos build --split`**
-  (`scripts/cargo-leptos.sh` adds it): FerroUI's lazy islands load from chunks
-  of their own, and without the split no island hydrates (FerroUI #331). A
-  deployment that serves the site from its own web server serves the whole
-  `pkg/` directory, chunks included; the image already does.
+  (`scripts/cargo-leptos.sh` adds it) and FerroUI's `split` feature, so
+  FerroUI's lazy islands (the date pickers and the tree) load from chunks of
+  their own on a page that draws them (FerroUI #331). A deployment that
+  serves the site from its own web server serves the whole `pkg/` directory,
+  chunks included; the image already does.
 - **The dashboard's compositions per day count commits**, read from each
   version's `commit_audit/time_committed`, as its note says; it counted
   context start times before.

@@ -312,6 +312,7 @@ pub fn PartiesPage() -> impl IntoView {
             crumbs: Vec::new(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::PLUS),
@@ -385,7 +386,7 @@ pub fn PartiesPage() -> impl IntoView {
         };
         let card = list_card(ListCard {
             title: tr(Msg::PartiesTagsTitle),
-            count: total,
+            count: total.map(ferrohealth_ui::view::template::list::HeadingCount::All),
             order: None,
             tabs: None,
             actions: None,
@@ -532,6 +533,7 @@ pub fn NewPartyPage() -> impl IntoView {
                 crumbs: party_crumbs(),
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::none(),
         );
@@ -937,6 +939,7 @@ pub fn PartyPage() -> impl IntoView {
                         crumbs: party_crumbs(),
                         mono: false,
                         badge: None,
+                        subtitle_view: None,
                     },
                     ActionGroup::none(),
                 );
@@ -1123,7 +1126,7 @@ pub fn PartyPage() -> impl IntoView {
         let dialog = current.as_ref().map(|state| {
             danger_dialog(
                 Confirmation {
-                    id: DELETE_DIALOG,
+                    id: DELETE_DIALOG.into(),
                     title: tr_with(Msg::PartyDeleteTitle, &[("name", name.clone().into())]).into(),
                     message: tr_with(
                         Msg::PartyDeleteMessage,
@@ -1238,6 +1241,7 @@ fn party_header(
             crumbs: party_crumbs(),
             mono: false,
             badge,
+            subtitle_view: None,
         },
         actions,
     )
@@ -1399,6 +1403,7 @@ pub fn EditPartyPage() -> impl IntoView {
                 crumbs: trail,
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::none(),
         );
@@ -1562,6 +1567,7 @@ pub fn RelationshipPage() -> impl IntoView {
                 crumbs: trail,
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::primary(Action::new(
                 Some(Glyph::PENCIL),
@@ -1572,7 +1578,7 @@ pub fn RelationshipPage() -> impl IntoView {
         );
         let dialog = danger_dialog(
             Confirmation {
-                id: DELETE_RELATIONSHIP,
+                id: DELETE_RELATIONSHIP.into(),
                 title: tr_with(
                     Msg::RelationshipDeleteTitle,
                     &[("name", state.name.clone().into())],
@@ -1737,6 +1743,7 @@ pub fn NewRelationshipPage() -> impl IntoView {
                 crumbs: trail,
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::none(),
         );
@@ -1937,6 +1944,7 @@ pub fn EditRelationshipPage() -> impl IntoView {
                 crumbs: trail,
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::none(),
         );
@@ -2023,6 +2031,7 @@ pub fn PartyContributionPage() -> impl IntoView {
             crumbs: party_crumbs(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::none(),
     );

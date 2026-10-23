@@ -477,6 +477,7 @@ pub fn StatusEditPage() -> impl IntoView {
             crumbs: trail,
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::none(),
     );

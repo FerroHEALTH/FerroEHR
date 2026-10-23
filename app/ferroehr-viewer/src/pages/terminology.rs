@@ -113,6 +113,7 @@ fn heading() -> AnyView {
             crumbs: Vec::new(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::none(),
     )
@@ -327,6 +328,7 @@ pub fn TerminologyPage() -> impl IntoView {
                 crumbs: vec![Crumb::new(tr(Msg::NavTerminology), "/terminology")],
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::none(),
         );

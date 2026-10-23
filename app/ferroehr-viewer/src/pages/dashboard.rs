@@ -201,7 +201,7 @@ fn namespaces_card(tiles: Result<Vec<NamespaceTile>, crate::error::ViewerError>)
     };
     list_card(ListCard {
         title: tr(Msg::DashboardByNamespace),
-        count,
+        count: count.map(ferrohealth_ui::view::template::list::HeadingCount::All),
         order: None,
         tabs: None,
         actions: None,
@@ -219,6 +219,7 @@ fn heading(subtitle: String, actions: ActionGroup) -> AnyView {
             crumbs: Vec::new(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         actions,
     )

@@ -188,7 +188,7 @@ fn delete_dialog(
 ) -> AnyView {
     danger_dialog(
         Confirmation {
-            id,
+            id: id.into(),
             title: tr_with(
                 Msg::TemplateDeleteTitle,
                 &[("name", template_id.to_owned().into())],
@@ -277,6 +277,7 @@ pub fn TemplatesPage() -> impl IntoView {
             crumbs: Vec::new(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::UPLOAD),
@@ -481,6 +482,7 @@ pub fn UploadTemplatePage() -> impl IntoView {
                 )],
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::none(),
         );
@@ -849,6 +851,7 @@ fn template_header(
             )],
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::SQUARE_TERMINAL),

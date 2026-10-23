@@ -100,6 +100,7 @@ fn heading(save: AnyView) -> AnyView {
             crumbs: Vec::new(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::PLAY),
@@ -114,6 +115,7 @@ fn heading(save: AnyView) -> AnyView {
     .into_any()
 }
 
+// TODO(#3942): Save joins the header's action group with FerroHEALTH/FerroUI#354.
 /// Save to the CDR: the namespace, the name and the version, fields of the
 /// query's form, and the submit that saves. A stored query opened from the
 /// CDR (`loaded`, its qualified name and version) fills them with its
@@ -141,7 +143,7 @@ fn save_popover(
     };
     let error = problem.map(|problem| view! { <p class="fui-field-error">{problem}</p> });
     popover_form(PopoverForm {
-        id: SAVE_POPOVER,
+        id: SAVE_POPOVER.into(),
         variant: Variant::Secondary,
         glyph: Glyph::SAVE,
         label: tr(Msg::QuerySave).into(),
@@ -979,6 +981,7 @@ fn columns_view(draft: &Draft, offered: &[Leaf]) -> AnyView {
             let alias_id = format!("col-{place}-alias");
             RepeatRow {
                 key: place.to_string(),
+                heading: None,
                 fields: view! {
                     <div class="fui-field">
                         <label class="fui-sr-only" for=path_id.clone()>
@@ -1472,6 +1475,7 @@ fn parameters_view(rows: &[(String, String)]) -> AnyView {
             let value_id = format!("param-{place}-value");
             RepeatRow {
                 key: place.to_string(),
+                heading: None,
                 fields: view! {
                     <div class="fui-field">
                         <label class="fui-sr-only" for=name_id.clone()>

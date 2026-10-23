@@ -56,6 +56,7 @@ pub fn grant_of(raw: &str) -> ScopeGrant {
     }
 }
 
+// TODO(#3942): the CDR grammar builds the grant with FerroHEALTH/FerroUI#350.
 /// The grants of every scope in `claim`, space-separated.
 #[must_use]
 pub fn grants_of(claim: &str) -> Vec<ScopeGrant> {
@@ -176,6 +177,7 @@ pub fn AccessPage() -> impl IntoView {
             crumbs: Vec::new(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ferrohealth_ui::view::action::ActionGroup::none(),
     );

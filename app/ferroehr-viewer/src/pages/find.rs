@@ -338,6 +338,7 @@ pub fn FindPage() -> impl IntoView {
                 crumbs: Vec::new(),
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ferrohealth_ui::view::action::ActionGroup::none(),
         )
@@ -384,7 +385,7 @@ pub fn FindPage() -> impl IntoView {
         };
         let card = list_card(ListCard {
             title: tr(Msg::FindOtherWays),
-            count: Some(3),
+            count: Some(ferrohealth_ui::view::template::list::HeadingCount::All(3)),
             order: None,
             tabs: None,
             actions: None,

@@ -99,6 +99,7 @@ pub fn AboutPage() -> impl IntoView {
                 crumbs: Vec::new(),
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             release: crate::shell::footer().release(),
             versions,
@@ -126,7 +127,7 @@ pub fn AboutPage() -> impl IntoView {
 
 /// The FerroUI release the viewer draws with: the exact pin of the
 /// workspace manifest, held to it by a test.
-const FERROHEALTH_UI: &str = "0.3.2";
+const FERROHEALTH_UI: &str = "0.3.3";
 
 /// The FerroUI release the viewer draws with.
 fn ferrohealth_ui_version() -> String {
@@ -140,7 +141,11 @@ mod tests {
     #[test]
     fn about_names_the_ferroui_release_the_workspace_pins() {
         let manifest = include_str!("../../../../Cargo.toml");
-        let pin = format!("ferrohealth-ui = \"={FERROHEALTH_UI}\"");
-        assert!(manifest.contains(&pin), "the workspace pins {pin}");
+        let line = manifest
+            .lines()
+            .find(|line| line.starts_with("ferrohealth-ui = "))
+            .expect("the workspace pins ferrohealth-ui");
+        let pin = format!("\"={FERROHEALTH_UI}\"");
+        assert!(line.contains(&pin), "the workspace pins {pin}: {line}");
     }
 }
