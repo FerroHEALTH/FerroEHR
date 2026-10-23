@@ -100,6 +100,23 @@ pub enum FlatError {
         key: String,
     },
 
+    /// A FLAT or STRUCTURED write decomposes a value of an RM type the
+    /// Simplified Formats define no form for: ITS-REST
+    /// `simplified_formats/master05-rm_mapping.adoc` has a mapping table per
+    /// supported type (§DV_TEXT to §DV_INTERVAL) and none for `DV_STATE`.
+    /// Only the master04 §Raw canonical JSON bypass (`|raw`) carries one.
+    #[error(
+        "{path} is a {rm_type}, for which the simplified formats define no form \
+         (simplified_formats master05-rm_mapping has no {rm_type} table); \
+         send it as canonical JSON with |raw (master04 §Raw canonical JSON)"
+    )]
+    NoSimplifiedForm {
+        /// The RM type of the node the path resolved to.
+        rm_type: String,
+        /// The simplified path of the node.
+        path: String,
+    },
+
     /// A value has the wrong JSON type or an unparsable encoding for its
     /// slot (e.g. a non-numeric `|magnitude`, a malformed compact
     /// participation-identifier list).

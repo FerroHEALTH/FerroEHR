@@ -368,6 +368,41 @@
                   </existence>
                 </attributes>
               </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0008</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_STATE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id/>
+                  </children>
+                </attributes>
+              </children>
               <cardinality>
                 <is_ordered>false</is_ordered>
                 <is_unique>false</is_unique>
@@ -415,6 +450,10 @@
         <term_definitions code="at0007">
           <items id="description">An element whose value is constrained to any.</items>
           <items id="text">Method detail</items>
+        </term_definitions>
+        <term_definitions code="at0008">
+          <items id="description">An element whose value is a DV_STATE.</items>
+          <items id="text">Process state</items>
         </term_definitions>
       </children>
       <cardinality>

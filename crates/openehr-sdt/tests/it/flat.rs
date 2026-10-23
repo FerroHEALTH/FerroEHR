@@ -1557,6 +1557,10 @@ fn an_element_with_an_open_value_keeps_its_node_with_every_value_type() {
             );
         }
         assert!(
+            !alternatives.iter().any(|(_, rm)| *rm == "DV_STATE"),
+            "{id} offers no DV_STATE, which has no simplified form: {alternatives:?}"
+        );
+        assert!(
             element
                 .children
                 .iter()
@@ -1672,4 +1676,143 @@ fn the_better_any_element_template_keeps_its_open_element() {
         types.contains(&"DV_TEXT") && types.contains(&"DV_QUANTITY"),
         "the open element offers every value type: {types:?}"
     );
+}
+
+// ── a DV_STATE has no simplified form (#3934) ────────────────────────────────
+//
+// RM `data_types` §DV_STATE gives `value: DV_CODED_TEXT` and `is_terminal:
+// Boolean`, and simplified formats master05-rm_mapping has no §DV_STATE table
+// (#3936), so only master04 §Raw canonical JSON (`|raw`) carries one. Carrier:
+// "Process state" (`at0008`) of `any_element_value.en.v1`.
+
+const PROCESS_STATE: &str = "any_element_value/any_element_observation:0/process_state";
+
+fn dv_state() -> Value {
+    serde_json::json!({
+        "_type": "DV_STATE",
+        "value": {
+            "_type": "DV_CODED_TEXT",
+            "value": "completed",
+            "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "local"},
+                "code_string": "at9000"
+            }
+        },
+        "is_terminal": true
+    })
+}
+
+fn assert_no_simplified_form(result: Result<Value, openehr_sdt::flat::error::FlatError>) {
+    match result {
+        Err(openehr_sdt::flat::error::FlatError::NoSimplifiedForm { rm_type, path }) => {
+            assert_eq!(rm_type, "DV_STATE", "the refusal names the type");
+            assert!(
+                path.contains("process_state"),
+                "the refusal names the node: {path}"
+            );
+        }
+        Err(other) => panic!("refused for another reason: {other}"),
+        Ok(rm) => panic!(
+            "a decomposed DV_STATE must not build, built {:?}",
+            rm.pointer("/content/0/protocol/items")
+        ),
+    }
+}
+
+/// A FLAT write that decomposes a DV_STATE, in the DV_CODED_TEXT spelling or
+/// as a bare value, is refused and builds nothing in its place.
+#[test]
+fn a_flat_write_that_decomposes_a_dv_state_is_refused() {
+    let wt = any_element_value_wt();
+    let code_key = format!("{PROCESS_STATE}|code");
+    let value_key = format!("{PROCESS_STATE}|value");
+    let terminology_key = format!("{PROCESS_STATE}|terminology");
+    let coded = any_element_flat(&[
+        (code_key.as_str(), Value::String("at9000".into())),
+        (value_key.as_str(), Value::String("completed".into())),
+        (terminology_key.as_str(), Value::String("local".into())),
+    ]);
+    assert_no_simplified_form(composition_from_flat(&coded, &wt, NOW));
+    let bare = any_element_flat(&[(PROCESS_STATE, Value::String("completed".into()))]);
+    assert_no_simplified_form(composition_from_flat(&bare, &wt, NOW));
+    let message = composition_from_flat(&coded, &wt, NOW)
+        .err()
+        .map(|e| e.to_string())
+        .unwrap_or_default();
+    assert!(
+        message.contains("master05") && message.contains("|raw"),
+        "the diagnostic cites the missing table and the raw bypass: {message}"
+    );
+}
+
+/// The STRUCTURED twin of the FLAT refusal.
+#[test]
+fn a_structured_write_that_decomposes_a_dv_state_is_refused() {
+    let wt = any_element_value_wt();
+    let raw_key = format!("{PROCESS_STATE}|raw");
+    let flat = any_element_flat(&[(raw_key.as_str(), dv_state())]);
+    let rm = composition_from_flat(&flat, &wt, NOW).expect("from_flat");
+    let mut structured =
+        openehr_sdt::flat::convert::composition_to_structured(&rm, &wt).expect("to_structured");
+    let state = structured
+        .pointer_mut("/any_element_value/any_element_observation/0/process_state/0")
+        .unwrap_or_else(|| panic!("the STRUCTURED document carries the state"));
+    *state = serde_json::json!({"|code": "at9000", "|value": "completed"});
+    assert_no_simplified_form(openehr_sdt::flat::convert::composition_from_structured(
+        &structured,
+        &wt,
+        NOW,
+    ));
+}
+
+/// A DV_STATE sent as `|raw` canonical JSON builds unchanged, validates, and
+/// reads back as `|raw` from FLAT and STRUCTURED.
+#[test]
+fn a_dv_state_round_trips_as_raw_canonical_json() {
+    let wt = any_element_value_wt();
+    let raw_key = format!("{PROCESS_STATE}|raw");
+    let flat = any_element_flat(&[(raw_key.as_str(), dv_state())]);
+    let rm = composition_from_flat(&flat, &wt, NOW).expect("from_flat");
+    let messages = openehr_sdt::rm_instance::validate_composition(&rm, &wt);
+    assert!(
+        messages.is_empty(),
+        "the built composition validates: {messages:?}"
+    );
+    assert_eq!(
+        rm.pointer("/content/0/protocol/items/0/value"),
+        Some(&dv_state()),
+        "the element carries the DV_STATE as sent"
+    );
+    let flat_again = composition_to_flat(&rm, &wt).expect("to_flat");
+    let state_keys: Vec<&String> = flat_again
+        .keys()
+        .filter(|k| k.starts_with(PROCESS_STATE))
+        .collect();
+    assert_eq!(state_keys, vec![&raw_key], "only |raw reads back");
+    assert_eq!(flat_again.get(&raw_key), Some(&dv_state()));
+    let structured =
+        openehr_sdt::flat::convert::composition_to_structured(&rm, &wt).expect("to_structured");
+    assert_eq!(
+        structured.pointer("/any_element_value/any_element_observation/0/process_state/0/|raw"),
+        Some(&dv_state()),
+        "STRUCTURED reads the state back as |raw: {structured}"
+    );
+}
+
+/// The FLAT example shows no path for a DV_STATE node.
+#[test]
+fn the_flat_example_leaves_a_dv_state_out() {
+    let wt = any_element_value_wt();
+    for level in [DetailLevel::Medium, DetailLevel::Complete] {
+        let example = example_composition(&wt, level).expect("the example builds");
+        let messages = openehr_sdt::rm_instance::validate_composition(&example, &wt);
+        assert!(messages.is_empty(), "the example validates: {messages:?}");
+        let flat = composition_to_flat(&example, &wt).expect("to_flat");
+        assert!(
+            !flat.keys().any(|k| k.starts_with(PROCESS_STATE)),
+            "the example carries no DV_STATE key: {:?}",
+            flat.keys().collect::<Vec<_>>()
+        );
+    }
 }

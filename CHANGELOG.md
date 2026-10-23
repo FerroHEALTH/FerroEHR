@@ -26,9 +26,20 @@ workflow refuses a tag that has no matching section here.
   `C_COMPLEX_OBJECT.any_allowed`, ADL 1.4 "Any" constraints), so it now keeps
   its node with one alternative per concrete data value type, keyed by type as
   in the Simplified Formats CLUSTER example (`…/test_method/text_value`,
-  `…/test_method/quantity_value|magnitude`). `DV_STATE` is not offered yet
-  (#3934). Web templates, FLAT and STRUCTURED examples and FLAT paths change
+  `…/test_method/quantity_value|magnitude`); `DV_STATE` is not among them,
+  since it has no simplified form (#3934). Web templates, FLAT and STRUCTURED examples and FLAT paths change
   for templates with such elements. The `openehr-*` crates move to 0.0.96.
+- **A `DV_STATE` is no longer built as a coded text from FLAT or STRUCTURED**
+  (#3934). The converter read and wrote a `DV_STATE` with the `DV_CODED_TEXT`
+  suffixes, so a write built a value the RM refuses (RM `data_types`
+  §DV_STATE: `value: DV_CODED_TEXT`, `is_terminal: Boolean`) and a read
+  emitted keys no table defines. The Simplified Formats RM mapping chapter has
+  no `DV_STATE` table, so a write that decomposes a `DV_STATE` node is now
+  refused with a `422` naming the node and the missing table; the node is
+  written and read as `|raw` canonical JSON, and the FLAT and STRUCTURED
+  examples leave it out. A canonical commit's `DV_STATE` is now checked
+  against the template's code list on its `value`. The gap is reported
+  upstream in #3936.
 
 ### Security
 

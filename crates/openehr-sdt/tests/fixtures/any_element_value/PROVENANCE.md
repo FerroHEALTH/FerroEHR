@@ -15,7 +15,9 @@ not vendored; this fixture reproduces its shape with synthetic archetypes:
 - the observation gains a `protocol` `ITEM_TREE` (`at0005`) holding two
   elements. "Test method" (`at0006`) carries no attribute constraint at all,
   the shape of the reported template. "Method detail" (`at0007`) carries a
-  `value` attribute with no child constraint, the `value matches {*}` shape;
+  `value` attribute with no child constraint, the `value matches {*}` shape.
+  "Process state" (`at0008`) constrains its value to `DV_STATE`, the type
+  the Simplified Formats give no form (#3934);
 - the identifiers, the uid and the term definitions are renamed to describe
   the fixture.
 
