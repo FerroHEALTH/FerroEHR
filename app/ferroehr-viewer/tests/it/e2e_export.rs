@@ -218,9 +218,9 @@ async fn the_result_export_serves_the_rows_on_screen() {
     h.shot(1, "results-before-export").await;
 
     let (headers, rows) = table_on_screen(&h).await;
-    // The header cells carry Tailwind's `uppercase` and `text()` returns the
-    // RENDERED text, so the screen is matched case-insensitively; the alias
-    // itself is what the CSV header row must spell, asserted verbatim below.
+    // The screen's head is matched case-insensitively, since a stylesheet may
+    // set its case; the alias itself is what the CSV header row must spell,
+    // asserted verbatim below.
     let headed: Vec<String> = headers.iter().map(|h| h.to_lowercase()).collect();
     assert_eq!(
         headed, EXPORT_COLUMNS,

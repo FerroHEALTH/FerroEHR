@@ -467,7 +467,7 @@ fn is_public_path(path: &str) -> bool {
 ///   viewer emits is Leptos's hydration bootstrap, and it is authorized by a
 ///   per-request nonce ([`csp_nonce_layer`]) instead.
 /// - `style-src 'self'`: every style the viewer uses is a stylesheet of its
-///   own origin (the Tailwind build, FerroUI's stylesheet and the brand theme),
+///   own origin (FerroUI's stylesheet and its FerroEHR theme),
 ///   and no component writes a `style` attribute or a `<style>` element, so no
 ///   inline allowance and no style nonce are needed.
 /// - `X-Frame-Options: DENY` plus `frame-ancestors 'none'` — belt and braces

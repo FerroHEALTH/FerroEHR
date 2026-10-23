@@ -12,12 +12,11 @@ before any viewer change:
 - the consumer guide, [`docs/consoles.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/docs/consoles.md):
   how a console takes the library, what it keeps local, how it moves to a
   new release;
-- the component rules, [`.claude/rules/leptos-ui.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.2.0/.claude/rules/leptos-ui.md):
-  the mandates (§0), the two tiers (§1), reactivity, views, forms, tables
-  and paging, accessibility to WCAG 2.2 AA, tokens and themes, icons, the
-  bundle (§12) and the catalogs (§13); on `main` the same file adds the
-  four-layer interaction contract (§1), the book's rules (§14) and the
-  island rules (§15);
+- the component rules, [`.claude/rules/leptos-ui.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.3.2/.claude/rules/leptos-ui.md):
+  the mandates (§0), the four-layer interaction contract (§1), reactivity,
+  views, forms, tables and paging, accessibility to WCAG 2.2 AA, tokens and
+  themes, icons, the bundle (§12), the catalogs (§13), the book's rules (§14)
+  and the island rules (§15);
 - the crate discipline, [`crates/ferrohealth-ui/CLAUDE.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/crates/ferrohealth-ui/CLAUDE.md):
   the interaction contract, islands mode and the list of ready islands;
 - the reviewed design, [`design/README.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/design/README.md),
@@ -27,12 +26,10 @@ before any viewer change:
   [`design/consoles/ferroehr/`](https://github.com/FerroHEALTH/FerroUI/tree/main/design/consoles/ferroehr).
 
 **The pin decides the version you read.** The viewer pins `ferrohealth-ui =
-"=0.2.0"` (root `Cargo.toml`), so its component rules are read at the tag
-`v0.2.0`. The guide, the crate discipline and the design entered FerroUI
-after that tag and are read on `main` until the viewer's pin reaches a tag
-that carries them. The viewer moves to FerroUI 0.3.x, islands mode and the
-four-layer interaction contract in the console rollout
-(FerroHEALTH/FerroUI#161, after FerroUI 0.3.2); new UI work waits for it.
+"=0.3.2"` (root `Cargo.toml`), so the component rules, the guide, the crate
+discipline and the design are read at the tag `v0.3.2`. The viewer runs in
+islands mode under the four-layer interaction contract since the console
+rollout (FerroHEALTH/FerroUI#161).
 FerroUI's `design/` is the only design source: a design folder anywhere
 else is stale and never synced from.
 
@@ -52,82 +49,77 @@ book (leptos-rs/book `main`, Leptos 0.8; `/leptos-lookup`), never memory.
 - **No hand-written JavaScript:** FerroUI's mandate (its `leptos-ui.md` §0)
   binds the viewer whole. The only JS is the generated `wasm-bindgen`
   bootstrap.
-- **REST boundary:** the viewer reaches the CDR only over ITS-REST from the
-  BFF (server functions → `reqwest`). It may depend on `crates/openehr-*`;
-  it must NEVER depend on `app/ferroehr` or `app/ferroehr-rest`.
-- **Server functions are a public HTTP API** (`server/25_server_functions`).
-  Every `#[server]` fn enforces the viewer's session itself and is declared
-  `#[server(client = crate::session_client::SessionAwareClient)]` (the crate
-  `CLAUDE.md`). CDR credentials never leave the server.
+- **REST boundary:** the viewer reaches the CDR only over ITS-REST from its
+  server (`reqwest`). It may depend on `crates/openehr-*`; it must NEVER
+  depend on `app/ferroehr` or `app/ferroehr-rest`.
+- **Every route and every `#[server]` fn is a public HTTP endpoint**
+  (`server/25_server_functions`). A page is behind the login guard; a post is
+  refused from another origin; a `#[server]` fn an island calls enforces the
+  session itself and is declared
+  `#[server(client = crate::session_client::SessionAwareClient)]`. CDR
+  credentials never leave the server.
 
 ## 1. Two halves, chosen by target
 
 - One crate, two halves: the server binary and the rlib on the host, the
   cdylib on `wasm32-unknown-unknown`. They are chosen by compilation target
-  (`cfg(target_arch = "wasm32")`), never by a Cargo `ssr`/`hydrate` feature
-  pair, so a workspace `--all-features` build never enables both. Server-only
-  dependencies sit under `[target.'cfg(not(target_arch = "wasm32"))'.dependencies]`.
-- WASM is 32-bit: never `usize`/`isize` in a server-fn argument, return type
-  or any serialized shared type (`server/25` quirks).
+  (`cfg(target_arch = "wasm32")`), never by a Cargo feature pair. Server-only
+  dependencies sit under `[target.'cfg(not(target_arch = "wasm32"))'.dependencies]`,
+  and every module but the islands, the errors, the locale and the session
+  client is server-only (`src/lib.rs`).
+- WASM is 32-bit: never `usize`/`isize` in an island prop, a server-fn
+  argument or any serialized shared type.
 - **Views are built in `.into_any()`-erased sections**: plain `cargo` builds
   have no `erase_components`, and a monolithic `view!` blows rustc's layout
   recursion in `cargo test` codegen.
+- The site is built with `--split` (the wrapper `scripts/cargo-leptos.sh`
+  adds it): FerroUI's lazy islands import from a placeholder module that only
+  the split rewrites, and without it no island hydrates (FerroUI #331).
 
-## 2. Reactivity the viewer learned the hard way
+## 2. Pages are drawn on the server
 
-- FerroUI's reactivity rules (its `leptos-ui.md` §3, and §14.2 on `main`)
-  forbid writing one signal from an `Effect` that reads another. The
-  viewer's two sanctioned async-answer-into-signal shapes: an Action's answer is written in the action's own continuation; a
-  Resource seeding editable local state stays a one-shot resource-reading
-  `Effect` with a written justification whenever any seed target renders
-  outside the resource's own `Suspend` (seeding inside it writes during the
-  server pass and again during hydration replay: an unrecoverable tachys
-  hydration panic, reproduced live on `/queries/aql?load=…`).
-- Seed-gated `disabled`: the live state goes on `prop:disabled`, with a
-  static `disabled` attribute beside it for the server HTML.
-- Toolchain trap (1.97, still live on 1.98.1): `use_query_map().with_untracked(…)`
-  directly in a `#[component]` body stops `clippy::must_use_candidate` firing,
-  so the crate-idiom `#[expect]` turns into an unfulfilled expectation. Put
-  the URL read in a private helper fn (`ehrs.rs::find_from_url`).
+- Every route is `SsrMode::Async` and answers `GET` and `POST`: a post renders
+  the page it was posted to, with `crate::posted::posted()` as the form. A
+  page's reads are awaited in `pages::common::awaited` (a `Suspense` over one
+  `Suspend`); never a `Resource` the browser re-runs.
+- A form's default action is a hidden `default-intent`; a submit button's
+  `name="intent"` wins (`Posted::intent`), whatever the order of the fields.
+- A success redirects (`crate::flash::redirect_with`, a toast in a flash
+  cookie); a refusal renders on the page posted to, the fields as typed.
+- A page that docks its decision bar from inside an awaited future holds
+  `crate::shell::promise_dock()` there. A docked form carries no `required`
+  field: Discard posts the same form.
+- A form never holds another form (the parser drops it); a second action in a
+  form is a submit with `formaction`.
+- A table row is one link (FerroUI R9); another control in the row sits in
+  `.fui-table-actions` or the row menu.
 
-## 3. Async data and hydration (the BFF pattern)
+## 3. Islands
 
-- Loading is a `Resource` over a `#[server]` fn, mutation an
-  `Action`/`ServerAction`; reactive inputs go in the source. Lists that reload
-  use `<Transition>`.
-- **Never create a Resource (or render `<Outlet/>` or any resource-owning
-  subtree) inside a `Suspend` closure**: it re-runs on every notification and
-  re-creates everything inside, so server and client resource ids diverge
-  (found live 2026-07-18). The shell renders the chrome and `<Outlet/>` once,
-  outside its session `Suspense`.
-- Do NOT use `<ErrorBoundary>` inside `<Suspense>` (a hydrated fallback
-  mismatches in 0.8): resolve the `Result` inside the `Suspend` and render
-  content or `notice::inline_error` as one erased view.
-- Every authenticated route uses `SsrMode::Async` on the parent route
-  (streamed fragments race WASM init); `/login` too, so it works without
-  JavaScript.
-- Anchors to BFF axum routes carry `rel="external"`.
+- An island is the only part of a page the browser hydrates. Its props cross
+  as serialized data, its words are resolved on the server (`*Words::of_page()`),
+  and the page around it works without it: a control an island drives is a
+  link or a submit until it hydrates (FerroUI's §15).
+- An editor is editable from the first paint; never wait for the island to
+  enable a field a page with no WebAssembly needs.
+- The viewer's own islands live in `src/islands.rs`: the code editor, the
+  template source upload, the subject reveal.
 
 ## 4. URL state and patient data
 
-- Filter, search and paging state of a listing that names no patient lives in
-  the URL (`<Form method="GET">` → `use_query_map` → resource source).
+- Filter and search state lives in the URL (a `GET` form); paging of a
+  listing that names no patient may too.
 - **No patient identifier and no position in a listing that can show patient
   data goes in a URL** (FerroUI's mandate, its `leptos-ui.md` §0): those
-  listings page with `components::data_table::paging_in_session` (FerroUI's
-  session pager).
+  listings page through `crate::paging`, a session cookie per listing.
 
-## 5. Theme and styles
+## 5. Theme, preferences and styles
 
-- The theme is the `ferroehr-theme` cookie the switch posts to `/theme`,
-  written by the server as `data-theme` on `<html>` (`crate::theme`); no
-  browser storage.
-- FerroUI's stylesheet and `style/theme.css` (FerroEHR's palette over
-  FerroUI's roles) are served from this origin. The viewer's Tailwind
-  utilities name roles only (`bg-raised`, `text-ink-muted`, `border-edge`),
-  never a palette entry and never a per-element `dark:`.
-- `tests/it/contrast.rs` holds every pairing of the FerroEHR theme to WCAG 2.2
-  AA; a new colour joins it in the change that adds it.
+- The theme and every other display preference is a cookie of its own
+  (`crate::prefs` over FerroUI's `Preferences`), posted from the user menu and
+  Your preferences and read when a page is drawn; no browser storage.
+- FerroUI's stylesheet and its FerroEHR theme are served from this origin
+  (`src/server.rs`). The viewer adds no stylesheet of its own.
 
 ## 6. Testing and gates
 
@@ -136,24 +128,27 @@ book (leptos-rs/book `main`, Leptos 0.8; `/leptos-lookup`), never memory.
   console runs, `design/tools/check.sh`) run in FerroUI. The viewer runs the
   gates below over its own code.
 - Business logic lives out of components in plain types with unit tests.
-- SSR render tests (`tests/it/ssr_*.rs`) render with `RenderHtml::to_html`
-  in an `Owner`.
+- `tests/it/ssr_app.rs` drives every screen through the real service in
+  process, over a CDR replayed from `tests/fixtures/cdr/recording.json`.
 - **E2E is a merge gate**: `thirtyfour` driving headless Chromium against the
   composed stack (`scripts/ui-e2e.sh`), journeys in the `e2e_*` modules,
   skip-with-reason when `UI_E2E_BASE_URL` is unset. Every journey fails on a
   browser-console hydration error or panic. Explicit waits, never `sleep`; a
   journey holds the harness's bounded `common::Element`
-  (`scripts/checks/e2e-waits.sh`).
+  (`scripts/checks/e2e-waits.sh`). CI runs the battery at 1440 px and at
+  390 px (`UI_E2E_VIEWPORT=phone`, device emulation), and `e2e_keyboard`
+  drives the composition-level keyboard paths (#2793).
 - Gates: `cargo clippy -p ferroehr-viewer --all-targets` on the host and
   `cargo clippy -p ferroehr-viewer --lib --target wasm32-unknown-unknown`,
   both `-D warnings`; `cargo nextest run -p ferroehr-viewer`; `leptosfmt` and
   `cargo fmt`; `bash scripts/cargo-leptos.sh build`, always the wrapper (a bare
   `cargo leptos` rewrites `Cargo.lock`).
 - **The `ui-screenshot-guard` CI job**: a PR that touches
-  `app/ferroehr-viewer/src/` or `style/` commits refreshed captures under
+  `app/ferroehr-viewer/src/` commits refreshed captures under
   `website/book/src/viewer/img/` (`UI_E2E_DOCS_SHOTS=1 scripts/ui-e2e.sh`) or
   carries the `no-ui-visual-change` label (zero visual effect only). Applying
-  the label raises a fresh run (#2777).
+  the label raises a fresh run (#2777). The same pass captures every route at
+  1440 and 390 px, light and dark, as the `ui-route-shots` artifact (#3910).
 
 ## 7. Bundle
 
@@ -190,6 +185,6 @@ catalog file with no code change.
 - `scripts/checks/stray-literals.sh app/ferroehr-viewer/src` runs in CI
   against `scripts/checks/stray-literals.baseline`: a file may hold no more
   stray literals than its count, and a change that moves strings into the
-  catalog lowers the count with `--update`. Most of the remaining strings
-  reach a component that takes a `&'static str`, which FerroHEALTH/FerroUI#114
-  widens.
+  catalog lowers the count with `--update`. A literal no reader sees (an RM
+  type name, a header token, a cookie's attributes) is allowed by pattern in
+  `scripts/checks/stray-literals.allow`, with the reason.
