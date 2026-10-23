@@ -274,7 +274,7 @@ Nothing. Every text in scope already states these facts.
 
 - **The viewer pages**: [the viewer](../viewer/index.md) names the footer's
   manufacturer line and the System screen's Manufacturer card (#3634), and
-  [dark mode](../viewer/dark-mode.md) describes the moon and sun button and
+  [dark mode](../viewer/preferences.md) describes the moon and sun button and
   the theme cookie as FerroUI draws them. No page names a component library
   the viewer no longer uses.
 - **The logging component**: the [EHDS readiness](ehds-readiness.md) page and

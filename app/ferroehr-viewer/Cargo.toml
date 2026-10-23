@@ -42,7 +42,9 @@ openehr-query = { path = "../../crates/openehr-query" }
 openehr-its = { path = "../../crates/openehr-its", default-features = false }
 openehr-sdt = { path = "../../crates/openehr-sdt", default-features = false }
 
-leptos.workspace = true
+# Islands mode (FerroUI `crates/ferrohealth-ui/CLAUDE.md`): the server draws
+# every page whole and the browser hydrates only the islands.
+leptos = { workspace = true, features = ["islands"] }
 leptos_meta.workspace = true
 leptos_router.workspace = true
 # The shared FerroHEALTH console components, tokens, stylesheet, highlighters
@@ -134,13 +136,12 @@ reqwest = { workspace = true, features = ["form"] }
 [lints]
 workspace = true
 
-# cargo-leptos build config (Tailwind v4 standalone — pin the
-# binary with LEPTOS_TAILWIND_VERSION=v4.3.3 in CI/containers; no Node/npm).
+# cargo-leptos build config. The stylesheet is FerroUI's, served by the
+# viewer itself, so the site bundle is the WebAssembly and its glue only.
 [package.metadata.leptos]
 output-name = "ferroehr-viewer"
 site-root = "target/site"
 site-pkg-dir = "pkg"
-tailwind-input-file = "style/tailwind.css"
 site-addr = "127.0.0.1:3000"
 reload-port = 3001
 lib-profile-release = "wasm-release"

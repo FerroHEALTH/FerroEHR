@@ -2035,16 +2035,9 @@ jobs:
         with:
           # wasm-bindgen pinned to the workspace's wasm-bindgen version;
           # cargo-leptos resolves its external tools from PATH before its
-          # own downloader (which failed opaque on a runner), so both it
-          # and Tailwind are preinstalled deterministically.
+          # own downloader (which failed opaque on a runner), so it is
+          # preinstalled deterministically.
           tool: cargo-nextest,cargo-leptos@0.3.7,wasm-bindgen@0.2.129
-      - name: Install the Tailwind v4 standalone binary
-        if: steps.viewer-cache.outputs.cache-hit != 'true'
-        run: |
-          curl -sSfL -o /usr/local/bin/tailwindcss \
-            https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.3/tailwindcss-linux-x64
-          chmod +x /usr/local/bin/tailwindcss
-          tailwindcss --help | head -1
       - name: Build the viewer + archive the e2e test binaries
         if: steps.viewer-cache.outputs.cache-hit != 'true'
         env:
@@ -2058,7 +2051,6 @@ jobs:
           # "Incrementally compiled crates cannot be cached"
           # (github.com/mozilla/sccache#known-caveats).
           CARGO_INCREMENTAL: "0"
-          LEPTOS_TAILWIND_VERSION: v4.3.3
         run: |
           set -euo pipefail
           # ORDER IS LOAD-BEARING: the nextest archive step compiles the
@@ -2108,15 +2100,18 @@ jobs:
   # question of which journeys are order-dependent rather than answering it —
   # the answer is worth having, and it is not this file's to give.
   ui-e2e:
-    name: ui-e2e ${{ matrix.shard }}/${{ needs.changes.outputs.ui_e2e_shard_count }}
+    name: ui-e2e ${{ matrix.viewport }} ${{ matrix.shard }}/${{ needs.changes.outputs.ui_e2e_shard_count }}
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
     if: needs.changes.outputs.viewer == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The battery runs once at the desktop width and once at a phone's 390 px,
+    # by device emulation in the harness (UI_E2E_VIEWPORT, #3910).
     strategy:
       fail-fast: false
       matrix:
         shard: ${{ fromJSON(needs.changes.outputs.ui_e2e_shards) }}
+        viewport: [desktop, phone]
     # `contents: read` (now also the workflow-level default) is all it needs:
     # nothing here writes to a registry any more (the GHCR buildx layer cache
     # was removed, and the image is now packaged locally from a job artifact).
@@ -2197,12 +2192,13 @@ jobs:
           FERROEHR_IMAGE: ferroehr:ui-e2e
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:ui-e2e
           UI_E2E_PARTITION: hash:${{ matrix.shard }}/${{ needs.changes.outputs.ui_e2e_shard_count }}
+          UI_E2E_VIEWPORT: ${{ matrix.viewport }}
         run: bash scripts/ui-e2e.sh
       - name: Upload journey screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ui-e2e-screenshots-${{ matrix.shard }}
+          name: ui-e2e-screenshots-${{ matrix.viewport }}-${{ matrix.shard }}
           path: target/ui-e2e/screenshots/
           if-no-files-found: ignore
 
@@ -2274,6 +2270,15 @@ jobs:
         with:
           name: ui-docs-shots
           path: website/book/src/viewer/img/
+          if-no-files-found: error
+      # Every route at 1440 and 390 px, light and dark, for the family
+      # screenshot review (#3910); not committed.
+      - name: Upload the route screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ui-route-shots
+          path: target/ui-e2e/screenshots/routes/
           if-no-files-found: error
 
   # ── The compose/local image target (docker/Dockerfile runtime-from-source) ──

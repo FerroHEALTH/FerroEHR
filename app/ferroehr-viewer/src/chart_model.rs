@@ -3,7 +3,7 @@
 
 //! Grouped multi-series chart derivation for an AQL result set — the
 //! component-free half of the results pane's chart view (the view itself is
-//! [`crate::components::results_chart`]).
+//! `crate::components::results_chart`).
 //!
 //! One series per mostly-numeric result column (the column header is the
 //! series name), and one X axis per column whose cells read as ISO 8601
@@ -53,7 +53,7 @@ pub struct SeriesSpec {
 ///
 /// `f64::NAN` marks a cell that was absent, null, or not a number —
 /// FerroUI's chart draws those as a gap in the line rather than a point at
-/// zero (see [`crate::components::results_chart`]).
+/// zero (see `crate::components::results_chart`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChartRow {
     /// The X position: a row ordinal, or seconds since the Unix epoch.

@@ -21,19 +21,14 @@
 )]
 // e2e journeys are assertive by design; skip-with-reason prints; the shared
 // harness module is per-test-binary (the corpus.rs test-file precedent)
-//! End-to-end journey over the results pane's multi-series chart: the raw AQL
-//! editor runs a two-numeric-column query against the seeded compositions, and
-//! the chart renders one legend entry per column, offers the ISO-8601 column as
-//! the time axis, and hides a series when its legend chip is clicked.
+//! End-to-end journey over the results pane's multi-series chart: Query's AQL
+//! tab runs a two-numeric-column query against the seeded compositions, and
+//! the chart draws one legend entry per column over the ISO-8601 column as its
+//! time axis, and hides a series when its legend chip is pressed.
 
 use crate::common;
 
-use std::time::Duration;
-
-use common::{
-    Harness, env, find_all, is_visible, login_basic, poll_until, poll_until_for, wait_enabled,
-};
-use thirtyfour::prelude::*;
+use common::{Harness, env, fill, find_all, login_basic, poll_until};
 
 /// A two-numeric-column query over the harness-seeded compositions
 /// (`scripts/ui-e2e.sh` commits three FLAT compositions carrying a quantity
@@ -60,40 +55,12 @@ fn seeded() -> bool {
     false
 }
 
-/// How many series lines FerroUI's chart currently draws with geometry. A
-/// hidden series draws no `<path>`, so this is the DOM-visible count of series
-/// actually on screen.
-async fn drawn_lines(h: &Harness) -> usize {
-    let paths = find_all(h, "[data-results-chart] path.fui-chart-line").await;
-    let mut drawn = 0;
-    for path in paths {
-        // NOTE: probe tier — the chart redraws its plot on every toggle, so a
-        // path found a moment ago may already be detached.
-        if let Some(geometry) = path.read_attr("d").await
-            && !geometry.trim().is_empty()
-        {
-            drawn += 1;
-        }
-    }
-    drawn
-}
-
-/// Wait until exactly `expected` line paths carry geometry.
-///
-/// # Panics
-/// When the count never settles on `expected` within the budget.
-async fn wait_drawn_lines(h: &Harness, expected: usize) {
-    if poll_until(async || drawn_lines(h).await == expected).await {
-        return;
-    }
-    panic!(
-        "the chart never drew exactly {expected} series (last count: {})",
-        drawn_lines(h).await
-    );
-}
+/// The plot of the chart the results pane draws.
+const CHART: &str = "#results-chart-plot";
 
 /// The chart draws one series per numeric result column, names each in the
-/// legend, defaults to the temporal X axis, and hides a series on demand.
+/// legend, reads the temporal column as its X axis, and hides a series when
+/// its hydrated legend chip is pressed.
 #[tokio::test]
 async fn results_chart_groups_series_and_toggles_them() {
     let Some(h) = Harness::start("results-chart").await else {
@@ -104,57 +71,19 @@ async fn results_chart_groups_series_and_toggles_them() {
         return;
     }
     login_basic(&h).await;
-
-    // Run the query from the raw editor (the results pane both query screens
-    // share — the builder renders the same component).
-    h.goto("/queries/aql").await;
-    // Save/Run dispatch is hydrated behaviour (#2285's class).
-    h.wait_hydrated().await;
-    wait_enabled(&h, "#aql-editor").await;
-    h.wait_css("#aql-editor").await.send_keys(CHART_AQL).await;
-    // Run stays DISABLED until the editor's content reaches the signal, so the
-    // wait has to include the condition — a click on the disabled button is
-    // intercepted by the toolbar above it, not merely lost.
-    h.wait_clickable_xpath("//button[normalize-space(.)='Run']")
-        .await
-        .click()
-        .await;
-    h.wait_css("table tbody tr").await;
+    h.goto("/query/aql").await;
+    fill(&h, "#aql", CHART_AQL).await;
+    common::submit(&h, "header.fui-page-header button[form='query-form']").await;
+    h.wait_css("main table tbody tr").await;
     h.shot(1, "results-table").await;
 
-    // Switch to the chart pane. A click landing before hydration is simply
-    // lost (the login-submit precedent), so re-click until the pane shows.
-    let mut charted = false;
-    for _ in 0..5 {
-        h.wait_xpath("//button[normalize-space(.)='Chart']")
-            .await
-            .click()
-            .await;
-        charted = poll_until_for(Duration::from_secs(3), async || {
-            is_visible(&h, "[data-results-chart]").await
-        })
+    h.wait_css("label[for='shown-chart']").await.click().await;
+    common::submit(&h, "header.fui-page-header button[form='query-form']").await;
+    h.wait_css(&format!("{CHART} [data-series-lines='1']"))
         .await;
-        if charted {
-            break;
-        }
-    }
-    assert!(
-        charted,
-        "the Chart toggle never revealed the chart pane (pre-hydration clicks exhausted)"
-    );
-
-    // Two numeric columns → two derived series (the hook carries the count).
-    let pane = h.wait_css("[data-results-chart]").await;
-    assert_eq!(
-        pane.attr("data-results-chart").await,
-        "2",
-        "the two numeric result columns must derive two series"
-    );
-
-    // The legend names both series.
-    h.wait_css("[data-results-chart] .fui-legend").await;
-    let chips = find_all(&h, "[data-results-chart] .fui-legend-chip").await;
-    assert_eq!(chips.len(), 2, "one legend entry per series");
+    common::wait_main_contains(&h, "observed").await;
+    h.wait_hydrated().await;
+    let chips = find_all(&h, ".fui-legend button.fui-legend-chip").await;
     let mut names = Vec::new();
     for chip in &chips {
         names.push(chip.text().await.trim().to_owned());
@@ -163,59 +92,32 @@ async fn results_chart_groups_series_and_toggles_them() {
     assert_eq!(
         names,
         vec!["magnitude".to_owned(), "magnitude_repeat".to_owned()],
-        "the legend names the result-set columns"
+        "the legend names the two numeric result columns"
     );
-
-    // The ISO-8601 column is offered as the X axis, and is the default.
-    let axis = h.wait_css("select[data-chart-axis]").await;
-    let options = axis.find_all(By::Tag("option")).await;
-    assert_eq!(
-        options.len(),
-        2,
-        "the timestamp column plus the row-order fallback"
-    );
-    assert_eq!(
-        axis.prop("value").await,
-        "0",
-        "the temporal axis is the default"
-    );
-    // contains(): leptos interleaves hydration markers with text nodes, so an
-    // exact text comparison is unreliable.
-    let first_axis = options.first().expect("the first axis option").text().await;
-    assert!(
-        first_axis.contains("observed"),
-        "the temporal axis is named after its column (got `{first_axis}`)"
-    );
-
-    // Both series are drawn.
-    wait_drawn_lines(&h, 2).await;
     h.shot(2, "chart-two-series").await;
 
-    // Toggling one legend chip hides exactly that series.
-    let chip = chips.first().expect("a legend chip");
-    let hidden = chip.text().await.trim().to_owned();
+    let chip = h
+        .wait_css(".fui-legend button.fui-legend-chip[data-series='magnitude']")
+        .await;
     chip.click().await;
-    // NOTE: probe tier — the chip is re-rendered by the toggle it just
-    // dispatched, so a stale handle mid-poll is "not yet", not a failure.
-    poll_until(async || chip.read_attr("aria-pressed").await.as_deref() == Some("false")).await;
     assert_eq!(
         chip.attr("aria-pressed").await,
         "false",
-        "the clicked legend chip reports `{hidden}` as hidden"
+        "the chip is released"
     );
-    wait_drawn_lines(&h, 1).await;
-    h.shot(3, "chart-one-series-hidden").await;
-
-    // The last visible series cannot be hidden — the chart never empties.
-    let survivor = chips.get(1).expect("the second legend chip");
-    assert!(
-        !survivor.enabled().await,
-        "the only remaining series is not hideable"
-    );
-
-    // Showing it again brings the line back.
-    chip.click().await;
-    wait_drawn_lines(&h, 2).await;
+    let hidden = poll_until(async || {
+        common::read_attr(&h, &format!("{CHART} [data-series-lines='0']"), "hidden")
+            .await
+            .is_some()
+    })
+    .await;
+    assert!(hidden, "the released series is hidden in the drawing");
+    // The last series shown cannot be hidden, so the chart never empties.
+    let last = h
+        .wait_css(".fui-legend button.fui-legend-chip[data-series='magnitude_repeat']")
+        .await;
+    assert!(!last.enabled().await, "the last series shown stays pressed");
+    h.shot(3, "chart-one-series").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;

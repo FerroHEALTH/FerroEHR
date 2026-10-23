@@ -1048,7 +1048,7 @@ curl -u admin:… -o flamegraph.svg \
 With the surface enabled, the viewer grows an **Operations** screen over
 it (dependency health, build provenance, the metric registry, and runtime log
 control) which appears only while the CDR serves `/management/info`. See
-[Viewer → Operations panel](viewer/operations.md).
+[Viewer → Server](viewer/server.md).
 
 ## The manufacturer and the deployment report
 

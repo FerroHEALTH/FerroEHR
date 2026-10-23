@@ -1,269 +1,131 @@
-# `ferroehr-viewer` — the Leptos viewer (BFF over ITS-REST)
+# `ferroehr-viewer`: the viewer (a FerroUI console over ITS-REST)
 
-A standalone full-stack Leptos 0.8 app (cargo-leptos: the server binary and
-the WASM client, the two halves chosen by compilation target, never by Cargo
-feature) and its own OCI image. It is a **REST client** of the
-CDR — no openEHR spec governs the viewer (our own design / product
-extension); the wire it consumes IS spec-bound (`docs/specs/openehr/ITS-REST/`
-+ the served `openapi.json`).
+A standalone Leptos 0.8 app in islands mode, built by cargo-leptos (the server
+binary and the WebAssembly islands, the two halves chosen by compilation
+target, never by Cargo feature) with its own OCI image. It is a REST client
+of the CDR; no openEHR spec governs the viewer (our own design); the wire it
+consumes is spec-bound (`docs/specs/openehr/ITS-REST/` and the served
+`openapi.json`).
 
-## The three binding mandates (owner, 2026-07-13)
+## The binding mandates
 
-1. **Rust only — zero authored JavaScript** (the wasm-bindgen bootstrap is
-   generated, never touched; styling is Tailwind v4 standalone, no Node).
-2. **The CDR is reached ONLY over ITS-REST.** Never depend on `app/ferroehr`
-   or `app/ferroehr-rest`; allowed deps: `crates/openehr-*` + the network.
+1. **Rust only, zero authored JavaScript.** The wasm-bindgen bootstrap is
+   generated, never touched; the stylesheet is FerroUI's, served by the
+   viewer; there is no Node and no Tailwind.
+2. **The CDR is reached only over ITS-REST.** Never depend on `app/ferroehr`
+   or `app/ferroehr-rest`; allowed deps: `crates/openehr-*` and the network.
    The two source files shared with `app/ferroehr` are compiled here through
-   `#[path]` modules and hold constants only (no dependency but `serde`):
-   `app/ferroehr/src/manufacturer.rs` (`crate::manufacturer`), so the footer
-   and the `/system` manufacturer card name the manufacturer without a request,
-   and `app/ferroehr/src/served_vocabulary.rs` (`crate::served_vocabulary`),
-   the deployment gap codes and the OpenAPI family slugs the server holds its
-   own definitions to, so the sandbox notice's gap texts and the `/system`
-   family selector cannot drift from what the server serves.
-3. **Every `#[server]` fn is a publicly reachable HTTP endpoint** — each one
-   enforces the viewer's own session auth itself; "only my UI calls this"
-   is never assumed.
+   `#[path]` modules and hold constants only: `app/ferroehr/src/manufacturer.rs`
+   (`crate::manufacturer`) and `app/ferroehr/src/served_vocabulary.rs`
+   (`crate::served_vocabulary`, the deployment gap codes and the OpenAPI family
+   slugs).
+3. **Every route is a public HTTP endpoint.** A page checks the session
+   itself (the login guard in `src/server.rs`); a post is checked for its
+   `Origin`; a `#[server]` fn left for an island checks the session too and
+   is declared with `crate::session_client::SessionAwareClient`.
 
-## Discipline
+## How a page works (FerroUI's interaction contract)
 
-- Rules file: `.claude/rules/leptos-ui.md` (hydration hard rules, `<For>`
-  keys, forms, server fns); Leptos questions → `/leptos-lookup` (the book is
-  the oracle, never memory).
-- Business logic (query-builder AST lowering, criteria validation) lives in
-  component-free plain-Rust modules with ordinary unit tests; components
-  stay thin.
-- **The components are FerroUI's** (`ferrohealth-ui`, pinned exactly in the
-  root `[workspace.dependencies]`): the shell, navigation, theme toggle,
-  tables and pager, toasts, alerts, skeletons, buttons, fields, cards, empty
-  states, icons and the highlighter. Its stylesheet and the FerroEHR brand
-  (`style/theme.css`) are served from this origin (`src/server.rs`); the
-  viewer's own Tailwind utilities name FerroUI's roles (`style/tailwind.css`).
-  A component the viewer needs that FerroUI lacks is filed on FerroUI and
-  added there, never built here. The dialogs, the access side panel, the
-  upload field, the charts, the document pane with its copy button, the
-  segmented controls, the tree and the tabs are FerroUI's too.
-- **Views are built in `.into_any()`-erased sections** (rules §1): plain cargo
-  builds have no `erase_components`, and monolithic view trees blow rustc's
-  layout-recursion depth in `cargo test` codegen.
-- **Every listing table comes from ONE kit — `components::data_table`**, over
-  FerroUI's table model: the table, the loading skeleton (`table_skeleton`;
-  never re-declare a per-screen copy), the viewer-wide `PAGE_SIZE`, and
-  FerroUI's pager (`table_footer`). A listing that names no patient keeps its
-  page (1-based) and size in the URL (`paging_from_url`); one that can show
-  patient data keeps them in the screen (`paging_in_session`). Both are read
-  in SETUP, never inside a `Suspend`, so paging re-renders the window without
-  refetching. The AQL-windowed tables (EHRs, compositions, results) keep their
-  offset controls until the wire reports a total.
-- **Every AQL result set is charted by ONE kit — `components::results_chart`**
-  (both query screens' results panes call it). What the chart shows is decided by
-  the component-free, unit-tested `chart_model`: one series per mostly-numeric
-  column, every ISO-8601 column offered as a real time axis with the row order as
-  the fallback, and the tick-label granularity. Keep that derivation pure (it is
-  what makes the chart hydration-safe) and keep the view thin: the chart is
-  FerroUI's line chart, a missing cell is `f64::NAN` (a gap in the line), and
-  each line pins its palette colour by index so hiding one never recolours the
-  others.
-- **Every scope string the viewer EXPLAINS is read by ONE grammar and rendered
-  by ONE kit.**
-  The parse is `openehr_sdt::smart_scopes` — the same master08 module the
-  CDR's scope gate enforces with, so the viewer's explanation can never drift
-  from the server's behaviour; NEVER write a second scope parser here. It is
-  reachable on BOTH targets because the crate is taken
-  `default-features = false` (the grammar is a dependency-free island; the heavy
-  ITS surfaces ride `openehr-its/full`, which the server half adds back) — the
-  previewer is a pure client-side function, not a server round-trip. The
-  presentation model is the component-free, unit-tested `crate::scopes` (grants,
-  chips, the master08 diagnosis for a rejected scope, the policy-source copy);
-  `components::scope_grants` is the only view that draws it, used by the access
-  drawer for the session's own scopes and by the previewer field. The drawer
-  renders ONLY identity facts the session actually carries (identity + method +
-  scopes today) — no invented claims, and capability ≠ authorization is stated
-  on the surface. `/system`'s SMART card still lists the discovery document's
-  `scopes_supported` as plain chips: that is an advertisement of supported
-  strings, not a grant this session holds — if it ever explains them, it uses
-  this kit and never a second parser.
-- **Every terminology lookup goes through ONE reader — `crate::terminology`**: the
-  six session-guarded `#[server]` fns over the CDR's terminology surface, plus the
-  pure, unit-tested flatteners their answers pass through (`TermRow::rubric` is the
-  single `code — text` spelling). Both consumers read it — the `/terminology`
-  browser screen and the query builder's coded-criterion picker — so a term looks
-  the same wherever it appears. The surface is CONFIG-GATED on the CDR side
-  (`[terminology] api_enabled`, off by default) and answers `404` as if unmounted,
-  which is the same `404` an unknown terminology/code/value set produces: every
-  read returns `Ok(None)` for it and the screen renders the absence it means
-  (the browser's whole-screen disabled card; a silently optionless datalist in the
-  builder). Never add a second terminology client.
-- **Every BFF fan-out is bounded by ONE constant — `cdr::FANOUT_CONCURRENCY`**:
-  a `#[server]` fn that issues N CDR requests for one screen runs them
-  `futures::stream::iter(…).buffered(FANOUT_CONCURRENCY)`, never a serial await
-  chain and never an unbounded burst (the dashboard namespace tiles, `/system`'s
-  repository-usage counts, the directory history window). `try_collect` keeps a
-  serial loop's short circuit where the caller had one. Never write a second
-  concurrency literal.
-- **Every events-per-day chart comes from ONE kit — `components::activity_chart`
-  over `crate::activity::bucket_by_day`**: the dashboard's commit trend and an
-  EHR's contribution timeline are the same chart, the day-bucketing is a pure
-  unit-tested function (no clock, no locale — that is what keeps the chart
-  hydration-stable), and charts are FerroUI's (SVG drawn in Rust on the
-  server); a JS charting binding is banned by the no-JavaScript mandate.
-- **Every template example pane is controlled by ONE kit —
-  `components::example_controls` over `crate::example_options`** (#2894):
-  format, `detail_level` and `type` are three segmented controls whose
-  signals feed the pane's resource source, the query string is the pure
-  unit-tested `example_query`, and every segmented control anywhere in the
-  viewer draws through `format_view::segment_button`. Never build a second
-  example-options control or query builder.
+- **The server draws every page whole** (`SsrMode::Async`); the browser
+  hydrates only the islands (`src/islands.rs` and FerroUI's own). Every link
+  is a link and every action a form, so each page works with no WebAssembly:
+  native elements first (`<dialog>` with `command`/`commandfor`, `popover`,
+  `<details>`), then Rust behaviour in an island, never hand-written JS.
+- **A post renders the page it was posted to.** Every route takes `GET` and
+  `POST`; `crate::posted::posted()` is the form the page answers. A form's
+  default action rides as `default-intent` and the submitter's own `intent`
+  wins (`Posted::intent`). A success redirects with a toast waiting in a flash
+  cookie (`crate::flash::redirect_with`); a redirect is never overwritten by a
+  later `set_status` (`crate::request::set_status`).
+- **A docked decision bar** (`pages::common::dock_editor`, FerroUI's dock) is
+  set by the page and drawn by the shell. A page that docks inside an awaited
+  future holds `crate::shell::promise_dock()` in that future, or the shell may
+  draw before the bar is set. Discard and every other submit of a docked form
+  must work with the form's fields as they stand: no `required` on a docked
+  form (FerroUI's `Decision` has no `formnovalidate`); validate on save.
+- **A table row is one link** (FerroUI R9): the first cell's link covers the
+  row; any other control in the row sits in `.fui-table-actions` or the row
+  menu.
+- **A form never holds another form**: the HTML parser drops a nested one.
+  The results' exports are submits of the page's own form with `formaction`.
+- **Session listings keep their position in a cookie** (`crate::paging`,
+  FerroUI `leptos-ui.md` §0): the EHRs, an EHR's compositions and
+  contributions, the audit log. Filters stay in the URL.
+- **Preferences are cookies** (`crate::prefs`, FerroUI's `Preferences`), each
+  its own, read when a page is drawn. The theme is set in the user menu and on
+  Your preferences, never in the top bar.
+- **Words come from the catalog** (`locales/en/ferroehr-viewer.ftl` through
+  `crate::locale::Msg`); `scripts/checks/stray-literals.sh` fails a literal a
+  reader sees. Numbers format through FerroUI's formatter.
 
-## Every `#[server]` fn carries the session backstop (#3044)
+## The components are FerroUI's
 
-- **A server function is declared `#[server(client =
-  crate::session_client::SessionAwareClient)]` — with no exceptions.** That
-  transport wrapper is what watches every answer for
-  `ViewerError::Unauthenticated` / `CdrUnauthorized` (server_fn renders an
-  application error as a `500` carrying the encoded error, so the detection
-  reads the BODY, not the status) and bumps the counter the shell turns into
-  the signed-out transition. A bare `#[server]` is a hole in that net; the
-  unit test `session_client::tests::
-  every_server_function_in_this_crate_is_declared_with_the_session_aware_client`
-  fails on one.
-- **The signed-out transition has ONE destination —
-  `session_client::signed_out_url`** (`/login?expired=1&next=…`), used by both
-  the shell's session gate and its backstop Effect. The login screen renders
-  the "your session ended" notice from `?expired=1` alone, so the state is a
-  URL, not a signal.
+`ferrohealth-ui`, pinned exactly in the root `[workspace.dependencies]`, read
+at its tag (`docs/consoles.md`, `COMPONENTS.md`, `crates/ferrohealth-ui/CLAUDE.md`,
+`design/consoles/ferroehr/` for this console's mockups). The shell, the
+navigation, tables and pagers, toasts, alerts, dialogs, menus, buttons,
+fields, the code editor and panels, trees, charts, the conditions of the query
+builder and the stylesheet are all FerroUI's. A component the viewer needs
+that FerroUI lacks is filed on FerroUI and added there, never built here.
 
-## Error feedback: toast vs inline (one rule, 2026-07-25)
+## One reader per claim
 
-- **A mutation toasts on success AND on failure.** Every action that writes to
-  the CDR (create / commit / update / save / upload / delete) reports both
-  outcomes as a toast. The failure toast carries the **actionable** copy —
-  name the object, name what went wrong (the CDR's own diagnostic verbatim),
-  name the next action: `feedback::write_failure_copy` for writes,
-  `admin::delete_failure_copy` for the destructive admin ops.
-- **A detailed inline alert (`notice::failure_bar`) may stay BESIDE the failure toast** where
-  the diagnostic is worth reading line by line (template-upload validation, a
-  rejected composition body, the directory conflict banner) — the toast is
-  the notification, the inline bar is the detail. Never inline-only: a
-  transient success toast paired with a silent failure below the fold reads
-  as "nothing happened".
-- **Pure reads render inline errors only** — `notice::inline_error` in
-  the section whose data failed (a screen says so where the data would be),
-  and never a toast. A first-class empty/absent state (`Ok(None)` from a
-  `404`) is not an error at all. `components::notice` is the ONE home of the
-  inline feedback views: the read-failure bar, the alert note beside a
-  control, the deleted/unknown section notices, the CDR's verbatim diagnostic
-  under a refused form, and the write-failure message bar.
+- No two viewer surfaces read the same claim from two endpoints; where the CDR
+  serves one fact twice, one page reads it and the others link there (the top
+  bar's pill reads the status document; Server's Health reads the readiness
+  indicators; the redacted configuration lives on Configuration; the
+  conformance manifest on About).
+- The operational template is read once per template page, and its panes are
+  distilled from that one document.
+- Directory history is a window, never a walk: ITS-REST exposes no
+  `VERSIONED_FOLDER` revision history (AMB-24, upstream report #1490), so
+  `list_directory_versions` synthesizes the uid list and reads the newest
+  versions concurrently; Older versions widens the window (`?versions=`).
+- The current `EHR_STATUS` is read once per EHR page and shared by the header
+  and the Status tab.
+- The compositions filters are AQL assembled in one place
+  (`bff::ehr_detail::composition_filter`): fixed fragments chosen by which
+  filters are filled, every value a binding. Never concatenate a value into
+  AQL.
+- Every scope the viewer explains is parsed by `openehr_sdt::smart_scopes`,
+  the grammar the CDR enforces with; never a second parser.
+- Every BFF fan-out is bounded by `cdr::FANOUT_CONCURRENCY`.
+- Optional CDR surfaces are probe-and-hide: the management tabs on
+  `GET /management/info`, Subscriptions on `GET /admin/event_subscription`; a
+  `404` hides the entry, any other answer counts as present.
 
-## No viewer-local domain state (owner ruling, 2026-07-25)
+## No viewer-local domain state
 
-- **The viewer stores NOTHING of its own** — no database, no JSON store beside
-  the binary, no state directory. Its only state is the sealed session cookie. Every fact a screen shows is read from the CDR over ITS-REST, so it is
-  visible to other clients, survives a restart, is covered by the CDR's backups,
-  and is identical across replicas. The two former stores (`groups.rs` →
-  `viewer-groups.json`, `folder_templates.rs` →
-  `viewer-folder-templates.json`) were deleted for exactly those reasons —
-  **do not reintroduce a local store in any form** (file, embedded DB, cookie
-  payload); if a grouping or preset is worth keeping, find it in the wire
-  contract or drop the feature.
-- **Grouping derives from the wire, not from us.** Stored-query grouping is the
-  namespace of the qualified name (`crate::query_namespace`, which cites
-  ITS-REST `specifications/docs/query/Qualified_query_name.md`); the directory
-  create flow commits an empty root and the tree editor builds structure. Any
-  future "grouping"/"favourites"/"preset" feature must be derived from CDR data
-  the same way, or not exist.
+The viewer stores nothing of its own: no database, no file beside the
+binary. Its state is the sealed session cookie and the display cookies above.
+Every fact a page shows is read from the CDR. Grouping derives from the wire
+(stored-query namespaces, `crate::query_namespace`), never from a local store.
 
-## One reader per claim (owner adjudication, 2026-07-25)
+## Feedback
 
-- **No two viewer surfaces may read the same claim from two endpoints.** Where
-  the CDR exposes one fact on more than one endpoint, the viewer picks ONE
-  reader and every other screen cross-links to it. Live cases: the topbar pill
-  reads the status document (`/ferroehr/rest/status` — API up + version) while
-  the operations panel's health card reads the dependency indicators
-  (`/management/health` with their detail, falling back to the status-only
-  public `/health/readiness` when that endpoint is absent or refuses the
-  session's role), and the screen states the split; the redacted effective
-  configuration is served identically by `/management/env` and `/admin/config`,
-  so the ONE viewer lives on `/system` (the API base URL is always configured;
-  the management surface may sit on an unreachable internal port) and
-  `/operations` links to it. On `/system` the status document is the reader for
-  the product + openEHR-REST versions, so the conformance-manifest card shows
-  only what the System API alone knows (product identity, claimed profile,
-  mounted API groups) and says where the versions are. On the composition
-  viewer the split is: document CONTENT ← the COMPOSITION resource (the only
-  format-negotiating one), commit history ← the revision history, the VERSION's
-  envelope facts (lifecycle state, preceding version, contribution, signature)
-  ← the direct VERSIONED_COMPOSITION version read.
-- **The operational template is read ONCE per template-detail render**:
-  `pages::template_detail::fetch_template_detail` fetches the OPT and distils
-  all three panes from that one document (source, identity card, WT path
-  catalog) through the pure `template_detail_from_opt`; every pane takes the
-  same handle. The Query Builder's `fetch_template_catalog` rides the same
-  pipeline and returns the catalog alone, so its wire payload stays the tree.
-  Never add a second GET of `definition/template/adl1.4/{id}`.
-- **Directory history is a WINDOW, never a walk**: ITS-REST exposes no
-  VERSIONED_FOLDER revision history (register AMB-24, upstream report #1490),
-  so `list_directory_versions` synthesizes the uid list and reads the newest
-  `PAGE_SIZE` of it concurrently; the rest is reached by the panel's explicit
-  "load older", one page per click. There is deliberately no "load all".
-- **EHR_STATUS split**: the *current* status document is read ONCE per
-  EHR-detail screen — `pages::ehr_detail::status::status_feed`, created in the
-  page's setup and shared by its two consumers: the header's identity strip
-  (subject + the queryable/modifiable badges) and the Status tab (the same
-  badges, the document pane, and the edit form's merge base). Never add a
-  second GET for any of those facts; take the handle. The read is deliberately
-  NOT tab-gated, because the header renders on every tab. The Status-history
-  tab reads only the VERSIONED_EHR_STATUS family — content by
-  `ehr_status/{version_uid}`, envelope facts by the VERSION read (the
-  composition-viewer split). The edit form replaces exactly
-  `is_queryable`/`is_modifiable`/`other_details` and re-sends everything else
-  verbatim — never a re-model of the served document.
-- **The compositions tab's filters are AQL, assembled in ONE place**:
-  `pages::ehr_detail::composition_filter` is the component-free, unit-tested
-  module that turns the URL's `?template=`/`?from=`/`?to=`/`?composer=` into a
-  statement plus its `query_parameters`. The statement text comes from
-  compile-time fragments chosen by which filters are FILLED; every operator
-  value is a BINDING. Never concatenate a filter value into AQL, and never let
-  the text and the bindings drift apart — the CDR answers `400 unbound query
-  parameter` for a named parameter it was not given.
-- **CONTRIBUTION authoring has ONE writer and no readers of its own.** The EHR
-  detail's Commit tab (`pages::ehr_detail::commit`) is the viewer's only caller
-  of `POST /ehr/{ehr_id}/contribution` — the openEHR-native atomic change set —
-  and it re-uses the existing readers for everything it shows: the template list,
-  the EHR's composition list, the composition body, and the current `EHR_STATUS`.
-  It adds no viewer either: a committed contribution opens in the Contributions
-  tab. Its staging list is component state, never a store (§No viewer-local
-  domain state), and the body it posts is built by the component-free,
-  unit-tested `commit::staged` — never inline in a view.
-- **Two windows of ONE endpoint are not two readers.** The contributions tab
-  reads `GET /ehr/{id}/contribution` twice — a page for the list, a wider window
-  for the activity timeline — because those are different claims; what the rule
-  forbids is reading one claim from two different endpoints.
-- **Optional CDR surfaces are probe-and-hide.** An affordance for a surface the
-  CDR may not serve is gated on a probe (`crate::admin` for the admin group via
-  the System API manifest, `crate::management` for the management surface via
-  `GET /management/info`): a `404` hides the affordance/nav entry entirely, and
-  every other answer counts as present — capability is not authorization, so a
-  `401`/`403` refusal surfaces as actionable copy on the screen that asked.
+A write reports its outcome: a success as a toast after the redirect, a
+refusal on the page that was posted, beside the fields that caused it, with
+the CDR's own words (`pages::common::refused`). A read that fails says so
+where its data would be; a `404` that means "absent" is an empty state, not an
+error.
 
 ## Accepted build warning (adjudicated, #2697)
 
 macOS/aarch64 bin links print Apple ld's `__eh_frame section too large (max
 16MB) to encode dwarf unwind offsets in compact unwind table, performance of
 exception handling might be affected`. Accepted with record: the shipped
-viewer is a Linux ELF image (Apple's compact-unwind machinery never applies
-to production), and on local macOS builds the cost is slower DWARF unwinding
-on the already-exceptional panic path — the `panic = "unwind"` contract needs
-unwinding to WORK, not to be fast. Do not re-file it, and do not silence
-`linker_messages` (it would hide genuinely new linker findings).
+viewer is a Linux ELF image, and on local macOS builds the cost is slower
+DWARF unwinding on the already-exceptional panic path. Do not re-file it, and
+do not silence `linker_messages`.
 
 ## Gates
 
-`/ui-gates`: clippy on **the host (the server half, `--all-targets`) and
-wasm32 (the browser half, `--lib`)**, `cargo nextest run -p ferroehr-viewer`,
-the contrast test (`tests/it/contrast.rs`), leptosfmt
-(src + tests) + cargo fmt, `bash scripts/cargo-leptos.sh build` (the wrapper,
-never a bare `cargo leptos` — it rewrites `Cargo.lock`, #2877); E2E journeys (the `e2e_*`
-modules under `tests/it/`, skip-with-reason via `UI_E2E_BASE_URL`)
-merge-gate in CI; a UI-visual change re-captures the `website/book`
-screenshots (`ui-screenshot-guard`).
+`/ui-gates`: clippy on the host (the server half, `--all-targets`) and wasm32
+(the browser half, `--lib`), `cargo nextest run -p ferroehr-viewer` (the
+in-process `ssr_app` suite replays a recorded CDR, `tests/fixtures/cdr/`),
+leptosfmt (src and tests) then cargo fmt, `bash scripts/cargo-leptos.sh build`
+(the wrapper: it freezes `Cargo.lock` and builds with `--split`, which
+FerroUI's lazy islands need, FerroUI #331). The E2E journeys (the `e2e_*`
+modules under `tests/it/`, skip-with-reason via `UI_E2E_BASE_URL`) gate merges
+in CI at 1440 px and at 390 px (`UI_E2E_VIEWPORT=phone`); a UI-visual change
+re-captures the book's screenshots (`UI_E2E_DOCS_SHOTS`, `ui-screenshot-guard`).

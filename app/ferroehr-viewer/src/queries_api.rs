@@ -22,10 +22,10 @@
 use leptos::server;
 use serde::{Deserialize, Serialize};
 
+use crate::bff::ehrs::ResultPage;
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_served, tr_served_with};
-use crate::pages::ehrs::ResultPage;
 
 /// A stored-query listing row (ITS-REST Definition API).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -103,7 +103,7 @@ pub async fn run_aql(
     let body = if has_own_window {
         serde_json::json!({ "q": aql, "query_parameters": parameters }).to_string()
     } else {
-        crate::pages::ehrs::aql_request_body(&aql, &parameters, offset)
+        crate::bff::ehrs::aql_request_body(&aql, &parameters, offset, crate::bff::PAGE_SIZE)
     };
     let response = state
         .cdr
@@ -117,7 +117,7 @@ pub async fn run_aql(
         )
         .await?;
     let response = crate::cdr::CdrClient::expect_success(response)?;
-    crate::pages::ehrs::parse_result_set(&response.body, offset)
+    crate::bff::ehrs::parse_result_set(&response.body, offset)
 }
 
 /// List the CDR's stored queries (`GET definition/query`).
@@ -383,7 +383,7 @@ pub async fn run_stored_query(
     let body = if paged {
         serde_json::json!({
             "query_parameters": parameters,
-            "fetch": crate::components::data_table::PAGE_SIZE,
+            "fetch": crate::bff::PAGE_SIZE,
             "offset": offset,
         })
     } else {
@@ -401,7 +401,7 @@ pub async fn run_stored_query(
         )
         .await?;
     let response = crate::cdr::CdrClient::expect_success(response)?;
-    crate::pages::ehrs::parse_result_set(&response.body, if paged { offset } else { 0 })
+    crate::bff::ehrs::parse_result_set(&response.body, if paged { offset } else { 0 })
 }
 
 /// Run one stored query (`GET query/{name}/{version}`) and return its match

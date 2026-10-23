@@ -38,7 +38,6 @@
 ARG RUST_VERSION=1.99.1
 ARG CARGO_LEPTOS_VERSION=0.3.7
 ARG WASM_BINDGEN_VERSION=0.2.128
-ARG TAILWIND_VERSION=v4.3.3
 
 # ── builder: toolchain + prebuilt tools, then cargo-leptos under the cache ─────
 # Digest-pinned rust:1.99.1-slim-trixie (Debian 13, glibc 2.41), resolved
@@ -48,7 +47,6 @@ FROM rust:${RUST_VERSION}-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a03
 WORKDIR /app
 ARG CARGO_LEPTOS_VERSION
 ARG WASM_BINDGEN_VERSION
-ARG TAILWIND_VERSION
 # amd64 | arm64 — provided by buildx/compose.
 ARG TARGETARCH
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -59,7 +57,7 @@ RUN rustup target add wasm32-unknown-unknown
 # artifacts persist across builds keyed by version, so a rebuild that did not
 # bump a tool version re-uses them instead of re-downloading
 # (docs.docker.com/build/cache/optimize — RUN --mount=type=cache). cargo-leptos
-# resolves wasm-bindgen + Tailwind from PATH before its own downloader.
+# resolves wasm-bindgen from PATH before its own downloader.
 # `sh` on Debian is dash, which has no `pipefail`, so the tool downloads below
 # need bash: each is `curl … | tar … > file`, and without pipefail a failed
 # curl leaves tar's exit status to decide. The redirect creates the file
@@ -69,8 +67,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN --mount=type=cache,target=/opt/tool-cache,sharing=locked \
     set -eu; \
     case "${TARGETARCH}" in \
-      amd64) triple=x86_64-unknown-linux-gnu; tw=x64 ;; \
-      arm64) triple=aarch64-unknown-linux-gnu; tw=arm64 ;; \
+      amd64) triple=x86_64-unknown-linux-gnu ;; \
+      arm64) triple=aarch64-unknown-linux-gnu ;; \
       *) echo "unsupported TARGETARCH ${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
     cache="/opt/tool-cache/${triple}"; mkdir -p "$cache"; \
@@ -82,13 +80,8 @@ RUN --mount=type=cache,target=/opt/tool-cache,sharing=locked \
       curl -sSfL "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-${triple}.tar.gz" \
         | tar -xz -O "wasm-bindgen-${WASM_BINDGEN_VERSION}-${triple}/wasm-bindgen" > "$cache/wasm-bindgen-${WASM_BINDGEN_VERSION}"; \
     fi; \
-    if [ ! -f "$cache/tailwindcss-${TAILWIND_VERSION}" ]; then \
-      curl -sSfL -o "$cache/tailwindcss-${TAILWIND_VERSION}" \
-        "https://github.com/tailwindlabs/tailwindcss/releases/download/${TAILWIND_VERSION}/tailwindcss-linux-${tw}"; \
-    fi; \
     install -m0755 "$cache/cargo-leptos-${CARGO_LEPTOS_VERSION}" /usr/local/bin/cargo-leptos; \
-    install -m0755 "$cache/wasm-bindgen-${WASM_BINDGEN_VERSION}" /usr/local/bin/wasm-bindgen; \
-    install -m0755 "$cache/tailwindcss-${TAILWIND_VERSION}" /usr/local/bin/tailwindcss
+    install -m0755 "$cache/wasm-bindgen-${WASM_BINDGEN_VERSION}" /usr/local/bin/wasm-bindgen
 # cargo-auditable embeds the compressed dependency list in the binary's own
 # `.dep-v0` section, so a scan of this image sees the viewer's Rust
 # dependencies (#3675; https://github.com/rust-secure-code/cargo-auditable).
@@ -99,7 +92,6 @@ COPY . .
 # The viewer has no provenance build.rs, so it carries no compile-time SHA env;
 # its image provenance is the OCI-standard REVISION LABEL on the shared runtime
 # stage below (docs.docker.com/build/building/best-practices).
-ENV LEPTOS_TAILWIND_VERSION=${TAILWIND_VERSION}
 # cargo-leptos builds the server binary with the command this variable names
 # instead of `cargo` (cargo-leptos 0.3.7, `bin-cargo-command`, read from the
 # environment in src/config/dotenvs.rs), so the server leg runs

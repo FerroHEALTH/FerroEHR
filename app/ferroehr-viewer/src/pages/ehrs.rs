@@ -1,1050 +1,468 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `/ehrs` screen — the EHR finder.
+//! The EHRs list and New EHR (FerroUI `design/consoles/ferroehr/`, pages 10
+//! and 11).
 //!
-//! A lookup form (jump straight to an EHR by id) over a recent-EHRs table
-//! sourced from an ad-hoc AQL query — ITS-REST has no unpaged EHR-list
-//! endpoint, so listing via AQL is the spec-honest route. Paging is
-//! URL-driven (`?offset=`): shareable, refresh-safe, and WASM-optional.
-//!
-//! No openEHR spec governs the viewer — our own design / product extension.
-//! The wire it reads IS spec-bound: the AQL runs against `POST query/aql`
-//! (`docs/specs/openehr/ITS-REST/docs/query/`). User input NEVER concatenates
-//! into the AQL text — the fixed query is a validated const and the caller's
-//! value travels as an AQL `query_parameters` binding.
-//!
-//! Every co-located `#[server]` fn guards with
-//! [`require_session`](crate::session::require_session) first — server
-//! functions are a public HTTP API — and the CDR credential never reaches
-//! client-visible state.
+//! The list is the newest EHRs read with AQL (`docs/specs/openehr/ITS-REST/`
+//! `docs/query/`), which states no total, so it pages with Previous and Next
+//! alone; its position is kept in the browser's session, never the URL
+//! ([`crate::paging`]). The find field takes an EHR id, which opens that EHR,
+//! or a subject id with its namespace (`GET /ehr?subject_id&subject_namespace`,
+//! ITS-REST `ehr_get_by_subject`), and posts, since a subject id names a
+//! patient. New EHR creates one with a subject or with none, with the CDR's
+//! id or one given (`POST /ehr`, `PUT /ehr/{ehr_id}`). No openEHR spec governs
+//! the viewer's pages: our own design.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694)"
-)]
-
-use ferrohealth_ui::table::model::{Noun, OpenWindow, Paging};
-use ferrohealth_ui::table::view::{Listing, link_open_pager};
+use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::table::filter::{Find, find_form};
+use ferrohealth_ui::table::model::{OpenWindow, StateSource};
+use ferrohealth_ui::table::pager::{Listing as PagerListing, PostTo, post_open_pager};
+use ferrohealth_ui::table::view::{
+    Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
+};
+use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::form::Field;
+use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
+use ferrohealth_ui::view::template::list::{
+    ActiveFilters, FilterChip, ListCard, active_filters, list_card, list_empty,
+};
+use ferrohealth_ui::widget::action_menu::{Act, Action};
+use ferrohealth_ui::widget::identifier::{Domain, Masked};
 use leptos::prelude::*;
-use leptos::{component, server};
 use leptos_meta::Title;
-use leptos_router::components::{A, Redirect};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
-use crate::components::data_table::{CELL, CELL_MONO, PAGE_SIZE, ROW, table_shell, table_skeleton};
-use crate::components::empty_state::EmptyState;
-use crate::components::field::{BTN_PRIMARY, BTN_SECONDARY, INPUT, LABEL};
-use crate::components::notice::inline_error;
-use crate::components::page_header::PageHeader;
-use crate::components::surface::{CARD_PAD, CARD_TITLE};
-use crate::components::toast::toast_success;
-use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::locale::tr_served;
-use crate::locale::{Msg, message, tr, tr_with};
+use crate::bff::ehrs::{
+    ResultPage, cell_text, create_ehr, ehr_detail_href, find_ehr_by_subject, is_uuid, list_ehrs,
+};
+use crate::flash::{Done, redirect_with};
+use crate::locale::{Msg, tr, tr_with};
+use crate::pages::common::{
+    EditorDock, awaited, card_panel, dock_editor, is_status, refused, section, short,
+};
+use crate::paging::Listing;
 
-#[cfg(not(target_arch = "wasm32"))]
-/// The fixed AQL that lists EHRs newest-first for the recent-EHRs table.
-/// Validated by [`tests::fixed_aql_parses`]; never concatenated with user
-/// input.
-const LIST_EHRS_AQL: &str =
-    "SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC";
-
-/// One page of an AQL `RESULT_SET`, flattened for rendering: the column
-/// headers, the raw row cells, and the offset that produced it (so the view
-/// can build prev/next links).
-///
-/// Shared across the EHR browse surfaces; carries only fixed-size ints so it
-/// is WASM-safe over the server-fn boundary.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ResultPage {
-    /// The result-set column names (falling back to the column path).
-    pub columns: Vec<String>,
-    /// The result rows, each a vector of raw JSON cell values.
-    pub rows: Vec<Vec<Value>>,
-    /// The offset this page was fetched at (for prev/next paging).
-    pub offset: u32,
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// Build the `POST query/aql` request body: the fixed AQL text, the caller's
-/// parameter bindings (never string-interpolated into the query), and the
-/// `fetch`/`offset` window.
-pub(crate) fn aql_request_body(aql: &str, parameters: &Value, offset: u32) -> String {
-    serde_json::json!({
-        "q": aql,
-        "query_parameters": parameters,
-        "fetch": PAGE_SIZE,
-        "offset": offset,
-    })
-    .to_string()
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// Parse an AQL `RESULT_SET` JSON body into a [`ResultPage`]. The result-set
-/// shape (`columns: [{name, path}]`, `rows: [[…]]`) is the ITS-REST Query API
-/// contract.
-///
-/// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
-pub(crate) fn parse_result_set(body: &str, offset: u32) -> Result<ResultPage, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::AqlResultJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
-    let columns = doc
-        .get("columns")
-        .and_then(Value::as_array)
-        .map(|cols| {
-            cols.iter()
-                .enumerate()
-                .map(|(i, col)| {
-                    col.get("name")
-                        .and_then(Value::as_str)
-                        .or_else(|| col.get("path").and_then(Value::as_str))
-                        .map_or_else(|| format!("#{i}"), str::to_owned)
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-    let rows = doc
-        .get("rows")
-        .and_then(Value::as_array)
-        .map(|rows| {
-            rows.iter()
-                .map(|row| row.as_array().cloned().unwrap_or_default())
-                .collect()
-        })
-        .unwrap_or_default();
-    Ok(ResultPage {
-        columns,
-        rows,
-        offset,
-    })
-}
-
-/// List EHRs newest-first via `LIST_EHRS_AQL`, one page at `offset`.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the result set is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn list_ehrs(
-    /// First row of the page to return.
-    offset: u32,
-) -> Result<ResultPage, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1("query/aql");
-    let body = aql_request_body(LIST_EHRS_AQL, &serde_json::json!({}), offset);
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            body,
-        )
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    parse_result_set(&response.body, offset)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// Build a subject-bound `EHR_STATUS` for `POST /ehr`: a `PARTY_SELF` whose
-/// `external_ref` (a `PARTY_REF`) carries the subject `id.value` +
-/// `namespace`, which is exactly what `GET /ehr?subject_id&subject_namespace`
-/// matches against (ITS-REST EHR API `ehr_get_by_subject`; RM ehr master04
-/// §EHR Status — `subject` is a `PARTY_SELF`, the subject is identified via
-/// its `external_ref`, never a `PARTY_IDENTIFIED`). `is_queryable` /
-/// `is_modifiable` default true.
-///
-/// `archetype_details` is not decoration: `EHR_STATUS` carries the invariant
-/// `Is_archetype_root`
-/// (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr.ehr_status.adoc`),
-/// and `LOCATABLE`'s `Archetyped_valid` is
-/// `is_archetype_root xor archetype_details = Void`
-/// (`.../org.openehr.rm.common.locatable.adoc`) — so an `EHR_STATUS` without an
-/// `ARCHETYPED` is invalid and the CDR refuses it `422`.
-pub(crate) fn subject_ehr_status(subject_id: &str, subject_namespace: &str) -> Value {
-    serde_json::json!({
-        "_type": "EHR_STATUS",
-        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
-        "archetype_details": {
-            "_type": "ARCHETYPED",
-            "archetype_id": {
-                "_type": "ARCHETYPE_ID",
-                "value": "openEHR-EHR-EHR_STATUS.generic.v1"
-            },
-            "rm_version": "1.2.0"
+/// The EHRs list's heading, with New EHR.
+fn heading() -> AnyView {
+    page_heading(
+        Header {
+            title: tr(Msg::NavEhrs).into(),
+            subtitle: Some(tr(Msg::EhrsSubtitle).into()),
+            crumbs: Vec::new(),
+            mono: false,
+            badge: None,
         },
-        "name": { "_type": "DV_TEXT", "value": tr(Msg::EhrStatus) },
-        "subject": {
-            "_type": "PARTY_SELF",
-            "external_ref": {
-                "_type": "PARTY_REF",
-                "namespace": subject_namespace,
-                "type": "PERSON",
-                "id": { "_type": "HIER_OBJECT_ID", "value": subject_id }
-            }
-        },
-        "is_queryable": true,
-        "is_modifiable": true
-    })
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// Pull the `ehr_id.value` out of an `EHR` resource body (the
-/// `Prefer: return=representation` response of `POST /ehr` and the body of
-/// `GET /ehr?subject_id…`).
-///
-/// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON or carries no
-/// `ehr_id`.
-pub(crate) fn parse_ehr_id(body: &str) -> Result<String, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(Msg::EhrJson3, &[("e", (e).to_string().into())]))
-    })?;
-    doc.get("ehr_id")
-        .and_then(|v| v.get("value"))
-        .and_then(Value::as_str)
-        .map(str::to_owned)
-        .ok_or_else(|| ViewerError::Internal(tr(Msg::EhrResponseCarriedNoEhrId)))
-}
-
-/// Whether `value` is a UUID in the RFC 9562 §4 string representation
-/// (`8-4-4-4-12` lower- or upper-case hex with hyphens).
-///
-/// The EHR API's client-supplied id "MUST be valid `HIER_OBJECT_ID` value. It is
-/// strongly RECOMMENDED that an UUID always be used for this"
-/// (`docs/specs/openehr/ITS-REST/specifications/operations/ehr_create_with_id.yaml`
-/// §description), so the viewer requires a UUID and says so — a typed id is
-/// checked before the round-trip and again in the server function.
-///
-/// Byte-wise (never `&value[..n]`, which can panic on a non-char boundary — the
-/// `string_slice` reliability lint).
-#[must_use]
-pub(crate) fn is_uuid(value: &str) -> bool {
-    let bytes = value.as_bytes();
-    if bytes.len() != 36 {
-        return false;
-    }
-    bytes.iter().enumerate().all(|(index, byte)| {
-        if matches!(index, 8 | 13 | 18 | 23) {
-            *byte == b'-'
-        } else {
-            byte.is_ascii_hexdigit()
-        }
-    })
-}
-
-/// Create a new EHR.
-///
-/// `ehr_id` empty → the CDR mints the id (`POST /ehr`); a client-supplied
-/// `ehr_id` creates that exact EHR (`PUT /ehr/{ehr_id}` —
-/// `ehr_create_with_id`), and an id already in use is the CDR's `409`, which
-/// the caller surfaces verbatim. Both subject fields empty → the CDR mints the
-/// default `EHR_STATUS` (`PARTY_SELF` subject); both filled → a subject-bound
-/// `EHR_STATUS` body (see `subject_ehr_status`). Exactly one filled is a
-/// validation error (both or neither). Sends `Prefer: return=representation`
-/// and returns the new `ehr_id`.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when exactly one subject field is filled or the
-/// supplied `ehr_id` is not a UUID; CDR transport errors pass through; a
-/// non-2xx CDR answer (the `409` for an id already in use, and any validation
-/// diagnostic, included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn create_ehr(
-    /// The EHR id to create under; empty lets the CDR assign one.
-    ehr_id: String,
-    /// The subject's external id.
-    subject_id: String,
-    /// The issuing namespace the subject id belongs to.
-    subject_namespace: String,
-) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
-    let ehr_id = ehr_id.trim();
-    let subject_id = subject_id.trim();
-    let subject_namespace = subject_namespace.trim();
-    let body = match (subject_id.is_empty(), subject_namespace.is_empty()) {
-        // Neither: let the CDR mint the default EHR_STATUS (empty body — the
-        // EHR API's request body is optional).
-        (true, true) => String::new(),
-        // Both: a subject-bound EHR_STATUS.
-        (false, false) => subject_ehr_status(subject_id, subject_namespace).to_string(),
-        // Exactly one: a bad request; the subject needs both parts.
-        _ => {
-            return Err(ViewerError::Invalid(tr_served(
-                Msg::ProvideBothSubjectIdSubjectNamespace,
-            )));
-        }
-    };
-    // A server function is a public endpoint: the client-side check is a
-    // courtesy, this one is the guard.
-    if !ehr_id.is_empty() && !is_uuid(ehr_id) {
-        return Err(ViewerError::Invalid(format!(
-            "{ehr_id:?} is not a UUID: the openEHR EHR API strongly recommends a UUID for a \
-             client-supplied EHR id"
-        )));
-    }
-    let response = if ehr_id.is_empty() {
-        let url = state.cdr.rest_v1("ehr");
-        state
-            .cdr
-            .post(
-                &session.credential,
-                &url,
-                "application/json",
-                "application/json",
-                &[("Prefer", "return=representation")],
-                body,
-            )
-            .await?
-    } else {
-        let url = state
-            .cdr
-            .rest_v1(&format!("ehr/{}", urlencoding::encode(ehr_id)));
-        state
-            .cdr
-            .put(
-                &session.credential,
-                &url,
-                "application/json",
-                "application/json",
-                &[("Prefer", "return=representation")],
-                body,
-            )
-            .await?
-    };
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    let created = parse_ehr_id(&response.body);
-    // The representation body names the created EHR; when a client supplied the
-    // id, that id is its own answer even if the CDR returned no body.
-    match created {
-        Ok(id) => Ok(id),
-        Err(_) if !ehr_id.is_empty() => Ok(ehr_id.to_owned()),
-        Err(e) => Err(e),
-    }
-}
-
-/// Look up an EHR by `subject_id` + `subject_namespace`
-/// (`GET /ehr?subject_id&subject_namespace`). `Ok(Some(ehr_id))` when found,
-/// `Ok(None)` on a `404` (no EHR for that subject — a first-class empty
-/// state, not an error).
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when either subject field is empty; CDR transport
-/// errors pass through; a non-2xx, non-404 CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn find_ehr_by_subject(
-    /// The subject's external id to look up.
-    subject_id: String,
-    /// The issuing namespace the subject id belongs to.
-    subject_namespace: String,
-) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
-    let subject_id = subject_id.trim();
-    let subject_namespace = subject_namespace.trim();
-    if subject_id.is_empty() || subject_namespace.is_empty() {
-        return Err(ViewerError::Invalid(tr_served(
-            Msg::BothSubjectIdSubjectNamespaceRequired,
-        )));
-    }
-    let url = state.cdr.rest_v1(&format!(
-        "ehr?subject_id={}&subject_namespace={}",
-        urlencoding::encode(subject_id),
-        urlencoding::encode(subject_namespace)
-    ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    if response.is(http::StatusCode::NOT_FOUND) {
-        return Ok(None);
-    }
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    parse_ehr_id(&response.body).map(Some)
-}
-
-/// The detail-route href for one EHR id. The id is user- or CDR-supplied, so
-/// the path segment is percent-encoded with `urlencoding` — an id carrying `/`,
-/// `#`, `?` or `%` would otherwise address a different route.
-///
-/// Encoding is also what keeps the `?find=` redirect safe: the returned path
-/// becomes a `Location` header value server-side, and `urlencoding::encode`
-/// emits only unreserved ASCII plus `%XX`, so a submitted id carrying a control
-/// character or a non-ASCII byte can never reach the header builder.
-#[must_use]
-pub(crate) fn ehr_detail_href(ehr_id: &str) -> String {
-    format!("/ehrs/{}", urlencoding::encode(ehr_id))
-}
-
-/// The `?find=` value the no-JS finder form submits, trimmed. Empty (or
-/// absent) means "no lookup requested".
-fn find_from_url() -> String {
-    leptos_router::hooks::use_query_map()
-        .with_untracked(|q| q.get("find").unwrap_or_default())
-        .trim()
-        .to_owned()
-}
-
-/// The `/ehrs` screen: a lookup form over a URL-paged recent-EHRs table.
-///
-/// `?find=<ehr_id>` — what the finder's GET form submits when WASM has not
-/// loaded — short-circuits the whole screen into a [`Redirect`] to that EHR's
-/// detail route, so find-by-id is a plain HTML round-trip with no JavaScript
-/// at all (`Redirect` sets the response redirect server-side; the
-/// authenticated routes render `SsrMode::Async`, so the header is still
-/// Read untracked at setup: the parameter is a submitted request, not reactive
-/// screen state, and this way the redirect case creates no resources and issues
-/// no AQL. Untracked is sound only because every route that can carry `?find=`
-/// is entered as a fresh render of this component — the hydrated form navigates
-/// straight to the detail route, and a pasted URL is a full document load. A
-/// same-path client-side navigation would NOT re-run this body, so anything
-/// that adds an in-app `/ehrs?find=…` link must make this decision reactive
-/// instead.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; view!/mount always consumes the value"
-)]
-#[component]
-pub fn EhrsPage() -> impl IntoView {
-    let find = find_from_url();
-    if !find.is_empty() {
-        return view! {
-            <Title text="EHRs" />
-            <Redirect path=ehr_detail_href(&find) />
-        }
-        .into_any();
-    }
-
-    let toaster = crate::components::toast::toaster();
-    let create = create_ehr_section(toaster);
-    let finder = finder_section();
-    let query = leptos_router::hooks::use_query_map();
-    let offset = offset_from_url();
-    let table = recent_ehrs_section(offset, query);
-
-    view! {
-        <Title text="EHRs" />
-        <div>
-            <PageHeader title=tr(Msg::Ehrs) subtitle=tr(Msg::CreateEhrFindOneIdSubject) />
-            {create}
-            {finder}
-            {table}
-        </div>
-    }
+        ActionGroup::primary(Action::new(
+            Some(Glyph::PLUS),
+            tr(Msg::NewEhr),
+            Act::Link("/ehrs/new".to_owned()),
+        )),
+    )
     .into_any()
 }
 
-/// The Create-EHR card: an optional client-supplied EHR id, an optional subject
-/// id + namespace (both or neither), a Create button dispatching the
-/// [`create_ehr`] action, and — on success — a toast plus client-side navigation
-/// to the new EHR's detail route. The both-or-neither rule and the UUID shape of
-/// a supplied id are validated client-side before dispatch and re-checked
-/// server-side; a CDR validation diagnostic surfaces inline verbatim.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one erased section: the create card's inputs + validation + action wiring (rules §1)"
-)]
-fn create_ehr_section(toaster: ferrohealth_ui::widget::toast::Toasts) -> AnyView {
-    // UNCONTROLLED inputs, read at dispatch — a controlled input resets to
-    // its empty signal at hydration, wiping pre-WASM typing (the login
-    // form's proven pattern).
-    let ehr_id_ref = NodeRef::<leptos::html::Input>::new();
-    let subject_id_ref = NodeRef::<leptos::html::Input>::new();
-    let subject_namespace_ref = NodeRef::<leptos::html::Input>::new();
-    let validation = RwSignal::new(Option::<String>::None);
-    let create = Action::new(|(ehr_id, id, ns): &(String, String, String)| {
-        let ehr_id = ehr_id.clone();
-        let id = id.clone();
-        let ns = ns.clone();
-        async move { create_ehr(ehr_id, id, ns).await }
-    });
-
-    // Report the outcome and, on success, navigate to the new EHR. Both are
-    // outside-world side-effects (the router, the toast region), so an Effect
-    // is their correct home; it never runs on the server pass. The route
-    // instance unmounts on navigation, cleaning the Effect up. Failure toasts
-    // too (the viewer's mutation-feedback rule); the CDR's validation
-    // diagnostic also stays inline below the form.
-    let navigate = leptos_router::hooks::use_navigate();
-    Effect::new(move |_| match create.value().get() {
-        Some(Ok(new_id)) => {
-            toast_success(
-                toaster,
-                &tr(Msg::EhrCreated),
-                &tr_with(Msg::NewEhr, &[("new_id", new_id.clone().into())]),
-            );
-            navigate(
-                &ehr_detail_href(&new_id),
-                leptos_router::NavigateOptions::default(),
-            );
-        }
-        Some(Err(error)) => {
-            crate::feedback::toast_write_failure(
-                toaster,
-                &tr(Msg::CreateFailed),
-                &tr(Msg::TheNewEhr),
-                &error,
-            );
-        }
-        None => {}
-    });
-
-    let on_click = move |_| {
-        let ehr_id = ehr_id_ref
-            .get_untracked()
-            .map(|el| el.value())
-            .unwrap_or_default()
-            .trim()
-            .to_owned();
-        let id = subject_id_ref
-            .get_untracked()
-            .map(|el| el.value())
-            .unwrap_or_default()
-            .trim()
-            .to_owned();
-        let ns = subject_namespace_ref
-            .get_untracked()
-            .map(|el| el.value())
-            .unwrap_or_default()
-            .trim()
-            .to_owned();
-        if id.is_empty() != ns.is_empty() {
-            validation.set(Some(
-                { tr(Msg::ProvideBothSubjectIdNamespaceLeave) }.clone(),
-            ));
-            return;
-        }
-        if !ehr_id.is_empty() && !is_uuid(&ehr_id) {
-            validation.set(Some(tr(Msg::EhrIdMustUuid84)));
-            return;
-        }
-        validation.set(None);
-        create.dispatch((ehr_id, id, ns));
-    };
-
-    view! {
-        <section class=format!("{CARD_PAD} mb-6")>
-            <h2 class=CARD_TITLE>{tr(Msg::CreateEhr)}</h2>
-            <div class="fui-field-flow">
-                <div class="flex flex-col gap-1">
-                    <label class=LABEL r#for="ehr-create-id">
-                        {tr(Msg::EhrIdOptional)}
-                    </label>
-                    <input
-                        id="ehr-create-id"
-                        type="text"
-                        class=INPUT
-                        placeholder=tr(Msg::EhrIdUuidBlankLetsCdr)
-                        node_ref=ehr_id_ref
-                    />
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class=LABEL r#for="ehr-create-subject-id">
-                        {tr(Msg::SubjectIdOptional)}
-                    </label>
-                    <input
-                        id="ehr-create-subject-id"
-                        type="text"
-                        class=INPUT
-                        placeholder=tr(Msg::ExternalSubjectId)
-                        node_ref=subject_id_ref
-                    />
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class=LABEL r#for="ehr-create-subject-namespace">
-                        {tr(Msg::SubjectNamespaceOptional)}
-                    </label>
-                    <input
-                        id="ehr-create-subject-namespace"
-                        type="text"
-                        class=INPUT
-                        placeholder="namespace"
-                        node_ref=subject_namespace_ref
-                    />
-                </div>
-                <button
-                    id="ehr-create-submit"
-                    type="button"
-                    class=BTN_PRIMARY
-                    disabled=Signal::derive(move || create.pending().get())
-                    on:click=on_click
-                >
-                    {tr(Msg::CreateEhr)}
-                </button>
-            </div>
-            <p class="mt-2 fui-help">
-                {tr(Msg::LeaveSubjectFieldsBlankAnonymousEhr)} {tr(Msg::SupplyEhrIdCreateExactEhr)}
-            </p>
-            <div class="mt-2 text-sm">
-                <Show when=move || create.pending().get()>
-                    <span class="text-ink-muted">{tr(Msg::Creating)}</span>
-                </Show>
-                {move || {
-                    validation
-                        .get()
-                        .map(|msg| {
-                            view! {
-                                <p
-                                    role="alert"
-                                    class="rounded-control border border-danger/40 bg-danger-subtle px-3 py-2 text-danger"
-                                >
-                                    {msg}
-                                </p>
-                            }
-                        })
-                }}
-                {move || match create.value().get() {
-                    Some(Err(error)) => inline_error(&error),
-                    _ => ().into_any(),
-                }}
-            </div>
-        </section>
-    }
-    .into_any()
+/// The list's columns.
+fn columns() -> [Column; 2] {
+    [
+        Column::text("ehr", tr(Msg::ColumnEhr)).role(Role::Title),
+        Column::text("created", tr(Msg::ColumnCreated)).role(Role::Meta),
+    ]
 }
 
-/// The offset the recent-EHRs table is paged at, read from `?offset=` and
-/// clamped to a valid `u32` (bad input reads as 0). Deterministic from the
-/// URL, so hydration-safe.
-fn offset_from_url() -> Signal<u32> {
-    let query = leptos_router::hooks::use_query_map();
-    Signal::derive(move || {
-        query
-            .with(|q| q.get("offset"))
-            .and_then(|s| s.parse::<u32>().ok())
-            .unwrap_or(0)
-    })
-}
-
-/// The finder: two modes in one card. Mode 1 is the by-id jump — a plain
-/// `<form method="GET" action="/ehrs">` whose `find` field the page reads and
-/// redirects on, so it works with no JavaScript at all; once hydrated, its
-/// `on:submit` handler cancels the round-trip and navigates client-side
-/// instead (identical UX, one hop instead of two). Mode 2 is the subject
-/// lookup — `subject_id` + `subject_namespace` dispatched to
-/// [`find_ehr_by_subject`], navigating to the detail route when found and
-/// surfacing an inline not-found note on a `404`.
-#[expect(
-    clippy::too_many_lines,
-    reason = "two finder modes assembled as one erased section (rules §1) — splitting would separate a mode from its state"
-)]
-fn finder_section() -> AnyView {
-    // ── Mode 1: jump by EHR id ──────────────────────────────────────────────
-    // A PLAIN <form>, not the router's <Form>: pre-WASM the browser submits it
-    // natively (GET /ehrs?find=…, which the page turns into a server-side
-    // redirect), and post-hydration our own `on:submit` listener prevents the
-    // default and navigates to the detail route. UNCONTROLLED input, read at
-    // submit: a controlled input resets to its empty signal at hydration,
-    // wiping anything typed before the WASM loaded.
-    let lookup_ref = NodeRef::<leptos::html::Input>::new();
-    let by_id_navigate = leptos_router::hooks::use_navigate();
-    let on_lookup = move |ev: leptos::ev::SubmitEvent| {
-        // Hydrated: cancel the full-page GET and navigate client-side.
-        ev.prevent_default();
-        let id = lookup_ref
-            .get_untracked()
-            .map(|el| el.value())
-            .unwrap_or_default()
-            .trim()
-            .to_owned();
-        if !id.is_empty() {
-            by_id_navigate(
-                &ehr_detail_href(&id),
-                leptos_router::NavigateOptions::default(),
-            );
-        }
-    };
-
-    // ── Mode 2: find by subject id + namespace ──────────────────────────────
-    let subject_id_ref = NodeRef::<leptos::html::Input>::new();
-    let subject_namespace_ref = NodeRef::<leptos::html::Input>::new();
-    let find = Action::new(|(id, ns): &(String, String)| {
-        let id = id.clone();
-        let ns = ns.clone();
-        async move { find_ehr_by_subject(id, ns).await }
-    });
-    // Navigate to the found EHR is an outside-world side-effect.
-    let by_subject_navigate = leptos_router::hooks::use_navigate();
-    Effect::new(move |_| {
-        if let Some(Ok(Some(id))) = find.value().get() {
-            by_subject_navigate(
-                &ehr_detail_href(&id),
-                leptos_router::NavigateOptions::default(),
-            );
-        }
-    });
-    let on_find_subject = move |_| {
-        let id = subject_id_ref
-            .get_untracked()
-            .map(|el| el.value())
-            .unwrap_or_default()
-            .trim()
-            .to_owned();
-        let ns = subject_namespace_ref
-            .get_untracked()
-            .map(|el| el.value())
-            .unwrap_or_default()
-            .trim()
-            .to_owned();
-        if !id.is_empty() && !ns.is_empty() {
-            find.dispatch((id, ns));
-        }
-    };
-
-    view! {
-        <section class=format!("{CARD_PAD} mb-6")>
-            <h2 class=CARD_TITLE>{tr(Msg::FindAnEhr)}</h2>
-            // method=GET + action=/ehrs: the no-JS submission lands on
-            // /ehrs?find=<id>, which EhrsPage answers with a redirect to the
-            // detail route (lookup state travels in the URL).
-            <form method="GET" action="/ehrs" on:submit=on_lookup>
-                <div class="fui-field-flow">
-                    <div class="flex flex-col gap-1">
-                        // Plain label + explicit stable input id keep the SSR↔hydration
-                        // association deterministic and preserve the E2E contract
-                        // (`#ehr-lookup`).
-                        <label class=LABEL r#for="ehr-lookup">
-                            {tr(Msg::EhrId2)}
-                        </label>
-                        <input
-                            id="ehr-lookup"
-                            name="find"
-                            type="text"
-                            class=INPUT
-                            placeholder=tr(Msg::EhrIdUuid)
-                            node_ref=lookup_ref
-                        />
-                    </div>
-                    <button id="ehr-find" type="submit" class=BTN_PRIMARY>
-                        {tr(Msg::Find)}
-                    </button>
-                </div>
-            </form>
-            <div class="mt-3 fui-field-flow">
-                <div class="flex flex-col gap-1">
-                    <label class=LABEL r#for="ehr-subject-id">
-                        {tr(Msg::SubjectId)}
-                    </label>
-                    <input
-                        id="ehr-subject-id"
-                        type="text"
-                        class=INPUT
-                        placeholder=tr(Msg::ExternalSubjectId)
-                        node_ref=subject_id_ref
-                    />
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class=LABEL r#for="ehr-subject-namespace">
-                        {tr(Msg::SubjectNamespace)}
-                    </label>
-                    <input
-                        id="ehr-subject-namespace"
-                        type="text"
-                        class=INPUT
-                        placeholder="namespace"
-                        node_ref=subject_namespace_ref
-                    />
-                </div>
-                <button
-                    id="ehr-subject-find"
-                    type="button"
-                    class=BTN_SECONDARY
-                    disabled=Signal::derive(move || find.pending().get())
-                    on:click=on_find_subject
-                >
-                    {tr(Msg::FindBySubject)}
-                </button>
-            </div>
-            <div class="mt-2 text-sm">
-                <Show when=move || find.pending().get()>
-                    <span class="text-ink-muted">{tr(Msg::Searching)}</span>
-                </Show>
-                // The "not found" line is deliberately an inline note rather than
-                // an EmptyState: it answers the search control it sits under
-                // (like "Searching…" above it), and no data region went empty —
-                // the recent-EHRs table below is untouched and keeps its own
-                // empty state.
-                {move || match find.value().get() {
-                    Some(Ok(None)) => {
-                        view! { <p class="text-ink-muted">{tr(Msg::NoEhrFoundSubject)}</p> }
-                            .into_any()
-                    }
-                    Some(Err(error)) => inline_error(&error),
-                    _ => ().into_any(),
-                }}
-            </div>
-        </section>
-    }
-    .into_any()
-}
-
-/// The recent-EHRs table section: an AQL-backed [`Resource`] under a
-/// `<Transition>` (old rows stay visible across paging) that resolves
-/// its `Result` inside the transition (an SSR'd `ErrorBoundary` fallback
-/// mismatches at hydration in leptos 0.8), and prev/next links.
-fn recent_ehrs_section(
-    offset: Signal<u32>,
-    query: Memo<leptos_router::params::ParamsMap>,
-) -> AnyView {
-    let resource = Resource::new(
-        move || offset.get(),
-        |offset| async move { list_ehrs(offset).await },
-    );
-    view! {
-        <Transition fallback=table_skeleton>
-            {move || Suspend::new(async move {
-                match resource.await {
-                    Ok(page) => ehrs_table(&page, query),
-                    Err(e) => inline_error(&e),
-                }
-            })}
-        </Transition>
-    }
-    .into_any()
-}
-
-/// Render one page of EHRs: a table whose id cells link to the detail route,
-/// plus prev/next paging links. The empty page is a first-class state.
-fn ehrs_table(page: &ResultPage, query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
-    if page.rows.is_empty() {
-        return view! {
-            <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::DATABASE
-                message=tr(Msg::NoEhrsFound)
-                hint=tr(Msg::CreateEhrThroughCdrThenBrowse)
-            />
-        }
-        .into_any();
-    }
-    let rows = page.rows.clone();
-    let body = view! {
-        <For
-            each=move || rows.clone()
-            key=|row| row.first().map(cell_text).unwrap_or_default()
-            let:row
-        >
-            {ehrs_row(&row)}
-        </For>
-    }
-    .into_any();
-    let paging = paging_controls(
-        page.offset,
-        page.rows.len(),
-        "/ehrs",
-        Noun::new(message(Msg::NounEhrs)),
-        query,
-    );
-    view! {
-        {table_shell(&tr(Msg::Ehrs), &[&tr(Msg::EhrId), &tr(Msg::Created)], body)}
-        {paging}
-    }
-    .into_any()
-}
-
-/// One EHR row: the first cell (`ehr_id`) links to `/ehrs/{id}`; the rest are
-/// plain text.
-fn ehrs_row(row: &[Value]) -> AnyView {
-    let id = row.first().map(cell_text).unwrap_or_default();
-    let cells = row
+/// The table of `rows`, each `(ehr id, created)`.
+fn table(rows: &[(String, String)]) -> AnyView {
+    let columns = columns();
+    let body = rows
         .iter()
-        .enumerate()
-        .map(|(i, value)| {
-            let text = cell_text(value);
-            if i == 0 {
-                let href = ehr_detail_href(&id);
-                view! {
-                    <td class=CELL_MONO>
-                        <A href=href attr:class="text-accent hover:underline">
-                            {text}
-                        </A>
-                    </td>
-                }
-                .into_any()
-            } else {
-                view! {
-                    <td class=CELL data-label=tr(Msg::Created)>
-                        {ferrohealth_ui::view::time::timestamp(&text)}
-                    </td>
-                }
-                .into_any()
-            }
+        .map(|(ehr_id, created)| {
+            let href = ehr_detail_href(ehr_id);
+            let title = title_cell(Some(&href), short(ehr_id), None);
+            let created = cell(&columns[1], crate::pages::common::ago(created));
+            view! { <tr>{title} {created}</tr> }.into_any()
         })
-        .collect::<Vec<_>>();
-    view! { <tr class=ROW>{cells}</tr> }.into_any()
+        .collect_view()
+        .into_any();
+    let caption = tr(Msg::NavEhrs);
+    data_table(DataTable {
+        caption: &caption,
+        columns: &columns,
+        sorting: Sorting::default(),
+        body: Body::Rows(body),
+    })
+    .into_any()
 }
 
-/// FerroUI's pager for an AQL-paged table at `base` (e.g. `/ehrs`), whose
-/// total the CDR does not report: Previous when `offset > 0`, Next when the
-/// page came back full (there may be more), and the range with no total.
-///
-/// `query` is the screen's whole query map, so a page link carries every OTHER
-/// parameter across — the tab a table sits on, the filters that produced it —
-/// instead of navigating back to a bare path. Encoding is the router's own
-/// [`ParamsMap::to_query_string`], never a hand-rolled codec, and the default
-/// offset is written as its ABSENCE so the first page's URL stays clean. The
-/// window is the AQL fetch window, so the pager offers no size choice.
-///
-/// The map is read UNTRACKED: this control renders inside the table's
-/// `Suspend`, which already re-runs on every query change.
-pub(crate) fn paging_controls(
-    offset: u32,
-    row_count: usize,
-    base: &str,
-    noun: Noun,
-    query: Memo<leptos_router::params::ParamsMap>,
-) -> AnyView {
-    #[expect(
-        clippy::integer_division,
-        reason = "the page holding row `offset` IS the truncating quotient"
-    )]
-    let page = offset / PAGE_SIZE + 1;
-    let window = OpenWindow::of(
-        Paging {
-            page,
-            size: PAGE_SIZE,
-        },
-        u32::try_from(row_count).unwrap_or(u32::MAX),
-    );
-    let href = |next: Paging| {
-        let mut map = query.get_untracked();
-        let to = next.page.saturating_sub(1).saturating_mul(PAGE_SIZE);
-        if to == 0 {
-            drop(map.remove("offset"));
-        } else {
-            map.replace("offset", to.to_string());
-        }
-        format!("{base}{}", map.to_query_string())
+/// The rows of a result page of the list's AQL.
+fn rows_of(page: &ResultPage) -> Vec<(String, String)> {
+    page.rows
+        .iter()
+        .map(|row| {
+            (
+                row.first().map(cell_text).unwrap_or_default(),
+                row.get(1).map(cell_text).unwrap_or_default(),
+            )
+        })
+        .filter(|(ehr_id, _)| !ehr_id.is_empty())
+        .collect()
+}
+
+/// The find toolbar: an EHR id or a subject id, and the subject id's
+/// namespace. It posts, since a subject id names a patient.
+fn toolbar(typed: &str, namespace: &str) -> AnyView {
+    let namespace_field = view! {
+        <div class="fui-list-find">
+            <label for="ehrs-namespace" class="fui-sr-only">
+                {tr(Msg::EhrsNamespace)}
+            </label>
+            <input
+                id="ehrs-namespace"
+                name="namespace"
+                type="text"
+                class="fui-input fui-mono"
+                value=namespace.to_owned()
+                placeholder=tr(Msg::EhrsNamespace)
+                autocomplete="off"
+                spellcheck="false"
+            />
+        </div>
+        <button type="submit" class="fui-button fui-button-secondary">
+            {ferrohealth_ui::icon::icon(Glyph::SEARCH, "16")}
+            {tr(Msg::SearchSubmit)}
+        </button>
     };
-    link_open_pager(
-        Listing::new(tr(Msg::Pages)).noun(noun).sizes(&[]),
-        window,
-        &href,
+    let label = tr(Msg::EhrsFindLabel);
+    find_form(
+        Find {
+            id: "ehrs-find",
+            name: "find",
+            label: &label,
+            value: typed,
+            source: StateSource::Session,
+            action: Some("/ehrs"),
+            fields: &[("intent".to_owned(), "find".to_owned())],
+        },
+        namespace_field,
     )
 }
 
-/// Render one raw AQL cell value as display text: strings verbatim, JSON null
-/// as empty, anything else as compact JSON.
-pub(crate) fn cell_text(value: &Value) -> String {
-    match value {
-        Value::String(s) => s.clone(),
-        Value::Null => String::new(),
-        other => other.to_string(),
+/// The chip of a find with its way back to the whole list.
+fn chips(label: String) -> AnyView {
+    active_filters(
+        ActiveFilters {
+            chips: vec![FilterChip {
+                label,
+                remove: "/ehrs".to_owned(),
+            }],
+            clear: "/ehrs".to_owned(),
+            shown: None,
+        },
+        None,
+    )
+}
+
+/// The card of the list, its pager in its foot.
+fn card(body: AnyView, count: Option<u64>, pager: Option<AnyView>) -> AnyView {
+    list_card(ListCard {
+        title: tr(Msg::NavEhrs),
+        count,
+        order: None,
+        tabs: None,
+        actions: None,
+        body,
+        pager,
+    })
+}
+
+/// The page a post finding an EHR draws: the EHR id's page, the one EHR the
+/// subject names, or the line that no EHR has it.
+async fn found(typed: String, namespace: String) -> AnyView {
+    let id = crate::uid::container_uid_of(&typed);
+    if is_uuid(&id) {
+        leptos_axum::redirect(&ehr_detail_href(&id));
+        return ().into_any();
+    }
+    if namespace.is_empty() {
+        let line = list_empty(tr(Msg::EhrsSubjectNeedsNamespace), None);
+        return view! {
+            {toolbar(&typed, &namespace)}
+            {card(line, None, None)}
+        }
+        .into_any();
+    }
+    let masked = Masked::new(
+        Domain::new(namespace.clone()),
+        &typed,
+        ferrohealth_ui::widget::identifier::KEEP,
+    );
+    let chip = tr_with(Msg::EhrsSubjectChip, &[("subject", masked.drawn().into())]);
+    match find_ehr_by_subject(typed.clone(), namespace.clone()).await {
+        Ok(Some(ehr_id)) => view! {
+            {toolbar("", &namespace)}
+            {chips(chip)}
+            {card(table(&[(ehr_id, String::new())]), Some(1), None)}
+        }
+        .into_any(),
+        Ok(None) => view! {
+            {toolbar("", &namespace)}
+            {chips(chip)}
+            {card(list_empty(tr(Msg::EhrsNoMatch), None), Some(0), None)}
+        }
+        .into_any(),
+        Err(error) => view! {
+            {toolbar("", &namespace)}
+            {refused(tr(Msg::EhrsFindRefused), &error, None)}
+        }
+        .into_any(),
     }
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
-mod tests {
-    use super::{
-        LIST_EHRS_AQL, aql_request_body, cell_text, is_uuid, parse_ehr_id, parse_result_set,
-        subject_ehr_status,
-    };
-    use crate::components::data_table::PAGE_SIZE;
-
-    #[test]
-    fn a_client_supplied_ehr_id_must_be_a_uuid() {
-        assert!(is_uuid("7d44aa01-0f9e-4a2c-9a0f-2a6a5f9b1c3d"));
-        // Upper case hex is the same UUID (RFC 9562 §4 is case-insensitive).
-        assert!(is_uuid("7D44AA01-0F9E-4A2C-9A0F-2A6A5F9B1C3D"));
-        // Too short / too long / hyphens misplaced / non-hex / not ASCII.
-        assert!(!is_uuid(""));
-        assert!(!is_uuid("7d44aa01"));
-        assert!(!is_uuid("7d44aa010f9e4a2c9a0f2a6a5f9b1c3d"));
-        assert!(!is_uuid("7d44aa01-0f9e-4a2c-9a0f-2a6a5f9b1c3d0"));
-        assert!(!is_uuid("7d44aa010-f9e-4a2c-9a0f-2a6a5f9b1c3d"));
-        assert!(!is_uuid("7d44aa01-0f9e-4a2c-9a0f-2a6a5f9b1c3z"));
-        // A multi-byte string of the same char count is not 36 BYTES — the
-        // check must not panic on it either (byte-wise, no slicing).
-        assert!(!is_uuid("ééééééééééééééééééééééééééééééééééé"));
+/// The EHRs list.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the router always consumes the value"
+)]
+#[component]
+pub fn EhrsPage() -> impl IntoView {
+    let posted = crate::posted::posted_for("find");
+    let paging = crate::paging::current(Listing::Ehrs);
+    let fields = crate::paging::fields(Listing::Ehrs);
+    let body = awaited(async move {
+        if let Some(posted) = posted {
+            let typed = posted.text("find");
+            let namespace = posted.text("namespace");
+            if !typed.is_empty() {
+                return found(typed, namespace).await;
+            }
+        }
+        let window = OpenWindow::of(paging, 0);
+        match list_ehrs(window.start, window.size).await {
+            Ok(page) => {
+                let rows = rows_of(&page);
+                let held = u32::try_from(rows.len()).unwrap_or(u32::MAX);
+                let window = OpenWindow::of(paging, held);
+                let body = if rows.is_empty() && window.page == 1 {
+                    list_empty(
+                        tr(Msg::EhrsEmpty),
+                        Some((tr(Msg::EhrsCreateFirst), "/ehrs/new".to_owned())),
+                    )
+                } else {
+                    table(&rows)
+                };
+                let pager = (window.page > 1 || window.has_next()).then(|| {
+                    post_open_pager(
+                        PagerListing::new(tr(Msg::EhrsPages)),
+                        window,
+                        PostTo {
+                            id: "ehrs-pager",
+                            action: crate::paging::PAGING_ROUTE,
+                            fields: &fields,
+                        },
+                    )
+                });
+                view! {
+                    {toolbar("", "")}
+                    {card(body, None, pager)}
+                }
+                .into_any()
+            }
+            Err(error) => view! {
+                {toolbar("", "")}
+                {refused(tr(Msg::EhrsRefused), &error, None)}
+            }
+            .into_any(),
+        }
+    });
+    view! {
+        <Title text=tr(Msg::NavEhrs) />
+        {heading()}
+        <div class="fui-list-page">{body}</div>
     }
+}
 
-    #[test]
-    fn fixed_aql_parses() {
-        openehr_query::parser::parse_str(LIST_EHRS_AQL)
-            .expect("the recent-EHRs AQL const must parse");
+/// The id of New EHR's form, which the docked bar submits.
+const NEW_EHR_FORM: &str = "ehr-new";
+
+/// What New EHR's form holds, as it was posted.
+#[derive(Debug, Clone, Default)]
+struct Draft {
+    /// The subject id.
+    subject_id: String,
+    /// The subject's namespace.
+    namespace: String,
+    /// The EHR id asked for, empty for the CDR's own.
+    ehr_id: String,
+}
+
+/// New EHR's form: the subject and its namespace, and an optional EHR id.
+fn new_form(draft: &Draft, ehr_id_error: Option<String>) -> AnyView {
+    let subject = Field::new("s-id", tr(Msg::EhrNewSubjectId)).view(view! {
+        <input
+            id="s-id"
+            name="subject_id"
+            type="password"
+            class="fui-input fui-mono"
+            spellcheck="false"
+            autocomplete="off"
+            value=draft.subject_id.clone()
+        />
+    });
+    let namespace = Field::new("s-ns", tr(Msg::EhrNewNamespace)).view(view! {
+        <input
+            id="s-ns"
+            name="namespace"
+            type="text"
+            class="fui-input fui-mono"
+            spellcheck="false"
+            autocomplete="off"
+            value=draft.namespace.clone()
+        />
+    });
+    let invalid = ehr_id_error.is_some().then_some("true");
+    let ehr_id = Field::new("e-id", tr(Msg::EhrNewEhrId))
+        .help(tr(Msg::EhrNewEhrIdHelp))
+        .holds_id()
+        .after(ehr_id_error.map(|error| {
+            view! {
+                <p class="fui-help fui-error" id="e-id-error">
+                    {error}
+                </p>
+            }
+        }))
+        .view(view! {
+            <input
+                id="e-id"
+                name="ehr_id"
+                type="text"
+                class="fui-input fui-mono"
+                spellcheck="false"
+                autocomplete="off"
+                placeholder=tr(Msg::EhrNewEhrIdPlaceholder)
+                aria-invalid=invalid
+                value=draft.ehr_id.clone()
+            />
+        });
+    view! {
+        <form id=NEW_EHR_FORM method="post" action="/ehrs/new">
+            {card_panel(
+                view! {
+                    {section(
+                        Some(tr(Msg::EhrNewSubject)),
+                        None,
+                        None,
+                        view! {
+                            {ferrohealth_ui::view::surface::section_intro(
+                                tr(Msg::EhrNewSubjectIntro),
+                            )}
+                            <div class="fui-form-grid">{subject} {namespace}</div>
+                        },
+                    )}
+                    {section(None, None, None, view! { <div class="fui-form-grid">{ehr_id}</div> })}
+                },
+            )}
+        </form>
     }
+    .into_any()
+}
 
-    #[test]
-    fn request_body_carries_params_and_window() {
-        let body = aql_request_body(
-            "SELECT e/ehr_id/value FROM EHR e",
-            &serde_json::json!({}),
-            50,
-        );
-        let doc: serde_json::Value = serde_json::from_str(&body).expect("valid JSON body");
-        assert_eq!(doc["q"], "SELECT e/ehr_id/value FROM EHR e");
-        assert_eq!(doc["fetch"], serde_json::json!(PAGE_SIZE));
-        assert_eq!(doc["offset"], serde_json::json!(50));
-        assert!(doc["query_parameters"].is_object());
+/// New EHR.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the router always consumes the value"
+)]
+#[component]
+pub fn NewEhrPage() -> impl IntoView {
+    let posted = crate::posted::posted();
+    if crate::pages::common::discarded(posted.as_ref()) {
+        leptos_axum::redirect("/ehrs");
     }
-
-    #[test]
-    fn parses_result_set_columns_and_rows() {
-        let body = r#"{
-            "columns": [{"name": "ehr_id", "path": "e/ehr_id/value"}, {"path": "e/time_created/value"}],
-            "rows": [["7d44", "2026-07-12T00:00:00Z"], ["ab01", null]]
-        }"#;
-        let page = parse_result_set(body, 25).expect("valid result set");
-        assert_eq!(page.columns, vec!["ehr_id", "e/time_created/value"]);
-        assert_eq!(page.rows.len(), 2);
-        assert_eq!(page.offset, 25);
-    }
-
-    #[test]
-    fn cell_text_renders_scalars_and_null() {
-        assert_eq!(cell_text(&serde_json::json!("hello")), "hello");
-        assert_eq!(cell_text(&serde_json::json!(null)), "");
-        assert_eq!(cell_text(&serde_json::json!(42)), "42");
-    }
-
-    #[test]
-    fn subject_ehr_status_binds_the_external_ref() {
-        let status = subject_ehr_status("patient-123", "patients");
-        assert_eq!(status["_type"], "EHR_STATUS");
-        assert_eq!(status["subject"]["_type"], "PARTY_SELF");
-        // The subject id + namespace are what GET /ehr?subject_id&subject_namespace
-        // matches against (external_ref.id.value + external_ref.namespace).
-        assert_eq!(
-            status["subject"]["external_ref"]["id"]["value"],
-            "patient-123"
-        );
-        assert_eq!(status["subject"]["external_ref"]["namespace"], "patients");
-        assert_eq!(status["subject"]["external_ref"]["type"], "PERSON");
-        assert_eq!(status["is_queryable"].as_bool(), Some(true));
-        assert_eq!(status["is_modifiable"].as_bool(), Some(true));
-        // EHR_STATUS is an archetype root (RM ehr_status `Is_archetype_root`),
-        // and LOCATABLE's `Archetyped_valid` then makes ARCHETYPED mandatory —
-        // a body without it is refused `422`.
-        assert_eq!(status["archetype_details"]["_type"], "ARCHETYPED");
-        assert_eq!(
-            status["archetype_details"]["archetype_id"]["value"],
-            "openEHR-EHR-EHR_STATUS.generic.v1"
-        );
-    }
-
-    #[test]
-    fn parse_ehr_id_reads_the_value_or_errors() {
-        let body = r#"{"_type":"EHR","ehr_id":{"_type":"HIER_OBJECT_ID","value":"7d44aa01"}}"#;
-        assert_eq!(parse_ehr_id(body).expect("ehr_id"), "7d44aa01");
-        assert!(parse_ehr_id(r#"{"ehr_id":{}}"#).is_err());
-        assert!(parse_ehr_id("not json").is_err());
+    let dock_promise = crate::shell::promise_dock();
+    let body = awaited(async move {
+        let _dock_promise = dock_promise;
+        let draft = posted.as_ref().map_or_else(Draft::default, |posted| Draft {
+            subject_id: posted.text("subject_id"),
+            namespace: posted.text("namespace"),
+            ehr_id: posted.text("ehr_id"),
+        });
+        let mut top = None;
+        let mut ehr_id_error = None;
+        let mut line = (Glyph::FILE_PLUS, tr(Msg::EhrNewNotYet));
+        if posted
+            .as_ref()
+            .is_some_and(|posted| posted.intent() == "save")
+        {
+            let id = draft.ehr_id.trim().to_owned();
+            if !id.is_empty() && !is_uuid(&id) {
+                ehr_id_error = Some(tr(Msg::EhrNewNotUuid));
+                line = (Glyph::CIRCLE_X, tr(Msg::EhrNewNotCreated));
+            } else {
+                match create_ehr(
+                    id.clone(),
+                    draft.subject_id.clone(),
+                    draft.namespace.clone(),
+                )
+                .await
+                {
+                    Ok(created) => {
+                        redirect_with(
+                            &ehr_detail_href(&created),
+                            &Done::ok(tr(Msg::EhrCreated))
+                                .line(crate::pages::common::shortened(&created)),
+                        );
+                        return ().into_any();
+                    }
+                    Err(error) => {
+                        line = (Glyph::CIRCLE_X, tr(Msg::EhrNewNotCreated));
+                        if is_status(&error, http::StatusCode::CONFLICT) {
+                            ehr_id_error = Some(tr(Msg::EhrNewInUse));
+                        }
+                        let open = is_status(&error, http::StatusCode::CONFLICT).then(|| {
+                            ferrohealth_ui::view::button::link_button(
+                                ehr_detail_href(&id),
+                                ferrohealth_ui::view::button::Variant::Secondary,
+                                Some(Glyph::ARROW_RIGHT),
+                                tr_with(
+                                    Msg::EhrOpen,
+                                    &[("id", crate::pages::common::shortened(&id).into())],
+                                ),
+                            )
+                        });
+                        top = Some(
+                            view! {
+                                {refused(tr(Msg::EhrNewRefused), &error, None)}
+                                <div class="fui-cluster">{open}</div>
+                            }
+                            .into_any(),
+                        );
+                    }
+                }
+            }
+        }
+        dock_editor(EditorDock {
+            form: NEW_EHR_FORM.to_owned(),
+            line: line.1,
+            glyph: line.0,
+            save: tr(Msg::EhrNewCreate),
+            blocked: None,
+        });
+        view! {
+            {top}
+            {new_form(&draft, ehr_id_error)}
+        }
+        .into_any()
+    });
+    let heading = page_heading(
+        Header {
+            title: tr(Msg::NewEhr).into(),
+            subtitle: Some(tr(Msg::EhrNewSubtitle).into()),
+            crumbs: vec![Crumb::new(tr(Msg::NavEhrs), "/ehrs")],
+            mono: false,
+            badge: None,
+        },
+        ActionGroup::none(),
+    );
+    view! {
+        <Title text=tr(Msg::NewEhr) />
+        {heading}
+        <div class="fui-stack">{body}</div>
     }
 }

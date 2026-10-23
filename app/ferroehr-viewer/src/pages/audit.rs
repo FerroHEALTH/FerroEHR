@@ -1,690 +1,510 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `/audit` screen — the ATNA audit-log browser.
+//! The Audit log: the CDR's security audit records, who accessed what and
+//! with what outcome, and one record as stored (FerroUI
+//! `design/consoles/ferroehr/`, pages 20.1 to 20.5).
 //!
-//! Browses the CDR's local Audit Record Repository through the RESTful-ATNA
-//! **ITI-81** retrieval (`GET fhir/r4/AuditEvent`): a filter form (event-time
-//! window, patient, principal, outcome, action), a paged table of the stored
-//! FHIR R4 `AuditEvent` documents (IHE BALP shape), and a per-row raw-record
-//! view. No openEHR spec governs the viewer — our own design / product
-//! extension; the wire it reads is IHE's (the `RESTful` ATNA supplement's
-//! ITI-81 FHIR search), served by the CDR.
-//!
-//! The CDR answering `404` (the local audit store disabled) is a first-class
-//! rendered state, not an error.
+//! The records are the IHE ATNA retrieval (ITI-81, `GET fhir/r4/AuditEvent`)
+//! the CDR serves over its local store ([`crate::bff::audit`]); a CDR that
+//! keeps no local store answers `404` and the page says so. The filters are a
+//! `GET` form, the page position is kept in the browser's session
+//! ([`crate::paging`]), and a record's page finds it again by the filters and
+//! the instant it was recorded at, since ITI-81 offers no read by id. The patient
+//! identifier is masked as everywhere. No openEHR spec governs the viewer's
+//! pages: our own design.
 
-#![allow(
-    clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
-)]
-
-use ferrohealth_ui::view::form::keyed_field;
+use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::table::filter::{Find, find_form};
+use ferrohealth_ui::table::model::{Paging, StateSource, Window};
+use ferrohealth_ui::table::pager::{Listing as PagerListing, PostTo, post_pager};
+use ferrohealth_ui::table::view::{
+    Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
+};
+use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::flow::FlowState;
+use ferrohealth_ui::view::form::Field;
+use ferrohealth_ui::view::surface::{Crumb, Header, definitions, page_heading};
+use ferrohealth_ui::view::template::list::{
+    ActiveFilters, FilterChip, ListCard, active_filters, list_card, list_empty,
+};
+use ferrohealth_ui::widget::identifier::{Domain, KEEP, Masked};
 use leptos::prelude::*;
-use leptos::{component, server};
 use leptos_meta::Title;
-use leptos_router::hooks::use_query_map;
+use leptos_router::hooks::use_params_map;
 
-use crate::components::data_table::{CELL, CELL_MONO, PAGE_SIZE, ROW, table_shell, table_skeleton};
-use crate::components::empty_state::EmptyState;
-use crate::components::field::INPUT;
-use crate::components::page_header::PageHeader;
+use crate::bff::PAGE_SIZE;
+use crate::bff::audit::{ACTIONS, AuditPage as Listed, AuditRow, OUTCOMES, search_audit};
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
+use crate::pages::common::{
+    ago, awaited, card_panel, date_range, document_section, refused, section, state_mark, when,
+};
+use crate::paging::Listing;
 
-/// One distilled audit record: the promoted facts the table shows plus the
-/// full stored `AuditEvent` JSON for the raw view. Client-safe fields only
-/// (fixed-size ints, no `usize`).
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct AuditRow {
-    /// The event instant (`AuditEvent.recorded`), as stored.
-    pub recorded: String,
-    /// The event family, humanized (REST / Authentication / Export / Import).
-    pub family: String,
-    /// The concrete operation (the ITS-REST operation id, or the login kind).
-    pub operation: String,
-    /// The action code (`C`/`R`/`U`/`D`/`E`).
-    pub action: String,
-    /// The outcome, humanized (success / minor failure / …).
-    pub outcome: String,
-    /// Whether the outcome is a success (drives the outcome tint).
-    pub success: bool,
-    /// The requesting principal (the requestor agent's identifier).
-    pub principal: String,
-    /// The recorded patient (EHR subject) id, when patient-centric.
-    pub patient: String,
-    /// The touched resource id, when one was recorded.
-    pub resource: String,
-    /// The full stored `AuditEvent` document, pretty-printed.
-    pub raw: String,
-}
+/// The page sizes the audit log offers: the one the CDR is asked for.
+const SIZES: &[u32] = &[PAGE_SIZE];
 
-/// One retrieved page plus the availability verdict.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct AuditPage {
-    /// `false` when the CDR answered `404` — the local Audit Record
-    /// Repository is disabled (`[audit.store]`); a first-class state.
-    pub available: bool,
-    /// Total records matching the filter (the Bundle `total`).
-    pub total: u32,
-    /// The current page offset.
-    pub offset: u32,
-    /// The page rows, newest first.
-    pub rows: Vec<AuditRow>,
-}
-
-/// Retrieve one page of audit records via the ITI-81 FHIR search
-/// (`GET fhir/r4/AuditEvent`), with the supported filter subset. Empty
-/// filter strings are omitted from the query; instants are sent as
-/// `date=ge…`/`date=le…` bounds; values are percent-encoded.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnauthorized`] when the CDR no longer accepts this
-/// session, [`ViewerError::Forbidden`] when the caller lacks the CDR's admin
-/// role (the audit trail is an operator surface); [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
-/// on an unparseable Bundle.
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn search_audit(
-    /// Inclusive lower bound on the record instant; empty means unbounded.
-    from: String,
-    /// Inclusive upper bound on the record instant; empty means unbounded.
-    to: String,
-    /// Patient reference to match; empty means any patient.
-    patient: String,
-    /// Agent (acting user) to match; empty means any agent.
+/// The filters the address names.
+#[derive(Debug, Clone, Default)]
+struct Filters {
+    /// The principal.
     agent: String,
-    /// Outcome code to match; empty means any outcome.
+    /// The outcome code.
     outcome: String,
-    /// Action code to match; empty means any action.
+    /// The action code.
     action: String,
-    /// First record of the page to return.
-    offset: u32,
-) -> Result<AuditPage, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    /// The earliest day.
+    from: String,
+    /// The latest day.
+    to: String,
+    /// The patient identifier.
+    patient: String,
+}
 
-    let mut params: Vec<String> = Vec::new();
-    let mut push = |key: &str, value: &str| {
-        if !value.trim().is_empty() {
-            params.push(format!("{key}={}", urlencoding::encode(value.trim())));
+impl Filters {
+    /// The filters of the request.
+    fn read() -> Self {
+        let get = |key: &str| crate::request::query(key).unwrap_or_default();
+        Self {
+            agent: get("agent"),
+            outcome: get("outcome"),
+            action: get("action"),
+            from: get("from"),
+            to: get("to"),
+            patient: get("patient"),
         }
-    };
-    push("date", &prefixed("ge", &from));
-    push("date", &prefixed("le", &to));
-    push("patient", &patient);
-    push("agent", &agent);
-    push("outcome", &outcome);
-    push("action", &action);
-    params.push(format!("_count={PAGE_SIZE}"));
-    params.push(format!("_offset={offset}"));
+    }
 
-    let url = format!(
-        "{}?{}",
-        state.cdr.rest_v1("fhir/r4/AuditEvent"),
-        params.join("&")
-    );
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/fhir+json")
-        .await?;
-    if response.is(http::StatusCode::NOT_FOUND) {
-        // The local Audit Record Repository is disabled ([audit.store]) —
-        // a rendered state, never an error.
-        return Ok(AuditPage {
-            available: false,
-            total: 0,
+    /// The filters as address pairs, `without` left out.
+    fn pairs(&self, without: &str) -> Vec<String> {
+        [
+            ("agent", &self.agent),
+            ("outcome", &self.outcome),
+            ("action", &self.action),
+            ("from", &self.from),
+            ("to", &self.to),
+            ("patient", &self.patient),
+        ]
+        .into_iter()
+        .filter(|(key, value)| *key != without && !value.is_empty())
+        .map(|(key, value)| format!("{key}={}", urlencoding::encode(value)))
+        .collect()
+    }
+
+    /// The audit log with these filters but `without`.
+    fn href_without(&self, without: &str) -> String {
+        let pairs = self.pairs(without);
+        if pairs.is_empty() {
+            "/audit".to_owned()
+        } else {
+            format!("/audit?{}", pairs.join("&"))
+        }
+    }
+
+    /// Whether any filter is set.
+    fn any(&self) -> bool {
+        !self.pairs("").is_empty()
+    }
+
+    /// Runs the search for the page starting at `offset`.
+    async fn search(&self, offset: u32) -> Result<Listed, ViewerError> {
+        search_audit(
+            self.from.clone(),
+            self.to.clone(),
+            self.patient.clone(),
+            self.agent.clone(),
+            self.outcome.clone(),
+            self.action.clone(),
             offset,
-            rows: Vec::new(),
-        });
+        )
+        .await
     }
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
-    parse_bundle(&body, offset)
 }
 
-/// `ge`/`le`-prefix a non-empty instant for the ITI-81 `date` parameter.
-#[cfg(not(target_arch = "wasm32"))]
-fn prefixed(prefix: &str, value: &str) -> String {
-    let value = value.trim();
-    if value.is_empty() {
-        String::new()
+/// The page of the record at `place` in the filtered log, carrying the
+/// filters and the instant it was recorded at, which finds it again.
+// NOTE: an ITI-81 AuditEvent carries no id the search can read back, so a record is found by its instant.
+fn record_href(row: &AuditRow, filters: &Filters, place: u32) -> String {
+    let mut pairs = filters.pairs("");
+    pairs.push(format!("at={}", urlencoding::encode(&row.recorded)));
+    format!("/audit/{place}?{}", pairs.join("&"))
+}
+
+/// The masked patient identifier of a record.
+fn patient(row: &AuditRow) -> AnyView {
+    if row.patient.is_empty() {
+        return view! { <span class="fui-muted">{tr(Msg::AuditNoPatient)}</span> }.into_any();
+    }
+    view! {
+        <span class="fui-identifier">
+            <code>{Masked::new(Domain::new(String::new()), &row.patient, KEEP).drawn()}</code>
+        </span>
+    }
+    .into_any()
+}
+
+/// The stored record with its patient identifier masked as the list masks
+/// it.
+fn masked_record(row: &AuditRow) -> String {
+    let pretty = crate::bff::pretty_body(&row.raw, crate::format::ReprFormat::CanonicalJson);
+    if row.patient.is_empty() {
+        return pretty;
+    }
+    pretty.replace(
+        &row.patient,
+        &Masked::new(Domain::new(String::new()), &row.patient, KEEP).drawn(),
+    )
+}
+
+/// The outcome of a record as a state.
+fn outcome(row: &AuditRow) -> AnyView {
+    if row.success {
+        state_mark(FlowState::Up, &tr(Msg::AuditSuccess))
     } else {
-        format!("{prefix}{value}")
+        state_mark(FlowState::Unreachable, &row.outcome.clone())
     }
 }
 
-/// Distil the ITI-81 `searchset` Bundle into an [`AuditPage`].
-#[cfg(not(target_arch = "wasm32"))]
-fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
-    let bundle = serde_json::from_str::<serde_json::Value>(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::AuditeventBundleJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
-    let total = bundle
-        .get("total")
-        .and_then(serde_json::Value::as_u64)
-        .and_then(|t| u32::try_from(t).ok())
-        .unwrap_or(0);
-    let rows = bundle
-        .get("entry")
-        .and_then(serde_json::Value::as_array)
-        .map(|entries| {
-            entries
-                .iter()
-                .filter_map(|entry| entry.get("resource"))
-                .map(audit_row)
-                .collect()
+/// The event words of a record.
+fn event(row: &AuditRow) -> String {
+    if row.operation.is_empty() {
+        row.family.clone()
+    } else {
+        row.operation.clone()
+    }
+}
+
+/// The filter toolbar.
+fn toolbar(filters: &Filters) -> AnyView {
+    let select = |id: &'static str,
+                  name: &'static str,
+                  label: String,
+                  choices: &[(&str, Msg)],
+                  chosen: &str| {
+        let options = choices
+            .iter()
+            .map(|(value, words)| {
+                view! {
+                    <option value=(*value).to_owned() selected=*value == chosen>
+                        {tr(*words)}
+                    </option>
+                }
+            })
+            .collect_view();
+        Field::new(id, label).view(view! {
+            <select id=id name=name class="fui-select">
+                {options}
+            </select>
         })
-        .unwrap_or_default();
-    Ok(AuditPage {
-        available: true,
-        total,
-        offset,
-        rows,
+    };
+    let tools = view! {
+        {select("a-outcome", "outcome", tr(Msg::AuditOutcome), &OUTCOMES, &filters.outcome)}
+        {select("a-action", "action", tr(Msg::AuditAction), &ACTIONS, &filters.action)}
+        {date_range("a-when", tr(Msg::AuditWhen), &filters.from, &filters.to)}
+        <div class="fui-list-find">
+            <label for="a-patient" class="fui-sr-only">
+                {tr(Msg::AuditPatient)}
+            </label>
+            <input
+                id="a-patient"
+                name="patient"
+                type="text"
+                class="fui-input fui-mono"
+                value=filters.patient.clone()
+                placeholder=tr(Msg::AuditPatient)
+                autocomplete="off"
+            />
+        </div>
+        <button type="submit" class="fui-button fui-button-secondary">
+            {ferrohealth_ui::icon::icon(Glyph::FUNNEL, "16")}
+            {tr(Msg::FilterApply)}
+        </button>
+    };
+    let label = tr(Msg::AuditFind);
+    find_form(
+        Find {
+            id: "a-agent",
+            name: "agent",
+            label: &label,
+            value: &filters.agent,
+            source: StateSource::Url,
+            action: Some("/audit"),
+            fields: &[],
+        },
+        tools,
+    )
+}
+
+/// The active filters as chips.
+fn chips(filters: &Filters) -> Option<AnyView> {
+    let chips: Vec<FilterChip> = [
+        ("agent", &filters.agent, Msg::AuditChipAgent),
+        ("outcome", &filters.outcome, Msg::AuditChipOutcome),
+        ("action", &filters.action, Msg::AuditChipAction),
+        ("from", &filters.from, Msg::ChipFrom),
+        ("to", &filters.to, Msg::ChipTo),
+        ("patient", &filters.patient, Msg::AuditChipPatient),
+    ]
+    .into_iter()
+    .filter(|(_, value, _)| !value.is_empty())
+    .map(|(key, value, msg)| FilterChip {
+        label: tr_with(msg, &[("value", value.clone().into())]),
+        remove: filters.href_without(key),
+    })
+    .collect();
+    (!chips.is_empty()).then(|| {
+        active_filters(
+            ActiveFilters {
+                chips,
+                clear: "/audit".to_owned(),
+                shown: None,
+            },
+            None,
+        )
     })
 }
 
-/// Distil one stored `AuditEvent` (IHE BALP shape) into an [`AuditRow`],
-/// reading every field defensively (a missing field renders empty, never
-/// drops the record from the security log).
-#[cfg(not(target_arch = "wasm32"))]
-fn audit_row(resource: &serde_json::Value) -> AuditRow {
-    let text = |v: Option<&serde_json::Value>| {
-        v.and_then(serde_json::Value::as_str)
-            .unwrap_or_default()
-            .to_owned()
-    };
-    let type_code = text(resource.pointer("/type/code"));
-    let family = match type_code.as_str() {
-        "rest" => "REST".to_owned(),
-        "110114" => tr(Msg::Authentication),
-        "110106" => tr(Msg::Export),
-        "110107" => tr(Msg::Import),
-        other => other.to_owned(),
-    };
-    // The concrete operation: the last subtype coding (the ITS-REST
-    // operation id, or the DCM login kind on authentication records).
-    let operation = resource
-        .pointer("/subtype")
-        .and_then(serde_json::Value::as_array)
-        .and_then(|codings| codings.last())
-        .map(|coding| {
-            let code = text(coding.get("code"));
-            match code.as_str() {
-                "110122" => "login".to_owned(),
-                "110123" => "logout".to_owned(),
-                _ => code,
+/// The records of one page, as a table.
+fn table(page: &Listed, filters: &Filters) -> AnyView {
+    let columns = [
+        Column::text("event", tr(Msg::AuditEvent)).role(Role::Title),
+        Column::text("when", tr(Msg::AuditWhen)).role(Role::Sub),
+        Column::text("principal", tr(Msg::AuditPrincipal)).role(Role::Meta),
+        Column::text("patient", tr(Msg::AuditPatient)).role(Role::Meta),
+        Column::text("outcome", tr(Msg::AuditOutcome)).role(Role::Meta),
+    ];
+    let rows = page
+        .rows
+        .iter()
+        .zip(page.offset..)
+        .map(|(row, place)| {
+            let href = record_href(row, filters, place);
+            let principal = if row.principal.is_empty() {
+                view! { <span class="fui-muted">{tr(Msg::AuditUnknown)}</span> }.into_any()
+            } else {
+                row.principal.clone().into_any()
+            };
+            view! {
+                <tr>
+                    {title_cell(Some(&href), event(row), None)}
+                    {cell(&columns[1], ago(&row.recorded))} {cell(&columns[2], principal)}
+                    {cell(&columns[3], patient(row))} {cell(&columns[4], outcome(row))}
+                </tr>
             }
+            .into_any()
         })
-        .unwrap_or_default();
-    let outcome_code = text(resource.get("outcome"));
-    let (outcome, success) = match outcome_code.as_str() {
-        "0" => ("success".to_owned(), true),
-        "4" => (tr(Msg::MinorFailure), false),
-        "8" => (tr(Msg::SeriousFailure), false),
-        "12" => (tr(Msg::MajorFailure), false),
-        other => (other.to_owned(), false),
-    };
-    // The requesting principal: the requestor agent's who-identifier
-    // (skipping the token agent, which carries no who).
-    let principal = resource
-        .pointer("/agent")
-        .and_then(serde_json::Value::as_array)
-        .and_then(|agents| {
-            agents.iter().find(|a| {
-                a.get("requestor") == Some(&serde_json::Value::Bool(true))
-                    && a.pointer("/who/identifier/value").is_some()
-            })
-        })
-        .map(|a| text(a.pointer("/who/identifier/value")))
-        .unwrap_or_default();
-    // Entities: the patient (audit-entity-type 1) and the data object (2).
-    let entity_value = |type_code: &str| {
-        resource
-            .pointer("/entity")
-            .and_then(serde_json::Value::as_array)
-            .and_then(|entities| {
-                entities.iter().find(|e| {
-                    e.pointer("/type/code").and_then(serde_json::Value::as_str) == Some(type_code)
-                })
-            })
-            .map(|e| text(e.pointer("/what/identifier/value")))
-            .unwrap_or_default()
-    };
-    AuditRow {
-        recorded: text(resource.get("recorded")),
-        family,
-        operation,
-        action: text(resource.get("action")),
-        outcome,
-        success,
-        principal,
-        patient: entity_value("1"),
-        resource: entity_value("2"),
-        raw: serde_json::to_string_pretty(resource).unwrap_or_default(),
-    }
+        .collect_view()
+        .into_any();
+    let caption = tr(Msg::AuditRecords);
+    data_table(DataTable {
+        caption: &caption,
+        columns: &columns,
+        sorting: Sorting::default(),
+        body: Body::Rows(rows),
+    })
+    .into_any()
 }
 
-/// The audit-log browser screen: the URL-driven filter form and the paged
-/// record table over the ITI-81 retrieval.
+/// The heading of the Audit log.
+fn heading() -> AnyView {
+    page_heading(
+        Header {
+            title: tr(Msg::NavAudit).into(),
+            subtitle: Some(tr(Msg::AuditSubtitle).into()),
+            crumbs: Vec::new(),
+            mono: false,
+            badge: None,
+        },
+        ActionGroup::none(),
+    )
+    .into_any()
+}
+
+/// The note of a CDR that keeps no local audit store.
+fn store_off() -> AnyView {
+    card_panel(view! {
+        <div class="fui-panel-body fui-stack">
+            <p>{tr(Msg::AuditStoreOff)}</p>
+            <p class="fui-small fui-muted">{tr(Msg::AuditStoreOffLine)}</p>
+        </div>
+    })
+}
+
+/// The Audit log.
 #[expect(
     clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; view!/mount always consumes the value"
+    reason = "#[component] rewrites the fn; the router always consumes the value"
 )]
 #[component]
 pub fn AuditPage() -> impl IntoView {
-    let query = use_query_map();
-    let q = move |key: &str| query.read().get(key).unwrap_or_default();
-
-    // The resource source is the full filter tuple pulled from the URL
-    // (tracked); the fetcher itself is untracked by design.
-    let page: Resource<Result<AuditPage, ViewerError>> = Resource::new(
-        move || {
-            (
-                q("from"),
-                q("to"),
-                q("patient"),
-                q("agent"),
-                q("outcome"),
-                q("action"),
-                q("page").parse::<u32>().unwrap_or(0),
+    let filters = Filters::read();
+    let kept = crate::paging::current(Listing::Audit);
+    let fields = crate::paging::fields(Listing::Audit);
+    let body = awaited(async move {
+        let paging = Paging {
+            page: kept.page,
+            size: PAGE_SIZE,
+        };
+        let asked = Window::over(u32::MAX, paging);
+        let mut page = match filters.search(asked.start).await {
+            Ok(page) => page,
+            Err(error) => return refused(tr(Msg::AuditRefused), &error, None),
+        };
+        if !page.available {
+            return store_off();
+        }
+        let window = Window::over(page.total, paging);
+        if window.start != asked.start {
+            page = match filters.search(window.start).await {
+                Ok(page) => page,
+                Err(error) => return refused(tr(Msg::AuditRefused), &error, None),
+            };
+        }
+        let list = if page.rows.is_empty() {
+            list_empty(
+                tr(if filters.any() {
+                    Msg::AuditNoMatch
+                } else {
+                    Msg::AuditEmpty
+                }),
+                None,
             )
-        },
-        |(from, to, patient, agent, outcome, action, page)| async move {
-            search_audit(from, to, patient, agent, outcome, action, page * PAGE_SIZE).await
-        },
-    );
-
-    let filter_section = filter_form(query);
-    let table_section = audit_table(page, query);
-
+        } else {
+            table(&page, &filters)
+        };
+        let pager = (window.pages > 1).then(|| {
+            post_pager(
+                PagerListing::new(tr(Msg::AuditPages)).sizes(SIZES),
+                window,
+                PostTo {
+                    id: "audit-pager",
+                    action: crate::paging::PAGING_ROUTE,
+                    fields: &fields,
+                },
+            )
+        });
+        let card = list_card(ListCard {
+            title: tr(Msg::AuditRecords),
+            count: Some(u64::from(page.total)),
+            order: None,
+            tabs: None,
+            actions: None,
+            body: list,
+            pager,
+        });
+        view! { <div class="fui-list-page">{toolbar(&filters)} {chips(&filters)} {card}</div> }
+            .into_any()
+    });
     view! {
-        <Title text="Audit log" />
-        <div>
-            <PageHeader
-                title=tr(Msg::AuditLog)
-                subtitle=tr(Msg::AtnaSecurityAuditTrailWhoAccessed)
-            />
-            {filter_section}
-            {table_section}
-        </div>
+        <Title text=tr(Msg::NavAudit) />
+        {heading()}
+        {body}
     }
 }
 
-/// The GET filter form (router `<Form>`): submits to `/audit` with the
-/// filters as query parameters — shareable, refresh-safe, and functional
-/// before WASM loads. Initial values come from the current URL so a reload
-/// keeps the form filled.
-fn filter_form(query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
-    let initial = move |key: &str| query.read_untracked().get(key).unwrap_or_default();
-    // The two instants take a wider share of the row than the other filters,
-    // so a whole instant shows at the desktop width.
-    let from = text_filter(
-        "from",
-        tr(Msg::FromInstant),
-        Some("2026-07-01T00:00:00Z".to_owned()),
-        initial("from"),
-    );
-    let to = text_filter(
-        "to",
-        tr(Msg::ToInstant),
-        Some("2026-07-18T00:00:00Z".to_owned()),
-        initial("to"),
-    );
-    let patient = text_filter("patient", tr(Msg::PatientId), None, initial("patient"));
-    let agent = text_filter("agent", tr(Msg::Principal), None, initial("agent"));
-    let outcome = choice_filter("outcome", tr(Msg::Outcome), &OUTCOMES, &initial("outcome"));
-    let action = choice_filter("action", tr(Msg::Action2), &ACTIONS, &initial("action"));
-    view! {
-        <leptos_router::components::Form method="GET" action="/audit" attr:class="mb-4">
-            <div class="fui-field-flow">
-                <div class="basis-56">{from}</div>
-                <div class="basis-56">{to}</div>
-                {patient}
-                {agent}
-                {outcome}
-                {action}
-                <button type="submit" class=crate::components::field::BTN_PRIMARY>
-                    {tr(Msg::Filter)}
-                </button>
-            </div>
-        </leptos_router::components::Form>
-    }
-    .into_any()
-}
-
-/// The outcome choices of the filter, as the value the query carries and
-/// the words shown.
-const OUTCOMES: [(&str, Msg); 5] = [
-    ("", Msg::ChoiceAny),
-    ("0", Msg::ChoiceSuccess),
-    ("4", Msg::MinorFailure),
-    ("8", Msg::SeriousFailure),
-    ("12", Msg::MajorFailure),
-];
-
-/// The action choices of the filter, as the value the query carries and the
-/// words shown.
-const ACTIONS: [(&str, Msg); 6] = [
-    ("", Msg::ChoiceAny),
-    ("C", Msg::ActionCreate),
-    ("R", Msg::ActionRead),
-    ("U", Msg::ActionUpdate),
-    ("D", Msg::ActionDelete),
-    ("E", Msg::ActionExecute),
-];
-
-/// One text filter of the form, the query parameter `name` seeded with
-/// `value`.
-fn text_filter(
-    name: &'static str,
-    label: String,
-    placeholder: Option<String>,
-    value: String,
-) -> AnyView {
-    let id = format!("audit-{name}");
-    let input = view! {
-        <input
-            id=id.clone()
-            type="text"
-            name=name
-            class=INPUT
-            placeholder=placeholder
-            value=value
-        />
-    };
-    keyed_field(id, label, None, input).into_any()
-}
-
-/// One choice filter of the form, the query parameter `name` with `current`
-/// selected.
-fn choice_filter(
-    name: &'static str,
-    label: String,
-    choices: &[(&'static str, Msg)],
-    current: &str,
-) -> AnyView {
-    let id = format!("audit-{name}");
-    // Initial selection via the option `selected` attribute: it
-    // server-renders (a `prop:` would not) and the select stays uncontrolled,
-    // so the GET form owns the state.
-    let options = choices
-        .iter()
-        .map(|(value, words)| {
-            view! {
-                <option value=*value selected=*value == current>
-                    {tr(*words)}
-                </option>
+/// One audit record.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the router always consumes the value"
+)]
+#[component]
+pub fn AuditRecordPage() -> impl IntoView {
+    let place = use_params_map()
+        .with_untracked(|params| params.get("id"))
+        .and_then(|id| id.parse::<u32>().ok());
+    let filters = Filters::read();
+    let at = crate::request::query("at").unwrap_or_default();
+    let page = awaited(async move {
+        let Some(_place) = place else {
+            crate::request::set_status(http::StatusCode::NOT_FOUND);
+            return view! {
+                {heading()}
+                {crate::pages::common::info_note(tr(Msg::AuditRecordGone))}
             }
-        })
-        .collect_view();
-    let select = view! {
-        <select id=id.clone() name=name class=crate::components::field::SELECT>
-            {options}
-        </select>
-    };
-    keyed_field(id, label, None, select).into_any()
-}
-
-/// The record table: the page resource under `<Transition>` (old rows stay
-/// visible while a filter/page change loads), resolving the `Result`
-/// inside the `Suspend`.
-fn audit_table(
-    page: Resource<Result<AuditPage, ViewerError>>,
-    query: Memo<leptos_router::params::ParamsMap>,
-) -> AnyView {
-    view! {
-        <Transition fallback=table_skeleton>
-            {move || Suspend::new(async move {
-                match page.await {
-                    Ok(page) => page_view(page, query),
-                    Err(e) => crate::components::notice::inline_error(&e),
+            .into_any();
+        };
+        let mut bounded = filters.clone();
+        bounded.to.clone_from(&at);
+        let found = match bounded.search(0).await {
+            Ok(page) if !page.available => {
+                return view! {
+                    {heading()}
+                    {store_off()}
                 }
-            })}
-        </Transition>
-    }
-    .into_any()
-}
-
-/// Render one loaded page: the store-disabled state, the empty state, or the
-/// table + pagination footer.
-fn page_view(page: AuditPage, query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
-    if !page.available {
-        return view! {
-            <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::SHIELD_OFF
-                message=tr(Msg::LocalAuditRepositoryDisabled)
-                hint=tr(Msg::EnableAuditStoreCdrRecordBrowse)
-            />
-        }
-        .into_any();
-    }
-    if page.rows.is_empty() {
-        return view! {
-            <EmptyState
-                icon=ferrohealth_ui::icon::Glyph::SHIELD_CHECK
-                message=tr(Msg::NoAuditRecordsMatch)
-                hint=tr(Msg::WidenTimeWindowClearFilterEvery)
-            />
-        }
-        .into_any();
-    }
-
-    let body = page
-        .rows
-        .into_iter()
-        .map(row_view)
-        .collect_view()
-        .into_any();
-    let footer = pagination(page.total, page.offset, query);
-    view! {
-        {table_shell(
-            &tr(Msg::AuditRecords),
-            &[
-                &tr(Msg::Recorded),
-                &tr(Msg::Event2),
-                &tr(Msg::Operation),
-                &tr(Msg::Outcome),
-                &tr(Msg::Principal),
-                &tr(Msg::Patient),
-                &tr(Msg::Resource),
-                &tr(Msg::Record),
-            ],
-            body,
-        )}
-        {footer}
-    }
-    .into_any()
-}
-
-/// One record row. The raw stored `AuditEvent` opens in a native
-/// `<details>` disclosure (valid HTML, zero script).
-fn row_view(row: AuditRow) -> impl IntoView {
-    let outcome_class = if row.success {
-        "px-3 py-2 align-top text-success"
-    } else {
-        "px-3 py-2 align-top text-danger"
-    };
-    let event = format!("{} · {}", row.family, row.action);
-    view! {
-        <tr class=ROW>
-            <td class=CELL>{ferrohealth_ui::view::time::timestamp(&row.recorded)}</td>
-            <td class=CELL class:whitespace-nowrap=true data-label=tr(Msg::Event2)>
-                {event}
-            </td>
-            <td class=CELL_MONO data-label=tr(Msg::Operation)>
-                {row.operation}
-            </td>
-            <td class=outcome_class data-label=tr(Msg::Outcome)>
-                {row.outcome}
-            </td>
-            <td class=CELL_MONO data-label=tr(Msg::Principal)>
-                {row.principal}
-            </td>
-            <td class=CELL_MONO data-label=tr(Msg::Patient)>
-                {row.patient}
-            </td>
-            <td class=CELL_MONO data-label=tr(Msg::Resource)>
-                {row.resource}
-            </td>
-            <td class=CELL data-label=tr(Msg::Record)>
-                <details>
-                    <summary class="cursor-pointer text-accent hover:underline text-xs">
-                        "view"
-                    </summary>
-                    <pre class="mt-2 max-h-80 w-48 overflow-auto rounded-card border border-edge bg-sunken p-2 font-mono text-xs">
-                        {row.raw}
-                    </pre>
-                </details>
-            </td>
-        </tr>
-    }
-}
-
-/// The pagination footer: total + prev/next links that preserve the current
-/// filters in the URL (plain router anchors — WASM-optional).
-fn pagination(total: u32, offset: u32, query: Memo<leptos_router::params::ParamsMap>) -> AnyView {
-    #[expect(
-        clippy::integer_division,
-        reason = "a page index IS the truncating quotient of a page-aligned offset"
-    )]
-    let page_index = offset / PAGE_SIZE;
-    let shown_from = offset + 1;
-    let shown_to = (offset + PAGE_SIZE).min(total);
-    let href_for = move |page: u32| {
-        let map = query.read_untracked();
-        let mut params: Vec<String> = Vec::new();
-        for key in ["from", "to", "patient", "agent", "outcome", "action"] {
-            if let Some(value) = map.get(key)
-                && !value.is_empty()
-            {
-                params.push(format!("{key}={}", urlencoding::encode(&value)));
+                .into_any();
             }
-        }
-        params.push(format!("page={page}"));
-        format!("/audit?{}", params.join("&"))
-    };
-    let prev = (page_index > 0).then(|| {
+            Ok(page) => page.rows.into_iter().find(|row| row.recorded == at),
+            Err(error) => {
+                return view! {
+                    {heading()}
+                    {refused(tr(Msg::AuditRefused), &error, None)}
+                }
+                .into_any();
+            }
+        };
+        let Some(row) = found else {
+            crate::request::set_status(http::StatusCode::NOT_FOUND);
+            return view! {
+                {heading()}
+                {crate::pages::common::info_note(tr(Msg::AuditRecordGone))}
+            }
+            .into_any();
+        };
+        let facts = definitions(vec![
+            (tr(Msg::AuditWhen), when(&row.recorded)),
+            (
+                tr(Msg::AuditPrincipal),
+                if row.principal.is_empty() {
+                    tr(Msg::AuditUnknown)
+                } else {
+                    row.principal.clone()
+                }
+                .into_any(),
+            ),
+            (tr(Msg::AuditPatient), patient(&row)),
+            (
+                tr(Msg::AuditWhat),
+                view! { <code>{row.resource.clone()}</code> }.into_any(),
+            ),
+            (tr(Msg::AuditAction), row.action.clone().into_any()),
+            (tr(Msg::AuditOutcome), outcome(&row)),
+        ]);
+        let back = filters.pairs("");
+        let back = if back.is_empty() {
+            "/audit".to_owned()
+        } else {
+            format!("/audit?{}", back.join("&"))
+        };
+        let heading = page_heading(
+            Header {
+                title: event(&row).into(),
+                subtitle: Some(tr(Msg::AuditStoredAs).into()),
+                crumbs: vec![Crumb::new(tr(Msg::NavAudit), back)],
+                mono: false,
+                badge: None,
+            },
+            ActionGroup::none(),
+        );
         view! {
-            <leptos_router::components::A
-                href=href_for(page_index - 1)
-                attr:class="text-accent hover:underline"
-            >
-                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_LEFT, "12")}
-                {tr(Msg::Newer)}
-            </leptos_router::components::A>
-        }
-    });
-    let next = (shown_to < total).then(|| {
-        view! {
-            <leptos_router::components::A
-                href=href_for(page_index + 1)
-                attr:class="text-accent hover:underline"
-            >
-                {tr(Msg::Older)}
-                {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::ARROW_RIGHT, "12")}
-            </leptos_router::components::A>
-        }
-    });
-    view! {
-        <div class="mt-3 flex items-center gap-4 text-sm text-ink-muted">
-            <span>
-                {tr_with(
-                    Msg::OfRecords,
-                    &[
-                        ("shown_from", (shown_from).to_string().into()),
-                        ("shown_to", (shown_to).to_string().into()),
-                        ("total", (total).to_string().into()),
-                    ],
+            <Title text=event(&row) />
+            {heading}
+            <div class="fui-stack">
+                {card_panel(
+                    view! {
+                        {section(Some(tr(Msg::AuditTheEvent)), None, None, facts)}
+                        {document_section(
+                            tr(Msg::AuditAsStored),
+                            Language::Json,
+                            masked_record(&row),
+                            "audit-record",
+                        )}
+                    },
                 )}
-            </span>
-            {prev}
-            {next}
-        </div>
-    }
-    .into_any()
-}
-
-#[cfg(all(test, not(target_arch = "wasm32")))]
-mod tests {
-    use super::{audit_row, parse_bundle};
-
-    fn bundle(entries: &serde_json::Value) -> String {
-        serde_json::json!({
-            "resourceType": "Bundle",
-            "type": "searchset",
-            "total": 2,
-            "entry": entries,
-        })
-        .to_string()
-    }
-
-    #[test]
-    fn parses_a_searchset_bundle() {
-        let body = bundle(&serde_json::json!([
-            { "resource": { "resourceType": "AuditEvent", "recorded": "2026-07-10T08:00:00Z",
-                "type": { "code": "rest" }, "action": "R", "outcome": "0" } },
-            { "resource": { "resourceType": "AuditEvent", "recorded": "2026-07-09T08:00:00Z",
-                "type": { "code": "110114" }, "action": "E", "outcome": "4" } },
-        ]));
-        let page = parse_bundle(&body, 0).expect("page");
-        assert!(page.available);
-        assert_eq!(page.total, 2);
-        assert_eq!(page.rows.len(), 2);
-        assert_eq!(page.rows[0].family, "REST");
-        assert!(page.rows[0].success);
-        assert_eq!(page.rows[1].family, "Authentication");
-        assert_eq!(page.rows[1].outcome, "minor failure");
-    }
-
-    #[test]
-    fn distils_the_balp_shape() {
-        let resource = serde_json::json!({
-            "resourceType": "AuditEvent",
-            "recorded": "2026-07-10T08:00:00Z",
-            "type": { "code": "rest" },
-            "subtype": [
-                { "code": "read" },
-                { "code": "composition_get" }
-            ],
-            "action": "R",
-            "outcome": "0",
-            "agent": [
-                { "requestor": true, "who": { "identifier": { "value": "alice" } } },
-                { "requestor": false, "who": { "identifier": { "value": "ferroehr" } } },
-                { "requestor": true, "policy": ["jti-1"] }
-            ],
-            "entity": [
-                { "type": { "code": "1" }, "what": { "identifier": { "value": "patient-42" } } },
-                { "type": { "code": "2" }, "what": { "identifier": { "value": "8fa1::ferroehr::1" } } }
-            ]
-        });
-        let row = audit_row(&resource);
-        assert_eq!(row.operation, "composition_get");
-        assert_eq!(row.principal, "alice");
-        assert_eq!(row.patient, "patient-42");
-        assert_eq!(row.resource, "8fa1::ferroehr::1");
-        assert!(row.raw.contains("composition_get"));
-    }
-
-    #[test]
-    fn login_records_humanize() {
-        let resource = serde_json::json!({
-            "resourceType": "AuditEvent",
-            "recorded": "2026-07-10T08:00:00Z",
-            "type": { "code": "110114" },
-            "subtype": [{ "code": "110122" }],
-            "action": "E",
-            "outcome": "4",
-        });
-        let row = audit_row(&resource);
-        assert_eq!(row.family, "Authentication");
-        assert_eq!(row.operation, "login");
-        assert!(!row.success);
-    }
+            </div>
+        }
+        .into_any()
+    });
+    view! { {page} }
 }

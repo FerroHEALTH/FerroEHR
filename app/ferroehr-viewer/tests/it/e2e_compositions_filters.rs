@@ -24,11 +24,11 @@
 //! **EHR header identity**:
 //!
 //! - the filter form writes the URL and narrows the rows (template, composer),
-//!   and a row opens the composition viewer's RENDERED clinical reading;
+//!   and a row opens the composition on its Reading tab;
 //! - a shared filter URL reproduces the view, and a one-day window INCLUDES the
 //!   compositions recorded during that day;
-//! - the header names the EHR's subject and its queryable/modifiable badges
-//!   from the same status read the Status tab shows.
+//! - the header names the EHR's subject, masked until revealed, and its
+//!   queryable and modifiable badges on every tab.
 //!
 //! Isolation: each journey creates its OWN subject-bound EHR over ITS-REST and
 //! commits two compositions into it — different templates, different composers,
@@ -40,7 +40,6 @@
 use crate::common;
 
 use common::{Harness, env, find_all, login_basic, poll_until, retype};
-use thirtyfour::prelude::*;
 
 /// The two templates the journeys distinguish between; both are uploaded here
 /// (idempotently) so the filter has something to narrow.
@@ -250,30 +249,18 @@ async fn seed(http: &reqwest::Client, v1: &str) -> (String, String) {
     (ehr_id, subject_id)
 }
 
-/// The text of every composition row currently on screen, newest first — a row
-/// being a table row that carries a link into the composition viewer.
+/// The text of every composition row, in order.
 async fn row_texts(h: &Harness) -> Vec<String> {
     let mut rows = Vec::new();
-    for link in find_all(h, "tr a[href*='/compositions/']").await {
-        // The row is the link's grandparent (<a> inside <td> inside <tr>).
-        // NOTE: probe tier on both hops — a handle the `<Transition>` detaches
-        // mid-swap is "not yet" for the poll loop around this read.
-        if let Some(row) = link.read_find(By::XPath("./ancestor::tr[1]")).await
-            && let Some(text) = row.read_text().await
-        {
+    for row in find_all(h, "main table tbody tr").await {
+        if let Some(text) = row.read_text().await {
             rows.push(text);
         }
     }
     rows
 }
 
-/// Poll until the visible composition rows are exactly the ones whose text
-/// contains each `expected` fragment, in order — a `<Transition>` keeps the
-/// PREVIOUS rows on screen while the filtered read runs, so an immediate count
-/// would assert against the unfiltered page.
-///
-/// # Panics
-/// When the rows never settle on the expected set, reporting what was on screen.
+/// Wait until the rows are exactly `expected`, one fragment per row in order.
 async fn wait_rows(h: &Harness, expected: &[&str]) {
     let mut last = Vec::new();
     let settled = poll_until(async || {
@@ -291,9 +278,9 @@ async fn wait_rows(h: &Harness, expected: &[&str]) {
     );
 }
 
-/// The filter form writes its fields into the URL, the rows narrow to what the
-/// CDR matched, and a row opens the composition viewer already in its RENDERED
-/// clinical reading.
+/// The filter form writes its fields into the URL, the rows narrow to what
+/// the CDR matched, Clear filters empties it, and a row opens the composition
+/// on its Reading tab.
 #[tokio::test]
 async fn composition_filters_travel_in_the_url_and_narrow_the_rows() {
     let Some(h) = Harness::start("compositions-filters").await else {
@@ -308,68 +295,54 @@ async fn composition_filters_travel_in_the_url_and_narrow_the_rows() {
     let (ehr_id, _subject) = seed(&http, &v1).await;
 
     login_basic(&h).await;
-    h.goto(&format!("/ehrs/{ehr_id}?tab=compositions")).await;
-    // Unfiltered: both compositions, newest first — the tab's behaviour with an
-    // empty filter set is exactly what it always was.
+    h.goto(&format!("/ehrs/{ehr_id}")).await;
     wait_rows(&h, &[COMPOSER_B, COMPOSER_A]).await;
     h.shot(1, "unfiltered").await;
 
-    // The template filter, typed into the form and submitted.
-    retype(&h, "#composition-filter-template", "instruction").await;
-    h.wait_css("#composition-filter-apply").await.click().await;
+    retype(&h, "#f-template", "instruction").await;
+    common::submit(&h, "main form[role='search'] button[type=submit]").await;
     h.wait_url_contains("template=instruction").await;
-    // The submission stays on the tab it came from and drops any page offset.
-    h.wait_url_contains("tab=compositions").await;
     wait_rows(&h, &[COMPOSER_B]).await;
     h.shot(2, "template-filtered").await;
 
-    // The composer filter, from the URL — the same state a shared link carries.
-    h.goto(&format!("/ehrs/{ehr_id}?tab=compositions&composer=Ashford"))
-        .await;
+    h.goto(&format!("/ehrs/{ehr_id}?composer=Ashford")).await;
     wait_rows(&h, &[COMPOSER_A]).await;
-    // …and the form came back filled from the URL, so the view is reproducible.
-    let composer_field = h.wait_css("#composition-filter-composer").await;
     assert_eq!(
-        composer_field.prop("value").await,
+        h.wait_css("#f-composer").await.prop("value").await,
         "Ashford",
         "a shared filter URL must refill the form it came from"
     );
     h.shot(3, "composer-filtered").await;
 
-    // Clearing puts every row back AND empties the boxes: the fields follow the
-    // address bar, so none of them can keep claiming a filter the URL dropped.
-    h.wait_css("#composition-filter-clear").await.click().await;
-    wait_rows(&h, &[COMPOSER_B, COMPOSER_A]).await;
-    for field in [
-        "#composition-filter-template",
-        "#composition-filter-from",
-        "#composition-filter-to",
-        "#composition-filter-composer",
-    ] {
-        let value = h.wait_css(field).await.prop("value").await;
-        assert!(
-            value.is_empty(),
-            "`{field}` still reads `{value}` after Clear"
-        );
-    }
-
-    // A row opens the viewer's RENDERED clinical reading — no tab click.
-    h.wait_css("tr a[href*='/compositions/']")
+    h.wait_css(&format!("main a[href='/ehrs/{ehr_id}']"))
         .await
         .click()
         .await;
-    h.wait_url_contains("view=rendered").await;
-    h.wait_css("[data-doc-row]").await;
-    h.shot(4, "row-opens-rendered").await;
+    wait_rows(&h, &[COMPOSER_B, COMPOSER_A]).await;
+    for field in ["#f-template", "#f-start-from", "#f-start-to", "#f-composer"] {
+        let value = h.wait_css(field).await.prop("value").await;
+        assert!(
+            value.is_empty(),
+            "`{field}` still reads `{value}` after Clear filters"
+        );
+    }
+
+    h.wait_css("main table tbody a.fui-row-link")
+        .await
+        .click()
+        .await;
+    h.wait_url_contains("/compositions/").await;
+    h.wait_css("h2.fui-reading-title").await;
+    h.shot(4, "row-opens-reading").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;
     h.finish().await;
 }
 
-/// A date window in the URL bounds the composition's context start time, and a
-/// ONE-DAY window includes what was recorded during that day: the upper bound
-/// is completed to the end of its UTC day, not read as midnight.
+/// A date window in the URL bounds the context start time, and a one-day
+/// window includes what was recorded during that day: the upper bound is
+/// completed to the end of its UTC day.
 #[tokio::test]
 async fn a_shared_date_window_bounds_the_context_start_time_inclusively() {
     let Some(h) = Harness::start("compositions-date-window").await else {
@@ -384,36 +357,23 @@ async fn a_shared_date_window_bounds_the_context_start_time_inclusively() {
     let (ehr_id, _subject) = seed(&http, &v1).await;
 
     login_basic(&h).await;
-    // An upper bound before the later composition keeps only the earlier one.
-    h.goto(&format!("/ehrs/{ehr_id}?tab=compositions&to=2026-04-01"))
-        .await;
+    h.goto(&format!("/ehrs/{ehr_id}?to=2026-04-01")).await;
     wait_rows(&h, &[COMPOSER_A]).await;
     h.shot(1, "upper-bound").await;
 
-    // A lower bound after it keeps only the later one.
-    h.goto(&format!("/ehrs/{ehr_id}?tab=compositions&from=2026-04-01"))
-        .await;
+    h.goto(&format!("/ehrs/{ehr_id}?from=2026-04-01")).await;
     wait_rows(&h, &[COMPOSER_B]).await;
     h.shot(2, "lower-bound").await;
 
-    // The whole-day case: the later composition was recorded at 14:45 UTC, so a
-    // window of exactly its day must include it.
-    h.goto(&format!(
-        "/ehrs/{ehr_id}?tab=compositions&from={DAY_B}&to={DAY_B}"
-    ))
-    .await;
+    h.goto(&format!("/ehrs/{ehr_id}?from={DAY_B}&to={DAY_B}"))
+        .await;
     wait_rows(&h, &[COMPOSER_B]).await;
     h.shot(3, "one-day-window").await;
 
-    // A window neither composition falls in is the filtered empty state, not
-    // the "this EHR holds nothing" one.
-    h.goto(&format!(
-        "/ehrs/{ehr_id}?tab=compositions&from=2027-01-01&to=2027-01-02"
-    ))
-    .await;
-    wait_rows(&h, &[]).await;
-    h.wait_xpath("//*[contains(., 'No compositions match these filters')]")
+    h.goto(&format!("/ehrs/{ehr_id}?from=2027-01-01&to=2027-01-02"))
         .await;
+    wait_rows(&h, &[]).await;
+    common::wait_main_contains(&h, "No composition matches").await;
     h.shot(4, "no-match").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
@@ -421,9 +381,8 @@ async fn a_shared_date_window_bounds_the_context_start_time_inclusively() {
     h.finish().await;
 }
 
-/// The EHR-detail header names the EHR's subject and shows its capability
-/// badges, on EVERY tab — from the same current-`EHR_STATUS` read the Status
-/// tab renders, never a second one.
+/// The EHR header names the subject, masked until revealed, and shows its
+/// status badges on every tab, from the one current-`EHR_STATUS` read.
 #[tokio::test]
 async fn the_ehr_header_names_the_subject_and_its_status_badges() {
     let Some(h) = Harness::start("ehr-header-identity").await else {
@@ -438,35 +397,29 @@ async fn the_ehr_header_names_the_subject_and_its_status_badges() {
     let (ehr_id, subject_id) = seed(&http, &v1).await;
 
     login_basic(&h).await;
-    h.goto(&format!("/ehrs/{ehr_id}?tab=compositions")).await;
+    for tab in ["", "/status", "/tags"] {
+        h.goto(&format!("/ehrs/{ehr_id}{tab}")).await;
+        let header = h.wait_css(".fui-subject").await.text().await;
+        assert!(
+            header.contains("e2e-patients") && !header.contains(&subject_id),
+            "the header names the namespace and masks the subject id (got `{header}`)"
+        );
+        for badge in ["Queryable", "Modifiable"] {
+            assert!(
+                header.contains(badge),
+                "the header shows `{badge}`: {header}"
+            );
+        }
+    }
+    h.shot(1, "header-masked").await;
 
-    // The identity line carries the external_ref's id AND its namespace.
-    let identity = h.wait_css("#ehr-identity").await;
-    let text = identity.text().await;
-    assert!(
-        text.contains(&subject_id) && text.contains("e2e-patients"),
-        "the header must name the subject id and its namespace (got `{text}`)"
-    );
-    // Both capability badges, in the header, the one place the page shows
-    // them.
-    h.wait_css(
-        "[data-status-scope='header'][data-status-flag='queryable'][data-status-value='true']",
-    )
-    .await;
-    h.wait_css(
-        "[data-status-scope='header'][data-status-flag='modifiable'][data-status-value='true']",
-    )
-    .await;
-    h.shot(1, "header-on-compositions-tab").await;
-
-    // The header keeps both flags while the Status tab is open.
-    h.goto(&format!("/ehrs/{ehr_id}?tab=status")).await;
-    h.wait_css(
-        "[data-status-scope='header'][data-status-flag='queryable'][data-status-value='true']",
-    )
-    .await;
-    h.wait_css("#ehr-identity").await;
-    h.shot(2, "header-on-status-tab").await;
+    // Reveal is the hydrated island's button; it shows the whole id.
+    h.wait_xpath("//div[contains(@class, 'fui-subject')]//button[normalize-space(.)='Reveal']")
+        .await
+        .click()
+        .await;
+    common::wait_text_contains(&h, ".fui-subject", &subject_id).await;
+    h.shot(2, "header-revealed").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;

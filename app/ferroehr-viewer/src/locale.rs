@@ -27,8 +27,23 @@ fluent_templates::static_loader! {
         fallback_language: "en",
         // NOTE: Fluent's guide, "Bidirectionality": the isolation marks around a
         // placeable are for mixed-direction text; the English catalog draws none.
-        customise: |bundle| bundle.set_use_isolating(false),
+        customise: |bundle| {
+            bundle.set_use_isolating(false);
+            // FerroUI's formatter groups each number in the page's language,
+            // from each catalog's `number-group` (FerroUI #293).
+            bundle.set_formatter(Some(ferrohealth_ui::i18n::number::format_number));
+        },
     };
+}
+
+/// Every language the viewer's catalogs ship, English first.
+#[must_use]
+pub fn shipped() -> Vec<Locale> {
+    let mut tags: Vec<String> = catalog().locales().map(ToString::to_string).collect();
+    tags.sort_by_key(|tag| (tag != "en", tag.clone()));
+    tags.iter()
+        .filter_map(|tag| Locale::parse(tag).ok())
+        .collect()
 }
 
 /// The viewer's catalogs, every language it ships.
@@ -2382,6 +2397,1918 @@ messages! {
     FlagQueryable = "flag-queryable",
     /// The EHR status flag `is_modifiable`, on a badge
     FlagModifiable = "flag-modifiable",
+    /// `FerroEHR`
+    BrandName = "brand-name",
+    /// `Viewer`
+    BrandWord = "brand-word",
+    /// `CDR unreachable`
+    CdrUnreachableCode = "cdr-unreachable-code",
+    /// `{ $count ->`
+    DaysAgo = "days-ago",
+    /// `Discard`
+    Discard = "discard",
+    /// `Decision`
+    DockLabel = "dock-label",
+    /// `You are signed in as { $who }, and the CDR shows this only to { $needs }.`
+    ForbiddenBody = "forbidden-body",
+    /// `{ $count } h ago`
+    HoursAgo = "hours-ago",
+    /// `Viewer error`
+    InternalCode = "internal-code",
+    /// `Not sent`
+    InvalidCode = "invalid-code",
+    /// `just now`
+    JustNow = "just-now",
+    /// `{ $count } min ago`
+    MinutesAgo = "minutes-ago",
+    /// `About`
+    NavAbout = "nav-about",
+    /// `Audit log`
+    NavAudit = "nav-audit",
+    /// `Configuration`
+    NavConfiguration = "nav-configuration",
+    /// `Dashboard`
+    NavDashboard = "nav-dashboard",
+    /// `EHRs`
+    NavEhrs = "nav-ehrs",
+    /// `Console`
+    NavGroupConsole = "nav-group-console",
+    /// `Definitions`
+    NavGroupDefinitions = "nav-group-definitions",
+    /// `Overview`
+    NavGroupOverview = "nav-group-overview",
+    /// `Queries`
+    NavGroupQueries = "nav-group-queries",
+    /// `Records`
+    NavGroupRecords = "nav-group-records",
+    /// `Viewer`
+    NavLabel = "nav-label",
+    /// `Parties`
+    NavParties = "nav-parties",
+    /// `Query`
+    NavQuery = "nav-query",
+    /// `Server`
+    NavServer = "nav-server",
+    /// `Stored queries`
+    NavStoredQueries = "nav-stored-queries",
+    /// `Subscriptions`
+    NavSubscriptions = "nav-subscriptions",
+    /// `Templates`
+    NavTemplates = "nav-templates",
+    /// `Terminology`
+    NavTerminology = "nav-terminology",
+    /// `FerroEHR { $version } at { $address }`
+    PillDetail = "pill-detail",
+    /// `FerroEHR { $version } at { $address } · { $profile } deployment`
+    PillDetailProfile = "pill-detail-profile",
+    /// `CDR refused 401`
+    PillRefused = "pill-refused",
+    /// `CDR unknown`
+    PillUnknown = "pill-unknown",
+    /// `CDR unreachable`
+    PillUnreachable = "pill-unreachable",
+    /// `No answer from { $address }`
+    PillUnreachableDetail = "pill-unreachable-detail",
+    /// `CDR up`
+    PillUp = "pill-up",
+    /// `FerroEHR Viewer`
+    ProductName = "product-name",
+    /// `{ $count ->`
+    SandboxGaps = "sandbox-gaps",
+    /// `This deployment must not hold real patient data.`
+    SandboxNoGaps = "sandbox-no-gaps",
+    /// `Sandbox`
+    SandboxTitle = "sandbox-title",
+    /// `Find in the CDR`
+    SearchLabel = "search-label",
+    /// `Id, name or subject id`
+    SearchPlaceholder = "search-placeholder",
+    /// `Find`
+    SearchSubmit = "search-submit",
+    /// `Search waits for the CDR`
+    SearchWaits = "search-waits",
+    /// `{ $count } s ago`
+    SecondsAgo = "seconds-ago",
+    /// `Session ended`
+    SessionEndedCode = "session-ended-code",
+    /// `Sign in at { $host }`
+    SignInAt = "sign-in-at",
+    /// `Sign in with a CDR account`
+    SignInBasicSubmit = "sign-in-basic-submit",
+    /// `The viewer of the FerroEHR clinical data repository.`
+    SignInCaption = "sign-in-caption",
+    /// `The CDR did not answer. You can still try to sign in.`
+    SignInCdrUnreachable = "sign-in-cdr-unreachable",
+    /// `Your session ended. Sign in again to return to the page you were on.`
+    SignInExpired = "sign-in-expired",
+    /// `Not signed in: { $error }`
+    SignInFailed = "sign-in-failed",
+    /// `the identity provider`
+    SignInIdentityProvider = "sign-in-identity-provider",
+    /// `Taking you to { $host }…`
+    SignInRedirecting = "sign-in-redirecting",
+    /// `Not signed in: the CDR refused that username or password.`
+    SignInRefused = "sign-in-refused",
+    /// `The identity provider did not sign you in.`
+    SignInRefusedProvider = "sign-in-refused-provider",
+    /// `You are signed out.`
+    SignInSignedOut = "sign-in-signed-out",
+    /// `Sign in`
+    SignInTitle = "sign-in-title",
+    /// `Signed in with a CDR account`
+    SignedInBasic = "signed-in-basic",
+    /// `Signed in at the identity provider`
+    SignedInOidc = "signed-in-oidc",
+    /// `an unknown version`
+    UnknownVersion = "unknown-version",
+    /// `Your access`
+    YourAccess = "your-access",
+    /// `Your menu`
+    YourMenu = "your-menu",
+    /// `The FerroEHR book`
+    AboutBook = "about-book",
+    /// `CDR`
+    AboutCdr = "about-cdr",
+    /// `FerroEHR { $version }`
+    AboutCdrVersion = "about-cdr-version",
+    /// `FerroUI`
+    AboutFerroUi = "about-ferro-ui",
+    /// `ferrohealth-ui { $version }`
+    AboutFerroUiVersion = "about-ferro-ui-version",
+    /// `Business Source License 1.1`
+    AboutLicence = "about-licence",
+    /// `The conformance manifest`
+    AboutManifest = "about-manifest",
+    /// `What the CDR answers at OPTIONS on its base path.`
+    AboutManifestLine = "about-manifest-line",
+    /// `The conformance manifest could not be read.`
+    AboutManifestRefused = "about-manifest-refused",
+    /// `openEHR REST`
+    AboutOpenEhrRest = "about-open-ehr-rest",
+    /// `ITS-REST { $version }`
+    AboutRestVersion = "about-rest-version",
+    /// `The viewer, the CDR it reads, and the manufacturer.`
+    AboutSubtitle = "about-subtitle",
+    /// `What decides`
+    AccessDecides = "access-decides",
+    /// `How`
+    AccessHow = "access-how",
+    /// `Basic sign-in with a CDR account`
+    AccessHowBasic = "access-how-basic",
+    /// `OIDC at the identity provider`
+    AccessHowOidc = "access-how-oidc",
+    /// `A Basic session carries no SMART scopes; the CDR checks the account's role.`
+    AccessNoScopes = "access-no-scopes",
+    /// `Read a scope`
+    AccessPreview = "access-preview",
+    /// `Paste a scope to read it here.`
+    AccessPreviewEmpty = "access-preview-empty",
+    /// `Paste a scope to see what it allows.`
+    AccessPreviewIntro = "access-preview-intro",
+    /// `Previewed scopes`
+    AccessPreviewed = "access-previewed",
+    /// `Read it`
+    AccessReadIt = "access-read-it",
+    /// `Scope or claim`
+    AccessScopeField = "access-scope-field",
+    /// `patient/composition-*.rs`
+    AccessScopePlaceholder = "access-scope-placeholder",
+    /// `Session`
+    AccessSession = "access-session",
+    /// `Ends after { $minutes } minutes without a request`
+    AccessSessionEnds = "access-session-ends",
+    /// `Signed in as`
+    AccessSignedInAs = "access-signed-in-as",
+    /// `What this session may do.`
+    AccessSubtitle = "access-subtitle",
+    /// `Who you are`
+    AccessWho = "access-who",
+    /// `Teal`
+    BrandAccent = "brand-accent",
+    /// `Matches`
+    ColumnMatches = "column-matches",
+    /// `Namespace`
+    ColumnNamespace = "column-namespace",
+    /// `Matches by namespace`
+    DashboardByNamespace = "dashboard-by-namespace",
+    /// `Create the first EHR`
+    DashboardCreateFirstEhr = "dashboard-create-first-ehr",
+    /// `{ $count ->`
+    DashboardMatches = "dashboard-matches",
+    /// `The stored queries could not be read.`
+    DashboardNamespacesRefused = "dashboard-namespaces-refused",
+    /// `The CDR did not answer.`
+    DashboardNoAnswer = "dashboard-no-answer",
+    /// `No composition is committed yet.`
+    DashboardNoCompositions = "dashboard-no-compositions",
+    /// `No stored query yet.`
+    DashboardNoStoredQuery = "dashboard-no-stored-query",
+    /// `No total`
+    DashboardNoTotal = "dashboard-no-total",
+    /// `Compositions per day`
+    DashboardPerDay = "dashboard-per-day",
+    /// `By commit time, over the newest compositions; read with one AQL query.`
+    DashboardPerDayNote = "dashboard-per-day-note",
+    /// `The compositions per day could not be read.`
+    DashboardPerDayRefused = "dashboard-per-day-refused",
+    /// `{ $total } compositions from { $first } to { $last }, at most { $most } on one day.`
+    DashboardPerDaySummary = "dashboard-per-day-summary",
+    /// `{ $count ->`
+    DashboardQueries = "dashboard-queries",
+    /// `The CDR did not answer, so the dashboard cannot be shown. Your session is kept.`
+    DashboardRefused = "dashboard-refused",
+    /// `What { $host } holds, as it answered just now.`
+    DashboardSubtitle = "dashboard-subtitle",
+    /// `Write one in Query`
+    DashboardWriteOne = "dashboard-write-one",
+    /// `How long a subject id stays shown after you reveal it; the viewer caps it at 2 minutes.`
+    RevealDescription = "reveal-description",
+    /// `Show a revealed identifier for`
+    RevealLabel = "reveal-label",
+    /// `{ $count ->`
+    RevealMinutes = "reveal-minutes",
+    /// `{ $count } seconds`
+    RevealSeconds = "reveal-seconds",
+    /// `Not a SMART on openEHR scope.`
+    ScopeNotRecognised = "scope-not-recognised",
+    /// `{ $family } { $pattern }`
+    ScopeResource = "scope-resource",
+    /// `Compositions, found in Query`
+    StatCompositions = "stat-compositions",
+    /// `EHRs`
+    StatEhrs = "stat-ehrs",
+    /// `Stored queries`
+    StatStoredQueries = "stat-stored-queries",
+    /// `Templates`
+    StatTemplates = "stat-templates",
+    /// `Try again`
+    TryAgain = "try-again",
+    /// `—`
+    UnknownCount = "unknown-count",
+    /// `Upload a template`
+    UploadATemplate = "upload-a-template",
+    /// `Your preferences`
+    YourPreferences = "your-preferences",
+    /// `The viewer's state is not in reach.`
+    AboutNoState = "about-no-state",
+    /// `Created`
+    ColumnCreated = "column-created",
+    /// `EHR`
+    ColumnEhr = "column-ehr",
+    /// `Add the reference`
+    DirectoryAddReference = "directory-add-reference",
+    /// `The CDR refused to create the directory.`
+    DirectoryCreateRefused = "directory-create-refused",
+    /// `Add, rename and remove folders, and add references to the EHR's compositions. Nothing reac`
+    DirectoryEditIntro = "directory-edit-intro",
+    /// `Saved as one new version.`
+    DirectoryEditSubtitle = "directory-edit-subtitle",
+    /// `Edit the directory`
+    DirectoryEditTitle = "directory-edit-title",
+    /// `Empty`
+    DirectoryEmpty = "directory-empty",
+    /// `{ $count ->`
+    DirectoryFolders = "directory-folders",
+    /// `{ $folders ->`
+    DirectoryFoldersItems = "directory-folders-items",
+    /// `Folders`
+    DirectoryFoldersTitle = "directory-folders-title",
+    /// `{ $count ->`
+    DirectoryItems = "directory-items",
+    /// `Keep this name`
+    DirectoryKeepName = "directory-keep-name",
+    /// `Overwrite`
+    DirectoryOverwrite = "directory-overwrite",
+    /// `Overwrite replaces the other change with yours.`
+    DirectoryOverwriteNote = "directory-overwrite-note",
+    /// `Composition`
+    DirectoryReferenceLabel = "directory-reference-label",
+    /// `Reload the latest version, or overwrite it.`
+    DirectoryReloadOrOverwrite = "directory-reload-or-overwrite",
+    /// `The CDR refused the directory.`
+    DirectorySaveRefused = "directory-save-refused",
+    /// `Saved as version { $version }.`
+    DirectorySavedVersion = "directory-saved-version",
+    /// `The document is not valid JSON.`
+    EditorJson = "editor-json",
+    /// `Not saved`
+    EditorNotSaved = "editor-not-saved",
+    /// `Opened at the latest version`
+    EditorOpened = "editor-opened",
+    /// `Reload the latest version before you save.`
+    EditorReloadFirst = "editor-reload-first",
+    /// `Reloading replaces your edits with the version on the server.`
+    EditorReloadReplaces = "editor-reload-replaces",
+    /// `Reload version { $version }`
+    EditorReloadVersion = "editor-reload-version",
+    /// `Save`
+    EditorSave = "editor-save",
+    /// `Save as version { $version }`
+    EditorSaveAsVersion = "editor-save-as-version",
+    /// `Edit`
+    EditorTitle = "editor-title",
+    /// `Back to EHRs`
+    EhrBack = "ehr-back",
+    /// `Commit several changes`
+    EhrCommitSeveral = "ehr-commit-several",
+    /// `Create the directory`
+    EhrCreateDirectory = "ehr-create-directory",
+    /// `Delete EHR…`
+    EhrDelete = "ehr-delete",
+    /// `Delete EHR`
+    EhrDeleteConfirm = "ehr-delete-confirm",
+    /// `Type the first 8 characters of the EHR id to confirm`
+    EhrDeleteConfirmLabel = "ehr-delete-confirm-label",
+    /// `The EHR and every composition, directory and status version in it are removed from the CDR`
+    EhrDeleteMessage = "ehr-delete-message",
+    /// `The characters you typed are not the start of this EHR id.`
+    EhrDeleteMismatch = "ehr-delete-mismatch",
+    /// `The CDR refused to delete the EHR.`
+    EhrDeleteRefused = "ehr-delete-refused",
+    /// `Delete EHR { $id }?`
+    EhrDeleteTitle = "ehr-delete-title",
+    /// `More actions`
+    EhrMore = "ehr-more",
+    /// `Create EHR`
+    EhrNewCreate = "ehr-new-create",
+    /// `EHR id`
+    EhrNewEhrId = "ehr-new-ehr-id",
+    /// `Leave it empty and the CDR mints a UUID.`
+    EhrNewEhrIdHelp = "ehr-new-ehr-id-help",
+    /// `UUID, or empty`
+    EhrNewEhrIdPlaceholder = "ehr-new-ehr-id-placeholder",
+    /// `An EHR with this id exists already.`
+    EhrNewInUse = "ehr-new-in-use",
+    /// `Namespace`
+    EhrNewNamespace = "ehr-new-namespace",
+    /// `EHR not created`
+    EhrNewNotCreated = "ehr-new-not-created",
+    /// `An EHR id is a UUID, such as 7d44aa01-0f9e-4a2c-9a0f-2a6a5f9b1c3d.`
+    EhrNewNotUuid = "ehr-new-not-uuid",
+    /// `Not created yet`
+    EhrNewNotYet = "ehr-new-not-yet",
+    /// `The CDR refused to create the EHR.`
+    EhrNewRefused = "ehr-new-refused",
+    /// `Subject`
+    EhrNewSubject = "ehr-new-subject",
+    /// `Subject id`
+    EhrNewSubjectId = "ehr-new-subject-id",
+    /// `The person this EHR is about, as an id the CDR keeps without reading it.`
+    EhrNewSubjectIntro = "ehr-new-subject-intro",
+    /// `An EHR with its status; the subject is optional.`
+    EhrNewSubtitle = "ehr-new-subtitle",
+    /// `No EHR { $id }`
+    EhrNotFoundTitle = "ehr-not-found-title",
+    /// `Open EHR { $id }`
+    EhrOpen = "ehr-open",
+    /// `The EHR could not be read.`
+    EhrRefused = "ehr-refused",
+    /// `In { $system }`
+    EhrSubtitle = "ehr-subtitle",
+    /// `Compositions`
+    EhrTabCompositions = "ehr-tab-compositions",
+    /// `Contributions`
+    EhrTabContributions = "ehr-tab-contributions",
+    /// `Directory`
+    EhrTabDirectory = "ehr-tab-directory",
+    /// `Status`
+    EhrTabStatus = "ehr-tab-status",
+    /// `Tags`
+    EhrTabTags = "ehr-tab-tags",
+    /// `EHR { $id }`
+    EhrTitle = "ehr-title",
+    /// `Create the first EHR`
+    EhrsCreateFirst = "ehrs-create-first",
+    /// `The CDR holds no EHR yet.`
+    EhrsEmpty = "ehrs-empty",
+    /// `Subject id`
+    EhrsFindLabel = "ehrs-find-label",
+    /// `The subject search could not be finished.`
+    EhrsFindRefused = "ehrs-find-refused",
+    /// `Namespace`
+    EhrsNamespace = "ehrs-namespace",
+    /// `No EHR belongs to this subject.`
+    EhrsNoMatch = "ehrs-no-match",
+    /// `EHR pages`
+    EhrsPages = "ehrs-pages",
+    /// `The EHRs could not be read.`
+    EhrsRefused = "ehrs-refused",
+    /// `Subject: { $subject }`
+    EhrsSubjectChip = "ehrs-subject-chip",
+    /// `A subject search needs the namespace the subject id belongs to.`
+    EhrsSubjectNeedsNamespace = "ehrs-subject-needs-namespace",
+    /// `Every EHR the CDR holds, newest first.`
+    EhrsSubtitle = "ehrs-subtitle",
+    /// `Contribution`
+    FactContribution = "fact-contribution",
+    /// `Lifecycle`
+    FactLifecycle = "fact-lifecycle",
+    /// `Committed`
+    FactSigned = "fact-signed",
+    /// `Version`
+    FactVersion = "fact-version",
+    /// `In EHR { $ehr }`
+    FindCompositionLine = "find-composition-line",
+    /// `Compositions`
+    FindCompositions = "find-compositions",
+    /// `EHR { $id }`
+    FindEhr = "find-ehr",
+    /// `Created { $created }`
+    FindEhrLine = "find-ehr-line",
+    /// `Type an id, a subject, a template or a query name in the search field above.`
+    FindEmpty = "find-empty",
+    /// `{ $count ->`
+    FindFoundSome = "find-found-some",
+    /// `{ $count ->`
+    FindMatches = "find-matches",
+    /// `No EHR, composition or party has the id { $id }.`
+    FindNoIdHolds = "find-no-id-holds",
+    /// `Nothing matches “{ $typed }”.`
+    FindNothingFor = "find-nothing-for",
+    /// `Check the spelling, or open the list of the kind of record you look for.`
+    FindNothingLine = "find-nothing-line",
+    /// `Nothing found`
+    FindNothingTitle = "find-nothing-title",
+    /// `Other ways to find a record`
+    FindOtherWays = "find-other-ways",
+    /// `{ $kind }`
+    FindPartyLine = "find-party-line",
+    /// `Stored query, version { $version }`
+    FindQueryLine = "find-query-line",
+    /// `One answer for an id, a subject, a template or a stored query.`
+    FindSubtitle = "find-subtitle",
+    /// `Template: { $concept }`
+    FindTemplateLine = "find-template-line",
+    /// `Find`
+    FindTitle = "find-title",
+    /// `The CDR refused the search over { $kinds }; the answer may be incomplete.`
+    FindUnfinishedLine = "find-unfinished-line",
+    /// `Part of the search did not finish`
+    FindUnfinishedTitle = "find-unfinished-title",
+    /// `EHRs`
+    FindWayEhr = "find-way-ehr",
+    /// `Every EHR, with the subject search.`
+    FindWayEhrLine = "find-way-ehr-line",
+    /// `Parties`
+    FindWayParty = "find-way-party",
+    /// `A party by its id or its tags.`
+    FindWayPartyLine = "find-way-party-line",
+    /// `By subject`
+    FindWaySubject = "find-way-subject",
+    /// `An EHR by its subject id and namespace.`
+    FindWaySubjectLine = "find-way-subject-line",
+    /// `No`
+    No = "no",
+    /// `Not recorded`
+    NoneShown = "none-shown",
+    /// `Opens the version that was current at that moment.`
+    StatusAtTimeOpens = "status-at-time-opens",
+    /// `Capabilities`
+    StatusCapabilities = "status-capabilities",
+    /// `Document`
+    StatusDocument = "status-document",
+    /// `The status as the CDR holds it.`
+    StatusDocumentIntro = "status-document-intro",
+    /// `EHR_STATUS, version { $version }`
+    StatusDocumentTitle = "status-document-title",
+    /// `Edit status`
+    StatusEdit = "status-edit",
+    /// `Saved as one new version.`
+    StatusEditSubtitle = "status-edit-subtitle",
+    /// `Edit the EHR status`
+    StatusEditTitle = "status-edit-title",
+    /// `The status history could not be read.`
+    StatusHistoryRefused = "status-history-refused",
+    /// `Clients may commit to this EHR.`
+    StatusModifiableHelp = "status-modifiable-help",
+    /// `Not queryable: AQL over the population leaves this EHR out.`
+    StatusNotQueryable = "status-not-queryable",
+    /// `Other details`
+    StatusOtherDetails = "status-other-details",
+    /// `The ITEM_STRUCTURE the status carries beside its flags.`
+    StatusOtherDetailsIntro = "status-other-details-intro",
+    /// `AQL over the population includes this EHR.`
+    StatusQueryableHelp = "status-queryable-help",
+    /// `The EHR status could not be read.`
+    StatusRefused = "status-refused",
+    /// `The CDR refused the status.`
+    StatusSaveRefused = "status-save-refused",
+    /// `Status saved`
+    StatusSaved = "status-saved",
+    /// `Saved as a new version.`
+    StatusSavedLine = "status-saved-line",
+    /// `Saved as version { $version }.`
+    StatusSavedVersion = "status-saved-version",
+    /// `This version`
+    StatusThisVersion = "status-this-version",
+    /// `Status of EHR { $id }`
+    StatusTitle = "status-title",
+    /// `This version could not be read.`
+    StatusVersionRefused = "status-version-refused",
+    /// `Versions`
+    StatusVersions = "status-versions",
+    /// `Yes`
+    Yes = "yes",
+    /// `Composer: { $value }`
+    ChipComposer = "chip-composer",
+    /// `From { $value }`
+    ChipFrom = "chip-from",
+    /// `Template: { $value }`
+    ChipTemplate = "chip-template",
+    /// `To { $value }`
+    ChipTo = "chip-to",
+    /// `Composer`
+    ColumnComposer = "column-composer",
+    /// `Composition`
+    ColumnComposition = "column-composition",
+    /// `Start time`
+    ColumnStartTime = "column-start-time",
+    /// `Version`
+    ColumnVersion = "column-version",
+    /// `This EHR holds no composition yet.`
+    CompositionsEmpty = "compositions-empty",
+    /// `No composition matches these filters.`
+    CompositionsNoMatch = "compositions-no-match",
+    /// `Composition pages`
+    CompositionsPages = "compositions-pages",
+    /// `The compositions could not be read.`
+    CompositionsRefused = "compositions-refused",
+    /// `Opens the version that was current at that moment.`
+    DirectoryAtTimeOpens = "directory-at-time-opens",
+    /// `Changed, not saved`
+    DirectoryChanged = "directory-changed",
+    /// `Delete the directory…`
+    DirectoryDelete = "directory-delete",
+    /// `Delete the directory`
+    DirectoryDeleteConfirm = "directory-delete-confirm",
+    /// `The directory is marked deleted; its versions stay in the history and the compositions it `
+    DirectoryDeleteMessage = "directory-delete-message",
+    /// `The CDR refused to delete the directory.`
+    DirectoryDeleteRefused = "directory-delete-refused",
+    /// `Delete the directory?`
+    DirectoryDeleteTitle = "directory-delete-title",
+    /// `Edit`
+    DirectoryEdit = "directory-edit",
+    /// `The directory's versions could not be read.`
+    DirectoryHistoryRefused = "directory-history-refused",
+    /// `More directory actions`
+    DirectoryMore = "directory-more",
+    /// `New folder`
+    DirectoryNewFolder = "directory-new-folder",
+    /// `The directory has no folder at { $path }; the whole tree is shown.`
+    DirectoryNoPath = "directory-no-path",
+    /// `This EHR has no directory. Create it from the EHR's actions.`
+    DirectoryNone = "directory-none",
+    /// `The EHR had no directory at that moment.`
+    DirectoryNoneAtTime = "directory-none-at-time",
+    /// `episodes/2026`
+    DirectoryPathPlaceholder = "directory-path-placeholder",
+    /// `The folder at this path could not be read.`
+    DirectoryPathRefused = "directory-path-refused",
+    /// `The directory could not be read.`
+    DirectoryRefused = "directory-refused",
+    /// `Reload the directory`
+    DirectoryReload = "directory-reload",
+    /// `Restore…`
+    DirectoryRestore = "directory-restore",
+    /// `Restore as version { $next }`
+    DirectoryRestoreAs = "directory-restore-as",
+    /// `The tree of version { $version } is written back as version { $next }. The versions in bet`
+    DirectoryRestoreMessage = "directory-restore-message",
+    /// `The CDR refused to restore this version.`
+    DirectoryRestoreRefused = "directory-restore-refused",
+    /// `Restore version { $version }?`
+    DirectoryRestoreTitle = "directory-restore-title",
+    /// `Restore version { $version }`
+    DirectoryRestoreVersion = "directory-restore-version",
+    /// `Directory saved`
+    DirectorySaved = "directory-saved",
+    /// `Show`
+    DirectoryShow = "directory-show",
+    /// `Show one folder by path`
+    DirectoryShowPath = "directory-show-path",
+    /// `Showing the folder at { $path }.`
+    DirectoryShowingPath = "directory-showing-path",
+    /// `Directory of EHR { $id }`
+    DirectoryTitle = "directory-title",
+    /// `The directory's folders`
+    DirectoryTreeLabel = "directory-tree-label",
+    /// `(no name)`
+    DirectoryUnnamed = "directory-unnamed",
+    /// `{ $folders ->`
+    DirectoryVersionHolds = "directory-version-holds",
+    /// `Versions`
+    DirectoryVersions = "directory-versions",
+    /// `Every version of the directory; restoring one writes it back as a new version.`
+    DirectoryVersionsIntro = "directory-versions-intro",
+    /// `The document is not valid UTF-8.`
+    EditorUtf8 = "editor-utf-8",
+    /// `Apply`
+    FilterApply = "filter-apply",
+    /// `Composer`
+    FilterComposer = "filter-composer",
+    /// `From`
+    FilterFrom = "filter-from",
+    /// `Start time`
+    FilterStartTime = "filter-start-time",
+    /// `Template`
+    FilterTemplate = "filter-template",
+    /// `To`
+    FilterTo = "filter-to",
+    /// `This EHR has no subject.`
+    RevealNoSubject = "reveal-no-subject",
+    /// `Amendment`
+    ChangeAmendment = "change-amendment",
+    /// `Attestation`
+    ChangeAttestation = "change-attestation",
+    /// `Creation`
+    ChangeCreation = "change-creation",
+    /// `Deleted`
+    ChangeDeleted = "change-deleted",
+    /// `Modification`
+    ChangeModification = "change-modification",
+    /// `Synthesis`
+    ChangeSynthesis = "change-synthesis",
+    /// `Key: { $value }`
+    ChipKey = "chip-key",
+    /// `Value: { $value }`
+    ChipValue = "chip-value",
+    /// `Change`
+    ColumnChange = "column-change",
+    /// `Committed`
+    ColumnCommitted = "column-committed",
+    /// `Committer`
+    ColumnCommitter = "column-committer",
+    /// `Contribution`
+    ColumnContribution = "column-contribution",
+    /// `Kind`
+    ColumnKind = "column-kind",
+    /// `Object`
+    ColumnObject = "column-object",
+    /// `The templates or compositions to pick from could not be read.`
+    ContributionChoicesRefused = "contribution-choices-refused",
+    /// `{ $count ->`
+    ContributionCommit = "contribution-commit",
+    /// `The CDR refused the contribution, so nothing was committed.`
+    ContributionCommitRefused = "contribution-commit-refused",
+    /// `Leave empty to commit as yourself`
+    ContributionCommitterPlaceholder = "contribution-committer-placeholder",
+    /// `The composition to amend could not be read.`
+    ContributionCompositionRefused = "contribution-composition-refused",
+    /// `{ $count ->`
+    ContributionMadeVersions = "contribution-made-versions",
+    /// `Several changes, committed together: all of them or none.`
+    ContributionNewSubtitle = "contribution-new-subtitle",
+    /// `{ $mode ->`
+    ContributionNewTitle = "contribution-new-title",
+    /// `Not committed`
+    ContributionNotCommitted = "contribution-not-committed",
+    /// `Record`
+    ContributionRecord = "contribution-record",
+    /// `The contribution could not be read.`
+    ContributionRefused = "contribution-refused",
+    /// `One change set, committed together.`
+    ContributionSubtitle = "contribution-subtitle",
+    /// `Contribution { $id }`
+    ContributionTitle = "contribution-title",
+    /// `The contributions per day could not be read.`
+    ContributionsActivityRefused = "contributions-activity-refused",
+    /// `This EHR has no contribution yet.`
+    ContributionsEmpty = "contributions-empty",
+    /// `Contribution pages`
+    ContributionsPages = "contributions-pages",
+    /// `Contributions per day`
+    ContributionsPerDay = "contributions-per-day",
+    /// `Contributions per day, { $first } to { $last }: { $total } contributions, at most { $most `
+    ContributionsPerDaySummary = "contributions-per-day-summary",
+    /// `Contributions per day, last 30 days`
+    ContributionsPerDayTitle = "contributions-per-day-title",
+    /// `The contributions could not be read.`
+    ContributionsRefused = "contributions-refused",
+    /// `Contributions to EHR { $id }`
+    ContributionsTitle = "contributions-title",
+    /// `Change`
+    FactChange = "fact-change",
+    /// `Committed`
+    FactCommitted = "fact-committed",
+    /// `Committer`
+    FactCommitter = "fact-committer",
+    /// `Description`
+    FactDescription = "fact-description",
+    /// `System`
+    FactSystem = "fact-system",
+    /// `An amended composition`
+    StagedAmend = "staged-amend",
+    /// `Apply`
+    StagedApply = "staged-apply",
+    /// `Composition`
+    StagedComposition = "staged-composition",
+    /// `Its latest version is the one the change supersedes.`
+    StagedCompositionHelp = "staged-composition-help",
+    /// `{ $count ->`
+    StagedCount = "staged-count",
+    /// `A new composition`
+    StagedCreate = "staged-create",
+    /// `The document of change { $number }`
+    StagedDocument = "staged-document",
+    /// `The one the document names`
+    StagedFromDocument = "staged-from-document",
+    /// `Pick a composition`
+    StagedPick = "staged-pick",
+    /// `Recorded as the audit change type { $change }.`
+    StagedRecordedAs = "staged-recorded-as",
+    /// `Remove change { $number }`
+    StagedRemove = "staged-remove",
+    /// `Stage a change`
+    StagedStage = "staged-stage",
+    /// `The EHR status`
+    StagedStatus = "staged-status",
+    /// `Loaded from version { $version }, which it supersedes.`
+    StagedStatusFrom = "staged-status-from",
+    /// `{ $number }. { $what }`
+    StagedTitle = "staged-title",
+    /// `What changes`
+    StagedWhat = "staged-what",
+    /// `Tags in this EHR`
+    TagsCaption = "tags-caption",
+    /// `Composition { $id }`
+    TagsComposition = "tags-composition",
+    /// `EHR status`
+    TagsEhrStatus = "tags-ehr-status",
+    /// `No object in this EHR carries a tag.`
+    TagsEmpty = "tags-empty",
+    /// `A tag is set on its object, on that object's Tags tab; this list reads them all.`
+    TagsIntro = "tags-intro",
+    /// `Key`
+    TagsKey = "tags-key",
+    /// `No tag matches these filters.`
+    TagsNoMatch = "tags-no-match",
+    /// `version { $version }`
+    TagsOneVersion = "tags-one-version",
+    /// `The tags could not be read.`
+    TagsRefused = "tags-refused",
+    /// `Target path`
+    TagsTargetPath = "tags-target-path",
+    /// `Tags in EHR { $id }`
+    TagsTitle = "tags-title",
+    /// `an object the CDR did not name`
+    TagsUnknownObject = "tags-unknown-object",
+    /// `Value`
+    TagsValue = "tags-value",
+    /// `versioned composition`
+    TagsVersionedComposition = "tags-versioned-composition",
+    /// `versioned directory`
+    TagsVersionedDirectory = "tags-versioned-directory",
+    /// `versioned EHR status`
+    TagsVersionedStatus = "tags-versioned-status",
+    /// `the whole object`
+    TagsWholeObject = "tags-whole-object",
+    /// `Opens the version that was current at that moment.`
+    CompositionAtTimeOpens = "composition-at-time-opens",
+    /// `Commit this composition`
+    CompositionCommit = "composition-commit",
+    /// `The CDR refused the document, so nothing was committed.`
+    CompositionCommitRefused = "composition-commit-refused",
+    /// `Context`
+    CompositionContext = "composition-context",
+    /// `The CDR converts; the viewer shows its answer as sent.`
+    CompositionConverts = "composition-converts",
+    /// `Delete composition…`
+    CompositionDelete = "composition-delete",
+    /// `Delete the composition`
+    CompositionDeleteConfirm = "composition-delete-confirm",
+    /// `{ $count ->`
+    CompositionDeleteMessage = "composition-delete-message",
+    /// `The CDR refused to delete the composition.`
+    CompositionDeleteRefused = "composition-delete-refused",
+    /// `Delete the composition { $name }?`
+    CompositionDeleteTitle = "composition-delete-title",
+    /// `{ $template } · deleted { $when } by { $who } as version { $version }.`
+    CompositionDeletedLine = "composition-deleted-line",
+    /// `Deleted`
+    CompositionDeletedMark = "composition-deleted-mark",
+    /// `This composition is deleted; there is no version to edit.`
+    CompositionDeletedNoEdit = "composition-deleted-no-edit",
+    /// `This version is the deletion; it holds no document.`
+    CompositionDeletedVersion = "composition-deleted-version",
+    /// `Document`
+    CompositionDocument = "composition-document",
+    /// `The CDR could not send the document in this format.`
+    CompositionDocumentRefused = "composition-document-refused",
+    /// `COMPOSITION · { $format }`
+    CompositionDocumentTitle = "composition-document-title",
+    /// `Edit as a new version`
+    CompositionEdit = "composition-edit",
+    /// `Edit the latest`
+    CompositionEditLatest = "composition-edit-latest",
+    /// `Version { $version }, opened now.`
+    CompositionEditSubtitle = "composition-edit-subtitle",
+    /// `Edit { $name }`
+    CompositionEditTitle = "composition-edit-title",
+    /// `The composition, canonical JSON`
+    CompositionEditorLabel = "composition-editor-label",
+    /// `First committed`
+    CompositionFirstCommitted = "composition-first-committed",
+    /// `None: this is the first version`
+    CompositionFirstVersion = "composition-first-version",
+    /// `Format`
+    CompositionFormat = "composition-format",
+    /// `The versions could not be read.`
+    CompositionHistoryRefused = "composition-history-refused",
+    /// `Holds content`
+    CompositionHoldsContent = "composition-holds-content",
+    /// `You are reading version { $version }, the last before the deletion; it is read-only.`
+    CompositionLastBeforeDeletion = "composition-last-before-deletion",
+    /// `{ $template } · version { $version } · started { $started } by { $composer }.`
+    CompositionLine = "composition-line",
+    /// `{ $template } · started { $started } by { $composer }.`
+    CompositionLineOlder = "composition-line-older",
+    /// `More actions for the composition`
+    CompositionMore = "composition-more",
+    /// `The new composition`
+    CompositionNewEditorLabel = "composition-new-editor-label",
+    /// `New composition`
+    CompositionNewPageTitle = "composition-new-page-title",
+    /// `A document committed as version 1 under a template.`
+    CompositionNewSubtitle = "composition-new-subtitle",
+    /// `{ $mode ->`
+    CompositionNewTitle = "composition-new-title",
+    /// `This document is not a canonical composition the reading understands; the Document tab sho`
+    CompositionNoReading = "composition-no-reading",
+    /// `Not committed yet.`
+    CompositionNotYet = "composition-not-yet",
+    /// `Preceding version`
+    CompositionPreceding = "composition-preceding",
+    /// `Read version { $version }`
+    CompositionReadVersion = "composition-read-version",
+    /// `Reading`
+    CompositionReading = "composition-reading",
+    /// `The composition could not be read.`
+    CompositionRefused = "composition-refused",
+    /// `The CDR refused the document, so no version was saved.`
+    CompositionSaveRefused = "composition-save-refused",
+    /// `Composition saved`
+    CompositionSaved = "composition-saved",
+    /// `Saved as version { $version }.`
+    CompositionSavedVersion = "composition-saved-version",
+    /// `Show the full document`
+    CompositionShowDocument = "composition-show-document",
+    /// `The template the document is committed against; FLAT needs it.`
+    CompositionTemplateHelp = "composition-template-help",
+    /// `The templates could not be read.`
+    CompositionTemplatesRefused = "composition-templates-refused",
+    /// `Composition { $id }`
+    CompositionTitle = "composition-title",
+    /// `Version { $version }`
+    CompositionVersionN = "composition-version-n",
+    /// `This version could not be read.`
+    CompositionVersionRefused = "composition-version-refused",
+    /// `The versioned composition`
+    CompositionVersioned = "composition-versioned",
+    /// `Versioned object`
+    CompositionVersionedObject = "composition-versioned-object",
+    /// `Versions`
+    CompositionVersions = "composition-versions",
+    /// `Views of this composition`
+    CompositionViews = "composition-views",
+    /// `{ $count ->`
+    EditorRefusedHeading = "editor-refused-heading",
+    /// `XML`
+    EditorXml = "editor-xml",
+    /// `composition`
+    TagCollectionComposition = "tag-collection-composition",
+    /// `{ $count ->`
+    TagCount = "tag-count",
+    /// `Tags stay on the { $object } across its versions; setting one commits no version.`
+    TagIntro = "tag-intro",
+    /// `The { $object } carries no tag.`
+    TagNone = "tag-none",
+    /// `Target path (optional)`
+    TagPathOptional = "tag-path-optional",
+    /// `The CDR refused the tag.`
+    TagRefused = "tag-refused",
+    /// `Remove the tag { $key }`
+    TagRemove = "tag-remove",
+    /// `Remove`
+    TagRemoveColumn = "tag-remove-column",
+    /// `Tag removed`
+    TagRemoved = "tag-removed",
+    /// `{ $key } is gone from { $object }.`
+    TagRemovedLine = "tag-removed-line",
+    /// `Tag set`
+    TagSet = "tag-set",
+    /// `Set the tag`
+    TagSetAction = "tag-set-action",
+    /// `{ $key } is on { $object }.`
+    TagSetLine = "tag-set-line",
+    /// `Set a tag`
+    TagSetTitle = "tag-set-title",
+    /// `Value (optional)`
+    TagValueOptional = "tag-value-optional",
+    /// `the whole { $object }`
+    TagWhole = "tag-whole",
+    /// `Tags of the { $object }`
+    TagsOf = "tags-of",
+    /// `Not committed`
+    CompositionNotCommitted = "composition-not-committed",
+    /// `Agent`
+    KindAgent = "kind-agent",
+    /// `Group`
+    KindGroup = "kind-group",
+    /// `Organisation`
+    KindOrganisation = "kind-organisation",
+    /// `Person`
+    KindPerson = "kind-person",
+    /// `Role`
+    KindRole = "kind-role",
+    /// `New party`
+    PartiesNew = "parties-new",
+    /// `No { $kind } and no other kind of party has this uid.`
+    PartiesNoKindHolds = "parties-no-kind-holds",
+    /// `No party carries a tag yet.`
+    PartiesNoTags = "parties-no-tags",
+    /// `No party has this uid.`
+    PartiesNoneHolds = "parties-none-holds",
+    /// `Parties follow the released RM 1.1.0 demographic model; the REST API for them is still in `
+    PartiesNote = "parties-note",
+    /// `Open`
+    PartiesOpen = "parties-open",
+    /// `The party could not be opened.`
+    PartiesOpenRefused = "parties-open-refused",
+    /// `People, organisations, groups, agents and roles, opened by their id.`
+    PartiesSubtitle = "parties-subtitle",
+    /// `The demographic tag index`
+    PartiesTagIndex = "parties-tag-index",
+    /// `On`
+    PartiesTagOn = "parties-tag-on",
+    /// `The tags on parties could not be read.`
+    PartiesTagsRefused = "parties-tags-refused",
+    /// `Tags on parties`
+    PartiesTagsTitle = "parties-tags-title",
+    /// `Party uid`
+    PartiesUid = "parties-uid",
+    /// `Archetype`
+    PartyArchetype = "party-archetype",
+    /// `Opens the party as it stood then.`
+    PartyAtTimeOpens = "party-at-time-opens",
+    /// `Create this party`
+    PartyCreate = "party-create",
+    /// `The CDR refused the party, so nothing was created.`
+    PartyCreateRefused = "party-create-refused",
+    /// `Current version`
+    PartyCurrentVersion = "party-current-version",
+    /// `Delete party…`
+    PartyDelete = "party-delete",
+    /// `Delete the party`
+    PartyDeleteConfirm = "party-delete-confirm",
+    /// `The party is marked deleted. { $count ->`
+    PartyDeleteMessage = "party-delete-message",
+    /// `The CDR refused to delete the party.`
+    PartyDeleteRefused = "party-delete-refused",
+    /// `Delete { $name }?`
+    PartyDeleteTitle = "party-delete-title",
+    /// `The party is deleted; its versions stay readable, and its relationships stay.`
+    PartyDeletedIntro = "party-deleted-intro",
+    /// `{ $kind } · deleted { $when } by { $who } as version { $version }`
+    PartyDeletedLine = "party-deleted-line",
+    /// `This party is deleted; there is no version to edit.`
+    PartyDeletedNoEdit = "party-deleted-no-edit",
+    /// `{ $type } · version { $version }`
+    PartyDocumentTitle = "party-document-title",
+    /// `Edit`
+    PartyEdit = "party-edit",
+    /// `The whole party as JSON, as New party takes it; it must keep at least one identity.`
+    PartyEditIntro = "party-edit-intro",
+    /// `The party`
+    PartyEditorLabel = "party-editor-label",
+    /// `Facts`
+    PartyFacts = "party-facts",
+    /// `Identities`
+    PartyIdentities = "party-identities",
+    /// `Start over puts this kind's starting document in the editor.`
+    PartyKindHelp = "party-kind-help",
+    /// `{ $kind } · version { $version } · { $id }`
+    PartyLine = "party-line",
+    /// `More actions for the party`
+    PartyMore = "party-more",
+    /// `The new party`
+    PartyNewEditorLabel = "party-new-editor-label",
+    /// `A starting document for a { $kind }.`
+    PartyNewSubtitle = "party-new-subtitle",
+    /// `{ $mode ->`
+    PartyNewTitle = "party-new-title",
+    /// `This party carries no identity the reading understands.`
+    PartyNoIdentities = "party-no-identities",
+    /// `This party is the source of no relationship.`
+    PartyNoRelationships = "party-no-relationships",
+    /// `Not created.`
+    PartyNotCreated = "party-not-created",
+    /// `Not created yet.`
+    PartyNotYet = "party-not-yet",
+    /// `Overview`
+    PartyOverview = "party-overview",
+    /// `The party could not be read.`
+    PartyRefused = "party-refused",
+    /// `Relate this party`
+    PartyRelate = "party-relate",
+    /// `Relationships from this party`
+    PartyRelationshipsFrom = "party-relationships-from",
+    /// `The relationships this party is the source of; the CDR cannot list the ones that point at `
+    PartyRelationshipsIntro = "party-relationships-intro",
+    /// `The CDR refused the party, so no version was saved.`
+    PartySaveRefused = "party-save-refused",
+    /// `Party saved`
+    PartySaved = "party-saved",
+    /// `Start over`
+    PartyStartOver = "party-start-over",
+    /// `Party { $id }`
+    PartyTitle = "party-title",
+    /// `The party at version { $version }`
+    PartyVersionDocument = "party-version-document",
+    /// `Create this relationship`
+    RelationshipCreate = "relationship-create",
+    /// `The CDR refused the relationship, so nothing was created.`
+    RelationshipCreateRefused = "relationship-create-refused",
+    /// `Delete relationship…`
+    RelationshipDelete = "relationship-delete",
+    /// `Delete the relationship`
+    RelationshipDeleteConfirm = "relationship-delete-confirm",
+    /// `The relationship is marked deleted; both parties stay, and its versions stay readable.`
+    RelationshipDeleteMessage = "relationship-delete-message",
+    /// `The CDR refused to delete the relationship.`
+    RelationshipDeleteRefused = "relationship-delete-refused",
+    /// `Delete the relationship { $name }?`
+    RelationshipDeleteTitle = "relationship-delete-title",
+    /// `Relationship deleted`
+    RelationshipDeletedToast = "relationship-deleted-toast",
+    /// `Details`
+    RelationshipDetails = "relationship-details",
+    /// `Optional extra details, as JSON.`
+    RelationshipDetailsIntro = "relationship-details-intro",
+    /// `Ends`
+    RelationshipEnds = "relationship-ends",
+    /// `The two ends are fixed; other parties make another relationship.`
+    RelationshipEndsIntro = "relationship-ends-intro",
+    /// `From`
+    RelationshipFrom = "relationship-from",
+    /// `Relationship · version { $version } · { $id }`
+    RelationshipLine = "relationship-line",
+    /// `More actions for the relationship`
+    RelationshipMore = "relationship-more",
+    /// `New relationship`
+    RelationshipNewPageTitle = "relationship-new-page-title",
+    /// `From this party to another.`
+    RelationshipNewSubtitle = "relationship-new-subtitle",
+    /// `{ $mode ->`
+    RelationshipNewTitle = "relationship-new-title",
+    /// `none`
+    RelationshipNone = "relationship-none",
+    /// `The relationship could not be read.`
+    RelationshipRefused = "relationship-refused",
+    /// `The CDR refused the relationship, so no version was saved.`
+    RelationshipSaveRefused = "relationship-save-refused",
+    /// `Relationship saved`
+    RelationshipSaved = "relationship-saved",
+    /// `Source`
+    RelationshipSource = "relationship-source",
+    /// `Target`
+    RelationshipTarget = "relationship-target",
+    /// `Target kind`
+    RelationshipTargetKind = "relationship-target-kind",
+    /// `Target party uid`
+    RelationshipTargetUid = "relationship-target-uid",
+    /// `Relationship`
+    RelationshipTitle = "relationship-title",
+    /// `The type as a key, for example employment.`
+    RelationshipTypeHelp = "relationship-type-help",
+    /// `Time validity`
+    RelationshipValidity = "relationship-validity",
+    /// `party`
+    TagCollectionParty = "tag-collection-party",
+    /// `Contains: { $value }`
+    ChipContains = "chip-contains",
+    /// `Actions`
+    ColumnActions = "column-actions",
+    /// `Root archetype`
+    ColumnRootArchetype = "column-root-archetype",
+    /// `Template`
+    ColumnTemplate = "column-template",
+    /// `Uploaded`
+    ColumnUploaded = "column-uploaded",
+    /// `Actions for { $name }`
+    TemplateActionsFor = "template-actions-for",
+    /// `ADL 1.4`
+    TemplateAdl14Line = "template-adl-14-line",
+    /// `{ $concept } · ADL 1.4`
+    TemplateAdl14Subtitle = "template-adl-14-subtitle",
+    /// `The viewer builds these paths itself: the CDR has no web template for ADL 2.`
+    TemplateAdl2Paths = "template-adl-2-paths",
+    /// `template (adl_version=2.4.0; rm_release=1.1.0)`
+    TemplateAdl2Placeholder = "template-adl-2-placeholder",
+    /// `The ADL 2 source`
+    TemplateAdl2Source = "template-adl-2-source",
+    /// `{ $hrid } · ADL 2`
+    TemplateAdl2Subtitle = "template-adl-2-subtitle",
+    /// `Build a query`
+    TemplateBuildQuery = "template-build-query",
+    /// `Choose a file`
+    TemplateChooseFile = "template-choose-file",
+    /// `Concept`
+    TemplateConcept = "template-concept",
+    /// `Default language`
+    TemplateDefaultLanguage = "template-default-language",
+    /// `Delete…`
+    TemplateDelete = "template-delete",
+    /// `Delete the template`
+    TemplateDeleteConfirm = "template-delete-confirm",
+    /// `The CDR refuses while compositions use the template; delete or migrate them first.`
+    TemplateDeleteMessage = "template-delete-message",
+    /// `The CDR refused to delete the template.`
+    TemplateDeleteRefused = "template-delete-refused",
+    /// `Delete the template { $name }?`
+    TemplateDeleteTitle = "template-delete-title",
+    /// `Example`
+    TemplateExample = "template-example",
+    /// `Detail level`
+    TemplateExampleDetail = "template-example-detail",
+    /// `The CDR could not build an example for these options.`
+    TemplateExampleRefused = "template-example-refused",
+    /// `Example · { $format }`
+    TemplateExampleTitle = "template-example-title",
+    /// `Type`
+    TemplateExampleType = "template-example-type",
+    /// `Identity`
+    TemplateIdentity = "template-identity",
+    /// `JSON`
+    TemplateJson = "template-json",
+    /// `JSON · release { $release }`
+    TemplateJsonTitle = "template-json-title",
+    /// `Languages`
+    TemplateLanguages = "template-languages",
+    /// `More actions for the template`
+    TemplateMore = "template-more",
+    /// `The CDR sent no operational template to build paths from.`
+    TemplateNoCatalog = "template-no-catalog",
+    /// `The CDR built no example for these options.`
+    TemplateNoExample = "template-no-example",
+    /// `The CDR holds no source for this release.`
+    TemplateNoSource = "template-no-source",
+    /// `Node`
+    TemplateNode = "template-node",
+    /// `Not uploaded.`
+    TemplateNotUploaded = "template-not-uploaded",
+    /// `Not uploaded yet.`
+    TemplateNotYet = "template-not-yet",
+    /// `<?xml version="1.0" encoding="UTF-8"?>`
+    TemplateOptPlaceholder = "template-opt-placeholder",
+    /// `The operational template`
+    TemplateOptSource = "template-opt-source",
+    /// `Paths`
+    TemplatePaths = "template-paths",
+    /// `The paths of { $name }`
+    TemplatePathsOf = "template-paths-of",
+    /// `Pick a node in the tree to read its path, type and codes.`
+    TemplatePickNode = "template-pick-node",
+    /// `Read { $release }, the latest`
+    TemplateReadLatest = "template-read-latest",
+    /// `You are reading release { $release }.`
+    TemplateReadingRelease = "template-reading-release",
+    /// `The template could not be read.`
+    TemplateRefused = "template-refused",
+    /// `Release`
+    TemplateRelease = "template-release",
+    /// `{ $count ->`
+    TemplateReleaseCount = "template-release-count",
+    /// `Releases`
+    TemplateReleases = "template-releases",
+    /// `Show the example`
+    TemplateShowExample = "template-show-example",
+    /// `Source`
+    TemplateSourceTitle = "template-source-title",
+    /// `UID`
+    TemplateUid = "template-uid",
+    /// `Upload this template`
+    TemplateUpload = "template-upload",
+    /// `The CDR refused the template, so nothing was uploaded.`
+    TemplateUploadRefused = "template-upload-refused",
+    /// `Choose a file or paste the source; the CDR validates it on upload.`
+    TemplateUploadSubtitle = "template-upload-subtitle",
+    /// `{ $mode ->`
+    TemplateUploadTitle = "template-upload-title",
+    /// `Use`
+    TemplateUse = "template-use",
+    /// `Query the compositions committed under it`
+    TemplateUseLine = "template-use-line",
+    /// `Template version`
+    TemplateVersion = "template-version",
+    /// `No template is uploaded yet.`
+    TemplatesEmpty = "templates-empty",
+    /// `Template families`
+    TemplatesFamilies = "templates-families",
+    /// `Family`
+    TemplatesFamily = "templates-family",
+    /// `Id, concept or archetype`
+    TemplatesFind = "templates-find",
+    /// `No template matches.`
+    TemplatesNoMatch = "templates-no-match",
+    /// `The templates could not be read.`
+    TemplatesRefused = "templates-refused",
+    /// `The operational templates the CDR validates compositions against.`
+    TemplatesSubtitle = "templates-subtitle",
+    /// `Upload a template`
+    TemplatesUpload = "templates-upload",
+    /// `Broader code`
+    TermBroader = "term-broader",
+    /// `Defined:`
+    TermDefined = "term-defined",
+    /// `Descriptor`
+    TermDescriptor = "term-descriptor",
+    /// `Effective date (optional)`
+    TermEffectiveDate = "term-effective-date",
+    /// `Expand`
+    TermExpand = "term-expand",
+    /// `Expand one of its groups`
+    TermExpandGroup = "term-expand-group",
+    /// `Fields you can ask for`
+    TermFields = "term-fields",
+    /// `The openEHR vocabulary has no broader or narrower codes, so it always answers no; a termin`
+    TermFlat = "term-flat",
+    /// `Hierarchy`
+    TermHierarchy = "term-hierarchy",
+    /// `Id`
+    TermId = "term-id",
+    /// `Language`
+    TermLanguage = "term-language",
+    /// `Look up`
+    TermLookUp = "term-look-up",
+    /// `Look up`
+    TermLookup = "term-lookup",
+    /// `Look up a code in it`
+    TermLookupIn = "term-lookup-in",
+    /// `The CDR could not look the code up.`
+    TermLookupRefused = "term-lookup-refused",
+    /// `{ $code } is a member of { $set }.`
+    TermMember = "term-member",
+    /// `Members`
+    TermMembers = "term-members",
+    /// `Narrower code`
+    TermNarrower = "term-narrower",
+    /// `The terminology has no value set { $set }.`
+    TermNoValueSet = "term-no-value-set",
+    /// `{ $code } is not a member of { $set }.`
+    TermNotMember = "term-not-member",
+    /// `{ $broader } is not broader than { $narrower }.`
+    TermNotSubsumes = "term-not-subsumes",
+    /// `The CDR's terminology API is off.`
+    TermOff = "term-off",
+    /// `Set in ferroehr.toml and read at start; the Configuration page shows the running value.`
+    TermOffLine = "term-off-line",
+    /// `Terminology operations`
+    TermOperations = "term-operations",
+    /// `Preferred term`
+    TermPreferred = "term-preferred",
+    /// `Publisher`
+    TermPublisher = "term-publisher",
+    /// `The terminologies could not be read.`
+    TermRefused = "term-refused",
+    /// `Terminologies the CDR serves`
+    TermServed = "term-served",
+    /// `{ $broader } is broader than { $narrower }.`
+    TermSubsumes = "term-subsumes",
+    /// `The CDR could not test the codes.`
+    TermSubsumptionRefused = "term-subsumption-refused",
+    /// `What the CDR can answer about the code sets it serves.`
+    TermSubtitle = "term-subtitle",
+    /// `Terminologies`
+    TermTerminologies = "term-terminologies",
+    /// `Terminology`
+    TermTerminology = "term-terminology",
+    /// `Test`
+    TermTest = "term-test",
+    /// `The terminology { $terminology } does not define { $code }.`
+    TermUndefined = "term-undefined",
+    /// `Identifying URI`
+    TermUri = "term-uri",
+    /// `Validate`
+    TermValidate = "term-validate",
+    /// `The CDR could not validate the code.`
+    TermValidateRefused = "term-validate-refused",
+    /// `Validate a code`
+    TermValidateTitle = "term-validate-title",
+    /// `Value set`
+    TermValueSet = "term-value-set",
+    /// `The CDR could not expand the value set.`
+    TermValueSetRefused = "term-value-set-refused",
+    /// `Value sets`
+    TermValueSets = "term-value-sets",
+    /// `{ $name } { $version }`
+    QueriesAqlTitle = "queries-aql-title",
+    /// `Definition`
+    QueriesDefinition = "queries-definition",
+    /// `Delete version { $version }`
+    QueriesDeleteConfirm = "queries-delete-confirm",
+    /// `Removes this version from the CDR's stored queries for good, for every client; its other v`
+    QueriesDeleteMessage = "queries-delete-message",
+    /// `Delete version { $version }…`
+    QueriesDeleteNamed = "queries-delete-named",
+    /// `The CDR refused to delete the version.`
+    QueriesDeleteRefused = "queries-delete-refused",
+    /// `Delete { $name } version { $version }?`
+    QueriesDeleteTitle = "queries-delete-title",
+    /// `Delete this version…`
+    QueriesDeleteVersion = "queries-delete-version",
+    /// `Stored query version deleted`
+    QueriesDeleted = "queries-deleted",
+    /// `Nothing was sent: fix the version first.`
+    QueriesFixVersion = "queries-fix-version",
+    /// `{ $names ->`
+    QueriesGroupCount = "queries-group-count",
+    /// `{ $name } · version { $version }`
+    QueriesLine = "queries-line",
+    /// `More actions for the stored query`
+    QueriesMore = "queries-more",
+    /// `Namespace { $value }`
+    QueriesNamespaceChip = "queries-namespace-chip",
+    /// `older version`
+    QueriesOlderVersion = "queries-older-version",
+    /// `Open in Query`
+    QueriesOpenInQuery = "queries-open-in-query",
+    /// `Numbers and true or false are sent as they are; quote a number to send it as text.`
+    QueriesParamHelp = "queries-param-help",
+    /// `Read { $version }`
+    QueriesReadVersion = "queries-read-version",
+    /// `You are reading version { $version }; Latest runs { $latest }.`
+    QueriesReadingOlder = "queries-reading-older",
+    /// `The stored queries could not be read.`
+    QueriesRefused = "queries-refused",
+    /// `Saved`
+    QueriesSaved = "queries-saved",
+    /// `The stored query could not be read.`
+    QueriesStoredRefused = "queries-stored-refused",
+    /// `The CDR's stored queries, grouped by the namespace of their name.`
+    QueriesSubtitle = "queries-subtitle",
+    /// `Type`
+    QueriesType = "queries-type",
+    /// `Unqualified`
+    QueriesUnqualified = "queries-unqualified",
+    /// `Each version is its own immutable definition; Latest runs the highest.`
+    QueriesVersionsIntro = "queries-versions-intro",
+    /// `Views of this stored query`
+    QueriesViews = "queries-views",
+    /// `Which version runs`
+    QueriesWhichVersion = "queries-which-version",
+    /// `Add a data point`
+    QueryAddDataPoint = "query-add-data-point",
+    /// `Add a parameter`
+    QueryAddParam = "query-add-param",
+    /// `AQL`
+    QueryAql = "query-aql",
+    /// `Query · AQL`
+    QueryAqlTitle = "query-aql-title",
+    /// `The row limit is not a whole number.`
+    QueryBadLimit = "query-bad-limit",
+    /// `Build`
+    QueryBuild = "query-build",
+    /// `The AQL Build made, as it runs; edits here leave Build behind.`
+    QueryBuildMade = "query-build-made",
+    /// `Built AQL`
+    QueryBuiltAql = "query-built-aql",
+    /// `This AQL cannot be opened in Build: { $reason }`
+    QueryCannotBuild = "query-cannot-build",
+    /// `The template's data points could not be read.`
+    QueryCatalogRefused = "query-catalog-refused",
+    /// `Column name`
+    QueryColumnName = "query-column-name",
+    /// `Column name of data point { $number }`
+    QueryColumnNameN = "query-column-name-n",
+    /// `Conditions`
+    QueryConditions = "query-conditions",
+    /// `Data point`
+    QueryDataPoint = "query-data-point",
+    /// `Data point { $number }`
+    QueryDataPointN = "query-data-point-n",
+    /// `Data points`
+    QueryDataPoints = "query-data-points",
+    /// `Direction`
+    QueryDirection = "query-direction",
+    /// `The query ends before it is complete.`
+    QueryEndedEarly = "query-ended-early",
+    /// `{ $count ->`
+    QueryGrammarHeading = "query-grammar-heading",
+    /// `Nothing was sent: the grammar check found an error.`
+    QueryGrammarStops = "query-grammar-stops",
+    /// `The AQL it builds`
+    QueryItBuilds = "query-it-builds",
+    /// `Row limit`
+    QueryLimit = "query-limit",
+    /// `Namespace`
+    QueryNamespace = "query-namespace",
+    /// `Newest first`
+    QueryNewestFirst = "query-newest-first",
+    /// `No data point yet; the query returns nothing until you add one.`
+    QueryNoDataPoints = "query-no-data-points",
+    /// `No order`
+    QueryNoOrder = "query-no-order",
+    /// `No parameter.`
+    QueryNoParams = "query-no-params",
+    /// `The builder cannot write this query yet: { $reason }`
+    QueryNotBuilt = "query-not-built",
+    /// `The value of { $path }, { $value }, is not a number.`
+    QueryNotNumber = "query-not-number",
+    /// `Nothing to run: write a query first.`
+    QueryNothingToRun = "query-nothing-to-run",
+    /// `Oldest first`
+    QueryOldestFirst = "query-oldest-first",
+    /// `Open in AQL`
+    QueryOpenInAql = "query-open-in-aql",
+    /// `Open in Build`
+    QueryOpenInBuild = "query-open-in-build",
+    /// `Open it`
+    QueryOpenStored = "query-open-stored",
+    /// `Opened from the stored query { $name } { $version }.`
+    QueryOpenedStored = "query-opened-stored",
+    /// `Order by`
+    QueryOrderBy = "query-order-by",
+    /// `Order and limit`
+    QueryOrderLimit = "query-order-limit",
+    /// `Name of parameter { $number }`
+    QueryParamNameN = "query-param-name-n",
+    /// `Value of parameter { $number }`
+    QueryParamValueN = "query-param-value-n",
+    /// `Parameters`
+    QueryParameters = "query-parameters",
+    /// `Remove the data point { $name }`
+    QueryRemoveDataPoint = "query-remove-data-point",
+    /// `Remove the parameter { $name }`
+    QueryRemoveParam = "query-remove-param",
+    /// `Returns`
+    QueryReturns = "query-returns",
+    /// `Run`
+    QueryRun = "query-run",
+    /// `The CDR refused the query.`
+    QueryRunRefused = "query-run-refused",
+    /// `Save to the CDR`
+    QuerySave = "query-save",
+    /// `Save`
+    QuerySaveAction = "query-save-action",
+    /// `The CDR refused to store the query.`
+    QuerySaveRefused = "query-save-refused",
+    /// `Whole compositions`
+    QueryShapeCompositions = "query-shape-compositions",
+    /// `A count`
+    QueryShapeCount = "query-shape-count",
+    /// `Data points`
+    QueryShapeData = "query-shape-data",
+    /// `EHRs (cohort)`
+    QueryShapeEhrs = "query-shape-ehrs",
+    /// `The stored query could not be read.`
+    QueryStoredRefused = "query-stored-refused",
+    /// `Build AQL from a template, or write it; run it against the CDR.`
+    QuerySubtitle = "query-subtitle",
+    /// `The AQL`
+    QueryTheAql = "query-the-aql",
+    /// `Unexpected { $token } here.`
+    QueryUnexpected = "query-unexpected",
+    /// `The template has no data point at { $path }.`
+    QueryUnknownPath = "query-unknown-path",
+    /// `Empty writes the version the CDR assigns.`
+    QueryVersionHelp = "query-version-help",
+    /// `This version of this name already exists, and a saved version cannot change.`
+    QueryVersionTaken = "query-version-taken",
+    /// `Ways to write the query`
+    QueryWays = "query-ways",
+    /// `The x axis is { $axis }, at its true spacing.`
+    ResultsAxis = "results-axis",
+    /// `Chart`
+    ResultsChart = "results-chart",
+    /// `The numeric columns over the results`
+    ResultsChartLabel = "results-chart-label",
+    /// `{ $series } over { $axis }.`
+    ResultsChartSummary = "results-chart-summary",
+    /// `CSV`
+    ResultsCsv = "results-csv",
+    /// `JSON`
+    ResultsJson = "results-json",
+    /// `These results have no numbers to draw, so they are shown as a table.`
+    ResultsNoChart = "results-no-chart",
+    /// `The query matched no row.`
+    ResultsNone = "results-none",
+    /// `Run the query to see its rows here.`
+    ResultsNotRun = "results-not-run",
+    /// `Show as`
+    ResultsShowAs = "results-show-as",
+    /// `Table`
+    ResultsTable = "results-table",
+    /// `Results`
+    ResultsTitle = "results-title",
+    /// `{ $count ->`
+    ResultsWindow = "results-window",
+    /// `{ $count ->`
+    ResultsWindowOwn = "results-window-own",
+    /// `openEHR: Admin (in development)`
+    ApiAdmin = "api-admin",
+    /// `The complete surface`
+    ApiAll = "api-all",
+    /// `FerroEHR: Audit`
+    ApiAudit = "api-audit",
+    /// `openEHR: Definition`
+    ApiDefinition = "api-definition",
+    /// `openEHR: Demographic (in development)`
+    ApiDemographic = "api-demographic",
+    /// `openEHR: EHR`
+    ApiEhr = "api-ehr",
+    /// `FerroEHR: Event Subscriptions`
+    ApiEvents = "api-events",
+    /// `FerroEHR: Status and Management`
+    ApiManagement = "api-management",
+    /// `openEHR: Query`
+    ApiQuery = "api-query",
+    /// `FerroEHR: Party Relationships`
+    ApiRelationships = "api-relationships",
+    /// `FerroEHR: SMART Discovery`
+    ApiSmart = "api-smart",
+    /// `FerroEHR: Terminology`
+    ApiTerminology = "api-terminology",
+    /// `Action`
+    AuditAction = "audit-action",
+    /// `As stored`
+    AuditAsStored = "audit-as-stored",
+    /// `Action: { $value }`
+    AuditChipAction = "audit-chip-action",
+    /// `Principal: { $value }`
+    AuditChipAgent = "audit-chip-agent",
+    /// `Outcome: { $value }`
+    AuditChipOutcome = "audit-chip-outcome",
+    /// `Patient: { $value }`
+    AuditChipPatient = "audit-chip-patient",
+    /// `The CDR has recorded no audit event yet.`
+    AuditEmpty = "audit-empty",
+    /// `Event`
+    AuditEvent = "audit-event",
+    /// `Principal`
+    AuditFind = "audit-find",
+    /// `No audit record matches these filters.`
+    AuditNoMatch = "audit-no-match",
+    /// `No patient`
+    AuditNoPatient = "audit-no-patient",
+    /// `Outcome`
+    AuditOutcome = "audit-outcome",
+    /// `Audit pages`
+    AuditPages = "audit-pages",
+    /// `Patient`
+    AuditPatient = "audit-patient",
+    /// `Principal`
+    AuditPrincipal = "audit-principal",
+    /// `This record is no longer on the page it was listed on; open it from the audit log again.`
+    AuditRecordGone = "audit-record-gone",
+    /// `The audit log could not be read.`
+    AuditRefused = "audit-refused",
+    /// `The CDR keeps no local audit store; its records go only to the forwarding target, so there`
+    AuditStoreOff = "audit-store-off",
+    /// `Set in ferroehr.toml; the Configuration page shows the running value.`
+    AuditStoreOffLine = "audit-store-off-line",
+    /// `Stored as a FHIR AuditEvent (IHE ITI-81).`
+    AuditStoredAs = "audit-stored-as",
+    /// `The CDR's security audit log: who accessed what, and with what outcome.`
+    AuditSubtitle = "audit-subtitle",
+    /// `Success`
+    AuditSuccess = "audit-success",
+    /// `The event`
+    AuditTheEvent = "audit-the-event",
+    /// `Unknown`
+    AuditUnknown = "audit-unknown",
+    /// `What`
+    AuditWhat = "audit-what",
+    /// `When`
+    AuditWhen = "audit-when",
+    /// `Access`
+    ConfigAccess = "config-access",
+    /// `Basic sign-in`
+    ConfigBasicSignIn = "config-basic-sign-in",
+    /// `Offers the username and password form; the CDR checks the account.`
+    ConfigBasicSignInLine = "config-basic-sign-in-line",
+    /// `CDR address`
+    ConfigCdrAddress = "config-cdr-address",
+    /// `The address the viewer calls for every CDR request.`
+    ConfigCdrAddressLine = "config-cdr-address-line",
+    /// `CDR base path`
+    ConfigCdrBasePath = "config-cdr-base-path",
+    /// `Must match the base path the CDR serves its API under.`
+    ConfigCdrBasePathLine = "config-cdr-base-path-line",
+    /// `Deployment`
+    ConfigDeployment = "config-deployment",
+    /// `read at start; change the file and restart to change a setting`
+    ConfigHow = "config-how",
+    /// `Session idle time`
+    ConfigIdle = "config-idle",
+    /// `A session ends after this long without a request.`
+    ConfigIdleLine = "config-idle-line",
+    /// `Integrations`
+    ConfigIntegrations = "config-integrations",
+    /// `Language`
+    ConfigLanguage = "config-language",
+    /// `Used when the browser asks for a language the viewer does not have.`
+    ConfigLanguageLine = "config-language-line",
+    /// `Management address`
+    ConfigManagementAddress = "config-management-address",
+    /// `Where the viewer reads health, metrics and logging.`
+    ConfigManagementAddressLine = "config-management-address-line",
+    /// `{ $count } min`
+    ConfigMinutes = "config-minutes",
+    /// `Off`
+    ConfigOff = "config-off",
+    /// `OIDC client secret`
+    ConfigOidcSecret = "config-oidc-secret",
+    /// `Proves the viewer to the identity provider; read from a file and never shown.`
+    ConfigOidcSecretLine = "config-oidc-secret-line",
+    /// `OIDC sign-in`
+    ConfigOidcSignIn = "config-oidc-sign-in",
+    /// `The identity provider that signs people in.`
+    ConfigOidcSignInLine = "config-oidc-sign-in-line",
+    /// `On`
+    ConfigOn = "config-on",
+    /// `Operations`
+    ConfigOperations = "config-operations",
+    /// `Records`
+    ConfigRecords = "config-records",
+    /// `The CDR's configuration could not be read.`
+    ConfigRefused = "config-refused",
+    /// `Configuration sections`
+    ConfigSections = "config-sections",
+    /// `Server and database`
+    ConfigServer = "config-server",
+    /// `Session key`
+    ConfigSessionKey = "config-session-key",
+    /// `Seals the session cookie; every replica holds the same key.`
+    ConfigSessionKeyLine = "config-session-key-line",
+    /// `The CDR's settings as it serves them, redacted, and the viewer's own.`
+    ConfigSubtitle = "config-subtitle",
+    /// `Viewer`
+    ConfigViewer = "config-viewer",
+    /// `Also`
+    ServerAlso = "server-also",
+    /// `API`
+    ServerApi = "server-api",
+    /// `API family`
+    ServerApiFamily = "server-api-family",
+    /// `The OpenAPI documents the CDR serves for itself, by API family.`
+    ServerApiLine = "server-api-line",
+    /// `The OpenAPI document could not be read.`
+    ServerApiRefused = "server-api-refused",
+    /// `Apply…`
+    ServerApply = "server-apply",
+    /// `Apply the filter`
+    ServerApplyConfirm = "server-apply-confirm",
+    /// `It applies to this instance until it restarts.`
+    ServerApplyMessage = "server-apply-message",
+    /// `Apply the new log filter?`
+    ServerApplyTitle = "server-apply-title",
+    /// `At boot`
+    ServerAtBoot = "server-at-boot",
+    /// `The filter in effect is the boot filter.`
+    ServerAtBootAlready = "server-at-boot-already",
+    /// `Build`
+    ServerBuild = "server-build",
+    /// `The build information could not be read.`
+    ServerBuildRefused = "server-build-refused",
+    /// `Change the log filter`
+    ServerChangeFilter = "server-change-filter",
+    /// `Applies to this instance until it restarts.`
+    ServerChangeFilterIntro = "server-change-filter-intro",
+    /// `Versions and conformance`
+    ServerConformance = "server-conformance",
+    /// `Dependencies`
+    ServerDependencies = "server-dependencies",
+    /// `Dependency`
+    ServerDependency = "server-dependency",
+    /// `Deployment`
+    ServerDeployment = "server-deployment",
+    /// `Detail`
+    ServerDetail = "server-detail",
+    /// `{ $count ->`
+    ServerEndpointCount = "server-endpoint-count",
+    /// `Endpoints of { $family }`
+    ServerEndpointsOf = "server-endpoints-of",
+    /// `Filter`
+    ServerFilter = "server-filter",
+    /// `Log filter applied`
+    ServerFilterApplied = "server-filter-applied",
+    /// `The CDR refused the log filter.`
+    ServerFilterRefused = "server-filter-refused",
+    /// `Log filter reset to the boot filter`
+    ServerFilterReset = "server-filter-reset",
+    /// `Grant types`
+    ServerGrantTypes = "server-grant-types",
+    /// `Health`
+    ServerHealth = "server-health",
+    /// `What the CDR depends on, and whether each part is healthy.`
+    ServerHealthLine = "server-health-line",
+    /// `The dependencies could not be read.`
+    ServerHealthRefused = "server-health-refused",
+    /// `In effect`
+    ServerInEffect = "server-in-effect",
+    /// `Labels`
+    ServerLabels = "server-labels",
+    /// `Logging`
+    ServerLogging = "server-logging",
+    /// `The live log filter of the instance that answered.`
+    ServerLoggingLine = "server-logging-line",
+    /// `The log filter could not be read.`
+    ServerLoggingRefused = "server-logging-refused",
+    /// `Method and path`
+    ServerMethodPath = "server-method-path",
+    /// `Metric`
+    ServerMetric = "server-metric",
+    /// `{ $count ->`
+    ServerMetricCount = "server-metric-count",
+    /// `Metrics`
+    ServerMetrics = "server-metrics",
+    /// `Counters since the last start.`
+    ServerMetricsLine = "server-metrics-line",
+    /// `The metrics could not be read.`
+    ServerMetricsRefused = "server-metrics-refused",
+    /// `New filter`
+    ServerNewFilter = "server-new-filter",
+    /// `The CDR serves no build information.`
+    ServerNoBuildInfo = "server-no-build-info",
+    /// `The CDR serves no log filter control.`
+    ServerNoLogging = "server-no-logging",
+    /// `The CDR has no management endpoints turned on, so Health, Metrics and Logging are not offe`
+    ServerNoManagement = "server-no-management",
+    /// `The CDR has no such metric.`
+    ServerNoMetric = "server-no-metric",
+    /// `The CDR serves no SMART discovery document.`
+    ServerNoSmart = "server-no-smart",
+    /// `Now`
+    ServerNow = "server-now",
+    /// `The OpenAPI document`
+    ServerOpenApi = "server-open-api",
+    /// `Overview`
+    ServerOverview = "server-overview",
+    /// `How the CDR was built and deployed.`
+    ServerOverviewLine = "server-overview-line",
+    /// `PKCE`
+    ServerPkce = "server-pkce",
+    /// `Production`
+    ServerProduction = "server-production",
+    /// `The CDR serves only each dependency's state, not its detail.`
+    ServerPublicReadiness = "server-public-readiness",
+    /// `The metric registry`
+    ServerRegistry = "server-registry",
+    /// `Reset to the boot filter`
+    ServerReset = "server-reset",
+    /// `Safeguard`
+    ServerSafeguard = "server-safeguard",
+    /// `Production safeguards that are off`
+    ServerSafeguardsOff = "server-safeguards-off",
+    /// `Samples of { $metric }`
+    ServerSamplesOf = "server-samples-of",
+    /// `Sandbox`
+    ServerSandbox = "server-sandbox",
+    /// `A sandbox must not hold real patient data.`
+    ServerSandboxIntro = "server-sandbox-intro",
+    /// `Scopes it supports`
+    ServerScopes = "server-scopes",
+    /// `Server sections`
+    ServerSections = "server-sections",
+    /// `Show`
+    ServerShow = "server-show",
+    /// `Sign-in`
+    ServerSignIn = "server-sign-in",
+    /// `SMART`
+    ServerSmart = "server-smart",
+    /// `The scopes the CDR supports; Your access shows the ones you hold.`
+    ServerSmartLine = "server-smart-line",
+    /// `The SMART discovery document could not be read.`
+    ServerSmartRefused = "server-smart-refused",
+    /// `State`
+    ServerState = "server-state",
+    /// `Status`
+    ServerStatus = "server-status",
+    /// `The CDR this viewer reads: what it is, how it runs, and what it serves.`
+    ServerSubtitle = "server-subtitle",
+    /// `Summary`
+    ServerSummary = "server-summary",
+    /// `Unknown`
+    ServerUnknown = "server-unknown",
+    /// `Unreachable`
+    ServerUnreachable = "server-unreachable",
+    /// `Up`
+    ServerUp = "server-up",
+    /// `Version`
+    ServerVersion = "server-version",
+    /// `Any change`
+    SubAnyChange = "sub-any-change",
+    /// `Any kind`
+    SubAnyKind = "sub-any-kind",
+    /// `Any template`
+    SubAnyTemplate = "sub-any-template",
+    /// `Change type`
+    SubChangeType = "sub-change-type",
+    /// `Composition`
+    SubComposition = "sub-composition",
+    /// `Create subscription`
+    SubCreate = "sub-create",
+    /// `Subscription created`
+    SubCreated = "sub-created",
+    /// `{ $name } · queue ferroehr.events.{ $name }`
+    SubCreatedLine = "sub-created-line",
+    /// `Delete the subscription…`
+    SubDelete = "sub-delete",
+    /// `Delete the subscription`
+    SubDeleteConfirm = "sub-delete-confirm",
+    /// `Removes the subscription for good. The queue and its messages stay on the broker; remove t`
+    SubDeleteMessage = "sub-delete-message",
+    /// `The CDR refused to delete the subscription.`
+    SubDeleteRefused = "sub-delete-refused",
+    /// `Delete the subscription { $name }?`
+    SubDeleteTitle = "sub-delete-title",
+    /// `Subscription deleted`
+    SubDeleted = "sub-deleted",
+    /// `Deliver messages`
+    SubDeliver = "sub-deliver",
+    /// `When off, the subscription is kept but sends nothing.`
+    SubDeliverHelp = "sub-deliver-help",
+    /// `Delivery`
+    SubDelivery = "sub-delivery",
+    /// `Disable`
+    SubDisable = "sub-disable",
+    /// `Subscription disabled`
+    SubDisabled = "sub-disabled",
+    /// `Saving replaces what this subscription selects.`
+    SubEditSubtitle = "sub-edit-subtitle",
+    /// `{ $mode ->`
+    SubEditorTitle = "sub-editor-title",
+    /// `EHR status`
+    SubEhrStatus = "sub-ehr-status",
+    /// `No subscription yet.`
+    SubEmpty = "sub-empty",
+    /// `Enable`
+    SubEnable = "sub-enable",
+    /// `Subscription enabled`
+    SubEnabled = "sub-enabled",
+    /// `Every { $change } of any kind.`
+    SubEveryChange = "sub-every-change",
+    /// `Every { $change } of a { $kind }.`
+    SubEveryChangeOfKind = "sub-every-change-of-kind",
+    /// `Every committed { $kind }.`
+    SubEveryOfKind = "sub-every-of-kind",
+    /// `Every committed version of any kind.`
+    SubEveryVersion = "sub-every-version",
+    /// `Folder`
+    SubFolder = "sub-folder",
+    /// `More actions for the subscription`
+    SubMore = "sub-more",
+    /// `The name cannot change: a new name would be a different queue.`
+    SubNameFixed = "sub-name-fixed",
+    /// `Letters, digits, dots, dashes and underscores. The name cannot change later.`
+    SubNameHelp = "sub-name-help",
+    /// `Use letters, digits, dots, dashes and underscores only.`
+    SubNameInvalid = "sub-name-invalid",
+    /// `The CDR already has a subscription called { $name }. Choose another name.`
+    SubNameTaken = "sub-name-taken",
+    /// `New subscription`
+    SubNew = "sub-new",
+    /// `The CDR has no subscription called { $name }.`
+    SubNone = "sub-none",
+    /// `The CDR's subscription API is off, so there is nothing to list.`
+    SubOff = "sub-off",
+    /// `Set in ferroehr.toml; the Configuration page shows the running value.`
+    SubOffLine = "sub-off-line",
+    /// `Queue`
+    SubQueue = "sub-queue",
+    /// `The subscriptions could not be read.`
+    SubRefused = "sub-refused",
+    /// `The CDR refused the subscription.`
+    SubSaveRefused = "sub-save-refused",
+    /// `Subscription saved`
+    SubSaved = "sub-saved",
+    /// `What it selects`
+    SubSelects = "sub-selects",
+    /// `Disabled`
+    SubStateDisabled = "sub-state-disabled",
+    /// `Enabled`
+    SubStateEnabled = "sub-state-enabled",
+    /// `Get a message on the event queue for each change that matches.`
+    SubSubtitle = "sub-subtitle",
+    /// `{ $line } Under { $template } only.`
+    SubUnderTemplate = "sub-under-template",
+    /// `Delete…`
+    SubDeleteRow = "sub-delete-row",
+    /// `Delete…`
+    TemplateDeleteRow = "template-delete-row",
+    /// `Name the query to save it.`
+    QuerySaveNameMissing = "query-save-name-missing",
+    /// `Give the relationship a type.`
+    RelationshipNeedsType = "relationship-needs-type",
+    /// `Give the relationship a type and a target party.`
+    RelationshipNeedsTypeAndTarget = "relationship-needs-type-and-target",
+    /// `Sends`
+    QueriesSends = "queries-sends",
+    /// `Latest sends no version; Prefix and Exact send the one typed here.`
+    QueriesVersionHelp = "queries-version-help",
+    /// `Older versions`
+    DirectoryOlderVersions = "directory-older-versions",
 }
 
 /// The viewer's message `msg` in the page's locale.
@@ -2454,7 +4381,26 @@ pub fn current() -> Locale {
                     .map(str::to_owned)
             })
             .unwrap_or_default();
-        Locale::negotiate_with(&header, catalog(), configured)
+        // The language preference of Your preferences wins over the browser's
+        // when it names a language the viewer ships (family rule 9).
+        let chosen = use_context::<http::request::Parts>()
+            .and_then(|parts| {
+                parts
+                    .headers
+                    .get(http::header::COOKIE)
+                    .and_then(|value| value.to_str().ok())
+                    .map(|cookies| {
+                        ferrohealth_ui::theme::Preferences::read(
+                            cookies,
+                            crate::prefs::COOKIE_PREFIX,
+                        )
+                        .language
+                    })
+            })
+            .and_then(|language| language.tag().map(str::to_owned))
+            .filter(|tag| shipped().iter().any(|locale| locale.tag() == *tag))
+            .and_then(|tag| Locale::parse(&tag).ok());
+        chosen.unwrap_or_else(|| Locale::negotiate_with(&header, catalog(), configured))
     }
     // NOTE: no openEHR spec governs this: our own design; the browser reads the
     // tag the server wrote, as the theme reads `data-theme`.
@@ -2537,7 +4483,7 @@ mod tests {
     #[test]
     fn a_throwaway_catalog_changes_the_words_with_no_code_change() {
         let english = Locale::english();
-        assert_eq!("Not found", tr_in(catalog(), &english, Msg::Title404));
+        assert_eq!("No such screen", tr_in(catalog(), &english, Msg::Title404));
         let throwaway = Locale::parse("qaa").expect("a private-use language");
         assert_eq!("Qot qound", tr_in(&*THROWAWAY, &throwaway, Msg::Title404));
         assert_eq!(

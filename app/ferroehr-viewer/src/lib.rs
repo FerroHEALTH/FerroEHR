@@ -13,6 +13,8 @@
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
 #![doc(test(attr(deny(warnings))))]
+// NOTE: FerroUI's sign-in view nests deep enough that computing its layout inside an async page passes the default limit of 128 (rustc reference, `recursion_limit`).
+#![recursion_limit = "256"]
 // Every `#[component]` in this crate expands `#[derive(TypedBuilder)]` on its
 // generated props struct, and that derive emits an inherent `builder()` whose
 // name matches a trait method already in scope — so `same_name_method` fires
@@ -37,42 +39,65 @@
 // (`target_arch = "wasm32"`) are chosen by compilation target, never by Cargo
 // feature, so `--all-features` over the workspace can never turn both on.
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod activity;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod adl2;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod admin;
-pub mod app;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod aql_text;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod auth;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod builder;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod chart_model;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod clinical;
-pub mod components;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod deployment;
 pub mod error;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod example_options;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod feedback;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod format;
+pub mod islands;
 pub mod locale;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod management;
 // NOTE: no openEHR spec governs this — our own design; the viewer links no
 // application crate, so it compiles the manufacturer's one source file itself.
 #[path = "../../ferroehr/src/manufacturer.rs"]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod manufacturer;
-pub mod pages;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod queries_api;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod query_namespace;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod scopes;
 // NOTE: no openEHR spec governs this — our own design; the gap codes and the
 // OpenAPI family slugs come from the one file the server holds itself to.
 #[path = "../../ferroehr/src/served_vocabulary.rs"]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod served_vocabulary;
 pub mod session_client;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod subscriptions;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod system_api;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod terminology;
-pub mod theme;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod uid;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub mod app;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod bff;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cdr;
 #[cfg(not(target_arch = "wasm32"))]
@@ -80,18 +105,42 @@ pub mod config;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod export;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod flash;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod oidc;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod pages;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod paging;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod posted;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod prefs;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod request;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod session;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod shell;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod state;
 
-/// WASM entry point: attaches interactivity to the server-rendered DOM.
+/// The WebAssembly entry: hydrates the islands of the page the server drew.
+///
+/// Every page renders whole on the server; only the islands ship code to the
+/// browser, and each takes its words as props, so the browser builds no locale
+/// (FerroUI `crates/ferrohealth-ui/CLAUDE.md`, the Leptos book "Guide:
+/// Islands"). The library is named so its own islands link into this bundle.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
+    use ferrohealth_ui as _;
     console_error_panic_hook::set_once();
-    leptos::mount::hydrate_body(app::App);
+    leptos::mount::hydrate_islands();
+    // NOTE: the browser journeys wait for this mark before their first interaction (tests/it/common).
+    if let Some(body) = leptos::prelude::document().body() {
+        drop(body.set_attribute("data-hydrated", ""));
+    }
 }

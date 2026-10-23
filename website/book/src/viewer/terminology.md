@@ -35,65 +35,56 @@ an external FHIR terminology server is a separate setting, and it changes what
 these lookups can answer; both are covered in
 [Terminology servers](../beyond-core/terminology.md).
 
-## Picking a terminology
+## The terminologies
 
-The list on the left is exactly what the CDR reports: the internal `openehr`
-vocabulary and the external code sets beside it (languages, countries,
-character sets, media types). Selecting one puts it in the address bar, so a
-terminology is shareable and survives a reload, and the choice works before the
-page's WebAssembly has loaded.
+**Terminologies**, the first of four tabs, lists exactly what the CDR reports:
+the internal `openehr` vocabulary and the external code sets beside it
+(languages, countries, character sets, media types). A row opens the
+terminology's descriptor: publisher, identifying URI, version, and the fields
+an extract may ask for, with links to look a code up in it and to expand one
+of its groups. Fields the server does not publish are left out.
 
-The **Descriptor** card beside it shows what the CDR publishes about that
-terminology: publisher, identifying URI, available versions, and the
-meta-model attributes an extract request may ask for. Fields the server does not
-publish are not shown at all rather than filled in with a guess.
+## Look up
 
-## Defining a term
+Pick a terminology, type a code and **Look up**. A defined term comes back with
+its text, the language it is written in and whether it is the preferred term.
+An **effective date** is optional: supplied, it asks for the definition as it
+stood that day; the openEHR bundle is one pinned release, so a date changes
+nothing there, while an external terminology server can answer differently.
 
-Type a code and the screen asks the CDR what it means. A defined term comes back
-as `code — text`, with the language it is written in and whether it is the
-preferred term among alternatives; a code the terminology carries without any
-display text comes back as the bare code, which is the honest answer rather than
-a blank.
+A code the terminology does not define is an answer, not an error: the page
+says so, naming the code and the terminology.
 
-An **effective date** is optional. Supplied, it asks for the definition as it
-stood on that date; left empty, it asks for the current one. The openEHR bundle
-is a single pinned release, so a date does not change its answer; an external
-terminology server can.
-
-A code the terminology does not define is reported as a plain note on the card
-that asked, naming the code and the terminology. It is not an error: asking
-whether something exists is a legitimate question, and "no" is an answer.
+![Look up](img/terminology/lookup.png)
 
 > [!NOTE]
-> openEHR terminology codes are **scoped to their group**, not global: `532` is
-> `complete` in one group and `completed` in another. A code lookup treats the
-> `openehr` terminology as flat and returns the first group's rubric, so use the
-> value-set card below whenever the group matters.
+> openEHR terminology codes are scoped to their group: `532` is `complete` in
+> one group and `completed` in another. A lookup reads the `openehr`
+> terminology as flat and returns the first group's rubric, so expand the
+> group under Value sets whenever the group matters.
 
-## Expanding a value set
+## Value sets
 
-A value set is addressed by its id: for the `openehr` terminology, an openEHR
-vocabulary group such as `audit_change_type` or `version_lifecycle_state`, by
-its identifier or its display name. Expanding one lists its members as
-`code — text`.
+Pick a terminology and a value set (for `openehr`, a vocabulary group such as
+`audit_change_type`, offered as you type) and **Expand** it into its members.
+Under them, **Validate** answers whether a code is a member, as a sentence
+either way; a value set the CDR does not know has no members.
 
-Under it, **Validate** answers one question: is this code a member of that value
-set? Both verdicts read as a sentence, and a value set the CDR does not know
-simply has no members, so a code is reported as *not* a member rather than the
-question being refused.
+![Value sets](img/terminology/valuesets.png)
 
-## Testing subsumption
+## Hierarchy
 
-Subsumption asks whether one code is an ancestor of another. The test is
-**strict**, so a code never subsumes itself, and the openEHR vocabulary is flat
-(it defines no is-a hierarchy) so the honest verdict for any pair of openEHR
-codes is "does not subsume". Hierarchical answers come from an external
-terminology server when one is bound.
+**Test** asks whether one code is broader than another. The test is strict,
+so a code is never broader than itself, and the openEHR vocabulary defines no
+hierarchy, so for any two openEHR codes the answer is no; the page says why.
+Hierarchical answers come from an external terminology server when one is
+bound.
 
-## Picking codes in the Query Builder
+Every tab is a GET form: the question stays in the address, so an answer is
+shareable, and every tab works with JavaScript off.
 
-The same lookups back the Query Builder's **coded condition** editor, so a
-coded criterion no longer has to be typed from memory; see
-[Dashboard & queries](queries.md#the-query-builder). The model is unchanged:
-whatever route a code took into the criterion, the query carries the bare code.
+## In the query builder
+
+A condition on a coded text in [Build](queries.md#build) offers the codes the
+template allows as a select, so a coded criterion is never typed from memory;
+the query carries the bare code.

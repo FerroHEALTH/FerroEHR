@@ -96,6 +96,21 @@ pub async fn fetch_conformance_manifest() -> Result<ConformanceManifest, ViewerE
     })
 }
 
+/// The conformance manifest as the CDR answers it, raw, for About's
+/// self-description card and its Download.
+///
+/// # Errors
+/// [`ViewerError::CdrUnreachable`] on transport failure; [`ViewerError::Cdr`]
+/// when the CDR answers non-2xx.
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_conformance_document(
+    state: &crate::state::AppState,
+) -> Result<String, ViewerError> {
+    let url = state.cdr.rest_v1_root();
+    let response = state.cdr.options_public(&url, "application/json").await?;
+    Ok(crate::cdr::CdrClient::expect_success(response)?.body)
+}
+
 #[cfg(test)]
 mod tests {
     use super::ConformanceManifest;

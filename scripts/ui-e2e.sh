@@ -305,7 +305,7 @@ else
     done
   else
     echo "── building the viewer (cargo-leptos)"
-    LEPTOS_TAILWIND_VERSION=v4.3.3 bash scripts/cargo-leptos.sh build
+    bash scripts/cargo-leptos.sh build
   fi
   echo "── starting the viewer on $VIEWER_ADDR"
   # LEPTOS_HASH_FILES is the runtime half of the crate manifest's `hash-files`

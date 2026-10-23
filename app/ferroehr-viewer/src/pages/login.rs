@@ -1,174 +1,179 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `/login` screen: dual Basic + OIDC authentication, drawn by FerroUI's
-//! sign-in card (`ferrohealth_ui::view::sign_in`).
+//! The sign-in page (R19): Basic and OIDC, the deployment's notice and links,
+//! and every state the page can be in.
 //!
-//! The Basic path is a plain form `POST` to the [`crate::auth::LoginBasic`]
-//! server function, so it submits and redirects before WASM loads and
-//! hydration never wipes what was typed (the inputs are named exactly
-//! `username`, `password`, `next`, matching the server-fn arguments). The OIDC
-//! path is a plain `<a rel="external">` to the BFF's `/auth/oidc/login` axum
-//! route. Which paths appear — and the deployment-configured notice and links
-//! around them — is decided by [`crate::auth::fetch_login_screen`]. The
-//! post-login destination is carried through the `next` query parameter on
-//! BOTH paths. An arrival carrying `?expired=1` — the shell's signed-out
-//! transition — opens the card with the notice that the previous session
-//! ended; one carrying `?refused=1` — where [`crate::auth::login_basic`] sends
-//! credentials the CDR refused — opens it with the refusal.
+//! The Basic form is a plain `POST` to this page, with plain uncontrolled
+//! `username` and `current-password` inputs, so it works with no WebAssembly
+//! (FerroUI `leptos-ui.md` §5): accepted credentials send the reader on with
+//! a redirect, and refused ones draw the page again with the refusal under
+//! the password and the username kept. The OIDC action is a plain link to
+//! the viewer's own `/auth/oidc/login` route. The page shows the session
+//! ended (`?expired=1`), signed out (`?signed-out=1`) or refused
+//! (`?refused=1`, the OIDC callback's) from its address. Which methods it
+//! offers comes from [`crate::auth::fetch_login_screen`]. No openEHR spec
+//! governs the viewer: our own design.
 
-use ferrohealth_ui::tone::Tone;
-use ferrohealth_ui::view::notice::{Announce, notice};
-use ferrohealth_ui::view::shell::{Footer, centred};
-use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, REFUSAL_ID, SignIn, sign_in};
+use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::view::shell::{brand_mark, centred, lockup_plain};
+use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, SignIn, State, sign_in};
 use leptos::prelude::*;
-use leptos::server_fn::ServerFn as _;
+use leptos_meta::Title;
 
-use crate::auth::{LoginBasic, fetch_login_screen};
-use crate::components::brand::viewer_lockup;
+use crate::auth::{SignedIn, fetch_login_screen, sign_in_basic};
 use crate::locale::{Msg, tr, tr_with};
-
-/// The login screen.
-///
-/// Renders FerroUI's sign-in card, centred: the lockup over the Basic form
-/// and/or the OIDC button, gated on the CDR's enabled auth modes (read once via
-/// a `Resource` under `<Suspense>`). A `?expired=1` arrival additionally opens
-/// the card with the notice that the previous session ended, and a
-/// `?refused=1` arrival with the refusal, both read from the URL so the server
-/// pass and hydration agree.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; view!/mount always consumes the value"
-)]
-#[component]
-pub fn LoginPage() -> impl IntoView {
-    let screen = Resource::new(|| (), |()| fetch_login_screen());
-    let (next, expired, refused) = login_query();
-
-    let card = view! {
-        // The fallback already says what the URL says (the refusal, the ended
-        // session), so it shows before the sign-in methods resolve and with no
-        // JavaScript at all; the card repeats it once they do.
-        <Suspense fallback=move || {
-            view! {
-                <div class="fui-card fui-sign-in">
-                    <div class="fui-sign-in-lockup">{viewer_lockup()}</div>
-                    {expired
-                        .then(|| {
-                            notice(
-                                Tone::Warn,
-                                Announce::Status,
-                                Some("session-expired"),
-                                tr(Msg::YourSessionEndedSignAgainContinue),
-                            )
-                        })}
-                    {refused
-                        .then(|| {
-                            notice(
-                                Tone::Bad,
-                                Announce::Alert,
-                                Some(REFUSAL_ID),
-                                tr(Msg::WrongUsernameOrPassword),
-                            )
-                        })}
-                    {ferrohealth_ui::view::empty::skeleton(3, tr(Msg::LoadingSignMethods))}
-                </div>
-            }
-        }>
-            {move || {
-                let next = next.clone();
-                Suspend::new(async move {
-                    let (basic, oidc, configured, links, mode_error) = match screen.await {
-                        Ok(s) => (s.basic, s.oidc, s.notice, s.links, None),
-                        Err(e) => (true, true, String::new(), Vec::new(), Some(e.to_string())),
-                    };
-                    let mut notices = Vec::new();
-                    if expired {
-                        notices
-                            .push(
-                                Notice::new(Tone::Warn, tr(Msg::YourSessionEndedSignAgainContinue))
-                                    .id("session-expired"),
-                            );
-                    }
-                    if !configured.is_empty() {
-                        notices.push(Notice::new(Tone::Accent, configured));
-                    }
-                    if let Some(error) = mode_error {
-                        notices
-                            .push(
-                                Notice::new(
-                                    Tone::Warn,
-                                    tr_with(
-                                        Msg::CouldNotReadCdrSLogin,
-                                        &[("error", error.clone().into())],
-                                    ),
-                                ),
-                            );
-                    }
-                    sign_in(SignIn {
-                            lockup: viewer_lockup().into_any(),
-                            notices,
-                            refusal: refused.then(|| tr(Msg::WrongUsernameOrPassword)),
-                            basic: basic
-                                .then(|| Basic {
-                                    action: LoginBasic::url(),
-                                    next: next.clone(),
-                                }),
-                            provider: oidc
-                                .then(|| Provider {
-                                    href: oidc_login_href(&next),
-                                    label: tr(Msg::SignInWithOidc),
-                                }),
-                            links: links.into_iter().map(|link| (link.label, link.href)).collect(),
-                        })
-                        .into_any()
-                })
-            }}
-        </Suspense>
-    }
-    .into_any();
-
-    view! {
-        <leptos_meta::Title text="Sign in" />
-        {centred(
-            card,
-            Footer {
-                product: "FerroEHR Viewer".into(),
-                version: env!("CARGO_PKG_VERSION"),
-                about: "/system#manufacturer",
-            },
-        )}
-    }
-}
-
-/// The URL facts the card reads: the post-login destination (`?next=`, the
-/// shell root by default), whether the previous session ended (`?expired=1`,
-/// set by `crate::session_client::signed_out_url`) and whether the CDR refused
-/// the last Basic sign-in (`?refused=1`). Deterministic from the URL, so
-/// hydration-safe.
-fn login_query() -> (String, bool, bool) {
-    let query = leptos_router::hooks::use_query_map();
-    query.with_untracked(|q| {
-        (
-            q.get("next").unwrap_or_else(|| "/".to_owned()),
-            q.get("expired").is_some(),
-            q.get("refused").is_some(),
-        )
-    })
-}
 
 /// The BFF's OIDC sign-in URL, carrying the post-login destination.
 ///
-/// The shell root is the route's own fallback, so it is left off rather than
-/// spelled out. Everything else is percent-encoded with the `urlencoding`
-/// crate (the owner's never-hand-roll-a-codec rule); what the route then
-/// ACCEPTS is decided server-side by `crate::oidc::same_origin_next`, since a
-/// link is not a place a security property can live.
+/// The shell root is the route's own fallback, so it is left off. What the
+/// route then accepts is decided on the server by
+/// `crate::auth::same_origin_next`.
 fn oidc_login_href(next: &str) -> String {
     if next == "/" {
         "/auth/oidc/login".to_owned()
     } else {
         format!("/auth/oidc/login?next={}", urlencoding::encode(next))
+    }
+}
+
+/// What the address says about the sign-in: where to go next and the state
+/// the page opens in.
+fn arrival() -> (String, State) {
+    let next = crate::request::query("next").unwrap_or_else(|| "/".to_owned());
+    let state = if crate::request::query("expired").is_some() {
+        State::Expired(Notice::new(tr(Msg::SignInExpired)))
+    } else if crate::request::query("signed-out").is_some() {
+        State::SignedOut(Notice::new(tr(Msg::SignInSignedOut)))
+    } else if crate::request::query("refused").is_some() {
+        State::Refused(Notice::new(tr(Msg::SignInRefusedProvider)))
+    } else {
+        State::Ready
+    };
+    (next, state)
+}
+
+/// The sign-in card for the methods of `screen`, in `state`, the basic form
+/// holding `username` and saying `error` under the password.
+fn card(
+    screen: Result<crate::auth::LoginScreen, crate::error::ViewerError>,
+    state: State,
+    next: &str,
+    username: String,
+    error: Option<String>,
+) -> AnyView {
+    let (basic, oidc, notice_text, links, state) = match screen {
+        Ok(screen) => (
+            screen.basic,
+            screen.oidc,
+            screen.notice,
+            screen.links,
+            state,
+        ),
+        Err(error) => {
+            let mut unreachable = Notice::new(tr(Msg::SignInCdrUnreachable));
+            unreachable.detail = Some(error.to_string());
+            (
+                true,
+                true,
+                String::new(),
+                Vec::new(),
+                match state {
+                    State::Ready => State::UpstreamUnreachable(unreachable),
+                    other => other,
+                },
+            )
+        }
+    };
+    let issuer = crate::request::state()
+        .map(|state| state.config.auth.oidc.issuer.clone())
+        .unwrap_or_default();
+    let host = issuer
+        .parse::<http::Uri>()
+        .ok()
+        .and_then(|uri| uri.host().map(str::to_owned))
+        .unwrap_or_else(|| tr(Msg::SignInIdentityProvider));
+    let line = (!notice_text.is_empty()).then(|| {
+        view! { <p class="fui-small fui-muted fui-sign-in-line">{notice_text}</p> }.into_any()
+    });
+    sign_in(SignIn {
+        lockup: lockup_plain(
+            brand_mark(crate::shell::MARK_PATH, crate::shell::MARK_PATH),
+            tr(Msg::BrandName),
+            tr(Msg::BrandWord),
+        )
+        .into_any(),
+        title: Some(tr(Msg::SignInTitle)),
+        state,
+        provider: oidc.then(|| Provider {
+            href: oidc_login_href(next),
+            label: tr_with(Msg::SignInAt, &[("host", host.clone().into())]),
+            busy: tr_with(Msg::SignInRedirecting, &[("host", host.into())]),
+            glyph: Glyph::LOG_IN,
+        }),
+        basic: basic.then(|| Basic {
+            action: "/login".to_owned(),
+            next: next.to_owned(),
+            divider: None,
+            submit: Some(tr(Msg::SignInBasicSubmit)),
+            username,
+            error,
+        }),
+        line,
+        note: None,
+        links: links
+            .into_iter()
+            .map(|link| (link.label, link.href))
+            .collect(),
+        caption: Some(tr(Msg::SignInCaption)),
+    })
+    .into_any()
+}
+
+/// The sign-in page.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the router always consumes the value"
+)]
+#[component]
+pub fn LoginPage() -> impl IntoView {
+    let (next, state) = arrival();
+    let posted = crate::posted::posted();
+    let body = crate::pages::common::awaited(async move {
+        let attempt = match posted {
+            Some(posted) => {
+                let username = posted.text("username");
+                let outcome = sign_in_basic(
+                    username.clone(),
+                    posted.get("password").unwrap_or_default(),
+                    posted.get("next"),
+                )
+                .await;
+                Some((username, outcome))
+            }
+            None => None,
+        };
+        let screen = fetch_login_screen().await;
+        let (username, error) = match attempt {
+            Some((_, Ok(SignedIn::Accepted(to)))) => {
+                leptos_axum::redirect(&to);
+                return ().into_any();
+            }
+            Some((username, Ok(SignedIn::Refused))) => (username, Some(tr(Msg::SignInRefused))),
+            Some((username, Err(error))) => (
+                username,
+                Some(tr_with(
+                    Msg::SignInFailed,
+                    &[("error", error.to_string().into())],
+                )),
+            ),
+            None => (String::new(), None),
+        };
+        card(screen, state, &next, username, error)
+    });
+    view! {
+        <Title text=tr(Msg::SignInTitle) />
+        {centred(body, crate::shell::footer())}
     }
 }
 

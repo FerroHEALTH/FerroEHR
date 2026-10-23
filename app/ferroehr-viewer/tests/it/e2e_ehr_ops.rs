@@ -42,21 +42,17 @@
 
 use crate::common;
 
-use std::time::Duration;
-
 use common::{
-    Harness, confirm_in_dialog, env, is_present_by, login_basic, poll_until_for, retype,
-    wait_css_absent, wait_text_contains,
+    Harness, confirm_in_dialog, env, fill, login_basic, wait_css_absent, wait_main_contains,
 };
-use thirtyfour::prelude::*;
 
-/// The template `scripts/ui-e2e.sh` seeds; its CDR-generated example
-/// composition is the body the delete journey commits (spec-valid by
-/// construction — never a hand-built fixture).
+/// The template the seeded compositions use.
 const SEED_TEMPLATE_ID: &str = "minimal_evaluation.en.v1";
 
-/// The CDR base URL the harness exports for REST-side test setup; `None` skips
-/// with a reason.
+/// The namespace the subject-bound EHR journey binds its subject in.
+const SUBJECT_NAMESPACE: &str = "e2e-viewer-subjects";
+
+/// The CDR origin the journeys seed through, or `None` (with a printed skip).
 fn cdr_url() -> Option<String> {
     if let Some(url) = env("UI_E2E_CDR_URL") {
         Some(url)
@@ -66,15 +62,8 @@ fn cdr_url() -> Option<String> {
     }
 }
 
-/// A fresh UUID-shaped id for this run, built from the clock so repeated runs
-/// against the same CDR never collide. Version/variant nibbles are fixed so the
-/// value is a well-formed UUID string, which is what the EHR API recommends for
-/// a client-supplied `ehr_id`.
-///
-/// # Panics
-/// When the system clock sits outside the range `jiff` supports.
+/// A fresh UUID-shaped id from the clock, unique per run.
 fn generated_uuid() -> String {
-    // Wall-clock time comes from jiff, the workspace's one time library.
     let nanos = jiff::Timestamp::now().as_nanosecond().unsigned_abs();
     let low = u32::try_from(nanos & 0xffff_ffff).unwrap_or(1);
     let mid = u16::try_from((nanos >> 32) & 0xffff).unwrap_or(1);
@@ -82,54 +71,20 @@ fn generated_uuid() -> String {
     format!("{low:08x}-{mid:04x}-4000-8000-{node:012x}")
 }
 
-/// Click the EHR-create button until the viewer leaves for the new EHR's
-/// detail route, returning whether it did.
-///
-/// The button is an `on:click` affordance, so a click landing before hydration
-/// is simply lost — the bounded retry is the login-submit precedent. Each
-/// attempt waits long enough (10 s) that a slow-but-successful create is not
-/// clicked twice.
-async fn create_ehr_until_navigated(h: &Harness, ehr_id: &str) -> bool {
-    for _ in 0..3 {
-        h.wait_css("#ehr-create-submit").await.click().await;
-        if poll_until_for(Duration::from_secs(10), async || {
-            h.current_url().await.contains(ehr_id)
-        })
-        .await
-        {
-            return true;
-        }
+/// Fill New EHR and create it.
+async fn create_ehr(h: &Harness, ehr_id: &str, subject: Option<(&str, &str)>) {
+    h.goto("/ehrs/new").await;
+    if let Some((id, namespace)) = subject {
+        fill(h, "#s-id", id).await;
+        fill(h, "#s-ns", namespace).await;
     }
-    false
+    fill(h, "#e-id", ehr_id).await;
+    common::submit(h, "#editor-dock button[value='save']").await;
 }
 
-/// Click `css` until `xpath` shows up, returning whether it did.
-///
-/// Same reason as [`create_ehr_until_navigated`]: an `on:click` affordance
-/// clicked before hydration loses the click, and re-clicking is safe here (the
-/// validation retry sends nothing, and a repeated conflicting create is refused
-/// again).
-///
-/// # Panics
-/// On any interaction failure.
-async fn click_until_xpath(h: &Harness, css: &str, xpath: &str) -> bool {
-    for _ in 0..5 {
-        h.wait_css(css).await.click().await;
-        if poll_until_for(Duration::from_secs(5), async || {
-            is_present_by(h, By::XPath(xpath)).await
-        })
-        .await
-        {
-            return true;
-        }
-    }
-    false
-}
-
-/// A client-supplied EHR id creates exactly that EHR (`PUT /ehr/{ehr_id}`), the
-/// detail screen's summary header reports the EHR resource's own facts, and
-/// re-using the same id is refused by the CDR with actionable copy — nothing is
-/// silently overwritten.
+/// A client-supplied EHR id creates exactly that EHR (`PUT /ehr/{ehr_id}`),
+/// a malformed one is refused before anything is sent, and the same id again
+/// is refused by the CDR with a link to the EHR that holds it.
 #[tokio::test]
 async fn client_supplied_ehr_id_creates_that_ehr_and_then_conflicts() {
     let Some(h) = Harness::start("ehr-client-supplied-id").await else {
@@ -138,143 +93,76 @@ async fn client_supplied_ehr_id_creates_that_ehr_and_then_conflicts() {
     login_basic(&h).await;
     let ehr_id = generated_uuid();
 
-    // A non-UUID id is refused BEFORE any round-trip (client-side validation).
-    h.goto("/ehrs").await;
-    retype(&h, "#ehr-create-id", "not-a-uuid").await;
-    assert!(
-        click_until_xpath(
-            &h,
-            "#ehr-create-submit",
-            "//*[@role='alert' and contains(., 'UUID')]",
-        )
-        .await,
-        "a non-UUID EHR id must be refused inline before anything is sent"
-    );
+    create_ehr(&h, "not-a-uuid", None).await;
+    wait_main_contains(&h, "An EHR id is a UUID").await;
+    assert!(h.current_url().await.ends_with("/ehrs/new"));
     h.shot(1, "ehr-id-validation").await;
 
-    // The real create: the viewer lands on THAT id's detail route.
-    retype(&h, "#ehr-create-id", &ehr_id).await;
-    assert!(
-        create_ehr_until_navigated(&h, &ehr_id).await,
-        "creating EHR {ehr_id} never navigated to its detail route"
-    );
-    // The summary header is the EHR resource read (`GET /ehr/{ehr_id}`): it
-    // names the very id that was supplied.
-    let summary = h.wait_css("#ehr-summary").await;
-    let text = summary.text().await;
-    assert!(
-        text.contains(&ehr_id),
-        "the EHR summary must name the created id (got `{text}`)"
-    );
+    create_ehr(&h, &ehr_id, None).await;
+    h.wait_url_contains(&format!("/ehrs/{ehr_id}")).await;
+    h.wait_css(&format!("main a[href^='/ehrs/{ehr_id}/']"))
+        .await;
     h.shot(2, "ehr-created-with-supplied-id").await;
 
-    // The same id again: the CDR answers 409 and the viewer says so instead of
-    // pretending the create worked.
-    h.goto("/ehrs").await;
-    retype(&h, "#ehr-create-id", &ehr_id).await;
-    assert!(
-        click_until_xpath(
-            &h,
-            "#ehr-create-submit",
-            "//*[contains(@class, 'fui-toast-text') and contains(., 'conflicting')]",
-        )
-        .await,
-        "re-using EHR id {ehr_id} must surface the CDR's conflict, not a success"
-    );
+    create_ehr(&h, &ehr_id, None).await;
+    wait_main_contains(&h, "409").await;
+    wait_main_contains(&h, "An EHR with this id exists already").await;
+    h.wait_css(&format!("main a[href='/ehrs/{ehr_id}']")).await;
     h.shot(3, "ehr-id-conflict").await;
 
-    // Deliberate negative steps: the refused create reaches the browser as a
-    // failed server-fn call.
-    h.assert_console_clean(&[
-        "409",
-        "500",
-        "server function",
-        "401",
-        "Failed to load resource",
-    ])
-    .await;
+    h.assert_console_clean(&["401", "Failed to load resource"])
+        .await;
     h.finish().await;
 }
 
-/// The namespace the subject-bound create journey issues its subject ids in.
-const SUBJECT_NAMESPACE: &str = "e2e-viewer-subjects";
-
-/// Click the EHR-create button until the viewer leaves `/ehrs`, returning
-/// whether it did.
-///
-/// The subject-bound create lets the CDR mint the id, so there is nothing to
-/// watch the URL for except leaving the finder. Same bounded retry as
-/// [`create_ehr_until_navigated`]: a click landing before hydration is lost.
-async fn create_ehr_until_left_finder(h: &Harness) -> bool {
-    for _ in 0..3 {
-        h.wait_css("#ehr-create-submit").await.click().await;
-        if poll_until_for(Duration::from_secs(10), async || {
-            !h.current_url().await.ends_with("/ehrs")
-        })
-        .await
-        {
-            return true;
-        }
-    }
-    false
-}
-
-/// The viewer's OWN **create-EHR-with-subject** path: the form binds the
-/// subject, and the EHR the viewer lands on carries it — in the detail
-/// header's identity strip and on the Status tab, both from the one
-/// current-`EHR_STATUS` read.
-///
-/// Nothing here is seeded over REST: the point of the journey is that the
-/// viewer can create a subject-bound EHR through its own form at all. It could
-/// not, once — the `EHR_STATUS` it built carried no `archetype_details`, so the
-/// CDR refused it `422` — and every journey seeding EHRs over REST is why that
-/// shipped unnoticed.
+/// The viewer's own create-with-subject path: the form binds the subject, the
+/// EHR it lands on carries it in its header and on the Status tab, and the
+/// EHR list finds it by subject id and namespace.
 #[tokio::test]
 async fn a_subject_bound_ehr_created_in_the_viewer_carries_its_subject() {
     let Some(h) = Harness::start("ehr-create-with-subject").await else {
         return;
     };
     login_basic(&h).await;
-    // A run-unique subject id, so a shared stack can hold several runs'.
     let subject_id = format!("patient-{}", generated_uuid());
-
-    h.goto("/ehrs").await;
-    retype(&h, "#ehr-create-subject-id", &subject_id).await;
-    retype(&h, "#ehr-create-subject-namespace", SUBJECT_NAMESPACE).await;
+    create_ehr(&h, "", Some((&subject_id, SUBJECT_NAMESPACE))).await;
+    h.wait_url_not_contains("/ehrs/new").await;
+    let url = h.current_url().await;
+    let ehr_path = url
+        .get(url.find("/ehrs/").expect("the create landed on an EHR")..)
+        .expect("a path")
+        .to_owned();
+    let header = h.wait_css(".fui-subject").await.text().await;
     assert!(
-        create_ehr_until_left_finder(&h).await,
-        "creating a subject-bound EHR never navigated to its detail route — the viewer's own \
-         create path is broken (a 422 from the CDR toasts here)"
+        header.contains(SUBJECT_NAMESPACE),
+        "the header names the subject's namespace (got `{header}`)"
     );
-
-    // The header's identity strip names the subject id AND its namespace.
-    let identity = h.wait_css("#ehr-identity").await;
-    let text = identity.text().await;
+    let tail = subject_id
+        .get(subject_id.len() - 3..)
+        .expect("a long subject id");
     assert!(
-        text.contains(&subject_id) && text.contains(SUBJECT_NAMESPACE),
-        "the header must name the subject the form bound (got `{text}`)"
+        header.contains(tail),
+        "the masked subject ends in `{tail}`: {header}"
     );
     h.shot(1, "ehr-created-with-subject").await;
 
-    // The Status tab reads the same current EHR_STATUS: it names the status
-    // version, and the header above it keeps the subject, shown once on the
-    // page. Opening the tab explicitly puts it in the URL.
-    h.wait_css("a[href$='tab=status']").await.click().await;
-    h.wait_url_contains("tab=status").await;
-    wait_text_contains(&h, "[data-status-fact='version']", "::").await;
-    wait_text_contains(&h, "#ehr-identity", &subject_id).await;
-    wait_text_contains(&h, "#ehr-identity", SUBJECT_NAMESPACE).await;
+    h.wait_css("a.fui-tab[data-tab='status']")
+        .await
+        .click()
+        .await;
+    h.wait_url_contains("/status").await;
+    wait_main_contains(&h, SUBJECT_NAMESPACE).await;
     h.shot(2, "ehr-status-carries-the-subject").await;
 
-    // The same subject now resolves through the finder's subject lookup, which
-    // is what binding it was for.
     h.goto("/ehrs").await;
-    retype(&h, "#ehr-subject-id", &subject_id).await;
-    retype(&h, "#ehr-subject-namespace", SUBJECT_NAMESPACE).await;
-    assert!(
-        click_until_xpath(&h, "#ehr-subject-find", "//*[@id='ehr-identity']").await,
-        "the subject the viewer bound must be findable by subject id + namespace"
-    );
+    fill(&h, "#ehrs-find", &subject_id).await;
+    fill(&h, "#ehrs-namespace", SUBJECT_NAMESPACE).await;
+    common::submit(&h, "form[action='/ehrs'] button[type=submit]").await;
+    // The list shows the subject masked, and the one EHR bound to it.
+    wait_main_contains(&h, &format!("Subject: ••••••{tail}")).await;
+    assert_eq!(common::count_matching(&h, "main table tbody tr").await, 1);
+    h.wait_css(&format!("main a.fui-row-link[href='{ehr_path}']"))
+        .await;
     h.shot(3, "ehr-found-by-subject").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
@@ -282,10 +170,6 @@ async fn a_subject_bound_ehr_created_in_the_viewer_carries_its_subject() {
     h.finish().await;
 }
 
-/// The composition viewer's **logical delete**: a freshly committed composition
-/// is deleted from the viewer (with `If-Match` on its latest version), the
-/// viewer reports the outcome and returns to the EHR's compositions tab, and
-/// the deleted composition is no longer listed there.
 #[tokio::test]
 async fn composition_logical_delete_leaves_the_list_without_it() {
     let Some(h) = Harness::start("composition-logical-delete").await else {
@@ -356,28 +240,24 @@ async fn composition_logical_delete_leaves_the_list_without_it() {
     login_basic(&h).await;
     h.goto(&format!("/ehrs/{ehr_id}/compositions/{vo_id}"))
         .await;
-    // The revision history must have loaded: the delete targets the version the
-    // history reports as latest.
-    h.wait_css("#version-select").await;
-    // The versioned-object card proves the direct VERSION read resolved too.
-    h.wait_css("[data-versioned-fact='lifecycle']").await;
+    h.wait_css("h2.fui-reading-title").await;
     h.shot(1, "composition-before-delete").await;
 
-    confirm_in_dialog(&h, "#composition-delete", "composition-delete-confirm").await;
-    // Wait for the mutation's OWN outcome before anything else — the success
-    // toast. (The viewer navigates to the compositions tab on success; a
-    // failure would toast the CDR's diagnostic here instead.)
-    h.wait_xpath("//*[contains(normalize-space(.), 'Composition deleted')]")
+    h.wait_css("summary[aria-controls='composition-more']")
+        .await
+        .click()
         .await;
+    confirm_in_dialog(
+        &h,
+        "button[commandfor='delete-composition']",
+        "#delete-composition button[type=submit]",
+    )
+    .await;
+    h.wait_css(".fui-toast-text").await;
     h.shot(2, "composition-deleted").await;
-    h.wait_url_contains("tab=compositions").await;
-    // The list reloads with the deleted composition gone: this EHR held exactly
-    // one, so the tab settles on its empty state (waiting for that first is what
-    // makes the assert-gone below a real assertion rather than a race with the
-    // still-loading table).
-    h.wait_xpath("//*[contains(., 'No compositions in this EHR')]")
-        .await;
-    wait_css_absent(&h, &format!("a[href*='{vo_id}']")).await;
+    h.wait_url_contains(&format!("/ehrs/{ehr_id}")).await;
+    wait_main_contains(&h, "This EHR holds no composition yet").await;
+    wait_css_absent(&h, &format!("main a[href*='{vo_id}']")).await;
     h.shot(3, "compositions-without-deleted").await;
 
     h.assert_console_clean(&["401", "404", "Failed to load resource"])

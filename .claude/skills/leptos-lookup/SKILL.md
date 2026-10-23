@@ -26,7 +26,7 @@ not settle. The viewer's own rules live in `.claude/rules/leptos-ui.md`.
 
 1. **Read FerroUI first** (FerroHEALTH/FerroUI; a local checkout or
    GitHub). Take the tag from the viewer's pin (`ferrohealth-ui` in the root
-   `Cargo.toml`, `=0.2.0` today, tag `v0.2.0`):
+   `Cargo.toml`, `=0.3.2` today, tag `v0.3.2`):
 
    ```bash
    UI=~/.cache/ferroehr/ferroui

@@ -22,17 +22,16 @@
 )]
 // e2e journeys are assertive by design; skip-with-reason prints; the shared
 // harness module is per-test-binary (the corpus.rs test-file precedent)
-//! End-to-end DIRECTORY journeys — the create-empty flow, the structured tree
-//! editor (add a subfolder + save with `If-Match`), the item picker's
-//! add/remove round trip, version history with restore, and the two-step
-//! directory delete with the create state coming back. Each journey creates its
-//! OWN anonymous EHR through the viewer (never the seeded one — these journeys
-//! mutate/delete the directory) and fails on any browser console error (the
-//! standing hydration gate).
+//! End-to-end directory journeys: Create the directory, the folder editor
+//! (add a folder, save with `If-Match`), the reference picker's add and remove
+//! round trip, the version history with restore and Older versions, and Delete
+//! the directory with Create the directory coming back. Each journey creates
+//! its own EHR (never the seeded one: these journeys change and delete the
+//! directory) and fails on any browser console error.
 //!
-//! The viewer keeps no folder-shape library of its own, so the create-empty
-//! root plus the tree editor is the ONLY way directory structure is built —
-//! which is what every journey here drives.
+//! The editor is a form the server answers with the tree changed: each add,
+//! rename and remove posts it, and the tree travels in a hidden field until
+//! Save sends it to the CDR.
 //!
 //! The item-picker journey seeds its two compositions over ITS-REST
 //! (`UI_E2E_CDR_URL`) rather than through the UI: the commit form has its own
@@ -41,53 +40,58 @@
 
 use crate::common;
 
-use common::{
-    Harness, count_matching, env, is_present_by, login_basic, poll_some_for, wait_css_absent,
-    wait_text,
-};
-use thirtyfour::prelude::*;
+use common::{Harness, confirm_in_dialog, env, login_basic, wait_css_absent, wait_main_contains};
 
-/// Create an anonymous EHR through the viewer and land on its detail page,
-/// returning the new EHR id (parsed from the navigated URL).
+/// The folder tree of the editor and of the tab.
+const TREE: &str = "#directory-tree";
+
+/// Create an EHR in the viewer and return its id.
 async fn create_ehr(h: &Harness) -> String {
-    h.goto("/ehrs").await;
-    // The create dispatch + navigation are hydrated behaviour; a click landing
-    // before hydration is silently lost (#2285's class).
-    h.wait_hydrated().await;
-    h.wait_css("#ehr-create-submit").await.click().await;
-    // The success Effect navigates to /ehrs/{uuid}; wait for a detail-only
-    // element, then read the id from the URL.
-    h.wait_css("#ehr-detail, [id^='tab-'], main").await;
-    let mut url = String::new();
-    let found = poll_some_for(std::time::Duration::from_secs(5), async || {
-        url = h.current_url().await;
-        url.split("/ehrs/")
-            .nth(1)
-            .filter(|tail| tail.len() >= 36)
-            .map(|tail| tail.chars().take(36).collect::<String>())
-    })
-    .await;
-    match found {
-        Some(id) => id,
-        None => panic!("EHR creation never navigated to a detail route (last url {url})"),
-    }
+    h.goto("/ehrs/new").await;
+    common::submit(h, "#editor-dock button[value='save']").await;
+    let url = h.current_url().await;
+    url.split("/ehrs/")
+        .nth(1)
+        .map(|tail| tail.chars().take(36).collect::<String>())
+        .filter(|id| id.len() == 36)
+        .unwrap_or_else(|| panic!("EHR creation never landed on an EHR (last url {url})"))
 }
 
-/// Create the EHR's directory through the create-empty flow — the ONLY create
-/// path now that the viewer keeps no folder-shape library of its own — and
-/// wait for the edit view. Structure is built afterwards in the tree editor,
-/// which is exactly what each journey below exercises.
+/// Create the EHR's empty directory from the EHR's More menu.
 async fn create_empty_directory(h: &Harness, ehr_id: &str) {
-    h.goto(&format!("/ehrs/{ehr_id}?tab=directory")).await;
-    // A full navigation restarts hydration; the create dispatch is hydrated
-    // behaviour, and a click landing earlier is silently lost (#2285's class).
-    h.wait_hydrated().await;
-    h.wait_css("#directory-create").await.click().await;
+    h.goto(&format!("/ehrs/{ehr_id}")).await;
+    h.wait_css("summary[aria-controls='ehr-more']")
+        .await
+        .click()
+        .await;
+    common::submit(h, "#ehr-more form button").await;
+    h.wait_url_contains(&format!("/ehrs/{ehr_id}/directory"))
+        .await;
+    h.wait_css(TREE).await;
+}
+
+/// Open the editor of the directory.
+async fn open_editor(h: &Harness, ehr_id: &str) {
+    h.goto(&format!("/ehrs/{ehr_id}/directory/edit")).await;
     h.wait_css("#directory-edit").await;
 }
 
-/// Journey: structured tree editing — add a subfolder at the root, save with
-/// the dirty-bar `If-Match` PUT, and see the change survive the refetch.
+/// The credentials and CDR the seeding needs, or `None` with a printed skip.
+fn seeding() -> Option<(String, String, String)> {
+    if let (Some(cdr), Some(user), Some(pass)) = (
+        env("UI_E2E_CDR_URL"),
+        env("UI_E2E_BASIC_USER"),
+        env("UI_E2E_BASIC_PASS"),
+    ) {
+        Some((cdr, user, pass))
+    } else {
+        println!("SKIP: seeding needs UI_E2E_CDR_URL/UI_E2E_BASIC_*");
+        None
+    }
+}
+
+/// The folder editor: add a folder at the root, save with the opened
+/// version's `If-Match`, and the folder survives the reread.
 #[tokio::test]
 async fn directory_tree_edit_journey() {
     let Some(h) = Harness::start("directory-edit").await else {
@@ -97,26 +101,21 @@ async fn directory_tree_edit_journey() {
     let ehr_id = create_ehr(&h).await;
     create_empty_directory(&h, &ehr_id).await;
 
-    // Add a subfolder at the root ("New folder"), which marks the tree dirty.
-    h.wait_css("[aria-label='Add subfolder']")
-        .await
-        .click()
-        .await;
-    h.wait_xpath("//*[@id='directory-tree']//*[contains(normalize-space(.), 'New folder')]")
-        .await;
+    open_editor(&h, &ehr_id).await;
+    common::submit(&h, "button[name='add_folder'][value='n0']").await;
+    common::wait_text_contains(&h, TREE, "New folder").await;
+    h.shot(1, "directory-folder-added").await;
+    common::submit(&h, "#editor-dock button[value='save']").await;
+    h.wait_url_not_contains("/edit").await;
+    common::wait_text_contains(&h, TREE, "New folder").await;
+    wait_main_contains(&h, "Version 2").await;
+    h.shot(2, "directory-saved").await;
 
-    // Save → PUT with If-Match; the resource refetches and re-seeds.
-    h.wait_css("#directory-save").await.click().await;
-    // The save bar disappears once the refetched tree is clean again, and the
-    // committed subfolder is still rendered.
-    h.wait_xpath("//*[@id='directory-tree']//*[contains(normalize-space(.), 'New folder')]")
-        .await;
     h.assert_console_clean(&[]).await;
     h.finish().await;
 }
 
-/// The template the seeded picker compositions are committed against — the one
-/// `scripts/ui-e2e.sh` uploads while bringing the stack up.
+/// The template the picker's fixture compositions use.
 const PICKER_TEMPLATE: &str = "minimal_evaluation.en.v1";
 
 /// Commit one FLAT composition into `ehr_id` and return its VERSIONED-OBJECT
@@ -208,84 +207,38 @@ async fn stored_item_ids(cdr: &str, user: &str, pass: &str, ehr_id: &str) -> Vec
         .unwrap_or_default()
 }
 
-/// Add the composition whose version uid contains `object_id` to the root
-/// folder through the item picker.
-///
-/// The picker overlay stays mounted and hidden (`class:hidden`), so its rows
-/// are always PRESENT — the wait therefore has to be on clickability, which is
-/// the condition that covers both the overlay opening and the composition list
-/// resolving.
-///
-/// # Panics
-/// When the picker never offers that composition.
-async fn add_item_through_picker(h: &Harness, object_id: &str) {
-    h.wait_css("[aria-label='Add item reference']")
+/// Add a reference to the composition `object_id` at the root.
+async fn add_reference(h: &Harness, object_id: &str) {
+    common::submit(h, "button[name='add_reference'][value='n0']").await;
+    h.wait_css("#d-reference")
         .await
-        .click()
+        .select_by_value(object_id)
         .await;
-    h.wait_clickable_xpath(&format!("//button[contains(., '{object_id}')]"))
-        .await
-        .click()
-        .await;
-    // The picker closes on pick, and the row it added carries the reference id.
-    h.wait_css(&format!("[data-item-id='{object_id}']")).await;
+    common::submit(h, "button[name='intent'][value='edit']").await;
 }
 
-/// Commit the pending tree edit and wait for the CDR's own confirmation.
-///
-/// The success toast is the "the PUT finished" condition: a REST re-read fired
-/// straight after the click races the in-flight write and reads the directory
-/// as the CDR held it BEFORE the save (measured — it read zero items while the
-/// screen already showed two). Waiting for no toast is not that condition: it
-/// is satisfied in the instant before the toast even appears. The toasts are
-/// then cleared, because a visible one intercepts the next click.
-///
-/// # Panics
-/// When the save never confirms.
-async fn save_directory(h: &Harness, what: &'static str) {
-    // The create's own toast overlays the corner; let it go before clicking, so
-    // the "Directory updated" wait below cannot see a stale card either.
-    h.wait_toasts_cleared().await;
-    h.wait_css("#directory-save").await.click().await;
-    assert!(
-        wait_text(h, "Directory updated").await,
-        "the directory save never confirmed ({what})"
-    );
-    h.wait_toasts_cleared().await;
-}
-
-/// Journey: the item picker adds two references and removes ONE — and the
-/// reference that survives is the specific OTHER one, on screen and in the CDR.
-///
-/// Removing a sibling is exactly where a position-keyed row hands its
-/// neighbour's identity to the delete (rules §4), so counting rows would pass
-/// against that bug. Every assertion here names an id.
+/// The picker adds two references and removes one, and the reference that
+/// survives is the other one, on screen and in the CDR: removing a sibling is
+/// where a position-keyed row would hand its neighbour's identity to the
+/// remove.
 #[tokio::test]
 async fn directory_item_picker_add_remove_journey() {
-    let Some(h) = Harness::start("directory-item-picker").await else {
+    let Some(h) = Harness::start("directory-picker").await else {
         return;
     };
-    let (Some(cdr), Some(user), Some(pass)) = (
-        env("UI_E2E_CDR_URL"),
-        env("UI_E2E_BASIC_USER"),
-        env("UI_E2E_BASIC_PASS"),
-    ) else {
-        println!("SKIP directory-item-picker: seeding needs UI_E2E_CDR_URL/UI_E2E_BASIC_*");
+    let Some((cdr, user, pass)) = seeding() else {
         h.finish().await;
         return;
     };
     login_basic(&h).await;
     let ehr_id = create_ehr(&h).await;
-
-    // Two compositions to reference, distinguishable by composer and time so a
-    // failure report says WHICH one the picker offered.
     let kept = seed_picker_composition(
         &cdr,
         &user,
         &pass,
         &ehr_id,
-        "Picker keeper",
-        "2026-07-20T09:00:00Z",
+        "Picker kept",
+        "2026-04-01T08:00:00Z",
     )
     .await;
     let removed = seed_picker_composition(
@@ -294,60 +247,53 @@ async fn directory_item_picker_add_remove_journey() {
         &pass,
         &ehr_id,
         "Picker removed",
-        "2026-07-21T09:00:00Z",
+        "2026-04-02T08:00:00Z",
     )
     .await;
     assert_ne!(kept, removed, "the two fixtures must be distinct objects");
-
     create_empty_directory(&h, &ehr_id).await;
 
-    // Add BOTH references through the picker, then commit them.
-    add_item_through_picker(&h, &removed).await;
-    add_item_through_picker(&h, &kept).await;
-    save_directory(&h, "commit both references").await;
-    // Both survive the refetch — the tree the CDR served back holds them.
-    h.wait_css(&format!("[data-item-id='{removed}']")).await;
-    h.wait_css(&format!("[data-item-id='{kept}']")).await;
-    let stored = stored_item_ids(&cdr, &user, &pass, &ehr_id).await;
-    assert_eq!(
-        stored.len(),
-        2,
-        "the CDR holds both references (got {stored:?})"
-    );
-    h.shot(1, "two-references").await;
+    open_editor(&h, &ehr_id).await;
+    add_reference(&h, &removed).await;
+    add_reference(&h, &kept).await;
+    let tail = |id: &str| id.get(id.len() - 4..).expect("a long id").to_owned();
+    common::wait_text_contains(&h, TREE, &tail(&removed)).await;
+    common::wait_text_contains(&h, TREE, &tail(&kept)).await;
+    h.shot(1, "directory-two-references").await;
 
-    // Remove exactly ONE of them and commit again.
-    h.wait_css(&format!(
-        "[data-item-id='{removed}'] button[aria-label='Remove item']"
-    ))
-    .await
-    .click()
+    let remove = h
+        .wait_xpath(&format!(
+            "//ul[@id='directory-tree']//li[contains(., '{}')][not(.//li[contains(., '{}')])]//button[@name='remove']",
+            tail(&removed),
+            tail(&removed)
+        ))
+        .await;
+    remove.click().await;
+    h.wait_css("#directory-edit").await;
+    common::poll_until(async || {
+        common::read_text(&h, TREE)
+            .await
+            .is_some_and(|text| !text.contains(&tail(&removed)))
+    })
     .await;
-    save_directory(&h, "commit the removal").await;
+    common::wait_text_contains(&h, TREE, &tail(&kept)).await;
+    common::submit(&h, "#editor-dock button[value='save']").await;
+    h.wait_url_not_contains("/edit").await;
+    h.shot(2, "directory-one-reference").await;
 
-    // The survivor is the OTHER one, by identity — never by count.
-    wait_css_absent(&h, &format!("[data-item-id='{removed}']")).await;
-    h.wait_css(&format!("[data-item-id='{kept}']")).await;
-    assert_eq!(
-        count_matching(&h, "[data-item-id]").await,
-        1,
-        "exactly one reference is left on screen after removing a sibling"
-    );
-    // …and the repository agrees, which is the half the browser cannot prove.
     assert_eq!(
         stored_item_ids(&cdr, &user, &pass, &ehr_id).await,
         vec![kept.clone()],
-        "the committed directory keeps exactly the reference that was not removed"
+        "the CDR keeps exactly the reference that was not removed"
     );
-    h.shot(2, "one-reference-left").await;
 
     h.assert_console_clean(&[]).await;
     h.finish().await;
 }
 
-/// Journey: version history — after an edit there are two versions; v1 is
-/// previewable read-only and restorable (a PUT of v1's tree with the current
-/// latest `If-Match`).
+/// The version history: after an edit there are two versions; version 1 reads
+/// on its own and restores, written back as version 3 with the latest
+/// version's `If-Match`.
 #[tokio::test]
 async fn directory_history_and_restore_journey() {
     let Some(h) = Harness::start("directory-history").await else {
@@ -356,39 +302,34 @@ async fn directory_history_and_restore_journey() {
     login_basic(&h).await;
     let ehr_id = create_ehr(&h).await;
     create_empty_directory(&h, &ehr_id).await;
+    open_editor(&h, &ehr_id).await;
+    common::submit(&h, "button[name='add_folder'][value='n0']").await;
+    common::submit(&h, "#editor-dock button[value='save']").await;
+    wait_main_contains(&h, "Version 2").await;
 
-    // v2: add a subfolder and save.
-    h.wait_css("[aria-label='Add subfolder']")
+    h.goto(&format!("/ehrs/{ehr_id}/directory")).await;
+    h.wait_css("main a[aria-label='Restore version 1']")
         .await
         .click()
         .await;
-    h.wait_css("#directory-save").await.click().await;
+    h.wait_url_contains("restore=1").await;
+    wait_main_contains(&h, "You are reading version 1 of 2").await;
+    h.shot(1, "directory-version-1").await;
+    confirm_in_dialog(
+        &h,
+        "button[command='show-modal'][commandfor='restore-directory']",
+        "#restore-directory button[type=submit]",
+    )
+    .await;
+    h.wait_css(".fui-toast-text").await;
+    wait_main_contains(&h, "Version 3").await;
+    let tree = h.wait_css(TREE).await.text().await;
+    assert!(
+        !tree.contains("New folder"),
+        "version 1's empty tree is back: {tree}"
+    );
+    h.shot(2, "directory-restored").await;
 
-    // The save toast overlays the bottom-right corner and intercepts clicks
-    // on anything underneath — wait for it to clear (explicit condition).
-    h.wait_toasts_cleared().await;
-
-    // Open the history panel: two versions listed, newest first.
-    h.wait_xpath("//button[contains(normalize-space(.), 'Version history')]")
-        .await
-        .click()
-        .await;
-    h.wait_xpath("//button[contains(normalize-space(.), 'v2')]")
-        .await;
-    let v1_row = h
-        .wait_xpath("//button[contains(normalize-space(.), 'v1')]")
-        .await;
-    v1_row.click().await;
-
-    // v1 preview offers a restore (v1 is not the latest); restoring commits
-    // v3 = v1's tree. Any lingering toast would intercept the click.
-    h.wait_toasts_cleared().await;
-    h.wait_xpath("//button[contains(normalize-space(.), 'Restore this version')]")
-        .await
-        .click()
-        .await;
-    h.wait_xpath("//button[contains(normalize-space(.), 'v3')]")
-        .await;
     h.assert_console_clean(&[]).await;
     h.finish().await;
 }
@@ -443,40 +384,22 @@ async fn commit_directory_version(
         .to_owned()
 }
 
-/// The exact-match `XPath` for one history row's button — `v1` must never
-/// match `v10`, which is precisely what a deep history puts on screen.
-fn history_row_xpath(number: u32) -> String {
-    format!("//button[.//span[normalize-space(text())='v{number}']]")
-}
-
-/// Journey: a history deeper than one window — the panel loads only the newest
-/// page, "load older" reaches the versions below it, and a version reached
-/// that way still restores.
-///
-/// The viewer cannot ask the CDR for a FOLDER revision history (ITS-REST
-/// 1.1.0 exposes none — register AMB-24, upstream report #1490), so it
-/// synthesizes the uid list and reads it in windows; this journey is the proof
-/// that the window is real and that the rest stays reachable.
+/// A history deeper than one window: the tab reads only the newest versions,
+/// Older versions reaches the ones below, and a version reached that way still
+/// restores. ITS-REST 1.1.0 has no FOLDER revision history, so the viewer reads
+/// a window of versions back from the latest.
 #[tokio::test]
 async fn directory_history_load_older_journey() {
     let Some(h) = Harness::start("directory-history-older").await else {
         return;
     };
-    let (Some(cdr), Some(user), Some(pass)) = (
-        env("UI_E2E_CDR_URL"),
-        env("UI_E2E_BASIC_USER"),
-        env("UI_E2E_BASIC_PASS"),
-    ) else {
-        println!("SKIP directory-history-older: seeding needs UI_E2E_CDR_URL/UI_E2E_BASIC_*");
+    let Some((cdr, user, pass)) = seeding() else {
         h.finish().await;
         return;
     };
     login_basic(&h).await;
     let ehr_id = create_ehr(&h).await;
-
-    // Two versions past one window, so the first page stops at v3 and the
-    // oldest two are only reachable through "load older".
-    let deepest = ferroehr_viewer::components::data_table::PAGE_SIZE + 2;
+    let deepest = 12_u32;
     let mut previous: Option<String> = None;
     for number in 1..=deepest {
         let uid = commit_directory_version(
@@ -491,44 +414,43 @@ async fn directory_history_load_older_journey() {
         previous = Some(uid);
     }
 
-    h.goto(&format!("/ehrs/{ehr_id}?tab=directory")).await;
-    h.wait_hydrated().await;
-    h.wait_toasts_cleared().await;
-    h.wait_xpath("//button[contains(normalize-space(.), 'Version history')]")
-        .await
-        .click()
-        .await;
-
-    // The newest version heads the list; the whole first window renders from
-    // one resolution, so v1's absence beside it is a settled fact, not a race.
-    h.wait_xpath(&history_row_xpath(deepest)).await;
+    let tab = format!("/ehrs/{ehr_id}/directory");
+    h.goto(&tab).await;
+    wait_main_contains(&h, &format!("Version {deepest}")).await;
     assert!(
-        !is_present_by(&h, By::XPath(history_row_xpath(1))).await,
-        "the initial history load must stop at the newest window, but v1 of {deepest} was listed"
+        !common::is_present(&h, &format!("main a.fui-row-link[href='{tab}?version=1']")).await,
+        "the first read stops at the newest window, but version 1 of {deepest} is listed"
     );
     h.shot(1, "history-first-window").await;
 
-    // "Load older" widens the window by another page and reaches v1.
-    h.wait_css("#directory-history-older").await.click().await;
-    let oldest = h.wait_xpath(&history_row_xpath(1)).await;
-    oldest.click().await;
-    h.shot(2, "history-older-loaded").await;
-
-    // …and restoring it still commits, which is the half a listing test cannot
-    // prove: the restore PUTs v1's tree against the current latest If-Match.
-    h.wait_toasts_cleared().await;
-    h.wait_xpath("//button[contains(normalize-space(.), 'Restore this version')]")
+    h.wait_css(&format!("main a[href='{tab}?versions=20']"))
         .await
         .click()
         .await;
-    h.wait_xpath(&history_row_xpath(deepest + 1)).await;
+    h.wait_css(&format!("main a.fui-row-link[href='{tab}?version=1']"))
+        .await;
+    h.wait_css("main a[aria-label='Restore version 1']")
+        .await
+        .click()
+        .await;
+    wait_main_contains(&h, &format!("You are reading version 1 of {deepest}")).await;
+    h.shot(2, "history-older-loaded").await;
+    confirm_in_dialog(
+        &h,
+        "button[command='show-modal'][commandfor='restore-directory']",
+        "#restore-directory button[type=submit]",
+    )
+    .await;
+    wait_main_contains(&h, &format!("Version {}", deepest + 1)).await;
+    h.shot(3, "history-older-restored").await;
+
     h.assert_console_clean(&[]).await;
     h.finish().await;
 }
 
-/// Journey: the two-step delete — confirm, the deleted/empty state renders
-/// the create flow again, and (per RM master06 §Logical Deletion + our
-/// live-slot rule) creating a NEW directory afterwards succeeds.
+/// Delete the directory: confirm, the tab offers Create the directory again,
+/// and a new directory can then be created (RM `common` §Logical deletion, and
+/// the CDR's one-live-directory rule).
 #[tokio::test]
 async fn directory_delete_and_recreate_journey() {
     let Some(h) = Harness::start("directory-delete").await else {
@@ -538,30 +460,23 @@ async fn directory_delete_and_recreate_journey() {
     let ehr_id = create_ehr(&h).await;
     create_empty_directory(&h, &ehr_id).await;
 
-    // Two-step delete: the danger button opens the inline confirmation.
-    h.wait_xpath("//button[contains(normalize-space(.), 'Delete directory')]")
+    h.wait_css("summary[aria-controls='directory-more']")
         .await
         .click()
         .await;
-    h.wait_css("#directory-delete-confirm").await.click().await;
+    confirm_in_dialog(
+        &h,
+        "button[commandfor='delete-directory']",
+        "#delete-directory button[type=submit]",
+    )
+    .await;
+    h.wait_css(".fui-toast-text").await;
+    wait_css_absent(&h, TREE).await;
+    h.shot(1, "directory-deleted").await;
 
-    // The tab falls back to the create state (no live directory)…
-    h.wait_css("#directory-create").await;
+    create_empty_directory(&h, &ehr_id).await;
+    h.shot(2, "directory-recreated").await;
 
-    // …and a NEW directory can be created (the deleted container remains,
-    // the slot is vacant — proven at the wire by directory_http). The delete
-    // toast must clear first (it intercepts clicks underneath).
-    h.wait_toasts_cleared().await;
-    h.wait_css("#directory-create").await.click().await;
-    h.wait_css("#directory-edit").await;
     h.assert_console_clean(&[]).await;
     h.finish().await;
-}
-
-/// The env accessor is used by the harness in the other journeys; referenced
-/// here so the shared module's API stays exercised uniformly.
-#[test]
-fn harness_env_accessor_shape() {
-    // A plain unit assertion (no browser): absent variables are None.
-    assert!(env("UI_E2E_THIS_VARIABLE_DOES_NOT_EXIST").is_none());
 }

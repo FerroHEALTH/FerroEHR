@@ -55,6 +55,9 @@ const POLL_STEP: Duration = Duration::from_millis(200);
 /// only observes a rendered page (module docs).
 const HYDRATION_WAIT: Duration = Duration::from_mins(1);
 
+/// The width of a phone screen, in CSS pixels.
+pub(crate) const PHONE_WIDTH: u32 = 390;
+
 /// Everything a journey needs.
 pub(crate) struct Harness {
     /// The `WebDriver` session, private so every journey command goes
@@ -128,13 +131,18 @@ impl Harness {
         let driver = WebDriver::builder(&webdriver_url, caps)
             .await
             .expect("webdriver session (is chromedriver up?)");
-        Some(Self {
+        let harness = Self {
             driver,
             base,
             shots_dir,
             journey,
             js: true,
-        })
+        };
+        // The phone lane runs every journey at 390 px (#3910).
+        if env("UI_E2E_VIEWPORT").as_deref() == Some("phone") {
+            harness.emulate(PHONE_WIDTH, false).await;
+        }
+        Some(harness)
     }
 
     /// Navigate to a viewer path.
@@ -358,49 +366,6 @@ impl Harness {
         }
     }
 
-    /// Explicit wait on an `XPath` that additionally requires the element to be
-    /// CLICKABLE — displayed and enabled — before returning it.
-    ///
-    /// A control the viewer disables until its form is valid is already
-    /// PRESENT, so [`Self::wait_xpath`] hands it back and the click is
-    /// INTERCEPTED by whatever sits above it. That is an error rather than a
-    /// lost interaction, so the re-click loop other journeys use for
-    /// pre-hydration clicks does not cover it — the condition has to be part of
-    /// the wait.
-    ///
-    /// # Panics
-    /// When the element never becomes clickable.
-    pub(crate) async fn wait_clickable_xpath(&self, xpath: &str) -> Element {
-        match bounded_for(
-            &format!("query(xpath={xpath}).and_clickable().wait()"),
-            WAIT + COMMAND_BUDGET,
-            self.driver
-                .query(By::XPath(xpath))
-                .and_clickable()
-                .wait(WAIT, Duration::from_millis(200))
-                .first(),
-        )
-        .await
-        {
-            Ok(inner) => Element::new(inner, xpath),
-            Err(e) => {
-                let url = bounded("current_url()", self.driver.current_url())
-                    .await
-                    .map(|u| u.to_string())
-                    .unwrap_or_default();
-                let path = format!("{}/{}-fail.png", self.shots_dir, self.journey);
-                drop(
-                    bounded(
-                        "screenshot()",
-                        self.driver.screenshot(std::path::Path::new(&path)),
-                    )
-                    .await,
-                );
-                panic!("waiting for xpath `{xpath}` to become clickable at {url}: {e}");
-            }
-        }
-    }
-
     /// Wait until the current URL contains `fragment` (redirect chains).
     ///
     /// # Panics
@@ -466,48 +431,6 @@ impl Harness {
             .await;
     }
 
-    /// Failure evidence at a journey-defined point, for a panic that would
-    /// otherwise preempt the next `goto`'s console sweep: a screenshot, the
-    /// DRAINED browser console printed to the test log (hydration errors and
-    /// panics land there), and any visible message-bar text — returned as one
-    /// line for the panic message.
-    pub(crate) async fn evidence_dump(&self, slug: &str) -> String {
-        let url = bounded("current_url()", self.driver.current_url())
-            .await
-            .map(|u| u.to_string())
-            .unwrap_or_default();
-        let path = format!("{}/{}-{slug}.png", self.shots_dir, self.journey);
-        drop(
-            bounded(
-                "screenshot()",
-                self.driver.screenshot(std::path::Path::new(&path)),
-            )
-            .await,
-        );
-        let entries = bounded("get_log(browser)", self.driver.get_log("browser"))
-            .await
-            .unwrap_or_default();
-        let mut severe = 0usize;
-        for entry in &entries {
-            if entry.level == "SEVERE" {
-                severe += 1;
-            }
-            println!("console[{}]: {}", entry.level, entry.message);
-        }
-        // Evidence gathering, so this one read stays best-effort: panicking
-        // here would destroy the report the caller is about to print.
-        let bar = match bounded("find(alert)", self.driver.find(By::Css("[role='alert']"))).await {
-            Ok(inner) => bounded("text(alert)", inner.text())
-                .await
-                .unwrap_or_default(),
-            Err(_) => String::new(),
-        };
-        format!(
-            "at {url}; {} console entries ({severe} SEVERE — printed above); message bar: {bar:?}",
-            entries.len()
-        )
-    }
-
     /// Numbered step screenshot: `{journey}-{step}-{slug}.png`.
     ///
     /// # Panics
@@ -571,16 +494,6 @@ impl Harness {
             .expect("tab title")
     }
 
-    /// The current page's serialized DOM source.
-    ///
-    /// # Panics
-    /// When the `WebDriver` does not answer.
-    pub(crate) async fn page_source(&self) -> String {
-        bounded("source()", self.driver.source())
-            .await
-            .expect("page source")
-    }
-
     /// Write a full-window PNG of the current page to `path`.
     ///
     /// # Panics
@@ -601,17 +514,114 @@ impl Harness {
             .expect("the browser's cookies for the viewer origin")
     }
 
-    /// Delete the cookie named `name` from the browser.
+    /// Replace the value of the cookie named `name`, keeping it on the
+    /// viewer's whole origin.
     ///
     /// # Panics
     /// When the `WebDriver` does not answer.
-    pub(crate) async fn delete_cookie(&self, name: &str) {
+    pub(crate) async fn set_cookie(&self, name: &str, value: &str) {
+        let mut cookie = Cookie::new(name.to_owned(), value.to_owned());
+        cookie.set_path("/");
         bounded(
-            &format!("delete_cookie({name})"),
-            self.driver.delete_cookie(name.to_owned()),
+            &format!("add_cookie({name})"),
+            self.driver.add_cookie(cookie),
         )
         .await
-        .expect("delete the cookie");
+        .expect("set the cookie");
+    }
+
+    /// Press `key` where the focus is, as a person at a keyboard does.
+    ///
+    /// # Panics
+    /// When the `WebDriver` does not answer.
+    pub(crate) async fn press(&self, key: impl Into<TypingData>) {
+        bounded(
+            "action_chain(send_keys).perform()",
+            self.driver.action_chain().send_keys(key).perform(),
+        )
+        .await
+        .expect("press the key");
+    }
+
+    /// Whether the focused element matches `css`.
+    ///
+    /// # Panics
+    /// When the `WebDriver` does not answer.
+    pub(crate) async fn focus_matches(&self, css: &str) -> bool {
+        let answer = bounded(
+            "execute(activeElement.matches)",
+            self.driver.execute(
+                "return !!document.activeElement && document.activeElement.matches(arguments[0]);",
+                vec![serde_json::Value::String(css.to_owned())],
+            ),
+        )
+        .await
+        .expect("read the focused element");
+        answer.json().as_bool().unwrap_or(false)
+    }
+
+    /// Press Tab until the focus reaches an element matching `css`, at most
+    /// `limit` times; whether it got there.
+    ///
+    /// # Panics
+    /// When the `WebDriver` does not answer.
+    pub(crate) async fn tab_to(&self, css: &str, limit: usize) -> bool {
+        for _ in 0..limit {
+            if self.focus_matches(css).await {
+                return true;
+            }
+            self.press(Key::Tab).await;
+        }
+        self.focus_matches(css).await
+    }
+
+    /// Lay the page out at `width` CSS pixels (a phone at 390) in the colour
+    /// scheme `dark` asks for, by Chrome `DevTools` Protocol emulation: the
+    /// headless window will not size itself below 500 px.
+    ///
+    /// # Panics
+    /// When the browser refuses the emulation.
+    pub(crate) async fn emulate(&self, width: u32, dark: bool) {
+        let cdp = self.driver.cdp();
+        let metrics = if width >= 1440 {
+            bounded(
+                "Emulation.clearDeviceMetricsOverride",
+                cdp.send_raw(
+                    "Emulation.clearDeviceMetricsOverride",
+                    serde_json::json!({}),
+                ),
+            )
+            .await
+        } else {
+            bounded(
+                "Emulation.setDeviceMetricsOverride",
+                cdp.send_raw(
+                    "Emulation.setDeviceMetricsOverride",
+                    serde_json::json!({
+                        "width": width,
+                        "height": 844,
+                        "deviceScaleFactor": 1,
+                        "mobile": true
+                    }),
+                ),
+            )
+            .await
+        };
+        metrics.expect("the browser takes the viewport emulation");
+        bounded(
+            "Emulation.setEmulatedMedia",
+            cdp.send_raw(
+                "Emulation.setEmulatedMedia",
+                serde_json::json!({
+                    "features": [{
+                        "name": "prefers-color-scheme",
+                        "value": if dark { "dark" } else { "light" }
+                    }]
+                }),
+            ),
+        )
+        .await
+        .expect("the browser takes the colour-scheme emulation");
     }
 
     /// End the session (screenshots + console gate are per-journey calls).
@@ -681,15 +691,23 @@ impl Element {
         element_command(&format!("clear({})", self.what), self.inner.clear()).await;
     }
 
-    /// Scroll it into the viewport.
+    /// Scroll it to the middle of the viewport, clear of the sticky top bar
+    /// and the docked decision bar.
     ///
     /// # Panics
     /// When the `WebDriver` answers with anything but success.
-    pub(crate) async fn scroll_into_view(&self) {
-        element_command(
-            &format!("scroll_into_view({})", self.what),
-            self.inner.scroll_into_view(),
-        )
+    pub(crate) async fn scroll_to_centre(&self) {
+        let arg = self
+            .inner
+            .to_json()
+            .expect("an element handle serializes as a script argument");
+        element_command(&format!("scroll_to_centre({})", self.what), async {
+            self.inner
+                .handle()
+                .execute("arguments[0].scrollIntoView({block: 'center'});", vec![arg])
+                .await
+                .map(|_| ())
+        })
         .await;
     }
 
@@ -743,18 +761,6 @@ impl Element {
         .await
     }
 
-    /// Whether it is displayed.
-    ///
-    /// # Panics
-    /// When the `WebDriver` answers with anything but success.
-    pub(crate) async fn displayed(&self) -> bool {
-        element_command(
-            &format!("is_displayed({})", self.what),
-            self.inner.is_displayed(),
-        )
-        .await
-    }
-
     /// Whether it is selected (a checkbox, a radio, an `<option>`).
     ///
     /// # Panics
@@ -765,31 +771,6 @@ impl Element {
             self.inner.is_selected(),
         )
         .await
-    }
-
-    /// The RESOLVED value of the CSS `property` — what the browser computed,
-    /// not what the stylesheet declared.
-    ///
-    /// # Panics
-    /// When the `WebDriver` answers with anything but success.
-    pub(crate) async fn css_value(&self, property: &str) -> String {
-        element_command(
-            &format!("css_value({}.{property})", self.what),
-            self.inner.css_value(property.to_owned()),
-        )
-        .await
-    }
-
-    /// The first element matching `by` INSIDE this one.
-    ///
-    /// # Panics
-    /// When the `WebDriver` answers with anything but success, absence
-    /// included — a journey reaching into a subtree is asserting the child is
-    /// there ([`Self::read_find`] is the probe).
-    pub(crate) async fn find(&self, by: By) -> Self {
-        let what = format!("{} {by:?}", self.what);
-        let inner = element_command(&format!("find({what})"), self.inner.find(by)).await;
-        Self::new(inner, &what)
     }
 
     /// Every element matching `by` inside this one, empty when none match.
@@ -832,24 +813,6 @@ impl Element {
         .await;
     }
 
-    /// Select the `<option>` at `index` ([`Self::select_by_value`] for the
-    /// bounding rationale).
-    ///
-    /// # Panics
-    /// When the element is not a `<select>`, or the option cannot be chosen.
-    pub(crate) async fn select_by_index(&self, index: u32) {
-        let select = element_command(
-            &format!("SelectElement::new({})", self.what),
-            SelectElement::new(&self.inner),
-        )
-        .await;
-        element_command(
-            &format!("select_by_index({}, {index})", self.what),
-            select.select_by_index(index),
-        )
-        .await;
-    }
-
     /// Its rendered text, or `None` when the handle went stale.
     ///
     /// The probe tier's one collapse, reasoned here for all four `read_*`
@@ -883,16 +846,6 @@ impl Element {
         )
         .await
         .flatten()
-    }
-
-    /// The first element matching `by` inside this one, or `None` when
-    /// nothing matches or the handle went stale ([`Self::read_text`] reasons
-    /// the collapse).
-    pub(crate) async fn read_find(&self, by: By) -> Option<Self> {
-        let what = format!("{} {by:?}", self.what);
-        element_probe(&format!("find({what})"), self.inner.find(by))
-            .await
-            .map(|inner| Self::new(inner, &what))
     }
 
     /// Whether it is enabled, or `None` when the handle went stale
@@ -1086,9 +1039,9 @@ pub(crate) async fn is_any_visible(h: &Harness, css: &str) -> bool {
 /// the not-found page carry a footer with no body beside it.
 pub(crate) const SHELL_FOOTER: &str = ".fui-body ~ footer";
 
-/// FerroUI's modal dialog while it is open (`showModal()` sets `open`); its
-/// `::backdrop` covers the page under it.
-const DIALOG_SURFACE: &str = "dialog.fui-modal[open]";
+/// FerroUI's modal dialog while it is open (the `show-modal` command sets
+/// `open`); its `::backdrop` covers the page under it.
+const DIALOG_SURFACE: &str = "dialog.fui-dialog[open]";
 
 /// Establish the precondition every page-level click has: nothing is covering
 /// the page.
@@ -1136,122 +1089,30 @@ pub(crate) async fn wait_dialog_settled(h: &Harness, control_css: &str) {
     panic!("the dialog holding `{control_css}` never became open and settled (at {url})");
 }
 
-/// The submit button of the Template Manager's one upload dialog.
-const UPLOAD_SUBMIT: &str = "#template-upload-submit";
-
-/// The refusal diagnostic, scoped to the MODAL: the template listings render
-/// their own notice for an empty result, which is not this one.
-const UPLOAD_DIAGNOSTIC: &str = "dialog.fui-modal[open] .fui-alert";
-
-/// The in-flight line FerroUI's upload field renders while the upload is
-/// pending: its presence IS the pending state.
-const UPLOAD_PENDING_LINE: &str =
-    "//dialog[@open]//p[contains(@class, 'fui-spinner')][contains(., 'Uploading')]";
-
-/// Every toast card currently on screen; each upload outcome raises one.
+/// Every toast card currently on screen.
 const TOAST_CARD: &str = ".fui-toast-text";
 
-/// What the upload dialog says about a dispatch, read at one instant.
+/// Upload the file at `path` as a template of `family` (`adl14` or `adl2`)
+/// through Upload a template: the hydrated file field reads the file into
+/// the source editor, and the dock's primary button posts it.
 ///
-/// The submit click's post-condition is a COMPARISON of two of these, because
-/// only some of the observables are unconditionally absent beforehand: a
-/// refusal diagnostic and a toast can both survive from an earlier attempt.
-#[derive(Debug)]
-struct UploadDialogState {
-    /// Whether the modal surface is on screen — an accepted upload closes it.
-    open: bool,
-    /// Whether the submit button is live, or `None` when it is not in the DOM.
-    submit_enabled: Option<bool>,
-    /// Whether the "Uploading…" line is rendered.
-    pending: bool,
-    /// The refusal diagnostic rendered inside the dialog, if any.
-    diagnostic: Option<String>,
-    /// How many toast cards are up.
-    toasts: usize,
-}
-
-impl UploadDialogState {
-    /// Read every observable once.
-    ///
-    /// # Panics
-    /// When the `WebDriver` fails to answer any of them ([`is_absence`]).
-    async fn read(h: &Harness) -> Self {
-        Self {
-            open: is_visible(h, DIALOG_SURFACE).await,
-            submit_enabled: read_enabled(h, UPLOAD_SUBMIT).await,
-            pending: is_present_by(h, By::XPath(UPLOAD_PENDING_LINE)).await,
-            diagnostic: read_text(h, UPLOAD_DIAGNOSTIC).await,
-            toasts: count_matching(h, TOAST_CARD).await,
-        }
-    }
-
-    /// Whether this state carries a consequence of the submit dispatch that
-    /// `before` did not already carry.
-    ///
-    /// Each disjunct is something only a dispatch produces: the dialog closing
-    /// is the accepted-upload continuation, the pending line and the button
-    /// going inert are the action's own in-flight state, a moved diagnostic is
-    /// a fresh refusal, and a new toast is either outcome's feedback.
-    fn dispatched_since(&self, before: &Self) -> bool {
-        (before.open && !self.open)
-            || self.pending
-            || (before.submit_enabled == Some(true) && self.submit_enabled == Some(false))
-            || self.diagnostic != before.diagnostic
-            || self.toasts > before.toasts
-    }
-}
-
-/// The submit click's post-condition: poll until the dialog shows that the
-/// dispatch happened.
+/// Leaves the browser on the page that answers the post: the template's own
+/// page when the CDR took it, the upload page with the CDR's diagnostic when
+/// it refused.
 ///
 /// # Panics
-/// When nothing moves within 15 s — the click was answered, the handler never
-/// ran, and the panic says so HERE rather than leaving a downstream read to
-/// blame the CDR for a row nothing ever sent it.
-async fn wait_upload_dispatched(h: &Harness, before: &UploadDialogState) {
-    for _ in 0..75 {
-        if UploadDialogState::read(h).await.dispatched_since(before) {
-            return;
-        }
-        tokio::time::sleep(Duration::from_millis(200)).await;
-    }
-    let evidence = h.evidence_dump("upload-click-not-dispatched").await;
-    panic!(
-        "the click on `{UPLOAD_SUBMIT}` did not dispatch the upload: 15 s on, the dialog \
-         is still open with its source loaded and its submit button live, nothing is \
-         pending, no new diagnostic and no toast — the click was answered but the \
-         handler never ran, so nothing was sent to the CDR ({evidence})"
-    );
-}
-
-/// Upload `path` through the Template Manager's one upload dialog: open it
-/// from the page-header trigger, choose the file, and send it.
-///
-/// Both template families share this control (#2955), so every family's seed
-/// helper drives this one routine.
-///
-/// Four conditions, no sleeps, each the exact fact the next step needs:
-/// nothing covers the page ([`clear_dialog_overlay`] — a refused upload keeps
-/// its dialog open on purpose, so re-entry with a modal up is normal, #3134);
-/// the modal is open and settled ([`wait_dialog_settled`]); the submit button
-/// is live ([`wait_enabled`]), which is inert until the chosen file has been
-/// read into the dialog's source editor and so means exactly "the file
-/// arrived"; and the send actually DISPATCHED ([`wait_upload_dispatched`]).
-///
-/// # Panics
-/// On any interaction failure, and when the submit click dispatches nothing.
-pub(crate) async fn upload_via_dialog(h: &Harness, path: &str) {
-    clear_dialog_overlay(h).await;
-    h.wait_css("#template-upload-open").await.click().await;
-    wait_dialog_settled(h, UPLOAD_SUBMIT).await;
-    h.wait_css("#template-upload-file")
-        .await
-        .send_keys(path)
-        .await;
-    wait_enabled(h, UPLOAD_SUBMIT).await;
-    let before = UploadDialogState::read(h).await;
-    h.wait_css(UPLOAD_SUBMIT).await.click().await;
-    wait_upload_dispatched(h, &before).await;
+/// When the file never reaches the editor or no page answers the post.
+pub(crate) async fn upload_template(h: &Harness, family: &str, path: &str) {
+    h.goto(&format!("/templates/upload?family={family}")).await;
+    h.wait_css("#source-file").await.send_keys(path).await;
+    let read = poll_until_for(Duration::from_secs(15), async || {
+        read_prop(h, "#source-text", "value")
+            .await
+            .is_some_and(|value| !value.is_empty())
+    })
+    .await;
+    assert!(read, "the chosen file never reached the source editor");
+    submit(h, "#editor-dock button[value='save']").await;
 }
 
 /// Whether the control at `css` is enabled, or `None` when nothing matches.
@@ -1320,30 +1181,6 @@ pub(crate) async fn count_matching(h: &Harness, css: &str) -> usize {
     find_all(h, css).await.len()
 }
 
-/// Whether an element matching `css` shows up within `budget`.
-///
-/// The short-budget probe for a branch a journey takes either way (a capture
-/// that is skipped when a screen is not served, a click retried until its
-/// target renders); a condition the journey REQUIRES is waited for by
-/// [`Harness::wait_css`] instead, which fails with evidence.
-///
-/// # Panics
-/// When the `WebDriver` answers with anything but an absence ([`is_absence`]).
-pub(crate) async fn appears_within(h: &Harness, css: &str, budget: Duration) -> bool {
-    let step = Duration::from_millis(200);
-    let mut waited = Duration::ZERO;
-    loop {
-        if is_present(h, css).await {
-            return true;
-        }
-        if waited >= budget {
-            return false;
-        }
-        tokio::time::sleep(step).await;
-        waited += step;
-    }
-}
-
 /// Poll `condition` every [`POLL_STEP`] until it holds, for at most `budget`;
 /// returns whether it did.
 ///
@@ -1370,139 +1207,6 @@ pub(crate) async fn poll_until_for(
 /// [`poll_until_for`] over [`WAIT`] — the ordinary journey condition.
 pub(crate) async fn poll_until(condition: impl AsyncFnMut() -> bool) -> bool {
     poll_until_for(WAIT, condition).await
-}
-
-/// Poll `probe` every [`POLL_STEP`] until it answers `Some`, for at most
-/// `budget`, and hand that answer back.
-///
-/// [`poll_until_for`] for a condition that also PRODUCES the value the
-/// journey went looking for (the id in a URL, the settled text of a row).
-pub(crate) async fn poll_some_for<T>(
-    budget: Duration,
-    mut probe: impl AsyncFnMut() -> Option<T>,
-) -> Option<T> {
-    let mut waited = Duration::ZERO;
-    loop {
-        if let Some(value) = probe().await {
-            return Some(value);
-        }
-        if waited >= budget {
-            return None;
-        }
-        tokio::time::sleep(POLL_STEP).await;
-        waited += POLL_STEP;
-    }
-}
-
-/// [`poll_some_for`] over [`WAIT`].
-pub(crate) async fn poll_some<T>(probe: impl AsyncFnMut() -> Option<T>) -> Option<T> {
-    poll_some_for(WAIT, probe).await
-}
-
-/// Let the page sit for `duration` with nothing expected to happen, printing
-/// `why`.
-///
-/// The one wait here that is NOT a condition, and it lives in the harness so
-/// the journey files can stay sleep-free: a journey that asserts a window
-/// passes WITHOUT something happening — a timer the previous shell left
-/// behind failing to fire — has no observable to poll for, and turning the
-/// absence into a condition would only be a sleep wearing a wait's name.
-pub(crate) async fn dwell(duration: Duration, why: &str) {
-    println!("dwell {duration:?}: {why}");
-    tokio::time::sleep(duration).await;
-}
-
-/// The red, green and blue channels of a serialised CSS colour, whatever
-/// spelling it arrived in.
-///
-/// Every CSSOM colour serialization writes the three channels first —
-/// `rgb(15, 23, 42)` for a colour the cascade resolved as opaque,
-/// `rgba(15, 23, 42, 1)` when the winning declaration carried an explicit
-/// alpha channel — so reading the first three numbers reads the PAINT and
-/// ignores the spelling. Alpha is deliberately not compared: it is the one
-/// component the two spellings disagree about, and a wait on a themed surface
-/// is a wait on its colour.
-fn colour_channels(value: &str) -> Option<[u32; 3]> {
-    let mut numbers = value
-        .split(|c: char| !c.is_ascii_digit())
-        .filter(|part| !part.is_empty())
-        .map(str::parse::<u32>);
-    let mut channels = [0u32; 3];
-    for channel in &mut channels {
-        *channel = numbers.next()?.ok()?;
-    }
-    Some(channels)
-}
-
-/// Poll until the RESOLVED colour of the CSS `property` on the first element
-/// matching `css` is `expected`.
-///
-/// Resolved rather than declared: `WebDriver`'s Get Element CSS Value returns
-/// the computed value, which is what makes a token swap observable at all —
-/// the declaration never changes, only what `var(--…)` resolves to.
-///
-/// Colour rather than text: the computed value comes back in the CSSOM
-/// spelling the winning declaration produced, and this viewer's `<html>`
-/// background reaches Chrome 152 as `rgba(15, 23, 42, 1)` where the same paint
-/// declared without an alpha channel would read `rgb(15, 23, 42)`. Comparing
-/// [`colour_channels`] compares what was painted; comparing the strings would
-/// compare the serialization and fail on a browser that chose the other one.
-///
-/// # Panics
-/// When it never does within [`WAIT`], reporting the last value seen, or when
-/// `expected` is not a colour [`colour_channels`] can read.
-pub(crate) async fn wait_css_colour(h: &Harness, css: &str, property: &str, expected: &str) {
-    let want = colour_channels(expected)
-        .unwrap_or_else(|| panic!("`{expected}` is not a CSS colour with three channels"));
-    let mut last = String::new();
-    let settled = poll_until(async || match find_css(h, css).await {
-        Some(element) => {
-            last = element.css_value(property).await;
-            colour_channels(&last) == Some(want)
-        }
-        None => false,
-    })
-    .await;
-    assert!(
-        settled,
-        "`{css}`'s resolved `{property}` never became `{expected}` (last: `{last}`)"
-    );
-}
-
-/// Poll until the CSS `property` of `css` STOPS moving: two samples
-/// [`POLL_STEP`] apart that agree.
-///
-/// The animation half of a theme flip. `wait_css_colour` answers "the token
-/// swapped"; a surface carrying a colour transition is still somewhere
-/// between its two colours at that instant, and a capture taken then freezes
-/// a half-themed frame. Two equal samples is the observable end of the
-/// transition — an explicit condition, where a fixed settle is a guess that
-/// is either too short on a loaded machine or wasted time on a quiet one.
-///
-/// Returns at once when nothing matches `css`: a page carrying no animated
-/// surface has nothing to settle.
-///
-/// # Panics
-/// When the value is still moving after [`WAIT`].
-pub(crate) async fn wait_css_value_still(h: &Harness, css: &str, property: &str) {
-    let mut last = String::new();
-    let settled = poll_until(async || {
-        let Some(before) = find_css(h, css).await else {
-            return true;
-        };
-        let first = before.css_value(property).await;
-        tokio::time::sleep(POLL_STEP).await;
-        let Some(after) = find_css(h, css).await else {
-            return true;
-        };
-        last = after.css_value(property).await;
-        first == last
-    })
-    .await;
-    assert!(
-        settled,
-        "`{css}`'s `{property}` never stopped moving (last: `{last}`)"
-    );
 }
 
 /// Poll until the control at `css` is present, ENABLED and not read-only.
@@ -1547,24 +1251,6 @@ pub(crate) async fn wait_css_absent(h: &Harness, css: &str) {
     panic!("`{css}` never disappeared (at {url})");
 }
 
-/// Wait until some element's text contains `needle` (a toast title, a status
-/// line), returning whether it appeared.
-///
-/// # Panics
-/// When the `WebDriver` answers with anything but an absence ([`is_absence`]):
-/// "the page never said it" is a claim about the page, so it may only be made
-/// on an answer.
-pub(crate) async fn wait_text(h: &Harness, needle: &str) -> bool {
-    let xpath = format!("//*[contains(normalize-space(.), '{needle}')]");
-    for _ in 0..75 {
-        if is_present_by(h, By::XPath(&xpath)).await {
-            return true;
-        }
-        tokio::time::sleep(Duration::from_millis(200)).await;
-    }
-    false
-}
-
 /// Poll until the text of the element at `css` contains `fragment` — the "the
 /// CDR actually applied it" assertion, an explicit condition rather than a
 /// sleep.
@@ -1586,26 +1272,6 @@ pub(crate) async fn wait_text_contains(h: &Harness, css: &str, fragment: &str) {
     panic!("`{css}` never contained `{fragment}` (last text: {last})");
 }
 
-/// Wait until the element at `css` has text ending in `suffix` (a version
-/// number the screen must have caught up to).
-///
-/// # Panics
-/// When it never does within [`WAIT`], reporting the last text seen, or when
-/// the `WebDriver` answers with anything but an absence ([`is_absence`]).
-pub(crate) async fn wait_text_suffix(h: &Harness, css: &str, suffix: &str) {
-    let mut last = String::new();
-    for _ in 0..75 {
-        if let Some(text) = read_text(h, css).await {
-            last = text;
-            if last.trim_end().ends_with(suffix) {
-                return;
-            }
-        }
-        tokio::time::sleep(Duration::from_millis(200)).await;
-    }
-    panic!("`{css}` never ended in `{suffix}` (last text: `{last}`)");
-}
-
 /// Type `text` into the field at `css`, clearing whatever is there first.
 ///
 /// # Panics
@@ -1615,28 +1281,6 @@ pub(crate) async fn retype(h: &Harness, css: &str, text: &str) {
     let field = h.wait_css(css).await;
     field.clear().await;
     field.send_keys(text).await;
-}
-
-/// Click `css` until `target_css` shows up, returning whether it did (the
-/// pre-hydration-click precedent; re-clicking an "open this version" button is
-/// idempotent).
-///
-/// # Panics
-/// On a click failure, and when the `WebDriver` answers the probe with
-/// anything but an absence ([`is_absence`]) — five rounds of a dead driver
-/// would otherwise report "the target never appeared".
-pub(crate) async fn click_until_css(h: &Harness, css: &str, target_css: &str) -> bool {
-    for _ in 0..5 {
-        h.wait_css(css).await.click().await;
-        if poll_until_for(Duration::from_secs(5), async || {
-            is_present(h, target_css).await
-        })
-        .await
-        {
-            return true;
-        }
-    }
-    false
 }
 
 /// Poll until `css` is no longer visible.
@@ -1676,34 +1320,6 @@ pub(crate) async fn wait_visible(h: &Harness, css: &str) {
     panic!("`{css}` never became visible (at {url})");
 }
 
-/// Empty the field at `css` BY TYPING.
-///
-/// Deliberately not `WebDriver`'s element-clear command: measured on the
-/// event-subscription journey, clearing that way empties the DOM value without
-/// the viewer's `on:input` listener ever running, so the form's state keeps
-/// the old value and the save sends it back — a green screen and a wrong wire.
-/// Backspacing is what a person does, and it fires the events the binding
-/// listens for. ([`retype`] is unaffected: the keystrokes it sends after
-/// clearing re-deliver the whole value.)
-///
-/// # Panics
-/// On any interaction failure, or when the field is not empty afterwards.
-pub(crate) async fn clear_field(h: &Harness, css: &str) {
-    let field = h.wait_css(css).await;
-    let held = field.prop("value").await;
-    let mut keys = String::from(Key::End.value());
-    keys.extend(std::iter::repeat_n(
-        Key::Backspace.value(),
-        held.chars().count(),
-    ));
-    field.send_keys(keys).await;
-    let left = field.prop("value").await;
-    assert!(
-        left.is_empty(),
-        "`{css}` still reads `{left}` after erasing"
-    );
-}
-
 /// One attempt at reading `attribute` off the first element matching `css`,
 /// or `None`.
 ///
@@ -1714,101 +1330,91 @@ pub(crate) async fn read_attr(h: &Harness, css: &str, attribute: &str) -> Option
     find_css(h, css).await?.read_attr(attribute).await
 }
 
-/// `attribute` of the first element matching `css`, waited for — the rendered
-/// window's identity.
+/// Drive one action through its confirmation dialog: click the trigger, which
+/// opens the `<dialog>` by the browser's own `command="show-modal"`, then
+/// click the confirm control `confirm_css` inside it. The confirm control is a
+/// submit button, so the click posts the page's form and the browser leaves
+/// the page; the wait covers the dialog going with it.
 ///
 /// # Panics
-/// When nothing readable matches within the wait budget.
-pub(crate) async fn wait_attr(h: &Harness, css: &str, attribute: &str) -> String {
-    for _ in 0..75 {
-        if let Some(value) = read_attr(h, css, attribute).await {
-            return value;
-        }
-        tokio::time::sleep(Duration::from_millis(200)).await;
-    }
-    let url = bounded("current_url()", h.driver.current_url())
-        .await
-        .expect("current url");
-    panic!("no element matched `{css}` with a readable `{attribute}` (at {url})");
-}
-
-/// Poll until `attribute` of the first element matching `css` is no longer
-/// `previous`, and return the new value.
-///
-/// This is the content-moved condition (never a sleep): a paging link is a real
-/// navigation and a `<Transition>` keeps the previous rows on screen while the
-/// next window loads.
-///
-/// # Panics
-/// When it has not changed after 15 s.
-pub(crate) async fn wait_attr_change(
-    h: &Harness,
-    css: &str,
-    attribute: &str,
-    previous: &str,
-) -> String {
-    for _ in 0..75 {
-        if let Some(current) = read_attr(h, css, attribute).await
-            && current != previous
-        {
-            return current;
-        }
-        tokio::time::sleep(Duration::from_millis(200)).await;
-    }
-    let url = bounded("current_url()", h.driver.current_url())
-        .await
-        .expect("current url");
-    panic!("`{css}`'s `{attribute}` never moved off `{previous}` (at {url})");
-}
-
-/// Drive one action through its confirmation MODAL: click the trigger, wait for
-/// the dialog to become visible, then click its confirm button. Explicit
-/// conditions, never a sleep.
-///
-/// The trigger click carries a bounded retry (the login-submit precedent): a
-/// click landing before hydration attaches the listener is simply lost, and
-/// re-clicking is safe precisely because the dialog is not open yet.
-///
-/// # Panics
-/// When the dialog never opens.
-pub(crate) async fn confirm_in_dialog(h: &Harness, trigger_css: &str, confirm_id: &str) {
+/// When the dialog never opens or never closes.
+pub(crate) async fn confirm_in_dialog(h: &Harness, trigger_css: &str, confirm_css: &str) {
     // A visible toast overlays the bottom-right corner and intercepts clicks.
     h.wait_toasts_cleared().await;
-    // A modal backdrop overlays the whole viewport and does the same (#3134).
     clear_dialog_overlay(h).await;
-    let trigger = h.wait_css(trigger_css).await;
-    let confirm_css = format!("#{confirm_id}");
-    let mut opened = false;
-    for attempt in 0..10 {
-        // Retries exist for a pre-hydration click that does nothing. Once a
-        // dialog surface is actually up, clicking the trigger again would be
-        // swallowed by the modal and surface as `ElementClickIntercepted` — a
-        // confusing report for what is really "the dialog opened, but not with
-        // the confirm id this call expects". Stop and let the assertion say so.
-        if attempt > 0 && is_any_visible(h, DIALOG_SURFACE).await {
-            break;
-        }
-        trigger.click().await;
-        opened = poll_until_for(Duration::from_secs(2), async || {
-            is_visible(h, &confirm_css).await
-        })
-        .await;
-        if opened {
-            break;
-        }
+    h.wait_css(trigger_css).await.click().await;
+    wait_dialog_settled(h, confirm_css).await;
+    submit(h, confirm_css).await;
+}
+
+/// Follow the sidebar's link to `href`, opening the drawer first where the
+/// sidebar is one (below 48 rem).
+///
+/// # Panics
+/// When the link is not in the sidebar.
+pub(crate) async fn follow_nav(h: &Harness, href: &str) {
+    let link = format!("nav a[href='{href}']");
+    if !is_visible(h, &link).await {
+        h.wait_css("button[command='show-modal'][commandfor='sidebar']")
+            .await
+            .click()
+            .await;
+        wait_visible(h, &link).await;
     }
-    assert!(
-        opened,
-        "`{trigger_css}` never opened the `{confirm_css}` dialog — either the click \
-         never landed (pre-hydration) or a dialog opened whose confirm id is not \
-         `{confirm_id}`"
-    );
-    wait_dialog_settled(h, &confirm_css).await;
-    h.wait_css(&confirm_css).await.click().await;
-    // The dialog closes on confirm — that it closed proves the click landed,
-    // and the journey's next click needs its backdrop gone (#3134).
-    wait_hidden(h, &confirm_css).await;
-    wait_hidden(h, DIALOG_SURFACE).await;
+    h.wait_css(&link).await.click().await;
+}
+
+/// Wait until the text of `main` contains `fragment`.
+///
+/// # Panics
+/// When it never does within 15 s.
+pub(crate) async fn wait_main_contains(h: &Harness, fragment: &str) {
+    wait_text_contains(h, "main", fragment).await;
+}
+
+/// The text of the page's `main`.
+///
+/// # Panics
+/// When the page has no `main`.
+pub(crate) async fn main_text(h: &Harness) -> String {
+    h.wait_css("main").await.text().await
+}
+
+/// Type `text` into the field at `css`, replacing what it holds.
+///
+/// # Panics
+/// When the field is not on the page.
+pub(crate) async fn fill(h: &Harness, css: &str, text: &str) {
+    let field = h.wait_css(css).await;
+    field.clear().await;
+    field.send_keys(text).await;
+}
+
+/// Click the submit control at `css` and wait for the page that answers the
+/// post: the document is marked before the click, and the answer is a new
+/// document without the mark.
+///
+/// # Panics
+/// When the click fails or no page answers within 15 s.
+pub(crate) async fn submit(h: &Harness, css: &str) {
+    bounded(
+        "execute(mark the document)",
+        h.driver.execute(
+            "document.documentElement.dataset.e2eLeft = '1';",
+            Vec::new(),
+        ),
+    )
+    .await
+    .expect("mark the document before the post");
+    let control = h.wait_css(css).await;
+    control.scroll_to_centre().await;
+    control.click().await;
+    let moved = poll_until_for(Duration::from_secs(15), async || {
+        !is_present(h, "html[data-e2e-left]").await
+    })
+    .await;
+    assert!(moved, "the click on `{css}` never brought a new page");
+    h.wait_css("main").await;
 }
 
 /// Log in through the Basic form (journeys that need a session).
@@ -1877,9 +1483,7 @@ mod tests {
 
     use thirtyfour::error::{WebDriverError, WebDriverErrorInfo, WebDriverErrorInner};
 
-    use super::{
-        COMMAND_BUDGET, WAIT, bounded, colour_channels, element_command, element_probe, is_absence,
-    };
+    use super::{COMMAND_BUDGET, WAIT, bounded, element_command, element_probe, is_absence};
 
     /// The two failures a probe is allowed to read as "not there yet"
     /// ([`is_absence`]).
@@ -1972,30 +1576,6 @@ mod tests {
         )
         .await;
         panic!("a stalled driver must not answer `{answer:?}`");
-    }
-
-    /// The two CSSOM spellings of one paint read as one colour, and a
-    /// different paint does not — the comparison a themed capture waits on.
-    #[test]
-    fn one_colour_reads_the_same_in_both_cssom_spellings() {
-        let dark = Some([15, 23, 42]);
-        assert_eq!(colour_channels("rgb(15, 23, 42)"), dark);
-        assert_eq!(
-            colour_channels("rgba(15, 23, 42, 1)"),
-            dark,
-            "an explicit alpha channel is the spelling, not the paint"
-        );
-        assert_eq!(colour_channels("rgb(15 23 42 / 1)"), dark);
-        assert_ne!(
-            colour_channels("rgb(248, 250, 252)"),
-            dark,
-            "the light surface is a different colour, not a different spelling"
-        );
-        assert_eq!(
-            colour_channels("transparent"),
-            None,
-            "a keyword carries no channels to compare"
-        );
     }
 
     /// A command that answers is handed back untouched — the bound adds no

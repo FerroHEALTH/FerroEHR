@@ -294,3 +294,7 @@ categorized narrative summary for orientation. On any discrepancy between this
 file, `CLAUDE.md`, and the manifest, **the manifest wins**. Add a dependency to
 a crate with `dep.workspace = true`; do not hand-pin a version at the crate
 level.
+
+The viewer's component library, `ferrohealth-ui` (FerroUI), is pinned exactly
+(`=0.3.2`), and its rules, guide and design are read at the matching tag
+(`v0.3.2`); the viewer moves to a new FerroUI release in a change of its own.

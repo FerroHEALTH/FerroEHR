@@ -22,6 +22,11 @@
 #   2. `--locked` passed through to both compile legs (`--lib-cargo-args` /
 #      `--bin-cargo-args`), so neither can re-resolve either.
 #
+# FerroUI's lazy islands (#[island(lazy)]) import their code from a
+# placeholder module that only `--split` rewrites into chunks, so a bundle
+# built without it fails to load and no island hydrates. Every `build`
+# therefore splits.
+#
 # Usage: scripts/cargo-leptos.sh build [--release] [...]
 set -Eeuo pipefail
 
@@ -39,6 +44,10 @@ fi
 # `cargo leptos` reads its configuration from the viewer crate's own manifest
 # directory, so the build runs from there.
 cd "$VIEWER_DIR"
-exec cargo leptos "$@" \
+args=("$@")
+if [[ "${1:-}" == build ]]; then
+  args=(build --split "${@:2}")
+fi
+exec cargo leptos "${args[@]}" \
   --lib-cargo-args=--locked \
   --bin-cargo-args=--locked

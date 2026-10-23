@@ -184,20 +184,6 @@ pub fn logical_delete_failure_copy(object: &str, error: &ViewerError) -> String 
     }
 }
 
-/// Toast a failed write with [`write_failure_copy`] — the failure half of the
-/// rule this module records.
-///
-/// `title` is the short outcome ("Upload failed", "Commit failed"); `object`
-/// is the noun phrase the copy is built around.
-pub fn toast_write_failure(
-    toaster: ferrohealth_ui::widget::toast::Toasts,
-    title: &str,
-    object: &str,
-    error: &ViewerError,
-) {
-    crate::components::toast::toast_error(toaster, title, &write_failure_copy(object, error));
-}
-
 #[cfg(test)]
 mod tests {
     use super::{logical_delete_failure_copy, write_failure_copy};
