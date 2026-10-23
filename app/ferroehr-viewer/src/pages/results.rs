@@ -5,13 +5,14 @@
 //!
 //! As Query and a stored query's Run tab draw them (FerroUI
 //! `design/consoles/ferroehr/`, the results pane E7): the window line, the rows as a table or, when the result set has numbers to
-//! draw, as a line chart, and the exports.
+//! draw, as a line chart, and the Export menu.
 //!
 //! A run is a form post, and its results exist only in the page that answers
 //! it: the viewer keeps no store between requests. So FerroUI's pane rides
 //! the page's own form: Table and Chart are submits of it that run the query
-//! again, and each export is a submit of it sent to `/export/aql/<format>`
-//! ([`crate::export`]), since a form cannot hold another. No openEHR spec
+//! again, and each item of Export is a submit of it sent to
+//! `/export/aql/<format>` by `formaction` ([`crate::export`]), since a form
+//! cannot hold another. No openEHR spec
 //! governs the viewer's pages: our own design.
 
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Sorting, cell, data_table};
@@ -179,9 +180,9 @@ fn chart(page: &ResultPage) -> Option<AnyView> {
     )
 }
 
-// TODO(#3946): the exports become one Export menu with FerroHEALTH/FerroUI#375.
-/// An export of the run in `format`: a submit of the page's own form, which
-/// the Results section always sits in, sent to `/export/aql/<format>`.
+/// An item of the Export menu for the run in `format`: a submit of the
+/// page's own form, which the Results section always sits in, sent to
+/// `/export/aql/<format>` by `formaction`.
 fn export(format: &str) -> Export {
     Export::Submit {
         action: format!("{}/{format}", crate::export::EXPORT_ROUTE),

@@ -108,9 +108,11 @@ account and carries no SMART scopes; an OIDC session carries an access token
 whose scopes are listed), every scope on the session read as its parsed grant
 (the compartment, the resource family and id pattern, and which of create,
 read, update, delete and search it permits, with a *broad access* marker on a
-bare `*`), and a previewer: paste any scope or a whole claim, press **Read
-it**, and read the same rendering. A malformed scope says what the grammar
-expected. The user menu and Server's SMART tab link here.
+bare `*`; an identity or launch scope such as `openid`, `profile` or
+`launch/patient` reads as the request it makes), and a previewer: paste any
+scope or a whole claim, press **Read it**, and read the same rendering. A
+malformed scope says what the grammar expected. The user menu and Server's
+SMART tab link here.
 
 The reading parses with the same grammar the CDR's SMART on openEHR
 enforcement reads, so the two cannot drift. Scopes narrow access and never

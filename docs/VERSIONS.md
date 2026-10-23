@@ -296,5 +296,5 @@ a crate with `dep.workspace = true`; do not hand-pin a version at the crate
 level.
 
 The viewer's component library, `ferrohealth-ui` (FerroUI), is pinned exactly
-(`=0.3.4`, with its `split` feature), and its rules, guide and design are read at the matching tag
-(`v0.3.4`); the viewer moves to a new FerroUI release in a change of its own.
+(`=0.3.5`, with its `split` feature), and its rules, guide and design are read at the matching tag
+(`v0.3.5`); the viewer moves to a new FerroUI release in a change of its own.

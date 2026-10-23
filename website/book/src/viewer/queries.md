@@ -72,8 +72,10 @@ hides that series; the last one shown stays.
 
 ![Results as a chart](img/queries/results-chart.png)
 
-**Export CSV** and **Export JSON** download the rows: the query runs again on the viewer's
-server and the file arrives as `aql-export.csv` or `aql-export.json`. The
+**Export** in the Results heading opens a menu of the formats: **CSV** and
+**JSON** download the rows. The query runs again on the viewer's server and
+the file arrives as `aql-export.csv` or `aql-export.json`. The menu works
+with no WebAssembly, and with no row Export is unavailable. The
 viewer keeps no results between requests, so an export is always the CDR's
 answer at that moment.
 

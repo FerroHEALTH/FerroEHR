@@ -17,7 +17,7 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
-- **The viewer is rebuilt on FerroUI 0.3.4** (#3932, #3942, FerroHEALTH/FerroUI#161).
+- **The viewer is rebuilt on FerroUI 0.3.5** (#3932, #3942, #3946, FerroHEALTH/FerroUI#161).
   Every screen follows the FerroEHR mockups of FerroUI's
   `design/consoles/ferroehr/` at 1440 and 390 px, light and dark, with
   FerroUI's components and none of the viewer's own copies. The viewer now
@@ -65,8 +65,9 @@ workflow refuses a tag that has no matching section here.
   context start times before.
 - **A query's results are FerroUI's results pane** (#3942). Table and Chart
   sit in the Results heading and run the query again in the view chosen, which
-  the next Run keeps; the separate Show as choice is gone. The exports post
-  to `/export/aql/csv` and `/export/aql/json`, and `/export/aql` with a
+  the next Run keeps; the separate Show as choice is gone. Export in the
+  heading opens a menu of CSV and JSON (#3946), whose items post to
+  `/export/aql/csv` and `/export/aql/json`, and `/export/aql` with a
   `format` field no longer answers.
 
 ### Added
@@ -92,6 +93,13 @@ workflow refuses a tag that has no matching section here.
   their required fields again; the time of each point in a chart's figures
   table; Your access's grants built from the CDR's own reading of each scope;
   and the How configuration works dialog on Configuration.
+- **The parts the FerroEHR mockups draw and FerroUI 0.3.5 now carries**
+  (#3946): Your access reads the OpenID Connect `profile` scope as the
+  request for your profile, where it drew it refused although the CDR
+  accepts it; a query's exports are one Export menu; and Stored queries takes
+  its scroll glyph in the navigation, on the dashboard and in the search's
+  answers. The activity charts of the dashboard and of an EHR's
+  contributions label their first and last day as the mockups do (`22 Sep`).
 - **A template's Download** in its More menu (#3942): the stored ADL 1.4
   operational template (`.opt`) or ADL2 template (`.adlt`) as a file, read
   with your session from `/download/template/{family}/{id}`.

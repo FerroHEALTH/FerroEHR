@@ -57,8 +57,7 @@ pub fn grant_of(raw: &str) -> ScopeGrant {
         }),
         (SmartScope::Identity(name), _) => match identity(&name) {
             Some(request) => Grant::Request(request),
-            // TODO(#3946): FerroUI reads `profile` with FerroHEALTH/FerroUI#373.
-            None => ScopeGrant::read(raw, |_| (String::new(), false)).grant,
+            None => Grant::Refused(tr(Msg::ScopeNotRecognised).into()),
         },
         (_, GrantDetail::Unrecognized { expected }) => Grant::Refused(
             expected
@@ -96,11 +95,12 @@ fn operations(permissions: Permissions) -> Operations {
     .collect()
 }
 
-/// FerroUI's request for an identity scope the CDR reads, `None` for one
-/// FerroUI has no words for.
+/// FerroUI's request for an identity scope the CDR reads, `None` for a
+/// name the CDR's grammar does not read as one.
 fn identity(name: &str) -> Option<Request> {
     match name {
         "openid" => Some(Request::OpenId),
+        "profile" => Some(Request::Profile),
         "fhirUser" => Some(Request::FhirUser),
         "online_access" => Some(Request::OnlineAccess),
         "offline_access" => Some(Request::OfflineAccess),
@@ -280,6 +280,19 @@ mod tests {
     #[test]
     fn identity_and_launch_scopes_are_requests_and_a_typo_is_refused() {
         assert_eq!(grant_of("openid").grant, Grant::Request(Request::OpenId));
+        assert_eq!(grant_of("profile").grant, Grant::Request(Request::Profile));
+        assert_eq!(
+            grant_of("fhirUser").grant,
+            Grant::Request(Request::FhirUser)
+        );
+        assert_eq!(
+            grant_of("offline_access").grant,
+            Grant::Request(Request::OfflineAccess)
+        );
+        assert_eq!(
+            grant_of("online_access").grant,
+            Grant::Request(Request::OnlineAccess)
+        );
         assert_eq!(grant_of("launch").grant, Grant::Request(Request::Launch));
         assert_eq!(
             grant_of("launch/patient").grant,

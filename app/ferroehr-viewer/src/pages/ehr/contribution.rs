@@ -98,7 +98,7 @@ fn activity(points: Result<Vec<crate::activity::ActivityPoint>, ViewerError>) ->
             ],
         ),
         points: days.counts,
-        ends: (days.first, days.last),
+        ends: days.ends,
     };
     activity_chart(&chart).into_any()
 }
@@ -695,6 +695,7 @@ fn change_section(
                 <select id=id("kind") name=id("kind") class="fui-select">
                     {kind_options(draft.kind)}
                 </select>
+                // TODO(#3957): the mockup draws no Apply, FerroHEALTH/FerroUI#386.
                 <button
                     type="submit"
                     name="intent"
