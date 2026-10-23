@@ -64,10 +64,16 @@ impl Posted {
             .any(|(field, value)| field == name && value != "off")
     }
 
-    /// What the post asks the page to do: its `intent` field.
+    /// What the post asks the page to do: the `intent` its submitter posted,
+    /// else the form's `default-intent`.
     #[must_use]
     pub fn intent(&self) -> String {
-        self.text("intent")
+        // NOTE: a form's default rides as `default-intent`, so the button that submitted it, which
+        // may sit outside it in tree order (`form=`), always wins whatever the field order.
+        self.get("intent")
+            .or_else(|| self.get("default-intent"))
+            .map(|value| value.trim().to_owned())
+            .unwrap_or_default()
     }
 
     /// Every field, in the order posted.
@@ -105,6 +111,18 @@ mod tests {
         assert_eq!(vec!["one".to_owned(), " two ".to_owned()], posted.all("a"));
         assert_eq!(Some("x\ny".to_owned()), posted.get("doc"));
         assert!(posted.get("missing").is_none());
+    }
+
+    #[test]
+    fn the_submitters_intent_wins_over_the_forms_default_in_any_order() {
+        let pair = |name: &str, value: &str| (name.to_owned(), value.to_owned());
+        let before = Posted::new(vec![pair("intent", "save"), pair("default-intent", "run")]);
+        assert_eq!(before.intent(), "save");
+        let after = Posted::new(vec![pair("default-intent", "run"), pair("intent", "save")]);
+        assert_eq!(after.intent(), "save");
+        let bare = Posted::new(vec![pair("default-intent", "run")]);
+        assert_eq!(bare.intent(), "run");
+        assert_eq!(Posted::new(Vec::new()).intent(), "");
     }
 
     #[test]

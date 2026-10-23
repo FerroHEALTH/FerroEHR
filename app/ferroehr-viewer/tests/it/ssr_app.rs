@@ -620,6 +620,29 @@ async fn every_screen_draws_its_heading_and_its_reading() {
     }
 }
 
+/// An editor that decides its decision bar only after its reads still docks
+/// it: the shell waits for the page's promise.
+#[tokio::test]
+async fn an_editor_docks_its_decision_bar_after_its_reads() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let ehr = id("ehr");
+    let composition = id("composition");
+    for path in [
+        "/ehrs/new".to_owned(),
+        format!("/ehrs/{ehr}/status/edit"),
+        format!("/ehrs/{ehr}/compositions/{composition}/edit"),
+    ] {
+        let page = viewer.page(&cookie, &path).await;
+        assert_eq!(page.status, http::StatusCode::OK, "{path}: {}", page.body);
+        assert!(
+            page.body.contains("id=\"editor-dock\""),
+            "{path} docks its decision bar:\n{}",
+            page.main()
+        );
+    }
+}
+
 #[tokio::test]
 async fn an_ehr_shows_its_subject_masked_until_the_reader_asks() {
     let viewer = Viewer::start().await;
@@ -646,7 +669,7 @@ async fn a_run_draws_the_rows_and_the_exports_post_the_query_again() {
             http::Method::POST,
             "/query/aql",
             Some(&cookie),
-            Some(&[("intent", "run"), ("aql", aql)]),
+            Some(&[("default-intent", "run"), ("aql", aql)]),
         )
         .await;
     assert_eq!(answer.status, http::StatusCode::OK);

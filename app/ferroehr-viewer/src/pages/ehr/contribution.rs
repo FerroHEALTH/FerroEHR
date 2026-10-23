@@ -805,9 +805,11 @@ pub fn NewContributionPage() -> impl IntoView {
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&tab_href(&ehr_id, EhrTab::Contributions));
     }
+    let dock_promise = crate::shell::promise_dock();
     let body = awaited({
         let ehr_id = ehr_id.clone();
         async move {
+            let _dock_promise = dock_promise;
             let mut drafts = drafts(posted.as_ref());
             let mut troubles = Vec::new();
             for draft in &mut drafts {

@@ -2093,6 +2093,7 @@ query-data-point-n = Data point { $number }
 query-column-name-n = Column name of data point { $number }
 query-remove-data-point = Remove the data point { $name }
 query-add-data-point = Add a data point
+query-save-name-missing = Name the query to save it.
 query-no-data-points = No data point yet; the query returns nothing until you add one.
 query-conditions = Conditions
 query-order-limit = Order and limit

@@ -935,7 +935,9 @@ pub fn EditCompositionPage() -> impl IntoView {
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&composition_href(&ehr_id, &uid));
     }
+    let dock_promise = crate::shell::promise_dock();
     let page = awaited(async move {
+        let _dock_promise = dock_promise;
         let current =
             match fetch_composition(ehr_id.clone(), uid.clone(), ReprFormat::CanonicalJson).await {
                 Ok(Some(body)) => crate::bff::pretty_body(&body, ReprFormat::CanonicalJson),
@@ -1097,7 +1099,9 @@ pub fn NewCompositionPage() -> impl IntoView {
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&ehr_href(&ehr_id));
     }
+    let dock_promise = crate::shell::promise_dock();
     let page = awaited(async move {
+        let _dock_promise = dock_promise;
         let format_key = posted
             .as_ref()
             .map(|posted| posted.text("format"))

@@ -265,9 +265,11 @@ pub fn StatusEditPage() -> impl IntoView {
     if crate::pages::common::discarded(posted.as_ref()) {
         leptos_axum::redirect(&tab_href(&ehr_id, EhrTab::Status));
     }
+    let dock_promise = crate::shell::promise_dock();
     let body = awaited({
         let ehr_id = ehr_id.clone();
         async move {
+            let _dock_promise = dock_promise;
             let current = match fetch_ehr_status(ehr_id.clone()).await {
                 Ok(current) => current,
                 Err(error) => return refused(tr(Msg::StatusRefused), &error, None),

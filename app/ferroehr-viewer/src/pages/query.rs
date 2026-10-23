@@ -115,9 +115,30 @@ fn heading(save: AnyView) -> AnyView {
 }
 
 /// Save to the CDR: the namespace, the name and the version, fields of the
-/// query's form, and the submit that saves.
-fn save_popover(posted: Option<&crate::posted::Posted>, problem: Option<String>) -> AnyView {
-    let field = |name: &str| posted.map(|posted| posted.text(name)).unwrap_or_default();
+/// query's form, and the submit that saves. A stored query opened from the
+/// CDR (`loaded`, its qualified name and version) fills them with its
+/// namespace, its bare name and the next minor version, since its own
+/// version is immutable on the CDR.
+fn save_popover(
+    posted: Option<&crate::posted::Posted>,
+    problem: Option<String>,
+    loaded: Option<(&str, &str)>,
+) -> AnyView {
+    let seed = loaded.map(|(name, version)| {
+        let (namespace, bare) = crate::query_namespace::split_qualified(name);
+        let next = crate::query_namespace::next_minor(version).unwrap_or_default();
+        (namespace, bare, next)
+    });
+    let field = |name: &str| match (posted, &seed) {
+        (Some(posted), _) => posted.text(name),
+        (None, Some((namespace, bare, next))) => match name {
+            "save_namespace" => namespace.clone(),
+            "save_name" => bare.clone(),
+            "save_version" => next.clone(),
+            _ => String::new(),
+        },
+        (None, None) => String::new(),
+    };
     let error = problem.map(|problem| view! { <p class="fui-field-error">{problem}</p> });
     popover_form(PopoverForm {
         id: SAVE_POPOVER,
@@ -129,7 +150,7 @@ fn save_popover(posted: Option<&crate::posted::Posted>, problem: Option<String>)
             {Field::new("sv-ns", tr(Msg::QueryNamespace))
                 .view(view! { <input id="sv-ns" name="save_namespace" form=QUERY_FORM type="text" class="fui-input fui-mono" value=field("save_namespace") /> })}
             {Field::new("sv-n", tr(Msg::QueryName))
-                .view(view! { <input id="sv-n" name="save_name" form=QUERY_FORM type="text" class="fui-input fui-mono" value=field("save_name") required /> })}
+                .view(view! { <input id="sv-n" name="save_name" form=QUERY_FORM type="text" class="fui-input fui-mono" value=field("save_name") /> })}
             {Field::new("sv-v", tr(Msg::ColumnVersion))
                 .help(tr(Msg::QueryVersionHelp))
                 .after(error)
@@ -175,6 +196,11 @@ async fn save(
     let Some(posted) = posted else {
         return Ok(());
     };
+    // NOTE: the name is not `required` in the markup: the field belongs to the form every Run and
+    // Add posts, so the browser would refuse those too; the save checks it here instead.
+    if posted.text("save_name").trim().is_empty() {
+        return Err(Box::new((tr(Msg::QuerySaveNameMissing), None)));
+    }
     let name =
         crate::query_namespace::qualify(&posted.text("save_namespace"), &posted.text("save_name"));
     let version = Some(posted.text("save_version")).filter(|version| !version.is_empty());
@@ -1178,13 +1204,13 @@ pub fn BuildTab() -> impl IntoView {
         let aql = built.clone().unwrap_or_default();
         view! {
             <Title text=tr(Msg::NavQuery) />
-            {heading(save_popover(posted.as_ref(), save_problem))}
+            {heading(save_popover(posted.as_ref(), save_problem, None))}
             <div class="fui-stack">
                 {lifted}
                 {top}
                 {catalog_trouble}
                 <form id=QUERY_FORM method="post" action="/query">
-                    <input type="hidden" name="intent" value="run" />
+                    <input type="hidden" name="default-intent" value="run" />
                     <button type="submit" class="fui-sr-only" tabindex="-1">{tr(Msg::QueryRun)}</button>
                     <input type="hidden" name="state" value=state />
                     <input type="hidden" name="aql" value=aql />
@@ -1368,6 +1394,7 @@ pub fn AqlTab() -> impl IntoView {
     let page = awaited(async move {
         let mut note = None;
         let mut top = None;
+        let mut loaded = None;
         let aql = match &posted {
             Some(posted) => posted.get("aql").unwrap_or_default(),
             None => match (
@@ -1379,6 +1406,7 @@ pub fn AqlTab() -> impl IntoView {
                         .await
                     {
                         Ok(text) => {
+                            loaded = Some((name.clone(), version.clone()));
                             note = Some(info_note(tr_with(
                                 Msg::QueryOpenedStored,
                                 &[("name", name.into()), ("version", version.into())],
@@ -1469,11 +1497,11 @@ pub fn AqlTab() -> impl IntoView {
         };
         view! {
             <Title text=tr(Msg::QueryAqlTitle) />
-            {heading(save_popover(posted.as_ref(), save_problem))}
+            {heading(save_popover(posted.as_ref(), save_problem, loaded.as_ref().map(|(name, version)| (name.as_str(), version.as_str()))))}
             <div class="fui-stack">
                 {top}
                 <form id=QUERY_FORM method="post" action="/query/aql">
-                    <input type="hidden" name="intent" value="run" />
+                    <input type="hidden" name="default-intent" value="run" />
                     <button type="submit" class="fui-sr-only" tabindex="-1">{tr(Msg::QueryRun)}</button>
                     {binder(tr(Msg::QueryWays), tabs(), "aql", panel(view! {
                         {plain_section(view! {

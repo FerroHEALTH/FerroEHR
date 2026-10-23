@@ -4301,6 +4301,8 @@ messages! {
     SubDeleteRow = "sub-delete-row",
     /// `Delete…`
     TemplateDeleteRow = "template-delete-row",
+    /// `Name the query to save it.`
+    QuerySaveNameMissing = "query-save-name-missing",
 }
 
 /// The viewer's message `msg` in the page's locale.

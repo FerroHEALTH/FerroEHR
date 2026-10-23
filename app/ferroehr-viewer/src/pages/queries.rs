@@ -643,7 +643,7 @@ pub fn StoredQueryRunTab() -> impl IntoView {
             .collect_view();
             panel(view! {
                 <form id=RUN_FORM method="post" action=format!("{}/run", stored_query_href(&name, &version))>
-                    <input type="hidden" name="intent" value="run" />
+                    <input type="hidden" name="default-intent" value="run" />
                     {section(Some(tr(Msg::ColumnVersion)), None, None, view! {
                         {choice_group("res", tr(Msg::QueriesWhichVersion), &modes, mode.as_str())}
                         {version_field}

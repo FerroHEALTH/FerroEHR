@@ -235,8 +235,6 @@ pub fn CodeEditor(
         findings,
     } = setup;
     let text = RwSignal::new(text);
-    let ready = RwSignal::new(false);
-    Effect::new(move |_| ready.set(true));
     let caret = RwSignal::new(Position { line: 1, column: 1 });
     let marks = Signal::stored(marks);
     let editor = || Editor {
@@ -244,7 +242,9 @@ pub fn CodeEditor(
         language: language.language(),
         text: text.into(),
         marks,
-        editable: ready.into(),
+        // NOTE: leptos-ui.md §15.8: a page works with no WebAssembly, so the text area is editable
+        // from the first paint and never waits for the island.
+        editable: Signal::stored(true),
     };
     let panel = editor_panel(
         Panel {

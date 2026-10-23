@@ -709,9 +709,11 @@ pub fn DirectoryEditPage() -> impl IntoView {
     if crate::pages::common::discarded(posted.as_ref()) {
         leptos_axum::redirect(&tab_href(&ehr_id, EhrTab::Directory));
     }
+    let dock_promise = crate::shell::promise_dock();
     let body = awaited({
         let ehr_id = ehr_id.clone();
         async move {
+            let _dock_promise = dock_promise;
             let current = match fetch_directory(ehr_id.clone()).await {
                 Ok(Some(current)) => current,
                 Ok(None) => return quiet(tr(Msg::DirectoryNone)),

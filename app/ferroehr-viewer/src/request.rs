@@ -107,9 +107,18 @@ pub fn state() -> Option<crate::state::AppState> {
 }
 
 /// Sets the response status of the page being drawn.
+///
+/// A page that already ended in a redirect keeps it: a post that succeeded
+/// keeps its `302` even when its page can no longer read its object.
 pub fn set_status(status: http::StatusCode) {
     if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
-        response.set_status(status);
+        let Ok(mut parts) = response.0.write() else {
+            return;
+        };
+        if parts.status.is_some_and(|set| set.is_redirection()) {
+            return;
+        }
+        parts.status = Some(status);
     }
 }
 

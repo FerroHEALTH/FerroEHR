@@ -525,7 +525,9 @@ pub fn EditSubscriptionPage() -> impl IntoView {
     if discarded(posted.as_ref()) {
         leptos_axum::redirect("/subscriptions");
     }
+    let dock_promise = crate::shell::promise_dock();
     let page = awaited(async move {
+        let _dock_promise = dock_promise;
         let rows = match list_event_subscriptions().await {
             Ok(Some(rows)) => rows,
             Ok(None) => return view! { {heading()} {off()} }.into_any(),

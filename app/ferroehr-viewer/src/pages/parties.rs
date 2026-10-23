@@ -1235,7 +1235,9 @@ fn parts_of(text: &str) -> (String, String) {
 pub fn EditPartyPage() -> impl IntoView {
     let (kind, uid) = party_params();
     let posted = crate::posted::posted();
+    let dock_promise = crate::shell::promise_dock();
     let page = awaited(async move {
+        let _dock_promise = dock_promise;
         let Some(kind) = kind else {
             crate::request::set_status(http::StatusCode::NOT_FOUND);
             return crate::pages::errors::not_found_page().into_any();
@@ -1589,7 +1591,9 @@ pub fn NewRelationshipPage() -> impl IntoView {
     let saving = posted
         .as_ref()
         .is_some_and(|posted| posted.intent() == "save");
+    let dock_promise = crate::shell::promise_dock();
     let page = awaited(async move {
+        let _dock_promise = dock_promise;
         let mut top = None;
         let mut line = (Glyph::FILE_PLUS, tr(Msg::PartyNotYet));
         if saving {
@@ -1713,7 +1717,9 @@ pub fn EditRelationshipPage() -> impl IntoView {
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&relationship_href(&uid));
     }
+    let dock_promise = crate::shell::promise_dock();
     let page = awaited(async move {
+        let _dock_promise = dock_promise;
         let state = match fetch_relationship(uid.clone()).await {
             Ok(Some(state)) => state,
             Ok(None) => return info_note(tr(Msg::RelationshipDeleted)),

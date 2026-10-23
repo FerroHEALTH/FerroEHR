@@ -22,6 +22,7 @@
               (the clippy.toml test scoping reaches only #[test] fns, not \
               integration-binary helper modules)"
 )]
+#![allow(dead_code, reason = "TEMP-PRUNE")]
 #![expect(
     clippy::disallowed_types,
     reason = "test fixtures and wire assertions are raw JSON by the testing rule \
@@ -1139,122 +1140,30 @@ pub(crate) async fn wait_dialog_settled(h: &Harness, control_css: &str) {
     panic!("the dialog holding `{control_css}` never became open and settled (at {url})");
 }
 
-/// The submit button of the Template Manager's one upload dialog.
-const UPLOAD_SUBMIT: &str = "#template-upload-submit";
-
-/// The refusal diagnostic, scoped to the MODAL: the template listings render
-/// their own notice for an empty result, which is not this one.
-const UPLOAD_DIAGNOSTIC: &str = "dialog.fui-modal[open] .fui-alert";
-
-/// The in-flight line FerroUI's upload field renders while the upload is
-/// pending: its presence IS the pending state.
-const UPLOAD_PENDING_LINE: &str =
-    "//dialog[@open]//p[contains(@class, 'fui-spinner')][contains(., 'Uploading')]";
-
-/// Every toast card currently on screen; each upload outcome raises one.
+/// Every toast card currently on screen.
 const TOAST_CARD: &str = ".fui-toast-text";
 
-/// What the upload dialog says about a dispatch, read at one instant.
+/// Upload the file at `path` as a template of `family` (`adl14` or `adl2`)
+/// through Upload a template: the hydrated file field reads the file into
+/// the source editor, and the dock's primary button posts it.
 ///
-/// The submit click's post-condition is a COMPARISON of two of these, because
-/// only some of the observables are unconditionally absent beforehand: a
-/// refusal diagnostic and a toast can both survive from an earlier attempt.
-#[derive(Debug)]
-struct UploadDialogState {
-    /// Whether the modal surface is on screen — an accepted upload closes it.
-    open: bool,
-    /// Whether the submit button is live, or `None` when it is not in the DOM.
-    submit_enabled: Option<bool>,
-    /// Whether the "Uploading…" line is rendered.
-    pending: bool,
-    /// The refusal diagnostic rendered inside the dialog, if any.
-    diagnostic: Option<String>,
-    /// How many toast cards are up.
-    toasts: usize,
-}
-
-impl UploadDialogState {
-    /// Read every observable once.
-    ///
-    /// # Panics
-    /// When the `WebDriver` fails to answer any of them ([`is_absence`]).
-    async fn read(h: &Harness) -> Self {
-        Self {
-            open: is_visible(h, DIALOG_SURFACE).await,
-            submit_enabled: read_enabled(h, UPLOAD_SUBMIT).await,
-            pending: is_present_by(h, By::XPath(UPLOAD_PENDING_LINE)).await,
-            diagnostic: read_text(h, UPLOAD_DIAGNOSTIC).await,
-            toasts: count_matching(h, TOAST_CARD).await,
-        }
-    }
-
-    /// Whether this state carries a consequence of the submit dispatch that
-    /// `before` did not already carry.
-    ///
-    /// Each disjunct is something only a dispatch produces: the dialog closing
-    /// is the accepted-upload continuation, the pending line and the button
-    /// going inert are the action's own in-flight state, a moved diagnostic is
-    /// a fresh refusal, and a new toast is either outcome's feedback.
-    fn dispatched_since(&self, before: &Self) -> bool {
-        (before.open && !self.open)
-            || self.pending
-            || (before.submit_enabled == Some(true) && self.submit_enabled == Some(false))
-            || self.diagnostic != before.diagnostic
-            || self.toasts > before.toasts
-    }
-}
-
-/// The submit click's post-condition: poll until the dialog shows that the
-/// dispatch happened.
+/// Leaves the browser on the page that answers the post: the template's own
+/// page when the CDR took it, the upload page with the CDR's diagnostic when
+/// it refused.
 ///
 /// # Panics
-/// When nothing moves within 15 s — the click was answered, the handler never
-/// ran, and the panic says so HERE rather than leaving a downstream read to
-/// blame the CDR for a row nothing ever sent it.
-async fn wait_upload_dispatched(h: &Harness, before: &UploadDialogState) {
-    for _ in 0..75 {
-        if UploadDialogState::read(h).await.dispatched_since(before) {
-            return;
-        }
-        tokio::time::sleep(Duration::from_millis(200)).await;
-    }
-    let evidence = h.evidence_dump("upload-click-not-dispatched").await;
-    panic!(
-        "the click on `{UPLOAD_SUBMIT}` did not dispatch the upload: 15 s on, the dialog \
-         is still open with its source loaded and its submit button live, nothing is \
-         pending, no new diagnostic and no toast — the click was answered but the \
-         handler never ran, so nothing was sent to the CDR ({evidence})"
-    );
-}
-
-/// Upload `path` through the Template Manager's one upload dialog: open it
-/// from the page-header trigger, choose the file, and send it.
-///
-/// Both template families share this control (#2955), so every family's seed
-/// helper drives this one routine.
-///
-/// Four conditions, no sleeps, each the exact fact the next step needs:
-/// nothing covers the page ([`clear_dialog_overlay`] — a refused upload keeps
-/// its dialog open on purpose, so re-entry with a modal up is normal, #3134);
-/// the modal is open and settled ([`wait_dialog_settled`]); the submit button
-/// is live ([`wait_enabled`]), which is inert until the chosen file has been
-/// read into the dialog's source editor and so means exactly "the file
-/// arrived"; and the send actually DISPATCHED ([`wait_upload_dispatched`]).
-///
-/// # Panics
-/// On any interaction failure, and when the submit click dispatches nothing.
-pub(crate) async fn upload_via_dialog(h: &Harness, path: &str) {
-    clear_dialog_overlay(h).await;
-    h.wait_css("#template-upload-open").await.click().await;
-    wait_dialog_settled(h, UPLOAD_SUBMIT).await;
-    h.wait_css("#template-upload-file")
-        .await
-        .send_keys(path)
-        .await;
-    wait_enabled(h, UPLOAD_SUBMIT).await;
-    let before = UploadDialogState::read(h).await;
-    h.wait_css(UPLOAD_SUBMIT).await.click().await;
-    wait_upload_dispatched(h, &before).await;
+/// When the file never reaches the editor or no page answers the post.
+pub(crate) async fn upload_template(h: &Harness, family: &str, path: &str) {
+    h.goto(&format!("/templates/upload?family={family}")).await;
+    h.wait_css("#source-file").await.send_keys(path).await;
+    let read = poll_until_for(Duration::from_secs(15), async || {
+        read_prop(h, "#source-text", "value")
+            .await
+            .is_some_and(|value| !value.is_empty())
+    })
+    .await;
+    assert!(read, "the chosen file never reached the source editor");
+    submit(h, "#editor-dock button[value='save']").await;
 }
 
 /// Whether the control at `css` is enabled, or `None` when nothing matches.

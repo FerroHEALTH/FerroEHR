@@ -50,14 +50,63 @@ pub const FIND_ROUTE: &str = "/find";
 
 /// The page's docked decision bar, which the page sets as it is drawn and
 /// the shell draws at the foot of the main area (R4).
+///
+/// A page that decides its bar only after a read promises it first
+/// ([`promise_dock`]); the shell draws the dock once every promise is kept or
+/// dropped, so the bar never depends on which part of the page the server
+/// happened to finish first.
 #[derive(Debug, Clone, Default)]
-pub struct Dock(ArcRwSignal<Option<DecisionBar>>);
+pub struct Dock {
+    /// The bar, once the page set one.
+    bar: ArcRwSignal<Option<DecisionBar>>,
+    /// The promises still open.
+    pending: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    /// Woken as each promise closes.
+    closed: std::sync::Arc<tokio::sync::Notify>,
+}
 
 impl Dock {
     /// Docks `bar` at the foot of the page being drawn.
     pub fn set(&self, bar: DecisionBar) {
-        self.0.set(Some(bar));
+        self.bar.set(Some(bar));
     }
+
+    /// The bar, once no promise is open.
+    async fn settled(&self) -> Option<DecisionBar> {
+        loop {
+            let woken = self.closed.notified();
+            if self.pending.load(std::sync::atomic::Ordering::Acquire) == 0 {
+                return self.bar.get_untracked();
+            }
+            woken.await;
+        }
+    }
+}
+
+/// A page's promise to dock its bar, or to have none, by the time it drops.
+#[derive(Debug)]
+pub struct DockPromise(Option<Dock>);
+
+impl Drop for DockPromise {
+    fn drop(&mut self) {
+        if let Some(dock) = self.0.take() {
+            dock.pending
+                .fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
+            dock.closed.notify_waiters();
+        }
+    }
+}
+
+/// Promises the dock of the page being drawn: hold it in the future that
+/// calls [`dock`], so the shell waits for it.
+#[must_use]
+pub fn promise_dock() -> DockPromise {
+    let dock = use_context::<Dock>();
+    if let Some(dock) = &dock {
+        dock.pending
+            .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    }
+    DockPromise(dock)
 }
 
 /// Docks `bar` at the foot of the page being drawn.
@@ -397,8 +446,10 @@ pub fn AppShell() -> impl IntoView {
         })
     };
     let docked = {
-        let dock = dock.0.clone();
-        (move || dock.get().map(decision_bar)).into_any()
+        let dock = dock.clone();
+        crate::pages::common::awaited(async move {
+            dock.settled().await.map(decision_bar).into_any()
+        })
     };
     shell(Shell {
         topbar: topbar(TopBar {
