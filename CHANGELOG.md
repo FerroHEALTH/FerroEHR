@@ -30,6 +30,13 @@ workflow refuses a tag that has no matching section here.
   (#3934). Web templates, FLAT and STRUCTURED examples and FLAT paths change
   for templates with such elements. The `openehr-*` crates move to 0.0.96.
 
+### Security
+
+- **`ctutils` 0.4.5** (RUSTSEC-2026-0385). Its `Choice` mask generation and
+  its `u128` comparisons could compile to branches on secret values; the crate
+  sits under the `aes-gcm`, `hmac` and `digest` implementations the server
+  uses.
+
 ## [5.3.2] - 2026-10-22
 
 The v5.3.0 and v5.3.1 tags were pushed but neither release published: the v5.3.0 scan refused the container base's `ca-certificates` (DSA-6572-1), and the v5.3.1 plan refused a CRA risk assessment with no revision for that base change. 5.3.2 is the same release on the rebuilt base, and no 5.3.0 or 5.3.1 artifacts exist.
