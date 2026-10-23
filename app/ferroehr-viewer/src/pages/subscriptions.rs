@@ -383,7 +383,6 @@ async fn form_view(form: &Form, editing: bool, name_error: Option<String>) -> An
                                     placeholder="vital-signs-feed"
                                     value=form.name.clone()
                                     aria-invalid=name_error.is_some().then_some("true")
-                                    required
                                 />
                             })}
                     </div>
@@ -433,11 +432,12 @@ pub fn NewSubscriptionPage() -> impl IntoView {
     if discarded(posted.as_ref()) {
         leptos_axum::redirect("/subscriptions");
     }
+    let dock_promise = crate::shell::promise_dock();
     let page = awaited(async move {
+        let _dock_promise = dock_promise;
         let form = Form::read(None);
         let mut top = None;
         let mut name_error = None;
-        let mut blocked = None;
         if posted
             .as_ref()
             .is_some_and(|posted| posted.intent() == "save")
@@ -462,7 +462,6 @@ pub fn NewSubscriptionPage() -> impl IntoView {
                                 Msg::SubNameTaken,
                                 &[("name", form.name.clone().into())],
                             ));
-                            blocked = Some(tr(Msg::SubChangeName));
                         } else {
                             top = Some(refused(tr(Msg::SubSaveRefused), &error, None));
                         }
@@ -470,7 +469,6 @@ pub fn NewSubscriptionPage() -> impl IntoView {
                 }
             } else {
                 name_error = Some(tr(Msg::SubNameInvalid));
-                blocked = Some(tr(Msg::SubFixName));
             }
         }
         dock_editor(EditorDock {
@@ -478,7 +476,9 @@ pub fn NewSubscriptionPage() -> impl IntoView {
             line: summary(&form.kind, &form.change, &form.template),
             glyph: Glyph::FUNNEL,
             save: tr(Msg::SubCreate),
-            blocked,
+            // NOTE: leptos-ui.md §15.8: a refused name stays editable and the save stays live, since
+            // a page with no WebAssembly has no other way to send the corrected name.
+            blocked: None,
         });
         let heading = editor_heading(
             message(Msg::SubEditorTitle),

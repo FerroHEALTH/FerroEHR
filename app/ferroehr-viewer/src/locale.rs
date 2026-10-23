@@ -4203,8 +4203,6 @@ messages! {
     SubAnyKind = "sub-any-kind",
     /// `Any template`
     SubAnyTemplate = "sub-any-template",
-    /// `Change the name first.`
-    SubChangeName = "sub-change-name",
     /// `Change type`
     SubChangeType = "sub-change-type",
     /// `Composition`
@@ -4257,8 +4255,6 @@ messages! {
     SubEveryOfKind = "sub-every-of-kind",
     /// `Every committed version of any kind.`
     SubEveryVersion = "sub-every-version",
-    /// `Fix the name first.`
-    SubFixName = "sub-fix-name",
     /// `Folder`
     SubFolder = "sub-folder",
     /// `More actions for the subscription`

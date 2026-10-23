@@ -367,7 +367,9 @@ pub fn NewEhrPage() -> impl IntoView {
     if crate::pages::common::discarded(posted.as_ref()) {
         leptos_axum::redirect("/ehrs");
     }
+    let dock_promise = crate::shell::promise_dock();
     let body = awaited(async move {
+        let _dock_promise = dock_promise;
         let draft = posted.as_ref().map_or_else(Draft::default, |posted| Draft {
             subject_id: posted.text("subject_id"),
             namespace: posted.text("namespace"),

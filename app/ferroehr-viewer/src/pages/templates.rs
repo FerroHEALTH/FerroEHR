@@ -402,7 +402,9 @@ pub fn UploadTemplatePage() -> impl IntoView {
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&format!("/templates?family={}", family.as_query()));
     }
+    let dock_promise = crate::shell::promise_dock();
     let page = awaited(async move {
+        let _dock_promise = dock_promise;
         let source = posted
             .as_ref()
             .and_then(|posted| posted.get("source-text"))

@@ -469,7 +469,9 @@ pub fn NewPartyPage() -> impl IntoView {
     if discarded(posted.as_ref()) {
         leptos_axum::redirect("/parties");
     }
+    let dock_promise = crate::shell::promise_dock();
     let page = awaited(async move {
+        let _dock_promise = dock_promise;
         let kind = posted
             .as_ref()
             .map(|posted| posted.text("kind"))
