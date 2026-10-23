@@ -588,6 +588,7 @@ fn header(
             crumbs: crumbs(ehr_id),
             mono: false,
             badge,
+            subtitle_view: None,
         },
         actions,
     )
@@ -602,7 +603,7 @@ fn delete_dialog(ehr_id: &str, uid: &str, name: &str, latest: &str, count: usize
     );
     danger_dialog(
         Confirmation {
-            id: DELETE_DIALOG,
+            id: DELETE_DIALOG.into(),
             title: tr_with(
                 Msg::CompositionDeleteTitle,
                 &[("name", name.to_owned().into())],
@@ -688,6 +689,7 @@ pub fn CompositionPage() -> impl IntoView {
                         crumbs: crumbs(&ehr_id),
                         mono: false,
                         badge: None,
+                        subtitle_view: None,
                     },
                     ActionGroup::none(),
                 );
@@ -1062,6 +1064,7 @@ pub fn EditCompositionPage() -> impl IntoView {
                 crumbs: trail,
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::none(),
         );
@@ -1214,6 +1217,7 @@ pub fn NewCompositionPage() -> impl IntoView {
                 crumbs: crumbs(&ehr_id),
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             ActionGroup::none(),
         );

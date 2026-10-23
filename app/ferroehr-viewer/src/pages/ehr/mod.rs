@@ -173,6 +173,7 @@ fn more(ehr_id: &str, facts: &EhrFacts) -> Menu {
     } else {
         Vec::new()
     };
+    // TODO(#3942): Copy EHR id joins the menu with FerroHEALTH/FerroUI#351.
     Menu::new("ehr-more", tr(Msg::EhrMore), items).destructive(destructive)
 }
 
@@ -204,7 +205,7 @@ fn delete_dialog(ehr_id: &str) -> AnyView {
     };
     danger_dialog(
         Confirmation {
-            id: DELETE_DIALOG,
+            id: DELETE_DIALOG.into(),
             title: tr_with(Msg::EhrDeleteTitle, &[("id", shortened(ehr_id).into())]).into(),
             message: tr(Msg::EhrDeleteMessage).into(),
         },
@@ -295,6 +296,7 @@ fn header(ehr_id: &str, facts: &EhrFacts) -> AnyView {
             crumbs: vec![Crumb::new(tr(Msg::NavEhrs), "/ehrs")],
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         actions,
     );
@@ -418,6 +420,7 @@ fn missing(ehr_id: &str, error: &ViewerError) -> AnyView {
             crumbs: vec![Crumb::new(tr(Msg::NavEhrs), "/ehrs")],
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::none(),
     );

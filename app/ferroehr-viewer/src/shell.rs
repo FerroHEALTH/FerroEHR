@@ -310,6 +310,7 @@ fn pill(status: Result<String, crate::error::ViewerError>) -> AnyView {
     .into_any()
 }
 
+// TODO(#3942): the band links its details with FerroHEALTH/FerroUI#348.
 /// The sandbox band under the top bar, when the CDR declares the sandbox
 /// deployment profile.
 fn sandbox_band(status: Option<&Result<String, crate::error::ViewerError>>) -> Option<AnyView> {
@@ -348,6 +349,7 @@ fn menu(session: Option<&crate::session::ViewerSession>) -> AnyView {
         }
         None => (tr(Msg::YourMenu), String::new()),
     };
+    // TODO(#3942): Your access joins the menu with FerroHEALTH/FerroUI#347.
     user_menu(UserMenu {
         id: USER_MENU_ID,
         label: who.clone(),

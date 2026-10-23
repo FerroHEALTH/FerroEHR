@@ -119,6 +119,7 @@ fn table(page: &ResultPage) -> AnyView {
     .into_any()
 }
 
+// TODO(#3942): E7 draws this section with FerroHEALTH/FerroUI#355.
 /// The numeric columns of a result set as a line chart over its first time
 /// column, or the row order; `None` when it has nothing to draw.
 fn chart(page: &ResultPage) -> Option<AnyView> {
@@ -162,6 +163,7 @@ fn chart(page: &ResultPage) -> Option<AnyView> {
             ],
         ),
         series,
+        // TODO(#3942): each point carries its label with FerroHEALTH/FerroUI#358.
         x_ticks: ticks,
         y_range: None,
     };

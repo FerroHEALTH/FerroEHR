@@ -358,6 +358,7 @@ pub fn ContributionPage() -> impl IntoView {
             crumbs: trail,
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::none(),
     );
@@ -837,6 +838,7 @@ pub fn NewContributionPage() -> impl IntoView {
                 .unwrap_or_default();
             let mut top = None;
             let mut line = (
+                // TODO(#3942): git-commit replaces LAYERS with FerroHEALTH/FerroUI#352.
                 Glyph::LAYERS,
                 tr_with(Msg::StagedCount, &[("count", count(drafts.len()))]),
             );
@@ -971,6 +973,7 @@ pub fn NewContributionPage() -> impl IntoView {
             crumbs: crumbs(&ehr_id),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::none(),
     );

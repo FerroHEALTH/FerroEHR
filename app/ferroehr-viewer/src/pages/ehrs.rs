@@ -51,6 +51,7 @@ fn heading() -> AnyView {
             crumbs: Vec::new(),
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::PLUS),
@@ -164,7 +165,7 @@ fn chips(label: String) -> AnyView {
 fn card(body: AnyView, count: Option<u64>, pager: Option<AnyView>) -> AnyView {
     list_card(ListCard {
         title: tr(Msg::NavEhrs),
-        count,
+        count: count.map(ferrohealth_ui::view::template::list::HeadingCount::All),
         order: None,
         tabs: None,
         actions: None,
@@ -457,6 +458,7 @@ pub fn NewEhrPage() -> impl IntoView {
             crumbs: vec![Crumb::new(tr(Msg::NavEhrs), "/ehrs")],
             mono: false,
             badge: None,
+            subtitle_view: None,
         },
         ActionGroup::none(),
     );

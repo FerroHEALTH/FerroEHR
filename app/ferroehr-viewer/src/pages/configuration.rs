@@ -322,6 +322,7 @@ pub fn ConfigurationPage() -> impl IntoView {
                 crumbs: Vec::new(),
                 mono: false,
                 badge: None,
+                subtitle_view: None,
             },
             actions: ActionGroup::none(),
             source: Source::File {

@@ -12,7 +12,7 @@ before any viewer change:
 - the consumer guide, [`docs/consoles.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/docs/consoles.md):
   how a console takes the library, what it keeps local, how it moves to a
   new release;
-- the component rules, [`.claude/rules/leptos-ui.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.3.2/.claude/rules/leptos-ui.md):
+- the component rules, [`.claude/rules/leptos-ui.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.3.3/.claude/rules/leptos-ui.md):
   the mandates (§0), the four-layer interaction contract (§1), reactivity,
   views, forms, tables and paging, accessibility to WCAG 2.2 AA, tokens and
   themes, icons, the bundle (§12), the catalogs (§13), the book's rules (§14)
@@ -26,8 +26,8 @@ before any viewer change:
   [`design/consoles/ferroehr/`](https://github.com/FerroHEALTH/FerroUI/tree/main/design/consoles/ferroehr).
 
 **The pin decides the version you read.** The viewer pins `ferrohealth-ui =
-"=0.3.2"` (root `Cargo.toml`), so the component rules, the guide, the crate
-discipline and the design are read at the tag `v0.3.2`. The viewer runs in
+"=0.3.3"` (root `Cargo.toml`, with its `split` feature), so the component rules, the guide, the crate
+discipline and the design are read at the tag `v0.3.3`. The viewer runs in
 islands mode under the four-layer interaction contract since the console
 rollout (FerroHEALTH/FerroUI#161).
 FerroUI's `design/` is the only design source: a design folder anywhere
@@ -159,8 +159,9 @@ brotli-compressed, is over the number below, which it reads from this table.
 |---|---|
 | WebAssembly, brotli-compressed | 450000 bytes |
 
-The release build on 2026-10-23, on FerroUI 0.3.2 in islands mode with
-`--split`, measured 416607 brotli bytes for the WebAssembly every page loads
+The release build on 2026-10-23, on FerroUI 0.3.3 in islands mode with
+`--split` and its `split` feature, measured 421418 brotli bytes for the
+WebAssembly every page loads
 (1425689 on FerroUI 0.1.4 with whole-page hydration); the lazy islands' chunks
 load only on a page that draws them and are not counted. The budget leaves
 about 8% for growth. Raise it only in the change that needs the room, with the

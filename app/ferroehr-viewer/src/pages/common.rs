@@ -98,7 +98,7 @@ pub fn is_status(error: &ViewerError, status: http::StatusCode) -> bool {
 /// dot and word say it together, never colour alone.
 #[must_use]
 pub fn state_mark(state: ferrohealth_ui::view::flow::FlowState, word: &str) -> AnyView {
-    ferrohealth_ui::view::status::pill(state.tone(), word).into_any()
+    ferrohealth_ui::view::state::state(state.into(), word.to_owned(), None)
 }
 
 /// An identifier shortened to its first eight and last four characters, the
@@ -128,6 +128,7 @@ pub fn shortened(id: &str) -> String {
     format!("{head}…{tail}")
 }
 
+// TODO(#3942): FerroUI's relative time replaces this with FerroHEALTH/FerroUI#349.
 /// A relative time for a list (family rule 11): "13 s ago", "4 min ago",
 /// with the full timestamp in its tooltip and the moment in `datetime`.
 ///
@@ -183,7 +184,7 @@ pub fn section(
     panel_section(
         title.map(|title| SectionHead {
             title,
-            count,
+            count: count.map(ferrohealth_ui::view::template::list::HeadingCount::All),
             actions,
         }),
         body,
@@ -430,6 +431,7 @@ pub struct EditorDock {
     pub blocked: Option<String>,
 }
 
+// TODO(#3942): docked forms take `required` back with FerroHEALTH/FerroUI#357.
 /// Docks an editor's decision bar at the foot of the page: its line, Discard
 /// and the primary decision, both submits of the page's form (R4).
 pub fn dock_editor(editor: EditorDock) {
