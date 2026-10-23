@@ -744,6 +744,19 @@ async fn a_template_downloads_as_its_stored_source() {
         "{}",
         file.body
     );
+    for crafted in [
+        "/download/template/adl14/..%2F..%2Fehr",
+        "/download/template/adl14/..",
+        "/download/template/adl14/a%5Cb",
+        "/download/template/..%2Fadl1.4/minimal_evaluation.en.v1",
+    ] {
+        let refused = viewer.page(&cookie, crafted).await;
+        assert_eq!(
+            refused.status,
+            http::StatusCode::NOT_FOUND,
+            "{crafted} names no template"
+        );
+    }
     let anonymous = viewer.send(http::Method::GET, href, None, None).await;
     assert!(
         anonymous.status.is_redirection(),
