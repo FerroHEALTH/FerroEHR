@@ -28,7 +28,11 @@ use axum::response::{IntoResponse, Response};
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
 
-/// The export form body (`q` + optional JSON parameters + the format).
+/// The route an export posts to, followed by its format: `/export/aql/csv`
+/// or `/export/aql/json`.
+pub const EXPORT_ROUTE: &str = "/export/aql";
+
+/// The export form body (`q` + optional JSON parameters).
 #[derive(Debug, serde::Deserialize)]
 pub struct ExportForm {
     /// The AQL text.
@@ -36,11 +40,10 @@ pub struct ExportForm {
     /// `query_parameters` as a JSON object (empty = none).
     #[serde(default)]
     pub parameters_json: String,
-    /// `csv` or `json`.
-    pub format: String,
 }
 
-/// `POST /export/aql` — run the query and answer with a file download.
+/// `POST /export/aql/{format}` — run the query and answer with a file
+/// download in `format`, `csv` or `json`.
 ///
 /// Callers without a viewer session are redirected to `/login` (the form is
 /// a full-page navigation, so a redirect is the correct UX and the correct
@@ -50,6 +53,7 @@ pub struct ExportForm {
 /// mid-flight CDR 401).
 pub async fn export_aql(
     axum::Extension(state): axum::Extension<crate::state::AppState>,
+    axum::extract::Path(format): axum::extract::Path<String>,
     headers: HeaderMap,
     axum::Form(form): axum::Form<ExportForm>,
 ) -> Response {
@@ -62,7 +66,7 @@ pub async fn export_aql(
     else {
         return axum::response::Redirect::to("/login").into_response();
     };
-    match run(&state, &admin, &form).await {
+    match run(&state, &admin, &form, &format).await {
         Ok(response) => response,
         Err(ViewerError::Unauthenticated) => axum::response::Redirect::to("/login").into_response(),
         Err(e) => plain(
@@ -76,6 +80,7 @@ async fn run(
     state: &crate::state::AppState,
     admin: &crate::session::ViewerSession,
     form: &ExportForm,
+    format: &str,
 ) -> Result<Response, ViewerError> {
     let parameters: serde_json::Value = if form.parameters_json.trim().is_empty() {
         serde_json::json!({})
@@ -105,7 +110,7 @@ async fn run(
         .await?;
     let response = crate::cdr::CdrClient::expect_success(response)?;
 
-    match form.format.as_str() {
+    match format {
         "json" => Ok(download(
             "application/json",
             "aql-export.json",

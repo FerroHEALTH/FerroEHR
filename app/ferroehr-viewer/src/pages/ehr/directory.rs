@@ -300,16 +300,31 @@ fn restore_button(number: &str) -> AnyView {
     .into_any()
 }
 
-/// The directory's own menu: Delete the directory…, last.
-fn directory_menu() -> AnyView {
-    row_menu(
-        Menu::new("directory-more", tr(Msg::DirectoryMore), Vec::new()).destructive(vec![
+/// The directory's own menu: Copy the directory id when the version names
+/// it, then Delete the directory…, last.
+fn directory_menu(version_uid: &str) -> AnyView {
+    let copy = version_uid
+        .split("::")
+        .next()
+        .filter(|id| !id.is_empty())
+        .map(|id| {
             Item::new(Action::new(
-                Some(Glyph::TRASH),
-                tr(Msg::DirectoryDelete),
-                Act::Dialog(DELETE_DIALOG.to_owned()),
-            )),
-        ]),
+                Some(Glyph::COPY),
+                tr(Msg::DirectoryCopyId),
+                Act::Copy(id.to_owned()),
+            ))
+        });
+    row_menu(
+        Menu::new(
+            "directory-more",
+            tr(Msg::DirectoryMore),
+            copy.into_iter().collect(),
+        )
+        .destructive(vec![Item::new(Action::new(
+            Some(Glyph::TRASH),
+            tr(Msg::DirectoryDelete),
+            Act::Dialog(DELETE_DIALOG.to_owned()),
+        ))]),
     )
 }
 
@@ -579,7 +594,7 @@ pub fn DirectoryTab() -> impl IntoView {
                         Some(Glyph::PENCIL),
                         tr(Msg::DirectoryEdit),
                     )}
-                    {directory_menu()}
+                    {directory_menu(&shown.version_uid)}
                 }
                 .into_any();
                 let restore = reading.filter(|_| restoring).map(|number| {

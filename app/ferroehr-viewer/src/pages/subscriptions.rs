@@ -413,6 +413,7 @@ async fn form_view(form: &Form, editing: bool, name_error: Option<String>) -> An
                                         class="fui-input fui-mono"
                                         spellcheck="false"
                                         placeholder="vital-signs-feed"
+                                        required
                                         value=form.name.clone()
                                         aria-invalid=name_error.is_some().then_some("true")
                                     />

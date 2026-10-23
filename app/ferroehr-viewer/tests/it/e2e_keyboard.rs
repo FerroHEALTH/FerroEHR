@@ -23,12 +23,13 @@
 //! What a component does with the keyboard (focus rings, roles, roving focus
 //! in a tree or a menu) is FerroUI's and is tested there; these journeys cover
 //! what the viewer composes from the components: where the focus lands after a
-//! route change, the query builder traversed and run by keyboard, and the user
-//! menu's keyboard pattern as the shell mounts it.
+//! route change, the query builder traversed and run by keyboard with Save
+//! beside Run, and the user menu's keyboard pattern as the shell mounts it,
+//! Your access among its items.
 
 use crate::common;
 
-use common::{Harness, login_basic, wait_main_contains};
+use common::{Harness, login_basic, poll_until, wait_main_contains};
 use thirtyfour::prelude::*;
 
 /// How many Tab presses a journey allows before it calls a control
@@ -118,6 +119,23 @@ async fn the_query_builder_is_traversed_and_run_by_keyboard() {
         h.press(Key::Shift + Key::Tab).await;
     }
     assert!(reached, "Run is reachable by Shift+Tab");
+    h.press(Key::Tab).await;
+    assert!(
+        h.focus_matches("header.fui-page-header button[commandfor='save-query']")
+            .await,
+        "Save to the CDR follows Run in the header's action group"
+    );
+    let mut back = false;
+    for _ in 0..TAB_BUDGET {
+        h.press(Key::Shift + Key::Tab).await;
+        if h.focus_matches("header.fui-page-header button[form='query-form']")
+            .await
+        {
+            back = true;
+            break;
+        }
+    }
+    assert!(back, "Shift+Tab from Save returns to Run");
     h.press(Key::Enter).await;
     wait_main_contains(&h, "2020-01-01T00:00:00Z").await;
     h.wait_css("main table tbody tr").await;
@@ -129,8 +147,8 @@ async fn the_query_builder_is_traversed_and_run_by_keyboard() {
 }
 
 /// The user menu as the shell mounts it: Enter opens it with the focus on its
-/// first item, the arrow keys move between the items, and Escape closes it and
-/// returns the focus to its button.
+/// first item, Your preferences, Down moves to Your access, Escape closes it
+/// and returns the focus to its button, and Enter on Your access opens it.
 #[tokio::test]
 async fn the_user_menu_answers_the_keyboard() {
     let Some(h) = Harness::start("keyboard-user-menu").await else {
@@ -147,13 +165,15 @@ async fn the_user_menu_answers_the_keyboard() {
     h.wait_css("#user-menu:popover-open").await;
     h.wait_css(&format!("{button}[aria-expanded='true']")).await;
     assert!(
-        h.focus_matches("#user-menu [role^='menuitem']").await,
-        "opening the menu puts the focus on its first item"
+        h.focus_matches("#user-menu [role^='menuitem'][href='/preferences']")
+            .await,
+        "opening the menu puts the focus on its first item, Your preferences"
     );
     h.press(Key::Down).await;
     assert!(
-        h.focus_matches("#user-menu [role^='menuitem']").await,
-        "Down moves to the next item"
+        h.focus_matches("#user-menu [role^='menuitem'][href='/access']")
+            .await,
+        "Down moves to Your access"
     );
     h.shot(1, "user-menu-by-keyboard").await;
     h.press(Key::Escape).await;
@@ -162,6 +182,24 @@ async fn the_user_menu_answers_the_keyboard() {
         h.focus_matches(button).await,
         "Escape returns the focus to the menu's button"
     );
+    h.press(Key::Enter).await;
+    h.wait_css("#user-menu:popover-open").await;
+    let first = poll_until(async || {
+        h.focus_matches("#user-menu [role^='menuitem'][href='/preferences']")
+            .await
+    })
+    .await;
+    assert!(first, "the menu opens again on Your preferences");
+    h.press(Key::Down).await;
+    let access = poll_until(async || {
+        h.focus_matches("#user-menu [role^='menuitem'][href='/access']")
+            .await
+    })
+    .await;
+    assert!(access, "Down moves to Your access again");
+    h.press(Key::Enter).await;
+    h.wait_url_contains("/access").await;
+    h.wait_css("#scope").await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;

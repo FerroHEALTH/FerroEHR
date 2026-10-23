@@ -89,7 +89,7 @@ pub fn forbidden(title: String, needs: String) -> AnyView {
             Way {
                 label: tr(Msg::YourAccess),
                 href: "/access".to_owned(),
-                glyph: None,
+                glyph: Some(Glyph::KEY_ROUND),
             },
         ],
         detail: None,

@@ -25,8 +25,8 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::dock::{DecisionBar, decision_bar};
 use ferrohealth_ui::view::search::{SearchAnswer, SearchBox, search_box};
 use ferrohealth_ui::view::shell::{Footer, Shell, TopBar, brand_mark, lockup, shell, topbar};
-use ferrohealth_ui::view::status::{Reach, StatusPill, banner, status_pill};
-use ferrohealth_ui::widget::menu::{ThemeChoice, UserMenu, user_menu};
+use ferrohealth_ui::view::status::{BannerLink, Reach, StatusPill, banner, status_pill};
+use ferrohealth_ui::widget::menu::{ThemeChoice, UserLink, UserMenu, user_menu};
 use ferrohealth_ui::widget::nav::{Entry, Group, Rail, Sidebar, sidebar};
 use leptos::prelude::*;
 use leptos_router::components::Outlet;
@@ -47,6 +47,14 @@ pub const MARK_PATH: &str = "/ferroehr-icon.svg";
 
 /// The route the top bar's search posts to.
 pub const FIND_ROUTE: &str = "/find";
+
+// TODO(#3946): Stored queries takes `scroll-text` with FerroHEALTH/FerroUI#376.
+/// The glyph of Stored queries in the navigation, on the dashboard and in
+/// the search's answers.
+pub const STORED_QUERIES_GLYPH: Glyph = Glyph::SEARCH_CODE;
+
+/// Server › Overview, where the sandbox band's Details lead.
+const SERVER_ROUTE: &str = "/server";
 
 /// The page's docked decision bar, which the page sets as it is drawn and
 /// the shell draws at the foot of the main area (R4).
@@ -184,7 +192,7 @@ fn entry(href: &'static str, label: Msg, glyph: Glyph, exact: bool) -> Entry {
 /// The navigation groups, Subscriptions among them when the CDR serves it.
 fn groups(subscriptions: bool) -> Vec<Group> {
     let mut console = vec![
-        entry("/server", Msg::NavServer, Glyph::SERVER, false),
+        entry(SERVER_ROUTE, Msg::NavServer, Glyph::SERVER, false),
         entry("/audit", Msg::NavAudit, Glyph::SHIELD_CHECK, false),
     ];
     if subscriptions {
@@ -221,14 +229,19 @@ fn groups(subscriptions: bool) -> Vec<Group> {
             title: tr(Msg::NavGroupDefinitions).into(),
             entries: vec![
                 entry("/templates", Msg::NavTemplates, Glyph::FILE_CODE, false),
-                entry("/terminology", Msg::NavTerminology, Glyph::BOOK_A, false),
+                entry("/terminology", Msg::NavTerminology, Glyph::BOOK_OPEN, false),
             ],
         },
         Group {
             id: "nav-queries",
             title: tr(Msg::NavGroupQueries).into(),
             entries: vec![
-                entry("/queries", Msg::NavStoredQueries, Glyph::SEARCH_CODE, false),
+                entry(
+                    "/queries",
+                    Msg::NavStoredQueries,
+                    STORED_QUERIES_GLYPH,
+                    false,
+                ),
                 entry("/query", Msg::NavQuery, Glyph::SQUARE_TERMINAL, false),
             ],
         },
@@ -310,10 +323,13 @@ fn pill(status: Result<String, crate::error::ViewerError>) -> AnyView {
     .into_any()
 }
 
-// TODO(#3942): the band links its details with FerroHEALTH/FerroUI#348.
 /// The sandbox band under the top bar, when the CDR declares the sandbox
-/// deployment profile.
-fn sandbox_band(status: Option<&Result<String, crate::error::ViewerError>>) -> Option<AnyView> {
+/// deployment profile, its Details leading to Server › Overview unless the
+/// page is that one.
+fn sandbox_band(
+    status: Option<&Result<String, crate::error::ViewerError>>,
+    current: &str,
+) -> Option<AnyView> {
     let body = status?.as_ref().ok()?;
     let document = crate::deployment::StatusDocument::parse(body)?;
     let notice = document.sandbox_notice()?;
@@ -333,11 +349,15 @@ fn sandbox_band(status: Option<&Result<String, crate::error::ViewerError>>) -> O
         Glyph::TRIANGLE_ALERT,
         tr(Msg::SandboxTitle),
         &line,
+        (current != SERVER_ROUTE).then(|| BannerLink {
+            words: tr(Msg::SandboxDetails),
+            href: SERVER_ROUTE.to_owned(),
+        }),
     ))
 }
 
-/// The user menu: who is signed in, Your preferences, the theme, Keyboard
-/// shortcuts and Sign out.
+/// The user menu: who is signed in, Your preferences, Your access, the
+/// theme, Keyboard shortcuts and Sign out.
 fn menu(session: Option<&crate::session::ViewerSession>) -> AnyView {
     let (who, line) = match session {
         Some(session) => {
@@ -349,7 +369,6 @@ fn menu(session: Option<&crate::session::ViewerSession>) -> AnyView {
         }
         None => (tr(Msg::YourMenu), String::new()),
     };
-    // TODO(#3942): Your access joins the menu with FerroHEALTH/FerroUI#347.
     user_menu(UserMenu {
         id: USER_MENU_ID,
         label: who.clone(),
@@ -357,6 +376,11 @@ fn menu(session: Option<&crate::session::ViewerSession>) -> AnyView {
         who,
         line,
         preferences: "/preferences".to_owned(),
+        links: vec![UserLink {
+            words: tr(Msg::YourAccess),
+            href: "/access".to_owned(),
+            glyph: Glyph::KEY_ROUND,
+        }],
         theme: ThemeChoice {
             current: crate::prefs::current().theme,
             action: crate::prefs::PREFERENCE_ROUTE.to_owned(),
@@ -433,9 +457,10 @@ pub fn AppShell() -> impl IntoView {
     };
     let band = {
         let status = status.clone();
+        let current = current.clone();
         crate::pages::common::awaited(async move {
             let answer = status.read().await;
-            sandbox_band(Some(&answer)).unwrap_or_else(|| ().into_any())
+            sandbox_band(Some(&answer), &current).unwrap_or_else(|| ().into_any())
         })
     };
     let nav = {

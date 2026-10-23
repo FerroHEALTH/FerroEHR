@@ -37,7 +37,7 @@ use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{
     awaited, count, document_section, info_note, panel, plain_section, refused, section, when,
 };
-use crate::pages::results::{Answered, chart_asked, not_run, results, shown_choice};
+use crate::pages::results::{Answered, chart_asked, not_run, results};
 use crate::queries_api::{
     StoredQueryRow, fetch_stored_query, list_stored_queries, run_stored_query,
 };
@@ -393,17 +393,23 @@ where
             tr(Msg::CompositionVersions),
         ),
     );
-    let more =
-        Menu::new("stored-more", tr(Msg::QueriesMore), Vec::new()).destructive(vec![Item::new(
-            Action::new(
-                Some(Glyph::TRASH),
-                tr_with(
-                    Msg::QueriesDeleteNamed,
-                    &[("version", version.clone().into())],
-                ),
-                Act::Dialog(DELETE_DIALOG.to_owned()),
-            ),
-        )]);
+    let more = Menu::new(
+        "stored-more",
+        tr(Msg::QueriesMore),
+        vec![Item::new(Action::new(
+            Some(Glyph::COPY),
+            tr(Msg::QueriesCopyName),
+            Act::Copy(name.clone()),
+        ))],
+    )
+    .destructive(vec![Item::new(Action::new(
+        Some(Glyph::TRASH),
+        tr_with(
+            Msg::QueriesDeleteNamed,
+            &[("version", version.clone().into())],
+        ),
+        Act::Dialog(DELETE_DIALOG.to_owned()),
+    ))]);
     let heading = page_heading(
         Header {
             title: bare_name_of(&name).to_owned().into(),
@@ -735,7 +741,6 @@ pub fn StoredQueryRunTab() -> impl IntoView {
                         None,
                         view! {
                             <div class="fui-form-grid">{fields}</div>
-                            {shown_choice(chart)}
                             <div class="fui-transform-run">
                                 <button type="submit" class="fui-button fui-button-primary">
                                     {ferrohealth_ui::icon::icon(Glyph::PLAY, "16")}

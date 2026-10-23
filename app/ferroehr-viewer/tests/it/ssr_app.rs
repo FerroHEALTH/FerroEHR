@@ -595,7 +595,7 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             "/about".to_owned(),
-            vec!["ferrohealth-ui 0.3.3", "The conformance manifest"],
+            vec!["ferrohealth-ui 0.3.4", "The conformance manifest"],
         ),
         ("/access".to_owned(), vec!["Signed in as", "ferroehr"]),
         (
@@ -643,6 +643,128 @@ async fn an_editor_docks_its_decision_bar_after_its_reads() {
     }
 }
 
+/// The shell's user menu lists Your access, and the sandbox band's Details
+/// leads to Server's Overview from every page but that one.
+#[tokio::test]
+async fn the_shell_links_your_access_and_the_sandbox_details() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let details = r#"<a href="/server">Details</a>"#;
+    let dashboard = viewer.page(&cookie, "/").await;
+    assert_eq!(dashboard.status, http::StatusCode::OK);
+    let menu = dashboard
+        .body
+        .find(r#"id="user-menu-menu""#)
+        .and_then(|start| dashboard.body.get(start..))
+        .unwrap_or_default();
+    let menu = menu
+        .get(..menu.find("</div>").unwrap_or(menu.len()))
+        .unwrap_or_default();
+    let preferences = menu
+        .find(r#"href="/preferences""#)
+        .expect("Your preferences");
+    let access = menu
+        .find(r#"href="/access""#)
+        .expect("Your access in the menu");
+    assert!(
+        preferences < access,
+        "Your access follows Your preferences: {menu}"
+    );
+    assert!(dashboard.body.contains(details), "{}", dashboard.body);
+    let server = viewer.page(&cookie, "/server").await;
+    assert_eq!(server.status, http::StatusCode::OK);
+    assert!(server.body.contains("Sandbox"), "the band is drawn");
+    assert!(!server.body.contains(details), "{}", server.body);
+}
+
+/// An EHR's More menu copies its id, and an editor's Discard leaves without
+/// the form's checks.
+#[tokio::test]
+async fn an_ehr_menu_copies_its_id_and_discard_skips_the_checks() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let ehr = id("ehr");
+    let page = viewer.page(&cookie, &format!("/ehrs/{ehr}")).await;
+    assert_eq!(page.status, http::StatusCode::OK);
+    assert!(
+        page.body.contains(&format!(r#"data-fui-copy="{ehr}""#)),
+        "{}",
+        page.main()
+    );
+    let new = viewer.page(&cookie, "/ehrs/new").await;
+    assert_eq!(new.status, http::StatusCode::OK);
+    let discard = new
+        .body
+        .find(r#"value="discard""#)
+        .and_then(|at| {
+            let start = new.body.get(..at)?.rfind("<button")?;
+            let end = at + new.body.get(at..)?.find('>')?;
+            new.body.get(start..end)
+        })
+        .expect("Discard");
+    assert!(discard.contains("formnovalidate"), "{discard}");
+    let save = new
+        .body
+        .find(r#"value="save""#)
+        .and_then(|at| {
+            let start = new.body.get(..at)?.rfind("<button")?;
+            let end = at + new.body.get(at..)?.find('>')?;
+            new.body.get(start..end)
+        })
+        .expect("Save");
+    assert!(!save.contains("formnovalidate"), "{save}");
+}
+
+/// A template's More menu offers its Download, which answers the stored
+/// operational template as a file, and only to a signed-in reader.
+#[tokio::test]
+async fn a_template_downloads_as_its_stored_source() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let href = "/download/template/adl14/minimal_evaluation.en.v1";
+    let page = viewer
+        .page(&cookie, "/templates/minimal_evaluation.en.v1")
+        .await;
+    assert_eq!(page.status, http::StatusCode::OK);
+    assert!(
+        page.body.contains(&format!(r#"href="{href}""#)),
+        "{}",
+        page.main()
+    );
+    let file = viewer.page(&cookie, href).await;
+    assert_eq!(file.status, http::StatusCode::OK, "{}", file.body);
+    assert_eq!(
+        file.headers
+            .get(http::header::CONTENT_DISPOSITION)
+            .and_then(|value| value.to_str().ok()),
+        Some(r#"attachment; filename="minimal_evaluation.en.v1.opt""#)
+    );
+    assert!(
+        file.body.contains("minimal_evaluation.en.v1"),
+        "{}",
+        file.body
+    );
+    for crafted in [
+        "/download/template/adl14/..%2F..%2Fehr",
+        "/download/template/adl14/..",
+        "/download/template/adl14/a%5Cb",
+        "/download/template/..%2Fadl1.4/minimal_evaluation.en.v1",
+    ] {
+        let refused = viewer.page(&cookie, crafted).await;
+        assert_eq!(
+            refused.status,
+            http::StatusCode::NOT_FOUND,
+            "{crafted} names no template"
+        );
+    }
+    let anonymous = viewer.send(http::Method::GET, href, None, None).await;
+    assert!(
+        anonymous.status.is_redirection(),
+        "no session, no file: {}",
+        anonymous.status
+    );
+}
+
 #[tokio::test]
 async fn an_ehr_shows_its_subject_masked_until_the_reader_asks() {
     let viewer = Viewer::start().await;
@@ -675,8 +797,16 @@ async fn a_run_draws_the_rows_and_the_exports_post_the_query_again() {
     assert_eq!(answer.status, http::StatusCode::OK);
     let main = answer.main();
     assert!(main.contains(&id("ehr")), "{main}");
-    assert!(main.contains(r#"action="/export/aql""#), "{main}");
-    assert!(main.contains(r#"name="format" value="csv""#), "{main}");
+    assert!(main.contains(r#"formaction="/export/aql/csv""#), "{main}");
+    assert!(main.contains(r#"formaction="/export/aql/json""#), "{main}");
+    assert!(
+        main.contains(r#"name="default-shown" value="table""#),
+        "the next Run keeps the view: {main}"
+    );
+    assert!(
+        !main.contains(r#"name="shown""#),
+        "a result with no numeric column offers no chart: {main}"
+    );
 }
 
 #[tokio::test]

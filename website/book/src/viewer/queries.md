@@ -63,14 +63,16 @@ its own `LIMIT`, and the rows as a table.
 
 ![AQL results](img/queries/aql-results.png)
 
-**Show as** **Chart** draws the numeric columns as lines over the first time
-column (or over the row order when there is none), one series per column with
-a legend. With the page's WebAssembly loaded, pressing a legend entry hides
-that series; the last one shown stays.
+**Chart** in the Results heading runs the query again and draws the numeric
+columns as lines over the first time column (or over the row order when there
+is none), one series per column with a legend; **Table** goes back, and the
+next **Run** keeps the view you chose. The table under the chart names each
+point by its time. With the page's WebAssembly loaded, pressing a legend entry
+hides that series; the last one shown stays.
 
 ![Results as a chart](img/queries/results-chart.png)
 
-**CSV** and **JSON** download the rows: the query runs again on the viewer's
+**Export CSV** and **Export JSON** download the rows: the query runs again on the viewer's
 server and the file arrives as `aql-export.csv` or `aql-export.json`. The
 viewer keeps no results between requests, so an export is always the CDR's
 answer at that moment.

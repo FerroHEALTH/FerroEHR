@@ -60,7 +60,7 @@ impl Kind {
             Self::Composition => Glyph::FILE_TEXT,
             Self::Party => Glyph::USERS,
             Self::Template => Glyph::FILE_CODE,
-            Self::StoredQuery => Glyph::SEARCH_CODE,
+            Self::StoredQuery => crate::shell::STORED_QUERIES_GLYPH,
         }
     }
 }

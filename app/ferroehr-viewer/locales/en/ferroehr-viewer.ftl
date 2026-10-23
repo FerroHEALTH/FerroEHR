@@ -1249,9 +1249,10 @@ pill-unreachable-detail = No answer from { $address }
 unknown-version = an unknown version
 sandbox-title = Sandbox
 sandbox-gaps = { $count ->
-    [one] 1 production safeguard is off; Server › Overview names it.
-   *[other] { $count } production safeguards are off; Server › Overview names them.
+    [one] 1 production safeguard is off
+   *[other] { $count } production safeguards are off
 }
+sandbox-details = Details
 sandbox-no-gaps = This deployment must not hold real patient data.
 signed-in-basic = Signed in with a CDR account
 signed-in-oidc = Signed in at the identity provider
@@ -1263,14 +1264,6 @@ search-submit = Find
 search-waits = Search waits for the CDR
 dock-label = Decision
 discard = Discard
-just-now = just now
-seconds-ago = { $count } s ago
-minutes-ago = { $count } min ago
-hours-ago = { $count } h ago
-days-ago = { $count ->
-    [one] 1 day ago
-   *[other] { $count } days ago
-}
 cdr-unreachable-code = CDR unreachable
 invalid-code = Not sent
 session-ended-code = Session ended
@@ -1462,6 +1455,7 @@ ehr-not-found-title = No EHR { $id }
 ehr-refused = The EHR could not be read.
 ehr-back = Back to EHRs
 ehr-more = More actions
+ehr-copy-id = Copy EHR id
 ehr-commit-several = Commit several changes
 ehr-create-directory = Create the directory
 ehr-delete = Delete EHR
@@ -1578,6 +1572,7 @@ directory-no-path = The directory has no folder at { $path }; the whole tree is 
 directory-path-refused = The folder at this path could not be read.
 directory-edit = Edit
 directory-more = More directory actions
+directory-copy-id = Copy the directory id
 directory-delete = Delete the directory
 directory-delete-title = Delete the directory?
 directory-delete-message = The directory is marked deleted; its versions stay in the history and the compositions it references are kept.
@@ -1640,6 +1635,7 @@ contribution-title = Contribution { $id }
 contribution-subtitle = One change set, committed together.
 contribution-refused = The contribution could not be read.
 contribution-audit = Audit
+contribution-new-audit = Contribution audit
 contribution-versions = Versions
 contribution-record = Record
 fact-committed = Committed
@@ -1661,7 +1657,7 @@ contribution-not-committed = Not committed
 contribution-commit-refused = The CDR refused the contribution, so nothing was committed.
 contribution-choices-refused = The templates or compositions to pick from could not be read.
 contribution-composition-refused = The composition to amend could not be read.
-contribution-committer-placeholder = Leave empty to commit as yourself
+contribution-committer-placeholder = Leave empty to commit as { $name }
 contribution-commit = { $count ->
     [one] Commit 1 change
    *[other] Commit { $count } changes
@@ -1717,6 +1713,7 @@ composition-reading = Reading
 composition-document = Document
 composition-versions = Versions
 composition-more = More actions for the composition
+composition-copy-id = Copy the id
 composition-edit = Edit as a new version
 composition-edit-latest = Edit the latest
 composition-line = { $template } · version { $version } · started { $started } by { $composer }.
@@ -1826,6 +1823,7 @@ party-views = Views of this party
 party-line = { $kind } · version { $version } · { $id }
 party-deleted-line = { $kind } · deleted { $when } by { $who } as version { $version }
 party-more = More actions for the party
+party-copy-id = Copy the id
 party-edit = Edit
 party-relate = Relate this party
 party-delete = Delete party
@@ -1878,6 +1876,7 @@ relationship-title = Relationship
 relationship-line = Relationship · version { $version } · { $id }
 relationship-refused = The relationship could not be read.
 relationship-more = More actions for the relationship
+relationship-copy-id = Copy the id
 relationship-delete = Delete relationship
 relationship-delete-title = Delete the relationship { $name }?
 relationship-delete-message = The relationship is marked deleted; both parties stay, and its versions stay readable.
@@ -1930,6 +1929,8 @@ template-delete-message = The CDR refuses while compositions use the template; d
 template-delete-confirm = Delete the template
 template-delete-refused = The CDR refused to delete the template.
 template-more = More actions for the template
+template-download = Download
+template-copy-id = Copy id
 template-views = Views of this template
 template-refused = The template could not be read.
 template-adl-14-line = ADL 1.4
@@ -2047,6 +2048,7 @@ queries-namespace-chip = Namespace { $value }
 queries-refused = The stored queries could not be read.
 queries-views = Views of this stored query
 queries-more = More actions for the stored query
+queries-copy-name = Copy name
 queries-line = { $name } · version { $version }
 queries-delete-named = Delete version { $version }
 queries-delete-title = Delete { $name } version { $version }?
@@ -2141,17 +2143,10 @@ query-no-params = No parameter.
 ## Results
 
 results-title = Results
-results-show-as = Show as
-results-table = Table
-results-chart = Chart
 results-chart-label = The numeric columns over the results
 results-chart-summary = { $series } over { $axis }.
 results-axis = The x axis is { $axis }, at its true spacing.
-results-no-chart = These results have no numbers to draw, so they are shown as a table.
-results-none = The query matched no row.
 results-not-run = Run the query to see its rows here.
-results-csv = CSV
-results-json = JSON
 results-window = { $count ->
     [one] 1 row. No LIMIT in the query, so the CDR returns at most its own page.
    *[other] { $count } rows. No LIMIT in the query, so the CDR returns at most its own page.
@@ -2346,7 +2341,13 @@ sub-delete-refused = The CDR refused to delete the subscription.
 
 config-subtitle = The CDR's settings as it serves them, redacted, and the viewer's own.
 config-sections = Configuration sections
-config-how = read at start; change the file and restart to change a setting
+config-how-title = How configuration works
+config-how-reads = The CDR reads ferroehr.toml once at start, and the viewer reads ferroehr-viewer.toml; an environment variable overrides a key in either.
+config-how-where-title = Where you see it
+config-how-where = Here, read-only: the CDR's settings as it serves them, redacted, and the viewer's own.
+config-how-change-title = How you change it
+config-how-change = Change the file, review it, and restart the CDR or the viewer.
+config-how-nothing = Nothing here can be changed from the viewer: the database holds clinical data, never settings.
 config-deployment = Deployment
 config-server = Server and database
 config-access = Access

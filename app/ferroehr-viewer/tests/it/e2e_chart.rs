@@ -77,8 +77,7 @@ async fn results_chart_groups_series_and_toggles_them() {
     h.wait_css("main table tbody tr").await;
     h.shot(1, "results-table").await;
 
-    h.wait_css("label[for='shown-chart']").await.click().await;
-    common::submit(&h, "header.fui-page-header button[form='query-form']").await;
+    common::submit(&h, "main button[name='shown'][value='chart']").await;
     h.wait_css(&format!("{CHART} [data-series-lines='1']"))
         .await;
     common::wait_main_contains(&h, "observed").await;
@@ -118,6 +117,15 @@ async fn results_chart_groups_series_and_toggles_them() {
         .await;
     assert!(!last.enabled().await, "the last series shown stays pressed");
     h.shot(3, "chart-one-series").await;
+
+    // The switch says the chart is shown, and the next Run keeps it.
+    h.wait_css("main button[name='shown'][value='chart'][aria-pressed='true']")
+        .await;
+    common::submit(&h, "header.fui-page-header button[form='query-form']").await;
+    h.wait_css(&format!("{CHART} [data-series-lines='1']"))
+        .await;
+    h.wait_css("main button[name='shown'][value='chart'][aria-pressed='true']")
+        .await;
 
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;

@@ -49,7 +49,7 @@ use crate::bff::ehr_detail::contributions::{
 };
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
-use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup, MAX_STAGED};
+use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::locale::{Msg, message, tr, tr_with};
 use crate::pages::common::{
     EditorDock, ago, awaited, card_panel, count, discarded, dock_editor, document_section, panel,
@@ -428,7 +428,7 @@ const NEW_FORM: &str = "contribution-new";
 #[derive(Debug, Clone)]
 struct Draft {
     /// Its number in the form, from 1.
-    number: u8,
+    number: u16,
     /// What it changes.
     kind: StagedKind,
     /// The template a new composition follows.
@@ -443,7 +443,7 @@ struct Draft {
 
 impl Draft {
     /// A new change numbered `number`: a new composition.
-    fn new(number: u8) -> Self {
+    fn new(number: u16) -> Self {
         Self {
             number,
             kind: StagedKind::CompositionCreate,
@@ -455,7 +455,7 @@ impl Draft {
     }
 
     /// The change numbered `number` as `posted` holds it.
-    fn posted(posted: &crate::posted::Posted, number: u8) -> Self {
+    fn posted(posted: &crate::posted::Posted, number: u16) -> Self {
         let field = |name: &str| posted.text(&format!("{name}-{number}"));
         let kind = StagedKind::from_value(&field("kind"));
         let preceding = field("preceding");
@@ -472,7 +472,7 @@ impl Draft {
                 String::new()
             } else {
                 posted
-                    .get(EditorField::Staged(number).name())
+                    .get(&EditorField::Staged(number).name())
                     .unwrap_or_default()
             },
         }
@@ -514,23 +514,23 @@ fn drafts(posted: Option<&crate::posted::Posted>) -> Vec<Draft> {
     let mut drafts: Vec<Draft> = Vec::new();
     for number in posted.all("seq") {
         // NOTE: the numbers are the form's own hidden fields; one that does not parse names no change.
-        let Ok(number) = number.trim().parse::<u8>() else {
+        let Ok(number) = number.trim().parse::<u16>() else {
             continue;
         };
-        if (1..=MAX_STAGED).contains(&number) && drafts.iter().all(|draft| draft.number != number) {
+        if number >= 1 && drafts.iter().all(|draft| draft.number != number) {
             drafts.push(Draft::posted(posted, number));
         }
     }
     let intent = posted.intent();
     if let Some(number) = intent
         .strip_prefix("remove:")
-        .and_then(|number| number.parse::<u8>().ok())
+        .and_then(|number| number.parse::<u16>().ok())
     {
         drafts.retain(|draft| draft.number != number);
     }
     if intent == "stage"
         && let Some(number) =
-            (1..=MAX_STAGED).find(|number| drafts.iter().all(|draft| draft.number != *number))
+            (1..=u16::MAX).find(|number| drafts.iter().all(|draft| draft.number != *number))
     {
         drafts.push(Draft::new(number));
     }
@@ -836,10 +836,12 @@ pub fn NewContributionPage() -> impl IntoView {
                 .as_ref()
                 .map(|posted| posted.text("committer"))
                 .unwrap_or_default();
+            let you = crate::request::session()
+                .map(|session| session.identity)
+                .unwrap_or_default();
             let mut top = None;
             let mut line = (
-                // TODO(#3942): git-commit replaces LAYERS with FerroHEALTH/FerroUI#352.
-                Glyph::LAYERS,
+                Glyph::GIT_COMMIT,
                 tr_with(Msg::StagedCount, &[("count", count(drafts.len()))]),
             );
             if posted
@@ -889,7 +891,7 @@ pub fn NewContributionPage() -> impl IntoView {
                 .zip(troubles)
                 .map(|(draft, trouble)| change_section(draft, &choices, removable, trouble))
                 .collect_view();
-            let stage = (drafts.len() < usize::from(MAX_STAGED)).then(|| {
+            let stage = (drafts.len() < usize::from(u16::MAX)).then(|| {
                 view! {
                     <div class="fui-add-row">
                         <button
@@ -930,7 +932,10 @@ pub fn NewContributionPage() -> impl IntoView {
                                         type="text"
                                         class="fui-input"
                                         value=committer
-                                        placeholder=tr(Msg::ContributionCommitterPlaceholder)
+                                        placeholder=tr_with(
+                                            Msg::ContributionCommitterPlaceholder,
+                                            &[("name", you.clone().into())],
+                                        )
                                     />
                                 },
                             )}
@@ -956,7 +961,7 @@ pub fn NewContributionPage() -> impl IntoView {
                         view! {
                             {sections}
                             {crate::pages::common::plain_section(stage)}
-                            {section(Some(tr(Msg::ContributionAudit)), None, None, audit)}
+                            {section(Some(tr(Msg::ContributionNewAudit)), None, None, audit)}
                         },
                     )}
                 </form>
@@ -988,6 +993,7 @@ pub fn NewContributionPage() -> impl IntoView {
 mod tests {
     use super::drafts;
     use crate::bff::ehr_detail::commit::staged::StagedKind;
+    use crate::islands::EditorField;
     use crate::posted::Posted;
 
     fn posted(fields: &[(&str, &str)]) -> Posted {
@@ -1036,11 +1042,26 @@ mod tests {
             first.body.is_empty(),
             "a new kind starts from what it loads"
         );
-        let forged = drafts(Some(&posted(&[("seq", "99"), ("seq", "x")])));
+        let forged = drafts(Some(&posted(&[
+            ("seq", "0"),
+            ("seq", "70000"),
+            ("seq", "x"),
+        ])));
         assert_eq!(
             forged.iter().map(|draft| draft.number).collect::<Vec<_>>(),
             vec![1],
-            "out-of-range numbers name no change"
+            "zero, out-of-range and non-numeric numbers name no change"
+        );
+        let many = drafts(Some(&posted(&[("seq", "13"), ("seq", "99")])));
+        assert_eq!(
+            many.iter().map(|draft| draft.number).collect::<Vec<_>>(),
+            vec![13, 99],
+            "a change past the twelfth keeps an editor of its own"
+        );
+        assert_eq!(
+            EditorField::Staged(99).name(),
+            "staged-99",
+            "each staged change posts its own field"
         );
     }
 }

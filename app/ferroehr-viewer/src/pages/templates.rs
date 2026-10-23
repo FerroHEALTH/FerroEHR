@@ -833,14 +833,27 @@ fn template_header(
     family: TemplateFamily,
     after: Option<AnyView>,
 ) -> AnyView {
-    let more =
-        Menu::new("template-more", tr(Msg::TemplateMore), Vec::new()).destructive(vec![Item::new(
-            Action::new(
-                Some(Glyph::TRASH),
-                tr(Msg::TemplateDelete),
-                Act::Dialog(DELETE_DIALOG.to_owned()),
-            ),
-        )]);
+    let more = Menu::new(
+        "template-more",
+        tr(Msg::TemplateMore),
+        vec![
+            Item::new(Action::new(
+                Some(Glyph::DOWNLOAD),
+                tr(Msg::TemplateDownload),
+                Act::Link(crate::download::template_href(family, template_id)),
+            )),
+            Item::new(Action::new(
+                Some(Glyph::COPY),
+                tr(Msg::TemplateCopyId),
+                Act::Copy(template_id.to_owned()),
+            )),
+        ],
+    )
+    .destructive(vec![Item::new(Action::new(
+        Some(Glyph::TRASH),
+        tr(Msg::TemplateDelete),
+        Act::Dialog(DELETE_DIALOG.to_owned()),
+    ))]);
     let heading = page_heading(
         Header {
             title: title.into(),

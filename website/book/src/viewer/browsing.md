@@ -37,7 +37,7 @@ answers the arrow keys; without it each node is a link.
 
 ![Paths](img/templates/template-paths.png)
 
-**Source** is the template as stored, with line numbers and Copy. **Example**
+**Source** is the template as stored, with line numbers and Copy; **Download** in the More menu saves it as a file. **Example**
 is the composition the CDR generates for it, in the format, type and detail
 you pick.
 
@@ -79,7 +79,7 @@ An EHR's page names it, its subject masked until you press **Reveal** (with
 JavaScript off the reveal is a link),
 and its Queryable and Modifiable badges, on every tab. A revealed subject hides
 again after the time set in Your preferences (30 seconds unless you change
-it). **New composition** and **More** (Commit several changes, Create the directory, Delete EHR…) sit in the
+it). **New composition** and **More** (Commit several changes, Create the directory, Copy EHR id, Delete EHR…) sit in the
 header.
 
 ![An EHR](img/ehrs/ehr.png)
@@ -116,8 +116,8 @@ removes the EHR and everything in it; it needs the CDR's ADMIN role.
 ### Committing several changes at once
 
 **Commit several changes** builds one contribution: stage a new composition,
-an amended one or the EHR status, each with its document, then commit them
-together with a description. The CDR takes all of them or none: a refused
+an amended one or the EHR status, each with its document in an editor of its
+own, as many as you need, then commit them together with a description. The CDR takes all of them or none: a refused
 change keeps every staged change on the page beside the CDR's words.
 
 ## Compositions

@@ -147,10 +147,11 @@ pub async fn facts(ehr_id: &str) -> Result<EhrFacts, ViewerError> {
 }
 
 /// The More menu of an EHR: Commit several changes, Create the directory
-/// when it has none, then Delete EHR… last when the admin group is mounted.
+/// when it has none, Copy EHR id, then Delete EHR… last when the admin group
+/// is mounted.
 fn more(ehr_id: &str, facts: &EhrFacts) -> Menu {
     let mut items = vec![Item::new(Action::new(
-        Some(Glyph::FILE_PLUS),
+        Some(Glyph::GIT_COMMIT),
         tr(Msg::EhrCommitSeveral),
         Act::Link(format!("{}/contribution/new", ehr_href(ehr_id))),
     ))];
@@ -164,6 +165,11 @@ fn more(ehr_id: &str, facts: &EhrFacts) -> Menu {
             },
         )));
     }
+    items.push(Item::new(Action::new(
+        Some(Glyph::COPY),
+        tr(Msg::EhrCopyId),
+        Act::Copy(ehr_id.to_owned()),
+    )));
     let destructive = if facts.admin {
         vec![Item::new(Action::new(
             Some(Glyph::TRASH),
@@ -173,7 +179,6 @@ fn more(ehr_id: &str, facts: &EhrFacts) -> Menu {
     } else {
         Vec::new()
     };
-    // TODO(#3942): Copy EHR id joins the menu with FerroHEALTH/FerroUI#351.
     Menu::new("ehr-more", tr(Msg::EhrMore), items).destructive(destructive)
 }
 
