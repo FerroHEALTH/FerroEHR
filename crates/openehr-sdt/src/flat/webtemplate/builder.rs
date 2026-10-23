@@ -600,9 +600,9 @@ fn build_children(
 /// The concrete `DATA_VALUE` types an unconstrained `ELEMENT.value` admits, in
 /// the order they become choice alternatives: every non-generic, non-deprecated
 /// subtype of RM `data_types` (`DV_INTERVAL<T>` needs a parameter the OPT does
-/// not give, `DV_PARAGRAPH` is deprecated) except `DV_STATE`, whose FLAT build
-/// is not RM-valid yet.
-// TODO(#3934): admit DV_STATE once its FLAT build carries `value` and `is_terminal`.
+/// not give, `DV_PARAGRAPH` is deprecated) except `DV_STATE`.
+// NOTE: simplified_formats master05-rm_mapping has no DV_STATE table, so no FLAT key
+// can name one (#3936).
 const ANY_ELEMENT_VALUE_TYPES: [&str; 17] = [
     "DV_TEXT",
     "DV_CODED_TEXT",

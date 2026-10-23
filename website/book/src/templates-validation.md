@@ -423,8 +423,40 @@ node's canonical JSON verbatim under the `|raw` suffix:
 ```
 
 The embedded object **must** carry `_type` (without it, the key is treated as a
-normal leaf). `|raw` is write-only: retrieval always decomposes to regular FLAT
-keys.
+normal leaf). Retrieval decomposes a value into regular FLAT keys wherever the
+Simplified Formats define them, and returns `|raw` only for a value they cannot
+express: a stored value whose type differs from the template's, or a
+`DV_STATE`.
+
+### `DV_STATE` has no FLAT form
+
+The Simplified Formats RM mapping chapter has a table for each data value type
+it maps, and none for `DV_STATE` (RM `value: DV_CODED_TEXT`, `is_terminal:
+Boolean`). No specification governs a FLAT or STRUCTURED spelling for it, and
+FerroEHR invents none: a write that decomposes a `DV_STATE` node (`|code`,
+`|value`, a bare value) is refused with an error that names the node, and
+the node is sent and returned as `|raw` canonical JSON instead:
+
+```json
+{
+  "my_template/my_observation:0/process_state|raw": {
+    "_type": "DV_STATE",
+    "value": {
+      "_type": "DV_CODED_TEXT", "value": "completed",
+      "defining_code": {
+        "_type": "CODE_PHRASE",
+        "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "local"},
+        "code_string": "at0012"
+      }
+    },
+    "is_terminal": true
+  }
+}
+```
+
+The FLAT and STRUCTURED examples leave a `DV_STATE` node out, and an element
+whose value the template leaves open does not offer `DV_STATE` among its
+alternatives. The gap is reported upstream in #3936.
 
 ### Coded text and open value sets
 

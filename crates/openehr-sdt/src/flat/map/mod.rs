@@ -80,6 +80,8 @@ pub(crate) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out:
 ///   (`listOpen: false`).
 /// - [`FlatError::UnknownSuffix`] — a `|suffix` not defined for `rm_type`
 ///   (master05 per-type tables).
+/// - [`FlatError::NoSimplifiedForm`] — anything but `|raw` on a `DV_STATE`,
+///   a type master05 gives no mapping table.
 /// - [`FlatError::InvalidValue`] — the present datum parts do not form a value
 ///   of the leaf's type.
 pub(crate) fn build_leaf(
@@ -91,8 +93,9 @@ pub(crate) fn build_leaf(
     let base = base_type(rm_type);
 
     // `|raw` bypass (master04 §"Raw canonical JSON"): the value is embedded
-    // canonical RM JSON and MUST carry `_type`. Write-only — RM→FLAT always
-    // decomposes, so `emit_leaf` never produces `|raw`.
+    // canonical RM JSON and MUST carry `_type`. RM→FLAT produces it only for
+    // a value no master05 table can express (a `DV_STATE`, a non-conforming
+    // stored value).
     if let Some(raw) = node.attrs.get("raw") {
         if raw.get("_type").and_then(Value::as_str).is_some() {
             return Ok(raw.clone());
@@ -100,6 +103,15 @@ pub(crate) fn build_leaf(
         return Err(FlatError::InvalidRaw {
             path: path.to_owned(),
             reason: "the |raw payload must carry a _type property".to_owned(),
+        });
+    }
+
+    // NOTE: simplified_formats master05-rm_mapping has no DV_STATE table, so
+    // only `|raw` carries one (#3936).
+    if base == "DV_STATE" {
+        return Err(FlatError::NoSimplifiedForm {
+            rm_type: base.to_owned(),
+            path: path.to_owned(),
         });
     }
 
@@ -284,7 +296,7 @@ fn is_known_suffix(base: &str, suffix: &str) -> bool {
     ];
     let base_ok: &[&str] = match base {
         "DV_TEXT" | "DV_PARAGRAPH" => &["value", "formatting"],
-        "DV_CODED_TEXT" | "DV_STATE" => &[
+        "DV_CODED_TEXT" => &[
             "code",
             "value",
             "terminology",

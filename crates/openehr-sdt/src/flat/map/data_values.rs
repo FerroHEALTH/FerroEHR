@@ -111,7 +111,7 @@ pub(super) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out:
         }
         // master05 §DV_CODED_TEXT: `|value` (display), `|code`/`|terminology`
         // (defining_code), `|preferred_term`, `|formatting`.
-        "DV_CODED_TEXT" | "DV_STATE" => {
+        "DV_CODED_TEXT" => {
             put(out, "value", rm.get("value"));
             if let Some(dc) = rm.get("defining_code") {
                 let (code, term, pref) = code_phrase_parts(dc);
@@ -121,6 +121,9 @@ pub(super) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out:
             }
             put(out, "formatting", rm.get("formatting"));
         }
+        // master05 has no §DV_STATE table, so the value goes out whole as
+        // master04 §Raw canonical JSON (`|raw`), the one specified carrier.
+        "DV_STATE" => put(out, "raw", Some(rm)),
         // master05 §CODE_PHRASE.
         "CODE_PHRASE" => {
             let (code, term, pref) = code_phrase_parts(rm);
@@ -252,7 +255,7 @@ fn emit_multimedia(rm: &Value, out: &mut SimNode) {
 /// DV_MULTIMEDIA / DV_PARSABLE). Called from [`super::structures::emit_rm_attrs`].
 pub(super) fn emit_value_internal(rm: &Value, ty: &str, out: &mut SimNode) {
     match ty {
-        "DV_TEXT" | "DV_PARAGRAPH" | "DV_CODED_TEXT" | "DV_STATE" => emit_text_meta(rm, out),
+        "DV_TEXT" | "DV_PARAGRAPH" | "DV_CODED_TEXT" => emit_text_meta(rm, out),
         "DV_PARSABLE" => {
             emit_code_phrase_sub(rm.get("charset"), "_charset", out);
             emit_code_phrase_sub(rm.get("language"), "_language", out);
@@ -453,10 +456,7 @@ fn attach_ordered_internal(map: &mut Map<String, Value>, base: &str, node: &SimN
 }
 
 fn is_text_family(base: &str) -> bool {
-    matches!(
-        base,
-        "DV_TEXT" | "DV_PARAGRAPH" | "DV_CODED_TEXT" | "DV_STATE"
-    )
+    matches!(base, "DV_TEXT" | "DV_PARAGRAPH" | "DV_CODED_TEXT")
 }
 
 /// The single (index-0) occurrence of a `_`-family child, if present.
@@ -519,7 +519,7 @@ fn build_core(
 ) -> Option<Value> {
     match base {
         "DV_TEXT" | "DV_PARAGRAPH" => build_text(node, base),
-        "DV_CODED_TEXT" | "DV_STATE" => build_coded_text(node, base, wt),
+        "DV_CODED_TEXT" => build_coded_text(node, base, wt),
         "CODE_PHRASE" => build_code_phrase(node),
         "DV_QUANTITY" => build_quantity(node),
         "DV_COUNT" => build_count(node),

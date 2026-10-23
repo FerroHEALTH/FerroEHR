@@ -778,7 +778,7 @@ fn emit_leaf(node: &WebTemplateNode, base: &str, out: &mut Map<String, Value>) -
             // OPTIONAL leaf carrying it is omitted upstream in [`walk`].)
             put(out, base, "", json!(ehr_uri_example(node)));
         }
-        "DV_CODED_TEXT" | "DV_STATE" => emit_coded_text(node, base, out),
+        "DV_CODED_TEXT" => emit_coded_text(node, base, out),
         "CODE_PHRASE" => emit_code_phrase(node, base, out),
         "DV_QUANTITY" => emit_quantity(node, base, out),
         "DV_COUNT" => {
@@ -877,7 +877,8 @@ fn emit_leaf(node: &WebTemplateNode, base: &str, out: &mut Map<String, Value>) -
         // skipped rather than fabricated: an unset `ENTRY.subject` defaults
         // to PARTY_SELF and a `COMPOSITION.composer` comes from
         // `ctx/composer_*`, so inventing a named party here would put a
-        // fictitious person in the example. See the module NOTE.
+        // fictitious person in the example. See the module NOTE. A DV_STATE
+        // is left out too: master05 has no §DV_STATE table to spell it (#3936).
         _ => return false,
     }
     true

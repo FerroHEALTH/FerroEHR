@@ -32,7 +32,13 @@ use crate::flat::webtemplate::model::{
 pub(super) fn check_inputs(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
     let rm = wt.rm_type.split('<').next().unwrap_or(&wt.rm_type);
     match rm {
-        "DV_CODED_TEXT" | "DV_STATE" => check_coded_text(v, instance, wt),
+        "DV_CODED_TEXT" => check_coded_text(v, instance, wt),
+        // RM `data_types` §DV_STATE: the state's code sits on its `value`.
+        "DV_STATE" => {
+            if let Some(value) = instance.get("value") {
+                check_coded_text(v, value, wt);
+            }
+        }
         "CODE_PHRASE" => check_code_phrase(v, instance, wt),
         "DV_ORDINAL" | "DV_SCALE" => check_ordinal(v, instance, wt),
         "DV_QUANTITY" => check_quantity(v, instance, wt),
