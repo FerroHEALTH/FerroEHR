@@ -101,12 +101,17 @@ jobs:
               echo "the pull request moved past ${HEAD}; the run of its new head reads the pull request itself"
               exit 0
             fi
+            # A failed read is retried, never taken for a missing guard (#3951).
+            if ! jobs=$(gh run view "${run}" --json jobs \
+              --jq '.jobs[] | "\(.name)\t\(.databaseId) \(.conclusion)"'); then
+              sleep 15
+              continue
+            fi
             next=""
             for guard in "${guards[@]}"; do
               case "${handled}" in *" ${guard} "*) continue ;; esac
               job="" outcome=""
-              read -r job outcome < <(GUARD="${guard}" gh run view "${run}" --json jobs \
-                --jq '.jobs[] | select(.name == env.GUARD) | "\(.databaseId) \(.conclusion)"') || true
+              read -r job outcome < <(awk -F '\t' -v g="${guard}" '$1 == g { print $2; exit }' <<<"${jobs}") || true
               if [ -z "${job}" ]; then
                 echo "${guard} is not a job of CI run ${run}"
               elif stale "${outcome}"; then
