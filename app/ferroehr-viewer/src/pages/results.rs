@@ -8,16 +8,15 @@
 //! draw, as a line chart, and the exports.
 //!
 //! A run is a form post, and its results exist only in the page that answers
-//! it: the viewer keeps no store between requests. So Show as is a choice of
-//! the page's own form, applied by the next run, and each export is a submit
-//! of that same form sent to `/export/aql` ([`crate::export`]), since a form
-//! cannot hold another. No openEHR spec governs the viewer's pages: our own
-//! design.
+//! it: the viewer keeps no store between requests. So FerroUI's pane rides
+//! the page's own form: Table and Chart are submits of it that run the query
+//! again, and each export is a submit of it sent to `/export/aql/<format>`
+//! ([`crate::export`]), since a form cannot hold another. No openEHR spec
+//! governs the viewer's pages: our own design.
 
-use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Sorting, cell, data_table};
 use ferrohealth_ui::view::chart::{LineChart, Series};
-use ferrohealth_ui::view::segmented::choice_group;
+use ferrohealth_ui::view::results::{Export, ResultsPane, SHOWN, Shown, Switch, results_pane};
 use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
 use leptos::prelude::*;
 
@@ -26,27 +25,19 @@ use crate::chart_model::AxisScale;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{count, quiet, section};
 
-/// The name the Show as choice posts as.
-pub const SHOWN: &str = "shown";
+/// The name the view the results show rides as, so the next Run keeps it;
+/// the switch's own `shown` wins.
+const SHOWN_DEFAULT: &str = "default-shown";
 
 /// Whether the reader asked for the chart.
 #[must_use]
 pub fn chart_asked() -> bool {
-    crate::posted::posted().is_some_and(|posted| posted.text(SHOWN) == "chart")
-}
-
-/// The Show as choice, a field of the page's form `form`.
-#[must_use]
-pub fn shown_choice(chart: bool) -> AnyView {
-    choice_group(
-        SHOWN,
-        tr(Msg::ResultsShowAs),
-        &[
-            ("table", tr(Msg::ResultsTable)),
-            ("chart", tr(Msg::ResultsChart)),
-        ],
-        if chart { "chart" } else { "table" },
-    )
+    crate::posted::posted().is_some_and(|posted| {
+        posted
+            .get(SHOWN)
+            .or_else(|| posted.get(SHOWN_DEFAULT))
+            .is_some_and(|shown| shown.trim() == Shown::Chart.key())
+    })
 }
 
 /// The words of one result cell: a data value read as a person reads it (a
@@ -119,7 +110,6 @@ fn table(page: &ResultPage) -> AnyView {
     .into_any()
 }
 
-// TODO(#3942): E7 draws this section with FerroHEALTH/FerroUI#355.
 /// The numeric columns of a result set as a line chart over its first time
 /// column, or the row order; `None` when it has nothing to draw.
 fn chart(page: &ResultPage) -> Option<AnyView> {
@@ -151,6 +141,17 @@ fn chart(page: &ResultPage) -> Option<AnyView> {
         }
         _ => Vec::new(),
     };
+    let x_labels = match axis.scale {
+        AxisScale::Time => axis
+            .rows
+            .iter()
+            .filter_map(|row| {
+                crate::chart_model::time_point_label(row.x)
+                    .map(|label| (row.x, ferrohealth_ui::view::time::reading(&label)))
+            })
+            .collect(),
+        AxisScale::RowOrder => Vec::new(),
+    };
     let names: Vec<String> = model.series.iter().map(|spec| spec.name.clone()).collect();
     let chart = LineChart {
         id: "results-chart",
@@ -163,41 +164,28 @@ fn chart(page: &ResultPage) -> Option<AnyView> {
             ],
         ),
         series,
-        // TODO(#3942): each point carries its label with FerroHEALTH/FerroUI#358.
         x_ticks: ticks,
+        x_labels,
         y_range: None,
     };
     Some(
         view! {
-            <div class="fui-panel-body">
-                {line_chart(&chart, ChartWords::of_page())}
-                <p class="fui-small fui-muted">
-                    {tr_with(Msg::ResultsAxis, &[("axis", axis.label.clone().into())])}
-                </p>
-            </div>
+            {line_chart(&chart, ChartWords::of_page())}
+            <p class="fui-small fui-muted">
+                {tr_with(Msg::ResultsAxis, &[("axis", axis.label.clone().into())])}
+            </p>
         }
         .into_any(),
     )
 }
 
 /// An export of the run in `format`: a submit of the page's own form, which
-/// the Results section always sits in, sent to `/export/aql` instead.
-fn export(format: &'static str, words: String) -> AnyView {
-    view! {
-        <button
-            type="submit"
-            name="format"
-            value=format
-            formaction="/export/aql"
-            formmethod="post"
-            formnovalidate
-            class="fui-button fui-button-secondary fui-button-small"
-        >
-            {ferrohealth_ui::icon::icon(Glyph::DOWNLOAD, "14")}
-            {words}
-        </button>
+/// the Results section always sits in, sent to `/export/aql/<format>`.
+fn export(format: &str) -> Export {
+    Export::Submit {
+        action: format!("{}/{format}", crate::export::EXPORT_ROUTE),
+        form: None,
     }
-    .into_any()
 }
 
 /// What a run answered, as the Results section.
@@ -213,7 +201,7 @@ pub struct Answered<'a> {
     pub chart: bool,
 }
 
-/// The Results section of a run.
+/// The Results section of a run (E7).
 #[must_use]
 pub fn results(answered: &Answered<'_>) -> AnyView {
     let page = answered.page;
@@ -223,39 +211,36 @@ pub fn results(answered: &Answered<'_>) -> AnyView {
     } else {
         tr_with(Msg::ResultsWindow, &[("count", count(total))])
     };
-    let body = if total == 0 {
-        quiet(tr(Msg::ResultsNone))
-    } else if answered.chart {
-        chart(page).unwrap_or_else(|| {
-            view! {
-                <p class="fui-small fui-muted">{tr(Msg::ResultsNoChart)}</p>
-                {table(page)}
-            }
-            .into_any()
-        })
+    let asked = if answered.chart {
+        Shown::Chart
     } else {
-        table(page)
+        Shown::Table
     };
-    let actions = (total > 0).then(|| {
-        view! {
-            <div class="fui-cluster">
-                <input type="hidden" name="q" value=answered.aql.to_owned() />
-                <input type="hidden" name="parameters_json" value=answered.parameters.to_owned() />
-                {export("csv", tr(Msg::ResultsCsv))}
-                {export("json", tr(Msg::ResultsJson))}
-            </div>
-        }
-        .into_any()
-    });
-    section(
-        Some(tr(Msg::ResultsTitle)),
-        u64::try_from(total).ok(),
-        actions,
-        view! {
-            <p class="fui-results-window">{window}</p>
-            {body}
-        },
-    )
+    let drawn = if total == 0 { None } else { chart(page) };
+    let numeric = drawn.is_some();
+    let (shown, body) = match drawn.filter(|_| answered.chart) {
+        Some(chart) => (Shown::Chart, chart),
+        None if total == 0 => (Shown::Table, ().into_any()),
+        None => (Shown::Table, table(page)),
+    };
+    let body = view! {
+        <input type="hidden" name=SHOWN_DEFAULT value=asked.key() />
+        <input type="hidden" name="q" value=answered.aql.to_owned() />
+        <input type="hidden" name="parameters_json" value=answered.parameters.to_owned() />
+        {body}
+    }
+    .into_any();
+    results_pane(ResultsPane {
+        title: tr(Msg::ResultsTitle),
+        count: u64::try_from(total).unwrap_or(u64::MAX),
+        numeric,
+        shown,
+        switch: Switch::Form { form: None },
+        csv: export("csv"),
+        json: export("json"),
+        window,
+        body,
+    })
 }
 
 /// The Results section before a run.

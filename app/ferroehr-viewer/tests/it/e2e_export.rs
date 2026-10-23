@@ -24,11 +24,12 @@
 //! surface whose outcome is a file rather than a screen.
 //!
 //! Each export is a submit of the page's own form sent to the viewer's
-//! `/export/aql` route (`formaction`, `ferroehr_viewer::export`), so a browser
-//! click hands the bytes to the download manager and `WebDriver` never sees
-//! them. The journey therefore does what the button does: it runs the query on
-//! screen, reads the three fields the export reads (`q`, `parameters_json`,
-//! `format`) out of the DOM, lifts the browser's own session cookie off the
+//! `/export/aql/<format>` route (`formaction`, `ferroehr_viewer::export`), so a
+//! browser click hands the bytes to the download manager and `WebDriver` never
+//! sees them. The journey therefore does what the button does: it runs the
+//! query on screen, reads the two fields the export reads (`q`,
+//! `parameters_json`) and the button's own target out of the DOM, lifts the
+//! browser's own session cookie off the
 //! `WebDriver`, and re-posts exactly that request — so what it asserts is the
 //! button's own target answering the button's own request, under the button's
 //! own session.
@@ -73,23 +74,19 @@ struct PostedForm {
     q: String,
     /// The `parameters_json` field: the bindings object, empty when none.
     parameters_json: String,
-    /// The `format` field: `csv` or `json`.
-    format: String,
+    /// The button's own target: `/export/aql/csv` or `/export/aql/json`.
+    action: String,
 }
 
 /// What the export button `format` would post: the run's hidden `q` and
-/// `parameters_json` beside the Results section, and its own `format`.
+/// `parameters_json` in the Results section, to its own target.
 async fn posted_form(h: &Harness, format: &str) -> PostedForm {
-    let button = h
-        .wait_css(&format!(
-            "button[formaction='/export/aql'][name='format'][value='{format}']"
-        ))
-        .await;
-    assert_eq!(
-        button.attr("formmethod").await,
-        "post",
-        "the export posts the page's form"
-    );
+    let action = format!("/export/aql/{format}");
+    // NOTE: the button carries no `formmethod`, so the method is its form's, which must post.
+    h.wait_css(&format!(
+        "form[method='post' i] button[type='submit'][formaction='{action}']"
+    ))
+    .await;
     let field = async |name: &str| {
         h.wait_css(&format!("main input[type='hidden'][name='{name}']"))
             .await
@@ -99,7 +96,7 @@ async fn posted_form(h: &Harness, format: &str) -> PostedForm {
     PostedForm {
         q: field("q").await,
         parameters_json: field("parameters_json").await,
-        format: format.to_owned(),
+        action,
     }
 }
 
@@ -123,7 +120,8 @@ async fn session_cookie_header(h: &Harness) -> String {
         .join("; ")
 }
 
-/// POST the form to `/export/aql`, optionally carrying a session cookie.
+/// POST the form to the export button's target, optionally carrying a
+/// session cookie.
 ///
 /// Redirects are NOT followed: the route answers an unauthenticated caller with
 /// a redirect to `/login`, and following it would turn a refusal into a `200`
@@ -136,7 +134,7 @@ async fn post_export(base: &str, cookie: Option<&str>, form: &PostedForm) -> req
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .expect("an HTTP client that does not follow redirects");
-    let mut request = http.post(format!("{base}/export/aql"));
+    let mut request = http.post(format!("{base}{}", form.action));
     if let Some(cookie) = cookie {
         request = request.header("Cookie", cookie);
     }
@@ -144,7 +142,6 @@ async fn post_export(base: &str, cookie: Option<&str>, form: &PostedForm) -> req
         .form(&[
             ("q", form.q.as_str()),
             ("parameters_json", form.parameters_json.as_str()),
-            ("format", form.format.as_str()),
         ])
         .send()
         .await

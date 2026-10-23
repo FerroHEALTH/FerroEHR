@@ -18,19 +18,56 @@
     reason = "the viewer reads the CDR's configuration JSON tree to draw its leaves"
 )]
 
+use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::dialog::{Explanation, info_dialog};
 use ferrohealth_ui::view::secret::{SecretState, secret_state};
 use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::Header;
 use ferrohealth_ui::view::tabs::{Tab, TabRow};
-use ferrohealth_ui::view::template::settings::{Setting, SettingsPage, Source, settings_page};
+use ferrohealth_ui::view::template::settings::{How, Setting, SettingsPage, Source, settings_page};
 use leptos::prelude::*;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params_map;
 use serde_json::Value;
 
 use crate::locale::{Msg, tr};
+
+/// The id of the dialog the file line's How configuration works opens.
+const HOW_DIALOG: &str = "how-configuration";
+
+/// How configuration works: where the settings are read from, where the
+/// viewer shows them and how they change.
+fn how_dialog() -> AnyView {
+    info_dialog(
+        Explanation {
+            id: HOW_DIALOG.into(),
+            title: tr(Msg::ConfigHowTitle).into(),
+        },
+        view! {
+            <p>{tr(Msg::ConfigHowReads)}</p>
+            <div class="fui-ownership">
+                <div>
+                    <h3>
+                        {ferrohealth_ui::icon::icon(Glyph::FILE_TEXT, "16")}
+                        {tr(Msg::ConfigHowWhereTitle)}
+                    </h3>
+                    <p class="fui-small fui-muted">{tr(Msg::ConfigHowWhere)}</p>
+                </div>
+                <div>
+                    <h3>
+                        {ferrohealth_ui::icon::icon(Glyph::REFRESH_CW, "16")}
+                        {tr(Msg::ConfigHowChangeTitle)}
+                    </h3>
+                    <p class="fui-small fui-muted">{tr(Msg::ConfigHowChange)}</p>
+                </div>
+            </div>
+            <p class="fui-small fui-muted">{tr(Msg::ConfigHowNothing)}</p>
+        },
+    )
+    .into_any()
+}
 use crate::pages::common::{awaited, refused};
 
 /// The sections of Configuration, each with the top-level keys of the CDR's
@@ -331,7 +368,7 @@ pub fn ConfigurationPage() -> impl IntoView {
                 } else {
                     "ferroehr.toml".to_owned()
                 },
-                how: tr(Msg::ConfigHow),
+                how: How::Dialog(HOW_DIALOG.into()),
             },
             tabs: Some(TabRow {
                 label: tr(Msg::ConfigSections),
@@ -344,6 +381,7 @@ pub fn ConfigurationPage() -> impl IntoView {
         view! {
             {page}
             {trouble}
+            {how_dialog()}
         }
         .into_any()
     });

@@ -95,8 +95,8 @@ password screens to find; those live in the CDR's configuration and in your
 IdP.
 
 The button with your name at the end of the top bar opens the user menu: who
-is signed in and how, Your preferences, the theme, Keyboard shortcuts and Sign
-out.
+is signed in and how, Your preferences, Your access, the theme, Keyboard
+shortcuts and Sign out.
 
 ![User menu](img/dashboard/user-menu.png)
 
@@ -110,7 +110,7 @@ whose scopes are listed), every scope on the session read as its parsed grant
 read, update, delete and search it permits, with a *broad access* marker on a
 bare `*`), and a previewer: paste any scope or a whole claim, press **Read
 it**, and read the same rendering. A malformed scope says what the grammar
-expected. Server's SMART tab links here.
+expected. The user menu and Server's SMART tab link here.
 
 The reading parses with the same grammar the CDR's SMART on openEHR
 enforcement reads, so the two cannot drift. Scopes narrow access and never
@@ -144,7 +144,8 @@ on every signed-in page: this deployment must not hold real patient data,
 with the number of production separations the server reported as open (a
 shared database credential, a shared cluster, no subject pseudonym namespace,
 no durable audit trail, schema preparation on the runtime credential).
-A production deployment raises no band. The
+Its **Details** opens Server's Overview, which names each one. A production
+deployment raises no band. The
 quickstart and the composed stacks run as `sandbox`; a CDR older than the
 profile reports none and the viewer claims nothing. See the
 [deployment profile](../installation/configuration.md#deployment_profile) in

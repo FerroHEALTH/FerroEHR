@@ -8,55 +8,106 @@
 //! grammar the CDR's scope gate enforces with
 //! (`docs/specs/openehr/ITS-REST/docs/smart_app_launch/master08-scopes.adoc`
 //! §Resource Scopes), so the page never explains a scope the CDR would refuse
-//! as a grant ([`crate::scopes`]). FerroUI's scope grant (`view::scope`) draws
-//! the breakdown. A scope narrows what a token may ask for and grants nothing
-//! by itself: the CDR decides every request. No openEHR spec governs the
-//! viewer: our own design.
+//! as a grant ([`crate::scopes`]). The grant FerroUI's scope list
+//! (`view::scope`) draws is built from that parse. A scope narrows what a
+//! token may ask for and grants nothing by itself: the CDR decides every
+//! request. No openEHR spec governs the viewer: our own design.
 
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::form::Field;
-use ferrohealth_ui::view::scope::{Grant, ScopeGrant, scope_grants};
+use ferrohealth_ui::view::scope::{
+    Compartment, Grant, Operation, Operations, Request, Scope, ScopeGrant, scope_grants,
+};
 use ferrohealth_ui::view::surface::{Header, definitions, page_heading};
 use ferrohealth_ui::view::transform::{Density, Run, RunState, run_button, transform_options};
 use leptos::prelude::*;
 use leptos_meta::Title;
+use openehr_sdt::smart_scopes::{self, Permissions, SmartScope};
 
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{card_panel, quiet, section};
 use crate::scopes::GrantDetail;
 
-/// The grant FerroUI draws for `raw`, its verdict the CDR's grammar's.
+/// The grant FerroUI draws for `raw`, built from the CDR's grammar: its
+/// verdict, its compartment, its resource and its operations.
 #[must_use]
 pub fn grant_of(raw: &str) -> ScopeGrant {
     let reading = crate::scopes::grant(raw);
-    match reading.detail {
-        GrantDetail::Unrecognized { expected } => ScopeGrant {
-            raw: raw.to_owned(),
-            grant: Grant::Refused(
-                expected
-                    .unwrap_or_else(|| tr(Msg::ScopeNotRecognised))
-                    .into(),
+    let grant = match (SmartScope::parse(raw), reading.detail) {
+        (SmartScope::Resource(scope), GrantDetail::Resource(resource)) => Grant::Granted {
+            scope: Scope {
+                compartment: compartment(scope.compartment),
+                resource: scope.resource.to_string(),
+                operations: operations(scope.permissions),
+                constraint: None,
+            },
+            resource: tr_with(
+                Msg::ScopeResource,
+                &[
+                    ("family", resource.family.into()),
+                    ("pattern", resource.pattern.into()),
+                ],
             ),
+            broad: resource.broad,
         },
-        GrantDetail::Resource(resource) => ScopeGrant::read(raw, |_| {
-            (
-                tr_with(
-                    Msg::ScopeResource,
-                    &[
-                        ("family", resource.family.clone().into()),
-                        ("pattern", resource.pattern.clone().into()),
-                    ],
-                ),
-                resource.broad,
-            )
+        (SmartScope::Launch, _) => Grant::Request(Request::Launch),
+        (SmartScope::LaunchContext(context), _) => Grant::Request(Request::LaunchContext {
+            resource: context.to_string(),
+            role: None,
         }),
-        GrantDetail::Context { .. } | GrantDetail::Identity { .. } => {
-            ScopeGrant::read(raw, |_| (String::new(), false))
-        }
+        (SmartScope::Identity(name), _) => match identity(&name) {
+            Some(request) => Grant::Request(request),
+            // TODO(#3946): FerroUI reads `profile` with FerroHEALTH/FerroUI#373.
+            None => ScopeGrant::read(raw, |_| (String::new(), false)).grant,
+        },
+        (_, GrantDetail::Unrecognized { expected }) => Grant::Refused(
+            expected
+                .unwrap_or_else(|| tr(Msg::ScopeNotRecognised))
+                .into(),
+        ),
+        (_, _) => Grant::Refused(tr(Msg::ScopeNotRecognised).into()),
+    };
+    ScopeGrant {
+        raw: raw.to_owned(),
+        grant,
     }
 }
 
-// TODO(#3942): the CDR grammar builds the grant with FerroHEALTH/FerroUI#350.
+/// FerroUI's compartment for the CDR's.
+const fn compartment(compartment: smart_scopes::Compartment) -> Compartment {
+    match compartment {
+        smart_scopes::Compartment::Patient => Compartment::Patient,
+        smart_scopes::Compartment::User => Compartment::User,
+        smart_scopes::Compartment::System => Compartment::System,
+    }
+}
+
+/// FerroUI's operations for the CDR's permissions.
+fn operations(permissions: Permissions) -> Operations {
+    [
+        (permissions.create, Operation::Create),
+        (permissions.read, Operation::Read),
+        (permissions.update, Operation::Update),
+        (permissions.delete, Operation::Delete),
+        (permissions.search, Operation::Search),
+    ]
+    .into_iter()
+    .filter_map(|(permitted, operation)| permitted.then_some(operation))
+    .collect()
+}
+
+/// FerroUI's request for an identity scope the CDR reads, `None` for one
+/// FerroUI has no words for.
+fn identity(name: &str) -> Option<Request> {
+    match name {
+        "openid" => Some(Request::OpenId),
+        "fhirUser" => Some(Request::FhirUser),
+        "online_access" => Some(Request::OnlineAccess),
+        "offline_access" => Some(Request::OfflineAccess),
+        _ => None,
+    }
+}
+
 /// The grants of every scope in `claim`, space-separated.
 #[must_use]
 pub fn grants_of(claim: &str) -> Vec<ScopeGrant> {
@@ -185,5 +236,61 @@ pub fn AccessPage() -> impl IntoView {
         <Title text=tr(Msg::YourAccess) />
         {heading}
         <div class="fui-stack">{body}</div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ferrohealth_ui::view::scope::{Compartment, Grant, Operation, Request};
+
+    use super::grant_of;
+
+    #[test]
+    fn a_resource_scope_is_drawn_from_the_cdr_parse() {
+        let Grant::Granted {
+            scope,
+            resource,
+            broad,
+        } = grant_of("patient/composition-*.rs").grant
+        else {
+            panic!("the CDR reads a resource scope");
+        };
+        assert_eq!(scope.compartment, Compartment::Patient);
+        assert_eq!(scope.resource, "composition-*");
+        assert!(scope.operations.permits(Operation::Read));
+        assert!(scope.operations.permits(Operation::Search));
+        assert!(!scope.operations.permits(Operation::Create));
+        assert!(!resource.is_empty(), "the resource is said in words");
+        assert!(broad, "a bare `*` is broad");
+    }
+
+    #[test]
+    fn an_aql_scope_the_cdr_reads_is_granted_with_its_own_resource() {
+        let Grant::Granted { scope, broad, .. } = grant_of("system/aql-MyQuery.sdurc").grant else {
+            panic!("the CDR reads an AQL scope");
+        };
+        assert_eq!(scope.compartment, Compartment::System);
+        assert_eq!(scope.resource, "aql-MyQuery");
+        for operation in Operation::ALL {
+            assert!(scope.operations.permits(operation), "{operation:?}");
+        }
+        assert!(!broad, "an exact name is narrow");
+    }
+
+    #[test]
+    fn identity_and_launch_scopes_are_requests_and_a_typo_is_refused() {
+        assert_eq!(grant_of("openid").grant, Grant::Request(Request::OpenId));
+        assert_eq!(grant_of("launch").grant, Grant::Request(Request::Launch));
+        assert_eq!(
+            grant_of("launch/patient").grant,
+            Grant::Request(Request::LaunchContext {
+                resource: "patient".to_owned(),
+                role: None,
+            })
+        );
+        assert!(matches!(
+            grant_of("patient/composition-*.rx").grant,
+            Grant::Refused(_)
+        ));
     }
 }

@@ -2403,24 +2403,16 @@ messages! {
     BrandWord = "brand-word",
     /// `CDR unreachable`
     CdrUnreachableCode = "cdr-unreachable-code",
-    /// `{ $count ->`
-    DaysAgo = "days-ago",
     /// `Discard`
     Discard = "discard",
     /// `Decision`
     DockLabel = "dock-label",
     /// `You are signed in as { $who }, and the CDR shows this only to { $needs }.`
     ForbiddenBody = "forbidden-body",
-    /// `{ $count } h ago`
-    HoursAgo = "hours-ago",
     /// `Viewer error`
     InternalCode = "internal-code",
     /// `Not sent`
     InvalidCode = "invalid-code",
-    /// `just now`
-    JustNow = "just-now",
-    /// `{ $count } min ago`
-    MinutesAgo = "minutes-ago",
     /// `About`
     NavAbout = "nav-about",
     /// `Audit log`
@@ -2473,6 +2465,8 @@ messages! {
     PillUp = "pill-up",
     /// `FerroEHR Viewer`
     ProductName = "product-name",
+    /// `Details`
+    SandboxDetails = "sandbox-details",
     /// `{ $count ->`
     SandboxGaps = "sandbox-gaps",
     /// `This deployment must not hold real patient data.`
@@ -2487,8 +2481,6 @@ messages! {
     SearchSubmit = "search-submit",
     /// `Search waits for the CDR`
     SearchWaits = "search-waits",
-    /// `{ $count } s ago`
-    SecondsAgo = "seconds-ago",
     /// `Session ended`
     SessionEndedCode = "session-ended-code",
     /// `Sign in at { $host }`
@@ -2729,6 +2721,8 @@ messages! {
     EhrDeleteTitle = "ehr-delete-title",
     /// `More actions`
     EhrMore = "ehr-more",
+    /// `Copy EHR id`
+    EhrCopyId = "ehr-copy-id",
     /// `Create EHR`
     EhrNewCreate = "ehr-new-create",
     /// `EHR id`
@@ -2953,6 +2947,8 @@ messages! {
     DirectoryHistoryRefused = "directory-history-refused",
     /// `More directory actions`
     DirectoryMore = "directory-more",
+    /// `Copy the directory id`
+    DirectoryCopyId = "directory-copy-id",
     /// `New folder`
     DirectoryNewFolder = "directory-new-folder",
     /// `The directory has no folder at { $path }; the whole tree is shown.`
@@ -3225,6 +3221,8 @@ messages! {
     CompositionLineOlder = "composition-line-older",
     /// `More actions for the composition`
     CompositionMore = "composition-more",
+    /// `Copy the id`
+    CompositionCopyId = "composition-copy-id",
     /// `The new composition`
     CompositionNewEditorLabel = "composition-new-editor-label",
     /// `New composition`
@@ -3391,6 +3389,8 @@ messages! {
     PartyLine = "party-line",
     /// `More actions for the party`
     PartyMore = "party-more",
+    /// `Copy the id`
+    PartyCopyId = "party-copy-id",
     /// `The new party`
     PartyNewEditorLabel = "party-new-editor-label",
     /// `A starting document for a { $kind }.`
@@ -3455,6 +3455,8 @@ messages! {
     RelationshipLine = "relationship-line",
     /// `More actions for the relationship`
     RelationshipMore = "relationship-more",
+    /// `Copy the id`
+    RelationshipCopyId = "relationship-copy-id",
     /// `New relationship`
     RelationshipNewPageTitle = "relationship-new-page-title",
     /// `From this party to another.`
@@ -3547,6 +3549,8 @@ messages! {
     TemplateLanguages = "template-languages",
     /// `More actions for the template`
     TemplateMore = "template-more",
+    /// `Copy id`
+    TemplateCopyId = "template-copy-id",
     /// `The CDR sent no operational template to build paths from.`
     TemplateNoCatalog = "template-no-catalog",
     /// `The CDR built no example for these options.`
@@ -3727,6 +3731,8 @@ messages! {
     QueriesLine = "queries-line",
     /// `More actions for the stored query`
     QueriesMore = "queries-more",
+    /// `Copy name`
+    QueriesCopyName = "queries-copy-name",
     /// `Namespace { $value }`
     QueriesNamespaceChip = "queries-namespace-chip",
     /// `older version`
@@ -3879,26 +3885,12 @@ messages! {
     QueryWays = "query-ways",
     /// `The x axis is { $axis }, at its true spacing.`
     ResultsAxis = "results-axis",
-    /// `Chart`
-    ResultsChart = "results-chart",
     /// `The numeric columns over the results`
     ResultsChartLabel = "results-chart-label",
     /// `{ $series } over { $axis }.`
     ResultsChartSummary = "results-chart-summary",
-    /// `CSV`
-    ResultsCsv = "results-csv",
-    /// `JSON`
-    ResultsJson = "results-json",
-    /// `These results have no numbers to draw, so they are shown as a table.`
-    ResultsNoChart = "results-no-chart",
-    /// `The query matched no row.`
-    ResultsNone = "results-none",
     /// `Run the query to see its rows here.`
     ResultsNotRun = "results-not-run",
-    /// `Show as`
-    ResultsShowAs = "results-show-as",
-    /// `Table`
-    ResultsTable = "results-table",
     /// `Results`
     ResultsTitle = "results-title",
     /// `{ $count ->`
@@ -3997,8 +3989,20 @@ messages! {
     ConfigCdrBasePathLine = "config-cdr-base-path-line",
     /// `Deployment`
     ConfigDeployment = "config-deployment",
-    /// `read at start; change the file and restart to change a setting`
-    ConfigHow = "config-how",
+    /// `How configuration works`
+    ConfigHowTitle = "config-how-title",
+    /// `The CDR reads ferroehr.toml once at start, ...`
+    ConfigHowReads = "config-how-reads",
+    /// `Where you see it`
+    ConfigHowWhereTitle = "config-how-where-title",
+    /// `Here, read-only: the CDR's settings as it serves them, redacted, and the viewer's own.`
+    ConfigHowWhere = "config-how-where",
+    /// `How you change it`
+    ConfigHowChangeTitle = "config-how-change-title",
+    /// `Change the file, review it, and restart the CDR or the viewer.`
+    ConfigHowChange = "config-how-change",
+    /// `Nothing here can be changed from the viewer: the database holds clinical data, never settings.`
+    ConfigHowNothing = "config-how-nothing",
     /// `Session idle time`
     ConfigIdle = "config-idle",
     /// `A session ends after this long without a request.`

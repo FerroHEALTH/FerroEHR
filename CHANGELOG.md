@@ -17,7 +17,7 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
-- **The viewer is rebuilt on FerroUI 0.3.3** (#3932, FerroHEALTH/FerroUI#161).
+- **The viewer is rebuilt on FerroUI 0.3.4** (#3932, #3942, FerroHEALTH/FerroUI#161).
   Every screen follows the FerroEHR mockups of FerroUI's
   `design/consoles/ferroehr/` at 1440 and 390 px, light and dark, with
   FerroUI's components and none of the viewer's own copies. The viewer now
@@ -63,6 +63,11 @@ workflow refuses a tag that has no matching section here.
 - **The dashboard's compositions per day count commits**, read from each
   version's `commit_audit/time_committed`, as its note says; it counted
   context start times before.
+- **A query's results are FerroUI's results pane** (#3942). Table and Chart
+  sit in the Results heading and run the query again in the view chosen, which
+  the next Run keeps; the separate Show as choice is gone. The exports post
+  to `/export/aql/csv` and `/export/aql/json`, and `/export/aql` with a
+  `format` field no longer answers.
 
 ### Added
 
@@ -76,6 +81,17 @@ workflow refuses a tag that has no matching section here.
   the `ui-route-shots` artifact (#3910). Keyboard journeys cover where the
   focus lands after a route change, the query builder by keyboard, and the user
   menu's keyboard pattern (#2793).
+- **The parts the FerroEHR mockups draw and FerroUI 0.3.4 now carries**
+  (#3942): Your access in the user menu; Details on the sandbox band, leading
+  to Server's Overview; Copy the id (or the name) in the More menus of an EHR,
+  a directory, a composition, a party, a relationship, a template and a stored
+  query; Save to the CDR beside Run in Query's header; relative times in
+  FerroUI's words; one editor per staged change of a new contribution, with no
+  cap of twelve; the contribution glyph; Discard that leaves a form with an
+  empty required field, so the relationship and subscription editors mark
+  their required fields again; the time of each point in a chart's figures
+  table; Your access's grants built from the CDR's own reading of each scope;
+  and the How configuration works dialog on Configuration.
 
 ### Removed
 

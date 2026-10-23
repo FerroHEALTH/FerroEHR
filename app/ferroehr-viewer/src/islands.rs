@@ -29,6 +29,8 @@
     reason = "the #[island] macro writes an undocumented struct of each island's props as they cross to the browser"
 )]
 
+use std::borrow::Cow;
+
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::view::diagnostics::{DiagnosticsWords, FileFindings, Position};
 use ferrohealth_ui::widget::editor::{
@@ -152,44 +154,20 @@ pub enum EditorField {
     /// An AQL query.
     Aql,
     /// The document of one change a new contribution stages, by its number.
-    Staged(u8),
+    Staged(u16),
 }
 
-// TODO(#3942): the cap goes with FerroHEALTH/FerroUI#353.
-/// The most changes one new contribution stages.
-pub const MAX_STAGED: u8 = 12;
-
-/// The field names of the staged changes' documents, `staged-1` onward.
-// NOTE: FerroUI `widget::editor::Editor::id` takes `&'static str`, so the names are a fixed table.
-const STAGED_FIELDS: [&str; 12] = [
-    "staged-1",
-    "staged-2",
-    "staged-3",
-    "staged-4",
-    "staged-5",
-    "staged-6",
-    "staged-7",
-    "staged-8",
-    "staged-9",
-    "staged-10",
-    "staged-11",
-    "staged-12",
-];
-
 impl EditorField {
-    /// The text area's id and the name the form posts it as.
+    /// The text area's id and the name the form posts it as, `staged-3` for
+    /// the third staged change.
     #[must_use]
-    pub fn name(self) -> &'static str {
+    pub fn name(self) -> Cow<'static, str> {
         match self {
-            Self::Document => "document",
-            Self::OtherDetails => "other_details",
-            Self::Details => "details",
-            Self::Aql => "aql",
-            Self::Staged(number) => number
-                .checked_sub(1)
-                .and_then(|index| STAGED_FIELDS.get(usize::from(index)))
-                .copied()
-                .unwrap_or("staged"),
+            Self::Document => "document".into(),
+            Self::OtherDetails => "other_details".into(),
+            Self::Details => "details".into(),
+            Self::Aql => "aql".into(),
+            Self::Staged(number) => format!("staged-{number}").into(),
         }
     }
 }
@@ -253,9 +231,6 @@ pub fn CodeEditor(
         language: language.language(),
         text: text.into(),
         marks,
-        // NOTE: leptos-ui.md §15.8: a page works with no WebAssembly, so the text area is editable
-        // from the first paint and never waits for the island.
-        // TODO(#3942): the editor's own contract replaces this with FerroHEALTH/FerroUI#356.
         editable: Signal::stored(true),
     };
     let panel = editor_panel(

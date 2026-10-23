@@ -491,7 +491,7 @@ pub fn NewPartyPage() -> impl IntoView {
         let text = posted
             .as_ref()
             .filter(|posted| posted.intent() != "kind")
-            .and_then(|posted| posted.get(EditorField::Document.name()))
+            .and_then(|posted| posted.get(&EditorField::Document.name()))
             .unwrap_or_else(|| starter(kind));
         let mut top = None;
         let mut findings = None;
@@ -510,7 +510,7 @@ pub fn NewPartyPage() -> impl IntoView {
                 }
                 Err(error) => {
                     line = (Glyph::CIRCLE_X, tr(Msg::PartyNotCreated));
-                    findings = findings_of(&error, &text, EditorField::Document.name());
+                    findings = findings_of(&error, &text, &EditorField::Document.name());
                     top = Some(refused(tr(Msg::PartyCreateRefused), &error, None));
                 }
             }
@@ -1163,6 +1163,15 @@ pub fn PartyPage() -> impl IntoView {
     view! { {page} }
 }
 
+/// The More menu's Copy the id of the party `uid`.
+fn copy_party_id(uid: &str) -> Item {
+    Item::new(Action::new(
+        Some(Glyph::COPY),
+        tr(Msg::PartyCopyId),
+        Act::Copy(uid.to_owned()),
+    ))
+}
+
 /// The header of a party: its name, kind and version line, and Edit with the
 /// More menu; a deleted party says when it was deleted.
 fn party_header(
@@ -1182,6 +1191,11 @@ fn party_header(
                     &[("version", last.unwrap_or_default().to_owned().into())],
                 ),
                 Act::Link(party_tab_href(kind, uid, PartyTab::Versions, last)),
+            ))
+            .more(Menu::new(
+                "party-more",
+                tr(Msg::PartyMore),
+                vec![copy_party_id(uid)],
             )),
             tr_with(
                 Msg::PartyDeletedLine,
@@ -1201,15 +1215,18 @@ fn party_header(
         let more = Menu::new(
             "party-more",
             tr(Msg::PartyMore),
-            vec![Item::new(Action::new(
-                Some(Glyph::LINK),
-                tr(Msg::PartyRelate),
-                Act::Link(format!(
-                    "/parties/relationships/new?source_kind={}&source={}",
-                    kind.segment(),
-                    urlencoding::encode(uid)
+            vec![
+                Item::new(Action::new(
+                    Some(Glyph::LINK),
+                    tr(Msg::PartyRelate),
+                    Act::Link(format!(
+                        "/parties/relationships/new?source_kind={}&source={}",
+                        kind.segment(),
+                        urlencoding::encode(uid)
+                    )),
                 )),
-            ))],
+                copy_party_id(uid),
+            ],
         )
         .destructive(vec![Item::new(Action::new(
             Some(Glyph::TRASH),
@@ -1303,7 +1320,7 @@ pub fn EditPartyPage() -> impl IntoView {
             .unwrap_or_else(|| state.version_uid.clone());
         let text = posted
             .as_ref()
-            .and_then(|posted| posted.get(EditorField::Document.name()))
+            .and_then(|posted| posted.get(&EditorField::Document.name()))
             .unwrap_or_else(|| current.clone());
         let name = display_name(&state);
         let mut top = None;
@@ -1337,7 +1354,7 @@ pub fn EditPartyPage() -> impl IntoView {
                 }
                 Err(error) => {
                     line = (Glyph::CIRCLE_X, tr(Msg::EditorNotSaved));
-                    findings = findings_of(&error, &text, EditorField::Document.name());
+                    findings = findings_of(&error, &text, &EditorField::Document.name());
                     let conflict = is_status(&error, http::StatusCode::PRECONDITION_FAILED);
                     if conflict {
                         blocked = Some(tr(Msg::EditorReloadFirst));
@@ -1545,12 +1562,20 @@ pub fn RelationshipPage() -> impl IntoView {
         if let Some(href) = source_href.clone() {
             trail.push(Crumb::new(shortened(&state.source.id), href));
         }
-        let more = Menu::new("relationship-more", tr(Msg::RelationshipMore), Vec::new())
-            .destructive(vec![Item::new(Action::new(
-                Some(Glyph::TRASH),
-                tr(Msg::RelationshipDelete),
-                Act::Dialog(DELETE_RELATIONSHIP.to_owned()),
-            ))]);
+        let more = Menu::new(
+            "relationship-more",
+            tr(Msg::RelationshipMore),
+            vec![Item::new(Action::new(
+                Some(Glyph::COPY),
+                tr(Msg::RelationshipCopyId),
+                Act::Copy(uid.clone()),
+            ))],
+        )
+        .destructive(vec![Item::new(Action::new(
+            Some(Glyph::TRASH),
+            tr(Msg::RelationshipDelete),
+            Act::Dialog(DELETE_RELATIONSHIP.to_owned()),
+        ))]);
         let heading = page_heading(
             Header {
                 title: state.name.clone().into(),
@@ -1669,7 +1694,7 @@ pub fn NewRelationshipPage() -> impl IntoView {
         PartyKind::from_segment(&field("target_kind")).unwrap_or(PartyKind::Organisation);
     let details = posted
         .as_ref()
-        .and_then(|posted| posted.get(EditorField::Details.name()))
+        .and_then(|posted| posted.get(&EditorField::Details.name()))
         .unwrap_or_default();
     let back = party_tab_href(source_kind, &source, PartyTab::Relationships, None);
     if discarded(posted.as_ref()) {
@@ -1769,6 +1794,7 @@ pub fn NewRelationshipPage() -> impl IntoView {
                                     name="type"
                                     type="text"
                                     class="fui-input fui-mono"
+                                    required
                                     value=kind_type.clone()
                                 />
                             },
@@ -1795,6 +1821,7 @@ pub fn NewRelationshipPage() -> impl IntoView {
                                     type="text"
                                     class="fui-input fui-mono"
                                     spellcheck="false"
+                                    required
                                     value=target.clone()
                                 />
                             },
@@ -1866,7 +1893,7 @@ pub fn EditRelationshipPage() -> impl IntoView {
             .map_or_else(|| state.name.clone(), |posted| posted.text("type"));
         let details = posted
             .as_ref()
-            .and_then(|posted| posted.get(EditorField::Details.name()))
+            .and_then(|posted| posted.get(&EditorField::Details.name()))
             .unwrap_or_else(|| state.details.clone());
         let mut top = None;
         let mut blocked = None;
@@ -1986,6 +2013,7 @@ pub fn EditRelationshipPage() -> impl IntoView {
                                                             name="type"
                                                             type="text"
                                                             class="fui-input fui-mono"
+                                                            required
                                                             value=name.clone()
                                                         />
                                                     },

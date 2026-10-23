@@ -489,6 +489,15 @@ async fn act(
     }
 }
 
+/// The More menu's Copy the id of the composition `uid`.
+fn copy_id(uid: &str) -> Item {
+    Item::new(Action::new(
+        Some(Glyph::COPY),
+        tr(Msg::CompositionCopyId),
+        Act::Copy(uid.to_owned()),
+    ))
+}
+
 /// The composition's header: its name, its template and context line, and
 /// Edit with the More menu; a deleted composition says when it was deleted.
 fn header(
@@ -499,7 +508,11 @@ fn header(
     reading: Option<&str>,
     deleted: Option<&VersionEntry>,
 ) -> AnyView {
-    let more = Menu::new("composition-more", tr(Msg::CompositionMore), Vec::new());
+    let more = Menu::new(
+        "composition-more",
+        tr(Msg::CompositionMore),
+        vec![copy_id(uid)],
+    );
     let (actions, subtitle, badge) = if let Some(deletion) = deleted {
         let last = version_number(&deletion.version_id)
             .parse::<u32>()
@@ -514,7 +527,8 @@ fn header(
                     &[("version", last.clone().into())],
                 ),
                 Act::Link(tab_href(ehr_id, uid, CompTab::Reading, Some(&last))),
-            )),
+            ))
+            .more(more),
             tr_with(
                 Msg::CompositionDeletedLine,
                 &[
@@ -965,7 +979,7 @@ pub fn EditCompositionPage() -> impl IntoView {
             .unwrap_or_else(|| latest.clone());
         let text = posted
             .as_ref()
-            .and_then(|posted| posted.get(EditorField::Document.name()))
+            .and_then(|posted| posted.get(&EditorField::Document.name()))
             .unwrap_or_else(|| current.clone());
         let head = Head::of(&current);
         let mut top = None;
@@ -991,7 +1005,7 @@ pub fn EditCompositionPage() -> impl IntoView {
                 }
                 Err(error) => {
                     line = (Glyph::CIRCLE_X, tr(Msg::EditorNotSaved));
-                    findings = findings_of(&error, &text, EditorField::Document.name());
+                    findings = findings_of(&error, &text, &EditorField::Document.name());
                     let conflict = is_status(&error, http::StatusCode::PRECONDITION_FAILED);
                     if conflict {
                         blocked = Some(tr(Msg::EditorReloadFirst));
@@ -1136,7 +1150,7 @@ pub fn NewCompositionPage() -> impl IntoView {
             .unwrap_or_default();
         let text = posted
             .as_ref()
-            .and_then(|posted| posted.get(EditorField::Document.name()))
+            .and_then(|posted| posted.get(&EditorField::Document.name()))
             .unwrap_or_default();
         let mut top = None;
         let mut findings = None;
@@ -1163,7 +1177,7 @@ pub fn NewCompositionPage() -> impl IntoView {
                 }
                 Err(error) => {
                     line = (Glyph::CIRCLE_X, tr(Msg::CompositionNotCommitted));
-                    findings = findings_of(&error, &text, EditorField::Document.name());
+                    findings = findings_of(&error, &text, &EditorField::Document.name());
                     top = Some(refused(tr(Msg::CompositionCommitRefused), &error, None));
                 }
             }

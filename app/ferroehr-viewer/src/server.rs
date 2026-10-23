@@ -57,7 +57,7 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
         // Result export: a plain form-POST download (no WASM required); the
         // handler enforces the viewer session itself like every server fn.
         .route(
-            "/export/aql",
+            "/export/aql/{format}",
             axum::routing::post(crate::export::export_aql),
         )
         // FerroUI's stylesheet and its FerroEHR theme, served from this origin

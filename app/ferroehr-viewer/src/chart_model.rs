@@ -404,11 +404,30 @@ pub fn time_tick_label(seconds: f64, span_seconds: f64) -> String {
     }
 }
 
+/// The instant of one point of a time axis, `seconds` since the Unix epoch,
+/// in RFC 3339 form for the figures table to read; `None` when it is no
+/// representable instant.
+#[must_use]
+pub fn time_point_label(seconds: f64) -> Option<String> {
+    if !seconds.is_finite() || seconds.abs() > 1e12 {
+        return None;
+    }
+    #[expect(
+        clippy::as_conversions,
+        clippy::cast_possible_truncation,
+        reason = "range-guarded immediately above"
+    )]
+    let timestamp = jiff::Timestamp::from_second(seconds as i64).ok()?;
+    Some(timestamp.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
 
-    use super::{AxisScale, ChartRow, derive, iso_epoch_seconds, time_tick_label};
+    use super::{
+        AxisScale, ChartRow, derive, iso_epoch_seconds, time_point_label, time_tick_label,
+    };
 
     /// Every mostly-numeric column becomes its own series, named by the result
     /// set's own header — the multi-series re-specification of the former
@@ -614,5 +633,16 @@ mod tests {
         assert_eq!(time_tick_label(instant, 800.0 * 86_400.0), "2026-07-14");
         assert_eq!(time_tick_label(f64::NAN, 3_600.0), "-");
         assert_eq!(time_tick_label(1e15, 3_600.0), "-");
+    }
+
+    #[test]
+    fn a_point_of_a_time_axis_is_labelled_by_its_instant() {
+        let instant = 1_784_016_000.0; // 2026-07-14T08:00:00Z
+        assert_eq!(
+            time_point_label(instant).as_deref(),
+            Some("2026-07-14T08:00:00Z")
+        );
+        assert_eq!(time_point_label(f64::NAN), None);
+        assert_eq!(time_point_label(1e15), None);
     }
 }

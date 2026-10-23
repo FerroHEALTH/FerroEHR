@@ -29,12 +29,12 @@ use ferrohealth_ui::view::conditions::{
 };
 use ferrohealth_ui::view::diagnostics::{DiagnosticsWords, FileFindings, Finding};
 use ferrohealth_ui::view::form::Field;
-use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
+use ferrohealth_ui::view::popover::PopoverForm;
 use ferrohealth_ui::view::surface::{Header, page_heading};
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::widget::action_menu::{Act, Action};
 use ferrohealth_ui::widget::editor::{EditorWords, caret_at};
-use ferrohealth_ui::widget::repeat::{Fields, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
+use ferrohealth_ui::widget::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use leptos::prelude::*;
 use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
@@ -51,7 +51,7 @@ use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{
     awaited, count, info_note, marks_of, panel, plain_section, refused, section, warn_note,
 };
-use crate::pages::results::{Answered, chart_asked, not_run, results, shown_choice};
+use crate::pages::results::{Answered, chart_asked, not_run, results};
 
 /// The id of the query's form.
 pub const QUERY_FORM: &str = "query-form";
@@ -91,9 +91,8 @@ fn step(posted: Option<&crate::posted::Posted>) -> Step {
 
 /// The page heading of Query with Run, which submits the form, and Save to
 /// the CDR beside it, whose fields belong to the form too.
-// NOTE: FerroUI `view::action::ActionGroup` holds actions only, so the Save popover sits in its own row under the heading.
-fn heading(save: AnyView) -> AnyView {
-    let heading = page_heading(
+fn heading(save: PopoverForm) -> AnyView {
+    page_heading(
         Header {
             title: tr(Msg::NavQuery).into(),
             subtitle: Some(tr(Msg::QuerySubtitle).into()),
@@ -106,16 +105,12 @@ fn heading(save: AnyView) -> AnyView {
             Some(Glyph::PLAY),
             tr(Msg::QueryRun),
             Act::Submit(QUERY_FORM.to_owned()),
-        )),
-    );
-    view! {
-        {heading}
-        <div class="fui-cluster fui-page-actions">{save}</div>
-    }
+        ))
+        .popover(save),
+    )
     .into_any()
 }
 
-// TODO(#3942): Save joins the header's action group with FerroHEALTH/FerroUI#354.
 /// Save to the CDR: the namespace, the name and the version, fields of the
 /// query's form, and the submit that saves. A stored query opened from the
 /// CDR (`loaded`, its qualified name and version) fills them with its
@@ -125,7 +120,7 @@ fn save_popover(
     posted: Option<&crate::posted::Posted>,
     problem: Option<String>,
     loaded: Option<(&str, &str)>,
-) -> AnyView {
+) -> PopoverForm {
     let seed = loaded.map(|(name, version)| {
         let (namespace, bare) = crate::query_namespace::split_qualified(name);
         let next = crate::query_namespace::next_minor(version).unwrap_or_default();
@@ -142,7 +137,7 @@ fn save_popover(
         (None, None) => String::new(),
     };
     let error = problem.map(|problem| view! { <p class="fui-field-error">{problem}</p> });
-    popover_form(PopoverForm {
+    PopoverForm {
         id: SAVE_POPOVER.into(),
         variant: Variant::Secondary,
         glyph: Glyph::SAVE,
@@ -205,7 +200,7 @@ fn save_popover(
             </div>
         }
         .into_any(),
-    })
+    }
 }
 
 /// The newest version the CDR holds of the stored query `name`, the one it
@@ -1037,6 +1032,7 @@ fn columns_view(draft: &Draft, offered: &[Leaf]) -> AnyView {
         fields: Fields::Two,
         head: vec![tr(Msg::QueryDataPoint), tr(Msg::QueryColumnName)],
         rows,
+        token: ROW,
         blank: None,
         add: Some(RepeatAdd {
             label: tr(Msg::QueryAddDataPoint),
@@ -1364,7 +1360,6 @@ pub fn BuildTab() -> impl IntoView {
                                 {section(Some(tr(Msg::QueryConditions)), None, None, conditions)}
                                 {section(Some(tr(Msg::QueryOrderLimit)), None, None, order)}
                                 {built_section}
-                                {plain_section(shown_choice(chart))}
                                 {answer.unwrap_or_else(|| not_run(tr(Msg::ResultsNotRun)))}
                             },
                         ),
@@ -1422,7 +1417,7 @@ fn grammar(aql: &str) -> Option<(String, FileFindings)> {
     Some((
         tr_with(Msg::QueryGrammarHeading, &[("count", count(total))]),
         FileFindings {
-            file: EditorField::Aql.name().to_owned(),
+            file: EditorField::Aql.name().into_owned(),
             href: None,
             lines: format!("#{}-L", EditorField::Aql.name()),
             current: None,
@@ -1525,6 +1520,7 @@ fn parameters_view(rows: &[(String, String)]) -> AnyView {
         fields: Fields::Two,
         head: vec![tr(Msg::QueryName), tr(Msg::TagsValue)],
         rows,
+        token: ROW,
         blank: None,
         add: Some(RepeatAdd {
             label: tr(Msg::QueryAddParam),
@@ -1703,7 +1699,6 @@ pub fn AqlTab() -> impl IntoView {
                                     None,
                                     parameters_view(&rows),
                                 )}
-                                {plain_section(shown_choice(chart))}
                                 {answer.unwrap_or_else(|| not_run(tr(Msg::ResultsNotRun)))}
                             },
                         ),

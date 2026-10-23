@@ -128,43 +128,21 @@ pub fn shortened(id: &str) -> String {
     format!("{head}…{tail}")
 }
 
-// TODO(#3942): FerroUI's relative time replaces this with FerroHEALTH/FerroUI#349.
-/// A relative time for a list (family rule 11): "13 s ago", "4 min ago",
-/// with the full timestamp in its tooltip and the moment in `datetime`.
+/// A relative time for a list (family rule 11), as FerroUI draws it: "13 s
+/// ago", "4 min ago", with the full timestamp in its tooltip and the moment
+/// in `datetime`.
 ///
 /// It is drawn by the server alone, against the server's clock when the page
-/// is drawn; a value that is no instant is drawn as the reading form.
+/// is drawn.
 #[must_use]
 pub fn ago(raw: &str) -> AnyView {
-    let reading = ferrohealth_ui::view::time::reading(raw);
-    let words = relative_words(raw, jiff::Timestamp::now()).unwrap_or_else(|| reading.clone());
-    let raw = raw.to_owned();
-    view! {
-        <time class="fui-time" datetime=raw title=reading>
-            {words}
-        </time>
-    }
-    .into_any()
+    ferrohealth_ui::view::time::relative(raw, &clock(jiff::Timestamp::now())).into_any()
 }
 
-/// The relative words for the instant `raw` as seen at `now`, or `None` when
-/// `raw` is no instant.
-#[must_use]
-pub fn relative_words(raw: &str, now: jiff::Timestamp) -> Option<String> {
-    let then: jiff::Timestamp = raw.trim().parse().ok()?;
-    let seconds = now.as_second().saturating_sub(then.as_second());
-    if seconds < 0 {
-        return Some(tr(Msg::JustNow));
-    }
-    let seconds = u64::try_from(seconds).ok()?;
-    let (msg, count) = match seconds {
-        0..60 => (Msg::SecondsAgo, seconds),
-        60..3_600 => (Msg::MinutesAgo, seconds.div_euclid(60)),
-        3_600..86_400 => (Msg::HoursAgo, seconds.div_euclid(3_600)),
-        86_400..2_592_000 => (Msg::DaysAgo, seconds.div_euclid(86_400)),
-        _ => return Some(ferrohealth_ui::view::time::reading(raw)),
-    };
-    Some(tr_with(msg, &[("count", count.into())]))
+/// The server's clock at `now` in the instant form FerroUI's relative time
+/// reads.
+fn clock(now: jiff::Timestamp) -> String {
+    now.to_string()
 }
 
 /// An absolute time for a record (family rule 11), as FerroUI draws it.
@@ -431,9 +409,11 @@ pub struct EditorDock {
     pub blocked: Option<String>,
 }
 
-// TODO(#3942): docked forms take `required` back with FerroHEALTH/FerroUI#357.
 /// Docks an editor's decision bar at the foot of the page: its line, Discard
 /// and the primary decision, both submits of the page's form (R4).
+///
+/// Discard leaves the form unchecked, so a required field left empty never
+/// holds the reader on the page.
 pub fn dock_editor(editor: EditorDock) {
     let EditorDock {
         form,
@@ -461,6 +441,7 @@ pub fn dock_editor(editor: EditorDock) {
                 glyph: Some(Glyph::X),
                 shortcut: None,
                 state: DecisionState::Ready,
+                leaves: true,
             },
             Decision {
                 name: "intent".to_owned(),
@@ -470,6 +451,7 @@ pub fn dock_editor(editor: EditorDock) {
                 glyph: Some(Glyph::SAVE),
                 shortcut: None,
                 state,
+                leaves: false,
             },
         ],
     });
@@ -647,11 +629,10 @@ fn locate(text: &str, path: &str) -> Option<ferrohealth_ui::view::diagnostics::P
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        findings_of, last_days_to, locate, path_in, relative_words, shortened, status_words,
-    };
+    use super::{clock, findings_of, last_days_to, locate, path_in, shortened, status_words};
     use crate::activity::ActivityPoint;
     use crate::error::ViewerError;
+    use ferrohealth_ui::view::time::relative_reading;
 
     #[test]
     fn an_identifier_is_shortened_to_its_ends() {
@@ -669,10 +650,12 @@ mod tests {
     }
 
     #[test]
-    fn a_time_in_a_list_reads_relative_and_an_unknown_value_is_none() {
-        let now: jiff::Timestamp = "2026-10-21T09:42:11Z".parse().expect("an instant");
-        assert!(relative_words("2026-10-21T09:41:58Z", now).is_some());
-        assert!(relative_words("not a time", now).is_none());
+    fn a_time_in_a_list_reads_relative_to_the_server_clock_and_an_unknown_value_as_it_stands() {
+        let now = clock("2026-10-21T09:42:11Z".parse().expect("an instant"));
+        assert_eq!("2026-10-21T09:42:11Z", now);
+        assert_eq!("13 s ago", relative_reading("2026-10-21T09:41:58Z", &now));
+        assert_eq!("2 h ago", relative_reading("2026-10-21T07:40:00Z", &now));
+        assert_eq!("not a time", relative_reading("not a time", &now));
     }
 
     #[test]

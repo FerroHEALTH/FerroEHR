@@ -504,8 +504,7 @@ async fn capture_states(h: &Harness, seeded: &Seeded, book: &Path) {
     common::submit(h, "header.fui-page-header button[form='query-form']").await;
     h.wait_css("main table tbody tr").await;
     shot_to(h, book, "queries/aql-results").await;
-    h.wait_css("label[for='shown-chart']").await.click().await;
-    common::submit(h, "header.fui-page-header button[form='query-form']").await;
+    common::submit(h, "main button[name='shown'][value='chart']").await;
     h.wait_css("#results-chart-plot").await;
     shot_to(h, book, "queries/results-chart").await;
 

@@ -40,14 +40,15 @@ consumes is spec-bound (`docs/specs/openehr/ITS-REST/` and the served
 - **A docked decision bar** (`pages::common::dock_editor`, FerroUI's dock) is
   set by the page and drawn by the shell. A page that docks inside an awaited
   future holds `crate::shell::promise_dock()` in that future, or the shell may
-  draw before the bar is set. Discard and every other submit of a docked form
-  must work with the form's fields as they stand: no `required` on a docked
-  form (FerroUI's `Decision` has no `formnovalidate`); validate on save.
+  draw before the bar is set. Discard leaves without the form's checks
+  (`Decision::leaves`, drawn as `formnovalidate`), so a docked form may mark
+  its required fields; the save checks them again.
 - **A table row is one link** (FerroUI R9): the first cell's link covers the
   row; any other control in the row sits in `.fui-table-actions` or the row
   menu.
 - **A form never holds another form**: the HTML parser drops a nested one.
-  The results' exports are submits of the page's own form with `formaction`.
+  The results pane (E7) rides the page's own form: Table and Chart are its
+  submits, and each export is a submit with `formaction`.
 - **Session listings keep their position in a cookie** (`crate::paging`,
   FerroUI `leptos-ui.md` §0): the EHRs, an EHR's compositions and
   contributions, the audit log. Filters stay in the URL.
