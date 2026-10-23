@@ -150,16 +150,36 @@ where
         },
         ActionGroup::none(),
     );
-    let line = tab.words().1;
+    let intro = if tab == ServerTab::Smart {
+        smart_intro()
+    } else {
+        ferrohealth_ui::view::surface::section_intro(tab.words().1)
+    };
     view! {
         <Title text=tr(Msg::NavServer) />
         {heading}
         <div class="fui-stack">
             {binder(tr(Msg::ServerSections), tabs, tab.key(), panel(view! {
-                {plain_section(ferrohealth_ui::view::surface::section_intro(line))}
+                {plain_section(intro)}
                 {content}
             }))}
         </div>
+    }
+    .into_any()
+}
+
+/// The line under the SMART tab, its "Your access" a link to the page that
+/// shows the scopes the session holds.
+fn smart_intro() -> AnyView {
+    const MARK: &str = "\u{1}";
+    let line = tr_with(Msg::ServerSmartLine, &[("access", MARK.into())]);
+    let (before, after) = line.split_once(MARK).unwrap_or((line.as_str(), ""));
+    view! {
+        <p class="fui-small fui-muted fui-section-intro">
+            {before.to_owned()}
+            <a href="/access">{tr(Msg::YourAccess)}</a>
+            {after.to_owned()}
+        </p>
     }
     .into_any()
 }

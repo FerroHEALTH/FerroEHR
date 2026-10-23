@@ -17,7 +17,7 @@
 )]
 // e2e journeys are assertive by design; skip-with-reason prints; the shared
 // harness module is per-test-binary (the corpus.rs test-file precedent)
-//! End-to-end audit-log journeys — the `/audit` browser over the CDR's
+//! End-to-end audit-log journeys: the `/audit` browser over the CDR's
 //! RESTful-ATNA ITI-81 retrieval. Driven by `scripts/ui-e2e.sh`; each test
 //! owns its own [`Harness`] and skips with a printed reason when the harness
 //! environment is absent.
@@ -32,7 +32,7 @@
 
 use crate::common;
 
-use common::{Harness, env, login_basic, login_basic_as};
+use common::{Harness, env, login_basic, login_basic_as, wait_text_contains};
 
 /// The admin dev user (quickstart `docker/ferroehr.dev.toml`).
 fn admin_credentials() -> (String, String) {
@@ -43,8 +43,8 @@ fn admin_credentials() -> (String, String) {
 }
 
 /// As the admin: the audit table renders real records (the stack's own
-/// audited activity), the raw-record disclosure opens, and a
-/// nothing-matches filter renders the empty state.
+/// audited activity), a row opens the record as stored, and a nothing-matches
+/// filter renders the empty state.
 #[tokio::test]
 async fn admin_browses_audit_records_and_the_empty_state() {
     let Some(h) = Harness::start("audit-browse").await else {
@@ -53,32 +53,30 @@ async fn admin_browses_audit_records_and_the_empty_state() {
     let (user, pass) = admin_credentials();
     login_basic_as(&h, &user, &pass).await;
 
-    // Generate at least one guaranteed audit record before browsing: the
-    // viewer's own CDR calls are audited, so touching the dashboard is
-    // enough — but be explicit and load the templates list too.
+    // The viewer's own CDR calls are audited, so loading a screen guarantees
+    // at least one record before browsing.
     h.goto("/templates").await;
     h.wait_css(common::SHELL_FOOTER).await;
 
-    // The populated table.
     h.goto("/audit").await;
-    h.wait_css("table tbody tr").await;
+    h.wait_css("main table tbody tr").await;
     h.shot(1, "audit-records").await;
 
-    // The raw-record disclosure carries the stored FHIR AuditEvent.
-    let summary = h.wait_css("tbody tr details summary").await;
-    summary.click().await;
-    let raw = h.wait_css("tbody tr details pre").await;
-    let text = raw.text().await;
-    assert!(
-        text.contains("\"resourceType\": \"AuditEvent\""),
-        "the raw view shows the stored FHIR AuditEvent, got: {text:.200}"
-    );
+    // A row opens its record, which shows the stored FHIR AuditEvent.
+    h.wait_css("main table tbody a.fui-row-link").await.click().await;
+    h.wait_url_contains("/audit/").await;
+    wait_text_contains(&h, "#audit-record-text", "\"resourceType\": \"AuditEvent\"").await;
+    // The hydrated copy button appears; it is hidden without WebAssembly.
+    h.wait_hydrated().await;
+    common::wait_visible(&h, "#audit-record").await;
+    h.shot(2, "audit-record").await;
 
-    // A filter that cannot match renders the first-class empty state.
+    // A filter that cannot match renders the empty state, with the filter
+    // named and a way to clear it.
     h.goto("/audit?patient=e2e-audit-no-such-patient").await;
-    h.wait_xpath("//*[contains(text(), 'No audit records match')]")
-        .await;
-    h.shot(2, "audit-empty").await;
+    common::wait_main_contains(&h, "No audit record matches these filters").await;
+    h.wait_css("main a[href='/audit']").await;
+    h.shot(3, "audit-empty").await;
 
     h.assert_console_clean(&[]).await;
     h.finish().await;
@@ -95,12 +93,9 @@ async fn plain_user_is_refused_the_audit_surface() {
     login_basic(&h).await;
     h.goto("/audit").await;
     h.wait_css(common::SHELL_FOOTER).await;
-    // The CDR's 403 surfaces through the viewer's inline error rendering.
-    h.wait_xpath("//*[contains(translate(text(), 'FORBIDDEN', 'forbidden'), 'forbidden') or contains(text(), '403')]")
-        .await;
-    // The refusal is a deliberate negative step: the CDR's 403 lands in the
-    // browser log as a failed fetch, which the console gate must allow.
-    h.assert_console_clean(&["403", "Forbidden", "server function"])
-        .await;
+    // The CDR's 403 surfaces as the page's refusal, with the CDR's words.
+    common::wait_main_contains(&h, "403").await;
+    common::wait_main_contains(&h, "ADMIN").await;
+    h.assert_console_clean(&[]).await;
     h.finish().await;
 }

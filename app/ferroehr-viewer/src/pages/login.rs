@@ -169,8 +169,7 @@ pub fn LoginPage() -> impl IntoView {
             ),
             None => (String::new(), None),
         };
-        let card = card(screen, state, &next, username, error);
-        view! { <div class="fui-stack fui-sign-in-stack">{card}</div> }.into_any()
+        card(screen, state, &next, username, error)
     });
     view! {
         <Title text=tr(Msg::SignInTitle) />

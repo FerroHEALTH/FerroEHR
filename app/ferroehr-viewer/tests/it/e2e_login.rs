@@ -45,7 +45,10 @@ async fn login_basic_authenticates_and_rejects_bad_credentials() {
         .send_keys("definitely-wrong")
         .await;
     h.wait_css("button[type=submit]").await.click().await;
-    h.wait_css(".fui-alert").await;
+    // The refusal is the password field's own error, named by its
+    // `aria-describedby`.
+    h.wait_css("#sign-in-password[aria-invalid='true']").await;
+    h.wait_css("#sign-in-password-error").await;
     h.shot(2, "login-error").await;
     assert!(
         h.current_url().await.contains("/login"),
@@ -94,7 +97,7 @@ async fn login_oidc_round_trips_through_keycloak() {
     // is read with it.
     if let Some(ehr_id) = env("UI_E2E_SEEDED_EHR_ID") {
         h.goto(&format!("/ehrs/{ehr_id}")).await;
-        h.wait_xpath("//*[contains(., 'queryable')]").await;
+        h.wait_xpath("//*[contains(., 'Queryable')]").await;
         h.shot(3, "ehr-read-with-oidc-token").await;
     } else {
         println!("SKIP the CDR read: UI_E2E_SEEDED_EHR_ID unset (run scripts/ui-e2e.sh)");
@@ -113,10 +116,14 @@ async fn hydration_attaches_interactivity() {
     };
     login_basic(&h).await;
     h.shot(1, "shell-before-toggle").await;
-    // The user-menu popover opens on click — DOM state only WASM can flip.
-    let user_button = h.wait_css("#user-menu-trigger button").await;
+    // The browser opens the user menu's popover by itself; only the hydrated
+    // island says so on the button (`aria-expanded`), so that attribute is
+    // the proof the WebAssembly attached.
+    let user_button = h.wait_css("button[popovertarget='user-menu']").await;
     user_button.click().await;
     h.wait_css("#user-menu:popover-open").await;
+    h.wait_css("button[popovertarget='user-menu'][aria-expanded='true']")
+        .await;
     h.shot(2, "user-menu-open").await;
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;

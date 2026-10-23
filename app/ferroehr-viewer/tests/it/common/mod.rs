@@ -601,17 +601,20 @@ impl Harness {
             .expect("the browser's cookies for the viewer origin")
     }
 
-    /// Delete the cookie named `name` from the browser.
+    /// Replace the value of the cookie named `name`, keeping it on the
+    /// viewer's whole origin.
     ///
     /// # Panics
     /// When the `WebDriver` does not answer.
-    pub(crate) async fn delete_cookie(&self, name: &str) {
+    pub(crate) async fn set_cookie(&self, name: &str, value: &str) {
+        let mut cookie = Cookie::new(name.to_owned(), value.to_owned());
+        cookie.set_path("/");
         bounded(
-            &format!("delete_cookie({name})"),
-            self.driver.delete_cookie(name.to_owned()),
+            &format!("add_cookie({name})"),
+            self.driver.add_cookie(cookie),
         )
         .await
-        .expect("delete the cookie");
+        .expect("set the cookie");
     }
 
     /// End the session (screenshots + console gate are per-journey calls).
@@ -1086,9 +1089,9 @@ pub(crate) async fn is_any_visible(h: &Harness, css: &str) -> bool {
 /// the not-found page carry a footer with no body beside it.
 pub(crate) const SHELL_FOOTER: &str = ".fui-body ~ footer";
 
-/// FerroUI's modal dialog while it is open (`showModal()` sets `open`); its
-/// `::backdrop` covers the page under it.
-const DIALOG_SURFACE: &str = "dialog.fui-modal[open]";
+/// FerroUI's modal dialog while it is open (the `show-modal` command sets
+/// `open`); its `::backdrop` covers the page under it.
+const DIALOG_SURFACE: &str = "dialog.fui-dialog[open]";
 
 /// Establish the precondition every page-level click has: nothing is covering
 /// the page.
@@ -1397,19 +1400,6 @@ pub(crate) async fn poll_some_for<T>(
 /// [`poll_some_for`] over [`WAIT`].
 pub(crate) async fn poll_some<T>(probe: impl AsyncFnMut() -> Option<T>) -> Option<T> {
     poll_some_for(WAIT, probe).await
-}
-
-/// Let the page sit for `duration` with nothing expected to happen, printing
-/// `why`.
-///
-/// The one wait here that is NOT a condition, and it lives in the harness so
-/// the journey files can stay sleep-free: a journey that asserts a window
-/// passes WITHOUT something happening — a timer the previous shell left
-/// behind failing to fire — has no observable to poll for, and turning the
-/// absence into a condition would only be a sleep wearing a wait's name.
-pub(crate) async fn dwell(duration: Duration, why: &str) {
-    println!("dwell {duration:?}: {why}");
-    tokio::time::sleep(duration).await;
 }
 
 /// The red, green and blue channels of a serialised CSS colour, whatever
@@ -1761,54 +1751,64 @@ pub(crate) async fn wait_attr_change(
     panic!("`{css}`'s `{attribute}` never moved off `{previous}` (at {url})");
 }
 
-/// Drive one action through its confirmation MODAL: click the trigger, wait for
-/// the dialog to become visible, then click its confirm button. Explicit
-/// conditions, never a sleep.
-///
-/// The trigger click carries a bounded retry (the login-submit precedent): a
-/// click landing before hydration attaches the listener is simply lost, and
-/// re-clicking is safe precisely because the dialog is not open yet.
+/// Drive one action through its confirmation dialog: click the trigger, which
+/// opens the `<dialog>` by the browser's own `command="show-modal"`, then
+/// click the confirm control `confirm_css` inside it. The confirm control is a
+/// submit button, so the click posts the page's form and the browser leaves
+/// the page; the wait covers the dialog going with it.
 ///
 /// # Panics
-/// When the dialog never opens.
-pub(crate) async fn confirm_in_dialog(h: &Harness, trigger_css: &str, confirm_id: &str) {
+/// When the dialog never opens or never closes.
+pub(crate) async fn confirm_in_dialog(h: &Harness, trigger_css: &str, confirm_css: &str) {
     // A visible toast overlays the bottom-right corner and intercepts clicks.
     h.wait_toasts_cleared().await;
-    // A modal backdrop overlays the whole viewport and does the same (#3134).
     clear_dialog_overlay(h).await;
-    let trigger = h.wait_css(trigger_css).await;
-    let confirm_css = format!("#{confirm_id}");
-    let mut opened = false;
-    for attempt in 0..10 {
-        // Retries exist for a pre-hydration click that does nothing. Once a
-        // dialog surface is actually up, clicking the trigger again would be
-        // swallowed by the modal and surface as `ElementClickIntercepted` — a
-        // confusing report for what is really "the dialog opened, but not with
-        // the confirm id this call expects". Stop and let the assertion say so.
-        if attempt > 0 && is_any_visible(h, DIALOG_SURFACE).await {
-            break;
-        }
-        trigger.click().await;
-        opened = poll_until_for(Duration::from_secs(2), async || {
-            is_visible(h, &confirm_css).await
-        })
-        .await;
-        if opened {
-            break;
-        }
-    }
-    assert!(
-        opened,
-        "`{trigger_css}` never opened the `{confirm_css}` dialog — either the click \
-         never landed (pre-hydration) or a dialog opened whose confirm id is not \
-         `{confirm_id}`"
-    );
-    wait_dialog_settled(h, &confirm_css).await;
-    h.wait_css(&confirm_css).await.click().await;
-    // The dialog closes on confirm — that it closed proves the click landed,
-    // and the journey's next click needs its backdrop gone (#3134).
-    wait_hidden(h, &confirm_css).await;
+    h.wait_css(trigger_css).await.click().await;
+    wait_dialog_settled(h, confirm_css).await;
+    h.wait_css(confirm_css).await.click().await;
     wait_hidden(h, DIALOG_SURFACE).await;
+}
+
+/// Wait until the text of `main` contains `fragment`.
+///
+/// # Panics
+/// When it never does within 15 s.
+pub(crate) async fn wait_main_contains(h: &Harness, fragment: &str) {
+    wait_text_contains(h, "main", fragment).await;
+}
+
+/// The text of the page's `main`.
+///
+/// # Panics
+/// When the page has no `main`.
+pub(crate) async fn main_text(h: &Harness) -> String {
+    h.wait_css("main").await.text().await
+}
+
+/// Type `text` into the field at `css`, replacing what it holds.
+///
+/// # Panics
+/// When the field is not on the page.
+pub(crate) async fn fill(h: &Harness, css: &str, text: &str) {
+    let field = h.wait_css(css).await;
+    field.clear().await;
+    field.send_keys(text).await;
+}
+
+/// Click the submit control at `css` and wait for the page that answers the
+/// post: the old `main` goes stale and a new one renders.
+///
+/// # Panics
+/// When the click fails or no page answers within 15 s.
+pub(crate) async fn submit(h: &Harness, css: &str) {
+    let before = h.wait_css("main").await;
+    h.wait_css(css).await.click().await;
+    let moved = poll_until_for(Duration::from_secs(15), async || {
+        before.read_text().await.is_none()
+    })
+    .await;
+    assert!(moved, "the click on `{css}` never brought a new page");
+    h.wait_css("main").await;
 }
 
 /// Log in through the Basic form (journeys that need a session).
