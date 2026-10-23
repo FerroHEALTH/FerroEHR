@@ -33,6 +33,7 @@ use std::future::Future;
 use std::time::Duration;
 
 use thirtyfour::components::SelectElement;
+use thirtyfour::extensions::cdp::ChromeDevTools;
 use thirtyfour::error::WebDriverErrorInner;
 use thirtyfour::prelude::*;
 
@@ -55,6 +56,9 @@ const POLL_STEP: Duration = Duration::from_millis(200);
 /// before the marker appears, which is comfortably slower than any wait that
 /// only observes a rendered page (module docs).
 const HYDRATION_WAIT: Duration = Duration::from_mins(1);
+
+/// The width of a phone screen, in CSS pixels.
+pub(crate) const PHONE_WIDTH: u32 = 390;
 
 /// Everything a journey needs.
 pub(crate) struct Harness {
@@ -129,13 +133,18 @@ impl Harness {
         let driver = WebDriver::builder(&webdriver_url, caps)
             .await
             .expect("webdriver session (is chromedriver up?)");
-        Some(Self {
+        let harness = Self {
             driver,
             base,
             shots_dir,
             journey,
             js: true,
-        })
+        };
+        // The phone lane runs every journey at 390 px (#3910).
+        if env("UI_E2E_VIEWPORT").as_deref() == Some("phone") {
+            harness.emulate(PHONE_WIDTH, false).await;
+        }
+        Some(harness)
     }
 
     /// Navigate to a viewer path.
@@ -616,6 +625,52 @@ impl Harness {
         )
         .await
         .expect("set the cookie");
+    }
+
+    /// Lay the page out at `width` CSS pixels (a phone at 390) in the colour
+    /// scheme `dark` asks for, by Chrome DevTools Protocol emulation: the
+    /// headless window will not size itself below 500 px.
+    ///
+    /// # Panics
+    /// When the browser refuses the emulation.
+    pub(crate) async fn emulate(&self, width: u32, dark: bool) {
+        let tools = ChromeDevTools::new(self.driver.handle().clone());
+        let metrics = if width >= 1440 {
+            bounded(
+                "Emulation.clearDeviceMetricsOverride",
+                tools.execute_cdp("Emulation.clearDeviceMetricsOverride"),
+            )
+            .await
+        } else {
+            bounded(
+                "Emulation.setDeviceMetricsOverride",
+                tools.execute_cdp_with_params(
+                    "Emulation.setDeviceMetricsOverride",
+                    serde_json::json!({
+                        "width": width,
+                        "height": 844,
+                        "deviceScaleFactor": 1,
+                        "mobile": true
+                    }),
+                ),
+            )
+            .await
+        };
+        metrics.expect("the browser takes the viewport emulation");
+        bounded(
+            "Emulation.setEmulatedMedia",
+            tools.execute_cdp_with_params(
+                "Emulation.setEmulatedMedia",
+                serde_json::json!({
+                    "features": [{
+                        "name": "prefers-color-scheme",
+                        "value": if dark { "dark" } else { "light" }
+                    }]
+                }),
+            ),
+        )
+        .await
+        .expect("the browser takes the colour-scheme emulation");
     }
 
     /// End the session (screenshots + console gate are per-journey calls).
@@ -1697,8 +1752,24 @@ pub(crate) async fn confirm_in_dialog(h: &Harness, trigger_css: &str, confirm_cs
     clear_dialog_overlay(h).await;
     h.wait_css(trigger_css).await.click().await;
     wait_dialog_settled(h, confirm_css).await;
-    h.wait_css(confirm_css).await.click().await;
-    wait_hidden(h, DIALOG_SURFACE).await;
+    submit(h, confirm_css).await;
+}
+
+/// Follow the sidebar's link to `href`, opening the drawer first where the
+/// sidebar is one (below 48 rem).
+///
+/// # Panics
+/// When the link is not in the sidebar.
+pub(crate) async fn follow_nav(h: &Harness, href: &str) {
+    let link = format!("nav a[href='{href}']");
+    if !is_visible(h, &link).await {
+        h.wait_css("button[command='show-modal'][commandfor='sidebar']")
+            .await
+            .click()
+            .await;
+        wait_visible(h, &link).await;
+    }
+    h.wait_css(&link).await.click().await;
 }
 
 /// Wait until the text of `main` contains `fragment`.

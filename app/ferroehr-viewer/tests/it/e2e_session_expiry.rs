@@ -80,7 +80,7 @@ async fn a_revoked_session_signs_the_ui_out_on_the_next_interaction() {
     h.shot(1, "signed-in").await;
 
     revoke_session(&h).await;
-    h.wait_css("nav a[href='/ehrs']").await.click().await;
+    common::follow_nav(&h, "/ehrs").await;
 
     h.wait_url_contains("expired=1").await;
     assert_signed_out(&h).await;
@@ -99,7 +99,7 @@ async fn signing_in_from_the_expired_card_returns_to_the_screen_without_a_reload
     login_basic(&h).await;
     h.goto("/templates").await;
     revoke_session(&h).await;
-    h.wait_css("nav a[href='/ehrs']").await.click().await;
+    common::follow_nav(&h, "/ehrs").await;
     h.wait_url_contains("expired=1").await;
     assert!(
         h.current_url().await.contains("next=%2Fehrs"),
@@ -191,7 +191,7 @@ async fn returning_through_oidc_from_the_expired_card_renders_the_chrome() {
     h.wait_css(common::SHELL_FOOTER).await;
     h.goto("/templates").await;
     revoke_session(&h).await;
-    h.wait_css("nav a[href='/ehrs']").await.click().await;
+    common::follow_nav(&h, "/ehrs").await;
     h.wait_url_contains("expired=1").await;
     assert_signed_out(&h).await;
     h.shot(1, "expired-card").await;

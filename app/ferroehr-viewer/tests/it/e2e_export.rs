@@ -166,14 +166,16 @@ fn header(response: &reqwest::Response, name: reqwest::header::HeaderName) -> St
 async fn table_on_screen(h: &Harness) -> (Vec<String>, Vec<Vec<String>>) {
     h.wait_css("main table tbody tr").await;
     let mut headers = Vec::new();
+    // Below 48 rem the table stacks into cards and hides its head, so
+    // the head is read by its text content rather than its rendered text.
     for cell in find_all(h, "main table thead th").await {
-        headers.push(cell.text().await);
+        headers.push(cell.prop("textContent").await.trim().to_owned());
     }
     let mut rows = Vec::new();
     for row in find_all(h, "main table tbody tr").await {
         let mut cells = Vec::new();
         for cell in row.find_all(By::Css("th, td")).await {
-            cells.push(cell.text().await);
+            cells.push(cell.prop("textContent").await.trim().to_owned());
         }
         rows.push(cells);
     }

@@ -38,7 +38,7 @@ const EHR_COUNT_AQL: &str = "SELECT COUNT(*) FROM EHR e";
 const COMPOSITION_COUNT_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c";
 /// Recent composition commit times, newest first, for the day-bucketed trend.
 #[cfg(not(target_arch = "wasm32"))]
-const TREND_AQL: &str = "SELECT c/context/start_time/value FROM EHR e CONTAINS COMPOSITION c ORDER BY c/context/start_time/value DESC";
+const TREND_AQL: &str = "SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC";
 /// Rows pulled for the commit-activity trend before day-bucketing.
 #[cfg(not(target_arch = "wasm32"))]
 const TREND_FETCH: u32 = 500;

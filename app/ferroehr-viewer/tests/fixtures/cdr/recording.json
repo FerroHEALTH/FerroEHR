@@ -96,13 +96,13 @@
  {
   "method": "POST",
   "path": "/ferroehr/rest/openehr/v1/query/aql",
-  "body": "{\"q\":\"SELECT c/context/start_time/value FROM EHR e CONTAINS COMPOSITION c ORDER BY c/context/start_time/value DESC\",\"query_parameters\":{},\"fetch\":500}",
+  "body": "{\"q\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\",\"query_parameters\":{},\"fetch\":500}",
   "status": 200,
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"dee77065-d561-580f-8be9-1bbe4111ff2b\""
   },
-  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-23T08:47:27.164352558Z\",\"_executed_aql\":\"SELECT c/context/start_time/value FROM EHR e CONTAINS COMPOSITION c ORDER BY c/context/start_time/value DESC\"},\"q\":\"SELECT c/context/start_time/value FROM EHR e CONTAINS COMPOSITION c ORDER BY c/context/start_time/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/context/start_time/value\"}],\"rows\":[[\"2026-10-20T08:00:00Z\"],[\"2022-02-03T04:05:06Z\"]]}"
+  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-23T08:47:27.164352558Z\",\"_executed_aql\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\"},\"q\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/commit_audit/time_committed/value\"}],\"rows\":[[\"2026-10-20T08:00:00Z\"],[\"2022-02-03T04:05:06Z\"]]}"
  },
  {
   "method": "GET",

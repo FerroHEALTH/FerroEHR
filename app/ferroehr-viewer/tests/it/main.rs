@@ -27,7 +27,7 @@ mod e2e_compositions_filters;
 mod e2e_contribution_authoring;
 mod e2e_demographics;
 mod e2e_directory;
-// PENDING mod e2e_docs_shots;
+mod e2e_docs_shots;
 mod e2e_ehr_ops;
 mod e2e_ehr_status;
 mod e2e_event_subscriptions;

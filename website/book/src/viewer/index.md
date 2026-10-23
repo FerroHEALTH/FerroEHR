@@ -4,8 +4,9 @@
 ITS-REST-1.1.0 CDR, this server or any other. It is a **pure REST client**:
 everything it does goes through the CDR's public API (never the database),
 so what you see in the viewer is exactly what the API serves. The whole
-application is Rust (Leptos SSR + WebAssembly); there is no hand-written
-JavaScript anywhere, including its browser tests.
+application is Rust (Leptos, drawn on the server, with WebAssembly islands)
+on FerroUI, the component library the FerroHEALTH consoles share; there is no
+hand-written JavaScript anywhere, including its browser tests.
 
 <!-- toc -->
 
@@ -78,9 +79,10 @@ schemes the CDR advertises (its `WWW-Authenticate` challenge). A Basic
 form is never shown against a bearer-only CDR, and vice versa. If the CDR
 cannot be reached at all, the page falls back to the viewer's own
 configuration and renders anyway, and the outage then surfaces on the login
-attempt instead of hiding the page. Sign-in is served fully rendered and works
-with JavaScript disabled. A username or password the CDR refuses brings you
-back to the sign-in card with the refusal, whether or not JavaScript is on.
+attempt instead of hiding the page. A username or password the CDR refuses
+brings you back to the sign-in card with the refusal under the password.
+
+![Sign in](img/login/login.png)
 
 The viewer verifies the CDR and the OIDC issuer against the platform trust
 store, so an identity provider whose certificate comes from a private CA is
@@ -92,70 +94,59 @@ CDR (Basic) or your identity provider (OIDC), and there are no user, role, or
 password screens to find; those live in the CDR's configuration and in your
 IdP.
 
-The viewer ships a full dark theme (the toggle persists per browser), and every
-screen in this chapter has one, and [Dark mode](dark-mode.md) is the gallery.
-The user menu opens the access drawer:
-
-![Dark mode](img/dashboard/dashboard-dark.png)
+The button with your name at the end of the top bar opens the user menu: who
+is signed in and how, Your preferences, the theme, Keyboard shortcuts and Sign
+out.
 
 ![User menu](img/dashboard/user-menu.png)
 
-### The access drawer
+### Your access
 
-"View scopes" answers *what may this session do, and who says so*:
+**Your access** (`/access`) answers *what may this session do, and who says
+so*: the principal and how it signed in (a Basic session replays its CDR
+account and carries no SMART scopes; an OIDC session carries an access token
+whose scopes are listed), every scope on the session read as its parsed grant
+(the compartment, the resource family and id pattern, and which of create,
+read, update, delete and search it permits, with a *broad access* marker on a
+bare `*`), and a previewer: paste any scope or a whole claim, press **Read
+it**, and read the same rendering. A malformed scope says what the grammar
+expected. Server's SMART tab links here.
 
-- the authenticated principal and how it signs in: a Basic session replays
-  its CDR account (and carries no SMART scopes), an OIDC session carries an
-  access token whose scopes are listed;
-- every scope on the session rendered as its **parsed grant**: the
-  compartment it delegates to (`patient` / `user` / `system`), the resource
-  family and id pattern it reaches, and the create/read/update/delete/search
-  operations it permits, with a *broad access* marker on a bare `*`;
-- a **previewer**: paste any scope string, or a whole space-separated claim,
-  and read the same rendering. A scope shaped like a resource scope but
-  malformed explains what the grammar expected instead of quietly reading as
-  nothing.
+The reading parses with the same grammar the CDR's SMART on openEHR
+enforcement reads, so the two cannot drift. Scopes narrow access and never
+grant it; the CDR remains the enforcer.
 
-The reading is not the viewer's own interpretation: it parses with the same
-grammar the CDR's SMART on openEHR enforcement reads, so the two can never drift.
-Scopes **narrow** access and never grant it; the CDR remains the enforcer,
-and a previewed grant is an upper bound.
-
-![Access scopes](img/dashboard/scopes-drawer.png)
+![Your access](img/access/access.png)
 
 ### When your session ends
 
 A session ends when you sign out, when its idle window
 (`session.idle_minutes`) passes with no request from your browser, or when
 the CDR stops accepting the credential behind it (an expired or revoked
-token). The viewer notices on its own. Every call it makes to its backend is
-checked for a signed-out answer, and the shell re-checks the session on its
-own schedule as well, so a session that ends while a screen is open is
-detected within seconds even if you touch nothing. The authenticated screens
-then unmount and you land on the sign-in page with a notice that the session
-ended. Signing in again, with Basic or with OIDC, returns you to the page you
-were on. There is no in-between state where the header reports the CDR as
-offline while the rest of the screen still accepts input.
+token). Every page is drawn on the server, so the next page you ask for is
+where the viewer notices: it answers with the sign-in page, which says the
+session ended, and signing in again (Basic or OIDC) returns you to the page you
+asked for.
 
 ![Session ended](img/login/login-expired.png)
 
-The idle window slides on any authenticated request, and the shell's own
-status poll is one, so a tab you leave open stays signed in while it is open.
-Closing the browser ends the session.
+The idle window slides on each request your browser makes. The viewer polls
+nothing in the background, so a tab left open and untouched idles out after
+`session.idle_minutes` like a closed one, and the page it shows stays as it
+was drawn until you ask for another.
 
 ## The deployment profile
 
-The header's status chip names the profile the connected CDR declares
-(`deployment_profile` in its configuration, reported on `GET /rest/status`):
-`CDR UP · v<server version> · production`, or `· sandbox`. A production deployment says
-so quietly and nothing else changes. A sandbox deployment raises a persistent
-notice under the header on every authenticated screen: this deployment has
-not made the production separations and must not hold real patient data,
-followed by the separations the server reported as open (a shared database
-credential, a shared cluster, no subject pseudonym namespace, no durable audit
-trail, schema preparation on the runtime credential). The quickstart and the
-composed stacks run as `sandbox`, so the notice is what you see there; a CDR
-older than the profile reports none and the viewer claims nothing. See the
+The status pill at the end of the top bar says whether the CDR answers. A
+deployment that declares the `sandbox` profile (`deployment_profile` in its
+configuration, reported on `GET /rest/status`) raises a band under the top bar
+on every signed-in page: this deployment must not hold real patient data,
+with the number of production separations the server reported as open (a
+shared database credential, a shared cluster, no subject pseudonym namespace,
+no durable audit trail, schema preparation on the runtime credential).
+A production deployment raises no band. The
+quickstart and the composed stacks run as `sandbox`; a CDR older than the
+profile reports none and the viewer claims nothing. See the
 [deployment profile](../installation/configuration.md#deployment_profile) in
 the server configuration.
 
@@ -171,14 +162,14 @@ overrides. Unknown keys are refused at startup, exactly as on the CDR:
 | `cdr.base_url` | `http://localhost:8080` | The CDR origin (`cdr.base_path` is appended). |
 | `cdr.base_path` | `/ferroehr/rest/openehr/v1` | The CDR's ITS-REST base path. Mirror of the CDR's own `server.base_path`: set the same value here when a deployment [shortens it](../installation/config-server.md#base_path-shortening-the-rest-base-path), or the viewer calls paths the CDR does not serve. The status document, the OpenAPI documents and the SMART discovery document are derived from it by the same rule the CDR uses. |
 | `cdr.request_timeout_secs` | `30` | Per-request timeout toward the CDR. |
-| `cdr.management_base_url` | derived from `cdr.base_url` | The CDR's management surface, base path included; set it when the CDR serves management on its own internal listener (`management.port`) or under a renamed base path. Drives the [Operations panel](operations.md). |
+| `cdr.management_base_url` | derived from `cdr.base_url` | The CDR's management surface, base path included; set it when the CDR serves management on its own internal listener (`management.port`) or under a renamed base path. Drives Server's [management tabs](server.md#health-metrics-and-logging). |
 | `auth.basic_enabled` | `true` | Offer the username/password form (validated against the CDR; held server-side). |
 | `auth.oidc.enabled` | `false` | Offer OIDC login (authorization code + PKCE). |
 | `auth.oidc.issuer` / `client_id` / `client_secret` (`_file`) / `public_base_url` / `scopes` | — | The OIDC client registration; `public_base_url` is the viewer's externally visible origin for the redirect URI. Enabling OIDC without issuer, client id and public base URL is a startup error. |
 | `auth.oidc.resolve` | — | A `host=ip:port` override for the issuer host, for split-horizon DNS: the viewer reaches an issuer whose canonical name only resolves inside the container network, while browsers and tokens keep the canonical URL. |
 | `login.notice` | empty | Informational text on the sign-in card, line breaks preserved. A demo or evaluation deployment states its public credentials and usage expectations here. |
 | `login.links` | empty | Links under the sign-in card, each `{ label, href }` — an API reference, a documentation page. |
-| `session.idle_minutes` | `60` | Session idle expiry (sliding; carried inside the sealed cookie). |
+| `session.idle_minutes` | `60` | Session idle expiry: the window slides on each request the browser makes, and the viewer polls nothing in the background (carried inside the sealed cookie). |
 | `session.cookie_secure` | `true` | On by default; set `false` only for plain-HTTP local development. |
 | `session.secret` | empty | The session-cookie sealing key: base64 of at least 64 bytes (`openssl rand -base64 64`). Every replica of a scaled deployment must hold the same value. Empty = an ephemeral per-instance key, fine for exactly one replica. |
 | `session.secret_file` | — | Path to a file holding the sealing key; wins over `session.secret`. |
@@ -192,92 +183,71 @@ every replica shows the same repository. Sessions are a **sealed cookie**
 (AES-256-GCM, keyed by `session.secret`), so any replica holding the key can
 serve any signed-in visitor.
 
-Login and sessions live in the viewer's backend; the browser stores only
-the encrypted session cookie — CDR credentials and bearer tokens never reach
+Login and sessions live in the viewer's server; the browser stores only
+the encrypted session cookie: CDR credentials and bearer tokens never reach
 it in readable form.
 
-![Login](img/login/login.png)
+## How the pages work
 
-## The screens
+The viewer draws every page on its server and sends it complete. Every link
+is a link and every action is a form that posts to the page it sits on, so
+the whole viewer works with JavaScript off. The browser then loads a small
+WebAssembly bundle that adds behaviour to a few parts of a page (the code
+editor, the path trees, the chart legend, the date pickers, the user menu's
+keyboard handling, the subject reveal and Copy buttons); nothing on a page
+waits for it. There is no hand-written JavaScript.
 
-- **Dashboard:** record counts, per-namespace stored-query match tiles, and a
-  commit-activity trend. See [Dashboard & queries](queries.md).
-- **Templates:** upload and inspect operational templates. See
-  [Templates & EHR browsing](browsing.md).
-- **Queries:** the point-and-click Query Builder, the raw AQL editor, and
-  stored-query management. See [Dashboard & queries](queries.md).
-- **EHRs:** browse EHRs, folders, compositions, version history, and the
-  item tags on any of them. See [Templates & EHR browsing](browsing.md).
-- **Demographics:** browse and edit the five demographic party kinds, their
-  relationships, version history, and tags. See
-  [Demographics](demographics.md).
-- **Terminology:** browse the terminologies the CDR serves, define a code,
-  expand a value set, and test membership or subsumption. See
+An editor (a new EHR, a composition, the EHR status, the directory, a party, a
+subscription, a template upload) ends in a bar docked at the foot of the page:
+what has changed, **Discard**, and the save. A save that the CDR refuses
+keeps what you typed on the page beside the CDR's own words.
+
+The screens are listed in the sidebar; below 48 rem it folds into a drawer
+behind the menu button.
+
+- **Dashboard:** record counts, the compositions committed per day, and the
+  stored queries by namespace. See [Queries](queries.md).
+- **EHRs:** find, create and delete EHRs; each EHR's compositions, directory,
+  status, contributions and tags. See [Templates and EHRs](browsing.md).
+- **Parties:** the demographic parties, their versions, relationships and
+  tags. See [Parties](parties.md).
+- **Templates:** upload and read ADL 1.4 and ADL 2 operational templates. See
+  [Templates and EHRs](browsing.md).
+- **Terminology:** the terminologies the CDR serves. See
   [Terminology](terminology.md).
-- **Audit log:** browse the CDR's ATNA security audit trail (see below).
-- **System:** CDR status, the openEHR **conformance manifest** (what the
-  server advertises about itself through the System API: product, vendor,
-  claimed conformance profile, and the API groups it actually mounts), SMART
-  discovery, repository usage, the server's own OpenAPI documents (pick the
-  complete surface or one API family; the choice stays in the URL), the
-  redacted runtime configuration, and a shortcut into the audit browser.
-  A Manufacturer card names Cadasto B.V., the manufacturer of each release,
-  with its postal address, contact email and website.
-  ![System](img/system/system.png)
-- **Operations:** dependency health, build and spec provenance, the metric
-  registry, and runtime log control. Appears only when the CDR serves its
-  management surface. See [Operations panel](operations.md).
-- **Subscriptions:** the event subscriptions that decide which committed
-  versions the CDR publishes to a message broker. Appears only when the CDR
-  serves its subscription API. See
+- **Stored queries** and **Query:** build or write AQL, run it, chart and
+  export the rows, save it to the CDR. See [Queries](queries.md).
+- **Server:** what the CDR is, how it runs and what it serves, and the **Audit
+  log**. See [Server and audit log](server.md).
+- **Subscriptions:** the CDR's event subscriptions. See
   [Event subscriptions](subscriptions.md).
+- **Configuration:** the CDR's redacted running configuration, by section.
+- **About:** the viewer, the CDR and their versions, the manufacturer and
+  the CDR's conformance manifest.
 
-The footer under every screen names the viewer and its version, the
-manufacturer (Cadasto B.V.), and an About link to that Manufacturer card.
+The top bar's search takes an EHR id, a composition or party uid, a subject
+id, a template id or a stored-query name, and answers with what matches, or
+with the other ways to find a record when nothing does.
 
-Every one of them is themed twice; [Dark mode](dark-mode.md) shows the dark
-half of the viewer screen by screen.
+The footer under every page names the viewer and its version, the
+manufacturer (Cadasto B.V.), and an About link.
 
 ### Paging
 
-Every listing is paged. The tables the viewer holds in full share one pager
-under the table: which rows are on screen out of how many (`26-50 of 137`),
-First, Previous, the page you are on, Next and Last (a step you cannot take
-stays in place and says "(unavailable)"), and a rows-per-page choice of
-25/50/100. On a listing that names no patient (**Templates**, **Queries**,
-**Subscriptions**) the page lives in the **URL** (`?page=`, counted from 1,
-and `?size=`): a page is shareable and bookmarkable, a reload lands on the same
-rows, and the browser's back and forward buttons walk the pages. A listing that
-can show patient data (the demographic tags, an EHR's tags) keeps its page in
-the screen and never in a URL. The AQL-backed
-listings (EHRs, an EHR's compositions) page through `?offset=` links, and the
-audit browser through `?page=` beside its filters. Every URL control is a
-plain link, so paging works before the page's WebAssembly loads, and a
-page link carries the screen's other parameters (the tab you are on, the
-filters you set) across with it.
+A listing that can show patient data (the EHRs, an EHR's compositions and
+contributions, the audit log) pages with First, Previous, Next and Last under
+the table and keeps its page in a cookie for the browser session, never in the
+address or the history, as FerroUI asks of every family console. A filter
+stays in the address, so a filtered view is still shareable; the page you
+were on is not. Each step is a form that posts to `/paging` and comes back to
+the listing, so paging works with JavaScript off.
+
+### Preferences and the keyboard
+
+**Your preferences** keeps the viewer's display choices, each in its own
+cookie for that browser: the theme, the reading choices, and the keyboard
+shortcuts. See [Preferences and the theme](preferences.md).
 
 ## Audit log
 
-The **Audit log** screen browses the CDR's security audit trail (who
-accessed what, with what outcome) through the standard IHE ITI-81
-retrieval (`GET /fhir/r4/AuditEvent`; see the
-[Audit trail chapter](../audit.md)). Filter by event-time window, patient,
-principal, outcome, or action; every filter lives in the URL, so a filtered
-view is shareable and refresh-safe. Each row opens the full stored FHIR R4
-`AuditEvent` record.
-
-The audit trail is an operator surface: under role-based access control the
-screen requires the CDR's admin role, and when the CDR's local audit store
-is disabled the screen says so instead of erroring.
-
-![Audit log](img/audit/audit.png)
-
-Each row's **view** disclosure opens the full stored `AuditEvent` record:
-exactly what the ITI-81 API serves:
-
-![Audit log — the raw record](img/audit/audit-record.png)
-
-A filter that matches nothing renders a distinct empty state, so "no
-records" is always visibly different from "records you haven't found":
-
-![Audit log — no matches](img/audit/audit-empty.png)
+The audit log has its own section in [Server and audit log](server.md#audit-log).
