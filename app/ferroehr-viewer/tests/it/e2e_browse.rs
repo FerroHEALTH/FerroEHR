@@ -97,10 +97,11 @@ async fn template_upload_lists_and_inspects_path_catalog() {
     h.wait_css("ul.fui-tree[role='tree'] li[role='treeitem']")
         .await;
     h.wait_hydrated().await;
-    // The hydrated tree expands in place: the toggle is live once the island
-    // runs, and a collapsed branch opens on a click.
+    // The tree is a lazy island whose chunk loads after the page hydrates:
+    // its toggles are disabled in the server's HTML and come alive with it,
+    // and a collapsed branch then opens on a click.
     let toggle = h
-        .wait_css("li[aria-expanded='false'] > div button.fui-tree-toggle, li[aria-expanded='false'] button.fui-tree-toggle")
+        .wait_css("li[aria-expanded='false'] button.fui-tree-toggle:not([disabled])")
         .await;
     toggle.click().await;
     h.wait_css("li[aria-level='3']").await;
