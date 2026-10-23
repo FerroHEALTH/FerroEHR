@@ -836,11 +836,18 @@ fn template_header(
     let more = Menu::new(
         "template-more",
         tr(Msg::TemplateMore),
-        vec![Item::new(Action::new(
-            Some(Glyph::COPY),
-            tr(Msg::TemplateCopyId),
-            Act::Copy(template_id.to_owned()),
-        ))],
+        vec![
+            Item::new(Action::new(
+                Some(Glyph::DOWNLOAD),
+                tr(Msg::TemplateDownload),
+                Act::Link(crate::download::template_href(family, template_id)),
+            )),
+            Item::new(Action::new(
+                Some(Glyph::COPY),
+                tr(Msg::TemplateCopyId),
+                Act::Copy(template_id.to_owned()),
+            )),
+        ],
     )
     .destructive(vec![Item::new(Action::new(
         Some(Glyph::TRASH),

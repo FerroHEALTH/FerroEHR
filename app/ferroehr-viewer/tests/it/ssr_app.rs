@@ -715,6 +715,43 @@ async fn an_ehr_menu_copies_its_id_and_discard_skips_the_checks() {
     assert!(!save.contains("formnovalidate"), "{save}");
 }
 
+/// A template's More menu offers its Download, which answers the stored
+/// operational template as a file, and only to a signed-in reader.
+#[tokio::test]
+async fn a_template_downloads_as_its_stored_source() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let href = "/download/template/adl14/minimal_evaluation.en.v1";
+    let page = viewer
+        .page(&cookie, "/templates/minimal_evaluation.en.v1")
+        .await;
+    assert_eq!(page.status, http::StatusCode::OK);
+    assert!(
+        page.body.contains(&format!(r#"href="{href}""#)),
+        "{}",
+        page.main()
+    );
+    let file = viewer.page(&cookie, href).await;
+    assert_eq!(file.status, http::StatusCode::OK, "{}", file.body);
+    assert_eq!(
+        file.headers
+            .get(http::header::CONTENT_DISPOSITION)
+            .and_then(|value| value.to_str().ok()),
+        Some(r#"attachment; filename="minimal_evaluation.en.v1.opt""#)
+    );
+    assert!(
+        file.body.contains("minimal_evaluation.en.v1"),
+        "{}",
+        file.body
+    );
+    let anonymous = viewer.send(http::Method::GET, href, None, None).await;
+    assert!(
+        anonymous.status.is_redirection(),
+        "no session, no file: {}",
+        anonymous.status
+    );
+}
+
 #[tokio::test]
 async fn an_ehr_shows_its_subject_masked_until_the_reader_asks() {
     let viewer = Viewer::start().await;

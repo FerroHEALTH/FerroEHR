@@ -1928,6 +1928,7 @@ template-delete-message = The CDR refuses while compositions use the template; d
 template-delete-confirm = Delete the template
 template-delete-refused = The CDR refused to delete the template.
 template-more = More actions for the template
+template-download = Download
 template-copy-id = Copy id
 template-views = Views of this template
 template-refused = The template could not be read.

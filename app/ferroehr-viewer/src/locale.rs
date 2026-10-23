@@ -3549,6 +3549,8 @@ messages! {
     TemplateLanguages = "template-languages",
     /// `More actions for the template`
     TemplateMore = "template-more",
+    /// `Download`
+    TemplateDownload = "template-download",
     /// `Copy id`
     TemplateCopyId = "template-copy-id",
     /// `The CDR sent no operational template to build paths from.`

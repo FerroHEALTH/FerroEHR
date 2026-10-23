@@ -92,6 +92,9 @@ workflow refuses a tag that has no matching section here.
   their required fields again; the time of each point in a chart's figures
   table; Your access's grants built from the CDR's own reading of each scope;
   and the How configuration works dialog on Configuration.
+- **A template's Download** in its More menu (#3942): the stored ADL 1.4
+  operational template (`.opt`) or ADL2 template (`.adlt`) as a file, read
+  with your session from `/download/template/{family}/{id}`.
 
 ### Removed
 

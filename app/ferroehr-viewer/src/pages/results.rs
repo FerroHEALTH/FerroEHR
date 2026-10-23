@@ -179,6 +179,7 @@ fn chart(page: &ResultPage) -> Option<AnyView> {
     )
 }
 
+// TODO(#3946): the exports become one Export menu with FerroHEALTH/FerroUI#375.
 /// An export of the run in `format`: a submit of the page's own form, which
 /// the Results section always sits in, sent to `/export/aql/<format>`.
 fn export(format: &str) -> Export {

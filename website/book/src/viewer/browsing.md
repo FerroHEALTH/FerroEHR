@@ -37,7 +37,7 @@ answers the arrow keys; without it each node is a link.
 
 ![Paths](img/templates/template-paths.png)
 
-**Source** is the template as stored, with line numbers and Copy. **Example**
+**Source** is the template as stored, with line numbers and Copy; **Download** in the More menu saves it as a file. **Example**
 is the composition the CDR generates for it, in the format, type and detail
 you pick.
 

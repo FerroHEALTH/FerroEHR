@@ -15,3 +15,4 @@ allow ^openEHR-(EHR|DEMOGRAPHIC)-           # archetype ids, never translated
 allow Path=/; SameSite=Lax; HttpOnly        # Set-Cookie attribute lists
 allow -L$                                   # the line-anchor suffix of a code panel's ids
 allow ^fhirUser$                            # the SMART scope token, a protocol word
+allow ^attachment; filename=                 # the Content-Disposition header value

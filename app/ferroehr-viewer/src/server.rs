@@ -87,6 +87,12 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
             crate::paging::PAGING_ROUTE,
             axum::routing::post(crate::paging::choose_paging),
         )
+        // A template's Download: the stored source as a file, read with the
+        // session's credential.
+        .route(
+            "/download/template/{family}/{id}",
+            axum::routing::get(crate::download::download_template),
+        )
         .route(
             crate::pages::about::DOWNLOAD_ROUTE,
             axum::routing::get(download_manifest),
