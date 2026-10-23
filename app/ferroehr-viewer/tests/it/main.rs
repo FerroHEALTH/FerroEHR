@@ -17,7 +17,7 @@ mod common;
 mod ssr_app;
 mod ssr_assets;
 
-// PENDING mod e2e_adl2;
+mod e2e_adl2;
 mod e2e_admin_ops;
 mod e2e_audit;
 mod e2e_browse;
