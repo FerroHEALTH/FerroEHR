@@ -232,6 +232,8 @@ fn subject(ehr_id: &str, status: &Result<EhrStatusState, ViewerError>) -> AnyVie
         );
         let revealed = crate::request::query("reveal").is_some();
         if revealed {
+            let reader = crate::request::session().map(|session| session.identity).unwrap_or_default();
+            tracing::info!(reader = %reader, ehr = %ehr_id, "revealed an EHR's subject id");
             Subject::External(
                 view! {
                     <span class="fui-identifier">

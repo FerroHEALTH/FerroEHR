@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `/demographics/{kind}/{uid}` screen — one party, read, edited, walked
+//! The reads and writes behind the `/parties/{kind}/{uid}` page: one party, read, edited, walked
 //! version by version, related, and tagged.
 //!
 //! Four URL-driven tabs (`?tab=`) over one versioned object:
@@ -333,10 +333,9 @@ fn checked_party_body(body: &str, kind: PartyKind) -> Result<String, ViewerError
         .unwrap_or_default();
     if declared != kind.rm_type() {
         return Err(ViewerError::Invalid(format!(
-            "this is the {} route, but the body declares _type {declared:?}: create it under \
-             /demographics/{} instead, or fix the _type",
-            kind.rm_type(),
-            declared.to_lowercase()
+            "this is a {} form, but the body declares _type {declared:?}: pick that kind \
+             instead, or fix the _type",
+            kind.rm_type()
         )));
     }
     Ok(doc.to_string())

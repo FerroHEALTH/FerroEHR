@@ -48,6 +48,34 @@ pub fn shown_choice(chart: bool) -> AnyView {
     )
 }
 
+/// The words of one result cell: a data value read as a person reads it (a
+/// quantity with its unit, a text, a code or a time by its value), anything
+/// else as the CDR sent it.
+#[expect(
+    clippy::disallowed_types,
+    reason = "a RESULT_SET cell is the CDR's untyped JSON"
+)]
+fn cell_words(value: &serde_json::Value) -> String {
+    use serde_json::Value;
+    let Some(kind) = value.get("_type").and_then(Value::as_str) else {
+        return cell_text(value);
+    };
+    let text = |key: &str| value.get(key).map(cell_text);
+    match kind {
+        "DV_QUANTITY" => match (text("magnitude"), text("units")) {
+            (Some(magnitude), Some(units)) => format!("{magnitude} {units}"),
+            (Some(magnitude), None) => magnitude,
+            _ => cell_text(value),
+        },
+        "DV_COUNT" | "DV_ORDINAL" | "DV_PROPORTION" => text("magnitude")
+            .or_else(|| text("value"))
+            .or_else(|| text("numerator"))
+            .unwrap_or_else(|| cell_text(value)),
+        _ if kind.starts_with("DV_") => text("value").unwrap_or_else(|| cell_text(value)),
+        _ => cell_text(value),
+    }
+}
+
 /// The rows of a result set as a table.
 fn table(page: &ResultPage) -> AnyView {
     let columns: Vec<Column> = page
@@ -67,12 +95,12 @@ fn table(page: &ResultPage) -> AnyView {
                     if index == 0 {
                         view! {
                             <th scope="row" data-role="title">
-                                <code>{cell_text(value)}</code>
+                                <code>{cell_words(value)}</code>
                             </th>
                         }
                         .into_any()
                     } else {
-                        cell(column, cell_text(value))
+                        cell(column, cell_words(value))
                     }
                 })
                 .collect_view();

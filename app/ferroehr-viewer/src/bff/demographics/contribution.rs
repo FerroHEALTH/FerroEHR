@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `/demographics/contribution/{uid}` — the demographic CONTRIBUTION viewer.
+//! The demographic CONTRIBUTION the `/parties/contributions/{uid}` page reads.
 //!
 //! A read-only screen over `GET /demographic/contribution/{contribution_uid}`
 //! ("Retrieves a CONTRIBUTION identified by `contribution_uid`",

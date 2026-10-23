@@ -227,7 +227,7 @@ pub fn SubscriptionsPage() -> impl IntoView {
                         )
                         .destructive(vec![Item::new(Action::new(
                             Some(Glyph::TRASH),
-                            tr(Msg::TemplateDelete),
+                            tr(Msg::SubDeleteRow),
                             Act::Link(format!("{href}?confirm=delete")),
                         ))]),
                     );

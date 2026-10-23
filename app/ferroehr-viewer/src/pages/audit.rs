@@ -10,14 +10,9 @@
 //! keeps no local store answers `404` and the page says so. The filters are a
 //! `GET` form, the page position is kept in the browser's session
 //! ([`crate::paging`]), and a record's page finds it again by the filters and
-//! the page it was listed on, since ITI-81 offers no read by id. The patient
+//! the instant it was recorded at, since ITI-81 offers no read by id. The patient
 //! identifier is masked as everywhere. No openEHR spec governs the viewer's
 //! pages: our own design.
-
-#![expect(
-    clippy::disallowed_types,
-    reason = "the viewer reads the stored AuditEvent JSON for its id"
-)]
 
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
@@ -38,7 +33,6 @@ use ferrohealth_ui::widget::identifier::{Domain, KEEP, Masked};
 use leptos::prelude::*;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params_map;
-use serde_json::Value;
 
 use crate::bff::PAGE_SIZE;
 use crate::bff::audit::{ACTIONS, AuditPage as Listed, AuditRow, OUTCOMES, search_audit};
@@ -129,24 +123,13 @@ impl Filters {
     }
 }
 
-/// The stored id of an audit record.
-fn record_id(row: &AuditRow) -> String {
-    serde_json::from_str::<Value>(&row.raw)
-        .ok()
-        .and_then(|record| record.get("id").and_then(Value::as_str).map(str::to_owned))
-        .unwrap_or_default()
-}
-
-/// The page of a record, carrying the filters and the offset it was listed
-/// at.
-fn record_href(row: &AuditRow, filters: &Filters, offset: u32) -> String {
+/// The page of the record at `place` in the filtered log, carrying the
+/// filters and the instant it was recorded at, which finds it again.
+// NOTE: an ITI-81 AuditEvent carries no id the search can read back, so a record is found by its instant.
+fn record_href(row: &AuditRow, filters: &Filters, place: u32) -> String {
     let mut pairs = filters.pairs("");
-    pairs.push(format!("offset={offset}"));
-    format!(
-        "/audit/{}?{}",
-        urlencoding::encode(&record_id(row)),
-        pairs.join("&")
-    )
+    pairs.push(format!("at={}", urlencoding::encode(&row.recorded)));
+    format!("/audit/{place}?{}", pairs.join("&"))
 }
 
 /// The masked patient identifier of a record.
@@ -268,8 +251,9 @@ fn table(page: &Listed, filters: &Filters) -> AnyView {
     let rows = page
         .rows
         .iter()
-        .map(|row| {
-            let href = record_href(row, filters, page.offset);
+        .zip(page.offset..)
+        .map(|(row, place)| {
+            let href = record_href(row, filters, place);
             let principal = if row.principal.is_empty() {
                 view! { <span class="fui-muted">{tr(Msg::AuditUnknown)}</span> }.into_any()
             } else {
@@ -408,17 +392,21 @@ pub fn AuditPage() -> impl IntoView {
 )]
 #[component]
 pub fn AuditRecordPage() -> impl IntoView {
-    let id = use_params_map()
+    let place = use_params_map()
         .with_untracked(|params| params.get("id"))
-        .unwrap_or_default();
+        .and_then(|id| id.parse::<u32>().ok());
     let filters = Filters::read();
-    let offset = crate::request::query("offset")
-        .and_then(|offset| offset.parse::<u32>().ok())
-        .unwrap_or(0);
+    let at = crate::request::query("at").unwrap_or_default();
     let page = awaited(async move {
-        let found = match filters.search(offset).await {
+        let Some(_place) = place else {
+            crate::request::set_status(http::StatusCode::NOT_FOUND);
+            return view! { {heading()} {crate::pages::common::info_note(tr(Msg::AuditRecordGone))} }.into_any();
+        };
+        let mut bounded = filters.clone();
+        bounded.to.clone_from(&at);
+        let found = match bounded.search(0).await {
             Ok(page) if !page.available => return view! { {heading()} {store_off()} }.into_any(),
-            Ok(page) => page.rows.into_iter().find(|row| record_id(row) == id),
+            Ok(page) => page.rows.into_iter().find(|row| row.recorded == at),
             Err(error) => {
                 return view! { {heading()} {refused(tr(Msg::AuditRefused), &error, None)} }
                     .into_any();
@@ -451,8 +439,7 @@ pub fn AuditRecordPage() -> impl IntoView {
             (tr(Msg::AuditAction), row.action.clone().into_any()),
             (tr(Msg::AuditOutcome), outcome(&row)),
         ]);
-        let mut back = filters.pairs("");
-        back.retain(|pair| !pair.is_empty());
+        let back = filters.pairs("");
         let back = if back.is_empty() {
             "/audit".to_owned()
         } else {

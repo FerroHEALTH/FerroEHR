@@ -174,7 +174,7 @@ pub fn StatusTab() -> impl IntoView {
                             tab_href(&ehr_id, EhrTab::Status),
                         ))
                     });
-                let mut rows = vec![(tr(Msg::FactVersion), short(&shown.version_uid))];
+                let mut rows = vec![(tr(Msg::FactVersion), version_number(&shown.version_uid).into_any())];
                 if let Ok(facts) = &facts_of {
                     rows.push((tr(Msg::FactContribution), short(&facts.contribution_uid)));
                     rows.push((

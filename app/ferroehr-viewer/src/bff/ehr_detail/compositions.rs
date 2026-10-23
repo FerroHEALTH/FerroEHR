@@ -167,16 +167,3 @@ pub async fn commit_composition(
     let response = crate::cdr::CdrClient::expect_success(response)?;
     Ok(uid_value_of(&response.body))
 }
-
-
-
-
-
-
-
-#[cfg(test)]
-mod tests {
-    use super::{format_from_value, format_value};
-    use crate::format::ReprFormat;
-
-}

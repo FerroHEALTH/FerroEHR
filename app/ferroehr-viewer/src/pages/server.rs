@@ -225,7 +225,9 @@ pub fn OverviewTab() -> impl IntoView {
                 view! { <a href="/about">{tr(Msg::NavAbout)}</a> }.into_any(),
             ),
         ]);
-        let gaps = deployment.filter(|_| sandbox).map(|deployment| {
+        let gaps = deployment
+            .filter(|deployment| sandbox && !deployment.gaps.is_empty())
+            .map(|deployment| {
             let columns = [Column::text("gap", tr(Msg::ServerSafeguard)).role(Role::Title)];
             let rows = deployment
                 .gaps

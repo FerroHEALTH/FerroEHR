@@ -640,11 +640,11 @@ mod tests {
         );
         assert_eq!(
             EhrTargetKind::EhrStatus.href("7d44b88c", "8849182c"),
-            "/ehrs/7d44b88c?tab=status"
+            "/ehrs/7d44b88c/status"
         );
         assert_eq!(
             EhrTargetKind::Directory.href("7d44b88c", "8849182c"),
-            "/ehrs/7d44b88c?tab=directory"
+            "/ehrs/7d44b88c/directory"
         );
         // A hostile id can never break out of its path segment.
         assert_eq!(

@@ -98,7 +98,9 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
     ferrohealth_ui::i18n::provide_locale(crate::locale::current());
     let flash = crate::flash::take();
-    let routes = view! {
+    view! {
+        <Title formatter=viewer_title text=product() />
+        <Router>
         <Routes fallback=crate::pages::errors::not_found_page>
             <Route path=path!("/login") view=crate::pages::login::LoginPage ssr=SsrMode::Async />
             <ParentRoute path=path!("") view=crate::shell::AppShell ssr=SsrMode::Async>
@@ -236,11 +238,7 @@ pub fn App() -> impl IntoView {
                 <Route path=path!("about") view=crate::pages::about::AboutPage />
             </ParentRoute>
         </Routes>
-    }
-    .into_any();
-    view! {
-        <Title formatter=viewer_title text=product() />
-        <Router>{routes}</Router>
+        </Router>
         <ToastRegion words=RegionWords::of_page() flash=flash />
     }
 }

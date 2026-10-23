@@ -524,6 +524,22 @@ mod tests {
     /// server's own family set is held to), each under the server's selector
     /// name and in its order, `messaging` included.
     #[test]
+    fn the_family_selector_offers_every_served_family() {
+        let offered: Vec<(&str, String)> = openapi_families().skip(1).collect();
+        let served: Vec<(&str, String)> = OPENAPI_FAMILIES
+            .into_iter()
+            .map(|(slug, label)| (slug, label.to_owned()))
+            .collect();
+        assert_eq!(offered, served);
+        assert!(
+            offered
+                .iter()
+                .any(|(slug, label)| *slug == "messaging" && *label == "FerroEHR: Messaging"),
+            "{offered:?}"
+        );
+    }
+
+    #[test]
     fn groups_by_tag_then_path_segment_sorted() {
         let doc = serde_json::json!({
             "paths": {

@@ -646,7 +646,7 @@ mod tests {
             create_target_label("", r#"{"name":{"value":"Vitals"}}"#),
             "Vitals"
         );
-        assert_eq!(create_target_label("", "{}"), "new COMPOSITION");
-        assert_eq!(create_target_label("", "not json"), "new COMPOSITION");
+        assert_eq!(create_target_label("", "{}"), "New composition");
+        assert_eq!(create_target_label("", "not json"), "New composition");
     }
 }

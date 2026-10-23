@@ -301,7 +301,6 @@ pub async fn delete_adl2_artefact(
 
 #[cfg(test)]
 mod tests {
-    use crate::adl2::TemplateFamily;
 
     /// Both families' listings are read through this one parser, so it is
     /// pinned against the four fields the Definition API returns.

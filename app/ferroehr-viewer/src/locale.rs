@@ -4297,6 +4297,10 @@ messages! {
     SubSubtitle = "sub-subtitle",
     /// `{ $line } Under { $template } only.`
     SubUnderTemplate = "sub-under-template",
+    /// `Delete…`
+    SubDeleteRow = "sub-delete-row",
+    /// `Delete…`
+    TemplateDeleteRow = "template-delete-row",
 }
 
 /// The viewer's message `msg` in the page's locale.
@@ -4468,7 +4472,7 @@ mod tests {
     #[test]
     fn a_throwaway_catalog_changes_the_words_with_no_code_change() {
         let english = Locale::english();
-        assert_eq!("Not found", tr_in(catalog(), &english, Msg::Title404));
+        assert_eq!("No such screen", tr_in(catalog(), &english, Msg::Title404));
         let throwaway = Locale::parse("qaa").expect("a private-use language");
         assert_eq!("Qot qound", tr_in(&*THROWAWAY, &throwaway, Msg::Title404));
         assert_eq!(

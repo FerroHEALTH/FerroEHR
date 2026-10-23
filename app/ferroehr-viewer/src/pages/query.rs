@@ -145,6 +145,27 @@ fn save_popover(posted: Option<&crate::posted::Posted>, problem: Option<String>)
     })
 }
 
+/// The newest version the CDR holds of the stored query `name`, the one it
+/// assigned to a save that named none; empty when the listing does not say.
+async fn saved_version(name: &str) -> String {
+    // NOTE: the save succeeded; a listing that fails only leaves the version out of the toast.
+    crate::queries_api::list_stored_queries()
+        .await
+        .ok()
+        .and_then(|rows| {
+            rows.into_iter()
+                .filter(|row| row.name == name)
+                .map(|row| row.version)
+                .max_by_key(|version| {
+                    version
+                        .split('.')
+                        .map(|part| part.parse::<u64>().unwrap_or(0))
+                        .collect::<Vec<_>>()
+                })
+        })
+        .unwrap_or_default()
+}
+
 /// Saves `aql` as the stored query the post names. `Ok(None)` is no save
 /// asked; `Err` is what the popover says.
 async fn save(
@@ -159,9 +180,16 @@ async fn save(
     let version = Some(posted.text("save_version")).filter(|version| !version.is_empty());
     match crate::queries_api::store_query(name.clone(), version.clone(), aql.to_owned()).await {
         Ok(()) => {
-            let shown = version.unwrap_or_else(|| "1.0.0".to_owned());
+            let shown = match version {
+                Some(version) => version,
+                None => saved_version(&name).await,
+            };
             redirect_with(
-                &crate::request::path(),
+                &format!(
+                    "/query/aql?name={}&version={}",
+                    urlencoding::encode(&name),
+                    urlencoding::encode(&shown)
+                ),
                 &Done::ok(tr(Msg::QuerySaved))
                     .line(format!("{name} {shown}"))
                     .link(
@@ -1030,6 +1058,11 @@ pub fn BuildTab() -> impl IntoView {
                 Some(refused(tr(Msg::QueryCatalogRefused), &error, None)),
             ),
         };
+        if posted.is_none() && draft.shape == "data" && draft.columns.is_empty() {
+            if let Some(first) = leaves.first() {
+                draft.columns.push((first.path.clone(), String::new()));
+            }
+        }
         let built = query_of(&draft, &leaves)
             .map_err(|error| error.to_string())
             .and_then(|query| {

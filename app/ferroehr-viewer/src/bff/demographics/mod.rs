@@ -247,13 +247,13 @@ fn unknown_segment(segment: &str, expected: &str) -> ViewerError {
     ))
 }
 
-/// The `/demographics/{kind}` browser href.
+/// The Parties page opened on `kind`.
 #[must_use]
 pub fn browse_href(kind: PartyKind) -> String {
     format!("/parties?kind={}", kind.segment())
 }
 
-/// The `/demographics/{kind}/{uid}` detail href.
+/// The `/parties/{kind}/{uid}` page of a party.
 ///
 /// The id is percent-encoded — an id carrying `/`, `#`, `?` or `%` would
 /// otherwise address a different route, and the encoded form is also what makes
@@ -267,7 +267,7 @@ pub fn party_href(kind: PartyKind, uid: &str) -> String {
     )
 }
 
-/// The `/demographics/relationship/{uid}` detail href (same encoding rule as
+/// The `/parties/relationships/{uid}` page of a relationship (same encoding rule as
 /// [`party_href`]).
 #[must_use]
 pub fn relationship_href(uid: &str) -> String {
@@ -277,7 +277,7 @@ pub fn relationship_href(uid: &str) -> String {
     )
 }
 
-/// The `/demographics/contribution/{uid}` viewer href.
+/// The `/parties/contributions/{uid}` page of a demographic contribution.
 #[must_use]
 pub fn contribution_href(uid: &str) -> String {
     format!(
@@ -634,22 +634,22 @@ mod tests {
 
     #[test]
     fn hrefs_route_on_the_container_and_percent_encode_the_id() {
-        assert_eq!(browse_href(PartyKind::Person), "/demographics/person");
+        assert_eq!(browse_href(PartyKind::Person), "/parties?kind=person");
         assert_eq!(
             party_href(PartyKind::Role, "8849182c::sys::3"),
-            "/demographics/role/8849182c"
+            "/parties/role/8849182c"
         );
         // A hostile id can never break out of its path segment.
         assert_eq!(
             party_href(PartyKind::Person, "a/b?c#d"),
-            "/demographics/person/a%2Fb%3Fc%23d"
+            "/parties/person/a%2Fb%3Fc%23d"
         );
         assert_eq!(
             relationship_href("7d44aa01::sys::1"),
-            "/demographics/relationship/7d44aa01"
+            "/parties/relationships/7d44aa01"
         );
         // A contribution uid is NOT a version id — it keeps every character.
-        assert_eq!(contribution_href(" c9 "), "/demographics/contribution/c9");
+        assert_eq!(contribution_href(" c9 "), "/parties/contributions/c9");
     }
 
     #[test]

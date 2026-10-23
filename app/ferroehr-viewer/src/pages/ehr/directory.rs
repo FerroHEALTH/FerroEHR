@@ -259,8 +259,8 @@ fn history(
                         ),
                     ],
                 ),
-                committer: version.root_name.clone(),
-                when: tr(Msg::NoneShown).into_any(),
+                committer: String::new(),
+                when: ().into_any(),
                 contribution: if version.is_latest {
                     ().into_any()
                 } else {

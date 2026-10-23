@@ -659,7 +659,7 @@ fn overview(kind: PartyKind, uid: &str, state: &PartyState) -> AnyView {
     let facts = definitions(vec![
         (tr(Msg::ColumnKind), kind_words(kind).into_any()),
         (tr(Msg::PartyArchetype), view! { <code>{state.archetype_node_id.clone()}</code> }.into_any()),
-        (tr(Msg::PartyCurrentVersion), short(&state.version_uid)),
+        (tr(Msg::PartyCurrentVersion), version_number(&state.version_uid).into_any()),
         (tr(Msg::PartyIdentities), state.identity_count.to_string().into_any()),
         (
             tr(Msg::PartyRelationshipsFrom),

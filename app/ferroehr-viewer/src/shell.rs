@@ -67,11 +67,6 @@ pub fn dock(bar: DecisionBar) {
     }
 }
 
-/// The answer under the top bar's search, when the page answers a search;
-/// the find page reads the same answer, so the CDR is asked once.
-#[derive(Debug, Clone, Default)]
-pub struct Finds(pub std::sync::Arc<tokio::sync::OnceCell<crate::pages::find::Found>>);
-
 /// The CDR's status document, read once per page: the pill, the band and a
 /// page that shows the deployment read the same answer.
 #[derive(Debug, Clone, Default)]
@@ -359,8 +354,6 @@ pub fn AppShell() -> impl IntoView {
     provide_context(dock.clone());
     let status = Status::default();
     provide_context(status.clone());
-    let finds = Finds::default();
-    provide_context(finds.clone());
     let typed = crate::posted::posted()
         .filter(|_| current == FIND_ROUTE)
         .map(|posted| posted.text("q"))
@@ -379,26 +372,12 @@ pub fn AppShell() -> impl IntoView {
     let search_part = {
         let status = status.clone();
         crate::pages::common::awaited(async move {
-            let found = match typed.clone() {
-                Some(typed) => Some(
-                    finds
-                        .0
-                        .get_or_init(|| async move { crate::pages::find::find(&typed).await })
-                        .await
-                        .clone(),
-                ),
-                None => None,
-            };
             let down = matches!(
                 status.read().await,
                 Err(crate::error::ViewerError::CdrUnreachable(_))
             );
             let disabled = down.then(|| tr(Msg::SearchWaits));
-            search(
-                found.map(crate::pages::find::Found::answer),
-                typed.unwrap_or_default(),
-                disabled,
-            )
+            search(None, typed.unwrap_or_default(), disabled)
         })
     };
     let band = {

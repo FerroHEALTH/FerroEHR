@@ -148,7 +148,7 @@ fn rows_table(family: TemplateFamily, rows: &[TemplateRow]) -> AnyView {
                 )
                 .destructive(vec![Item::new(Action::new(
                     Some(Glyph::TRASH),
-                    tr(Msg::TemplateDelete),
+                    tr(Msg::TemplateDeleteRow),
                     Act::Link(confirm),
                 ))]),
             );

@@ -330,7 +330,6 @@ pub fn FindPage() -> impl IntoView {
     let typed = crate::posted::posted()
         .map(|posted| posted.text("q"))
         .filter(|typed| !typed.is_empty());
-    let finds = use_context::<crate::shell::Finds>().unwrap_or_default();
     let body = awaited(async move {
         let heading = page_heading(
             Header {
@@ -350,11 +349,7 @@ pub fn FindPage() -> impl IntoView {
             }
             .into_any();
         };
-        let found = finds
-            .0
-            .get_or_init(|| async move { find(&typed).await })
-            .await
-            .clone();
+        let found = find(&typed).await;
         let unfinished = (!found.failed.is_empty())
             .then(|| crate::pages::common::warn_note(failed_line(&found.failed)));
         let read = if found.hits.is_empty() {
@@ -371,13 +366,18 @@ pub fn FindPage() -> impl IntoView {
             };
             info_note(line)
         } else {
-            info_note(tr_with(
-                Msg::FindFoundSome,
-                &[(
-                    "count",
-                    crate::pages::common::count(found.hits.len()),
-                )],
-            ))
+            list_card(ListCard {
+                title: tr_with(
+                    Msg::FindFoundSome,
+                    &[("count", crate::pages::common::count(found.hits.len()))],
+                ),
+                count: None,
+                order: None,
+                tabs: None,
+                actions: None,
+                body: ferrohealth_ui::view::search::search_answer("find-page", found.clone().answer()),
+                pager: None,
+            })
         };
         let card = list_card(ListCard {
             title: tr(Msg::FindOtherWays),
