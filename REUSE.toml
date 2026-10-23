@@ -151,12 +151,12 @@ precedence = "override"
 SPDX-FileCopyrightText = ["Nedap Healthcare", "Better Ltd", "vitasystems GmbH", "openEHR Foundation"]
 SPDX-License-Identifier = "Apache-2.0"
 
-# Two fixtures under that tree are NOT third-party: they are repo-authored
+# Three fixtures under that tree are NOT third-party: they are repo-authored
 # derivatives of an openEHR CNF Robot template (CC-BY-SA 3.0), so they carry
 # that licence and both copyright holders. Each PROVENANCE.md records the
 # upstream commit and every edit.
 [[annotations]]
-path = ["crates/openehr-sdt/tests/fixtures/named_event/**", "crates/openehr-sdt/tests/fixtures/slot_fill_twice/**"]
+path = ["crates/openehr-sdt/tests/fixtures/named_event/**", "crates/openehr-sdt/tests/fixtures/slot_fill_twice/**", "crates/openehr-sdt/tests/fixtures/any_element_value/**"]
 precedence = "override"
 SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
 SPDX-License-Identifier = "CC-BY-SA-3.0"

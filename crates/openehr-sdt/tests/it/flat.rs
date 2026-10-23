@@ -1475,3 +1475,201 @@ fn a_flat_round_trip_from_the_context_start_time_path_is_stable() {
         "the rebuilt composition keeps the submitted times"
     );
 }
+
+// ── an ELEMENT that leaves its value open keeps its node (#3933) ─────────────
+//
+// An `ELEMENT` with no `value` constraint, or `value matches {*}`, admits any
+// value (AOM 1.4 `C_COMPLEX_OBJECT.any_allowed`, ADL 1.4 master05-cadl §"Any"
+// Constraints), so it keeps its node with one alternative per concrete
+// `DATA_VALUE` (simplified formats master05 §CLUSTER: `…/labresult/text_value`).
+// Carrier: `any_element_value.en.v1`, whose protocol holds "Test method" (no
+// attributes) and "Method detail" (an empty `value` attribute).
+
+const TEST_METHOD: &str = "any_element_value/any_element_observation:0/test_method";
+const METHOD_DETAIL: &str = "any_element_value/any_element_observation:0/method_detail";
+
+fn any_element_value_wt() -> WebTemplate {
+    let opt_xml = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/any_element_value/any_element_value.opt"
+    ))
+    .unwrap_or_else(|e| panic!("read any_element_value OPT: {e}"));
+    let opt = opt14::from_xml(&opt_xml).unwrap_or_else(|e| panic!("parse OPT: {e}"));
+    build_web_template(&opt).unwrap_or_else(|e| panic!("build WT: {e}"))
+}
+
+fn find_by_aql<'a>(
+    node: &'a openehr_sdt::flat::webtemplate::model::WebTemplateNode,
+    suffix: &str,
+) -> Option<&'a openehr_sdt::flat::webtemplate::model::WebTemplateNode> {
+    if node.aql_path.ends_with(suffix) {
+        return Some(node);
+    }
+    node.children.iter().find_map(|c| find_by_aql(c, suffix))
+}
+
+fn any_element_flat(extra: &[(&str, Value)]) -> serde_json::Map<String, Value> {
+    let mut flat = serde_json::Map::new();
+    flat.insert("ctx/language".to_owned(), Value::String("en".into()));
+    flat.insert("ctx/territory".to_owned(), Value::String("US".into()));
+    flat.insert(
+        "ctx/composer_name".to_owned(),
+        Value::String("Dr. Marcus Johnson".into()),
+    );
+    flat.insert(
+        "any_element_value/any_element_observation:0/reading".to_owned(),
+        Value::String("120 over 80".into()),
+    );
+    for (k, v) in extra {
+        flat.insert((*k).to_owned(), v.clone());
+    }
+    flat
+}
+
+/// Both open elements keep a node whose alternatives are the concrete data
+/// value types.
+#[test]
+fn an_element_with_an_open_value_keeps_its_node_with_every_value_type() {
+    let wt = any_element_value_wt();
+    for (code, id) in [("at0006", "test_method"), ("at0007", "method_detail")] {
+        let element = find_by_aql(&wt.tree, &format!("/protocol[at0005]/items[{code}]"))
+            .unwrap_or_else(|| panic!("the open element {code} keeps its node"));
+        assert_eq!(element.rm_type, "ELEMENT");
+        assert_eq!(element.id, id, "the node id comes from the rubric");
+        let alternatives: Vec<(&str, &str)> = element
+            .children
+            .iter()
+            .map(|c| (c.id.as_str(), c.rm_type.as_str()))
+            .collect();
+        for expected in [
+            ("text_value", "DV_TEXT"),
+            ("coded_text_value", "DV_CODED_TEXT"),
+            ("quantity_value", "DV_QUANTITY"),
+            ("count_value", "DV_COUNT"),
+            ("date_time_value", "DV_DATE_TIME"),
+            ("boolean_value", "DV_BOOLEAN"),
+            ("identifier_value", "DV_IDENTIFIER"),
+            ("uri_value", "DV_URI"),
+        ] {
+            assert!(
+                alternatives.contains(&expected),
+                "{id} offers {expected:?}: {alternatives:?}"
+            );
+        }
+        assert!(
+            element
+                .children
+                .iter()
+                .all(|c| c.aql_path.ends_with(&format!("items[{code}]/value"))),
+            "every alternative sits at ELEMENT.value"
+        );
+    }
+}
+
+/// The FLAT example carries both open elements, and the example the commit
+/// path validates.
+#[test]
+fn the_flat_example_carries_an_element_with_an_open_value() {
+    let wt = any_element_value_wt();
+    for level in [DetailLevel::Medium, DetailLevel::Complete] {
+        let example = example_composition(&wt, level).expect("the example builds");
+        let messages = openehr_sdt::rm_instance::validate_composition(&example, &wt);
+        assert!(messages.is_empty(), "the example validates: {messages:?}");
+        let flat = composition_to_flat(&example, &wt).expect("to_flat");
+        let keys: Vec<&String> = flat.keys().collect();
+        for element in [TEST_METHOD, METHOD_DETAIL] {
+            assert!(
+                keys.iter().any(|k| k.starts_with(&format!("{element}/"))),
+                "the example carries {element}: {keys:?}"
+            );
+        }
+    }
+}
+
+/// A FLAT write through each open element builds the chosen data value,
+/// validates and reads back unchanged.
+#[test]
+fn a_flat_round_trip_through_an_element_with_an_open_value_is_stable() {
+    let wt = any_element_value_wt();
+    let text_key = format!("{TEST_METHOD}/text_value");
+    let magnitude_key = format!("{METHOD_DETAIL}/quantity_value|magnitude");
+    let unit_key = format!("{METHOD_DETAIL}/quantity_value|unit");
+    let flat = any_element_flat(&[
+        (
+            text_key.as_str(),
+            Value::String("Next-generation sequencing".into()),
+        ),
+        (magnitude_key.as_str(), serde_json::json!(2.5)),
+        (unit_key.as_str(), Value::String("mg".into())),
+    ]);
+    let rm = composition_from_flat(&flat, &wt, NOW).expect("from_flat");
+    let messages = openehr_sdt::rm_instance::validate_composition(&rm, &wt);
+    assert!(
+        messages.is_empty(),
+        "the built composition validates: {messages:?}"
+    );
+
+    let items = rm
+        .pointer("/content/0/protocol/items")
+        .and_then(Value::as_array)
+        .unwrap_or_else(|| panic!("the built observation carries its protocol items"));
+    let built: Vec<(Option<&str>, Option<&str>, Option<&str>)> = items
+        .iter()
+        .map(|i| {
+            (
+                i.pointer("/archetype_node_id").and_then(Value::as_str),
+                i.pointer("/name/value").and_then(Value::as_str),
+                i.pointer("/value/_type").and_then(Value::as_str),
+            )
+        })
+        .collect();
+    assert_eq!(
+        built,
+        vec![
+            (Some("at0006"), Some("Test method"), Some("DV_TEXT")),
+            (Some("at0007"), Some("Method detail"), Some("DV_QUANTITY")),
+        ],
+        "each element carries the value type the FLAT key named"
+    );
+
+    let flat_again = composition_to_flat(&rm, &wt).expect("to_flat");
+    for (key, value) in [
+        (
+            &text_key,
+            Value::String("Next-generation sequencing".into()),
+        ),
+        (&magnitude_key, serde_json::json!(2.5)),
+        (&unit_key, Value::String("mg".into())),
+    ] {
+        assert_eq!(
+            flat_again.get(key),
+            Some(&value),
+            "{key} reads back: {:?}",
+            flat_again.keys().collect::<Vec<_>>()
+        );
+    }
+}
+
+/// Better's `any_element` template, whose event element has no value
+/// constraint, gets the same alternatives.
+#[test]
+fn the_better_any_element_template_keeps_its_open_element() {
+    let opt_xml = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/better/any_element.opt"
+    ))
+    .unwrap_or_else(|e| panic!("read any_element OPT: {e}"));
+    let opt = opt14::from_xml(&opt_xml).unwrap_or_else(|e| panic!("parse OPT: {e}"));
+    let wt = build_web_template(&opt).unwrap_or_else(|e| panic!("build WT: {e}"));
+    let element = find_by_aql(&wt.tree, "/data[at0003]/items[at0005]")
+        .unwrap_or_else(|| panic!("the open element keeps its node"));
+    let types: Vec<&str> = element
+        .children
+        .iter()
+        .map(|c| c.rm_type.as_str())
+        .collect();
+    assert!(
+        types.contains(&"DV_TEXT") && types.contains(&"DV_QUANTITY"),
+        "the open element offers every value type: {types:?}"
+    );
+}

@@ -15,6 +15,21 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **An element whose value the template leaves open keeps its FLAT path**
+  (#3933). The web template dropped an `ELEMENT` that carries no `value`
+  constraint, or a `value` constrained to `{*}`, so the `vcf_report` template's
+  "Test method" was missing from the FLAT example and a FLAT write to
+  `…/laboratory_test_result:0/test_method/text_value` was refused as an unknown
+  simplified path. Such an element admits any data value (AOM 1.4
+  `C_COMPLEX_OBJECT.any_allowed`, ADL 1.4 "Any" constraints), so it now keeps
+  its node with one alternative per concrete data value type, keyed by type as
+  in the Simplified Formats CLUSTER example (`…/test_method/text_value`,
+  `…/test_method/quantity_value|magnitude`). `DV_STATE` is not offered yet
+  (#3934). Web templates, FLAT and STRUCTURED examples and FLAT paths change
+  for templates with such elements. The `openehr-*` crates move to 0.0.96.
+
 ## [5.3.2] - 2026-10-22
 
 The v5.3.0 and v5.3.1 tags were pushed but neither release published: the v5.3.0 scan refused the container base's `ca-certificates` (DSA-6572-1), and the v5.3.1 plan refused a CRA risk assessment with no revision for that base change. 5.3.2 is the same release on the rebuilt base, and no 5.3.0 or 5.3.1 artifacts exist.

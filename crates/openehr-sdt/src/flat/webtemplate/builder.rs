@@ -563,6 +563,9 @@ fn build_children(
                 build_attribute_children(ctx, attr, node, scope, &mut children);
             }
         }
+        if let Some(any_value) = any_element_value(co, &node.rm_type) {
+            build_attribute_children(ctx, &any_value, node, scope, &mut children);
+        }
     }
 
     // A party node keeps its inputs even when it HAS children: master05's three
@@ -592,6 +595,88 @@ fn build_children(
     }
     node.children = children;
     shape::post_process(node);
+}
+
+/// The concrete `DATA_VALUE` types an unconstrained `ELEMENT.value` admits, in
+/// the order they become choice alternatives: every non-generic, non-deprecated
+/// subtype of RM `data_types` (`DV_INTERVAL<T>` needs a parameter the OPT does
+/// not give, `DV_PARAGRAPH` is deprecated) except `DV_STATE`, whose FLAT build
+/// is not RM-valid yet.
+// TODO(#3934): admit DV_STATE once its FLAT build carries `value` and `is_terminal`.
+const ANY_ELEMENT_VALUE_TYPES: [&str; 17] = [
+    "DV_TEXT",
+    "DV_CODED_TEXT",
+    "DV_MULTIMEDIA",
+    "DV_PARSABLE",
+    "DV_BOOLEAN",
+    "DV_IDENTIFIER",
+    "DV_URI",
+    "DV_EHR_URI",
+    "DV_DURATION",
+    "DV_QUANTITY",
+    "DV_COUNT",
+    "DV_PROPORTION",
+    "DV_DATE_TIME",
+    "DV_TIME",
+    "DV_ORDINAL",
+    "DV_SCALE",
+    "DV_DATE",
+];
+
+/// The `value` attribute an `ELEMENT` that leaves its value unconstrained
+/// stands for: one open alternative per concrete `DATA_VALUE` type.
+///
+/// An `ELEMENT` with no `value` constraint, or with `value matches {*}`, admits
+/// any value the RM permits (AOM 1.4 `C_COMPLEX_OBJECT.any_allowed`, ADL 1.4
+/// `master05-cadl.adoc` §"Any" Constraints), so it keeps a node in the web
+/// template and its FLAT keys name the chosen type (`…/test_method/text_value`,
+/// ITS-REST `simplified_formats/master05-rm_mapping.adoc` §CLUSTER). Returns
+/// `None` for every other node, and for a `value` the template prohibits.
+fn any_element_value(co: &CObject, rm_type: &str) -> Option<openehr_its::opt14::types::CAttribute> {
+    use openehr_its::opt14::types::{CAttribute, CComplexObject, CSingleAttribute};
+    if rm_type != "ELEMENT" {
+        return None;
+    }
+    let declared = inputs::attributes(co)
+        .iter()
+        .find(|a| inputs::attribute_name(a) == "value");
+    let existence = match declared {
+        None => Intervalofinteger {
+            lower_included: Some(true),
+            upper_included: Some(true),
+            lower_unbounded: false,
+            upper_unbounded: false,
+            lower: Some(0),
+            upper: Some(1),
+        },
+        Some(attr) if inputs::attribute_children(attr).is_empty() => {
+            let existence = attribute_existence(attr);
+            if !existence.upper_unbounded && existence.upper == Some(0) {
+                return None;
+            }
+            existence.clone()
+        }
+        Some(_) => return None,
+    };
+    let children = ANY_ELEMENT_VALUE_TYPES
+        .iter()
+        .map(|rm| {
+            CObject::CComplexObject(CComplexObject {
+                rm_type_name: (*rm).to_owned(),
+                occurrences: Intervalofinteger {
+                    lower: Some(0),
+                    ..existence.clone()
+                },
+                node_id: String::new(),
+                attributes: Vec::new(),
+            })
+        })
+        .collect();
+    Some(CAttribute::CSingleAttribute(CSingleAttribute {
+        rm_attribute_name: "value".to_owned(),
+        existence,
+        children,
+    }))
 }
 
 /// Whether a node of this RM type is a web-template LEAF — one that carries
