@@ -9,3 +9,8 @@ skip app/ferroehr-viewer/src/locale.rs   # the catalog mechanism: message ids
 allow ^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|Enter|Escape|Tab)$   # UI Events KeyboardEvent.key values
 allow ^Ferro(BRIDGE|FED|EHR|TERM|HEALTH)   # product names, the same in every language
 allow ^Cadasto B\.V\.$                      # the maker's legal name
+allow ^[A-Z][A-Z0-9_-]*$                    # RM type names, wire enum values and protocol tokens
+allow ^DV_$                                 # the RM data-value type prefix
+allow ^openEHR-(EHR|DEMOGRAPHIC)-           # archetype ids, never translated
+allow Path=/; SameSite=Lax; HttpOnly        # Set-Cookie attribute lists
+allow -L$                                   # the line-anchor suffix of a code panel's ids
