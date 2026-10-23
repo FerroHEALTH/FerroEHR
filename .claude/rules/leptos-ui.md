@@ -157,13 +157,14 @@ brotli-compressed, is over the number below, which it reads from this table.
 
 | Measure | Budget |
 |---|---|
-| WebAssembly, brotli-compressed | 1550000 bytes |
+| WebAssembly, brotli-compressed | 450000 bytes |
 
-The release build on 2026-10-19, on FerroUI 0.1.4 from crates.io with `thaw`, `leptos-use`
-and `leptos-chartistry` gone, measured 1425689 brotli bytes of WebAssembly
-(1433578 on 0.1.3, 1426414 on 0.1.5, 1420876 on 0.1.6);
-the budget leaves about 8% for growth. Raise it only in the
-change that needs the room, with the new measurement.
+The release build on 2026-10-23, on FerroUI 0.3.2 in islands mode with
+`--split`, measured 416607 brotli bytes for the WebAssembly every page loads
+(1425689 on FerroUI 0.1.4 with whole-page hydration); the lazy islands' chunks
+load only on a page that draws them and are not counted. The budget leaves
+about 8% for growth. Raise it only in the change that needs the room, with the
+new measurement.
 
 ## 8. Strings and locales
 
