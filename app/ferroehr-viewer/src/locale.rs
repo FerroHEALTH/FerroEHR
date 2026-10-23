@@ -4307,6 +4307,10 @@ messages! {
     RelationshipNeedsType = "relationship-needs-type",
     /// `Give the relationship a type and a target party.`
     RelationshipNeedsTypeAndTarget = "relationship-needs-type-and-target",
+    /// `Sends`
+    QueriesSends = "queries-sends",
+    /// `Latest sends no version; Prefix and Exact send the one typed here.`
+    QueriesVersionHelp = "queries-version-help",
 }
 
 /// The viewer's message `msg` in the page's locale.

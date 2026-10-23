@@ -23,11 +23,11 @@
 //! End-to-end journey over the `RESULT_SET` **export** — the one viewer
 //! surface whose outcome is a file rather than a screen.
 //!
-//! The export is a plain HTML `<form method="post">` to the viewer's own
-//! `/export/aql` BFF route (`ferroehr_viewer::export`), so a browser click
-//! hands the bytes to the download manager and `WebDriver` never sees them. The
-//! journey therefore does what the button does: it runs the query on screen,
-//! reads the THREE fields the form actually holds (`q`, `parameters_json`,
+//! Each export is a submit of the page's own form sent to the viewer's
+//! `/export/aql` route (`formaction`, `ferroehr_viewer::export`), so a browser
+//! click hands the bytes to the download manager and `WebDriver` never sees
+//! them. The journey therefore does what the button does: it runs the query on
+//! screen, reads the three fields the export reads (`q`, `parameters_json`,
 //! `format`) out of the DOM, lifts the browser's own session cookie off the
 //! `WebDriver`, and re-posts exactly that request — so what it asserts is the
 //! button's own target answering the button's own request, under the button's
@@ -49,7 +49,7 @@ use crate::common;
 
 use reqwest::StatusCode;
 
-use common::{Element, Harness, env, find_all, login_basic, wait_enabled};
+use common::{Harness, env, find_all, login_basic};
 use thirtyfour::prelude::*;
 
 /// The query the journey exports: two scalar columns over the compositions
@@ -77,43 +77,28 @@ struct PostedForm {
     format: String,
 }
 
-/// Read one hidden field's LIVE value off `form`.
-///
-/// `prop`, not `attr`: the viewer binds these fields with `prop:value`, so the
-/// DOM property is where the current query lives (rules §5 — an attribute only
-/// carries the initial value).
-///
-/// # Panics
-/// When the field is absent or unreadable.
-async fn field_value(form: &Element, name: &str) -> String {
-    form.find(By::Css(format!("input[name='{name}']")))
-        .await
-        .prop("value")
-        .await
+/// What the export button `format` would post: the run's hidden `q` and
+/// `parameters_json` beside the Results section, and its own `format`.
+async fn posted_form(h: &Harness, format: &str) -> PostedForm {
+    let button = h
+        .wait_css(&format!(
+            "button[formaction='/export/aql'][name='format'][value='{format}']"
+        ))
+        .await;
+    assert_eq!(button.attr("formmethod").await, "post");
+    let field = async |name: &str| {
+        h.wait_css(&format!("main input[type='hidden'][name='{name}']"))
+            .await
+            .prop("value")
+            .await
+    };
+    PostedForm {
+        q: field("q").await,
+        parameters_json: field("parameters_json").await,
+        format: format.to_owned(),
+    }
 }
 
-/// The export form whose `format` field is `format`, read field by field.
-///
-/// Matched on the field rather than on document order: the two forms are
-/// identical apart from that one value, and an order-based pick would silently
-/// export the wrong representation if they were ever reordered.
-///
-/// # Panics
-/// When no export form carries that format.
-async fn posted_form(h: &Harness, format: &str) -> PostedForm {
-    let forms = find_all(h, "form[action='/export/aql']").await;
-    for form in forms {
-        let held = field_value(&form, "format").await;
-        if held == format {
-            return PostedForm {
-                q: field_value(&form, "q").await,
-                parameters_json: field_value(&form, "parameters_json").await,
-                format: held,
-            };
-        }
-    }
-    panic!("no `/export/aql` form on screen carries format `{format}`");
-}
 
 /// The browser's cookies for the viewer origin, as one `Cookie` header.
 ///
@@ -179,15 +164,15 @@ fn header(response: &reqwest::Response, name: reqwest::header::HeaderName) -> St
 /// # Panics
 /// When the table has not rendered.
 async fn table_on_screen(h: &Harness) -> (Vec<String>, Vec<Vec<String>>) {
-    h.wait_css("table tbody tr").await;
+    h.wait_css("main table tbody tr").await;
     let mut headers = Vec::new();
-    for cell in find_all(h, "table thead th").await {
+    for cell in find_all(h, "main table thead th").await {
         headers.push(cell.text().await);
     }
     let mut rows = Vec::new();
-    for row in find_all(h, "table tbody tr").await {
+    for row in find_all(h, "main table tbody tr").await {
         let mut cells = Vec::new();
-        for cell in row.find_all(By::Tag("td")).await {
+        for cell in row.find_all(By::Css("th, td")).await {
             cells.push(cell.text().await);
         }
         rows.push(cells);
@@ -195,22 +180,15 @@ async fn table_on_screen(h: &Harness) -> (Vec<String>, Vec<Vec<String>>) {
     (headers, rows)
 }
 
-/// Run a query on the raw AQL screen and leave the results table on screen.
+/// Run a query on Query's AQL tab and leave the results table on screen.
 ///
 /// # Panics
 /// When the query never runs or renders no row.
 async fn run_export_query(h: &Harness) {
-    h.goto("/queries/aql").await;
-    wait_enabled(h, "#aql-editor").await;
-    h.wait_css("#aql-editor").await.send_keys(EXPORT_AQL).await;
-    // Run stays DISABLED until the typed AQL reaches the signal, so the wait
-    // has to carry that condition — a click on the disabled button is
-    // intercepted by the toolbar above it, not merely lost.
-    h.wait_clickable_xpath("//button[normalize-space(.)='Run']")
-        .await
-        .click()
-        .await;
-    h.wait_css("table tbody tr").await;
+    h.goto("/query/aql").await;
+    common::fill(h, "#aql", EXPORT_AQL).await;
+    common::submit(h, "header.fui-page-header button[form='query-form']").await;
+    h.wait_css("main table tbody tr").await;
 }
 
 /// The export buttons serve the rows on screen: CSV as a header row plus those

@@ -9,9 +9,10 @@
 //!
 //! A run is a form post, and its results exist only in the page that answers
 //! it: the viewer keeps no store between requests. So Show as is a choice of
-//! the page's own form, applied by the next run, and each export is a form
-//! that posts the query again to `/export/aql` ([`crate::export`]). No
-//! openEHR spec governs the viewer's pages: our own design.
+//! the page's own form, applied by the next run, and each export is a submit
+//! of that same form sent to `/export/aql` ([`crate::export`]), since a form
+//! cannot hold another. No openEHR spec governs the viewer's pages: our own
+//! design.
 
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Sorting, cell, data_table};
@@ -173,19 +174,22 @@ fn chart(page: &ResultPage) -> Option<AnyView> {
     .into_any())
 }
 
-/// An export of the query `aql` with `parameters`: a form that posts it
-/// again to `/export/aql` for a download in `format`.
-fn export(aql: &str, parameters: &str, format: &'static str, words: String) -> AnyView {
+/// An export of the run in `format`: a submit of the page's own form, which
+/// the Results section always sits in, sent to `/export/aql` instead.
+fn export(format: &'static str, words: String) -> AnyView {
     view! {
-        <form method="post" action="/export/aql" class="fui-inline-form">
-            <input type="hidden" name="q" value=aql.to_owned() />
-            <input type="hidden" name="parameters_json" value=parameters.to_owned() />
-            <input type="hidden" name="format" value=format />
-            <button type="submit" class="fui-button fui-button-secondary fui-button-small">
-                {ferrohealth_ui::icon::icon(Glyph::DOWNLOAD, "14")}
-                {words}
-            </button>
-        </form>
+        <button
+            type="submit"
+            name="format"
+            value=format
+            formaction="/export/aql"
+            formmethod="post"
+            formnovalidate
+            class="fui-button fui-button-secondary fui-button-small"
+        >
+            {ferrohealth_ui::icon::icon(Glyph::DOWNLOAD, "14")}
+            {words}
+        </button>
     }
     .into_any()
 }
@@ -229,8 +233,10 @@ pub fn results(answered: &Answered<'_>) -> AnyView {
     let actions = (total > 0).then(|| {
         view! {
             <div class="fui-cluster">
-                {export(answered.aql, answered.parameters, "csv", tr(Msg::ResultsCsv))}
-                {export(answered.aql, answered.parameters, "json", tr(Msg::ResultsJson))}
+                <input type="hidden" name="q" value=answered.aql.to_owned() />
+                <input type="hidden" name="parameters_json" value=answered.parameters.to_owned() />
+                {export("csv", tr(Msg::ResultsCsv))}
+                {export("json", tr(Msg::ResultsJson))}
             </div>
         }
         .into_any()

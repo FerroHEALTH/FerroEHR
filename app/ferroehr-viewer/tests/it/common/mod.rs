@@ -685,6 +685,29 @@ impl Element {
         element_command(&format!("clear({})", self.what), self.inner.clear()).await;
     }
 
+    /// Scroll it to the middle of the viewport, clear of the sticky top bar
+    /// and the docked decision bar.
+    ///
+    /// # Panics
+    /// When the `WebDriver` answers with anything but success.
+    pub(crate) async fn scroll_to_centre(&self) {
+        let arg = self
+            .inner
+            .to_json()
+            .expect("an element handle serializes as a script argument");
+        element_command(
+            &format!("scroll_to_centre({})", self.what),
+            async {
+                self.inner
+                    .handle()
+                    .execute("arguments[0].scrollIntoView({block: 'center'});", vec![arg])
+                    .await
+                    .map(|_| ())
+            },
+        )
+        .await;
+    }
+
     /// Scroll it into the viewport.
     ///
     /// # Panics
@@ -1718,7 +1741,9 @@ pub(crate) async fn submit(h: &Harness, css: &str) {
     )
     .await
     .expect("mark the document before the post");
-    h.wait_css(css).await.click().await;
+    let control = h.wait_css(css).await;
+    control.scroll_to_centre().await;
+    control.click().await;
     let moved = poll_until_for(Duration::from_secs(15), async || {
         !is_present(h, "html[data-e2e-left]").await
     })

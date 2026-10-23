@@ -627,11 +627,23 @@ pub fn StoredQueryRunTab() -> impl IntoView {
                 .iter()
                 .map(|each| (each.as_str(), tr(each.label())))
                 .collect();
-            let version_field = (mode != VersionResolution::Latest).then(|| {
-            Field::new("rv", tr(Msg::ColumnVersion))
+            // NOTE: leptos-ui.md §15.8: the version field shows whatever the choice, so a page with no
+            // WebAssembly can pick Prefix or Exact and type the version in one post.
+            let version_field = Field::new("rv", tr(Msg::ColumnVersion))
+                .help(tr(Msg::QueriesVersionHelp))
                 .after(version_error.clone().map(|error| view! { <p class="fui-field-error">{error}</p> }))
-                .view(view! { <input id="rv" name="run_version" type="text" class="fui-input fui-mono" value=typed.clone() placeholder="1 or 1.1" /> })
-        });
+                .view(view! { <input id="rv" name="run_version" type="text" class="fui-input fui-mono" value=typed.clone() placeholder="1 or 1.1" /> });
+            let sends = match mode {
+                VersionResolution::Latest => format!("POST /query/{name}"),
+                VersionResolution::Prefix | VersionResolution::Exact => {
+                    format!("POST /query/{name}/{}", typed.trim())
+                }
+            };
+            let sends = view! {
+                <p class="fui-small fui-muted">
+                    {tr(Msg::QueriesSends)} " " <code>{sends}</code>
+                </p>
+            };
             let fields = values
             .iter()
             .map(|(param, value)| {
@@ -647,6 +659,7 @@ pub fn StoredQueryRunTab() -> impl IntoView {
                     {section(Some(tr(Msg::ColumnVersion)), None, None, view! {
                         {choice_group("res", tr(Msg::QueriesWhichVersion), &modes, mode.as_str())}
                         {version_field}
+                        {sends}
                     })}
                     {section(Some(tr(Msg::QueryParameters)), u64::try_from(names.len()).ok(), None, view! {
                         <div class="fui-form-grid">{fields}</div>
