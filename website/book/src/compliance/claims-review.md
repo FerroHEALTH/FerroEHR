@@ -439,6 +439,7 @@ cut, after the texts in scope have been read.
 | 2026-10-20 | 5.1.0, after `18097c6f1` | 2 claims, in the README and one book page | nothing |
 | 2026-10-20 | 5.2.0, after `e5aa1902b` | 1 claim, in one book page | nothing |
 | 2026-10-22 | 5.3.2, after `434cd351e` | 4 claims, in four book pages and the technical documentation | nothing |
+| 2026-10-23 | 5.3.3, after `25845e6d3` | 1 claim, in one book page: the templates page said `|raw` is write-only, corrected for #3934 | nothing |
 
 ## The review of 2026-10-20, for 5.2.0
 
