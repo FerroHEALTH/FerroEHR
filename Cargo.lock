@@ -1896,9 +1896,9 @@ dependencies = [
 
 [[package]]
 name = "ctutils"
-version = "0.4.2"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d5515a3834141de9eafb9717ad39eea8247b5674e6066c404e8c4b365d2a29e"
+checksum = "38d28fb6aa7dd680b3ffd1a3e64e115c177bdba63c0ae7f9cd48129ff05c4fa0"
 dependencies = [
  "cmov",
 ]
@@ -2662,7 +2662,7 @@ dependencies = [
  "openehr-lang",
  "openehr-query",
  "openehr-rm",
- "openehr-sdt 0.0.95",
+ "openehr-sdt 0.0.96",
  "openehr-term",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -2757,7 +2757,7 @@ dependencies = [
  "openehr-its",
  "openehr-lang",
  "openehr-rm",
- "openehr-sdt 0.0.95",
+ "openehr-sdt 0.0.96",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
@@ -2800,7 +2800,7 @@ dependencies = [
  "ferroehr",
  "ferroehr-rest",
  "openehr-its",
- "openehr-sdt 0.0.95",
+ "openehr-sdt 0.0.96",
  "reqwest",
  "serde_json",
  "sqlx",
@@ -2833,7 +2833,7 @@ dependencies = [
  "openehr-am",
  "openehr-its",
  "openehr-query",
- "openehr-sdt 0.0.95",
+ "openehr-sdt 0.0.96",
  "openidconnect",
  "reqwest",
  "serde",
@@ -5433,7 +5433,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "openehr-adl"
-version = "0.0.95"
+version = "0.0.96"
 dependencies = [
  "indexmap 2.14.2",
  "openehr-am",
@@ -5449,7 +5449,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-am"
-version = "0.0.95"
+version = "0.0.96"
 dependencies = [
  "openehr-base",
  "openehr-lang",
@@ -5459,7 +5459,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-base"
-version = "0.0.95"
+version = "0.0.96"
 dependencies = [
  "serde",
  "serde_json",
@@ -5479,7 +5479,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-its"
-version = "0.0.95"
+version = "0.0.96"
 dependencies = [
  "async-trait",
  "axum",
@@ -5513,7 +5513,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-lang"
-version = "0.0.95"
+version = "0.0.96"
 dependencies = [
  "assert_fs",
  "chumsky",
@@ -5527,7 +5527,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-query"
-version = "0.0.95"
+version = "0.0.96"
 dependencies = [
  "chumsky",
  "logos",
@@ -5536,7 +5536,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-rm"
-version = "0.0.95"
+version = "0.0.96"
 dependencies = [
  "insta",
  "jsonschema",
@@ -5560,7 +5560,7 @@ checksum = "f23bd61aa0044486803da37083b265559a5ed63c82436f4c9bc2060cde8af234"
 
 [[package]]
 name = "openehr-sdt"
-version = "0.0.95"
+version = "0.0.96"
 dependencies = [
  "fancy-regex",
  "indexmap 2.14.2",
@@ -5584,7 +5584,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-term"
-version = "0.0.95"
+version = "0.0.96"
 dependencies = [
  "openehr-base",
  "roxmltree",
