@@ -74,13 +74,26 @@ key flag `0x02`), the server signs with that subkey; otherwise it signs with
 the primary key. Position in the file decides nothing, so an encryption
 subkey is never used to sign.
 
+**Sign with Ed25519.** It is the one algorithm the server signs with that
+has neither a refusal nor a warning.
+
+**An ECDSA or Ed448 signing key is refused at boot.** The private-key
+arithmetic of both runs on `crypto-bigint` 0.5, whose operations meant to be
+constant-time can branch on secret values (RUSTSEC-2026-0387), and the 0.5
+line has no fixed release. That covers ECDSA on every curve (P-256, P-384,
+P-521, secp256k1, Brainpool). The server stops before it makes a single
+signature and names the advisory. Only the signing component counts: a
+certificate whose primary key is ECDSA and whose signing subkey is Ed25519
+is accepted. Such a certificate stays usable for verification as a
+[retired key](#retired-keys-and-rotation), since verifying uses only public
+values.
+
 **An RSA signing key is accepted with a warning.** Every commit would then
 perform an RSA private-key operation, the operation the Marvin timing
 sidechannel (RUSTSEC-2023-0071 / CVE-2023-49092) concerns, and the
 underlying `rsa` crate has no fixed release. The server warns at boot and
 keeps working, because a repository whose history is RSA-signed still needs
-that key to verify it. Ed25519 or ECDSA keeps that code off the signing
-path.
+that key to verify it. An Ed25519 key keeps that code off the signing path.
 
 ### Retired keys and rotation
 
@@ -94,6 +107,10 @@ has to keep the old one verifiable. Two mechanisms do that:
 - **`retired_key_paths`.** A replaced certificate's **public** half is
   listed there and consulted during verification. A public key verifies and
   can never sign again, so a retired entry cannot become an active signer.
+
+A retired certificate may use any algorithm the server can verify, ECDSA,
+Ed448 and RSA included, so moving off a refused signing key keeps every
+version it signed verifiable.
 
 ## Server-generated versus client-supplied signatures
 

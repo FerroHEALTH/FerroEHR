@@ -384,13 +384,20 @@ takes a comma-separated list
 > `pgp` mode **fails closed at boot** if the key is missing or unusable: the
 > server will not start. Verify the key and passphrase before switching modes.
 
-### Choose an Ed25519 (or other ECC) signing key
+### Choose an Ed25519 signing key
 
-Any OpenPGP key algorithm is accepted, but an **RSA** signing key makes every
-commit perform an RSA private-key operation, the operation the Marvin timing
-sidechannel concerns (RUSTSEC-2023-0071 / CVE-2023-49092), for which the
-underlying `rsa` crate has no fixed release. An Ed25519 or ECDSA key keeps that
-code off the signing path entirely.
+The server refuses an **ECDSA** (P-256, P-384, P-521, secp256k1, Brainpool)
+or **Ed448** signing key at boot: their private-key arithmetic runs on
+`crypto-bigint` 0.5, whose constant-time operations can branch on secret
+values (RUSTSEC-2026-0387), with no fixed release on that line. The boot error
+names the advisory. Move to Ed25519 with the steps below; the old certificate
+goes in `retired_key_paths`, where it keeps verifying, because verification
+uses only public values.
+
+An **RSA** signing key is accepted, but it makes every commit perform an RSA
+private-key operation, the operation the Marvin timing sidechannel concerns
+(RUSTSEC-2023-0071 / CVE-2023-49092), for which the underlying `rsa` crate has
+no fixed release. An Ed25519 key keeps that code off the signing path entirely.
 
 The server does **not** refuse an RSA key: a repository whose history is
 already RSA-signed needs that key to keep verifying, and signatures are

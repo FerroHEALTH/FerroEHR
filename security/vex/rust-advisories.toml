@@ -60,8 +60,8 @@
 id = "https://ferroehr.eu/vex/rust-dependency-advisories"
 author = "Cadasto B.V."
 role = "vendor"
-timestamp = "2026-10-19T00:00:00Z"
-version = 9
+timestamp = "2026-10-24T00:00:00Z"
+version = 10
 
 # What the statements are about: the released server binary, the container
 # image built from it, and the viewer image. The server artifacts carry the
@@ -228,6 +228,55 @@ in the compiler's build step and links into nothing that ships. The \
 viewer's WebDriver client stopped reaching zip 8 when its `manager` \
 feature was turned off (#3806). Re-evaluate at the utoipa-swagger-ui \
 release that accepts zip 9 (#3799).\
+"""
+
+[[accepted]]
+id = "RUSTSEC-2026-0387"
+crate = "crypto-bigint"
+version = "0.5.5"
+carriers = ["cx448", "elliptic-curve"]
+workspace_roots = [
+  "ferroehr",
+  "ferroehr-viewer",
+  "ferroehr-ext",
+  "ferroehr-rest",
+  "ferroehr-server",
+  "openehr-adl",
+  "openehr-its",
+  "openehr-rm",
+  "openehr-sdt",
+  "testkit",
+]
+status = "not_affected"
+justification = "vulnerable_code_cannot_be_controlled_by_adversary"
+impact = """
+The advisory concerns crypto-bigint operations meant to be constant-time \
+(borrowing subtraction, trailing-zero counting, `div_rem`, `nlimbs`, \
+Montgomery multiplication, `UintRef` equality) that can branch on their \
+operands, which leaks only when an operand is SECRET. crypto-bigint 0.5.5 is \
+reached through `cx448` (Ed448) and `elliptic-curve` 0.13 (the ECDSA curves \
+`p256`, `p384`, `p521`, `k256`), all carried by `pgp`, and through `p256` and \
+`p384` under `openidconnect`. In VERSION signing (`[signing] mode = "pgp"`, \
+not the default `digest` mode), an ECDSA or Ed448 signature would run that \
+arithmetic over the private key and the nonce, so `PgpKey::from_parts` in \
+`app/ferroehr/src/versioning/signature/key.rs` refuses either algorithm as \
+the signing component with `KeyError::RefusedAlgorithm` before the boot check \
+makes any signature, and the server does not start (#3965). Ed25519 signs on \
+`curve25519-dalek` and RSA on `num-bigint-dig`, neither of which reaches the \
+crate. What remains is verification: of VERSION signatures against the \
+configured and retired certificates, of the licence token against the \
+licensor's certificates, and, in the viewer, of the identity provider's \
+ES256 or ES384 ID-token signature. Every operand there is a public key, a \
+public signature or a public digest, so a timing observation has no secret \
+to recover. Parsing an unencrypted ECDSA secret key file checks the scalar's \
+range once before the refusal; that runs at boot over an operator's local \
+file and cannot be repeated or timed by an adversary. The spec crates reach \
+the crate only through their path-only dev-dependency on `testkit`, which \
+cargo strips at packaging. No fix exists on the 0.5 line (only 0.7.6 and \
+later are patched), and no release of `pgp` (0.21.0), `cx448` (0.1.1) or \
+`openidconnect` (4.0.1) leaves it. Re-evaluate when `pgp` and \
+`openidconnect` release on crypto-bigint 0.7.6 or later, and before the \
+signing refusal is lifted.\
 """
 
 # ── Reported by lock-file scanners only ─────────────────────────────────────

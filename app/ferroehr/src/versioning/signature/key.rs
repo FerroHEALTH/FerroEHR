@@ -45,6 +45,23 @@ pub enum KeyError {
     /// key) — the fail-closed boot check.
     #[error("the configured OpenPGP key cannot sign (wrong passphrase or non-signing key)")]
     Unusable(#[from] PgpSignError),
+    /// The signing component is an ECDSA or Ed448 key, whose private-key
+    /// arithmetic runs `crypto-bigint` 0.5 operations that RUSTSEC-2026-0387
+    /// shows can branch on secret values.
+    ///
+    /// The certificate still verifies the signatures it made when it is
+    /// listed in `signing.retired_key_paths`, since verification uses only
+    /// public values.
+    #[error(
+        "the configured OpenPGP signing key is {algorithm:?}, which FerroEHR refuses to sign with: \
+         its private-key arithmetic is not constant-time in the crypto-bigint 0.5 it runs on \
+         (RUSTSEC-2026-0387, no fixed release). Rotate to an Ed25519 signing key and list this \
+         certificate in `signing.retired_key_paths` so versions already signed keep verifying"
+    )]
+    RefusedAlgorithm {
+        /// The public-key algorithm of the signing component.
+        algorithm: PublicKeyAlgorithm,
+    },
 }
 
 /// A failure producing a detached `OpenPGP` signature at runtime.
@@ -96,7 +113,8 @@ impl PgpKey {
     /// Performs the fail-closed boot check (a test signature).
     ///
     /// # Errors
-    /// [`KeyError::Read`] / [`KeyError::Parse`] / [`KeyError::Unusable`].
+    /// [`KeyError::Read`] / [`KeyError::Parse`] / [`KeyError::RefusedAlgorithm`] /
+    /// [`KeyError::Unusable`].
     pub fn load(
         path: &Path,
         passphrase: Option<&crate::config::secret::Secret>,
@@ -124,8 +142,9 @@ impl PgpKey {
     /// tests).
     ///
     /// # Errors
-    /// [`KeyError::Parse`] if the armor is not a secret key; [`KeyError::Unusable`]
-    /// if the boot check signature fails.
+    /// [`KeyError::Parse`] if the armor is not a secret key;
+    /// [`KeyError::RefusedAlgorithm`] if it signs with ECDSA or Ed448;
+    /// [`KeyError::Unusable`] if the boot check signature fails.
     pub fn from_armored(
         armored: &str,
         passphrase: Option<&crate::config::secret::Secret>,
@@ -168,6 +187,11 @@ impl PgpKey {
             retired,
             password,
         };
+        // NOTE: RUSTSEC-2026-0387; refused before the boot check, so no signature is made with it.
+        let algorithm = key.signing_algorithm();
+        if refused_signing_algorithm(algorithm) {
+            return Err(KeyError::RefusedAlgorithm { algorithm });
+        }
         // Fail-closed: a real signature proves the passphrase unlocks the key
         // and it can actually sign.
         key.sign(b"ferroehr-signing boot check")?;
@@ -252,6 +276,18 @@ fn rsa_family(algorithm: PublicKeyAlgorithm) -> bool {
     )
 }
 
+/// Whether `algorithm` signs with private-key arithmetic over `crypto-bigint`
+/// 0.5: ECDSA on any curve (`elliptic-curve` 0.13 scalars) and Ed448 (`cx448`).
+///
+/// Ed25519 runs on `curve25519-dalek` and RSA on `num-bigint-dig`, so neither
+/// reaches the crate.
+fn refused_signing_algorithm(algorithm: PublicKeyAlgorithm) -> bool {
+    matches!(
+        algorithm,
+        PublicKeyAlgorithm::ECDSA | PublicKeyAlgorithm::Ed448
+    )
+}
+
 /// Warns that the configured signing key performs RSA private-key operations.
 ///
 /// A warning rather than a boot refusal: an operator whose corpus is already
@@ -266,8 +302,8 @@ fn warn_rsa_signing_key(algorithm: PublicKeyAlgorithm) {
         "the configured OpenPGP signing key is RSA, so every signature is an RSA private-key \
          operation — the operation the Marvin timing sidechannel (RUSTSEC-2023-0071 / \
          CVE-2023-49092) concerns, and the `rsa` crate has no fixed release. Rotate to an Ed25519 \
-         (or other ECC) signing key and keep this certificate in `signing.retired_key_paths` so \
-         versions already signed keep verifying."
+         signing key and keep this certificate in `signing.retired_key_paths` so versions \
+         already signed keep verifying."
     );
 }
 
@@ -309,6 +345,22 @@ mod tests {
             PublicKeyAlgorithm::RSAEncrypt,
         ] {
             assert!(rsa_family(algorithm), "{algorithm:?} must classify as RSA");
+        }
+    }
+
+    /// ECDSA and Ed448 are refused as signing algorithms; Ed25519, in both
+    /// encodings, and RSA are not.
+    #[test]
+    fn ecdsa_and_ed448_are_refused_signing_algorithms() {
+        for algorithm in [PublicKeyAlgorithm::ECDSA, PublicKeyAlgorithm::Ed448] {
+            assert!(refused_signing_algorithm(algorithm), "{algorithm:?}");
+        }
+        for algorithm in [
+            PublicKeyAlgorithm::Ed25519,
+            PublicKeyAlgorithm::EdDSALegacy,
+            PublicKeyAlgorithm::RSA,
+        ] {
+            assert!(!refused_signing_algorithm(algorithm), "{algorithm:?}");
         }
     }
 

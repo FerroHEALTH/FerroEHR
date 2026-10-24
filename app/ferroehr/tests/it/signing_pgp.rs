@@ -3,8 +3,9 @@
 
 //! `OpenPGP`-mode integration tests: sign→verify round-trip with a
 //! generated key, tamper detection, armor-parse failures, the fail-closed
-//! boot validation (missing path, garbled key, wrong passphrase), and the
-//! boot advisory an RSA signing key raises.
+//! boot validation (missing path, garbled key, wrong passphrase), the
+//! boot advisory an RSA signing key raises, and the refusal of ECDSA and
+//! Ed448 signing keys (RUSTSEC-2026-0387).
 //!
 //! Keys are generated in-test via rPGP so there is no vendored key fixture.
 
@@ -26,8 +27,13 @@ use ferroehr::versioning::signature::key::KeyError;
 use ferroehr::versioning::signature::signer::{Signer, SigningError};
 use ferroehr::versioning::signature::verify::Verdict;
 use pgp::composed::{
-    ArmorOptions, KeyType, SecretKeyParamsBuilder, SignedSecretKey, SubkeyParamsBuilder,
+    ArmorOptions, DetachedSignature, KeyType, SecretKeyParamsBuilder, SignedSecretKey,
+    SubkeyParamsBuilder,
 };
+use pgp::crypto::ecc_curve::ECCCurve;
+use pgp::crypto::hash::HashAlgorithm;
+use pgp::crypto::public_key::PublicKeyAlgorithm;
+use pgp::types::Password;
 use rand::rngs::OsRng;
 use tracing::field::{Field, Visit};
 use tracing_subscriber::layer::{Context, Layer};
@@ -490,4 +496,110 @@ fn an_ed25519_signing_key_raises_no_advisory() {
         advisories.is_empty(),
         "an ECC signing key must boot silently, got {advisories:?}"
     );
+}
+
+// ── ECDSA and Ed448 signing keys (RUSTSEC-2026-0387) ────────────────────────
+
+/// Generate a `key_type` signing key, returning the key and its armored secret.
+fn generate_typed_key(key_type: KeyType) -> (SignedSecretKey, String) {
+    let mut builder = SecretKeyParamsBuilder::default();
+    builder
+        .key_type(key_type)
+        .can_sign(true)
+        .primary_user_id("ferroehr-signing typed <typed@ferroehr.local>".into());
+    let params = builder.build().expect("build key params");
+    let key: SignedSecretKey = params.generate(OsRng).expect("generate key");
+    let armored = key
+        .to_armored_string(ArmorOptions::default())
+        .expect("armor secret key");
+    (key, armored)
+}
+
+/// The signing keys the server refuses, with the algorithm each reports.
+fn refused_key_types() -> Vec<(KeyType, PublicKeyAlgorithm)> {
+    vec![
+        (KeyType::ECDSA(ECCCurve::P256), PublicKeyAlgorithm::ECDSA),
+        (KeyType::ECDSA(ECCCurve::P384), PublicKeyAlgorithm::ECDSA),
+        (KeyType::ECDSA(ECCCurve::P521), PublicKeyAlgorithm::ECDSA),
+        (
+            KeyType::ECDSA(ECCCurve::Secp256k1),
+            PublicKeyAlgorithm::ECDSA,
+        ),
+        (KeyType::Ed448, PublicKeyAlgorithm::Ed448),
+    ]
+}
+
+/// An ECDSA or Ed448 signing key stops the boot with an error naming the
+/// advisory and the replacement, before any signature is made with it.
+#[test]
+fn an_ecdsa_or_ed448_signing_key_is_refused_at_boot() {
+    for (key_type, expected) in refused_key_types() {
+        let (_, armored) = generate_typed_key(key_type.clone());
+        let err = pgp_signer(&armored, None).expect_err("the key must be refused");
+        let SigningError::Key(KeyError::RefusedAlgorithm { algorithm }) = &err else {
+            panic!("{key_type:?}: expected RefusedAlgorithm, got {err:?}");
+        };
+        assert_eq!(*algorithm, expected, "{key_type:?}");
+        let message = KeyError::RefusedAlgorithm {
+            algorithm: *algorithm,
+        }
+        .to_string();
+        for needle in ["RUSTSEC-2026-0387", "Ed25519", "retired_key_paths"] {
+            assert!(message.contains(needle), "{key_type:?}: {message}");
+        }
+    }
+}
+
+/// A refused key's certificate, listed as retired, still verifies a version it
+/// signed before the upgrade, and still fails tampered content.
+#[test]
+fn a_refused_key_still_verifies_its_signatures_as_a_retired_key() {
+    for (key_type, _) in refused_key_types() {
+        let (old_key, _) = generate_typed_key(key_type.clone());
+        // NOTE: RFC 9580 §5.2.3.2; a digest shorter than the curve fails, and rPGP holds Ed448 to 512 bits.
+        let old_signature = DetachedSignature::sign_binary_data(
+            OsRng,
+            &old_key.primary_key,
+            &Password::empty(),
+            HashAlgorithm::Sha512,
+            CANONICAL.as_bytes(),
+        )
+        .expect("sign with the pre-upgrade key")
+        .to_armored_string(ArmorOptions::default())
+        .expect("armor the signature");
+        let old_public = old_key
+            .to_public_key()
+            .to_armored_string(ArmorOptions::default())
+            .expect("armor public certificate");
+
+        let (new_secret, _) = generate_key_pair();
+        let rotated = signer_with_retired(&new_secret, &[&old_public]);
+        assert_eq!(
+            rotated.verify(CANONICAL, &old_signature),
+            Verdict::PgpValid,
+            "{key_type:?}: a retired certificate must verify its own signature"
+        );
+        assert_eq!(
+            rotated.verify(&format!("{CANONICAL} "), &old_signature),
+            Verdict::PgpInvalid,
+            "{key_type:?}: tampered content must still fail"
+        );
+    }
+}
+
+/// Ed25519 signs and verifies in both encodings: the legacy `EdDSA` one and
+/// the RFC 9580 one.
+#[test]
+fn an_ed25519_signing_key_still_signs() {
+    for key_type in [KeyType::Ed25519Legacy, KeyType::Ed25519] {
+        let (_, armored) = generate_typed_key(key_type.clone());
+        let signer = pgp_signer(&armored, None)
+            .unwrap_or_else(|err| panic!("{key_type:?} must load: {err:?}"));
+        let signature = signer.sign(CANONICAL).expect("sign");
+        assert_eq!(
+            signer.verify(CANONICAL, &signature),
+            Verdict::PgpValid,
+            "{key_type:?}"
+        );
+    }
 }
