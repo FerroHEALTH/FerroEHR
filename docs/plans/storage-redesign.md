@@ -670,7 +670,7 @@ that addressee.
 The owner's architecture drawing (2026-09-14) places FerroEHR inside a
 **FerroHEALTH instance** beside sibling products and proposed platform
 services: FerroTERM (terminology), FerroBRIDGE (FHIR R4 facade and the
-OMOP CDM load, live), FerroCHART (template to form), and, proposed, FerroPIX
+OMOP CDM load, live), FerroFORMS (template to form), and, proposed, FerroPIX
 (master patient index, IHE PIX/PIXm/PDQ/PDQm), FerroSYS (health, telemetry, event log,
 notification subscriptions, install and deploy) and FerroFED (XCPD patient
 discovery, distributed AQL). Veredictum stays the external acceptance
@@ -693,7 +693,7 @@ family has no central authorisation service (owner, 2026-10-19; #3381 closed):
 each product is its own SMART resource server, because one central service
 would hold the signing key every product's access depends on. Each
 platform service is its own product in its own repository (owner, 2026-09-14:
-FerroFED gets one, like FerroTERM, FerroBRIDGE and FerroCHART), so nothing of a
+FerroFED gets one, like FerroTERM, FerroBRIDGE and FerroFORMS), so nothing of a
 gateway, an MPI or a control plane is built here;
 #3383 reads the openEHR Federation Working Group's "Proposal for Federation
 Tier with AQL" (v0.9.0 release candidate, CC0) and its Apache-2.0 reference
