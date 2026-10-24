@@ -29,8 +29,9 @@
 use std::sync::Arc;
 
 use serde_json::{Value, json};
-use wiremock::matchers::{method, path, query_param};
-use wiremock::{Mock, MockServer, ResponseTemplate};
+use wiremock::{MockServer, ResponseTemplate};
+
+use crate::terminology_wire::{operation, parameter};
 
 use openehr_rm::prelude::PartyProxy;
 
@@ -246,9 +247,8 @@ const VS_URL: &str = "http://snomed.info/sct?fhir_vs=isa/50697003";
 
 async fn fhir_expand_server() -> MockServer {
     let server = MockServer::start().await;
-    Mock::given(method("GET"))
-        .and(path("/ValueSet/$expand"))
-        .and(query_param("url", VS_URL))
+    operation("/ValueSet/$expand")
+        .and(parameter("url", VS_URL))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "resourceType": "ValueSet",
             "status": "active",

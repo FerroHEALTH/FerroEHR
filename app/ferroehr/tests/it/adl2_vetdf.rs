@@ -37,6 +37,8 @@ use serde_json::json;
 use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+use crate::terminology_wire::{operation, parameter};
+
 const HRID: &str = "openEHR-EHR-OBSERVATION.vetdf.v1.0.0";
 /// The FHIR code system the binding target's URI names (SNOMED CT URI Standard).
 const SNOMED_SYSTEM: &str = "http://snomed.info/sct";
@@ -112,10 +114,9 @@ fn outcome(issue_type: &str, text: &str) -> serde_json::Value {
 /// code system URI and `code` the bare concept id, never the binding URI or
 /// the archetype's `SNOMED-CT` key.
 async fn mount_lookup(server: &MockServer, response: ResponseTemplate) {
-    Mock::given(method("GET"))
-        .and(path("/CodeSystem/$lookup"))
-        .and(query_param("system", SNOMED_SYSTEM))
-        .and(query_param("code", SNOMED_CODE))
+    operation("/CodeSystem/$lookup")
+        .and(parameter("system", SNOMED_SYSTEM))
+        .and(parameter("code", SNOMED_CODE))
         .respond_with(response)
         .mount(server)
         .await;
@@ -214,11 +215,16 @@ async fn a_code_system_the_server_does_not_serve_leaves_the_binding_unverified()
 #[tokio::test]
 async fn a_resolving_lookup_is_accepted() {
     let server = MockServer::start().await;
+    // FHIR R4B `OperationDefinition-CodeSystem-lookup` declares the out
+    // parameters `name` and `display` 1..1, so a resolving answer carries both.
     mount_lookup(
         &server,
         ResponseTemplate::new(200).set_body_json(json!({
             "resourceType": "Parameters",
-            "parameter": [{"name": "display", "valueString": "Entire lung"}]
+            "parameter": [
+                {"name": "name", "valueString": "SNOMED CT"},
+                {"name": "display", "valueString": "Entire lung"}
+            ]
         })),
     )
     .await;

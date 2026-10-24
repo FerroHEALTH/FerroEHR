@@ -21,7 +21,7 @@ publish = false
 # terminology client. FHIR R4 resource mapping is FerroBRIDGE's, outside this
 # workspace.
 default = ["fhir", "events", "multimedia"]
-fhir = ["dep:ferroehr-ext", "ferroehr-ext/fhir", "ehds-logging/balp", "ihe-atna/balp"]
+fhir = ["dep:ferrobridge-term", "ehds-logging/balp", "ihe-atna/balp"]
 events = ["dep:ferroehr-ext", "ferroehr-ext/events"]
 multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 
@@ -33,6 +33,9 @@ urlencoding.workspace = true
 # `[auth]` is the `ferrohealth-smart` section (`config::auth`), and the
 # terminology lane's client credentials grant runs on its client.
 ferrohealth-smart.workspace = true
+# The client of the one FHIR terminology server (`service::terminology::fhir`),
+# behind `fhir`: a slim build refuses a configured server at boot.
+ferrobridge-term = { workspace = true, optional = true }
 # `config::auth` boot validation: the OWASP Argon2id cost floor is judged by
 # parsing each configured PHC string, and `url` judges the issuer's userinfo.
 argon2.workspace = true
@@ -135,11 +138,11 @@ openehr-query = { path = "../../crates/openehr-query" }
 [dev-dependencies]
 # Every feature the integration modules USE, named here rather than left to
 # unification (#3207). The `multimedia` and `events` modules reach
-# `ferroehr_ext` directly; `fhir` is named because four modules import
-# `ferroehr::system_log::fhir`, a LIBRARY module that feature gates, so the
-# integration binary genuinely requires it. There is deliberately NO lane
-# building these targets with the library's `fhir` feature off.
-ferroehr-ext = { path = "../ferroehr-ext", features = ["multimedia", "events", "fhir"] }
+# `ferroehr_ext` directly. The modules that import the library's `fhir`-gated
+# `system_log::fhir` and `service::terminology::fhir` take that feature from
+# the library's defaults; there is deliberately NO lane building these
+# targets with it off.
+ferroehr-ext = { path = "../ferroehr-ext", features = ["multimedia", "events"] }
 testkit = { path = "../../tools/testkit" }
 # The access-record tests read what `ehds-logging` writes by its names.
 ehds-logging = { workspace = true, features = ["balp"] }
