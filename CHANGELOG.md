@@ -149,6 +149,24 @@ workflow refuses a tag that has no matching section here.
   Upgrade: a deployment whose certificate holds several signing subkeys signs
   with a different one after the upgrade; every version signed before keeps
   verifying, since the certificate still carries the old subkey.
+- **The OpenPGP primary key signs only when the certificate lets it**
+  (#3969). In `[signing] mode = "pgp"`, when no subkey qualified to sign, the
+  server signed with the primary key without checking it. It now signs with
+  the primary key only when the primary key's governing self-signature (the
+  newest valid Direct Key signature when it carries key flags, else the
+  newest valid self-signature on the primary User ID) carries the signing
+  flag 0x02, neither that self-signature nor the key has expired, and no
+  valid Key Revocation covers it (RFC 9580 §5.2.1.11, §5.2.3.10, §5.2.3.13,
+  §5.2.3.29). A self-signature with no key flags grants no signing. When
+  neither a subkey nor the primary key may sign, the server refuses to start
+  and says what to change. Upgrade: a certificate whose primary key lacks the
+  signing flag, or has expired or been revoked, and which has no usable
+  signing subkey, no longer boots; add an Ed25519 signing subkey
+  (`gpg --quick-add-key <FINGERPRINT> ed25519 sign`) and export the armored
+  secret key to `signing.key_path` again. Every version signed before keeps
+  verifying, since the certificate still carries the primary key. A
+  certificate generated with signing on its primary key, or with a valid
+  signing subkey, loads as before.
 
 ### Security
 
