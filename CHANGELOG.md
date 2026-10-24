@@ -18,12 +18,12 @@ workflow refuses a tag that has no matching section here.
 ### Changed
 
 - **`SECURITY.md` states the family's response times, with fix-time targets
-  by severity.** An acknowledgement within 5 business days and an initial
-  assessment within 10, both best effort as before, and now a fixed release
-  published within 7 days of the confirmed assessment for a Critical
-  vulnerability, 30 days for High, 90 days for Medium and with the next
-  release for Low. The CRA risk assessment says business days where it said
-  working days.
+  by severity.** An acknowledgement within about 5 business days and an
+  initial assessment within about 10, both best effort as before, and now a
+  fixed release published within 7 days of the confirmed assessment for a
+  Critical vulnerability, 30 days for High, 90 days for Medium and with the
+  next release for Low. The CRA risk assessment says business days where it
+  said working days.
 
 ## [5.4.1] - 2026-10-24
 
