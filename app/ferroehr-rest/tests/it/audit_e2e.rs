@@ -199,21 +199,80 @@ async fn audit_capture_fail_closed() -> AuditSender {
     sender
 }
 
+/// The first frame to arrive within [`RECORD_DEADLINE`].
 async fn recv_one(socket: &mut SyslogTlsListener) -> Option<String> {
-    let frame = socket.recv(Duration::from_secs(3)).await?;
+    let frame = socket.recv(RECORD_DEADLINE).await?;
     Some(String::from_utf8_lossy(&frame).into_owned())
 }
 
-/// Drain every DICOM frame that arrives within the window.
-async fn drain(socket: &mut SyslogTlsListener) -> Vec<String> {
-    let mut out = Vec::new();
-    // The sink opens its TLS connection on the first record, so the window is
-    // the silence after the last frame, long enough for a handshake.
-    while let Some(frame) = socket.recv(Duration::from_secs(2)).await {
+/// How long [`collect_until`] waits for the records a test names before it
+/// fails. A pass returns the moment they land, so the bound only has to cover
+/// the instrumented coverage build; no openEHR spec governs it: our own design.
+const RECORD_DEADLINE: Duration = Duration::from_secs(60);
+
+/// A record a test waits for: its name in the failure message, and the test a
+/// frame must pass to count as that record.
+struct Expected {
+    name: &'static str,
+    matches: fn(&str) -> bool,
+}
+
+/// Every frame that arrives until each of `expected` has been seen.
+///
+/// Fails naming the records still missing, with the frames seen, when
+/// [`RECORD_DEADLINE`] passes first. A silence window would read a slow record
+/// as an absent one (#3950).
+async fn collect_until(socket: &mut SyslogTlsListener, expected: &[Expected]) -> Vec<String> {
+    let deadline = tokio::time::Instant::now() + RECORD_DEADLINE;
+    let mut out: Vec<String> = Vec::new();
+    loop {
+        let missing: Vec<&str> = expected
+            .iter()
+            .filter(|want| !out.iter().any(|xml| (want.matches)(xml)))
+            .map(|want| want.name)
+            .collect();
+        if missing.is_empty() {
+            return out;
+        }
+        let left = deadline.saturating_duration_since(tokio::time::Instant::now());
+        let Some(frame) = socket.recv(left).await else {
+            panic!("no {missing:?} record within {RECORD_DEADLINE:?}; records seen: {out:#?}");
+        };
         out.push(String::from_utf8_lossy(&frame).into_owned());
     }
-    out
 }
+
+/// The party id of the [`send_sentinel`] request's record.
+const SENTINEL_PARTY: &str = "audit-sentinel";
+
+/// The record of the [`send_sentinel`] request.
+const SENTINEL: Expected = Expected {
+    name: "sentinel demographic read",
+    matches: |xml| xml.contains(r#"ParticipantObjectID="audit-sentinel""#),
+};
+
+/// Sends one more audited request after the one under test, so a test that
+/// asserts an absence can wait for this request's record instead of a silence.
+///
+/// One drain task ships the queue in order over one connection, so every
+/// record the earlier request emitted arrives before [`SENTINEL`].
+async fn send_sentinel(app: &Router) {
+    let _response = app
+        .clone()
+        .oneshot(req(
+            "GET",
+            &format!("/demographic/person/{SENTINEL_PARTY}"),
+            true,
+        ))
+        .await
+        .expect("sentinel response");
+}
+
+/// The template list's operation record.
+const TEMPLATE_OP: Expected = Expected {
+    name: "template operation",
+    matches: |xml| xml.contains(r#"originalText="template""#),
+};
 
 // ── service assembly ───────────────────────────────────────────────────────────
 
@@ -573,10 +632,12 @@ async fn login_event_is_suppressed_by_default() {
     let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     let _response = app
+        .clone()
         .oneshot(req("GET", "/definition/template/adl1.4", true))
         .await
         .expect("resp");
-    let records = drain(&mut socket).await;
+    send_sentinel(&app).await;
+    let records = collect_until(&mut socket, &[TEMPLATE_OP, SENTINEL]).await;
     assert!(
         records
             .iter()
@@ -601,7 +662,11 @@ async fn login_event_emitted_when_not_suppressed() {
         .oneshot(req("GET", "/definition/template/adl1.4", true))
         .await
         .expect("resp");
-    let records = drain(&mut socket).await;
+    let login = Expected {
+        name: "user authentication",
+        matches: |xml| xml.contains(r#"originalText="User Authentication""#),
+    };
+    let records = collect_until(&mut socket, &[TEMPLATE_OP, login]).await;
     assert!(
         records
             .iter()
@@ -696,6 +761,7 @@ async fn aql_execute_emits_one_access_record_per_served_ehr() {
     let (_pg, app, _uid) = audit_app_with_composition(sender).await;
 
     let resp = app
+        .clone()
         .oneshot(req(
             "GET",
             "/query/aql?q=SELECT%20c/uid/value%20FROM%20EHR%20e%20CONTAINS%20COMPOSITION%20c",
@@ -705,7 +771,10 @@ async fn aql_execute_emits_one_access_record_per_served_ehr() {
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let records = drain(&mut socket).await;
+    // Every access record the query emits lands before the sentinel's, so the
+    // count below sees them all.
+    send_sentinel(&app).await;
+    let records = collect_until(&mut socket, &[SENTINEL]).await;
     assert!(
         records
             .iter()
