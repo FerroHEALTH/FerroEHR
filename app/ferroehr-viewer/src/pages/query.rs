@@ -1117,7 +1117,12 @@ pub fn BuildTab() -> impl IntoView {
         let templates = crate::bff::templates::list_templates().await;
         let mut ids: Vec<String> = templates
             .as_ref()
-            .map(|rows| rows.iter().map(|row| row.template_id.clone()).collect())
+            .map(|rows| {
+                rows.iter()
+                    .filter(|row| row.is_composition())
+                    .map(|row| row.template_id.clone())
+                    .collect()
+            })
             .unwrap_or_default();
         ids.sort();
         ids.dedup();

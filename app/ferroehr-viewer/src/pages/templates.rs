@@ -143,11 +143,16 @@ fn rows_table(family: TemplateFamily, rows: &[TemplateRow]) -> AnyView {
                         Msg::TemplateActionsFor,
                         &[("name", row.template_id.clone().into())],
                     ),
-                    vec![Item::new(Action::new(
-                        Some(Glyph::SQUARE_TERMINAL),
-                        tr(Msg::TemplateBuildQuery),
-                        Act::Link(query_href(&row.template_id, None)),
-                    ))],
+                    row.is_composition()
+                        .then(|| {
+                            Item::new(Action::new(
+                                Some(Glyph::SQUARE_TERMINAL),
+                                tr(Msg::TemplateBuildQuery),
+                                Act::Link(query_href(&row.template_id, None)),
+                            ))
+                        })
+                        .into_iter()
+                        .collect(),
                 )
                 .destructive(vec![Item::new(Action::new(
                     Some(Glyph::TRASH),
@@ -694,21 +699,11 @@ fn paths_panel(template_id: &str, base: &str, root: &CatalogNode, note: Option<S
 
 /// The Example tab: the options as a `GET` form and the example the CDR
 /// builds.
-fn example_options(base: &str, adl2: bool) -> (AnyView, ReprFormat, ExampleDetail, ExampleType) {
+fn example_options(
+    base: &str,
+    formats: &[(&'static str, ReprFormat)],
+) -> (AnyView, ReprFormat, ExampleDetail, ExampleType) {
     let format_key = crate::request::query("format").unwrap_or_default();
-    let formats: &[(&str, ReprFormat)] = if adl2 {
-        &[
-            ("json", ReprFormat::CanonicalJson),
-            ("xml", ReprFormat::CanonicalXml),
-        ]
-    } else {
-        &[
-            ("json", ReprFormat::CanonicalJson),
-            ("xml", ReprFormat::CanonicalXml),
-            ("flat", ReprFormat::Flat),
-            ("structured", ReprFormat::Structured),
-        ]
-    };
     let format = formats
         .iter()
         .find(|(key, _)| *key == format_key)
@@ -824,14 +819,15 @@ fn example_panel(
     })
 }
 
-/// The header of a template: its name, its family line, Build a query and
-/// the More menu.
+/// The header of a template: its name, its family line, Build a query (for a
+/// template the query builder reaches, `queryable`) and the More menu.
 fn template_header(
     title: String,
     subtitle: String,
     template_id: &str,
     family: TemplateFamily,
     after: Option<AnyView>,
+    queryable: bool,
 ) -> AnyView {
     let more = Menu::new(
         "template-more",
@@ -866,11 +862,15 @@ fn template_header(
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::primary(Action::new(
-            Some(Glyph::SQUARE_TERMINAL),
-            tr(Msg::TemplateBuildQuery),
-            Act::Link(query_href(template_id, None)),
-        ))
+        if queryable {
+            ActionGroup::primary(Action::new(
+                Some(Glyph::SQUARE_TERMINAL),
+                tr(Msg::TemplateBuildQuery),
+                Act::Link(query_href(template_id, None)),
+            ))
+        } else {
+            ActionGroup::none()
+        }
         .more(more),
     );
     view! {
@@ -912,6 +912,7 @@ pub fn TemplatePage() -> impl IntoView {
                         &template_id,
                         TemplateFamily::Adl14,
                         None,
+                        true,
                     )}
                     {acted}
                     {refused(tr(Msg::TemplateRefused), &error, None)}
@@ -919,6 +920,7 @@ pub fn TemplatePage() -> impl IntoView {
                 .into_any();
             }
         };
+        let queryable = detail.catalog.rm_type == "COMPOSITION";
         let tabs: Vec<Tab> = [
             TemplateTab::Overview,
             TemplateTab::Paths,
@@ -942,11 +944,20 @@ pub fn TemplatePage() -> impl IntoView {
                 "template-source",
             )),
             TemplateTab::Example => {
-                let (form, format, level, kind) = example_options(&base, false);
-                let example = fetch_example(template_id.clone(), format, level, kind)
-                    .await
-                    .map(Some);
-                example_panel(form, format, example)
+                let root = detail.catalog.rm_type.clone();
+                let formats = crate::example_options::example_formats(&root);
+                if formats.is_empty() {
+                    panel(plain_section(info_note(tr_with(
+                        Msg::TemplateNoExampleForRoot,
+                        &[("root", root.into())],
+                    ))))
+                } else {
+                    let (form, format, level, kind) = example_options(&base, formats);
+                    let example = fetch_example(template_id.clone(), format, level, kind)
+                        .await
+                        .map(Some);
+                    example_panel(form, format, example)
+                }
             }
             _ => {
                 let uploaded = list_templates()
@@ -978,9 +989,8 @@ pub fn TemplatePage() -> impl IntoView {
                 if let Some(uploaded) = uploaded {
                     facts.push((tr(Msg::ColumnUploaded), when(&uploaded)));
                 }
-                panel(view! {
-                    {section(Some(tr(Msg::TemplateIdentity)), None, None, definitions(facts))}
-                    {section(
+                let use_section = queryable.then(|| {
+                    section(
                         Some(tr(Msg::TemplateUse)),
                         None,
                         None,
@@ -992,7 +1002,11 @@ pub fn TemplatePage() -> impl IntoView {
                                 )>{tr(Msg::TemplateUseLine)}</a>
                             </p>
                         },
-                    )}
+                    )
+                });
+                panel(view! {
+                    {section(Some(tr(Msg::TemplateIdentity)), None, None, definitions(facts))}
+                    {use_section}
                 })
             }
         };
@@ -1012,6 +1026,7 @@ pub fn TemplatePage() -> impl IntoView {
                 &template_id,
                 TemplateFamily::Adl14,
                 None,
+                queryable,
             )}
             <div class="fui-stack">
                 {acted} {inline_confirm(TemplateFamily::Adl14, &template_id, &base)}
@@ -1194,7 +1209,8 @@ pub fn Adl2TemplatePage() -> impl IntoView {
                 ))),
             },
             TemplateTab::Example => {
-                let (form, format, level, kind) = example_options(&base, true);
+                let (form, format, level, kind) =
+                    example_options(&base, crate::example_options::CANONICAL_EXAMPLE_FORMATS);
                 let example = fetch_adl2_example(hrid.clone(), format, level, kind).await;
                 example_panel(form, format, example)
             }
@@ -1232,7 +1248,7 @@ pub fn Adl2TemplatePage() -> impl IntoView {
         let subtitle = tr_with(Msg::TemplateAdl2Subtitle, &[("hrid", hrid.clone().into())]);
         view! {
             <Title text=title.clone() />
-            {template_header(title, subtitle, &hrid, TemplateFamily::Adl2, after)}
+            {template_header(title, subtitle, &hrid, TemplateFamily::Adl2, after, true)}
             <div class="fui-stack">
                 {acted} {inline_confirm(TemplateFamily::Adl2, &hrid, &base)}
                 {binder(tr(Msg::TemplateViews), tab_list, tab.key(), body)}

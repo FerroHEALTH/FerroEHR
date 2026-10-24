@@ -1185,7 +1185,11 @@ pub fn NewCompositionPage() -> impl IntoView {
         let templates = crate::bff::templates::list_templates().await;
         let template_field = match templates {
             Ok(rows) => {
-                let mut ids: Vec<String> = rows.into_iter().map(|row| row.template_id).collect();
+                let mut ids: Vec<String> = rows
+                    .into_iter()
+                    .filter(crate::bff::templates::TemplateRow::is_composition)
+                    .map(|row| row.template_id)
+                    .collect();
                 ids.sort();
                 ids.dedup();
                 let options = ids

@@ -774,6 +774,7 @@ async fn choices(ehr_id: &str, drafts: &[Draft]) -> Result<Choices, ViewerError>
         let mut templates: Vec<String> = crate::bff::templates::list_templates()
             .await?
             .into_iter()
+            .filter(crate::bff::templates::TemplateRow::is_composition)
             .map(|row| row.template_id)
             .collect();
         templates.sort();
