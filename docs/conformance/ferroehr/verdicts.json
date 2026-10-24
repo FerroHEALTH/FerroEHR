@@ -286,10 +286,10 @@
     [
       "ArchetypeValidation",
       {
-        "passed": 135,
+        "passed": 134,
         "failed": 0,
         "inconclusive": 0,
-        "unevidenced": 1
+        "unevidenced": 2
       }
     ],
     [
@@ -589,8 +589,8 @@
   ],
   "coverage": {
     "selected": 1145,
-    "driven": 1104,
-    "passed": 1104,
+    "driven": 1103,
+    "passed": 1103,
     "failed": 0,
     "inconclusive": 0
   }

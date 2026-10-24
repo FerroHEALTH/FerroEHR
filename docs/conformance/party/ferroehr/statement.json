@@ -92,7 +92,7 @@
     "party-xml-write-accepted",
     "sf-deprecated-types-unsupported",
     "undefined-containment-refused",
-    "unmatched-member-accepted",
+    "unmatched-member-refused",
     "versioned-party-xml-unsupported",
     "xml-namespace-negotiated"
   ],

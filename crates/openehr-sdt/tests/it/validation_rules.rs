@@ -483,6 +483,40 @@ fn wrong_type_reported() {
     );
 }
 
+/// Register AMB-229, `unmatched-member-refused` (the posture the party
+/// statement declares): a container member whose RM type matches no constraint
+/// node of the attribute is refused, so a CLUSTER where the template constrains
+/// `items[at0004]` to ELEMENT is `WrongType` at that node.
+#[test]
+fn unmatched_container_member_refused() {
+    let mut tree = node("ITEM_TREE", "/data[at0003]");
+    tree.children = vec![node("ELEMENT", "/data[at0003]/items[at0004]")];
+    let inst = json!({
+        "_type": "ITEM_TREE", "archetype_node_id": "at0003",
+        "name": {"_type": "DV_TEXT", "value": "tree"},
+        "items": [{"_type": "CLUSTER", "archetype_node_id": "at0004",
+                   "name": {"_type": "DV_TEXT", "value": "c"}, "items": []}]
+    });
+    let msgs = walk_only(&inst, &tree);
+    assert!(
+        msgs.iter().any(|m| m.kind == ValidationKind::WrongType
+            && m.path == "/data[at0003]/items[at0004]"
+            && m.message.contains("ELEMENT")
+            && m.message.contains("CLUSTER")),
+        "expected WrongType for a CLUSTER in an ELEMENT member, got {msgs:?}"
+    );
+    let element = json!({
+        "_type": "ITEM_TREE", "archetype_node_id": "at0003",
+        "name": {"_type": "DV_TEXT", "value": "tree"},
+        "items": [{"_type": "ELEMENT", "archetype_node_id": "at0004",
+                   "name": {"_type": "DV_TEXT", "value": "e"}}]
+    });
+    assert!(
+        !kinds(&walk_only(&element, &tree)).contains(&ValidationKind::WrongType),
+        "the matched member conforms"
+    );
+}
+
 #[test]
 fn coded_text_in_text_slot_conforms() {
     // DV_CODED_TEXT is-a DV_TEXT: no WrongType.

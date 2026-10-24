@@ -61,7 +61,7 @@ Capabilities claimed:
 - AuditAccountability
 - AnonymousEhrs
 
-Options declared: adl14-partial-id-exact, aql-nonnumeric-aggregate-refused, contribution-xml-unsupported, directory-xml-supported, directory-xml-write-accepted, ehr-status-xml-supported, ehr-status-xml-write-accepted, ehr-xml-supported, ehr-xml-write-accepted, legacy-alt-formats-unsupported, party-xml-supported, party-xml-write-accepted, sf-deprecated-types-unsupported, undefined-containment-refused, unmatched-member-accepted, versioned-party-xml-unsupported, xml-namespace-negotiated
+Options declared: adl14-partial-id-exact, aql-nonnumeric-aggregate-refused, contribution-xml-unsupported, directory-xml-supported, directory-xml-write-accepted, ehr-status-xml-supported, ehr-status-xml-write-accepted, ehr-xml-supported, ehr-xml-write-accepted, legacy-alt-formats-unsupported, party-xml-supported, party-xml-write-accepted, sf-deprecated-types-unsupported, undefined-containment-refused, unmatched-member-refused, versioned-party-xml-unsupported, xml-namespace-negotiated
 
 ## Additional non-openEHR surface
 
