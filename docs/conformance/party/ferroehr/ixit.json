@@ -147,7 +147,7 @@
     "posture": "fail_open",
     "servers": [
       {
-        "name": "terminology",
+        "name": "ferroterm",
         "namespaces": [
           "cnf-sct-shaped",
           "http://cnf.example.test/fhir/CodeSystem/sct-shaped",
@@ -165,7 +165,7 @@
     "cores": 8,
     "memory_gb": 16,
     "storage_class": "nvme",
-    "topology": "single-node docker compose (8-CPU/8GB Docker VM) on Apple M2, the self-contained SUT stack docker/sut-ferroehr.yml in the SMART resource-server posture (docker/sut-smart.yml overlays it) with the external-terminology profile composed beside it (a seeded HAPI FHIR R4 server, docker compose --profile terminology + docker/sut-terminology.yml, fail-open); alongside it a second deployment of the same image in the openPGP version-signing posture (project ferroehr-cnf-pgp, docker/sut-signing-pgp.yml + docker/sut-terminology-failclosed.yml + docker/sut-pgp-parallel.yml, host port 8081) declared as the sut_pgp instance, which carries the fail-closed terminology posture; and a third server of the same image over the PRIMARY's database in the stable openEHR generation set (docker/sut-spec-stable.yml, same project, host port 8082) declared as the sut_stable instance \u2014 the measured-performance stage drives the primary deployment alone (the pgp project is torn down and the stable server stopped before the window opens)"
+    "topology": "single-node docker compose (8-CPU/8GB Docker VM) on Apple M2, the self-contained SUT stack docker/sut-ferroehr.yml in the SMART resource-server posture (docker/sut-smart.yml overlays it) with the external-terminology profile composed beside it (FerroTERM 0.1.6 serving the shaped seed from a read-only mount, docker compose --profile terminology + docker/sut-terminology.yml, fail-open); alongside it a second deployment of the same image in the openPGP version-signing posture (project ferroehr-cnf-pgp, docker/sut-signing-pgp.yml + docker/sut-terminology-failclosed.yml + docker/sut-pgp-parallel.yml, host port 8081) declared as the sut_pgp instance, which carries the fail-closed terminology posture; and a third server of the same image over the PRIMARY's database in the stable openEHR generation set (docker/sut-spec-stable.yml, same project, host port 8082) declared as the sut_stable instance \u2014 the measured-performance stage drives the primary deployment alone (the pgp project is torn down and the stable server stopped before the window opens)"
   },
   "smart": {
     "platform_instance": "smart_platform",

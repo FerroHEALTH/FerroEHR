@@ -65,36 +65,36 @@ alongside the SUT identification that makes it readable.
 
 ## Running the terminology probe against real SNOMED CT
 
-The terminology family drives Snowstorm loaded with a real SNOMED CT release,
-because a code system we seeded ourselves would only prove our client can talk
-to our own fixture — `$subsumes` in particular means nothing without a
-published hierarchy behind it.
+The terminology family drives FerroTERM, the terminology server FerroEHR ships
+with, over a real SNOMED CT release, because a code system we seeded ourselves
+would only prove our client can talk to our own fixture: `$subsumes` in
+particular means nothing without a published hierarchy behind it. It uses the
+quickstart's own terminology overlay (`docker-compose.terminology.yml`): the
+overlay's one-shot `ferroterm-build` turns the archive into an index in a named
+volume, and FerroTERM opens it, which is the path an operator takes.
 
 **Local only, and the package is never in this repository.** The RF2 archive is
 licensed content under a SNOMED International Affiliate agreement: it is not
 committed, not fetched by CI, and not baked into an image. There is deliberately
-no CI lane — a workflow that downloaded it onto a shared runner would be moving
+no CI lane: a workflow that downloaded it onto a shared runner would be moving
 licensed content somewhere this project does not control. Without a package the
 family declares itself not exercised rather than substituting a fixture.
 
-**It never runs by default.** Snowstorm plus a real SNOMED import takes longer
-than every other family combined, so a plain `bash scripts/deploy-probe.sh`
-skips it and says so — even with the archive sitting in the repository root.
-It runs only when asked for, with `PROBE_ONLY=terminology` or an explicit
-`FERROEHR_SNOMED_RF2`.
+**It never runs by default.** A plain `bash scripts/deploy-probe.sh` skips it and
+says so, even with the archive sitting in the repository root. It runs only when
+asked for, with `PROBE_ONLY=terminology` or an explicit `FERROEHR_SNOMED_RF2`.
 
 **The setup is: drop the archive in the repository root.** `SnomedCT_*.zip` is
-gitignored precisely so it can live there, and the probe finds it — no
+gitignored precisely so it can live there, and the probe finds it, with no
 configuration:
 
 ```bash
 PROBE_ONLY=terminology bash scripts/deploy-probe.sh
 ```
 
-With both editions present the NATIONAL one is used, because that is the
-deployment reality being probed, and the International is loaded first so the
-extension can resolve against it. `FERROEHR_SNOMED_RF2` still overrides if the
-archive lives elsewhere.
+With both a national and the International edition present the NATIONAL one is
+used, because that is the deployment reality being probed. `FERROEHR_SNOMED_RF2`
+still overrides if the archive lives elsewhere.
 
 Setting the published checksum is worth the extra line:
 
@@ -103,27 +103,28 @@ FERROEHR_SNOMED_RF2_MD5=876355868299a8c4d1534e53de6e75a5 \
 PROBE_ONLY=terminology bash scripts/deploy-probe.sh
 ```
 
-The MD5 is the one SNOMED International publishes beside the release, and it is
-worth setting: a probe that silently ran against a truncated or substituted
-archive would report conformance about content nobody chose. It is pinned per
-release, so moving edition is a deliberate edit.
+The MD5 is the one SNOMED International publishes beside the release: a probe
+that silently ran against a truncated or substituted archive would report
+conformance about content nobody chose. It is pinned per release, so moving
+edition is a deliberate edit.
 
-**Whether the national package needs the International Edition alongside it is
-not something Snowstorm documents**, so the family does not assume — put both
-zips in the root and the International is imported to `MAIN` first.
+The family's probes:
 
-With only the national package, it is loaded on its own and the run reports what
-was actually served — the subsumption probe checks that the concepts it names
-are present before asserting anything about them, and declares a gap rather than
-a defect if they are not.
+| Probe | What it shows |
+|---|---|
+| `P-TERM-UP` | the overlay's digest-pinned FerroTERM starts and answers its R4B capability statement |
+| `P-TERM-IMPORT` | `ferroterm-build` builds the index from the mounted archive (the run prints the wall clock), and the server serves `http://snomed.info/sct` once it opens it |
+| `P-TERM-SUBSUMES` | `73211009` subsumes `44054006` over the published hierarchy; the concepts are looked up first, and their absence is a declared gap, never a defect |
+| `P-TERM-VALIDATE` | the CDR's `/terminology/*` route answers a SNOMED CT code through FerroTERM, since the bundled openEHR terminology carries none |
+| `P-TERM-BROKEN` | with FerroTERM stopped and `fail_on_error` set, a commit of a bound value is refused with `422` |
 
-**Two resource facts, stated because discovering them mid-import wastes an
-hour.** Elasticsearch and Snowstorm want ~8 GB of memory between them. And
-Elasticsearch refuses to start unless the HOST sets `vm.max_map_count=262144`, a
-sysctl no container can apply to itself:
+`ferroterm-build` builds one edition per run. Whether a national Managed Service
+edition is complete on its own is answered by what the build reports and what
+`P-TERM-SUBSUMES` finds: when the International concepts are absent, the run
+says so.
 
-```bash
-sudo sysctl -w vm.max_map_count=262144
-# Docker Desktop:
-wsl -d docker-desktop sysctl -w vm.max_map_count=262144
-```
+**Resource facts.** FerroTERM's own benchmark records the Netherlands edition at
+about 0.9 GB resident once served, and the build unpacks the archive to a 4 GB
+tmpfs that dies with the build container. The index stays in the probe
+project's named volume on this machine, and a second run rebuilds over it.
+

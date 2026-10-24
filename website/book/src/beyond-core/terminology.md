@@ -252,23 +252,20 @@ sandbox machine, beside the licence-free shaped seed the compose profile ships.
 The quickest local terminology server is the quickstart's
 [terminology overlay](../installation/compose.md#the-terminology-overlay-ferroterm):
 FerroTERM beside the CDR, the shaped seed served, the CDR wired, one command
-and no checkout. The conformance lane still runs its own server: from a
-checkout of the repository, the conformance stack can start a HAPI FHIR JPA
-server beside the CDR, seeded with the same synthetic code systems and value
-sets over its FHIR API (the lane moves to FerroTERM under #3085):
+and no checkout. The conformance lane runs the same server from a checkout of
+the repository, with the shaped seed mounted read-only out of
+`docker/terminology/seed/`:
 
 ```bash
 docker compose -p ferroehr-cnf --project-directory . --profile terminology \
   -f docker/sut-ferroehr.yml -f docker/sut-terminology.yml up -d --wait ferroehr
 ```
 
-The profile starts the terminology server (host port `8090` by default,
-`FERROEHR_TERMINOLOGY_PORT`) plus a one-shot seeding container that uploads the
-fixtures over the server's own FHIR API and verifies `$validate-code` and
-`$expand` before exiting, so a misconfigured server fails there rather than
-inside a later run. The overlay file is what points the CDR at it, by switching
-on the `[terminology.server]` the development configuration already carries in
-the disabled state.
+The profile starts FerroTERM (host port `8090` by default,
+`FERROEHR_TERMINOLOGY_PORT`), which reports healthy only once the mounted code
+systems and value sets are served, and the CDR waits on that. The overlay file
+is what points the CDR at it, by switching on the `[terminology.server]` the
+development configuration already carries in the disabled state.
 
 None of this touches the downloadable quickstart Compose file on its own, which
 uses the in-process openEHR terminology only; the terminology overlay is the
@@ -281,16 +278,11 @@ opt-in that adds FerroTERM to it.
 > content. Point the CDR at a real server, and for SNOMED CT hold the
 > appropriate licence, for anything beyond experimentation.
 
-The terminology container mounts no volume, so its seeded content lives inside
-the container only: re-create it and the seed is gone. Re-run the profile (or
-just the seeding container) afterwards.
-
 > [!TIP]
-> Seeding your own server is the same shape: upload the CodeSystem and ValueSet
-> resources your templates reference over plain FHIR REST (`PUT` to
-> `/fhir/CodeSystem/<id>` and `/fhir/ValueSet/<id>`). A FHIR terminology server
-> starts empty, and a value set it does not hold is an unresolved binding, which
-> your `fail_on_error` setting then decides the fate of.
+> Serving your own content is the same shape: FerroTERM loads every FHIR
+> `CodeSystem` and `ValueSet` in the directory `FERROTERM_CODESYSTEMS` names,
+> and serves them read-only. A value set it does not hold is an unresolved
+> binding, which your `fail_on_error` setting then decides the fate of.
 
 ## On Kubernetes
 

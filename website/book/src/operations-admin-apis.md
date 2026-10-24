@@ -111,7 +111,7 @@ Details that decide behaviour:
 - **The config view is redacted structurally, not by key name.** Passwords and
   password hashes, signing-key secrets and S3 secret keys render as
   `***`; every URL that can carry credentials (database, AMQP, the FHIR audit
-  feed, terminology servers and their token endpoints, the remote policy
+  feed, the terminology server and its token endpoint, the remote policy
   server, the OTLP collector, the object store, the usage-report endpoint)
   keeps its host and path and masks the embedded credentials
   (`postgres://***@host:5432/db`). The OIDC issuer and the SMART URLs are

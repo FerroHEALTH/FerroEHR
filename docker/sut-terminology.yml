@@ -4,8 +4,8 @@
 # CNF external-terminology lane (compose OVERLAY) — the fail-OPEN posture.
 #
 # Switches on the `[terminology.server]` that docker/ferroehr.dev.toml already
-# carries (disabled) and makes the CDR wait for the seeded FHIR terminology
-# server of the `terminology` profile. openEHR puts the resolver of an
+# carries (disabled) and makes the CDR wait for FerroTERM, the terminology
+# server of the `terminology` profile, serving the shaped seed. openEHR puts the resolver of an
 # archetype constraint binding outside the CDR — BASE
 # docs/architecture_overview/master12-terminology.adoc §"Binding Terminology
 # Value-sets to Archetypes": the archetype "simply hold[s] an identifier for a
@@ -35,9 +35,8 @@ services:
       FERROEHR__TERMINOLOGY__SERVER__ENABLED: "true"
       FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR: "false"
     depends_on:
-      # The seeder polls the server's own capability statement and exits 0 only
-      # after the code systems and value sets are in place, so this is the
-      # readiness gate for both containers
+      # FerroTERM reports healthy only once the mounted seed is served, so the
+      # first binding a composition carries finds the value set
       # (docs.docker.com/compose/how-tos/startup-order).
-      terminology-seed:
-        condition: service_completed_successfully
+      terminology:
+        condition: service_healthy

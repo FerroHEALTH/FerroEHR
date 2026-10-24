@@ -168,9 +168,10 @@ on the documentation site.
   distributed version identity, EHR cloning across systems, TDD import
 - **Demographics:** a versioned party store (person, organisation, group,
   agent, role) with relationships
-- **Terminology:** the bundled openEHR terminology plus pluggable external
-  FHIR terminology servers (validate, expand, subsume); FerroTERM, the
-  FerroHEALTH family's terminology server, ships with the quickstart as a compose overlay
+- **Terminology:** the bundled openEHR terminology plus one FHIR terminology
+  server for every other code system (validate, expand, subsume, look up);
+  FerroTERM, the FerroHEALTH family's terminology server, ships with the
+  quickstart as a compose overlay
 
 ### Integration
 
@@ -181,7 +182,7 @@ on the documentation site.
   [FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE), a separate server
   that maps between FHIR and openEHR and reaches FerroEHR over ITS-REST;
   FerroEHR itself renders its access log as FHIR `AuditEvent` (with the ITI-81
-  retrieval) and validates codes against external FHIR terminology servers
+  retrieval) and validates codes against its FHIR terminology server
 - **Binary & object storage:** large multimedia is content-addressed into
   any S3-compatible store with cryptographic integrity verification;
   SeaweedFS works out of the box for self-hosted setups
