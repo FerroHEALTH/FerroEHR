@@ -14,10 +14,14 @@
 #   1. the shipped WASM attaches: the hydrated app marks <body> — a viewer
 #      whose bundle never loads still logs in through the server-rendered
 #      form (the #2164 class), so a login alone passes on a broken bundle;
-#   2. the browser posts the credentials and lands on the authenticated
-#      Dashboard. The Basic login is FerroUI's sign-in card, a plain form
-#      POST to the LoginBasic server function by design (#3803), so the POST
-#      is a document navigation (#3861).
+#   2. the browser posts the credentials through the sign-in card's form and
+#      lands on the authenticated Dashboard. The Basic form is a plain POST
+#      to the page itself, `/login`, which answers accepted credentials with
+#      a redirect and refused ones with the page drawn again (#3980). So the
+#      script checks the form posts to /login before the click, and after it
+#      reads the performance log for that Document POST and its 3xx answer:
+#      a Dashboard reached by any other path (an automatic sign-in, a
+#      session already present) shows no such redirect and fails.
 #
 # Required (no defaults — a gate that passes without its artifact is not a
 # gate):
@@ -170,9 +174,21 @@ done
   exit 1
 }
 PASS_EL=$(find_element 'input[name=password]')
-SUBMIT_EL=$(find_element 'button[type=submit]')
-[[ -n "$PASS_EL" && -n "$SUBMIT_EL" ]] || {
-  echo "FATAL: the login form is missing its password input or submit button" >&2
+FORM_EL=$(find_element 'form:has(input[name=password])')
+SUBMIT_EL=$(find_element 'form:has(input[name=password]) button[type=submit]')
+[[ -n "$PASS_EL" && -n "$FORM_EL" && -n "$SUBMIT_EL" ]] || {
+  echo "FATAL: the sign-in card has no form holding the password input and a submit button" >&2
+  exit 1
+}
+# The IDL `method` and `action` properties are the form's effective ones: the
+# keyword lowercased and the URL resolved against the page (HTML Living
+# Standard, form submission attributes).
+FORM_METHOD=$(curl -sS "$S/element/$FORM_EL/property/method" | jq -r '.value')
+FORM_ACTION=$(curl -sS "$S/element/$FORM_EL/property/action" | jq -r '.value')
+echo "   sign-in form: method=$FORM_METHOD action=$FORM_ACTION"
+[[ "$FORM_METHOD" == post && "$FORM_ACTION" == "$VIEWER_URL/login" ]] || {
+  echo "::error::the sign-in card's form does not POST to $VIEWER_URL/login (method=$FORM_METHOD action=$FORM_ACTION)"
+  dump_browser_log
   exit 1
 }
 
@@ -199,15 +215,22 @@ TITLE=$(curl -sS "$S/title" | jq -r '.value')
 echo "   url=$URL"
 echo "   title=$TITLE"
 
-# Read the performance log once (reading drains it) and keep the login POST's
-# resource type: the sign-in card's plain form POST is a `Document`.
-LOGIN_TYPES=$(curl -sS -X POST "$S/se/log" -H 'Content-Type: application/json' \
+# Read the performance log once (reading drains it). A redirect keeps the
+# request id and arrives as a second requestWillBeSent carrying the previous
+# hop's `redirectResponse` (Chrome DevTools Protocol, Network domain), so one
+# line per POST to /login reads `<type> <has form body> <redirect status>`.
+LOGIN_POSTS=$(curl -sS -X POST "$S/se/log" -H 'Content-Type: application/json' \
   -d '{"type":"performance"}' \
   | jq -r '.value[]?.message' \
-  | jq -r 'select(.message.method == "Network.requestWillBeSent")
-           | select(.message.params.request.url | contains("/api/login_basic"))
-           | .message.params.type' || true)
-echo "   login POST resource types: ${LOGIN_TYPES:-<none>}"
+  | jq -rs --arg url "$VIEWER_URL/login" '
+      [.[] | .message | select(.method == "Network.requestWillBeSent") | .params] as $sent
+      | $sent[]
+      | select(.request.method == "POST" and .request.url == $url)
+      | . as $post
+      | ([$sent[] | select(.requestId == $post.requestId and .redirectResponse.url == $url)
+                  | .redirectResponse.status][0] // "none") as $status
+      | "\($post.type) \($post.request.hasPostData // false) \($status)"' || true)
+echo "   login POSTs (type, form body, redirect status): ${LOGIN_POSTS:-<none>}"
 
 case "$URL" in
   */login*)
@@ -224,11 +247,11 @@ case "$TITLE" in
     exit 1
     ;;
 esac
-grep -qx 'Document' <<<"$LOGIN_TYPES" || {
-  echo "::error::the credential POST was not the sign-in card's form POST (${LOGIN_TYPES:-no login POST observed}): the login reached the Dashboard by another path"
+grep -qE '^Document true 3[0-9]{2}$' <<<"$LOGIN_POSTS" || {
+  echo "::error::no Document POST of the sign-in form to /login was answered with a redirect (${LOGIN_POSTS:-no login POST observed}): the login reached the Dashboard by another path"
   dump_browser_log
   exit 1
 }
 
 dump_browser_log
-echo "── the viewer image logs in through a real browser: WASM hydrated, form POST sent, Dashboard reached"
+echo "── the viewer image logs in through a real browser: WASM hydrated, sign-in form POST redirected, Dashboard reached"
