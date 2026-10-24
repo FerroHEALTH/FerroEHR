@@ -396,7 +396,7 @@ its own has one verdict and one boundary.
 | The spec layer (`crates/openehr-*`) | published on crates.io on one lockstep line | crates.io: `openehr-its` splits into the `json`, `xml`, `opt14`, `schema-validation`, `rest`, `rest-server` and `rest-client` features, so a consumer with no HTTP server takes `default-features = false, features = ["json", "opt14"]` and no HTTP engine |
 | SMART on openEHR scope handling | the grammar is `openehr_sdt::smart_scopes`, a published crate; checking tokens and scopes is `ferrohealth-smart`, the family crate every product shares | crates.io: the CDR consumes both as dependencies and keeps only its route-to-requirement table (`ferroehr-rest::smart`) |
 
-The other products of the family (FerroTERM, FerroCHART, FerroFED and the
+The other products of the family (FerroTERM, FerroFORMS, FerroFED and the
 platform services) and the conformance instrument (Veredictum) live in their
 own repositories by the same rule: a sibling reaches the CDR over ITS-REST, and
 shared code travels as a published crate. The structure of the application
