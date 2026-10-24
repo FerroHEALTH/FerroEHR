@@ -76,10 +76,26 @@ jobs:
             esac
           }
 
+          # Every API read goes through retry: GitHub answers 5xx bursts of a minute
+          # or more, so it backs off for about five minutes before failing the job.
+          retry() {
+            local delay=5 waited=0 out
+            until out=$("$@"); do
+              if [ "${waited}" -ge 300 ]; then
+                echo "::error::gave up after ${waited}s of failed reads: $*" >&2
+                return 1
+              fi
+              sleep "${delay}"
+              waited=$((waited + delay))
+              delay=$((delay * 2 > 60 ? 60 : delay * 2))
+            done
+            printf '%s\n' "${out}"
+          }
+
           run=""
           for _ in $(seq 1 30); do
-            run=$(gh run list --workflow ci.yml --commit "${HEAD}" --event pull_request \
-              --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+            run=$(retry gh run list --workflow ci.yml --commit "${HEAD}" --event pull_request \
+              --limit 1 --json databaseId --jq '.[0].databaseId // empty') || exit 1
             [ -n "${run}" ] && break
             sleep 10
           done
@@ -90,23 +106,26 @@ jobs:
 
           handled=" "
           for _ in $(seq 1 20); do
-            gh run watch "${run}" --interval 30 > /dev/null
-            if [ "$(gh run view "${run}" --json conclusion --jq .conclusion)" = "cancelled" ]; then
+            while :; do
+              status=$(retry gh run view "${run}" --json status --jq .status) || exit 1
+              [ "${status}" = completed ] && break
+              sleep 30
+            done
+            conclusion=$(retry gh run view "${run}" --json conclusion --jq .conclusion) || exit 1
+            if [ "${conclusion}" = "cancelled" ]; then
               echo "CI run ${run} was cancelled; the run that replaced it reads the pull request itself"
               exit 0
             fi
             # Re-running an older commit's run would cancel the newer commit's
             # run, which shares its concurrency group.
-            if [ "$(gh api "repos/${GH_REPO}/pulls/${PR}" --jq .head.sha)" != "${HEAD}" ]; then
+            current=$(retry gh api "repos/${GH_REPO}/pulls/${PR}" --jq .head.sha) || exit 1
+            if [ "${current}" != "${HEAD}" ]; then
               echo "the pull request moved past ${HEAD}; the run of its new head reads the pull request itself"
               exit 0
             fi
             # A failed read is retried, never taken for a missing guard (#3951).
-            if ! jobs=$(gh run view "${run}" --json jobs \
-              --jq '.jobs[] | "\(.name)\t\(.databaseId) \(.conclusion)"'); then
-              sleep 15
-              continue
-            fi
+            jobs=$(retry gh run view "${run}" --json jobs \
+              --jq '.jobs[] | "\(.name)\t\(.databaseId) \(.conclusion)"') || exit 1
             next=""
             for guard in "${guards[@]}"; do
               case "${handled}" in *" ${guard} "*) continue ;; esac
