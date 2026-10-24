@@ -562,7 +562,7 @@ Nothing.
 Read on the tree after commit `9fdd36091`, for FerroEHR 5.4.1. The facts of this
 release checked in every text in scope: the CDR asks one terminology server
 under `[terminology.server]` through `ferrobridge-term`, and chart 14.0.0 wires
-it (#3085, #3993); an unserved method is `405` with `Allow` under SMART (#3987);
+it (#3085); an unserved method is `405` with `Allow` under SMART (#3987);
 the conformance statement declares `unmatched-member-refused` (#3988); a ROLE
 template whose single attributes state `0..*` uploads, and a demographic
 template's example is a party (#3994, #3995); the viewer offers demographic
