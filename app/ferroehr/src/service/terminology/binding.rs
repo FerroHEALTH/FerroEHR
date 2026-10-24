@@ -140,7 +140,7 @@ mod tests {
         WebTemplate, WebTemplateConstraintBinding, WebTemplateNode,
     };
     use serde_json::json;
-    use wiremock::matchers::{method, path, query_param};
+    use wiremock::matchers::{body_string_contains, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     use super::*;
@@ -192,17 +192,21 @@ mod tests {
     /// `false` for anything else.
     async fn validate_code_server(member_code: &str) -> MockServer {
         let server = MockServer::start().await;
-        Mock::given(method("GET"))
+        Mock::given(method("POST"))
             .and(path("/ValueSet/$validate-code"))
-            .and(query_param("url", BOUND_VS))
-            .and(query_param("code", member_code))
+            .and(body_string_contains(format!(
+                r#""name":"url","valueUri":"{BOUND_VS}""#
+            )))
+            .and(body_string_contains(format!(
+                r#""name":"code","valueCode":"{member_code}""#
+            )))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!({
                 "resourceType": "Parameters",
                 "parameter": [{"name": "result", "valueBoolean": true}]
             })))
             .mount(&server)
             .await;
-        Mock::given(method("GET"))
+        Mock::given(method("POST"))
             .and(path("/ValueSet/$validate-code"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!({
                 "resourceType": "Parameters",

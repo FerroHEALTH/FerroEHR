@@ -364,8 +364,8 @@ Three physical directories (consolidated 2026-07-16):
 `ferroehr-rest` (the ITS-REST protocol adapter, which calls the concrete
 `FerroEhrService` directly), `ferroehr-server` (the wiring-only binary; the
 bin is still named `ferroehr`), `ferroehr-ext` (the feature-gated
-optional-integration crate — the FHIR `AuditEvent` renderer and terminology
-decoder, events transport, multimedia store — one additive cargo feature per integration, default all-on,
+optional-integration crate — events transport, multimedia store — one
+additive cargo feature per integration, default all-on,
 slim builds compile them out with loud boot refusals for enabled-but-unbuilt
 integrations), and `ferroehr-viewer` (the Leptos SSR viewer — its own
 binary/OCI image, consuming the CDR strictly over ITS-REST);
@@ -419,7 +419,7 @@ The service layer realizes the openEHR **SM Platform Service Model**
 | System Log | `I_SYSTEM_LOG` (stub; "IHE ATNA-compliant") | `ferroehr::system_log` (dual DICOM PS3.15 + FHIR `AuditEvent`/BALP rendering, written and sent by the shared FerroAUDIT crates `ihe-atna` and `ehds-logging`; local Audit Record Repository in the `audit` schema, on by default; syslog + ITI-20 ATX:FHIR Feed forwarding sinks; the ITI-81 retrieval as the read side; ITI-19 mTLS via `[server.tls]`) | implemented |
 | Admin | `I_ADMIN_SERVICE` (+archive/dump-load) | `service::admin` | implemented |
 | EHR Index | `I_EHR_INDEX` | `service::ehr_index` over `linkage.subject_ehr` | implemented |
-| Terminology | `I_TERMINOLOGY_SERVICE` | `service::terminology` (in-process `openehr-term` bundle + one FHIR R4B terminology server, FerroTERM in every shipped deployment, with an optional OAuth2 client-credentials grant; commit-time ac-code constraint-binding resolution) | implemented |
+| Terminology | `I_TERMINOLOGY_SERVICE` | `service::terminology` (in-process `openehr-term` bundle + one FHIR R4B terminology server, FerroTERM in every shipped deployment, reached through the published `ferrobridge-term` client with an optional OAuth2 client-credentials grant; commit-time ac-code constraint-binding resolution) | implemented |
 | Message | `I_MESSAGE_SERVICE`, `I_EHR_EXTRACT_SERVICE`, `I_TDD_SERVICE` | `service::message` | implemented |
 | Subject Proxy | `I_SUBJECT_PROXY_SERVICE`, `I_DATA_BINDING` | not realised ([#3431](https://github.com/FerroHEALTH/FerroEHR/issues/3431)) | not realised |
 
@@ -438,7 +438,7 @@ The service layer realizes the openEHR **SM Platform Service Model**
 | `ferroehr-rest` | ITS-REST protocol adapter (axum) + auth + ATNA audit middleware; `access` module = RBAC/ABAC authz; calls the concrete `FerroEhrService` | application |
 | `ferroehr` | The platform library: storage, service layer (one module per SM chapter), AQL engine, `versioning` (change control plus the VERSION `signature` signing under `versioning::signature`), validation, templates, the full config tree, telemetry, `privacy`, `system_log`, `licence` (the boot-verified grant in force and the identifier stamp it keys), `usage_report` (the `start` and `daily` installation reports to FerroPULSE, on by default, contract in FerroHEALTH/FerroPULSE `docs/report-v1.md`, vendored schemas in `corpus/ferropulse/`) | application |
 | `ferroehr-server` | The wiring-only binary (config → pool → migrations → service → serve); bin name `ferroehr` | application |
-| `ferroehr-ext` | Optional integrations behind additive features (`fhir`, `events`, `multimedia`): the FHIR `AuditEvent` renderer and terminology-response decoder, the AMQP events transport, the content-addressed multimedia store | application |
+| `ferroehr-ext` | Optional integrations behind additive features (`events`, `multimedia`): the AMQP events transport, the content-addressed multimedia store | application |
 | `ferroehr-viewer` | The Leptos SSR viewer: its own binary and OCI image, consuming the CDR strictly over ITS-REST | application |
 | `testkit` | Shared test-database harness: one PG18 server + template-database cloning (`tools/*`) | tooling |
 

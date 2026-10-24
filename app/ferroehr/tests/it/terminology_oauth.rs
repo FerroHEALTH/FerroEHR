@@ -29,6 +29,8 @@ use serde_json::json;
 use wiremock::matchers::{body_string_contains, header, header_exists, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+use crate::terminology_wire::operation;
+
 const SNOMED: &str = "http://snomed.info/sct";
 
 /// An enabled server at `base`, authenticated by `oauth` when given.
@@ -113,12 +115,14 @@ async fn oauth2_client_credentials_token_is_obtained_and_reused() {
         .await;
 
     let ts = MockServer::start().await;
-    Mock::given(method("GET"))
-        .and(path("/CodeSystem/$lookup"))
+    operation("/CodeSystem/$lookup")
         .and(header("authorization", "Bearer tok-abc"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "resourceType": "Parameters",
-            "parameter": [{"name": "display", "valueString": "Hypertensive disorder"}]
+            "parameter": [
+                {"name": "name", "valueString": "SNOMED CT"},
+                {"name": "display", "valueString": "Hypertensive disorder"}
+            ]
         })))
         .mount(&ts)
         .await;
@@ -165,10 +169,13 @@ async fn a_refused_grant_is_a_typed_error_not_an_anonymous_request() {
         .await;
 
     let ts = MockServer::start().await;
-    Mock::given(method("GET"))
+    Mock::given(method("POST"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "resourceType": "Parameters",
-            "parameter": [{"name": "display", "valueString": "should never be reached"}]
+            "parameter": [
+                {"name": "name", "valueString": "SNOMED CT"},
+                {"name": "display", "valueString": "should never be reached"}
+            ]
         })))
         .mount(&ts)
         .await;
@@ -226,11 +233,14 @@ async fn client_secret_post_sends_credentials_in_the_body() {
         .await;
 
     let ts = MockServer::start().await;
-    Mock::given(method("GET"))
+    Mock::given(method("POST"))
         .and(header("authorization", "Bearer tok-post"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "resourceType": "Parameters",
-            "parameter": [{"name": "display", "valueString": "ok"}]
+            "parameter": [
+                {"name": "name", "valueString": "SNOMED CT"},
+                {"name": "display", "valueString": "ok"}
+            ]
         })))
         .mount(&ts)
         .await;
@@ -249,4 +259,71 @@ async fn client_secret_post_sends_credentials_in_the_body() {
         .await
         .expect("the post-form grant authenticates the lookup");
     assert_eq!(idp.received_requests().await.unwrap().len(), 1);
+}
+
+/// A token the terminology server refuses with `401` is dropped, a new one is
+/// obtained, and the request is sent once more under it (RFC 6750 §3.1 makes
+/// `401` the answer to an invalid token; RFC 9110 §15.5.2 says the refused
+/// request was not applied, so sending it again is safe).
+#[tokio::test]
+async fn a_refused_token_is_renewed_once() {
+    let idp = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "access_token": "tok-stale",
+            "token_type": "bearer",
+            "expires_in": 3600
+        })))
+        .up_to_n_times(1)
+        .mount(&idp)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "access_token": "tok-fresh",
+            "token_type": "bearer",
+            "expires_in": 3600
+        })))
+        .mount(&idp)
+        .await;
+
+    let ts = MockServer::start().await;
+    operation("/CodeSystem/$lookup")
+        .and(header("authorization", "Bearer tok-stale"))
+        .respond_with(ResponseTemplate::new(401))
+        .expect(1)
+        .mount(&ts)
+        .await;
+    operation("/CodeSystem/$lookup")
+        .and(header("authorization", "Bearer tok-fresh"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "resourceType": "Parameters",
+            "parameter": [
+                {"name": "name", "valueString": "SNOMED CT"},
+                {"name": "display", "valueString": "Hypertensive disorder"}
+            ]
+        })))
+        .expect(1)
+        .mount(&ts)
+        .await;
+
+    let grant = ClientCredentialsConfig {
+        token_url: Some(SecretUrl::new(format!("{}/token", idp.uri()))),
+        client_id: "ferroehr-cdr".to_owned(),
+        client_secret: Some(Secret::new("s3cret")),
+        client_auth: ClientAuthMethod::ClientSecretBasic,
+        scope: None,
+        ..ClientCredentialsConfig::default()
+    };
+    let service = service_with(server_cfg(&ts.uri(), Some(grant))).await;
+    service
+        .get_term(SNOMED, "38341003", None, None)
+        .await
+        .expect("the lookup succeeds under the renewed token");
+    assert_eq!(
+        idp.received_requests().await.unwrap().len(),
+        2,
+        "the refused token cost exactly one renewal"
+    );
 }

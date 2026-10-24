@@ -2635,6 +2635,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
+name = "ferrobridge-term"
+version = "0.1.130"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5abd63b1d2c42b78f4af901fb7d0d64b0279b491e95e0f476a51de578f15cca1"
+dependencies = [
+ "async-trait",
+ "backon",
+ "fhir-types",
+ "http",
+ "reqwest",
+ "secrecy",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "ferroehr"
 version = "5.4.0"
 dependencies = [
@@ -2648,6 +2666,7 @@ dependencies = [
  "config",
  "criterion",
  "ehds-logging",
+ "ferrobridge-term",
  "ferroehr-ext",
  "ferrohealth-smart",
  "futures",
@@ -2719,14 +2738,12 @@ dependencies = [
  "async-trait",
  "base64 0.23.1",
  "bytes",
- "fhir-model",
  "lapin",
  "object_store",
  "openehr-base",
  "openehr-its",
  "openehr-rm",
  "secrecy",
- "serde",
  "serde_json",
  "sha2 0.11.1",
  "thiserror 2.0.21",
@@ -2916,18 +2933,6 @@ dependencies = [
  "bitvec",
  "rand_core 0.6.4",
  "subtle",
-]
-
-[[package]]
-name = "fhir-model"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fcb3e6576cb1b797b2e33b08f22fe284b6660f1407718042ecd73bd62293449"
-dependencies = [
- "base64 0.22.1",
- "derive_builder",
- "serde",
- "time",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 [package]
 name = "ferroehr-ext"
-description = "FerroEHR optional-integration extensions (FHIR terminology, events, multimedia), feature-gated"
+description = "FerroEHR optional-integration extensions (events, multimedia), feature-gated"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,14 +10,7 @@ publish = false
 
 [features]
 default = []
-# One additive feature per integration (#1890). `fhir` covers the typed FHIR
-# surface the platform keeps: the terminology-response decoder.
-fhir = [
-    "dep:fhir-model",
-    "dep:serde",
-    "dep:serde_json",
-    "dep:thiserror",
-]
+# One additive feature per integration (#1890).
 events = [
     "dep:async-trait",
     "dep:lapin",
@@ -50,12 +43,10 @@ openehr-rm = { path = "../../crates/openehr-rm", optional = true }
 async-trait = { workspace = true, optional = true }
 base64 = { workspace = true, optional = true }
 bytes = { workspace = true, optional = true }
-fhir-model = { workspace = true, optional = true }
 lapin = { workspace = true, optional = true }
 object_store = { workspace = true, optional = true }
 secrecy = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
-serde = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
@@ -64,8 +55,8 @@ url = { workspace = true, optional = true }
 [dev-dependencies]
 tokio = { workspace = true }
 # The behaviour tests over the public seams (tests/it): a test double for the
-# EventPublisher trait, fixture bodies for the terminology decoders, and the
-# in-memory object_store backend standing in for S3.
+# EventPublisher trait and the in-memory object_store backend standing in for
+# S3.
 async-trait = { workspace = true }
 base64 = { workspace = true }
 object_store = { workspace = true }

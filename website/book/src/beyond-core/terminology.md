@@ -131,9 +131,26 @@ nothing is asked and nothing is refused.
 Membership is tested with `ValueSet/$validate-code`, one direct yes/no with the
 least payload; `$expand` serves a value set's contents, `$subsumes` a
 subsumption test and `$lookup` a term. Every call is a round trip to the
-server, which keeps no answer the CDR would have to invalidate. A response that
-is not a valid FHIR resource is treated as an upstream fault rather than
-partially read, and takes the same path as an unreachable server.
+server, which keeps no answer the CDR would have to invalidate.
+
+The CDR speaks to the server through
+[`ferrobridge-term`](https://docs.rs/ferrobridge-term/0.1.130), FerroBRIDGE's
+FHIR terminology client, over the FHIR R4B operation definitions. Each
+operation is a `POST` of a `Parameters` resource to the operation's path under
+the configured base URL, so a code never travels in a URL. The `at_date` of a
+term lookup or a membership test is sent as the operation's `date` input. Each
+call is made once, without a retry, so `request_timeout_ms` bounds the whole
+call on the commit path.
+
+A response that does not fit the operation's R4B definition is treated as an
+upstream fault rather than partially read, and takes the same path as an
+unreachable server: a `$lookup` answer without its `name` or `display`, an
+`$expand` answer without an `expansion`, a `$subsumes` outcome outside its four
+codes, or a body of another resource type. The server's refusals are read
+through the `tx-issue-type` coding of their `OperationOutcome`: `not-found`
+means the server does not serve the code system or value set, `invalid-code`
+that the code is not in it, and a `404` or `410` without either coding that the
+thing asked about is unknown.
 
 ### Authenticating to the server
 

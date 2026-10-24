@@ -17,6 +17,26 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The CDR reaches its terminology server through `ferrobridge-term`**
+  (#3085), FerroBRIDGE's published FHIR terminology client, in place of its own
+  HTTP client and the third-party `fhir-model` decoding, which leaves the
+  build. The configuration is unchanged. On the wire, `$lookup`,
+  `$validate-code`, `$expand` and `$subsumes` are now a `POST` of a FHIR R4B
+  `Parameters` body instead of a `GET` with the inputs in the query string, so
+  a code no longer travels in a URL; the `CodeSystem?url=&_summary=count`
+  probe stays a `GET`. The SM `at_date` is sent as the `date` input of
+  `$lookup` and `$validate-code`. Each call is made once, so
+  `request_timeout_ms` still bounds it. The answers are read strictly against
+  the R4B operation definitions: a `$lookup` answer without its `name` or
+  `display`, an `$expand` answer without an `expansion`, or a `$subsumes`
+  outcome outside its four codes is now an upstream fault (`500`, or the
+  unresolvable branch of `fail_on_error` at commit) where the CDR used to fall
+  back to the code as the term text, an empty value set, or "not subsumed". A
+  server that answers by the operation definitions sees no difference. The
+  `fhir` feature of the internal `ferroehr-ext` crate is gone with the decoder
+  it gated; the `fhir` features of `ferroehr`, `ferroehr-rest` and
+  `ferroehr-server` keep their meaning.
+
 - **The conformance statement declares `unmatched-member-refused`** (#3988,
   register AMB-229). The server refuses a container member whose RM type the
   template does not allow, such as a `CLUSTER` committed where

@@ -223,6 +223,16 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # them.
 ferrohealth-smart = { version = "=0.4.0", default-features = false, features = ["fetch"] }
 
+# ── Terminology (the client of the one FHIR terminology server) ───────────────
+# FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,
+# `$expand`, `$subsumes` and the `CodeSystem?url=&_summary=count` search over
+# the generated `fhir-types` operation contracts, every refusal a typed error
+# carrying the upstream status and its `tx-issue-type` coding. The same
+# Licensor's BUSL-1.1 code (deny.toml). Its crate line moves one patch per
+# change, a breaking one included, so it is pinned exactly. Verified on
+# crates.io 2026-10-24 (0.1.130).
+ferrobridge-term = "=0.1.130"
+
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
 # integrates it. `ihe-atna` is the IHE ATNA Record Audit Event sender (ITI-20:
@@ -290,14 +300,6 @@ quick-xml = { version = "0.42.0", features = ["serialize"] }   # verify latest 0
 roxmltree = "0.21"                   # read-only XML DOM — XSD reader for the XML codegen
 serde_norway = "0.9"                 # maintained serde_yaml fork — parse vendored OAS YAML for the REST codegen
 base64 = "0.23"
-# Typed FHIR R4B resource model (fhir-sdk's model half) — the typed surface of
-# the FHIR integration extension (`app/ferroehr-ext`, `fhir` feature): the ATNA
-# BALP `AuditEvent` we author and the `Parameters`/`ValueSet` a terminology
-# server answers with. Verified live on crates.io 2026-08-04 (0.13.0, MSRV
-# 1.95). default-features off drops the r5 model; `r4b` is the declared FHIR
-# surface and `builders` supplies the derive_builder constructors. It is
-# consumed ONLY from ferroehr-ext — no other crate names a `fhir_model` type.
-fhir-model = { version = "0.13.0", default-features = false, features = ["r4b", "builders"] }
 # ZIP container writer/reader — the SM COMPRESSION_FORMAT member `zip`
 # (docs/specs/openehr/SM/docs/UML/classes/compression_format.adoc) for the admin
 # dump/load archive. default-features off keeps it to the DEFLATE method over

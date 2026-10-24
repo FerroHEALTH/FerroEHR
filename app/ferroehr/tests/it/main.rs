@@ -98,6 +98,7 @@ mod telemetry_metrics;
 mod telemetry_samplers;
 mod terminology_fhir;
 mod terminology_oauth;
+mod terminology_wire;
 mod typed_body;
 mod usage_report;
 mod validation_opt;

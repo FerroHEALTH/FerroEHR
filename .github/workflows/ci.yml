@@ -1315,7 +1315,6 @@ jobs:
       # expectations the server lanes never compile (#3703).
       - run: cargo clippy --locked -p ferroehr-ext --no-default-features --all-targets -- -D warnings
       - run: cargo clippy --locked -p ferroehr-ext --no-default-features --features events --all-targets -- -D warnings
-      - run: cargo clippy --locked -p ferroehr-ext --no-default-features --features fhir --all-targets -- -D warnings
       - run: cargo clippy --locked -p ferroehr-ext --no-default-features --features multimedia --all-targets -- -D warnings
 
   # ── openehr-its + openehr-sdt on wasm32: the browser-consumer selection ────
