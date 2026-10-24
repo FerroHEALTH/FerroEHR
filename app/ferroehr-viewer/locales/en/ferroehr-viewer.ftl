@@ -1952,6 +1952,7 @@ template-example-detail = Detail level
 template-show-example = Show the example
 template-example-title = Example · { $format }
 template-no-example = The CDR built no example for these options.
+template-no-example-for-root = A template rooted at { $root } has no example: the CDR builds examples for COMPOSITION and party templates.
 template-example-refused = The CDR could not build an example for these options.
 template-identity = Identity
 template-use = Use

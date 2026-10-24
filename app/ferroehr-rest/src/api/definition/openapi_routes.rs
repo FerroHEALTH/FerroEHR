@@ -606,7 +606,11 @@ pub(crate) async fn definition_template_adl1_4_get(
                                         — here the GENERATED example data \
                                         instance, an RM COMPOSITION serialized \
                                         per `Accept` (canonical JSON/XML, or one \
-                                        of the two Simplified Formats). No \
+                                        of the two Simplified Formats); for a \
+                                        demographic template, an RM party of \
+                                        the root class (PERSON, ORGANISATION, \
+                                        GROUP, AGENT or ROLE) in canonical \
+                                        JSON/XML. No \
                                         `ETag`: the example is derived output, \
                                         not a stored resource with an identifier \
                                         (`Requests_and_responses.md` §\"ETag and \
@@ -628,10 +632,10 @@ pub(crate) async fn definition_template_adl1_4_get(
                                       under `responses/400.yaml`). Which arm of \
                                       that either/or applies is OURS. The same \
                                       `400` answers a template whose root is \
-                                      not a COMPOSITION (an ENTRY or a \
-                                      SECTION): the `200` body is one of the \
-                                      versioned-object classes, none of which \
-                                      such a template admits.",
+                                      neither a COMPOSITION nor a party class \
+                                      (an ENTRY or a SECTION): the `200` body is \
+                                      one of the versioned-object classes, none \
+                                      of which such a template admits.",
          body = serde_json::Value),
         (status = 404, description = "The released trigger, verbatim: `404 Not \
                                       Found` \"is returned when a template with \
@@ -646,7 +650,12 @@ pub(crate) async fn definition_template_adl1_4_get(
                                       is not supported\" (ITS-REST \
                                       `specifications/responses/406.yaml`) — an \
                                       `Accept` outside the four \
-                                      `Accept_LOCATABLE` representations.",
+                                      `Accept_LOCATABLE` representations, or a \
+                                      Simplified Format for a demographic \
+                                      template's example party (the Simplified \
+                                      Formats RM mapping, \
+                                      `simplified_formats/master05-rm_mapping.adoc`, \
+                                      maps no demographic party class).",
          body = serde_json::Value)
     )
 )]
@@ -1174,7 +1183,8 @@ pub(crate) async fn definition_template_adl2_get(
                                         compiled to its operational template and \
                                         turned into a Web Template (the v2_4 \
                                         front end), which the shared example \
-                                        generator walks into an RM COMPOSITION, \
+                                        generator walks into an RM COMPOSITION \
+                                        (an RM party for a demographic template), \
                                         serialized per `Accept`. No `ETag`: the \
                                         example is derived output, not a stored \
                                         resource with an identifier.",
@@ -1189,8 +1199,8 @@ pub(crate) async fn definition_template_adl2_get(
                                       uniformly here), and \"syntactically \
                                       invalid … parameter\" under \
                                       `responses/400.yaml`. It also answers a \
-                                      template whose root is not a COMPOSITION, \
-                                      which no example COMPOSITION conforms to.",
+                                      template whose root is neither a \
+                                      COMPOSITION nor a party class.",
          body = serde_json::Value),
         (status = 404, description = "The released trigger, verbatim: `404 Not \
                                       Found` \"is returned when a template with \

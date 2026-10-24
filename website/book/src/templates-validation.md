@@ -262,11 +262,20 @@ example composition. Both serve any of canonical JSON/XML, FLAT, or STRUCTURED
 
 The example carries every attribute and node the template makes mandatory, so
 it passes the server's own validation. A template whose mandatory content
-only an archetype slot admits cannot be filled by any example. A template whose root is not a `COMPOSITION` (an
-OBSERVATION or a SECTION, for example) has no example composition: the
-endpoint answers `400 Bad Request` naming the root, because the example the
-specification defines is an instance of a versioned-object class such as
-`COMPOSITION`, which such a template does not describe.
+only an archetype slot admits cannot be filled by any example.
+
+A demographic template (one rooted at `PERSON`, `ORGANISATION`, `GROUP`,
+`AGENT` or `ROLE`) gets an example party of that class instead, in canonical
+JSON or XML. An example `ROLE` carries a placeholder `performer`, which the
+reference model makes mandatory. The Simplified Formats map no party class,
+so `Accept: application/openehr.wt.flat+json` or `…structured+json` on a party
+example answers `406 Not Acceptable`.
+
+A template whose root is neither a `COMPOSITION` nor a party class (an
+OBSERVATION or a SECTION, for example) has no example: the endpoint answers
+`400 Bad Request` naming the root, because the example the specification
+defines is an instance of a versioned-object class such as `COMPOSITION`,
+which such a template does not describe.
 
 ## Composition formats
 

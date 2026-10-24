@@ -15,8 +15,43 @@
 //! function of the controls the operator picked, so both template families
 //! ask the CDR the same way.
 
+use crate::format::ReprFormat;
 use crate::locale::Msg;
 use serde::{Deserialize, Serialize};
+
+/// The canonical JSON and XML representations, the forms every example
+/// comes in.
+pub const CANONICAL_EXAMPLE_FORMATS: &[(&str, ReprFormat)] = &[
+    ("json", ReprFormat::CanonicalJson),
+    ("xml", ReprFormat::CanonicalXml),
+];
+
+/// The four representations of an example COMPOSITION: canonical JSON and XML
+/// and the two Simplified Formats.
+const COMPOSITION_EXAMPLE_FORMATS: &[(&str, ReprFormat)] = &[
+    ("json", ReprFormat::CanonicalJson),
+    ("xml", ReprFormat::CanonicalXml),
+    ("flat", ReprFormat::Flat),
+    ("structured", ReprFormat::Structured),
+];
+
+/// The representations the CDR serves the ADL 1.4 example of a template rooted
+/// at `root` in, each with its `format` query key; empty when it builds none.
+///
+/// The example operation answers a COMPOSITION or one of the five parties
+/// (`docs/specs/openehr/ITS-REST/specifications/responses/200_Template_example_retrieved.yaml`).
+/// The Simplified Formats RM mapping
+/// (`docs/specs/openehr/ITS-REST/docs/simplified_formats/master05-rm_mapping.adoc`)
+/// maps no demographic party class, so a party example comes in canonical JSON
+/// and XML only, and a template rooted at an ENTRY or a SECTION has no example.
+#[must_use]
+pub fn example_formats(root: &str) -> &'static [(&'static str, ReprFormat)] {
+    match root {
+        "COMPOSITION" => COMPOSITION_EXAMPLE_FORMATS,
+        "PERSON" | "ORGANISATION" | "GROUP" | "AGENT" | "ROLE" => CANONICAL_EXAMPLE_FORMATS,
+        _ => &[],
+    }
+}
 
 /// How much of the template a generated example fills in (`detail_level`).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -100,8 +135,40 @@ pub fn example_query(detail: ExampleDetail, kind: ExampleType) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::example_options::{ExampleDetail, ExampleType, example_query};
+    use crate::example_options::{
+        CANONICAL_EXAMPLE_FORMATS, ExampleDetail, ExampleType, example_formats, example_query,
+    };
+    use crate::format::ReprFormat;
     use crate::locale::tr;
+
+    #[test]
+    fn a_composition_template_offers_all_four_example_formats() {
+        let keys: Vec<&str> = example_formats("COMPOSITION")
+            .iter()
+            .map(|(key, _)| *key)
+            .collect();
+        assert_eq!(keys, ["json", "xml", "flat", "structured"]);
+    }
+
+    #[test]
+    fn a_party_template_offers_only_the_canonical_formats() {
+        for root in ["PERSON", "ORGANISATION", "GROUP", "AGENT", "ROLE"] {
+            assert_eq!(example_formats(root), CANONICAL_EXAMPLE_FORMATS, "{root}");
+            assert!(
+                example_formats(root)
+                    .iter()
+                    .all(|(_, f)| !matches!(f, ReprFormat::Flat | ReprFormat::Structured)),
+                "{root} offers no Simplified Format"
+            );
+        }
+    }
+
+    #[test]
+    fn an_entry_or_section_template_offers_no_example() {
+        for root in ["OBSERVATION", "SECTION", "CLUSTER"] {
+            assert!(example_formats(root).is_empty(), "{root}");
+        }
+    }
 
     #[test]
     fn every_option_spells_the_token_its_spec_enum_names() {

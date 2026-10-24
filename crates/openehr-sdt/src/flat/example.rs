@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Example-COMPOSITION generation from a [`WebTemplate`] (the `adl1.4/{id}/example`
-//! endpoint).
+//! endpoint), and the example party of a demographic template
+//! ([`example_party`]; [`example_instance`] picks by the root class).
 //!
 //! [`example_composition`] walks the web-template tree and produces a canonical
 //! openEHR JSON COMPOSITION populated with **deterministic** placeholder data
@@ -207,6 +208,70 @@ pub fn example_root_instance(wt: &WebTemplate, level: DetailLevel) -> Result<Val
         crate::flat::build::build_root(&doc, wt, &crate::flat::build::BuildOptions::default())?;
     fill_mandatory_structures(&mut value, &wt.tree);
     Ok(value)
+}
+
+/// Generates an example party from a demographic template at `level`.
+///
+/// The template root is a party class (`PERSON`, `ORGANISATION`, `GROUP`,
+/// `AGENT` or `ROLE`, RM demographic `master02-demographic_package.adoc`); the
+/// result is canonical openEHR JSON that decodes as that class, built through
+/// the same template walk as [`example_composition`] and the root builder
+/// [`crate::flat::build::build_root`]. A `ROLE` gets a placeholder `performer`
+/// reference, because the RM makes that attribute mandatory
+/// (`UML/classes/org.openehr.rm.demographic.role.adoc`, `performer` 1..1) and a
+/// template does not constrain it.
+///
+/// # Errors
+///
+/// [`FlatError::NotAPartyTemplate`] for a template whose root is not a party
+/// class, the build's own [`FlatError`], and [`FlatError::PartyDecode`] should
+/// the generated party not decode as its class.
+pub fn example_party(wt: &WebTemplate, level: DetailLevel) -> Result<Value, FlatError> {
+    let class = party_class(&wt.tree.rm_type).ok_or_else(|| FlatError::NotAPartyTemplate {
+        root: wt.tree.rm_type.clone(),
+    })?;
+    let mut flat: Map<String, Value> = Map::new();
+    walk(&wt.tree, &wt.tree.id, 0, level, false, &mut flat);
+    if class == "ROLE" {
+        let root = &wt.tree.id;
+        flat.insert(
+            format!("{root}/performer|id"),
+            json!(deterministic_uuid(&format!("{root}/performer"))),
+        );
+        flat.insert(format!("{root}/performer|namespace"), json!("demographic"));
+        flat.insert(format!("{root}/performer|type"), json!("PERSON"));
+    }
+    let doc = crate::flat::sim::flat::parse_flat(&flat)?;
+    let mut value =
+        crate::flat::build::build_root(&doc, wt, &crate::flat::build::BuildOptions::default())?;
+    fill_mandatory_structures(&mut value, &wt.tree);
+    crate::flat::build::check_party_decodes(&value, class)?;
+    Ok(value)
+}
+
+/// Generates the example instance the template's root class admits.
+///
+/// A COMPOSITION-rooted template gets [`example_composition`] and a party
+/// template [`example_party`]: both are versioned-object classes the ITS-REST
+/// example operation answers (`responses/200_Template_example_retrieved.yaml`).
+///
+/// # Errors
+///
+/// [`FlatError::NoExampleForRoot`] for a template rooted at any other class
+/// (an ENTRY or a SECTION, for example), and the generators' own errors.
+pub fn example_instance(wt: &WebTemplate, level: DetailLevel) -> Result<Value, FlatError> {
+    if party_class(&wt.tree.rm_type).is_some() {
+        example_party(wt, level)
+    } else {
+        example_composition(wt, level)
+    }
+}
+
+/// The party class `rm_type` names, if it names one.
+fn party_class(rm_type: &str) -> Option<&'static str> {
+    crate::flat::build::PARTY_CLASSES
+        .into_iter()
+        .find(|class| *class == rm_type)
 }
 
 /// Populate a deterministic `uid` (an `OBJECT_VERSION_ID`) on an example

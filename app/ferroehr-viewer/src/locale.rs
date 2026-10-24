@@ -3559,6 +3559,8 @@ messages! {
     TemplateNoCatalog = "template-no-catalog",
     /// `The CDR built no example for these options.`
     TemplateNoExample = "template-no-example",
+    /// `A template rooted at { $root } has no example: the CDR builds examples for COMPOSITION and party templates.`
+    TemplateNoExampleForRoot = "template-no-example-for-root",
     /// `The CDR holds no source for this release.`
     TemplateNoSource = "template-no-source",
     /// `Node`

@@ -601,8 +601,8 @@ impl FerroEhrService {
     ///   (it was engine-valid at upload, so this is a server fault).
     /// - [`ServiceError::Unprocessable`] (`422`) — the OPT cannot be compiled (an
     ///   unresolved constituent reference) or built into a `WebTemplate`.
-    /// - [`ServiceError::BadRequest`] (`400`) — the template's root is not a
-    ///   COMPOSITION, so no example COMPOSITION exists for it.
+    /// - [`ServiceError::BadRequest`] (`400`) — the template's root is neither a
+    ///   COMPOSITION nor a party class, so no example exists for it.
     pub(super) async fn adl2_example(
         &self,
         template_id: &str,

@@ -137,6 +137,33 @@ workflow refuses a tag that has no matching section here.
   §HTTP Methods, RFC 9110 §15.5.6). A request without a credential is still
   `401`.
 
+- **A ROLE operational template whose single attributes state `0..*`
+  uploads** (#3994). `POST /definition/template/adl1.4` refused deployed
+  `ROLE` templates (`Role.v2`, root `openEHR-DEMOGRAPHIC-ROLE.Role.v1`) with
+  `422 Members_valid`, because they constrain `ROLE.capabilities` and
+  `CAPABILITY.credentials` without a cardinality while the children state
+  occurrences `0..*`. ADL 1.4 `master05-cadl.adoc` §Occurrences calls that
+  "not illegal" and reads it as at most one value, so the CDR now accepts the
+  template and applies that cap: the Web Template gives such a node `max` 1,
+  and the ADL2 conversion states the cap and records it in
+  `conversion_details`, next to the template's undefined `ac0001` reference.
+  A ROLE party built against the template, and a PERSON that holds it through
+  `PERSON.relationships`, commit and read back as before. The disagreement
+  with the stricter AOM 1.4 `Members_valid` invariant is reported upstream
+  (#3996).
+
+- **The template example of a demographic template is a party** (#3995).
+  `GET /definition/template/adl1.4/{template_id}/example` (and the ADL 2
+  twin) answered `400 the template root PERSON is not a COMPOSITION` for
+  every PERSON, ORGANISATION, GROUP, AGENT or ROLE template. It now answers
+  an example party of the root class at every `detail_level`, in canonical
+  JSON or XML, with a `uid` for `type=output`; an example ROLE carries a
+  placeholder `performer`, which the RM makes mandatory. FLAT and STRUCTURED
+  stay `406` for a party example, since the Simplified Formats map no party
+  class. The viewer's Example tab offers JSON and XML only for a demographic
+  template, and for a template rooted at an ENTRY or a SECTION it says that
+  no example exists instead of showing the CDR's refusal.
+
 ## [5.4.0] - 2026-10-24
 
 5.4.0 carries breaking changes for operators, each with its upgrade step under Changed. Before you upgrade: replace an ECDSA or Ed448 OpenPGP signing key in `[signing] mode = "pgp"` with an Ed25519 key, and check that the certificate's primary key or a subkey may still sign; tell viewer users that the viewer's addresses change, so bookmarks and links into it need updating, and that the theme falls back to the system's until it is chosen again; and serve the viewer's whole `pkg/` directory if you serve its site from your own web server. No configuration key, database migration or image name changes.

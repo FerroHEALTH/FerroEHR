@@ -287,7 +287,7 @@ pub fn build_root(
 /// # Errors
 ///
 /// [`FlatError::PartyDecode`] carrying the strict reader's refusal.
-fn check_party_decodes(value: &Value, class: &str) -> Result<(), FlatError> {
+pub(crate) fn check_party_decodes(value: &Value, class: &str) -> Result<(), FlatError> {
     use openehr_its::json::from_canonical_value;
     use openehr_rm::v1_2::demographic;
     let decoded = match class {
