@@ -17,6 +17,22 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **Breaking: an ECDSA or Ed448 OpenPGP signing key is refused at boot**
+  (#3965). In `[signing] mode = "pgp"` the server no longer starts when the
+  key's signing component is ECDSA (P-256, P-384, P-521, secp256k1,
+  Brainpool) or Ed448, and the error names RUSTSEC-2026-0387; see Security
+  below. P-384, P-521 and Ed448 keys already failed the boot signature,
+  because the server signs with SHA-256 and RFC 9580 requires a longer digest
+  for them, so the keys that change behaviour are P-256 and secp256k1.
+  Ed25519 and RSA keys load as before, and the RSA boot warning now
+  recommends Ed25519 alone. Such a certificate keeps verifying the versions
+  it signed when it is listed in `signing.retired_key_paths`. Upgrade:
+  before upgrading a deployment that signs with such a key, generate an
+  Ed25519 signing key (`gpg --quick-generate-key "…" ed25519 sign`), export
+  its armored secret key to `signing.key_path`, and add the old
+  certificate's public half to `signing.retired_key_paths` (the book's PGP
+  signing page and the signing section of the configuration reference). The
+  digest mode, the default, is unaffected.
 - **The viewer is rebuilt on FerroUI 0.3.6** (#3932, #3942, #3946, #3957, FerroHEALTH/FerroUI#161).
   Every screen follows the FerroEHR mockups of FerroUI's
   `design/consoles/ferroehr/` at 1440 and 390 px, light and dark, with
@@ -119,6 +135,17 @@ workflow refuses a tag that has no matching section here.
   API, as the mockup has no panel for it.
 - **The stored-query listing's pager**: every stored query is listed, grouped
   by namespace.
+
+### Security
+
+Shipped with functional changes because: only the newest release is supported (SECURITY.md), so a security-only patch cut from 5.3.3 beside the next release would be out of support the moment that release lands and give no one a release to stay on; the fix is itself a behaviour change, refusing ECDSA and Ed448 signing keys, so there is no dependency bump to ship alone.
+
+- **RUSTSEC-2026-0387 in `crypto-bigint` 0.5.5** (#3965,
+  `security/vex/rust-advisories.openvex.json`). Its operations meant to be
+  constant-time can branch on their operands, and the 0.5 line, which
+  `pgp` and `openidconnect` still use, has no fixed release. With ECDSA and
+  Ed448 signing keys refused, the server runs those operations only over
+  public keys and signatures, in verification.
 
 ## [5.3.3] - 2026-10-23
 

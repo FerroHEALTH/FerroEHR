@@ -78,6 +78,14 @@ ignore = [
   { id = "RUSTSEC-2026-0368", reason = "zip 8.6.0 only as utoipa-swagger-ui's build dependency, which never calls the extract APIs (#3806)" },
   # https://rustsec.org/advisories/RUSTSEC-2026-0369
   { id = "RUSTSEC-2026-0369", reason = "zip 8.6.0 only as utoipa-swagger-ui's build dependency, which never calls the extract APIs (#3806)" },
+  # 2026-10-24 (#3965): crypto-bigint 0.5.5, timing variability in
+  # operations meant to be constant-time; only 0.7.6 and later are fixed and
+  # no release of pgp, cx448 or openidconnect leaves 0.5. The path argument
+  # is the RUSTSEC-2026-0387 statement in security/vex/rust-advisories.toml.
+  # DELETING EVENT: pgp and openidconnect releases on crypto-bigint 0.7.6 or
+  # later (upgrade the day both ship).
+  # https://rustsec.org/advisories/RUSTSEC-2026-0387
+  { id = "RUSTSEC-2026-0387", reason = "ECDSA and Ed448 signing keys are refused at boot (#3965), so crypto-bigint 0.5 runs only over public values in verification" },
   # 2026-10-16 (#3798): every zip 8.x release is yanked, and utoipa-swagger-ui
   # 10.0.1 (the latest, re-checked 2026-10-16) still requires zip ^8.6 as a
   # build dependency to unpack its own vendored Swagger UI archive. Yanked,
