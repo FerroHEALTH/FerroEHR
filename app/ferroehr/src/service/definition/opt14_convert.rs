@@ -378,7 +378,11 @@ impl Decomposer<'_> {
         let attr_path = format!("{path}/{rm_attribute_name}");
         let mut mapped_children = Vec::with_capacity(children.len());
         for c in children {
-            mapped_children.push(self.map_object(c, archetype_id, &attr_path, cx));
+            let capped = (!is_multiple)
+                .then(|| single_valued(c, &attr_path, cx))
+                .flatten();
+            let child = capped.as_ref().unwrap_or(c);
+            mapped_children.push(self.map_object(child, archetype_id, &attr_path, cx));
         }
         CAttribute {
             parent: None,
@@ -1743,6 +1747,59 @@ fn widened_units_attribute(
     }
 }
 
+/// The child of a single-valued attribute with its occurrences capped at one,
+/// or `None` when they already are.
+///
+/// ADL 1.4 `master05-cadl.adoc` §Occurrences: the value of a single-valued
+/// attribute "can only be `0..1` or `1..1`", and a wider occurrences constraint
+/// on it "is not illegal" (deployed ROLE templates state `0..*` under
+/// `capabilities`). The ADL2 output states the cap, and the widening is
+/// recorded in `conversion_details`.
+fn single_valued(
+    child: &opt14::types::CObject,
+    attr_path: &str,
+    cx: &mut RootCx,
+) -> Option<opt14::types::CObject> {
+    let mut capped = child.clone();
+    let occurrences = occurrences_mut(&mut capped);
+    if !occurrences.upper_unbounded && occurrences.upper.is_none_or(|u| u <= 1) {
+        return None;
+    }
+    occurrences.upper = Some(1);
+    occurrences.upper_unbounded = false;
+    occurrences.upper_included = Some(true);
+    if occurrences.lower.is_some_and(|l| l > 1) {
+        occurrences.lower = Some(1);
+    }
+    cx.note(
+        format!("single_attribute_occurrences.{attr_path}"),
+        format!(
+            "{attr_path} is single-valued; its child's occurrences wider than 1 were capped \
+             at 1 (ADL 1.4 cADL §Occurrences)"
+        ),
+    );
+    Some(capped)
+}
+
+/// The `occurrences` of any OPT 1.4 object constraint.
+fn occurrences_mut(obj: &mut opt14::types::CObject) -> &mut opt14::types::Intervalofinteger {
+    match obj {
+        opt14::types::CObject::ArchetypeInternalRef(o) => &mut o.occurrences,
+        opt14::types::CObject::ArchetypeSlot(o) => &mut o.occurrences,
+        opt14::types::CObject::ConstraintRef(o) => &mut o.occurrences,
+        opt14::types::CObject::CArchetypeRoot(o) => &mut o.occurrences,
+        opt14::types::CObject::CCodePhrase(o) => &mut o.occurrences,
+        opt14::types::CObject::CCodeReference(o) => &mut o.occurrences,
+        opt14::types::CObject::CComplexObject(o) => &mut o.occurrences,
+        opt14::types::CObject::CDefinedObject(o) => &mut o.occurrences,
+        opt14::types::CObject::CDvOrdinal(o) => &mut o.occurrences,
+        opt14::types::CObject::CDvQuantity(o) => &mut o.occurrences,
+        opt14::types::CObject::CDvState(o) => &mut o.occurrences,
+        opt14::types::CObject::CPrimitiveObject(o) => &mut o.occurrences,
+        opt14::types::CObject::TComplexObject(o) => &mut o.occurrences,
+    }
+}
+
 /// The `0..*` occurrences a synthesized single-child attribute carries (the
 /// converter core elides RM-default multiplicities).
 fn unbounded_occurrences() -> opt14::types::Intervalofinteger {
@@ -2488,6 +2545,59 @@ mod tests {
             "{:?}",
             cx.notes
         );
+    }
+
+    /// A deployed `ROLE` template converts clean: its `capabilities` and
+    /// `credentials` single attributes keep one value each (ADL 1.4
+    /// `master05-cadl.adoc` §Occurrences), and its `ac0001` reference, which
+    /// the template's ontology does not define, is reported in
+    /// `conversion_details` rather than refused.
+    #[test]
+    fn role_template_converts_with_its_defects_reported() {
+        let path = format!(
+            "{}/../../corpus/fixtures/opt/valid/role.v2.opt",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let xml = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
+        let opt = opt14::from_xml(&xml).unwrap_or_else(|e| panic!("parse Role.v2: {e:?}"));
+        let (archetypes, _) =
+            convert_opt_to_archetypes(&opt).unwrap_or_else(|e| panic!("convert Role.v2: {e}"));
+        let (_, role) = archetypes
+            .iter()
+            .find(|(id, _)| id == "openEHR-DEMOGRAPHIC-ROLE.Role.v1")
+            .expect("the ROLE root converts");
+        let errors: Vec<&str> = validate_integrity(role, None)
+            .iter()
+            .filter(|i| i.severity == Severity::Error)
+            .map(|i| i.code.mnemonic())
+            .collect();
+        assert!(
+            errors.is_empty(),
+            "Role.v2 failed phase-1 validation: {errors:?}"
+        );
+        let Archetype::AuthoredArchetype(boxed) = role else {
+            panic!("the ROLE root is an authored archetype");
+        };
+        let AuthoredArchetype::AuthoredArchetype(data) = boxed.as_ref() else {
+            panic!("the ROLE root is a plain authored archetype");
+        };
+        let details = data
+            .description
+            .as_ref()
+            .and_then(|d| d.conversion_details.as_ref())
+            .expect("Role.v2 reports its defects");
+        assert!(
+            details.values().any(|v| v.contains("ac0001")),
+            "the dangling ac0001 is reported: {details:?}"
+        );
+        for attr in ["capabilities", "credentials"] {
+            assert!(
+                details
+                    .keys()
+                    .any(|k| k.starts_with("single_attribute_occurrences.") && k.ends_with(attr)),
+                "the {attr} cap is reported: {details:?}"
+            );
+        }
     }
 
     /// Notes recorded during a walk land in the converted archetype's

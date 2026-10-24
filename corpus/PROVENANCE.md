@@ -55,3 +55,15 @@ The synthesized `templates/*.opt` files are the committed output of the
 instrument's `templates/generate_content_opts.py`, whose emission mirrors
 Veredictum's `src/exec/opt_synth.rs`; regenerate them from the pinned checkout
 rather than by hand.
+
+## Demographic operational templates under `fixtures/opt/valid/`
+
+- `role.v2.opt` is the `Role.v2` operational template a deployed openEHR
+  platform uses for its shared ROLE parties (root
+  `openEHR-DEMOGRAPHIC-ROLE.Role.v1`), supplied by the owner on 2026-10-24
+  and committed verbatim. It carries no patient data. It is kept because it
+  is a real-world shape: single attributes whose children state `0..*`
+  (#3994) and a `CONSTRAINT_REF` to an `ac0001` its ontology does not define.
+- `person.v2.opt` is synthetic, written for the FerroEHR test suite: a minimal
+  PERSON template with an identity and a `relationships` node, the partner a
+  ROLE template is used with.

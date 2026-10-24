@@ -405,8 +405,14 @@ fn existence_set_upper_above_one() {
     expect_code(&parse(&xml), "Existence_set");
 }
 
+/// Occurrences above one on the child of a single-valued attribute are
+/// accepted: ADL 1.4 `AM/docs/ADL1.4/master05-cadl.adoc` §Occurrences says such a
+/// constraint "is not illegal" and can only mean `0..1` or `1..1`. AOM 1.4's
+/// `Members_valid` invariant is stricter than that text; the disagreement is the
+/// upstream report #3996, and the deployed `Role.v2` template (#3994) carries
+/// the shape.
 #[test]
-fn members_valid_occurrences_above_one_under_single_attribute() {
+fn occurrences_above_one_under_single_attribute_is_accepted() {
     // `category` is a C_SINGLE_ATTRIBUTE; give its DV_CODED_TEXT child
     // occurrences 0..5.
     let xml = minimal_xml();
@@ -420,7 +426,8 @@ fn members_valid_occurrences_above_one_under_single_attribute() {
     let new_seg = seg.replace("<upper>1</upper>", "<upper>5</upper>");
     assert_ne!(seg, new_seg, "expected an <upper>1</upper> in occurrences");
     let xml = format!("{}{}{}", &xml[..occ], new_seg, &xml[seg_end..]);
-    expect_code(&parse(&xml), "Members_valid");
+    validate_opt_artefact(&parse(&xml))
+        .expect("occurrences above one under a single attribute uploads");
 }
 
 #[test]
