@@ -460,6 +460,12 @@ Content-Type: application/json
 { "message": "the request method is not allowed on this resource", "validationErrors": [], "error": "Method Not Allowed" }
 ```
 
+Whether a method is served depends on the resource, never on your credential.
+With authentication on, an authenticated request with a method the resource
+does not serve gets this `405` whatever its token grants; the role and SMART
+scope checks apply only to a served method. A request without a credential is
+still `401`.
+
 When a resource is switched off by configuration (the
 [admin API](../operations-admin-apis.md) with `FERROEHR__ADMIN__ENABLED=false`),
 the header is present but **empty**, which

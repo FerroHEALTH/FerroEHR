@@ -92,6 +92,18 @@ workflow refuses a tag that has no matching section here.
   routes, commit-time binding resolution and the ADL 2 VETDF check all ask the
   one server.
 
+### Fixed
+
+- **A method a resource does not serve is `405` with `Allow` under SMART**
+  (#3987). With bearer authentication on, `DELETE /ehr` and every other
+  method a route does not serve was refused `403` by the SMART on openEHR
+  scope check before the router could answer. The gate now answers `405`
+  with the `Allow` field naming the served methods once the caller has
+  authenticated, whatever the token grants, and runs the RBAC and scope
+  checks only on a served method (ITS-REST `overview/Requests_and_responses`
+  §HTTP Methods, RFC 9110 §15.5.6). A request without a credential is still
+  `401`.
+
 ## [5.4.0] - 2026-10-24
 
 5.4.0 carries breaking changes for operators, each with its upgrade step under Changed. Before you upgrade: replace an ECDSA or Ed448 OpenPGP signing key in `[signing] mode = "pgp"` with an Ed25519 key, and check that the certificate's primary key or a subkey may still sign; tell viewer users that the viewer's addresses change, so bookmarks and links into it need updating, and that the theme falls back to the system's until it is chosen again; and serve the viewer's whole `pkg/` directory if you serve its site from your own web server. No configuration key, database migration or image name changes.
