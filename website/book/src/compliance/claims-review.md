@@ -441,6 +441,7 @@ cut, after the texts in scope have been read.
 | 2026-10-22 | 5.3.2, after `434cd351e` | 4 claims, in four book pages and the technical documentation | nothing |
 | 2026-10-23 | 5.3.3, after `25845e6d3` | 1 claim, in one book page: the templates page said `|raw` is write-only, corrected for #3934 | nothing |
 | 2026-10-24 | 5.4.0, after `de38ec433` | none | nothing |
+| 2026-10-24 | 5.4.1, after `9fdd36091` | 2 claims, in two book pages: the compliance index named `[terminology.external]` and a terminology route, and the crates page pinned `0.0.97` | nothing |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -553,5 +554,46 @@ touched.
   the chart description** make no claim this release changes.
 
 ### Left open on 2026-10-24, for 5.4.0
+
+Nothing.
+
+## The review of 2026-10-24, for 5.4.1
+
+Read on the tree after commit `9fdd36091`, for FerroEHR 5.4.1. The facts of this
+release checked in every text in scope: the CDR asks one terminology server
+under `[terminology.server]` through `ferrobridge-term`, and chart 14.0.0 wires
+it (#3085, #3993); an unserved method is `405` with `Allow` under SMART (#3987);
+the conformance statement declares `unmatched-member-refused` (#3988); a ROLE
+template whose single attributes state `0..*` uploads, and a demographic
+template's example is a party (#3994, #3995); the viewer offers demographic
+templates only where they work (#3997); the nine `openehr-*` crates at `0.0.98`.
+
+### Changed on 2026-10-24, for 5.4.1
+
+- **The compliance index** (SGB V § 355 row) named `[terminology.external]`
+  and "the terminology route"; it now names `[terminology.server]` and its
+  `url`.
+- **The crates page** pinned the `openehr-*` crates at `0.0.97`; this release
+  publishes `0.0.98`.
+
+### Read and kept on 2026-10-24, for 5.4.1
+
+- **The terminology statements**: the
+  [integrations configuration](../installation/config-integrations.md), the
+  [Kubernetes installation](../installation/kubernetes.md) and the chart README
+  describe the one `[terminology.server]` and `secrets.terminologyClientSecret`,
+  as the code and the chart do.
+- **The template statements**: the
+  [templates page](../templates-validation.md) and
+  [content negotiation](../using-the-api/content-negotiation.md) state the
+  example party of a demographic template and its JSON and XML forms.
+- **The `405` statement**: content negotiation's "`405` always names the
+  allowed methods" holds under SMART as well.
+- **The landing page, `SECURITY.md`, the crate READMEs, the
+  [information sheet](information-sheet.md), the
+  [instructions for use](instructions-for-use.md), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-10-24, for 5.4.1
 
 Nothing.
