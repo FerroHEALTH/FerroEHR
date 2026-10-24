@@ -32,6 +32,7 @@ use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::chart::{ActivityChart, activity_chart};
 use ferrohealth_ui::view::diagnostics::DiagnosticsWords;
 use ferrohealth_ui::view::form::Field;
+use ferrohealth_ui::view::layout::{FieldRow, field_row};
 use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, definitions, editor_heading, page_heading,
 };
@@ -98,7 +99,7 @@ fn activity(points: Result<Vec<crate::activity::ActivityPoint>, ViewerError>) ->
             ],
         ),
         points: days.counts,
-        ends: days.ends,
+        ticks: days.ticks,
     };
     activity_chart(&chart).into_any()
 }
@@ -690,22 +691,22 @@ fn change_section(
             Msg::StagedRecordedAs,
             &[("change", change_words(change_type.rubric()).into())],
         ))
-        .view(view! {
-            <div class="fui-cluster">
+        .view(field_row(
+            FieldRow::WithActions,
+            view! {
                 <select id=id("kind") name=id("kind") class="fui-select">
                     {kind_options(draft.kind)}
                 </select>
-                // TODO(#3957): the mockup draws no Apply, FerroHEALTH/FerroUI#386.
                 <button
                     type="submit"
                     name="intent"
                     value="edit"
-                    class="fui-button fui-button-secondary fui-button-small"
+                    class="fui-button fui-button-secondary"
                 >
                     {tr(Msg::StagedApply)}
                 </button>
-            </div>
-        });
+            },
+        ));
     let editor = view! {
         <CodeEditor
             setup=EditorSetup {

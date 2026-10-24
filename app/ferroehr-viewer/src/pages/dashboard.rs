@@ -114,7 +114,7 @@ fn activity_card(
                     ],
                 ),
                 points: days.counts,
-                ends: days.ends,
+                ticks: days.ticks,
             };
             view! {
                 <div class="fui-panel-body">
