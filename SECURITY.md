@@ -97,8 +97,22 @@ can: affected component/endpoint, reproduction steps or a proof of concept,
 impact assessment, and any suggested fix. If you have seen the vulnerability
 exploited, say so.
 
-What you can expect from us (the acknowledgement and assessment times,
-coordinated disclosure, the safe harbour and credit) is the FerroHEALTH
+FerroEHR is solo-maintained, so the response times are best effort rather
+than a contractual service-level agreement. They are the times every product
+of the Ferro family states: an acknowledgement within about 5 business days,
+and an initial assessment (is it valid, how severe) within about 10 business
+days of the report. A confirmed vulnerability is fixed in a release published
+within the target for its severity, counted from the confirmed assessment:
+
+| Severity | Fixed release published within |
+|---|---|
+| Critical | 7 days |
+| High | 30 days |
+| Medium | 90 days |
+| Low | the next release |
+
+The rest of what you can expect from us (coordinated disclosure, the safe
+harbour and credit) is the FerroHEALTH
 [security policy](https://ferrohealth.eu/docs/security.html).
 
 **Never test against a live clinical deployment you do not own.** This software
