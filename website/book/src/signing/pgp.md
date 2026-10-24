@@ -67,12 +67,26 @@ string with it. A missing `key_path`, an unparseable file, a wrong
 passphrase, or a certificate with no usable signing component all stop
 startup with an error rather than leaving a running server that cannot sign.
 
-**The signing component is chosen by capability.** If the certificate
-carries a subkey flagged for data signing
-([RFC 9580 §5.2.3.29](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.29),
-key flag `0x02`), the server signs with that subkey; otherwise it signs with
-the primary key. Position in the file decides nothing, so an encryption
-subkey is never used to sign.
+**The signing component is chosen at boot.** A subkey qualifies to sign
+when all of these hold:
+
+- its newest valid Subkey Binding signature
+  ([RFC 9580 §5.2.3.10](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.10))
+  carries the data-signing key flag `0x02`
+  ([§5.2.3.29](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.29));
+- neither that binding nor the subkey has expired
+  ([§5.2.3.13](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.13));
+- no valid Subkey Revocation signature covers it
+  ([§5.2.1.12](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.1.12):
+  "A revoked subkey is not to be used").
+
+Of the qualifying subkeys, the one created last signs; on equal creation
+times, the later one in the file. When none qualifies, the server signs
+with the primary key. RFC 9580 gives no rule for choosing among several
+signing subkeys, so preferring the newest is FerroEHR's own choice. It is
+what makes adding a signing subkey a rotation. An encryption subkey never
+signs. The choice holds until the next restart, so restart after adding,
+revoking or expiring a subkey, and before a chosen subkey expires.
 
 **Sign with Ed25519.** It is the one algorithm the server signs with that
 has neither a refusal nor a warning.
@@ -83,8 +97,8 @@ constant-time can branch on secret values (RUSTSEC-2026-0387), and the 0.5
 line has no fixed release. That covers ECDSA on every curve (P-256, P-384,
 P-521, secp256k1, Brainpool). The server stops before it makes a single
 signature and names the advisory. Only the signing component counts: a
-certificate whose primary key is ECDSA and whose signing subkey is Ed25519
-is accepted. Such a certificate stays usable for verification as a
+certificate whose primary key is ECDSA and whose chosen signing subkey is
+Ed25519 is accepted. Such a certificate stays usable for verification as a
 [retired key](#retired-keys-and-rotation), since verifying uses only public
 values.
 
@@ -101,9 +115,11 @@ A stored `VERSION.signature` records no key identifier, and it is an
 immutable committed fact that cannot be re-issued. Rotating a key therefore
 has to keep the old one verifiable. Two mechanisms do that:
 
-- **A new signing subkey on the same certificate.** The server picks the
-  signing-capable subkey, the certificate retains the previous one, and
-  verification tries the primary key and every subkey. Nothing else changes.
+- **A new signing subkey on the same certificate.** After a restart the
+  server signs with the newest qualifying subkey (see above), the
+  certificate retains the previous one, and verification tries the primary
+  key and every subkey. Revoking the old subkey stops it signing and keeps
+  it verifying. Nothing else changes.
 - **`retired_key_paths`.** A replaced certificate's **public** half is
   listed there and consulted during verification. A public key verifies and
   can never sign again, so a retired entry cannot become an active signer.

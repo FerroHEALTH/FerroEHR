@@ -411,9 +411,14 @@ at boot naming the advisory. To clear it:
 3. Restart. New versions are signed with Ed25519; old ones keep verifying.
 
 Rotation inside one certificate is cheaper still: add an Ed25519 **signing
-subkey** to the existing certificate and the server signs with it
-automatically, with no `retired_key_paths` entry needed: the certificate keeps
-the previous subkey, so past signatures continue to verify.
+subkey** to the existing certificate, export the armored secret key again to
+`key_path`, and restart. The server signs with the newest subkey whose binding
+grants signing and that is neither expired nor revoked
+([the rule](../signing/pgp.md#configuring-the-key)), with no
+`retired_key_paths` entry needed: the certificate keeps the previous subkey, so
+past signatures continue to verify. For a refused ECDSA or Ed448 key this works
+when the new Ed25519 subkey is the one chosen. The steps above, with a new
+certificate, work in every case.
 
 **On Kubernetes**, `digest` mode needs nothing; it is the default. `pgp` mode
 needs the key as a file and its passphrase as a secret, both of which the chart

@@ -136,6 +136,20 @@ workflow refuses a tag that has no matching section here.
 - **The stored-query listing's pager**: every stored query is listed, grouped
   by namespace.
 
+### Fixed
+
+- **The OpenPGP signing subkey is the newest one that may sign** (#3967). In
+  `[signing] mode = "pgp"` the server took the first subkey in the file that
+  any binding signature had ever flagged for signing, so a subkey added for
+  rotation never signed, and a revoked or expired subkey kept signing. It now
+  signs with the subkey created last among those whose newest valid binding
+  grants signing, that have not expired, and that carry no valid revocation
+  (RFC 9580 §5.2.1.12, §5.2.3.10, §5.2.3.13), and with the primary key when
+  none qualifies. A certificate with one signing subkey signs as before.
+  Upgrade: a deployment whose certificate holds several signing subkeys signs
+  with a different one after the upgrade; every version signed before keeps
+  verifying, since the certificate still carries the old subkey.
+
 ### Security
 
 Shipped with functional changes because: only the newest release is supported (SECURITY.md), so a security-only patch cut from 5.3.3 beside the next release would be out of support the moment that release lands and give no one a release to stay on; the fix is itself a behaviour change, refusing ECDSA and Ed448 signing keys, so there is no dependency bump to ship alone.

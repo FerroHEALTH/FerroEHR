@@ -27,13 +27,14 @@ use ferroehr::versioning::signature::key::KeyError;
 use ferroehr::versioning::signature::signer::{Signer, SigningError};
 use ferroehr::versioning::signature::verify::Verdict;
 use pgp::composed::{
-    ArmorOptions, DetachedSignature, KeyType, SecretKeyParamsBuilder, SignedSecretKey,
-    SubkeyParamsBuilder,
+    ArmorOptions, Deserializable as _, DetachedSignature, KeyType, SecretKeyParamsBuilder,
+    SignedSecretKey, SubkeyParamsBuilder,
 };
 use pgp::crypto::ecc_curve::ECCCurve;
 use pgp::crypto::hash::HashAlgorithm;
 use pgp::crypto::public_key::PublicKeyAlgorithm;
-use pgp::types::Password;
+use pgp::packet::{KeyFlags, SignatureConfig, SignatureType, Subpacket, SubpacketData};
+use pgp::types::{Duration, KeyDetails as _, Password, Timestamp};
 use rand::rngs::OsRng;
 use tracing::field::{Field, Visit};
 use tracing_subscriber::layer::{Context, Layer};
@@ -602,4 +603,144 @@ fn an_ed25519_signing_key_still_signs() {
             "{key_type:?}"
         );
     }
+}
+
+// ── Choosing the signing subkey (RFC 9580 §5.2.1.12, §5.2.3.10, §5.2.3.13) ──
+
+/// A certificate whose primary only certifies and which carries two Ed25519
+/// signing subkeys: index 0 created long ago, index 1 created recently.
+fn certificate_with_two_signing_subkeys() -> SignedSecretKey {
+    let now = Timestamp::now().as_secs();
+    let subkey = |created: u32| {
+        SubkeyParamsBuilder::default()
+            .key_type(KeyType::Ed25519Legacy)
+            .can_sign(true)
+            .created_at(Timestamp::from_secs(created))
+            .passphrase(None)
+            .build()
+            .expect("build subkey params")
+    };
+    let mut builder = SecretKeyParamsBuilder::default();
+    builder
+        .key_type(KeyType::Ed25519Legacy)
+        .can_certify(true)
+        .can_sign(false)
+        .primary_user_id("ferroehr-signing rotation <rotation@ferroehr.local>".into())
+        .subkey(subkey(now - 1_000_000))
+        .subkey(subkey(now - 100));
+    builder
+        .build()
+        .expect("build key params")
+        .generate(OsRng)
+        .expect("generate key")
+}
+
+/// Adds a signature of `typ` by the primary over subkey `index`, created one
+/// second from now so it is the newest, with `extra` hashed subpackets.
+fn add_subkey_signature(
+    key: &mut SignedSecretKey,
+    index: usize,
+    typ: SignatureType,
+    extra: Vec<SubpacketData>,
+) {
+    let created = Timestamp::from_secs(Timestamp::now().as_secs() + 1);
+    let mut config =
+        SignatureConfig::from_key(OsRng, &key.primary_key, typ).expect("signature config");
+    config.hashed_subpackets = [
+        SubpacketData::SignatureCreationTime(created),
+        SubpacketData::IssuerFingerprint(key.primary_key.fingerprint()),
+    ]
+    .into_iter()
+    .chain(extra)
+    .map(|data| Subpacket::regular(data).expect("subpacket"))
+    .collect();
+    let primary = &key.primary_key;
+    let subkey = key
+        .secret_subkeys
+        .get_mut(index)
+        .expect("the subkey exists");
+    let signature = config
+        .sign_subkey_binding(
+            primary,
+            primary.public_key(),
+            &Password::empty(),
+            subkey.key.public_key(),
+        )
+        .expect("sign over the subkey");
+    subkey.signatures.push(signature);
+}
+
+/// Loads `key` as the signing key, signs, and returns the index of the
+/// subkey whose public half verifies the signature.
+fn subkey_that_signs(key: &SignedSecretKey) -> usize {
+    let armored = key
+        .to_armored_string(ArmorOptions::default())
+        .expect("armor secret key");
+    let signature = pgp_signer(&armored, None)
+        .expect("build signer")
+        .sign(CANONICAL)
+        .expect("sign");
+    let (signature, _) = DetachedSignature::from_string(&signature).expect("parse signature");
+    let public = key.to_public_key();
+    let signers: Vec<usize> = public
+        .public_subkeys
+        .iter()
+        .enumerate()
+        .filter(|(_, subkey)| signature.verify(*subkey, CANONICAL.as_bytes()).is_ok())
+        .map(|(index, _)| index)
+        .collect();
+    assert_eq!(signers.len(), 1, "exactly one subkey signs: {signers:?}");
+    *signers.first().expect("one signing subkey")
+}
+
+/// Of two valid signing subkeys the one created last signs, even though it
+/// comes second in the file: adding a signing subkey rotates to it.
+#[test]
+fn the_newest_signing_subkey_signs() {
+    assert_eq!(
+        subkey_that_signs(&certificate_with_two_signing_subkeys()),
+        1
+    );
+}
+
+/// A revoked subkey is not to be used (RFC 9580 §5.2.1.12), however new.
+#[test]
+fn a_revoked_signing_subkey_is_not_used() {
+    let mut key = certificate_with_two_signing_subkeys();
+    add_subkey_signature(&mut key, 1, SignatureType::SubkeyRevocation, Vec::new());
+    assert_eq!(subkey_that_signs(&key), 0);
+}
+
+/// A subkey whose newest binding sets a key lifetime that has run out is not
+/// used (RFC 9580 §5.2.3.13, counted from the subkey's creation).
+#[test]
+fn an_expired_signing_subkey_is_not_used() {
+    let mut key = certificate_with_two_signing_subkeys();
+    let mut flags = KeyFlags::default();
+    flags.set_sign(true);
+    add_subkey_signature(
+        &mut key,
+        1,
+        SignatureType::SubkeyBinding,
+        vec![
+            SubpacketData::KeyFlags(flags),
+            SubpacketData::KeyExpirationTime(Duration::from_secs(10)),
+        ],
+    );
+    assert_eq!(subkey_that_signs(&key), 0);
+}
+
+/// Only the newest binding counts (RFC 9580 §5.2.3.10): one that drops the
+/// signing flag takes the subkey out of signing, though an older binding
+/// grants it.
+#[test]
+fn a_subkey_whose_newest_binding_drops_signing_is_not_used() {
+    let mut key = certificate_with_two_signing_subkeys();
+    add_subkey_signature(
+        &mut key,
+        1,
+        SignatureType::SubkeyBinding,
+        vec![SubpacketData::KeyFlags(KeyFlags::default())],
+    );
+    assert_eq!(subkey_that_signs(&key), 0);
 }
