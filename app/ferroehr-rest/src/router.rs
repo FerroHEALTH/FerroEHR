@@ -109,6 +109,9 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
                 ferroehr::config::auth::product_scope(&cfg.auth),
                 cfg.smart.demographic_clients.clone(),
             )),
+            served: Arc::new(crate::api::served::ServedMethods::new(
+                &cfg.server.base_path,
+            )),
         },
         authn::middleware,
     ));

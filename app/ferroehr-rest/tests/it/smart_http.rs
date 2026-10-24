@@ -368,3 +368,64 @@ async fn authentication_off_leaves_the_families_ungated() {
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
 }
+
+// ── an unserved method ───────────────────────────────────────────────────────
+
+/// ITS-REST `overview/Requests_and_responses` §HTTP Methods and RFC 9110
+/// §15.5.6: `DELETE /ehr` is a method the resource does not serve, so it is
+/// `405` with `Allow` whatever the token grants (Veredictum case
+/// `I_EHR_SERVICE.create_ehr-wrong_method`), and the served `POST /ehr` keeps
+/// its scope check.
+#[tokio::test]
+async fn an_unserved_method_is_405_with_allow_whatever_the_grants() {
+    let issuer = issuer().await;
+    let uri = issuer.uri();
+    let (_pg, app) = app(config(&uri, true, false)).await;
+    let request = |method: &str, credential: &str| {
+        Request::builder()
+            .method(method)
+            .uri(format!("{BASE}/ehr"))
+            .header(header::ACCEPT, "application/json")
+            .header(header::AUTHORIZATION, credential)
+            .body(Body::empty())
+            .unwrap()
+    };
+    let authorized = token(&uri, "user/composition-*.cruds", &json!({}));
+    let unauthorized = token(&uri, "openid", &json!({}));
+    for credential in [&authorized, &unauthorized] {
+        let resp = app
+            .clone()
+            .oneshot(request("DELETE", credential))
+            .await
+            .expect("response");
+        assert_eq!(resp.status(), StatusCode::METHOD_NOT_ALLOWED);
+        let allow = resp
+            .headers()
+            .get(header::ALLOW)
+            .and_then(|value| value.to_str().ok())
+            .expect("RFC 9110 §15.5.6: a 405 carries Allow")
+            .to_owned();
+        assert!(allow.contains("POST"), "{allow}");
+        assert!(!allow.contains("DELETE"), "{allow}");
+    }
+    let (status, body) = send(&app, request("POST", &unauthorized)).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    let (status, body) = send(&app, request("POST", &authorized)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+}
+
+/// A request without a credential is still `401` on an unserved method: the
+/// method check follows authentication and opens nothing to an anonymous
+/// caller.
+#[tokio::test]
+async fn an_unserved_method_without_a_credential_is_401() {
+    let issuer = issuer().await;
+    let (_pg, app) = app(config(&issuer.uri(), true, false)).await;
+    let req = Request::builder()
+        .method("DELETE")
+        .uri(format!("{BASE}/ehr"))
+        .body(Body::empty())
+        .unwrap();
+    let (status, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
+}

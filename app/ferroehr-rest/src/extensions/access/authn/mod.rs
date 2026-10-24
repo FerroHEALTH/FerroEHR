@@ -56,6 +56,7 @@ use http::request::Parts;
 use http::{HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
 
+use crate::api::served::ServedMethods;
 use crate::config::AppConfig;
 use crate::extensions::access::authz::AuthzHandle;
 use crate::extensions::access::authz::roles::{RbacDecision, extract_roles};
@@ -76,6 +77,9 @@ pub(crate) struct AuthLayer {
     pub(crate) patient_data: Option<Arc<PatientDataGate>>,
     /// The SMART on openEHR requirement of each route.
     pub(crate) smart: Arc<SmartRoutes>,
+    /// The methods each route serves, so an unserved one is answered `405`
+    /// before any check judges the caller.
+    pub(crate) served: Arc<ServedMethods>,
 }
 
 /// The authenticated caller.
@@ -534,6 +538,17 @@ pub(crate) async fn middleware(
 
     match auth.authenticate(req.headers()).await {
         Ok(Authenticated { principal, fresh }) => {
+            // NOTE: RFC 9110 §15.5.6; whether a method is served is the
+            // resource's property, so no grant changes the `405`.
+            if let Some(mut refusal) = layer.served.refusal(
+                req.method(),
+                req.extensions()
+                    .get::<MatchedPath>()
+                    .map(MatchedPath::as_str),
+            ) {
+                refusal.extensions_mut().insert(principal);
+                return refusal;
+            }
             // How the person authenticated is judged before what they may do:
             // a step-up refusal is an authentication outcome (RFC 9470 §3).
             let actor = match layer.patient_data.as_deref() {
@@ -1472,6 +1487,7 @@ mod tests {
             authz: None,
             patient_data: None,
             smart: Arc::new(SmartRoutes::new("", "__ferroehr.platform", Vec::new())),
+            served: Arc::new(ServedMethods::default()),
         };
         let app = axum::Router::new()
             .route("/x", axum::routing::get(|| async { "ok" }))
