@@ -113,7 +113,6 @@ allow = [
   "ISC",
   "Zlib",
   "Unicode-3.0",
-  "MPL-2.0",
   "CC0-1.0",
   # MIT No Attribution (borrow-or-share, via fluent-uri → sqlx).
   "MIT-0",
