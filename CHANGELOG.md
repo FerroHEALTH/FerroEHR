@@ -15,6 +15,16 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Changed
+
+- **`SECURITY.md` states the family's response times, with fix-time targets
+  by severity.** An acknowledgement within 5 business days and an initial
+  assessment within 10, both best effort as before, and now a fixed release
+  published within 7 days of the confirmed assessment for a Critical
+  vulnerability, 30 days for High, 90 days for Medium and with the next
+  release for Low. The CRA risk assessment says business days where it said
+  working days.
+
 ## [5.4.1] - 2026-10-24
 
 5.4.1 carries breaking changes for operators who use a terminology server, each with its upgrade step under Changed. Before you upgrade: move `[terminology.external]` to the one `[terminology.server]` (its `url`, `fail_on_error`, `request_timeout_ms` and optional `oauth` grant) and rename `FERROEHR__TERMINOLOGY__EXTERNAL__` variables to `FERROEHR__TERMINOLOGY__SERVER__`; on Helm, chart 14.0.0 takes `config.terminology.server` and `secrets.terminologyClientSecret`. A deployment without an external terminology server upgrades unchanged.
