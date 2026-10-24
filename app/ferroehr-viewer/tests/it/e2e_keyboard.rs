@@ -93,7 +93,7 @@ async fn the_query_builder_is_traversed_and_run_by_keyboard() {
             .await,
         "Add a condition is reachable by Tab"
     );
-    h.press(Key::Enter).await;
+    common::submit_by_key(&h, Key::Enter).await;
     h.wait_css("select[name='g.c0-path']").await;
     assert!(
         h.tab_to("select[name='g.c0-op']", TAB_BUDGET).await,
@@ -136,7 +136,7 @@ async fn the_query_builder_is_traversed_and_run_by_keyboard() {
         }
     }
     assert!(back, "Shift+Tab from Save returns to Run");
-    h.press(Key::Enter).await;
+    common::submit_by_key(&h, Key::Enter).await;
     wait_main_contains(&h, "2020-01-01T00:00:00Z").await;
     h.wait_css("main table tbody tr").await;
     h.shot(2, "run-by-keyboard").await;
