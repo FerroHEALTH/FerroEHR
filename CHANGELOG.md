@@ -15,6 +15,10 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [5.4.1] - 2026-10-24
+
+5.4.1 carries breaking changes for operators who use a terminology server, each with its upgrade step under Changed. Before you upgrade: move `[terminology.external]` to the one `[terminology.server]` (its `url`, `fail_on_error`, `request_timeout_ms` and optional `oauth` grant) and rename `FERROEHR__TERMINOLOGY__EXTERNAL__` variables to `FERROEHR__TERMINOLOGY__SERVER__`; on Helm, chart 14.0.0 takes `config.terminology.server` and `secrets.terminologyClientSecret`. A deployment without an external terminology server upgrades unchanged.
+
 ### Changed
 
 - **The CDR reaches its terminology server through `ferrobridge-term`**
@@ -12192,6 +12196,7 @@ but has not yet run in production.
 
 
 [unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.4.0...HEAD
+[5.4.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.4.0...v5.4.1
 [5.4.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.3...v5.4.0
 [5.3.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.2...v5.3.3
 [5.3.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.2.0...v5.3.2
