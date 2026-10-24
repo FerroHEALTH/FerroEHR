@@ -634,6 +634,16 @@ async fn drain(
             send_to_direct_feed(feed, &records).await;
         }
     }
+    // NOTE: RFC 5425 §4.4: a transport sender closes with close_notify once no
+    // record follows, so the last records sent are not lost to a reset.
+    if let Some(transport) = &sinks.syslog
+        && let Err(e) = transport.close().await
+    {
+        crate::telemetry::metrics::metrics()
+            .atna_audit_send_failed
+            .add(1, &[opentelemetry::KeyValue::new("sink", "syslog")]);
+        tracing::warn!("ATNA audit syslog close failed; the records sent last may be lost: {e}");
+    }
     tracing::debug!("ATNA audit drain: channel closed, task exiting");
 }
 

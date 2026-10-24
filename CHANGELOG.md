@@ -181,6 +181,14 @@ workflow refuses a tag that has no matching section here.
   `signing.retired_key_paths` so the versions it signed keep verifying. To
   keep an expired certificate, extend its primary key's expiry
   (`gpg --quick-set-expire <FINGERPRINT> 1y`) and export it again.
+- **The audit drain no longer loses the records it sent last when it exits**
+  (#3959). It dropped its syslog connection without a TLS `close_notify`. With
+  the repository's session tickets still unread, the kernel answered with a
+  reset, which could discard the last records, with no warning. The drain now
+  closes the connection as RFC 5425 §4.4 asks, through FerroAUDIT 0.2.5's
+  `Connection::close` (`ihe-atna` and `ehds-logging` `=0.2.5`), and logs and
+  counts a close that fails. The syslog connection also sends each record at
+  once (`TCP_NODELAY`).
 
 ### Security
 
