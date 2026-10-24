@@ -1391,12 +1391,40 @@ pub(crate) async fn fill(h: &Harness, css: &str, text: &str) {
 }
 
 /// Click the submit control at `css` and wait for the page that answers the
-/// post: the document is marked before the click, and the answer is a new
-/// document without the mark.
+/// post ([`leave_page`]).
 ///
 /// # Panics
 /// When the click fails or no page answers within 15 s.
 pub(crate) async fn submit(h: &Harness, css: &str) {
+    leave_page(h, &format!("the click on `{css}`"), async {
+        let control = h.wait_css(css).await;
+        control.scroll_to_centre().await;
+        control.click().await;
+    })
+    .await;
+}
+
+/// Press `key` on the focused submit control and wait for the page that
+/// answers the post ([`leave_page`]): [`submit`] for a keyboard journey.
+///
+/// # Panics
+/// When the key press fails or no page answers within 15 s.
+pub(crate) async fn submit_by_key(h: &Harness, key: impl Into<TypingData>) {
+    let key = key.into();
+    leave_page(h, "the key press", h.press(key)).await;
+}
+
+/// Mark the document, run `action`, and wait for the page that answers it: a
+/// new document without the mark, with its `main` drawn.
+///
+/// A probe that runs before the new document arrives can find an element in
+/// the old one and read it after the browser replaced it, which Chrome
+/// answers with "Node with given id does not belong to the document", an
+/// error [`is_absence`] rightly refuses.
+///
+/// # Panics
+/// When the mark cannot be set or no page answers within 15 s.
+async fn leave_page(h: &Harness, what: &str, action: impl Future<Output = ()>) {
     bounded(
         "execute(mark the document)",
         h.driver.execute(
@@ -1406,14 +1434,12 @@ pub(crate) async fn submit(h: &Harness, css: &str) {
     )
     .await
     .expect("mark the document before the post");
-    let control = h.wait_css(css).await;
-    control.scroll_to_centre().await;
-    control.click().await;
+    action.await;
     let moved = poll_until_for(Duration::from_secs(15), async || {
         !is_present(h, "html[data-e2e-left]").await
     })
     .await;
-    assert!(moved, "the click on `{css}` never brought a new page");
+    assert!(moved, "{what} never brought a new page");
     h.wait_css("main").await;
 }
 
