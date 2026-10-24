@@ -30,8 +30,8 @@ api_enabled = true
 or, as an environment override, `FERROEHR__TERMINOLOGY__API_ENABLED=true`.
 
 Turning it on exposes only lookups over terminologies the server already holds:
-the bundled openEHR terminology plus the external code sets beside it. Binding
-an external FHIR terminology server is a separate setting, and it changes what
+the bundled openEHR terminology plus the external code sets beside it. Wiring
+the FHIR terminology server is a separate setting, and it changes what
 these lookups can answer; both are covered in
 [Terminology servers](../beyond-core/terminology.md).
 

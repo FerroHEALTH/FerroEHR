@@ -301,7 +301,7 @@ rather than inherit from a quickstart. See
 | `[licence]` | The commercial licence token | [Authentication & access](config-auth.md) |
 | `[query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |
 | `[events]` | Change eventing | [Integrations](config-integrations.md) |
-| `[terminology]`, `[multimedia]` | External terminology servers, multimedia externalization | [Integrations](config-integrations.md) |
+| `[terminology]`, `[multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |
 | `[privacy]`, `[privacy.identifier_scan]` | What the clinical side refuses to hold: the subject reference, identified parties, the identifier scanner | [Privacy & data minimisation](config-privacy.md) |
 | `[cohort]`, `[cohort.predicates]` | Cross-domain cohort queries: the demographic predicate allow-list, the small-cell floor, the cohort ceiling | [Privacy & data minimisation](config-privacy.md) |

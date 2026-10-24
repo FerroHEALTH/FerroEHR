@@ -545,9 +545,9 @@ Value filters can be backed by terminology in three ways:
 - a terminology URI operand (`matches { terminology://… }`) expands the set the
   URI identifies.
 
-These require a terminology source; if external terminology is not configured,
+These require a terminology source; if no terminology server is configured,
 the in-process openEHR bundle is used. See
-[Terminology servers](beyond-core/terminology.md) for wiring an external FHIR
+[Terminology servers](beyond-core/terminology.md) for wiring the FHIR
 terminology server.
 
 Two rejections to expect here: only `expand` may stand as a `matches` operand

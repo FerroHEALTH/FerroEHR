@@ -228,7 +228,7 @@ knows of for this release.
   implementing acts under EHDS Art. 15(1) that have not been adopted.
 - FerroEHR maps no FHIR resources. FHIR R4 mapping is FerroBRIDGE's; FerroEHR
   uses FHIR for the access log's `AuditEvent` (with the ITI-81 retrieval) and
-  for external terminology servers only. A configuration that still carries
+  for its terminology server only. A configuration that still carries
   `[fhir]` or `[fhir.outbound]` is refused at boot as unknown keys.
 - Of the access-log renderings, the DICOM message carries neither the
   accessing organisation, the purpose, the origins nor the categories, because
