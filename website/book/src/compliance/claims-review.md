@@ -522,7 +522,7 @@ Nothing.
 Read on the tree after commit `de38ec433`, for FerroEHR 5.4.0. The facts of this
 release checked in every text in scope: the viewer rebuilt on FerroUI 0.3.6 in
 islands mode, working with JavaScript off, with its new addresses, its
-preferences as cookies of their own and an open tab that idles out (#3941,
+preferences as cookies of their own and an open tab that idles out (#3932,
 #3057); an ECDSA or Ed448 OpenPGP signing key refused at boot for
 RUSTSEC-2026-0387 (#3965); the signer's choice of subkey and primary key
 (#3967, #3969, #3971); the audit drain closing its syslog connection with
