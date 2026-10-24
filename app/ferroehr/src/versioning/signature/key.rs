@@ -307,10 +307,11 @@ fn rsa_family(algorithm: PublicKeyAlgorithm) -> bool {
     )
 }
 
-/// Returns the index of the secret subkey that signs, or `None` to sign with
-/// the primary key.
+/// Returns the index of the secret subkey that signs, or `None` when none
+/// may.
 ///
-/// A subkey qualifies when its newest valid Subkey Binding (RFC 9580
+/// No subkey qualifies while the primary key is revoked or expired
+/// ([`primary_in_force_at`]). Otherwise a subkey qualifies when its newest valid Subkey Binding (RFC 9580
 /// §5.2.3.10) carries key flag 0x02 (§5.2.3.29), neither that binding nor the
 /// subkey has expired at `now` (§5.2.3.13), and no valid Subkey Revocation
 /// covers it (§5.2.1.12: "A revoked subkey is not to be used"). Among those,
@@ -318,6 +319,9 @@ fn rsa_family(algorithm: PublicKeyAlgorithm) -> bool {
 /// gives no rule for choosing among several signing subkeys; preferring the
 /// newest is our own design, so that adding a signing subkey rotates to it.
 fn signing_subkey_index(secret: &SignedSecretKey, now: Timestamp) -> Option<usize> {
+    if !primary_in_force_at(secret, now) {
+        return None;
+    }
     let primary = secret.primary_key.public_key();
     secret
         .secret_subkeys
@@ -357,24 +361,28 @@ fn may_sign_at(primary: &PublicKey, subkey: &SignedSecretSubKey, now: Timestamp)
         && !expired(subkey.key.created_at(), binding.key_expiration_time(), now)
 }
 
-/// Whether the primary key may sign data at `now`.
-///
-/// It may when no valid Key Revocation signature covers it (RFC 9580
-/// §5.2.1.11: "A revoked key is not to be used") and its governing
-/// self-signature carries key flag 0x02 (§5.2.3.29) and has not expired, nor
-/// has the key (§5.2.3.13, counted from the primary key's creation).
+/// The primary key's self-signatures that state facts about it.
+#[derive(Debug, Clone, Copy)]
+struct PrimarySelfSignatures<'a> {
+    /// The newest valid Direct Key signature.
+    direct: Option<&'a Signature>,
+    /// The self-signature the primary key's key flags are read from.
+    governing: Option<&'a Signature>,
+}
+
+/// The primary key's self-signatures, or `None` when the primary key is not
+/// to be used at all: a valid Key Revocation signature covers it (RFC 9580
+/// §5.2.1.11: "A revoked key is not to be used"), or it is a version 6 key
+/// without a valid Direct Key signature (§5.2.3.10).
 ///
 /// The governing self-signature follows §5.2.3.10, which keeps the primary
 /// key's key flags in a Direct Key signature (the version 6 place) or, by
 /// version 4 convention, in a User ID self-signature: the newest valid Direct
 /// Key signature when it carries a Key Flags subpacket, else the newest valid
-/// self-signature on the primary User ID. A version 6 key needs a valid
-/// Direct Key signature to be used at all (§5.2.3.10). A self-signature with
-/// no Key Flags subpacket states no flags, and §5.2.3.29 counts an unstated
-/// flag as zero, so it grants no signing. RFC 9580 gives no precedence
+/// self-signature on the primary User ID. RFC 9580 gives no precedence
 /// between the two places; preferring the Direct Key signature, whose
 /// subpackets "apply to the entire key", is our own design.
-fn primary_may_sign_at(secret: &SignedSecretKey, now: Timestamp) -> bool {
+fn primary_self_signatures(secret: &SignedSecretKey) -> Option<PrimarySelfSignatures<'_>> {
     let primary = secret.primary_key.public_key();
     let details = &secret.details;
     // NOTE: RFC 9580 §5.2.1.11; only a revocation by the key itself is valid.
@@ -382,7 +390,7 @@ fn primary_may_sign_at(secret: &SignedSecretKey, now: Timestamp) -> bool {
         sig.typ() == Some(SignatureType::KeyRevocation) && sig.verify_key(primary).is_ok()
     });
     if revoked {
-        return false;
+        return None;
     }
     let direct = details
         .direct_signatures
@@ -390,22 +398,58 @@ fn primary_may_sign_at(secret: &SignedSecretKey, now: Timestamp) -> bool {
         .filter(|sig| sig.typ() == Some(SignatureType::Key) && sig.verify_key(primary).is_ok())
         .max_by_key(|sig| sig.created());
     if primary.version() == KeyVersion::V6 && direct.is_none() {
-        return false;
+        return None;
     }
-    let Some(governing) = direct
+    let governing = direct
         .filter(|sig| states_key_flags(sig))
-        .or_else(|| primary_user_self_signature(primary, &details.users))
-    else {
+        .or_else(|| primary_user_self_signature(primary, &details.users));
+    Some(PrimarySelfSignatures { direct, governing })
+}
+
+/// Whether the primary key is in force at `now`: usable at all
+/// ([`primary_self_signatures`]) and not past the Key Expiration Time its
+/// governing or Direct Key self-signature states (RFC 9580 §5.2.3.13, counted
+/// from the primary key's creation).
+///
+/// A subkey signs only while its primary key is in force. RFC 9580 does not
+/// say in so many words that a subkey inherits its primary key's revocation
+/// or expiry; reading the Subkey Binding (§5.2.1.8) as a statement a revoked
+/// or expired primary key can no longer make is our own design.
+fn primary_in_force_at(secret: &SignedSecretKey, now: Timestamp) -> bool {
+    let created = secret.primary_key.created_at();
+    primary_self_signatures(secret).is_some_and(|sigs| {
+        // NOTE: our own design; an expiry stated on the Direct Key signature binds
+        // even when the primary User ID governs.
+        [sigs.direct, sigs.governing]
+            .into_iter()
+            .flatten()
+            .all(|sig| !expired(created, sig.key_expiration_time(), now))
+    })
+}
+
+/// Whether the primary key may sign data at `now`.
+///
+/// It may when it is in force ([`primary_in_force_at`]) and its governing
+/// self-signature ([`primary_self_signatures`]) carries key flag 0x02
+/// (RFC 9580 §5.2.3.29), with neither that self-signature nor the Direct Key
+/// signature past its Signature Expiration Time (§5.2.3.18). A self-signature
+/// with no Key Flags subpacket states no flags, and §5.2.3.29 counts an
+/// unstated flag as zero, so it grants no signing.
+fn primary_may_sign_at(secret: &SignedSecretKey, now: Timestamp) -> bool {
+    let Some(sigs) = primary_self_signatures(secret) else {
         return false;
     };
-    let live = |sig: &Signature| {
+    let Some(governing) = sigs.governing else {
+        return false;
+    };
+    let signature_live = |sig: &Signature| {
         sig.created()
             .is_some_and(|created| !expired(created, sig.signature_expiration_time(), now))
-            && !expired(primary.created_at(), sig.key_expiration_time(), now)
     };
-    // NOTE: our own design; an expiry stated on the Direct Key signature binds
-    // even when the primary User ID governs.
-    governing.key_flags().sign() && live(governing) && direct.is_none_or(live)
+    primary_in_force_at(secret, now)
+        && governing.key_flags().sign()
+        && signature_live(governing)
+        && sigs.direct.is_none_or(signature_live)
 }
 
 /// Whether `sig` carries a Key Flags subpacket in its hashed area, the only

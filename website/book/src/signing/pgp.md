@@ -67,8 +67,16 @@ string with it. A missing `key_path`, an unparseable file, a wrong
 passphrase, or a certificate with no usable signing component all stop
 startup with an error rather than leaving a running server that cannot sign.
 
-**The signing component is chosen at boot.** A subkey qualifies to sign
-when all of these hold:
+**The signing component is chosen at boot.** No subkey signs while the
+primary key is revoked
+([RFC 9580 §5.2.1.11](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.1.11):
+"A revoked key is not to be used") or past the Key Expiration Time its
+self-signature states
+([§5.2.3.13](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.13)).
+RFC 9580 does not say in so many words that a subkey inherits its primary
+key's revocation or expiry, so applying it is FerroEHR's own choice: the
+primary key's binding is what vouches for the subkey. Otherwise a subkey
+qualifies to sign when all of these hold:
 
 - its newest valid Subkey Binding signature
   ([RFC 9580 §5.2.3.10](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.10))

@@ -167,6 +167,20 @@ workflow refuses a tag that has no matching section here.
   verifying, since the certificate still carries the primary key. A
   certificate generated with signing on its primary key, or with a valid
   signing subkey, loads as before.
+- **A signing subkey stops signing when its primary key is revoked or
+  expires** (#3971). In `[signing] mode = "pgp"` the server checked a signing
+  subkey's own binding, expiry and revocation but not the primary key's, so
+  the subkey of a certificate whose primary key carried a valid Key
+  Revocation, or had passed its Key Expiration Time, kept signing. Now no
+  subkey signs while the primary key is revoked or expired (RFC 9580
+  §5.2.1.11, §5.2.3.13), and with nothing left that may sign the server
+  refuses to start. Upgrade: a deployment whose certificate's primary key is
+  revoked or expired no longer boots; generate a new Ed25519 certificate
+  (`gpg --quick-generate-key "…" ed25519 sign`), export its armored secret
+  key to `signing.key_path`, and list the old certificate's public half in
+  `signing.retired_key_paths` so the versions it signed keep verifying. To
+  keep an expired certificate, extend its primary key's expiry
+  (`gpg --quick-set-expire <FINGERPRINT> 1y`) and export it again.
 
 ### Security
 
