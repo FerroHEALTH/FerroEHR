@@ -17,6 +17,19 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The conformance statement declares `unmatched-member-refused`** (#3988,
+  register AMB-229). The server refuses a container member whose RM type the
+  template does not allow, such as a `CLUSTER` committed where
+  `items[at0004]` is constrained to `ELEMENT` (`422`, AM AOM 1.4
+  `C_OBJECT.rm_type_name`, ADL 1.4 cADL §Occurrences). The statement claimed
+  the lenient `unmatched-member-accepted` arm, so the served and declared
+  postures disagreed. The posture is the strict one by owner rule: FerroEHR
+  holds to the specification and makes no allowance for other
+  implementations' mistakes. Catalogue case
+  `CONT-ITEM-unmatched_member_refused` now applies and
+  `CONT-ITEM-unmatched_member_accepted` is not applicable. A client that
+  commits a mismatched member gets the same `422` as before.
+
 - **Breaking: the CDR asks one terminology server, configured under
   `[terminology.server]`** (#3085). All terminology beyond the openEHR support
   terminology is FerroTERM's job: the CDR keeps the in-process openEHR

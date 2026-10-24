@@ -88,7 +88,7 @@ Selected gating cases per claimed capability. `inconclusive` counts cases whose 
 | DirectoryOps | pass | 88 | 0 | 0 | 8 |
 | ChangeSets | pass | 108 | 0 | 0 | 5 |
 | Versioning | pass | 75 | 0 | 0 | 0 |
-| ArchetypeValidation | pass | 135 | 0 | 0 | 1 |
+| ArchetypeValidation | pass | 134 | 0 | 0 | 2 |
 | PartyOperations | pass | 89 | 0 | 0 | 4 |
 | PartyRelationshipOperations | pass | 19 | 0 | 0 | 0 |
 | DemographicArchetypeValidation | pass | 11 | 0 | 0 | 0 |
@@ -175,7 +175,7 @@ Percentiles re-derive from the embedded HDR V2 histograms; the class verdict is 
 
 ## Honesty
 
-Coverage: 1104 of 1145 selected cases driven.
+Coverage: 1103 of 1145 selected cases driven.
 
 Not-executed verdicts (each cited):
 
