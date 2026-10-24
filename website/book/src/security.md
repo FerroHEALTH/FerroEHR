@@ -605,7 +605,7 @@ error naming the pair:
 | the database DSN, per storage domain, and the credential that prepares the schema | `db.url_file`, `storage.<domain>.url_file`, `db.migrate_url_file` |
 | a Basic user's Argon2 hash | `auth.basic.users[].password_hash_file` |
 | the PGP signing-key passphrase | `signing.key_passphrase_file` |
-| a terminology OAuth2 client secret | `terminology.external.oauth2_clients.<name>.client_secret_file` |
+| a terminology OAuth2 client secret | `terminology.server.oauth.client_secret_file` |
 | the object-store secret key | `multimedia.secret_access_key_file` |
 | the AMQP URL of the change events | `events.url_file` |
 | the national-identifier root key | `demographic.identifier_protection.key_file` |

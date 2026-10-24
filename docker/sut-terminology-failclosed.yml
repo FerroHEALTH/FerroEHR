@@ -3,7 +3,7 @@
 
 # CNF external-terminology lane (compose OVERLAY) — the fail-CLOSED posture.
 #
-# `[terminology.external] fail_on_error` decides what a deployment does with a
+# `[terminology.server] fail_on_error` decides what a deployment does with a
 # bound value set it cannot resolve: accept the composition (fail-open, the
 # shipped default) or refuse it. A running server realizes exactly ONE of the
 # two, and no released openEHR text decides between them — BASE
@@ -21,24 +21,19 @@
 # the ixit declares them independently too, as that instance's own `signing`
 # and `terminology` blocks.
 #
-# EVERY PROVIDER IS UNREACHABLE HERE, and deliberately so. This project runs
+# THE SERVER IS UNREACHABLE HERE, and deliberately so. This project runs
 # without the `terminology` profile, so no terminology server exists on its
-# network; pointing the two seeded providers at the same nothing-answers
-# address as the third makes the declaration honest — the ixit's `sut_pgp`
-# instance declares all three servers `reachable: false`, and the only
-# terminology behaviour this deployment can evidence is the unresolvable
-# branch it exists to prove.
+# network; pointing the one server at a nothing-answers address makes the
+# declaration honest — the ixit's `sut_pgp` instance declares its server
+# `reachable: false`, and the only terminology behaviour this deployment can
+# evidence is the unresolvable branch it exists to prove.
 services:
   ferroehr:
     environment:
-      FERROEHR__TERMINOLOGY__EXTERNAL__ENABLED: "true"
-      FERROEHR__TERMINOLOGY__EXTERNAL__FAIL_ON_ERROR: "true"
+      FERROEHR__TERMINOLOGY__SERVER__ENABLED: "true"
+      FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR: "true"
       # RFC 2606 §2 reserves `.invalid` precisely so a name is guaranteed not
       # to resolve — the connect fails the way a terminology-server outage
       # does, on every attempt, for the whole run.
-      FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SCT__URL: "http://terminology-unreachable.invalid:8080/fhir"
-      FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SCT__CONNECT_TIMEOUT_MS: "500"
-      FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SCT__REQUEST_TIMEOUT_MS: "1000"
-      FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__LOINC__URL: "http://terminology-unreachable.invalid:8080/fhir"
-      FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__LOINC__CONNECT_TIMEOUT_MS: "500"
-      FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__LOINC__REQUEST_TIMEOUT_MS: "1000"
+      FERROEHR__TERMINOLOGY__SERVER__URL: "http://terminology-unreachable.invalid:8080/fhir"
+      FERROEHR__TERMINOLOGY__SERVER__REQUEST_TIMEOUT_MS: "1000"

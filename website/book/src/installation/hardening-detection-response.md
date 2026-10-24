@@ -24,7 +24,7 @@ you can judge the exposure rather than reading "secrets" generically.
 | **The database DSN** | always | **direct read/write access to all patient data**, bypassing the API, its authorization and its audit trail entirely |
 | A Basic user's Argon2id hash | `secrets.basicUserPasswordHashes` | an offline cracking target, not a usable password |
 | The version-signing passphrase (plus the PGP key via `config.files`) | `config.signing.mode: pgp` | the ability to forge version signatures, breaking the integrity guarantee |
-| A terminology `client_secret` | `secrets.terminologyOauth2ClientSecrets` | access to that terminology server as this client |
+| A terminology `client_secret` | `secrets.terminologyClientSecret` | access to the terminology server as this client |
 | The AMQP broker URL | `secrets.eventsUrl` | access to the change-event stream, which is PHI-free by design |
 | The audit repository URL | `secrets.auditFhirFeedUrl` | the ability to read or forge audit records at the repository |
 | S3 credentials | `secrets.multimediaSecretAccessKey` (with `secrets.multimediaAccessKeyId`) | offloaded `DV_MULTIMEDIA` blobs, which **are PHI** |
@@ -65,7 +65,7 @@ them from a secret manager:
   Azure or GCP provider) mounts the value as a file. Point `extraVolumes` and
   `extraVolumeMounts` at it and set the matching `*_file` configuration key;
   `config.signing.key_passphrase_file`,
-  `config.multimedia.secret_access_key_file`, a terminology client's
+  `config.multimedia.secret_access_key_file`, the terminology grant's
   `client_secret_file`. Nothing reaches a Kubernetes Secret at all.
 - **An operator that syncs into a Secret** (External Secrets Operator, Vault
   Agent Injector) still lands in etcd, so it buys rotation rather than removal:

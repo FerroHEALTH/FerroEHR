@@ -535,14 +535,14 @@ secrets:
   # FERROEHR__AUDIT__FHIR_FEED__URL env: audit.fhir_feed.url has no `*_file`
   # sibling either.
   auditFhirFeedUrl: ""
-  # -- OAuth2 client secrets for [terminology.external.oauth2_clients.<name>],
-  # keyed by client name. Each is MOUNTED as
-  # /etc/ferroehr-secrets/terminology.external.oauth2_clients.<name>.client_secret
-  # and the chart injects the matching `client_secret_file` into the rendered
-  # TOML (a path is not sensitive). Declare the client itself — token_url,
-  # client_id, scopes — under config.terminology.external.oauth2_clients.<name>;
-  # a name with no such declaration is a render error.
-  terminologyOauth2ClientSecrets: {}
+  # -- The client secret of the terminology server's OAuth2 grant
+  # ([terminology.server.oauth]). MOUNTED as
+  # /etc/ferroehr-secrets/terminology.server.oauth.client_secret, and the chart
+  # injects the matching `client_secret_file` into the rendered TOML (a path is
+  # not sensitive). Declare the grant itself — token_url or issuer, client_id,
+  # scope — under config.terminology.server.oauth; a secret with no such
+  # declaration is a render error.
+  terminologyClientSecret: ""
   # -- S3 access key id for [multimedia] → FERROEHR__MULTIMEDIA__ACCESS_KEY_ID
   # env. Not a secret in the server's own model (it is reported unredacted by
   # /management/env); prefer IRSA/Workload-Identity (leave empty) on cloud.
@@ -821,15 +821,15 @@ config:
     exchange: ferroehr.events
     tls: false
 
-  # [terminology] — terminology extension API + external FHIR-TS validation.
+  # [terminology] — terminology extension API + the FHIR terminology server.
   #
-  # `external.enabled` and `external.fail_on_error` are deliberately NOT
+  # `server.enabled`, `server.url` and `server.fail_on_error` are deliberately NOT
   # defaulted here. With `terminology.enabled` + `terminology.wireCdr` the chart
-  # INJECTS both, and a defaulted key is indistinguishable from one an operator
+  # INJECTS all three, and a defaulted key is indistinguishable from one an operator
   # typed — so the render could not tell an agreement from an overwrite, and
   # would silently ship a ferroehr.toml contradicting the values file. Left out,
-  # a declaration of either is visibly the operator's and is refused. The
-  # server's own defaults for both are `false`, which is what an install without
+  # a declaration of any is visibly the operator's and is refused. The
+  # server's own defaults (off, no URL, fail-open) are what an install without
   # FerroTERM gets either way.
   terminology:
     api_enabled: false
@@ -849,9 +849,7 @@ config:
   # Each key becomes /etc/ferroehr/<key> from a chart Secret (opaque, read-only),
   # alongside ferroehr.toml. Use for file-shaped material an in-TOML `*_path`/
   # `*_file` key points at: the PGP key (signing.key_path), Cedar policies
-  # (authz.abac.cedar.policy_dir), ATNA PEMs, terminology-server mutual-TLS PEMs
-  # (terminology.external.providers.<name>.client_cert_path / client_key_path /
-  # ca_bundle_path), a JWKS file (auth.jwks_file), the commercial
+  # (authz.abac.cedar.policy_dir), ATNA PEMs, a JWKS file (auth.jwks_file), the commercial
   # licence token (licence.file).
   files: {}
   # signing.asc: |
@@ -1348,7 +1346,7 @@ viewer:
 #
 # The Helm equivalent of docker-compose.terminology.yml: one Deployment, one
 # ClusterIP Service, the licence-free shaped seed as a ConfigMap, and the CDR's
-# [terminology.external] wired at the Service. Off by default — a CDR resolves
+# [terminology.server] wired at the Service. Off by default — a CDR resolves
 # bindings against its built-in terminology without it.
 #
 # NO INGRESS is rendered, and no value renders one. The CDR is the only caller,
@@ -1367,16 +1365,13 @@ viewer:
 terminology:
   # -- Deploy FerroTERM alongside the CDR.
   enabled: false
-  # -- Point the CDR's `config.terminology.external` at the rendered Service.
-  # The chart injects `enabled`, `fail_on_error` and the `default` provider, so
-  # the Service address and the workload answering it are one decision. Set it
-  # to false to run FerroTERM beside a CDR you wire yourself. While it is true
-  # the render refuses every values file that contradicts the injection:
-  # `config.terminology.external.providers.default`, an
-  # `external.enabled: false`, an `external.fail_on_error` disagreeing with
-  # `failOnError` below, and a provider of your own with no
-  # `external.routes` entry naming it (an unrouted terminology falls back to
-  # `default`, which the injection has taken).
+  # -- Point the CDR's `config.terminology.server` at the rendered Service.
+  # The chart injects `enabled`, `url` and `fail_on_error`, so the Service
+  # address and the workload answering it are one decision. Set it to false to
+  # run FerroTERM beside a CDR you wire yourself. While it is true the render
+  # refuses every values file that contradicts the injection: a
+  # `config.terminology.server.url` of your own, a `server.enabled: false`, and
+  # a `server.fail_on_error` disagreeing with `failOnError` below.
   wireCdr: true
   # -- What the CDR does when the terminology server cannot answer. `false` (the
   # server's own shipped default) accepts the binding; `true` turns an

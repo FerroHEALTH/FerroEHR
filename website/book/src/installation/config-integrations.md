@@ -72,174 +72,94 @@ default; the envelopes are PHI-free by design.
 
 ## `[terminology]`
 
-The terminology extension API and external FHIR terminology servers.
+The terminology extension API and the one FHIR terminology server the CDR asks.
 
 `[terminology]`: `api_enabled` (bool, `false`) mounts the terminology extension
 API.
 
-`[terminology.external]`:
+`[terminology.server]`:
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Materialise the configured providers. With it off, no remote provider is built and validation stays on the in-process openEHR terminology bundle. |
-| `fail_on_error` | bool | `false` | What an unresolvable terminology lookup does to a commit: `false` accepts it (fail-open), `true` rejects it. |
+| `enabled` | bool | `false` | Build the client. With it off, nothing is requested and validation stays on the in-process openEHR terminology bundle. |
+| `url` | secret URL | required when enabled | The server's FHIR R4B base URL, for FerroTERM `http://ferroterm:8080/r4b`. Empty while `enabled` is a boot error. Credentials embedded in it are redacted from every rendering. |
+| `fail_on_error` | bool | `false` | What an unresolvable binding does to a commit: `false` accepts it (fail-open), `true` rejects it. |
+| `request_timeout_ms` | int | `10000` | How long one request may take, connection included. |
 
-Enabling `[terminology.external]` with no provider configured is a boot error.
+Every key is a scalar, so the whole section is reachable through the
+environment: `FERROEHR__TERMINOLOGY__SERVER__ENABLED`,
+`FERROEHR__TERMINOLOGY__SERVER__URL`,
+`FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR`,
+`FERROEHR__TERMINOLOGY__SERVER__REQUEST_TIMEOUT_MS`.
 
-`[terminology.external.providers.<name>]`, conventionally at least `default`:
+```toml
+[terminology.server]
+enabled = true
+url = "http://ferroterm:8080/r4b"
+fail_on_error = false
+```
 
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `type` | enum{fhir} | `fhir` | Server kind. Only FHIR R4B is supported. |
-| `url` | secret URL | required | The server's FHIR base URL. Empty is a boot error. Credentials embedded in it are redacted from every rendering. |
-| `operation` | enum{validate_code,expand} | `validate_code` | The membership operation. `validate_code` is a direct yes/no with the least payload; `expand` plus a membership test is the fallback for servers without `$validate-code`. |
-| `connect_timeout_ms` | int | `2000` | TCP connect timeout. |
-| `request_timeout_ms` | int | `10000` | Overall request timeout. |
-| `oauth2_client` | string | unset ⇒ unauthenticated | Names an entry under `[terminology.external.oauth2_clients]`. A name with no such entry is a boot error. |
-| `client_cert_path` / `client_key_path` | path | unset | The mutual-TLS client identity; see [below](#mutual-tls-to-a-terminology-server). |
-| `ca_bundle_path` | path | unset | The trust anchors this server's certificate is verified against; see [below](#mutual-tls-to-a-terminology-server). |
-| `cache_ttl_secs` | int | `300` | TTL of the per-provider response cache; a repeated validate/expand/subsumes/lookup within the window is served locally instead of one HTTPS round trip per validated code. `0` disables it. |
-| `cache_capacity` | int | `10000` | Maximum cached responses per provider. |
-
-Cached entries are the *decoded* responses, not raw JSON: a server answer that
-is not a valid FHIR R4B `Parameters`/`ValueSet` resource (for example an
+The server answers every terminology the bundled openEHR terminology does not
+carry: the `/terminology/*` extension API, AQL `TERMINOLOGY(…)` resolution, the
+ADL 2 binding check and the composition-commit binding checks below. A response
+that is not a valid FHIR R4B `Parameters` or `ValueSet` resource (for example an
 `$expand` result missing the required `ValueSet.status` or
 `expansion.timestamp`) is treated as an upstream fault rather than partially
 read, so it takes the same path as an unreachable server and `fail_on_error`
 decides what the commit does.
 
 > [!NOTE]
-> External terminology servers need the `fhir` build feature, which is on in the
+> The terminology server needs the `fhir` build feature, which is on in the
 > published binary and container images. A binary built with
-> `--no-default-features` refuses at startup if `terminology.external` is
-> enabled with any provider configured; the in-process openEHR terminology
-> bundle remains available.
+> `--no-default-features` refuses at startup if `terminology.server` is enabled;
+> the in-process openEHR terminology bundle remains available.
 
-### Several terminology servers at once
+### Authenticating to the terminology server
 
-**Every** entry under `[terminology.external.providers]` is materialised at
-startup, so one instance can serve SNOMED CT from one server and LOINC or ICD
-from others. `[terminology.external.routes]` maps a terminology to the provider
-that answers for it: the key is a terminology id (`SNOMED-CT`) or a system URI
-(`http://snomed.info/sct`), matched case-insensitively as a whole string, and
-the value names a provider. A terminology with no route goes to the provider
-named `default`, or to the sole configured provider when there is exactly one. A
-route naming a provider that does not exist is a startup error, because a
-dangling route would otherwise degrade silently into "ask the default server".
-
-```toml
-[terminology.external]
-enabled = true
-fail_on_error = false
-
-[terminology.external.providers.default]
-type = "fhir"
-url = "https://r4.ontoserver.csiro.au/fhir"
-
-[terminology.external.providers.snomed]
-type = "fhir"
-url = "https://snowstorm.example.org/fhir"
-oauth2_client = "ts-client"
-
-[terminology.external.routes]
-"SNOMED-CT" = "snomed"
-"http://snomed.info/sct" = "snomed"
-"http://loinc.org" = "default"
-```
-
-Routing applies everywhere terminology is consulted: the `/terminology/*`
-extension API, AQL `TERMINOLOGY(…)` resolution, and the composition-commit
-binding checks below.
-
-### Authenticating to a terminology server
-
-`[terminology.external.oauth2_clients.<name>]` configures an OAuth2
-client-credentials client; a provider references it by name with
-`oauth2_client`. The access token is cached and re-requested shortly before it
-expires, so a validation burst costs one token request per token lifetime.
+A server behind an authorization server takes the OAuth2 client-credentials
+grant under `[terminology.server.oauth]`, with the same keys as
+`[audit.fhir_feed.oauth]` and `[authz.abac.remote.oauth]`. The access token is
+cached and re-requested shortly before it expires, and a request the server
+answers with `401` is sent once more under a new token.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `token_url` | secret URL | required | The OAuth2 token endpoint. Empty is a boot error. Credentials embedded in it are redacted from every rendering. |
+| `token_url` | secret URL | one of `token_url` and `issuer` | The OAuth2 token endpoint. Credentials embedded in it are redacted from every rendering. |
+| `issuer` | string | one of `token_url` and `issuer` | The issuer whose metadata names the token endpoint (RFC 8414). |
 | `client_id` | string | required | The registered client identifier. Empty is a boot error. |
 | `client_secret` / `client_secret_file` | secret / path | one is required | The client secret, inline or read from a mounted file. |
-| `scopes` | list of string | `[]` | Scopes requested with the client-credentials grant. |
-| `refresh_leeway_secs` | int | `30` | How long before stated expiry the token is renewed. |
-| `auth_method` | enum{client_secret_basic,client_secret_post} | `client_secret_basic` | How the client authenticates at the token endpoint. |
+| `client_auth` | enum{client_secret_basic,client_secret_post} | `client_secret_basic` | How the client authenticates at the token endpoint. |
+| `scope` | string | unset | The `scope` request parameter. |
+| `audience` | string | unset | The `audience` request parameter some authorization servers read. |
+| `resource` | URL | unset | The RFC 8707 `resource` request parameter. |
 
 ```toml
-[terminology.external.oauth2_clients.ts-client]
+[terminology.server.oauth]
 token_url = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
 client_id = "ferroehr-cdr"
 client_secret_file = "/run/secrets/ts-client"
-scopes = ["system/*.read"]
+scope = "system/*.read"
 ```
 
-### Mutual TLS to a terminology server
-
-A terminology server that authenticates its clients with certificates instead of
-(or in addition to) a bearer token is configured **per provider**, because a
-client certificate is issued by that server's PKI: a deployment enrolled with a
-national SNOMED CT service, a commercial value-set server and an in-house FHIR
-server holds three different certificates. Repeat the same paths in each
-provider table if one identity really does serve them all.
-
-| Key | Meaning |
-|---|---|
-| `client_cert_path` | PEM file with the client certificate (optionally a chain) presented to this server. |
-| `client_key_path` | PEM file with that certificate's private key. |
-| `ca_bundle_path` | PEM bundle of the trust anchors this server's certificate is verified against. |
-
-```toml
-[terminology.external.providers.snomed]
-type = "fhir"
-url = "https://snowstorm.example.org/fhir"
-client_cert_path = "/run/secrets/ts-snomed-client.crt.pem"
-client_key_path = "/run/secrets/ts-snomed-client.key.pem"
-ca_bundle_path = "/run/secrets/ts-snomed-ca.pem"
-```
-
-`client_cert_path` and `client_key_path` are set together; one without the
-other is a startup error, never a connection that silently presents no
-certificate. Unreadable files, a certificate file with no certificate in it and
-a key file with no key in it are startup errors too, so a broken identity never
-waits until the first validated code to surface.
-
-`ca_bundle_path` **replaces** the default trust anchors for that provider, so a
-terminology server issued by a private PKI is pinned to that PKI instead of also
-accepting the whole public web PKI. Leave it unset to use the platform's default
-trust store.
-
-> [!WARNING]
-> There is no option to disable certificate verification. Server-certificate and
-> hostname verification are always on for every provider; `ca_bundle_path`
-> changes *which* anchors are trusted, never *whether* the server is verified.
-
-The client identity applies to the connection to the terminology server itself.
-An OAuth2 token endpoint (`oauth2_client`) is a different host in a different
-trust domain and keeps the default TLS stack.
-
-Kubernetes deployments mount the PEM files with the chart's `config.files` map,
-which materialises them under `/etc/ferroehr/`.
+A grant beside credentials in the server URL's userinfo is a boot error: the
+server would receive two authorizations.
 
 ### Archetype value-set bindings at commit
 
-With `[terminology.external]` enabled, committing a COMPOSITION also resolves
+With `[terminology.server]` enabled, committing a COMPOSITION also resolves
 the archetype **constraint bindings** its template declares: where a template
 binds an `ac` code to an external terminology query, the coded value in the
-composition must be a member of the value set that query returns. The query goes
-to the server the binding's terminology routes to.
+composition must be a member of the value set that query returns.
 
 - The code is in the value set → the commit proceeds.
 - The code is **not** in the value set → `422` naming the path, the code, and
   the bound query. That is a real constraint violation, not a service failure,
   so `fail_on_error` does not change it.
 - The value set could **not be resolved** (server down, error response, unknown
-  value set, no provider routes to that terminology) → `fail_on_error` decides:
-  `false` (the default) accepts the commit and logs a warning; `true` rejects it
-  with `422`.
+  value set) → `fail_on_error` decides: `false` (the default) accepts the
+  commit and logs a warning; `true` rejects it with `422`.
 
-With `[terminology.external]` disabled (the default) no binding is resolved
+With `[terminology.server]` disabled (the default) no binding is resolved
 and no request is made, so commit behaviour is exactly as if this section did
 not exist.
 

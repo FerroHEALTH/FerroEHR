@@ -419,7 +419,7 @@ The service layer realizes the openEHR **SM Platform Service Model**
 | System Log | `I_SYSTEM_LOG` (stub; "IHE ATNA-compliant") | `ferroehr::system_log` (dual DICOM PS3.15 + FHIR `AuditEvent`/BALP rendering, written and sent by the shared FerroAUDIT crates `ihe-atna` and `ehds-logging`; local Audit Record Repository in the `audit` schema, on by default; syslog + ITI-20 ATX:FHIR Feed forwarding sinks; the ITI-81 retrieval as the read side; ITI-19 mTLS via `[server.tls]`) | implemented |
 | Admin | `I_ADMIN_SERVICE` (+archive/dump-load) | `service::admin` | implemented |
 | EHR Index | `I_EHR_INDEX` | `service::ehr_index` over `linkage.subject_ehr` | implemented |
-| Terminology | `I_TERMINOLOGY_SERVICE` | `service::terminology` (in-process `openehr-term` bundle + N simultaneously-materialised FHIR R4B servers, selected per call by an explicit terminology→provider route map with a `default` fallback; optional OAuth2 client-credentials per server; commit-time ac-code constraint-binding resolution) | implemented |
+| Terminology | `I_TERMINOLOGY_SERVICE` | `service::terminology` (in-process `openehr-term` bundle + one FHIR R4B terminology server, FerroTERM in every shipped deployment, with an optional OAuth2 client-credentials grant; commit-time ac-code constraint-binding resolution) | implemented |
 | Message | `I_MESSAGE_SERVICE`, `I_EHR_EXTRACT_SERVICE`, `I_TDD_SERVICE` | `service::message` | implemented |
 | Subject Proxy | `I_SUBJECT_PROXY_SERVICE`, `I_DATA_BINDING` | not realised ([#3431](https://github.com/FerroHEALTH/FerroEHR/issues/3431)) | not realised |
 

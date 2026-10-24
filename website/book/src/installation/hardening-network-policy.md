@@ -285,9 +285,9 @@ unless its key is set, so add only the rows you have switched on:
 | OTLP collector | `config.telemetry.otlp_endpoint` | 4317 gRPC / 4318 HTTP | in-cluster |
 | Token issuer (metadata + key set) | `config.auth.issuer`, **unless** `config.auth.jwks_file` is supplied | 443 | off-cluster |
 | External policy decision point | `config.authz.abac.engine: remote` plus `config.authz.abac.remote.server` | the URL's (3001) | in-cluster |
-| FHIR terminology server(s) | `config.terminology.external.enabled` plus a provider `url` | 443 | off-cluster |
+| FHIR terminology server | `config.terminology.server.enabled` plus its `url` | 443 | off-cluster |
 | FerroTERM in the cluster | `terminology.enabled` | 8080 | in-cluster, and the **chart renders this rule itself** — it chose the destination when it wired the CDR at the Service, so you do not add it to `rules`. Omitted, terminology would fail silently: under the shipped fail-open posture an unresolvable binding is accepted, so nothing refuses and nothing logs. |
-| Terminology token endpoint | `config.terminology.external.oauth2_clients.<name>.token_url` | 443 | off-cluster |
+| Terminology token endpoint | `config.terminology.server.oauth.token_url` | 443 | off-cluster |
 | AMQP broker (events) | `config.events.enabled` plus `secrets.eventsUrl` | 5672, or 5671 with `config.events.tls` | in-cluster |
 | Object store | `config.multimedia.enabled` plus `config.multimedia.endpoint` (unset means AWS regional resolution) | 443, or the endpoint's | off-cluster |
 | Syslog audit repository | `config.audit.syslog.enabled` | 6514 TCP (TLS) | off-cluster |

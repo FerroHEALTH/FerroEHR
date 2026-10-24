@@ -28,9 +28,9 @@ config:
       basic_roles:
         clinician: [ADMIN]
   # The CDR's own terminology extension API, so the routes that answer FROM
-  # FerroTERM are mounted in this render. `config.terminology.external` is NOT
-  # declared here: the chart injects it, and declaring the `default` provider
-  # beside that is refused (the refusal is probed in validate.sh).
+  # FerroTERM are mounted in this render. `config.terminology.server` is NOT
+  # declared here: the chart injects it, and declaring its URL beside that is
+  # refused (the refusal is probed in validate.sh).
   terminology:
     api_enabled: true
 

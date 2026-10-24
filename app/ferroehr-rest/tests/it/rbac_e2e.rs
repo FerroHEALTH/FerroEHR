@@ -500,27 +500,18 @@ async fn admin_config_admin_gets_redacted_snapshot() {
 /// its host and path with the userinfo masked.
 #[tokio::test]
 async fn no_url_userinfo_reaches_admin_config_or_management_env() {
+    use ferroehr::config::client_credentials::ClientCredentialsConfig;
     use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
     use ferroehr::config::secret::SecretUrl;
-    use ferroehr::service::terminology::config::{FhirProviderConfig, TerminologyOauth2Config};
 
     let leaky = |n: u32| SecretUrl::new(format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}/p"));
     let mut cfg = ferroehr::config::FerroEhrConfig::default();
     cfg.db.url = leaky(1);
-    cfg.terminology.external.providers.insert(
-        "ts".to_owned(),
-        FhirProviderConfig {
-            url: leaky(2),
-            ..FhirProviderConfig::default()
-        },
-    );
-    cfg.terminology.external.oauth2_clients.insert(
-        "client".to_owned(),
-        TerminologyOauth2Config {
-            token_url: leaky(3),
-            ..TerminologyOauth2Config::default()
-        },
-    );
+    cfg.terminology.server.url = leaky(2);
+    cfg.terminology.server.oauth = Some(ClientCredentialsConfig {
+        token_url: Some(leaky(3)),
+        ..ClientCredentialsConfig::default()
+    });
     cfg.usage_report.endpoint = leaky(4);
     cfg.authz.abac.remote.server = Some(leaky(5));
     cfg.telemetry.otlp_endpoint = Some(leaky(6));

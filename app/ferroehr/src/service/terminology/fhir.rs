@@ -5,22 +5,22 @@
 //! the SM `I_TERMINOLOGY_SERVICE` calls against a remote server over `reqwest`
 //! (rustls).
 //!
-//! The remote provider is one of the two the routing layer (`super::routing`)
-//! selects among; the in-process `openehr-term` bundle (`super::bundle`) is the
-//! enumerable local default. `arch-overview master12-terminology.adoc` models
-//! this concrete backend as an external "terminology query server". SM contract:
+//! The one terminology server (`[terminology.server]`) is what the routing
+//! layer (`super::routing`) asks for every terminology the in-process
+//! `openehr-term` bundle (`super::bundle`) does not carry. BASE
+//! `architecture_overview/master12-terminology.adoc` models this backend as an
+//! external "terminology query server". SM contract:
 //! `docs/specs/openehr/SM/docs/UML/classes/i_terminology_service.adoc`; the
 //! client and the server it points at are our own design. This module owns the
-//! HTTP client, the cache and the SM error mapping, while the FHIR resources are
-//! decoded by [`ferroehr_ext::fhir::terminology`] over the typed `fhir-model`
-//! R4B model (the `fhir` cargo feature; a slim build refuses a configured
-//! provider at boot).
+//! HTTP client and the SM error mapping, while the FHIR resources are decoded
+//! by [`ferroehr_ext::fhir::terminology`] (the `fhir` cargo feature; a slim
+//! build refuses a configured server at boot).
 //!
 //! # SM call → FHIR operation mapping
 //!
 //! | SM call | FHIR R4B operation |
 //! |---|---|
-//! | `value_set_validate` | `ValueSet/$validate-code` (or `$expand` + membership) |
+//! | `value_set_validate` | `ValueSet/$validate-code` |
 //! | `get_value_set` | `ValueSet/$expand` → [`TerminologyExtract`] |
 //! | `subsumes` | `CodeSystem/$subsumes` (outcome `subsumes`) |
 //! | `has_term` / `get_term` | `CodeSystem/$lookup` |
@@ -46,10 +46,10 @@
 //! or `$validate-code result=false`) is a `Pre_has_*` precondition failure
 //! ([`CallStatusType::VersionedObjectDoesNotExist`]) and a transport fault is
 //! [`SmError::exception`]; the fail-open choice belongs to the caller
-//! ([`config::ExternalTerminologyConfig::fail_on_error`](super::config::ExternalTerminologyConfig::fail_on_error)).
+//! ([`config::TerminologyServerConfig::fail_on_error`](super::config::TerminologyServerConfig::fail_on_error)).
 
 use std::collections::BTreeMap;
-use std::sync::Arc;
+#[cfg(feature = "fhir")]
 use std::time::Duration;
 
 use crate::service::status::{CallStatusType, SmError};
@@ -58,9 +58,14 @@ use crate::service::terminology::types::{
     TerminologyRelation,
 };
 
-use super::config::{FhirOperation, FhirProviderConfig};
+use super::config::TerminologyServerConfig;
 use ferrohealth_smart::client::CallError;
 use ferrohealth_smart::client::cache::TokenSource;
+
+/// The configuration key the client-credentials grant sits under, named in
+/// every refusal of it.
+#[cfg(feature = "fhir")]
+const OAUTH_KEY: &str = "terminology.server.oauth";
 
 /// The `Term_relationship.relation_name` under which a FHIR `$expand`
 /// parent→child `contains` nesting is preserved (`terminology_extract.adoc`).
@@ -71,90 +76,93 @@ const CHILD_RELATION: &str = "child";
 const FHIR_CHILD_PROPERTY: &str = "http://hl7.org/fhir/concept-properties#child";
 
 /// A FHIR R4B terminology-server client realizing the SM
-/// `I_TERMINOLOGY_SERVICE` lookup/validation calls against a remote server.
+/// `I_TERMINOLOGY_SERVICE` lookup/validation calls against the one configured
+/// server.
 #[derive(Debug, Clone)]
 pub struct FhirTerminologyProvider {
     client: reqwest::Client,
     /// The FHIR base URL, trailing `/` stripped (e.g. `http://host:8090/fhir`).
     base: String,
-    /// The membership operation used by `value_set_validate`.
-    operation: FhirOperation,
-    /// The configured provider name (for error/log context).
-    name: String,
-    /// TTL-bounded response cache keyed by the full operation URL (`None`
-    /// when disabled). Caches the DECODED response — including a classified
-    /// "not found" outcome — so a validation burst over the same codes costs
-    /// one remote round trip per TTL window.
-    cache: Option<moka::future::Cache<String, Fetched>>,
+    /// The base URL with any userinfo masked, the server's name on the trace
+    /// record.
+    endpoint: String,
     /// The OAuth 2.0 client-credentials token source whose bearer credential
-    /// authenticates every request, when the provider configures one. `None` =
+    /// authenticates every request (`[terminology.server.oauth]`). `None` =
     /// unauthenticated requests.
-    token: Option<Arc<TokenSource>>,
+    token: Option<TokenSource>,
+    /// Whether a binding this server cannot resolve refuses the composition
+    /// ([`TerminologyServerConfig::fail_on_error`]).
+    fail_on_error: bool,
 }
 
 impl FhirTerminologyProvider {
-    /// Build a provider from its configuration.
+    /// Build the client from `[terminology.server]`, with the
+    /// client-credentials token source attached when `oauth` is set.
     ///
     /// # Errors
     ///
     /// [`SmError::exception`] if the URL is empty (after trimming), the
-    /// configured TLS material is unusable ([`super::tls::TlsMaterialError`]),
-    /// or the `reqwest` client cannot be built (e.g. TLS backend init
-    /// failure).
-    pub fn new(name: &str, cfg: &FhirProviderConfig) -> Result<Self, SmError> {
+    /// `oauth` grant is incomplete or refused by the token client, or the
+    /// `reqwest` client cannot be built (e.g. TLS backend init failure).
+    #[cfg_attr(
+        not(feature = "fhir"),
+        expect(
+            unused_variables,
+            reason = "a slim build refuses the server before reading its configuration"
+        )
+    )]
+    pub fn new(cfg: &TerminologyServerConfig) -> Result<Self, SmError> {
+        // A slim build cannot decode the server's FHIR responses, so a
+        // configured server is refused loudly rather than silently ignored.
+        #[cfg(not(feature = "fhir"))]
+        return Err(SmError::exception(
+            "terminology.server is enabled, but this binary was built without the `fhir` cargo \
+             feature (the in-process bundle remains the terminology)",
+        ));
+        #[cfg(feature = "fhir")]
+        Self::build(cfg)
+    }
+
+    /// Build the client once the `fhir` feature is known to be present.
+    #[cfg(feature = "fhir")]
+    fn build(cfg: &TerminologyServerConfig) -> Result<Self, SmError> {
         let base = cfg.url.expose().trim().trim_end_matches('/').to_owned();
         if base.is_empty() {
-            return Err(SmError::exception(format!(
-                "terminology provider '{name}' has an empty url"
-            )));
+            return Err(SmError::exception(
+                "terminology.server.url must not be empty",
+            ));
         }
-        let builder = reqwest::Client::builder()
-            .connect_timeout(Duration::from_millis(cfg.connect_timeout_ms))
-            .timeout(Duration::from_millis(cfg.request_timeout_ms));
-        // Mutual TLS + the provider's trust anchors, when configured. Bad
-        // material is a boot failure here, never a first-request surprise
-        // ([`super::tls`]).
-        let builder = super::tls::apply(builder, cfg).map_err(|e| {
-            SmError::exception(format!(
-                "terminology provider '{name}': the configured TLS material is unusable"
-            ))
-            .with_source(e)
-        })?;
-        let client = builder.build().map_err(|e| {
-            SmError::exception(format!(
-                "building the terminology client for provider '{name}' failed"
-            ))
-            .with_source(e)
-        })?;
-        let cache = (cfg.cache_ttl_secs > 0).then(|| {
-            moka::future::Cache::builder()
-                .max_capacity(cfg.cache_capacity)
-                .time_to_live(Duration::from_secs(cfg.cache_ttl_secs))
-                .build()
-        });
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_millis(cfg.request_timeout_ms))
+            .build()
+            .map_err(|e| {
+                SmError::exception("building the terminology client failed").with_source(e)
+            })?;
+        let token = cfg
+            .oauth
+            .as_ref()
+            .map(|oauth| {
+                let grant = oauth.grant(OAUTH_KEY).map_err(SmError::exception)?;
+                TokenSource::new(grant).map_err(|e| {
+                    SmError::exception(format!("{OAUTH_KEY}: the grant is refused")).with_source(e)
+                })
+            })
+            .transpose()?;
         Ok(Self {
             client,
             base,
-            operation: cfg.operation,
-            name: name.to_owned(),
-            cache,
-            token: None,
+            endpoint: cfg.url.redacted(),
+            token,
+            fail_on_error: cfg.fail_on_error,
         })
     }
 
-    /// Attach the `OAuth2` client-credentials token source whose bearer
-    /// credential every request to this provider carries
-    /// (`[terminology.external.providers.<name>] oauth2_client`).
+    /// Whether a binding this server cannot resolve refuses the composition
+    /// (fail-closed) or is tolerated (fail-open), the deployment posture of
+    /// register AMB-172.
     #[must_use]
-    pub fn with_token(mut self, token: Arc<TokenSource>) -> Self {
-        self.token = Some(token);
-        self
-    }
-
-    /// The configured provider name (routing, logging, error context).
-    #[must_use]
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn fail_on_error(&self) -> bool {
+        self.fail_on_error
     }
 
     /// GET a FHIR operation with query params, returning the decoded response
@@ -183,12 +191,6 @@ impl FhirTerminologyProvider {
                 pairs.append_pair(k, v);
             }
         }
-        if let Some(cache) = &self.cache
-            && let Some(hit) = cache.get(url.as_str()).await
-        {
-            return Ok(hit);
-        }
-        let cache_key = url.as_str().to_owned();
         let request = |bearer: Option<reqwest::header::HeaderValue>| {
             let mut request = self
                 .client
@@ -222,31 +224,25 @@ impl FhirTerminologyProvider {
             .bytes()
             .await
             .map_err(|e| self.transport_error(op_path, &e))?;
-        let fetched = if status.is_success() {
-            Fetched::Found(decode(kind, &body).map_err(|e| {
+        if status.is_success() {
+            return Ok(Fetched::Found(decode(kind, &body).map_err(|e| {
                 self.provider_fault(op_path, &crate::service::error::ErrorChain::new(&e))
-            })?)
-        } else {
-            let issues = outcome_issue_types(&body);
-            let gone =
-                status == reqwest::StatusCode::NOT_FOUND || status == reqwest::StatusCode::GONE;
-            if issues.iter().any(|c| c == TX_ISSUE_NOT_FOUND) {
-                Fetched::Absent(Absence::UnknownSystem)
-            } else if issues.iter().any(|c| c == TX_ISSUE_INVALID_CODE) {
-                Fetched::Absent(Absence::UnknownCode)
-            } else if gone {
-                Fetched::Absent(Absence::Unclassified)
-            } else {
-                return Err(self.provider_fault(
-                    op_path,
-                    &format_args!("upstream returned HTTP {}", status.as_u16()),
-                ));
-            }
-        };
-        if let Some(cache) = &self.cache {
-            cache.insert(cache_key, fetched.clone()).await;
+            })?));
         }
-        Ok(fetched)
+        let issues = outcome_issue_types(&body);
+        let gone = status == reqwest::StatusCode::NOT_FOUND || status == reqwest::StatusCode::GONE;
+        if issues.iter().any(|c| c == TX_ISSUE_NOT_FOUND) {
+            Ok(Fetched::Absent(Absence::UnknownSystem))
+        } else if issues.iter().any(|c| c == TX_ISSUE_INVALID_CODE) {
+            Ok(Fetched::Absent(Absence::UnknownCode))
+        } else if gone {
+            Ok(Fetched::Absent(Absence::Unclassified))
+        } else {
+            Err(self.provider_fault(
+                op_path,
+                &format_args!("upstream returned HTTP {}", status.as_u16()),
+            ))
+        }
     }
 
     /// The named scalar values of a `Parameters` response, or `None` for any
@@ -317,13 +313,13 @@ impl FhirTerminologyProvider {
     }
 
     /// The refusal of a request whose bearer token could not be obtained: the
-    /// operator detail (the provider and the authorization server's own error)
+    /// operator detail (the server and the authorization server's own error)
     /// goes to the trace record, the wire body stays the curated 500 message,
     /// so a client cannot read the credential configuration out of a response.
     /// No openEHR spec governs 500 body content — our own design.
     fn token_failure(&self, error: &CallError<reqwest::Error>) -> SmError {
         tracing::error!(
-            provider = %self.name,
+            server = %self.endpoint,
             error = %crate::service::error::ErrorChain::new(error),
             "terminology oauth2 client-credentials grant failed → 500"
         );
@@ -343,11 +339,11 @@ impl FhirTerminologyProvider {
     }
 
     /// A `500` for an upstream-terminology fault, with the OPERATOR detail
-    /// (which provider, which operation, the upstream diagnostic) on the trace
+    /// (which server, which operation, the upstream diagnostic) on the trace
     /// record and NOT on the wire.
     ///
-    /// The detail here is the deployment's own configuration — the provider's
-    /// configured name and the upstream server's error — which is exactly the
+    /// The detail here is the deployment's own configuration — the server's
+    /// address and the upstream server's error — which is exactly the
     /// class of fact a client must not be able to read out of a
     /// response body, while the operator still needs it in full. The server
     /// carries no per-request diagnostic surface (`/management` mounts
@@ -357,10 +353,10 @@ impl FhirTerminologyProvider {
     /// `Requests_and_responses.md` §HTTP status codes row.)
     fn provider_fault(&self, op_path: &str, detail: &dyn std::fmt::Display) -> SmError {
         tracing::error!(
-            provider = %self.name,
+            server = %self.endpoint,
             operation = op_path,
             error = %detail,
-            "terminology provider fault → 500"
+            "terminology server fault → 500"
         );
         SmError::exception(crate::service::error::INTERNAL_MESSAGE.to_owned())
     }
@@ -368,10 +364,10 @@ impl FhirTerminologyProvider {
     /// A `Pre_has_*` precondition failure (`VersionedObjectDoesNotExist`).
     ///
     /// The body carries only what the client can act on, the kind and id it
-    /// asked about; which configured provider answered is deployment
-    /// configuration and goes to the trace record only.
+    /// asked about; which server answered is deployment configuration and goes
+    /// to the trace record only.
     fn not_found(&self, what: &str, id: &str) -> SmError {
-        tracing::debug!(provider = %self.name, what, id, "terminology lookup: not found");
+        tracing::debug!(server = %self.endpoint, what, id, "terminology lookup: not found");
         SmError::new(
             CallStatusType::VersionedObjectDoesNotExist,
             format!("{what} '{id}' not found"),
@@ -404,8 +400,7 @@ impl FhirTerminologyProvider {
         }
     }
 
-    /// `value_set_validate` → FHIR `ValueSet/$validate-code` (or `$expand` +
-    /// membership when the provider is configured for `expand`).
+    /// `value_set_validate` → FHIR `ValueSet/$validate-code`.
     ///
     /// `terminology_id` is passed as the FHIR `system`; `value_set_id` as the
     /// value-set `url`; `at_date` as the FHIR `date`. A known value set
@@ -427,35 +422,21 @@ impl FhirTerminologyProvider {
         if candidate_code.is_empty() {
             return Err(SmError::precondition("candidate_code must not be empty"));
         }
-        match self.operation {
-            FhirOperation::Expand => {
-                let expansion = self
-                    .expand(value_set_id, at_date.as_deref())
-                    .await?
-                    .ok_or_else(|| self.not_found("value set", value_set_id))?;
-                Ok(expansion.contains_code(candidate_code))
-            }
-            FhirOperation::ValidateCode => {
-                let mut query = vec![
-                    ("url", value_set_id),
-                    ("system", terminology_id),
-                    ("code", candidate_code),
-                ];
-                if let Some(date) = at_date.as_deref() {
-                    query.push(("date", date));
-                }
-                let values = self
-                    .parameters("/ValueSet/$validate-code", &query)
-                    .await?
-                    .ok_or_else(|| self.not_found("value set", value_set_id))?;
-                values.booleans.get("result").copied().ok_or_else(|| {
-                    SmError::exception(format!(
-                        "terminology provider '{}': $validate-code response had no 'result'",
-                        self.name
-                    ))
-                })
-            }
+        let mut query = vec![
+            ("url", value_set_id),
+            ("system", terminology_id),
+            ("code", candidate_code),
+        ];
+        if let Some(date) = at_date.as_deref() {
+            query.push(("date", date));
         }
+        let values = self
+            .parameters("/ValueSet/$validate-code", &query)
+            .await?
+            .ok_or_else(|| self.not_found("value set", value_set_id))?;
+        values.booleans.get("result").copied().ok_or_else(|| {
+            SmError::exception("the terminology server's $validate-code response had no 'result'")
+        })
     }
 
     /// `get_value_set` → FHIR `ValueSet/$expand`, mapped to a
@@ -477,63 +458,6 @@ impl FhirTerminologyProvider {
             .await?
             .ok_or_else(|| self.not_found("value set", value_set_code))?;
         Ok(expansion.into_extract(value_set_code))
-    }
-
-    /// Cross-terminology code translation → FHIR `ConceptMap/$translate`
-    /// (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>):
-    /// `system`/`code` name the source coding, `target_system` the FHIR
-    /// `targetsystem`, and `concept_map` (when pinned) the `url`.
-    ///
-    /// `Ok(None)` when no translation exists — the server answered `404`, the
-    /// response's `result` is `false`, or no match is STRICTLY equivalent
-    /// (`equivalence` ∈ {`equivalent`, `equal`}; the looser relations —
-    /// `wider`, `narrower`, `relatedto`, `inexact` — are deliberately not
-    /// taken: no openEHR spec governs FHIR conversion, and writing a
-    /// non-equivalent code would be a silently wrong clinical value).
-    ///
-    /// # Errors
-    ///
-    /// Precondition on an empty `code`; exception on a transport fault or a
-    /// malformed response.
-    #[cfg(feature = "fhir")]
-    pub async fn translate(
-        &self,
-        system: &str,
-        code: &str,
-        target_system: &str,
-        concept_map: Option<&str>,
-    ) -> Result<Option<ferroehr_ext::fhir::terminology::TranslatedCode>, SmError> {
-        if code.is_empty() {
-            return Err(SmError::precondition("code must not be empty"));
-        }
-        let mut query = vec![
-            ("system", system),
-            ("code", code),
-            ("targetsystem", target_system),
-        ];
-        if let Some(url) = concept_map {
-            query.push(("url", url));
-        }
-        let Some(values) = self.parameters("/ConceptMap/$translate", &query).await? else {
-            return Ok(None);
-        };
-        if values.booleans.get("result") != Some(&true) {
-            return Ok(None);
-        }
-        Ok(values
-            .matches
-            .iter()
-            .find(|m| {
-                matches!(m.equivalence.as_deref(), Some("equivalent" | "equal")) && m.code.is_some()
-            })
-            .and_then(|m| {
-                m.code
-                    .clone()
-                    .map(|code| ferroehr_ext::fhir::terminology::TranslatedCode {
-                        code,
-                        display: m.display.clone(),
-                    })
-            }))
     }
 
     /// `subsumes` → FHIR `CodeSystem/$subsumes` (`codeA` = `ref_code`,
@@ -563,10 +487,7 @@ impl FhirTerminologyProvider {
             .await?
             .ok_or_else(|| self.not_found("terminology", terminology_id))?;
         let outcome = values.codes.get("outcome").ok_or_else(|| {
-            SmError::exception(format!(
-                "terminology provider '{}': $subsumes response had no 'outcome'",
-                self.name
-            ))
+            SmError::exception("the terminology server's $subsumes response had no 'outcome'")
         })?;
         Ok(outcome == "subsumes")
     }
@@ -688,7 +609,7 @@ impl FhirTerminologyProvider {
     }
 }
 
-// ─── the decoded response the cache holds ─────────────────────────────────────
+// ─── the decoded response ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// Which FHIR resource an operation answers with.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -720,8 +641,7 @@ enum Absence {
     Unclassified,
 }
 
-/// What one fetch produced: a decoded resource, or a classified absence. The
-/// cache holds this, so a repeated question costs one round trip per TTL.
+/// What one fetch produced: a decoded resource, or a classified absence.
 #[derive(Debug, Clone)]
 enum Fetched {
     /// A 2xx answer, decoded.
@@ -744,14 +664,13 @@ pub enum TermExistence {
 }
 
 /// A decoded FHIR terminology response, reduced to what the SM calls read.
-/// The cache is typed on this, never on raw JSON.
 #[derive(Debug, Clone)]
 #[cfg_attr(
     not(feature = "fhir"),
     expect(
         dead_code,
-        reason = "a slim build decodes no FHIR response: the router refuses a configured \
-                  provider at boot"
+        reason = "a slim build decodes no FHIR response: the server wiring refuses a \
+                  configured terminology server at boot"
     )
 )]
 enum DecodedResponse {
@@ -773,21 +692,6 @@ struct ParameterValues {
     codes: BTreeMap<String, String>,
     /// `valueString` parameters (`$lookup` `display`).
     strings: BTreeMap<String, String>,
-    /// `$translate` `match` parameters, in response order.
-    #[cfg(feature = "fhir")]
-    matches: Vec<TranslateMatchValues>,
-}
-
-/// One `$translate` match: the equivalence code + the target concept.
-#[cfg(feature = "fhir")]
-#[derive(Debug, Clone, Default)]
-struct TranslateMatchValues {
-    /// The match's `equivalence` (`equivalent`, `equal`, `wider`, …).
-    equivalence: Option<String>,
-    /// The target concept's code.
-    code: Option<String>,
-    /// The target concept's display text.
-    display: Option<String>,
 }
 
 /// A `$expand` expansion reduced to the extract's membership + hierarchy.
@@ -800,12 +704,6 @@ struct Expansion {
 }
 
 impl Expansion {
-    /// Whether `code` appears anywhere in the (possibly hierarchical)
-    /// expansion.
-    fn contains_code(&self, code: &str) -> bool {
-        self.terms.contains_key(code)
-    }
-
     /// Map the expansion into a [`TerminologyExtract`]: the flat `terms` map
     /// keyed by code (the membership view) plus, when the expansion nests
     /// members, the parent→child tree preserved as `relationships`.
@@ -847,7 +745,7 @@ enum DecodeError {
     #[error(transparent)]
     Fhir(#[from] ferroehr_ext::fhir::terminology::TerminologyDecodeError),
     /// A slim build has no FHIR model to decode with. Unreachable:
-    /// [`FhirTerminologyProvider::new`] refuses a configured provider at boot.
+    /// [`FhirTerminologyProvider::new`] refuses a configured terminology server at boot.
     #[cfg(not(feature = "fhir"))]
     #[error("this binary was built without the `fhir` cargo feature")]
     FeatureAbsent,
@@ -864,15 +762,6 @@ fn decode(kind: ResponseKind, body: &[u8]) -> Result<DecodedResponse, DecodeErro
                 booleans: view.booleans,
                 codes: view.codes,
                 strings: view.strings,
-                matches: view
-                    .matches
-                    .into_iter()
-                    .map(|m| TranslateMatchValues {
-                        equivalence: m.equivalence,
-                        code: m.code,
-                        display: m.display,
-                    })
-                    .collect(),
             }))
         }
         ResponseKind::ValueSet => {
@@ -940,7 +829,7 @@ fn collect(member: &ferroehr_ext::fhir::terminology::ExpansionMember, out: &mut 
 }
 
 /// A slim build decodes no FHIR responses. Unreachable:
-/// [`FhirTerminologyProvider::new`] refuses a configured provider at boot.
+/// [`FhirTerminologyProvider::new`] refuses a configured terminology server at boot.
 #[cfg(not(feature = "fhir"))]
 fn decode(_kind: ResponseKind, _body: &[u8]) -> Result<DecodedResponse, DecodeError> {
     Err(DecodeError::FeatureAbsent)
@@ -1003,11 +892,11 @@ mod tests {
                 {{"system":"s","code":"L","contains":[
                     {{"system":"s","code":"O","display":"Occlusal"}}]}}]}}}}"#
         ));
-        assert!(vs.contains_code("B"));
-        assert!(vs.contains_code("O")); // nested
-        assert!(!vs.contains_code("Z"));
         let ext = vs.into_extract("http://example/vs/surface");
         let terms = ext.terms.expect("terms");
+        assert!(terms.contains_key("B"));
+        assert!(terms.contains_key("O")); // nested
+        assert!(!terms.contains_key("Z"));
         assert_eq!(terms.len(), 3);
         assert!(matches!(terms.get("L"), Some(TermEntry::Bare(_))));
         assert!(matches!(terms.get("B"), Some(TermEntry::Defined(_))));
@@ -1063,19 +952,11 @@ mod tests {
 
     #[test]
     fn empty_url_rejected() {
-        let cfg = FhirProviderConfig {
-            kind: super::super::config::ProviderKind::Fhir,
+        let cfg = TerminologyServerConfig {
+            enabled: true,
             url: crate::config::secret::SecretUrl::new("  "),
-            operation: FhirOperation::ValidateCode,
-            connect_timeout_ms: 100,
-            request_timeout_ms: 100,
-            oauth2_client: None,
-            client_cert_path: None,
-            client_key_path: None,
-            ca_bundle_path: None,
-            cache_ttl_secs: 0,
-            cache_capacity: 1024,
+            ..TerminologyServerConfig::default()
         };
-        assert!(FhirTerminologyProvider::new("p", &cfg).is_err());
+        assert!(FhirTerminologyProvider::new(&cfg).is_err());
     }
 }

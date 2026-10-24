@@ -362,10 +362,10 @@ endpoint = "https://u3:URL_PW_SENTINEL_3@h3:8333/p3"
 [authz.abac.remote]
 server = "https://u4:URL_PW_SENTINEL_4@h4:3001/p4/"
 
-[terminology.external.providers.ts]
+[terminology.server]
 url = "https://u5:URL_PW_SENTINEL_5@h5:443/p5"
 
-[terminology.external.oauth2_clients.client]
+[terminology.server.oauth]
 token_url = "https://u6:URL_PW_SENTINEL_6@h6:443/p6"
 client_id = "client"
 client_secret = "CLIENT_SECRET_SENTINEL"

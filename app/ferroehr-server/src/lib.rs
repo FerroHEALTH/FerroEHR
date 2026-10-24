@@ -1000,31 +1000,31 @@ async fn connect_pool(config: &ferroehr::config::FerroEhrConfig) -> anyhow::Resu
     Ok(pools)
 }
 
-/// Wires the opt-in external FHIR terminology servers — ALL configured
-/// providers, with the terminology→provider routing (a deployment binds
-/// several terminologies at once; BASE
-/// `architecture_overview/master12-terminology.adoc` §Overview).
+/// Wires the opt-in FHIR terminology server (`[terminology.server]`), the
+/// "terminology query server" BASE
+/// `architecture_overview/master12-terminology.adoc` §Binding Terminology
+/// Value-sets to Archetypes places the resolver of a constraint binding in.
 ///
 /// # Errors
-/// A provider that cannot be built (a boot error: configuration promising a
+/// A server that cannot be built (a boot error: configuration promising a
 /// terminology binding must never degrade to no binding).
 fn attach_terminology(
     service: FerroEhrService,
     config: &ferroehr::config::FerroEhrConfig,
 ) -> anyhow::Result<FerroEhrService> {
-    let Some(router) = ferroehr::service::terminology::router::TerminologyRouter::build(
-        &config.terminology.external,
-    )
-    .context("initialising the external terminology providers")?
-    else {
+    let server = &config.terminology.server;
+    if !server.enabled {
         return Ok(service);
-    };
+    }
+    let client = ferroehr::service::terminology::fhir::FhirTerminologyProvider::new(server)
+        .context("initialising the terminology server client")?;
     tracing::info!(
-        providers = %router.provider_names().collect::<Vec<_>>().join(", "),
-        fail_on_error = router.fail_on_error(),
-        "external FHIR terminology providers configured"
+        server = %server.url,
+        fail_on_error = server.fail_on_error,
+        authenticated = server.oauth.is_some(),
+        "FHIR terminology server configured"
     );
-    Ok(service.with_terminology_router(Arc::new(router)))
+    Ok(service.with_terminology_server(Arc::new(client)))
 }
 
 /// Wires the opt-in `DV_MULTIMEDIA` externalization behind the `multimedia`

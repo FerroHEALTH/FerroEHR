@@ -669,17 +669,14 @@ configs:
       health = "admin_only"
       status = "admin_only"
 
-      # The external terminology server FerroTERM, declared here and switched
-      # on by docker-compose.terminology.yml (the overlay only flips the
-      # switch, so the two files never disagree about where the server is).
-      # Off, the CDR resolves nothing externally and this block is inert.
-      [terminology.external]
+      # The terminology server FerroTERM, declared here and switched on by
+      # docker-compose.terminology.yml (the overlay only flips the switch, so
+      # the two files never disagree about where the server is). Off, the CDR
+      # resolves nothing externally and this block is inert.
+      [terminology.server]
       enabled = false
-      fail_on_error = false
-
-      [terminology.external.providers.default]
-      type = "fhir"
       url = "http://ferroterm:8080/r4b"
+      fail_on_error = false
 
 volumes:
   ferroehr-pgdata:

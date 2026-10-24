@@ -919,7 +919,7 @@ probes_k8s_terminology() {
       "the terminology workload never became ready, so nothing about it could be observed"
     return 0
   fi
-  # The CDR rolls too: the injected [terminology.external] rewrites its
+  # The CDR rolls too: the injected [terminology.server] rewrites its
   # ConfigMap, whose checksum is a pod annotation. Its Service forward is
   # therefore rebuilt before anything below asks the CDR a question.
   k8s_rollout 180s

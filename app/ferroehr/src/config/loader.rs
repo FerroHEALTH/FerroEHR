@@ -402,7 +402,8 @@ fn find_key_line_in_section(content: &str, section: &str, key: &str) -> Option<u
 }
 
 /// Resolves the `client_secret_file` of each outbound client-credentials grant
-/// (`[audit.fhir_feed.oauth]`, `[authz.abac.remote.oauth]`).
+/// (`[audit.fhir_feed.oauth]`, `[authz.abac.remote.oauth]`,
+/// `[terminology.server.oauth]`).
 fn resolve_outbound_client_secrets(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigError>) {
     for (key, oauth) in [
         (
@@ -412,6 +413,10 @@ fn resolve_outbound_client_secrets(config: &mut FerroEhrConfig, errors: &mut Vec
         (
             "authz.abac.remote.oauth",
             config.authz.abac.remote.oauth.as_mut(),
+        ),
+        (
+            "terminology.server.oauth",
+            config.terminology.server.oauth.as_mut(),
         ),
     ] {
         if let Some(oauth) = oauth {
@@ -448,15 +453,6 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
         config.multimedia.secret_access_key_file.take(),
         errors,
     );
-    for (name, client) in &mut config.terminology.external.oauth2_clients {
-        let file = client.client_secret_file.take();
-        resolve_secret(
-            &format!("terminology.external.oauth2_clients.{name}.client_secret"),
-            &mut client.client_secret,
-            file,
-            errors,
-        );
-    }
     resolve_outbound_client_secrets(config, errors);
     if let Some(basic) = config.auth.basic.as_mut() {
         for user in &mut basic.users {

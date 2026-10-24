@@ -90,27 +90,15 @@
         "posture": "fail_closed",
         "servers": [
           {
-            "name": "sct",
+            "name": "unreachable",
             "reachable": false,
             "namespaces": [
               "cnf-sct-shaped",
               "http://cnf.example.test/fhir/CodeSystem/sct-shaped",
-              "http://cnf.example.test/fhir/ValueSet/sct-shaped-disorders"
-            ]
-          },
-          {
-            "name": "loinc",
-            "reachable": false,
-            "namespaces": [
+              "http://cnf.example.test/fhir/ValueSet/sct-shaped-disorders",
               "cnf-lab-shaped",
               "http://cnf.example.test/fhir/CodeSystem/lab-shaped",
-              "http://cnf.example.test/fhir/ValueSet/lab-shaped-vitals"
-            ]
-          },
-          {
-            "name": "unreachable",
-            "reachable": false,
-            "namespaces": [
+              "http://cnf.example.test/fhir/ValueSet/lab-shaped-vitals",
               "cnf-ts-down",
               "http://cnf.example.test/fhir/CodeSystem/ts-down",
               "http://cnf.example.test/fhir/ValueSet/ts-down-set"
@@ -159,28 +147,14 @@
     "posture": "fail_open",
     "servers": [
       {
-        "name": "sct",
+        "name": "terminology",
         "namespaces": [
           "cnf-sct-shaped",
           "http://cnf.example.test/fhir/CodeSystem/sct-shaped",
-          "http://cnf.example.test/fhir/ValueSet/sct-shaped-disorders"
-        ]
-      },
-      {
-        "name": "loinc",
-        "namespaces": [
+          "http://cnf.example.test/fhir/ValueSet/sct-shaped-disorders",
           "cnf-lab-shaped",
           "http://cnf.example.test/fhir/CodeSystem/lab-shaped",
           "http://cnf.example.test/fhir/ValueSet/lab-shaped-vitals"
-        ]
-      },
-      {
-        "name": "unreachable",
-        "reachable": false,
-        "namespaces": [
-          "cnf-ts-down",
-          "http://cnf.example.test/fhir/CodeSystem/ts-down",
-          "http://cnf.example.test/fhir/ValueSet/ts-down-set"
         ]
       }
     ]

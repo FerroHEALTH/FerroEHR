@@ -211,7 +211,10 @@ async fn the_feed_authenticates_with_a_client_credentials_token() {
     let mut cfg = config(&format!("{}/fhir", arr.uri()));
     cfg.fhir_feed.oauth = Some(
         ferroehr::config::client_credentials::ClientCredentialsConfig {
-            token_url: Some(format!("{}/token", auth.uri())),
+            token_url: Some(ferroehr::config::secret::SecretUrl::new(format!(
+                "{}/token",
+                auth.uri()
+            ))),
             client_id: "ferroehr-feed".to_owned(),
             client_secret: Some(ferroehr::config::secret::Secret::new("s3cret")),
             ..Default::default()

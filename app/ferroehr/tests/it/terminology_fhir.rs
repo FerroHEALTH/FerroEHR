@@ -17,47 +17,21 @@
 use std::time::Duration;
 
 use ferroehr::service::status::CallStatusType;
-use ferroehr::service::terminology::config::{FhirOperation, FhirProviderConfig, ProviderKind};
+use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use serde_json::json;
 use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-/// Build a provider pointing at `base` with short, test-friendly timeouts.
-fn provider(base: &str, operation: FhirOperation) -> FhirTerminologyProvider {
-    let cfg = FhirProviderConfig {
-        kind: ProviderKind::Fhir,
+/// Build a client pointing at `base` with a short, test-friendly timeout.
+fn provider(base: &str) -> FhirTerminologyProvider {
+    let cfg = TerminologyServerConfig {
+        enabled: true,
         url: ferroehr::config::secret::SecretUrl::new(base),
-        operation,
-        connect_timeout_ms: 500,
         request_timeout_ms: 800,
-        oauth2_client: None,
-        client_cert_path: None,
-        client_key_path: None,
-        ca_bundle_path: None,
-        // Cache off: these tests assert exact per-call server interactions.
-        cache_ttl_secs: 0,
-        cache_capacity: 0,
+        ..TerminologyServerConfig::default()
     };
-    FhirTerminologyProvider::new("test", &cfg).expect("build provider")
-}
-
-/// As [`provider`], with the response cache on (the production default).
-fn cached_provider(base: &str, operation: FhirOperation) -> FhirTerminologyProvider {
-    let cfg = FhirProviderConfig {
-        kind: ProviderKind::Fhir,
-        url: ferroehr::config::secret::SecretUrl::new(base),
-        operation,
-        connect_timeout_ms: 500,
-        request_timeout_ms: 800,
-        oauth2_client: None,
-        client_cert_path: None,
-        client_key_path: None,
-        ca_bundle_path: None,
-        cache_ttl_secs: 300,
-        cache_capacity: 1024,
-    };
-    FhirTerminologyProvider::new("test", &cfg).expect("build provider")
+    FhirTerminologyProvider::new(&cfg).expect("build provider")
 }
 
 /// The reference golden case: `ValueSet/surface`, code `B` = "Buccal".
@@ -85,7 +59,7 @@ async fn validate_code_member_is_accepted() {
         .mount(&server)
         .await;
 
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
+    let p = provider(&server.uri());
     let ok = p
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
@@ -105,7 +79,7 @@ async fn validate_code_non_member_is_rejected() {
         .mount(&server)
         .await;
 
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
+    let p = provider(&server.uri());
     let ok = p
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "Z", None)
         .await
@@ -122,7 +96,7 @@ async fn validate_code_unknown_valueset_is_not_found() {
         .mount(&server)
         .await;
 
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
+    let p = provider(&server.uri());
     let err = p
         .value_set_validate(SURFACE_SYS, "http://x/ValueSet/nope", "B", None)
         .await
@@ -133,36 +107,6 @@ async fn validate_code_unknown_valueset_is_not_found() {
     assert!(
         err.message.contains("http://x/ValueSet/nope") && !err.message.contains("test"),
         "the body names the asked-about id and not the provider: {err:?}"
-    );
-}
-
-#[tokio::test]
-async fn validate_via_expand_membership() {
-    let server = MockServer::start().await;
-    Mock::given(method("GET"))
-        .and(path("/ValueSet/$expand"))
-        .and(query_param("url", SURFACE_VS))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-            "resourceType": "ValueSet",
-            "status": "active",
-            "expansion": {"timestamp": EXPANSION_TIMESTAMP, "contains": [
-                {"system": SURFACE_SYS, "code": "B", "display": "Buccal"},
-                {"system": SURFACE_SYS, "code": "L", "display": "Lingual"}
-            ]}
-        })))
-        .mount(&server)
-        .await;
-
-    let p = provider(&server.uri(), FhirOperation::Expand);
-    assert!(
-        p.value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
-            .await
-            .expect("call")
-    );
-    assert!(
-        !p.value_set_validate(SURFACE_SYS, SURFACE_VS, "Z", None)
-            .await
-            .expect("call")
     );
 }
 
@@ -182,7 +126,7 @@ async fn get_value_set_maps_expansion_to_extract() {
         .mount(&server)
         .await;
 
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
+    let p = provider(&server.uri());
     let extract = p
         .get_value_set(SURFACE_SYS, SURFACE_VS)
         .await
@@ -205,7 +149,7 @@ async fn subsumes_true_only_on_strict_subsumption() {
         })))
         .mount(&server)
         .await;
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
+    let p = provider(&server.uri());
     assert!(p.subsumes("sys", "parent", "child").await.expect("call"));
 
     // outcome=equivalent → false (strict subsumption excludes equivalence).
@@ -218,7 +162,7 @@ async fn subsumes_true_only_on_strict_subsumption() {
         })))
         .mount(&server2)
         .await;
-    let p2 = provider(&server2.uri(), FhirOperation::ValidateCode);
+    let p2 = provider(&server2.uri());
     assert!(!p2.subsumes("sys", "a", "a").await.expect("call"));
 }
 
@@ -238,7 +182,7 @@ async fn lookup_drives_has_term_and_get_term() {
         .mount(&server)
         .await;
 
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
+    let p = provider(&server.uri());
     assert!(p.has_term(SURFACE_SYS, "B", None).await.expect("has_term"));
 
     let extract = p
@@ -266,7 +210,7 @@ async fn has_term_false_when_lookup_404() {
         .mount(&server)
         .await;
 
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
+    let p = provider(&server.uri());
     assert!(
         !p.has_term(SURFACE_SYS, "nope", None)
             .await
@@ -285,7 +229,7 @@ async fn server_5xx_is_an_exception() {
         .mount(&server)
         .await;
 
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
+    let p = provider(&server.uri());
     let err = p
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
@@ -314,7 +258,7 @@ async fn malformed_body_is_an_exception() {
         .mount(&server)
         .await;
 
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
+    let p = provider(&server.uri());
     let err = p
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
@@ -334,7 +278,7 @@ async fn missing_result_field_is_an_exception() {
         .mount(&server)
         .await;
 
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
+    let p = provider(&server.uri());
     let err = p
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
@@ -359,196 +303,10 @@ async fn timeout_is_an_exception() {
         .mount(&server)
         .await;
 
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
+    let p = provider(&server.uri());
     let err = p
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
         .expect_err("timeout → exception");
     assert_eq!(err.status, CallStatusType::Exception);
-}
-
-/// With the response cache on (the production default), a repeated operation
-/// costs ONE remote round trip per TTL window — the wiremock mounts with
-/// `expect(1)` and the second identical call is served from the cache,
-/// including the negative (`404` unknown-resource) outcome.
-#[tokio::test]
-async fn repeated_operations_are_served_from_the_cache() {
-    let server = MockServer::start().await;
-    Mock::given(method("GET"))
-        .and(path("/ValueSet/$validate-code"))
-        .and(query_param("url", SURFACE_VS))
-        .and(query_param("code", "B"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-            "resourceType": "Parameters",
-            "parameter": [{"name": "result", "valueBoolean": true}]
-        })))
-        .expect(1)
-        .mount(&server)
-        .await;
-    Mock::given(method("GET"))
-        .and(path("/ValueSet/$expand"))
-        .and(query_param("url", "http://example.org/ValueSet/missing"))
-        .respond_with(ResponseTemplate::new(404))
-        .expect(1)
-        .mount(&server)
-        .await;
-
-    let p = cached_provider(&server.uri(), FhirOperation::ValidateCode);
-    for _ in 0..2 {
-        let ok = p
-            .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
-            .await
-            .expect("validate");
-        assert!(ok);
-    }
-    for _ in 0..2 {
-        let missing = p
-            .get_value_set("sys", "http://example.org/ValueSet/missing")
-            .await;
-        assert!(
-            missing.is_err(),
-            "unknown value set stays a not-found error"
-        );
-    }
-}
-
-// ── ConceptMap/$translate (cross-terminology code translation) ───────────────
-
-#[tokio::test]
-async fn translate_takes_the_first_strictly_equivalent_match() {
-    let server = MockServer::start().await;
-    Mock::given(method("GET"))
-        .and(path("/ConceptMap/$translate"))
-        .and(query_param("system", "http://loinc.org"))
-        .and(query_param("code", "8480-6"))
-        .and(query_param("targetsystem", "http://snomed.info/sct"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-            "resourceType": "Parameters",
-            "parameter": [
-                {"name": "result", "valueBoolean": true},
-                {"name": "match", "part": [
-                    {"name": "equivalence", "valueCode": "wider"},
-                    {"name": "concept", "valueCoding": {
-                        "system": "http://snomed.info/sct", "code": "75367002"}}
-                ]},
-                {"name": "match", "part": [
-                    {"name": "equivalence", "valueCode": "equivalent"},
-                    {"name": "concept", "valueCoding": {
-                        "system": "http://snomed.info/sct", "code": "271649006",
-                        "display": "Systolic blood pressure"}}
-                ]}
-            ]
-        })))
-        .expect(1)
-        .mount(&server)
-        .await;
-
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
-    let hit = p
-        .translate("http://loinc.org", "8480-6", "http://snomed.info/sct", None)
-        .await
-        .expect("call")
-        .expect("a strictly equivalent match translates");
-    assert_eq!(hit.code, "271649006", "the wider match is skipped");
-    assert_eq!(hit.display.as_deref(), Some("Systolic blood pressure"));
-}
-
-#[tokio::test]
-async fn translate_without_a_strict_match_is_none() {
-    let server = MockServer::start().await;
-    Mock::given(method("GET"))
-        .and(path("/ConceptMap/$translate"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-            "resourceType": "Parameters",
-            "parameter": [
-                {"name": "result", "valueBoolean": true},
-                {"name": "match", "part": [
-                    {"name": "equivalence", "valueCode": "narrower"},
-                    {"name": "concept", "valueCoding": {"code": "x"}}
-                ]}
-            ]
-        })))
-        .mount(&server)
-        .await;
-
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
-    let hit = p
-        .translate("http://loinc.org", "8480-6", "http://snomed.info/sct", None)
-        .await
-        .expect("call");
-    assert!(hit.is_none(), "narrower is never taken");
-}
-
-#[tokio::test]
-async fn translate_result_false_and_404_are_none() {
-    let server = MockServer::start().await;
-    Mock::given(method("GET"))
-        .and(path("/ConceptMap/$translate"))
-        .and(query_param("code", "unmapped"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-            "resourceType": "Parameters",
-            "parameter": [{"name": "result", "valueBoolean": false}]
-        })))
-        .mount(&server)
-        .await;
-
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
-    assert!(
-        p.translate(
-            "http://loinc.org",
-            "unmapped",
-            "http://snomed.info/sct",
-            None
-        )
-        .await
-        .expect("call")
-        .is_none(),
-        "result=false is no translation"
-    );
-    assert!(
-        p.translate(
-            "http://loinc.org",
-            "no-map-at-all",
-            "http://snomed.info/sct",
-            None
-        )
-        .await
-        .expect("call")
-        .is_none(),
-        "an unmatched route (404) is no translation, not a fault"
-    );
-}
-
-#[tokio::test]
-async fn translate_pins_the_concept_map_url() {
-    let server = MockServer::start().await;
-    Mock::given(method("GET"))
-        .and(path("/ConceptMap/$translate"))
-        .and(query_param("url", "http://example.org/ConceptMap/bp"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-            "resourceType": "Parameters",
-            "parameter": [
-                {"name": "result", "valueBoolean": true},
-                {"name": "match", "part": [
-                    {"name": "equivalence", "valueCode": "equal"},
-                    {"name": "concept", "valueCoding": {"code": "target-1"}}
-                ]}
-            ]
-        })))
-        .expect(1)
-        .mount(&server)
-        .await;
-
-    let p = provider(&server.uri(), FhirOperation::ValidateCode);
-    let hit = p
-        .translate(
-            "http://loinc.org",
-            "8480-6",
-            "http://snomed.info/sct",
-            Some("http://example.org/ConceptMap/bp"),
-        )
-        .await
-        .expect("call")
-        .expect("equal is strict too");
-    assert_eq!(hit.code, "target-1");
 }

@@ -2,16 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The 9 SM `I_TERMINOLOGY_SERVICE` calls on
-//! [`FerroEhrService`], routing between the two providers
-//! (`i_terminology_service.adoc`; the routing rule — see the module docs in
+//! [`FerroEhrService`], answered by the in-process bundle or the one
+//! terminology server (`i_terminology_service.adoc`; see the module docs in
 //! [`super`]).
 //!
 //! Enumeration is always the bundle's; lookup/validation goes to the bundle
-//! when it knows the terminology, else to the FHIR provider **the
-//! `terminology_id` routes to** ([`super::router::TerminologyRouter`] — several
-//! servers may be configured at once, BASE
-//! `docs/architecture_overview/master12-terminology.adoc` §Overview), else
-//! falls through to the bundle's `Pre_has_terminology` → `NotFound`.
+//! when it knows the terminology, else to the configured terminology server,
+//! else falls through to the bundle's `Pre_has_terminology` → `NotFound`.
 
 use std::collections::BTreeMap;
 
@@ -81,8 +78,8 @@ impl FerroEhrService {
     }
 
     /// `has_term` — whether `code` is a term of `terminology_id`. Routed to
-    /// the bundle when it knows the terminology, else to the configured FHIR
-    /// provider (`CodeSystem/$lookup`).
+    /// the bundle when it knows the terminology, else to the configured
+    /// terminology server (`CodeSystem/$lookup`).
     ///
     /// # Errors
     ///
@@ -99,8 +96,8 @@ impl FerroEhrService {
     ) -> Result<bool, SmError> {
         if bundle::has_terminology(terminology_id) {
             bundle::has_term(terminology_id, code)
-        } else if let Some(p) = self.terminology_provider(terminology_id) {
-            p.has_term(terminology_id, code, at_date).await
+        } else if let Some(server) = self.terminology_server() {
+            server.has_term(terminology_id, code, at_date).await
         } else {
             bundle::has_term(terminology_id, code)
         }
@@ -108,35 +105,30 @@ impl FerroEhrService {
 
     /// Whether `code` exists in the external code system `system`, as the three
     /// answers ADL2 VETDF distinguishes ([`super::fhir::TermExistence`]): the
-    /// binding's outer key `terminology_id` only helps pick the provider (its
-    /// own route, then the system's route, then the default); with no external
-    /// provider configured nothing is asked and the binding is unverifiable
+    /// code system is asked of the one terminology server; with no server
+    /// configured nothing is asked and the binding is unverifiable
     /// (AM ADL2 `master03-archetype_package.adoc` §Validity Rules, VETDF).
     ///
     /// # Errors
     ///
-    /// The FHIR provider's: a transport fault, an unclassified non-2xx status,
+    /// The terminology server's: a transport fault, an unclassified non-2xx status,
     /// or a malformed body.
     pub async fn term_existence(
         &self,
-        terminology_id: &str,
         system: &str,
         code: &str,
     ) -> Result<super::fhir::TermExistence, SmError> {
-        let provider = self
-            .terminology_route(system)
-            .or_else(|| self.terminology_provider(terminology_id));
-        match provider {
-            Some(p) => p.term_existence(system, code).await,
+        match self.terminology_server() {
+            Some(server) => server.term_existence(system, code).await,
             None => Ok(super::fhir::TermExistence::Unverifiable(
-                "no external terminology provider is configured",
+                "no terminology server is configured",
             )),
         }
     }
 
     /// `get_term` — a single-term `Terminology_extract`. Routed to the bundle
     /// when it knows the terminology (no meta-model `attributes` exist for
-    /// the openEHR bundle; `at_date` is a no-op on the pinned version), else to the configured FHIR provider (`CodeSystem/$lookup`).
+    /// the openEHR bundle; `at_date` is a no-op on the pinned version), else to the configured terminology server (`CodeSystem/$lookup`).
     ///
     /// # Errors
     ///
@@ -154,8 +146,10 @@ impl FerroEhrService {
     ) -> Result<TerminologyExtract, SmError> {
         if bundle::has_terminology(terminology_id) {
             bundle::get_term(terminology_id, code)
-        } else if let Some(p) = self.terminology_provider(terminology_id) {
-            p.get_term(terminology_id, code, attributes, at_date).await
+        } else if let Some(server) = self.terminology_server() {
+            server
+                .get_term(terminology_id, code, attributes, at_date)
+                .await
         } else {
             bundle::get_term(terminology_id, code)
         }
@@ -163,7 +157,7 @@ impl FerroEhrService {
 
     /// `subsumes` — whether `candidate_child_code` is in the **strict**
     /// subsumption of `ref_code`. The flat bundle always answers `false`
-    /// (bundle NOTE); hierarchical subsumption is the FHIR provider's
+    /// (bundle NOTE); hierarchical subsumption is the terminology server's
     /// `CodeSystem/$subsumes`.
     ///
     /// # Errors
@@ -181,8 +175,9 @@ impl FerroEhrService {
     ) -> Result<bool, SmError> {
         if bundle::has_terminology(terminology_id) {
             bundle::subsumes(terminology_id, ref_code, candidate_child_code)
-        } else if let Some(p) = self.terminology_provider(terminology_id) {
-            p.subsumes(terminology_id, ref_code, candidate_child_code)
+        } else if let Some(server) = self.terminology_server() {
+            server
+                .subsumes(terminology_id, ref_code, candidate_child_code)
                 .await
         } else {
             bundle::subsumes(terminology_id, ref_code, candidate_child_code)
@@ -191,8 +186,7 @@ impl FerroEhrService {
 
     /// `value_set_validate` — set membership of `candidate_code` in the value
     /// set. Routed to the bundle when it knows the terminology, else to the
-    /// configured FHIR provider (`ValueSet/$validate-code` or `$expand` +
-    /// membership).
+    /// configured terminology server (`ValueSet/$validate-code`).
     ///
     /// # Errors
     ///
@@ -211,8 +205,9 @@ impl FerroEhrService {
     ) -> Result<bool, SmError> {
         if bundle::has_terminology(terminology_id) {
             bundle::value_set_validate(terminology_id, value_set_id, candidate_code)
-        } else if let Some(p) = self.terminology_provider(terminology_id) {
-            p.value_set_validate(terminology_id, value_set_id, candidate_code, at_date)
+        } else if let Some(server) = self.terminology_server() {
+            server
+                .value_set_validate(terminology_id, value_set_id, candidate_code, at_date)
                 .await
         } else {
             bundle::value_set_validate(terminology_id, value_set_id, candidate_code)
@@ -234,16 +229,16 @@ impl FerroEhrService {
     ) -> Result<bool, SmError> {
         if bundle::has_terminology(terminology_id) {
             Ok(bundle::has_value_set(terminology_id, value_set_code))
-        } else if let Some(p) = self.terminology_provider(terminology_id) {
-            p.has_value_set(terminology_id, value_set_code).await
+        } else if let Some(server) = self.terminology_server() {
+            server.has_value_set(terminology_id, value_set_code).await
         } else {
             Ok(bundle::has_value_set(terminology_id, value_set_code))
         }
     }
 
     /// `get_value_set` — the value set's `Terminology_extract`. Routed to the
-    /// bundle when it knows the terminology, else to the configured FHIR
-    /// provider (`ValueSet/$expand`).
+    /// bundle when it knows the terminology, else to the configured
+    /// terminology server (`ValueSet/$expand`).
     ///
     /// # Errors
     ///
@@ -259,8 +254,8 @@ impl FerroEhrService {
     ) -> Result<TerminologyExtract, SmError> {
         if bundle::has_terminology(terminology_id) {
             bundle::get_value_set(terminology_id, value_set_code)
-        } else if let Some(p) = self.terminology_provider(terminology_id) {
-            p.get_value_set(terminology_id, value_set_code).await
+        } else if let Some(server) = self.terminology_server() {
+            server.get_value_set(terminology_id, value_set_code).await
         } else {
             bundle::get_value_set(terminology_id, value_set_code)
         }

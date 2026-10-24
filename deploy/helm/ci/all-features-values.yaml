@@ -35,8 +35,7 @@ secrets:
   auditFhirFeedUrl: https://arr:arr-password@arr.example.com/fhir
   multimediaAccessKeyId: AKIAEXAMPLE
   multimediaSecretAccessKey: s3-secret
-  terminologyOauth2ClientSecrets:
-    tx: tx-client-secret
+  terminologyClientSecret: tx-client-secret
 
 metrics:
   enabled: true
@@ -141,35 +140,19 @@ config:
     tls: true
   terminology:
     api_enabled: true
-    external:
-      # `enabled`, `fail_on_error` and the `default` provider are INJECTED by
-      # the chart from the `terminology:` block below, which is why they are not
-      # declared here: declaring the `default` provider beside the in-cluster
-      # one is refused at render, because two answers to "which server resolves
-      # a binding" is exactly the state that silently points resolution
-      # somewhere the operator did not choose.
-      providers:
-        # A SECOND, operator-declared provider beside the injected default, so
-        # the off-cluster provider shape — its own URL, its `operation`, its
-        # OAuth2 client — still reaches a golden render.
-        tx:
-          type: fhir
-          url: https://tx.example.com/fhir
-          operation: validate_code
-      # The route that makes `tx` reachable. Without it the provider is dead
-      # configuration: an unmatched terminology falls back to the provider
-      # named `default`, which the chart's wiring has taken for the in-cluster
-      # FerroTERM, so nothing would ever call `tx`. The chart refuses that
-      # combination, and this is the shape that satisfies it.
-      routes:
-        "http://loinc.org": tx
-      # The client secret itself is secrets.terminologyOauth2ClientSecrets.tx;
-      # the chart injects client_secret_file pointing at the mounted file.
-      oauth2_clients:
-        tx:
-          token_url: https://idp.example.org/realms/ts/protocol/openid-connect/token
-          client_id: ferroehr
-          scopes: [tx.read]
+    server:
+      # `enabled`, `url` and `fail_on_error` are INJECTED by the chart from the
+      # `terminology:` block below, which is why they are not declared here:
+      # declaring the URL beside the in-cluster one is refused at render,
+      # because two answers to "which server resolves a binding" is exactly the
+      # state that silently points resolution somewhere the operator did not
+      # choose. The grant is the operator's, so the OAuth2 shape still reaches
+      # a golden render; its client secret is secrets.terminologyClientSecret,
+      # and the chart injects client_secret_file pointing at the mounted file.
+      oauth:
+        token_url: https://idp.example.org/realms/ts/protocol/openid-connect/token
+        client_id: ferroehr
+        scope: tx.read
   multimedia:
     enabled: true
     threshold_bytes: 262144
