@@ -469,8 +469,8 @@ pub fn count(n: usize) -> ferrohealth_ui::i18n::Arg {
     n.into()
 }
 
-/// The days of an activity chart: each day's count by its place, and the
-/// first and the last day.
+/// The days of an activity chart: each day's count by its place, the first
+/// and the last day, and the days its axis names.
 #[derive(Debug, Clone)]
 pub struct LastDays {
     /// Each day's place from 0 and its count, every day of the window.
@@ -479,9 +479,29 @@ pub struct LastDays {
     pub first: String,
     /// The window's last day, today, `YYYY-MM-DD`.
     pub last: String,
-    // TODO(#3957): the mockups label four days, FerroHEALTH/FerroUI#387.
-    /// The axis labels of the first and the last day, such as `22 Sep`.
-    pub ends: (String, String),
+    /// The days the axis names, each its place and its label such as
+    /// `22 Sep`: the first day, and the last with every tenth before it.
+    pub ticks: Vec<(u32, String)>,
+}
+
+/// The days between two labelled days counted back from the last, as the
+/// FerroEHR mockups label a 30-day chart on 22 Sep, 1 Oct, 11 Oct and 21 Oct.
+const TICK_EVERY: u32 = 10;
+
+/// The fewest days a tick counted back from the last keeps from the first
+/// day, half of [`TICK_EVERY`], so the two labels never meet.
+const TICK_CLEARANCE: u32 = 5;
+
+/// The places an axis over `days` days names: 0, and the last place with
+/// every tenth before it that keeps clear of 0.
+fn tick_places(days: u32) -> Vec<u32> {
+    let last = days.saturating_sub(1);
+    let mut back: Vec<u32> =
+        std::iter::successors(Some(last), |place| place.checked_sub(TICK_EVERY))
+            .take_while(|place| *place >= TICK_CLEARANCE)
+            .collect();
+    back.reverse();
+    std::iter::once(0).chain(back).collect()
 }
 
 /// The axis label of `date`, its day and its month in short, such as
@@ -534,8 +554,13 @@ fn last_days_to(
         .checked_sub(jiff::Span::new().days(span))
         .unwrap_or(today);
     let mut counts = Vec::with_capacity(usize::from(days));
+    let places = tick_places(u32::from(days.max(1)));
+    let mut ticks = Vec::with_capacity(places.len());
     let mut day = first;
     for place in 0..u32::from(days.max(1)) {
+        if places.contains(&place) {
+            ticks.push((place, axis_day(day)));
+        }
         let key = day.to_string();
         let held = points
             .iter()
@@ -552,7 +577,7 @@ fn last_days_to(
         counts,
         first: first.to_string(),
         last: today.to_string(),
-        ends: (axis_day(first), axis_day(today)),
+        ticks,
     }
 }
 
@@ -667,6 +692,7 @@ fn locate(text: &str, path: &str) -> Option<ferrohealth_ui::view::diagnostics::P
 mod tests {
     use super::{
         axis_day, clock, findings_of, last_days_to, locate, path_in, shortened, status_words,
+        tick_places,
     };
     use crate::activity::ActivityPoint;
     use crate::error::ViewerError;
@@ -717,11 +743,45 @@ mod tests {
         assert_eq!(days.counts.len(), 30);
         assert_eq!(days.first, "2026-09-24");
         assert_eq!(days.last, "2026-10-23");
-        assert_eq!(days.ends, ("24 Sep".to_owned(), "23 Oct".to_owned()));
+        assert_eq!(
+            days.ticks,
+            vec![
+                (0, "24 Sep".to_owned()),
+                (9, "3 Oct".to_owned()),
+                (19, "13 Oct".to_owned()),
+                (29, "23 Oct".to_owned()),
+            ]
+        );
         assert_eq!(days.counts.last(), Some(&(29, 3)));
         assert_eq!(days.counts.get(26), Some(&(26, 1)));
         let total: u32 = days.counts.iter().map(|(_, count)| *count).sum();
         assert_eq!(total, 4, "a day before the window is left out");
+    }
+
+    #[test]
+    fn a_month_long_axis_names_the_four_days_the_mockups_label() {
+        let days = last_days_to(&[], 30, jiff::civil::date(2026, 10, 21));
+        let labels: Vec<(u32, &str)> = days
+            .ticks
+            .iter()
+            .map(|(place, words)| (*place, words.as_str()))
+            .collect();
+        assert_eq!(
+            labels,
+            vec![(0, "22 Sep"), (9, "1 Oct"), (19, "11 Oct"), (29, "21 Oct")]
+        );
+    }
+
+    #[test]
+    fn a_short_axis_names_its_first_and_its_last_day() {
+        assert_eq!(tick_places(1), vec![0]);
+        assert_eq!(tick_places(7), vec![0, 6]);
+        assert_eq!(
+            tick_places(12),
+            vec![0, 11],
+            "a tick beside the first is left out"
+        );
+        assert_eq!(tick_places(16), vec![0, 5, 15]);
     }
 
     #[test]

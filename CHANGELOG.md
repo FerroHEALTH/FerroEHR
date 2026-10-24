@@ -17,7 +17,7 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
-- **The viewer is rebuilt on FerroUI 0.3.5** (#3932, #3942, #3946, FerroHEALTH/FerroUI#161).
+- **The viewer is rebuilt on FerroUI 0.3.6** (#3932, #3942, #3946, #3957, FerroHEALTH/FerroUI#161).
   Every screen follows the FerroEHR mockups of FerroUI's
   `design/consoles/ferroehr/` at 1440 and 390 px, light and dark, with
   FerroUI's components and none of the viewer's own copies. The viewer now
@@ -29,7 +29,9 @@ workflow refuses a tag that has no matching section here.
   docked decision bar; a refused save keeps what you typed beside the CDR's
   words. The navigation is Dashboard, EHRs, Parties, Templates, Terminology,
   Stored queries, Query, Server, Audit log, Subscriptions, Configuration and
-  About, with search in the top bar.
+  About, with search in the top bar. The activity charts of the dashboard and
+  of an EHR's contributions label their first day and every tenth day back
+  from today, and a staged change's Apply sits beside its What changes select.
 - **Breaking: the viewer's addresses change.** `/demographics/…` is
   `/parties` (`/parties/{kind}/{uid}`, `/parties/relationships/{uid}`,
   `/parties/contributions/{uid}`); an EHR's tabs are paths
