@@ -15,7 +15,7 @@
 # an isolated stable stack could never hold one (its own ingress refuses the
 # body at parse time, and that refusal is itself one of the served answers).
 #
-#   docker compose -p ferroehr-cnf --project-directory . \
+#   docker compose -p ferroehr-cnf --project-directory . --profile terminology \
 #     -f docker/sut-ferroehr.yml -f docker/sut-smart.yml \
 #     -f docker/sut-terminology.yml -f docker/sut-spec-stable.yml \
 #     up -d --wait ferroehr-stable
@@ -25,8 +25,9 @@
 # own directory, while every path in docker/sut-*.yml is repo-root-relative
 # under `--project-directory .` — an extends here would silently rebase the
 # config mount. The env below is therefore the primary `ferroehr` service's
-# posture (docker/sut-ferroehr.yml + the SMART overlay's trust block) with
-# exactly two deltas: FERROEHR__SPEC_PROFILE=stable and the remapped host
+# posture (docker/sut-ferroehr.yml + the SMART overlay's trust block + the
+# terminology overlay's reachable FerroTERM in the fail-open posture, which the
+# ixit's party default declares for this instance too) with exactly two deltas: FERROEHR__SPEC_PROFILE=stable and the remapped host
 # port. It never builds: docker/sut-ferroehr.yml pins the explicit `image:`
 # tag the primary service builds, so this service starts the identical
 # artefact under the other generation set — one build, two profiles.
@@ -42,6 +43,8 @@ services:
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
+      terminology:
+        condition: service_healthy
     environment:
       # The SAME database as the primary service — the shared repository is
       # the ground the profile gate is about, not an accident.
@@ -52,6 +55,9 @@ services:
       FERROEHR__SERVER__MAX_IN_FLIGHT: ${FERROEHR__SERVER__MAX_IN_FLIGHT:-256}
       FERROEHR__SERVER__RATE_LIMIT__ENABLED: ${FERROEHR__SERVER__RATE_LIMIT__ENABLED:-true}
       FERROEHR__SIGNING__ENABLED: ${FERROEHR__SIGNING__ENABLED:-true}
+      # The primary's one terminology server (docker/sut-terminology.yml).
+      FERROEHR__TERMINOLOGY__SERVER__ENABLED: "true"
+      FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR: "false"
       FERROEHR__LOG__FORMAT: ${FERROEHR__LOG__FORMAT:-pretty}
       FERROEHR__LOG__FILTER: ${FERROEHR__LOG__FILTER:-info}
       # As the primary SUT: the harness reports nothing to FerroPULSE by default.

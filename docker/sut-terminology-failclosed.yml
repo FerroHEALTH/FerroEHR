@@ -16,8 +16,8 @@
 #
 # This overlay is the fail-closed half. The pipeline stacks it on the SECOND
 # deployment the ferroehr run already composes — the parallel openPGP-signing
-# project (`-p ferroehr-cnf-pgp`, host port 8081) — so the two terminology
-# branches cost no third server. A deployment carries independent postures;
+# project (`-p ferroehr-cnf-pgp`, host port 8081), so the fail-closed
+# branch costs no extra server. A deployment carries independent postures;
 # the ixit declares them independently too, as that instance's own `signing`
 # and `terminology` blocks.
 #

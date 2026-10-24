@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# CNF fail-open unreachable-terminology deployment (compose OVERLAY, stacks LAST).
+#
+# The fail-OPEN branch of an unresolvable bound value set, on a deployment of
+# its own. `[terminology.server] fail_on_error` decides what a deployment does
+# with a bound value set it cannot resolve, and no released openEHR text
+# decides between accepting and refusing: BASE
+# docs/architecture_overview/master12-terminology.adoc §"Binding Terminology
+# Value-sets to Archetypes" puts the query in an external "terminology query
+# server" and never says what follows when that server cannot answer (register
+# AMB-172). Both branches are therefore tested against the deployments that
+# realize them: the fail-closed one rides on the pgp project
+# (docker/sut-terminology-failclosed.yml), and this is the fail-open one.
+#
+# WHY A FOURTH DEPLOYMENT. The CDR is wired to ONE terminology server per
+# deployment, and the primary's one server is FerroTERM, reachable, serving
+# the shaped seed (docker/sut-terminology.yml). One server cannot be reachable
+# and unreachable at once, so the down branch in the fail-open posture needs a
+# deployment whose one server nothing answers on. `sut_stable` stays a normal
+# FerroTERM deployment of the primary project.
+#
+#   docker compose -p ferroehr-cnf-failopen --project-directory . \
+#     -f docker/sut-ferroehr.yml -f docker/sut-smart.yml \
+#     -f docker/sut-terminology-failopen.yml up -d --wait ferroehr
+#
+# Its own compose project isolates containers, networks and volumes; it runs
+# without the `terminology` profile, so no terminology server exists on its
+# network. The published HOST ports are global, so they are remapped with the
+# `!override` tag (docs.docker.com/reference/compose-file/merge, "Replace value
+# with !override"), the same coexistence shape as docker/sut-pgp-parallel.yml.
+# It never builds: docker/sut-ferroehr.yml pins the explicit `image:` tags the
+# primary builds (or, under SKIP_BUILD, pulls), so this project starts the
+# identical artefact with a different configuration.
+#
+# The ixit declares this deployment as the `sut_fail_open` instance, with its
+# one server `reachable: false` and the fail-open posture; the fail-open case
+# addresses it with `on: sut_fail_open`.
+services:
+  ferroehr-postgres:
+    ports: !override
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_FAILOPEN_DB_PORT:-5434}:5432"
+
+  ferroehr:
+    environment:
+      FERROEHR__TERMINOLOGY__SERVER__ENABLED: "true"
+      FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR: "false"
+      # RFC 2606 §2 reserves `.invalid` so a name is guaranteed not to resolve:
+      # the connect fails the way a terminology-server outage does, on every
+      # attempt, for the whole run.
+      FERROEHR__TERMINOLOGY__SERVER__URL: "http://terminology-unreachable.invalid:8080/fhir"
+      FERROEHR__TERMINOLOGY__SERVER__REQUEST_TIMEOUT_MS: "1000"
+      # master04 §Services: every advertised services.*.baseUrl is an
+      # "Absolute URL to the root of the API", so this deployment names the
+      # origin IT is reached on, not the primary's.
+      FERROEHR__SMART__PUBLIC_BASE_URL: "http://localhost:${FERROEHR_FAILOPEN_PORT:-8083}"
+    ports: !override
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_FAILOPEN_PORT:-8083}:8080"

@@ -30,7 +30,9 @@
 #                     deployment of the same image in the openPGP
 #                     version-signing posture on its own project/ports, so
 #                     both claimed signing modes are exercised in the one
-#                     record (the ixit's `sut_pgp` instance).
+#                     record (the ixit's `sut_pgp` instance), PLUS a third
+#                     deployment in the fail-open posture wired to an
+#                     unreachable terminology server (`sut_fail_open`).
 #                   ehrbase: composes upstream EHRbase from
 #                     docker/sut-ehrbase.yml (official images, fresh
 #                     volumes, host port 8091) — the #232 comparison target
@@ -144,6 +146,18 @@ FERROEHR_RS_PGP_COMPOSE=(docker compose -p ferroehr-cnf-pgp \
   -f "$REPO_ROOT/docker/sut-signing-pgp.yml" \
   -f "$REPO_ROOT/docker/sut-terminology-failclosed.yml" \
   -f "$REPO_ROOT/docker/sut-pgp-parallel.yml")
+# The fail-OPEN half of the same unresolvable-binding pair needs a deployment
+# of its own: the CDR is wired to one terminology server per deployment, the
+# primary's one server is the reachable FerroTERM, and one server cannot be
+# reachable and unreachable at once. docker/sut-terminology-failopen.yml is
+# that deployment, its own project on remapped host ports, wired to an address
+# nothing answers on with `fail_on_error = false`; the ixit declares it as the
+# `sut_fail_open` instance and the fail-open case addresses it with `on:`.
+FERROEHR_RS_FAILOPEN_COMPOSE=(docker compose -p ferroehr-cnf-failopen \
+  --project-directory "$REPO_ROOT" \
+  -f "$REPO_ROOT/docker/sut-ferroehr.yml" \
+  -f "$REPO_ROOT/docker/sut-smart.yml" \
+  -f "$REPO_ROOT/docker/sut-terminology-failopen.yml")
 
 
 # Build provenance for compose-built images: the OCI-standard REVISION arg (the
@@ -190,6 +204,7 @@ compose_down() {
   else
     (cd "$REPO_ROOT" && "${FERROEHR_RS_COMPOSE[@]}" down -v) || true
     (cd "$REPO_ROOT" && "${FERROEHR_RS_PGP_COMPOSE[@]}" down -v) || true
+    (cd "$REPO_ROOT" && "${FERROEHR_RS_FAILOPEN_COMPOSE[@]}" down -v) || true
   fi
 }
 
@@ -219,6 +234,7 @@ if [[ -z "${CONF_NO_COMPOSE:-}" ]] && [[ "$SUT" != "byo" ]]; then
   else
     (cd "$REPO_ROOT" && "${FERROEHR_RS_COMPOSE[@]}" down -v) || true
     (cd "$REPO_ROOT" && "${FERROEHR_RS_PGP_COMPOSE[@]}" down -v) || true
+    (cd "$REPO_ROOT" && "${FERROEHR_RS_FAILOPEN_COMPOSE[@]}" down -v) || true
     if [[ -n "${SKIP_BUILD:-}" ]]; then
       (cd "$REPO_ROOT" && "${FERROEHR_RS_COMPOSE[@]}" up -d --wait ferroehr)
     else
@@ -239,6 +255,9 @@ if [[ -z "${CONF_NO_COMPOSE:-}" ]] && [[ "$SUT" != "byo" ]]; then
     # two postures, and no chance of the two records describing different code.
     # `up ferroehr` starts only that service and its depends_on (postgres).
     (cd "$REPO_ROOT" && "${FERROEHR_RS_PGP_COMPOSE[@]}" up -d --wait ferroehr)
+    # The fail-open unreachable-terminology deployment, the same artefact
+    # again and never --build, for the same reason as the pgp project.
+    (cd "$REPO_ROOT" && "${FERROEHR_RS_FAILOPEN_COMPOSE[@]}" up -d --wait ferroehr)
   fi
 fi
 
@@ -290,6 +309,8 @@ if [[ -n "${CONF_PERF_CLASS:-}" ]]; then
   if [[ -z "${CONF_NO_COMPOSE:-}" ]] && [[ "$SUT" = "ferroehr" ]]; then
     echo "==> Tearing down the parallel pgp deployment before the measured window"
     (cd "$REPO_ROOT" && "${FERROEHR_RS_PGP_COMPOSE[@]}" down -v) || true
+    echo "==> Tearing down the fail-open terminology deployment before the measured window"
+    (cd "$REPO_ROOT" && "${FERROEHR_RS_FAILOPEN_COMPOSE[@]}" down -v) || true
     # The stable-profile server shares the primary's project AND database; a
     # resident second server is part of the environment, so it leaves the
     # envelope before the window opens — perf drives the primary alone.
