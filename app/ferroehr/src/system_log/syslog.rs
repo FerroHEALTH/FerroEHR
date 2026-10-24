@@ -115,6 +115,27 @@ impl SyslogSink {
         *slot = Some(connection);
         Ok(())
     }
+
+    /// Closes the held connection, if any, with a TLS `close_notify`, so every
+    /// frame sent on it reaches the repository before the socket closes.
+    ///
+    /// The drain calls it when it exits: a dropped connection is reset by the
+    /// kernel and can lose the frames sent last (#3959).
+    ///
+    /// # Errors
+    /// [`AuditError::Transport`] when the close fails or the repository does
+    /// not end the stream within the send timeout; a frame sent last may then
+    /// be lost.
+    pub async fn close(&self) -> Result<(), AuditError> {
+        let held = self.connection.lock().await.take();
+        match held {
+            Some(connection) => connection
+                .close()
+                .await
+                .map_err(|e| AuditError::Transport(Box::new(e))),
+            None => Ok(()),
+        }
+    }
 }
 
 /// The bytes of the PEM file at `path`.

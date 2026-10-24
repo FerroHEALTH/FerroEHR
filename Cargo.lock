@@ -2404,9 +2404,9 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4f15ab8bf2a757e7d96557a31bd942d078721bda6fbceb6e9732e53442b3e6d"
+checksum = "d3b5680111494871950069fd582f1889cf1e8c041fa8d2a0318c1b85ab758b5e"
 dependencies = [
  "async-trait",
  "ihe-atna",
@@ -4036,9 +4036,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-atna"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "906db7f67949032336733d05d258d84f7414423b33c13636ec807a4455692412"
+checksum = "927197dc57f47e0c5723599f8fe001b2c524595a36737add06f1b3a354674a51"
 dependencies = [
  "async-trait",
  "base64 0.23.1",

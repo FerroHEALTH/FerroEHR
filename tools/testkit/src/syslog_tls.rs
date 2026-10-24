@@ -45,6 +45,7 @@ pub struct SyslogTlsListener {
     /// `[audit.syslog] tls_ca_file`.
     pub ca_file: PathBuf,
     frames: mpsc::UnboundedReceiver<Vec<u8>>,
+    endings: mpsc::UnboundedReceiver<Ending>,
 }
 
 impl SyslogTlsListener {
@@ -65,13 +66,24 @@ impl SyslogTlsListener {
         ));
         tokio::fs::write(&ca_file, pki.ca_pem.as_bytes()).await?;
         let (tx, frames) = mpsc::unbounded_channel();
+        let (ended, endings) = mpsc::unbounded_channel();
         drop(tokio::spawn(async move {
             while let Ok((tcp, _peer)) = listener.accept().await {
                 let acceptor = acceptor.clone();
                 let tx = tx.clone();
+                let ended = ended.clone();
                 drop(tokio::spawn(async move {
-                    if let Ok(tls) = acceptor.accept(tcp).await {
-                        read_frames(tls, &tx).await;
+                    match acceptor.accept(tcp).await {
+                        Ok(tls) => {
+                            if let Some(ending) = read_frames(tls, &tx).await
+                                && ended.send(ending).is_err()
+                            {
+                                tracing::debug!("syslog test listener: no test reads the endings");
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("syslog test listener: TLS handshake failed: {e}");
+                        }
                     }
                 }));
             }
@@ -80,7 +92,17 @@ impl SyslogTlsListener {
             port,
             ca_file,
             frames,
+            endings,
         })
+    }
+
+    /// How the next connection to end ended, or `None` when none ends within
+    /// `wait`.
+    pub async fn ending(&mut self, wait: Duration) -> Option<Ending> {
+        tokio::time::timeout(wait, self.endings.recv())
+            .await
+            .ok()
+            .flatten()
     }
 
     /// The next whole frame, `MSG-LEN SP SYSLOG-MSG`, or `None` when none
@@ -93,21 +115,34 @@ impl SyslogTlsListener {
     }
 }
 
-/// Reads RFC 5425 §4.3 frames off `stream` until it ends, sending each.
+/// How a sender ended its connection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Ending {
+    /// With a TLS `close_notify`, as RFC 5425 §4.4 asks of a transport sender.
+    CloseNotify,
+    /// Without one: the connection was dropped, reset, or failed.
+    Abrupt,
+}
+
+/// Reads RFC 5425 §4.3 frames off `stream` until it ends, sending each, and
+/// returns how it ended; `None` when the test stopped listening first.
 async fn read_frames<S: tokio::io::AsyncRead + Unpin>(
     mut stream: S,
     tx: &mpsc::UnboundedSender<Vec<u8>>,
-) {
+) -> Option<Ending> {
     let mut buffer = Vec::new();
     let mut chunk = [0_u8; 4096];
     loop {
         while let Some(frame) = take_frame(&mut buffer) {
             if tx.send(frame).is_err() {
-                return;
+                return None;
             }
         }
+        // NOTE: tokio-rustls reads a close_notify as the end of the stream, and
+        // a stream that ends without one as an error.
         match stream.read(&mut chunk).await {
-            Ok(0) | Err(_) => return,
+            Ok(0) => return Some(Ending::CloseNotify),
+            Err(_) => return Some(Ending::Abrupt),
             Ok(read) => buffer.extend(chunk.iter().take(read)),
         }
     }
