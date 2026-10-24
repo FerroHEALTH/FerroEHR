@@ -440,6 +440,7 @@ cut, after the texts in scope have been read.
 | 2026-10-20 | 5.2.0, after `e5aa1902b` | 1 claim, in one book page | nothing |
 | 2026-10-22 | 5.3.2, after `434cd351e` | 4 claims, in four book pages and the technical documentation | nothing |
 | 2026-10-23 | 5.3.3, after `25845e6d3` | 1 claim, in one book page: the templates page said `|raw` is write-only, corrected for #3934 | nothing |
+| 2026-10-24 | 5.4.0, after `de38ec433` | none | nothing |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -513,5 +514,44 @@ at 1.98; the nine `openehr-*` crates at `0.0.95`.
   the chart description** make no claim this release changes.
 
 ### Left open on 2026-10-22, for 5.3.2
+
+Nothing.
+
+## The review of 2026-10-24, for 5.4.0
+
+Read on the tree after commit `de38ec433`, for FerroEHR 5.4.0. The facts of this
+release checked in every text in scope: the viewer rebuilt on FerroUI 0.3.6 in
+islands mode, working with JavaScript off, with its new addresses, its
+preferences as cookies of their own and an open tab that idles out (#3941,
+#3057); an ECDSA or Ed448 OpenPGP signing key refused at boot for
+RUSTSEC-2026-0387 (#3965); the signer's choice of subkey and primary key
+(#3967, #3969, #3971); the audit drain closing its syslog connection with
+`close_notify` and FerroAUDIT 0.2.5 (#3959); the nine `openehr-*` crates
+unchanged at `0.0.97`.
+
+### Changed on 2026-10-24, for 5.4.0
+
+Nothing: the pull requests that made these changes updated the texts they
+touched.
+
+### Read and kept on 2026-10-24, for 5.4.0
+
+- **The viewer statements**: the README, the [viewer](../viewer/index.md)
+  pages and the image label of `docker/viewer/Dockerfile` describe the viewer
+  the code draws; no text names a removed address, the `ferroehr-theme`
+  cookie, the Tailwind build or a background poll.
+- **The signing statements**: [PGP signing](../signing/pgp.md) and the
+  [authentication and signing configuration](../installation/config-auth.md)
+  state the refused ECDSA and Ed448 keys, the subkey the server signs with and
+  the retired-key path, as the code does.
+- **The audit statements**: the [hazard log](hazard-log.md) and
+  [EHDS readiness](ehds-readiness.md) name `ehds-logging` and `ihe-atna`
+  0.2.5, the version the root `Cargo.toml` pins.
+- **The landing page, `SECURITY.md`, the crate READMEs, the
+  [information sheet](information-sheet.md), the
+  [instructions for use](instructions-for-use.md), the other image labels and
+  the chart description** make no claim this release changes.
+
+### Left open on 2026-10-24, for 5.4.0
 
 Nothing.

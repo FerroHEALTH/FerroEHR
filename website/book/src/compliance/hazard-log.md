@@ -257,7 +257,9 @@ in every EU Member State, longer where national law sets more), and a
 configured period below it stops the boot. The reaper deletes only records
 past the horizon, in calendar years where the period is given in years, and
 the chain stays verifiable after it runs. The forwarding outbox keeps
-records until the sink takes them. `production` refuses audit with no
+records until the sink takes them, and the audit drain closes its syslog
+connection with a TLS `close_notify` when it exits, so the records it sent
+last are not lost to a reset. `production` refuses audit with no
 durable sink unless accepted by name.
 
 **Shown by:**
@@ -275,7 +277,9 @@ durable sink unless accepted by name.
 - `app/ferroehr/tests/it/audit_chain.rs`:
   `retention_reaping_leaves_a_verifiable_trail`;
 - `app/ferroehr/tests/it/audit_feed.rs`:
-  `arr_outage_leaves_rows_pending_then_delivers_on_recovery`.
+  `arr_outage_leaves_rows_pending_then_delivers_on_recovery`;
+- `app/ferroehr/tests/it/system_log_tls_roundtrip.rs`:
+  `the_drain_closes_its_connection_with_close_notify_when_it_exits`.
 
 **Remains:** a local store shares the fate of its database, so backups and
 an off-box sink are the deploying organisation's
@@ -431,3 +435,4 @@ EHDS-side risk assessment of the component.
 | 6 | 2026-10-20 | Reviewed for release 5.2.0 (changes since 5.1.0: the EHDS Art. 8 restriction of access lands, so H9's control is the restriction with its emergency override and the mark on that access record (#3682); a read of a party's protected identifiers is recorded per scheme (#3776); the access context carries whether a request enforces the restriction); every named test exists and asserts its control; no hazard added |
 | 7 | 2026-10-20 | Reviewed for the move onto FerroAUDIT (#3887): the access record, its categories and their classification, the retention floor and the emergency mark come from `ehds-logging` 0.1.1, the BALP and DICOM renderings and the ATNA sender from `ihe-atna` 0.1.1; the syslog feed sends over TLS only; H2, H3 and H9 name the moved tests; every named test exists and asserts its control; no hazard added |
 | 8 | 2026-10-22 | Reviewed for release 5.3.2 (changes since 5.2.0: the move onto FerroAUDIT of review 7 (#3887), then `ehds-logging` and `ihe-atna` 0.2.4 (#3902), so the record carries the token's `jti`, the operation subtype, `outcomeDesc` and the optional DICOM elements again, a Basic user is recorded with no issuer, a retention without end or under three years is stated as such, and archetype ids are compared as openEHR BASE 1.3.0 asks with each id kept as the access named it (#3908); the ITI-81 search form-decodes its query string (#3891)); every named test exists and asserts its control; no hazard added |
+| 9 | 2026-10-24 | Reviewed for release 5.4.0 (changes since 5.3.3: `ehds-logging` and `ihe-atna` 0.2.5, and the audit drain closes its syslog connection with a TLS `close_notify` when it exits, logging and counting a close that fails, so the records it sent last are not lost to a reset (#3959); H5 names its test); every named test exists and asserts its control; no hazard added |
