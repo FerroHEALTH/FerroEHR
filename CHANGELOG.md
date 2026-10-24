@@ -15,6 +15,10 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [5.4.0] - 2026-10-24
+
+5.4.0 carries breaking changes for operators, each with its upgrade step under Changed. Before you upgrade: replace an ECDSA or Ed448 OpenPGP signing key in `[signing] mode = "pgp"` with an Ed25519 key, and check that the certificate's primary key or a subkey may still sign; tell viewer users that the viewer's addresses change, so bookmarks and links into it need updating, and that the theme falls back to the system's until it is chosen again; and serve the viewer's whole `pkg/` directory if you serve its site from your own web server. No configuration key, database migration or image name changes.
+
 ### Changed
 
 - **Breaking: an ECDSA or Ed448 OpenPGP signing key is refused at boot**
@@ -12038,7 +12042,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.3...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.4.0...HEAD
+[5.4.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.3...v5.4.0
 [5.3.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.2...v5.3.3
 [5.3.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.2.0...v5.3.2
 [5.2.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.1.0...v5.2.0
