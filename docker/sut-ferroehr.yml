@@ -16,15 +16,18 @@
 #   |-----------|----------------------------------------------|-------------------|
 #   | CNF (rs)  | scripts/conformance.sh                       | ferroehr-cnf      |
 #   | CNF (pgp) | (same run — the parallel signing posture)    | ferroehr-cnf-pgp  |
+#   | CNF (open)| (same run, fail-open, unreachable terminology) | ferroehr-cnf-failopen |
 #   | CNF(java) | CONF_SUT=ehrbase scripts/conformance.sh | cnf-ehrbase  |
 #
-# The CNF (rs) run brings up BOTH of its projects: this stack and a second
+# The CNF (rs) run brings up ALL THREE of its projects: this stack, a second
 # deployment of the same image in the openPGP version-signing posture
-# (docker/sut-pgp-parallel.yml remaps it to 8081/5433 so the two coexist), so
-# one record covers both claimed signing modes. The standard conformance
+# (docker/sut-pgp-parallel.yml remaps it to 8081/5433 so the two coexist, so
+# one record covers both claimed signing modes), and a third project in the
+# fail-open posture wired to an unreachable terminology server
+# (docker/sut-terminology-failopen.yml, 8083/5434). The standard conformance
 # posture stacks docker/sut-smart.yml + docker/sut-terminology.yml on top
 # (scripts/conformance.sh), with `--profile terminology` starting the seeded
-# FHIR R4 server below.
+# FHIR R4B server below.
 #
 # The SUT builds FROM SOURCE (`runtime-from-source` — a conformance verdict on
 # this server is only meaningful against the current sources; SKIP_BUILD pulls

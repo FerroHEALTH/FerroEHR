@@ -128,6 +128,43 @@
         ]
       },
       "spec_profile": "stable"
+    },
+    "sut_fail_open": {
+      "base_url": "http://localhost:8083/ferroehr/rest/openehr/v1",
+      "administrative": false,
+      "auth": {
+        "mode": "bearer_mint",
+        "subject": "cnf-user",
+        "roles": [
+          "USER"
+        ],
+        "default_scopes": [
+          "user/template-*.cruds",
+          "user/aql-*.cruds",
+          "user/composition-*.cruds",
+          "__ferroehr.platform"
+        ]
+      },
+      "terminology": {
+        "posture": "fail_open",
+        "servers": [
+          {
+            "name": "unreachable",
+            "reachable": false,
+            "namespaces": [
+              "cnf-sct-shaped",
+              "http://cnf.example.test/fhir/CodeSystem/sct-shaped",
+              "http://cnf.example.test/fhir/ValueSet/sct-shaped-disorders",
+              "cnf-lab-shaped",
+              "http://cnf.example.test/fhir/CodeSystem/lab-shaped",
+              "http://cnf.example.test/fhir/ValueSet/lab-shaped-vitals",
+              "cnf-ts-down",
+              "http://cnf.example.test/fhir/CodeSystem/ts-down",
+              "http://cnf.example.test/fhir/ValueSet/ts-down-set"
+            ]
+          }
+        ]
+      }
     }
   },
   "containers": {

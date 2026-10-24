@@ -175,19 +175,26 @@ without re-running.
 Some behaviour exists only in a particular server configuration. Rather than
 splitting those into separate runs whose records would have to be merged by hand
 (which is exactly how a claim stops being reproducible) the pipeline brings up
-**two deployments of the same image** and covers both postures in the **one**
+**four deployments of the same image** and covers every posture in the **one**
 committed record:
 
 - the **primary** deployment runs the SMART resource-server role with fail-closed
-  scopes and a trusted test issuer, digest version signing, and an external FHIR
-  terminology server in the **fail-open** posture;
-- a **second** deployment, in its own compose project on remapped ports, runs
-  **openPGP** version signing and the **fail-closed** terminology posture.
+  scopes and a trusted test issuer, digest version signing, and FerroTERM as its
+  one terminology server, reachable, in the **fail-open** posture;
+- a **stable-profile** deployment shares the primary's database and serves the
+  released openEHR generation set, with the same terminology server;
+- an **openPGP** deployment, in its own compose project on remapped ports, runs
+  openPGP version signing and the **fail-closed** terminology posture, wired to a
+  terminology server nothing answers on;
+- a **fail-open** deployment, also in its own compose project, runs the
+  fail-open posture wired to a terminology server nothing answers on.
 
-The reason is the same in both cases: a running server realizes exactly one
-signing depth and exactly one unresolvable-value-set behaviour, so testing both
-claims means running both deployments. The ixit declares the second one as its own
-instance, and the cases that check those properties address it by name.
+The reason is the same in every case: a running server realizes exactly one
+signing depth, one generation set, and one unresolvable-value-set behaviour, and
+it is wired to one terminology server, which is either reachable or not. Testing
+each claim means running the deployment that realizes it. The ixit declares each
+deployment as its own instance, and the cases that check those properties address
+it by name.
 
 Two consequences worth knowing:
 
@@ -207,8 +214,10 @@ Two consequences worth knowing:
   server, and commit-time validation of a bound value set, accepted for a member
   code and refused for a non-member. What a deployment does when the value set
   cannot be resolved *at all* is not decided by any openEHR text, so it is a
-  declared posture rather than a verdict; both branches execute, one per
-  deployment.
+  declared posture rather than a verdict; both branches execute, each on a
+  deployment whose terminology server is unreachable. With one server per
+  deployment, the case that needs two distinct reachable servers records
+  not-applicable by its own guard.
 
 A measured performance or stress run adds one more posture: rate limiting is
 turned off for the duration, because the instruments deliberately offer load past

@@ -68,6 +68,13 @@ workflow refuses a tag that has no matching section here.
   `scripts/deploy-probe.sh` builds a local SNOMED CT release into an index
   with the quickstart overlay's own `ferroterm-build` and drives FerroTERM over
   it, in place of Snowstorm and Elasticsearch.
+- **The conformance run composes a fourth deployment for the fail-open
+  unresolvable-binding branch** (#3985). `docker/sut-terminology-failopen.yml`
+  runs the same image as its own compose project on ports 8083 and 5434, with
+  `[terminology.server] fail_on_error = false` and a server URL nothing answers
+  on, and the ixit declares it as the `sut_fail_open` instance. The
+  stable-profile deployment now uses the primary's FerroTERM, which the ixit
+  already declared for it.
 
 ### Removed
 
