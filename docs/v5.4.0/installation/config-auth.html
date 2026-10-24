@@ -1,0 +1,769 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Authentication &amp; access - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-13ea2195.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-ae67a48d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/installation/config-auth.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="authentication--access"><a class="header" href="#authentication--access">Authentication &amp; access</a></h1>
+<p>Who may call the server, what they may do once identified, and the surfaces
+that are gated rather than always-on: <code>[auth]</code>, <code>[authz]</code>, <code>[admin]</code>,
+<code>[smart]</code>, <code>[management]</code>, and <code>[signing]</code>. Precedence, the
+environment-name grammar, and file discovery are on the
+<a href="configuration.html">Configuration reference</a> index.</p>
+<ul>
+<li><a href="#auth"><code>[auth]</code></a>
+<ul>
+<li><a href="#the-basic-auth-user-store">The Basic-auth user store</a></li>
+</ul>
+</li>
+<li><a href="#authz"><code>[authz]</code></a>
+<ul>
+<li><a href="#authzassurance-the-assurance-level-patient-data-requires"><code>[authz.assurance]</code>: the assurance level patient data requires</a></li>
+<li><a href="#authzprofessional-the-natural-person-behind-a-token"><code>[authz.professional]</code>: the natural person behind a token</a></li>
+<li><a href="#authzrbac"><code>[authz.rbac]</code></a></li>
+<li><a href="#authzabac"><code>[authz.abac]</code></a></li>
+</ul>
+</li>
+<li><a href="#admin"><code>[admin]</code></a></li>
+<li><a href="#smart"><code>[smart]</code></a></li>
+<li><a href="#management"><code>[management]</code></a></li>
+<li><a href="#licence"><code>[licence]</code></a></li>
+<li><a href="#signing"><code>[signing]</code></a>
+<ul>
+<li><a href="#choose-an-ed25519-signing-key">Choose an Ed25519 signing key</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="auth"><a class="header" href="#auth"><code>[auth]</code></a></h2>
+<p>Authentication: bearer tokens of one or more trusted issuers, Basic
+credentials, or both. <code>[auth]</code> is the section every FerroHEALTH product shares,
+checked by the <code>ferrohealth-smart</code> crate. FerroEHR is a resource server: it
+checks tokens and never issues them.</p>
+<pre><code class="language-toml">[auth]
+enabled = true
+issuer = "https://keycloak.example.com/realms/ferroehr"
+audience = ["ferroehr"]
+
+[[auth.basic.users]]
+user = "clinician"
+password_hash = "$argon2id$v=19$m=19456,t=2,p=1$…$…"   # never a plaintext password
+scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds"]
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>true</code></td><td>Master switch. <code>false</code> = all requests pass unauthenticated (development only). With <code>true</code> and <strong>no mechanism configured the server refuses to start</strong>; see below.</td></tr>
+<tr><td><code>issuer</code></td><td>string, or <code>[[auth.issuer]]</code> tables</td><td>unset</td><td>The issuer whose tokens are accepted. Its metadata is read at boot, at the RFC 8414 §3 location first and the OpenID Connect Discovery 1.0 §4 location after a <code>404</code>, and with it the key set at its <code>jwks_uri</code>, so an authorization server that cannot be reached refuses the start. An <code>https</code> URL with no query and no fragment and no user name or password; plain <code>http</code> is accepted on a loopback host only. Several issuers are <code>[[auth.issuer]]</code> tables, each carrying the keys from <code>issuer</code> to <code>jwks_file</code>.</td></tr>
+<tr><td><code>audience</code></td><td>list of string</td><td><strong>required with an issuer</strong></td><td>Accepted <code>aud</code> values; a token naming none of them is refused (RFC 9068 §4, RFC 8725 §3.9).</td></tr>
+<tr><td><code>algorithms</code></td><td>list of string</td><td><code>["RS256","RS384","PS256","PS384","ES256","ES384"]</code></td><td>Accepted signature algorithms. Asymmetric only: an <code>HS*</code> algorithm is a boot error, and <code>none</code> is no algorithm at all (RFC 8725 §3.1, §3.2).</td></tr>
+<tr><td><code>token_profile</code></td><td><code>rfc9068</code> or <code>jwt</code></td><td><code>rfc9068</code></td><td><code>rfc9068</code> requires <code>typ</code> <code>at+jwt</code> and the <code>client_id</code>, <code>iat</code> and <code>jti</code> claims (RFC 9068 §2.2, §4). <code>jwt</code> admits a plain JWT bearer token (<code>typ</code> absent or <code>JWT</code>) for an issuer that mints no RFC 9068 tokens, and reads a <code>scp</code> array when <code>scope</code> is absent. A token typed as another kind of JWT is refused under either.</td></tr>
+<tr><td><code>clock_skew_seconds</code></td><td>int</td><td><code>60</code></td><td>Leeway on <code>exp</code>, <code>nbf</code> and <code>iat</code>. At most <code>300</code>.</td></tr>
+<tr><td><code>jwks_max_age_seconds</code></td><td>int</td><td><code>600</code></td><td>A key set older than this is read again.</td></tr>
+<tr><td><code>jwks_refresh_interval_seconds</code></td><td>int</td><td><code>60</code></td><td>A token naming an unknown <code>kid</code> reads the key set again at most once per interval.</td></tr>
+<tr><td><code>jwks_file</code></td><td>path</td><td><code>""</code></td><td>A JWK Set of public keys handed over out of band, read instead of the issuer’s metadata. A symmetric key (<code>kty: "oct"</code>) or a private-key member (<code>d</code>, <code>p</code>, <code>q</code>, <code>dp</code>, <code>dq</code>, <code>qi</code>, <code>oth</code>, <code>k</code>) is a boot error. An issuer read from a file has no metadata, so it serves the SMART discovery document only with <a href="#smart"><code>[smart] issuer_metadata_file</code></a> set.</td></tr>
+<tr><td><code>timeout_ms</code></td><td>int</td><td><code>10000</code></td><td>One call to the authorization server.</td></tr>
+<tr><td><code>realm</code></td><td>string</td><td><code>""</code> ⇒ <code>ferroehr</code></td><td>The realm every <code>WWW-Authenticate</code> challenge names.</td></tr>
+<tr><td><code>scopeless_subjects</code></td><td>list of string</td><td><code>[]</code></td><td>The exact <code>sub</code> values whose token, when it carries no resource scope of either the SMART on openEHR or the SMART on FHIR grammar, meets every SMART on openEHR requirement. A token that carries resource scopes gets only its scopes, and the allowlist reaches neither the ADMIN API nor the DEMOGRAPHIC API, which need the product scope.</td></tr>
+<tr><td><code>capabilities</code></td><td>list of string</td><td><code>[]</code></td><td>SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI.</td></tr>
+<tr><td><code>scopes_supported</code></td><td>list of string</td><td><code>[]</code></td><td>The scopes the discovery document lists. Empty, it lists the scopes the route table honours.</td></tr>
+<tr><td><code>product_scope</code></td><td>string</td><td><code>""</code> ⇒ <code>__ferroehr.platform</code></td><td>FerroEHR’s own scope. It admits the ADMIN API and, beside the bearer clients in <code>[smart] demographic_clients</code>, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with <code>__</code> (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility).</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><strong><code>auth.enabled = true</code> with no mechanism is a boot error.</strong> Such a server
+could only refuse every request while advertising an authentication scheme it
+does not implement, which RFC 9110 §11.6.1 forbids: a <code>401</code> challenge must
+name a scheme applicable to the target resource. Configure an <code>issuer</code>,
+configure <code>[[auth.basic.users]]</code>, or set <code>auth.enabled = false</code> for a
+development server.</p>
+</blockquote>
+<p>The key-set fetches verify the identity provider’s certificate against the
+platform trust store and follow no redirects. An identity provider whose
+certificate comes from a private CA is trusted once that CA is in the image’s
+system store or in a directory or file named by <code>SSL_CERT_DIR</code> or
+<code>SSL_CERT_FILE</code>. A key set that cannot be read when a token needs it answers
+<code>503</code>, never <code>401</code>: the server cannot decide, and a <code>401</code> would tell a caller
+with a valid token that its credential was refused.</p>
+<p>A validated token must also carry a non-blank <code>sub</code> claim: the authenticated
+subject is stamped into the audit trail, so a token without one is refused with
+<code>401</code> rather than recorded under a placeholder identity. A bearer token outside
+the RFC 6750 §2.1 <code>b64token</code> alphabet is refused the same way, with <code>401</code> and
+<code>error="invalid_token"</code>.</p>
+<h3 id="the-basic-auth-user-store"><a class="header" href="#the-basic-auth-user-store">The Basic-auth user store</a></h3>
+<p><code>[[auth.basic.users]]</code> is an array of tables and therefore <strong>file-only</strong>: the
+environment grammar cannot spell an array index.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>user</code></td><td>string</td><td>required</td><td>The user-id. Empty, or with a colon or a control character, is a boot error (RFC 7617 §2).</td></tr>
+<tr><td><code>password_hash</code></td><td>secret</td><td>required</td><td>Argon2<strong>id</strong> PHC hash (<code>$argon2id$v=19$…</code>), never a plaintext password. Boot-validated against the OWASP floor; see below.</td></tr>
+<tr><td><code>password_hash_file</code></td><td>path</td><td>unset</td><td>Read the hash from a file instead, for a mounted secret. A hash is an offline cracking target, so prefer this wherever the configuration file itself is not treated as sensitive. Exactly one of the pair is required.</td></tr>
+<tr><td><code>scopes</code></td><td>list of string</td><td><code>[]</code></td><td>The SMART on openEHR scopes the user holds, checked on every route exactly like a token’s <code>scope</code> claim. A user with none is refused everywhere a requirement applies.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The user’s RBAC roles are <a href="#authzrbac"><code>[authz.rbac.basic_roles]</code></a>.</p>
+<p><code>[auth.basic]</code> itself takes one key beside the users:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cache_ttl_seconds</code></td><td>int</td><td><code>0</code></td><td>How long a credential that verified is kept, so a repeat request skips the Argon2id derivation (<code>0</code> checks every request). The entry is named by a keyed hash of <code>user-id:password</code>, never the password, and only a credential that verified is kept, so a wrong password always pays the derivation. The TTL bounds how long a removed user keeps working. Argon2id costs tens of milliseconds of CPU per check by design, so a busy Basic client wants a value such as <code>60</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><strong>Every <code>password_hash</code> must meet the OWASP Argon2id floor: <code>m&gt;=19456</code>
+(19 MiB), <code>t&gt;=2</code>, <code>p&gt;=1</code>, algorithm <code>argon2id</code>.</strong> Anything weaker (or a
+non-<code>argon2id</code> PHC string, or an unparsable one) is a boot error naming the
+user. This is checked at startup because the verifier takes its cost
+parameters <em>from the stored hash</em>, so a deliberately cheap hash would
+otherwise verify happily and silently weaken every password in the store.
+The floor is the
+<a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html">OWASP Password Storage Cheat Sheet</a>
+§Argon2id minimum.</p>
+</blockquote>
+<p>An unknown user-id is checked against a decoy hash of the same cost, so the
+time a refusal takes does not say whether the user exists.</p>
+<h2 id="authz"><a class="header" href="#authz"><code>[authz]</code></a></h2>
+<p>Role-based (RBAC) and attribute-based (ABAC) authorization, and the
+patient-data assurance gate. The full evaluation order and design rationale are
+in <a href="../security.html">Security</a>.</p>
+<h3 id="authzassurance-the-assurance-level-patient-data-requires"><a class="header" href="#authzassurance-the-assurance-level-patient-data-requires"><code>[authz.assurance]</code>: the assurance level patient data requires</a></h3>
+<p>Off by default. What it refuses and the <code>401</code> challenge it sends are described
+in <a href="../security.html#assurance-level-and-the-natural-person-on-patient-data">Security</a>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>claim</code></td><td>string</td><td><code>acr</code></td><td>The token claim carrying the authentication context class; a dotted path reaches into a JSON object.</td></tr>
+<tr><td><code>levels</code></td><td>table of string → <code>low</code> | <code>substantial</code> | <code>high</code></td><td>empty</td><td>Maps each value your identity provider puts in <code>claim</code> to an eIDAS level of assurance. A value the table does not name carries no level. File-only: the keys are usually URIs.</td></tr>
+<tr><td><code>minimum</code></td><td><code>low</code> | <code>substantial</code> | <code>high</code></td><td>unset</td><td>The level a patient-data request must carry. Unset refuses nothing.</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-toml">[authz.assurance]
+minimum = "substantial"
+
+[authz.assurance.levels]
+"http://eidas.europa.eu/LoA/substantial" = "substantial"
+"http://eidas.europa.eu/LoA/high" = "high"
+</code></pre>
+<p>Boot refuses a <code>minimum</code> with an empty <code>levels</code> table or with no value mapped at
+or above it (every patient-data request would be refused), a blank <code>claim</code>
+beside a declared table, and a <code>levels</code> value that is blank or carries
+whitespace, a quote or a backslash, because the refusal names the accepted
+values in one quoted, space-separated <code>acr_values</code> parameter (RFC 9470 §3).</p>
+<h3 id="authzprofessional-the-natural-person-behind-a-token"><a class="header" href="#authzprofessional-the-natural-person-behind-a-token"><code>[authz.professional]</code>: the natural person behind a token</a></h3>
+<p>Absent by default, and tokens are then not judged on it. Present, a
+patient-data request whose token names no natural person is refused with <code>403</code>,
+unless it is a client token acting for a named professional.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>claim</code></td><td>string</td><td><code>sub</code></td><td>The claim identifying the natural person; a dotted path reaches into a JSON object. A token lacking it is a client token.</td></tr>
+<tr><td><code>client_tokens</code></td><td><code>sub_is_client</code> | <code>claim_absent</code></td><td><code>sub_is_client</code></td><td>How else a client-credentials token is recognised. <code>sub_is_client</code> also treats a token whose <code>sub</code> equals its <code>client_id</code> or <code>azp</code> as a client token (RFC 9068 §2.2); <code>claim_absent</code> relies on the missing claim alone.</td></tr>
+<tr><td><code>acting_for_claim</code></td><td>string</td><td>unset</td><td>The claim a client token carries the professional’s identifier in, such as <code>act.sub</code>. Unset refuses every client token on patient data.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The access record then carries the acting mode and the professional; see
+<a href="../audit.html#the-ehds-logging-elements-mapped">Audit trail</a>. Both tables are
+reachable from the environment too (<code>FERROEHR__AUTHZ__ASSURANCE__MINIMUM</code>,
+<code>FERROEHR__AUTHZ__PROFESSIONAL__ACTING_FOR_CLAIM</code>), except the <code>levels</code> map.</p>
+<h3 id="authzrbac"><a class="header" href="#authzrbac"><code>[authz.rbac]</code></a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>true</code></td><td>The coarse role gate (active when authentication is enabled). Off, every authenticated caller may use every enabled surface, reported as the <code>rbac_off</code> deployment gap. <code>ehr_access_default</code> and <code>admin_role</code> apply either way.</td></tr>
+<tr><td><code>admin_role</code></td><td>string</td><td><code>ADMIN</code></td><td>Role required for admin-class operations. A blank value is a boot error.</td></tr>
+<tr><td><code>user_role</code></td><td>string</td><td><code>USER</code></td><td>Baseline clinical role.</td></tr>
+<tr><td><code>readonly_role</code></td><td>string</td><td><code>READONLY</code></td><td>Role marking a principal read-only: refused on every write operation (create/update/delete/upload), even alongside granting roles. Reads and AQL queries are still allowed.</td></tr>
+<tr><td><code>emergency_access_role</code></td><td>string</td><td>unset</td><td>Role that reads data under an EHDS Art. 8 access restriction when the caller also declares one of <code>[audit] emergency_purpose_codes</code> (EHDS Art. 11(5)); the access record then carries the emergency mark. Unset, nobody may override a restriction. See <a href="../security.html#restriction-of-access-by-health-professionals-ehds-art-8">restriction of access</a>.</td></tr>
+<tr><td><code>identifier_reader_role</code></td><td>string</td><td>unset</td><td>Role that may read a party’s protected national identifiers through <code>GET {base}/admin/party/identifiers</code>, beside the admin role. Every read is an access record naming the reader, the party and the scheme. Unset, nobody may. See <a href="../operations-admin-apis.html#reading-a-partys-protected-identifiers">reading a party’s protected identifiers</a>.</td></tr>
+<tr><td><code>subject_audit_role</code></td><td>string</td><td>unset</td><td>Role that may read the access log for one subject at a time: <code>GET /fhir/r4/AuditEvent</code> with the <code>patient</code> parameter required, refused without it. The grant a patient portal holds to serve a person’s right to know who accessed their record (GDPR Art. 15, EHDS Art. 9), instead of an admin credential over every patient’s log. Unset, the log stays admin-only. See <a href="../audit.html#retrieving-audit-records-iti-81">Audit trail</a>.</td></tr>
+<tr><td><code>role_claims</code></td><td>list of string</td><td><code>["roles","groups","entitlements","realm_access.roles"]</code></td><td>JWT claim paths mined for roles, in order. Dotted paths walk nested claims. Must be non-empty and contain no blank path. <strong><code>scope</code> is not a role source</strong>; see <a href="../security.html#rbac-role-based-coarse">Security</a>.</td></tr>
+<tr><td><code>basic_roles</code></td><td>table of user-id → list of string</td><td>empty</td><td>The roles of each <code>[[auth.basic.users]]</code> user, upper-cased on authentication. A user it does not list holds <code>user_role</code>. File-only.</td></tr>
+<tr><td><code>ehr_access_default</code></td><td>enum{open,restricted}</td><td><code>open</code></td><td>What an EHR carrying no <code>ACCESS_CONTROL_SETTINGS</code> admits. <code>restricted</code> is object-level default-deny: only <code>admin_role</code> reaches a setting-less EHR, so an operator can still author the settings that open it. It is enforced whether <code>enabled</code> is on or off. With <code>[auth] enabled = false</code> nothing could enforce <code>restricted</code>, so that combination is a boot error. See <a href="../security.html#per-ehr-access-control-ehr_access">Security</a>.</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The management surface is <strong>not</strong> configured under <code>[authz.rbac]</code>.
+<a href="#management"><code>[management.endpoints]</code></a> owns it, one level per endpoint, with
+no global default beside it: an endpoint you do not name is <code>off</code> and is not
+mounted. Only the <code>admin_only</code> level consults <code>authz.rbac.admin_role</code>.</p>
+</blockquote>
+<h3 id="authzabac"><a class="header" href="#authzabac"><code>[authz.abac]</code></a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>false</code></td><td>Master ABAC switch.</td></tr>
+<tr><td><code>engine</code></td><td>enum{cedar,remote}</td><td><code>cedar</code></td><td>Embedded Cedar, or a remote decision point.</td></tr>
+<tr><td><code>organization_claim</code></td><td>string</td><td><code>organization_id</code></td><td>JWT claim carrying the caller’s organization.</td></tr>
+<tr><td><code>patient_claim</code></td><td>string</td><td><code>patient_id</code></td><td>JWT claim carrying the patient id. Set, it scopes every request to the patient it names (see below). Empty turns the patient scope off.</td></tr>
+<tr><td><code>patient_namespace</code></td><td>string</td><td>unset</td><td>The subject namespace (<code>EHR_STATUS.subject.external_ref.namespace</code>) the patient ids in <code>patient_claim</code> are issued in. Set, a claim names the EHR whose subject is that id under this namespace. Unset, a claim names the EHR holding that id only when no other namespace holds the same id.</td></tr>
+<tr><td><code>check_directory</code></td><td>bool</td><td><code>false</code></td><td>Submit DIRECTORY (<code>FOLDER</code>) operations to the decision point. Engine-independent, so it works under Cedar as well as a remote PDP.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The patient scope.</strong> With ABAC on and <code>patient_claim</code> set, a token
+without that claim is refused with <code>403</code>. With the claim:</p>
+<ul>
+<li>A route that names an EHR (<code>/ehr/{ehr_id}/…</code>) answers <code>403</code> unless the
+claim names that EHR’s subject. An EHR that records no subject is in no
+patient’s scope and is refused.</li>
+<li>Without <code>patient_namespace</code>, an id held under two or more namespaces names
+none of those subjects, so it reaches none of their EHRs. Set
+<code>patient_namespace</code> to read the claim in one namespace.</li>
+<li>An AQL query returns rows only from EHRs the claim names, whatever the query
+selects, including <code>SELECT e/ehr_id/value FROM EHR e</code>.</li>
+</ul>
+<p>After a query runs, the decision point receives the subject ids of every EHR
+the query touched as its <code>patient</code> attribute, so a patient-keyed policy
+applies to queries whether or not <code>patient_claim</code> is set. Without
+<code>patient_namespace</code>, a query that touches a subject id held under several
+namespaces is refused with <code>403</code>, because a bare id would name both subjects.</p>
+<ul>
+<li><strong><code>[authz.abac.cedar]</code>:</strong> <code>policy_dir</code> (path, required when
+<code>engine = "cedar"</code> and ABAC is on) and <code>reload_secs</code> (int, unset, an
+optional hot-reload interval).</li>
+<li><strong><code>[authz.abac.remote]</code>:</strong> <code>server</code> (secret URL, required when
+<code>engine = "remote"</code>, and it must end with <code>/</code>, because the policy name is
+appended; credentials embedded in it are redacted from every rendering), <code>connect_timeout_ms</code> (int, <code>2000</code>), <code>request_timeout_ms</code> (int,
+<code>5000</code>).</li>
+<li><strong><code>[authz.abac.remote.oauth]</code>:</strong> calls the policy service as an OAuth 2.0
+client instead of with the Basic credentials of <code>server</code>: FerroEHR obtains a
+token with the client credentials grant and sends it as a bearer token. The
+keys are those of <a href="config-audit.html#auditfhir_feedoauth-authenticating-with-oauth-20-client-credentials"><code>[audit.fhir_feed.oauth]</code></a>
+(<code>token_url</code> or <code>issuer</code>, <code>client_id</code>, <code>client_secret</code> or
+<code>client_secret_file</code>, <code>client_auth</code>, <code>scope</code>, <code>audience</code>, <code>resource</code>).
+When the policy service refuses the token with <code>401</code>, a new one is fetched
+and the decision asked once more; a token that cannot be obtained, or that
+is refused again, is no decision, and the request fails closed with a <code>500</code>,
+never a <code>403</code>. <code>server</code> with credentials beside this table stops startup.</li>
+<li><strong><code>[authz.abac.policy.&lt;kind&gt;]</code>:</strong> one entry per resource kind, with <code>kind</code> ∈
+<code>ehr</code>, <code>ehr_status</code>, <code>composition</code>, <code>contribution</code>, <code>query</code>, <code>directory</code>.
+Keys: <code>name</code> (string, the policy to evaluate) and <code>parameters</code> (list of
+enum{organization,patient,template}). A key that is not one of those six
+kinds is a boot error, and <code>template</code> is rejected on <code>ehr</code> and <code>ehr_status</code>,
+since neither carries a template.</li>
+</ul>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><strong>With <code>engine = "remote"</code>, every resource kind the enforcement point
+consults needs a policy entry: <code>ehr</code>, <code>ehr_status</code>, <code>composition</code>,
+<code>contribution</code>, <code>query</code></strong>, plus <code>directory</code> when <code>check_directory = true</code>. A
+missing one is a boot error. At runtime a kind with no policy can only be
+<strong>denied</strong>, since there is no policy to ask and permitting would be a silent
+hole, so the misconfiguration is caught at startup rather than turning into
+blanket <code>403</code>s on live traffic. The Cedar engine reads its policies from
+<code>authz.abac.cedar.policy_dir</code> and needs no entries here.</p>
+</blockquote>
+<h2 id="admin"><a class="header" href="#admin"><code>[admin]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>false</code></td><td>Mount the ADMIN API (physical, irreversible delete). Off ⇒ every admin route answers <code>405 Method Not Allowed</code> with an empty <code>Allow</code> header, never <code>403</code>, and never touches the backend.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Physical deletion is irreversible, so the group stays off by default. With it
+on, <code>/admin</code> also joins the group list the <code>OPTIONS</code> System-Options manifest
+advertises, so the manifest never names a group that answers <code>404</code>.</p>
+<h2 id="smart"><a class="header" href="#smart"><code>[smart]</code></a></h2>
+<p>The SMART on openEHR scopes are enforced on <strong>every route</strong> whenever
+<code>[auth]</code> is on: each operation carries a requirement from FerroEHR’s route
+table, which the <code>ferrohealth-smart</code> crate checks against the token’s scopes
+or a Basic user’s <code>scopes</code>. There is no switch for it. This section decides
+what beside the route table: whether the discovery document is served, and
+whose grants count for what. See <a href="../smart-app-launch.html">SMART App Launch</a>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>false</code></td><td>Serve <code>/.well-known/smart-configuration</code>. It is built from the first <code>[auth]</code> issuer’s metadata, so it needs an issuer whose metadata names a <code>token_endpoint</code> (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer read from a <code>jwks_file</code> refuses the start with <code>enabled = true</code> unless <code>issuer_metadata_file</code> supplies that metadata.</td></tr>
+<tr><td><code>issuer_metadata_file</code></td><td>path</td><td>unset</td><td>A JSON file holding the RFC 8414 §2 metadata of the first <code>[auth]</code> issuer when its key set is a <code>jwks_file</code>, read at boot. It must name that issuer, and every endpoint it names must be <code>https</code> (a loopback host excepted); the discovery document takes its <code>token_endpoint</code> and the other endpoints from it. Set for an issuer whose metadata is read from the issuer, it is a boot error.</td></tr>
+<tr><td><code>platform_base_url</code></td><td>string</td><td>unset ⇒ the REST root</td><td>The path the discovery document hangs off, e.g. <code>/gateway/v1</code>.</td></tr>
+<tr><td><code>public_base_url</code></td><td>string</td><td><strong>required when enabled</strong></td><td>The server’s externally reachable origin (e.g. <code>https://cdr.example.com</code>), from which the discovery document’s absolute <code>services.*.baseUrl</code> values are built.</td></tr>
+<tr><td><code>launch_base64_json</code></td><td>bool</td><td><code>false</code></td><td>Advertise the <code>launch-base64-json</code> capability. Experimental, and advisory: the base64 JSON launch object is consumed by the application, not the CDR.</td></tr>
+<tr><td><code>backend_clients</code></td><td>list of string</td><td><code>[]</code></td><td>The <code>client_id</code>s a <code>system/aql-*</code> grant counts for: such a grant “would grant access to all registered and ad-hoc AQL queries system-wide” (master08 §Resource Scopes).</td></tr>
+<tr><td><code>patient_issuers</code></td><td>list of string</td><td><code>[]</code></td><td>The issuers whose <code>patient/</code> grants count, each confined to the EHR the token’s <code>ehrId</code> claim names (master07 §Context Selection). Empty, a <code>patient/</code> grant grants nothing.</td></tr>
+<tr><td><code>demographic_clients</code></td><td>list of string</td><td><code>[]</code></td><td>The bearer <code>client_id</code>s that reach the DEMOGRAPHIC API, which no SMART on openEHR scope covers. A Basic user-id never matches an entry. A caller holding <code>[auth] product_scope</code> reaches it too.</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>[smart.episode]</code>: <code>enabled</code> (bool, <code>false</code>) advertises episode context and
+accepts the <code>launch/episode</code> scope and <code>episodeId</code> claim, but applies no
+episode-scoped filtering.</p>
+<p>No <code>smart</code> URL may carry a user name or password, whether or not the document
+is served: the discovery document publishes these URLs to every application,
+so a credential in one would be served to anyone who asks.</p>
+<h2 id="management"><a class="header" href="#management"><code>[management]</code></a></h2>
+<p>The ops-introspection surface: build info, Prometheus, metric views, the
+effective configuration, runtime log control, and the on-demand profiler. Off
+by default, and every endpoint off individually.</p>
+<p>The <strong>health probes are not configured here</strong>: <code>/health</code>, <code>/health/liveness</code>
+and <code>/health/readiness</code> are always served on the main API port without
+authentication, whatever this section says (see
+<a href="../operations.html#health-probes">Operations → Health probes</a>).</p>
+<pre><code class="language-toml">[management]
+enabled = false
+base_path = "/management"
+
+[management.endpoints]
+info = "off"
+metrics = "off"
+prometheus = "off"
+env = "off"
+loggers = "off"
+flamegraph = "off"
+
+[management.profiling]
+max_seconds = 30
+max_frequency = 999
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>false</code></td><td>Mount the management router.</td></tr>
+<tr><td><code>base_path</code></td><td>string</td><td><code>/management</code></td><td>Base path for the management endpoints.</td></tr>
+<tr><td><code>port</code></td><td>int</td><td>unset ⇒ share the main listener</td><td>Serve management on its own listener and port. Must differ from the <code>server.bind</code> port, and it is plain HTTP, an internal surface.</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>[management.endpoints]</code>: <code>info</code>, <code>metrics</code>, <code>prometheus</code>, <code>env</code>, <code>loggers</code>
+and <code>flamegraph</code>, each enum{off,admin_only,private,public}, default <code>off</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Level</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>off</code></td><td>Not mounted at all; the route answers <code>404</code>.</td></tr>
+<tr><td><code>admin_only</code></td><td>Requires an authenticated principal carrying <code>authz.rbac.admin_role</code> (<code>401</code> unauthenticated, <code>403</code> authenticated but not admin).</td></tr>
+<tr><td><code>private</code></td><td>Requires any authenticated principal.</td></tr>
+<tr><td><code>public</code></td><td>Served <strong>outside</strong> authentication.</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>env</code> renders the effective configuration and <code>flamegraph</code> starts a profiler on
+request, so the boot log prints exactly which endpoints a configuration turned
+on and at which level.</p>
+<p><code>[management.profiling]</code>: limits for the on-demand CPU flamegraph behind
+<code>endpoints.flamegraph</code> (see
+<a href="../operations.html#profiling-the-on-demand-cpu-flamegraph">Operations → Profiling</a>):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>max_seconds</code></td><td>int</td><td><code>30</code></td><td>Longest sample window one request may ask for. A request asking for more is refused with <code>400</code>, never clamped.</td></tr>
+<tr><td><code>max_frequency</code></td><td>int</td><td><code>999</code></td><td>Highest sampling frequency (Hz) a request may ask for. Same refusal semantics.</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><code>probes_enabled</code> and <code>endpoints.health</code> do not exist. Configuration is
+strict, so a file or environment variable still setting either one fails at
+boot with an unknown-key error: delete the key; the probes are always on.</p>
+</blockquote>
+<h2 id="licence"><a class="header" href="#licence"><code>[licence]</code></a></h2>
+<p>The commercial licence token. Every build embeds the licensor’s
+<code>non-commercial</code> grant; a deployment that holds a <code>commercial</code> licence installs
+its token here. The server behaves identically under either grant and reports
+the one in force on <code>GET /management/status</code> (<code>licence.use</code>, <code>licence.licensee</code>,
+<code>licence.not_after</code>, <code>licence.configured_token</code>). See
+<a href="../licensing.html">Licensing &amp; legal</a>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>file</code></td><td>path</td><td>unset</td><td>The licence token the licensor issued. A token that cannot be read or does not verify is reported as <code>refused</code> on <code>/management/status</code>; the embedded grant stays in force.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="signing"><a class="header" href="#signing"><code>[signing]</code></a></h2>
+<p>VERSION signing. On by default in <code>digest</code> mode, with read-time verification of
+the server’s own signatures <strong>strict</strong> by default.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>true</code></td><td>Server-side signing of committed versions.</td></tr>
+<tr><td><code>mode</code></td><td>enum{digest,pgp}</td><td><code>digest</code></td><td>A SHA-256 integrity digest, or an OpenPGP (RFC 4880) detached signature.</td></tr>
+<tr><td><code>key_path</code></td><td>path</td><td>unset</td><td>Armored secret key; <strong>required for <code>pgp</code></strong> (a boot error otherwise).</td></tr>
+<tr><td><code>key_passphrase</code> / <code>key_passphrase_file</code></td><td>secret / path</td><td>unset</td><td>Key passphrase. At most one of the pair.</td></tr>
+<tr><td><code>retired_key_paths</code></td><td>list of path</td><td><code>[]</code></td><td>Armored <strong>public</strong> keys retired from signing and kept for verification, so versions signed before a key rotation keep verifying.</td></tr>
+<tr><td><code>verify_on_read</code></td><td>enum{off,warn,strict}</td><td>unset ⇒ <code>strict</code> when signing is enabled</td><td>Read-time recompute-and-compare policy for the server’s own signatures.</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>retired_key_paths</code> exists because a stored <code>VERSION.signature</code> records no key
+identifier and is an immutable committed fact that cannot be re-issued;
+keeping the retired public key is the only way history stays verifiable across
+a rotation, and a public key can verify but never sign. Its environment form
+takes a comma-separated list
+(<code>FERROEHR__SIGNING__RETIRED_KEY_PATHS=/keys/a.pub.asc,/keys/b.pub.asc</code>).</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p><strong><code>verify_on_read</code> resolves to <code>strict</code> when signing is enabled.</strong> On every
+read the server recomputes the signature of a version it signed and, on a
+mismatch, returns a <code>500</code> integrity fault rather than silently serving a
+provably corrupt record. Set it explicitly to <code>warn</code> (log + meter
+<code>version_signature_invalid_total</code>, still serve) or <code>off</code> (never
+check). <strong>Client-supplied signatures</strong> (an author’s own, or one carried by an
+imported version) are always stored verbatim and <strong>never</strong> re-verified,
+whatever this setting says, because the author may have signed a different
+agreed serialization.</p>
+</blockquote>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p><code>pgp</code> mode <strong>fails closed at boot</strong> if the key is missing or unusable: the
+server will not start. Verify the key and passphrase before switching modes.</p>
+</blockquote>
+<h3 id="choose-an-ed25519-signing-key"><a class="header" href="#choose-an-ed25519-signing-key">Choose an Ed25519 signing key</a></h3>
+<p>The server refuses an <strong>ECDSA</strong> (P-256, P-384, P-521, secp256k1, Brainpool)
+or <strong>Ed448</strong> signing key at boot: their private-key arithmetic runs on
+<code>crypto-bigint</code> 0.5, whose constant-time operations can branch on secret
+values (RUSTSEC-2026-0387), with no fixed release on that line. The boot error
+names the advisory. Move to Ed25519 with the steps below; the old certificate
+goes in <code>retired_key_paths</code>, where it keeps verifying, because verification
+uses only public values.</p>
+<p>An <strong>RSA</strong> signing key is accepted, but it makes every commit perform an RSA
+private-key operation, the operation the Marvin timing sidechannel concerns
+(RUSTSEC-2023-0071 / CVE-2023-49092), for which the underlying <code>rsa</code> crate has
+no fixed release. An Ed25519 key keeps that code off the signing path entirely.</p>
+<p>The server does <strong>not</strong> refuse an RSA key: a repository whose history is
+already RSA-signed needs that key to keep verifying, and signatures are
+immutable committed facts that cannot be re-issued. Instead it logs a warning
+at boot naming the advisory. To clear it:</p>
+<ol>
+<li>Generate a new signing key: <code>gpg --quick-generate-key "…" ed25519 sign</code>, and
+export the armored secret key to <code>key_path</code>.</li>
+<li>Export the <strong>public</strong> half of the old certificate and add it to
+<code>retired_key_paths</code>, so versions signed with it still verify (see above).</li>
+<li>Restart. New versions are signed with Ed25519; old ones keep verifying.</li>
+</ol>
+<p>Rotation inside one certificate is cheaper still: add an Ed25519 <strong>signing
+subkey</strong> to the existing certificate, export the armored secret key again to
+<code>key_path</code>, and restart. The server signs with the newest subkey whose binding
+grants signing and that is neither expired nor revoked
+(<a href="../signing/pgp.html#configuring-the-key">the rule</a>), with no
+<code>retired_key_paths</code> entry needed: the certificate keeps the previous subkey, so
+past signatures continue to verify. For a refused ECDSA or Ed448 key this works
+when the new Ed25519 subkey is the one chosen. The steps above, with a new
+certificate, work in every case.</p>
+<p><strong>On Kubernetes</strong>, <code>digest</code> mode needs nothing; it is the default. <code>pgp</code> mode
+needs the key as a file and its passphrase as a secret, both of which the chart
+mounts for you:</p>
+<pre><code class="language-yaml"># values.yaml
+config:
+  signing:
+    enabled: true
+    mode: pgp
+    key_path: /etc/ferroehr/signing-key.asc
+  files:
+    signing-key.asc: |
+      -----BEGIN PGP PRIVATE KEY BLOCK-----
+      …
+secrets:
+  signingKeyPassphrase: "…"
+</code></pre>
+<p>Every <code>config.files</code> key becomes <code>/etc/ferroehr/&lt;key&gt;</code>, mounted read-only from
+a chart Secret at mode <code>0440</code>, and that volume holds the private key, so it is
+never world-readable inside the container. <strong>To go back to <code>digest</code></strong>, set
+<code>mode: digest</code> and drop the key material; versions already signed keep their
+signatures and still verify.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../installation/config-server.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../installation/config-integrations.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../installation/config-server.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../installation/config-integrations.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
