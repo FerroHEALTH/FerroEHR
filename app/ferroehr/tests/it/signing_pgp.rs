@@ -901,3 +901,97 @@ fn a_revoked_primary_key_is_refused() {
     key.details.revocation_signatures.push(revocation);
     assert_no_signing_component(&key);
 }
+
+// ── A subkey under a revoked or expired primary key (RFC 9580 §5.2.1.11, §5.2.3.13) ──
+
+/// A certify-only primary key, created long ago, with one valid Ed25519
+/// signing subkey.
+fn certificate_with_a_signing_subkey() -> SignedSecretKey {
+    let mut builder = SecretKeyParamsBuilder::default();
+    builder
+        .key_type(KeyType::Ed25519Legacy)
+        .can_certify(true)
+        .can_sign(false)
+        .created_at(Timestamp::from_secs(Timestamp::now().as_secs() - 1_000))
+        .primary_user_id("ferroehr-signing standing <standing@ferroehr.local>".into())
+        .subkey(
+            SubkeyParamsBuilder::default()
+                .key_type(KeyType::Ed25519Legacy)
+                .can_sign(true)
+                .passphrase(None)
+                .build()
+                .expect("build subkey params"),
+        );
+    builder
+        .build()
+        .expect("build key params")
+        .generate(OsRng)
+        .expect("generate key")
+}
+
+/// The fixture's signing subkey signs while its primary key stands, so the
+/// two refusals below are caused by the primary key alone.
+#[test]
+fn a_signing_subkey_under_a_valid_primary_key_signs() {
+    assert_eq!(subkey_that_signs(&certificate_with_a_signing_subkey()), 0);
+}
+
+/// A revoked key is not to be used (RFC 9580 §5.2.1.11), and its signing
+/// subkey with it: the certificate is refused at boot.
+#[test]
+fn a_signing_subkey_under_a_revoked_primary_key_is_refused_at_boot() {
+    let mut key = certificate_with_a_signing_subkey();
+    let mut config =
+        SignatureConfig::from_key(OsRng, &key.primary_key, SignatureType::KeyRevocation)
+            .expect("signature config");
+    config.hashed_subpackets = [
+        SubpacketData::SignatureCreationTime(Timestamp::now()),
+        SubpacketData::IssuerFingerprint(key.primary_key.fingerprint()),
+    ]
+    .into_iter()
+    .map(|data| Subpacket::regular(data).expect("subpacket"))
+    .collect();
+    let revocation = config
+        .sign_key(
+            &key.primary_key,
+            &Password::empty(),
+            key.primary_key.public_key(),
+        )
+        .expect("sign the revocation");
+    key.details.revocation_signatures.push(revocation);
+    assert_no_signing_component(&key);
+}
+
+/// A primary key past its Key Expiration Time (RFC 9580 §5.2.3.13, counted
+/// from its creation) takes its signing subkey out of signing too.
+#[test]
+fn a_signing_subkey_under_an_expired_primary_key_is_refused_at_boot() {
+    let mut key = certificate_with_a_signing_subkey();
+    let mut flags = KeyFlags::default();
+    flags.set_certify(true);
+    let mut config =
+        SignatureConfig::from_key(OsRng, &key.primary_key, SignatureType::CertPositive)
+            .expect("signature config");
+    config.hashed_subpackets = [
+        SubpacketData::SignatureCreationTime(Timestamp::from_secs(Timestamp::now().as_secs() + 1)),
+        SubpacketData::IssuerFingerprint(key.primary_key.fingerprint()),
+        SubpacketData::KeyFlags(flags),
+        SubpacketData::IsPrimary(true),
+        SubpacketData::KeyExpirationTime(Duration::from_secs(10)),
+    ]
+    .into_iter()
+    .map(|data| Subpacket::regular(data).expect("subpacket"))
+    .collect();
+    let user = key.details.users.first_mut().expect("the primary User ID");
+    let signature = config
+        .sign_certification(
+            &key.primary_key,
+            key.primary_key.public_key(),
+            &Password::empty(),
+            Tag::UserId,
+            &user.id,
+        )
+        .expect("sign the User ID");
+    user.signatures.push(signature);
+    assert_no_signing_component(&key);
+}
