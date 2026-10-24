@@ -94,10 +94,11 @@ STATEMENT="${CONF_STATEMENT:-$PARTY/statement.json}"
 # archetype constraint binding in an external "terminology query server" (BASE
 # docs/architecture_overview/master12-terminology.adoc §"Binding Terminology
 # Value-sets to Archetypes"), so the ONE committed record only covers the
-# terminology-routed surface — AQL TERMINOLOGY() and commit-time binding
-# validation — when a real FHIR R4 server is composed and seeded beside the
-# CDR. docker/sut-terminology.yml points the CDR at it in the fail-OPEN
-# posture; the ixit declares the resulting servers/namespaces/posture.
+# terminology-backed surface — AQL TERMINOLOGY() and commit-time binding
+# validation — when a real terminology server, FerroTERM over the shaped seed,
+# is composed beside the CDR. docker/sut-terminology.yml points the CDR at it
+# in the fail-OPEN posture; the ixit declares the resulting server, namespaces
+# and posture.
 # docker/sut-spec-stable.yml adds the SECOND openEHR generation-set posture to
 # the SAME project: a `spec_profile = stable` server over the SAME database
 # (the shared repository IS the ground — the development-only stored body the

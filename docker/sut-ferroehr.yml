@@ -169,83 +169,63 @@ services:
       retries: 5
       start_period: 20s
 
-  # A real HAPI FHIR JPA terminology server, behind the `terminology` profile.
-  # NOTE: the container is configured fhir_version R4 while the CDR's client
-  # speaks R4B — deliberate cross-version coverage: the terminology resources
-  # exercised ($validate-code/$expand shapes) are identical across the two.
-  # openEHR models the resolver of an archetype
-  # constraint binding as an external "terminology query server" (BASE
+  # FerroTERM, the FHIR terminology server, behind the `terminology` profile.
+  # openEHR models the resolver of an archetype constraint binding as an
+  # external "terminology query server" (BASE
   # docs/architecture_overview/master12-terminology.adoc §"Binding Terminology
   # Value-sets to Archetypes": the archetype "simply hold[s] an identifier for
   # a query; the query itself is defined within a 'terminology query server'"),
-  # and §Overview names the ecosystem — LOINC, ICDx, ICPC, SNOMED CT "and the
-  # many other terminologies and vocabularies used in healthcare" — and one
-  # server answers for all of them. This service is that server for the
+  # and one server answers for every terminology the bundled openEHR
+  # terminology does not carry. This service is that server for the
   # conformance record and for local experimentation; the CDR reaches it
   # through `[terminology.server]` in docker/ferroehr.dev.toml, which stays
   # DISABLED until an overlay enables it:
   #   docker compose -p ferroehr-cnf --profile terminology \
   #     -f docker/sut-ferroehr.yml -f docker/sut-terminology.yml up -d --wait ferroehr
   #
-  # The seeded content is SYNTHETIC (docker/terminology/seed/): two code
-  # systems shaped like SNOMED CT and LOINC, under the reserved example.test
-  # domain. No licensed terminology content is distributed with this repo.
+  # The content is the SYNTHETIC shaped seed (docker/terminology/seed/): two
+  # code systems shaped like SNOMED CT and LOINC and one value set each, under
+  # the reserved example.test domain, mounted READ-ONLY as FerroTERM's FHIR
+  # CodeSystem/ValueSet directory. FerroTERM serves what it loads and accepts
+  # no writes, so seeding is the mount, never a request. No licensed
+  # terminology content is distributed with this repo.
   terminology:
+    profiles: [terminology]
+    # Digest-pinned FerroTERM 0.1.6, the release docker-compose.terminology.yml
+    # and the Helm chart pin; no `:latest`.
+    image: ghcr.io/ferrohealth/ferroterm:0.1.6@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b
+    environment:
+      FERROTERM_CODESYSTEMS: /seed
+      FERROTERM_UI: "off"
+      FERROTERM_LOG_FORMAT: json
+      RUST_LOG: info
+    volumes:
+      - type: bind
+        source: ./docker/terminology/seed
+        target: /seed
+        read_only: true
+    ports:
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_TERMINOLOGY_PORT:-8090}:8080"
+    # The image is its own health probe (`ferroterm healthcheck`): the
+    # distroless base carries no shell and no HTTP client, so the binary sends
+    # the one GET /health itself and exits 0 on 200, once the seed is served.
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/ferroterm", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    # Distroless, uid 65532, writes nothing while serving: read-only root, every
+    # capability dropped.
+    read_only: true
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
-    profiles: [terminology]
-    # Digest-pinned hapiproject/hapi:v8.10.0-3 (current release), resolved
-    # 2026-07-29; no `:latest` (docs.docker.com/build/building/best-practices).
-    image: hapiproject/hapi:v8.10.0-3@sha256:55213612779ab3eeec919226b7bad378f0061ade823393a61d7dd46dd5087a3d
-    environment:
-      hapi.fhir.fhir_version: R4
-      # The stock image ships with Hibernate Search DISABLED, and without it
-      # `ValueSet/$expand` and `CodeSystem/$subsumes` answer 500
-      # (HSEARCH800001: Hibernate Search was not initialized). Enabling it
-      # naively then crash-loops on HSEARCH000353 (Unknown analyzer) unless
-      # HAPI's own Lucene analysis configurer is named, so the whole block
-      # below travels together — it is the minimum working terminology
-      # configuration of this image.
-      SPRING_JPA_PROPERTIES_HIBERNATE_SEARCH_ENABLED: "true"
-      SPRING_JPA_PROPERTIES_HIBERNATE_SEARCH_BACKEND_TYPE: lucene
-      SPRING_JPA_PROPERTIES_HIBERNATE_SEARCH_BACKEND_ANALYSIS_CONFIGURER: ca.uhn.fhir.jpa.search.HapiHSearchAnalysisConfigurers$$HapiLuceneAnalysisConfigurer
-      SPRING_JPA_PROPERTIES_HIBERNATE_SEARCH_BACKEND_DIRECTORY_TYPE: local-filesystem
-      SPRING_JPA_PROPERTIES_HIBERNATE_SEARCH_BACKEND_DIRECTORY_ROOT: target/lucenefiles
-      SPRING_JPA_PROPERTIES_HIBERNATE_SEARCH_BACKEND_LUCENE_VERSION: lucene_current
-    ports:
-      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_TERMINOLOGY_PORT:-8090}:8080"
     deploy:
       resources:
         limits:
           cpus: "${FERROEHR_TERMINOLOGY_CPUS:-2}"
-          memory: ${FERROEHR_TERMINOLOGY_MEM:-2G}
-    # No healthcheck: the image carries no in-container HTTP client (no
-    # curl/wget), so readiness is polled EXTERNALLY by the seeder below, which
-    # is also the gate every dependant waits on.
-
-  # One-shot seeding of the terminology server through its OWN FHIR API — the
-  # CDR is never the writer of terminology content. Idempotent (`PUT
-  # /<type>/<id>`, the FHIR "update as create" interaction), and it verifies
-  # `$validate-code` + `$expand` before exiting so a misconfigured server fails
-  # here instead of inside a conformance run.
-  terminology-seed:
-    cap_drop: [ALL]
-    security_opt:
-      - no-new-privileges:true
-    profiles: [terminology]
-    # Digest-pinned curlimages/curl:8.19.0, resolved 2026-07-29.
-    image: curlimages/curl:8.19.0@sha256:c03110c736db81bbe1be0296f1f1608c81b954b01626bdfb0a8f84e5bd00ff3c
-    depends_on:
-      terminology:
-        condition: service_started
-    environment:
-      FHIR_BASE: http://terminology:8080/fhir
-    entrypoint: ["/bin/sh", "/seed.sh"]
-    volumes:
-      - ./docker/terminology/seed.sh:/seed.sh:ro
-      - ./docker/terminology/seed:/seed:ro
-    restart: "no"
+          memory: ${FERROEHR_TERMINOLOGY_MEM:-512m}
 
 volumes:
   ferroehr-pgdata:

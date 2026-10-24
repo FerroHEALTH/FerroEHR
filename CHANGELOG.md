@@ -59,6 +59,15 @@ workflow refuses a tag that has no matching section here.
   host and path and masks its userinfo in `ferroehr config check`,
   `/management/env`, `GET /admin/config` and `ferroehr report`, as the
   terminology client's own token URL already did.
+- **The conformance lane and the real-release terminology probe run FerroTERM**
+  (#3085, #2236). The `terminology` profile of `docker/sut-ferroehr.yml`
+  composes FerroTERM 0.1.6, pinned by digest, with the shaped seed of
+  `docker/terminology/seed/` mounted read-only as its code-system directory, in
+  place of HAPI FHIR and the `PUT` seeder `docker/terminology/seed.sh`, which is
+  gone. The opt-in `PROBE_ONLY=terminology` family of
+  `scripts/deploy-probe.sh` builds a local SNOMED CT release into an index
+  with the quickstart overlay's own `ferroterm-build` and drives FerroTERM over
+  it, in place of Snowstorm and Elasticsearch.
 
 ### Removed
 

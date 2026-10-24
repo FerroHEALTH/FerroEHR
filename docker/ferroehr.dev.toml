@@ -89,7 +89,7 @@ api_enabled = true
 # client. No openEHR spec governs the client's configuration — our own design.
 [terminology.server]
 enabled = false
-url = "http://terminology:8080/fhir"
+url = "http://terminology:8080/r4b"
 fail_on_error = false
 
 [[auth.basic.users]]
