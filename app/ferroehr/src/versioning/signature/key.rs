@@ -14,11 +14,13 @@ use std::path::Path;
 
 use pgp::composed::{
     ArmorOptions, Deserializable, DetachedSignature, SignedPublicKey, SignedSecretKey,
+    SignedSecretSubKey,
 };
 use pgp::crypto::hash::HashAlgorithm;
 use pgp::crypto::public_key::PublicKeyAlgorithm;
+use pgp::packet::{PublicKey, SignatureType};
 use pgp::types::KeyDetails as _;
-use pgp::types::Password;
+use pgp::types::{Duration, Password, Timestamp};
 use rand::rngs::OsRng;
 
 /// The hash algorithm used for `OpenPGP` signatures (SHA-256, matching the digest
@@ -84,8 +86,8 @@ pub(crate) enum PgpVerdict {
 /// public key) plus the passphrase that unlocks it. Never logged/serialised.
 pub struct PgpKey {
     secret: SignedSecretKey,
-    /// Index into `secret.secret_subkeys` of the signing-capable subkey, when
-    /// the certificate carries one.
+    /// Index into `secret.secret_subkeys` of the subkey chosen to sign
+    /// ([`signing_subkey_index`]), when one qualifies.
     ///
     /// Signing with a subkey is what makes rotation cheap: the operator issues
     /// a new signing subkey, the certificate retains the old one, and history
@@ -172,14 +174,7 @@ impl PgpKey {
             Some(secret) => Password::from(secret.expose()),
             None => Password::empty(),
         };
-        // RFC 9580 §5.2.3.29 key flag 0x02 ("this key may be used to sign
-        // data"): the subkey is chosen by CAPABILITY, never by position — an
-        // encryption subkey signing would be a key-usage violation a strict
-        // verifier should reject.
-        let signing_subkey = secret
-            .secret_subkeys
-            .iter()
-            .position(|subkey| subkey.signatures.iter().any(|sig| sig.key_flags().sign()));
+        let signing_subkey = signing_subkey_index(&secret, Timestamp::now());
         let key = Self {
             secret,
             signing_subkey,
@@ -276,6 +271,67 @@ fn rsa_family(algorithm: PublicKeyAlgorithm) -> bool {
     )
 }
 
+/// Returns the index of the secret subkey that signs, or `None` to sign with
+/// the primary key.
+///
+/// A subkey qualifies when its newest valid Subkey Binding (RFC 9580
+/// §5.2.3.10) carries key flag 0x02 (§5.2.3.29), neither that binding nor the
+/// subkey has expired at `now` (§5.2.3.13), and no valid Subkey Revocation
+/// covers it (§5.2.1.12: "A revoked subkey is not to be used"). Among those,
+/// the subkey created last signs, the later one in the file on a tie. RFC 9580
+/// gives no rule for choosing among several signing subkeys; preferring the
+/// newest is our own design, so that adding a signing subkey rotates to it.
+fn signing_subkey_index(secret: &SignedSecretKey, now: Timestamp) -> Option<usize> {
+    let primary = secret.primary_key.public_key();
+    secret
+        .secret_subkeys
+        .iter()
+        .enumerate()
+        .filter(|(_, subkey)| may_sign_at(primary, subkey, now))
+        .max_by_key(|(_, subkey)| subkey.key.created_at())
+        .map(|(index, _)| index)
+}
+
+/// Whether `subkey` qualifies to sign at `now`, by the rule of
+/// [`signing_subkey_index`].
+fn may_sign_at(primary: &PublicKey, subkey: &SignedSecretSubKey, now: Timestamp) -> bool {
+    let subkey_public = subkey.key.public_key();
+    // NOTE: RFC 9580 §5.2.3.10; a binding that does not verify is not a valid
+    // self-signature, so it is skipped rather than refused.
+    let valid = || {
+        subkey
+            .signatures
+            .iter()
+            .filter(|sig| sig.verify_subkey_binding(primary, subkey_public).is_ok())
+    };
+    if valid().any(|sig| sig.typ() == Some(SignatureType::SubkeyRevocation)) {
+        return false;
+    }
+    let Some(binding) = valid()
+        .filter(|sig| sig.typ() == Some(SignatureType::SubkeyBinding))
+        .max_by_key(|sig| sig.created())
+    else {
+        return false;
+    };
+    let binding_live = binding
+        .created()
+        .is_some_and(|created| !expired(created, binding.signature_expiration_time(), now));
+    binding.key_flags().sign()
+        && binding_live
+        && !expired(subkey.key.created_at(), binding.key_expiration_time(), now)
+}
+
+/// Whether a lifetime of `lifetime` from `start` has run out at `now`; an
+/// absent or zero lifetime never runs out (RFC 9580 §5.2.3.13).
+fn expired(start: Timestamp, lifetime: Option<Duration>, now: Timestamp) -> bool {
+    match lifetime {
+        Some(lifetime) if lifetime.as_secs() > 0 => {
+            u64::from(start.as_secs()) + u64::from(lifetime.as_secs()) <= u64::from(now.as_secs())
+        }
+        _ => false,
+    }
+}
+
 /// Whether `algorithm` signs with private-key arithmetic over `crypto-bigint`
 /// 0.5: ECDSA on any curve (`elliptic-curve` 0.13 scalars) and Ed448 (`cx448`).
 ///
@@ -346,6 +402,21 @@ mod tests {
         ] {
             assert!(rsa_family(algorithm), "{algorithm:?} must classify as RSA");
         }
+    }
+
+    /// A lifetime runs out at its end, and an absent or zero one never does.
+    #[test]
+    fn a_lifetime_runs_out_at_its_end() {
+        let start = Timestamp::from_secs(1_000);
+        let lifetime = Some(Duration::from_secs(100));
+        assert!(!expired(start, lifetime, Timestamp::from_secs(1_099)));
+        assert!(expired(start, lifetime, Timestamp::from_secs(1_100)));
+        assert!(!expired(start, None, Timestamp::from_secs(u32::MAX)));
+        assert!(!expired(
+            start,
+            Some(Duration::from_secs(0)),
+            Timestamp::from_secs(u32::MAX)
+        ));
     }
 
     /// ECDSA and Ed448 are refused as signing algorithms; Ed25519, in both
