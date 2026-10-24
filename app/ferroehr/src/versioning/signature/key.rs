@@ -18,9 +18,9 @@ use pgp::composed::{
 };
 use pgp::crypto::hash::HashAlgorithm;
 use pgp::crypto::public_key::PublicKeyAlgorithm;
-use pgp::packet::{PublicKey, SignatureType};
+use pgp::packet::{PublicKey, Signature, SignatureType, SubpacketData};
 use pgp::types::KeyDetails as _;
-use pgp::types::{Duration, Password, Timestamp};
+use pgp::types::{Duration, KeyVersion, Password, SignedUser, Tag, Timestamp};
 use rand::rngs::OsRng;
 
 /// The hash algorithm used for `OpenPGP` signatures (SHA-256, matching the digest
@@ -64,6 +64,17 @@ pub enum KeyError {
         /// The public-key algorithm of the signing component.
         algorithm: PublicKeyAlgorithm,
     },
+    /// The certificate authorises no key to sign data: no subkey qualifies
+    /// and the primary key's self-signature does not carry key flag 0x02, or
+    /// the primary key has expired or been revoked.
+    #[error(
+        "the configured OpenPGP certificate authorises no key to sign data: neither a subkey nor \
+         the primary key carries the signing key flag 0x02 (RFC 9580 §5.2.3.29) on a valid, \
+         unexpired, unrevoked self-signature. Add a signing subkey, or re-issue the primary \
+         key's self-signature with the signing flag (for GnuPG, `gpg --quick-add-key <fpr> \
+         ed25519 sign`)"
+    )]
+    NoSigningComponent,
 }
 
 /// A failure producing a detached `OpenPGP` signature at runtime.
@@ -86,21 +97,30 @@ pub(crate) enum PgpVerdict {
 /// public key) plus the passphrase that unlocks it. Never logged/serialised.
 pub struct PgpKey {
     secret: SignedSecretKey,
-    /// Index into `secret.secret_subkeys` of the subkey chosen to sign
-    /// ([`signing_subkey_index`]), when one qualifies.
+    /// The component chosen to sign: a subkey ([`signing_subkey_index`]),
+    /// else the primary key when it may sign ([`primary_may_sign_at`]).
     ///
     /// Signing with a subkey is what makes rotation cheap: the operator issues
     /// a new signing subkey, the certificate retains the old one, and history
     /// keeps verifying against the same configured key with no retired-keyring
     /// entry. An index rather than a clone because the subkey is not `Clone`,
     /// and it stays valid for the lifetime of the owned certificate.
-    signing_subkey: Option<usize>,
+    signing: SigningComponent,
     public: SignedPublicKey,
     /// Certificates retired from signing and retained for verification only, so
     /// versions signed before a rotation keep verifying. Public keys by
     /// construction: a retired certificate can never sign again.
     retired: Vec<SignedPublicKey>,
     password: Password,
+}
+
+/// The component of the certificate that signs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SigningComponent {
+    /// The secret subkey at this index of `secret_subkeys`.
+    Subkey(usize),
+    /// The primary key.
+    Primary,
 }
 
 impl std::fmt::Debug for PgpKey {
@@ -115,7 +135,8 @@ impl PgpKey {
     /// Performs the fail-closed boot check (a test signature).
     ///
     /// # Errors
-    /// [`KeyError::Read`] / [`KeyError::Parse`] / [`KeyError::RefusedAlgorithm`] /
+    /// [`KeyError::Read`] / [`KeyError::Parse`] /
+    /// [`KeyError::NoSigningComponent`] / [`KeyError::RefusedAlgorithm`] /
     /// [`KeyError::Unusable`].
     pub fn load(
         path: &Path,
@@ -145,6 +166,7 @@ impl PgpKey {
     ///
     /// # Errors
     /// [`KeyError::Parse`] if the armor is not a secret key;
+    /// [`KeyError::NoSigningComponent`] if no key of the certificate may sign;
     /// [`KeyError::RefusedAlgorithm`] if it signs with ECDSA or Ed448;
     /// [`KeyError::Unusable`] if the boot check signature fails.
     pub fn from_armored(
@@ -174,10 +196,15 @@ impl PgpKey {
             Some(secret) => Password::from(secret.expose()),
             None => Password::empty(),
         };
-        let signing_subkey = signing_subkey_index(&secret, Timestamp::now());
+        let now = Timestamp::now();
+        let signing = match signing_subkey_index(&secret, now) {
+            Some(index) => SigningComponent::Subkey(index),
+            None if primary_may_sign_at(&secret, now) => SigningComponent::Primary,
+            None => return Err(KeyError::NoSigningComponent),
+        };
         let key = Self {
             secret,
-            signing_subkey,
+            signing,
             public,
             retired,
             password,
@@ -196,17 +223,26 @@ impl PgpKey {
         Ok(key)
     }
 
-    /// The public-key algorithm of the component that actually signs — the
-    /// signing subkey when the certificate carries one, else the primary key
-    /// (the same choice [`Self::sign`] makes).
+    /// The public-key algorithm of the component that actually signs (the
+    /// same choice [`Self::sign`] makes).
     fn signing_algorithm(&self) -> PublicKeyAlgorithm {
-        match self
-            .signing_subkey
-            .and_then(|index| self.secret.secret_subkeys.get(index))
-        {
-            Some(subkey) => subkey.key.algorithm(),
-            None => self.secret.primary_key.algorithm(),
+        match self.signing {
+            SigningComponent::Subkey(index) => self.signing_subkey(index).key.algorithm(),
+            SigningComponent::Primary => self.secret.primary_key.algorithm(),
         }
+    }
+
+    /// The secret subkey at `index`, which [`signing_subkey_index`] chose.
+    #[expect(
+        clippy::expect_used,
+        reason = "the index comes from `signing_subkey_index` over this same owned \
+                  `secret_subkeys`, which nothing mutates after construction"
+    )]
+    fn signing_subkey(&self, index: usize) -> &SignedSecretSubKey {
+        self.secret
+            .secret_subkeys
+            .get(index)
+            .expect("the chosen signing subkey should be in the certificate it was chosen from")
     }
 
     /// Returns the signing algorithm of this key when it is one whose
@@ -226,15 +262,15 @@ impl PgpKey {
     /// # Errors
     /// [`PgpSignError`] if signing or armoring fails.
     pub fn sign(&self, data: &[u8]) -> Result<String, PgpSignError> {
-        // A certificate with no signing subkey signs with the primary key.
-        let sig = match self
-            .signing_subkey
-            .and_then(|index| self.secret.secret_subkeys.get(index))
-        {
-            Some(subkey) => {
-                DetachedSignature::sign_binary_data(OsRng, &subkey.key, &self.password, HASH, data)
-            }
-            None => DetachedSignature::sign_binary_data(
+        let sig = match self.signing {
+            SigningComponent::Subkey(index) => DetachedSignature::sign_binary_data(
+                OsRng,
+                &self.signing_subkey(index).key,
+                &self.password,
+                HASH,
+                data,
+            ),
+            SigningComponent::Primary => DetachedSignature::sign_binary_data(
                 OsRng,
                 &self.secret.primary_key,
                 &self.password,
@@ -319,6 +355,106 @@ fn may_sign_at(primary: &PublicKey, subkey: &SignedSecretSubKey, now: Timestamp)
     binding.key_flags().sign()
         && binding_live
         && !expired(subkey.key.created_at(), binding.key_expiration_time(), now)
+}
+
+/// Whether the primary key may sign data at `now`.
+///
+/// It may when no valid Key Revocation signature covers it (RFC 9580
+/// §5.2.1.11: "A revoked key is not to be used") and its governing
+/// self-signature carries key flag 0x02 (§5.2.3.29) and has not expired, nor
+/// has the key (§5.2.3.13, counted from the primary key's creation).
+///
+/// The governing self-signature follows §5.2.3.10, which keeps the primary
+/// key's key flags in a Direct Key signature (the version 6 place) or, by
+/// version 4 convention, in a User ID self-signature: the newest valid Direct
+/// Key signature when it carries a Key Flags subpacket, else the newest valid
+/// self-signature on the primary User ID. A version 6 key needs a valid
+/// Direct Key signature to be used at all (§5.2.3.10). A self-signature with
+/// no Key Flags subpacket states no flags, and §5.2.3.29 counts an unstated
+/// flag as zero, so it grants no signing. RFC 9580 gives no precedence
+/// between the two places; preferring the Direct Key signature, whose
+/// subpackets "apply to the entire key", is our own design.
+fn primary_may_sign_at(secret: &SignedSecretKey, now: Timestamp) -> bool {
+    let primary = secret.primary_key.public_key();
+    let details = &secret.details;
+    // NOTE: RFC 9580 §5.2.1.11; only a revocation by the key itself is valid.
+    let revoked = details.revocation_signatures.iter().any(|sig| {
+        sig.typ() == Some(SignatureType::KeyRevocation) && sig.verify_key(primary).is_ok()
+    });
+    if revoked {
+        return false;
+    }
+    let direct = details
+        .direct_signatures
+        .iter()
+        .filter(|sig| sig.typ() == Some(SignatureType::Key) && sig.verify_key(primary).is_ok())
+        .max_by_key(|sig| sig.created());
+    if primary.version() == KeyVersion::V6 && direct.is_none() {
+        return false;
+    }
+    let Some(governing) = direct
+        .filter(|sig| states_key_flags(sig))
+        .or_else(|| primary_user_self_signature(primary, &details.users))
+    else {
+        return false;
+    };
+    let live = |sig: &Signature| {
+        sig.created()
+            .is_some_and(|created| !expired(created, sig.signature_expiration_time(), now))
+            && !expired(primary.created_at(), sig.key_expiration_time(), now)
+    };
+    // NOTE: our own design; an expiry stated on the Direct Key signature binds
+    // even when the primary User ID governs.
+    governing.key_flags().sign() && live(governing) && direct.is_none_or(live)
+}
+
+/// Whether `sig` carries a Key Flags subpacket in its hashed area, the only
+/// area a self-signature's statements about the key are read from.
+fn states_key_flags(sig: &Signature) -> bool {
+    sig.config().is_some_and(|config| {
+        config
+            .hashed_subpackets()
+            .any(|subpacket| matches!(subpacket.data, SubpacketData::KeyFlags(_)))
+    })
+}
+
+/// The newest valid certification self-signature on the primary User ID, or
+/// `None` when no User ID carries one.
+///
+/// A User ID whose newest valid self-signature is followed by a valid
+/// Certification Revocation is retired (RFC 9580 §5.2.1.13, §5.2.3.10) and
+/// skipped. The primary User ID is the one whose newest self-signature sets
+/// Primary User ID, the one with the most recent self-signature when several
+/// do (§5.2.3.27). When none does, the User ID with the most recent
+/// self-signature stands in: §5.2.3.27 leaves that case open, so this is our
+/// own design.
+fn primary_user_self_signature<'a>(
+    primary: &PublicKey,
+    users: &'a [SignedUser],
+) -> Option<&'a Signature> {
+    let newest = users.iter().filter_map(|user| {
+        let valid = || {
+            user.signatures.iter().filter(|sig| {
+                sig.verify_certification(primary, Tag::UserId, &user.id)
+                    .is_ok()
+            })
+        };
+        let certification = valid()
+            .filter(|sig| sig.typ() != Some(SignatureType::CertRevocation))
+            .max_by_key(|sig| sig.created())?;
+        let retired = valid().any(|sig| {
+            sig.typ() == Some(SignatureType::CertRevocation)
+                && sig.created() >= certification.created()
+        });
+        (!retired).then_some(certification)
+    });
+    let newest: Vec<&Signature> = newest.collect();
+    newest
+        .iter()
+        .copied()
+        .filter(|sig| sig.is_primary())
+        .max_by_key(|sig| sig.created())
+        .or_else(|| newest.iter().copied().max_by_key(|sig| sig.created()))
 }
 
 /// Whether a lifetime of `lifetime` from `start` has run out at `now`; an

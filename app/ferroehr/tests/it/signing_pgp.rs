@@ -4,8 +4,9 @@
 //! `OpenPGP`-mode integration tests: sign→verify round-trip with a
 //! generated key, tamper detection, armor-parse failures, the fail-closed
 //! boot validation (missing path, garbled key, wrong passphrase), the
-//! boot advisory an RSA signing key raises, and the refusal of ECDSA and
-//! Ed448 signing keys (RUSTSEC-2026-0387).
+//! boot advisory an RSA signing key raises, the refusal of ECDSA and
+//! Ed448 signing keys (RUSTSEC-2026-0387), and the choice of the signing
+//! component, subkey or primary key.
 //!
 //! Keys are generated in-test via rPGP so there is no vendored key fixture.
 
@@ -34,7 +35,7 @@ use pgp::crypto::ecc_curve::ECCCurve;
 use pgp::crypto::hash::HashAlgorithm;
 use pgp::crypto::public_key::PublicKeyAlgorithm;
 use pgp::packet::{KeyFlags, SignatureConfig, SignatureType, Subpacket, SubpacketData};
-use pgp::types::{Duration, KeyDetails as _, Password, Timestamp};
+use pgp::types::{Duration, KeyDetails as _, KeyVersion, Password, Tag, Timestamp};
 use rand::rngs::OsRng;
 use tracing::field::{Field, Visit};
 use tracing_subscriber::layer::{Context, Layer};
@@ -743,4 +744,160 @@ fn a_subkey_whose_newest_binding_drops_signing_is_not_used() {
         vec![SubpacketData::KeyFlags(KeyFlags::default())],
     );
     assert_eq!(subkey_that_signs(&key), 0);
+}
+
+// ── Falling back to the primary key (RFC 9580 §5.2.1.11, §5.2.3.10, §5.2.3.29) ──
+
+/// A single-key certificate, no subkeys, whose primary key may sign when
+/// `can_sign`, created `age` seconds ago.
+fn primary_only_certificate(can_sign: bool, age: u32) -> SignedSecretKey {
+    let mut builder = SecretKeyParamsBuilder::default();
+    builder
+        .key_type(KeyType::Ed25519Legacy)
+        .can_certify(true)
+        .can_sign(can_sign)
+        .created_at(Timestamp::from_secs(Timestamp::now().as_secs() - age))
+        .primary_user_id("ferroehr-signing primary <primary@ferroehr.local>".into());
+    builder
+        .build()
+        .expect("build key params")
+        .generate(OsRng)
+        .expect("generate key")
+}
+
+/// The armored secret key of `key`.
+fn armored(key: &SignedSecretKey) -> String {
+    key.to_armored_string(ArmorOptions::default())
+        .expect("armor secret key")
+}
+
+/// Asserts that loading `key` stops the boot because no key may sign.
+fn assert_no_signing_component(key: &SignedSecretKey) {
+    let err = pgp_signer(&armored(key), None).expect_err("the certificate must be refused");
+    assert!(
+        matches!(err, SigningError::Key(KeyError::NoSigningComponent)),
+        "got {err:?}"
+    );
+}
+
+/// A primary key whose self-signature lacks the signing flag, with no subkey
+/// to sign instead, is refused at boot: it is not authorised to sign data.
+#[test]
+fn a_primary_key_without_the_signing_flag_is_refused_at_boot() {
+    assert_no_signing_component(&primary_only_certificate(false, 0));
+    let message = KeyError::NoSigningComponent.to_string();
+    for needle in ["0x02", "RFC 9580", "signing subkey"] {
+        assert!(message.contains(needle), "{message}");
+    }
+}
+
+/// The case the fallback hid: a certify-only primary whose one signing
+/// subkey is revoked has nothing left that may sign.
+#[test]
+fn a_certify_only_primary_is_not_used_when_its_signing_subkey_is_revoked() {
+    let (secret, _) = generate_key_pair_with_signing_subkey();
+    let (mut key, _) = SignedSecretKey::from_string(&secret).expect("parse key");
+    add_subkey_signature(&mut key, 0, SignatureType::SubkeyRevocation, Vec::new());
+    assert_no_signing_component(&key);
+}
+
+/// A primary key whose User ID self-signature carries the signing flag signs,
+/// and the signature verifies against the primary key itself.
+#[test]
+fn a_primary_key_with_the_signing_flag_signs() {
+    let key = primary_only_certificate(true, 0);
+    let signature = pgp_signer(&armored(&key), None)
+        .expect("build signer")
+        .sign(CANONICAL)
+        .expect("sign");
+    let (signature, _) = DetachedSignature::from_string(&signature).expect("parse signature");
+    signature
+        .verify(&key.to_public_key(), CANONICAL.as_bytes())
+        .expect("the primary key made the signature");
+}
+
+/// A version 6 key keeps the primary key's flags in its Direct Key signature
+/// (RFC 9580 §5.2.3.10), and the primary key signs from there.
+#[test]
+fn a_version_6_primary_key_signs_from_its_direct_key_signature() {
+    let mut builder = SecretKeyParamsBuilder::default();
+    builder
+        .version(KeyVersion::V6)
+        .key_type(KeyType::Ed25519)
+        .can_certify(true)
+        .can_sign(true)
+        .primary_user_id("ferroehr-signing v6 <v6@ferroehr.local>".into());
+    let key = builder
+        .build()
+        .expect("build key params")
+        .generate(OsRng)
+        .expect("generate key");
+    assert!(
+        !key.details.direct_signatures.is_empty(),
+        "the v6 fixture has a Direct Key signature"
+    );
+    let signer = pgp_signer(&armored(&key), None).expect("build signer");
+    let signature = signer.sign(CANONICAL).expect("sign");
+    assert_eq!(signer.verify(CANONICAL, &signature), Verdict::PgpValid);
+}
+
+/// A primary key whose newest User ID self-signature sets a key lifetime that
+/// has run out (RFC 9580 §5.2.3.13, counted from the primary key's creation)
+/// is refused, though an older self-signature granted signing.
+#[test]
+fn an_expired_primary_key_is_refused() {
+    let mut key = primary_only_certificate(true, 1_000);
+    let mut flags = KeyFlags::default();
+    flags.set_certify(true);
+    flags.set_sign(true);
+    let mut config =
+        SignatureConfig::from_key(OsRng, &key.primary_key, SignatureType::CertPositive)
+            .expect("signature config");
+    config.hashed_subpackets = [
+        SubpacketData::SignatureCreationTime(Timestamp::from_secs(Timestamp::now().as_secs() + 1)),
+        SubpacketData::IssuerFingerprint(key.primary_key.fingerprint()),
+        SubpacketData::KeyFlags(flags),
+        SubpacketData::IsPrimary(true),
+        SubpacketData::KeyExpirationTime(Duration::from_secs(10)),
+    ]
+    .into_iter()
+    .map(|data| Subpacket::regular(data).expect("subpacket"))
+    .collect();
+    let user = key.details.users.first_mut().expect("the primary User ID");
+    let signature = config
+        .sign_certification(
+            &key.primary_key,
+            key.primary_key.public_key(),
+            &Password::empty(),
+            Tag::UserId,
+            &user.id,
+        )
+        .expect("sign the User ID");
+    user.signatures.push(signature);
+    assert_no_signing_component(&key);
+}
+
+/// A revoked key is not to be used (RFC 9580 §5.2.1.11), signing flag or not.
+#[test]
+fn a_revoked_primary_key_is_refused() {
+    let mut key = primary_only_certificate(true, 0);
+    let mut config =
+        SignatureConfig::from_key(OsRng, &key.primary_key, SignatureType::KeyRevocation)
+            .expect("signature config");
+    config.hashed_subpackets = [
+        SubpacketData::SignatureCreationTime(Timestamp::now()),
+        SubpacketData::IssuerFingerprint(key.primary_key.fingerprint()),
+    ]
+    .into_iter()
+    .map(|data| Subpacket::regular(data).expect("subpacket"))
+    .collect();
+    let revocation = config
+        .sign_key(
+            &key.primary_key,
+            &Password::empty(),
+            key.primary_key.public_key(),
+        )
+        .expect("sign the revocation");
+    key.details.revocation_signatures.push(revocation);
+    assert_no_signing_component(&key);
 }

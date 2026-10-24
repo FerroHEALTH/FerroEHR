@@ -81,12 +81,40 @@ when all of these hold:
   "A revoked subkey is not to be used").
 
 Of the qualifying subkeys, the one created last signs; on equal creation
-times, the later one in the file. When none qualifies, the server signs
-with the primary key. RFC 9580 gives no rule for choosing among several
-signing subkeys, so preferring the newest is FerroEHR's own choice. It is
-what makes adding a signing subkey a rotation. An encryption subkey never
-signs. The choice holds until the next restart, so restart after adding,
-revoking or expiring a subkey, and before a chosen subkey expires.
+times, the later one in the file. RFC 9580 gives no rule for choosing among
+several signing subkeys, so preferring the newest is FerroEHR's own choice.
+It is what makes adding a signing subkey a rotation. An encryption subkey
+never signs.
+
+When no subkey qualifies, the primary key signs, provided the certificate
+lets it:
+
+- its governing self-signature carries the signing flag `0x02`. RFC 9580
+  keeps the primary key's flags in a Direct Key signature or, by version 4
+  convention, in a User ID self-signature
+  ([§5.2.3.10](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.10)),
+  so the governing one is the newest valid Direct Key signature when it
+  carries key flags, else the newest valid self-signature on the primary
+  User ID. A version 6 key without a valid Direct Key signature is not used
+  at all, as §5.2.3.10 requires. A self-signature with no key flags grants
+  no signing, since §5.2.3.29 counts an unstated flag as zero. RFC 9580
+  gives no precedence between the two places, so preferring the Direct Key
+  signature is FerroEHR's own choice;
+- neither that self-signature nor the primary key has expired
+  ([§5.2.3.13](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.13),
+  counted from the primary key's creation);
+- no valid Key Revocation signature covers it
+  ([§5.2.1.11](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.1.11):
+  "A revoked key is not to be used").
+
+**When neither a subkey nor the primary key may sign, the server refuses
+to start** and names the signing flag. It never signs with a key the
+certificate does not authorise. Add a signing subkey
+(`gpg --quick-add-key <FINGERPRINT> ed25519 sign`), or re-issue the primary
+key's self-signature with the signing flag.
+
+The choice holds until the next restart, so restart after adding, revoking
+or expiring a subkey, and before the chosen component expires.
 
 **Sign with Ed25519.** It is the one algorithm the server signs with that
 has neither a refusal nor a warning.
