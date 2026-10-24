@@ -510,53 +510,30 @@ prune_interval_secs = 3600
 publish_max_retries = 3
 admin_api = false            # mount /admin/event_subscription CRUD
 
-# ── [terminology] — terminology API + external-server validation ──────────────
+# ── [terminology] — terminology API + the terminology server ──────────────────
 [terminology]
 api_enabled = false
 
-[terminology.external]
-enabled = false              # on: SM lookups, AQL TERMINOLOGY(), and
-                             # composition ac-code binding resolution route here
-fail_on_error = false        # TS unreachable/erroring: false = accept the
+# The one FHIR R4B terminology server (FerroTERM, or any server speaking the
+# FHIR terminology operations). The openEHR terminology is in-process and needs
+# none of this.
+[terminology.server]
+enabled = false              # on: composition ac-code binding resolution, ADL 2
+                             # VETDF, AQL TERMINOLOGY() and the /terminology/*
+                             # calls the bundled openEHR terminology cannot answer
+#? url = "http://ferroterm:8080/r4b"
+fail_on_error = false        # unresolvable binding: false = accept the
                              # composition (fail-open), true = reject it (422)
-# Named FHIR R4B terminology-server providers (map). EVERY entry is materialised
-# — a deployment binds SNOMED CT, LOINC, ICD… to different servers at once:
-#? [terminology.external.providers.default]
-#? type = "fhir"
-#? url = "https://r4.ontoserver.csiro.au/fhir"
-#? operation = "validate_code"   # validate_code | expand
-#? connect_timeout_ms = 2000
-#? request_timeout_ms = 10000
-#? cache_ttl_secs = 300
-#? cache_capacity = 10000
-#? oauth2_client = "ts-client"   # must name a [terminology.external.oauth2_clients.*]
-# Mutual TLS to THIS server (each TS issues its own client certificate, so the
-# identity is per provider). Set the cert and the key together. ca_bundle_path
-# REPLACES the default trust anchors for this provider — server-certificate and
-# hostname verification are always on; there is no way to disable them:
-#? client_cert_path = "/run/secrets/ts-client.crt.pem"
-#? client_key_path = "/run/secrets/ts-client.key.pem"
-#? ca_bundle_path = "/run/secrets/ts-ca.pem"
-#? [terminology.external.providers.snomed]
-#? type = "fhir"
-#? url = "https://snowstorm.example.org/fhir"
+request_timeout_ms = 10000
 
-# Terminology → provider routing. Keys are terminology ids or system URIs
-# (matched case-insensitively, whole string); values name a provider above.
-# An unmatched terminology goes to `default` (or the sole provider):
-#? [terminology.external.routes]
-#? "SNOMED-CT" = "snomed"
-#? "http://snomed.info/sct" = "snomed"
-#? "http://loinc.org" = "default"
-
-# OAuth2 client-credentials clients the providers authenticate with:
-#? [terminology.external.oauth2_clients.ts-client]
+# OAuth2 client-credentials grant, only when the server sits behind an
+# authorization server (the same keys as [audit.fhir_feed.oauth]):
+#? [terminology.server.oauth]
 #? token_url = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
 #? client_id = "ferroehr-cdr"
 #? client_secret = "..."        # or client_secret_file = "/run/secrets/ts-client"
-#? scopes = ["system/*.read"]
-#? refresh_leeway_secs = 30
-#? auth_method = "client_secret_basic"   # client_secret_basic | client_secret_post
+#? scope = "system/*.read"
+#? client_auth = "client_secret_basic"   # client_secret_basic | client_secret_post
 
 # ── [multimedia] — DV_MULTIMEDIA externalization to S3-compatible storage ─────
 [multimedia]

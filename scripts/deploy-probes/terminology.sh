@@ -77,10 +77,9 @@ services:
     depends_on:
       - ferroehr-snowstorm
     environment:
-      FERROEHR__TERMINOLOGY__EXTERNAL__ENABLED: "true"
-      FERROEHR__TERMINOLOGY__EXTERNAL__FAIL_ON_ERROR: "true"
-      FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SNOMED__BASE_URL: ${TERM_INTERNAL}
-      FERROEHR__TERMINOLOGY__EXTERNAL__ROUTES__DEFAULT: snomed
+      FERROEHR__TERMINOLOGY__SERVER__ENABLED: "true"
+      FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR: "true"
+      FERROEHR__TERMINOLOGY__SERVER__URL: ${TERM_INTERNAL}
 YAML
   printf '%s' "$out"
 }
@@ -316,9 +315,9 @@ probes_terminology_ferroterm() {
   # Exported, not a prefix assignment: `dc` is a shell function, and only an
   # exported variable reliably reaches the compose interpolation it runs. The
   # env change recreates the CDR, so the cache is cold here too.
-  export FERROEHR__TERMINOLOGY__EXTERNAL__FAIL_ON_ERROR=true
+  export FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR=true
   dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" --profile s3 up -d --no-deps --wait ferroehr >/dev/null 2>&1
-  unset FERROEHR__TERMINOLOGY__EXTERNAL__FAIL_ON_ERROR
+  unset FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR
   wait_http "$CDR/health/readiness" 90 >/dev/null || true
   assert_not_contains "$(dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" ps -a --format '{{.Service}} {{.State}}')" "ferroterm running" \
     "the terminology server must still be down under fail-closed"

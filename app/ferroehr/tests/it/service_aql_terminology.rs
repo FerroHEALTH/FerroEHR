@@ -37,7 +37,7 @@ use openehr_rm::prelude::PartyProxy;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::service::status::CallStatusType;
-use ferroehr::service::terminology::config::{FhirOperation, FhirProviderConfig, ProviderKind};
+use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
@@ -266,20 +266,13 @@ async fn fhir_expand_server() -> MockServer {
 }
 
 fn fhir_provider(base: &str) -> FhirTerminologyProvider {
-    let cfg = FhirProviderConfig {
-        kind: ProviderKind::Fhir,
+    let cfg = TerminologyServerConfig {
+        enabled: true,
         url: ferroehr::config::secret::SecretUrl::new(base),
-        operation: FhirOperation::Expand,
-        connect_timeout_ms: 800,
         request_timeout_ms: 1_500,
-        oauth2_client: None,
-        client_cert_path: None,
-        client_key_path: None,
-        ca_bundle_path: None,
-        cache_ttl_secs: 0,
-        cache_capacity: 1024,
+        ..TerminologyServerConfig::default()
     };
-    FhirTerminologyProvider::new("test-fhir", &cfg).expect("build provider")
+    FhirTerminologyProvider::new(&cfg).expect("build provider")
 }
 
 #[tokio::test]
@@ -287,7 +280,7 @@ async fn terminology_expand_fhir_merges_expansion_codes() {
     let server = fhir_expand_server().await;
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
-        .with_external_terminology(Arc::new(fhir_provider(&server.uri())));
+        .with_terminology_server(Arc::new(fhir_provider(&server.uri())));
     let ehr = create_ehr(&svc).await;
 
     // SNOMED-coded leaves (non-openEHR terminology → not RM-terminology-checked).

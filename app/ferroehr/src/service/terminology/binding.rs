@@ -17,21 +17,19 @@
 //! `openehr_sdt::flat::validation::collect_constraint_binding_checks` walks the
 //! COMPOSITION against its `WebTemplate` and returns one
 //! [`ConstraintBindingCheck`] per bound coded value present in the instance.
-//! Each check is resolved against the terminology server the binding routes to
-//! ([`super::router::TerminologyRouter`]) with the SM `value_set_validate`
-//! call, i.e. FHIR `ValueSet/$validate-code` or `$expand` plus membership.
+//! Each check is resolved against the one terminology server with the SM
+//! `value_set_validate` call, i.e. FHIR `ValueSet/$validate-code`.
 //!
 //! # Outcomes
 //!
-//! - No external terminology configured (the default): no check is collected
+//! - No terminology server configured (the default): no check is collected
 //!   and behaviour is byte-identical to a deployment without this module.
 //! - Resolved and the code is a member: accepted.
 //! - Resolved and the code is not a member: a [`ValidationKind::Terminology`]
 //!   violation, `422`. It is a constraint violation rather than a service
 //!   failure, so `fail_on_error` does not apply.
-//! - Unresolvable (server down, `5xx`, unknown value set, no provider routes to
-//!   the binding's terminology): governed by `[terminology.external]
-//!   fail_on_error` — fail-closed rejects the composition, fail-open (the
+//! - Unresolvable (server down, `5xx`, unknown value set): governed by
+//!   `[terminology.server] fail_on_error` — fail-closed rejects the composition, fail-open (the
 //!   default) accepts it and logs a warning.
 //!
 //! NOTE: no openEHR spec maps `CODE_PHRASE.terminology_id` values to FHIR system
@@ -52,19 +50,20 @@ use serde_json::Value;
 
 use crate::service::FerroEhrService;
 use crate::service::status::SmError;
+use crate::service::terminology::fhir::FhirTerminologyProvider;
 
 impl FerroEhrService {
     /// Resolve every archetype constraint binding this COMPOSITION triggers
-    /// against the routed terminology servers, returning the violations found.
+    /// against the terminology server, returning the violations found.
     ///
-    /// Empty (and free of any remote call) when external terminology is not
+    /// Empty (and free of any remote call) when no terminology server is
     /// configured or the template carries no constraint binding.
     pub(in crate::service) async fn constraint_binding_violations(
         &self,
         composition: &Value,
         wt: &WebTemplate,
     ) -> Vec<ValidationMessage> {
-        let Some(router) = self.terminology.as_deref() else {
+        let Some(server) = self.terminology_server() else {
             return Vec::new();
         };
         let checks =
@@ -74,7 +73,7 @@ impl FerroEhrService {
         }
         let mut out = Vec::new();
         for check in checks {
-            match self.resolve_binding(&check).await {
+            match resolve_binding(server, &check).await {
                 Ok(true) => {}
                 Ok(false) => out.push(ValidationMessage {
                     path: check.path.clone(),
@@ -90,12 +89,12 @@ impl FerroEhrService {
                     kind: ValidationKind::Terminology,
                 }),
                 Err(e) => {
-                    if router.fail_on_error() {
+                    if server.fail_on_error() {
                         out.push(ValidationMessage {
                             path: check.path.clone(),
                             message: format!(
                                 "the value set bound to constraint code '{}' ({}) could not be \
-                                 resolved and terminology.external.fail_on_error is set: {}",
+                                 resolved and terminology.server.fail_on_error is set: {}",
                                 check.ac_code, check.query_uri, e.message,
                             ),
                             kind: ValidationKind::Terminology,
@@ -107,7 +106,7 @@ impl FerroEhrService {
                             terminology = %check.binding_terminology,
                             error = %e.message,
                             "constraint-binding value set unresolved; accepting the composition \
-                             (terminology.external.fail_on_error is not set)"
+                             (terminology.server.fail_on_error is not set)"
                         );
                     }
                 }
@@ -115,46 +114,26 @@ impl FerroEhrService {
         }
         out
     }
+}
 
-    /// Ask the terminology server that serves this binding whether the
-    /// instance code is a member of the bound value set.
-    ///
-    /// Routed by the binding's terminology first (the archetype's own
-    /// statement of which terminology it binds to), then the instance code's
-    /// terminology, then the query URI itself.
-    async fn resolve_binding(&self, check: &ConstraintBindingCheck) -> Result<bool, SmError> {
-        let provider = self
-            .terminology_route(&check.binding_terminology)
-            .or_else(|| self.terminology_route(&check.instance_terminology))
-            .or_else(|| self.terminology_route(&check.query_uri))
-            .or_else(|| self.terminology_default_provider())
-            .ok_or_else(|| {
-                // The 500-class body stays opaque about the deployment's
-                // terminology routing (the #1809 adjudication, #1819); the
-                // operator sees which terminology had no route on the trace.
-                tracing::error!(
-                    terminology = %check.binding_terminology,
-                    "constraint binding: no terminology server is configured for this terminology"
-                );
-                SmError::exception(
-                    "the archetype constraint binding could not be resolved; see the server log"
-                        .to_owned(),
-                )
-            })?;
-        provider
-            .value_set_validate(
-                &check.instance_terminology,
-                &check.query_uri,
-                &check.instance_code,
-                None,
-            )
-            .await
-    }
+/// Ask the terminology server whether the instance code is a member of the
+/// value set the binding names.
+async fn resolve_binding(
+    server: &FhirTerminologyProvider,
+    check: &ConstraintBindingCheck,
+) -> Result<bool, SmError> {
+    server
+        .value_set_validate(
+            &check.instance_terminology,
+            &check.query_uri,
+            &check.instance_code,
+            None,
+        )
+        .await
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
     use std::sync::Arc;
 
     use openehr_sdt::flat::webtemplate::model::{
@@ -165,10 +144,7 @@ mod tests {
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     use super::*;
-    use crate::service::terminology::config::{
-        ExternalTerminologyConfig, FhirOperation, FhirProviderConfig, ProviderKind,
-    };
-    use crate::service::terminology::router::TerminologyRouter;
+    use crate::service::terminology::config::TerminologyServerConfig;
 
     const BOUND_VS: &str = "http://vs.example/blood-group";
     const SNOMED: &str = "http://snomed.info/sct";
@@ -237,38 +213,20 @@ mod tests {
         server
     }
 
-    fn provider_cfg(base: &str) -> FhirProviderConfig {
-        FhirProviderConfig {
-            kind: ProviderKind::Fhir,
-            url: crate::config::secret::SecretUrl::new(base),
-            operation: FhirOperation::ValidateCode,
-            connect_timeout_ms: 500,
-            request_timeout_ms: 800,
-            oauth2_client: None,
-            client_cert_path: None,
-            client_key_path: None,
-            ca_bundle_path: None,
-            cache_ttl_secs: 0,
-            cache_capacity: 0,
-        }
-    }
-
-    /// A service routing `SNOMED-CT` at `base`, with the given fail-open /
+    /// A service whose terminology server is `base`, with the given fail-open /
     /// fail-closed posture.
     async fn service(base: &str, fail_on_error: bool) -> FerroEhrService {
-        let cfg = ExternalTerminologyConfig {
+        let cfg = TerminologyServerConfig {
             enabled: true,
+            url: crate::config::secret::SecretUrl::new(base),
             fail_on_error,
-            providers: BTreeMap::from([("default".to_owned(), provider_cfg(base))]),
-            routes: BTreeMap::from([("SNOMED-CT".to_owned(), "default".to_owned())]),
-            ..ExternalTerminologyConfig::default()
+            request_timeout_ms: 800,
+            oauth: None,
         };
-        let router = TerminologyRouter::build(&cfg)
-            .expect("build router")
-            .expect("router");
+        let server = FhirTerminologyProvider::new(&cfg).expect("build the terminology client");
         let db = testkit::db().await.expect("testkit database");
         FerroEhrService::new(&crate::db::domain::DomainPools::from_shared(&db.pool()))
-            .with_terminology_router(Arc::new(router))
+            .with_terminology_server(Arc::new(server))
     }
 
     /// A code the bound value set contains is accepted (BASE master12
@@ -317,12 +275,12 @@ mod tests {
 
     /// Terminology server unreachable: fail-open (the default) accepts the
     /// composition, fail-closed rejects it. The observable difference is the
-    /// whole point of `[terminology.external] fail_on_error`.
+    /// whole point of `[terminology.server] fail_on_error`.
     #[tokio::test]
     async fn an_unresolvable_binding_follows_fail_on_error() {
         // TEST-NET-1 (RFC 5737 §3: 192.0.2.0/24 "for use in documentation",
         // never routed on the public internet), so the provider's connect fails
-        // the way a TS outage does, within the 500 ms connect timeout. A
+        // the way a TS outage does, within the 800 ms request timeout. A
         // started-then-dropped mock server would leave a port the operating
         // system may hand to the next listener, which is not an unreachable
         // endpoint.
@@ -353,7 +311,7 @@ mod tests {
         );
     }
 
-    /// With no external terminology configured — the shipped default — the
+    /// With no terminology server configured — the shipped default — the
     /// binding pass does nothing at all: no check is collected, no request is
     /// made, and commit behaviour is byte-identical to a deployment without
     /// this module.
@@ -369,7 +327,7 @@ mod tests {
             .await;
         assert!(
             violations.is_empty(),
-            "no binding is resolved without [terminology.external]"
+            "no binding is resolved without [terminology.server]"
         );
         assert_eq!(
             ts.received_requests().await.unwrap().len(),

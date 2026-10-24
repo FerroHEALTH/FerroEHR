@@ -35,7 +35,7 @@ use std::time::Duration;
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::status::CallStatusType;
-use ferroehr::service::terminology::config::{FhirOperation, FhirProviderConfig, ProviderKind};
+use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use testcontainers::core::{ContainerPort, Mount};
 use testcontainers::runners::AsyncRunner;
@@ -107,22 +107,15 @@ impl FerroTerm {
     }
 }
 
-/// A provider at `FerroTERM`'s R4B base, cache off so every test asks the server.
+/// A client at `FerroTERM`'s R4B base; every test asks the server.
 fn provider(base: &str) -> FhirTerminologyProvider {
-    let cfg = FhirProviderConfig {
-        kind: ProviderKind::Fhir,
+    let cfg = TerminologyServerConfig {
+        enabled: true,
         url: ferroehr::config::secret::SecretUrl::new(base),
-        operation: FhirOperation::ValidateCode,
-        connect_timeout_ms: 2000,
         request_timeout_ms: 5000,
-        oauth2_client: None,
-        client_cert_path: None,
-        client_key_path: None,
-        ca_bundle_path: None,
-        cache_ttl_secs: 0,
-        cache_capacity: 0,
+        ..TerminologyServerConfig::default()
     };
-    FhirTerminologyProvider::new("ferroterm", &cfg).expect("build provider")
+    FhirTerminologyProvider::new(&cfg).expect("build provider")
 }
 
 /// A minimal spec-valid ADL2 archetype named `concept` whose root node binds
@@ -167,7 +160,7 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
     let ferroterm = FerroTerm::start().await;
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
-        .with_external_terminology(Arc::new(provider(&ferroterm.base)));
+        .with_terminology_server(Arc::new(provider(&ferroterm.base)));
 
     // 1. A SNOMED CT concept URI on a server that serves no SNOMED CT: the
     //    binding is unverifiable, so the archetype is accepted (the sandbox
@@ -228,7 +221,7 @@ async fn a_ckm_archetype_with_snomed_bindings_uploads_when_snomed_is_not_served(
     let ferroterm = FerroTerm::start().await;
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
-        .with_external_terminology(Arc::new(provider(&ferroterm.base)));
+        .with_terminology_server(Arc::new(provider(&ferroterm.base)));
 
     let source = std::fs::read_to_string(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(

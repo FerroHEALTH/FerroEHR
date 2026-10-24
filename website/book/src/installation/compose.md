@@ -292,7 +292,7 @@ curl -H "Authorization: Bearer $TOKEN" -X POST -i \
 FHIR terminology server: R4, R4B and R5 endpoints over a precomputed index, no
 JVM, no database, one distroless image. The overlay
 `docker-compose.terminology.yml` starts it beside the CDR and switches the CDR's
-external terminology on, so archetype value-set bindings resolve at commit and
+terminology server on, so archetype value-set bindings resolve at commit and
 AQL `TERMINOLOGY()` expands through it. It also switches on the read-only
 `/terminology/*` extension API (`FERROEHR__TERMINOLOGY__API_ENABLED`, off by
 default): a term, subsumption or value-set call there for a terminology the
@@ -348,7 +348,7 @@ Three things the operator owns:
   commercial licence. Its README says which is which.
 
 The CDR keeps its shipped fail-open posture: a binding the server cannot resolve
-is accepted. `FERROEHR__TERMINOLOGY__EXTERNAL__FAIL_ON_ERROR=true` turns an
+is accepted. `FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR=true` turns an
 unreachable server into a `422` refusal instead; the
 [terminology page](../beyond-core/terminology.md#when-the-terminology-server-cannot-answer)
 explains both. A code the server resolves as outside its value set is refused

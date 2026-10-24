@@ -5,14 +5,12 @@
 //! [`TerminologyExpander`] trait (`crate::aql::terminology`) so the AQL
 //! semantic-analysis pass (`aql/terminology.rs::expand_matches`) can resolve
 //! `TERMINOLOGY('expand', …)` operands, the Boolean operations, and
-//! `matches { terminology-uri }` through this service's providers
-//! (QUERY master03 §TERMINOLOGY, §matches).
+//! `matches { terminology-uri }` through the in-process bundle or the one
+//! terminology server (QUERY master03 §TERMINOLOGY, §matches).
 //!
-//! A FHIR operand is answered by the terminology server its routing keys
-//! select ([`crate::service::terminology::router::TerminologyRouter`]) — the
-//! value set / `system` argument first, then the `service_api` flavour, then
-//! the default provider — so several servers resolve different value sets in
-//! one instance.
+//! QUERY master03 §TERMINOLOGY defines `service_api` as "an identifier of a type
+//! of terminology service. This is not the service endpoint as such", so a FHIR
+//! operand of any FHIR flavour is answered by the configured server.
 
 use std::collections::BTreeMap;
 
@@ -47,34 +45,26 @@ fn is_fhir_service_api(service_api: &str) -> bool {
 #[async_trait]
 impl TerminologyExpander for FerroEhrService {
     /// Resolve `TERMINOLOGY('expand', service_api, params_uri)` to the value
-    /// set's codes: route by `service_api` (FHIR → the terminology server the
-    /// value-set URL or the `service_api` routes to; `"openehr"` → the
-    /// in-process bundle), fetch the expansion via the SM `get_value_set`, and
+    /// set's codes: by `service_api` (FHIR → the terminology server; `"openehr"`
+    /// → the in-process bundle), fetch the expansion via the SM `get_value_set`, and
     /// return its code keys.
     ///
     /// # Errors
     ///
-    /// A missing FHIR provider or an unrecognised `service_api` is a 400
+    /// A missing terminology server or an unrecognised `service_api` is a 400
     /// ([`AqlFeatureError::UnknownTerminologyService`]); an unknown value set
     /// is a 400 ([`AqlFeatureError::TerminologyValueSetNotFound`]); any other
     /// (server/transport) failure is a 500 ([`ExecError::Terminology`]).
     async fn expand(&self, service_api: &str, params_uri: &str) -> Result<Vec<String>, AqlError> {
         let extract = if is_fhir_service_api(service_api) {
-            // Routed by the value set first (a deployment may point a specific
-            // value-set URL at a specific server), then by the `service_api`
-            // flavour, else the default provider.
-            let provider = self
-                .terminology_route(params_uri)
-                .or_else(|| self.terminology_route(service_api))
-                .or_else(|| self.terminology_default_provider())
-                .ok_or_else(|| {
-                    AqlFeatureError::UnknownTerminologyService(format!(
-                        "{service_api} (no FHIR terminology server configured)"
-                    ))
-                })?;
-            // The FHIR provider ignores `terminology_id` for `$expand`; the
-            // value set is identified by `params_uri` (its URL).
-            provider.get_value_set(service_api, params_uri).await
+            let server = self.terminology_server().ok_or_else(|| {
+                AqlFeatureError::UnknownTerminologyService(format!(
+                    "{service_api} (no FHIR terminology server configured)"
+                ))
+            })?;
+            // The server ignores `terminology_id` for `$expand`; the value set
+            // is identified by `params_uri` (its URL).
+            server.get_value_set(service_api, params_uri).await
         } else if service_api == BUNDLE_SERVICE_API {
             // The bundle's value sets live under the `"openehr"` terminology;
             // `params_uri` is the group / code-set id.
@@ -116,25 +106,18 @@ impl TerminologyExpander for FerroEhrService {
         if !fhir && service_api != BUNDLE_SERVICE_API {
             return Err(AqlFeatureError::UnknownTerminologyService(service_api.to_owned()).into());
         }
-        // The FHIR operations name their terminology in the `system` argument,
-        // which is the routing key; the `service_api` flavour and the value-set
-        // URL are the fallbacks.
-        let fhir_provider = |primary: &str, secondary: &str| {
-            self.terminology_route(primary)
-                .or_else(|| self.terminology_route(secondary))
-                .or_else(|| self.terminology_route(service_api))
-                .or_else(|| self.terminology_default_provider())
-                .ok_or_else(|| {
-                    AqlFeatureError::UnknownTerminologyService(format!(
-                        "{service_api} (no FHIR terminology server configured)"
-                    ))
-                })
+        let fhir_server = || {
+            self.terminology_server().ok_or_else(|| {
+                AqlFeatureError::UnknownTerminologyService(format!(
+                    "{service_api} (no FHIR terminology server configured)"
+                ))
+            })
         };
         let result = match operation.to_ascii_lowercase().as_str() {
             "validate" => {
                 let (system, url, code) = (arg("system")?, arg("url")?, arg("code")?);
                 if fhir {
-                    fhir_provider(system, url)?
+                    fhir_server()?
                         .value_set_validate(system, url, code, None)
                         .await
                 } else {
@@ -144,9 +127,7 @@ impl TerminologyExpander for FerroEhrService {
             "subsumes" => {
                 let (system, code_a, code_b) = (arg("system")?, arg("codeA")?, arg("codeB")?);
                 if fhir {
-                    fhir_provider(system, system)?
-                        .subsumes(system, code_a, code_b)
-                        .await
+                    fhir_server()?.subsumes(system, code_a, code_b).await
                 } else {
                     bundle::subsumes(system, code_a, code_b)
                 }
@@ -163,15 +144,14 @@ impl TerminologyExpander for FerroEhrService {
     /// Expand a terminology URI operand (`matches { terminology://… }` —
     /// QUERY master03 §matches/URI): the URI identifies a value set; matching
     /// is membership of its expansion. Routed to the in-process bundle for a
-    /// `terminology://openehr/<set>` URI, else to the FHIR server the URI
-    /// routes to (the URI is both the value-set identifier and the routing
-    /// key).
+    /// `terminology://openehr/<set>` URI, else to the terminology server (the
+    /// URI is the value-set identifier).
     ///
     /// # Errors
     ///
-    /// As [`TerminologyExpander::expand`]: no FHIR provider configured for a
-    /// non-bundle URI is a 400; an unknown value set is a 400; any other
-    /// provider failure is a 500.
+    /// As [`TerminologyExpander::expand`]: no terminology server configured for
+    /// a non-bundle URI is a 400; an unknown value set is a 400; any other
+    /// server failure is a 500.
     async fn expand_uri(&self, uri: &str) -> Result<Vec<String>, AqlError> {
         if let Some(rest) = uri
             .strip_prefix("terminology://openehr/")
@@ -182,12 +162,12 @@ impl TerminologyExpander for FerroEhrService {
                 .map_err(|e| map_expand_error(e, "openehr", uri))?;
             return Ok(codes_of(extract));
         }
-        let provider = self.terminology_provider(uri).ok_or_else(|| {
+        let server = self.terminology_server().ok_or_else(|| {
             AqlFeatureError::UnknownTerminologyService(format!(
                 "{uri} (no FHIR terminology server configured for URI operands)"
             ))
         })?;
-        let extract = provider
+        let extract = server
             .get_value_set("", uri)
             .await
             .map_err(|e| map_expand_error(e, "fhir", uri))?;

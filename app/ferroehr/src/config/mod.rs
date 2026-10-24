@@ -27,7 +27,6 @@ mod alias;
 pub mod loader;
 
 use crate::config::loader::{ConfigError, ConfigErrors};
-use crate::config::secret::Secret;
 mod strict;
 
 pub mod auth;
@@ -95,7 +94,7 @@ pub struct FerroEhrConfig {
     pub query: crate::service::query::config::QueryConfig,
     /// `[events]` — contribution-outbox eventing (+ its admin API).
     pub events: crate::extensions::events::config::EventsConfig,
-    /// `[terminology]` — terminology API + external-server validation.
+    /// `[terminology]` — terminology API + the terminology server.
     pub terminology: crate::service::terminology::config::TerminologyConfig,
     /// `[multimedia]` — `DV_MULTIMEDIA` externalization.
     pub multimedia: crate::extensions::multimedia::config::MultimediaConfig,
@@ -153,7 +152,7 @@ impl FerroEhrConfig {
                 "management.port ({port}) must differ from the server.bind port"
             )));
         }
-        validate_terminology(&self.terminology.external, &mut errors);
+        validate_terminology(&self.terminology.server, &mut errors);
 
         if errors.is_empty() {
             Ok(())
@@ -163,16 +162,17 @@ impl FerroEhrConfig {
     }
 
     /// The client-credentials grants of the outbound connections that are in
-    /// use: the ITI-20 feed when it is enabled and the remote policy service
-    /// when ABAC runs on it. A grant beside credentials in the URL's userinfo
-    /// is refused: the upstream would receive two authorizations, and which
-    /// one it honours is not ours to guess. No openEHR spec governs outbound
-    /// authentication — our own design.
+    /// use: the ITI-20 feed when it is enabled, the remote policy service when
+    /// ABAC runs on it, and the terminology server when it is enabled. A grant
+    /// beside credentials in the URL's userinfo is refused: the upstream would
+    /// receive two authorizations, and which one it honours is not ours to
+    /// guess. No openEHR spec governs outbound authentication — our own design.
     fn validate_outbound_clients(&self, errors: &mut Vec<ConfigError>) {
         let feed = &self.audit.fhir_feed;
         let remote = &self.authz.abac.remote;
         let remote_in_use =
             self.authz.abac.enabled && self.authz.abac.engine == authz::AbacEngineKind::Remote;
+        let terminology = &self.terminology.server;
         let checks = [
             (
                 "audit.fhir_feed",
@@ -185,6 +185,12 @@ impl FerroEhrConfig {
                 remote_in_use,
                 remote.oauth.as_ref(),
                 remote.server.as_ref().map(secret::SecretUrl::expose),
+            ),
+            (
+                "terminology.server",
+                terminology.enabled,
+                terminology.oauth.as_ref(),
+                Some(terminology.url.expose()),
             ),
         ];
         for (key, in_use, oauth, url) in checks {
@@ -700,109 +706,21 @@ fn server_bind_port(bind: &str) -> Option<u16> {
     bind.rsplit_once(':').and_then(|(_, p)| p.parse().ok())
 }
 
-/// Semantic checks on `[terminology.external]`: enabling it needs a provider,
-/// every provider needs its base URL, and every cross-reference must resolve.
-/// A dangling reference would degrade silently — a route to a missing provider
-/// quietly falls back to the default
-/// server, an `oauth2_client` naming a missing client would send
-/// unauthenticated requests, and half a mutual-TLS identity would connect
-/// without a client certificate — so all three are boot errors (never make a
-/// bad value a silent default). The TLS material itself (readable PEM,
-/// a certificate where a certificate belongs, a key where a key belongs) is
-/// validated when the provider is built, which is also boot time. No openEHR
-/// spec governs configuration — our own design.
+/// Semantic check on `[terminology.server]`: enabling it needs the server's
+/// base URL, a boot error rather than a silent fall back to the bundle. The
+/// `oauth` grant is checked with the other outbound grants
+/// (`FerroEhrConfig::validate_outbound_clients`). No openEHR spec governs
+/// configuration — our own design.
 fn validate_terminology(
-    terminology: &crate::service::terminology::config::ExternalTerminologyConfig,
+    server: &crate::service::terminology::config::TerminologyServerConfig,
     errors: &mut Vec<ConfigError>,
 ) {
-    if terminology.enabled && terminology.providers.is_empty() {
+    if server.enabled && server.url.expose().trim().is_empty() {
         errors.push(ConfigError::semantic(
-            "terminology.external.enabled = true requires at least one \
-             [terminology.external.providers.<name>]"
+            "terminology.server.enabled = true requires terminology.server.url (the FHIR R4B 
+             base URL of the terminology server)"
                 .to_owned(),
         ));
-    }
-    for (key, provider) in &terminology.routes {
-        if !terminology.providers.contains_key(provider) {
-            errors.push(ConfigError::semantic(format!(
-                "terminology.external.routes.\"{key}\" names provider '{provider}', which has no \
-                 [terminology.external.providers.{provider}]"
-            )));
-        }
-    }
-    for (name, provider) in &terminology.providers {
-        validate_terminology_provider(name, provider, terminology, errors);
-    }
-    for (name, client) in &terminology.oauth2_clients {
-        validate_terminology_client(name, client, errors);
-    }
-}
-
-/// One `[terminology.external.providers.<name>]` block: its base URL, the
-/// completeness of any mutual-TLS identity, and the resolvability of its
-/// OAuth2 client reference.
-///
-/// A mutual-TLS identity is a certificate AND its key; half of one would
-/// connect with no client certificate at all, which the server rejects at
-/// handshake time — a boot error, not a runtime surprise.
-fn validate_terminology_provider(
-    name: &str,
-    provider: &crate::service::terminology::config::FhirProviderConfig,
-    terminology: &crate::service::terminology::config::ExternalTerminologyConfig,
-    errors: &mut Vec<ConfigError>,
-) {
-    if provider.url.expose().trim().is_empty() {
-        errors.push(ConfigError::semantic(format!(
-            "terminology.external.providers.{name}.url must not be empty (the FHIR R4B base \
-             URL of the terminology server)"
-        )));
-    }
-    match (&provider.client_cert_path, &provider.client_key_path) {
-        (Some(_), None) => errors.push(ConfigError::semantic(format!(
-            "terminology.external.providers.{name}.client_cert_path is set without \
-             client_key_path (a client certificate needs its private key)"
-        ))),
-        (None, Some(_)) => errors.push(ConfigError::semantic(format!(
-            "terminology.external.providers.{name}.client_key_path is set without \
-             client_cert_path (a private key needs its certificate)"
-        ))),
-        _ => {}
-    }
-    let Some(client) = provider.oauth2_client.as_deref() else {
-        return;
-    };
-    if !terminology.oauth2_clients.contains_key(client) {
-        errors.push(ConfigError::semantic(format!(
-            "terminology.external.providers.{name}.oauth2_client names '{client}', which has \
-             no [terminology.external.oauth2_clients.{client}]"
-        )));
-    }
-}
-
-/// One `[terminology.external.oauth2_clients.<name>]` block: the
-/// client-credentials grant needs a token endpoint, a client id, and a secret.
-fn validate_terminology_client(
-    name: &str,
-    client: &crate::service::terminology::config::TerminologyOauth2Config,
-    errors: &mut Vec<ConfigError>,
-) {
-    if client.token_url.expose().trim().is_empty() {
-        errors.push(ConfigError::semantic(format!(
-            "terminology.external.oauth2_clients.{name}.token_url must not be empty"
-        )));
-    }
-    if client.client_id.trim().is_empty() {
-        errors.push(ConfigError::semantic(format!(
-            "terminology.external.oauth2_clients.{name}.client_id must not be empty"
-        )));
-    }
-    if client.client_secret.as_ref().is_none_or(Secret::is_empty)
-        && client.client_secret_file.is_none()
-    {
-        errors.push(ConfigError::semantic(format!(
-            "terminology.external.oauth2_clients.{name} requires client_secret or \
-             client_secret_file (the client-credentials grant authenticates the client)"
-        )));
     }
 }
 
@@ -1111,7 +1029,7 @@ mod tests {
 
     use super::*;
     use crate::config::authz::AbacParam;
-    use crate::config::secret::SecretUrl;
+    use crate::config::secret::{Secret, SecretUrl};
 
     /// Build an injected env map from `(key, value)` pairs.
     fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
@@ -1314,10 +1232,7 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER", "https://idp"),
                 ("FERROEHR__AUTH__AUDIENCE", "ferroehr,other"),
                 ("FERROEHR__AUTH__TIMEOUT_MS", "1500"),
-                (
-                    "FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__ONTO__URL",
-                    "https://onto/fhir",
-                ),
+                ("FERROEHR__AUTHZ__ABAC__POLICY__EHR__NAME", "ehr-policy"),
             ]),
             &[],
         );
@@ -1335,14 +1250,12 @@ mod tests {
         assert_eq!(c.auth.jwks_max_age_seconds, 600);
         assert_eq!(c.auth.jwks_refresh_interval_seconds, 60);
         assert_eq!(
-            c.terminology
-                .external
-                .providers
-                .get("onto")
-                .expect("onto")
-                .url
-                .expose(),
-            "https://onto/fhir"
+            c.authz
+                .abac
+                .policy
+                .get("ehr")
+                .map(|rule| rule.name.as_str()),
+            Some("ehr-policy")
         );
     }
 
@@ -1398,9 +1311,8 @@ mod tests {
 
     /// A list nested under a MAP key is addressable from the environment too,
     /// so it needs registration like any other — `authz.abac.policy.<kind>` is
-    /// a map, not an array of tables, and
-    /// `terminology.external.providers.<name>` above already proves the env
-    /// grammar reaches into one.
+    /// a map, not an array of tables, and the scalar case above already proves
+    /// the env grammar reaches into one.
     #[test]
     fn a_list_under_a_map_key_parses_from_env() {
         let c = assemble_ok(
@@ -1812,7 +1724,7 @@ mod tests {
     /// keeps its host and path with the userinfo masked.
     #[test]
     fn url_userinfo_reaches_no_rendering() {
-        use crate::service::terminology::config::{FhirProviderConfig, TerminologyOauth2Config};
+        use crate::config::client_credentials::ClientCredentialsConfig;
 
         let leaky =
             |n: u32| SecretUrl::new(format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}:1/p{n}"));
@@ -1826,20 +1738,11 @@ mod tests {
         c.storage.migrate.party.url = Some(leaky(15));
         c.events.url = leaky(7);
         c.audit.fhir_feed.url = leaky(8);
-        c.terminology.external.providers.insert(
-            "ts".to_owned(),
-            FhirProviderConfig {
-                url: leaky(9),
-                ..FhirProviderConfig::default()
-            },
-        );
-        c.terminology.external.oauth2_clients.insert(
-            "client".to_owned(),
-            TerminologyOauth2Config {
-                token_url: leaky(10),
-                ..TerminologyOauth2Config::default()
-            },
-        );
+        c.terminology.server.url = leaky(9);
+        c.terminology.server.oauth = Some(ClientCredentialsConfig {
+            token_url: Some(leaky(10)),
+            ..ClientCredentialsConfig::default()
+        });
         c.usage_report.endpoint = leaky(11);
         c.authz.abac.remote.server = Some(leaky(12));
         c.telemetry.otlp_endpoint = Some(leaky(13));
@@ -2755,317 +2658,120 @@ mod tests {
         }
     }
 
+    /// Enabling the terminology server with no URL fails to boot, naming the
+    /// key. The section reads its defaults from one `Default` impl, so serde
+    /// cannot report the missing key itself — the semantic pass owns it, which
+    /// is also what lets every configuration error surface at once.
     #[test]
-    fn validate_external_terminology_needs_a_provider() {
+    fn validate_terminology_server_needs_a_url() {
         let mut c = FerroEhrConfig::default();
-        c.terminology.external.enabled = true;
-        assert!(c.validate().is_err());
-    }
-
-    /// A provider table with no `url` fails to boot, naming the key. The
-    /// section reads its defaults from one `Default` impl, so serde cannot
-    /// report the missing key itself — the semantic pass owns it, which is
-    /// also what lets every configuration error surface at once.
-    #[test]
-    fn validate_terminology_provider_needs_a_url() {
-        let mut c = FerroEhrConfig::default();
-        let external = &mut c.terminology.external;
-        external.enabled = true;
-        external.providers.insert(
-            "default".to_owned(),
-            crate::service::terminology::config::FhirProviderConfig::default(),
-        );
+        c.terminology.server.enabled = true;
         let err = c
             .validate()
-            .expect_err("a provider with no url must be rejected");
+            .expect_err("an enabled server with no url must be rejected");
         assert!(
-            err.to_string()
-                .contains("terminology.external.providers.default.url"),
+            err.to_string().contains("terminology.server.url"),
             "got {err}"
         );
 
-        c.terminology
-            .external
-            .providers
-            .get_mut("default")
-            .expect("provider")
-            .url = SecretUrl::new("https://ts.example/fhir");
+        c.terminology.server.url = SecretUrl::new("https://ts.example/fhir");
         assert!(c.validate().is_ok());
     }
 
-    /// A terminology route naming a provider that is not configured is a boot
-    /// error — never a silent fall-back to the default server.
+    /// The terminology server's client-credentials grant is checked like every
+    /// other outbound grant: an incomplete one is a boot error naming its
+    /// keys, never a silently unauthenticated terminology request.
     #[test]
-    fn validate_terminology_route_must_name_a_configured_provider() {
+    fn validate_terminology_server_oauth_shape() {
+        use crate::config::client_credentials::ClientCredentialsConfig;
+
         let mut c = FerroEhrConfig::default();
-        let external = &mut c.terminology.external;
-        external.enabled = true;
-        external.providers.insert(
-            "default".to_owned(),
-            crate::service::terminology::config::FhirProviderConfig {
-                kind: crate::service::terminology::config::ProviderKind::Fhir,
-                url: SecretUrl::new("https://ts.example/fhir"),
-                operation: crate::service::terminology::config::FhirOperation::ValidateCode,
-                connect_timeout_ms: 2_000,
-                request_timeout_ms: 10_000,
-                oauth2_client: None,
-                client_cert_path: None,
-                client_key_path: None,
-                ca_bundle_path: None,
-                cache_ttl_secs: 300,
-                cache_capacity: 10_000,
-            },
-        );
-        assert!(c.validate().is_ok(), "a routeless provider set is valid");
-
-        c.terminology
-            .external
-            .routes
-            .insert("SNOMED-CT".to_owned(), "snomed".to_owned());
-        let err = c.validate().expect_err("a dangling route must be rejected");
-        assert!(err.to_string().contains("snomed"), "got {err}");
-
-        c.terminology
-            .external
-            .routes
-            .insert("SNOMED-CT".to_owned(), "default".to_owned());
-        assert!(c.validate().is_ok());
-    }
-
-    /// A provider naming an `oauth2_client` with no matching client table is a
-    /// boot error — never a silently unauthenticated terminology request. The
-    /// client itself must carry a token endpoint, a client id, and a secret.
-    #[test]
-    fn validate_terminology_oauth2_client_reference_and_shape() {
-        let mut c = FerroEhrConfig::default();
-        let external = &mut c.terminology.external;
-        external.enabled = true;
-        external.providers.insert(
-            "default".to_owned(),
-            crate::service::terminology::config::FhirProviderConfig {
-                kind: crate::service::terminology::config::ProviderKind::Fhir,
-                url: SecretUrl::new("https://ts.example/fhir"),
-                operation: crate::service::terminology::config::FhirOperation::ValidateCode,
-                connect_timeout_ms: 2_000,
-                request_timeout_ms: 10_000,
-                oauth2_client: Some("ts-client".to_owned()),
-                client_cert_path: None,
-                client_key_path: None,
-                ca_bundle_path: None,
-                cache_ttl_secs: 300,
-                cache_capacity: 10_000,
-            },
-        );
+        c.terminology.server.enabled = true;
+        c.terminology.server.url = SecretUrl::new("https://ts.example/fhir");
+        c.terminology.server.oauth = Some(ClientCredentialsConfig::default());
         let err = c
             .validate()
-            .expect_err("an unconfigured oauth2_client must be rejected");
-        assert!(err.to_string().contains("ts-client"), "got {err}");
-
-        // A client table with none of its mandatory keys: each is named. The
-        // section reads its defaults from one `Default` impl, so serde reports
-        // none of them and this pass owns all three.
-        c.terminology.external.oauth2_clients.insert(
-            "ts-client".to_owned(),
-            crate::service::terminology::config::TerminologyOauth2Config::default(),
-        );
-        let err = c
-            .validate()
-            .expect_err("a client with no token_url/client_id/secret is rejected");
-        for key in ["token_url", "client_id", "client_secret"] {
+            .expect_err("a grant with no token endpoint, client id or secret is rejected");
+        for key in [
+            "terminology.server.oauth",
+            "token_url",
+            "client_id",
+            "client_secret",
+        ] {
             assert!(err.to_string().contains(key), "{key} unnamed in {err}");
         }
 
-        // A client with no secret cannot run the client-credentials grant.
-        c.terminology.external.oauth2_clients.insert(
-            "ts-client".to_owned(),
-            crate::service::terminology::config::TerminologyOauth2Config {
-                token_url: SecretUrl::new("https://idp.example/token"),
-                client_id: "cdr".to_owned(),
-                ..crate::service::terminology::config::TerminologyOauth2Config::default()
-            },
-        );
-        let err = c.validate().expect_err("a secretless client is rejected");
-        assert!(err.to_string().contains("client_secret"), "got {err}");
+        c.terminology.server.oauth = Some(ClientCredentialsConfig {
+            token_url: Some(SecretUrl::new("https://idp.example/token")),
+            client_id: "cdr".to_owned(),
+            client_secret: Some(Secret::new("s3cret")),
+            ..ClientCredentialsConfig::default()
+        });
+        assert!(c.validate().is_ok());
 
-        c.terminology
-            .external
-            .oauth2_clients
-            .get_mut("ts-client")
-            .expect("client")
-            .client_secret = Some(Secret::new("s3cret"));
+        // A grant beside userinfo in the server URL would send two
+        // authorizations.
+        c.terminology.server.url = SecretUrl::new("https://u:p@ts.example/fhir");
+        let err = c
+            .validate()
+            .expect_err("userinfo beside a grant is rejected");
+        assert!(
+            err.to_string()
+                .contains("terminology.server carries credentials"),
+            "got {err}"
+        );
+
+        // A disabled server's grant is not in use, so it is not checked.
+        c.terminology.server.enabled = false;
+        c.terminology.server.oauth = Some(ClientCredentialsConfig::default());
         assert!(c.validate().is_ok());
     }
 
-    /// The new terminology keys are reachable through the one env grammar, map
-    /// keys included.
+    /// Every terminology key is a scalar, so the whole section, its grant
+    /// included, is reachable through the one env grammar.
     #[test]
-    fn env_mapping_terminology_routes_and_oauth2_clients() {
+    fn env_mapping_terminology_server_and_oauth() {
         let c = assemble_ok(
             None,
             &env(&[
-                ("FERROEHR__TERMINOLOGY__EXTERNAL__ENABLED", "true"),
+                ("FERROEHR__TERMINOLOGY__SERVER__ENABLED", "true"),
                 (
-                    "FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SNOMED__URL",
-                    "https://snowstorm/fhir",
+                    "FERROEHR__TERMINOLOGY__SERVER__URL",
+                    "http://ferroterm:8080/r4b",
                 ),
+                ("FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR", "true"),
+                ("FERROEHR__TERMINOLOGY__SERVER__REQUEST_TIMEOUT_MS", "2500"),
                 (
-                    "FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SNOMED__OAUTH2_CLIENT",
-                    "ts-client",
-                ),
-                (
-                    "FERROEHR__TERMINOLOGY__EXTERNAL__ROUTES__SNOMED-CT",
-                    "snomed",
-                ),
-                (
-                    "FERROEHR__TERMINOLOGY__EXTERNAL__OAUTH2_CLIENTS__TS-CLIENT__TOKEN_URL",
+                    "FERROEHR__TERMINOLOGY__SERVER__OAUTH__TOKEN_URL",
                     "https://idp/token",
                 ),
+                ("FERROEHR__TERMINOLOGY__SERVER__OAUTH__CLIENT_ID", "cdr"),
                 (
-                    "FERROEHR__TERMINOLOGY__EXTERNAL__OAUTH2_CLIENTS__TS-CLIENT__CLIENT_ID",
-                    "cdr",
-                ),
-                (
-                    "FERROEHR__TERMINOLOGY__EXTERNAL__OAUTH2_CLIENTS__TS-CLIENT__CLIENT_SECRET",
+                    "FERROEHR__TERMINOLOGY__SERVER__OAUTH__CLIENT_SECRET",
                     "s3cret",
                 ),
+                (
+                    "FERROEHR__TERMINOLOGY__SERVER__OAUTH__SCOPE",
+                    "system/*.read",
+                ),
             ]),
             &[],
         );
-        let external = &c.terminology.external;
-        assert!(external.enabled);
+        let server = &c.terminology.server;
+        assert!(server.enabled);
+        assert!(server.fail_on_error);
+        assert_eq!(server.url.expose(), "http://ferroterm:8080/r4b");
+        assert_eq!(server.request_timeout_ms, 2_500);
+        let oauth = server.oauth.as_ref().expect("the grant from env");
         assert_eq!(
-            external
-                .providers
-                .get("snomed")
-                .expect("snomed")
-                .url
-                .expose(),
-            "https://snowstorm/fhir"
+            oauth.token_url.as_ref().map(SecretUrl::expose),
+            Some("https://idp/token")
         );
+        assert_eq!(oauth.client_id, "cdr");
         assert_eq!(
-            external.routes.get("snomed-ct").map(String::as_str),
-            Some("snomed"),
-            "map keys arrive lower-cased from the env grammar"
-        );
-        let client = external
-            .oauth2_clients
-            .get("ts-client")
-            .expect("oauth2 client");
-        assert_eq!(client.token_url.expose(), "https://idp/token");
-        assert_eq!(
-            client.client_secret.as_ref().map(Secret::expose),
+            oauth.client_secret.as_ref().map(Secret::expose),
             Some("s3cret")
         );
-    }
-
-    /// A mutual-TLS client identity is a certificate AND its key: half of one
-    /// would connect presenting nothing, so it is a boot error. The trust
-    /// anchor (`ca_bundle_path`) stands alone — verification against a private
-    /// CA needs no client identity.
-    #[test]
-    fn validate_terminology_client_identity_needs_both_halves() {
-        let mut c = FerroEhrConfig::default();
-        let external = &mut c.terminology.external;
-        external.enabled = true;
-        external.providers.insert(
-            "default".to_owned(),
-            crate::service::terminology::config::FhirProviderConfig {
-                kind: crate::service::terminology::config::ProviderKind::Fhir,
-                url: SecretUrl::new("https://ts.example/fhir"),
-                operation: crate::service::terminology::config::FhirOperation::ValidateCode,
-                connect_timeout_ms: 2_000,
-                request_timeout_ms: 10_000,
-                oauth2_client: None,
-                client_cert_path: Some(PathBuf::from("/run/secrets/ts-client.crt.pem")),
-                client_key_path: None,
-                ca_bundle_path: None,
-                cache_ttl_secs: 300,
-                cache_capacity: 10_000,
-            },
-        );
-        let err = c
-            .validate()
-            .expect_err("a certificate without its key must be rejected");
-        assert!(err.to_string().contains("client_key_path"), "got {err}");
-
-        let provider = c
-            .terminology
-            .external
-            .providers
-            .get_mut("default")
-            .expect("provider");
-        provider.client_cert_path = None;
-        provider.client_key_path = Some(PathBuf::from("/run/secrets/ts-client.key.pem"));
-        let err = c
-            .validate()
-            .expect_err("a key without its certificate must be rejected");
-        assert!(err.to_string().contains("client_cert_path"), "got {err}");
-
-        // Both halves together are valid; so is a bare trust anchor.
-        let provider = c
-            .terminology
-            .external
-            .providers
-            .get_mut("default")
-            .expect("provider");
-        provider.client_cert_path = Some(PathBuf::from("/run/secrets/ts-client.crt.pem"));
-        provider.ca_bundle_path = Some(PathBuf::from("/run/secrets/ts-ca.pem"));
-        assert!(c.validate().is_ok());
-
-        let provider = c
-            .terminology
-            .external
-            .providers
-            .get_mut("default")
-            .expect("provider");
-        provider.client_cert_path = None;
-        provider.client_key_path = None;
-        assert!(c.validate().is_ok(), "a CA bundle alone is valid");
-    }
-
-    /// The mutual-TLS keys are reachable through the one env grammar.
-    #[test]
-    fn env_mapping_terminology_provider_mtls_paths() {
-        let c = assemble_ok(
-            None,
-            &env(&[
-                ("FERROEHR__TERMINOLOGY__EXTERNAL__ENABLED", "true"),
-                (
-                    "FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SNOMED__URL",
-                    "https://snowstorm/fhir",
-                ),
-                (
-                    "FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SNOMED__CLIENT_CERT_PATH",
-                    "/run/secrets/ts-client.crt.pem",
-                ),
-                (
-                    "FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SNOMED__CLIENT_KEY_PATH",
-                    "/run/secrets/ts-client.key.pem",
-                ),
-                (
-                    "FERROEHR__TERMINOLOGY__EXTERNAL__PROVIDERS__SNOMED__CA_BUNDLE_PATH",
-                    "/run/secrets/ts-ca.pem",
-                ),
-            ]),
-            &[],
-        );
-        let provider = c
-            .terminology
-            .external
-            .providers
-            .get("snomed")
-            .expect("snomed");
-        assert_eq!(
-            provider.client_cert_path.as_deref(),
-            Some(Path::new("/run/secrets/ts-client.crt.pem"))
-        );
-        assert_eq!(
-            provider.client_key_path.as_deref(),
-            Some(Path::new("/run/secrets/ts-client.key.pem"))
-        );
-        assert_eq!(
-            provider.ca_bundle_path.as_deref(),
-            Some(Path::new("/run/secrets/ts-ca.pem"))
-        );
+        assert_eq!(oauth.scope.as_deref(), Some("system/*.read"));
     }
 }

@@ -241,7 +241,9 @@ fn deny_for_patient(who: &'static str) -> impl Fn(&Request) -> bool {
 /// A client-credentials grant at `as_uri`'s token endpoint.
 fn grant(as_uri: &str) -> ferroehr::config::client_credentials::ClientCredentialsConfig {
     ferroehr::config::client_credentials::ClientCredentialsConfig {
-        token_url: Some(format!("{as_uri}/token")),
+        token_url: Some(ferroehr::config::secret::SecretUrl::new(format!(
+            "{as_uri}/token"
+        ))),
         client_id: "ferroehr-pep".to_owned(),
         client_secret: Some(ferroehr::config::secret::Secret::new("s3cret")),
         scope: Some("pdp.decide".to_owned()),

@@ -17,7 +17,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use super::secret::Secret;
+use super::secret::{Secret, SecretUrl};
 
 /// How the client authenticates to the token endpoint (RFC 6749 §2.3.1).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,8 +37,9 @@ pub enum ClientAuthMethod {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ClientCredentialsConfig {
-    /// The token endpoint (RFC 6749 §3.2).
-    pub token_url: Option<String>,
+    /// The token endpoint (RFC 6749 §3.2). Any `userinfo` in it is masked in
+    /// every rendering.
+    pub token_url: Option<SecretUrl>,
     /// The issuer whose metadata names the token endpoint (RFC 8414 §3).
     pub issuer: Option<String>,
     /// The client identifier (RFC 6749 §2.2).
@@ -66,7 +67,7 @@ impl ClientCredentialsConfig {
     pub fn problems(&self, key: &str) -> Vec<String> {
         let mut out = Vec::new();
         match (
-            non_blank(self.token_url.as_ref()),
+            non_blank_url(self.token_url.as_ref()),
             non_blank(self.issuer.as_ref()),
         ) {
             (Some(_), Some(_)) => {
@@ -109,7 +110,7 @@ impl ClientCredentialsConfig {
             return Err(problem);
         }
         let endpoint = match (
-            non_blank(self.token_url.as_ref()),
+            non_blank_url(self.token_url.as_ref()),
             non_blank(self.issuer.as_ref()),
         ) {
             (Some(url), _) => ferrohealth_smart::client::Endpoint::Token(
@@ -144,6 +145,14 @@ impl ClientCredentialsConfig {
         grant.timeout = Duration::from_secs(10);
         Ok(grant)
     }
+}
+
+/// The URL when set to something other than whitespace.
+fn non_blank_url(value: Option<&SecretUrl>) -> Option<&str> {
+    value
+        .map(SecretUrl::expose)
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
 }
 
 /// The value when set to something other than whitespace.

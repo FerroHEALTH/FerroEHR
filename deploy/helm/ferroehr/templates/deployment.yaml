@@ -404,9 +404,9 @@ spec:
                     - key: auth.basic.users.{{ $user }}.password_hash
                       path: auth.basic.users.{{ $user }}.password_hash
               {{- end }}
-              {{- range $name, $value := .Values.secrets.terminologyOauth2ClientSecrets }}
-                    - key: terminology.external.oauth2_clients.{{ $name }}.client_secret
-                      path: terminology.external.oauth2_clients.{{ $name }}.client_secret
+              {{- if .Values.secrets.terminologyClientSecret }}
+                    - key: terminology.server.oauth.client_secret
+                      path: terminology.server.oauth.client_secret
               {{- end }}
               {{- end }}
         {{- end }}

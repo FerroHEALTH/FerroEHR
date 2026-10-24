@@ -31,7 +31,7 @@ use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::status::CallStatusType;
-use ferroehr::service::terminology::config::{FhirOperation, FhirProviderConfig, ProviderKind};
+use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use serde_json::json;
 use wiremock::matchers::{method, path, query_param};
@@ -82,24 +82,15 @@ terminology
     .to_owned()
 }
 
-/// Build a provider pointing at `base` with the response cache off (each test
-/// asserts a fresh remote answer).
+/// Build a client pointing at `base`; every call is a fresh remote answer.
 fn provider(base: &str) -> FhirTerminologyProvider {
-    let cfg = FhirProviderConfig {
-        kind: ProviderKind::Fhir,
+    let cfg = TerminologyServerConfig {
+        enabled: true,
         url: ferroehr::config::secret::SecretUrl::new(base),
-        // VETDF uses `CodeSystem/$lookup` regardless of the membership op.
-        operation: FhirOperation::ValidateCode,
-        connect_timeout_ms: 500,
         request_timeout_ms: 800,
-        oauth2_client: None,
-        client_cert_path: None,
-        client_key_path: None,
-        ca_bundle_path: None,
-        cache_ttl_secs: 0,
-        cache_capacity: 0,
+        ..TerminologyServerConfig::default()
     };
-    FhirTerminologyProvider::new("test", &cfg).expect("build provider")
+    FhirTerminologyProvider::new(&cfg).expect("build provider")
 }
 
 /// An `OperationOutcome` carrying one `tx-issue-type` coding.
@@ -148,7 +139,7 @@ async fn mount_system_probe(server: &MockServer, total: u32) {
 async fn service_at(server: &MockServer) -> (testkit::TestDb, FerroEhrService) {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
-        .with_external_terminology(Arc::new(provider(&server.uri())));
+        .with_terminology_server(Arc::new(provider(&server.uri())));
     (db, svc)
 }
 

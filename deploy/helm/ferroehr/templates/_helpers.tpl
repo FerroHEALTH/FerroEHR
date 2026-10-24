@@ -154,7 +154,7 @@ when there is at least one secret value to carry).
 {{- $inlineDb := and (not .Values.database.existingSecret) .Values.database.url }}
 {{- $inlineDomain := include "ferroehr.hasInlineDomainDsn" . }}
 {{- $inlineMigrate := and (not .Values.database.migrateExistingSecret) .Values.database.migrateUrl }}
-{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.basicUserPasswordHashes .Values.secrets.signingKeyPassphrase .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl .Values.secrets.auditFhirFeedUrl .Values.secrets.multimediaAccessKeyId .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyOauth2ClientSecrets -}}
+{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.basicUserPasswordHashes .Values.secrets.signingKeyPassphrase .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl .Values.secrets.auditFhirFeedUrl .Values.secrets.multimediaAccessKeyId .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret -}}
 true
 {{- end -}}
 {{- end }}
@@ -181,7 +181,7 @@ names a Secret nothing created makes the pod fail to mount.
 {{- $inlineDb := and (not .Values.database.existingSecret) .Values.database.url -}}
 {{- $inlineDomain := include "ferroehr.hasInlineDomainDsn" . -}}
 {{- $inlineMigrate := and (not .Values.database.migrateExistingSecret) .Values.database.migrateUrl -}}
-{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.signingKeyPassphrase .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyOauth2ClientSecrets .Values.secrets.basicUserPasswordHashes .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl -}}
+{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.signingKeyPassphrase .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.basicUserPasswordHashes .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl -}}
 true
 {{- end -}}
 {{- end }}
@@ -298,7 +298,7 @@ The `secrets:` key that carries a routed secret, keyed on its leaf name.
   "url" "route it through the matching `secrets:` key — `eventsUrl` (mounted as a file via events.url_file), `auditFhirFeedUrl` (env; that key still has no `*_file` sibling), or `database.existingSecret` for the shared DSN (mounted via db.url_file) and `database.<domain>.existingSecret` for one storage domain's own (mounted via storage.<domain>.url_file)"
   "key_passphrase" "set `secrets.signingKeyPassphrase` instead"
   "secret_access_key" "set `secrets.multimediaSecretAccessKey` instead"
-  "client_secret" "set `secrets.terminologyOauth2ClientSecrets.<client name>` instead"
+  "client_secret" "set `secrets.terminologyClientSecret` instead (for [terminology.server.oauth])"
   "password_hash" "set `secrets.basicUserPasswordHashes.<user>` instead, and leave only `user`/`scopes` under `config:` (the chart mounts the hash and injects password_hash_file)"
 -}}
 {{- get $routes . | default "no `secrets:` route exists for this key" -}}
@@ -357,57 +357,44 @@ secret VALUE refused outright.
 {{- fail (printf "secrets.basicUserPasswordHashes.%s has no matching entry at config.auth.basic.users[] with user: %s (declare the user and its scopes there, its roles at config.authz.rbac.basic_roles; only the hash belongs in secrets:)" $user $user) -}}
 {{- end -}}
 {{- end -}}
-{{- range $name, $value := .Values.secrets.terminologyOauth2ClientSecrets -}}
-{{- $clients := dig "terminology" "external" "oauth2_clients" (dict) $rendered -}}
-{{- if not (hasKey $clients $name) -}}
-{{- fail (printf "secrets.terminologyOauth2ClientSecrets.%s has no client declared at config.terminology.external.oauth2_clients.%s (declare its token_url/client_id there; only the secret belongs here)" $name $name) -}}
+{{- if .Values.secrets.terminologyClientSecret -}}
+{{- $oauth := dig "terminology" "server" "oauth" "" $rendered -}}
+{{- if not (kindIs "map" $oauth) -}}
+{{- fail "secrets.terminologyClientSecret is set and config.terminology.server.oauth declares no grant (declare its token_url or issuer and its client_id there; only the secret belongs here)" -}}
 {{- end -}}
-{{- $_ := set (get $clients $name) "client_secret_file" (printf "%s/terminology.external.oauth2_clients.%s.client_secret" (include "ferroehr.secretMountPath" $) $name) -}}
+{{- $_ := set $oauth "client_secret_file" (printf "%s/terminology.server.oauth.client_secret" (include "ferroehr.secretMountPath" $)) -}}
 {{- end -}}
 {{- if and $.Values.terminology.enabled $.Values.terminology.wireCdr -}}
 {{- /* The in-cluster FerroTERM is wired the same way the mounted secret paths
        above are: by injection, so the Service address and the workload that
-       answers it are one decision. An operator who declared the `default`
-       provider by hand meant a different server, and silently replacing it
+       answers it are one decision. An operator who declared the server URL
+       by hand meant a different server, and silently replacing it
        would point binding resolution somewhere they did not choose.
 
        Every key this block WRITES is refused when the operator wrote it too.
        An injection that overwrites is indistinguishable from one that agrees:
        the render succeeds either way and the value an operator reads back in
        their own values file is not the value the server runs on. The chart's
-       own `config.terminology.external` defaults therefore declare neither
-       `enabled` nor `fail_on_error` — a defaulted key cannot be told apart
-       from a typed one, and the server's own defaults for both are the same
-       `false`, so nothing is lost by leaving them to it. */ -}}
+       own `config.terminology.server` defaults therefore declare none of
+       `enabled`, `url` and `fail_on_error` — a defaulted key cannot be told
+       apart from a typed one, and the server's own defaults (off, no URL,
+       fail-open) are what is left to it. */ -}}
 {{- if not (hasKey $rendered "terminology") -}}{{- $_ := set $rendered "terminology" (dict) -}}{{- end -}}
 {{- $terminology := get $rendered "terminology" -}}
-{{- if not (hasKey $terminology "external") -}}{{- $_ := set $terminology "external" (dict) -}}{{- end -}}
-{{- $external := get $terminology "external" -}}
-{{- $providers := dig "providers" (dict) $external -}}
-{{- if hasKey $providers "default" -}}
-{{- fail "terminology.enabled=true already declares config.terminology.external.providers.default at the in-cluster FerroTERM Service, so declaring it in values too is two answers to one question: drop config.terminology.external.providers.default, or set terminology.wireCdr=false to keep your own provider and run FerroTERM unwired. A second, differently-named provider under config.terminology.external.providers is unaffected." -}}
+{{- if not (hasKey $terminology "server") -}}{{- $_ := set $terminology "server" (dict) -}}{{- end -}}
+{{- $server := get $terminology "server" -}}
+{{- if hasKey $server "url" -}}
+{{- fail "terminology.enabled=true already points config.terminology.server.url at the in-cluster FerroTERM Service, so declaring it in values too is two answers to one question: drop config.terminology.server.url, or set terminology.wireCdr=false to keep your own server and run FerroTERM unwired." -}}
 {{- end -}}
-{{- if and (hasKey $external "enabled") (not (get $external "enabled")) -}}
-{{- fail "config.terminology.external.enabled=false is set while terminology.enabled=true and terminology.wireCdr=true, which inject enabled=true — the rendered ferroehr.toml would say the opposite of your values file, and the CDR would resolve bindings against FerroTERM anyway. Drop config.terminology.external.enabled, or set terminology.wireCdr=false to keep your own [terminology.external] and run FerroTERM unwired." -}}
+{{- if and (hasKey $server "enabled") (not (get $server "enabled")) -}}
+{{- fail "config.terminology.server.enabled=false is set while terminology.enabled=true and terminology.wireCdr=true, which inject enabled=true — the rendered ferroehr.toml would say the opposite of your values file, and the CDR would resolve bindings against FerroTERM anyway. Drop config.terminology.server.enabled, or set terminology.wireCdr=false to keep your own [terminology.server] and run FerroTERM unwired." -}}
 {{- end -}}
-{{- if and (hasKey $external "fail_on_error") (ne (get $external "fail_on_error") $.Values.terminology.failOnError) -}}
-{{- fail (printf "config.terminology.external.fail_on_error=%v contradicts terminology.failOnError=%v, and the wiring injects the second — the rendered ferroehr.toml would carry a fail posture your values file denies. Set terminology.failOnError=%v and drop config.terminology.external.fail_on_error, or set terminology.wireCdr=false to keep your own [terminology.external]." (get $external "fail_on_error") $.Values.terminology.failOnError (get $external "fail_on_error")) -}}
+{{- if and (hasKey $server "fail_on_error") (ne (get $server "fail_on_error") $.Values.terminology.failOnError) -}}
+{{- fail (printf "config.terminology.server.fail_on_error=%v contradicts terminology.failOnError=%v, and the wiring injects the second — the rendered ferroehr.toml would carry a fail posture your values file denies. Set terminology.failOnError=%v and drop config.terminology.server.fail_on_error, or set terminology.wireCdr=false to keep your own [terminology.server]." (get $server "fail_on_error") $.Values.terminology.failOnError (get $server "fail_on_error")) -}}
 {{- end -}}
-{{- /* A provider nothing routes to is a provider the router never reaches:
-       an unmatched terminology falls back to the provider named `default`,
-       which the injection above has just claimed for the in-cluster
-       FerroTERM. So an operator's own provider declared beside the injection
-       without a `routes` entry naming it is dead configuration that renders,
-       boots and resolves nothing — the silent-demotion shape, refused rather
-       than shipped. */ -}}
-{{- $extraProviders := keys (omit $providers "default") -}}
-{{- if and $extraProviders (not (dig "routes" (dict) $external)) -}}
-{{- fail (printf "config.terminology.external.providers declares %v while config.terminology.external.routes is empty, and terminology.wireCdr=true has taken the `default` provider for the in-cluster FerroTERM: an unrouted terminology falls back to `default`, so nothing would ever reach %v. Add a config.terminology.external.routes entry (terminology id or system URI -> provider name) for each, or set terminology.wireCdr=false to keep `default` for yourself." (join ", " $extraProviders) (join ", " $extraProviders)) -}}
-{{- end -}}
-{{- $_ := set $providers "default" (dict "type" "fhir" "url" (printf "http://%s:%v/r4b" (include "ferroehr.terminologyFullname" $) $.Values.terminology.service.port)) -}}
-{{- $_ := set $external "providers" $providers -}}
-{{- $_ := set $external "enabled" true -}}
-{{- $_ := set $external "fail_on_error" $.Values.terminology.failOnError -}}
+{{- $_ := set $server "url" (printf "http://%s:%v/r4b" (include "ferroehr.terminologyFullname" $) $.Values.terminology.service.port) -}}
+{{- $_ := set $server "enabled" true -}}
+{{- $_ := set $server "fail_on_error" $.Values.terminology.failOnError -}}
 {{- end -}}
 {{- /* The usage report: the switch is the top-level usageReport.enabled value,
        and the deployment kind the report states is always `helm` under this

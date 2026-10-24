@@ -3,10 +3,10 @@
 
 # CNF external-terminology lane (compose OVERLAY) — the fail-OPEN posture.
 #
-# Switches on the `[terminology.external]` providers that docker/ferroehr.dev.toml
-# already carries (disabled) and makes the CDR wait for the seeded FHIR R4
-# terminology server of the `terminology` profile. openEHR puts the resolver of
-# an archetype constraint binding outside the CDR — BASE
+# Switches on the `[terminology.server]` that docker/ferroehr.dev.toml already
+# carries (disabled) and makes the CDR wait for the seeded FHIR terminology
+# server of the `terminology` profile. openEHR puts the resolver of an
+# archetype constraint binding outside the CDR — BASE
 # docs/architecture_overview/master12-terminology.adoc §"Binding Terminology
 # Value-sets to Archetypes": the archetype "simply hold[s] an identifier for a
 # query; the query itself is defined within a 'terminology query server'" — so
@@ -19,12 +19,11 @@
 #
 # The reference conformance pipeline composes it UNCONDITIONALLY for
 # ferroehr (scripts/conformance.sh), so the ONE committed record covers the
-# terminology-routed surface. The ixit declares the resulting posture as the
-# `terminology` block on the `sut` instance's party default: three servers
-# (two reachable, serving the two seeded namespaces; one declared unreachable)
-# and the fail-open branch.
+# terminology-backed surface. The ixit declares the resulting posture as the
+# `terminology` block on the `sut` instance's party default: one reachable
+# server serving the two seeded namespaces, and the fail-open branch.
 #
-# WHY FAIL-OPEN HERE. `[terminology.external] fail_on_error` decides what a
+# WHY FAIL-OPEN HERE. `[terminology.server] fail_on_error` decides what a
 # deployment does with a bound value set it cannot resolve, and a running
 # server realizes exactly ONE branch. This deployment realizes the shipped
 # default (accept); the fail-CLOSED branch is a second deployment
@@ -33,8 +32,8 @@
 services:
   ferroehr:
     environment:
-      FERROEHR__TERMINOLOGY__EXTERNAL__ENABLED: "true"
-      FERROEHR__TERMINOLOGY__EXTERNAL__FAIL_ON_ERROR: "false"
+      FERROEHR__TERMINOLOGY__SERVER__ENABLED: "true"
+      FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR: "false"
     depends_on:
       # The seeder polls the server's own capability statement and exits 0 only
       # after the code systems and value sets are in place, so this is the

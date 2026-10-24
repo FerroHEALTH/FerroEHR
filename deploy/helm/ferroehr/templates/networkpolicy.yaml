@@ -96,7 +96,7 @@ spec:
     # The in-cluster FerroTERM, by pod selector. Rendered by the chart rather
     # than left to `rules`, because the operator did not choose this
     # destination's address — the chart did, when it wired
-    # config.terminology.external at the Service above it. Omitted, a hardened
+    # config.terminology.server at the Service above it. Omitted, a hardened
     # install loses terminology while every other check stays green: a binding
     # the server cannot resolve is ACCEPTED under the shipped fail-open
     # posture, so nothing refuses and nothing logs an error.

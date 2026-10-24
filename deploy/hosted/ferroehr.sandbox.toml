@@ -51,19 +51,16 @@ scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds
 enabled = false
 
 # FerroTERM beside the CDR (#3304). The read-only /terminology/* routes are on so
-# the viewer's terminology browser and code picker work; the external provider
-# is FerroTERM at its compose-network name, the only address it answers on. A
-# sole provider needs no routes: every terminology goes to it. Fail-open is the
+# the viewer's terminology browser and code picker work; the terminology server
+# is FerroTERM at its compose-network name, the only address it answers on, and
+# every terminology the bundle does not carry goes to it. Fail-open is the
 # shipped default and the posture this sandbox declares (register AMB-172): a
 # binding the server cannot resolve is accepted, a binding it resolves as a
 # non-member is refused with 422.
 [terminology]
 api_enabled = true
 
-[terminology.external]
+[terminology.server]
 enabled = true
-fail_on_error = false
-
-[terminology.external.providers.default]
-type = "fhir"
 url = "http://ferroterm:8080/r4b"
+fail_on_error = false

@@ -16,16 +16,14 @@
               helpers; a failing fixture must panic at the fixture (the Rust Book ch11)"
 )]
 
-use std::collections::BTreeMap;
-
 use assert_fs::prelude::*;
 use ferroehr::config::FerroEhrConfig;
+use ferroehr::config::client_credentials::ClientCredentialsConfig;
 use ferroehr::config::secret::{Secret, SecretUrl};
 use ferroehr::db::domain::DomainPools;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::{ManifestEntry, PartStatus, Report};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::terminology::config::TerminologyOauth2Config;
 
 /// Each sentinel is unique, so a leak names the setting it came from.
 const DB_PW: &str = "DB_PW_SENTINEL_5c1e";
@@ -73,15 +71,12 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
         }],
         cache_ttl_seconds: 0,
     });
-    config.terminology.external.oauth2_clients = BTreeMap::from([(
-        "terminology".to_owned(),
-        TerminologyOauth2Config {
-            token_url: SecretUrl::new("https://idp.example/token"),
-            client_id: "ferroehr".to_owned(),
-            client_secret: Some(Secret::new(CLIENT_SECRET)),
-            ..TerminologyOauth2Config::default()
-        },
-    )]);
+    config.terminology.server.oauth = Some(ClientCredentialsConfig {
+        token_url: Some(SecretUrl::new("https://idp.example/token")),
+        client_id: "ferroehr".to_owned(),
+        client_secret: Some(Secret::new(CLIENT_SECRET)),
+        ..ClientCredentialsConfig::default()
+    });
     config.signing.key_path = Some(key.path().to_path_buf());
     config.signing.key_passphrase = Some(Secret::new(PASSPHRASE));
     config.licence.file = Some(token.path().to_path_buf());

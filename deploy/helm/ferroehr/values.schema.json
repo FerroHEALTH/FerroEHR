@@ -426,12 +426,9 @@
         "auditFhirFeedUrl": {
           "type": "string"
         },
-        "terminologyOauth2ClientSecrets": {
-          "description": "Keyed by client name; each name also needs an entry under config.terminology.external.oauth2_clients, or rendering fails.",
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
+        "terminologyClientSecret": {
+          "description": "The client secret of the grant under config.terminology.server.oauth, which must be declared, or rendering fails.",
+          "type": "string"
         },
         "multimediaAccessKeyId": {
           "type": "string"
@@ -1288,7 +1285,7 @@
           "type": "boolean"
         },
         "wireCdr": {
-          "description": "Point config.terminology.external at the rendered Service. Declaring config.terminology.external.providers.default yourself while this is true is refused at render.",
+          "description": "Point config.terminology.server at the rendered Service. Declaring config.terminology.server.url yourself while this is true is refused at render.",
           "type": "boolean"
         },
         "failOnError": {

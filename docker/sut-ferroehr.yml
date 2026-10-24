@@ -179,11 +179,11 @@ services:
   # Value-sets to Archetypes": the archetype "simply hold[s] an identifier for
   # a query; the query itself is defined within a 'terminology query server'"),
   # and §Overview names the ecosystem — LOINC, ICDx, ICPC, SNOMED CT "and the
-  # many other terminologies and vocabularies used in healthcare" — so a
-  # deployment binds to SEVERAL at once. This service is that server for the
+  # many other terminologies and vocabularies used in healthcare" — and one
+  # server answers for all of them. This service is that server for the
   # conformance record and for local experimentation; the CDR reaches it
-  # through the `[terminology.external]` providers in docker/ferroehr.dev.toml,
-  # which stay DISABLED until an overlay enables them:
+  # through `[terminology.server]` in docker/ferroehr.dev.toml, which stays
+  # DISABLED until an overlay enables it:
   #   docker compose -p ferroehr-cnf --profile terminology \
   #     -f docker/sut-ferroehr.yml -f docker/sut-terminology.yml up -d --wait ferroehr
   #

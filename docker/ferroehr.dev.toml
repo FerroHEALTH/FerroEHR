@@ -79,61 +79,18 @@ status = "admin_only"
 [terminology]
 api_enabled = true
 
-# External terminology servers for the `terminology` compose profile —
-# DISABLED here and switched on only by an overlay
-# (docker/sut-terminology.yml), so the plain quickstart is byte-identical to a
-# deployment without any of this. The providers and routes live in the file
-# rather than in compose env because a route KEY is a terminology namespace
-# (a code-system URI, a value-set URL), which the `FERROEHR__…` env grammar
-# cannot spell.
-#
-# WHY THREE PROVIDERS. BASE docs/architecture_overview/master12-terminology.adoc
-# §Overview names the ecosystem archetypes bind to — LOINC, ICDx, ICPC,
-# SNOMED CT "and the many other terminologies and vocabularies used in
-# healthcare" — so a deployment serves several terminologies at once. Two
-# providers therefore carry the two seeded namespaces, and a third is wired to
-# an address nothing answers on (RFC 2606 §2 reserves `.invalid`), which is how
-# the terminology-server-down branch is exercised for a whole run without any
-# reconfiguration. NOTE: there is deliberately NO provider named `default` —
-# with two or more providers and no `default`, an unrouted terminology has no
-# server at all, so every answer below is proof that its route entry selected
-# its provider. No openEHR spec governs the routing mechanics; our own
-# design/extension.
-[terminology.external]
+# The terminology server for the `terminology` compose profile — DISABLED here
+# and switched on only by an overlay (docker/sut-terminology.yml), so the plain
+# quickstart is byte-identical to a deployment without any of this. One server
+# answers every terminology the bundled openEHR terminology does not carry:
+# BASE docs/architecture_overview/master12-terminology.adoc §"Binding
+# Terminology Value-sets to Archetypes" puts the query behind an archetype
+# constraint binding in a "terminology query server", and the CDR is its
+# client. No openEHR spec governs the client's configuration — our own design.
+[terminology.server]
 enabled = false
+url = "http://terminology:8080/fhir"
 fail_on_error = false
-
-[terminology.external.providers.sct]
-type = "fhir"
-url = "http://terminology:8080/fhir"
-
-[terminology.external.providers.loinc]
-type = "fhir"
-url = "http://terminology:8080/fhir"
-
-[terminology.external.providers.unreachable]
-type = "fhir"
-url = "http://terminology-unreachable.invalid:8080/fhir"
-# Short timeouts: this provider exists to fail, and the branch it proves is
-# "the server could not be reached", not "the server was slow".
-connect_timeout_ms = 500
-request_timeout_ms = 1000
-cache_ttl_secs = 0
-
-# Terminology namespace -> provider. The keys are matched whole-string and
-# case-insensitively: the FHIR `system` URIs and value-set URLs the AQL
-# TERMINOLOGY() operands carry, plus the terminology ids an archetype
-# constraint binding declares.
-[terminology.external.routes]
-"http://cnf.example.test/fhir/CodeSystem/sct-shaped" = "sct"
-"http://cnf.example.test/fhir/ValueSet/sct-shaped-disorders" = "sct"
-"cnf-sct-shaped" = "sct"
-"http://cnf.example.test/fhir/CodeSystem/lab-shaped" = "loinc"
-"http://cnf.example.test/fhir/ValueSet/lab-shaped-vitals" = "loinc"
-"cnf-lab-shaped" = "loinc"
-"http://cnf.example.test/fhir/CodeSystem/ts-down" = "unreachable"
-"http://cnf.example.test/fhir/ValueSet/ts-down-set" = "unreachable"
-"cnf-ts-down" = "unreachable"
 
 [[auth.basic.users]]
 user = "ferroehr"

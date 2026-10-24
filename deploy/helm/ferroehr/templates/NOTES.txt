@@ -166,12 +166,12 @@ SECURITY POSTURE
      you hold a licence for.
 {{- end }}
 {{- if .Values.terminology.wireCdr }}
-  CDR wiring: config.terminology.external is pointed at that Service, fail_on_error={{ .Values.terminology.failOnError }}
+  CDR wiring: config.terminology.server is pointed at that Service, fail_on_error={{ .Values.terminology.failOnError }}
      {{ if .Values.terminology.failOnError }}— a binding the server cannot resolve is REFUSED with 422.{{ else }}— a binding the server cannot resolve is ACCEPTED (the shipped posture). Set
      terminology.failOnError=true to refuse it with 422 instead.{{ end }}
 {{- else }}
   ⚠  terminology.wireCdr=false — FerroTERM is running, and this CDR resolves
-     nothing against it. Wire config.terminology.external yourself, or set
+     nothing against it. Wire config.terminology.server yourself, or set
      terminology.wireCdr=true.
 {{- end }}
 {{- end }}
@@ -209,10 +209,10 @@ Optional integrations currently ON:
   S3 multimedia:    {{ .Values.config.multimedia.enabled }}
   ATNA audit:       {{ .Values.config.audit.enabled }}
   {{- /* The INJECTED state, not the values one: terminology.enabled writes
-         config.terminology.external.enabled for the operator, so reading the
+         config.terminology.server.enabled for the operator, so reading the
          values tree here would report "false" for a release that resolves
          every binding against the FerroTERM beside it. Read through `dig`
          because the chart defaults that key away — a defaulted one could not
          be told apart from one the operator typed, which is what the wiring
          refusals turn on. */}}
-  ext terminology:  {{ if and .Values.terminology.enabled .Values.terminology.wireCdr }}true (in-cluster FerroTERM){{ else }}{{ dig "terminology" "external" "enabled" false .Values.config }}{{ end }}
+  ext terminology:  {{ if and .Values.terminology.enabled .Values.terminology.wireCdr }}true (in-cluster FerroTERM){{ else }}{{ dig "terminology" "server" "enabled" false .Values.config }}{{ end }}

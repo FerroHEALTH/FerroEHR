@@ -388,10 +388,7 @@ impl FerroEhrService {
         for binding in external_term_bindings(archetype) {
             let (system, code) = code_system_and_code(&binding.target)
                 .unwrap_or_else(|| (binding.terminology_id.clone(), binding.target.clone()));
-            match self
-                .term_existence(&binding.terminology_id, &system, &code)
-                .await
-            {
+            match self.term_existence(&system, &code).await {
                 Ok(TermExistence::Exists) => {
                     resolved.insert((binding.terminology_id, binding.target), true);
                 }

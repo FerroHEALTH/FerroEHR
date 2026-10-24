@@ -121,8 +121,6 @@ rand = "0.8"
 # Feed.
 ihe-atna = { workspace = true, features = ["atna"] }
 ehds-logging.workspace = true
-# The terminology client's mutual-TLS identity is read with rustls' PEM reader.
-rustls.workspace = true
 
 openehr-base = { path = "../../crates/openehr-base" }
 openehr-term = { path = "../../crates/openehr-term" }
@@ -145,8 +143,6 @@ ferroehr-ext = { path = "../ferroehr-ext", features = ["multimedia", "events", "
 testkit = { path = "../../tools/testkit" }
 # The access-record tests read what `ehds-logging` writes by its names.
 ehds-logging = { workspace = true, features = ["balp"] }
-# The in-process TLS listeners of the syslog and terminology mutual-TLS tests.
-tokio-rustls.workspace = true
 serde_norway.workspace = true
 # Temp config files for the pure-loader (`config` module) tests.
 assert_fs.workspace = true

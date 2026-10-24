@@ -15,6 +15,67 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking: the CDR asks one terminology server, configured under
+  `[terminology.server]`** (#3085). All terminology beyond the openEHR support
+  terminology is FerroTERM's job: the CDR keeps the in-process openEHR
+  terminology the RM validates against and one client to one FHIR R4B
+  terminology server (BASE `architecture_overview/master12-terminology.adoc`
+  §Binding Terminology Value-sets to Archetypes puts the resolver of a
+  constraint binding in that server). `[terminology.server]` carries
+  `enabled`, `url`, `fail_on_error` and `request_timeout_ms`, and the optional
+  `[terminology.server.oauth]` grant takes the keys `[audit.fhir_feed.oauth]`
+  already uses. Every key is a scalar, so the whole section is reachable
+  through `FERROEHR__TERMINOLOGY__SERVER__*`. The fail-open default and the
+  `422` for a resolved non-member are unchanged (register AMB-172). A
+  configuration that still names `[terminology.external]` is refused at boot,
+  naming the key. Upgrade: move `[terminology.external] enabled` and
+  `fail_on_error` to `[terminology.server]`; put the one server's base URL in
+  `[terminology.server] url` (the URL of the provider you used as `default`,
+  for FerroTERM `http://ferroterm:8080/r4b`) and its `request_timeout_ms`
+  beside it; move an `[terminology.external.oauth2_clients.<name>]` table to
+  `[terminology.server.oauth]`, where `scopes = [...]` becomes one
+  space-separated `scope = "..."` string, `auth_method` becomes
+  `client_auth`, and `refresh_leeway_secs` goes; rename every
+  `FERROEHR__TERMINOLOGY__EXTERNAL__` environment variable to
+  `FERROEHR__TERMINOLOGY__SERVER__`. A deployment that spread code systems
+  over several servers loads them into FerroTERM, which serves SNOMED CT,
+  LOINC, ICD and any FHIR `CodeSystem` or `ValueSet` from one index.
+- **Breaking: Helm chart 14.0.0 wires the terminology server through
+  `config.terminology.server` and takes its client secret as
+  `secrets.terminologyClientSecret`** (#3085). `terminology.enabled` with
+  `terminology.wireCdr` injects `enabled`, `url` and `fail_on_error` under
+  `config.terminology.server`, and refuses a values file that sets the URL
+  itself. `secrets.terminologyClientSecret` is one string, mounted at
+  `/etc/ferroehr-secrets/terminology.server.oauth.client_secret`, and needs the
+  grant declared under `config.terminology.server.oauth`. Upgrade: move
+  `config.terminology.external` to `config.terminology.server` as above, and
+  `secrets.terminologyOauth2ClientSecrets.<name>` to
+  `secrets.terminologyClientSecret`.
+- **A token endpoint URL is masked in every rendering of an outbound grant**
+  (#3085). `token_url` under `[audit.fhir_feed.oauth]`,
+  `[authz.abac.remote.oauth]` and `[terminology.server.oauth]` now keeps its
+  host and path and masks its userinfo in `ferroehr config check`,
+  `/management/env`, `GET /admin/config` and `ferroehr report`, as the
+  terminology client's own token URL already did.
+
+### Removed
+
+- **The terminology route map, per-server credentials and caches are gone**
+  (#3085); FerroTERM is where the capability lives. Removed keys:
+  `[terminology.external.providers.<name>]` with `type`, `operation`,
+  `connect_timeout_ms`, `cache_ttl_secs`, `cache_capacity`, `oauth2_client`,
+  `client_cert_path`, `client_key_path` and `ca_bundle_path`;
+  `[terminology.external.routes]`; `[terminology.external.oauth2_clients]`. The
+  CDR no longer selects a server per terminology, no longer presents a
+  per-server mutual-TLS client certificate or pins a per-server trust bundle
+  (the server is verified against the platform's trust store), no longer caches
+  terminology answers, and no longer validates membership through `$expand`
+  (`$validate-code` answers it). AQL `TERMINOLOGY()`, the `/terminology/*`
+  routes, commit-time binding resolution and the ADL 2 VETDF check all ask the
+  one server.
+
 ## [5.4.0] - 2026-10-24
 
 5.4.0 carries breaking changes for operators, each with its upgrade step under Changed. Before you upgrade: replace an ECDSA or Ed448 OpenPGP signing key in `[signing] mode = "pgp"` with an Ed25519 key, and check that the certificate's primary key or a subkey may still sign; tell viewer users that the viewer's addresses change, so bookmarks and links into it need updating, and that the theme falls back to the system's until it is chosen again; and serve the viewer's whole `pkg/` directory if you serve its site from your own web server. No configuration key, database migration or image name changes.
