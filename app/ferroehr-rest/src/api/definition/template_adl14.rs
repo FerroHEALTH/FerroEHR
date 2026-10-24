@@ -160,7 +160,8 @@ pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Respon
 }
 
 /// `GET …/definition/template/adl1.4/{template_id}/example` — a generated
-/// example COMPOSITION, negotiated across the four `Accept_LOCATABLE` forms.
+/// example COMPOSITION, negotiated across the four `Accept_LOCATABLE` forms, or
+/// for a demographic template an example party in canonical JSON or XML.
 pub(super) async fn example_get(
     state: &AppState,
     parts: &RequestParts,
@@ -175,6 +176,10 @@ pub(super) async fn example_get(
         .backend()
         .template_adl14_example(p.template_id, p.detail_level, p.r#type)
         .await?;
+    // A demographic template's example is a party, served canonically.
+    if let Some(resp) = super::party_example_response(h, &comp) {
+        return Ok(resp);
+    }
     // The four representations `Accept_LOCATABLE` enumerates; any other media
     // type is the endpoint's `406`.
     match negotiate::resolve_accept(h, EXAMPLE_FORMATS, WireFormat::CanonicalJson) {

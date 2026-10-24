@@ -385,8 +385,9 @@ fn create_node(
     } else {
         String::new()
     };
-    let (occ_min, max) = occurrences(object_occurrences(co));
+    let (occ_min, occ_max) = occurrences(object_occurrences(co));
     let min = meet_single_existence(occ_min, owner);
+    let max = cap_single_upper(occ_max, owner);
     let name_constraint = if archetyped {
         name_constraint(co)
     } else {
@@ -1567,6 +1568,30 @@ fn meet_single_existence(
     };
     let existence_min = occurrences(&s.existence).0.unwrap_or(0);
     occurrences_min.map(|m| m.min(existence_min))
+}
+
+/// The node's effective `max`: its own occurrences upper bound capped at `1`
+/// under a SINGLE attribute.
+///
+/// The same ADL 1.4 `master05-cadl.adoc` §Occurrences text as
+/// [`meet_single_existence`]: the value of a single-valued attribute "can only
+/// be `0..1` or `1..1`", and stating a wider occurrences "is not illegal". An
+/// attribute without a cardinality is single-valued even where the RM declares
+/// a container (`master05-cadl.adoc` §Cardinality: "this holds even for smarter
+/// parsers that can access the reference model"), so the deployed `ROLE`
+/// templates that constrain `capabilities` this way admit one `CAPABILITY`.
+fn cap_single_upper(
+    occurrences_max: i32,
+    owner: Option<&openehr_its::opt14::types::CAttribute>,
+) -> i32 {
+    match owner {
+        Some(openehr_its::opt14::types::CAttribute::CSingleAttribute(_))
+            if occurrences_max == -1 || occurrences_max > 1 =>
+        {
+            1
+        }
+        _ => occurrences_max,
+    }
 }
 
 /// `(min, max)` from an occurrences/cardinality interval; `max == -1` unbounded.

@@ -60,6 +60,36 @@ pub struct TemplateRow {
     pub created: String,
 }
 
+impl TemplateRow {
+    /// Whether the template describes a COMPOSITION, the one class a
+    /// composition editor commits and the query builder reaches.
+    ///
+    /// The root archetype id names its RM class in its `rm_entity` part
+    /// (`openEHR-EHR-COMPOSITION.encounter.v1`; BASE `master05-identification_package.adoc`
+    /// §Archetype identifier: `rm_originator-rm_name-rm_entity`, compared
+    /// case-insensitively). A demographic template
+    /// (`openEHR-DEMOGRAPHIC-ROLE.Role.v1`) describes a party instead. A row
+    /// whose root the CDR did not report is kept, since nothing says what it
+    /// describes.
+    #[must_use]
+    pub fn is_composition(&self) -> bool {
+        root_is_composition(&self.archetype_id)
+    }
+}
+
+/// Whether `archetype_id` names a COMPOSITION root (see
+/// [`TemplateRow::is_composition`]); an empty id is not known not to.
+fn root_is_composition(archetype_id: &str) -> bool {
+    if archetype_id.trim().is_empty() {
+        return true;
+    }
+    archetype_id
+        .split('.')
+        .next()
+        .and_then(|qualified| qualified.splitn(3, '-').nth(2))
+        .is_some_and(|entity| entity.eq_ignore_ascii_case("COMPOSITION"))
+}
+
 /// List the CDR's ADL 1.4 operational templates.
 ///
 /// GET `definition/template/adl1.4?version=*` with
@@ -290,6 +320,18 @@ pub async fn delete_adl2_artefact(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_composition_root_is_a_composition_template() {
+        use super::root_is_composition;
+        assert!(root_is_composition("openEHR-EHR-COMPOSITION.encounter.v1"));
+        assert!(root_is_composition("openEHR-EHR-composition.minimal.v1"));
+        assert!(!root_is_composition("openEHR-DEMOGRAPHIC-ROLE.Role.v1"));
+        assert!(!root_is_composition("openEHR-DEMOGRAPHIC-PERSON.person.v2"));
+        assert!(!root_is_composition(
+            "openEHR-EHR-OBSERVATION.blood_pressure.v2"
+        ));
+        assert!(root_is_composition(""), "an unreported root is kept");
+    }
 
     /// Both families' listings are read through this one parser, so it is
     /// pinned against the four fields the Definition API returns.

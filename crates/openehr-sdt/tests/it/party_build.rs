@@ -8,7 +8,9 @@
 //! `master02-demographic_package.adoc`) builds a party that decodes as its root
 //! class, with `identities` as the `List<PARTY_IDENTITY>` the RM declares, no
 //! composition attribute, a compacted structure named by its term definition,
-//! and a refusal for a `ctx/` key. The templates are synthetic, generated here.
+//! and a refusal for a `ctx/` key. The templates are synthetic, generated here,
+//! beside the deployed `Role.v2` from `corpus/fixtures/opt/valid`. A party
+//! template's example is a party of its class (`flat::example::example_party`).
 #![expect(
     clippy::expect_used,
     clippy::panic,
@@ -23,6 +25,7 @@ use openehr_rm::v1_2::demographic::role::Role;
 use openehr_sdt::flat::build::{BuildOptions, RM_VERSION, build_composition_with};
 use openehr_sdt::flat::convert::{composition_from_flat, composition_to_flat, party_from_flat};
 use openehr_sdt::flat::error::FlatError;
+use openehr_sdt::flat::example::{DetailLevel, example_instance, example_party};
 use openehr_sdt::flat::sim::flat::parse_flat;
 use openehr_sdt::flat::tdd::{from_tdd, from_tdd_with};
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
@@ -472,4 +475,123 @@ fn the_party_validator_refuses_a_composition_template() {
         messages.first().map(|m| m.kind),
         Some(ValidationKind::WrongType)
     );
+}
+
+// ── the example party of a demographic template (#3995) ─────────────────────
+
+const LEVELS: [DetailLevel; 3] = [
+    DetailLevel::Required,
+    DetailLevel::Medium,
+    DetailLevel::Complete,
+];
+
+/// The Web Template of the deployed `Role.v2` operational template.
+fn role_v2_template() -> WebTemplate {
+    let path = format!(
+        "{}/../../corpus/fixtures/opt/valid/role.v2.opt",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let xml = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
+    build_web_template(&opt14::from_xml(&xml).expect("parse Role.v2")).expect("build Role.v2")
+}
+
+/// Every party class's template has an example party of that class at every
+/// detail level, which the strict reader decodes (`example_party` checks it,
+/// and the decode below restates it for the three classes with a typed import).
+#[test]
+fn a_party_template_has_an_example_party_at_every_level() {
+    for class in ["PERSON", "ORGANISATION", "GROUP", "AGENT", "ROLE"] {
+        let wt = party_template(class);
+        for level in LEVELS {
+            let party =
+                example_party(&wt, level).unwrap_or_else(|e| panic!("{class}@{level:?}: {e}"));
+            assert_eq!(party["_type"], class, "{class}@{level:?}");
+            assert!(
+                party["identities"]
+                    .as_array()
+                    .is_some_and(|i| !i.is_empty()),
+                "{class}@{level:?}: identities is a non-empty list: {party}"
+            );
+            for attr in ["category", "language", "territory", "composer", "context"] {
+                assert!(party.get(attr).is_none(), "{attr} on a party: {party}");
+            }
+            assert_eq!(
+                party["archetype_details"]["template_id"]["value"],
+                format!("synthetic.{}.v1", class.to_ascii_lowercase())
+            );
+            let instance = example_instance(&wt, level).expect("example_instance");
+            assert_eq!(instance, party, "{class}@{level:?}: one generator");
+        }
+    }
+    from_canonical_value::<Person>(
+        &example_party(&party_template("PERSON"), DetailLevel::Medium).expect("PERSON"),
+    )
+    .expect("decodes as PERSON");
+    from_canonical_value::<Organisation>(
+        &example_party(&party_template("ORGANISATION"), DetailLevel::Medium).expect("ORGANISATION"),
+    )
+    .expect("decodes as ORGANISATION");
+}
+
+/// RM demographic §ROLE makes `performer` mandatory, so the example ROLE
+/// carries a placeholder `PARTY_REF` (`org.openehr.rm.demographic.role.adoc`).
+#[test]
+fn an_example_role_carries_a_performer() {
+    let party = example_party(&party_template("ROLE"), DetailLevel::Required).expect("ROLE");
+    from_canonical_value::<Role>(&party).expect("decodes as ROLE");
+    assert_eq!(party["performer"]["_type"], "PARTY_REF");
+    assert_eq!(party["performer"]["namespace"], "demographic");
+}
+
+/// `Role.v2` constrains `capabilities` and `credentials` as single attributes
+/// whose children state `0..*`; ADL 1.4 `master05-cadl.adoc` §Occurrences caps
+/// such a child at one, so the Web Template says `max` 1 and even the
+/// `complete` example (which repeats every repeating node) holds one
+/// CAPABILITY with one `credentials` structure.
+#[test]
+fn the_role_v2_example_keeps_its_single_attributes_single() {
+    let wt = role_v2_template();
+    assert_eq!(wt.tree.rm_type, "ROLE");
+    let capability = wt
+        .tree
+        .children
+        .iter()
+        .find(|n| n.rm_type == "CAPABILITY")
+        .expect("the CAPABILITY node");
+    assert_eq!(capability.max, 1, "capabilities is single-valued");
+
+    for level in LEVELS {
+        let party = example_party(&wt, level).unwrap_or_else(|e| panic!("Role.v2@{level:?}: {e}"));
+        from_canonical_value::<Role>(&party).expect("decodes as ROLE");
+        let capabilities = party["capabilities"].as_array().map_or(0, Vec::len);
+        assert!(
+            capabilities <= 1,
+            "Role.v2@{level:?}: {capabilities} capabilities"
+        );
+        if let Some(credentials) = party.pointer("/capabilities/0/credentials") {
+            assert!(
+                credentials.is_object(),
+                "Role.v2@{level:?}: one credentials structure"
+            );
+        }
+    }
+    let complete = example_party(&wt, DetailLevel::Complete).expect("complete");
+    assert_eq!(
+        complete["capabilities"].as_array().map(Vec::len),
+        Some(1),
+        "the complete example fills the optional CAPABILITY once: {complete}"
+    );
+}
+
+/// A COMPOSITION template has no example party, and `example_instance` gives
+/// it its example COMPOSITION.
+#[test]
+fn a_composition_template_has_no_example_party() {
+    let wt = minimal_composition_template();
+    match example_party(&wt, DetailLevel::Required) {
+        Err(FlatError::NotAPartyTemplate { root }) => assert_eq!(root, "COMPOSITION"),
+        other => panic!("expected NotAPartyTemplate, got {other:?}"),
+    }
+    let instance = example_instance(&wt, DetailLevel::Required).expect("a COMPOSITION example");
+    assert_eq!(instance["_type"], "COMPOSITION");
 }

@@ -68,7 +68,7 @@ them.
 
 | | verdict scope (selected) | driven | in-scope passed | in-scope failed | in-scope inconclusive |
 |---|---|---|---|---|---|
-| **ferroehr** | 1145 | 1104 | 1104 | 0 | 0 |
+| **ferroehr** | 1145 | 1103 | 1103 | 0 | 0 |
 | **EHRbase** | 692 | 571 | 148 | 148 | 275 |
 
 An **inconclusive** row's wire answered outside the operation's bound outcome

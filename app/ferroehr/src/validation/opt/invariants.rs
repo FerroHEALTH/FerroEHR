@@ -10,8 +10,7 @@
 //! `master05-cadl.adoc`), all decidable structurally on a flattened OPT tree
 //! without running the `valid_value` cascade:
 //!
-//! - `Rm_attribute_name_valid` and `Existence_set` (`C_ATTRIBUTE`),
-//!   `Members_valid` (`C_SINGLE_ATTRIBUTE`);
+//! - `Rm_attribute_name_valid` and `Existence_set` (`C_ATTRIBUTE`);
 //! - VARID and VARDT, archetype-identifier syntax and the RM type / id type slot
 //!   match (master08 lines 544/556);
 //! - VDFAI, a slot-referenced archetype id is well-formed (master08 573);
@@ -23,15 +22,14 @@
 use std::collections::HashSet;
 
 use openehr_its::opt14::types::{
-    ArchetypeInternalRef, ArchetypeSlot, Assertion, CObject, ConstraintRef, ExprItem,
-    Intervalofinteger,
+    ArchetypeInternalRef, ArchetypeSlot, Assertion, ConstraintRef, ExprItem, Intervalofinteger,
 };
 use openehr_its::xml::runtime::XmlAny;
 
 use super::interval::{iv_lower, iv_upper};
-use super::{Ctx, NodeView, RuleViolation};
+use super::{Ctx, RuleViolation};
 
-// ─── C_ATTRIBUTE / C_SINGLE_ATTRIBUTE invariants (T4, T5b) ───────────────────────
+// ─── C_ATTRIBUTE invariants (T4) ─────────────────────────────────────────────────
 
 /// `C_ATTRIBUTE` invariant `Rm_attribute_name_valid`: `not rm_attribute_name.
 /// is_empty` (AOM1.4 `c_attribute` class file, Invariants).
@@ -64,34 +62,6 @@ pub(super) fn check_existence_set(
                  (existence.lower >= 0 and existence.upper <= 1)"
             ),
         ));
-    }
-    Ok(())
-}
-
-/// `C_SINGLE_ATTRIBUTE` invariant `Members_valid`: every alternative child
-/// satisfies `co.occurrences.upper <= 1` — a single-valued attribute can hold
-/// at most one value (AOM1.4 `c_single_attribute` class file, Invariants; also
-/// cADL: occurrences upper > 1 only under a container attribute, AOM1.4
-/// `c_object` class file, `occurrences`). Called only for a single-valued
-/// attribute (no cardinality).
-pub(super) fn check_members_valid(
-    attr_name: &str,
-    parent_rm: &str,
-    children: &[CObject],
-) -> Result<(), RuleViolation> {
-    for child in children {
-        let view = NodeView::of(child);
-        let occ = view.occurrences;
-        if occ.upper_unbounded || iv_upper(occ).is_some_and(|u| u > 1) {
-            return Err(RuleViolation::new(
-                "Members_valid",
-                format!(
-                    "attribute '{attr_name}' on '{parent_rm}' is single-valued but child object \
-                     '{}' has occurrences upper > 1",
-                    view.node_id
-                ),
-            ));
-        }
     }
     Ok(())
 }

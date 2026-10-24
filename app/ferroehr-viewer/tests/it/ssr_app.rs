@@ -124,9 +124,17 @@ fn answer<'a>(
         .or_else(|| recorded.iter().filter(same).find(wanted_status))
 }
 
-/// Starts the replayed CDR and returns its base URL.
-async fn replayed_cdr() -> String {
-    let recorded = recording();
+/// Starts the replayed CDR with `stubs`, exchanges in the recording's shape
+/// that answer before it, and returns its base URL.
+///
+/// A stub stands in for a CDR answer the recording has no screen for (a
+/// demographic template, for example); it is written by the test that needs
+/// it, never added to the recording.
+async fn replayed_cdr_with(stubs: Vec<Value>) -> String {
+    let recorded: Arc<[Value]> = stubs
+        .into_iter()
+        .chain(recording().iter().cloned())
+        .collect();
     let app = axum::Router::new().fallback(move |request: axum::extract::Request| {
         let recorded = Arc::clone(&recorded);
         async move {
@@ -246,9 +254,14 @@ impl Answer {
 impl Viewer {
     /// The viewer over a fresh replayed CDR.
     async fn start() -> Self {
+        Self::start_with(Vec::new()).await
+    }
+
+    /// The viewer over a fresh replayed CDR answering `stubs` first.
+    async fn start_with(stubs: Vec<Value>) -> Self {
         // Initializes the reactive executor the way the viewer's own server does.
         drop(leptos_axum::generate_route_list(|| ()));
-        let cdr = replayed_cdr().await;
+        let cdr = replayed_cdr_with(stubs).await;
         let options = LeptosOptions::builder()
             .output_name(env!("CARGO_PKG_NAME"))
             .build();
@@ -898,4 +911,90 @@ async fn an_unknown_address_answers_404_with_the_way_back() {
     let page = viewer.page(&cookie, "/no-such-screen").await;
     assert_eq!(page.status, http::StatusCode::NOT_FOUND);
     assert!(page.body.contains("No such screen"), "{}", page.body);
+}
+
+/// A stubbed CDR exchange: a `GET` of `path` answered `200` with `content_type`.
+fn stub(path: &str, content_type: &str, response: &str) -> Value {
+    serde_json::json!({
+        "method": "GET",
+        "path": path,
+        "body": "",
+        "status": 200,
+        "headers": { "content-type": content_type },
+        "response": response,
+    })
+}
+
+/// The format options an Example tab's selector offers.
+fn example_format_options(main: &str) -> Vec<&str> {
+    let Some(start) = main.find("name=\"format\"") else {
+        return Vec::new();
+    };
+    let select = main.get(start..).unwrap_or_default();
+    let select = select
+        .get(..select.find("</select>").unwrap_or(select.len()))
+        .unwrap_or_default();
+    select
+        .match_indices("<option value=\"")
+        .filter_map(|(at, open)| {
+            let value = select.get(at + open.len()..)?;
+            value.get(..value.find('"')?)
+        })
+        .collect()
+}
+
+/// A COMPOSITION template's Example tab offers the four representations of
+/// an example COMPOSITION.
+#[tokio::test]
+async fn a_composition_template_offers_every_example_format() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let page = viewer
+        .page(&cookie, "/templates/minimal_evaluation.en.v1?tab=example")
+        .await;
+    assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
+    assert_eq!(
+        example_format_options(page.main()),
+        ["json", "xml", "flat", "structured"],
+        "{}",
+        page.main()
+    );
+}
+
+/// A demographic template's example is a party, which comes in canonical JSON
+/// and XML only (the Simplified Formats RM mapping maps no party class), so the
+/// Example tab offers no FLAT or STRUCTURED and draws the party (#3995).
+#[tokio::test]
+async fn a_demographic_template_offers_only_the_canonical_example_formats() {
+    let base = "/ferroehr/rest/openehr/v1/definition/template/adl1.4/Role.v2";
+    let opt = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/fixtures/opt/valid/role.v2.opt"),
+    )
+    .expect("the Role.v2 fixture should be readable");
+    let example = r#"{"_type":"ROLE","name":{"_type":"DV_TEXT","value":"Rol"},"archetype_node_id":"openEHR-DEMOGRAPHIC-ROLE.Role.v1","identities":[],"performer":{"_type":"PARTY_REF","namespace":"demographic","type":"PERSON","id":{"_type":"HIER_OBJECT_ID","value":"example-performer"}}}"#;
+    let viewer = Viewer::start_with(vec![
+        stub(base, "application/xml", &opt),
+        stub(
+            &format!("{base}/example?detail_level=required&type=input"),
+            "application/json",
+            example,
+        ),
+    ])
+    .await;
+    let cookie = viewer.sign_in().await;
+    let page = viewer.page(&cookie, "/templates/Role.v2?tab=example").await;
+    assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
+    assert_eq!(
+        example_format_options(page.main()),
+        ["json", "xml"],
+        "{}",
+        page.main()
+    );
+    assert!(page.main().contains("example-performer"), "{}", page.main());
+
+    let paths = viewer.page(&cookie, "/templates/Role.v2?tab=paths").await;
+    assert_eq!(paths.status, http::StatusCode::OK, "{}", paths.body);
+    // The CAPABILITY node (at0003) is named by its term, "Geschiktheid".
+    assert!(paths.main().contains("Geschiktheid"), "{}", paths.main());
 }

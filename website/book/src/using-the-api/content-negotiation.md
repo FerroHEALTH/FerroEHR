@@ -144,7 +144,8 @@ Where they work:
   back with the matching `Accept`.
 - **Template examples:** `GET …/definition/template/adl1.4/{id}/example` (and
   the ADL2 form) return the generated example in canonical JSON or XML, FLAT, or
-  STRUCTURED, chosen via `Accept`.
+  STRUCTURED, chosen via `Accept`. The example party of a demographic template
+  comes in canonical JSON or XML only.
 - **Template definitions:** `GET …/definition/template/adl1.4/{id}` with
   `Accept: application/openehr.wt+json` returns the Web Template document.
   `Accept: application/json` returns the same document (it is the only JSON

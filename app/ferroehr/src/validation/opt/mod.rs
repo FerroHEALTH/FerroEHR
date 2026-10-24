@@ -17,7 +17,7 @@
 //! modules along the AOM2/08 catalogue's own section axis:
 //!
 //! - `invariants` — AOM 1.4 constraint-model per-node-kind invariants
-//!   (`Existence_set`, `Members_valid`, `Target_path_valid`, VARID/VARDT, VACDF,
+//!   (`Existence_set`, `Target_path_valid`, VARID/VARDT, VACDF,
 //!   VDFAI, STCDC);
 //! - `rm_conformance` — VCORM/VCARM/VCAEX/VCACA/VCAM + VACMCO over
 //!   `openehr_rm::v1_2::model`;
@@ -339,12 +339,9 @@ fn walk_attribute(attr: &CAttribute, parent_rm: &str, ctx: &Ctx, f: &mut Finding
         attr_name, parent_rm, existence,
     ));
 
-    // A single-valued attribute (no cardinality) can hold at most one value.
-    if cardinality.is_none() {
-        f.record(invariants::check_members_valid(
-            attr_name, parent_rm, children,
-        ));
-    }
+    // NOTE: ADL 1.4 `master05-cadl.adoc` §Occurrences: occurrences on the child
+    // of a single-valued attribute "is not illegal" and can only mean 0..1 or 1..1,
+    // so AOM 1.4 `Members_valid` is read as that cap (#3996), never a refusal.
 
     // RM-conformance checks (VCARM/VCAM/VCAEX) on the resolved RM attribute.
     f.record(rm_conformance::check_attribute(

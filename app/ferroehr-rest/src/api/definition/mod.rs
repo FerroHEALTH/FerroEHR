@@ -34,3 +34,34 @@ mod template_adl2;
 // The `adl1.4/{id}/example` handler negotiates the Simplified-Formats
 // (FLAT/STRUCTURED) representations through the shared `crate::formats::dispatch`
 // adapter, called by its full path (no module alias).
+
+/// Renders an example party (the example of a demographic template) as
+/// canonical JSON or XML, or `None` when `example` is not a party.
+///
+/// The ITS-REST example operation answers the five party classes beside
+/// COMPOSITION (`responses/200_Template_example_retrieved.yaml`). The
+/// Simplified Formats RM mapping (`simplified_formats/master05-rm_mapping.adoc`)
+/// maps no demographic party class, so a FLAT or STRUCTURED `Accept` on a party
+/// example is the `406` the canonical negotiation answers.
+#[expect(
+    clippy::disallowed_types,
+    reason = "owner-approved 2026-08-03 (#1694): the example is the canonical value the \
+              generator produced"
+)]
+fn party_example_response(
+    headers: &http::HeaderMap,
+    example: &serde_json::Value,
+) -> Option<axum::response::Response> {
+    use crate::negotiate::respond_rm;
+    use openehr_rm::prelude::{Agent, Group, Organisation, Person, Role};
+    let ok = http::StatusCode::OK;
+    let response = match example.get("_type").and_then(serde_json::Value::as_str)? {
+        "PERSON" => respond_rm::<Person>(headers, ok, example, "person"),
+        "ORGANISATION" => respond_rm::<Organisation>(headers, ok, example, "organisation"),
+        "GROUP" => respond_rm::<Group>(headers, ok, example, "group"),
+        "AGENT" => respond_rm::<Agent>(headers, ok, example, "agent"),
+        "ROLE" => respond_rm::<Role>(headers, ok, example, "role"),
+        _ => return None,
+    };
+    Some(response)
+}
