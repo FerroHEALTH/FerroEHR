@@ -230,10 +230,12 @@ async fn an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log(
 
     let (status, body) = common::send_body(
         &app,
-        Request::get(format!("{BASE}/fhir/r4/AuditEvent?patient={SUBJECT}"))
-            .header(header::AUTHORIZATION, basic("portal"))
-            .body(Body::empty())
-            .unwrap(),
+        Request::get(format!(
+            "{BASE}/fhir/r4/AuditEvent?date=ge2026-01-01&patient={SUBJECT}"
+        ))
+        .header(header::AUTHORIZATION, basic("portal"))
+        .body(Body::empty())
+        .unwrap(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "subject-scoped retrieval: {body}");

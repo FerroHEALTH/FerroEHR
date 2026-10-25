@@ -39,6 +39,10 @@ use crate::common;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 
+/// A date window around every seeded record: ITI-81 requires at least one
+/// `date` parameter (`RESTful` ATNA §3.81.4.1.2.1).
+const WINDOW: &str = "date=ge2026-07-01";
+
 fn rest_config() -> AppConfig {
     let mut config = AppConfig::default();
     common::with_basic_users(
@@ -163,10 +167,13 @@ async fn searchset_bundle_with_filters_and_paging() {
     )
     .await;
 
-    // Unfiltered: all three, newest first.
+    // Within the window and otherwise unfiltered: all three, newest first.
     let resp = app
         .clone()
-        .oneshot(get("/fhir/r4/AuditEvent", &basic("root")))
+        .oneshot(get(
+            &format!("/fhir/r4/AuditEvent?{WINDOW}"),
+            &basic("root"),
+        ))
         .await
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::OK);
@@ -184,7 +191,7 @@ async fn searchset_bundle_with_filters_and_paging() {
     let resp = app
         .clone()
         .oneshot(get(
-            "/fhir/r4/AuditEvent?patient=patient-1&agent=alice",
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&patient=patient-1&agent=alice"),
             &basic("root"),
         ))
         .await
@@ -209,7 +216,7 @@ async fn searchset_bundle_with_filters_and_paging() {
     let resp = app
         .clone()
         .oneshot(get(
-            "/fhir/r4/AuditEvent?action=R&_count=1&_offset=1",
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&action=R&_count=1&_offset=1"),
             &basic("root"),
         ))
         .await
@@ -222,15 +229,103 @@ async fn searchset_bundle_with_filters_and_paging() {
         "one page entry"
     );
 
+    assert_eq!(
+        bundle["link"].as_array().map(Vec::len),
+        Some(1),
+        "the last page names no next page: {bundle}"
+    );
+}
+
+/// The query grammar of `ihe-atna`: a day without a prefix is `eq`, a
+/// malformed value is `invalid`, and a query without a `date` is refused.
+#[tokio::test]
+async fn the_date_grammar_and_the_required_date() {
+    let (_pg, app, store) = app(true, false).await;
+    seed(
+        &store,
+        "2026-07-12T09:00:00Z",
+        EventActionCode::Create,
+        "bob",
+        Some("patient-2"),
+    )
+    .await;
+
+    // A page with more behind it names the next one.
+    seed(
+        &store,
+        "2026-07-12T10:00:00Z",
+        EventActionCode::Create,
+        "bob",
+        Some("patient-2"),
+    )
+    .await;
+    let resp = app
+        .clone()
+        .oneshot(get(
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&_count=1"),
+            &basic("root"),
+        ))
+        .await
+        .expect("resp");
+    let bundle = body_json(resp).await;
+    assert_eq!(bundle["link"][1]["relation"], "next", "{bundle}");
+    assert_eq!(
+        bundle["link"][1]["url"],
+        format!("AuditEvent?{WINDOW}&_count=1&_offset=1"),
+        "{bundle}"
+    );
+
+    // A day with no prefix is `eq` (FHIR R4 Search §3.1.1.4.5): the whole day.
+    let resp = app
+        .clone()
+        .oneshot(get("/fhir/r4/AuditEvent?date=2026-07-12", &basic("root")))
+        .await
+        .expect("resp");
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(body_json(resp).await["total"], 2);
+
+    // An instant finer than the microsecond the store keeps still finds its
+    // record, as the viewer's record page asks for it by its `recorded`.
+    seed(
+        &store,
+        "2026-07-15T10:00:00.5713589Z",
+        EventActionCode::Read,
+        "carol",
+        Some("patient-3"),
+    )
+    .await;
+    let resp = app
+        .clone()
+        .oneshot(get(
+            "/fhir/r4/AuditEvent?date=le2026-07-15T10:00:00.5713589Z&patient=patient-3",
+            &basic("root"),
+        ))
+        .await
+        .expect("resp");
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(body_json(resp).await["total"], 1);
+
     // A malformed supported parameter is a 400 OperationOutcome.
     let resp = app
         .clone()
-        .oneshot(get("/fhir/r4/AuditEvent?date=2026-07-11", &basic("root")))
+        .oneshot(get("/fhir/r4/AuditEvent?date=ge2026-13-01", &basic("root")))
         .await
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     let outcome = body_json(resp).await;
     assert_eq!(outcome["resourceType"], "OperationOutcome");
+    assert_eq!(outcome["issue"][0]["code"], "invalid");
+
+    // `RESTful` ATNA §3.81.4.1.2.1: at least one `date` parameter shall be
+    // present, and §3.81.4.2.2 lets the repository answer its absence 400.
+    let resp = app
+        .clone()
+        .oneshot(get("/fhir/r4/AuditEvent?patient=patient-1", &basic("root")))
+        .await
+        .expect("resp");
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let outcome = body_json(resp).await;
+    assert_eq!(outcome["issue"][0]["code"], "invalid");
 }
 
 #[tokio::test]
@@ -267,7 +362,10 @@ async fn rbac_gates_the_audit_surface_to_admins() {
 
     // An ADMIN retrieves.
     let resp = app
-        .oneshot(get("/fhir/r4/AuditEvent", &basic("root")))
+        .oneshot(get(
+            &format!("/fhir/r4/AuditEvent?{WINDOW}"),
+            &basic("root"),
+        ))
         .await
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::OK);
@@ -303,7 +401,7 @@ async fn the_subject_audit_role_reads_one_subjects_log_and_nothing_else() {
     let resp = app
         .clone()
         .oneshot(get(
-            "/fhir/r4/AuditEvent?patient=patient-1",
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&patient=patient-1"),
             &basic("portal"),
         ))
         .await
@@ -324,7 +422,10 @@ async fn the_subject_audit_role_reads_one_subjects_log_and_nothing_else() {
     // Unscoped: the same role is refused, with the reason naming the parameter.
     let resp = app
         .clone()
-        .oneshot(get("/fhir/r4/AuditEvent", &basic("portal")))
+        .oneshot(get(
+            &format!("/fhir/r4/AuditEvent?{WINDOW}"),
+            &basic("portal"),
+        ))
         .await
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
@@ -347,7 +448,10 @@ async fn the_subject_audit_role_reads_one_subjects_log_and_nothing_else() {
 
     // The admin keeps the unscoped retrieval.
     let resp = app
-        .oneshot(get("/fhir/r4/AuditEvent", &basic("root")))
+        .oneshot(get(
+            &format!("/fhir/r4/AuditEvent?{WINDOW}"),
+            &basic("root"),
+        ))
         .await
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::OK);

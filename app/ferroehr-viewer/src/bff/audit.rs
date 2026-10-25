@@ -107,6 +107,13 @@ pub async fn search_audit(
             params.push(format!("{key}={}", urlencoding::encode(value.trim())));
         }
     };
+    // NOTE: RESTful ATNA §3.81.4.1.2.1, a retrieval names at least one date, so an unset
+    // window is the last 30 days (no specification governs the length: our own design).
+    let from = if from.trim().is_empty() && to.trim().is_empty() {
+        window_start()
+    } else {
+        from
+    };
     push("date", &prefixed("ge", &from));
     push("date", &prefixed("le", &to));
     push("patient", &patient);
@@ -148,6 +155,18 @@ fn prefixed(prefix: &str, value: &str) -> String {
     } else {
         format!("{prefix}{value}")
     }
+}
+
+/// The first day of the window a search with no date asks for: 30 days
+/// back, as a FHIR date.
+#[cfg(not(target_arch = "wasm32"))]
+fn window_start() -> String {
+    jiff::Timestamp::now()
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .date()
+        .checked_sub(jiff::Span::new().days(30))
+        .map(|day| day.to_string())
+        .unwrap_or_default()
 }
 
 /// Distil the ITI-81 `searchset` Bundle into an [`AuditPage`].

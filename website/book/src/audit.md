@@ -535,20 +535,25 @@ GET /ferroehr/rest/openehr/v1/fhir/r4/AuditEvent
 ```
 
 It returns a FHIR `searchset` Bundle of the stored `AuditEvent` documents,
-newest first, with the full match `total`. Supported search parameters:
+newest first, with the full match `total`, a `self` link and a `next` link
+while more pages follow. The query is read by `ihe-atna`, the family's audit
+crate. At least one `date` parameter is required (RESTful ATNA
+§3.81.4.1.2.1): a query without one is a `400`. Supported search parameters:
 
 | Parameter | Meaning |
 |---|---|
-| `date` | event-time bound, `ge`/`le`-prefixed RFC 3339 instants, repeatable |
-| `patient` | the recorded patient (EHR subject) id |
-| `agent` | the authenticated principal |
-| `entity` | the touched resource id |
+| `date` | **required**, repeatable: a FHIR date value with a prefix (`eq` when none, `gt`, `lt`, `ge`, `le`, `sa`, `eb`); a day such as `2026-07-12` covers the whole day, read in UTC |
+| `patient`, `patient.identifier` | the recorded patient (EHR subject) id |
+| `agent`, `agent.identifier` | the authenticated principal |
+| `entity`, `entity.identifier` | the touched resource id |
 | `outcome` | the outcome indicator: `0`, `4`, `8` or `12` (FerroEHR records `0`, `4` and `8`) |
 | `action` | the action code: `C`, `R`, `U`, `D` or `E` |
-| `_count` / `_offset` | paging; page size defaults to 50, capped at 1000 |
+| `_count` / `_offset` | paging; page size defaults to 50, capped at 1000; `_count=0` returns the total alone |
 
-Other FHIR search parameters are ignored (lenient search); a malformed value on
-a supported one is a `400` carrying a FHIR `OperationOutcome`. Under RBAC the
+A malformed value is a `400` carrying a FHIR `OperationOutcome` with
+`invalid`; a parameter the local store cannot apply yet is a `400` with
+`not-supported`; a parameter the crate does not know is ignored
+(§3.81.4.1.3). Under RBAC the
 unscoped retrieval is **admin-only**; a caller holding the configured
 `authz.rbac.subject_audit_role` reads it **scoped to one subject**, `patient`
 required, and is refused with a `403` that names the parameter when it omits
