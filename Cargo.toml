@@ -221,7 +221,8 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # issuer's key set, Basic users, the SMART on openEHR scopes, the discovery
 # document and the client credentials grant. It checks tokens and never issues
 # them.
-ferrohealth-smart = { version = "=0.4.0", default-features = false, features = ["fetch"] }
+# Verified on crates.io 2026-10-25 (0.5.0, which requires openehr-sdt 0.0.98).
+ferrohealth-smart = { version = "=0.5.0", default-features = false, features = ["fetch"] }
 
 # ── Terminology (the client of the one FHIR terminology server) ───────────────
 # FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,
@@ -437,6 +438,14 @@ criterion = { version = "0.8.2", features = ["html_reports"] }
 # Full debuginfo on ~400 deps + 18 workspace crates made dev builds/links slow
 # and grew target/ past 190 GB. Line tables keep file:line backtraces for our
 # code; dependencies get none (their debuginfo is never read in this repo).
+# ferrohealth-smart's `openehr` feature names the published openehr-sdt, and
+# cargo keeps a registry copy apart from the workspace member of the same
+# version, so the workspace member stands in for it and the graph holds ONE
+# openehr-sdt (#4002). It applies only while both name the same 0.0.x: a crate
+# line bump here waits for the ferrohealth-smart release that requires it.
+[patch.crates-io]
+openehr-sdt = { path = "crates/openehr-sdt" }
+
 [profile.dev]
 debug = "line-tables-only"
 # rustc's `linker_messages` lint surfaces Apple ld's "__eh_frame section too
