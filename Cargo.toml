@@ -426,8 +426,9 @@ criterion = { version = "0.8.2", features = ["html_reports"] }
 #   cargo-llvm-cov, sccache ; linker: mold (Linux).
 #
 # Toolchain: Rust stable 1.99.1, edition 2024; the MSRV is 1.98.
-# The floor is fhir-types, which ihe-atna's `balp` feature pulls and which declares
-# 1.98; the nine published crates feel the bump (docs/VERSIONS.md §MSRV policy).
+# The MSRV is the toolchain minus one minor and is only ever raised, the rule every
+# FerroHEALTH repository follows; the toolchain watcher moves both, and the nine
+# published crates take a lockstep bump with each MSRV move (docs/VERSIONS.md §MSRV policy).
 # Database: PostgreSQL 18 (target 18.6+; 18.x is the current stable line; PG 19 in beta — do not target).
 
 # ── Build-speed profiles ─────────────────────────────────────────────────────
