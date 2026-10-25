@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+#
+# A search fixture for validate.sh's config-keys gate (#3901), rendered on top
+# of default-values.yaml: it sets one key the server configuration does not
+# define, the `[audit.syslog] transport` that #3897 removed, and the gate must
+# refuse the render naming it. Not a deployment, so boot-check.sh skips it.
+config:
+  audit:
+    syslog:
+      transport: tls
