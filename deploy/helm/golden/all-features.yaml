@@ -618,7 +618,7 @@ data:
           client_id = "ferroehr"
           client_secret_file = "/etc/ferroehr-secrets/terminology.server.oauth.client_secret"
           scope = "tx.read"
-          token_url = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
+          token_endpoint = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
     
     [usage_report]
       deployment = "helm"

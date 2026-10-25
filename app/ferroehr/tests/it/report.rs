@@ -18,7 +18,6 @@
 
 use assert_fs::prelude::*;
 use ferroehr::config::FerroEhrConfig;
-use ferroehr::config::client_credentials::ClientCredentialsConfig;
 use ferroehr::config::secret::{Secret, SecretUrl};
 use ferroehr::db::domain::DomainPools;
 use ferroehr::manufacturer::MANUFACTURER;
@@ -72,11 +71,11 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
         }],
         cache_ttl_seconds: 0,
     });
-    config.terminology.server.oauth = Some(ClientCredentialsConfig {
-        token_url: Some(SecretUrl::new("https://idp.example/token")),
+    config.terminology.server.oauth = Some(ferrohealth_smart::config::OauthSection {
+        token_endpoint: "https://idp.example/token".to_owned(),
         client_id: "ferroehr".to_owned(),
-        client_secret: Some(Secret::new(CLIENT_SECRET)),
-        ..ClientCredentialsConfig::default()
+        client_secret: Some(secrecy::SecretString::from(CLIENT_SECRET)),
+        ..ferrohealth_smart::config::OauthSection::default()
     });
     config.signing.key_path = Some(key.path().to_path_buf());
     config.signing.key_passphrase = Some(Secret::new(PASSPHRASE));

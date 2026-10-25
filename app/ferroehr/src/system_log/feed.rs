@@ -49,8 +49,8 @@ impl FeedClient {
             .as_ref()
             .map(|oauth| {
                 let grant = oauth
-                    .grant("audit.fhir_feed.oauth")
-                    .map_err(|e| AuditError::Transport(e.into()))?;
+                    .resolve()
+                    .map_err(|e| AuditError::Transport(Box::new(e)))?;
                 ferrohealth_smart::client::cache::TokenSource::new(grant)
                     .map_err(|e| AuditError::Transport(Box::new(e)))
             })

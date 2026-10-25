@@ -150,7 +150,7 @@ config:
       # a golden render; its client secret is secrets.terminologyClientSecret,
       # and the chart injects client_secret_file pointing at the mounted file.
       oauth:
-        token_url: https://idp.example.org/realms/ts/protocol/openid-connect/token
+        token_endpoint: https://idp.example.org/realms/ts/protocol/openid-connect/token
         client_id: ferroehr
         scope: tx.read
   multimedia:

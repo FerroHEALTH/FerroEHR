@@ -197,7 +197,7 @@ pub struct FhirFeedConfig {
     /// The OAuth 2.0 client-credentials grant the feed authenticates with
     /// (`[audit.fhir_feed.oauth]`), the IHE IUA authorized client; absent, the
     /// feed sends the Basic credentials of `url`, if any.
-    pub oauth: Option<crate::config::client_credentials::ClientCredentialsConfig>,
+    pub oauth: Option<ferrohealth_smart::config::OauthSection>,
 }
 
 impl Default for FhirFeedConfig {

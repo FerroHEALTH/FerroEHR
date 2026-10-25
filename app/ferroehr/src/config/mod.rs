@@ -31,7 +31,6 @@ mod strict;
 
 pub mod auth;
 pub mod authz;
-pub mod client_credentials;
 pub mod deployment;
 pub mod management;
 pub mod profile;
@@ -1029,7 +1028,7 @@ mod tests {
 
     use super::*;
     use crate::config::authz::AbacParam;
-    use crate::config::secret::{Secret, SecretUrl};
+    use crate::config::secret::SecretUrl;
 
     /// Build an injected env map from `(key, value)` pairs.
     fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
@@ -1724,7 +1723,7 @@ mod tests {
     /// keeps its host and path with the userinfo masked.
     #[test]
     fn url_userinfo_reaches_no_rendering() {
-        use crate::config::client_credentials::ClientCredentialsConfig;
+        use ferrohealth_smart::config::OauthSection;
 
         let leaky =
             |n: u32| SecretUrl::new(format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}:1/p{n}"));
@@ -1739,9 +1738,9 @@ mod tests {
         c.events.url = leaky(7);
         c.audit.fhir_feed.url = leaky(8);
         c.terminology.server.url = leaky(9);
-        c.terminology.server.oauth = Some(ClientCredentialsConfig {
-            token_url: Some(leaky(10)),
-            ..ClientCredentialsConfig::default()
+        c.terminology.server.oauth = Some(OauthSection {
+            token_endpoint: "https://u10:URL_PW_SENTINEL_10@h10:1/p10".to_owned(),
+            ..OauthSection::default()
         });
         c.usage_report.endpoint = leaky(11);
         c.authz.abac.remote.server = Some(leaky(12));
@@ -1763,8 +1762,15 @@ mod tests {
                 "URL userinfo leaked into the {surface} rendering: {rendered}"
             );
             for n in 1..=15 {
+                // URL 10 is the `ferrohealth-smart` grant table, whose `Debug`
+                // masks userinfo as a percent-encoded `[redacted]` user.
+                let mask = if n == 10 && surface == "debug" {
+                    "%5Bredacted%5D"
+                } else {
+                    "***"
+                };
                 assert!(
-                    rendered.contains(&format!("https://***@h{n}:1/p{n}")),
+                    rendered.contains(&format!("https://{mask}@h{n}:1/p{n}")),
                     "URL {n} lost its host and path in the {surface} rendering: {rendered}"
                 );
             }
@@ -2684,29 +2690,29 @@ mod tests {
     /// keys, never a silently unauthenticated terminology request.
     #[test]
     fn validate_terminology_server_oauth_shape() {
-        use crate::config::client_credentials::ClientCredentialsConfig;
+        use ferrohealth_smart::config::OauthSection;
 
         let mut c = FerroEhrConfig::default();
         c.terminology.server.enabled = true;
         c.terminology.server.url = SecretUrl::new("https://ts.example/fhir");
-        c.terminology.server.oauth = Some(ClientCredentialsConfig::default());
+        c.terminology.server.oauth = Some(OauthSection::default());
         let err = c
             .validate()
             .expect_err("a grant with no token endpoint, client id or secret is rejected");
         for key in [
             "terminology.server.oauth",
-            "token_url",
+            "token_endpoint",
             "client_id",
             "client_secret",
         ] {
             assert!(err.to_string().contains(key), "{key} unnamed in {err}");
         }
 
-        c.terminology.server.oauth = Some(ClientCredentialsConfig {
-            token_url: Some(SecretUrl::new("https://idp.example/token")),
+        c.terminology.server.oauth = Some(OauthSection {
+            token_endpoint: "https://idp.example/token".to_owned(),
             client_id: "cdr".to_owned(),
-            client_secret: Some(Secret::new("s3cret")),
-            ..ClientCredentialsConfig::default()
+            client_secret: Some(secrecy::SecretString::from("s3cret")),
+            ..OauthSection::default()
         });
         assert!(c.validate().is_ok());
 
@@ -2724,7 +2730,7 @@ mod tests {
 
         // A disabled server's grant is not in use, so it is not checked.
         c.terminology.server.enabled = false;
-        c.terminology.server.oauth = Some(ClientCredentialsConfig::default());
+        c.terminology.server.oauth = Some(OauthSection::default());
         assert!(c.validate().is_ok());
     }
 
@@ -2743,7 +2749,7 @@ mod tests {
                 ("FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR", "true"),
                 ("FERROEHR__TERMINOLOGY__SERVER__REQUEST_TIMEOUT_MS", "2500"),
                 (
-                    "FERROEHR__TERMINOLOGY__SERVER__OAUTH__TOKEN_URL",
+                    "FERROEHR__TERMINOLOGY__SERVER__OAUTH__TOKEN_ENDPOINT",
                     "https://idp/token",
                 ),
                 ("FERROEHR__TERMINOLOGY__SERVER__OAUTH__CLIENT_ID", "cdr"),
@@ -2764,15 +2770,34 @@ mod tests {
         assert_eq!(server.url.expose(), "http://ferroterm:8080/r4b");
         assert_eq!(server.request_timeout_ms, 2_500);
         let oauth = server.oauth.as_ref().expect("the grant from env");
-        assert_eq!(
-            oauth.token_url.as_ref().map(SecretUrl::expose),
-            Some("https://idp/token")
-        );
+        assert_eq!(oauth.token_endpoint, "https://idp/token");
         assert_eq!(oauth.client_id, "cdr");
         assert_eq!(
-            oauth.client_secret.as_ref().map(Secret::expose),
+            oauth
+                .client_secret
+                .as_ref()
+                .map(secrecy::ExposeSecret::expose_secret),
             Some("s3cret")
         );
-        assert_eq!(oauth.scope.as_deref(), Some("system/*.read"));
+        assert_eq!(oauth.scope, "system/*.read");
+    }
+
+    /// Every outbound grant is the `ferrohealth-smart` client table, so the
+    /// key `token_url` that preceded `token_endpoint` stops startup by name
+    /// in each of the three tables that take a grant.
+    #[test]
+    fn the_old_token_url_key_is_refused_in_every_grant() {
+        for table in [
+            "terminology.server.oauth",
+            "audit.fhir_feed.oauth",
+            "authz.abac.remote.oauth",
+        ] {
+            let file = toml_file(&format!(
+                "[{table}]\ntoken_url = \"https://idp.example/token\"\nclient_id = \"c\"\n"
+            ));
+            let err =
+                assemble(Some(file.path()), &env(&[]), &[]).expect_err("the old key is unknown");
+            assert!(err.to_string().contains("token_url"), "{table}: {err}");
+        }
     }
 }

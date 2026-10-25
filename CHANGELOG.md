@@ -17,6 +17,20 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **Breaking: the outbound client credentials tables take the
+  `ferrohealth-smart` client table, so `token_url` is now `token_endpoint`**
+  (#4028). `[terminology.server.oauth]`, `[audit.fhir_feed.oauth]` and
+  `[authz.abac.remote.oauth]` are the family's shared grant: the old key
+  `token_url` stops startup by name, and each table gains `private_key_jwt`
+  (RFC 7523), mutual TLS (`tls_client_auth` and
+  `self_signed_tls_client_auth`, RFC 8705), `ca_file`, `refresh_margin_ms` and
+  `timeout_ms`. `issuer`, `client_id`, the client secret, `scope`, `audience`
+  and `resource` keep their names. Upgrade: rename `token_url` to
+  `token_endpoint` in each table (in the Helm chart, under
+  `config.terminology.server.oauth` and the other two), or
+  `..._OAUTH__TOKEN_URL` to `..._OAUTH__TOKEN_ENDPOINT` in the environment.
+  `ferrohealth-smart` moves to 0.7.0 and `ihe-atna` and `ehds-logging` to
+  0.2.10, and the FHIR Feed sends its bearer token through `ihe-atna`.
 - **Breaking: the ITI-81 audit retrieval (`GET /fhir/r4/AuditEvent`) requires
   a `date` parameter** (#4030). The query is now read by `ihe-atna`'s
   `retrieve`, the family's audit crate, and the answer written by it:

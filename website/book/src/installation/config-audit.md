@@ -166,14 +166,22 @@ startup.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `token_url` | URL | unset | The token endpoint. Set this or `issuer`. |
+| `token_endpoint` | URL | unset | The token endpoint. Set this or `issuer`. |
 | `issuer` | URL | unset | The issuer whose metadata (`/.well-known/oauth-authorization-server`) names the token endpoint. |
 | `client_id` | string | unset | The client identifier. Required. |
 | `client_secret` / `client_secret_file` | secret | unset | The client secret, inline or read from a file. One is required. |
-| `client_auth` | enum{client_secret_basic,client_secret_post} | `client_secret_basic` | How the client authenticates to the token endpoint. |
+| `client_auth` | enum{client_secret_basic,client_secret_post,private_key_jwt,tls_client_auth,self_signed_tls_client_auth} | `client_secret_basic` | How the client authenticates to the token endpoint. |
 | `scope` | string | unset | The `scope` of the token request. |
 | `audience` | string | unset | The `audience` parameter, for an authorization server that reads it. |
 | `resource` | URL | unset | The `resource` indicator (RFC 8707) naming the repository. |
+| `private_key_file` | path | unset | The PEM private key that signs the client assertion under `private_key_jwt` (RFC 7523). |
+| `kid` | string | the RFC 7638 thumbprint | The `kid` the client assertion names. |
+| `assertion_alg` | string | by key type | The algorithm the client assertion is signed with. |
+| `assertion_audience` | enum{token_endpoint,issuer} | `token_endpoint` | The `aud` of the client assertion; `issuer` needs `issuer` set. |
+| `client_certificate_file` / `client_key_file` | path | unset | The client certificate chain and its key presented over mutual TLS (RFC 8705); set together. |
+| `ca_file` | path | unset | PEM trust roots added to the built-in ones, for a token endpoint behind a private certificate authority. |
+| `refresh_margin_ms` | int | `30000` | How long before the token expires a new one is fetched. |
+| `timeout_ms` | int | `10000` | How long one call to the authorization server may take. |
 
 With the local store on, the feed drains the store's outbox and is therefore
 loss-free across a repository outage. With the store off it ships in-drain, and

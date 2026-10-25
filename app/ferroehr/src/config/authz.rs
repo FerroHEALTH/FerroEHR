@@ -254,7 +254,7 @@ pub struct RemoteConfig {
     /// The OAuth 2.0 client-credentials grant the policy service is called
     /// with (`[authz.abac.remote.oauth]`); absent, the calls carry the Basic
     /// credentials of `server`, if any.
-    pub oauth: Option<crate::config::client_credentials::ClientCredentialsConfig>,
+    pub oauth: Option<ferrohealth_smart::config::OauthSection>,
 }
 
 impl Default for RemoteConfig {

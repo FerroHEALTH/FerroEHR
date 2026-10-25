@@ -360,7 +360,7 @@ secret VALUE refused outright.
 {{- if .Values.secrets.terminologyClientSecret -}}
 {{- $oauth := dig "terminology" "server" "oauth" "" $rendered -}}
 {{- if not (kindIs "map" $oauth) -}}
-{{- fail "secrets.terminologyClientSecret is set and config.terminology.server.oauth declares no grant (declare its token_url or issuer and its client_id there; only the secret belongs here)" -}}
+{{- fail "secrets.terminologyClientSecret is set and config.terminology.server.oauth declares no grant (declare its token_endpoint or issuer and its client_id there; only the secret belongs here)" -}}
 {{- end -}}
 {{- $_ := set $oauth "client_secret_file" (printf "%s/terminology.server.oauth.client_secret" (include "ferroehr.secretMountPath" $)) -}}
 {{- end -}}

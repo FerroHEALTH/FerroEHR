@@ -539,7 +539,7 @@ secrets:
   # ([terminology.server.oauth]). MOUNTED as
   # /etc/ferroehr-secrets/terminology.server.oauth.client_secret, and the chart
   # injects the matching `client_secret_file` into the rendered TOML (a path is
-  # not sensitive). Declare the grant itself — token_url or issuer, client_id,
+  # not sensitive). Declare the grant itself — token_endpoint or issuer, client_id,
   # scope — under config.terminology.server.oauth; a secret with no such
   # declaration is a render error.
   terminologyClientSecret: ""

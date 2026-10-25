@@ -78,8 +78,8 @@ impl RemotePdp {
             .as_ref()
             .map(|oauth| {
                 let grant = oauth
-                    .grant("authz.abac.remote.oauth")
-                    .map_err(AuthzError::PolicyLoad)?;
+                    .resolve()
+                    .map_err(|e| AuthzError::PolicyLoad(format!("authz.abac.remote.oauth: {e}")))?;
                 ferrohealth_smart::client::cache::TokenSource::new(grant).map_err(|e| {
                     AuthzError::PolicyLoad(format!("building the policy-service token client: {e}"))
                 })

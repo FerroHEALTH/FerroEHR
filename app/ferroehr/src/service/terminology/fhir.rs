@@ -524,7 +524,9 @@ mod wire {
                 ..RetryPolicy::default()
             });
         if let Some(oauth) = &cfg.oauth {
-            let grant = oauth.grant(OAUTH_KEY).map_err(SmError::exception)?;
+            let grant = oauth.resolve().map_err(|e| {
+                SmError::exception(format!("{OAUTH_KEY}: the grant is refused")).with_source(e)
+            })?;
             let source = TokenSource::new(grant).map_err(|e| {
                 SmError::exception(format!("{OAUTH_KEY}: the grant is refused")).with_source(e)
             })?;
