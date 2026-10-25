@@ -354,13 +354,13 @@ secret VALUE refused outright.
 {{- end -}}
 {{- end -}}
 {{- if not $matched -}}
-{{- fail (printf "secrets.basicUserPasswordHashes.%s has no matching entry at config.auth.basic.users[] with user: %s (declare the user and its scopes there, its roles at config.authz.rbac.basic_roles; only the hash belongs in secrets:)" $user $user) -}}
+{{- fail (printf "secrets.basicUserPasswordHashes.%s has no matching entry at config.auth.basic.users[] with user: %s (declare the user, its scopes and its roles there; only the hash belongs in secrets:)" $user $user) -}}
 {{- end -}}
 {{- end -}}
 {{- if .Values.secrets.terminologyClientSecret -}}
 {{- $oauth := dig "terminology" "server" "oauth" "" $rendered -}}
 {{- if not (kindIs "map" $oauth) -}}
-{{- fail "secrets.terminologyClientSecret is set and config.terminology.server.oauth declares no grant (declare its token_url or issuer and its client_id there; only the secret belongs here)" -}}
+{{- fail "secrets.terminologyClientSecret is set and config.terminology.server.oauth declares no grant (declare its token_endpoint or issuer and its client_id there; only the secret belongs here)" -}}
 {{- end -}}
 {{- $_ := set $oauth "client_secret_file" (printf "%s/terminology.server.oauth.client_secret" (include "ferroehr.secretMountPath" $)) -}}
 {{- end -}}

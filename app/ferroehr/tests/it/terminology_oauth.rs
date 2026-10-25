@@ -20,11 +20,13 @@
 
 use std::sync::Arc;
 
-use ferroehr::config::client_credentials::{ClientAuthMethod, ClientCredentialsConfig};
-use ferroehr::config::secret::{Secret, SecretUrl};
+use ferroehr::config::secret::SecretUrl;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
+use ferrohealth_smart::client::ClientAuth;
+use ferrohealth_smart::config::OauthSection;
+use secrecy::SecretString;
 use serde_json::json;
 use wiremock::matchers::{body_string_contains, header, header_exists, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -34,7 +36,7 @@ use crate::terminology_wire::operation;
 const SNOMED: &str = "http://snomed.info/sct";
 
 /// An enabled server at `base`, authenticated by `oauth` when given.
-fn server_cfg(base: &str, oauth: Option<ClientCredentialsConfig>) -> TerminologyServerConfig {
+fn server_cfg(base: &str, oauth: Option<OauthSection>) -> TerminologyServerConfig {
     TerminologyServerConfig {
         enabled: true,
         url: SecretUrl::new(base),
@@ -127,13 +129,13 @@ async fn oauth2_client_credentials_token_is_obtained_and_reused() {
         .mount(&ts)
         .await;
 
-    let grant = ClientCredentialsConfig {
-        token_url: Some(SecretUrl::new(format!("{}/token", idp.uri()))),
+    let grant = OauthSection {
+        token_endpoint: format!("{}/token", idp.uri()),
         client_id: "ferroehr-cdr".to_owned(),
-        client_secret: Some(Secret::new("s3cret")),
-        client_auth: ClientAuthMethod::ClientSecretBasic,
-        scope: Some("system/*.read".to_owned()),
-        ..ClientCredentialsConfig::default()
+        client_secret: Some(SecretString::from("s3cret")),
+        client_auth: ClientAuth::ClientSecretBasic,
+        scope: "system/*.read".to_owned(),
+        ..OauthSection::default()
     };
     let service = service_with(server_cfg(&ts.uri(), Some(grant))).await;
 
@@ -180,13 +182,12 @@ async fn a_refused_grant_is_a_typed_error_not_an_anonymous_request() {
         .mount(&ts)
         .await;
 
-    let grant = ClientCredentialsConfig {
-        token_url: Some(SecretUrl::new(format!("{}/token", idp.uri()))),
+    let grant = OauthSection {
+        token_endpoint: format!("{}/token", idp.uri()),
         client_id: "ferroehr-cdr".to_owned(),
-        client_secret: Some(Secret::new("wrong")),
-        client_auth: ClientAuthMethod::ClientSecretBasic,
-        scope: None,
-        ..ClientCredentialsConfig::default()
+        client_secret: Some(SecretString::from("wrong")),
+        client_auth: ClientAuth::ClientSecretBasic,
+        ..OauthSection::default()
     };
     let service = service_with(server_cfg(&ts.uri(), Some(grant))).await;
 
@@ -245,13 +246,12 @@ async fn client_secret_post_sends_credentials_in_the_body() {
         .mount(&ts)
         .await;
 
-    let grant = ClientCredentialsConfig {
-        token_url: Some(SecretUrl::new(format!("{}/token", idp.uri()))),
+    let grant = OauthSection {
+        token_endpoint: format!("{}/token", idp.uri()),
         client_id: "ferroehr-cdr".to_owned(),
-        client_secret: Some(Secret::new("s3cret")),
-        client_auth: ClientAuthMethod::ClientSecretPost,
-        scope: None,
-        ..ClientCredentialsConfig::default()
+        client_secret: Some(SecretString::from("s3cret")),
+        client_auth: ClientAuth::ClientSecretPost,
+        ..OauthSection::default()
     };
     let service = service_with(server_cfg(&ts.uri(), Some(grant))).await;
     service
@@ -308,13 +308,12 @@ async fn a_refused_token_is_renewed_once() {
         .mount(&ts)
         .await;
 
-    let grant = ClientCredentialsConfig {
-        token_url: Some(SecretUrl::new(format!("{}/token", idp.uri()))),
+    let grant = OauthSection {
+        token_endpoint: format!("{}/token", idp.uri()),
         client_id: "ferroehr-cdr".to_owned(),
-        client_secret: Some(Secret::new("s3cret")),
-        client_auth: ClientAuthMethod::ClientSecretBasic,
-        scope: None,
-        ..ClientCredentialsConfig::default()
+        client_secret: Some(SecretString::from("s3cret")),
+        client_auth: ClientAuth::ClientSecretBasic,
+        ..OauthSection::default()
     };
     let service = service_with(server_cfg(&ts.uri(), Some(grant))).await;
     service

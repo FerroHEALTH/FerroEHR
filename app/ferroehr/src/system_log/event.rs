@@ -18,7 +18,7 @@
 
 use jiff::Timestamp;
 
-use crate::config::auth::AssuranceLevel;
+use ferrohealth_smart::assurance::AssuranceLevel;
 
 /// DICOM `EventActionCode` (PS3.15 §A.5.1): the CRUD/execute class of the op.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

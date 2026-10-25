@@ -124,18 +124,26 @@ answers with `401` is sent once more under a new token.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `token_url` | secret URL | one of `token_url` and `issuer` | The OAuth2 token endpoint. Credentials embedded in it are redacted from every rendering. |
-| `issuer` | string | one of `token_url` and `issuer` | The issuer whose metadata names the token endpoint (RFC 8414). |
+| `token_endpoint` | URL | one of `token_endpoint` and `issuer` | The OAuth2 token endpoint. Credentials embedded in it are masked in every rendering. |
+| `issuer` | string | one of `token_endpoint` and `issuer` | The issuer whose metadata names the token endpoint (RFC 8414). |
 | `client_id` | string | required | The registered client identifier. Empty is a boot error. |
 | `client_secret` / `client_secret_file` | secret / path | one is required | The client secret, inline or read from a mounted file. |
-| `client_auth` | enum{client_secret_basic,client_secret_post} | `client_secret_basic` | How the client authenticates at the token endpoint. |
+| `client_auth` | enum{client_secret_basic,client_secret_post,private_key_jwt,tls_client_auth,self_signed_tls_client_auth} | `client_secret_basic` | How the client authenticates at the token endpoint. |
 | `scope` | string | unset | The `scope` request parameter. |
 | `audience` | string | unset | The `audience` request parameter some authorization servers read. |
 | `resource` | URL | unset | The RFC 8707 `resource` request parameter. |
+| `private_key_file` | path | unset | The PEM private key that signs the client assertion under `private_key_jwt` (RFC 7523). |
+| `kid` | string | the RFC 7638 thumbprint | The `kid` the client assertion names. |
+| `assertion_alg` | string | by key type | The algorithm the client assertion is signed with. |
+| `assertion_audience` | enum{token_endpoint,issuer} | `token_endpoint` | The `aud` of the client assertion; `issuer` needs `issuer` set. |
+| `client_certificate_file` / `client_key_file` | path | unset | The client certificate chain and its key presented over mutual TLS (RFC 8705); set together. |
+| `ca_file` | path | unset | PEM trust roots added to the built-in ones, for a token endpoint behind a private certificate authority. |
+| `refresh_margin_ms` | int | `30000` | How long before the token expires a new one is fetched. |
+| `timeout_ms` | int | `10000` | How long one call to the authorization server may take. |
 
 ```toml
 [terminology.server.oauth]
-token_url = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
+token_endpoint = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
 client_id = "ferroehr-cdr"
 client_secret_file = "/run/secrets/ts-client"
 scope = "system/*.read"

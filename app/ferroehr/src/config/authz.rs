@@ -101,19 +101,6 @@ pub struct RbacConfig {
     /// identifier. Unset, nobody may call it (#3776). No openEHR spec governs
     /// this — our own design/extension.
     pub identifier_reader_role: Option<String>,
-    /// JWT claim paths mined for roles, in resolution order.
-    ///
-    /// Defaults to the carriers RFC 9068 §2.2.3.1 names for conveying
-    /// authorization state — `roles`, `groups`, `entitlements` (`roles` and
-    /// `entitlements` being SCIM attributes, RFC 7643 §4.1.2) — followed by the
-    /// widely deployed nested `realm_access.roles`. An issuer that nests them
-    /// differently is configuration, not a code change.
-    ///
-    /// `scope` is deliberately NOT a default: an OAuth2 scope grants a client
-    /// delegated authority (RFC 6749 §3.3) and asserts nothing about the
-    /// subject's roles, so reading it as one makes the "at least one role" gate
-    /// vacuous for every OIDC token.
-    pub role_claims: Vec<String>,
     /// What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default
     /// `open`).
     ///
@@ -129,15 +116,6 @@ pub struct RbacConfig {
     /// gate runs without the coarse one; with authentication off nothing could
     /// enforce `restricted`, so that combination is refused at boot.
     pub ehr_access_default: EhrAccessDefault,
-    /// The roles of each Basic user, by the user-id `[[auth.basic.users]]`
-    /// names (`[authz.rbac.basic_roles]`); a user it does not list holds
-    /// [`Self::user_role`].
-    ///
-    /// `[[auth.basic.users]]` is the shared `ferrohealth-smart` section and
-    /// carries a user's SMART scopes, not its roles, so the roles the RBAC gate
-    /// reads live here beside the other role keys. Names are upper-cased like
-    /// every role. No openEHR spec governs role semantics — our own design.
-    pub basic_roles: BTreeMap<String, Vec<String>>,
 }
 
 impl Default for RbacConfig {
@@ -150,30 +128,8 @@ impl Default for RbacConfig {
             subject_audit_role: None,
             emergency_access_role: None,
             identifier_reader_role: None,
-            role_claims: vec![
-                "roles".to_owned(),
-                "groups".to_owned(),
-                "entitlements".to_owned(),
-                "realm_access.roles".to_owned(),
-            ],
             ehr_access_default: EhrAccessDefault::Open,
-            basic_roles: BTreeMap::new(),
         }
-    }
-}
-
-impl RbacConfig {
-    /// Returns the roles of the Basic user `user`, upper-cased: its
-    /// [`Self::basic_roles`] entry, or [`Self::user_role`] when it has none.
-    #[must_use]
-    pub fn roles_of_basic_user(&self, user: &str) -> Vec<String> {
-        let mut roles: Vec<String> = match self.basic_roles.get(user) {
-            Some(roles) => roles.iter().map(|role| role.to_ascii_uppercase()).collect(),
-            None => vec![self.user_role.to_ascii_uppercase()],
-        };
-        roles.sort_unstable();
-        roles.dedup();
-        roles
     }
 }
 
@@ -254,7 +210,7 @@ pub struct RemoteConfig {
     /// The OAuth 2.0 client-credentials grant the policy service is called
     /// with (`[authz.abac.remote.oauth]`); absent, the calls carry the Basic
     /// credentials of `server`, if any.
-    pub oauth: Option<crate::config::client_credentials::ClientCredentialsConfig>,
+    pub oauth: Option<ferrohealth_smart::config::OauthSection>,
 }
 
 impl Default for RemoteConfig {
@@ -373,10 +329,10 @@ pub struct AuthzConfig {
     pub abac: AbacConfig,
     /// The authentication assurance a patient-data request must carry
     /// (`[authz.assurance]`, off by default).
-    pub assurance: crate::config::auth::AssuranceConfig,
+    pub assurance: ferrohealth_smart::assurance::AssuranceSection,
     /// How a bearer token names the natural person behind it
     /// (`[authz.professional]`, absent by default).
-    pub professional: Option<crate::config::auth::ProfessionalConfig>,
+    pub professional: Option<ferrohealth_smart::assurance::ProfessionalSection>,
 }
 
 /// A boot-time authorization-configuration error — a hard error that must
@@ -386,9 +342,6 @@ pub enum AuthzConfigError {
     /// A required role name was blank.
     #[error("authz.rbac.{0} must not be empty")]
     EmptyRole(&'static str),
-    /// The role-claim path list was empty or contained a blank entry.
-    #[error("authz.rbac.role_claims must be non-empty and contain no blank paths")]
-    RoleClaims,
     /// A policy key does not name a known resource kind.
     #[error(
         "authz.abac.policy.{0} is not a known resource kind \
@@ -423,8 +376,8 @@ impl AuthzConfig {
     /// Validate the configuration at boot. All defaults are valid.
     ///
     /// # Errors
-    /// [`AuthzConfigError`] when a role name is blank or the role-claim path list
-    /// is empty / contains a blank path.
+    /// [`AuthzConfigError`] when a role name is blank or an ABAC setting does
+    /// not hold.
     pub fn validate(&self) -> Result<(), AuthzConfigError> {
         if self.rbac.admin_role.trim().is_empty() {
             return Err(AuthzConfigError::EmptyRole("admin_role"));
@@ -434,11 +387,6 @@ impl AuthzConfig {
         }
         if self.rbac.readonly_role.trim().is_empty() {
             return Err(AuthzConfigError::EmptyRole("readonly_role"));
-        }
-        if self.rbac.role_claims.is_empty()
-            || self.rbac.role_claims.iter().any(|c| c.trim().is_empty())
-        {
-            return Err(AuthzConfigError::RoleClaims);
         }
         if self.abac.enabled {
             self.abac.validate()?;
@@ -544,18 +492,6 @@ mod tests {
         assert_eq!(c.rbac.admin_role, "ADMIN");
         assert_eq!(c.rbac.user_role, "USER");
         assert_eq!(c.rbac.readonly_role, "READONLY");
-        // The RFC 9068 §2.2.3.1 carriers, in order. `scope` is deliberately
-        // absent: an OAuth2 scope grants a client delegated authority
-        // (RFC 6749 §3.3) and asserts nothing about the subject's roles.
-        assert_eq!(
-            c.rbac.role_claims,
-            vec![
-                "roles".to_owned(),
-                "groups".to_owned(),
-                "entitlements".to_owned(),
-                "realm_access.roles".to_owned(),
-            ]
-        );
         assert!(c.validate().is_ok());
     }
 
@@ -584,26 +520,6 @@ mod tests {
             c.validate(),
             Err(AuthzConfigError::EmptyRole("readonly_role"))
         );
-    }
-
-    #[test]
-    fn empty_role_claims_rejected() {
-        let c = AuthzConfig {
-            rbac: RbacConfig {
-                role_claims: vec![],
-                ..RbacConfig::default()
-            },
-            ..AuthzConfig::default()
-        };
-        assert_eq!(c.validate(), Err(AuthzConfigError::RoleClaims));
-        let c = AuthzConfig {
-            rbac: RbacConfig {
-                role_claims: vec!["ok".to_owned(), "  ".to_owned()],
-                ..RbacConfig::default()
-            },
-            ..AuthzConfig::default()
-        };
-        assert_eq!(c.validate(), Err(AuthzConfigError::RoleClaims));
     }
 
     #[test]
@@ -879,7 +795,6 @@ mod tests {
         assert_eq!(parsed.rbac.enabled, default.rbac.enabled);
         assert_eq!(parsed.rbac.user_role, default.rbac.user_role);
         assert_eq!(parsed.rbac.readonly_role, default.rbac.readonly_role);
-        assert_eq!(parsed.rbac.role_claims, default.rbac.role_claims);
         assert_eq!(parsed.abac.engine, default.abac.engine);
         assert_eq!(
             parsed.abac.organization_claim,

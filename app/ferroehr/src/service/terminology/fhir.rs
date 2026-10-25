@@ -473,18 +473,15 @@ mod wire {
     use std::time::Duration;
 
     use ferrobridge_term::client::Client;
-    use ferrobridge_term::config::{
-        Config, Credentials, RetryPolicy, TokenFailure, TokenProvider, WireVersion,
-    };
+    use ferrobridge_term::config::{Config, Credentials, RetryPolicy, WireVersion};
     use ferrobridge_term::error::{Error, UpstreamError};
     use ferrobridge_term::outcome::{
         Coded, ExpandOutcome, ExpansionContains, LookupOutcome, SubsumesOutcome, Subsumption,
         ValidateOutcome, Validation,
     };
-    use ferrohealth_smart::client::TokenError;
-    use ferrohealth_smart::client::cache::{Token, TokenSource};
-    use http::{HeaderValue, StatusCode};
-    use secrecy::{ExposeSecret, SecretString};
+    use ferrobridge_term::smart::SmartToken;
+    use ferrohealth_smart::client::cache::TokenSource;
+    use http::StatusCode;
 
     use super::{
         Absence, CHILD_RELATION, Expansion, FhirTerminologyProvider, OAUTH_KEY,
@@ -500,9 +497,6 @@ mod wire {
 
     /// The `tx-issue-type` code for "the code is not in the code system".
     const TX_ISSUE_INVALID_CODE: &str = "invalid-code";
-
-    /// The scheme of an RFC 6750 §2.1 bearer credential, with its separator.
-    const BEARER: &str = "Bearer ";
 
     /// Builds the client of the server `cfg` names.
     pub(super) fn connect(cfg: &TerminologyServerConfig) -> Result<Client, SmError> {
@@ -524,53 +518,18 @@ mod wire {
                 ..RetryPolicy::default()
             });
         if let Some(oauth) = &cfg.oauth {
-            let grant = oauth.grant(OAUTH_KEY).map_err(SmError::exception)?;
+            let grant = oauth.resolve().map_err(|e| {
+                SmError::exception(format!("{OAUTH_KEY}: the grant is refused")).with_source(e)
+            })?;
             let source = TokenSource::new(grant).map_err(|e| {
                 SmError::exception(format!("{OAUTH_KEY}: the grant is refused")).with_source(e)
             })?;
-            config = config.with_credentials(Credentials::OAuth(Arc::new(ServerToken(source))));
+            config =
+                config.with_credentials(Credentials::OAuth(Arc::new(SmartToken::from(source))));
         }
         Client::new(config).map_err(|e| {
             SmError::exception("building the terminology client failed").with_source(e)
         })
-    }
-
-    /// The client-credentials token of `[terminology.server.oauth]`, cached,
-    /// renewed around expiry and once more when the server answers `401`.
-    #[derive(Debug)]
-    struct ServerToken(TokenSource);
-
-    #[async_trait::async_trait]
-    impl TokenProvider for ServerToken {
-        async fn token(&self) -> Result<SecretString, TokenFailure> {
-            let token = self.0.token().await.map_err(failure)?;
-            bare(&token).map_err(failure)
-        }
-
-        fn invalidate(&self, stale: &SecretString) {
-            // NOTE: RFC 6750 §2.1, the cached token travels as `Bearer <token>`,
-            // so the refused one is dropped by that value.
-            if let Ok(header) = HeaderValue::from_str(&format!("{BEARER}{}", stale.expose_secret()))
-            {
-                self.0.invalidate(&header);
-            }
-        }
-    }
-
-    /// The token `token` renders, the `Authorization` value without its scheme.
-    fn bare(token: &Token) -> Result<SecretString, Arc<TokenError>> {
-        token
-            .header()
-            .to_str()
-            .ok()
-            .and_then(|value| value.strip_prefix(BEARER))
-            .map(SecretString::from)
-            .ok_or_else(|| Arc::new(TokenError::Unusable))
-    }
-
-    /// The client's token failure carrying `error` as its source.
-    fn failure(error: Arc<TokenError>) -> TokenFailure {
-        TokenFailure::new(error)
     }
 
     /// Why a refusal says the asked-about thing is unknown, from the

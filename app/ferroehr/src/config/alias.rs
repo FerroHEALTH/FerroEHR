@@ -103,7 +103,7 @@ pub(super) const LIST_KEYS: &[&str] = &[
     "auth.scopeless_subjects",
     "auth.capabilities",
     "auth.scopes_supported",
-    "authz.rbac.role_claims",
+    "auth.role_claims",
     "smart.backend_clients",
     "smart.patient_issuers",
     "smart.demographic_clients",

@@ -22,7 +22,6 @@ readonly DEFAULT_TOML="${DEFAULT_TOML:-${REPO_ROOT}/app/ferroehr/assets/ferroehr
 readonly MAP_TABLES='
 audit.categories.templates
 audit.categories.archetypes
-authz.rbac.basic_roles
 authz.assurance.levels
 cohort.predicates
 '

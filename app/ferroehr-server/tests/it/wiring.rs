@@ -366,7 +366,7 @@ server = "https://u4:URL_PW_SENTINEL_4@h4:3001/p4/"
 url = "https://u5:URL_PW_SENTINEL_5@h5:443/p5"
 
 [terminology.server.oauth]
-token_url = "https://u6:URL_PW_SENTINEL_6@h6:443/p6"
+token_endpoint = "https://u6:URL_PW_SENTINEL_6@h6:8443/p6"
 client_id = "client"
 client_secret = "CLIENT_SECRET_SENTINEL"
 "#,
@@ -380,7 +380,9 @@ client_secret = "CLIENT_SECRET_SENTINEL"
         (3, 8333),
         (4, 3001),
         (5, 443),
-        (6, 443),
+        // NOTE: WHATWG URL Standard §4.5 (URL serializing) omits a scheme's
+        // default port, so the grant table's URL 6 names a port that stays.
+        (6, 8443),
     ] {
         assert!(
             text.contains(&format!("://***@h{n}:{port}/p{n}")),

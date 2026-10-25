@@ -36,9 +36,8 @@
 use axum::response::{IntoResponse, Response};
 
 use crate::extensions::access::authz::classify::{access_of, kind_of};
-use crate::extensions::access::authz::request::{
-    AccessMode, Attr, AuthzRequest, Decision, ResourceKind,
-};
+use crate::extensions::access::authz::request::{AccessMode, AuthzRequest, ResourceKind};
+use ferrohealth_authz::request::Attr;
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::Composition;
 
@@ -46,6 +45,7 @@ use crate::api::RequestParts;
 use crate::extensions::access::authn::{Principal, current_principal};
 use crate::extensions::access::authz::AbacGate;
 use crate::overview::error::RestError;
+use ferroehr::config::authz::AbacEngineKind;
 
 use crate::smart::routes;
 use crate::state::AppState;
@@ -165,7 +165,7 @@ pub(crate) async fn query_post(
         forbidden_unauthenticated("authentication required for attribute-based access control")
     })?;
     // The claim gate stays: a configured claim the token lacks is a 403 here too.
-    resolve_patient_claim(abac, &principal)?;
+    let claim = resolve_patient_claim(abac, &principal)?;
     let subjects = TouchedSubjects::fold(&outcome.subjects, abac.patient_namespace.as_deref());
     if !subjects.shared.is_empty() {
         return Err(forbidden(
@@ -191,6 +191,7 @@ pub(crate) async fn query_post(
             kind: ResourceKind::Query,
             access: AccessMode::Execute,
             organization: organization(abac, &principal),
+            subject_patient: abac.subject_patient(claim.as_ref()),
             patient,
             template: template.clone(),
         };
@@ -263,6 +264,7 @@ async fn abac_pre(
         kind,
         access: access_of(op).unwrap_or(AccessMode::Read),
         organization: organization(abac, &principal),
+        subject_patient: abac.subject_patient(patient.as_ref()),
         patient: patient.map(Attr::One),
         template,
     };
@@ -339,6 +341,7 @@ async fn abac_post(state: &AppState, op: &'static str, resp: Response) -> Respon
         kind,
         access: access_of(op).unwrap_or(AccessMode::Read),
         organization: organization(abac, &principal),
+        subject_patient: abac.subject_patient(patient.as_ref()),
         patient: patient.map(Attr::One),
         template,
     };
@@ -359,8 +362,8 @@ fn resolve_patient_claim(
     let Some(claim) = &abac.patient_claim else {
         return Ok(None);
     };
-    match crate::extensions::access::authz::roles::claim_string(&principal.claims, claim) {
-        Some(v) => Ok(Some(v)),
+    match ferrohealth_smart::roles::claim_text(&principal.claims, claim) {
+        Some(v) => Ok(Some(v.to_owned())),
         None => Err(forbidden(
             principal,
             &format!("ABAC requires a '{claim}' claim on the access token"),
@@ -372,7 +375,8 @@ fn resolve_patient_claim(
 fn organization(abac: &AbacGate, principal: &Principal) -> Option<String> {
     abac.organization_claim
         .as_ref()
-        .and_then(|c| crate::extensions::access::authz::roles::claim_string(&principal.claims, c))
+        .and_then(|c| ferrohealth_smart::roles::claim_text(&principal.claims, c))
+        .map(str::to_owned)
 }
 
 /// The pre-check patient gate: the subject match for target-EHR ops, plus the
@@ -568,9 +572,25 @@ async fn decide(
     principal: &Principal,
     req: &AuthzRequest<'_>,
 ) -> Result<(), Response> {
-    match abac.engine.decide(req).await {
-        Ok(Decision::Permit) => Ok(()),
-        Ok(Decision::Deny) => Err(forbidden(principal, "policy denied")),
+    let subject = req.subject();
+    let request = req
+        .to_request(&subject)
+        .map_err(|e| engine_error(principal, "build the authorization request", &e))?;
+    let outcome = abac.engine.decide(&request).await;
+    let result = match &outcome {
+        Ok(decision) if decision.is_permit() => "permit",
+        Ok(_) => "deny",
+        Err(_) => "error",
+    };
+    let metrics = ferroehr::telemetry::metrics::metrics();
+    let counter = match abac.engine_kind {
+        AbacEngineKind::Cedar => &metrics.authz_cedar_decisions,
+        AbacEngineKind::Remote => &metrics.authz_remote_pdp_calls,
+    };
+    counter.add(1, &[opentelemetry::KeyValue::new("result", result)]);
+    match outcome {
+        Ok(decision) if decision.is_permit() => Ok(()),
+        Ok(_) => Err(forbidden(principal, "policy denied")),
         Err(e) => Err(engine_error(
             principal,
             "reach an authorization decision",
@@ -765,8 +785,9 @@ mod tests {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use crate::extensions::access::authz::engine::{AuthzError, PolicyEngine};
     use async_trait::async_trait;
+    use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
+    use ferrohealth_authz::request::{Decision, Request};
     use http::StatusCode;
 
     use ferrohealth_smart::resource::{Access, Caller, Honoured};
@@ -791,9 +812,11 @@ mod tests {
 
     #[async_trait]
     impl PolicyEngine for CountingEngine {
-        async fn decide(&self, _req: &AuthzRequest<'_>) -> Result<Decision, AuthzError> {
+        async fn decide(&self, _req: &Request<'_>) -> Result<Decision, AuthzError> {
             self.0.fetch_add(1, Ordering::SeqCst);
-            Ok(Decision::Permit)
+            Ok(Decision::Permit {
+                policies: Vec::new(),
+            })
         }
     }
 
@@ -815,6 +838,7 @@ mod tests {
             patient_claim: Some("patient_id".to_owned()),
             patient_namespace: None,
             directory_checked: false,
+            engine_kind: AbacEngineKind::Cedar,
         }
     }
 

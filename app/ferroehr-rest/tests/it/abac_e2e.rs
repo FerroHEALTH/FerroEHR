@@ -42,13 +42,12 @@ use ferroehr::service::status::SmError;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
-use ferroehr_rest::extensions::access::authz::engine::{AuthzError, PolicyEngine};
-use ferroehr_rest::extensions::access::authz::request::{
-    Attr, AuthzRequest, Decision, ResourceKind,
-};
+use ferroehr_rest::extensions::access::authz::request::{PATIENT, ResourceKind, TEMPLATE};
 use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, ResolveError};
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::{build_full, build_with};
+use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
+use ferrohealth_authz::request::{Attr, Decision};
 use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode};
 use serde_json::{Value, json};
@@ -108,13 +107,30 @@ fn composition() -> Value {
 
 // ── a permit-all PDP engine: the patient gate is what denies here ─────────────
 
+/// A permit naming no policy.
+fn permit() -> Decision {
+    Decision::Permit {
+        policies: Vec::new(),
+    }
+}
+
+/// A deny naming no policy.
+fn deny() -> Decision {
+    Decision::Deny {
+        policies: Vec::new(),
+    }
+}
+
 #[derive(Debug)]
 struct PermitAll;
 
 #[async_trait]
 impl PolicyEngine for PermitAll {
-    async fn decide(&self, _req: &AuthzRequest<'_>) -> Result<Decision, AuthzError> {
-        Ok(Decision::Permit)
+    async fn decide(
+        &self,
+        _req: &ferrohealth_authz::request::Request<'_>,
+    ) -> Result<Decision, AuthzError> {
+        Ok(permit())
     }
 }
 
@@ -712,17 +728,16 @@ struct RequireIpsTemplate;
 
 #[async_trait]
 impl PolicyEngine for RequireIpsTemplate {
-    async fn decide(&self, req: &AuthzRequest<'_>) -> Result<Decision, AuthzError> {
-        let bound = match &req.template {
+    async fn decide(
+        &self,
+        req: &ferrohealth_authz::request::Request<'_>,
+    ) -> Result<Decision, AuthzError> {
+        let bound = match req.attributes().get(TEMPLATE) {
             Some(Attr::One(t)) => t == IPS_TEMPLATE_ID,
             Some(Attr::Set(set)) => set.iter().any(|t| t == IPS_TEMPLATE_ID),
             None => false,
         };
-        Ok(if bound {
-            Decision::Permit
-        } else {
-            Decision::Deny
-        })
+        Ok(if bound { permit() } else { deny() })
     }
 }
 
@@ -904,17 +919,22 @@ struct DenyOwnPatientQueries;
 
 #[async_trait]
 impl PolicyEngine for DenyOwnPatientQueries {
-    async fn decide(&self, req: &AuthzRequest<'_>) -> Result<Decision, AuthzError> {
-        let touches_own = match &req.patient {
+    async fn decide(
+        &self,
+        req: &ferrohealth_authz::request::Request<'_>,
+    ) -> Result<Decision, AuthzError> {
+        let touches_own = match req.attributes().get(PATIENT) {
             Some(Attr::One(p)) => p == PATIENT_OWN,
             Some(Attr::Set(set)) => set.iter().any(|p| p == PATIENT_OWN),
             None => false,
         };
-        Ok(if req.kind == ResourceKind::Query && touches_own {
-            Decision::Deny
-        } else {
-            Decision::Permit
-        })
+        Ok(
+            if req.resource_type() == ResourceKind::Query.resource_type() && touches_own {
+                deny()
+            } else {
+                permit()
+            },
+        )
     }
 }
 

@@ -1,87 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The role model: JWT-claim role extraction and the RBAC gate decision.
+//! The RBAC gate decision.
 //!
-//! Roles are plain upper-cased strings (`USER`, `ADMIN`, …). They come from a
-//! Bearer token's configured claim paths ([`extract_roles`]) or a Basic user's
-//! configured role list (resolved in `ferroehr-rest`). [`authorize`] gates an
+//! Roles are plain upper-cased strings (`USER`, `ADMIN`, …) that
+//! `ferrohealth-smart` reads from a token's `[auth] role_claims` or a Basic
+//! user's `[[auth.basic.users]] roles`. [`authorize`] gates an
 //! [`OperationClass`] against a principal's roles and the [`RbacConfig`].
-
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 7): RFC 7519 leaves the claim set open; \
-              decided-on claims lift into typed fields"
-)]
-
-use serde_json::{Map, Value};
 
 use crate::extensions::access::authz::classify::OperationClass;
 use ferroehr::config::authz::RbacConfig;
-
-/// Extract roles from a validated JWT claim map given dotted claim paths.
-///
-/// A path resolves through nested JSON objects (`realm_access.roles`). The value
-/// at a path is normalized to a role list: an array yields each string element
-/// (the RFC 9068 §2.2.3.1 / RFC 7643 §4.1.2 shape); a plain string is split on
-/// whitespace, for issuers that carry a single space-delimited role list. Every
-/// role is trimmed, upper-cased, and de-duplicated with first-seen order
-/// preserved.
-#[must_use]
-pub fn extract_roles(claims: &Map<String, Value>, paths: &[String]) -> Vec<String> {
-    let mut roles: Vec<String> = Vec::new();
-    for path in paths {
-        let Some(value) = lookup(claims, path) else {
-            continue;
-        };
-        match value {
-            Value::Array(items) => {
-                for item in items.iter().filter_map(Value::as_str) {
-                    push_role(&mut roles, item);
-                }
-            }
-            Value::String(s) => {
-                for token in s.split_whitespace() {
-                    push_role(&mut roles, token);
-                }
-            }
-            _ => {}
-        }
-    }
-    roles
-}
-
-/// Appends one normalized role — trimmed and upper-cased — unless it is empty
-/// or already present (first-seen order is preserved).
-fn push_role(roles: &mut Vec<String>, raw: &str) {
-    let norm = raw.trim().to_ascii_uppercase();
-    if !norm.is_empty() && !roles.contains(&norm) {
-        roles.push(norm);
-    }
-}
-
-/// Resolve a dotted claim path to a string value (the ABAC `organization` /
-/// `patient` attribute lookup). Returns `None` when the path is absent or
-/// the value is not a (non-empty) string.
-#[must_use]
-pub fn claim_string(claims: &Map<String, Value>, path: &str) -> Option<String> {
-    lookup(claims, path)
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(str::to_owned)
-}
-
-/// Resolve a dotted claim path through nested JSON objects.
-fn lookup<'a>(claims: &'a Map<String, Value>, path: &str) -> Option<&'a Value> {
-    let mut parts = path.split('.');
-    let first = parts.next()?;
-    let mut current = claims.get(first)?;
-    for part in parts {
-        current = current.as_object()?.get(part)?;
-    }
-    Some(current)
-}
 
 /// The outcome of the RBAC gate.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -156,70 +84,6 @@ pub fn authorize_readonly(is_write: bool, roles: &[String], rbac: &RbacConfig) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
-
-    fn claims(v: &Value) -> Map<String, Value> {
-        v.as_object().cloned().expect("object")
-    }
-
-    /// An OAuth2 scope grants a CLIENT delegated authority (RFC 6749 §3.3); it
-    /// asserts nothing about the subject's roles. Mining it made the
-    /// at-least-one-role gate vacuous for every OIDC token, since `openid`
-    /// alone satisfied it.
-    #[test]
-    fn scope_claim_does_not_grant_roles() {
-        let c = claims(&json!({
-            "realm_access": { "roles": ["user", "ferroehr-admin"] },
-            "scope": "openid EHR_READ",
-        }));
-        let roles = extract_roles(&c, &RbacConfig::default().role_claims);
-        assert!(roles.contains(&"USER".to_owned()));
-        assert!(roles.contains(&"FERROEHR-ADMIN".to_owned()));
-        assert!(
-            !roles.contains(&"OPENID".to_owned()),
-            "`openid` is a scope, not a role",
-        );
-        assert!(
-            !roles.contains(&"EHR_READ".to_owned()),
-            "a scope must not become a role",
-        );
-    }
-
-    /// The RFC 9068 §2.2.3.1 carriers are read in order, so an issuer using the
-    /// flat `roles`/`groups`/`entitlements` shape needs no configuration.
-    #[test]
-    fn rfc9068_role_claims_extracted() {
-        for carrier in ["roles", "groups", "entitlements"] {
-            let c = claims(&json!({ carrier: ["clinician"] }));
-            assert_eq!(
-                extract_roles(&c, &RbacConfig::default().role_claims),
-                vec!["CLINICIAN".to_owned()],
-                "the `{carrier}` claim must carry roles",
-            );
-        }
-    }
-
-    #[test]
-    fn dedups_preserving_order() {
-        // The same role from two configured carriers collapses to one entry.
-        let c = claims(&json!({
-            "roles": ["admin", "Admin"],
-            "realm_access": { "roles": ["ADMIN"] },
-        }));
-        assert_eq!(
-            extract_roles(&c, &RbacConfig::default().role_claims),
-            vec!["ADMIN".to_owned()]
-        );
-    }
-
-    #[test]
-    fn missing_paths_yield_empty() {
-        let c = claims(&json!({ "sub": "x" }));
-        assert_eq!(
-            extract_roles(&c, &RbacConfig::default().role_claims),
-            Vec::<String>::new()
-        );
-    }
 
     #[test]
     fn rbac_disabled_allows_everything() {

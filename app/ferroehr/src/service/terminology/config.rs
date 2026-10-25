@@ -18,7 +18,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::client_credentials::ClientCredentialsConfig;
 use crate::config::secret::SecretUrl;
 
 /// The `[terminology]` section: the extension-API toggle and the terminology
@@ -56,7 +55,7 @@ pub struct TerminologyServerConfig {
     pub request_timeout_ms: u64,
     /// The OAuth 2.0 client credentials grant whose bearer token every request
     /// carries (`[terminology.server.oauth]`). Unset = unauthenticated.
-    pub oauth: Option<ClientCredentialsConfig>,
+    pub oauth: Option<ferrohealth_smart::config::OauthSection>,
 }
 
 impl Default for TerminologyServerConfig {

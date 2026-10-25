@@ -276,6 +276,10 @@ realm = ""                   # the challenge realm; empty = "ferroehr"
 # either grammar, meets every SMART on openEHR requirement; a token that
 # carries scopes gets only its scopes.
 scopeless_subjects = []
+# The token claims the caller's roles are read from, in order; a dotted path
+# reaches a nested claim. `scope` is not a role source: a scope grants a client
+# delegated authority (RFC 6749 §3.3). The first three are RFC 9068 §2.2.3.1's.
+role_claims = ["roles", "groups", "entitlements", "realm_access.roles"]
 capabilities = []            # SMART capabilities the discovery document adds
 scopes_supported = []        # the scopes the discovery document lists; empty = the ones the route table honours
 # product_scope: FerroEHR's own scope, which admits the ADMIN API and, beside
@@ -292,13 +296,14 @@ product_scope = ""
 # argon2id PHC string meeting the OWASP Password Storage Cheat Sheet §Argon2id
 # floor — m>=19456, t>=2, p>=1 — checked at boot, because the verifier takes its
 # cost parameters from the stored hash. `scopes` are the SMART on openEHR
-# scopes the user holds, checked on every route like a token's; its RBAC roles
-# are [authz.rbac.basic_roles].
+# scopes the user holds, checked on every route like a token's; `roles` are its
+# RBAC roles (none = no role, refused wherever the role gate asks for one).
 #? [[auth.basic.users]]
 #? user = "alice"
 #? password_hash = "$argon2id$v=19$m=19456,t=2,p=1$...$..."   # never a plaintext password
 #? password_hash_file = "/run/secrets/alice-hash"   # or a mounted file; the Argon2id floor applies either way
 #? scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds"]
+#? roles = ["ADMIN", "USER"]
 # How long a Basic credential that verified is kept, so a repeat request skips
 # the Argon2id derivation (0 = every request). The entry is a keyed hash of
 # the credential, never the password; the TTL bounds how long a removed user
@@ -354,7 +359,6 @@ readonly_role = "READONLY"   # carriers are refused on every write operation
 # GET /admin/party/identifiers, beside admin_role. Every read is an access
 # record naming the reader, the party and the scheme. Unset, nobody may.
 #? identifier_reader_role = "IDENTIFIER_READER"
-role_claims = ["roles", "groups", "entitlements", "realm_access.roles"]
 # What an EHR carrying no ACCESS_CONTROL_SETTINGS admits. A new EHR carries
 # none, so this governs most records. "restricted" is object-level default-deny:
 # only admin_role reaches a setting-less EHR, so an operator can still author
@@ -363,11 +367,6 @@ role_claims = ["roles", "groups", "entitlements", "realm_access.roles"]
 ehr_access_default = "open"   # open | restricted
 # The management surface is NOT configured here — see [management.endpoints],
 # which owns it, one level per endpoint.
-
-# The RBAC roles of each [[auth.basic.users]] user, by user-id; a user it does
-# not list holds user_role.
-[authz.rbac.basic_roles]
-#? alice = ["ADMIN", "USER"]
 
 [authz.abac]
 enabled = false
@@ -536,12 +535,12 @@ request_timeout_ms = 10000
 # OAuth2 client-credentials grant, only when the server sits behind an
 # authorization server (the same keys as [audit.fhir_feed.oauth]):
 #? [terminology.server.oauth]
-#? token_url = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
+#? token_endpoint = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
 #? client_id = "ferroehr-cdr"
 #? client_secret = "..."
 #? client_secret_file = "/run/secrets/ts-client"   # instead of client_secret, a mounted file
 #? scope = "system/*.read"
-#? client_auth = "client_secret_basic"   # client_secret_basic | client_secret_post
+#? client_auth = "client_secret_basic"   # client_secret_basic | client_secret_post | private_key_jwt | tls_client_auth | self_signed_tls_client_auth
 
 # ── [multimedia] — DV_MULTIMEDIA externalization to S3-compatible storage ─────
 [multimedia]

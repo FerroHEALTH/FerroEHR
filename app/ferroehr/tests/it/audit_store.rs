@@ -545,8 +545,8 @@ async fn the_access_trail_refuses_rewriting_deletion_and_truncation() {
 /// chain verifies over records carrying them.
 #[tokio::test]
 async fn both_inserts_persist_the_authentication_columns() {
-    use ferroehr::config::auth::AssuranceLevel;
     use ferroehr::system_log::event::{ActingMode, ActorAuthentication};
+    use ferrohealth_smart::assurance::AssuranceLevel;
 
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();

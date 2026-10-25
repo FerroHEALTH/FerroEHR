@@ -31,7 +31,6 @@ mod strict;
 
 pub mod auth;
 pub mod authz;
-pub mod client_credentials;
 pub mod deployment;
 pub mod management;
 pub mod profile;
@@ -49,7 +48,7 @@ use serde::{Deserialize, Serialize};
 /// Every section has a `Default`, so the file may be empty or absent
 /// (zero-config boot). `deny_unknown_fields` makes a misspelled top-level
 /// table a boot error.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct FerroEhrConfig {
     /// `spec_profile` — the openEHR specification generation set the server
@@ -110,6 +109,48 @@ pub struct FerroEhrConfig {
     pub cohort: crate::service::linkage::cohort::config::CohortConfig,
     /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
     pub usage_report: crate::usage_report::config::UsageReportConfig,
+}
+
+impl Default for FerroEhrConfig {
+    fn default() -> Self {
+        Self {
+            spec_profile: profile::SpecProfile::default(),
+            deployment_profile: deployment::DeploymentProfile::default(),
+            deployment_accepts: Vec::default(),
+            server: server::ServerConfig::default(),
+            db: crate::db::DbConfig::default(),
+            storage: crate::db::domain::StorageConfig::default(),
+            log: crate::telemetry::config::LogConfig::default(),
+            telemetry: crate::telemetry::config::OtelConfig::default(),
+            // NOTE: RFC 9068 §2.2.3.1 names the first three role claims; Keycloak's
+            // nested `realm_access.roles` follows them, as this server has always read.
+            auth: ferrohealth_smart::config::AuthSection {
+                role_claims: vec![
+                    "roles".to_owned(),
+                    "groups".to_owned(),
+                    "entitlements".to_owned(),
+                    "realm_access.roles".to_owned(),
+                ],
+                ..ferrohealth_smart::config::AuthSection::default()
+            },
+            authz: authz::AuthzConfig::default(),
+            admin: server::AdminConfig::default(),
+            smart: smart::SmartConfig::default(),
+            management: management::ManagementConfig::default(),
+            signing: crate::versioning::signature::config::SigningConfig::default(),
+            licence: crate::licence::config::LicenceConfig::default(),
+            query: crate::service::query::config::QueryConfig::default(),
+            events: crate::extensions::events::config::EventsConfig::default(),
+            terminology: crate::service::terminology::config::TerminologyConfig::default(),
+            multimedia: crate::extensions::multimedia::config::MultimediaConfig::default(),
+            audit: crate::system_log::config::AuditConfig::default(),
+            privacy: crate::privacy::config::PrivacyConfig::default(),
+            demographic:
+                crate::service::demographic::identifier::config::DemographicConfig::default(),
+            cohort: crate::service::linkage::cohort::config::CohortConfig::default(),
+            usage_report: crate::usage_report::config::UsageReportConfig::default(),
+        }
+    }
 }
 
 /// The annotated default template `ferroehr config default` prints — a
@@ -555,7 +596,7 @@ impl FerroEhrConfig {
             .authz
             .professional
             .as_ref()
-            .map(auth::ProfessionalConfig::validate)
+            .map(ferrohealth_smart::assurance::ProfessionalSection::validate)
         {
             errors.push(ConfigError::semantic(format!("authz: {e}")));
         }
@@ -1029,7 +1070,7 @@ mod tests {
 
     use super::*;
     use crate::config::authz::AbacParam;
-    use crate::config::secret::{Secret, SecretUrl};
+    use crate::config::secret::SecretUrl;
 
     /// Build an injected env map from `(key, value)` pairs.
     fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
@@ -1213,12 +1254,15 @@ mod tests {
             &[],
         );
         assert_eq!(c.authz.assurance.claim, "loa");
-        assert_eq!(c.authz.assurance.minimum, Some(auth::AssuranceLevel::High));
+        assert_eq!(
+            c.authz.assurance.minimum,
+            Some(ferrohealth_smart::assurance::AssuranceLevel::High)
+        );
         let professional = c.authz.professional.expect("professional table from env");
         assert_eq!(professional.claim, "uzi");
         assert_eq!(
             professional.client_tokens,
-            auth::ClientTokenRule::ClaimAbsent
+            ferrohealth_smart::assurance::ClientTokens::ClaimAbsent
         );
         assert_eq!(professional.acting_for_claim.as_deref(), Some("act.sub"));
     }
@@ -1724,7 +1768,7 @@ mod tests {
     /// keeps its host and path with the userinfo masked.
     #[test]
     fn url_userinfo_reaches_no_rendering() {
-        use crate::config::client_credentials::ClientCredentialsConfig;
+        use ferrohealth_smart::config::OauthSection;
 
         let leaky =
             |n: u32| SecretUrl::new(format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}:1/p{n}"));
@@ -1739,9 +1783,9 @@ mod tests {
         c.events.url = leaky(7);
         c.audit.fhir_feed.url = leaky(8);
         c.terminology.server.url = leaky(9);
-        c.terminology.server.oauth = Some(ClientCredentialsConfig {
-            token_url: Some(leaky(10)),
-            ..ClientCredentialsConfig::default()
+        c.terminology.server.oauth = Some(OauthSection {
+            token_endpoint: "https://u10:URL_PW_SENTINEL_10@h10:1/p10".to_owned(),
+            ..OauthSection::default()
         });
         c.usage_report.endpoint = leaky(11);
         c.authz.abac.remote.server = Some(leaky(12));
@@ -1763,8 +1807,15 @@ mod tests {
                 "URL userinfo leaked into the {surface} rendering: {rendered}"
             );
             for n in 1..=15 {
+                // URL 10 is the `ferrohealth-smart` grant table, whose `Debug`
+                // masks userinfo as a percent-encoded `[redacted]` user.
+                let mask = if n == 10 && surface == "debug" {
+                    "%5Bredacted%5D"
+                } else {
+                    "***"
+                };
                 assert!(
-                    rendered.contains(&format!("https://***@h{n}:1/p{n}")),
+                    rendered.contains(&format!("https://{mask}@h{n}:1/p{n}")),
                     "URL {n} lost its host and path in the {surface} rendering: {rendered}"
                 );
             }
@@ -1816,6 +1867,7 @@ mod tests {
                 password_hash: Some(secrecy::SecretString::from(BASIC_HASH)),
                 password_hash_file: None,
                 scopes: vec!["user/composition-*.r".to_owned()],
+                roles: Vec::new(),
             }],
             cache_ttl_seconds: 0,
         });
@@ -2375,11 +2427,15 @@ mod tests {
             ),
             (
                 "authz.assurance",
-                accepted_fields::<auth::AssuranceConfig>("authz.assurance"),
+                accepted_fields::<ferrohealth_smart::assurance::AssuranceSection>(
+                    "authz.assurance",
+                ),
             ),
             (
                 "authz.professional",
-                accepted_fields::<auth::ProfessionalConfig>("authz.professional"),
+                accepted_fields::<ferrohealth_smart::assurance::ProfessionalSection>(
+                    "authz.professional",
+                ),
             ),
             ("db", accepted_fields::<crate::db::DbConfig>("db")),
             (
@@ -2683,29 +2739,29 @@ mod tests {
     /// keys, never a silently unauthenticated terminology request.
     #[test]
     fn validate_terminology_server_oauth_shape() {
-        use crate::config::client_credentials::ClientCredentialsConfig;
+        use ferrohealth_smart::config::OauthSection;
 
         let mut c = FerroEhrConfig::default();
         c.terminology.server.enabled = true;
         c.terminology.server.url = SecretUrl::new("https://ts.example/fhir");
-        c.terminology.server.oauth = Some(ClientCredentialsConfig::default());
+        c.terminology.server.oauth = Some(OauthSection::default());
         let err = c
             .validate()
             .expect_err("a grant with no token endpoint, client id or secret is rejected");
         for key in [
             "terminology.server.oauth",
-            "token_url",
+            "token_endpoint",
             "client_id",
             "client_secret",
         ] {
             assert!(err.to_string().contains(key), "{key} unnamed in {err}");
         }
 
-        c.terminology.server.oauth = Some(ClientCredentialsConfig {
-            token_url: Some(SecretUrl::new("https://idp.example/token")),
+        c.terminology.server.oauth = Some(OauthSection {
+            token_endpoint: "https://idp.example/token".to_owned(),
             client_id: "cdr".to_owned(),
-            client_secret: Some(Secret::new("s3cret")),
-            ..ClientCredentialsConfig::default()
+            client_secret: Some(secrecy::SecretString::from("s3cret")),
+            ..OauthSection::default()
         });
         assert!(c.validate().is_ok());
 
@@ -2723,7 +2779,7 @@ mod tests {
 
         // A disabled server's grant is not in use, so it is not checked.
         c.terminology.server.enabled = false;
-        c.terminology.server.oauth = Some(ClientCredentialsConfig::default());
+        c.terminology.server.oauth = Some(OauthSection::default());
         assert!(c.validate().is_ok());
     }
 
@@ -2742,7 +2798,7 @@ mod tests {
                 ("FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR", "true"),
                 ("FERROEHR__TERMINOLOGY__SERVER__REQUEST_TIMEOUT_MS", "2500"),
                 (
-                    "FERROEHR__TERMINOLOGY__SERVER__OAUTH__TOKEN_URL",
+                    "FERROEHR__TERMINOLOGY__SERVER__OAUTH__TOKEN_ENDPOINT",
                     "https://idp/token",
                 ),
                 ("FERROEHR__TERMINOLOGY__SERVER__OAUTH__CLIENT_ID", "cdr"),
@@ -2763,15 +2819,74 @@ mod tests {
         assert_eq!(server.url.expose(), "http://ferroterm:8080/r4b");
         assert_eq!(server.request_timeout_ms, 2_500);
         let oauth = server.oauth.as_ref().expect("the grant from env");
-        assert_eq!(
-            oauth.token_url.as_ref().map(SecretUrl::expose),
-            Some("https://idp/token")
-        );
+        assert_eq!(oauth.token_endpoint, "https://idp/token");
         assert_eq!(oauth.client_id, "cdr");
         assert_eq!(
-            oauth.client_secret.as_ref().map(Secret::expose),
+            oauth
+                .client_secret
+                .as_ref()
+                .map(secrecy::ExposeSecret::expose_secret),
             Some("s3cret")
         );
-        assert_eq!(oauth.scope.as_deref(), Some("system/*.read"));
+        assert_eq!(oauth.scope, "system/*.read");
+    }
+
+    /// The role keys moved to the shared `[auth]` section: their old place
+    /// under `[authz.rbac]` stops startup naming the key, from the file and
+    /// from the environment, and `[auth] role_claims` keeps this server's
+    /// default when the file leaves it out.
+    #[test]
+    fn the_moved_role_keys_are_refused_at_their_old_place() {
+        for (body, key) in [
+            ("[authz.rbac]\nrole_claims = [\"roles\"]\n", "role_claims"),
+            (
+                "[authz.rbac.basic_roles]\nalice = [\"ADMIN\"]\n",
+                "basic_roles",
+            ),
+        ] {
+            let file = toml_file(body);
+            let err = assemble(Some(file.path()), &env(&[]), &[]).expect_err("moved key");
+            assert!(err.to_string().contains(key), "{key}: {err}");
+        }
+        let err = assemble(
+            None,
+            &env(&[("FERROEHR__AUTHZ__RBAC__ROLE_CLAIMS", "roles")]),
+            &[],
+        )
+        .expect_err("moved env key");
+        assert!(err.to_string().contains("ROLE_CLAIMS"), "{err}");
+
+        let file = toml_file("[auth]\nissuer = \"https://idp.example/r\"\n");
+        let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
+        assert_eq!(
+            c.auth.role_claims,
+            ["roles", "groups", "entitlements", "realm_access.roles"]
+        );
+        assert!(!c.auth.role_claims.iter().any(|claim| claim == "scope"));
+        let c = assemble_ok(
+            None,
+            &env(&[("FERROEHR__AUTH__ROLE_CLAIMS", "app_roles,roles")]),
+            &[],
+        );
+        assert_eq!(c.auth.role_claims, ["app_roles", "roles"]);
+    }
+
+    /// Every outbound grant is the `ferrohealth-smart` client table, so the
+    /// key `token_url` that preceded `token_endpoint` stops startup by name
+    /// in each of the three tables that take a grant.
+    #[test]
+    fn the_old_token_url_key_is_refused_in_every_grant() {
+        for table in [
+            "terminology.server.oauth",
+            "audit.fhir_feed.oauth",
+            "authz.abac.remote.oauth",
+        ] {
+            let file = toml_file(&format!(
+                "[{table}]\ntoken_url = \"https://idp.example/token\"\nclient_id = \"c\"\n"
+            ));
+            let err =
+                assemble(Some(file.path()), &env(&[]), &[]).expect_err("the old key is unknown");
+            assert!(err.to_string().contains("token_url"), "{table}: {err}");
+        }
     }
 }

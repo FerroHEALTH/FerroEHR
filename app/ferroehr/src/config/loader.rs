@@ -146,6 +146,15 @@ pub fn assemble<S: std::hash::BuildHasher>(
         .collect();
 
     let mut builder = Config::builder();
+    // `[auth]` is the shared section, whose own defaults apply to every key the
+    // file leaves out; the role claims keep this server's default instead.
+    match builder.clone().set_default(
+        "auth.role_claims",
+        FerroEhrConfig::default().auth.role_claims,
+    ) {
+        Ok(next) => builder = next,
+        Err(e) => errors.push(ConfigError::new(format!("auth.role_claims default: {e}"))),
+    }
     if let Some(content) = &file_content {
         builder = builder.add_source(File::from_str(content, FileFormat::Toml));
     }
@@ -401,36 +410,6 @@ fn find_key_line_in_section(content: &str, section: &str, key: &str) -> Option<u
     None
 }
 
-/// Resolves the `client_secret_file` of each outbound client-credentials grant
-/// (`[audit.fhir_feed.oauth]`, `[authz.abac.remote.oauth]`,
-/// `[terminology.server.oauth]`).
-fn resolve_outbound_client_secrets(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigError>) {
-    for (key, oauth) in [
-        (
-            "audit.fhir_feed.oauth",
-            config.audit.fhir_feed.oauth.as_mut(),
-        ),
-        (
-            "authz.abac.remote.oauth",
-            config.authz.abac.remote.oauth.as_mut(),
-        ),
-        (
-            "terminology.server.oauth",
-            config.terminology.server.oauth.as_mut(),
-        ),
-    ] {
-        if let Some(oauth) = oauth {
-            let file = oauth.client_secret_file.take();
-            resolve_secret(
-                &format!("{key}.client_secret"),
-                &mut oauth.client_secret,
-                file,
-                errors,
-            );
-        }
-    }
-}
-
 /// Resolve every `*_file` sibling into its `Secret`/string field immediately
 /// after extraction: read the file, trim a trailing newline, and reject
 /// when both the inline value and its `*_file` are set.
@@ -453,7 +432,6 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
         config.multimedia.secret_access_key_file.take(),
         errors,
     );
-    resolve_outbound_client_secrets(config, errors);
     if let Some(basic) = config.auth.basic.as_mut() {
         for user in &mut basic.users {
             let Some(path) = user.password_hash_file.take() else {

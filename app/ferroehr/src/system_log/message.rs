@@ -587,7 +587,7 @@ mod tests {
         e.user_id = "scheduler-app".to_owned();
         e.actor = crate::system_log::event::ActorAuthentication {
             mode: Some(ActingMode::Client),
-            assurance_level: Some(crate::config::auth::AssuranceLevel::High),
+            assurance_level: Some(ferrohealth_smart::assurance::AssuranceLevel::High),
             assurance_value: Some("loa-high".to_owned()),
             professional_id: Some("prof-007".to_owned()),
         };

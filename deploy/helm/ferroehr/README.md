@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). A stock install runs the sandbox deployment profile, which must not hold real patient data; set config.deployment_profile for a production holder.
 
-![Version: 14.0.1](https://img.shields.io/badge/Version-14.0.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.4.2](https://img.shields.io/badge/AppVersion-5.4.2-informational?style=flat-square)
+![Version: 15.0.0](https://img.shields.io/badge/Version-15.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.4.2](https://img.shields.io/badge/AppVersion-5.4.2-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 14.0.1 \
+  --version 15.0.0 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.4.2
@@ -58,7 +58,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `14.0.1` |
+| the **chart** (templates, defaults, this document) | `--version` | `15.0.0` |
 | the **server image** | `image.tag` | `5.4.2` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -70,7 +70,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:14.0.1 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:15.0.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -78,7 +78,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:14.0.1 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:14.0.1 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:15.0.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.4.2 \
   -R FerroHEALTH/FerroEHR
@@ -407,12 +407,12 @@ Kubernetes: `>=1.36.0-0`
 | replicaCount | int | `2` | Number of replicas (ignored when autoscaling.enabled is true). |
 | resources | object | `{"limits":{"cpu":"2","ephemeral-storage":"1Gi","memory":"1Gi"},"requests":{"cpu":"250m","ephemeral-storage":"128Mi","memory":"256Mi"}}` | Resource requests/limits. Sized for a modest API replica; tune for load. ephemeral-storage is bounded too: the container writes only logs/tmp (the root filesystem is read-only), and an unbounded default would let runaway local writes evict the pod's node neighbours (https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#setting-requests-and-limits-for-local-ephemeral-storage). |
 | secrets.auditFhirFeedUrl | string | `""` | FHIR base URL of the external Audit Record Repository for [audit.fhir_feed] (may carry basic-auth credentials in its userinfo) → FERROEHR__AUDIT__FHIR_FEED__URL env: audit.fhir_feed.url has no `*_file` sibling either. |
-| secrets.basicUserPasswordHashes | object | `{}` | Argon2id password hashes for [[auth.basic.users]], keyed by user-id. Each is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<user>.password_hash and the chart injects the matching `password_hash_file` into the rendered TOML. Declare the user itself — `user`, `scopes` — under config.auth.basic.users, and its RBAC roles under config.authz.rbac.basic_roles.<user>; a user-id with no matching entry is a render error. A hash under `config:` is refused: it would reach the ConfigMap. |
+| secrets.basicUserPasswordHashes | object | `{}` | Argon2id password hashes for [[auth.basic.users]], keyed by user-id. Each is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<user>.password_hash and the chart injects the matching `password_hash_file` into the rendered TOML. Declare the user itself — `user`, `scopes`, `roles` — under config.auth.basic.users; a user-id with no matching entry is a render error. A hash under `config:` is refused: it would reach the ConfigMap. |
 | secrets.eventsUrl | string | `""` | AMQP broker URL for [events] (carries credentials). MOUNTED as /etc/ferroehr-secrets/events.url (events.url_file). |
 | secrets.multimediaAccessKeyId | string | `""` | S3 access key id for [multimedia] → FERROEHR__MULTIMEDIA__ACCESS_KEY_ID env. Not a secret in the server's own model (it is reported unredacted by /management/env); prefer IRSA/Workload-Identity (leave empty) on cloud. |
 | secrets.multimediaSecretAccessKey | string | `""` | S3 secret access key for [multimedia]. MOUNTED as /etc/ferroehr-secrets/multimedia.secret_access_key (multimedia.secret_access_key_file). |
 | secrets.signingKeyPassphrase | string | `""` | PGP key passphrase (config.signing.mode=pgp). MOUNTED as /etc/ferroehr-secrets/signing.key_passphrase (signing.key_passphrase_file). |
-| secrets.terminologyClientSecret | string | `""` | The client secret of the terminology server's OAuth2 grant ([terminology.server.oauth]). MOUNTED as /etc/ferroehr-secrets/terminology.server.oauth.client_secret, and the chart injects the matching `client_secret_file` into the rendered TOML (a path is not sensitive). Declare the grant itself — token_url or issuer, client_id, scope — under config.terminology.server.oauth; a secret with no such declaration is a render error. |
+| secrets.terminologyClientSecret | string | `""` | The client secret of the terminology server's OAuth2 grant ([terminology.server.oauth]). MOUNTED as /etc/ferroehr-secrets/terminology.server.oauth.client_secret, and the chart injects the matching `client_secret_file` into the rendered TOML (a path is not sensitive). Declare the grant itself — token_endpoint or issuer, client_id, scope — under config.terminology.server.oauth; a secret with no such declaration is a render error. |
 | securityContext.allowPrivilegeEscalation | bool | `false` | Block setuid/file-capability escalation. Required by the restricted profile. |
 | securityContext.capabilities.drop[0] | string | `"ALL"` |  |
 | securityContext.privileged | bool | `false` | Never true. A privileged container is effectively root on the node. |

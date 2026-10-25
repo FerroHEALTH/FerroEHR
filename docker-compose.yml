@@ -637,14 +637,12 @@ configs:
       user = "ferroehr"
       password_hash = "$$argon2id$$v=19$$m=19456,t=2,p=1$$ZmVycm9laHJEZXZTYWx0$$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
       scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
+      roles = ["ADMIN", "USER"]
 
       # Quickstart: authentication only, no role gate — the one user above can
       # use the clinical API, the admin API and the management endpoints.
       [authz.rbac]
       enabled = false
-
-      [authz.rbac.basic_roles]
-      ferroehr = ["ADMIN", "USER"]
 
       # The admin API (DELETE /admin/...) — on for the quickstart so the
       # optional viewer's panels work; keep off in production unless

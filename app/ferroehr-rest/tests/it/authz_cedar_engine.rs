@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `CedarEngine` tests: the shipped
-//! example policies produce the expected golden decisions, and the Cedar engine
-//! is **behaviourally identical** to the remote PDP over a corpus of requests
-//! (the differential test — same `AuthzRequest`, same `Decision`).
+//! Cedar engine tests over this CDR's model: the shipped example policies
+//! produce the expected golden decisions, and the Cedar engine is
+//! **behaviourally identical** to the remote PDP over a corpus of requests
+//! (the differential test — same `AuthzRequest`, same decision).
 #![expect(
     clippy::expect_used,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
@@ -17,12 +17,14 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AbacParam, PolicyRule, RemoteConfig};
-use ferroehr_rest::extensions::access::authz::cedar::CedarEngine;
-use ferroehr_rest::extensions::access::authz::engine::PolicyEngine;
-use ferroehr_rest::extensions::access::authz::remote::RemotePdp;
+use ferroehr_rest::extensions::access::authz::remote_pdp;
 use ferroehr_rest::extensions::access::authz::request::{
-    AccessMode, Attr, AuthzRequest, Decision, ResourceKind,
+    AccessMode, AuthzRequest, ResourceKind, model,
 };
+use ferrohealth_authz::cedar::CedarEngine;
+use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
+use ferrohealth_authz::remote::RemotePdp;
+use ferrohealth_authz::request::{Attr, Decision};
 use serde_json::Value;
 use wiremock::matchers::method;
 use wiremock::{Mock, MockServer, Request, ResponseTemplate};
@@ -31,11 +33,17 @@ fn examples_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/policies")
 }
 
+/// A composition create; a single patient is also the caller's patient claim,
+/// as the enforcement point's subject gate guarantees before it asks.
 fn composition<'a>(
     org: Option<&str>,
     patient: Option<Attr>,
     template: Option<Attr>,
 ) -> AuthzRequest<'a> {
+    let subject_patient = match &patient {
+        Some(Attr::One(p)) => Some(p.clone()),
+        _ => None,
+    };
     AuthzRequest {
         operation_id: "composition_create",
         kind: ResourceKind::Composition,
@@ -44,65 +52,83 @@ fn composition<'a>(
         roles: &[],
         scopes: &[],
         organization: org.map(str::to_owned),
+        subject_patient,
         patient,
         template,
     }
 }
 
+/// Puts `req` to `engine`: `Ok(true)` permits; a request the policy request
+/// refuses to carry (an empty set) is an `Err` like an engine failure.
+async fn permits(engine: &dyn PolicyEngine, req: &AuthzRequest<'_>) -> Result<bool, String> {
+    let subject = req.subject();
+    let request = req.to_request(&subject).map_err(|e| e.to_string())?;
+    engine
+        .decide(&request)
+        .await
+        .map(|decision: Decision| decision.is_permit())
+        .map_err(|e: AuthzError| e.to_string())
+}
+
 #[tokio::test]
 async fn shipped_example_policies_golden_decisions() {
-    let engine = CedarEngine::new(&examples_dir(), None).expect("load example policies");
+    let engine =
+        CedarEngine::from_directory(model(), &examples_dir(), None).expect("load example policies");
 
     // Permit: known org, patient present, template on the allow-list.
-    assert_eq!(
-        engine
-            .decide(&composition(
+    assert!(
+        permits(
+            &engine,
+            &composition(
                 Some("org1"),
                 Some(Attr::One("p1".to_owned())),
                 Some(Attr::One("org.openehr::vital_signs.v1".to_owned())),
-            ))
-            .await
-            .unwrap(),
-        Decision::Permit
+            ),
+        )
+        .await
+        .unwrap()
     );
 
     // Deny: template not on the allow-list.
-    assert_eq!(
-        engine
-            .decide(&composition(
+    assert!(
+        !permits(
+            &engine,
+            &composition(
                 Some("org1"),
                 Some(Attr::One("p1".to_owned())),
                 Some(Attr::One("org.openehr::secret.v1".to_owned())),
-            ))
-            .await
-            .unwrap(),
-        Decision::Deny
+            ),
+        )
+        .await
+        .unwrap()
     );
 
     // Deny: no organization on the caller.
-    assert_eq!(
-        engine
-            .decide(&composition(
+    assert!(
+        !permits(
+            &engine,
+            &composition(
                 None,
                 Some(Attr::One("p1".to_owned())),
                 Some(Attr::One("org.openehr::vital_signs.v1".to_owned())),
-            ))
-            .await
-            .unwrap(),
-        Decision::Deny
+            ),
+        )
+        .await
+        .unwrap()
     );
 
     // Deny: an explicitly revoked template (forbid overrides permit).
-    assert_eq!(
-        engine
-            .decide(&composition(
+    assert!(
+        !permits(
+            &engine,
+            &composition(
                 Some("org1"),
                 Some(Attr::One("p1".to_owned())),
                 Some(Attr::One("org.openehr::revoked.v1".to_owned())),
-            ))
-            .await
-            .unwrap(),
-        Decision::Deny
+            ),
+        )
+        .await
+        .unwrap()
     );
 }
 
@@ -111,9 +137,9 @@ async fn bad_policy_dir_refuses_to_load() {
     let dir = std::env::temp_dir().join(format!("authz-bad-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("broken.cedar"), "this is not a cedar policy").unwrap();
-    let e = CedarEngine::new(&dir, None).expect_err("must reject");
+    let e = CedarEngine::from_directory(model(), &dir, None).expect_err("must reject");
     let _cleanup = std::fs::remove_dir_all(&dir);
-    assert!(format!("{e}").contains("policy load failed"), "got {e}");
+    assert!(matches!(e, AuthzError::Load(_)), "got {e}");
 }
 
 /// Build a remote PDP whose mock permits iff the request body's `patient == "ok"`
@@ -153,18 +179,20 @@ async fn remote_permit_when_patient_ok() -> (MockServer, RemotePdp) {
         policy,
         ..AbacConfig::default()
     };
-    let pdp = RemotePdp::new(&config).expect("build remote");
+    let pdp = remote_pdp(&config).expect("build remote");
     (server, pdp)
 }
 
 /// Differential test: the same `AuthzRequest` corpus must yield identical
 /// decisions from the embedded Cedar engine and the v1-compatible remote PDP,
 /// proving the fan-out semantics (cartesian product, all-must-permit,
-/// short-circuit, empty→permit) are engine-independent.
+/// short-circuit, an empty set refused before either is asked) are
+/// engine-independent.
 #[tokio::test]
 async fn cedar_and_remote_agree_over_corpus() {
     // Cedar policy encoding the identical rule: permit iff resource.patient == "ok".
-    let cedar = CedarEngine::from_policy_src(
+    let cedar = CedarEngine::from_source(
+        model(),
         r#"permit(principal, action, resource) when { resource has patient && resource.patient == "ok" };"#,
     )
     .expect("build cedar");
@@ -195,8 +223,8 @@ async fn cedar_and_remote_agree_over_corpus() {
     ];
 
     for req in &corpus {
-        let c = cedar.decide(req).await.unwrap();
-        let r = remote.decide(req).await.unwrap();
+        let c = permits(&cedar, req).await;
+        let r = permits(&remote, req).await;
         assert_eq!(
             c, r,
             "engines diverged for {:?}/{:?}: cedar={c:?} remote={r:?}",

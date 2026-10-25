@@ -8,7 +8,7 @@
 //! secret by its leaf type; this endpoint returns it after a recursive pass
 //! that (a) masks any value under a key naming a secret value and (b) masks
 //! the `userinfo` of every URL value with the same masker the configuration
-//! uses. A URL-valued key such as `token_url` or `jwks_uri` is never masked by
+//! uses. A URL-valued key such as `token_endpoint` or `jwks_uri` is never masked by
 //! name, so this view shows the same URLs `GET {base}/admin/config` does
 //! (#3657).
 
@@ -112,12 +112,12 @@ mod tests {
     #[test]
     fn endpoint_urls_are_never_masked_by_name() {
         let cfg = json!({
-            "oauth2_clients": { "c": { "token_url": "https://u:pw@idp.example/token" } },
+            "oauth2_clients": { "c": { "token_endpoint": "https://u:pw@idp.example/token" } },
             "smart": { "endpoints": { "token_endpoint": "https://idp.example/token", "jwks_uri": "https://idp.example/jwks" } }
         });
         let out = redact(&cfg);
         assert_eq!(
-            out["oauth2_clients"]["c"]["token_url"],
+            out["oauth2_clients"]["c"]["token_endpoint"],
             "https://***@idp.example/token"
         );
         assert_eq!(

@@ -7,10 +7,10 @@
 //! (`ferroehr::config` — one TOML, one schema); this module holds only the
 //! adapter-side assembly the router consumes.
 
-use ferroehr::config::auth::{AssuranceConfig, ProfessionalConfig};
 use ferroehr::config::authz::RbacConfig;
 use ferroehr::config::server::{AdminConfig, ServerConfig};
 use ferroehr::config::smart::SmartConfig;
+use ferrohealth_smart::assurance::{AssuranceSection, ProfessionalSection};
 use ferrohealth_smart::config::AuthSection;
 
 /// The REST adapter's runtime configuration view, assembled by the binary
@@ -39,17 +39,12 @@ pub struct AppConfig {
     /// records it whether or not the ABAC gate that shares the setting is
     /// switched on. `None` when the deployment configures no claim.
     pub audit_organization_claim: Option<String>,
-    /// `[authz.rbac] role_claims` — the access-token claim paths Bearer role
-    /// extraction reads, lifted here because the authenticator applies them
-    /// whether or not any authorization gate is switched on.
-    pub role_claims: Vec<String>,
-    /// `[authz.rbac]` — the role rules a Basic user's roles are read from
-    /// (`basic_roles`, `user_role`).
+    /// `[authz.rbac]` — the role rules.
     pub rbac: RbacConfig,
     /// `[authz.assurance]` — the assurance a patient-data request must carry.
-    pub assurance: AssuranceConfig,
+    pub assurance: AssuranceSection,
     /// `[authz.professional]` — how a token names the natural person behind it.
-    pub professional: Option<ProfessionalConfig>,
+    pub professional: Option<ProfessionalSection>,
     /// `spec_profile` — the openEHR specification generation set the server
     /// runs; the demographic ingress boundary reads it (the stable
     /// generation's released surface differs from the typed core's).
@@ -60,15 +55,14 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             server: ServerConfig::default(),
-            auth: AuthSection::default(),
+            auth: ferroehr::config::FerroEhrConfig::default().auth,
             admin: AdminConfig::default(),
             smart: SmartConfig::default(),
             terminology_api_enabled: false,
             events_admin_api: false,
             audit_organization_claim: None,
-            role_claims: RbacConfig::default().role_claims,
             rbac: RbacConfig::default(),
-            assurance: AssuranceConfig::default(),
+            assurance: AssuranceSection::default(),
             professional: None,
             spec_profile: ferroehr::config::profile::SpecProfile::default(),
         }
@@ -110,6 +104,10 @@ mod tests {
         assert!(!c.smart.enabled);
         assert!(!c.terminology_api_enabled);
         assert!(!c.events_admin_api);
-        assert_eq!(c.role_claims, RbacConfig::default().role_claims);
+        assert!(
+            c.auth
+                .role_claims
+                .contains(&"realm_access.roles".to_owned())
+        );
     }
 }

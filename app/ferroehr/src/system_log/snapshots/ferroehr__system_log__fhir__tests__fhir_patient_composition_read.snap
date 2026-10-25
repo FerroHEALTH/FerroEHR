@@ -104,7 +104,10 @@ expression: v
   "resourceType": "AuditEvent",
   "source": {
     "observer": {
-      "display": "ferroehr"
+      "display": "ferroehr",
+      "identifier": {
+        "value": "ferroehr"
+      }
     },
     "site": "1f332a66-0000-0000-0000-000000000001",
     "type": [

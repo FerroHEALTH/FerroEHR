@@ -518,7 +518,6 @@ async fn admin_config_admin_gets_redacted_snapshot() {
 /// its host and path with the userinfo masked.
 #[tokio::test]
 async fn no_url_userinfo_reaches_admin_config_or_management_env() {
-    use ferroehr::config::client_credentials::ClientCredentialsConfig;
     use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
     use ferroehr::config::secret::SecretUrl;
 
@@ -526,9 +525,9 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
     let mut cfg = ferroehr::config::FerroEhrConfig::default();
     cfg.db.url = leaky(1);
     cfg.terminology.server.url = leaky(2);
-    cfg.terminology.server.oauth = Some(ClientCredentialsConfig {
-        token_url: Some(leaky(3)),
-        ..ClientCredentialsConfig::default()
+    cfg.terminology.server.oauth = Some(ferrohealth_smart::config::OauthSection {
+        token_endpoint: "https://u3:URL_PW_SENTINEL_3@h3/p".to_owned(),
+        ..ferrohealth_smart::config::OauthSection::default()
     });
     cfg.usage_report.endpoint = leaky(4);
     cfg.authz.abac.remote.server = Some(leaky(5));

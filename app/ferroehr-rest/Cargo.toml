@@ -87,11 +87,11 @@ tracing-opentelemetry = { workspace = true }
 ferrohealth-smart = { workspace = true, features = ["axum", "openehr"] }
 sha2 = { workspace = true }
 
-# Authorization (RBAC + ABAC), folded in from the former ferroehr-authz crate:
-# the embedded Cedar policy engine, the v1-compatible remote-PDP
-# HTTP client, and the hot-reload policy swap. (`serde`/`serde_json`/
-# `thiserror`/`tracing`/`metrics`/`async-trait`/`tokio` are already deps above.)
-cedar-policy = { workspace = true }
+# The ABAC policy decision: the family's Cedar engine and remote decision
+# point, over the attributes this CDR resolves.
+ferrohealth-authz = { workspace = true, features = ["cedar", "remote"] }
+# The remote decision point takes its server as a parsed URL.
+url = { workspace = true }
 reqwest = { workspace = true }
 arc-swap = { workspace = true }
 
