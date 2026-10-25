@@ -7,7 +7,7 @@
 - [Autonomous phase flow](autonomous-phase-flow.md) — PR+merge each phase, checkout main, start the next without asking
 - [Merge on local gates](merge-on-local-gates.md) — local gates green → merge immediately; CI is a post-merge backstop
 - [Tick the PR licensing box](tick-pr-licensing-box.md) — every PR body carries the ticked contribution-licensing line
-- [Max 2 concurrent workers](max-two-concurrent-workers.md) — implementation subagents run in pairs at most
+- [Max 5 concurrent workers](max-five-concurrent-workers.md): family cap since 2026-10-19, at most 5 implementation subagents at once; the owner may raise it on request
 - [One worker per phase, hard fences](one-worker-per-phase-hard-fences.md) — one worker per refactor phase with file fences; reverts orchestrator-only
 - [Concurrent sessions share this tree](concurrent-sessions-shared-tree.md) — explicit-pathspec commits, scoped gates, one `./target`, `cargo clean` above ~30 GB
 - [Session workflow gotchas](session-workflow-gotchas.md) — CI/PR/background-task/release-leg traps; read before pushing or running long jobs

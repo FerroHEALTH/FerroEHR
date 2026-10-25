@@ -30,7 +30,7 @@ the RUNTIME BEHAVIOUR matches the text, never merely "the types exist".
 backlog:** per unit, audit → file fix issues (typed label, `spec:*`, the
 program's milestone) → implement, test, PR and MERGE every one of them
 BEFORE the next unit's audit begins (P1 first; the orchestrator takes
-versioning/critical-path fixes, workers the mechanical ones, max 2) → each
+versioning/critical-path fixes, workers the mechanical ones, within the worker cap) → each
 fix PR carries its CNF pinning case + changelog entry → zero-drift CNF run →
 close the unit's issue → next unit. Later units then audit the FIXED shared
 layer instead of re-documenting known defects.

@@ -55,7 +55,7 @@ so they are not in context until read.
      specs as the authority (EHRbase = prior art only). Build
      compiling + tested. Note whether the task suits fanning out to an
      `implementer`/`ui-implementer` subagent per the CLAUDE.md
-     Model-orchestration section (max 2 concurrent), or belongs in-session
+     Model-orchestration section (max 5 concurrent), or belongs in-session
      (architecture, the AQL IR/codec core, spec-conformance judgement).
    - **Which spec sections govern it** — for any spec-facing task, name the
      `docs/specs/openehr/...` files (and CNF test-schedule chapters) the
