@@ -222,11 +222,8 @@ struct Filter {
     total_only: bool,
 }
 
-/// The page size when the query names none, and the largest served.
-///
-/// No specification governs either: our own design (FHIR R4 Search §3.1.1.5.3
-/// lets a server return fewer than `_count`).
-const DEFAULT_COUNT: i64 = 50;
+/// The largest page served; no specification governs it: our own design (FHIR
+/// R4 Search §3.1.1.5.3 lets a server return fewer than `_count`).
 const MAX_COUNT: i64 = 1000;
 
 /// The `outcome` code system (FHIR R4 `AuditEvent.outcome`).
@@ -246,7 +243,8 @@ fn audit_filter(query: Option<&str>) -> Result<Filter, Refused> {
     let query = Query::parse(query.unwrap_or_default())
         .map_err(|e| Refused::Invalid(ferroehr::service::error::ErrorChain::new(&e).to_string()))?;
     let mut store = ferroehr::system_log::store::AuditSearchFilter {
-        count: DEFAULT_COUNT,
+        // NOTE: the page size when the query names none, our own design.
+        count: 50,
         ..Default::default()
     };
     for date in query.dates() {

@@ -43,20 +43,6 @@ use crate::pages::common::{
 };
 use crate::paging::Listing;
 
-/// How many days back the date window opens when the request names none (no
-/// specification governs it: our own design).
-const DEFAULT_WINDOW_DAYS: i64 = 30;
-
-/// The first day of the default window, as the date form writes a day.
-fn default_from() -> String {
-    jiff::Timestamp::now()
-        .to_zoned(jiff::tz::TimeZone::UTC)
-        .date()
-        .checked_sub(jiff::Span::new().days(DEFAULT_WINDOW_DAYS))
-        .map(|day| day.to_string())
-        .unwrap_or_default()
-}
-
 /// The page sizes the audit log offers: the one the CDR is asked for.
 const SIZES: &[u32] = &[PAGE_SIZE];
 
@@ -79,25 +65,16 @@ struct Filters {
 
 impl Filters {
     /// The filters of the request.
-    ///
-    /// With neither end of the date window named, the window opens
-    /// [`DEFAULT_WINDOW_DAYS`] days back, since the CDR's ITI-81 retrieval
-    /// refuses a search that names no date (`RESTful` ATNA §3.81.4.1.2.1); the
-    /// form shows it, so the operator edits it.
     fn read() -> Self {
         let get = |key: &str| crate::request::query(key).unwrap_or_default();
-        let mut filters = Self {
+        Self {
             agent: get("agent"),
             outcome: get("outcome"),
             action: get("action"),
             from: get("from"),
             to: get("to"),
             patient: get("patient"),
-        };
-        if filters.from.is_empty() && filters.to.is_empty() {
-            filters.from = default_from();
         }
-        filters
     }
 
     /// The filters as address pairs, `without` left out.
