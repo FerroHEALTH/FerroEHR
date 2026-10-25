@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1022 504" width="1022" height="504" role="img">
+<style>
+text { fill: #52514e; font: 12px -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
+.title { fill: #0b0b0b; font-weight: 600; }
+.muted { fill: #8a8880; font-size: 11px; }
+.grid { stroke: #e4e2dd; stroke-width: 1; }
+.cell-label { fill: #ffffff; font-size: 11px; }
+.cell-label-dim { fill: #0b0b0b; font-size: 11px; }
+.ev-passed { fill: #0072b2; }
+.ev-failed { fill: #d55e00; }
+.ev-inconclusive { fill: #e69f00; }
+.ev-not-evidenced { fill: #cbc9c2; }
+.ev-not-claimed { fill: #edece8; }
+.cell-required { stroke: #52514e; stroke-width: 1.2; }
+.cell-optional { stroke: #cbc9c2; stroke-width: 1; stroke-dasharray: 3 2; }
+.bar-passed { fill: #0072b2; }
+.bar-failed { fill: #d55e00; }
+.bar-errored { fill: #e69f00; }
+.bar-na { fill: #cbc9c2; }
+.seg-label { fill: #ffffff; font-size: 10.5px; }
+.seg-label-dim { fill: #0b0b0b; font-size: 10.5px; }
+@media (prefers-color-scheme: dark) {
+text { fill: #c3c2b7; }
+.title { fill: #ffffff; }
+.muted { fill: #8f8e85; }
+.grid { stroke: #3a3a38; }
+.cell-label { fill: #ffffff; }
+.cell-label-dim { fill: #e8e6e0; }
+.ev-passed { fill: #3987e5; }
+.ev-failed { fill: #e5484d; }
+.ev-inconclusive { fill: #f5a623; }
+.ev-not-evidenced { fill: #4a4a47; }
+.ev-not-claimed { fill: #2b2b29; }
+.cell-required { stroke: #c3c2b7; }
+.cell-optional { stroke: #4a4a47; }
+.bar-passed { fill: #3987e5; }
+.bar-failed { fill: #e5484d; }
+.bar-errored { fill: #d9a514; }
+.bar-na { fill: #4a4a47; }
+.seg-label-dim { fill: #e8e6e0; }
+}
+</style>
+
+<text x="24" y="28" class="title">Capability conformance — ehrbase 2.34.0</text>
+<rect x="24" y="38" width="14" height="14" rx="3" class="ev-passed"/><text x="31" y="49" class="cell-label" text-anchor="middle" font-size="10">✓</text><text x="42" y="49" class="muted">passed</text><rect x="103.2" y="38" width="14" height="14" rx="3" class="ev-failed"/><text x="110.2" y="49" class="cell-label" text-anchor="middle" font-size="10">✕</text><text x="121.2" y="49" class="muted">FAILED</text><rect x="182.4" y="38" width="14" height="14" rx="3" class="ev-inconclusive"/><text x="189.4" y="49" class="cell-label-dim" text-anchor="middle" font-size="10">?</text><text x="200.4" y="49" class="muted">INCONCLUSIVE</text><rect x="304.8" y="38" width="14" height="14" rx="3" class="ev-not-evidenced"/><text x="311.8" y="49" class="cell-label-dim" text-anchor="middle" font-size="10">○</text><text x="322.8" y="49" class="muted">not evidenced</text><rect x="434.4" y="38" width="14" height="14" rx="3" class="ev-not-claimed"/><text x="441.4" y="49" class="cell-label-dim" text-anchor="middle" font-size="10">–</text><text x="452.4" y="49" class="muted">not claimed</text><text x="998" y="49" class="muted" text-anchor="end">solid border = required in tier · dashed = optional</text>
+<text x="24" y="82" class="title" font-size="12">CORE</text>
+<rect x="24" y="90" width="190" height="26" rx="5" class="ev-failed cell-optional"/><text x="37" y="107" class="cell-label" text-anchor="middle">✕</text><text x="50" y="107" class="cell-label sm">Adl14ArchetypeProvisioning</text>
+<rect x="220" y="90" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="233" y="107" class="cell-label" text-anchor="middle">✕</text><text x="246" y="107" class="cell-label">Adl14OptProvisioning</text>
+<rect x="416" y="90" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="429" y="107" class="cell-label" text-anchor="middle">✕</text><text x="442" y="107" class="cell-label">EhrOperations</text>
+<rect x="612" y="90" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="625" y="107" class="cell-label" text-anchor="middle">✕</text><text x="638" y="107" class="cell-label">EhrStatus</text>
+<rect x="808" y="90" width="190" height="26" rx="5" class="ev-inconclusive cell-required"/><text x="821" y="107" class="cell-label-dim" text-anchor="middle">?</text><text x="834" y="107" class="cell-label-dim">CompositionOps</text>
+<rect x="24" y="122" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="37" y="139" class="cell-label" text-anchor="middle">✕</text><text x="50" y="139" class="cell-label">ChangeSets</text>
+<rect x="220" y="122" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="233" y="139" class="cell-label" text-anchor="middle">✕</text><text x="246" y="139" class="cell-label">Versioning</text>
+<rect x="416" y="122" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="429" y="139" class="cell-label" text-anchor="middle">✕</text><text x="442" y="139" class="cell-label">ArchetypeValidation</text>
+<rect x="612" y="122" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="625" y="139" class="cell-label" text-anchor="middle">✕</text><text x="638" y="139" class="cell-label">DefinitionApi</text>
+<rect x="808" y="122" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="821" y="139" class="cell-label" text-anchor="middle">✕</text><text x="834" y="139" class="cell-label">EhrApi</text>
+<text x="24" y="182" class="title" font-size="12">STANDARD</text>
+<rect x="24" y="190" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="37" y="207" class="cell-label" text-anchor="middle">✕</text><text x="50" y="207" class="cell-label">QueryProvisioning</text>
+<rect x="220" y="190" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="233" y="207" class="cell-label" text-anchor="middle">✕</text><text x="246" y="207" class="cell-label">DirectoryOps</text>
+<rect x="416" y="190" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="429" y="207" class="cell-label" text-anchor="middle">✕</text><text x="442" y="207" class="cell-label">AqlBasic</text>
+<rect x="612" y="190" width="190" height="26" rx="5" class="ev-failed cell-required"/><text x="625" y="207" class="cell-label" text-anchor="middle">✕</text><text x="638" y="207" class="cell-label">QueryApi</text>
+<rect x="808" y="190" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="821" y="207" class="cell-label-dim" text-anchor="middle">–</text><text x="834" y="207" class="cell-label-dim">Signing</text>
+<text x="24" y="250" class="title" font-size="12">OPTIONS</text>
+<rect x="24" y="258" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="37" y="275" class="cell-label-dim" text-anchor="middle">–</text><text x="50" y="275" class="cell-label-dim sm">Adl2ArchetypeProvisioning</text>
+<rect x="220" y="258" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="233" y="275" class="cell-label-dim" text-anchor="middle">–</text><text x="246" y="275" class="cell-label-dim">Adl2OptProvisioning</text>
+<rect x="416" y="258" width="190" height="26" rx="5" class="ev-not-evidenced cell-optional"/><text x="429" y="275" class="cell-label-dim" text-anchor="middle">○</text><text x="442" y="275" class="cell-label-dim">TemplateExamples</text>
+<rect x="612" y="258" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="625" y="275" class="cell-label-dim" text-anchor="middle">–</text><text x="638" y="275" class="cell-label-dim">PartyOperations</text>
+<rect x="808" y="258" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="821" y="275" class="cell-label-dim" text-anchor="middle">–</text><text x="834" y="275" class="cell-label-dim sm">PartyRelationshipOperations</text>
+<rect x="24" y="290" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="37" y="307" class="cell-label-dim" text-anchor="middle">–</text><text x="50" y="307" class="cell-label-dim sm">DemographicArchetypeValidation</text>
+<rect x="220" y="290" width="190" height="26" rx="5" class="ev-inconclusive cell-optional"/><text x="233" y="307" class="cell-label-dim" text-anchor="middle">?</text><text x="246" y="307" class="cell-label-dim">AqlAdvanced</text>
+<rect x="416" y="290" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="429" y="307" class="cell-label-dim" text-anchor="middle">–</text><text x="442" y="307" class="cell-label-dim">AqlTerminology</text>
+<rect x="612" y="290" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="625" y="307" class="cell-label-dim" text-anchor="middle">–</text><text x="638" y="307" class="cell-label-dim">ActivityReport</text>
+<rect x="808" y="290" width="190" height="26" rx="5" class="ev-not-evidenced cell-optional"/><text x="821" y="307" class="cell-label-dim" text-anchor="middle">○</text><text x="834" y="307" class="cell-label-dim">PhysicalDeletion</text>
+<rect x="24" y="322" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="37" y="339" class="cell-label-dim" text-anchor="middle">–</text><text x="50" y="339" class="cell-label-dim">EhrDumpLoad</text>
+<rect x="220" y="322" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="233" y="339" class="cell-label-dim" text-anchor="middle">–</text><text x="246" y="339" class="cell-label-dim">BulkEhrLoad</text>
+<rect x="416" y="322" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="429" y="339" class="cell-label-dim" text-anchor="middle">–</text><text x="442" y="339" class="cell-label-dim">EhrArchive</text>
+<rect x="612" y="322" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="625" y="339" class="cell-label-dim" text-anchor="middle">–</text><text x="638" y="339" class="cell-label-dim">DemographicArchive</text>
+<rect x="808" y="322" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="821" y="339" class="cell-label-dim" text-anchor="middle">–</text><text x="834" y="339" class="cell-label-dim">EhrExtract</text>
+<rect x="24" y="354" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="37" y="371" class="cell-label-dim" text-anchor="middle">–</text><text x="50" y="371" class="cell-label-dim">Tds</text>
+<rect x="220" y="354" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="233" y="371" class="cell-label-dim" text-anchor="middle">–</text><text x="246" y="371" class="cell-label-dim">DemographicApi</text>
+<rect x="416" y="354" width="190" height="26" rx="5" class="ev-not-evidenced cell-optional"/><text x="429" y="371" class="cell-label-dim" text-anchor="middle">○</text><text x="442" y="371" class="cell-label-dim">AdminApi</text>
+<rect x="612" y="354" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="625" y="371" class="cell-label-dim" text-anchor="middle">–</text><text x="638" y="371" class="cell-label-dim">MessageApi</text>
+<rect x="808" y="354" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="821" y="371" class="cell-label-dim" text-anchor="middle">–</text><text x="834" y="371" class="cell-label-dim">SystemApi</text>
+<rect x="24" y="386" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="37" y="403" class="cell-label-dim" text-anchor="middle">–</text><text x="50" y="403" class="cell-label-dim">ItemTags</text>
+<rect x="220" y="386" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="233" y="403" class="cell-label-dim" text-anchor="middle">–</text><text x="246" y="403" class="cell-label-dim">SimplifiedFormats</text>
+<rect x="416" y="386" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="429" y="403" class="cell-label-dim" text-anchor="middle">–</text><text x="442" y="403" class="cell-label-dim">SmartAppLaunch</text>
+<text x="24" y="446" class="title" font-size="12">SEC-BASIC</text>
+<rect x="24" y="454" width="190" height="26" rx="5" class="ev-passed cell-required"/><text x="37" y="471" class="cell-label" text-anchor="middle">✓</text><text x="50" y="471" class="cell-label">EhrDemographicSeparation</text>
+<rect x="220" y="454" width="190" height="26" rx="5" class="ev-passed cell-required"/><text x="233" y="471" class="cell-label" text-anchor="middle">✓</text><text x="246" y="471" class="cell-label">AuthenticatedAccess</text>
+<rect x="416" y="454" width="190" height="26" rx="5" class="ev-not-evidenced cell-required"/><text x="429" y="471" class="cell-label-dim" text-anchor="middle">○</text><text x="442" y="471" class="cell-label-dim">AuthorizationSeparation</text>
+<rect x="612" y="454" width="190" height="26" rx="5" class="ev-not-claimed cell-required"/><text x="625" y="471" class="cell-label-dim" text-anchor="middle">–</text><text x="638" y="471" class="cell-label-dim">AuditAccountability</text>
+<rect x="808" y="454" width="190" height="26" rx="5" class="ev-not-claimed cell-required"/><text x="821" y="471" class="cell-label-dim" text-anchor="middle">–</text><text x="834" y="471" class="cell-label-dim">AnonymousEhrs</text>
+</svg>
