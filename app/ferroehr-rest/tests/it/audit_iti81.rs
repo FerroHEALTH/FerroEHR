@@ -457,3 +457,165 @@ async fn the_subject_audit_role_reads_one_subjects_log_and_nothing_else() {
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(body_json(resp).await["total"], 2);
 }
+
+/// Seeds the two records the shall-parameter test tells apart.
+async fn seed_two(store: &AuditStore) {
+    let records = [
+        (
+            "2026-07-10T08:00:00Z",
+            EventActionCode::Read,
+            EventOutcome::Success,
+            "alice",
+            "patient-1",
+            "10.1.2.3",
+            "8fa1::ferroehr::1",
+            "composition_get",
+        ),
+        (
+            "2026-07-12T09:00:00Z",
+            EventActionCode::Create,
+            EventOutcome::MinorFailure,
+            "bob",
+            "patient-2",
+            "192.168.7.9",
+            "9bb2::ferroehr::1",
+            "composition_create",
+        ),
+    ];
+    for (at, action, outcome, principal, patient, address, object, operation) in records {
+        let mut e = AuditEvent::new(action, ObjectClass::Composition, outcome);
+        principal.clone_into(&mut e.user_id);
+        e.client_ip = Some(address.to_owned());
+        e.object_id = Some(object.to_owned());
+        e.event_type = Some(EventType::RestOperation(operation));
+        e.timestamp = at.parse::<Timestamp>().expect("ts");
+        let rendered = fhir::to_fhir(&e, &ctx(), Some(patient)).expect("render");
+        store
+            .insert(&e, Some(patient), &rendered)
+            .await
+            .expect("seed");
+    }
+}
+
+/// Every search parameter `RESTful` ATNA §3.81.4.1.2.2 says the repository
+/// shall support matches what it names and nothing else: OR within one
+/// parameter, AND across parameters, and the three token forms of FHIR R4
+/// Search §3.1.1.4.10 (a value recorded without a system matches `code` and
+/// `|code`, and a query naming another system matches nothing).
+#[tokio::test]
+async fn every_shall_parameter_matches_what_it_names() {
+    let (_pg, app, store) = app(true, false).await;
+    seed_two(&store).await;
+    let entity_type = "http://terminology.hl7.org/CodeSystem/audit-entity-type";
+    let object_role = "http://terminology.hl7.org/CodeSystem/object-role";
+    let event_type = "http://terminology.hl7.org/CodeSystem/audit-event-type";
+    let operation = "urn:openehr:its-rest:operation";
+    let cases: Vec<(String, Vec<&str>)> = vec![
+        ("address=10.1.2".to_owned(), vec!["R"]),
+        ("address=192.168".to_owned(), vec!["C"]),
+        ("address=10.1.2,192.168".to_owned(), vec!["R", "C"]),
+        ("address=172.16".to_owned(), vec![]),
+        ("agent.identifier=alice".to_owned(), vec!["R"]),
+        ("agent.identifier=%7Calice".to_owned(), vec!["R"]),
+        ("agent.identifier=urn:x%7Calice".to_owned(), vec![]),
+        ("agent.identifier=alice,bob".to_owned(), vec!["R", "C"]),
+        ("patient.identifier=patient-1".to_owned(), vec!["R"]),
+        ("patient.identifier=%7Cpatient-2".to_owned(), vec!["C"]),
+        ("patient.identifier=urn:x%7Cpatient-1".to_owned(), vec![]),
+        ("entity.identifier=8fa1::ferroehr::1".to_owned(), vec!["R"]),
+        ("entity.identifier=patient-2".to_owned(), vec!["C"]),
+        ("entity.identifier=patient-3".to_owned(), vec![]),
+        (format!("entity-type={entity_type}%7C1"), vec!["R", "C"]),
+        (format!("entity-type={entity_type}%7C"), vec!["R", "C"]),
+        ("entity-type=%7C1".to_owned(), vec![]),
+        ("entity-type=9".to_owned(), vec![]),
+        (format!("entity-role={object_role}%7C1"), vec!["R", "C"]),
+        ("entity-role=urn:x%7C1".to_owned(), vec![]),
+        ("type=rest".to_owned(), vec!["R", "C"]),
+        (format!("type={event_type}%7Crest"), vec!["R", "C"]),
+        ("type=urn:x%7Crest".to_owned(), vec![]),
+        ("subtype=composition_get".to_owned(), vec!["R"]),
+        (
+            format!("subtype={operation}%7Ccomposition_create"),
+            vec!["C"],
+        ),
+        (
+            "subtype=composition_get,composition_create".to_owned(),
+            vec!["R", "C"],
+        ),
+        ("subtype=composition_delete".to_owned(), vec![]),
+        ("outcome=0".to_owned(), vec!["R"]),
+        ("outcome=4".to_owned(), vec!["C"]),
+        ("outcome=0,4".to_owned(), vec!["R", "C"]),
+        ("action=R,C".to_owned(), vec!["R", "C"]),
+        ("patient=patient-1,patient-2".to_owned(), vec!["R", "C"]),
+        ("patient=patient-1&agent=bob".to_owned(), vec![]),
+        (
+            "subtype=composition_get&subtype=composition_create".to_owned(),
+            vec![],
+        ),
+        ("source.identifier=ferroehr".to_owned(), vec!["R", "C"]),
+        ("source.identifier=urn:x%7Cferroehr".to_owned(), vec![]),
+    ];
+    for (criteria, expected) in cases {
+        let resp = app
+            .clone()
+            .oneshot(get(
+                &format!("/fhir/r4/AuditEvent?{WINDOW}&{criteria}"),
+                &basic("root"),
+            ))
+            .await
+            .expect("resp");
+        assert_eq!(resp.status(), StatusCode::OK, "{criteria}");
+        let bundle = body_json(resp).await;
+        let mut actions: Vec<String> = bundle["entry"]
+            .as_array()
+            .map(|entries| {
+                entries
+                    .iter()
+                    .filter_map(|entry| entry["resource"]["action"].as_str().map(str::to_owned))
+                    .collect()
+            })
+            .unwrap_or_default();
+        actions.sort_unstable();
+        let mut expected: Vec<String> = expected.iter().map(|a| (*a).to_owned()).collect();
+        expected.sort_unstable();
+        assert_eq!(actions, expected, "{criteria}: {bundle}");
+    }
+}
+
+/// The subject-scoped role stays held to one subject now that a parameter
+/// takes several values: two patients, in one parameter or two, are refused,
+/// and `patient.identifier` scopes the read as `patient` does.
+#[tokio::test]
+async fn the_subject_audit_role_cannot_name_two_subjects() {
+    let (_pg, app, store) = app(true, true).await;
+    seed_two(&store).await;
+    for criteria in [
+        "patient=patient-1,patient-2",
+        "patient=patient-1&patient=patient-2",
+        "patient=patient-1&patient.identifier=patient-2",
+        "patient.identifier=urn:x%7Cpatient-1",
+    ] {
+        let resp = app
+            .clone()
+            .oneshot(get(
+                &format!("/fhir/r4/AuditEvent?{WINDOW}&{criteria}"),
+                &basic("portal"),
+            ))
+            .await
+            .expect("resp");
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN, "{criteria}");
+    }
+    let resp = app
+        .oneshot(get(
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&patient.identifier=patient-2"),
+            &basic("portal"),
+        ))
+        .await
+        .expect("resp");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let bundle = body_json(resp).await;
+    assert_eq!(bundle["total"], 1, "{bundle}");
+    assert_eq!(bundle["entry"][0]["resource"]["action"], "C", "{bundle}");
+}
