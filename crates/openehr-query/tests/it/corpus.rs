@@ -10,7 +10,7 @@
     reason = "integration-test assertions, corpus diagnostics and fixture plumbing outside #[test] fns, which the clippy.toml allow-*-in-tests scoping does not reach"
 )]
 //! Parse the official openEHR AQL worked-example corpus (vendored under
-//! `vendor/examples/`, from specifications-QUERY). Every `----` listing block
+//! `vendor/examples/`, from specifications-QUERY). Every listing block
 //! that is standard **AQL 1.1.0** must parse.
 //!
 //! Some blocks are intentionally NOT standard AQL and are excluded with a
@@ -63,27 +63,57 @@ fn out_of_grammar_reason(q: &str) -> Option<&'static str> {
 /// [`official_aql_corpus_parses`]: a block that already contains a full
 /// `SELECT` is parsed as-is; a bare fragment is wrapped in a minimal
 /// `SELECT … FROM EHR e WHERE <fragment>` shell before parsing.
+///
+/// A delimiter is a line of four or more hyphens, and a block closes on the
+/// line identical to the one that opened it (Asciidoctor, "Delimited blocks":
+/// the closing delimiter must match the opening one exactly, and a listing
+/// delimiter may be longer than the minimum four characters).
 fn listing_blocks(doc: &str) -> Vec<String> {
     let mut out = Vec::new();
-    let mut in_block = false;
+    let mut open: Option<&str> = None;
     let mut buf = String::new();
     for line in doc.lines() {
-        if line.trim() == "----" {
-            if in_block {
+        let trimmed = line.trim();
+        match open {
+            Some(delimiter) if trimmed == delimiter => {
                 if !buf.trim().is_empty() {
                     out.push(std::mem::take(&mut buf));
                 }
                 buf.clear();
-                in_block = false;
-            } else {
-                in_block = true;
+                open = None;
             }
-        } else if in_block {
-            buf.push_str(line);
-            buf.push('\n');
+            Some(_) => {
+                buf.push_str(line);
+                buf.push('\n');
+            }
+            None if trimmed.len() >= 4 && trimmed.bytes().all(|b| b == b'-') => {
+                open = Some(trimmed);
+            }
+            None => {}
         }
     }
     out
+}
+
+/// How many listing blocks each example file holds, pinned so a file whose
+/// blocks are silently skipped fails the corpus test.
+const BLOCKS_PER_FILE: &[(&str, usize)] = &[
+    ("manifest_vars.adoc", 0),
+    ("master.adoc", 0),
+    ("master00-amendment_record.adoc", 0),
+    ("master01-preface.adoc", 0),
+    ("master02-overview.adoc", 0),
+    ("master03-syntax-function.adoc", 8),
+    ("master03-syntax-operator.adoc", 9),
+    ("master03-syntax.adoc", 0),
+    ("master04-single_subject.adoc", 1),
+    ("master05-population.adoc", 0),
+];
+
+#[test]
+fn listing_blocks_open_on_four_or_more_hyphens_and_close_on_the_same_line() {
+    let doc = "--------\nA\n----\nB\n--------\ntext\n----\nC\n----\n---\nD\n---\n";
+    assert_eq!(listing_blocks(doc), ["A\n----\nB\n", "C\n"]);
 }
 
 /// Wrap a bare AQL fragment (a `WHERE`-style boolean/predicate expression that
@@ -149,9 +179,27 @@ fn official_aql_corpus_parses() {
         .collect();
     files.sort();
 
+    let names: Vec<String> = files
+        .iter()
+        .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+        .collect();
+    let pinned: Vec<&str> = BLOCKS_PER_FILE.iter().map(|(name, _)| *name).collect();
+    assert_eq!(names, pinned, "the example files changed; pin their block counts");
+
     for path in files {
         let doc = fs::read_to_string(&path).unwrap();
-        for block in listing_blocks(&doc) {
+        let blocks = listing_blocks(&doc);
+        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        let expected = BLOCKS_PER_FILE
+            .iter()
+            .find(|(pinned, _)| *pinned == name)
+            .map(|(_, count)| *count);
+        assert_eq!(
+            Some(blocks.len()),
+            expected,
+            "listing blocks collected from {name}"
+        );
+        for block in blocks {
             total += 1;
             if let Some(reason) = out_of_grammar_reason(&block) {
                 excluded.push(reason);
