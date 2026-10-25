@@ -11,7 +11,7 @@ The repository was transferred from `rubentalstra/FerroEHR` to the `FerroHEALTH`
 - Artifact Hub kept the repository NAME `ferroehr` (id `f5b3afc5-…`), only its URL moved: the package page stays `artifacthub.io/packages/helm/ferroehr/ferroehr`.
 - Org packages are listed under `/orgs/FerroHEALTH/packages`, not `/users/`.
 - SonarQube Cloud moved too (#3555): project `FerroHEALTH_FerroEHR` in organization `ferrohealth`; `sonar.yml` reads the key from `sonar-project.properties`.
-- Still under the user account (do not rewrite): FerroTERM + `ghcr.io/rubentalstra/ferroterm`, Veredictum, FerroBRIDGE, `hetzner-deploy-action`, `urn:rubentalstra:ferroehr`.
+- FerroTERM and FerroBRIDGE have since moved to `FerroHEALTH` as well (checked 2026-10-25), as have FerroFED and FerroPIX; older FerroTERM images stay at `ghcr.io/rubentalstra/ferroterm`. Veredictum lives at `Vernum-Projecten/Veredictum`. Still under the user account (do not rewrite): `hetzner-deploy-action`, `urn:rubentalstra:ferroehr`.
 - Releases up to v4.3.1 were signed as `rubentalstra/FerroEHR`; v4.3.2 (2026-10-01) is the first built under FerroHEALTH, and `website/book/src/verifying-releases.md` carries a note on verifying the older ones.
 
 **Why:** owner moved the product line under one organization ([[sibling-products]]).

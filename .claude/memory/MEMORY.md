@@ -1,7 +1,8 @@
 # Memory index
 
+- [Family architecture](family-architecture.md): owner 2026-10-25, five servers (FerroEHR, FerroBRIDGE, FerroFED, FerroPIX, FerroTERM) that reach each other only over published protocols; shared crates for cross-cutting work; FerroEHR implements no FHIR, OMOP, federation or IHE profile; nothing hand-written that a shared crate covers
 - [Licence is BUSL 1.1](license-busl.md) — app+tooling BUSL-1.1, six openehr-* crates Apache-2.0; holder Cadasto B.V.; never call it "open source"
-- [Sibling products](sibling-products.md) — FerroTERM / FerroBRIDGE / FerroCKM are separate repos; never edit a sibling from here
+- [Sibling products](sibling-products.md): the four sibling products and the shared-crate repos beside this checkout; never edit one from here
 - [Owner work style](owner-work-style.md) — defer nothing, proper rewrites over quick fixes, specs re-read first-hand, never copy a number forward
 - [Autonomous phase flow](autonomous-phase-flow.md) — PR+merge each phase, checkout main, start the next without asking
 - [Merge on local gates](merge-on-local-gates.md) — local gates green → merge immediately; CI is a post-merge backstop
@@ -18,7 +19,7 @@
 - [Admin UI deprioritized](admin-ui-deprioritized.md) — server first; compose with explicit service names, never bare `up`
 - [Served OpenAPI is native](served-openapi-is-native.md) — serve only the utoipa document; vendored OAS is codegen input only
 - [Comments: less is more](comments-less-is-more.md) — RFC 505/1574 budgets; essays live on the issue/PR
-- [CNF design record is permanent](cnf-strategy-doc-kept-permanently.md) — Veredictum `ARCHITECTURE.md`; read it before performance work
+- [CNF design record is permanent](cnf-strategy-doc-kept-permanently.md): Veredictum `ARCHITECTURE.md`, read at the remote tag; input, not authority, while Veredictum is rewritten
 - [Measurement environment discipline](measurement-environment-discipline.md) — idle box, envelope-matched compose limits for measured runs
 - [Verified commits hard rule](verified-commits-hard-rule.md) — every commit signed; CI commits only via the Git Data API
 - [Commit-subject attribution tokens](commit-subject-attribution-tokens.md) — the commit-msg hook deletes lines with attribution literals
@@ -38,7 +39,7 @@
 - [Public comments: one and short](public-comments-one-and-short.md) — one short comment on external threads; edit, don't add
 - [No AI tells in prose](no-ai-tells-in-prose.md) — HARD RULE: the banned word/hedge/flattery list applies to all human-read prose
 - [Gate parity + caller sweeps](gate-parity-and-caller-sweeps.md) — local gates mirror CI flags verbatim; sweep every caller of a tightened check
-- [Veredictum: other session](veredictum-other-session.md) — never touch the Veredictum checkout or local cache; read the remote at the pinned tag
+- [Veredictum: other session](veredictum-other-session.md): never touch the Veredictum checkout or local cache; read the remote at the pinned tag; being rewritten, its verdicts are not authority
 - [Sandbox runs on Hetzner; DSN in the box .env](sandbox-dsn-is-neon-injected.md) — Neon direct endpoint, never the -pooler host
 - [History rewrite 2026-08-31](history-rewrite-2026-08-31.md) — main disjoint from tags ≤ v4.0.13
 - [No lint suppressions in source](no-lint-suppressions-in-source.md) — fix findings; `#[expect]`/`#[allow]` only in tests or third-party macro expansions
@@ -58,7 +59,7 @@
 - [New issues go to the current milestone](new-issues-go-to-current-milestone.md) — one milestone at a time; en-route issues join the current one, whatever its version
 - [Storage rewrite is greenfield](storage-rewrite-is-greenfield.md) — #3337: new one-concern migration sets, old databases refused at boot
 - [Rewrite needs baseline and harness](rewrite-needs-baseline-and-harness.md) — a perf rewrite ships its measurement program first
-- [Platform shape: single tenant, FerroBRIDGE](platform-shape-single-tenant-ferrobridge.md) — one instance per tenant; secondary use via FerroBRIDGE; no central authorisation service, each product its own SMART resource server
+- [Platform shape: single tenant, FerroBRIDGE](platform-shape-single-tenant-ferrobridge.md): one instance per tenant; secondary use via FerroBRIDGE over batch AQL; no FHIR face; each product its own SMART resource server
 - [API commits are unsigned](api-commits-are-unsigned.md) — never commit via the GitHub API with the user's token
 - [Release PR: chart bump + third-party images](release-pr-chart-and-third-party-images.md) — bump `Chart.yaml` version every release
 - [No CNF perf runs during the rewrite](no-cnf-perf-runs-during-rewrite.md) — wire before/after is #3452; #3350 is the only measurement
@@ -66,16 +67,16 @@
 - [Design record updated in the same turn](design-record-updated-in-the-same-turn.md) — plan, design comment and issues updated together
 - [OPT 1.4 format is the XSD](opt14-format-is-the-xsd.md) — the ITS-XML schema defines OPT 1.4 validity
 - [Many issues per PR](many-issues-per-pr.md) — batch six to ten related issues per PR, one Closes line each
-- [Release line: v4.3.11, v5.0.0, v5.1.0, v6.0.0](v5-withdrawn-rewrites-are-v431-v432.md) — v5.0.0 is the demographics release (owner 2026-10-19), v5.1.0 follow-ups, v6.0.0 platform refactors
+- [Release line](v5-withdrawn-rewrites-are-v431-v432.md): the 2026-10-19 themed line (v5.0.0 demographics, v6.0.0 platform refactors); v5.0.0 and v5.1.0 are cut, read the live milestones
 - [Update-branch is unsigned](update-branch-is-unsigned.md) — never `gh pr update-branch`; rebase locally, force-with-lease
 - [History rewrite 2026-09-16](history-rewrite-2026-09-16.md) — never resolve "latest release" by ancestry
 - [Release cut 2026-09-16 lessons](release-cut-2026-09-16-lessons.md) — signed tag, crates-io approval, sandbox leg across storage generations
 - [Release cut 2026-10-15 lessons](release-cut-2026-10-15-lessons.md) — the release reads the TAG tree; run vex-linkage and vex-coverage before tagging or the version burns
 - [New crate first publish is standalone](new-crate-first-publish-standalone.md) — first publish alone from a local dirty manifest
-- [Repo moved to FerroHEALTH](repo-moved-to-ferrohealth.md) — ghcr.io/ferrohealth, board orgs/FerroHEALTH/projects/2
+- [Repo moved to FerroHEALTH](repo-moved-to-ferrohealth.md): ghcr.io/ferrohealth, board orgs/FerroHEALTH/projects/2; the sibling products moved too
 - [Native issue types and fields](native-issue-types-and-priority.md) — type/priority/effort via scripts/gh/fields.sh; read issues with `--json`
 - [Caching must stay replica-safe](caching-replica-safe-only.md) — no cache that blocks multiple replicas; signature verification stays strict per read
-- [FerroPULSE usage report](ferropulse-usage-report.md) — daily default-on report from every Ferro product to FerroPULSE; FerroEHR side #3577
+- [FerroPULSE usage report](ferropulse-usage-report.md): daily default-on report from every family product to FerroPULSE; FerroEHR side #3577
 - [Respond in English](respond-in-english.md) — always reply in English, even to Dutch messages
 - [Refs PR can close an issue](refs-pr-can-close-issue.md) — check closingIssuesReferences before merging a plan-only PR
 - [Usage report stays default-on (accepted risk)](usage-report-default-on-accepted-risk.md) — owner chose on-by-default over the #3580 opt-in reading; do not re-propose
@@ -86,10 +87,10 @@
 - [Push PR fixes without asking](push-pr-fixes-without-asking.md) — fixing a red PR: commit + push to its branch, no permission prompt
 - [Stacked PRs after a squash merge](stacked-prs-after-squash.md) — rebase --onto the lower PR's last commit; lease-push to the exact remote sha
 - [Greenfield: breaking changes OK](greenfield-breaking-changes-ok.md) — remove superseded routes/keys in 4.3.x, no major bump
-- [FerroHEALTH is the mother name](ferrohealth-umbrella.md) — family-level docs (manufacturer, EHDS system, CRA overview, licensing) go to the FerroHEALTH book, not FerroEHR's
+- [FerroHEALTH is the family name](ferrohealth-umbrella.md): family-level docs live in the FerroHEALTH book, not FerroEHR's; the umbrella repo is paused (owner 2026-10-25)
 - [Podman, not Docker](podman-not-docker.md) — podman for containers and Kubernetes (kind, podman provider); DOCKER_HOST to the podman socket
 - [Agent pushes release tags](agent-pushes-release-tags.md) — create+push the signed vX.Y.Z tag, watch the run, close the milestone, clean branches; owner only merges
-- [FerroUI](ferroui.md) — every console draws in FerroUI; uniform design, shared components, all four consoles move in lockstep with each FerroUI release
+- [FerroUI](ferroui.md): every family console draws in FerroUI, pinned exactly; uniform design, shared components, reactive, all consoles move in lockstep with each FerroUI release
 - [Support: newest release only](support-newest-release-only.md): owner 2026-10-19: only the newest release is supported; CRA five years = product-wide fix commitment, shipped only in the newest (Art 13(8), 13(10))
 - [Release closes milestone](release-closes-milestone.md): release.yml refuses a tag whose milestone is missing or not empty and closes it after every leg; check it after a manual or recovery release; owner 2026-10-19 (#3858)
 - [Helm and Kubernetes in Podman](helm-kubernetes-in-podman.md): owner 2026-10-25, test charts locally on kind over Podman; install helm when missing; never build images locally
