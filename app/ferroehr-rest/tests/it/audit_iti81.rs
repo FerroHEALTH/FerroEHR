@@ -284,6 +284,27 @@ async fn the_date_grammar_and_the_required_date() {
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(body_json(resp).await["total"], 2);
 
+    // An instant finer than the microsecond the store keeps still finds its
+    // record, as the viewer's record page asks for it by its `recorded`.
+    seed(
+        &store,
+        "2026-07-15T10:00:00.5713589Z",
+        EventActionCode::Read,
+        "carol",
+        Some("patient-3"),
+    )
+    .await;
+    let resp = app
+        .clone()
+        .oneshot(get(
+            "/fhir/r4/AuditEvent?date=le2026-07-15T10:00:00.5713589Z&patient=patient-3",
+            &basic("root"),
+        ))
+        .await
+        .expect("resp");
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(body_json(resp).await["total"], 1);
+
     // A malformed supported parameter is a 400 OperationOutcome.
     let resp = app
         .clone()

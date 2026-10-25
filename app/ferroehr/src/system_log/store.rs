@@ -436,10 +436,12 @@ fn search_condition(filter: &AuditSearchFilter) -> sea_query::Cond {
         );
     }
     if let Some(until) = filter.until {
-        cond = cond.add(
-            Expr::col(Alias::new("recorded_at"))
-                .lt(Expr::val(until.to_string()).cast_as("timestamptz")),
-        );
+        let bound = Expr::val(until.to_string()).cast_as("timestamptz");
+        cond = cond.add(if filter.until_inclusive {
+            Expr::col(Alias::new("recorded_at")).lte(bound)
+        } else {
+            Expr::col(Alias::new("recorded_at")).lt(bound)
+        });
     }
     if let Some(patient) = &filter.patient {
         cond = cond.add(Expr::col(Alias::new("patient_id")).eq(patient.clone()));
@@ -527,9 +529,12 @@ pub struct AuditSearchFilter {
     /// The first instant a record's `recorded` may carry (inclusive), from
     /// the `date` parameters.
     pub from: Option<jiff::Timestamp>,
-    /// The first instant past the records served (exclusive), from the
-    /// `date` parameters.
+    /// The first instant past the records served, from the `date`
+    /// parameters: exclusive, or inclusive when [`Self::until_inclusive`].
     pub until: Option<jiff::Timestamp>,
+    /// Whether [`Self::until`] is inclusive: an end the query names below a
+    /// microsecond, rounded up to the microsecond `recorded_at` keeps.
+    pub until_inclusive: bool,
     /// `patient` — the recorded patient (EHR subject) id.
     pub patient: Option<String>,
     /// `agent` — the authenticated principal.

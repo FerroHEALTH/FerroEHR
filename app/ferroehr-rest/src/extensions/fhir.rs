@@ -319,6 +319,16 @@ fn audit_filter(query: Option<&str>) -> Result<Filter, Refused> {
             Value::Token(_) => token_code(code, value, "")?,
         });
     }
+    // NOTE: our own design: `recorded_at` keeps microseconds, so a bound finer than that is
+    // widened to the microsecond that holds it, never narrowed past a stored record.
+    store.from = store
+        .from
+        .map(|from| to_micros(from, jiff::RoundMode::Floor));
+    if let Some(until) = store.until {
+        let rounded = to_micros(until, jiff::RoundMode::Ceil);
+        store.until_inclusive = rounded != until;
+        store.until = Some(rounded);
+    }
     store.patient.clone_from(&patient);
     let total_only = query.count() == Some(0);
     if let Some(count) = query.count().filter(|count| *count > 0) {
@@ -333,6 +343,17 @@ fn audit_filter(query: Option<&str>) -> Result<Filter, Refused> {
         patient,
         total_only,
     })
+}
+
+/// `at` rounded to the microsecond by `mode`; `at` itself when the rounding
+/// overflows.
+fn to_micros(at: jiff::Timestamp, mode: jiff::RoundMode) -> jiff::Timestamp {
+    at.round(
+        jiff::TimestampRound::new()
+            .smallest(jiff::Unit::Microsecond)
+            .mode(mode),
+    )
+    .unwrap_or(at)
 }
 
 /// The code of a token value, which names no system or `system` (any system
