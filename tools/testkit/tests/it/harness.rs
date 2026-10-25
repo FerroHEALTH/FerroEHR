@@ -318,3 +318,70 @@ async fn a_killed_runs_young_clone_is_swept_by_its_free_lease() {
         db.name()
     );
 }
+
+/// The sweep never drops a database a live session holds the lease of: a
+/// sweeper loops while eight threads, each a session of its own like a test
+/// process, take clones of a template that was just dropped, so one of them
+/// rebuilds it through a clone-shaped staging database under the sweep
+/// (#3924: a sweep once dropped that staging database mid-build, and the
+/// rename failed with SQLSTATE 3D000).
+///
+/// Cluster-global like the template test above: it drops the shared template.
+#[test]
+fn the_sweep_spares_every_leased_clone_and_staging_database_under_load() {
+    const WORKERS: usize = 8;
+    const CLONES_EACH: usize = 4;
+    let runtime = || {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+    };
+    runtime().block_on(async {
+        let probe = testkit::db().await.expect("probe clone");
+        let template = format!("ferroehr_tk_tpl_{}", ferroehr::db::migration_fingerprint());
+        let drop_template = format!("DROP DATABASE IF EXISTS {template} WITH (FORCE)");
+        sqlx::raw_sql(sqlx::AssertSqlSafe(drop_template))
+            .execute(&probe.pool())
+            .await
+            .expect("drop the template so the workers rebuild it");
+    });
+
+    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let sweeper = {
+        let stop = std::sync::Arc::clone(&stop);
+        std::thread::spawn(move || {
+            runtime().block_on(async {
+                let mut sweeps = 0_u32;
+                while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                    testkit::sweep_stale().await.expect("sweep");
+                    sweeps += 1;
+                }
+                sweeps
+            })
+        })
+    };
+    let workers: Vec<_> = (0..WORKERS)
+        .map(|_| {
+            std::thread::spawn(move || {
+                runtime().block_on(async {
+                    for _ in 0..CLONES_EACH {
+                        let db = testkit::db().await.expect("a clone under the sweep");
+                        ferroehr::db::verify_migrations(&db.pool())
+                            .await
+                            .expect("the clone is whole while its lease is held");
+                    }
+                });
+            })
+        })
+        .collect();
+    let failed = workers
+        .into_iter()
+        .map(std::thread::JoinHandle::join)
+        .filter(Result::is_err)
+        .count();
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    let sweeps = sweeper.join().expect("the sweeper ends");
+    assert_eq!(failed, 0, "{failed} worker(s) lost a clone to the sweep");
+    assert!(sweeps > 0, "the sweep never ran beside the workers");
+}
