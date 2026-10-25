@@ -17,6 +17,13 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The CDR takes up `ferrohealth-smart` 0.5.0** (#4002), and the build
+  holds one copy of `openehr-sdt` where it held two (0.0.90 for the SMART
+  crate beside the workspace's 0.0.98). Reading a trusted issuer's
+  authorization-server metadata at boot, the server now refuses a document
+  that repeats a member name (RFC 8259 §4), naming the location that
+  answered it.
+
 - **`SECURITY.md` states the family's response times, with fix-time targets
   by severity.** An acknowledgement within about 5 business days and an
   initial assessment within about 10, both best effort as before, and now a

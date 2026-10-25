@@ -2690,7 +2690,7 @@ dependencies = [
  "openehr-lang",
  "openehr-query",
  "openehr-rm",
- "openehr-sdt 0.0.98",
+ "openehr-sdt",
  "openehr-term",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -2781,7 +2781,7 @@ dependencies = [
  "openehr-its",
  "openehr-lang",
  "openehr-rm",
- "openehr-sdt 0.0.98",
+ "openehr-sdt",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
@@ -2827,7 +2827,7 @@ dependencies = [
  "ferroehr",
  "ferroehr-rest",
  "openehr-its",
- "openehr-sdt 0.0.98",
+ "openehr-sdt",
  "reqwest",
  "serde_json",
  "sqlx",
@@ -2860,7 +2860,7 @@ dependencies = [
  "openehr-am",
  "openehr-its",
  "openehr-query",
- "openehr-sdt 0.0.98",
+ "openehr-sdt",
  "openidconnect",
  "reqwest",
  "serde",
@@ -2878,9 +2878,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-smart"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ffe8ec80408ba7026bae4480d6e4ea13380e056f4d6a0704c1698e5ef40b14d"
+checksum = "b372f7fc4c949c66b72c1c3a8056ea8936f2dbb0a25a8072dfe20594f25861a8"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
@@ -2889,7 +2889,7 @@ dependencies = [
  "http",
  "jiff",
  "jsonwebtoken",
- "openehr-sdt 0.0.90",
+ "openehr-sdt",
  "reqwest",
  "secrecy",
  "serde",
@@ -5315,7 +5315,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.21.7",
  "chrono",
  "getrandom 0.2.17",
  "http",
@@ -5567,12 +5567,6 @@ dependencies = [
  "thiserror 2.0.21",
  "uuid",
 ]
-
-[[package]]
-name = "openehr-sdt"
-version = "0.0.90"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f23bd61aa0044486803da37083b265559a5ed63c82436f4c9bc2060cde8af234"
 
 [[package]]
 name = "openehr-sdt"
@@ -6039,7 +6033,7 @@ dependencies = [
  "aes-gcm 0.10.3",
  "aes-kw",
  "argon2 0.5.3",
- "base64 0.22.1",
+ "base64 0.21.7",
  "bitfields",
  "block-padding",
  "blowfish",
