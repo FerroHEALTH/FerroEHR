@@ -257,3 +257,11 @@ shortcuts. See [Preferences and the theme](preferences.md).
 ## Audit log
 
 The audit log has its own section in [Server and audit log](server.md#audit-log).
+
+## Acknowledgment
+
+The viewer's feature set (the Template Manager, the point-and-click Query
+Builder, and saved, grouped and cohort queries) is inspired by
+[EHRServer](https://github.com/ppazos/cabolabs-ehrserver) by Pablo Pazos and
+CaboLabs Health Informatics (Apache-2.0). The interface is reimplemented in
+Rust over FerroEHR's own AQL engine, and no code is copied.
