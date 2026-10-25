@@ -27,6 +27,7 @@
 use crate::common;
 
 use common::{Harness, env, login_basic, wait_main_contains, wait_text_contains};
+use thirtyfour::prelude::*;
 
 /// The seeded EHR and composition, or `None` (with a printed skip) when the
 /// harness did not seed them.
@@ -238,5 +239,62 @@ async fn ehr_finder_by_id_works_with_javascript_disabled() {
     h.wait_url_contains(&format!("/ehrs/{ehr_id}")).await;
     wait_main_contains(&h, "Queryable").await;
     h.shot(2, "ehr-finder-no-js-opened").await;
+    h.finish().await;
+}
+
+/// The top bar's search answers under the field as you type: the seeded
+/// EHR's id opens the panel with the EHR as its first option, Down makes it
+/// the active option with the focus kept in the field, Enter opens it, and
+/// Escape closes the panel and keeps the words.
+#[tokio::test]
+async fn the_search_panel_answers_as_you_type_and_follows_the_keys() {
+    let Some(h) = Harness::start("find-typeahead").await else {
+        return;
+    };
+    let Some((ehr_id, _)) = seeded() else {
+        h.finish().await;
+        return;
+    };
+    login_basic(&h).await;
+
+    h.goto("/ehrs").await;
+    h.wait_css("#find[role='combobox']")
+        .await
+        .send_keys(&ehr_id)
+        .await;
+    common::wait_visible(&h, "#find-panel #find-hit-1").await;
+    h.wait_css("#find[aria-expanded='true']").await;
+    h.shot(1, "find-typeahead").await;
+    h.press(Key::Down).await;
+    h.wait_css("#find[aria-activedescendant='find-hit-1']")
+        .await;
+    assert!(
+        h.focus_matches("#find").await,
+        "the focus stays in the field while the arrows walk the options"
+    );
+    h.press(Key::Enter).await;
+    h.wait_url_contains(&format!("/ehrs/{ehr_id}")).await;
+    wait_main_contains(&h, "Queryable").await;
+
+    h.goto("/ehrs").await;
+    h.wait_css("#find[role='combobox']")
+        .await
+        .send_keys(&ehr_id)
+        .await;
+    common::wait_visible(&h, "#find-panel #find-hit-1").await;
+    h.press(Key::Escape).await;
+    common::wait_hidden(&h, "#find-panel").await;
+    assert!(
+        h.focus_matches("#find").await,
+        "Escape keeps the focus in the field"
+    );
+    assert_eq!(
+        h.wait_css("#find").await.prop("value").await,
+        ehr_id,
+        "Escape on an open panel keeps the words"
+    );
+
+    h.assert_console_clean(&["401", "Failed to load resource"])
+        .await;
     h.finish().await;
 }

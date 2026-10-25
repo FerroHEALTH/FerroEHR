@@ -278,10 +278,23 @@ impl Viewer {
         cookie: Option<&str>,
         form: Option<&[(&str, &str)]>,
     ) -> Answer {
+        self.send_accepting(method, path, cookie, form, "text/html")
+            .await
+    }
+
+    /// Sends a request as [`Viewer::send`] does, asking for `accept`.
+    async fn send_accepting(
+        &self,
+        method: http::Method,
+        path: &str,
+        cookie: Option<&str>,
+        form: Option<&[(&str, &str)]>,
+        accept: &str,
+    ) -> Answer {
         let mut request = http::Request::builder()
             .method(method)
             .uri(path)
-            .header(http::header::ACCEPT, "text/html")
+            .header(http::header::ACCEPT, accept)
             .header(http::header::HOST, "viewer.test");
         if let Some(cookie) = cookie {
             request = request.header(http::header::COOKIE, cookie);
@@ -608,7 +621,7 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             "/about".to_owned(),
-            vec!["ferrohealth-ui 0.3.7", "The conformance manifest"],
+            vec!["ferrohealth-ui 0.4.0", "The conformance manifest"],
         ),
         ("/access".to_owned(), vec!["Signed in as", "ferroehr"]),
         (
@@ -849,6 +862,50 @@ async fn find_answers_an_ehr_id_with_the_ehr() {
         answer.main().contains(&format!("/ehrs/{ehr}")),
         "{}",
         answer.main()
+    );
+}
+
+#[tokio::test]
+async fn the_search_panel_asks_the_find_answer_server_function() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let ehr = id("ehr");
+    let answer = viewer
+        .send_accepting(
+            http::Method::POST,
+            ferroehr_viewer::shell::FIND_ANSWER_ROUTE,
+            Some(&cookie),
+            Some(&[("q", &ehr)]),
+            "application/json",
+        )
+        .await;
+    assert_eq!(answer.status, http::StatusCode::OK, "{}", answer.body);
+    let found: ferrohealth_ui::view::search::SearchAnswer =
+        serde_json::from_str(&answer.body).expect("the answer is a SearchAnswer");
+    assert_eq!(found.query, ehr);
+    assert!(
+        found
+            .groups
+            .iter()
+            .flat_map(|group| &group.hits)
+            .any(|hit| hit.href == format!("/ehrs/{ehr}")),
+        "{}",
+        answer.body
+    );
+    let refused = viewer
+        .send_accepting(
+            http::Method::POST,
+            ferroehr_viewer::shell::FIND_ANSWER_ROUTE,
+            None,
+            Some(&[("q", &ehr)]),
+            "application/json",
+        )
+        .await;
+    assert_ne!(
+        refused.status,
+        http::StatusCode::OK,
+        "no answer without a session: {}",
+        refused.body
     );
 }
 
