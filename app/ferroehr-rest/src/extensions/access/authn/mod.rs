@@ -49,6 +49,7 @@ use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::metadata::ServerMetadata;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
+use ferrohealth_smart::resource::introspection::Introspector;
 use ferrohealth_smart::resource::{
     Access, Caller, Honoured, IssuerSet, ResourceError, ResourceServer, Via,
 };
@@ -286,6 +287,16 @@ impl AuthError {
     }
 }
 
+/// The check of the first issuer, whose metadata the SMART discovery document
+/// is built from.
+enum Primary {
+    /// A JWT access token checked against the issuer's keys.
+    Jwt(Arc<ResourceServer>),
+    /// An opaque access token checked by the issuer's introspection endpoint
+    /// (RFC 7662).
+    Introspection(Arc<Introspector>),
+}
+
 /// The configured authenticator: the crate's gate and the role sources.
 pub struct Authenticator {
     /// `[auth] enabled`.
@@ -295,7 +306,7 @@ pub struct Authenticator {
     /// The protection space every challenge names.
     realm: String,
     /// The issuer whose metadata the SMART discovery document is built from.
-    primary: Option<Arc<ResourceServer>>,
+    primary: Option<Primary>,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -326,7 +337,18 @@ impl Authenticator {
         let mut gate = Gate::open();
         let mut primary = None;
         if resolved.enabled {
-            if !resolved.issuers.is_empty() {
+            if let Some(settings) = resolved.introspection {
+                let issuer = settings.issuer.clone();
+                let introspector =
+                    Arc::new(Introspector::discover(settings).await.map_err(|e| {
+                        format!(
+                            "the introspection endpoint of {issuer} could not be read: {}",
+                            ferroehr::service::error::ErrorChain::new(&e)
+                        )
+                    })?);
+                primary = Some(Primary::Introspection(Arc::clone(&introspector)));
+                gate = gate.with_bearer(introspector);
+            } else if !resolved.issuers.is_empty() {
                 let mut supplied = match config.smart.issuer_metadata_file.as_deref() {
                     Some(path) => Some(issuer_metadata(path).await?),
                     None => None,
@@ -347,7 +369,7 @@ impl Authenticator {
                         })?;
                     }
                     let server = Arc::new(server);
-                    primary.get_or_insert_with(|| Arc::clone(&server));
+                    primary.get_or_insert_with(|| Primary::Jwt(Arc::clone(&server)));
                     issuers = issuers.with(server);
                 }
                 gate = gate.with_bearer(Arc::new(issuers));
@@ -393,9 +415,10 @@ impl Authenticator {
     /// The SMART discovery document of the first issuer under `options`, or
     /// `None` when no issuer's metadata was read.
     pub(crate) fn smart_configuration(&self, options: &SmartOptions) -> Option<serde_json::Value> {
-        self.primary
-            .as_ref()
-            .map(|server| server.smart_configuration(options))
+        self.primary.as_ref().map(|primary| match primary {
+            Primary::Jwt(server) => server.smart_configuration(options),
+            Primary::Introspection(introspector) => introspector.smart_configuration(options),
+        })
     }
 
     /// Builds the `WWW-Authenticate` challenge of `outcome`: the schemes the
@@ -939,6 +962,107 @@ mod tests {
             },
             ..AppConfig::default()
         }
+    }
+
+    /// An issuer at a `wiremock` server whose RFC 8414 metadata names its
+    /// introspection endpoint, and an authenticator introspecting its tokens
+    /// under the client authentication of RFC 7662 §2.1.
+    async fn introspecting() -> (wiremock::MockServer, Arc<Authenticator>) {
+        use wiremock::matchers::{method, path};
+        let server = wiremock::MockServer::start().await;
+        let uri = server.uri();
+        wiremock::Mock::given(method("GET"))
+            .and(path("/.well-known/oauth-authorization-server"))
+            .respond_with(wiremock::ResponseTemplate::new(200).set_body_json(json!({
+                "issuer": uri,
+                "jwks_uri": format!("{uri}/jwks"),
+                "authorization_endpoint": format!("{uri}/authorize"),
+                "token_endpoint": format!("{uri}/token"),
+                "introspection_endpoint": format!("{uri}/introspect"),
+                "grant_types_supported": ["client_credentials"],
+                "code_challenge_methods_supported": ["S256"]
+            })))
+            .mount(&server)
+            .await;
+        let auth = AuthSection {
+            issuer: ferrohealth_smart::config::IssuerKey::Flat(uri),
+            audience: vec![AUDIENCE.to_owned()],
+            mode: ferrohealth_smart::config::AuthMode::Introspection,
+            introspection: Some(ferrohealth_smart::config::IntrospectionSection {
+                client: Some(ferrohealth_smart::config::OauthSection {
+                    client_id: "ferroehr".to_owned(),
+                    client_secret: Some(SecretString::from("synthetic-secret")),
+                    ..ferrohealth_smart::config::OauthSection::default()
+                }),
+                ..ferrohealth_smart::config::IntrospectionSection::default()
+            }),
+            ..ferroehr::config::FerroEhrConfig::default().auth
+        };
+        let authenticator = Authenticator::new(&AppConfig {
+            auth,
+            ..AppConfig::default()
+        })
+        .await
+        .expect("an introspecting authenticator");
+        (server, authenticator)
+    }
+
+    /// Mounts `body` with `status` as the introspection answer.
+    async fn introspection_answers(server: &wiremock::MockServer, status: u16, body: Value) {
+        use wiremock::matchers::{method, path};
+        wiremock::Mock::given(method("POST"))
+            .and(path("/introspect"))
+            .respond_with(wiremock::ResponseTemplate::new(status).set_body_json(body))
+            .mount(server)
+            .await;
+    }
+
+    /// RFC 7662 §2.2: an active token admits its caller with its scopes and
+    /// roles, an inactive one is a `401`, and an endpoint that cannot answer
+    /// is a `503`, never a refusal of a token that may be valid.
+    #[tokio::test]
+    async fn an_opaque_token_is_checked_by_introspection() {
+        let (server, auth) = introspecting().await;
+        introspection_answers(
+            &server,
+            200,
+            json!({
+                "active": true,
+                "scope": "user/composition-*.r",
+                "sub": "alice",
+                "client_id": "portal",
+                "aud": AUDIENCE,
+                "iss": server.uri(),
+                "exp": jiff::Timestamp::now().as_second() + 300,
+                "roles": ["clinician"]
+            }),
+        )
+        .await;
+        let p = auth
+            .authenticate(&headers("Bearer synthetic-opaque-token"))
+            .await
+            .expect("an active token")
+            .principal;
+        assert_eq!(p.subject, "alice");
+        assert_eq!(p.method, AuthMethod::Bearer);
+        assert_eq!(p.scopes, vec!["user/composition-*.r".to_owned()]);
+        assert_eq!(p.roles, vec!["CLINICIAN".to_owned()]);
+
+        let (server, auth) = introspecting().await;
+        introspection_answers(&server, 200, json!({ "active": false })).await;
+        let err = auth
+            .authenticate(&headers("Bearer synthetic-opaque-token"))
+            .await
+            .expect_err("an inactive token");
+        assert_eq!(err.to_api_error().status(), StatusCode::UNAUTHORIZED);
+
+        let (server, auth) = introspecting().await;
+        introspection_answers(&server, 500, json!({ "error": "server_error" })).await;
+        let err = auth
+            .authenticate(&headers("Bearer synthetic-opaque-token"))
+            .await
+            .expect_err("no answer");
+        assert_eq!(err.to_api_error().status(), StatusCode::SERVICE_UNAVAILABLE);
     }
 
     async fn basic_only() -> Arc<Authenticator> {
