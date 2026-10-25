@@ -262,17 +262,19 @@ cmd_update() {
   echo "ok: status update posted ($status)"
 }
 
+# The project is read by its node id, which resolves whether the owner is a user
+# or an organisation (the FerroHEALTH board belongs to an organisation).
 cmd_updates() {
   resolve_project
   # shellcheck disable=SC2016  # GraphQL $variables are literal, never shell expansion
   gh api graphql \
-    -f query='query($owner: String!, $number: Int!) {
-      user(login: $owner) { projectV2(number: $number) { statusUpdates(last: 10) {
+    -f query='query($id: ID!) {
+      node(id: $id) { ... on ProjectV2 { statusUpdates(last: 10) {
         nodes { status startDate targetDate createdAt creator { login } body }
       } } }
     }' \
-    -f owner="$OWNER" -F number="$PROJ_NUMBER" \
-    --jq '.data.user.projectV2.statusUpdates.nodes | reverse | .[] | "== \(.status)  \(.createdAt)  by \(.creator.login)" + (if .startDate then "  start \(.startDate)" else "" end) + (if .targetDate then "  target \(.targetDate)" else "" end), .body, ""'
+    -f id="$PROJ_ID" \
+    --jq '.data.node.statusUpdates.nodes | reverse | .[] | "== \(.status)  \(.createdAt)  by \(.creator.login)" + (if .startDate then "  start \(.startDate)" else "" end) + (if .targetDate then "  target \(.targetDate)" else "" end), .body, ""'
 }
 
 # Derive "Target date" from each item's milestone due date. The roadmap
