@@ -68,6 +68,7 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
             password_hash: Some(secrecy::SecretString::from(BASIC_HASH)),
             password_hash_file: None,
             scopes: Vec::new(),
+            roles: Vec::new(),
         }],
         cache_ttl_seconds: 0,
     });

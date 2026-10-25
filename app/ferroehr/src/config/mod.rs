@@ -1816,6 +1816,7 @@ mod tests {
                 password_hash: Some(secrecy::SecretString::from(BASIC_HASH)),
                 password_hash_file: None,
                 scopes: vec!["user/composition-*.r".to_owned()],
+                roles: Vec::new(),
             }],
             cache_ttl_seconds: 0,
         });

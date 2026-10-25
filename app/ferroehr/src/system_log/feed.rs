@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The ITI-20 ATX: FHIR Feed client (`[audit.fhir_feed]`): `ihe-atna`'s
-//! [`FeedRepository`], which asks the
-//! feed's IHE IUA bearer token for each request and renews it once on a `401`
-//! (RFC 6750 §3.1).
+//! [`FeedRepository`] with its [`Bearer`] source, which asks the feed's IHE
+//! IUA bearer token for each request and renews it once on a `401` (RFC 6750
+//! §3.1).
 
 #![expect(
     clippy::disallowed_types,
@@ -17,7 +17,8 @@ use std::time::Duration;
 
 use backon::{ExponentialBuilder, Retryable};
 
-use ihe_atna::atna::feed::{Credentials, CredentialsError, FeedError, FeedRepository};
+use ihe_atna::atna::bearer::Bearer;
+use ihe_atna::atna::feed::{FeedError, FeedRepository};
 
 use crate::system_log::AuditError;
 use crate::system_log::config::FhirFeedConfig;
@@ -69,7 +70,7 @@ impl FeedClient {
         }
         .map_err(|e| AuditError::Transport(Box::new(e)))?;
         let repository = match token {
-            Some(token) => repository.with_credentials(Arc::new(Bearer(token))),
+            Some(token) => repository.with_credentials(Arc::new(Bearer::from(token))),
             None => repository,
         };
         Ok(FeedClient {
@@ -106,50 +107,5 @@ impl FeedClient {
                 .with_max_times(self.max_retries),
         )
         .await
-    }
-}
-
-/// The feed's IHE IUA bearer token, as `ihe-atna` asks for the value of each
-/// request and tells of a refused one.
-struct Bearer(ferrohealth_smart::client::cache::TokenSource);
-
-#[async_trait::async_trait]
-impl Credentials for Bearer {
-    async fn authorization(&self) -> Result<secrecy::SecretString, CredentialsError> {
-        let token = self
-            .0
-            .token()
-            .await
-            .map_err(|e| CredentialsError(Box::new(SharedError(e))))?;
-        let value = token
-            .header()
-            .to_str()
-            .map_err(|e| CredentialsError(Box::new(e)))?;
-        Ok(secrecy::SecretString::from(value.to_owned()))
-    }
-
-    async fn refused(&self, refused: &secrecy::SecretString) {
-        use secrecy::ExposeSecret as _;
-        // NOTE: a value this source gave is a header value, so a parse failure names none it
-        // holds and there is nothing to invalidate.
-        if let Ok(stale) = http::HeaderValue::from_str(refused.expose_secret()) {
-            self.0.invalidate(&stale);
-        }
-    }
-}
-
-/// A token error shared between the callers that waited on one fetch.
-#[derive(Debug)]
-struct SharedError(Arc<ferrohealth_smart::client::TokenError>);
-
-impl std::fmt::Display for SharedError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.0, f)
-    }
-}
-
-impl std::error::Error for SharedError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(self.0.as_ref())
     }
 }

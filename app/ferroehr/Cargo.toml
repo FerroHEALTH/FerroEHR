@@ -21,7 +21,7 @@ publish = false
 # terminology client. FHIR R4 resource mapping is FerroBRIDGE's, outside this
 # workspace.
 default = ["fhir", "events", "multimedia"]
-fhir = ["dep:ferrobridge-term", "ehds-logging/balp", "ihe-atna/balp"]
+fhir = ["dep:ferrobridge-term", "ehds-logging/balp", "ihe-atna/balp", "ihe-atna/smart"]
 events = ["dep:ferroehr-ext", "ferroehr-ext/events"]
 multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 

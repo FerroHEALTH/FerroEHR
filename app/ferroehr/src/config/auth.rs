@@ -836,6 +836,7 @@ mod tests {
                     password_hash: Some(SecretString::from(hash.to_owned())),
                     password_hash_file: None,
                     scopes: vec!["user/composition-*.cruds".to_owned()],
+                    roles: Vec::new(),
                 }],
                 cache_ttl_seconds: 0,
             }),

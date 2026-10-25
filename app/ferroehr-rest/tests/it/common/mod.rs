@@ -209,6 +209,7 @@ pub(crate) fn basic_auth(users: &[(&str, &str, &str)]) -> AuthSection {
                     password_hash: Some(secrecy::SecretString::from((*hash).to_owned())),
                     password_hash_file: None,
                     scopes: scopes.split_whitespace().map(str::to_owned).collect(),
+                    roles: Vec::new(),
                 })
                 .collect(),
             cache_ttl_seconds: 60,
