@@ -90,6 +90,7 @@ pub fn build_web_template_v2_4(
         languages: collect_languages(opt, &default_language),
         default_language,
         components: opt.component_terminologies.as_ref(),
+        overlay_parents: overlay_parents(opt),
     };
 
     // The OPT definition root is a plain `C_COMPLEX_OBJECT` (rm type COMPOSITION,
@@ -132,6 +133,36 @@ pub fn build_web_template_v2_4(
     })
 }
 
+/// The `other_meta_data` key naming each inlined template overlay's parent.
+///
+/// `openehr-adl`'s OPT generator writes it as `,`-separated
+/// `<overlay full id>=<parent full id>` pairs
+/// (`openehr_adl::opt::OVERLAY_PARENTS_KEY`; a test holds the two equal).
+pub const OVERLAY_PARENTS_KEY: &str = "template_overlay_parents";
+
+/// The specialisation parent of every template overlay the OPT inlined, keyed
+/// by the overlay's full id, read from the [`OVERLAY_PARENTS_KEY`] entry of its
+/// `other_meta_data`.
+///
+/// ADL2 and AOM2 §Templates make a template overlay the filler of the slot it
+/// fills and leave open which archetype id data built under it carries. A node
+/// under an overlay takes its parent's id, the published archetype, so
+/// committed data stays queryable by AQL written against that archetype and a
+/// model mapping of it matches; the overlay id stays template-internal (no
+/// specification governs this: our own design).
+fn overlay_parents(opt: &OperationalTemplate) -> BTreeMap<String, String> {
+    opt.other_meta_data
+        .get(OVERLAY_PARENTS_KEY)
+        .map(|pairs| {
+            pairs
+                .split(',')
+                .filter_map(|pair| pair.split_once('='))
+                .map(|(overlay, parent)| (overlay.trim().to_owned(), parent.trim().to_owned()))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// The template languages: the default language, then every language the OPT's
 /// own terminology or any constituent terminology defines a `term_definitions`
 /// block for, first-seen order.
@@ -161,6 +192,10 @@ struct Ctx<'a> {
     /// (OPT2 master03 §Terminology); scope is switched to these as the walk
     /// enters an inlined `C_ARCHETYPE_ROOT`.
     components: Option<&'a BTreeMap<String, ArchetypeTerminology>>,
+    /// The specialisation parent of each inlined template overlay, keyed by
+    /// the overlay's full id, as `openehr-adl` records it in the OPT's
+    /// `other_meta_data`.
+    overlay_parents: BTreeMap<String, String>,
 }
 
 impl Ctx<'_> {
@@ -283,7 +318,7 @@ fn create_node(
     let archetyped = identity == shape::Identity::Archetyped;
     let rm_type = object_rm_type(co).to_owned();
     let arch_node_id = if archetyped {
-        object_archetype_node_id(co)
+        object_archetype_node_id(co, &ctx.overlay_parents)
     } else {
         String::new()
     };
@@ -409,7 +444,7 @@ fn build_children(
     // handled by `inputs` (mirrors the OPT-1.4 front end's `recurse_attrs` guard).
     if recurse_attrs {
         node.existence = existence_constraints(co, &node.aql_path);
-        node.closed_attributes = closed_attributes(co, &node.aql_path);
+        node.closed_attributes = closed_attributes(co, &node.aql_path, &ctx.overlay_parents);
         node.structural_stubs = structural_stubs(ctx, term, co, &node.aql_path);
     }
     node.children = children;
@@ -1139,7 +1174,11 @@ fn is_object_valued(co: &CObject) -> bool {
 /// end — matching the OPT-1.4 internal-ref handling), and a purely
 /// primitive/unconstrained attribute is never closed. `name` is matched by
 /// predicate, not closure (master04 §"Field Identifiers").
-fn closed_attributes(co: &CObject, node_path: &str) -> Vec<WebTemplateClosedAttribute> {
+fn closed_attributes(
+    co: &CObject,
+    node_path: &str,
+    overlay_parents: &BTreeMap<String, String>,
+) -> Vec<WebTemplateClosedAttribute> {
     let mut out = Vec::new();
     for attr in co_attributes(co) {
         if attr.rm_attribute_name == "name" {
@@ -1155,7 +1194,7 @@ fn closed_attributes(co: &CObject, node_path: &str) -> Vec<WebTemplateClosedAttr
         {
             continue;
         }
-        let (allowed_ids, slots) = admissible_children(attr);
+        let (allowed_ids, slots) = admissible_children(attr, overlay_parents);
         if allowed_ids.is_empty() && slots.is_empty() {
             continue; // Open attribute (no node-id alternatives, no slot).
         }
@@ -1174,14 +1213,17 @@ fn closed_attributes(co: &CObject, node_path: &str) -> Vec<WebTemplateClosedAttr
 /// An alternative is an at/id-coded `C_COMPLEX_OBJECT`, or an inlined
 /// `C_ARCHETYPE_ROOT` carrying its interface archetype id; primitive value
 /// constraints never participate in sibling closure.
-fn admissible_children(attr: &CAttribute) -> (Vec<String>, Vec<WebTemplateArchetypeSlot>) {
+fn admissible_children(
+    attr: &CAttribute,
+    overlay_parents: &BTreeMap<String, String>,
+) -> (Vec<String>, Vec<WebTemplateArchetypeSlot>) {
     let mut allowed_ids: Vec<String> = Vec::new();
     let mut slots: Vec<WebTemplateArchetypeSlot> = Vec::new();
     for child in attr.children.iter().flatten() {
         match child {
             CObject::ArchetypeSlot(s) => slots.push(archetype_slot(s)),
             CObject::CComplexObject(_) => {
-                let id = object_archetype_node_id(child);
+                let id = object_archetype_node_id(child, overlay_parents);
                 if !id.is_empty() {
                     allowed_ids.push(id);
                 }
@@ -1299,7 +1341,7 @@ fn structural_stubs(
             let CObject::CComplexObject(_) = child else {
                 continue;
             };
-            let node_id = object_archetype_node_id(child);
+            let node_id = object_archetype_node_id(child, &ctx.overlay_parents);
             if node_id.is_empty() {
                 continue;
             }
@@ -1458,11 +1500,15 @@ fn object_node_id(co: &CObject) -> &str {
 }
 
 /// The RM `archetype_node_id`: the archetype id (interface form) at an inlined
-/// archetype root, else the constraint node id (at/id-code).
-fn object_archetype_node_id(co: &CObject) -> String {
+/// archetype root, the specialisation parent's for a template overlay (see
+/// [`overlay_parents`]), else the constraint node id (at/id-code).
+fn object_archetype_node_id(co: &CObject, overlay_parents: &BTreeMap<String, String>) -> String {
     match co {
         CObject::CComplexObject(CComplexObject::CArchetypeRoot(r)) => {
-            interface_id(&r.archetype_ref)
+            let reference = overlay_parents
+                .get(&r.archetype_ref)
+                .unwrap_or(&r.archetype_ref);
+            interface_id(reference)
         }
         _ => object_node_id(co).to_owned(),
     }

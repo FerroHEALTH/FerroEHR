@@ -686,3 +686,180 @@ fn an_assumed_at_code_of_the_value_set_becomes_the_default_value() {
             .all(|input| input.default_value.is_none())
     );
 }
+
+/// A base SECTION with one element, the parent of the overlay below.
+const OVERLAY_SECTION: &str = "\
+archetype (adl_version=2.4.0; rm_release=1.0.3)
+    openEHR-EHR-SECTION.event_info.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    lifecycle_state = <\"unmanaged\">
+    original_author = <
+        [\"name\"] = <\"openEHR\">
+    >
+
+definition
+    SECTION[at0000] matches {
+        items matches {
+            ENTRY[at0001] occurrences matches {0..*}
+        }
+    }
+
+terminology
+    term_definitions = <
+        [\"en\"] = <
+            [\"at0000\"] = <
+                text = <\"Event info\">
+                description = <\"Event info\">
+            >
+            [\"at0001\"] = <
+                text = <\"Entry\">
+                description = <\"Entry\">
+            >
+        >
+    >
+";
+
+/// A COMPOSITION with an open content slot.
+const OVERLAY_COMPOSITION: &str = "\
+archetype (adl_version=2.4.0; rm_release=1.0.3)
+    openEHR-EHR-COMPOSITION.discharge.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    lifecycle_state = <\"unmanaged\">
+    original_author = <
+        [\"name\"] = <\"openEHR\">
+    >
+
+definition
+    COMPOSITION[at0000] matches {
+        content matches {
+            allow_archetype SECTION[at0002] occurrences matches {0..*} matches {
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        [\"en\"] = <
+            [\"at0000\"] = <
+                text = <\"Discharge\">
+                description = <\"Discharge\">
+            >
+            [\"at0002\"] = <
+                text = <\"Content\">
+                description = <\"Content\">
+            >
+        >
+    >
+";
+
+/// A template filling the slot with a local overlay of the SECTION.
+const OVERLAY_TEMPLATE: &str = "\
+template (adl_version=2.4.0; rm_release=1.0.3)
+    openEHR-EHR-COMPOSITION.t_discharge.v1.0.0
+
+specialize
+    openEHR-EHR-COMPOSITION.discharge.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    lifecycle_state = <\"unmanaged\">
+    original_author = <
+        [\"name\"] = <\"openEHR\">
+    >
+
+definition
+    COMPOSITION[at0000.1] matches {
+        content matches {
+            use_archetype SECTION[at0002.1, openEHR-EHR-SECTION.t_event_info.v1] occurrences matches {1}
+        }
+    }
+
+terminology
+    term_definitions = <
+        [\"en\"] = <
+            [\"at0000.1\"] = <
+                text = <\"Templated discharge\">
+                description = <\"Templated discharge\">
+            >
+        >
+    >
+----------------------------------------------------------------
+template_overlay
+    openEHR-EHR-SECTION.t_event_info.v1.0.0
+
+specialize
+    openEHR-EHR-SECTION.event_info.v1
+
+definition
+    SECTION[at0000.1] matches {
+        items matches {
+            ENTRY[at0001] occurrences matches {0..1}
+        }
+    }
+
+terminology
+    term_definitions = <
+        [\"en\"] = <
+            [\"at0000.1\"] = <
+                text = <\"Templated event info\">
+                description = <\"Templated event info\">
+            >
+        >
+    >
+";
+
+/// A node under a template overlay carries its specialisation parent's
+/// archetype id, the published one, so data built under it is queryable by
+/// AQL written against that archetype; the overlay id stays template-internal
+/// (ADL2 and AOM2 §Templates make an overlay the slot filler and leave the data
+/// id open: our own design).
+#[test]
+fn a_node_under_a_template_overlay_carries_the_parent_archetype_id() {
+    let mut repo = ArchetypeRepository::new();
+    repo.insert(parse_artefact(OVERLAY_SECTION, Dialect::Adl2).expect("the section parses"));
+    repo.insert(
+        parse_artefact(OVERLAY_COMPOSITION, Dialect::Adl2).expect("the composition parses"),
+    );
+    let template = parse_artefact(OVERLAY_TEMPLATE, Dialect::Adl2).expect("the template parses");
+    let opt = create_opt(&template, &repo).expect("the operational template builds");
+    let wt = build_web_template_v2_4(&opt).expect("the web template builds");
+    let mut sections = Vec::new();
+    collect_typed(&wt.tree, "SECTION", &mut sections);
+    let [section] = sections.as_slice() else {
+        panic!("one SECTION node, got {}", sections.len());
+    };
+    assert_eq!(
+        section.node_id.as_deref(),
+        Some("openEHR-EHR-SECTION.event_info.v1"),
+        "the node takes the overlay's parent id"
+    );
+    assert!(
+        section
+            .aql_path
+            .contains("[openEHR-EHR-SECTION.event_info.v1]")
+            && !section.aql_path.contains("t_event_info"),
+        "the path names the published archetype: {}",
+        section.aql_path
+    );
+}
+
+/// The key the builder reads is the key `openehr-adl` writes.
+#[test]
+fn the_overlay_parents_key_is_the_generators() {
+    assert_eq!(
+        openehr_sdt::flat::webtemplate::builder_v2_4::OVERLAY_PARENTS_KEY,
+        openehr_adl::opt::OVERLAY_PARENTS_KEY
+    );
+}

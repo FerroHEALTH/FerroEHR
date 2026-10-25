@@ -442,9 +442,9 @@ criterion = { version = "0.8.2", features = ["html_reports"] }
 # code; dependencies get none (their debuginfo is never read in this repo).
 # ferrohealth-smart's `openehr` feature names the published openehr-sdt, and
 # cargo keeps a registry copy apart from the workspace member of the same
-# version, so the workspace member stands in for it and the graph holds ONE
-# openehr-sdt (#4002). It applies only while both name the same 0.0.x: a crate
-# line bump here waits for the ferrohealth-smart release that requires it.
+# version, so the workspace member stands in for it (#4002). It applies only
+# while both name the same 0.0.x: a crate line bump here may build a temporary
+# duplicate openehr-sdt until the next ferrohealth-smart release takes it up.
 [patch.crates-io]
 openehr-sdt = { path = "crates/openehr-sdt" }
 

@@ -15,6 +15,33 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+### Added
+
+- **The `openehr-*` crates carry the APIs FerroBRIDGE kept local copies of**
+  (#4047, #4048), on the 0.0.99 crate line. The FLAT builder takes a value
+  whole under `|raw` (Simplified Formats master04 §Raw canonical JSON) on
+  `ROLE.performer` (`<root>/performer|raw`, a `PARTY_REF`), on the COMPOSITION
+  `language`, `territory` and `composer`, and on the `_feeder_audit`,
+  `_link:i`, `_participation:i`, `_other_participation:i`, `_provider` and
+  `_health_care_facility` families. A `ctx/` key still wins over a path
+  spelling of the same attribute, and a raw value of the wrong class, or one
+  beside another suffix, is refused as `InvalidRaw`. `openehr-am` implements
+  `FromStr` for `ArchetypeHrid` (`openehr_adl::hrid::parse_hrid` now reads
+  through it), `openehr-base` adds `TerminologyId::new(name, version_id)`,
+  and `openehr-term` names the `audit_change_type` and
+  `version_lifecycle_state` concepts (`codes::AuditChangeType`,
+  `codes::VersionLifecycleState`), held equal to the embedded terminology.
+  Until a `ferrohealth-smart` release requires 0.0.99, the build holds a
+  registry copy of `openehr-sdt` 0.0.98 for it beside the workspace 0.0.99.
+
+- **An ADL 2 Web Template names a node under a template overlay by its
+  parent archetype.** `openehr_adl::opt::create_opt` records each overlay's
+  specialisation parent in the OPT's `other_meta_data`
+  (`template_overlay_parents`), and the ADL 2 builder uses the parent's id
+  for the node, its paths and its slot admissions, so data and mappings
+  written against the published archetype match. An ADL 2 header now quotes
+  a free metadata value that is not a bare token and reads a quoted one back.
+
 ### Changed
 
 - **Breaking: the ITI-81 audit retrieval (`GET /fhir/r4/AuditEvent`) requires
@@ -34,8 +61,8 @@ workflow refuses a tag that has no matching section here.
 
 - **The CDR takes up `ferrohealth-smart` 0.6.0 and `ferrobridge-term`
   0.1.134** (#4026, #4027). Token checking, Basic users, the discovery
-  document and every outbound client credentials token behave as before,
-  and the build still holds one `openehr-sdt`. The terminology client now
+  document and every outbound client credentials token behave as before.
+  The terminology client now
   refuses, before sending, a code with no system on an STU3 server; the
   CDR's server is R4B, so its binding checks are unchanged. The new
   `[auth] mode = "introspection"` key of the shared section, and an

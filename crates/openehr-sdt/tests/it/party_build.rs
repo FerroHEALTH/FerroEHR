@@ -272,6 +272,47 @@ fn a_role_template_builds_a_role_with_its_performer() {
     );
 }
 
+/// A `PARTY_REF` the caller already holds goes to `ROLE.performer` whole
+/// (master04 §Raw canonical JSON), whatever id class it carries, and the
+/// ROLE round-trips through the canonical JSON with it.
+#[test]
+fn a_role_takes_its_performer_whole_from_raw() {
+    let wt = party_template("ROLE");
+    let mut doc = party_document(&wt);
+    let root = &wt.tree.id;
+    let performer = json!({
+        "_type": "PARTY_REF",
+        "namespace": "demographic",
+        "type": "PERSON",
+        "id": {
+            "_type": "OBJECT_VERSION_ID",
+            "value": "4c1b2f8e-1d0a-4a52-9e0b-2f3c5d6e7f80::ferroehr::1",
+        },
+    });
+    doc.insert(format!("{root}/performer|raw"), performer.clone());
+    let party = build(&doc, &wt).expect("the ROLE builds");
+    assert_eq!(party["performer"], performer);
+    let role = from_canonical_value::<Role>(&party).expect("decodes as ROLE");
+    let again = openehr_its::json::to_canonical_value(&role);
+    assert_eq!(again["performer"], performer, "the performer round-trips");
+    assert_party_shape(&again, "ROLE");
+}
+
+#[test]
+fn a_raw_performer_of_another_class_is_refused() {
+    let wt = party_template("ROLE");
+    let mut doc = party_document(&wt);
+    let root = wt.tree.id.clone();
+    doc.insert(
+        format!("{root}/performer|raw"),
+        json!({"_type": "HIER_OBJECT_ID", "value": "some-id"}),
+    );
+    match build(&doc, &wt) {
+        Err(FlatError::InvalidRaw { path, .. }) => assert_eq!(path, format!("{root}/performer")),
+        other => panic!("expected InvalidRaw, got {other:?}"),
+    }
+}
+
 /// RM demographic §ROLE makes `performer` mandatory, so a ROLE without one is
 /// refused by the decode check instead of being handed on.
 #[test]

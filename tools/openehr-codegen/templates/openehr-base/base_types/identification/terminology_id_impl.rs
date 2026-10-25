@@ -19,6 +19,22 @@
 use super::terminology_id::TerminologyId;
 
 impl TerminologyId {
+    /// A terminology id from its `name` and `version_id`, written in the
+    /// lexical form `name [ '(' version ')' ]` (BASE `TERMINOLOGY_ID`); an
+    /// empty `version_id` means versioning is not used and adds no suffix.
+    ///
+    /// [`TerminologyId::name`] and [`TerminologyId::version_id`] read the two
+    /// parts back.
+    #[must_use]
+    pub fn new(name: &str, version_id: &str) -> Self {
+        let value = if version_id.is_empty() {
+            name.to_owned()
+        } else {
+            format!("{name}({version_id})")
+        };
+        Self { value }
+    }
+
     /// The terminology name, i.e. the part before any `(version)` suffix (BASE
     /// `TERMINOLOGY_ID.name`). Distinct names correspond to distinct
     /// terminologies (`ICD10AM` vs `ICD10`).
@@ -74,6 +90,17 @@ mod tests {
         let t = tid("ICD10AM(3rd_ed)");
         assert_eq!(t.name(), "ICD10AM");
         assert_eq!(t.version_id(), "3rd_ed");
+    }
+
+    #[test]
+    fn a_name_and_a_version_build_the_lexical_form() {
+        let versioned = TerminologyId::new("ICD10AM", "3rd_ed");
+        assert_eq!(versioned.value, "ICD10AM(3rd_ed)");
+        assert_eq!(versioned.name(), "ICD10AM");
+        assert_eq!(versioned.version_id(), "3rd_ed");
+        let unversioned = TerminologyId::new("SNOMED-CT", "");
+        assert_eq!(unversioned.value, "SNOMED-CT");
+        assert_eq!(unversioned.version_id(), "");
     }
 
     #[test]

@@ -114,6 +114,13 @@ pub(crate) struct CtxDefaults {
     pub(crate) id_namespace: Option<String>,
     /// Default external-reference scheme (master06 §"ID Namespace and Scheme").
     pub(crate) id_scheme: Option<String>,
+    /// The `COMPOSITION.language` CODE_PHRASE a `<root>/language|raw` value
+    /// carries, used when no `ctx/language` names one (master04 §Raw
+    /// canonical JSON).
+    pub(crate) language_phrase: Option<Value>,
+    /// The `COMPOSITION.territory` CODE_PHRASE a `<root>/territory|raw` value
+    /// carries, used when no `ctx/territory` names one.
+    pub(crate) territory_phrase: Option<Value>,
 }
 
 impl Default for CtxDefaults {
@@ -142,24 +149,30 @@ impl Default for CtxDefaults {
             links: Vec::new(),
             id_namespace: None,
             id_scheme: None,
+            language_phrase: None,
+            territory_phrase: None,
         }
     }
 }
 
 impl CtxDefaults {
     /// The `COMPOSITION`/`ENTRY` `language` as a CODE_PHRASE in `ISO_639-1`
-    /// (master06 §"Language and Territory"), when `ctx/language` was set.
+    /// (master06 §"Language and Territory"), when `ctx/language` was set,
+    /// else the `<root>/language|raw` CODE_PHRASE.
     pub(crate) fn language_code_phrase(&self) -> Option<Value> {
         self.language
             .as_deref()
             .map(|c| code_phrase("ISO_639-1", c))
+            .or_else(|| self.language_phrase.clone())
     }
 
-    /// The `COMPOSITION.territory` as a CODE_PHRASE in `ISO_3166-1`.
+    /// The `COMPOSITION.territory` as a CODE_PHRASE in `ISO_3166-1`, when
+    /// `ctx/territory` was set, else the `<root>/territory|raw` CODE_PHRASE.
     pub(crate) fn territory_code_phrase(&self) -> Option<Value> {
         self.territory
             .as_deref()
             .map(|c| code_phrase("ISO_3166-1", c))
+            .or_else(|| self.territory_phrase.clone())
     }
 }
 

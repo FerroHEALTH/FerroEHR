@@ -271,9 +271,27 @@ fn meta_clause(parts: &Parts<'_>) -> String {
         );
     }
     for (k, v) in parts.other_meta_data.into_iter().flatten() {
-        push_meta(&mut meta, &format!("{k}={v}"));
+        // NOTE: ADL2 `meta_data_value` admits a `primitive_value`, so a value that
+        // is no single version, GUID or identifier token prints as a string.
+        if is_bare_meta_value(v) {
+            push_meta(&mut meta, &format!("{k}={v}"));
+        } else {
+            push_meta(
+                &mut meta,
+                &format!("{k}=\"{}\"", v.replace('\\', "\\\\").replace('"', "\\\"")),
+            );
+        }
     }
     meta
+}
+
+/// Whether a metadata value prints bare: letters, digits, `_`, `.` and `-`
+/// only, the characters of an identifier, a version id or a GUID.
+fn is_bare_meta_value(value: &str) -> bool {
+    !value.is_empty()
+        && value
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-'))
 }
 
 fn push_meta(meta: &mut String, item: &str) {

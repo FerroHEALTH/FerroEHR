@@ -26,7 +26,12 @@
 //! * no sibling-order markers, no `specialise` section (a top-level standalone
 //!   artefact, master02);
 //! * the flat `terminology` of every constituent (other than the root) gathered
-//!   into `component_terminologies` (master03 §Terminology).
+//!   into `component_terminologies` (master03 §Terminology);
+//! * the specialisation parent of every inlined template overlay recorded in
+//!   `other_meta_data` under [`OVERLAY_PARENTS_KEY`], so a consumer can give
+//!   data under an overlay the published archetype's id (ADL2 and AOM2
+//!   §Templates make an overlay the slot filler and say nothing of the id its
+//!   data carries: our own design).
 //!
 //! [`profile_opt`] produces a *profiled* OPT from a raw one (master04):
 //! annotations removal, language filtering (≥1 language remains), and
@@ -110,6 +115,18 @@ pub enum OptError {
     },
 }
 
+/// The `other_meta_data` key under which [`create_opt`] records the
+/// specialisation parent of each inlined template overlay.
+///
+/// The value lists one `<overlay full id>=<parent full id>` pair per overlay,
+/// separated by `,`, in the order of the overlay ids. ADL2 and AOM2
+/// §Templates make a template overlay the filler of the slot it fills and
+/// leave open which archetype id the data built under it carries; recording
+/// the parent lets a Web Template builder name the node by the published
+/// archetype (our own design). The header prints the value as an ADL2
+/// `meta_data_value` string.
+pub const OVERLAY_PARENTS_KEY: &str = "template_overlay_parents";
+
 /// Generate the raw operational template from a source `root` template (or
 /// archetype) and a `repo` supplying its specialisation parent and every
 /// referenced constituent archetype.
@@ -149,11 +166,21 @@ pub fn create_opt(
     let mut transform = Transform {
         work: &work,
         components: BTreeMap::new(),
+        overlay_parents: BTreeMap::new(),
         root_id: &root_id,
         inlining: vec![root_id.clone()],
     };
     let opt_def = transform.complex(parts.definition.clone(), Nesting::ROOT)?;
     let components = transform.components;
+    let mut other_meta_data = BTreeMap::new();
+    if !transform.overlay_parents.is_empty() {
+        let pairs: Vec<String> = transform
+            .overlay_parents
+            .iter()
+            .map(|(overlay, parent)| format!("{overlay}={parent}"))
+            .collect();
+        other_meta_data.insert(OVERLAY_PARENTS_KEY.to_owned(), pairs.join(","));
+    }
 
     Ok(OperationalTemplate {
         // A top-level standalone artefact — no specialisation parent
@@ -176,7 +203,7 @@ pub fn create_opt(
         rm_release: parts.rm_release,
         // A generated artefact (master07.05 `generated`).
         is_generated: true,
-        other_meta_data: BTreeMap::new(),
+        other_meta_data,
         component_terminologies: (!components.is_empty()).then_some(components),
         terminology_extracts: None,
     })
@@ -191,6 +218,9 @@ pub fn create_opt(
 struct Transform<'a> {
     work: &'a ArchetypeRepository,
     components: BTreeMap<String, ArchetypeTerminology>,
+    /// The full id of each inlined template overlay's specialisation parent,
+    /// keyed by the overlay's full id.
+    overlay_parents: BTreeMap<String, String>,
     root_id: &'a str,
     inlining: Vec<String>,
 }
@@ -345,6 +375,15 @@ impl Transform<'_> {
             let mut chain = self.inlining.clone();
             chain.push(full_id);
             return Err(OptError::CyclicReference(chain));
+        }
+        if let Archetype::TemplateOverlay(overlay) = constituent
+            && let Some(parent) = overlay.parent_archetype_id.as_deref()
+        {
+            let parent_id = self.work.get(parent).map_or_else(
+                || parent.to_owned(),
+                |found| hrid_to_string(view(found).archetype_id),
+            );
+            self.overlay_parents.insert(full_id.clone(), parent_id);
         }
         let flat = flat_form(constituent, self.work)?;
         let flat_view = view(&flat);
