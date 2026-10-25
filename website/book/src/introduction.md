@@ -8,6 +8,9 @@ it, talk to its API, query it, and load the templates that give your data
 shape. If you build clinical applications, operate healthcare infrastructure,
 or are evaluating an openEHR back end, you are in the right place.
 
+The name comes from *ferrum*, Latin for iron: Rust is iron oxide, so the
+project went straight to the element. Say it "FER-ro-E-H-R".
+
 ## What openEHR gives you
 
 openEHR separates *clinical knowledge* from *software*. The structure and
