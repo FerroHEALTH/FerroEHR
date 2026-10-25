@@ -15,6 +15,10 @@ workflow refuses a tag that has no matching section here.
 
 ## [Unreleased]
 
+## [5.4.2] - 2026-10-25
+
+5.4.2 is a patch release with no breaking change: a deployment upgrades in place. Helm chart 14.0.1 carries `appVersion` 5.4.2 and changes nothing else.
+
 ### Changed
 
 - **The CDR takes up `ferrohealth-smart` 0.5.0** (#4002), and the build
@@ -12255,7 +12259,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.4.0...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.4.2...HEAD
+[5.4.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.4.1...v5.4.2
 [5.4.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.4.0...v5.4.1
 [5.4.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.3...v5.4.0
 [5.3.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.2...v5.3.3
