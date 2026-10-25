@@ -34,6 +34,13 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **The audit drain sends a held syslog connection's records without a
+  millisecond wait per record** (#3954). FerroEHR moves to `ihe-atna` and
+  `ehds-logging` 0.2.7 (FerroAUDIT). The liveness probe the syslog sink runs
+  before each record waited for a timer tick of about a millisecond, which
+  held one connection to roughly 880 records per second. It now answers at
+  once, about 47 000 records per second in FerroAUDIT's measurement.
+
 - **A revoked Direct Key signature no longer lets the primary key sign**
   (#3972). The PGP signer now applies a valid Certification Revocation of a
   Direct Key signature, created at or after it: the revoked signature is
