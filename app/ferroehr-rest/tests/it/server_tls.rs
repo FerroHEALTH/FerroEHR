@@ -15,13 +15,13 @@
 //! `client_auth = "required"` a client presenting no certificate is rejected
 //! at the handshake; with `"optional"` it is served. The accept-path for a
 //! *valid* client certificate is rustls' `WebPkiClientVerifier` (upstream-
-//! tested); the embedded test leaf is serverAuth-only, so it cannot double as
-//! a client identity here.
+//! tested); the test leaf is serverAuth-only, so it cannot double as a client
+//! identity here.
 //!
-//! Uses the same offline-generated, 100-year test CA/leaf as the ATNA syslog
-//! TLS round-trip test (CN=localhost, SAN localhost/127.0.0.1), plus an EC
-//! P-256 CA/leaf pair for the key-format cases and the certificate reload: a
-//! pair replaced on disk is presented by the next handshake, and a broken
+//! Every certificate and key is minted at run time with `rcgen` (`Pki`): an
+//! RSA CA and leaf (CN=localhost, SAN localhost/127.0.0.1), plus an EC P-256
+//! CA and leaf for the key-format cases and the certificate reload: a pair
+//! replaced on disk is presented by the next handshake, and a broken
 //! replacement leaves the pair in service untouched.
 
 use std::io::Write;
@@ -29,78 +29,286 @@ use std::time::Duration;
 
 use ferroehr::config::server::{ClientAuth, TlsConfig, TlsVersion};
 
-const TEST_CA_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
-MIIDFzCCAf+gAwIBAgIUAs65+YSFrH4uvtY9QWoTirKgkY8wDQYJKoZIhvcNAQEL
-BQAwGjEYMBYGA1UEAwwPZWhyYmFzZS10ZXN0LWNhMCAXDTI2MDcwNjE3NTkwMVoY
-DzIxMjYwNjEyMTc1OTAxWjAaMRgwFgYDVQQDDA9laHJiYXNlLXRlc3QtY2EwggEi
-MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC14PGEIvdnhTn4PjCWM6yzalPu
-tB924PIMTCwTLadZ6yX+RSmzQkLHQu83TR8l2D1nSfJaQMrejT6BRIZGOmhjjsWK
-D2ryY+m45ALweQYfPNstbrm9CQrAoNTWzgxA21ES3dH+2J5AKxDgQq1k2KqT5Lun
-NLzxpMDVUYDvx3kMgakrdhvHuSXBP9bwu3+kWrKvlhl5JndHrj6ASciPuC291knI
-r/g4u7aeCbFO+XH7+PsCPNsQuEC9ONMhEokMmGbqcVAHB6uOAM+El+mp0SbKUKfd
-tWBEUd3IGCVIKe0OHc4H1faoyMx9fJ+F3fJR+77P5DlHnVapRcqj6RSNLLdlAgMB
-AAGjUzBRMB0GA1UdDgQWBBSx14Rc1SngmufqoAwJU9BbIE5oxzAfBgNVHSMEGDAW
-gBSx14Rc1SngmufqoAwJU9BbIE5oxzAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3
-DQEBCwUAA4IBAQCtdVYkrqn7bx0Dy2GSJencQKyH8Ih7nXLUWQdCBprCrn39zWDV
-69hnAfeEuMxobUCxwsdRt06wIxadfgawB0rJWZDlEJN5ERLfvHNPE6s1G/6tdRRP
-bd6B2Pv4uI7IUdfH0zrpCtjLeQOZbrU5W6fuaGtUm9GxuwjPfuYOFjnNLojWGm54
-FQ6i/VNDLJThupkO95ab44mY/S12Sxvm5WnIoDZFWXdxQ8t6vnKRX+m89CmyNKP2
-9TLYW57BC6+RQlUJaXgqc+1t1vsWSJeAshGQcv2BxUTTvbMVhTBPlBUVy/XcgRCf
-MmtVfj2FhFGZDZxzyYU7uc0sRB9ja6qBZ9hk
------END CERTIFICATE-----
-";
+/// How many days past today the minted certificates stay valid: short, so a
+/// platform verifier (macOS caps a TLS server certificate at 825 days) never
+/// refuses one.
+const VALIDITY_DAYS: i64 = 30;
 
-const TEST_LEAF_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
-MIIDSzCCAjOgAwIBAgIUZvcUkQeuzlUI70IpDWe6esK6Q1MwDQYJKoZIhvcNAQEL
-BQAwGjEYMBYGA1UEAwwPZWhyYmFzZS10ZXN0LWNhMCAXDTI2MDcwNjE3NTkwMVoY
-DzIxMjYwNjEyMTc1OTAxWjAUMRIwEAYDVQQDDAlsb2NhbGhvc3QwggEiMA0GCSqG
-SIb3DQEBAQUAA4IBDwAwggEKAoIBAQCTDGF0kIaNYD3CNiO9XMir1OrsU/+IBtyX
-6b9zfs7mMB3NSgi7AuBNdImg3WT4EwgQ/lyX9vOVgKuyiQAWQXMl1DXauY4+z1rr
-N4ob6Lc2R4OLQEh6sqyoLMVwImafOkvXJ50rowWZKPiUBw437i4s1w1iaAf16ktw
-kUu+1c8mfqzcnVdPJhWR2efU1KexWxsieNLICru3h5G3kVjkc3ulou5MpHBNKY6O
-WnEmdtEdwn5seJCZfep+IAs5cAv38GJ505vTEf1J9Q6cgljk/EAeB58XCHo4imx+
-pfgvoXBLyWR826IyB7YqMT8lTZbAWnoU5Yuag/BgZ0zI5MBvP6PzAgMBAAGjgYww
-gYkwCQYDVR0TBAIwADAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwCwYDVR0P
-BAQDAgWgMBMGA1UdJQQMMAoGCCsGAQUFBwMBMB0GA1UdDgQWBBT/CRm0D6LGZnW4
-ZmpiK4+Yb53jszAfBgNVHSMEGDAWgBSx14Rc1SngmufqoAwJU9BbIE5oxzANBgkq
-hkiG9w0BAQsFAAOCAQEAhMdKY/Qk5eJJhH0SsKQngd2EePo8/f3hWcucBWzCZ1zs
-XTv1HoiJxPYJF9DIewF+x/TiEGow9WF8iU6EZT99w9IocIJHaFjFuFE1xmJlrlzv
-5bkLIwNyrkJQzxURBzuvEwepPsF2K1RkJEqzk4d5Ffwxv6hkf+whfpXqXxwCO1PW
-wQ/gmqFivCy8Zu99xO9ZYkQ/Gz5gCnna3snxutppF/xbWfQwOrq1HxgrAyIwFxAZ
-CbLNvH16JKpegbWEN2llNt2kGdL62y9TPtNPr5v5prdEVnn7RUZvchABqdLYuyAW
-P6DbgBmWaymqYHzOtsAx6zixYMWRkWJWMbq4mEp03Q==
------END CERTIFICATE-----
-";
+/// The certificates and keys these tests serve and trust, minted once per
+/// test process with `rcgen` and valid from yesterday to [`VALIDITY_DAYS`]
+/// from today, so nothing is committed and nothing expires under the tests.
+struct Pki {
+    /// An RSA CA (`CN=ferroehr-test-ca`), also the client CA of the gate.
+    ca: String,
+    /// The RSA server leaf it issued (CN=localhost, SAN localhost/127.0.0.1,
+    /// serverAuth only, so it cannot double as a client identity).
+    leaf: String,
+    /// The RSA leaf's key, PKCS#8.
+    leaf_key: String,
+    /// An EC P-256 CA (named curve).
+    ec_ca: String,
+    /// The EC P-256 server leaf `ec_ca` issued (CN=localhost, serverAuth).
+    ec_leaf: String,
+    /// The EC leaf's key as PKCS#8.
+    ec_leaf_pkcs8: String,
+    /// The same EC leaf key as SEC1 (`EC PRIVATE KEY`).
+    ec_leaf_sec1: String,
+    /// An EC P-256 certificate whose public key carries EXPLICIT curve
+    /// parameters, what `openssl req -newkey ec` writes without
+    /// `ec_param_enc:named_curve`.
+    explicit_curve: String,
+    /// An EC P-256 key for `explicit_curve`, PKCS#8.
+    explicit_curve_key: String,
+    /// A second client CA, the one a rotation swaps in.
+    rotated_ca: String,
+    /// A client leaf (`extendedKeyUsage=clientAuth`) `rotated_ca` issued.
+    rotated_client: String,
+    /// The rotated client leaf's key, PKCS#8.
+    rotated_client_key: String,
+}
 
-const TEST_LEAF_KEY_PEM: &[u8] = b"-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCTDGF0kIaNYD3C
-NiO9XMir1OrsU/+IBtyX6b9zfs7mMB3NSgi7AuBNdImg3WT4EwgQ/lyX9vOVgKuy
-iQAWQXMl1DXauY4+z1rrN4ob6Lc2R4OLQEh6sqyoLMVwImafOkvXJ50rowWZKPiU
-Bw437i4s1w1iaAf16ktwkUu+1c8mfqzcnVdPJhWR2efU1KexWxsieNLICru3h5G3
-kVjkc3ulou5MpHBNKY6OWnEmdtEdwn5seJCZfep+IAs5cAv38GJ505vTEf1J9Q6c
-gljk/EAeB58XCHo4imx+pfgvoXBLyWR826IyB7YqMT8lTZbAWnoU5Yuag/BgZ0zI
-5MBvP6PzAgMBAAECggEABBMyX5H2DYXXPxDdoofEybWhkojeTQmk31Kyz/wXLPSg
-tPOIbSxzYoXNUB7Xc8agx13vAqZ3AK6yxJ01KRn1rxfDyV/FLTbhhzS4z4iSDG5C
-TFg2oCJMXkhqar2QsinYLgpbdNGoLUo9hsyiBjzrV+Tr6n5eAEMRwL3q9g/3srTk
-5NO/+mAd2ODzrz6SwWbZSQpQZ/rvY4bmCihLCl3KzXR53M4c2Q6RZOH4Y1Dk3t1X
-Rk5qag+88SU3d0y7S6HZkS66psWlBGoAm13Nlp+BjUdw04pCNbtH98XEZtHIhHDu
-dlG96/c9WQIalB24Do4MD7/4dpc4jlBKHRCNtcPm4QKBgQDNM7TvScNNPtOtQIfT
-Zj1neBu18Ol1QgdSw1f5uSgk7dlUD4ZyARXVQE/wBhdou4Ly2K41MkkQbpMai84T
-hhdgaoK8hq7uM7OeAueduEg5tZYGPOXvCi6oDxT2u0XiZmxCBR2NnPG+S9PNX6Th
-dFUz2VGsYN1e8LKqFNnIVBDOKwKBgQC3c0v13xNWh3TKPcJox3PkeVhreYTQnmGk
-tNVL+JWIybcBbxszkOGnKpDoK1EXLt3aY7wz/3vceTPmLLRzF119locszvVWUPeK
-803JJS0BuLx2iYGbE/7Ms4uPSIE1GsnTh2R7/9q7nMcn0IDY3ccDtTVV5am5cnLu
-wmnHRLNlWQKBgQDFq/W0PP5iPw9yaiNtxaOJNO6cycJbLowXcg4hhffh+y3MCFif
-IeSCVT2sHnIWdeujPJA0togjyCD1BZAyxo1mV7QxIB0LYcq5gFrWWFtbHE21HJzz
-NH/VbRHozGZ5veizgHIDpRhLFIin4mbWuFYLaGGBCJ63gm7Z4NQaYsD9mQKBgCkT
-RcTNp/TN65aE8YyobAiSKvwVf2l+rPpGCyQxirnQAIvvprWLERtu6ncxi7yXH9GQ
-V0mFQOSCtt4o0FacurAuDiI4TLKA+oxAIgCRtFwYUwpvi3d/qKOI6Ayy/Us4rkwQ
-mq0xAnbTibwecVsdfTwVTNXo0HHXcGiJW0nk1g4xAoGAWRcc/XQTYPmgw3QtkyfA
-z12RhYxzUUaiiGwYTbSyitIKvySud+vCPw7Mnz1cdC63XOUN/mQr2Nwht2oFtLvl
-s29Z18H0uXzhfKQVu9kMRzdods9GZnHuEkPgQAO21av2ermD0646zvNsMZCAXPo1
-F9DV18ILppscP5wy0SP20/U=
------END PRIVATE KEY-----
-";
+static PKI: std::sync::LazyLock<Pki> = std::sync::LazyLock::new(Pki::mint);
+
+impl Pki {
+    fn mint() -> Self {
+        use rcgen::{KeyPair, PKCS_ECDSA_P256_SHA256, PKCS_RSA_SHA256};
+        let ca_key = KeyPair::generate_for(&PKCS_RSA_SHA256).expect("RSA CA key");
+        let ca = issuer("ferroehr-test-ca", ca_key);
+        let leaf_key = KeyPair::generate_for(&PKCS_RSA_SHA256).expect("RSA leaf key");
+        let leaf = leaf_cert(&leaf_key, rcgen::ExtendedKeyUsagePurpose::ServerAuth, &ca);
+
+        let ec_ca = issuer(
+            "ferroehr-test-ec-ca",
+            KeyPair::generate_for(&PKCS_ECDSA_P256_SHA256).expect("EC CA key"),
+        );
+        let ec_leaf_key = KeyPair::generate_for(&PKCS_ECDSA_P256_SHA256).expect("EC leaf key");
+        let ec_leaf = leaf_cert(
+            &ec_leaf_key,
+            rcgen::ExtendedKeyUsagePurpose::ServerAuth,
+            &ec_ca,
+        );
+
+        let explicit_key = KeyPair::generate_for(&PKCS_ECDSA_P256_SHA256).expect("EC key");
+        let named = leaf_cert(
+            &explicit_key,
+            rcgen::ExtendedKeyUsagePurpose::ServerAuth,
+            &ec_ca,
+        );
+
+        let rotated_ca = issuer(
+            "ferroehr-rotated-client-ca",
+            KeyPair::generate_for(&PKCS_RSA_SHA256).expect("rotated CA key"),
+        );
+        let client_key = KeyPair::generate_for(&PKCS_RSA_SHA256).expect("client key");
+        let client = leaf_cert(
+            &client_key,
+            rcgen::ExtendedKeyUsagePurpose::ClientAuth,
+            &rotated_ca,
+        );
+
+        Self {
+            ca: ca.certificate.pem(),
+            leaf: leaf.pem(),
+            leaf_key: leaf_key.serialize_pem(),
+            ec_ca: ec_ca.certificate.pem(),
+            ec_leaf: ec_leaf.pem(),
+            ec_leaf_pkcs8: ec_leaf_key.serialize_pem(),
+            ec_leaf_sec1: pem_block("EC PRIVATE KEY", &sec1_of(&ec_leaf_key.serialize_der())),
+            explicit_curve: pem_block("CERTIFICATE", &with_explicit_curve(named.der())),
+            explicit_curve_key: explicit_key.serialize_pem(),
+            rotated_ca: rotated_ca.certificate.pem(),
+            rotated_client: client.pem(),
+            rotated_client_key: client_key.serialize_pem(),
+        }
+    }
+}
+
+/// A CA with its certificate, ready to issue.
+struct Authority {
+    certificate: rcgen::Certificate,
+    issuer: rcgen::Issuer<'static, rcgen::KeyPair>,
+}
+
+/// Sets `params` valid from yesterday to [`VALIDITY_DAYS`] from today, in UTC.
+fn stamp_validity(params: &mut rcgen::CertificateParams) {
+    let today = jiff::Timestamp::now()
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .date();
+    let stamp = |date: jiff::civil::Date| {
+        rcgen::date_time_ymd(
+            i32::from(date.year()),
+            u8::try_from(date.month()).expect("month"),
+            u8::try_from(date.day()).expect("day"),
+        )
+    };
+    let last = today
+        .checked_add(jiff::Span::new().days(VALIDITY_DAYS))
+        .expect("end date");
+    params.not_before = stamp(today.yesterday().expect("yesterday"));
+    params.not_after = stamp(last);
+}
+
+/// A self-signed CA named `name` over `key`.
+fn issuer(name: &str, key: rcgen::KeyPair) -> Authority {
+    use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyUsagePurpose};
+    let mut params = CertificateParams::new(Vec::<String>::new()).expect("CA params");
+    params.distinguished_name.push(DnType::CommonName, name);
+    params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+    params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign];
+    stamp_validity(&mut params);
+    let certificate = params.self_signed(&key).expect("CA certificate");
+    Authority {
+        certificate,
+        issuer: rcgen::Issuer::new(params, key),
+    }
+}
+
+/// A leaf for localhost and 127.0.0.1 over `key`, for `purpose`, issued by `ca`.
+fn leaf_cert(
+    key: &rcgen::KeyPair,
+    purpose: rcgen::ExtendedKeyUsagePurpose,
+    ca: &Authority,
+) -> rcgen::Certificate {
+    use rcgen::{CertificateParams, DnType, KeyUsagePurpose};
+    let mut params = CertificateParams::new(vec!["localhost".to_owned(), "127.0.0.1".to_owned()])
+        .expect("leaf params");
+    params
+        .distinguished_name
+        .push(DnType::CommonName, "localhost");
+    params.key_usages = vec![
+        KeyUsagePurpose::DigitalSignature,
+        KeyUsagePurpose::KeyEncipherment,
+    ];
+    params.extended_key_usages = vec![purpose];
+    stamp_validity(&mut params);
+    params.signed_by(key, &ca.issuer).expect("leaf certificate")
+}
+
+/// `der` as a PEM block labelled `label`.
+fn pem_block(label: &str, der: &[u8]) -> String {
+    pem::encode(&pem::Pem::new(label, der.to_vec()))
+}
+
+/// The DER of the element `reader` is at, whatever its type.
+fn raw_element(reader: yasna::BERReader<'_, '_>) -> yasna::ASN1Result<Vec<u8>> {
+    reader.read_der()
+}
+
+/// The `ECPrivateKey` (RFC 5915 §3, the SEC1 form) a PKCS#8 EC key wraps:
+/// the `privateKey` OCTET STRING of `PrivateKeyInfo` (RFC 5208 §5).
+fn sec1_of(pkcs8: &[u8]) -> Vec<u8> {
+    yasna::parse_der(pkcs8, |reader| {
+        reader.read_sequence(|reader| {
+            reader.next().read_u8()?;
+            reader.next().read_der()?;
+            let key = reader.next().read_bytes()?;
+            reader.read_optional(raw_element)?;
+            Ok(key)
+        })
+    })
+    .expect("a PKCS#8 EC key")
+}
+
+/// `certificate` with its subject public key's `namedCurve` parameter
+/// replaced by the explicit P-256 `ECParameters` (RFC 3279 §2.3.5), the
+/// form RFC 5480 §2.1.1 forbids; the signature no longer verifies, which the
+/// loader never checks.
+fn with_explicit_curve(certificate: &[u8]) -> Vec<u8> {
+    let (tbs, algorithm, signature) = yasna::parse_der(certificate, |reader| {
+        reader.read_sequence(|reader| {
+            let tbs = reader.next().collect_sequence_of(raw_element)?;
+            let algorithm = reader.next().read_der()?;
+            let signature = reader.next().read_bitvec_bytes()?;
+            Ok((tbs, algorithm, signature))
+        })
+    })
+    .expect("a DER certificate");
+    let tbs: Vec<Vec<u8>> = tbs
+        .into_iter()
+        .map(|field| explicit_spki(&field).unwrap_or(field))
+        .collect();
+    yasna::construct_der(|writer| {
+        writer.write_sequence(|writer| {
+            writer.next().write_sequence(|writer| {
+                for field in &tbs {
+                    writer.next().write_der(field);
+                }
+            });
+            writer.next().write_der(&algorithm);
+            writer.next().write_bitvec_bytes(&signature.0, signature.1);
+        });
+    })
+}
+
+/// `id-ecPublicKey` (RFC 5480 §2.1.1).
+const EC_PUBLIC_KEY: &[u64] = &[1, 2, 840, 10045, 2, 1];
+/// `secp256r1`, the P-256 named curve (RFC 5480 §2.1.1.1).
+const SECP256R1: &[u64] = &[1, 2, 840, 10045, 3, 1, 7];
+/// `prime-field` (RFC 3279 §2.3.5).
+const PRIME_FIELD: &[u64] = &[1, 2, 840, 10045, 1, 1];
+/// The P-256 field prime (SEC 2 v2 §2.4.2), hex.
+const P256_P: &str = "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff";
+/// The P-256 coefficient `a`.
+const P256_A: &str = "ffffffff00000001000000000000000000000000fffffffffffffffffffffffc";
+/// The P-256 coefficient `b`.
+const P256_B: &str = "5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b";
+/// The P-256 base point, uncompressed.
+const P256_G: &str = "046b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c2964fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5";
+/// The P-256 base point's order.
+const P256_N: &str = "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551";
+
+/// The bytes a hex string spells.
+fn unhex(hex: &str) -> Vec<u8> {
+    hex.as_bytes()
+        .chunks(2)
+        .map(|pair| {
+            u8::from_str_radix(std::str::from_utf8(pair).expect("ASCII hex"), 16).expect("hex")
+        })
+        .collect()
+}
+
+/// `field` rewritten with explicit P-256 parameters when it is a P-256
+/// `SubjectPublicKeyInfo` with the named curve; `None` for any other field.
+fn explicit_spki(field: &[u8]) -> Option<Vec<u8>> {
+    let named = yasna::models::ObjectIdentifier::from_slice(SECP256R1);
+    let ec = yasna::models::ObjectIdentifier::from_slice(EC_PUBLIC_KEY);
+    // NOTE: a TBS field of another shape is not the key, so its parse failure is the answer.
+    let point = yasna::parse_der(field, |reader| {
+        reader.read_sequence(|reader| {
+            let (algorithm, curve) = reader.next().read_sequence(|reader| {
+                Ok((reader.next().read_oid()?, reader.next().read_oid()?))
+            })?;
+            let point = reader.next().read_bitvec_bytes()?;
+            Ok((algorithm == ec && curve == named).then_some(point))
+        })
+    })
+    .ok()
+    .flatten()?;
+    Some(yasna::construct_der(|writer| {
+        writer.write_sequence(|writer| {
+            writer.next().write_sequence(|writer| {
+                writer.next().write_oid(&ec);
+                writer.next().write_sequence(|writer| {
+                    writer.next().write_u8(1);
+                    writer.next().write_sequence(|writer| {
+                        writer
+                            .next()
+                            .write_oid(&yasna::models::ObjectIdentifier::from_slice(PRIME_FIELD));
+                        writer.next().write_bigint_bytes(&unhex(P256_P), true);
+                    });
+                    writer.next().write_sequence(|writer| {
+                        writer.next().write_bytes(&unhex(P256_A));
+                        writer.next().write_bytes(&unhex(P256_B));
+                    });
+                    writer.next().write_bytes(&unhex(P256_G));
+                    writer.next().write_bigint_bytes(&unhex(P256_N), true);
+                    writer.next().write_u8(1);
+                });
+            });
+            writer.next().write_bitvec_bytes(&point.0, point.1);
+        });
+    }))
+}
 
 /// Write the PEMs to temp files and build the `[server.tls]` section at the
 /// DEFAULT protocol floor.
@@ -122,12 +330,12 @@ fn tls_files_at(
     };
     TlsConfig {
         enabled: true,
-        cert_file: Some(write("server.pem", TEST_LEAF_PEM)),
-        key_file: Some(write("server.key", TEST_LEAF_KEY_PEM)),
+        cert_file: Some(write("server.pem", PKI.leaf.as_bytes())),
+        key_file: Some(write("server.key", PKI.leaf_key.as_bytes())),
         client_auth,
         client_ca_file: match client_auth {
             ClientAuth::Off => None,
-            _ => Some(write("client-ca.pem", TEST_CA_PEM)),
+            _ => Some(write("client-ca.pem", PKI.ca.as_bytes())),
         },
         min_version,
         reload_interval_secs: 0,
@@ -191,12 +399,11 @@ async fn serve_tls_reloadable(
     panic!("TLS listener did not come up");
 }
 
-/// A trust store holding ONLY the test CA: the platform verifier (reqwest's
-/// default) rejects the 100-year offline test leaf.
+/// A trust store holding ONLY the test CA, which no platform store holds.
 fn test_roots() -> rustls::RootCertStore {
     use rustls::pki_types::pem::PemObject;
     let mut roots = rustls::RootCertStore::empty();
-    for cert in rustls::pki_types::CertificateDer::pem_slice_iter(TEST_CA_PEM) {
+    for cert in rustls::pki_types::CertificateDer::pem_slice_iter(PKI.ca.as_bytes()) {
         roots.add(cert.expect("ca cert")).expect("add root");
     }
     roots
@@ -488,84 +695,6 @@ async fn missing_key_material_is_a_typed_boot_error() {
 
 // ------------------------------------------------------- EC keys and reload
 
-/// A 100-year EC P-256 test CA (named curve), generated offline with `LibreSSL`.
-const TEST_EC_CA_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
-MIIBdjCCAR2gAwIBAgIJAKiOVbI12tnRMAoGCCqGSM49BAMCMB4xHDAaBgNVBAMM
-E2ZlcnJvZWhyLXRlc3QtZWMtY2EwIBcNMjYxMDE0MTg1MTI0WhgPMjEyNjA5MjAx
-ODUxMjRaMB4xHDAaBgNVBAMME2ZlcnJvZWhyLXRlc3QtZWMtY2EwWTATBgcqhkjO
-PQIBBggqhkjOPQMBBwNCAAR1u4YnEx2336QpA9RY3M4LQycXaKmy8be+FHUFBMDT
-jb6wntl8W9Hgr1knaD7EzIwx0aOCs8iacfkauvJeETA5o0IwQDAPBgNVHRMBAf8E
-BTADAQH/MA4GA1UdDwEB/wQEAwIBBjAdBgNVHQ4EFgQUkOGQfgIVWOU2fdzgM1lP
-etzG67QwCgYIKoZIzj0EAwIDRwAwRAIgZESns1qCI5+B+YQwKS0eySlDeV4Fjz4p
-Ksg4rl6hOYcCIHJ+sAl4j7GrhcdvjuRQxz4kgQYgu0dpunux+jocrSOL
------END CERTIFICATE-----
-";
-
-/// The EC P-256 server leaf `TEST_EC_CA_PEM` issued (CN=localhost, SAN
-/// localhost/127.0.0.1, serverAuth).
-const TEST_EC_LEAF_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
-MIIBlzCCAT2gAwIBAgIJAI3GSCLsJSmPMAoGCCqGSM49BAMCMB4xHDAaBgNVBAMM
-E2ZlcnJvZWhyLXRlc3QtZWMtY2EwIBcNMjYxMDE0MTg1MTI0WhgPMjEyNjA5MjAx
-ODUxMjRaMBQxEjAQBgNVBAMMCWxvY2FsaG9zdDBZMBMGByqGSM49AgEGCCqGSM49
-AwEHA0IABLhm2z3NfMAnLc/E1LSOKIvP8C3o1iV28QPwUENJXbPHc9SBpg1blvvx
-iAj++6eSjVAHBx2Kl3jC5PgoqAp20gGjbDBqMAkGA1UdEwQCMAAwCwYDVR0PBAQD
-AgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMBMBoGA1UdEQQTMBGCCWxvY2FsaG9zdIcE
-fwAAATAfBgNVHSMEGDAWgBSQ4ZB+AhVY5TZ93OAzWU963MbrtDAKBggqhkjOPQQD
-AgNIADBFAiEAgaReGjmbq/SK8UmAHOIC9/HtUr+3Z1m+rcItIvurMJYCIEJIdwbJ
-QC+qbr9pvcJ2n9QQDN1kQe8UJ1phtndF5vKu
------END CERTIFICATE-----
-";
-
-/// The EC leaf's key as SEC1 (`openssl ecparam -genkey -noout`).
-const TEST_EC_LEAF_SEC1_KEY_PEM: &[u8] = b"-----BEGIN EC PRIVATE KEY-----
-MHcCAQEEIBfCoizCOqY1traVDSnFNHdf+UBJnbQORp5Pf40umVwPoAoGCCqGSM49
-AwEHoUQDQgAEuGbbPc18wCctz8TUtI4oi8/wLejWJXbxA/BQQ0lds8dz1IGmDVuW
-+/GICP77p5KNUAcHHYqXeMLk+CioCnbSAQ==
------END EC PRIVATE KEY-----
-";
-
-/// The same EC leaf key as PKCS#8 (`openssl pkcs8 -topk8 -nocrypt`).
-const TEST_EC_LEAF_PKCS8_KEY_PEM: &[u8] = b"-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgF8KiLMI6pjW2tpUN
-KcU0d1/5QEmdtA5Gnk9/jS6ZXA+hRANCAAS4Zts9zXzAJy3PxNS0jiiLz/At6NYl
-dvED8FBDSV2zx3PUgaYNW5b78YgI/vunko1QBwcdipd4wuT4KKgKdtIB
------END PRIVATE KEY-----
-";
-
-/// A self-signed X.509 v3 EC P-256 certificate whose public key carries
-/// EXPLICIT curve parameters: what `LibreSSL` 3.3 `req -x509 -newkey ec -pkeyopt
-/// ec_paramgen_curve:prime256v1` writes without `ec_param_enc:named_curve`.
-const TEST_EXPLICIT_CURVE_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
-MIICZjCCAgygAwIBAgIJAPSoLDAHYVTDMAoGCCqGSM49BAMCMBQxEjAQBgNVBAMM
-CWxvY2FsaG9zdDAgFw0yNjEwMTUwNTQ1MjRaGA8yMTI2MDkyMTA1NDUyNFowFDES
-MBAGA1UEAwwJbG9jYWxob3N0MIIBSzCCAQMGByqGSM49AgEwgfcCAQEwLAYHKoZI
-zj0BAQIhAP////8AAAABAAAAAAAAAAAAAAAA////////////////MFsEIP////8A
-AAABAAAAAAAAAAAAAAAA///////////////8BCBaxjXYqjqT57PrvVV2mIa8ZR0G
-sMxTsPY7zjw+J9JgSwMVAMSdNgiG5wSTamZ44ROdJreBn36QBEEEaxfR8uEsQkf4
-vOblY6RA8ncDfYEt6zOg9KE5RdiYwpZP40Li/hp/m47n60p8D54WK84zV2sxXs7L
-tkBoN79R9QIhAP////8AAAAA//////////+85vqtpxeehPO5ysL8YyVRAgEBA0IA
-BDa8lmLQSjc1D7ZQwWBdLY/tyYQnD3JJKDg2b5bccjzCZ/lakygnkm+QlADpnRHJ
-gNDv9sdp9uGHShYNSwaNE96jUTBPMAwGA1UdEwEB/wQCMAAwDgYDVR0PAQH/BAQD
-AgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMBMBoGA1UdEQQTMBGCCWxvY2FsaG9zdIcE
-fwAAATAKBggqhkjOPQQDAgNIADBFAiBR1BKUFwecKm7wzIVKOjxroT78yV//p90K
-rzh4GSxbBwIhAKuuohK92TuOYnuv5gJK3H+XJQlQHSi83tx4TqnEl6fy
------END CERTIFICATE-----
-";
-
-/// The key of `TEST_EXPLICIT_CURVE_PEM`, PKCS#8 with the same explicit
-/// parameters.
-const TEST_EXPLICIT_CURVE_KEY_PEM: &[u8] = b"-----BEGIN PRIVATE KEY-----
-MIIBeQIBADCCAQMGByqGSM49AgEwgfcCAQEwLAYHKoZIzj0BAQIhAP////8AAAAB
-AAAAAAAAAAAAAAAA////////////////MFsEIP////8AAAABAAAAAAAAAAAAAAAA
-///////////////8BCBaxjXYqjqT57PrvVV2mIa8ZR0GsMxTsPY7zjw+J9JgSwMV
-AMSdNgiG5wSTamZ44ROdJreBn36QBEEEaxfR8uEsQkf4vOblY6RA8ncDfYEt6zOg
-9KE5RdiYwpZP40Li/hp/m47n60p8D54WK84zV2sxXs7LtkBoN79R9QIhAP////8A
-AAAA//////////+85vqtpxeehPO5ysL8YyVRAgEBBG0wawIBAQQgNwnAi5rRiOkF
-UN2H95F4PHYaAt7Sz4m/7hzR332QYWehRANCAAQ2vJZi0Eo3NQ+2UMFgXS2P7cmE
-Jw9ySSg4Nm+W3HI8wmf5WpMoJ5JvkJQA6Z0RyYDQ7/bHafbhh0oWDUsGjRPe
------END PRIVATE KEY-----
-";
-
 /// The DER of the first certificate in `pem`.
 fn der_of(pem: &[u8]) -> rustls::pki_types::CertificateDer<'static> {
     use rustls::pki_types::pem::PemObject;
@@ -575,7 +704,9 @@ fn der_of(pem: &[u8]) -> rustls::pki_types::CertificateDer<'static> {
 /// A client config trusting both test CAs, so either server pair verifies.
 fn client_config_trusting_both_cas() -> std::sync::Arc<rustls::ClientConfig> {
     let mut roots = test_roots();
-    roots.add(der_of(TEST_EC_CA_PEM)).expect("add EC root");
+    roots
+        .add(der_of(PKI.ec_ca.as_bytes()))
+        .expect("add EC root");
     let provider = std::sync::Arc::new(rustls::crypto::aws_lc_rs::default_provider());
     std::sync::Arc::new(
         rustls::ClientConfig::builder_with_provider(provider)
@@ -617,12 +748,12 @@ async fn presented_certificate(port: u16) -> rustls::pki_types::CertificateDer<'
 /// a verified handshake with it.
 #[tokio::test]
 async fn an_ec_p256_key_loads_as_pkcs8_and_as_sec1() {
-    for key in [TEST_EC_LEAF_PKCS8_KEY_PEM, TEST_EC_LEAF_SEC1_KEY_PEM] {
+    for key in [PKI.ec_leaf_pkcs8.as_bytes(), PKI.ec_leaf_sec1.as_bytes()] {
         let dir = assert_fs::TempDir::new().expect("tempdir");
-        let port = serve_tls(pair_files(&dir, TEST_EC_LEAF_PEM, key)).await;
+        let port = serve_tls(pair_files(&dir, PKI.ec_leaf.as_bytes(), key)).await;
         assert_eq!(
             presented_certificate(port).await,
-            der_of(TEST_EC_LEAF_PEM),
+            der_of(PKI.ec_leaf.as_bytes()),
             "{}",
             String::from_utf8_lossy(key)
         );
@@ -635,7 +766,11 @@ async fn an_ec_p256_key_loads_as_pkcs8_and_as_sec1() {
 #[test]
 fn an_explicit_curve_certificate_is_refused_with_the_named_curve_remedy() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let tls = pair_files(&dir, TEST_EXPLICIT_CURVE_PEM, TEST_EXPLICIT_CURVE_KEY_PEM);
+    let tls = pair_files(
+        &dir,
+        PKI.explicit_curve.as_bytes(),
+        PKI.explicit_curve_key.as_bytes(),
+    );
     let err = ferroehr_rest::tls::server_tls(&tls).expect_err("must refuse");
     assert!(
         matches!(err, ferroehr_rest::tls::TlsError::EcKeyMismatch { .. }),
@@ -650,7 +785,7 @@ fn an_explicit_curve_certificate_is_refused_with_the_named_curve_remedy() {
 #[test]
 fn a_key_of_another_certificate_is_a_key_mismatch() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let tls = pair_files(&dir, TEST_EC_LEAF_PEM, TEST_LEAF_KEY_PEM);
+    let tls = pair_files(&dir, PKI.ec_leaf.as_bytes(), PKI.leaf_key.as_bytes());
     let err = ferroehr_rest::tls::server_tls(&tls).expect_err("must refuse");
     assert!(
         matches!(err, ferroehr_rest::tls::TlsError::KeyMismatch { .. }),
@@ -666,29 +801,42 @@ async fn a_renewed_certificate_is_served_without_a_restart_and_a_broken_one_is_n
     use ferroehr_rest::tls::Reloaded;
 
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let (port, reloader) =
-        serve_tls_reloadable(pair_files(&dir, TEST_LEAF_PEM, TEST_LEAF_KEY_PEM)).await;
-    assert_eq!(presented_certificate(port).await, der_of(TEST_LEAF_PEM));
+    let (port, reloader) = serve_tls_reloadable(pair_files(
+        &dir,
+        PKI.leaf.as_bytes(),
+        PKI.leaf_key.as_bytes(),
+    ))
+    .await;
+    assert_eq!(
+        presented_certificate(port).await,
+        der_of(PKI.leaf.as_bytes())
+    );
     assert_eq!(
         reloader.reload().await.expect("unchanged files"),
         Reloaded::Unchanged
     );
 
-    pair_files(&dir, TEST_EC_LEAF_PEM, TEST_EC_LEAF_PKCS8_KEY_PEM);
+    pair_files(&dir, PKI.ec_leaf.as_bytes(), PKI.ec_leaf_pkcs8.as_bytes());
     assert_eq!(
         reloader.reload().await.expect("the renewed pair loads"),
         Reloaded::Replaced
     );
-    assert_eq!(presented_certificate(port).await, der_of(TEST_EC_LEAF_PEM));
+    assert_eq!(
+        presented_certificate(port).await,
+        der_of(PKI.ec_leaf.as_bytes())
+    );
 
     // A replacement certificate without its matching key.
-    pair_files(&dir, TEST_LEAF_PEM, TEST_EC_LEAF_PKCS8_KEY_PEM);
+    pair_files(&dir, PKI.leaf.as_bytes(), PKI.ec_leaf_pkcs8.as_bytes());
     let refused = reloader.reload().await.expect_err("a mismatched pair");
     assert!(
         matches!(refused, ferroehr_rest::tls::TlsError::EcKeyMismatch { .. }),
         "{refused:?}"
     );
-    assert_eq!(presented_certificate(port).await, der_of(TEST_EC_LEAF_PEM));
+    assert_eq!(
+        presented_certificate(port).await,
+        der_of(PKI.ec_leaf.as_bytes())
+    );
     assert_eq!(
         reloader
             .reload()
@@ -698,21 +846,28 @@ async fn a_renewed_certificate_is_served_without_a_restart_and_a_broken_one_is_n
     );
 
     // A key file that is not PEM at all.
-    pair_files(&dir, TEST_LEAF_PEM, b"not a key");
+    pair_files(&dir, PKI.leaf.as_bytes(), b"not a key");
     reloader.reload().await.expect_err("an unreadable key");
-    assert_eq!(presented_certificate(port).await, der_of(TEST_EC_LEAF_PEM));
+    assert_eq!(
+        presented_certificate(port).await,
+        der_of(PKI.ec_leaf.as_bytes())
+    );
 }
 
 /// The watcher the listener runs picks a renewal up on its own interval.
 #[tokio::test]
 async fn the_watcher_serves_a_renewal_on_its_interval() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let (port, reloader) =
-        serve_tls_reloadable(pair_files(&dir, TEST_LEAF_PEM, TEST_LEAF_KEY_PEM)).await;
+    let (port, reloader) = serve_tls_reloadable(pair_files(
+        &dir,
+        PKI.leaf.as_bytes(),
+        PKI.leaf_key.as_bytes(),
+    ))
+    .await;
     let watcher = tokio::spawn(reloader.watch(Duration::from_millis(50)));
 
-    pair_files(&dir, TEST_EC_LEAF_PEM, TEST_EC_LEAF_SEC1_KEY_PEM);
-    let renewed = der_of(TEST_EC_LEAF_PEM);
+    pair_files(&dir, PKI.ec_leaf.as_bytes(), PKI.ec_leaf_sec1.as_bytes());
+    let renewed = der_of(PKI.ec_leaf.as_bytes());
     let mut presented = presented_certificate(port).await;
     for _ in 0..100 {
         if presented == renewed {
@@ -727,92 +882,13 @@ async fn the_watcher_serves_a_renewal_on_its_interval() {
 
 // ── the client CA reload (#3769) ─────────────────────────────────────────────
 
-/// A second client CA (`CN=ehrbase-terminology-test-ca`), the one the
-/// terminology mTLS suite signs its client certificate with.
-const ROTATED_CLIENT_CA_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
-MIIDPzCCAiegAwIBAgIUQdzLptxYSE4Z2KUtCRX4orOs5x4wDQYJKoZIhvcNAQEL
-BQAwJjEkMCIGA1UEAwwbZWhyYmFzZS10ZXJtaW5vbG9neS10ZXN0LWNhMCAXDTI2
-MDcyOTEzNDQ0MFoYDzIxMjYwNzA1MTM0NDQwWjAmMSQwIgYDVQQDDBtlaHJiYXNl
-LXRlcm1pbm9sb2d5LXRlc3QtY2EwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
-AoIBAQCr5GwUx1SYbKWyobe/4gNljimQ2fMkF6NJ2UbqQo1YmchqjbDU3yqPhO+u
-2uA3tjPy7LJiyFai7JexYbrgBcQEcphDvfWfTUTkpb5XxSrWYBxQEW1auxWpq33m
-5oQKch+SkblKpdhGXnRwBwtmiQs/oECPexEq/AOWCYwjn0Y0ZwZryjH0L0SAlHXa
-0SWIihVz2pBGk1xKiQkV7OPM+sbbR1e9D+clQOzTHWz1cGtfep7b2vWn14nBc36C
-cbF336umG/2XiF9B+dFM6KQxNRA3RizCuSPIIH0fdQBaAVuCzjGc3/sLqvulsbxV
-cEFmZchu7kEcVGVdcrS1tCple8AFAgMBAAGjYzBhMB0GA1UdDgQWBBT4JtIe+Kky
-uKi1rzSo2Sc1sg+zhjAfBgNVHSMEGDAWgBT4JtIe+KkyuKi1rzSo2Sc1sg+zhjAP
-BgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjANBgkqhkiG9w0BAQsFAAOC
-AQEAhD4fgejqDAO0ypzfEgJLzaFqqvJpbt8pyiNZ+THR6KrjylW3pUNk1WZRxL9p
-4b9A1YKtQX1ABt2AEJ0pFgm1PiXy4EDszyRK8A33hls91c6761pHds0+SFYsq6jr
-zSJEanbJ5sQccTbsZ6nkzEjq3y/QBmw49TAqzbzMrYJjvHFPXpUr3Bpt9qTR/UmQ
-NQ/kWfCpLqmpWD8O71enKN1F7UId3nnpEus+/HMtnPtErMHBfGBOWsr95d37NB52
-CJTogkq19bUHC9nI4XBnNhR4F1BTZL9lQYghjettRzu0fvHj0JCR437GbkFmOZyA
-6O1x7xRNYxQG+wohHHPFnyDENg==
------END CERTIFICATE-----
-";
-
-/// A client leaf (`CN=ehrbase-cdr`, `extendedKeyUsage=clientAuth`) signed by
-/// [`ROTATED_CLIENT_CA_PEM`].
-const ROTATED_CLIENT_CERT_PEM: &[u8] = b"-----BEGIN CERTIFICATE-----
-MIIDPjCCAiagAwIBAgIUN6RUnq7anOZdiSdi9b6onYdW7PEwDQYJKoZIhvcNAQEL
-BQAwJjEkMCIGA1UEAwwbZWhyYmFzZS10ZXJtaW5vbG9neS10ZXN0LWNhMCAXDTI2
-MDcyOTEzNDQ0MVoYDzIxMjYwNzA1MTM0NDQxWjAWMRQwEgYDVQQDDAtlaHJiYXNl
-LWNkcjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKYtID4ud0jEkUFr
-Dync/gEVvAeklhwA23JEdsLobmJkFJtbn68qJmmEMRyJx/0OYNwpoJ8MeY7NMNyx
-63J6lDfmhQFpxJVxHqLspBp9DmEu0ifO7Q5VmEeQrnqkd4cF/hp61M7X83TybG79
-O1605+X30/amgxHj6Y3NAFuO3+C9ayJl8oFjrX86if9m4ywPO2pps8fKRmy6V0P1
-O2PBIaf8lEvPYbzEj8pMiBiWj45ZuNopOq5OAUIndFtR55G7cL51KrocMuVo48i4
-AXRQQR14BDyhiyuCd8zhDtMoGuWsa0E+K9yove6Uhv7aKyaVlkVPSQ9vIQjXx9LJ
-b2n0QRkCAwEAAaNyMHAwDgYDVR0PAQH/BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUF
-BwMCMAkGA1UdEwQCMAAwHQYDVR0OBBYEFL65rmBZ4vWcx18igZhEiWnsGDp/MB8G
-A1UdIwQYMBaAFPgm0h74qTK4qLWvNKjZJzWyD7OGMA0GCSqGSIb3DQEBCwUAA4IB
-AQAHzzukoZnHp6zkcSwulSMUsECfdXQFjmPszTsgdoMRtozrIJBeTTn8TU4udt83
-lcqJO2aHxaEsXQAC6HiO68LLqudio4BymkpYY/jnBLZNOCiChY2NkMR+PNnWrrKh
-eXBNKgzE1OFcPs2eDzXDGi4u0C+5TAzTyk1iFJSjVPrm+WYBlSQ40+KkZjc3QPqM
-9mmbv/ywOeaLihcgIeIkTHQLb7dlhTazDyX5KpqegPqh/NMXVdVchN0pnRZ7l4V9
-xYMKapLu7dF65h/aXFYQaKSn7ztjDS5/sEKcwBjjSRcoXOqISuXyfONEjuInj/Lh
-WKGF8hUt9DgUqWPuDe33JrC8
------END CERTIFICATE-----
-";
-
-/// The key of [`ROTATED_CLIENT_CERT_PEM`].
-const ROTATED_CLIENT_KEY_PEM: &[u8] = b"-----BEGIN PRIVATE KEY-----
-MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCmLSA+LndIxJFB
-aw8p3P4BFbwHpJYcANtyRHbC6G5iZBSbW5+vKiZphDEcicf9DmDcKaCfDHmOzTDc
-setyepQ35oUBacSVcR6i7KQafQ5hLtInzu0OVZhHkK56pHeHBf4aetTO1/N08mxu
-/TtetOfl99P2poMR4+mNzQBbjt/gvWsiZfKBY61/Oon/ZuMsDztqabPHykZsuldD
-9TtjwSGn/JRLz2G8xI/KTIgYlo+OWbjaKTquTgFCJ3RbUeeRu3C+dSq6HDLlaOPI
-uAF0UEEdeAQ8oYsrgnfM4Q7TKBrlrGtBPivcqL3ulIb+2ismlZZFT0kPbyEI18fS
-yW9p9EEZAgMBAAECggEACfes9m3dE81OlSjxyOYLik8ebyrtIhLfFtSKdxhv/pDY
-N5VgV6ZklXGrbHXLPB+PqcUJcGDULb+bDbHSWJSHrW6zTalldD1LxCQDl98mbKfd
-TSv5RiHWN3yzKoIQ9VVjr3zspNeJL9uWq3WfCQg63K1n1mSYegs8qBfCzLseLKG3
-LR2yhZSbMdH7NNWwoG1iwDXyJGx4SM4r7z2dPRobMxT5ErIKtCzDRLcUWMeW3FiU
-qEB5SXscrF5TitQaFtwRFPO0IpbPWoXbW99OZTPoi+ZHUxVRShWE3gtO3D6cvgHf
-iwLxdpy3tUHIAnm5SbDjtp30AAF1S/CUU3ZpcoiafQKBgQDc7/LI4FcG0xmKzGHe
-vzfDZDUFxjVkCY0zQ919l9TufJZbZXOp6iVnAEts46ykZ2oPZXAt9csLT94EF4iy
-1/VxQ67NQxAyfMMKCCTMMgAuL0VCWhzKdx0udcOvoqdnoRAt48jOW/9fKlhSitMW
-Ef6pg+n1T3ZbXUPE+zi4ezC+vwKBgQDAjGS6k11728mqKP9SThpGGdPiJVwM9c3y
-etCHwz0g7Dfo0dZBFrXbyDksaI+M/OchbJLq3Ar+UOlB0l08m60f6OmXVzSDFvgs
-m1ilCvAp3cxvFuasji5CqTlQ5DZlNbjbsADUHwel4geiCgYvn655IONuUqo2stCf
-qArTp9dOJwKBgQCo/ML3kFggOTDtL/yf0iRFyAyiOQO3W3LrxjnQiWRtcU/T4lpA
-mX44NUp7o/z11r+RvSW7kafXJCSNfq6pFHOASaOXDneCFllb//SdVpU6vh88bA5f
-chIY6ixd14wxwEjOwM5jwIwobwwVPmfMFsFxSRuW7Ut7AHAIZ5rvyBH1owKBgQCB
-yWBQPurhhPm+/9lyEgE1xU0D/2i3t6v1SQFssZZvranV/jMsNnGozqJzI5u3TfVB
-m1zAgEfMup8v5etA4jJk8usZPwe/YOkxsBilTuUpYz7clpQwNbpK5qQiuWFNAVQ0
-iMNWOABAuUWp3JXk3f6N2TRT9daT/h4PsAZ0OosvOwKBgQCt7E+/RlRNlcC+4o2S
-kT6qEL4sTV0Qc+RMtlakqDaLElcQx9ZIc4SPAeiIRq0Lm/w5l1GV1JvxawWR63P0
-16krB8b1EGloCd5p8XBWMQRdn7Pyo+kY+Xrpo+3SJroCVbKHojJKxnPgX2GE0XVx
-SxWyjGrM2xGr1RcYYQM5nopluQ==
------END PRIVATE KEY-----
-";
-
 /// One handshake presenting the rotated client certificate, then `GET
 /// /rest/status`; `true` when the server answered.
 async fn served_with_client_certificate(port: u16) -> bool {
     use rustls::pki_types::pem::PemObject;
     let provider = std::sync::Arc::new(rustls::crypto::aws_lc_rs::default_provider());
-    let chain = vec![der_of(ROTATED_CLIENT_CERT_PEM)];
-    let key = rustls::pki_types::PrivateKeyDer::from_pem_slice(ROTATED_CLIENT_KEY_PEM)
+    let chain = vec![der_of(PKI.rotated_client.as_bytes())];
+    let key = rustls::pki_types::PrivateKeyDer::from_pem_slice(PKI.rotated_client_key.as_bytes())
         .expect("client key");
     let tls = rustls::ClientConfig::builder_with_provider(provider)
         .with_safe_default_protocol_versions()
@@ -878,7 +954,7 @@ async fn a_rotated_client_ca_verifies_without_a_restart() {
     );
 
     let ca_path = tls.client_ca_file.clone().expect("client_ca_file");
-    std::fs::write(&ca_path, ROTATED_CLIENT_CA_PEM).expect("rotate the client CA");
+    std::fs::write(&ca_path, PKI.rotated_ca.as_bytes()).expect("rotate the client CA");
     let config = reloader
         .reload()
         .await

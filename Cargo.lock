@@ -2728,7 +2728,7 @@ dependencies = [
  "urlencoding",
  "uuid",
  "wiremock",
- "zip 9.0.4",
+ "zip",
 ]
 
 [[package]]
@@ -2785,8 +2785,10 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
+ "pem 4.0.0",
  "pprof",
  "prometheus",
+ "rcgen",
  "reqwest",
  "rustls",
  "secrecy",
@@ -2812,6 +2814,7 @@ dependencies = [
  "utoipa-swagger-ui",
  "uuid",
  "wiremock",
+ "yasna",
 ]
 
 [[package]]
@@ -2900,9 +2903,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-ui"
-version = "0.3.6"
+version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "807b1ccb3be3e8176946e85aefbf5c44cf8dbb0d883a28dc7e942ebc6c61937c"
+checksum = "033f7c9cd1ead969a5764bda85c95484396d2143b762f6aafec51339278fec9a"
 dependencies = [
  "fluent-templates",
  "intl-memoizer",
@@ -9419,9 +9422,9 @@ dependencies = [
 
 [[package]]
 name = "utoipa-swagger-ui"
-version = "10.0.1"
+version = "10.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f5ec9d7816e4ce8ccb7e0bd7276e090cad0fcb1def4f3540e5b0f7485d7583e"
+checksum = "4f1fd2f9615838885c6ff4115fde8a2b58825dc7b4617f78d29c167377a15c92"
 dependencies = [
  "axum",
  "base64 0.23.1",
@@ -9432,7 +9435,7 @@ dependencies = [
  "url",
  "utoipa",
  "utoipa-swagger-ui-vendored",
- "zip 8.6.0",
+ "zip",
 ]
 
 [[package]]
@@ -10107,20 +10110,6 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "8.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d04a6b5381502aa6087c94c669499eb1602eb9c5e8198e534de571f7154809b"
-dependencies = [
- "crc32fast",
- "flate2",
- "indexmap 2.14.2",
- "memchr",
- "typed-path",
- "zopfli",
-]
-
-[[package]]
-name = "zip"
 version = "9.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a954114b47a54df49f83d2722814e86b23d4bb1b54a1b90fb7d92b41619ddc22"
@@ -10131,6 +10120,7 @@ dependencies = [
  "memchr",
  "nix 0.31.3",
  "typed-path",
+ "zopfli",
 ]
 
 [[package]]

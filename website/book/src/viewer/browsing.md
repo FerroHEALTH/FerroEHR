@@ -32,7 +32,9 @@ query it.
 ![A template](img/templates/template.png)
 
 **Paths** is its Web Template as a tree: pick a node to read its path, type
-and codes. With the page's WebAssembly loaded the tree expands in place and
+and codes, and on a COMPOSITION template **Build a query on this path**. A
+demographic template's nodes offer no query, since the query builder reads
+compositions. With the page's WebAssembly loaded the tree expands in place and
 answers the arrow keys; without it each node is a link.
 
 ![Paths](img/templates/template-paths.png)
