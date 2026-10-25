@@ -25,6 +25,16 @@ workflow refuses a tag that has no matching section here.
   next release for Low. The CRA risk assessment says business days where it
   said working days.
 
+### Fixed
+
+- **The viewer's Paths tab offers Build a query only on a COMPOSITION
+  template** (#4001). A node of a demographic template (a PERSON,
+  ORGANISATION, GROUP, AGENT or ROLE root) no longer links to the query
+  builder, whose one query shape, `FROM EHR e CONTAINS COMPOSITION c`, can
+  never match a party. The viewer moves to FerroUI 0.3.7, which makes the
+  node's query link optional and keeps a long URL or word in a banner, a
+  notice or a setting row inside the screen at 320 px.
+
 ## [5.4.1] - 2026-10-24
 
 5.4.1 carries breaking changes for operators who use a terminology server, each with its upgrade step under Changed. Before you upgrade: move `[terminology.external]` to the one `[terminology.server]` (its `url`, `fail_on_error`, `request_timeout_ms` and optional `oauth` grant) and rename `FERROEHR__TERMINOLOGY__EXTERNAL__` variables to `FERROEHR__TERMINOLOGY__SERVER__`; on Helm, chart 14.0.0 takes `config.terminology.server` and `secrets.terminologyClientSecret`. A deployment without an external terminology server upgrades unchanged.
