@@ -2288,6 +2288,70 @@ jobs:
           path: target/ui-e2e/screenshots/routes/
           if-no-files-found: error
 
+  # ── The viewer login smoke on a pull request (#3982) ───────────────────────
+  # docker/viewer/login-smoke.sh drives a real browser through the sign-in of
+  # a viewer IMAGE. It ran only in containers.yml on main and in the release,
+  # so the islands rebuild's broken sign-in surfaced first in the v5.4.0
+  # release (#3980, #3981). Here the viewer and CDR images are packaged
+  # COPY-only from the binaries ui-e2e-binary and ui-e2e-viewer already built
+  # (the `runtime-prebuilt` targets the published images use), and nothing is
+  # pushed. The asset chain of the RELEASE build stays containers.yml's check.
+  viewer-login-smoke:
+    name: viewer login smoke
+    needs: [changes, ui-e2e-binary, ui-e2e-viewer]
+    if: needs.changes.outputs.viewer == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ui-e2e-server-binary
+          path: bin/amd64
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ui-e2e-console
+          path: ui-e2e-console-stage
+      # docker/viewer/Dockerfile `runtime-prebuilt` COPYs
+      # bin/<arch>/ferroehr-viewer and site/ (with the hash.txt leptos reads
+      # beside the binary), the layout build-image.yml stages.
+      - name: Stage the viewer binary and site bundle
+        run: |
+          set -euo pipefail
+          install -m0755 ui-e2e-console-stage/ferroehr-viewer bin/amd64/ferroehr-viewer
+          mkdir -p site
+          cp -R ui-e2e-console-stage/site/. site/
+          cp ui-e2e-console-stage/hash.txt site/hash.txt
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Package the CDR image (COPY-only, seconds)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: runtime-prebuilt
+          load: true
+          tags: ferroehr:login-smoke
+      - name: Package the viewer image (COPY-only, seconds)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/viewer/Dockerfile
+          target: runtime-prebuilt
+          load: true
+          tags: ferroehr-viewer:login-smoke
+      - name: Build the postgres image (COPY-only, seconds)
+        run: docker buildx build --load -t ferroehr-postgres:login-smoke docker/postgres
+      - name: Browser-driven login against the packaged viewer image
+        env:
+          FERROEHR_VIEWER_IMAGE: ferroehr-viewer:login-smoke
+          FERROEHR_IMAGE: ferroehr:login-smoke
+          FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:login-smoke
+        run: bash docker/viewer/login-smoke.sh
+
   # ── The compose/local image target (docker/Dockerfile runtime-from-source) ──
   # ui-e2e packages the shipped `runtime-prebuilt` target now (issue #335), so
   # the in-image source build that docker-compose.dev.yml (the repo-dev
@@ -2947,6 +3011,7 @@ jobs:
       - ui-e2e-viewer
       - ui-e2e
       - ui-docs-shots
+      - viewer-login-smoke
       - deploy-probe
       - server-image-from-source
       - ui-screenshot-guard
