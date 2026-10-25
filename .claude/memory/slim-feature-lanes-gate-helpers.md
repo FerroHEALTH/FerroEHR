@@ -13,6 +13,11 @@ dead code in the slim build and fails that lane (hit 2026-09-11 on #3263: the
 RBAC `holds_subject_audit_role` accessor, used only by the ITI-81 handler in
 the `fhir` module).
 
+The ITI-81 retrieval route and its local Audit Record Repository are an IHE
+profile FerroEHR does not own under [[family-architecture]]: retrieval
+belongs to the shared `ihe-atna` crate. Never extend that route; its removal
+is tracker work.
+
 **Why:** the full `--all-features` lane I run locally never sees the slim
 shape, so the failure only surfaces in CI, one cycle later.
 

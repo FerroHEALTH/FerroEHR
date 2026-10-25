@@ -1,6 +1,6 @@
 ---
 name: v5-withdrawn-rewrites-are-v431-v432
-description: "The live release line (owner 2026-10-19): v4.3.11 the patch cut today, v5.0.0 the demographics release, v5.1.0 the larger follow-ups, v6.0.0 the platform and application-layer refactors; supersedes the 2026-09-16 withdrawal of v5"
+description: "The release line the owner set on 2026-10-19 (v4.3.11, v5.0.0 demographics, v5.1.0 follow-ups, v6.0.0 platform refactors), superseding the 2026-09-16 withdrawal of v5; v5.0.0 and v5.1.0 are cut, so read the live milestones"
 metadata:
   type: project
 ---
@@ -12,7 +12,9 @@ The release line as of 2026-10-19:
 - **v4.3.11**: the patch cut on 2026-10-19 with the quick fixes (viewer formatting and favicon, the FerroSYS documentation, the FerroUI 0.1.6 rollout, the flaky dump-load test).
 - **v5.0.0**: the demographics release, cut the same day. The owner decided on 2026-10-19 to put the demographics work here: the `openehr-sdt` party builder from a party Web Template and the caller-chosen `rm_version` (#3810, #3809), the two `openehr-sdt` example fixes (#3779, #3780), and AQL rooted at a demographic class, the Cadasto experimental extension subset FerroBRIDGE issues (#3818).
 - **v5.1.0**: the larger follow-ups that do not fit today's cut.
-- **v6.0.0**: the platform and application-layer refactors (the FerroSYS access-log service #3661, the platform seams #3377, the storage re-evaluation #3337 and their children).
+- **v6.0.0**: the platform and application-layer refactors. Its 2026-10-19 contents (#3661, #3377, #3337) are closed; FerroSYS is no longer a family product, and the audit trail belongs to the shared `ihe-atna` and `ehds-logging` crates ([[family-architecture]]).
+
+Update 2026-10-25: v5.0.0 and v5.1.0 are cut; the open milestones are v5.5.0, v5.6.0 and v6.0.0. Read the live milestone list (`gh api 'repos/FerroHEALTH/FerroEHR/milestones?state=open'`), never this note.
 
 **Why:** the owner re-grouped the work by release theme, so a note saying v5 is withdrawn would send new issues to the wrong place.
 
