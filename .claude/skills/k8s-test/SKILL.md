@@ -202,10 +202,23 @@ That manifest also creates the `ferroehr-db` Secret holding
 
 ## 3. Install
 
+Pull published images by digest only: a tag can move under a run. The digest
+of a release's image is the index digest the registry answers for its tag:
+
+```bash
+T=$(curl -s "https://ghcr.io/token?scope=repository:ferrohealth/ferroehr:pull" | jq -r .token)
+curl -sI -H "Authorization: Bearer $T" \
+  -H 'Accept: application/vnd.oci.image.index.v1+json' \
+  https://ghcr.io/v2/ferrohealth/ferroehr/manifests/5.4.1 | grep -i docker-content-digest
+```
+
+`postgres.yaml` pins `ferroehr-postgres` the same way; refresh both after a
+release publishes its images.
+
 ```bash
 helm install ferroehr deploy/helm/ferroehr -n ferroehr-test \
   -f .claude/skills/k8s-test/test-values.yaml \
-  --set image.tag=3.17.3
+  --set image.digest=sha256:b676e89db9cdd808817f7cfd46e13e79415e63c3baf92b5f249da38bd2a5e732   # 5.4.1
 
 kubectl -n ferroehr-test rollout status deploy/ferroehr --timeout=180s
 # deployment "ferroehr" successfully rolled out
@@ -533,7 +546,8 @@ CRDs — without the CRDs installed the install fails on an unknown kind.
 
 ```bash
 helm upgrade ferroehr deploy/helm/ferroehr -n ferroehr-test \
-  -f .claude/skills/k8s-test/test-values.yaml --set image.tag=3.17.3 --set replicaCount=2
+  -f .claude/skills/k8s-test/test-values.yaml \
+  --set image.digest=sha256:b676e89db9cdd808817f7cfd46e13e79415e63c3baf92b5f249da38bd2a5e732 --set replicaCount=2
 kubectl -n ferroehr-test rollout status deploy/ferroehr --timeout=180s
 helm -n ferroehr-test history ferroehr        # every revision, and its status
 ```
