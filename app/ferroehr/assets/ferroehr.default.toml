@@ -531,7 +531,8 @@ request_timeout_ms = 10000
 #? [terminology.server.oauth]
 #? token_url = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
 #? client_id = "ferroehr-cdr"
-#? client_secret = "..."        # or client_secret_file = "/run/secrets/ts-client"
+#? client_secret = "..."
+#? client_secret_file = "/run/secrets/ts-client"   # instead of client_secret, a mounted file
 #? scope = "system/*.read"
 #? client_auth = "client_secret_basic"   # client_secret_basic | client_secret_post
 

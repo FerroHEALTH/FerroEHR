@@ -63,8 +63,12 @@ NAMESPACE="ferroehr"
 #   is not a PHC string), because the gate greps for them; making it bootable
 #   would mean giving it real credentials and losing the attribution the
 #   sentinels buy.
+#   unknown-config-key-values.yaml — a search fixture for validate.sh's
+#   config-keys gate: it sets a key the server configuration does not define,
+#   so the server refuses it by design.
 declare -a NOT_A_DEPLOYMENT=(
   "secret-leak-values.yaml"
+  "unknown-config-key-values.yaml"
 )
 
 declare -a SKEW_ARGS=()

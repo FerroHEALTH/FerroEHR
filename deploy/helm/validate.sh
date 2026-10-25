@@ -969,6 +969,30 @@ config_keys_gate() {
 }
 config_keys_gate
 
+# ── An overlay key the configuration does not define is refused ──────────────
+# The per-overlay config-keys gate (gates/config-keys.sh) runs on every case
+# below; this proves it can fail. The fixture sets the `[audit.syslog]
+# transport` key #3897 removed, which chart-boot alone used to catch (#3901).
+unknown_config_key_gate() {
+  bold "── an unknown configuration key is refused ──────────────"
+  local rendered out
+  rendered="$(mktemp)"
+  helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" \
+    -f "${CI_DIR}/default-values.yaml" -f "${CI_DIR}/unknown-config-key-values.yaml" > "$rendered"
+  if out="$(bash "$(dirname "$0")/gates/config-keys.sh" "$rendered" "$RELEASE_NAME")"; then
+    red "  NOT REFUSED: audit.syslog.transport passed the config-keys gate"
+    FAIL=1
+  elif ! grep -qx 'audit.syslog.transport is not a key of ferroehr.default.toml' <<<"$out"; then
+    red "  the gate failed, but did not name audit.syslog.transport:"
+    printf '%s\n' "$out" | sed 's/^/    /'
+    FAIL=1
+  else
+    echo "  audit.syslog.transport refused by name"
+  fi
+  rm -f "$rendered"
+}
+unknown_config_key_gate
+
 # ── The production overlay makes the separations it claims (#3678) ────────────
 # values-production.yaml says which gap of deployment_profile = "production" it
 # closes and which one it accepts by name. A golden records the render; this
@@ -1199,6 +1223,15 @@ for case in "${CASES[@]}"; do
   assert_security "$rendered"
   assert_selector_stable "$rendered"
 
+  echo "config keys:"
+  if unknown_keys="$(bash "$(dirname "$0")/gates/config-keys.sh" "$rendered" "$RELEASE_NAME")"; then
+    echo "  every key in ferroehr.toml and every FERROEHR__ variable is a key of ferroehr.default.toml"
+  else
+    red "  config-keys gate FAILED for ${label}:"
+    printf '%s\n' "$unknown_keys" | sed 's/^/    /'
+    FAIL=1
+  fi
+
   if command -v kubeconform >/dev/null 2>&1; then
     echo "kubeconform:"
     kubeconform -strict -summary -ignore-missing-schemas "$rendered" || FAIL=1
@@ -1340,8 +1373,8 @@ cat <<'BOUNDARY'
   It therefore cannot tell you any of the following, and a green result above
   must not be read as evidence of them:
 
-    * that the server ACCEPTS the rendered ferroehr.toml — the keys it carries,
-      their types, and the semantic rules validated at boot (an auth mechanism,
+    * that the server ACCEPTS the rendered ferroehr.toml — the types of the
+      keys it carries and the semantic rules validated at boot (an auth mechanism,
       a real Argon2id PHC string, the SMART
       requirements). Run: deploy/helm/ci/boot-check.sh   [CI: chart-boot]
     * that the image the chart selects UNDERSTANDS those keys. `appVersion` and
