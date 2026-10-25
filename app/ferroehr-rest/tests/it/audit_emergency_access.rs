@@ -36,7 +36,9 @@ use ehds_logging::balp::{EMERGENCY_DESCRIPTION, EMERGENCY_ENTITY};
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
-use ferroehr::system_log::sender::{AuditHandle, ResolvedSubject, SubjectResolver, start};
+use ferroehr::system_log::sender::{
+    AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
+};
 use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
@@ -80,7 +82,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
     };
     let resolver: SubjectResolver = Arc::new(|_ehr_id| {
         Box::pin(async {
-            Some(ResolvedSubject {
+            SubjectLookup::Found(ResolvedSubject {
                 id: SUBJECT.to_owned(),
                 namespace: Some("urn:ferroehr:test-subjects".to_owned()),
             })

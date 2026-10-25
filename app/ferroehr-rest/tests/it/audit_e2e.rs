@@ -44,7 +44,7 @@ use axum::body::Body;
 use ferroehr::config::server::ServerConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
-use ferroehr::system_log::sender::{AuditSender, SubjectResolver, start};
+use ferroehr::system_log::sender::{AuditSender, SubjectLookup, SubjectResolver, start};
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode};
@@ -192,7 +192,7 @@ async fn audit_capture_fail_closed() -> AuditSender {
             // Never resolves → the drain parks here forever, so the 1-slot queue
             // saturates and every further emit is rejected.
             std::future::pending::<()>().await;
-            None
+            SubjectLookup::NoSubject
         })
     });
     let (sender, _handle) = start(cfg, Some(resolver), None).await.expect("audit start");

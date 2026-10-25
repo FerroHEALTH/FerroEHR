@@ -34,6 +34,7 @@
               already-rendered FHIR document, never a typed resource"
 )]
 
+use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -69,14 +70,24 @@ pub struct ResolvedSubject {
     pub namespace: Option<String>,
 }
 
+/// What a [`SubjectResolver`] learned about an EHR's patient subject.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SubjectLookup {
+    /// The EHR names this subject.
+    Found(ResolvedSubject),
+    /// The EHR names no subject, or there is no such EHR.
+    NoSubject,
+    /// The lookup failed: the database could not be asked, or did not answer.
+    Unavailable,
+}
+
 /// A background-only, indexed lookup of the EHR's patient subject.
 ///
 /// Reads `ehr.subject_id` and `ehr.subject_namespace`. Supplied by the binary
-/// (keeps the request path DB-free); given an `ehr_id`, resolves the subject
-/// or `None`.
-pub type SubjectResolver = Arc<
-    dyn Fn(String) -> Pin<Box<dyn Future<Output = Option<ResolvedSubject>> + Send>> + Send + Sync,
->;
+/// (keeps the request path DB-free); given an `ehr_id`, says whether it found
+/// a subject, found none, or could not ask.
+pub type SubjectResolver =
+    Arc<dyn Fn(String) -> Pin<Box<dyn Future<Output = SubjectLookup> + Send>> + Send + Sync>;
 
 /// `metrics` counter names.
 pub const METRIC_EMITTED: &str = "atna_audit_emitted_total";
@@ -617,10 +628,18 @@ async fn drain(
             break; // channel closed and drained
         }
 
-        if resolve_subject && let Some(resolve) = &resolver {
-            memoize_subjects(&batch, resolve, &subject_cache).await;
-        }
-        let records = render_batch(&mut batch, &ctx, &subject_cache, resolve_subject, &sinks).await;
+        let unavailable = match (&resolver, resolve_subject) {
+            (Some(resolve), true) => memoize_subjects(&batch, resolve, &subject_cache).await,
+            _ => BTreeSet::new(),
+        };
+        let records = render_batch(
+            &mut batch,
+            &ctx,
+            &subject_cache,
+            resolve_subject.then_some(&unavailable),
+            &sinks,
+        )
+        .await;
 
         // The sink order is the behaviour: the store is the durability
         // anchor and is written first, so a syslog send can stamp the row it
@@ -649,7 +668,14 @@ async fn drain(
 
 /// Resolves the subject id of every EHR the batch references that the memo
 /// does not already hold, concurrently, and memoizes each answer.
-async fn memoize_subjects(batch: &[AuditEvent], resolve: &SubjectResolver, cache: &SubjectCache) {
+///
+/// A failed lookup is not memoized, so the next batch asks again; the EHRs
+/// whose lookup failed are returned for this batch's records.
+async fn memoize_subjects(
+    batch: &[AuditEvent],
+    resolve: &SubjectResolver,
+    cache: &SubjectCache,
+) -> BTreeSet<String> {
     let mut pending: Vec<String> = batch
         .iter()
         .filter_map(|event| event.ehr_id.clone())
@@ -657,20 +683,32 @@ async fn memoize_subjects(batch: &[AuditEvent], resolve: &SubjectResolver, cache
         .collect();
     pending.sort_unstable();
     pending.dedup();
+    let mut unavailable: BTreeSet<String> = pending.iter().cloned().collect();
     let mut lookups = tokio::task::JoinSet::new();
     for ehr_id in pending {
         let lookup = resolve(ehr_id.clone());
         lookups.spawn(async move { (ehr_id, lookup.await) });
     }
+    // A lookup task that panicked never answers, so its EHR stays in `unavailable`.
     while let Some(joined) = lookups.join_next().await {
-        if let Ok((ehr_id, subject)) = joined {
-            cache.insert(ehr_id, subject).await;
-        }
+        let Ok((ehr_id, lookup)) = joined else {
+            continue;
+        };
+        let subject = match lookup {
+            SubjectLookup::Found(subject) => Some(subject),
+            SubjectLookup::NoSubject => None,
+            SubjectLookup::Unavailable => continue,
+        };
+        unavailable.remove(&ehr_id);
+        cache.insert(ehr_id, subject).await;
     }
+    unavailable
 }
 
-/// Drains the batch into records, attaching each event's memoized subject and,
-/// when any FHIR consumer is enabled, its rendered `AuditEvent` document.
+/// Drains the batch into records, attaching each event's memoized subject (or
+/// marking its lookup failed when its EHR is in `unavailable`) and, when any
+/// FHIR consumer is enabled, its rendered `AuditEvent` document. `unavailable`
+/// is `None` when subjects are not resolved at all.
 ///
 /// The document is rendered once here because both the store and the FHIR feed
 /// consume it; with neither sink enabled nothing is rendered at all.
@@ -678,7 +716,7 @@ async fn render_batch(
     batch: &mut Vec<AuditEvent>,
     ctx: &AuditContext,
     subject_cache: &SubjectCache,
-    resolve_subject: bool,
+    unavailable: Option<&BTreeSet<String>>,
     sinks: &Sinks,
 ) -> Vec<DrainRecord> {
     #[cfg(feature = "fhir")]
@@ -688,8 +726,12 @@ async fn render_batch(
     let mut records: Vec<DrainRecord> = Vec::with_capacity(batch.len());
     for event in batch.drain(..) {
         let mut event = event;
-        let resolved = match (resolve_subject, &event.ehr_id) {
-            (true, Some(ehr_id)) => subject_cache.get(ehr_id).await.flatten(),
+        let resolved = match (unavailable, &event.ehr_id) {
+            (Some(failed), Some(ehr_id)) if failed.contains(ehr_id) => {
+                event.subject_lookup_failed = true;
+                None
+            }
+            (Some(_), Some(ehr_id)) => subject_cache.get(ehr_id).await.flatten(),
             _ => None,
         };
         event
@@ -1038,6 +1080,44 @@ mod tests {
             ObjectClass::Ehr,
             EventOutcome::Success,
         )
+    }
+
+    /// A failed lookup is reported for its EHR and never memoized, so the next
+    /// batch asks again; a subject or its absence is memoized.
+    #[tokio::test]
+    async fn a_failed_subject_lookup_is_reported_and_not_memoized() {
+        let batch: Vec<AuditEvent> = ["failing", "empty", "named"]
+            .into_iter()
+            .map(|ehr_id| {
+                let mut e = event();
+                e.ehr_id = Some(ehr_id.to_owned());
+                e
+            })
+            .collect();
+        let resolve: SubjectResolver = Arc::new(|ehr_id: String| {
+            Box::pin(async move {
+                match ehr_id.as_str() {
+                    "failing" => SubjectLookup::Unavailable,
+                    "empty" => SubjectLookup::NoSubject,
+                    _ => SubjectLookup::Found(ResolvedSubject {
+                        id: "patient-1".to_owned(),
+                        namespace: None,
+                    }),
+                }
+            })
+        });
+        let cache: SubjectCache = moka::future::Cache::builder().max_capacity(8).build();
+        let unavailable = memoize_subjects(&batch, &resolve, &cache).await;
+        assert_eq!(unavailable, BTreeSet::from(["failing".to_owned()]));
+        assert!(
+            !cache.contains_key("failing"),
+            "a failure is never memoized"
+        );
+        assert_eq!(cache.get("empty").await, Some(None));
+        assert_eq!(
+            cache.get("named").await.flatten().map(|subject| subject.id),
+            Some("patient-1".to_owned())
+        );
     }
 
     /// Receivers of senders built by [`bare_sender`]: parked here (never read)

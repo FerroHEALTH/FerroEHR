@@ -25,6 +25,16 @@ workflow refuses a tag that has no matching section here.
   next release for Low. The CRA risk assessment says business days where it
   said working days.
 
+### Fixed
+
+- **An access record says when the patient lookup failed** (#3900). When the
+  audit drain cannot read the subject behind an EHR (the database refused or
+  did not answer), the EHDS access record now writes the patient lookup as
+  `unavailable` instead of `not-found`, so a reviewer can tell a record that
+  names no patient because the lookup failed from one whose EHR has no
+  subject (Regulation (EU) 2025/327 Art 9(1)). A failed lookup is asked again
+  for the next record instead of being remembered.
+
 ## [5.4.1] - 2026-10-24
 
 5.4.1 carries breaking changes for operators who use a terminology server, each with its upgrade step under Changed. Before you upgrade: move `[terminology.external]` to the one `[terminology.server]` (its `url`, `fail_on_error`, `request_timeout_ms` and optional `oauth` grant) and rename `FERROEHR__TERMINOLOGY__EXTERNAL__` variables to `FERROEHR__TERMINOLOGY__SERVER__`; on Helm, chart 14.0.0 takes `config.terminology.server` and `secrets.terminologyClientSecret`. A deployment without an external terminology server upgrades unchanged.

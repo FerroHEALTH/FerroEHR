@@ -36,7 +36,9 @@ use ferroehr::service::status::SmError;
 use ferroehr::support::{SupportPeriod, today_utc};
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::config::AuditPosture;
-use ferroehr::system_log::sender::{AuditHandle, AuditSender, ResolvedSubject, SubjectResolver};
+use ferroehr::system_log::sender::{
+    AuditHandle, AuditSender, ResolvedSubject, SubjectLookup, SubjectResolver,
+};
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr::telemetry::health::{HealthIndicator, HealthRegistry};
 use ferroehr::usage_report::config::Switch;
@@ -1397,19 +1399,26 @@ fn subject_resolver(pool: PgPool) -> SubjectResolver {
     Arc::new(move |ehr_id: String| {
         let pool = pool.clone();
         Box::pin(async move {
-            let id = Uuid::parse_str(&ehr_id).ok()?;
-            let (subject, namespace) = sqlx::query_as::<_, (Option<String>, Option<String>)>(
+            // NOTE: an id that is no UUID names no stored EHR, so the parse failure is the answer.
+            let Ok(id) = Uuid::parse_str(&ehr_id) else {
+                return SubjectLookup::NoSubject;
+            };
+            let row = sqlx::query_as::<_, (Option<String>, Option<String>)>(
                 "SELECT subject_id, subject_namespace FROM ehr WHERE id = $1",
             )
             .bind(id)
             .fetch_optional(&pool)
-            .await
-            .ok()
-            .flatten()?;
-            Some(ResolvedSubject {
-                id: subject?,
-                namespace,
-            })
+            .await;
+            match row {
+                Ok(Some((Some(id), namespace))) => {
+                    SubjectLookup::Found(ResolvedSubject { id, namespace })
+                }
+                Ok(_) => SubjectLookup::NoSubject,
+                Err(e) => {
+                    tracing::warn!(error = %e, "audit subject lookup failed; the record names the lookup unavailable");
+                    SubjectLookup::Unavailable
+                }
+            }
         })
     })
 }

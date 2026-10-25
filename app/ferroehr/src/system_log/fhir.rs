@@ -256,7 +256,7 @@ fn accessor(event: &AuditEvent, missing: &str, purposes: Vec<Purpose>) -> Access
 }
 
 /// Whether the patient behind the record's EHR is named: the subject resolver
-/// found `(id, namespace)`, or found none.
+/// found `(id, namespace)`, found none, or could not ask.
 fn patient_lookup(event: &AuditEvent, subject: Option<&str>) -> PatientLookup {
     if !event.object.is_patient_centric() && event.object != ObjectClass::Query {
         return PatientLookup::Unsupported;
@@ -266,6 +266,7 @@ fn patient_lookup(event: &AuditEvent, subject: Option<&str>) -> PatientLookup {
             namespace: event.subject_namespace.clone(),
             value: SecretString::from(value.to_owned()),
         }]),
+        None if event.subject_lookup_failed => PatientLookup::Unavailable,
         None => PatientLookup::NotFound,
     }
 }
@@ -556,6 +557,44 @@ mod tests {
             .iter()
             .find(|x| x["url"] == OTHER_ID)?["valueIdentifier"]["value"]
             .as_str()
+    }
+
+    /// The `patient-lookup` detail of the access record `v` writes.
+    fn patient_lookup_detail(v: &serde_json::Value) -> Vec<&str> {
+        v["entity"]
+            .as_array()
+            .expect("entities")
+            .iter()
+            .filter_map(|entity| entity["detail"].as_array())
+            .flatten()
+            .filter(|detail| detail["type"] == "patient-lookup")
+            .filter_map(|detail| detail["valueString"].as_str())
+            .collect()
+    }
+
+    /// A subject lookup that could not ask writes `unavailable`, and one that
+    /// found no subject `not-found` (Regulation (EU) 2025/327 Art 9(1)).
+    #[test]
+    fn a_failed_subject_lookup_is_recorded_as_unavailable() {
+        let mut e = event(
+            EventActionCode::Execute,
+            ObjectClass::Query,
+            EventOutcome::Success,
+        );
+        e.object_id = Some("eu.ferroehr::q1".to_owned());
+        e.ehr_id = Some("7d44b88c-4199-4bad-97dc-d78268e01398".to_owned());
+        e.category = Some(Classifier::default().classify(
+            &AccessedContent::Query(QueryConstraints {
+                reaches_content: true,
+                ..QueryConstraints::default()
+            }),
+            false,
+        ));
+        let none = json(&e, None);
+        assert_eq!(patient_lookup_detail(&none), ["not-found"], "{none}");
+        e.subject_lookup_failed = true;
+        let failed = json(&e, None);
+        assert_eq!(patient_lookup_detail(&failed), ["unavailable"], "{failed}");
     }
 
     #[test]
