@@ -92,3 +92,6 @@
 - [FerroUI](ferroui.md) — every console draws in FerroUI; uniform design, shared components, all four consoles move in lockstep with each FerroUI release
 - [Support: newest release only](support-newest-release-only.md): owner 2026-10-19: only the newest release is supported; CRA five years = product-wide fix commitment, shipped only in the newest (Art 13(8), 13(10))
 - [Release closes milestone](release-closes-milestone.md): release.yml refuses a tag whose milestone is missing or not empty and closes it after every leg; check it after a manual or recovery release; owner 2026-10-19 (#3858)
+- [Helm and Kubernetes in Podman](helm-kubernetes-in-podman.md): owner 2026-10-25, test charts locally on kind over Podman; install helm when missing; never build images locally
+- [Reactive console UI](reactive-console-ui.md): owner 2026-10-25, no full page reload for an interaction; WebAssembly is the normal path, the no-WebAssembly page the fallback (FerroUI #410)
+- [Contribution licence attestation](contribution-licence-attestation.md): owner 2026-10-25, always tick the licence checkbox on PRs opened for the owner, never ask
