@@ -25,6 +25,17 @@ workflow refuses a tag that has no matching section here.
   next release for Low. The CRA risk assessment says business days where it
   said working days.
 
+### Security
+
+Shipped with functional changes because: no shipped artefact is affected (zip 8.6.0 ran only in a build script, as the withdrawn VEX statements recorded), so there is no security update to separate from the other changes this release carries.
+
+- **zip 8.6.0 leaves the build** (#3799; GHSA-vv5m-jxxh-4627,
+  GHSA-4v9h-p7m9-rh26, GHSA-4684-h2q9-2vcp). `utoipa-swagger-ui` 10.0.2
+  unpacks its vendored Swagger UI archive with zip 9, so the yanked zip 8.6.0
+  and its three extraction advisories (RUSTSEC-2026-0367, RUSTSEC-2026-0368,
+  RUSTSEC-2026-0369) no longer reach the dependency graph, and `deny.toml` and
+  `security/vex/rust-advisories.openvex.json` drop their exceptions for them.
+
 ## [5.4.1] - 2026-10-24
 
 5.4.1 carries breaking changes for operators who use a terminology server, each with its upgrade step under Changed. Before you upgrade: move `[terminology.external]` to the one `[terminology.server]` (its `url`, `fail_on_error`, `request_timeout_ms` and optional `oauth` grant) and rename `FERROEHR__TERMINOLOGY__EXTERNAL__` variables to `FERROEHR__TERMINOLOGY__SERVER__`; on Helm, chart 14.0.0 takes `config.terminology.server` and `secrets.terminologyClientSecret`. A deployment without an external terminology server upgrades unchanged.
