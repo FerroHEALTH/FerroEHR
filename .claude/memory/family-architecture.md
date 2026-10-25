@@ -15,9 +15,9 @@ No product is a compile-time dependency of another.
 | Product | What it is | How the others reach it |
 |---|---|---|
 | FerroEHR | the openEHR CDR | openEHR ITS-REST and AQL |
-| FerroBRIDGE | openEHR to FHIR (FHIRconnect) and to the OMOP CDM (OMOCL) | it calls the CDR over ITS-REST; clients call its FHIR R4 face |
+| FerroBRIDGE | openEHR to FHIR (FHIRconnect) and to the OMOP CDM (OMOCL), and clinical HL7 v2 messages mapped in through HL7's v2-to-FHIR guide | it calls the CDR over ITS-REST; clients call its FHIR R4 face and its MLLP listener |
 | FerroFED | the federation gateway (Federation Tier with AQL, EHDS cross-border, MyHealth@EU) | it calls each CDR over ITS-REST; clients call its ITS-REST and FHIR faces |
-| FerroPIX | the master patient index (IHE PIX, PIXm, PDQ, PDQm, PMIR, HL7 v2) | IHE PIXm, PDQm and PMIR, and HL7 v2 over MLLP |
+| FerroPIX | the master patient index (IHE PIX, PIXm, PDQ, PDQm, PMIR) | IHE PIXm, PDQm and PMIR, and the HL7 v2 identity feed and queries (ITI-8, ITI-9, ITI-21) over MLLP |
 | FerroTERM | the FHIR terminology server | FHIR terminology operations |
 
 The rules that follow from it:
