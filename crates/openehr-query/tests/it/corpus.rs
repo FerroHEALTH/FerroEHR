@@ -10,7 +10,7 @@
     reason = "integration-test assertions, corpus diagnostics and fixture plumbing outside #[test] fns, which the clippy.toml allow-*-in-tests scoping does not reach"
 )]
 //! Parse the official openEHR AQL worked-example corpus (vendored under
-//! `vendor/examples/`, from specifications-QUERY). Every `----` listing block
+//! `vendor/examples/`, from specifications-QUERY). Every listing block
 //! that is standard **AQL 1.1.0** must parse.
 //!
 //! Some blocks are intentionally NOT standard AQL and are excluded with a
@@ -19,7 +19,9 @@
 //!   the `matches` operator are in ADL 1.4 format"* — those `matches { TYPE
 //!   matches {…} }` / `{|range|}` blocks are cADL, not the AQL `matches`
 //!   value-list operand;
-//! - `NOT IN (subquery)` is a SQL-style construct absent from `AqlParser.g4`.
+//! - `NOT IN (subquery)` is a SQL-style construct absent from `AqlParser.g4`;
+//! - the subsumption example passes `CONCAT(…)` to `TERMINOLOGY`, whose
+//!   released grammar rule takes three string literals.
 
 use std::fs;
 use std::path::Path;
@@ -48,6 +50,15 @@ fn out_of_grammar_reason(q: &str) -> Option<&'static str> {
         return Some("ADL 1.4 cADL on the `matches` RHS (illustrative, not AQL)");
     }
     let lower = q.to_lowercase();
+    // `terminologyFunction : TERMINOLOGY '(' STRING ',' STRING ',' STRING ')'`
+    // (vendor/grammar/AqlParser.g4): a function call as an argument is refused.
+    if lower
+        .find("terminology(")
+        .and_then(|at| lower.get(at..))
+        .is_some_and(|call| call.contains("concat("))
+    {
+        return Some("TERMINOLOGY with a CONCAT argument — the grammar takes three STRINGs");
+    }
     if lower.contains("not in") || lower.contains(" in (") || lower.contains(" in(") {
         return Some("SQL-style IN/subquery — not in the AQL 1.1.0 grammar");
     }
@@ -63,34 +74,74 @@ fn out_of_grammar_reason(q: &str) -> Option<&'static str> {
 /// [`official_aql_corpus_parses`]: a block that already contains a full
 /// `SELECT` is parsed as-is; a bare fragment is wrapped in a minimal
 /// `SELECT … FROM EHR e WHERE <fragment>` shell before parsing.
+///
+/// A delimiter is a line of four or more hyphens, and a block closes on the
+/// line identical to the one that opened it (Asciidoctor, "Delimited blocks":
+/// the closing delimiter must match the opening one exactly, and a listing
+/// delimiter may be longer than the minimum four characters).
 fn listing_blocks(doc: &str) -> Vec<String> {
     let mut out = Vec::new();
-    let mut in_block = false;
+    let mut open: Option<&str> = None;
     let mut buf = String::new();
     for line in doc.lines() {
-        if line.trim() == "----" {
-            if in_block {
+        let trimmed = line.trim();
+        match open {
+            Some(delimiter) if trimmed == delimiter => {
                 if !buf.trim().is_empty() {
                     out.push(std::mem::take(&mut buf));
                 }
                 buf.clear();
-                in_block = false;
-            } else {
-                in_block = true;
+                open = None;
             }
-        } else if in_block {
-            buf.push_str(line);
-            buf.push('\n');
+            Some(_) => {
+                buf.push_str(line);
+                buf.push('\n');
+            }
+            None if trimmed.len() >= 4 && trimmed.bytes().all(|b| b == b'-') => {
+                open = Some(trimmed);
+            }
+            None => {}
         }
     }
     out
 }
 
+/// How many listing blocks each example file holds, pinned so a file whose
+/// blocks are silently skipped fails the corpus test.
+const BLOCKS_PER_FILE: &[(&str, usize)] = &[
+    ("manifest_vars.adoc", 0),
+    ("master.adoc", 0),
+    ("master00-amendment_record.adoc", 0),
+    ("master01-preface.adoc", 0),
+    ("master02-overview.adoc", 0),
+    ("master03-syntax-function.adoc", 8),
+    ("master03-syntax-operator.adoc", 9),
+    ("master03-syntax.adoc", 0),
+    ("master04-single_subject.adoc", 1),
+    ("master05-population.adoc", 0),
+];
+
+#[test]
+fn listing_blocks_open_on_four_or_more_hyphens_and_close_on_the_same_line() {
+    let doc = "--------\nA\n----\nB\n--------\ntext\n----\nC\n----\n---\nD\n---\n";
+    assert_eq!(listing_blocks(doc), ["A\n----\nB\n", "C\n"]);
+}
+
 /// Wrap a bare AQL fragment (a `WHERE`-style boolean/predicate expression that
 /// is not itself a complete `SELECT`) in a minimal query shell so it can be
-/// parse-tested.
+/// parse-tested. A fragment that already opens with its own `WHERE` (the
+/// TERMINOLOGY examples) gets the shell without a second one.
 fn wrap_fragment(fragment: &str) -> String {
-    format!("SELECT e/ehr_id/value FROM EHR e WHERE {}", fragment.trim())
+    let fragment = fragment.trim();
+    let opens_with_where = fragment
+        .split_whitespace()
+        .next()
+        .is_some_and(|word| word.eq_ignore_ascii_case("WHERE"));
+    if opens_with_where {
+        format!("SELECT e/ehr_id/value FROM EHR e {fragment}")
+    } else {
+        format!("SELECT e/ehr_id/value FROM EHR e WHERE {fragment}")
+    }
 }
 
 /// Every standard AQL 1.1.0 query of the official corpus, a bare fragment
@@ -149,9 +200,30 @@ fn official_aql_corpus_parses() {
         .collect();
     files.sort();
 
+    let names: Vec<String> = files
+        .iter()
+        .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+        .collect();
+    let pinned: Vec<&str> = BLOCKS_PER_FILE.iter().map(|(name, _)| *name).collect();
+    assert_eq!(
+        names, pinned,
+        "the example files changed; pin their block counts"
+    );
+
     for path in files {
         let doc = fs::read_to_string(&path).unwrap();
-        for block in listing_blocks(&doc) {
+        let blocks = listing_blocks(&doc);
+        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        let expected = BLOCKS_PER_FILE
+            .iter()
+            .find(|(pinned, _)| *pinned == name)
+            .map(|(_, count)| *count);
+        assert_eq!(
+            Some(blocks.len()),
+            expected,
+            "listing blocks collected from {name}"
+        );
+        for block in blocks {
             total += 1;
             if let Some(reason) = out_of_grammar_reason(&block) {
                 excluded.push(reason);
