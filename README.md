@@ -4,6 +4,11 @@
 
 **The openEHR health record server, written in Rust, with every conformance claim measured.**
 
+[Documentation](https://ferroehr.eu/docs/latest/) ·
+[Live sandbox](https://sandbox.ferroehr.eu) ·
+[Quick start](#quick-start) ·
+[Commercial licence](https://ferroehr.eu/docs/latest/licensing.html)
+
 **Project**<br>
 [![Release](https://img.shields.io/github/v/release/FerroHEALTH/FerroEHR?logo=github&label=release)](https://github.com/FerroHEALTH/FerroEHR/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/FerroHEALTH/FerroEHR/ci.yml?branch=main&logo=githubactions&logoColor=white&label=CI)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/ci.yml)
@@ -34,11 +39,6 @@
 <br>
 [![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion)](https://ferroehr.eu/docs/latest/compliance/ehds-readiness.html)
 [![CRA](https://img.shields.io/badge/CRA-risk%20assessment-blue?logo=europeanunion)](https://ferroehr.eu/docs/latest/compliance/cra-risk-assessment.html)
-
-[Documentation](https://ferroehr.eu/docs/latest/) ·
-[Live sandbox](https://sandbox.ferroehr.eu) ·
-[Quick start](#quick-start) ·
-[Commercial licence](https://ferroehr.eu/docs/latest/licensing.html)
 
 </div>
 
