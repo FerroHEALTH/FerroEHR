@@ -20,7 +20,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use argon2::{Algorithm, Params, PasswordHash};
-use ferrohealth_smart::config::{AuthSection, ConfigError, IssuerKey, Resolved};
+use ferrohealth_smart::config::{AuthMode, AuthSection, ConfigError, IssuerKey, Resolved};
 use secrecy::ExposeSecret;
 use serde::de::IgnoredAny;
 use serde::{Deserialize, Serialize};
@@ -123,6 +123,10 @@ pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
 /// # Errors
 /// The [`AuthConfigError`] naming the first rule the section breaks.
 pub fn validate(section: &AuthSection) -> Result<(), AuthConfigError> {
+    // TODO(#4033): check opaque tokens through the crate's introspection verifier.
+    if section.mode == AuthMode::Introspection || section.introspection.is_some() {
+        return Err(AuthConfigError::IntrospectionUnserved);
+    }
     for entry in section.issuers() {
         check_issuer_userinfo(&entry.issuer)?;
         if let Some(path) = entry.jwks_file.as_deref().filter(|path| !path.is_empty()) {
@@ -171,6 +175,14 @@ pub enum AuthConfigError {
          [[auth.basic.users]] entries or an [auth] issuer, or set auth.enabled = false"
     )]
     NoMechanism,
+    /// `[auth]` asks for token introspection, which the server does not
+    /// serve.
+    #[error(
+        "auth.mode = \"introspection\" and [auth.introspection] are not served: this server \
+         checks bearer tokens as JWTs against the issuer's key set; remove both, or set \
+         auth.mode = \"jwt\""
+    )]
+    IntrospectionUnserved,
     /// The `ferrohealth-smart` crate refuses the section.
     #[error("the shared [auth] section is refused")]
     Section {
@@ -667,6 +679,33 @@ mod tests {
     /// Parses an `[auth]` table body.
     fn parse(body: &str) -> Result<AuthSection, toml::de::Error> {
         toml::from_str(body)
+    }
+
+    /// A section that asks for token introspection is refused at boot, never
+    /// checked as JWTs while the operator believes opaque tokens are served.
+    #[test]
+    fn token_introspection_is_refused_at_boot() {
+        for body in [
+            "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nmode = \"introspection\"\n",
+            "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\n\
+             [introspection]\nendpoint = \"https://idp.example/introspect\"\n",
+        ] {
+            let section = parse(body).expect("the crate accepts the keys");
+            assert!(
+                matches!(
+                    validate(&section),
+                    Err(AuthConfigError::IntrospectionUnserved)
+                ),
+                "introspection must be refused for {body:?}"
+            );
+        }
+        assert!(
+            !matches!(
+                validate(&parse("mode = \"jwt\"\n").expect("jwt parses")),
+                Err(AuthConfigError::IntrospectionUnserved)
+            ),
+            "mode = \"jwt\" is the served mode"
+        );
     }
 
     /// RFC 8725 §3.1, §3.2 and RFC 9068 §4: the resource server accepts

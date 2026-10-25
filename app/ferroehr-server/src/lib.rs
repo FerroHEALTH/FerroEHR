@@ -219,7 +219,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         Some(Command::Report { output }) => {
             run_report(output.as_deref(), cli.config.as_deref(), &cli.set).await
         }
-        None => serve(cli.config.as_deref(), &cli.set).await,
+        None => Box::pin(serve(cli.config.as_deref(), &cli.set)).await,
     }
 }
 

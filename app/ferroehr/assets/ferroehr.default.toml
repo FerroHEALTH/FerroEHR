@@ -260,6 +260,10 @@ algorithms = ["RS256", "RS384", "PS256", "PS384", "ES256", "ES384"]
 # (RFC 9068 §2.2, §4). jwt: a plain JWT bearer token (`typ` absent or `JWT`),
 # for an issuer that mints no RFC 9068 tokens.
 token_profile = "rfc9068"    # rfc9068 | jwt
+# How a bearer token is checked: "jwt", against the issuer's key set. Token
+# introspection (RFC 7662, mode = "introspection" with an [auth.introspection]
+# table) is refused at boot: this server does not serve it.
+mode = "jwt"
 clock_skew_seconds = 60      # at most 300 (RFC 9068 §4)
 jwks_max_age_seconds = 600   # a key set older than this is read again
 jwks_refresh_interval_seconds = 60   # at most one read per interval on an unknown `kid`
@@ -280,6 +284,9 @@ scopes_supported = []        # the scopes the discovery document lists; empty = 
 # starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context,
 # §Extensibility). Empty = "__ferroehr.platform".
 product_scope = ""
+# Refused at boot with mode = "introspection" (see `mode` above).
+#? [auth.introspection]
+#? endpoint = "https://idp.example/realms/ferroehr/introspect"
 
 # Basic-auth users (file-only; array of tables). Every password_hash must be an
 # argon2id PHC string meeting the OWASP Password Storage Cheat Sheet §Argon2id
