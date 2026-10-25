@@ -435,10 +435,10 @@ fn search_condition(filter: &AuditSearchFilter) -> sea_query::Cond {
                 .gte(Expr::val(from.to_string()).cast_as("timestamptz")),
         );
     }
-    if let Some(to) = filter.to {
+    if let Some(until) = filter.until {
         cond = cond.add(
             Expr::col(Alias::new("recorded_at"))
-                .lte(Expr::val(to.to_string()).cast_as("timestamptz")),
+                .lt(Expr::val(until.to_string()).cast_as("timestamptz")),
         );
     }
     if let Some(patient) = &filter.patient {
@@ -524,10 +524,12 @@ pub struct AuditChainFinding {
 /// The supported ITI-81 search-parameter subset, resolved by the REST layer.
 #[derive(Debug, Clone, Default)]
 pub struct AuditSearchFilter {
-    /// `date=ge…` — events at/after this instant.
+    /// The first instant a record's `recorded` may carry (inclusive), from
+    /// the `date` parameters.
     pub from: Option<jiff::Timestamp>,
-    /// `date=le…` — events at/before this instant.
-    pub to: Option<jiff::Timestamp>,
+    /// The first instant past the records served (exclusive), from the
+    /// `date` parameters.
+    pub until: Option<jiff::Timestamp>,
     /// `patient` — the recorded patient (EHR subject) id.
     pub patient: Option<String>,
     /// `agent` — the authenticated principal.
