@@ -19,6 +19,7 @@ use axum::extract::State;
 use axum::response::{IntoResponse, Response};
 use http::StatusCode;
 use http::header::{CONTENT_TYPE, HeaderValue};
+use ihe_atna::retrieve::Criterion;
 use ihe_atna::retrieve::Query;
 use ihe_atna::retrieve::TokenSystem;
 use ihe_atna::retrieve::Value;
@@ -28,6 +29,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use ferroehr::service::status::SmError;
+use ferroehr::system_log::store::{AuditCriterion, AuditElement, AuditToken, AuditTokenSystem};
 
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::extensions::access::authz::roles::RbacDecision;
@@ -267,58 +269,10 @@ fn audit_filter(query: Option<&str>) -> Result<Filter, Refused> {
             }
         }
     }
-    let mut patient = None;
     for criterion in query.all_criteria() {
-        let code = criterion.parameter().code();
-        let [value] = criterion.any_of() else {
-            return Err(Refused::NotSupported(format!(
-                "`{code}` with more than one value is not supported by this repository"
-            )));
-        };
-        let slot = match code {
-            "patient" | "patient.identifier" => &mut patient,
-            "agent" | "agent.identifier" => &mut store.agent,
-            "entity" | "entity.identifier" => &mut store.entity,
-            "outcome" => {
-                let code = token_code(code, value, OUTCOME_SYSTEM)?;
-                let outcome = code
-                    .parse::<i16>()
-                    .ok()
-                    .filter(|o| [0, 4, 8, 12].contains(o))
-                    .ok_or_else(|| {
-                        Refused::Invalid(format!(
-                            "invalid `outcome` `{code}` (expected 0, 4, 8 or 12)"
-                        ))
-                    })?;
-                store.outcome = Some(outcome);
-                continue;
-            }
-            "action" => {
-                let code = token_code(code, value, ACTION_SYSTEM)?;
-                if !["C", "R", "U", "D", "E"].contains(&code.as_str()) {
-                    return Err(Refused::Invalid(format!(
-                        "invalid `action` `{code}` (expected C, R, U, D or E)"
-                    )));
-                }
-                store.action = Some(code);
-                continue;
-            }
-            other => {
-                return Err(Refused::NotSupported(format!(
-                    "the search parameter `{other}` is not supported by this repository"
-                )));
-            }
-        };
-        if slot.is_some() {
-            return Err(Refused::NotSupported(format!(
-                "`{code}` named twice is not supported by this repository"
-            )));
-        }
-        *slot = Some(match value {
-            Value::Reference(text) | Value::String(text) | Value::Uri(text) => text.clone(),
-            Value::Token(_) => token_code(code, value, "")?,
-        });
+        store.criteria.push(criterion_of(criterion)?);
     }
+    let patient = sole_patient(&query);
     // NOTE: our own design: `recorded_at` keeps microseconds, so a bound finer than that is
     // widened to the microsecond that holds it, never narrowed past a stored record.
     store.from = store
@@ -329,7 +283,6 @@ fn audit_filter(query: Option<&str>) -> Result<Filter, Refused> {
         store.until_inclusive = rounded != until;
         store.until = Some(rounded);
     }
-    store.patient.clone_from(&patient);
     let total_only = query.count() == Some(0);
     if let Some(count) = query.count().filter(|count| *count > 0) {
         store.count = i64::from(count).min(MAX_COUNT);
@@ -343,6 +296,114 @@ fn audit_filter(query: Option<&str>) -> Result<Filter, Refused> {
         patient,
         total_only,
     })
+}
+
+/// The store criterion of one parameter of `RESTful` ATNA §3.81.4.1.2.2:
+/// any of its values matches, and a repeated parameter is one more criterion
+/// every record must also match (FHIR R4 Search §3.1.1.3).
+fn criterion_of(criterion: &Criterion) -> Result<AuditCriterion, Refused> {
+    let code = criterion.parameter().code();
+    let values = criterion.any_of();
+    let texts = || -> Vec<String> {
+        values
+            .iter()
+            .filter_map(|value| match value {
+                Value::Reference(text) | Value::String(text) | Value::Uri(text) => {
+                    Some(text.clone())
+                }
+                Value::Token(_) => None,
+            })
+            .collect()
+    };
+    let element = |element: AuditElement| -> Result<AuditCriterion, Refused> {
+        let tokens = values
+            .iter()
+            .map(|value| match value {
+                Value::Token(token) => Ok(AuditToken {
+                    system: match &token.system {
+                        TokenSystem::Any => AuditTokenSystem::Any,
+                        TokenSystem::Absent => AuditTokenSystem::Absent,
+                        TokenSystem::Named(system) => AuditTokenSystem::Named(system.clone()),
+                    },
+                    code: token.code.clone(),
+                }),
+                Value::Reference(_) | Value::String(_) | Value::Uri(_) => {
+                    Err(Refused::Invalid(format!("`{code}` is not a token")))
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(AuditCriterion::Element(element, tokens))
+    };
+    match code {
+        "patient" => Ok(AuditCriterion::Patient(texts())),
+        "agent" => Ok(AuditCriterion::Agent(texts())),
+        "entity" => Ok(AuditCriterion::Entity(texts())),
+        "address" => Ok(AuditCriterion::Address(texts())),
+        "patient.identifier" => element(AuditElement::PatientIdentifier),
+        "agent.identifier" => element(AuditElement::AgentIdentifier),
+        "entity.identifier" => element(AuditElement::EntityIdentifier),
+        "source.identifier" => element(AuditElement::SourceIdentifier),
+        "entity-type" => element(AuditElement::EntityType),
+        "entity-role" => element(AuditElement::EntityRole),
+        "type" => element(AuditElement::Type),
+        "subtype" => element(AuditElement::Subtype),
+        "outcome" => values
+            .iter()
+            .map(|value| {
+                let outcome = token_code(code, value, OUTCOME_SYSTEM)?;
+                outcome
+                    .parse::<i16>()
+                    .ok()
+                    .filter(|o| [0, 4, 8, 12].contains(o))
+                    .ok_or_else(|| {
+                        Refused::Invalid(format!(
+                            "invalid `outcome` `{outcome}` (expected 0, 4, 8 or 12)"
+                        ))
+                    })
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(AuditCriterion::Outcome),
+        "action" => values
+            .iter()
+            .map(|value| {
+                let action = token_code(code, value, ACTION_SYSTEM)?;
+                if ["C", "R", "U", "D", "E"].contains(&action.as_str()) {
+                    Ok(action)
+                } else {
+                    Err(Refused::Invalid(format!(
+                        "invalid `action` `{action}` (expected C, R, U, D or E)"
+                    )))
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(AuditCriterion::Action),
+        other => Err(Refused::NotSupported(format!(
+            "the search parameter `{other}` is not supported by this repository"
+        ))),
+    }
+}
+
+/// The one patient the query is held to, which the subject-scoped audit role
+/// requires and the access record names: the single value of the single
+/// `patient` or `patient.identifier` parameter, a token naming no system.
+fn sole_patient(query: &Query) -> Option<String> {
+    let mut named = query.all_criteria().iter().filter(|criterion| {
+        matches!(
+            criterion.parameter().code(),
+            "patient" | "patient.identifier"
+        )
+    });
+    let criterion = named.next()?;
+    if named.next().is_some() {
+        return None;
+    }
+    match criterion.any_of() {
+        [Value::Reference(text) | Value::String(text) | Value::Uri(text)] => Some(text.clone()),
+        [Value::Token(token)] if !matches!(token.system, TokenSystem::Named(_)) => {
+            token.code.clone()
+        }
+        _ => None,
+    }
 }
 
 /// `at` rounded to the microsecond by `mode`; `at` itself when the rounding

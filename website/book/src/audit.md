@@ -538,25 +538,43 @@ It returns a FHIR `searchset` Bundle of the stored `AuditEvent` documents,
 newest first, with the full match `total`, a `self` link and a `next` link
 while more pages follow. The query is read by `ihe-atna`, the family's audit
 crate. At least one `date` parameter is required (RESTful ATNA
-§3.81.4.1.2.1): a query without one is a `400`. Supported search parameters:
+§3.81.4.1.2.1): a query without one is a `400`. Every search parameter
+§3.81.4.1.2.2 says the repository shall support is applied. A parameter
+with several comma-separated values matches any of them, and every
+parameter of the query must match. A token takes the three forms of FHIR R4
+Search §3.1.1.4.10: `code`, `|code` (recorded without a system) and
+`system|code` (or `system|` for any code of that system). FerroEHR records
+identifiers without a system, so a query that names a system for an
+identifier matches nothing.
 
-| Parameter | Meaning |
+| Parameter | Matches |
 |---|---|
 | `date` | **required**, repeatable: a FHIR date value with a prefix (`eq` when none, `gt`, `lt`, `ge`, `le`, `sa`, `eb`); a day such as `2026-07-12` covers the whole day, read in UTC |
-| `patient`, `patient.identifier` | the recorded patient (EHR subject) id |
-| `agent`, `agent.identifier` | the authenticated principal |
-| `entity`, `entity.identifier` | the touched resource id |
+| `patient` | the recorded patient (EHR subject) id |
+| `patient.identifier` | `entity.what.identifier` of the entity whose role is Patient |
+| `agent` | the authenticated principal |
+| `agent.identifier` | `agent.who.identifier` |
+| `entity` | the touched resource id |
+| `entity.identifier` | `entity.what.identifier` of any entity |
+| `entity-type` | `entity.type` |
+| `entity-role` | `entity.role` |
+| `source.identifier` | `source.observer.identifier`, the audit source id |
+| `type` | `type` |
+| `subtype` | `subtype` (the REST interaction and the openEHR operation) |
+| `address` | a part of `agent.network.address`, compared without regard to case |
 | `outcome` | the outcome indicator: `0`, `4`, `8` or `12` (FerroEHR records `0`, `4` and `8`) |
 | `action` | the action code: `C`, `R`, `U`, `D` or `E` |
 | `_count` / `_offset` | paging; page size defaults to 50, capped at 1000; `_count=0` returns the total alone |
 
 A malformed value is a `400` carrying a FHIR `OperationOutcome` with
-`invalid`; a parameter the local store cannot apply yet is a `400` with
-`not-supported`; a parameter the crate does not know is ignored
+`invalid`; another FHIR R4 `AuditEvent` parameter, which §3.81.4.1.2.2 does
+not ask for, is a `400` with `not-supported`; a parameter the crate does not
+know is ignored
 (§3.81.4.1.3). Under RBAC the
 unscoped retrieval is **admin-only**; a caller holding the configured
-`authz.rbac.subject_audit_role` reads it **scoped to one subject**, `patient`
-required, and is refused with a `403` that names the parameter when it omits
+`authz.rbac.subject_audit_role` reads it **scoped to one subject**: one
+`patient` or `patient.identifier` with one value is required, and the caller
+is refused with a `403` that names the parameter when it omits
 it. Reading a subject's log is itself recorded as an access naming that
 subject and the record count served. An
 [emergency access](#emergency-access-ehds-art-115) in the subject's log

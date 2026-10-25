@@ -443,22 +443,82 @@ fn search_condition(filter: &AuditSearchFilter) -> sea_query::Cond {
             Expr::col(Alias::new("recorded_at")).lt(bound)
         });
     }
-    if let Some(patient) = &filter.patient {
-        cond = cond.add(Expr::col(Alias::new("patient_id")).eq(patient.clone()));
-    }
-    if let Some(agent) = &filter.agent {
-        cond = cond.add(Expr::col(Alias::new("principal")).eq(agent.clone()));
-    }
-    if let Some(entity) = &filter.entity {
-        cond = cond.add(Expr::col(Alias::new("resource_id")).eq(entity.clone()));
-    }
-    if let Some(outcome) = filter.outcome {
-        cond = cond.add(Expr::col(Alias::new("outcome")).eq(outcome));
-    }
-    if let Some(action) = &filter.action {
-        cond = cond.add(Expr::col(Alias::new("action")).eq(action.clone()));
+    for criterion in &filter.criteria {
+        cond = cond.add(criterion_condition(criterion));
     }
     cond
+}
+
+/// The condition of one criterion: any of its values matches.
+fn criterion_condition(criterion: &AuditCriterion) -> sea_query::Cond {
+    use sea_query::{Alias, Expr, ExprTrait};
+
+    let column_in = |column: &'static str, values: &[String]| {
+        values.iter().fold(sea_query::Cond::any(), |any, value| {
+            any.add(Expr::col(Alias::new(column)).eq(value.clone()))
+        })
+    };
+    match criterion {
+        AuditCriterion::Patient(values) => column_in("patient_id", values),
+        AuditCriterion::Agent(values) => column_in("principal", values),
+        AuditCriterion::Entity(values) => column_in("resource_id", values),
+        AuditCriterion::Action(values) => column_in("action", values),
+        AuditCriterion::Outcome(values) => {
+            values.iter().fold(sea_query::Cond::any(), |any, value| {
+                any.add(Expr::col(Alias::new("outcome")).eq(*value))
+            })
+        }
+        // NOTE: `RESTful` ATNA §3.81.4.1.2.2, `address` matches
+        // `agent.network.address`; every agent of the stored document is read.
+        AuditCriterion::Address(values) => {
+            values.iter().fold(sea_query::Cond::any(), |any, value| {
+                any.add(Expr::cust_with_values(
+                    "EXISTS (SELECT 1 FROM jsonb_path_query(fhir, CAST($1 AS jsonpath)) \
+                     AS address(value) WHERE strpos(lower(address.value #>> '{}'), lower($2)) > 0)",
+                    ["$.agent[*].network.address".to_owned(), value.clone()],
+                ))
+            })
+        }
+        AuditCriterion::Element(element, tokens) => {
+            tokens.iter().fold(sea_query::Cond::any(), |any, token| {
+                let (path, vars) = token_path(*element, token);
+                any.add(Expr::cust_with_values(
+                    "jsonb_path_exists(fhir, CAST($1 AS jsonpath), CAST($2 AS jsonb))",
+                    [path, vars.to_string()],
+                ))
+            })
+        }
+    }
+}
+
+/// The SQL/JSON path that finds `token` at `element`, and its variables: the
+/// three token forms of FHIR R4 Search §3.1.1.4.10, with the values bound as
+/// `$code` and `$system` rather than written into the path.
+fn token_path(element: AuditElement, token: &AuditToken) -> (String, serde_json::Value) {
+    let (path, identifier) = element.path();
+    let by_code = if identifier {
+        " ? (@.value == $code"
+    } else {
+        " ? (@.code == $code"
+    };
+    let filter: [&str; 2] = match (&token.system, token.code.is_some()) {
+        (AuditTokenSystem::Any, _) => [by_code, ")"],
+        (AuditTokenSystem::Absent, _) => [by_code, " && !exists(@.system))"],
+        (AuditTokenSystem::Named(_), true) => [by_code, " && @.system == $system)"],
+        (AuditTokenSystem::Named(_), false) => [" ? (@.system == $system", ")"],
+    };
+    let system = match &token.system {
+        AuditTokenSystem::Named(system) => serde_json::Value::String(system.clone()),
+        AuditTokenSystem::Any | AuditTokenSystem::Absent => serde_json::Value::Null,
+    };
+    let code = token
+        .code
+        .clone()
+        .map_or(serde_json::Value::Null, serde_json::Value::String);
+    (
+        [path, filter[0], filter[1]].concat(),
+        serde_json::json!({ "code": code, "system": system }),
+    )
 }
 
 /// Build the ITI-81 retrieval's two statements — the count and the page — from a
@@ -523,7 +583,9 @@ pub struct AuditChainFinding {
     pub finding: String,
 }
 
-/// The supported ITI-81 search-parameter subset, resolved by the REST layer.
+/// The ITI-81 retrieval the REST layer resolved: the `date` window, the
+/// criteria (every one must match, any of a criterion's values matches) and
+/// the page (`RESTful` ATNA §3.81.4.1.2.2).
 #[derive(Debug, Clone, Default)]
 pub struct AuditSearchFilter {
     /// The first instant a record's `recorded` may carry (inclusive), from
@@ -535,20 +597,97 @@ pub struct AuditSearchFilter {
     /// Whether [`Self::until`] is inclusive: an end the query names below a
     /// microsecond, rounded up to the microsecond `recorded_at` keeps.
     pub until_inclusive: bool,
-    /// `patient` — the recorded patient (EHR subject) id.
-    pub patient: Option<String>,
-    /// `agent` — the authenticated principal.
-    pub agent: Option<String>,
-    /// `entity` — the touched resource id.
-    pub entity: Option<String>,
-    /// `outcome` — the DICOM outcome indicator (0/4/8/12).
-    pub outcome: Option<i16>,
-    /// `action` — the DICOM action code (C/R/U/D/E).
-    pub action: Option<String>,
+    /// The criteria, each of which a record must match.
+    pub criteria: Vec<AuditCriterion>,
     /// `_count` — page size (default 50, capped at 1000).
     pub count: i64,
     /// `_offset` — page offset.
     pub offset: i64,
+}
+
+/// One search parameter of the retrieval: a record matches when any of its
+/// values does.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuditCriterion {
+    /// `patient` — the recorded patient (EHR subject) id.
+    Patient(Vec<String>),
+    /// `agent` — the authenticated principal.
+    Agent(Vec<String>),
+    /// `entity` — the touched resource id.
+    Entity(Vec<String>),
+    /// `outcome` — the DICOM outcome indicator (0/4/8/12).
+    Outcome(Vec<i16>),
+    /// `action` — the DICOM action code (C/R/U/D/E).
+    Action(Vec<String>),
+    /// `address` — a substring of an `agent.network.address`, compared
+    /// without regard to case.
+    Address(Vec<String>),
+    /// A token parameter matched against an element of the stored
+    /// `AuditEvent`.
+    Element(AuditElement, Vec<AuditToken>),
+}
+
+/// The `AuditEvent` element a token parameter is matched against
+/// (`RESTful` ATNA §3.81.4.1.2.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AuditElement {
+    /// `agent.identifier`: `agent.who.identifier`.
+    AgentIdentifier,
+    /// `patient.identifier`: the `entity.what.identifier` of the entity whose
+    /// role is Patient.
+    PatientIdentifier,
+    /// `entity.identifier`: `entity.what.identifier`.
+    EntityIdentifier,
+    /// `source.identifier`: `source.observer.identifier`.
+    SourceIdentifier,
+    /// `entity-type`: `entity.type`.
+    EntityType,
+    /// `entity-role`: `entity.role`.
+    EntityRole,
+    /// `type`: `type`.
+    Type,
+    /// `subtype`: `subtype`.
+    Subtype,
+}
+
+impl AuditElement {
+    /// The SQL/JSON path of the element, and whether it is an `Identifier`
+    /// (its code in `value`) rather than a `Coding` (its code in `code`).
+    const fn path(self) -> (&'static str, bool) {
+        match self {
+            Self::AgentIdentifier => ("$.agent[*].who.identifier", true),
+            Self::PatientIdentifier => (
+                "$.entity[*] ? (@.role.code == \"1\" && @.role.system == \"http://terminology.hl7.org/CodeSystem/object-role\").what.identifier",
+                true,
+            ),
+            Self::EntityIdentifier => ("$.entity[*].what.identifier", true),
+            Self::SourceIdentifier => ("$.source.observer.identifier", true),
+            Self::EntityType => ("$.entity[*].type", false),
+            Self::EntityRole => ("$.entity[*].role", false),
+            Self::Type => ("$.type", false),
+            Self::Subtype => ("$.subtype[*]", false),
+        }
+    }
+}
+
+/// A token value (FHIR R4 Search §3.1.1.4.10).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuditToken {
+    /// Which system the value names.
+    pub system: AuditTokenSystem,
+    /// The code or identifier value; `None` for `[system]|`.
+    pub code: Option<String>,
+}
+
+/// The system part of an [`AuditToken`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuditTokenSystem {
+    /// `[code]`: any system, or none.
+    Any,
+    /// `|[code]`: no system.
+    Absent,
+    /// `[system]|[code]` or `[system]|`.
+    Named(String),
 }
 
 fn action_str(event: &AuditEvent) -> String {
@@ -725,8 +864,8 @@ fn roles_json(event: &AuditEvent) -> Option<serde_json::Value> {
 
 #[cfg(test)]
 mod tests {
-    use super::AuditSearchFilter;
     use super::build_search_statements;
+    use super::{AuditCriterion, AuditElement, AuditSearchFilter, AuditToken, AuditTokenSystem};
 
     /// Twenty payloads that break SQL when they reach the statement text rather
     /// than a bound parameter.
@@ -755,10 +894,20 @@ mod tests {
 
     fn filter_with(value: &str) -> AuditSearchFilter {
         AuditSearchFilter {
-            patient: Some(value.to_owned()),
-            agent: Some(value.to_owned()),
-            entity: Some(value.to_owned()),
-            action: Some(value.to_owned()),
+            criteria: vec![
+                AuditCriterion::Patient(vec![value.to_owned()]),
+                AuditCriterion::Agent(vec![value.to_owned()]),
+                AuditCriterion::Entity(vec![value.to_owned()]),
+                AuditCriterion::Action(vec![value.to_owned()]),
+                AuditCriterion::Address(vec![value.to_owned()]),
+                AuditCriterion::Element(
+                    AuditElement::AgentIdentifier,
+                    vec![AuditToken {
+                        system: AuditTokenSystem::Named(value.to_owned()),
+                        code: Some(value.to_owned()),
+                    }],
+                ),
+            ],
             ..AuditSearchFilter::default()
         }
     }
@@ -824,11 +973,13 @@ mod tests {
     #[test]
     fn every_identifier_comes_from_the_closed_set() {
         let (count_sql, _, sql, _) = build_search_statements(&AuditSearchFilter {
-            patient: Some("p".to_owned()),
-            agent: Some("a".to_owned()),
-            entity: Some("e".to_owned()),
-            action: Some("x".to_owned()),
-            outcome: Some(0),
+            criteria: vec![
+                AuditCriterion::Patient(vec!["p".to_owned()]),
+                AuditCriterion::Agent(vec!["a".to_owned()]),
+                AuditCriterion::Entity(vec!["e".to_owned()]),
+                AuditCriterion::Action(vec!["x".to_owned()]),
+                AuditCriterion::Outcome(vec![0]),
+            ],
             ..AuditSearchFilter::default()
         });
 

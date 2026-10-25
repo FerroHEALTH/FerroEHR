@@ -17,6 +17,16 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **The ITI-81 audit retrieval applies every search parameter RESTful ATNA
+  §3.81.4.1.2.2 says the repository shall support** (#4040): `address`,
+  `agent.identifier`, `patient.identifier`, `entity.identifier`,
+  `entity-type`, `entity-role`, `source.identifier`, `type`, `subtype` and
+  `outcome`, beside `patient`, `agent`, `entity` and `action`. Several
+  comma-separated values match any of them, and a repeated parameter must
+  match too. Tokens take the `code`, `|code` and `system|code` forms of FHIR
+  R4 Search §3.1.1.4.10. These parameters were a `400` `not-supported`. The
+  subject-scoped audit role still names exactly one subject, by `patient` or
+  `patient.identifier`.
 - **The `openehr-*` crates carry the APIs FerroBRIDGE kept local copies of**
   (#4047, #4048), on the 0.0.99 crate line. The FLAT builder takes a value
   whole under `|raw` (Simplified Formats master04 §Raw canonical JSON) on
