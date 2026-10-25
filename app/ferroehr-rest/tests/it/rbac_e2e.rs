@@ -146,10 +146,30 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
     (socket, sender)
 }
 
-/// Receive one DICOM audit frame (as UTF-8) within a short window.
-async fn recv_audit(socket: &mut SyslogTlsListener) -> Option<String> {
-    let frame = socket.recv(Duration::from_secs(3)).await?;
-    Some(String::from_utf8_lossy(&frame).into_owned())
+/// How long a test waits for the audit record it asserts on. A pass returns
+/// the moment the record lands, so the bound only has to cover a loaded or
+/// instrumented build; no openEHR spec governs it: our own design.
+const RECORD_DEADLINE: Duration = Duration::from_secs(60);
+
+/// The first DICOM audit frame (as UTF-8) that `matches`, waiting at most
+/// [`RECORD_DEADLINE`]; fails naming the frames seen when none does. A
+/// silence window would read a slow record as an absent one (#3950).
+async fn record_matching(socket: &mut SyslogTlsListener, matches: fn(&str) -> bool) -> String {
+    let deadline = tokio::time::Instant::now() + RECORD_DEADLINE;
+    let mut seen: Vec<String> = Vec::new();
+    loop {
+        let left = deadline.saturating_duration_since(tokio::time::Instant::now());
+        let frame = socket.recv(left).await;
+        assert!(
+            frame.is_some(),
+            "no matching audit record within {RECORD_DEADLINE:?}; records seen: {seen:#?}"
+        );
+        let xml = String::from_utf8_lossy(&frame.unwrap_or_default()).into_owned();
+        if matches(&xml) {
+            return xml;
+        }
+        seen.push(xml);
+    }
 }
 
 // ── credentials + requests ────────────────────────────────────────────────────
@@ -396,9 +416,7 @@ async fn rbac_deny_is_audited() {
     .await;
     assert_eq!(s, StatusCode::FORBIDDEN);
 
-    let xml = recv_audit(&mut socket)
-        .await
-        .expect("an audit frame is emitted for the denied caller");
+    let xml = record_matching(&mut socket, |xml| xml.contains(r#"UserID="user""#)).await;
     assert!(
         xml.contains(r#"csd-code="110114""#),
         "User-Authentication event: {xml}"
