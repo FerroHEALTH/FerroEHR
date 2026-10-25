@@ -2404,9 +2404,9 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.2.5"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3b5680111494871950069fd582f1889cf1e8c041fa8d2a0318c1b85ab758b5e"
+checksum = "6961551c4793e272bb814a551d1a0fb2cd0e711998ce2f7d5b74172746581cb7"
 dependencies = [
  "async-trait",
  "ihe-atna",
@@ -4042,9 +4042,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-atna"
-version = "0.2.5"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "927197dc57f47e0c5723599f8fe001b2c524595a36737add06f1b3a354674a51"
+checksum = "334e34b35c8ae4cd917d85424ca98055300067585313e6adb5de16618f0999a3"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -5315,7 +5315,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "chrono",
  "getrandom 0.2.17",
  "http",
@@ -6033,7 +6033,7 @@ dependencies = [
  "aes-gcm 0.10.3",
  "aes-kw",
  "argon2 0.5.3",
- "base64 0.21.7",
+ "base64 0.22.1",
  "bitfields",
  "block-padding",
  "blowfish",

@@ -242,8 +242,8 @@ ferrobridge-term = "=0.1.130"
 # software component of Regulation (EU) 2025/327 (the Annex II 3.2 access
 # record, the Art 14(1) categories and their classification map, the Art 9(2)
 # retention floor). Features are chosen per member.
-ihe-atna = { version = "=0.2.5", default-features = false }
-ehds-logging = { version = "=0.2.5", default-features = false }
+ihe-atna = { version = "=0.2.7", default-features = false }
+ehds-logging = { version = "=0.2.7", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 openidconnect = { version = "4", default-features = false }   # OIDC discovery + code flow; HTTP-client agnostic: we supply the pinned reqwest (platform trust store)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
