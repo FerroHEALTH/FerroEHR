@@ -134,10 +134,10 @@ exceptions = [
   # Licensor's code under the same licence (owner decision 2026-10-18), taken
   # by the viewer alone.
   { allow = ["BUSL-1.1"], crate = "ferrohealth-ui" },
-  # FerroSMART, the FerroHEALTH products' shared SMART and OAuth 2.0 crate, is
-  # the same Licensor's code under the same licence; its client-credentials
-  # client authenticates the outbound audit feed and policy service (owner
-  # decision 2026-10-20, #3829).
+  # FerroAUTH's ferrohealth-smart, the FerroHEALTH products' shared SMART and
+  # OAuth 2.0 crate, is the same Licensor's code under the same licence; its
+  # client-credentials client authenticates the outbound audit feed and policy
+  # service (owner decision 2026-10-20, #3829).
   { allow = ["BUSL-1.1"], crate = "ferrohealth-smart" },
   # FerroAUDIT, the FerroHEALTH products' shared audit library, is the same
   # Licensor's code under the same licence: `ihe-atna` sends the ATNA trail and
