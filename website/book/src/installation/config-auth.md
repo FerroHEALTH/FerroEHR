@@ -34,6 +34,7 @@ scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds
 | `audience` | list of string | **required with an issuer** | Accepted `aud` values; a token naming none of them is refused (RFC 9068 §4, RFC 8725 §3.9). |
 | `algorithms` | list of string | `["RS256","RS384","PS256","PS384","ES256","ES384"]` | Accepted signature algorithms. Asymmetric only: an `HS*` algorithm is a boot error, and `none` is no algorithm at all (RFC 8725 §3.1, §3.2). |
 | `token_profile` | `rfc9068` or `jwt` | `rfc9068` | `rfc9068` requires `typ` `at+jwt` and the `client_id`, `iat` and `jti` claims (RFC 9068 §2.2, §4). `jwt` admits a plain JWT bearer token (`typ` absent or `JWT`) for an issuer that mints no RFC 9068 tokens, and reads a `scp` array when `scope` is absent. A token typed as another kind of JWT is refused under either. |
+| `mode` | `jwt` | `jwt` | How a bearer token is checked: as a JWT against the issuer's key set. `introspection` (RFC 7662) and an `[auth.introspection]` table are boot errors, because this server does not serve token introspection. |
 | `clock_skew_seconds` | int | `60` | Leeway on `exp`, `nbf` and `iat`. At most `300`. |
 | `jwks_max_age_seconds` | int | `600` | A key set older than this is read again. |
 | `jwks_refresh_interval_seconds` | int | `60` | A token naming an unknown `kid` reads the key set again at most once per interval. |

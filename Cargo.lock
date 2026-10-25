@@ -2636,9 +2636,9 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferrobridge-term"
-version = "0.1.130"
+version = "0.1.134"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5abd63b1d2c42b78f4af901fb7d0d64b0279b491e95e0f476a51de578f15cca1"
+checksum = "a3f55502de5395271a270514226e325f962cdcde03a55aa3c79e17f94b784211"
 dependencies = [
  "async-trait",
  "backon",
@@ -2878,9 +2878,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-smart"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b372f7fc4c949c66b72c1c3a8056ea8936f2dbb0a25a8072dfe20594f25861a8"
+checksum = "cb2825bac4f7555da8a6e047f1454bc21b200ede6d6b0a3482363723e264928c"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
@@ -2940,9 +2940,9 @@ dependencies = [
 
 [[package]]
 name = "fhir-types"
-version = "0.1.127"
+version = "0.1.128"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1d316f2ef88198139bb57a6dcb17b25311274b42ccc2584e27a849d35697a42"
+checksum = "eab6cf450919fa8033d479209d0384dfd9dc9a7373aef7a9be66dab6f1db72b3"
 dependencies = [
  "quick-xml 0.42.0",
  "regex",

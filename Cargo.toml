@@ -221,8 +221,8 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # issuer's key set, Basic users, the SMART on openEHR scopes, the discovery
 # document and the client credentials grant. It checks tokens and never issues
 # them.
-# Verified on crates.io 2026-10-25 (0.5.0, which requires openehr-sdt 0.0.98).
-ferrohealth-smart = { version = "=0.5.0", default-features = false, features = ["fetch"] }
+# Verified on crates.io 2026-10-25 (0.6.0, which requires openehr-sdt 0.0.98).
+ferrohealth-smart = { version = "=0.6.0", default-features = false, features = ["fetch"] }
 
 # ── Terminology (the client of the one FHIR terminology server) ───────────────
 # FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,
@@ -231,8 +231,8 @@ ferrohealth-smart = { version = "=0.5.0", default-features = false, features = [
 # carrying the upstream status and its `tx-issue-type` coding. The same
 # Licensor's BUSL-1.1 code (deny.toml). Its crate line moves one patch per
 # change, a breaking one included, so it is pinned exactly. Verified on
-# crates.io 2026-10-24 (0.1.130).
-ferrobridge-term = "=0.1.130"
+# crates.io 2026-10-25 (0.1.134).
+ferrobridge-term = "=0.1.134"
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
