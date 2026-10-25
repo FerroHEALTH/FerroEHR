@@ -597,9 +597,9 @@ async fn template_complete(
 /// the fingerprint and the build time.
 ///
 /// The template name therefore only ever names a fully migrated database. The
-/// staging database carries a clone-shaped name, so a concurrent process's
-/// sweep spares it for [`SWEEP_GRACE`] instead of dropping it mid-migration;
-/// another fingerprint's suite on the same server spares THIS template for
+/// staging database carries a clone-shaped name and its lease is held on
+/// `admin` until it is renamed, so a concurrent process's sweep spares it
+/// instead of dropping it mid-migration; another fingerprint's suite on the same server spares THIS template for
 /// `TEMPLATE_GRACE` after the stamp and sweeps it as stale after that, and
 /// nothing it drops can be half built.
 async fn build_template(
@@ -616,11 +616,28 @@ async fn build_template(
         .execute(&mut *admin)
         .await?;
     let staging = fresh_name();
+    let lease = lease_key(&staging);
+    if let Some(key) = lease {
+        sqlx::query("SELECT pg_advisory_lock($1, $2)")
+            .bind(CLONE_LEASE_CLASS)
+            .bind(key)
+            .execute(&mut *admin)
+            .await?;
+    }
     let create_sql = format!("CREATE DATABASE {staging}");
     sqlx::raw_sql(sqlx::AssertSqlSafe(create_sql))
         .execute(&mut *admin)
         .await?;
     let built = migrate_and_rename(admin, admin_url, &staging, template).await;
+    if let Some(key) = lease {
+        drop(
+            sqlx::query("SELECT pg_advisory_unlock($1, $2)")
+                .bind(CLONE_LEASE_CLASS)
+                .bind(key)
+                .execute(&mut *admin)
+                .await,
+        );
+    }
     if built.is_err() {
         let sql = format!("DROP DATABASE IF EXISTS {staging} WITH (FORCE)");
         drop(
