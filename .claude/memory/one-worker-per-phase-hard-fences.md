@@ -17,7 +17,7 @@ to HEAD, redo sequentially. Nothing committed was lost.
 
 **Rules now standing:**
 - Within a refactor phase, ONE implementation worker at a time — the
-  max-2 cap is an upper bound for genuinely disjoint work (e.g. catalogue
+  worker cap ([[max-five-concurrent-workers]]) is an upper bound for genuinely disjoint work (e.g. catalogue
   vs app), never for same-phase refactors where scope can bleed.
 - Every worker brief carries a HARD FILE FENCE: "touching any path outside
   <list> = STOP and report" — a task that turns out to need an out-of-fence
@@ -42,4 +42,4 @@ to HEAD, redo sequentially. Nothing committed was lost.
   worktree + its target after merging. Big implementation rounds stay
   serial in the main tree (cold build + convergence overhead eats the
   win).
-Related: [[concurrent-sessions-shared-tree]], [[max-two-concurrent-workers]].
+Related: [[concurrent-sessions-shared-tree]], [[max-five-concurrent-workers]].
