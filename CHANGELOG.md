@@ -31,6 +31,8 @@ workflow refuses a tag that has no matching section here.
   and `openehr-term` names the `audit_change_type` and
   `version_lifecycle_state` concepts (`codes::AuditChangeType`,
   `codes::VersionLifecycleState`), held equal to the embedded terminology.
+  Until a `ferrohealth-smart` release requires 0.0.99, the build holds a
+  registry copy of `openehr-sdt` 0.0.98 for it beside the workspace 0.0.99.
 
 - **An ADL 2 Web Template names a node under a template overlay by its
   parent archetype.** `openehr_adl::opt::create_opt` records each overlay's
@@ -59,8 +61,8 @@ workflow refuses a tag that has no matching section here.
 
 - **The CDR takes up `ferrohealth-smart` 0.6.0 and `ferrobridge-term`
   0.1.134** (#4026, #4027). Token checking, Basic users, the discovery
-  document and every outbound client credentials token behave as before,
-  and the build still holds one `openehr-sdt`. The terminology client now
+  document and every outbound client credentials token behave as before.
+  The terminology client now
   refuses, before sending, a code with no system on an STU3 server; the
   CDR's server is R4B, so its binding checks are unchanged. The new
   `[auth] mode = "introspection"` key of the shared section, and an
