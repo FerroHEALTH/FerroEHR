@@ -21,11 +21,13 @@
 # digest is read back from the registry for the new tag and every pin site
 # moves together, and a residual-pin check refuses to open a PR that missed one.
 #
-# THE MSRV IS A SEPARATE DATUM AND DOES NOT MOVE (docs/VERSIONS.md §MSRV bump
-# policy). This lane never writes `rust-version`; it asserts the line is
-# byte-identical after its edits. If the new toolchain makes the declared MSRV
-# unbuildable, ci.yml's `msrv` job (`cargo hack check --rust-version`) fails on
-# this PR — loudly, and without the MSRV having been moved to hide it.
+# THE MSRV FOLLOWS THE TOOLCHAIN MINUS ONE MINOR, AND IS ONLY EVER RAISED (the
+# FerroHEALTH family rule, docs/VERSIONS.md §MSRV bump policy). The lane moves
+# `rust-version` and every place that names the MSRV to the new toolchain minus
+# one, and never lowers it. An MSRV move changes the packaged manifest of the
+# nine published openehr-* crates, so the same commit bumps their lockstep
+# 0.0.x version, as ci.yml's crate-version-guard asks. ci.yml's `msrv` job
+# (`cargo hack check --rust-version`) then verifies the new floor on this PR.
 #
 # PREREQUISITE — the TOOLCHAIN_BUMP_TOKEN secret. Two properties of
 # GITHUB_TOKEN make it insufficient here, both documented and neither
@@ -180,9 +182,24 @@ jobs:
         run: |
           set -euo pipefail
 
-          # The MSRV line, captured before anything is written, so the
-          # "does not move the MSRV" property is asserted rather than assumed.
-          msrv_before=$(grep -E '^rust-version[[:space:]]*=' Cargo.toml)
+          # The MSRV, read before anything is written; the target is the new
+          # toolchain minus one minor, and it only ever moves up.
+          msrv_before=$(sed -nE 's/^rust-version[[:space:]]*=[[:space:]]*"([0-9]+\.[0-9]+)".*/\1/p' Cargo.toml)
+          if ! printf '%s' "$msrv_before" | grep -qE '^[0-9]+\.[0-9]+$'; then
+            echo "::error::Cargo.toml rust-version is '$msrv_before', not a major.minor pin. This lane only moves that shape."
+            exit 1
+          fi
+          new_major=${NEW_VERSION%%.*}
+          new_rest=${NEW_VERSION#*.}
+          new_min=${new_rest%%.*}
+          msrv_target="${new_major}.$((new_min - 1))"
+          highest=$(printf '%s\n%s\n' "$msrv_before" "$msrv_target" | sort -V | tail -1)
+          if [ "$msrv_target" != "$msrv_before" ] && [ "$highest" = "$msrv_target" ]; then
+            msrv_moves=1
+          else
+            msrv_moves=0
+            msrv_target="$msrv_before"
+          fi
 
           old_re=$(printf '%s' "$OLD_VERSION" | sed 's/\./\\./g')
           new_minor=${NEW_VERSION%.*}
@@ -215,11 +232,54 @@ jobs:
           sed -i -E "s|^# Toolchain: Rust stable [0-9]+\.[0-9]+\.[0-9]+,|# Toolchain: Rust stable ${NEW_VERSION},|" Cargo.toml
           sed -i -E "s|uses a [0-9]+\.[0-9]+ feature|uses a ${new_minor} feature|" Cargo.toml
 
+          # 4b. The MSRV and the lockstep crate version, only when the MSRV
+          #     rises. Anchored substitutions only, one per place that names it.
+          crate_before=$(sed -nE 's/^version = "(0\.0\.[0-9]+)"$/\1/p' crates/openehr-base/Cargo.toml)
+          crate_after="$crate_before"
+          if [ "$msrv_moves" = "1" ]; then
+            m_re=$(printf '%s' "$msrv_before" | sed 's/\./\\./g')
+            sed -i -E "s|^rust-version = \"${m_re}\"|rust-version = \"${msrv_target}\"|" Cargo.toml
+            sed -i -E "s|# MSRV ${m_re} is a hard pin|# MSRV ${msrv_target} is a hard pin|" Cargo.toml
+            sed -i -E "s|the MSRV is ${m_re}\.|the MSRV is ${msrv_target}.|" Cargo.toml
+            sed -i -E "s#^\| MSRV \| ${m_re} \|#| MSRV | ${msrv_target} |#" docs/VERSIONS.md
+            sed -i -E "s|MSRV ${m_re},|MSRV ${msrv_target},|" CLAUDE.md
+            sed -i -E "s|MSRV of \*\*Rust ${m_re}\*\*|MSRV of **Rust ${msrv_target}**|" website/book/src/crates.md
+            sed -i -E "s|minimum supported version is Rust ${m_re}|minimum supported version is Rust ${msrv_target}|" website/book/src/contributing.md
+            for f in crates/openehr-*/README.md; do
+              sed -i -E "s|^Rust ${m_re} \(edition 2024\)\.|Rust ${msrv_target} (edition 2024).|" "$f"
+            done
+
+            if ! printf '%s' "$crate_before" | grep -qE '^0\.0\.[0-9]+$'; then
+              echo "::error::crates/openehr-base is at '$crate_before', not a 0.0.x lockstep version. This lane only bumps that shape."
+              exit 1
+            fi
+            crate_after="0.0.$(( ${crate_before##*.} + 1 ))"
+            c_re=$(printf '%s' "$crate_before" | sed 's/\./\\./g')
+            for f in crates/openehr-*/Cargo.toml; do
+              sed -i -E "s|^version = \"${c_re}\"|version = \"${crate_after}\"|" "$f"
+              sed -i -E "s|(path = \"\.\./openehr-[a-z]+\", version = )\"${c_re}\"|\1\"${crate_after}\"|g" "$f"
+            done
+            # The path packages carry no source or checksum, so their lock
+            # entries are rewritten in place; fuzz/ is its own workspace.
+            for lock in Cargo.lock fuzz/Cargo.lock; do
+              awk -v old="\"${crate_before}\"" -v new="\"${crate_after}\"" '
+                $1 == "name" && $3 ~ /^"openehr-/ { hit = 1; print; next }
+                hit && $1 == "version" && $3 == old { sub(old, new) }
+                { hit = 0; print }
+              ' "$lock" > "$lock.new"
+              mv "$lock.new" "$lock"
+            done
+          fi
+
           # 5. The changelog entry, inserted into the existing [Unreleased]
           #    '### Changed' subsection when there is one — a second '### Changed'
           #    in the same release section is refused by
           #    scripts/checks/changelog-structure.sh.
-          entry="- **The Rust toolchain moves to ${NEW_VERSION}.** The pinned channel, both container base images (digest re-resolved) and the CI job containers move together; the MSRV is unchanged."
+          if [ "$msrv_moves" = "1" ]; then
+            entry="- **The Rust toolchain moves to ${NEW_VERSION} and the MSRV to ${msrv_target}.** The pinned channel, both container base images (digest re-resolved) and the CI job containers move together; the nine \`openehr-*\` crates move to ${crate_after} and need Rust ${msrv_target} or newer."
+          else
+            entry="- **The Rust toolchain moves to ${NEW_VERSION}.** The pinned channel, both container base images (digest re-resolved) and the CI job containers move together; the MSRV stays ${msrv_before}."
+          fi
           awk -v entry="$entry" '
             state == 0 && /^## \[Unreleased\]/            { print; state = 1; next }
             state == 1 && /^### Changed[[:space:]]*$/     { print; print ""; print entry; state = 2; next }
@@ -231,10 +291,26 @@ jobs:
 
           # ── The properties that make this safe to merge ────────────────────
 
-          msrv_after=$(grep -E '^rust-version[[:space:]]*=' Cargo.toml)
-          if [ "$msrv_before" != "$msrv_after" ]; then
-            echo "::error::The MSRV line changed ('$msrv_before' -> '$msrv_after'). It is a separate datum with its own policy and this lane must never move it."
+          msrv_after=$(sed -nE 's/^rust-version[[:space:]]*=[[:space:]]*"([0-9]+\.[0-9]+)".*/\1/p' Cargo.toml)
+          if [ "$msrv_after" != "$msrv_target" ]; then
+            echo "::error::rust-version is '$msrv_after' after the rewrite, expected '$msrv_target' (the new toolchain minus one, never lowered from '$msrv_before')."
             exit 1
+          fi
+          if [ "$msrv_moves" = "1" ]; then
+            m_old=$(grep -nE "MSRV ${m_re}([^0-9.]|$)|MSRV of \*\*Rust ${m_re}\*\*|version is Rust ${m_re}([^0-9.]|$)" \
+              Cargo.toml docs/VERSIONS.md CLAUDE.md website/book/src/crates.md website/book/src/contributing.md || true)
+            m_old="$m_old$(grep -nE "^Rust ${m_re} \(edition 2024\)" crates/openehr-*/README.md || true)"
+            if [ -n "$m_old" ]; then
+              echo "$m_old"
+              echo "::error::A place still names the old MSRV $msrv_before after the rewrite; add its substitution above."
+              exit 1
+            fi
+            c_old=$(grep -nF "\"${crate_before}\"" crates/openehr-*/Cargo.toml || true)
+            if [ -n "$c_old" ]; then
+              echo "$c_old"
+              echo "::error::An openehr-* manifest still names $crate_before after the lockstep bump to $crate_after."
+              exit 1
+            fi
           fi
 
           # No pin left behind. A residual old version in any of these files is
@@ -269,6 +345,13 @@ jobs:
             echo "::error::No digest-pinned rust image was found at all. The base-image shape changed; this lane needs updating."
             exit 1
           fi
+
+          {
+            echo "msrv_before=$msrv_before"
+            echo "msrv_after=$msrv_after"
+            echo "crate_before=$crate_before"
+            echo "crate_after=$crate_after"
+          } >> "$GITHUB_OUTPUT"
 
           if ! git diff --quiet; then
             git diff --name-only | tee changed-files.txt
@@ -313,6 +396,10 @@ jobs:
           NEW_VERSION: ${{ steps.discover.outputs.new_version }}
           VARIANT: ${{ steps.image.outputs.variant }}
           NEW_DIGEST: ${{ steps.image.outputs.digest }}
+          MSRV_BEFORE: ${{ steps.edit.outputs.msrv_before }}
+          MSRV_AFTER: ${{ steps.edit.outputs.msrv_after }}
+          CRATE_BEFORE: ${{ steps.edit.outputs.crate_before }}
+          CRATE_AFTER: ${{ steps.edit.outputs.crate_after }}
         run: |
           set -euo pipefail
 
@@ -370,13 +457,15 @@ jobs:
             echo "| New stable | \`${NEW_VERSION}\` |"
             echo "| Base image | \`rust:${NEW_VERSION}-${VARIANT}\` |"
             echo "| Index digest | \`${NEW_DIGEST}\` |"
+            echo "| MSRV | \`${MSRV_BEFORE}\` -> \`${MSRV_AFTER}\` |"
+            echo "| openehr-* crates | \`${CRATE_BEFORE}\` -> \`${CRATE_AFTER}\` |"
             echo
             echo "The digest was **re-resolved from the registry** for the new tag, not carried over. Copying it forward would keep the old toolchain in every container-based job while every version string claimed otherwise."
             echo
             echo "## What to check before merging"
             echo
             echo "- **New lints.** A minor release routinely adds lints that fail instantly under \`-D warnings\` with the pedantic table. That churn belongs on this PR."
-            echo "- **The MSRV did not move**, and must not: it is a separate datum with its own policy (\`docs/VERSIONS.md\` §MSRV bump policy). If \`cargo hack check --rust-version\` is red here, the fix is a deliberate MSRV decision in its own PR, never a quiet bump inside this one."
+            echo "- **The MSRV is the new toolchain minus one minor**, and only ever rises (\`docs/VERSIONS.md\` §MSRV bump policy). When it rises the nine \`openehr-*\` crates take the next lockstep version in this commit. \`cargo hack check --rust-version\` verifies the floor here."
             echo "- **The digest is the index digest** of \`rust:${NEW_VERSION}-${VARIANT}\`, verifiable with \`docker buildx imagetools inspect rust:${NEW_VERSION}-${VARIANT}\`."
             if [ "$HAVE_TOKEN" != "1" ]; then
               echo
