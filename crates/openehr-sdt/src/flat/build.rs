@@ -148,7 +148,8 @@ pub fn build_composition_with(
     // `ctx/…` key wins.
     let merged_ctx = merge_root_ctx_spellings(ctx_node, data_root);
     let explicit_event_context = has_explicit_event_context(merged_ctx.as_ref());
-    let defaults = ctx::resolve(merged_ctx.as_ref(), now)?;
+    let mut defaults = ctx::resolve(merged_ctx.as_ref(), now)?;
+    apply_root_raw(&mut defaults, data_root, root_id)?;
 
     // The template's hoisted-wrapper type narrowings (`ITEM_STRUCTURE`/`EVENT`
     // families the compactor folded away), keyed by absolute archetype path, so
@@ -196,6 +197,11 @@ pub(crate) const PARTY_CLASSES: [&str; 5] = ["PERSON", "ORGANISATION", "GROUP", 
 /// demographic package (`identities`, `contacts`, `addresses`, `capabilities`,
 /// `roles`, `languages`, `relationships`) is built as an array, and the result
 /// is checked to decode as the root's class before it is returned.
+///
+/// `ROLE.performer` (RM demographic §ROLE, `PARTY_REF`, 1..1) needs no template
+/// node: `<root>/performer|id`, `|namespace`, `|type` and the optional
+/// `|id_scheme` build it, or `<root>/performer|raw` takes a canonical-JSON
+/// `PARTY_REF` whole (master04 §Raw canonical JSON).
 ///
 /// NOTE: ITS-REST `simplified_formats/master04` defines FLAT for compositions only; a party build is our own extension over the same walk.
 ///
@@ -354,6 +360,44 @@ fn merge_root_ctx_spellings(ctx_node: Option<&SimNode>, data_root: &SimNode) -> 
     } else {
         Some(merged)
     }
+}
+
+/// Takes the COMPOSITION `language`, `territory` and `composer` a client
+/// sends whole as canonical JSON (`<root>/language|raw`, …; master04 §Raw
+/// canonical JSON) into the resolved context, where a `ctx/` key or a
+/// suffix spelling of the same attribute has not already set it.
+///
+/// # Errors
+/// [`FlatError::InvalidRaw`] for a `|raw` value without `_type`, one whose
+/// `_type` is not the attribute's RM type (`CODE_PHRASE`, or a `PARTY_PROXY`
+/// subtype for `composer`; RM ehr §COMPOSITION), or one beside other content.
+fn apply_root_raw(
+    defaults: &mut ctx::CtxDefaults,
+    data_root: &SimNode,
+    root_id: &str,
+) -> Result<(), FlatError> {
+    let raw = |seg: &str, types: &[&str]| {
+        data_root
+            .child(seg)
+            .and_then(|node| map::raw_value(node, &format!("{root_id}/{seg}"), types))
+            .transpose()
+    };
+    if let Some(phrase) = raw("language", &["CODE_PHRASE"])?
+        && defaults.language.is_none()
+    {
+        defaults.language_phrase = Some(phrase);
+    }
+    if let Some(phrase) = raw("territory", &["CODE_PHRASE"])?
+        && defaults.territory.is_none()
+    {
+        defaults.territory_phrase = Some(phrase);
+    }
+    if let Some(composer) = raw("composer", map::PARTY_PROXY_CLASSES)?
+        && defaults.composer.is_none()
+    {
+        defaults.composer = Some(composer);
+    }
+    Ok(())
 }
 
 /// Whether the client supplied any explicit EVENT_CONTEXT content — a
@@ -1025,7 +1069,8 @@ fn place_direct_rm_path(
 }
 
 /// Builds a `PARTY_REF` from the master05 §OBJECT_REF suffixes `|id`,
-/// `|namespace`, `|type` and the optional `|id_scheme`.
+/// `|namespace`, `|type` and the optional `|id_scheme`, or takes it whole
+/// from `|raw` (master04 §Raw canonical JSON).
 ///
 /// All of `id`, `namespace` and `type` are mandatory on an `OBJECT_REF` (BASE
 /// `base_types/master05-identification_package.adoc` §References), and a reference
@@ -1034,9 +1079,13 @@ fn place_direct_rm_path(
 /// `HIER_OBJECT_ID` a versioned party carries.
 ///
 /// # Errors
-/// [`FlatError::MissingRequiredSuffix`] naming the first absent suffix, and
-/// [`FlatError::UnknownSuffix`] for any other suffix.
+/// [`FlatError::MissingRequiredSuffix`] naming the first absent suffix,
+/// [`FlatError::UnknownSuffix`] for any other suffix, and
+/// [`FlatError::InvalidRaw`] for a `|raw` value that is no lone `PARTY_REF`.
 fn build_party_ref(node: &SimNode, path: &str) -> Result<Value, FlatError> {
+    if let Some(raw) = map::raw_value(node, path, &["PARTY_REF"]) {
+        return raw;
+    }
     if let Some(suffix) = node
         .attrs
         .keys()

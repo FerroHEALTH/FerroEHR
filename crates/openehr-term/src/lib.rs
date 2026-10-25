@@ -107,6 +107,7 @@ impl std::str::FromStr for Generation {
 
 // hand-written modules (spec behaviour), auto-declared:
 pub mod bundle;
+pub mod codes;
 pub mod measurement;
 
 // canonical-JSON `serde` impls (openehr-codegen -- emit-json), auto-declared:

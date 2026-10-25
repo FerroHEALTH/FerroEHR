@@ -538,3 +538,20 @@ fn as_complex(obj: &CObject) -> &CComplexObject {
         other => panic!("expected a complex object, got {other:?}"),
     }
 }
+
+/// The OPT records the specialisation parent of the overlay it inlined, so a
+/// Web Template builder can name the overlay's node by the published
+/// archetype (ADL2 and AOM2 §Templates leave the data id open: our own
+/// design).
+#[test]
+fn create_opt_records_the_specialisation_parent_of_each_overlay() {
+    let opt = build_opt();
+    assert_eq!(
+        opt.other_meta_data
+            .get(openehr_adl::opt::OVERLAY_PARENTS_KEY)
+            .map(String::as_str),
+        Some("openEHR-EHR-SECTION.t_event_info.v1.0.0=openEHR-EHR-SECTION.event_info.v1.0.0"),
+        "{:?}",
+        opt.other_meta_data
+    );
+}

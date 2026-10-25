@@ -318,6 +318,17 @@ in `openehr-sdt`, beside the template-independent RM-instance validation
 (`openehr_sdt::rm_instance`) and the SMART scope grammar
 (`openehr_sdt::smart_scopes`), over the `openehr-its` wire layer.
 
+**A node under a template overlay carries its parent archetype's id** in the
+ADL 2 Web Template: no specification governs this, it is our own design. ADL2
+and AOM2 §Templates make a template overlay a template-local specialisation
+that fills a slot, and its id never leaves the template. So the OPT generator
+(`openehr_adl::opt::create_opt`) records each overlay's specialisation parent
+in the OPT's `other_meta_data` under `template_overlay_parents`, and
+`openehr-sdt`'s ADL 2 builder writes the parent's interface id on the node,
+its paths and its slot admissions. A FLAT path, an AQL path and a mapping
+written against the published archetype then match the template's data. The
+OPT itself stays literal: it still names the overlay.
+
 ## Spec version policy
 
 One pin per openEHR component, always the newest generation we have

@@ -173,6 +173,51 @@ pub(crate) fn build_rm_attr(
     structures::build_rm_attr(seg, occurrences, base_type(host_rm_type), path)
 }
 
+/// The canonical-JSON value `node` carries whole under `|raw` (master04 §Raw
+/// canonical JSON), `None` when it carries none.
+///
+/// The value must be an object whose `_type` is one of `types`, the RM
+/// classes the attribute admits, and `|raw` must be the node's only content:
+/// a suffix or a sub-path beside it would be dropped.
+///
+/// # Errors
+/// [`FlatError::InvalidRaw`] for a value without `_type`, one of another
+/// class, or a `|raw` beside other content.
+pub(crate) fn raw_value(
+    node: &SimNode,
+    path: &str,
+    types: &[&str],
+) -> Option<Result<Value, FlatError>> {
+    let raw = node.attrs.get("raw")?;
+    let invalid = |reason: String| FlatError::InvalidRaw {
+        path: path.to_owned(),
+        reason,
+    };
+    let Some(rm_type) = raw.get("_type").and_then(Value::as_str) else {
+        return Some(Err(invalid(
+            "the |raw value must be a canonical-JSON object with _type".to_owned(),
+        )));
+    };
+    if !types.contains(&rm_type) {
+        return Some(Err(invalid(format!(
+            "the |raw value is a {rm_type}, expected one of {}",
+            types.join(", ")
+        ))));
+    }
+    if node.attrs.len() > 1 || !node.children.is_empty() {
+        return Some(Err(invalid(
+            "|raw carries the whole value, so no other suffix or sub-path may stand beside it"
+                .to_owned(),
+        )));
+    }
+    Some(Ok(raw.clone()))
+}
+
+/// The concrete `PARTY_PROXY` classes (RM common `generic` package §PARTY_PROXY
+/// and its descendants).
+pub(crate) const PARTY_PROXY_CLASSES: &[&str] =
+    &["PARTY_SELF", "PARTY_IDENTIFIED", "PARTY_RELATED"];
+
 // ── shared helpers (visible to the sibling map submodules) ────────────────────
 
 /// The concrete base of a possibly-generic slot type (`DV_INTERVAL<DV_QUANTITY>`

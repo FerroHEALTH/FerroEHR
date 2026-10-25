@@ -9,10 +9,137 @@
 //! `AM/docs/Identification/master03-artefact_source_id.adoc` §Formal Model (the
 //! `artefact_hrid` / `local_hrid` / `hrid_root` grammar), and
 //! `AM/docs/Identification/master04-versioning.adoc` §Version Numbering (the
-//! `version_id` grammar).
+//! `version_id` grammar). The [`FromStr`] reading follows the physical form of
+//! `AM/docs/ADL2/master07.05-adl_identification.adoc`.
+
+use std::fmt;
+use std::str::FromStr;
 
 use crate::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
 use openehr_base::v1_3::base_types::definitions::version_status::VersionStatus;
+
+/// Why a string is no archetype HRID.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HridError {
+    /// No `.vN` version segment.
+    NoVersion(String),
+    /// No `.concept` segment before the version.
+    NoConcept(String),
+    /// The model part is not `publisher-package-class`.
+    ModelPart {
+        /// The whole input.
+        hrid: String,
+        /// The model part found.
+        found: String,
+    },
+    /// A publisher, package, class or concept segment is empty.
+    EmptySegment(String),
+    /// The version tail is not `MAJOR[.MINOR[.PATCH]][-status[.build]]`.
+    InvalidVersion(String),
+}
+
+impl fmt::Display for HridError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NoVersion(s) => write!(f, "HRID {s:?} has no `.vN` version segment"),
+            Self::NoConcept(s) => write!(f, "HRID {s:?} has no `.concept` segment"),
+            Self::ModelPart { hrid, found } => write!(
+                f,
+                "HRID {hrid:?} model part must be `publisher-package-class`, found {found:?}"
+            ),
+            Self::EmptySegment(s) => write!(f, "HRID {s:?} has an empty identifier segment"),
+            Self::InvalidVersion(v) => write!(f, "invalid version {v:?}"),
+        }
+    }
+}
+
+impl std::error::Error for HridError {}
+
+impl FromStr for ArchetypeHrid {
+    type Err = HridError;
+
+    /// Reads the physical form
+    /// `[ns::]publisher-package-class.concept.vMAJOR[.MINOR[.PATCH]][-rc|-alpha|-beta[.build]]`
+    /// (ADL2 `master07.05-adl_identification.adoc`), normalising a 1- or
+    /// 2-part version to 3 parts (`v1` reads as `1.0.0`).
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (namespace, rest) = match s.split_once("::") {
+            Some((ns, rest)) => (Some(ns.to_owned()), rest),
+            None => (None, s),
+        };
+        let vpos = version_marker(rest).ok_or_else(|| HridError::NoVersion(s.to_owned()))?;
+        let left = rest.get(..vpos).unwrap_or_default();
+        let version = rest.get(vpos + 2..).unwrap_or_default();
+        let (model_part, concept_id) = left
+            .rsplit_once('.')
+            .ok_or_else(|| HridError::NoConcept(s.to_owned()))?;
+        let segments: Vec<&str> = model_part.split('-').collect();
+        let [publisher, package, class] = segments.as_slice() else {
+            return Err(HridError::ModelPart {
+                hrid: s.to_owned(),
+                found: model_part.to_owned(),
+            });
+        };
+        if publisher.is_empty() || package.is_empty() || class.is_empty() || concept_id.is_empty() {
+            return Err(HridError::EmptySegment(s.to_owned()));
+        }
+        let (release_version, version_status, build_count) = parse_version(version)?;
+        Ok(Self {
+            namespace,
+            rm_publisher: (*publisher).to_owned(),
+            rm_package: (*package).to_owned(),
+            rm_class: (*class).to_owned(),
+            concept_id: concept_id.to_owned(),
+            release_version,
+            version_status: VersionStatus::from_wire(version_status),
+            build_count,
+        })
+    }
+}
+
+/// The byte offset of the `.v` that opens the version segment of `s`, the LAST
+/// `.v` followed by a digit.
+///
+/// A concept id may itself start with `v` and a digit
+/// (`openEHR-EHR-OBSERVATION.v1_score.v1`), while the version tail never holds
+/// a `v` (ADL2 `master07.05-adl_identification.adoc` §Version Identifiers), so
+/// the last marker is the version.
+#[must_use]
+pub fn version_marker(s: &str) -> Option<usize> {
+    s.as_bytes()
+        .windows(3)
+        .rposition(|w| matches!(w, [b'.', b'v', third] if third.is_ascii_digit()))
+}
+
+/// The version tail as `(release_version, status, build_count)`.
+fn parse_version(version: &str) -> Result<(String, &'static str, String), HridError> {
+    let (status, numeric, build) = if let Some((numeric, build)) = split_status(version, "-rc") {
+        ("rc", numeric, build)
+    } else if let Some((numeric, build)) = split_status(version, "-alpha") {
+        ("alpha", numeric, build)
+    } else if let Some((numeric, build)) = split_status(version, "-beta") {
+        ("beta", numeric, build)
+    } else {
+        ("", version, "")
+    };
+    let mut parts = numeric.split('.');
+    let major = parts.next().unwrap_or("0");
+    let minor = parts.next().unwrap_or("0");
+    let patch = parts.next().unwrap_or("0");
+    if major.is_empty() || !major.bytes().all(|b| b.is_ascii_digit()) {
+        return Err(HridError::InvalidVersion(version.to_owned()));
+    }
+    let or_zero = |part: &str| if part.is_empty() { "0" } else { part }.to_owned();
+    let release_version = format!("{major}.{}.{}", or_zero(minor), or_zero(patch));
+    Ok((release_version, status, build.to_owned()))
+}
+
+/// Splits `version` at the `marker` pre-release suffix into `(numeric, build)`.
+fn split_status<'a>(version: &'a str, marker: &str) -> Option<(&'a str, &'a str)> {
+    let (numeric, after) = version.split_once(marker)?;
+    let build = after.strip_prefix('.').unwrap_or("");
+    Some((numeric, build))
+}
 
 impl ArchetypeHrid {
     /// Returns the major version, extracted from `release_version`.
@@ -180,6 +307,46 @@ mod tests {
             hrid(Some(""), VersionStatus::Released, "0").semantic_id(),
             "openEHR-EHR-OBSERVATION.blood_pressure.v1"
         );
+    }
+
+    #[test]
+    fn a_physical_id_parses_back_to_its_hrid() {
+        let id = "org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v1.8.2-rc.4";
+        let parsed: ArchetypeHrid = id.parse().expect("parses");
+        assert_eq!(parsed.namespace.as_deref(), Some("org.openehr"));
+        assert_eq!(parsed.concept_id, "blood_pressure");
+        assert_eq!(parsed.release_version, "1.8.2");
+        assert_eq!(parsed.build_count, "4");
+        assert_eq!(parsed.physical_id(), id);
+    }
+
+    #[test]
+    fn a_partial_version_is_normalised_to_three_parts() {
+        let parsed: ArchetypeHrid = "openEHR-EHR-OBSERVATION.v1_score.v1"
+            .parse()
+            .expect("parses");
+        assert_eq!(parsed.concept_id, "v1_score");
+        assert_eq!(parsed.release_version, "1.0.0");
+        assert_eq!(parsed.version_id(), "1.0.0");
+        assert_eq!(parsed.namespace, None);
+    }
+
+    #[test]
+    fn a_malformed_hrid_names_its_defect() {
+        assert_eq!(
+            "openEHR-EHR-OBSERVATION.bp".parse::<ArchetypeHrid>(),
+            Err(HridError::NoVersion(
+                "openEHR-EHR-OBSERVATION.bp".to_owned()
+            ))
+        );
+        assert!(matches!(
+            "openEHR-OBSERVATION.bp.v1".parse::<ArchetypeHrid>(),
+            Err(HridError::ModelPart { .. })
+        ));
+        assert!(matches!(
+            "openEHR-EHR-OBSERVATION..v1".parse::<ArchetypeHrid>(),
+            Err(HridError::EmptySegment(_))
+        ));
     }
 
     #[test]

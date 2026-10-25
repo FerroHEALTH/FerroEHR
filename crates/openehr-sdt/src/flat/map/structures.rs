@@ -307,6 +307,15 @@ pub(super) fn build_rm_attr(
 ) -> Result<Option<(String, Value)>, FlatError> {
     let name = seg.trim_start_matches('_');
     let first = || occurrences.iter().find(|o| !o.is_empty());
+    // A single-valued family takes its value whole from `|raw` (master04 §Raw
+    // canonical JSON) or builds it from the master05 suffixes.
+    let single = |types: &[&str], build: fn(&SimNode) -> Value| {
+        first()
+            .map(|o| {
+                super::raw_value(o, &format!("{path}/{seg}"), types).unwrap_or_else(|| Ok(build(o)))
+            })
+            .transpose()
+    };
     let out = match name {
         "uid" => first()
             .and_then(SimNode::bare)
@@ -317,13 +326,20 @@ pub(super) fn build_rm_attr(
             // reported key matches the client's own `_link:i` numbering.
             let mut links = Vec::new();
             for (i, occurrence) in occurrences.iter().enumerate() {
-                if !occurrence.is_empty() {
-                    links.push(build_link(occurrence, path, i)?);
+                if occurrence.is_empty() {
+                    continue;
                 }
+                let at = format!("{path}/{seg}:{i}");
+                links.push(match super::raw_value(occurrence, &at, &["LINK"]) {
+                    Some(raw) => raw?,
+                    None => build_link(occurrence, path, i)?,
+                });
             }
             Some(("links".to_owned(), Value::Array(links)))
         }
-        "feeder_audit" => first().map(|o| ("feeder_audit".to_owned(), build_feeder_audit(o))),
+        "feeder_audit" => {
+            single(&["FEEDER_AUDIT"], build_feeder_audit)?.map(|v| ("feeder_audit".to_owned(), v))
+        }
         "null_flavour" => first()
             .and_then(|o| data_values::build_leaf(o, "DV_CODED_TEXT", None))
             .map(|v| ("null_flavour".to_owned(), v)),
@@ -336,14 +352,17 @@ pub(super) fn build_rm_attr(
         "work_flow_id" => first()
             .and_then(parties::build_object_ref)
             .map(|v| ("workflow_id".to_owned(), v)),
-        "provider" => first().map(|o| ("provider".to_owned(), parties::build_party(o, "PERSON"))),
+        "provider" => single(super::PARTY_PROXY_CLASSES, |o| {
+            parties::build_party(o, "PERSON")
+        })?
+        .map(|v| ("provider".to_owned(), v)),
         "other_participation" => Some((
             "other_participations".to_owned(),
-            Value::Array(build_each(occurrences, parties::build_participation)),
+            Value::Array(participations(occurrences, seg, path)?),
         )),
         "participation" => Some((
             "participations".to_owned(),
-            Value::Array(build_each(occurrences, parties::build_participation)),
+            Value::Array(participations(occurrences, seg, path)?),
         )),
         "instruction_details" => first().map(|o| {
             (
@@ -375,12 +394,10 @@ pub(super) fn build_rm_attr(
         "location" => first()
             .and_then(SimNode::bare)
             .map(|v| ("location".to_owned(), v.clone())),
-        "health_care_facility" => first().map(|o| {
-            (
-                "health_care_facility".to_owned(),
-                parties::build_party(o, "ORGANISATION"),
-            )
-        }),
+        "health_care_facility" => single(&["PARTY_IDENTIFIED"], |o| {
+            parties::build_party(o, "ORGANISATION")
+        })?
+        .map(|v| ("health_care_facility".to_owned(), v)),
         // value-internal families (`T` = the host leaf type).
         "normal_range" => first().map(|o| {
             (
@@ -425,6 +442,25 @@ pub(super) fn build_rm_attr(
         }
     };
     Ok(out)
+}
+
+/// The `PARTICIPATION` of each non-empty occurrence, in order, each taken
+/// whole from `|raw` (master04 §Raw canonical JSON) or built from the
+/// master05 §PARTICIPATION suffixes.
+///
+/// # Errors
+/// [`FlatError::InvalidRaw`] for a `|raw` value that is no lone
+/// `PARTICIPATION`.
+fn participations(occurrences: &[SimNode], seg: &str, path: &str) -> Result<Vec<Value>, FlatError> {
+    occurrences
+        .iter()
+        .enumerate()
+        .filter(|(_, o)| !o.is_empty())
+        .map(|(i, o)| {
+            super::raw_value(o, &format!("{path}/{seg}:{i}"), &["PARTICIPATION"])
+                .unwrap_or_else(|| Ok(parties::build_participation(o)))
+        })
+        .collect()
 }
 
 /// Apply `f` to each non-empty occurrence, in order.

@@ -614,7 +614,12 @@ impl Outer<'_> {
             self.pos += 1;
             let value = if matches!(self.current(), Some(Token::SymEq)) {
                 self.pos += 1;
-                let v = self.current().and_then(token_text);
+                // NOTE: ADL2 `meta_data_value` admits a `primitive_value`; a string value
+                // is read as its decoded text, the delimiters and escapes removed.
+                let v = match self.current() {
+                    Some(Token::String(raw)) => Some(decode_meta_string(raw)),
+                    other => other.and_then(token_text),
+                };
                 if v.is_some() {
                     self.pos += 1;
                 }
@@ -707,6 +712,27 @@ fn has_primary_language(section: &openehr_lang::v1_1::odin::OdinValue) -> bool {
 }
 
 /// The text a meta value token carries, if any.
+/// The text of a quoted metadata string: the surrounding `"` removed and the
+/// `\\` and `\"` escapes decoded.
+fn decode_meta_string(raw: &str) -> String {
+    let inner = raw
+        .strip_prefix('"')
+        .and_then(|rest| rest.strip_suffix('"'))
+        .unwrap_or(raw);
+    let mut out = String::with_capacity(inner.len());
+    let mut chars = inner.chars();
+    while let Some(c) = chars.next() {
+        if c == '\\'
+            && let Some(next) = chars.next()
+        {
+            out.push(next);
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
 fn token_text(t: &Token) -> Option<String> {
     match t {
         Token::VersionId(s)
