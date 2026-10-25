@@ -153,6 +153,9 @@ pub struct AuditEvent {
     /// The namespace of the EHR subject's id, as `EHR_STATUS.subject` names
     /// it, filled by the drain beside the subject it resolves.
     pub subject_namespace: Option<String>,
+    /// Whether the drain could not learn the EHR's subject: the resolver
+    /// could not ask the database, or did not answer.
+    pub subject_lookup_failed: bool,
     /// The resolved object identifier (resource URI / version uid / query name).
     pub object_id: Option<String>,
     /// The bearer token's `jti` claim when the request was Bearer-authenticated
@@ -352,6 +355,7 @@ impl AuditEvent {
             client_ip: None,
             ehr_id: None,
             subject_namespace: None,
+            subject_lookup_failed: false,
             object_id: None,
             token_id: None,
             domain: AccessDomain::of(object),

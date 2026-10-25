@@ -34,6 +34,15 @@ workflow refuses a tag that has no matching section here.
   never match a party. The viewer moves to FerroUI 0.3.7, which makes the
   node's query link optional and keeps a long URL or word in a banner, a
   notice or a setting row inside the screen at 320 px.
+
+- **An access record says when the patient lookup failed** (#3900). When the
+  audit drain cannot read the subject behind an EHR (the database refused or
+  did not answer), the EHDS access record now writes the patient lookup as
+  `unavailable` instead of `not-found`, so a reviewer can tell a record that
+  names no patient because the lookup failed from one whose EHR has no
+  subject (Regulation (EU) 2025/327 Art 9(1)). A failed lookup is asked again
+  for the next record instead of being remembered.
+
 ### Security
 
 Shipped with functional changes because: no shipped artefact is affected (zip 8.6.0 ran only in a build script, as the withdrawn VEX statements recorded), so there is no security update to separate from the other changes this release carries.
