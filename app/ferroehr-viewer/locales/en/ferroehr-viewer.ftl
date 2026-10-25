@@ -1391,10 +1391,6 @@ find-subtitle = One answer for an id, a subject, a template or a stored query.
 find-empty = Type an id, a subject, a template or a query name in the search field above.
 find-no-id-holds = No EHR, composition or party has the id { $id }.
 find-nothing-for = Nothing matches “{ $typed }”.
-find-found-some = { $count ->
-    [one] 1 record matches.
-   *[other] { $count } records match.
-}
 find-matches = { $count ->
     [one] 1 match for “{ $typed }”
    *[other] { $count } matches for “{ $typed }”

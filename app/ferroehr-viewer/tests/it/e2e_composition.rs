@@ -231,7 +231,7 @@ async fn ehr_finder_by_id_works_with_javascript_disabled() {
     h.wait_css("#find").await.send_keys(&ehr_id).await;
     h.shot(1, "ehr-finder-no-js").await;
     common::submit(&h, "form[action='/find'] button[type=submit]").await;
-    wait_main_contains(&h, "1 record matches").await;
+    wait_main_contains(&h, "1 match for").await;
     h.wait_css(&format!("main a[href='/ehrs/{ehr_id}']"))
         .await
         .click()
