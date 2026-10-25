@@ -21,7 +21,11 @@
 //! `TEMPLATE_GRACE`. A clone is made under the
 //! same lock in shared mode and only from a stamped template. Clones are
 //! named `ferroehr_tk_<secs>_<rand>` and swept by [`sweep_stale`], which every
-//! test process runs once before it hands out a database.
+//! test process runs once before it hands out a database. A clone is leased
+//! to the process that made it by a session-level advisory lock held on its
+//! own connection for the clone's life, so the sweep drops a clone whose
+//! lease is free (its process ended, however it ended) and never one whose
+//! lease is held (`PostgreSQL` docs § Advisory Locks).
 
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
@@ -73,12 +77,17 @@ const TEMPLATE_LOCK_KEY: i64 = 0x0EB2_7E57_0001;
 /// Advisory-lock key electing the single startup sweeper.
 const SWEEP_LOCK_KEY: i64 = 0x0EB2_7E57_0002;
 
-/// Clones younger than this grace window are never swept.
+/// Clones younger than this grace window are never swept, for a clone name
+/// that carries no lease key.
 ///
 /// A running test's clone can momentarily have no session on it (the pools run
 /// `min_connections = 0`), so connectedness cannot tell live from leaked; the
-/// name-embedded creation time can.
+/// lease can, and for a name without one the name-embedded creation time can.
 const SWEEP_GRACE: Duration = Duration::from_mins(30);
+
+/// The first key of every clone lease, a two-key session-level advisory lock
+/// whose second key comes from the clone's name ([`lease_key`]).
+const CLONE_LEASE_CLASS: i32 = 0x0EB2_7E57;
 
 /// Templates of another migration fingerprint stamped complete less than this
 /// long ago are never swept.
@@ -143,14 +152,17 @@ pub enum TestkitError {
 /// One fresh, fully migrated database for one test: a clone of the migrated
 /// template.
 ///
-/// Dropping the guard best-effort-drops the database; the init sweep reclaims
-/// anything a killed process left behind.
+/// Dropping the guard drops the database before the drop returns, so a test
+/// that passes and one that panics both leave nothing behind; the startup
+/// sweep reclaims what a killed process left, by its free lease.
 #[derive(Debug)]
 pub struct TestDb {
     pool: PgPool,
     url: String,
     name: String,
     admin_url: String,
+    /// The connection holding the clone's lease; closing it frees the lease.
+    lease: Option<PgConnection>,
 }
 
 impl TestDb {
@@ -175,14 +187,15 @@ impl TestDb {
 
 impl Drop for TestDb {
     fn drop(&mut self) {
-        // Best-effort: `Drop` cannot await and the process may exit first; the
-        // init sweep is the durable backstop.
+        // `Drop` cannot await, so the drop runs on a thread of its own, and is
+        // joined: a detached thread dies with the test process, which nextest
+        // ends as soon as the test returns, and its clone leaked (#3924).
         //
         // NOTE: `WITH (FORCE)` is correct here and wrong in the sweep — it
         // terminates our own clone's connections, never another process's.
         let admin_url = self.admin_url.clone();
         let name = self.name.clone();
-        drop(std::thread::Builder::new().spawn(move || {
+        let dropper = std::thread::Builder::new().spawn(move || {
             if let Ok(rt) = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
@@ -199,7 +212,11 @@ impl Drop for TestDb {
                     }
                 });
             }
-        }));
+        });
+        if let Ok(dropper) = dropper {
+            drop(dropper.join());
+        }
+        drop(self.lease.take());
     }
 }
 
@@ -238,6 +255,16 @@ pub async fn empty_db() -> Result<TestDb, TestkitError> {
 async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, TestkitError> {
     const POOL_DEADLINE: Duration = Duration::from_secs(15);
     let name = fresh_name();
+    // The lease is taken before the clone exists, so no sweep ever sees the
+    // clone without its owner.
+    let mut lease = connect_ready(server).await?;
+    if let Some(key) = lease_key(&name) {
+        sqlx::query("SELECT pg_advisory_lock($1, $2)")
+            .bind(CLONE_LEASE_CLASS)
+            .bind(key)
+            .execute(&mut lease)
+            .await?;
+    }
     let mut admin = connect_ready(server).await?;
     if let Some(template) = template {
         create_clone(&mut admin, server, &name, template).await?;
@@ -273,6 +300,7 @@ async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, Testk
         url,
         name,
         admin_url: server.to_owned(),
+        lease: Some(lease),
     };
     if template.is_some() {
         db::verify_migrations(&db.pool).await?;
@@ -569,9 +597,9 @@ async fn template_complete(
 /// the fingerprint and the build time.
 ///
 /// The template name therefore only ever names a fully migrated database. The
-/// staging database carries a clone-shaped name, so a concurrent process's
-/// sweep spares it for [`SWEEP_GRACE`] instead of dropping it mid-migration;
-/// another fingerprint's suite on the same server spares THIS template for
+/// staging database carries a clone-shaped name and its lease is held on
+/// `admin` until it is renamed, so a concurrent process's sweep spares it
+/// instead of dropping it mid-migration; another fingerprint's suite on the same server spares THIS template for
 /// `TEMPLATE_GRACE` after the stamp and sweeps it as stale after that, and
 /// nothing it drops can be half built.
 async fn build_template(
@@ -588,11 +616,28 @@ async fn build_template(
         .execute(&mut *admin)
         .await?;
     let staging = fresh_name();
+    let lease = lease_key(&staging);
+    if let Some(key) = lease {
+        sqlx::query("SELECT pg_advisory_lock($1, $2)")
+            .bind(CLONE_LEASE_CLASS)
+            .bind(key)
+            .execute(&mut *admin)
+            .await?;
+    }
     let create_sql = format!("CREATE DATABASE {staging}");
     sqlx::raw_sql(sqlx::AssertSqlSafe(create_sql))
         .execute(&mut *admin)
         .await?;
     let built = migrate_and_rename(admin, admin_url, &staging, template).await;
+    if let Some(key) = lease {
+        drop(
+            sqlx::query("SELECT pg_advisory_unlock($1, $2)")
+                .bind(CLONE_LEASE_CLASS)
+                .bind(key)
+                .execute(&mut *admin)
+                .await,
+        );
+    }
     if built.is_err() {
         let sql = format!("DROP DATABASE IF EXISTS {staging} WITH (FORCE)");
         drop(
@@ -651,6 +696,19 @@ fn fresh_name() -> String {
     let rand = uuid::Uuid::new_v4().simple().to_string();
     let short = rand.get(..12).unwrap_or(rand.as_str());
     format!("{DB_PREFIX}{secs:x}_{short}")
+}
+
+/// The second key of the lease on clone `name`: the first eight hex digits of
+/// its random suffix, or `None` for a name [`fresh_name`] did not make.
+fn lease_key(name: &str) -> Option<i32> {
+    let rest = name.strip_prefix(DB_PREFIX)?;
+    if rest.starts_with("tpl_") {
+        return None;
+    }
+    let (_, suffix) = rest.split_once('_')?;
+    let digits = suffix.get(..8)?;
+    let key = u32::from_str_radix(digits, 16).ok()?;
+    Some(i32::from_be_bytes(key.to_be_bytes()))
 }
 
 /// Clones the template, only ever from a complete one.
@@ -848,7 +906,12 @@ async fn sweep(admin: &mut PgConnection) -> SweepReport {
     };
 
     for (name, comment) in databases {
-        if !stale(&name, comment.as_deref(), &current_template, now) {
+        let lease = lease_key(&name);
+        let candidate = match lease {
+            Some(key) => lease_free(admin, key).await,
+            None => stale(&name, comment.as_deref(), &current_template, now),
+        };
+        if !candidate {
             continue;
         }
         report.candidates += 1;
@@ -868,6 +931,15 @@ async fn sweep(admin: &mut PgConnection) -> SweepReport {
                     tracing::warn!("testkit sweep: dropping {name} failed: {error}");
                 }
             }
+        }
+        if let Some(key) = lease {
+            drop(
+                sqlx::query("SELECT pg_advisory_unlock($1, $2)")
+                    .bind(CLONE_LEASE_CLASS)
+                    .bind(key)
+                    .execute(&mut *admin)
+                    .await,
+            );
         }
     }
 
@@ -892,6 +964,24 @@ async fn sweep(admin: &mut PgConnection) -> SweepReport {
     }
 
     report
+}
+
+/// Whether the lease `key` names is free, taking it when it is: the process
+/// that made the clone has ended. The caller releases it after the drop.
+async fn lease_free(admin: &mut PgConnection, key: i32) -> bool {
+    let taken: Result<bool, sqlx::Error> =
+        sqlx::query_scalar("SELECT pg_try_advisory_lock($1, $2)")
+            .bind(CLONE_LEASE_CLASS)
+            .bind(key)
+            .fetch_one(&mut *admin)
+            .await;
+    match taken {
+        Ok(taken) => taken,
+        Err(error) => {
+            tracing::warn!("testkit sweep: reading a clone lease failed: {error}");
+            false
+        }
+    }
 }
 
 /// The `SQLSTATE` a failure carries, when it was reported by the server at all

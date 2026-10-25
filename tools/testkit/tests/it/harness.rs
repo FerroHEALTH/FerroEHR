@@ -220,3 +220,168 @@ async fn a_dropped_template_is_rebuilt_before_the_next_clone() {
             .expect("catalog probe for the template");
     assert_eq!(restored, vec![template], "the template was not rebuilt");
 }
+
+/// Whether database `name` exists, read through `pool` (the catalog is
+/// cluster-global).
+#[expect(
+    clippy::expect_used,
+    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
+              reaches `#[test]`-annotated functions, so it misses this helper; a \
+              panicking probe is how the calling test fails (the Rust Book ch11)"
+)]
+async fn exists(pool: &sqlx::PgPool, name: &str) -> bool {
+    sqlx::query_scalar::<_, bool>("SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = $1)")
+        .bind(name)
+        .fetch_one(pool)
+        .await
+        .expect("catalog probe")
+}
+
+/// A clone is gone the moment its guard drops, as when a passing test
+/// returns (#3924).
+#[tokio::test]
+async fn a_passing_tests_clone_is_dropped_with_its_guard() {
+    let probe = testkit::db().await.expect("probe clone");
+    let db = testkit::db().await.expect("clone");
+    let name = db.name().to_owned();
+    assert!(
+        exists(&probe.pool(), &name).await,
+        "the clone {name} was never created"
+    );
+    drop(db);
+    assert!(
+        !exists(&probe.pool(), &name).await,
+        "dropping the guard left {name} behind"
+    );
+}
+
+/// A clone is gone once a test that holds it panics, since the unwind drops
+/// the guard (#3924).
+#[tokio::test]
+async fn a_failing_tests_clone_is_dropped_by_the_unwind() {
+    let probe = testkit::db().await.expect("probe clone");
+    let (named, name) = std::sync::mpsc::channel();
+    // A test of its own, on its own runtime, as nextest runs one.
+    let failing = std::thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        runtime.block_on(async {
+            let db = testkit::db().await.expect("clone");
+            named
+                .send(db.name().to_owned())
+                .expect("send the clone's name");
+            panic!("a failing test holding {}", db.name());
+        });
+    });
+    assert!(failing.join().is_err(), "the stand-in test must fail");
+    let name = name.recv().expect("the clone's name");
+    assert!(
+        !exists(&probe.pool(), &name).await,
+        "the failing test left {name} behind"
+    );
+}
+
+/// A clone whose process was killed, so its lease is free, is swept however
+/// young it is, while a clone whose lease is held survives (#3924).
+///
+/// Cluster-global like the sweep gate above; the stand-in carries a unique,
+/// freshly stamped name inside the harness's prefix.
+#[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "non-key randomness: a v4 suffix keeping the stand-in database name \
+              unique across parallel test processes on the shared server"
+)]
+async fn a_killed_runs_young_clone_is_swept_by_its_free_lease() {
+    let db = testkit::db().await.expect("clone");
+    let pool = db.pool();
+    let now = u64::try_from(jiff::Timestamp::now().as_second()).expect("a post-1970 clock");
+    let suffix = uuid::Uuid::new_v4().simple().to_string();
+    let killed = format!("ferroehr_tk_{now:x}_{}", suffix.get(..12).expect("a uuid"));
+    let create = format!("CREATE DATABASE {killed}");
+    sqlx::raw_sql(sqlx::AssertSqlSafe(create))
+        .execute(&pool)
+        .await
+        .expect("create the killed run's clone");
+
+    testkit::sweep_stale().await.expect("sweep");
+
+    assert!(
+        !exists(&pool, &killed).await,
+        "the sweep left the killed run's clone {killed} behind"
+    );
+    assert!(
+        exists(&pool, db.name()).await,
+        "the sweep dropped {}, whose lease is held",
+        db.name()
+    );
+}
+
+/// The sweep never drops a database a live session holds the lease of: a
+/// sweeper loops while eight threads, each a session of its own like a test
+/// process, take clones of a template that was just dropped, so one of them
+/// rebuilds it through a clone-shaped staging database under the sweep
+/// (#3924: a sweep once dropped that staging database mid-build, and the
+/// rename failed with SQLSTATE 3D000).
+///
+/// Cluster-global like the template test above: it drops the shared template.
+#[test]
+fn the_sweep_spares_every_leased_clone_and_staging_database_under_load() {
+    const WORKERS: usize = 8;
+    const CLONES_EACH: usize = 4;
+    let runtime = || {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+    };
+    runtime().block_on(async {
+        let probe = testkit::db().await.expect("probe clone");
+        let template = format!("ferroehr_tk_tpl_{}", ferroehr::db::migration_fingerprint());
+        let drop_template = format!("DROP DATABASE IF EXISTS {template} WITH (FORCE)");
+        sqlx::raw_sql(sqlx::AssertSqlSafe(drop_template))
+            .execute(&probe.pool())
+            .await
+            .expect("drop the template so the workers rebuild it");
+    });
+
+    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let sweeper = {
+        let stop = std::sync::Arc::clone(&stop);
+        std::thread::spawn(move || {
+            runtime().block_on(async {
+                let mut sweeps = 0_u32;
+                while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                    testkit::sweep_stale().await.expect("sweep");
+                    sweeps += 1;
+                }
+                sweeps
+            })
+        })
+    };
+    let workers: Vec<_> = (0..WORKERS)
+        .map(|_| {
+            std::thread::spawn(move || {
+                runtime().block_on(async {
+                    for _ in 0..CLONES_EACH {
+                        let db = testkit::db().await.expect("a clone under the sweep");
+                        ferroehr::db::verify_migrations(&db.pool())
+                            .await
+                            .expect("the clone is whole while its lease is held");
+                    }
+                });
+            })
+        })
+        .collect();
+    let failed = workers
+        .into_iter()
+        .map(std::thread::JoinHandle::join)
+        .filter(Result::is_err)
+        .count();
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    let sweeps = sweeper.join().expect("the sweeper ends");
+    assert_eq!(failed, 0, "{failed} worker(s) lost a clone to the sweep");
+    assert!(sweeps > 0, "the sweep never ran beside the workers");
+}
