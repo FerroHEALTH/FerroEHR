@@ -2785,8 +2785,10 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
+ "pem 4.0.0",
  "pprof",
  "prometheus",
+ "rcgen",
  "reqwest",
  "rustls",
  "secrecy",
@@ -2812,6 +2814,7 @@ dependencies = [
  "utoipa-swagger-ui",
  "uuid",
  "wiremock",
+ "yasna",
 ]
 
 [[package]]
