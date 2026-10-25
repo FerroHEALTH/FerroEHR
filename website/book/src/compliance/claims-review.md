@@ -442,6 +442,7 @@ cut, after the texts in scope have been read.
 | 2026-10-23 | 5.3.3, after `25845e6d3` | 1 claim, in one book page: the templates page said `|raw` is write-only, corrected for #3934 | nothing |
 | 2026-10-24 | 5.4.0, after `de38ec433` | none | nothing |
 | 2026-10-24 | 5.4.1, after `9fdd36091` | 2 claims, in two book pages: the compliance index named `[terminology.external]` and a terminology route, and the crates page pinned `0.0.97` | nothing |
+| 2026-10-25 | 5.4.2, after `2333f98ba` | none; the changes of this release updated their own pages in the pull requests that made them | nothing |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -595,5 +596,41 @@ templates only where they work (#3997); the nine `openehr-*` crates at `0.0.98`.
   chart description** make no claim this release changes.
 
 ### Left open on 2026-10-24, for 5.4.1
+
+Nothing.
+
+## The review of 2026-10-25, for 5.4.2
+
+Read on the tree after commit `2333f98ba`, for FerroEHR 5.4.2. The facts of this
+release checked in every text in scope: a valid Certification Revocation of a
+Direct Key signature cancels it, so it no longer lets the primary key sign
+(#3972); an access record whose patient lookup failed writes `unavailable`
+(#3900); the viewer's Paths tab offers a query only on a COMPOSITION template,
+on FerroUI 0.3.7 (#4001); `ferrohealth-smart` 0.5.0, one `openehr-sdt` in the
+build (#4002); `ihe-atna` and `ehds-logging` 0.2.7 (#3954); zip 8.6.0 out of
+the build (#3799); chart 14.0.1; the nine `openehr-*` crates at `0.0.98`.
+
+### Changed on 2026-10-25, for 5.4.2
+
+Nothing at the cut: each change above updated its page in its own pull request.
+
+### Read and kept on 2026-10-25, for 5.4.2
+
+- **The signing statement**: the [PGP signing page](../signing/pgp.md) states
+  that a revoked Direct Key signature is not chosen, as the code does.
+- **The viewer statement**: [Templates & EHRs](../viewer/browsing.md) says a
+  node offers Build a query on this path only on a COMPOSITION template.
+- **The logging component**: the [EHDS readiness page](ehds-readiness.md),
+  rendered from `website/book/ehds.yaml`, and the [hazard log](hazard-log.md)
+  name `ehds-logging` and `ihe-atna` 0.2.7.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  14.0.1 and image 5.4.2.
+- **The landing page, `SECURITY.md`, the crate READMEs, the
+  [information sheet](information-sheet.md), the
+  [instructions for use](instructions-for-use.md), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-10-25, for 5.4.2
 
 Nothing.
