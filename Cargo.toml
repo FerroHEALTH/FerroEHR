@@ -274,7 +274,7 @@ pgp = { version = "0.21.0", default-features = false }   # rPGP — pure-Rust Op
 # ── OpenAPI / Swagger (code-first) ───────────────────────────────────────────
 utoipa = { version = "6.0.0", features = ["axum_extras", "chrono", "uuid", "decimal"] }
 utoipa-axum = "0.3.0"                  # route-matched OpenAPI
-utoipa-swagger-ui = { version = "10.0.1", features = ["axum", "vendored"] }   # serves Swagger UI (vendored = offline build, no curl download)
+utoipa-swagger-ui = { version = "10.0.2", features = ["axum", "vendored"] }   # serves Swagger UI (vendored = offline build, no curl download)
 # Swagger UI is the ONE document viewer this server ships; the alternative
 # utoipa viewers (redoc/scalar/rapidoc) were pinned here but never consumed by
 # any member, so they are gone. Re-add one only when a crate actually serves it.
