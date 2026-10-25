@@ -27,6 +27,13 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **A revoked Direct Key signature no longer lets the primary key sign**
+  (#3972). The PGP signer now applies a valid Certification Revocation of a
+  Direct Key signature, created at or after it: the revoked signature is
+  cancelled (RFC 9580 §5.2.3.10), so neither its signing flag nor its key
+  expiration counts any more, and a version 6 primary key left with no
+  Direct Key signature in force is not used.
+
 - **The viewer's Paths tab offers Build a query only on a COMPOSITION
   template** (#4001). A node of a demographic template (a PERSON,
   ORGANISATION, GROUP, AGENT or ROLE root) no longer links to the query

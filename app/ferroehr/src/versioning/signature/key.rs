@@ -18,7 +18,10 @@ use pgp::composed::{
 };
 use pgp::crypto::hash::HashAlgorithm;
 use pgp::crypto::public_key::PublicKeyAlgorithm;
-use pgp::packet::{PublicKey, Signature, SignatureType, SubpacketData};
+use pgp::packet::{
+    PublicKey, Signature, SignatureConfig, SignatureType, SignatureVersion,
+    SignatureVersionSpecific, SubpacketData,
+};
 use pgp::types::KeyDetails as _;
 use pgp::types::{Duration, KeyVersion, Password, SignedUser, Tag, Timestamp};
 use rand::rngs::OsRng;
@@ -392,10 +395,24 @@ fn primary_self_signatures(secret: &SignedSecretKey) -> Option<PrimarySelfSignat
     if revoked {
         return None;
     }
+    // NOTE: RFC 9580 §5.2.3.10, "Revoking a Direct Key signature cancels that signature".
+    let cancellations: Vec<&Signature> = details
+        .direct_signatures
+        .iter()
+        .chain(&details.revocation_signatures)
+        .filter(|sig| {
+            sig.typ() == Some(SignatureType::CertRevocation) && verifies_over_primary(sig, primary)
+        })
+        .collect();
     let direct = details
         .direct_signatures
         .iter()
         .filter(|sig| sig.typ() == Some(SignatureType::Key) && sig.verify_key(primary).is_ok())
+        .filter(|sig| {
+            !cancellations
+                .iter()
+                .any(|revocation| revocation.created() >= sig.created())
+        })
         .max_by_key(|sig| sig.created());
     if primary.version() == KeyVersion::V6 && direct.is_none() {
         return None;
@@ -404,6 +421,66 @@ fn primary_self_signatures(secret: &SignedSecretKey) -> Option<PrimarySelfSignat
         .filter(|sig| states_key_flags(sig))
         .or_else(|| primary_user_self_signature(primary, &details.users));
     Some(PrimarySelfSignatures { direct, governing })
+}
+
+/// Whether `sig`, a Certification Revocation (Type ID 0x30) found beside the
+/// primary key's Direct Key signatures, verifies against the primary key alone.
+///
+/// RFC 9580 §5.2.1.13 computes it "over the same data as the certification
+/// that it revokes", for a Direct Key signature the primary key alone hashed
+/// as §5.2.4 describes. rPGP 0.21's `Signature::verify_key` hashes exactly
+/// that but refuses the type, so the same steps are taken here: the issuer
+/// matches, the key and signature versions align, the hash's leading octets
+/// match and the signature verifies.
+fn verifies_over_primary(sig: &Signature, primary: &PublicKey) -> bool {
+    use pgp::types::VerifyingKey as _;
+
+    let (Some(config), Some(signed_hash), Some(bytes)) =
+        (sig.config(), sig.signed_hash_value(), sig.signature())
+    else {
+        return false;
+    };
+    let issuers = config.issuer_key_id();
+    let fingerprints = config.issuer_fingerprint();
+    let issued_by_primary = (issuers.is_empty() && fingerprints.is_empty())
+        || issuers.iter().any(|id| **id == primary.legacy_key_id())
+        || fingerprints.iter().any(|fp| **fp == primary.fingerprint());
+    let aligned =
+        (primary.version() == KeyVersion::V6) == (config.version() == SignatureVersion::V6);
+    issued_by_primary
+        && aligned
+        && key_signature_hash(config, primary).is_ok_and(|hash| {
+            hash.get(..2) == Some(signed_hash.as_slice())
+                && primary.verify(config.hash_alg, &hash, bytes).is_ok()
+        })
+}
+
+/// The hash a signature made with `config` over `primary` alone signs
+/// (RFC 9580 §5.2.4): the version 6 salt, the key packet framed by 0x99 and a
+/// 2-octet length (version 4) or 0x9B and a 4-octet length (version 6), the
+/// signature's hashed data and its trailer.
+fn key_signature_hash(
+    config: &SignatureConfig,
+    primary: &PublicKey,
+) -> pgp::errors::Result<Vec<u8>> {
+    use pgp::ser::Serialize as _;
+
+    let mut hasher = config.hash_alg.new_hasher()?;
+    if let SignatureVersionSpecific::V6 { salt } = &config.version_specific {
+        hasher.update(salt.as_ref());
+    }
+    let body = primary.to_bytes()?;
+    if primary.version() == KeyVersion::V6 {
+        hasher.update(&[0x9B]);
+        hasher.update(&u32::try_from(body.len())?.to_be_bytes());
+    } else {
+        hasher.update(&[0x99]);
+        hasher.update(&u16::try_from(body.len())?.to_be_bytes());
+    }
+    hasher.update(&body);
+    let len = config.hash_signature_data(&mut hasher)?;
+    hasher.update(&config.trailer(len)?);
+    Ok(hasher.finalize().into_vec())
 }
 
 /// Whether the primary key is in force at `now`: usable at all

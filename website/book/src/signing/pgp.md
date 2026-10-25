@@ -103,7 +103,11 @@ lets it:
   ([§5.2.3.10](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.3.10)),
   so the governing one is the newest valid Direct Key signature when it
   carries key flags, else the newest valid self-signature on the primary
-  User ID. A version 6 key without a valid Direct Key signature is not used
+  User ID. A Direct Key signature that a valid Certification Revocation
+  created at or after it revokes is cancelled and not chosen
+  ([§5.2.1.13](https://www.rfc-editor.org/rfc/rfc9580#section-5.2.1.13),
+  §5.2.3.10: "Revoking a Direct Key signature cancels that signature"). A
+  version 6 key without a valid Direct Key signature in force is not used
   at all, as §5.2.3.10 requires. A self-signature with no key flags grants
   no signing, since §5.2.3.29 counts an unstated flag as zero. RFC 9580
   gives no precedence between the two places, so preferring the Direct Key
