@@ -2814,8 +2814,6 @@ messages! {
     /// `Type an id, a subject, a template or a query name in the search field above.`
     FindEmpty = "find-empty",
     /// `{ $count ->`
-    FindFoundSome = "find-found-some",
-    /// `{ $count ->`
     FindMatches = "find-matches",
     /// `No EHR, composition or party has the id { $id }.`
     FindNoIdHolds = "find-no-id-holds",

@@ -9,22 +9,23 @@
 //! is read as an EHR id and as a composition's versioned object, and is tried
 //! as a party; any words are matched against the template ids and concepts
 //! and the stored queries' names. A subject id needs its namespace, which the
-//! EHRs list asks for. The answer opens under the search box, grouped by
-//! kind, and the find page lists the other ways to read the id. No openEHR
-//! spec governs the viewer: our own design; the reads are ITS-REST.
+//! EHRs list asks for. As you type, the panel under the search box asks the
+//! server function [`find_answer`] and shows the hits grouped by kind; the
+//! find page lists every hit in the page and the other ways to read the id.
+//! No openEHR spec governs the viewer: our own design; the reads are
+//! ITS-REST.
 
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::view::search::{Hit, HitGroup, Mark, SearchAnswer};
+use ferrohealth_ui::view::search::{Hit, HitGroup, Mark, SearchAnswer, find_results};
 use ferrohealth_ui::view::surface::{Header, page_heading};
 use ferrohealth_ui::view::template::list::{ListCard, list_card};
 use leptos::prelude::*;
+use leptos::server_fn::codec::Json;
 use leptos_meta::Title;
 
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{awaited, info_note, shortened};
-
-/// The most hits one kind shows under the search box.
-const HITS_PER_KIND: usize = 5;
+use crate::session_client::SessionAwareClient;
 
 /// One kind of hit, as the answer groups them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -92,9 +93,11 @@ pub struct Found {
 }
 
 impl Found {
-    /// The answer the top bar's search opens under it.
+    /// What the search found, every hit grouped by kind: the panel under
+    /// the search box shows five of a kind, and the find page every one.
     #[must_use]
     pub fn answer(self) -> SearchAnswer {
+        let unfinished = (!self.failed.is_empty()).then(|| failed_line(&self.failed));
         if self.hits.is_empty() {
             let none = if self.failed.is_empty() {
                 (tr(Msg::FindNothingTitle), tr(Msg::FindNothingLine))
@@ -102,9 +105,11 @@ impl Found {
                 (tr(Msg::FindUnfinishedTitle), failed_line(&self.failed))
             };
             return SearchAnswer {
+                query: self.typed,
                 head: None,
                 groups: Vec::new(),
                 none: Some(none),
+                unfinished: None,
                 more: None,
             };
         }
@@ -121,7 +126,6 @@ impl Found {
                 .hits
                 .iter()
                 .filter(|hit| hit.kind == kind)
-                .take(HITS_PER_KIND)
                 .map(|hit| Hit {
                     href: hit.href.clone(),
                     name: hit.name.clone(),
@@ -140,13 +144,33 @@ impl Found {
         SearchAnswer {
             head: Some(tr_with(
                 Msg::FindMatches,
-                &[("count", total.into()), ("typed", self.typed.into())],
+                &[
+                    ("count", total.into()),
+                    ("typed", self.typed.clone().into()),
+                ],
             )),
+            query: self.typed,
             groups,
             none: None,
+            unfinished,
             more: None,
         }
     }
+}
+
+/// Answers the panel under the search box: what the CDR holds under the
+/// words `q`, as JSON. The words travel in the post's body, never a URL.
+///
+/// # Errors
+/// Returns [`crate::error::ViewerError::Unauthenticated`] with no live
+/// session.
+#[server(endpoint = "find_answer", output = Json, client = SessionAwareClient)]
+pub async fn find_answer(
+    /// The words typed.
+    q: String,
+) -> Result<SearchAnswer, crate::error::ViewerError> {
+    crate::session::require_session().await?;
+    Ok(find(&q).await.answer())
 }
 
 /// The sentence naming the kinds the CDR did not answer for.
@@ -351,8 +375,6 @@ pub fn FindPage() -> impl IntoView {
             .into_any();
         };
         let found = find(&typed).await;
-        let unfinished = (!found.failed.is_empty())
-            .then(|| crate::pages::common::warn_note(failed_line(&found.failed)));
         let read = if found.hits.is_empty() {
             let line = if found.id_shaped {
                 tr_with(
@@ -365,23 +387,14 @@ pub fn FindPage() -> impl IntoView {
                     &[("typed", found.typed.clone().into())],
                 )
             };
-            info_note(line)
+            view! {
+                {(!found.failed.is_empty())
+                    .then(|| crate::pages::common::warn_note(failed_line(&found.failed)))}
+                {info_note(line)}
+            }
+            .into_any()
         } else {
-            list_card(ListCard {
-                title: tr_with(
-                    Msg::FindFoundSome,
-                    &[("count", crate::pages::common::count(found.hits.len()))],
-                ),
-                count: None,
-                order: None,
-                tabs: None,
-                actions: None,
-                body: ferrohealth_ui::view::search::search_answer(
-                    "find-page",
-                    found.clone().answer(),
-                ),
-                pager: None,
-            })
+            find_results(found.clone().answer())
         };
         let card = list_card(ListCard {
             title: tr(Msg::FindOtherWays),
@@ -394,7 +407,7 @@ pub fn FindPage() -> impl IntoView {
         });
         view! {
             {heading}
-            <div class="fui-list-page">{unfinished} {read} {card}</div>
+            <div class="fui-list-page">{read} {card}</div>
         }
         .into_any()
     });

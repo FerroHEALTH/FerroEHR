@@ -229,8 +229,11 @@ behind the menu button.
   the CDR's conformance manifest.
 
 The top bar's search takes an EHR id, a composition or party uid, a subject
-id, a template id or a stored-query name, and answers with what matches, or
-with the other ways to find a record when nothing does.
+id, a template id or a stored-query name. From the second character a panel
+under the field shows what matches, five of a kind; the arrow keys move
+through it, Enter opens a hit and Escape closes it. Submitting the search
+opens the find page, which lists every match, or the other ways to find a
+record when nothing does.
 
 The footer under every page names the viewer and its version, the
 manufacturer (Cadasto B.V.), and an About link.

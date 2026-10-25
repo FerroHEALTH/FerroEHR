@@ -23,7 +23,7 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::dock::{DecisionBar, decision_bar};
-use ferrohealth_ui::view::search::{SearchAnswer, SearchBox, search_box};
+use ferrohealth_ui::view::search::{SearchBox, search_box};
 use ferrohealth_ui::view::shell::{Footer, Shell, TopBar, brand_mark, lockup, shell, topbar};
 use ferrohealth_ui::view::status::{BannerLink, Reach, StatusPill, banner, status_pill};
 use ferrohealth_ui::widget::menu::{ThemeChoice, UserLink, UserMenu, user_menu};
@@ -47,6 +47,10 @@ pub const MARK_PATH: &str = "/ferroehr-icon.svg";
 
 /// The route the top bar's search posts to.
 pub const FIND_ROUTE: &str = "/find";
+
+/// The server function the panel under the search box asks as you type
+/// ([`crate::pages::find::find_answer`]).
+pub const FIND_ANSWER_ROUTE: &str = "/api/find_answer";
 
 /// The glyph of Stored queries in the navigation, on the dashboard and in
 /// the search's answers.
@@ -393,23 +397,22 @@ fn menu(session: Option<&crate::session::ViewerSession>) -> AnyView {
 
 /// The top bar's search box, its answer open under it when the page answers
 /// a search.
-fn search(answer: Option<SearchAnswer>, typed: String, disabled: Option<String>) -> AnyView {
-    search_box(
-        SearchBox {
-            id: "find".to_owned(),
-            name: "q".to_owned(),
-            label: tr(Msg::SearchLabel),
-            placeholder: tr(Msg::SearchPlaceholder),
-            action: FIND_ROUTE.to_owned(),
-            value: typed,
-            submit: tr(Msg::SearchSubmit).into(),
-            shortcut: Some('/'),
-            busy: false,
-            disabled,
-            post: true,
-        },
-        answer,
-    )
+fn search(typed: String, disabled: Option<String>) -> AnyView {
+    search_box(SearchBox {
+        id: "find".to_owned(),
+        name: "q".to_owned(),
+        label: tr(Msg::SearchLabel),
+        placeholder: tr(Msg::SearchPlaceholder),
+        action: FIND_ROUTE.to_owned(),
+        value: typed,
+        submit: tr(Msg::SearchSubmit).into(),
+        shortcut: Some('/'),
+        busy: false,
+        disabled,
+        post: true,
+        suggest: Some(String::from(FIND_ANSWER_ROUTE)),
+        suggest_from: 2,
+    })
 }
 
 /// The shell of every signed-in page.
@@ -451,7 +454,7 @@ pub fn AppShell() -> impl IntoView {
                 Err(crate::error::ViewerError::CdrUnreachable(_))
             );
             let disabled = down.then(|| tr(Msg::SearchWaits));
-            search(None, typed.unwrap_or_default(), disabled)
+            search(typed.unwrap_or_default(), disabled)
         })
     };
     let band = {
