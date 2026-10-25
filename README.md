@@ -13,8 +13,6 @@
 [![GHCR](https://img.shields.io/badge/ghcr.io-ferroehr-2496ED?logo=docker&logoColor=white)](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr)
 [![Image pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2FFerroHEALTH%2FFerroEHR%2Fferroehr&query=downloadCount&label=image%20pulls&logo=github)](https://github.com/FerroHEALTH/FerroEHR/pkgs/container/ferroehr)
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/ferroehr)](https://artifacthub.io/packages/search?repo=ferroehr)
-[![openehr-rm](https://img.shields.io/crates/v/openehr-rm?logo=rust&label=openehr-rm)](https://crates.io/crates/openehr-rm)
-[![docs.rs](https://img.shields.io/docsrs/openehr-rm?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-rm)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21940279-blue?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.21940279)
 
 **Quality and security**<br>
@@ -140,7 +138,7 @@ covers production.
 - [Change events](https://ferroehr.eu/docs/latest/beyond-core/amqp.html) over AMQP for every commit, without patient data by default
 - [Multimedia storage](https://ferroehr.eu/docs/latest/beyond-core/s3-multimedia.html) in any S3-compatible store, with integrity checks
 - [The FerroEHR Viewer](https://ferroehr.eu/docs/latest/viewer/index.html), a web interface over the same public API
-- [The `openehr-*` Rust crates](https://ferroehr.eu/docs/latest/crates.html), the openEHR specifications as libraries
+- [The `openehr-*` Rust crates](https://ferroehr.eu/docs/latest/crates.html), the openEHR specifications as libraries (listed below)
 
 ### Security and privacy
 
@@ -157,6 +155,24 @@ covers production.
 - [Backup and point-in-time recovery](https://ferroehr.eu/docs/latest/operations.html#backup-and-point-in-time-recovery) on PostgreSQL
 - [Measured conformance](https://ferroehr.eu/docs/latest/conformance.html), [performance](https://ferroehr.eu/docs/latest/performance.html) and a [comparison with EHRbase](https://ferroehr.eu/docs/latest/comparison.html)
 - [Verifiable releases](https://ferroehr.eu/docs/latest/verifying-releases.html): signed, with provenance and a software bill of materials
+
+<details>
+<summary><b>Published crates</b> (9)</summary>
+
+| Crate | What it does | Version | Docs | Downloads |
+|---|---|---|---|---|
+| [`openehr-rm`](https://crates.io/crates/openehr-rm) | The Reference Model: compositions, EHR status, entries, data structures and data types | [![crates.io](https://img.shields.io/crates/v/openehr-rm?logo=rust&label=crates.io)](https://crates.io/crates/openehr-rm) | [![docs.rs](https://img.shields.io/docsrs/openehr-rm?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-rm) | [![downloads](https://img.shields.io/crates/d/openehr-rm?logo=rust&label=downloads)](https://crates.io/crates/openehr-rm) |
+| [`openehr-base`](https://crates.io/crates/openehr-base) | BASE: the foundation and base types, such as identifiers and intervals | [![crates.io](https://img.shields.io/crates/v/openehr-base?logo=rust&label=crates.io)](https://crates.io/crates/openehr-base) | [![docs.rs](https://img.shields.io/docsrs/openehr-base?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-base) | [![downloads](https://img.shields.io/crates/d/openehr-base?logo=rust&label=downloads)](https://crates.io/crates/openehr-base) |
+| [`openehr-am`](https://crates.io/crates/openehr-am) | The Archetype Model in both generations, AOM 1.4 and AOM 2.4 | [![crates.io](https://img.shields.io/crates/v/openehr-am?logo=rust&label=crates.io)](https://crates.io/crates/openehr-am) | [![docs.rs](https://img.shields.io/docsrs/openehr-am?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-am) | [![downloads](https://img.shields.io/crates/d/openehr-am?logo=rust&label=downloads)](https://crates.io/crates/openehr-am) |
+| [`openehr-adl`](https://crates.io/crates/openehr-adl) | The ADL engine: parser, AOM2 validity rules, flattener, OPT2 generator and ADL 1.4 to 2 conversion | [![crates.io](https://img.shields.io/crates/v/openehr-adl?logo=rust&label=crates.io)](https://crates.io/crates/openehr-adl) | [![docs.rs](https://img.shields.io/docsrs/openehr-adl?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-adl) | [![downloads](https://img.shields.io/crates/d/openehr-adl?logo=rust&label=downloads)](https://crates.io/crates/openehr-adl) |
+| [`openehr-its`](https://crates.io/crates/openehr-its) | Canonical JSON and XML codecs, the ITS-REST contract, and the OPT 1.4 and AOM2 XML codecs | [![crates.io](https://img.shields.io/crates/v/openehr-its?logo=rust&label=crates.io)](https://crates.io/crates/openehr-its) | [![docs.rs](https://img.shields.io/docsrs/openehr-its?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-its) | [![downloads](https://img.shields.io/crates/d/openehr-its?logo=rust&label=downloads)](https://crates.io/crates/openehr-its) |
+| [`openehr-sdt`](https://crates.io/crates/openehr-sdt) | The Simplified Formats (WebTemplate, FLAT, STRUCTURED, TDD), instance validation and the SMART scope grammar | [![crates.io](https://img.shields.io/crates/v/openehr-sdt?logo=rust&label=crates.io)](https://crates.io/crates/openehr-sdt) | [![docs.rs](https://img.shields.io/docsrs/openehr-sdt?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-sdt) | [![downloads](https://img.shields.io/crates/d/openehr-sdt?logo=rust&label=downloads)](https://crates.io/crates/openehr-sdt) |
+| [`openehr-query`](https://crates.io/crates/openehr-query) | The AQL 1.1 lexer, parser and syntax tree | [![crates.io](https://img.shields.io/crates/v/openehr-query?logo=rust&label=crates.io)](https://crates.io/crates/openehr-query) | [![docs.rs](https://img.shields.io/docsrs/openehr-query?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-query) | [![downloads](https://img.shields.io/crates/d/openehr-query?logo=rust&label=downloads)](https://crates.io/crates/openehr-query) |
+| [`openehr-term`](https://crates.io/crates/openehr-term) | The terminology model and the bundled openEHR terminology | [![crates.io](https://img.shields.io/crates/v/openehr-term?logo=rust&label=crates.io)](https://crates.io/crates/openehr-term) | [![docs.rs](https://img.shields.io/docsrs/openehr-term?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-term) | [![downloads](https://img.shields.io/crates/d/openehr-term?logo=rust&label=downloads)](https://crates.io/crates/openehr-term) |
+| [`openehr-lang`](https://crates.io/crates/openehr-lang) | The BMM object model and the ODIN reader | [![crates.io](https://img.shields.io/crates/v/openehr-lang?logo=rust&label=crates.io)](https://crates.io/crates/openehr-lang) | [![docs.rs](https://img.shields.io/docsrs/openehr-lang?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-lang) | [![downloads](https://img.shields.io/crates/d/openehr-lang?logo=rust&label=downloads)](https://crates.io/crates/openehr-lang) |
+
+</details>
+
 
 ## Learn more
 
