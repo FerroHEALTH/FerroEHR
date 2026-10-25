@@ -995,3 +995,104 @@ fn a_signing_subkey_under_an_expired_primary_key_is_refused_at_boot() {
     user.signatures.push(signature);
     assert_no_signing_component(&key);
 }
+
+// ── A Certification Revocation of a Direct Key signature (RFC 9580 §5.2.1.13) ──
+
+/// A version 6 key whose primary key may sign only through its Direct Key
+/// signature (RFC 9580 §5.2.3.10).
+fn version_6_signing_key() -> SignedSecretKey {
+    let mut builder = SecretKeyParamsBuilder::default();
+    builder
+        .version(KeyVersion::V6)
+        .key_type(KeyType::Ed25519)
+        .can_certify(true)
+        .can_sign(true)
+        .primary_user_id("ferroehr-signing v6 <v6@ferroehr.local>".into());
+    builder
+        .build()
+        .expect("build key params")
+        .generate(OsRng)
+        .expect("generate key")
+}
+
+/// A Certification Revocation (Type ID 0x30) by the primary key over the
+/// primary key alone, created at `created`, the data a Direct Key signature
+/// covers (RFC 9580 §5.2.1.13, §5.2.4). rPGP's `sign_key` refuses the type,
+/// so the hash is built here. `tamper` flips a hashed octet after signing,
+/// which leaves a signature that does not verify.
+fn direct_key_revocation(
+    key: &SignedSecretKey,
+    created: Timestamp,
+    tamper: bool,
+) -> pgp::packet::Signature {
+    use pgp::packet::SignatureVersionSpecific;
+    use pgp::ser::Serialize as _;
+    use pgp::types::SigningKey as _;
+
+    let mut config =
+        SignatureConfig::from_key(OsRng, &key.primary_key, SignatureType::CertRevocation)
+            .expect("signature config");
+    config.hashed_subpackets = [
+        SubpacketData::SignatureCreationTime(created),
+        SubpacketData::IssuerFingerprint(key.primary_key.fingerprint()),
+    ]
+    .into_iter()
+    .map(|data| Subpacket::regular(data).expect("subpacket"))
+    .collect();
+    let mut hasher = config.hash_alg.new_hasher().expect("hasher");
+    if let SignatureVersionSpecific::V6 { salt } = &config.version_specific {
+        hasher.update(salt.as_ref());
+    }
+    let body = key.primary_key.public_key().to_bytes().expect("key body");
+    hasher.update(&[0x9B]);
+    hasher.update(&u32::try_from(body.len()).expect("key length").to_be_bytes());
+    hasher.update(&body);
+    let len = config
+        .hash_signature_data(&mut hasher)
+        .expect("hashed data");
+    hasher.update(&config.trailer(len).expect("trailer"));
+    let hash = hasher.finalize().into_vec();
+    let signature = key
+        .primary_key
+        .sign(&Password::empty(), config.hash_alg, &hash)
+        .expect("sign the revocation");
+    let [first, second]: [u8; 2] = hash
+        .get(..2)
+        .and_then(|leading| leading.try_into().ok())
+        .expect("a digest of at least two octets");
+    let signed_hash = [first, second ^ u8::from(tamper)];
+    pgp::packet::Signature::from_config(config, signed_hash, signature).expect("revocation")
+}
+
+/// A valid Certification Revocation of the Direct Key signature, created
+/// after it, cancels it (RFC 9580 §5.2.3.10, "Revoking a Direct Key
+/// signature cancels that signature"), and a version 6 primary key without a
+/// Direct Key signature in force may not sign.
+#[test]
+fn a_revoked_direct_key_signature_no_longer_lets_the_primary_key_sign() {
+    let mut key = version_6_signing_key();
+    let created = Timestamp::from_secs(Timestamp::now().as_secs() + 1);
+    let revocation = direct_key_revocation(&key, created, false);
+    key.details.direct_signatures.push(revocation);
+    assert_no_signing_component(&key);
+}
+
+/// A revocation created before the Direct Key signature, or one that does not
+/// verify, cancels nothing: the primary key still signs.
+#[test]
+fn an_older_or_invalid_revocation_leaves_the_direct_key_signature_in_force() {
+    for (created, tamper) in [
+        (
+            Timestamp::from_secs(Timestamp::now().as_secs() - 3_600),
+            false,
+        ),
+        (Timestamp::from_secs(Timestamp::now().as_secs() + 1), true),
+    ] {
+        let mut key = version_6_signing_key();
+        let revocation = direct_key_revocation(&key, created, tamper);
+        key.details.direct_signatures.push(revocation);
+        let signer = pgp_signer(&armored(&key), None).expect("build signer");
+        let signature = signer.sign(CANONICAL).expect("sign");
+        assert_eq!(signer.verify(CANONICAL, &signature), Verdict::PgpValid);
+    }
+}
