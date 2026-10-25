@@ -21,6 +21,14 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The viewer's search answers under the field as you type** (#4024), on
+  FerroUI 0.4.0. From the second character the panel under the top bar's
+  search shows the EHRs, compositions, parties, templates and stored queries
+  that match, five of a kind, from the server function `/api/find_answer`,
+  which posts the words so they stay out of the address and the log. Arrow
+  keys move through the hits, Enter opens one, Escape closes the panel. The
+  find page lists every hit in the page.
+
 - **The CDR takes up `ferrohealth-smart` 0.5.0** (#4002), and the build
   holds one copy of `openehr-sdt` where it held two (0.0.90 for the SMART
   crate beside the workspace's 0.0.98). Reading a trusted issuer's
