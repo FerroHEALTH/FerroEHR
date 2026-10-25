@@ -19,7 +19,9 @@
 //!   the `matches` operator are in ADL 1.4 format"* — those `matches { TYPE
 //!   matches {…} }` / `{|range|}` blocks are cADL, not the AQL `matches`
 //!   value-list operand;
-//! - `NOT IN (subquery)` is a SQL-style construct absent from `AqlParser.g4`.
+//! - `NOT IN (subquery)` is a SQL-style construct absent from `AqlParser.g4`;
+//! - the subsumption example passes `CONCAT(…)` to `TERMINOLOGY`, whose
+//!   released grammar rule takes three string literals.
 
 use std::fs;
 use std::path::Path;
@@ -48,6 +50,15 @@ fn out_of_grammar_reason(q: &str) -> Option<&'static str> {
         return Some("ADL 1.4 cADL on the `matches` RHS (illustrative, not AQL)");
     }
     let lower = q.to_lowercase();
+    // `terminologyFunction : TERMINOLOGY '(' STRING ',' STRING ',' STRING ')'`
+    // (vendor/grammar/AqlParser.g4): a function call as an argument is refused.
+    if lower
+        .find("terminology(")
+        .and_then(|at| lower.get(at..))
+        .is_some_and(|call| call.contains("concat("))
+    {
+        return Some("TERMINOLOGY with a CONCAT argument — the grammar takes three STRINGs");
+    }
     if lower.contains("not in") || lower.contains(" in (") || lower.contains(" in(") {
         return Some("SQL-style IN/subquery — not in the AQL 1.1.0 grammar");
     }
@@ -118,9 +129,19 @@ fn listing_blocks_open_on_four_or_more_hyphens_and_close_on_the_same_line() {
 
 /// Wrap a bare AQL fragment (a `WHERE`-style boolean/predicate expression that
 /// is not itself a complete `SELECT`) in a minimal query shell so it can be
-/// parse-tested.
+/// parse-tested. A fragment that already opens with its own `WHERE` (the
+/// TERMINOLOGY examples) gets the shell without a second one.
 fn wrap_fragment(fragment: &str) -> String {
-    format!("SELECT e/ehr_id/value FROM EHR e WHERE {}", fragment.trim())
+    let fragment = fragment.trim();
+    let opens_with_where = fragment
+        .split_whitespace()
+        .next()
+        .is_some_and(|word| word.eq_ignore_ascii_case("WHERE"));
+    if opens_with_where {
+        format!("SELECT e/ehr_id/value FROM EHR e {fragment}")
+    } else {
+        format!("SELECT e/ehr_id/value FROM EHR e WHERE {fragment}")
+    }
 }
 
 /// Every standard AQL 1.1.0 query of the official corpus, a bare fragment
@@ -184,7 +205,10 @@ fn official_aql_corpus_parses() {
         .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
         .collect();
     let pinned: Vec<&str> = BLOCKS_PER_FILE.iter().map(|(name, _)| *name).collect();
-    assert_eq!(names, pinned, "the example files changed; pin their block counts");
+    assert_eq!(
+        names, pinned,
+        "the example files changed; pin their block counts"
+    );
 
     for path in files {
         let doc = fs::read_to_string(&path).unwrap();
