@@ -128,6 +128,9 @@ argon2 = { workspace = true }
 # `secrecy::SecretString`, the crate section's type.
 secrecy = { workspace = true }
 assert_fs = { workspace = true }
+rcgen = { workspace = true }       # the server TLS tests mint their certificates (#3963)
+pem = { workspace = true }
+yasna = { workspace = true }
 reqwest = { workspace = true }
 base64 = { workspace = true }
 tracing = { workspace = true }

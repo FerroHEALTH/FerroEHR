@@ -20,7 +20,7 @@ failure; run the cheap gates first.
 
 FerroUI leads the viewer's UI, and its gates hold every component the
 viewer draws before a release reaches the pin (`ferrohealth-ui` in the root
-`Cargo.toml`, `=0.3.6` today):
+`Cargo.toml`, `=0.3.7` today):
 
 - the library gates of FerroUI's `.claude/rules/leptos-ui.md` §10 (fmt,
   clippy on the host and wasm32, nextest, the gallery journeys and

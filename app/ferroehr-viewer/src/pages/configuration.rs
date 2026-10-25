@@ -193,6 +193,7 @@ fn setting(key: &str, value: &Value) -> Setting {
         value: value_view(value),
         keys: vec![key.to_owned()],
         next_start: false,
+        source: None,
     }
 }
 
@@ -204,6 +205,7 @@ fn own(label: Msg, description: Msg, key: &str, value: AnyView) -> Setting {
         value,
         keys: vec![key.to_owned()],
         next_start: false,
+        source: None,
     }
 }
 

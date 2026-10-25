@@ -304,15 +304,30 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
     (socket, sender)
 }
 
-/// Collect DICOM audit frames until the window elapses.
-async fn drain_audit(socket: &mut SyslogTlsListener) -> Vec<String> {
-    let mut out = Vec::new();
-    // The sink opens its TLS connection on the first record, so the window is
-    // the silence after the last frame, long enough for a handshake.
-    while let Some(frame) = socket.recv(Duration::from_secs(2)).await {
-        out.push(String::from_utf8_lossy(&frame).into_owned());
+/// How long a test waits for the audit record it asserts on. A pass returns
+/// the moment the record lands, so the bound only has to cover a loaded or
+/// instrumented build; no openEHR spec governs it: our own design.
+const RECORD_DEADLINE: Duration = Duration::from_secs(60);
+
+/// The first DICOM audit frame (as UTF-8) that `matches`, waiting at most
+/// [`RECORD_DEADLINE`]; fails naming the frames seen when none does. A
+/// silence window would read a slow record as an absent one (#3950).
+async fn record_matching(socket: &mut SyslogTlsListener, matches: fn(&str) -> bool) -> String {
+    let deadline = tokio::time::Instant::now() + RECORD_DEADLINE;
+    let mut seen: Vec<String> = Vec::new();
+    loop {
+        let left = deadline.saturating_duration_since(tokio::time::Instant::now());
+        let frame = socket.recv(left).await;
+        assert!(
+            frame.is_some(),
+            "no matching audit record within {RECORD_DEADLINE:?}; records seen: {seen:#?}"
+        );
+        let xml = String::from_utf8_lossy(&frame.unwrap_or_default()).into_owned();
+        if matches(&xml) {
+            return xml;
+        }
+        seen.push(xml);
     }
-    out
 }
 
 // ── credentials + requests ────────────────────────────────────────────────────
@@ -527,13 +542,13 @@ async fn abac_deny_is_audited() {
     .await;
     assert_eq!(s, StatusCode::FORBIDDEN);
 
-    let records = drain_audit(&mut socket).await;
+    let xml = record_matching(&mut socket, |xml| {
+        xml.contains(r#"UserID="svc""#) && xml.contains(r#"EventOutcomeIndicator="4""#)
+    })
+    .await;
     assert!(
-        records
-            .iter()
-            .any(|xml| xml.contains(r#"EventOutcomeIndicator="4""#)
-                && xml.contains(r#"UserID="svc""#)),
-        "expected a minor-failure audit for `svc`, got {records:?}"
+        xml.contains(r#"UserID="svc""#),
+        "attributed to `svc`: {xml}"
     );
 }
 

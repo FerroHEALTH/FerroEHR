@@ -608,7 +608,7 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             "/about".to_owned(),
-            vec!["ferrohealth-ui 0.3.6", "The conformance manifest"],
+            vec!["ferrohealth-ui 0.3.7", "The conformance manifest"],
         ),
         ("/access".to_owned(), vec!["Signed in as", "ferroehr"]),
         (
@@ -997,4 +997,34 @@ async fn a_demographic_template_offers_only_the_canonical_example_formats() {
     assert_eq!(paths.status, http::StatusCode::OK, "{}", paths.body);
     // The CAPABILITY node (at0003) is named by its term, "Geschiktheid".
     assert!(paths.main().contains("Geschiktheid"), "{}", paths.main());
+
+    // A node of a demographic template offers no query: the builder's one
+    // shape, `FROM EHR e CONTAINS COMPOSITION c`, never matches a party (#4001).
+    let node = viewer
+        .page(&cookie, "/templates/Role.v2?tab=paths&node=n")
+        .await;
+    assert_eq!(node.status, http::StatusCode::OK, "{}", node.body);
+    assert!(node.main().contains("ROLE"), "{}", node.main());
+    assert!(!node.main().contains("/query?template="), "{}", node.main());
+}
+
+/// A node of a COMPOSITION template's Paths tab links to the query builder
+/// on its path (#4001).
+#[tokio::test]
+async fn a_composition_template_node_offers_a_query_on_its_path() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    let node = viewer
+        .page(
+            &cookie,
+            "/templates/minimal_evaluation.en.v1?tab=paths&node=n",
+        )
+        .await;
+    assert_eq!(node.status, http::StatusCode::OK, "{}", node.body);
+    assert!(
+        node.main()
+            .contains("/query?template=minimal_evaluation.en.v1&amp;path="),
+        "{}",
+        node.main()
+    );
 }

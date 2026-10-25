@@ -641,6 +641,10 @@ fn node_at<'a>(root: &'a CatalogNode, key: &str) -> Option<&'a CatalogNode> {
 }
 
 /// The Paths tab: the catalog tree beside the node it has selected.
+///
+/// A node links to the query builder only in a COMPOSITION template: the
+/// builder's one query shape is `FROM EHR e CONTAINS COMPOSITION c`, which
+/// never matches a party of a demographic template.
 fn paths_panel(template_id: &str, base: &str, root: &CatalogNode, note: Option<String>) -> AnyView {
     let selected = crate::request::query("node");
     let mut open = BTreeSet::new();
@@ -687,7 +691,8 @@ fn paths_panel(template_id: &str, base: &str, root: &CatalogNode, note: Option<S
                 })
                 .collect(),
             more: None,
-            query: query_href(template_id, Some(&picked.aql_path)),
+            query: (root.rm_type == "COMPOSITION")
+                .then(|| query_href(template_id, Some(&picked.aql_path))),
         }),
         None => BrowserPane::new(tr(Msg::TemplateNode), info_note(tr(Msg::TemplatePickNode))),
     };
