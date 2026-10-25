@@ -25,6 +25,15 @@ workflow refuses a tag that has no matching section here.
   next release for Low. The CRA risk assessment says business days where it
   said working days.
 
+### Fixed
+
+- **The viewer's Paths tab offers Build a query only on a COMPOSITION
+  template** (#4001). A node of a demographic template (a PERSON,
+  ORGANISATION, GROUP, AGENT or ROLE root) no longer links to the query
+  builder, whose one query shape, `FROM EHR e CONTAINS COMPOSITION c`, can
+  never match a party. The viewer moves to FerroUI 0.3.7, which makes the
+  node's query link optional and keeps a long URL or word in a banner, a
+  notice or a setting row inside the screen at 320 px.
 ### Security
 
 Shipped with functional changes because: no shipped artefact is affected (zip 8.6.0 ran only in a build script, as the withdrawn VEX statements recorded), so there is no security update to separate from the other changes this release carries.

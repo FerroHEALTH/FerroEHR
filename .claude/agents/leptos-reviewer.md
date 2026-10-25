@@ -27,7 +27,7 @@ read-only commands (git diff/log, `git -C <FerroUI checkout> show`, cargo
 clippy dry runs, grep).
 
 **First, read FerroUI, which leads the viewer's UI.** The viewer pins
-`ferrohealth-ui` in the root `Cargo.toml` (`=0.3.6` today, tag `v0.3.6`).
+`ferrohealth-ui` in the root `Cargo.toml` (`=0.3.7` today, tag `v0.3.7`).
 Read, from a FerroUI checkout or from GitHub (FerroHEALTH/FerroUI):
 
 - `.claude/rules/leptos-ui.md` at the tag matching the pin: the component
