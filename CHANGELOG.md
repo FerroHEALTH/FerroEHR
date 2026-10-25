@@ -37,7 +37,9 @@ workflow refuses a tag that has no matching section here.
   (`FERROEHR__AUTH__ROLE_CLAIMS` in the environment), and each user's entry
   of `[authz.rbac.basic_roles]` to `roles` under its `[[auth.basic.users]]`
   table (in the Helm chart, under `config.auth.basic.users`), and give a user
-  that had no entry `roles = ["USER"]`. `ferrobridge-term` moves to 0.1.136,
+  that had no entry `roles = ["USER"]`. Helm chart 15.0.0 takes the same keys
+  (`config.auth.role_claims`, `roles` under `config.auth.basic.users`, and
+  `token_endpoint` in each grant). `ferrobridge-term` moves to 0.1.136,
   whose `SmartToken` replaces the terminology client's own token adapter
   (#4031).
 
