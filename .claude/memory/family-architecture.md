@@ -28,7 +28,7 @@ The rules that follow from it:
   needs another's function, it calls that server over its protocol, as a
   client.
 - **Shared crates carry the cross-cutting work**, never a product's domain:
-  - FerroSMART: `ferrohealth-smart` (authentication, OAuth 2.0 and SMART,
+  - FerroAUTH (renamed from FerroSMART on 2026-10-25): `ferrohealth-smart` (authentication, OAuth 2.0 and SMART,
     the authenticated subject with its scopes and roles) and
     `ferrohealth-authz` (the policy decision: ABAC, Cedar, a remote PDP);
   - FerroAUDIT: `ihe-atna` (the whole audit trail: sending, forwarding and
