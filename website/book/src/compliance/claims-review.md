@@ -608,7 +608,7 @@ Direct Key signature cancels it, so it no longer lets the primary key sign
 (#3900); the viewer's Paths tab offers a query only on a COMPOSITION template,
 on FerroUI 0.3.7 (#4001); `ferrohealth-smart` 0.5.0, one `openehr-sdt` in the
 build (#4002); `ihe-atna` and `ehds-logging` 0.2.7 (#3954); zip 8.6.0 out of
-the build (#3799); chart 15.0.0; the nine `openehr-*` crates at `0.0.98`.
+the build (#3799); chart 14.0.1; the nine `openehr-*` crates at `0.0.98`.
 
 ### Changed on 2026-10-25, for 5.4.2
 
@@ -625,7 +625,7 @@ Nothing at the cut: each change above updated its page in its own pull request.
   name `ehds-logging` and `ihe-atna` 0.2.7.
 - **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
   the chart README and [verifying releases](../verifying-releases.md) name chart
-  15.0.0 and image 5.4.2.
+  14.0.1 and image 5.4.2.
 - **The landing page, `SECURITY.md`, the crate READMEs, the
   [information sheet](information-sheet.md), the
   [instructions for use](instructions-for-use.md), the image labels and the
