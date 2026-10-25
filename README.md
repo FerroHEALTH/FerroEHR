@@ -68,12 +68,12 @@ project and a loss of history.
 
 ### Why you can trust what it claims
 
-Each conformance badge above is computed by a separate test instrument that
-runs the full openEHR conformance catalogue against a live server; nobody
-types the numbers. Releases are signed and come with a software bill of
-materials, so you can check what you install. The source is public under the
-Business Source License, and every feature is in this repository: there is
-no paid edition with extra functions.
+Every release is signed and comes with a software bill of materials (the
+list of every component inside) and SLSA build provenance, so you can check
+that what you install is what was built here. The source is public, and every
+feature is in this repository: there is no paid edition with extra functions.
+The conformance reports link each run, with the openEHR specification as the
+reference, so you can check a result against the standard yourself.
 
 ## Part of FerroHEALTH
 
