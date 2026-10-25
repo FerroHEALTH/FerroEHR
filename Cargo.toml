@@ -237,8 +237,8 @@ ferrohealth-authz = { version = "=0.1.0", default-features = false }
 # carrying the upstream status and its `tx-issue-type` coding. The same
 # Licensor's BUSL-1.1 code (deny.toml). Its crate line moves one patch per
 # change, a breaking one included, so it is pinned exactly. Verified on
-# crates.io 2026-10-25 (0.1.134).
-ferrobridge-term = "=0.1.134"
+# crates.io 2026-10-25 (0.1.136); `smart` is its ferrohealth-smart token provider.
+ferrobridge-term = { version = "=0.1.136", features = ["smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -258,7 +258,6 @@ argon2 = "0.6"                      # password hashing (Argon2id); its `password
 cookie = { version = "0.18", features = ["private"] } # sealed session cookies: AES-256-GCM private jar (the viewer's multi-instance session, #2949)
 secrecy = "0.10"                   # wrap secrets, avoid logging
 # RBAC/ABAC policy engine for the Stage 2 access-control restoration (pick one at S2):
-cedar-policy = "4"                  # alternative policy engine (verify latest)
 
 # ── TLS / crypto foundations ─────────────────────────────────────────────────
 rustls = "0.23"

@@ -23,10 +23,7 @@ config:
       users:
         - user: clinician
           scopes: [user/composition-*.cruds, user/template-*.cruds, user/aql-*.cruds, __ferroehr.platform]
-  authz:
-    rbac:
-      basic_roles:
-        clinician: [ADMIN]
+          roles: [ADMIN]
   # The CDR's own terminology extension API, so the routes that answer FROM
   # FerroTERM are mounted in this render. `config.terminology.server` is NOT
   # declared here: the chart injects it, and declaring its URL beside that is

@@ -42,8 +42,8 @@ shares; FerroEHR checks tokens and never issues them.
 - **HTTP Basic** is active when `[[auth.basic.users]]` lists a user. Each user
   has a user-id, an Argon2id password hash (a PHC string beginning
   `$argon2id$`) or a `password_hash_file` pointing at one, and the SMART on
-  openEHR `scopes` it holds; its RBAC roles are
-  `[authz.rbac.basic_roles]` (a user with no entry holds `USER`). Because it is
+  openEHR `scopes` it holds, and its RBAC `roles` (a user with none holds no
+  role). Because it is
   a list of users, the Basic store is normally supplied through the TOML
   configuration file rather than environment variables.
 - **OAuth 2.0 bearer tokens** are active when `[auth]` names an `issuer`. The
@@ -359,7 +359,7 @@ case-insensitive strings; the defaults are `USER` and `ADMIN`.
 | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE` | `ADMIN` | role required for admin operations |
 | `FERROEHR__AUTHZ__RBAC__USER_ROLE` | `USER` | names the baseline clinical role |
 | `FERROEHR__AUTHZ__RBAC__READONLY_ROLE` | `READONLY` | role marking a principal read-only: refused on every write |
-| `FERROEHR__AUTHZ__RBAC__ROLE_CLAIMS` | `["roles","groups","entitlements","realm_access.roles"]` | JWT claim paths mined for roles |
+| `FERROEHR__AUTH__ROLE_CLAIMS` | `["roles","groups","entitlements","realm_access.roles"]` | JWT claim paths mined for roles |
 | `FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE` | unset | role that reads the access log for ONE subject at a time (`GET /fhir/r4/AuditEvent` with `patient` required). Unset, that log stays admin-only. See [Audit trail](audit.md#getting-the-log-out) |
 
 Roles come from the JWT claims listed in `ROLE_CLAIMS`, or from a Basic user's

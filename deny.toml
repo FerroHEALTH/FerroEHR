@@ -139,6 +139,11 @@ exceptions = [
   # client-credentials client authenticates the outbound audit feed and policy
   # service (owner decision 2026-10-20, #3829).
   { allow = ["BUSL-1.1"], crate = "ferrohealth-smart" },
+  # FerroAUTH's ferrohealth-authz, the FerroHEALTH products' shared policy
+  # decision point, is the same Licensor's code under the same licence: its
+  # Cedar engine and remote decision point decide the ABAC tier (owner decision
+  # 2026-10-25, #4038).
+  { allow = ["BUSL-1.1"], crate = "ferrohealth-authz" },
   # FerroAUDIT, the FerroHEALTH products' shared audit library, is the same
   # Licensor's code under the same licence: `ihe-atna` sends the ATNA trail and
   # writes the BALP AuditEvent, `ehds-logging` is the EHDS logging component

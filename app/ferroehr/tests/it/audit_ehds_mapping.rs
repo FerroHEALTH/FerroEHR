@@ -30,7 +30,6 @@
 
 use jiff::Timestamp;
 
-use ferroehr::config::auth::AssuranceLevel;
 use ferroehr::system_log::categories::{AccessedContent, Classifier, ContentIds};
 use ferroehr::system_log::event::{
     AccessDomain, ActingMode, ActorAuthentication, AuditEvent, EventActionCode, EventOutcome,
@@ -38,6 +37,7 @@ use ferroehr::system_log::event::{
 };
 use ferroehr::system_log::fhir;
 use ferroehr::system_log::message::{self, AuditContext};
+use ferrohealth_smart::assurance::AssuranceLevel;
 use secrecy::ExposeSecret as _;
 
 fn ctx() -> AuditContext {

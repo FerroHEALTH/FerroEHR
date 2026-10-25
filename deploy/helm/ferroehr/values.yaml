@@ -525,9 +525,8 @@ secrets:
   # -- Argon2id password hashes for [[auth.basic.users]], keyed by user-id. Each
   # is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<user>.password_hash
   # and the chart injects the matching `password_hash_file` into the rendered TOML.
-  # Declare the user itself — `user`, `scopes` — under config.auth.basic.users,
-  # and its RBAC roles under config.authz.rbac.basic_roles.<user>; a user-id with
-  # no matching entry is a render error. A hash under `config:` is refused: it
+  # Declare the user itself — `user`, `scopes`, `roles` — under
+  # config.auth.basic.users; a user-id with no matching entry is a render error. A hash under `config:` is refused: it
   # would reach the ConfigMap.
   basicUserPasswordHashes: {}
   # -- FHIR base URL of the external Audit Record Repository for

@@ -139,10 +139,8 @@ pub async fn build_full(
 /// Builds the [`Authenticator`] of `config`, reading each `[auth]` issuer's
 /// metadata and key set.
 ///
-/// The role-claim paths are `[authz.rbac] role_claims` as lifted into
-/// [`AppConfig::role_claims`], whether or not an authorization gate is wired,
-/// so Bearer role extraction never falls back to the defaults behind the
-/// operator's back. A served SMART discovery document needs the issuer's
+/// The role-claim paths are `[auth] role_claims`, which `ferrohealth-smart`
+/// reads whether or not an authorization gate is wired. A served SMART discovery document needs the issuer's
 /// metadata to name a `token_endpoint`, which the document requires (SMART App
 /// Launch 2.2.0, Conformance, §Metadata), so a `jwks_file` issuer refuses it
 /// unless `[smart] issuer_metadata_file` supplies that metadata.
@@ -431,7 +429,7 @@ pub(crate) mod test_support {
             issuer: IssuerKey::Flat(ISSUER.to_owned()),
             audience: vec![AUDIENCE.to_owned()],
             jwks_file: jwks_file().display().to_string(),
-            ..AuthSection::default()
+            ..ferroehr::config::FerroEhrConfig::default().auth
         }
     }
 
@@ -467,14 +465,16 @@ pub(crate) mod test_support {
 mod tests {
     use super::*;
 
-    /// The configured `[authz.rbac] role_claims` reach the authenticator with
+    /// The configured `[auth] role_claims` reach the authenticator with
     /// no authorization handle wired (RBAC, ABAC and the per-EHR default all
     /// off), so a role under a custom claim path is extracted.
     #[tokio::test]
     async fn configured_role_claims_apply_without_an_authz_handle() {
         let config = AppConfig {
-            auth: test_support::bearer_auth(),
-            role_claims: vec!["app_roles".to_owned()],
+            auth: ferrohealth_smart::config::AuthSection {
+                role_claims: vec!["app_roles".to_owned()],
+                ..test_support::bearer_auth()
+            },
             ..AppConfig::default()
         };
         let authenticator = build_authenticator(&config).await.expect("authenticator");

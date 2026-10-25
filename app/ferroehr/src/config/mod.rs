@@ -48,7 +48,7 @@ use serde::{Deserialize, Serialize};
 /// Every section has a `Default`, so the file may be empty or absent
 /// (zero-config boot). `deny_unknown_fields` makes a misspelled top-level
 /// table a boot error.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct FerroEhrConfig {
     /// `spec_profile` — the openEHR specification generation set the server
@@ -109,6 +109,48 @@ pub struct FerroEhrConfig {
     pub cohort: crate::service::linkage::cohort::config::CohortConfig,
     /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
     pub usage_report: crate::usage_report::config::UsageReportConfig,
+}
+
+impl Default for FerroEhrConfig {
+    fn default() -> Self {
+        Self {
+            spec_profile: profile::SpecProfile::default(),
+            deployment_profile: deployment::DeploymentProfile::default(),
+            deployment_accepts: Vec::default(),
+            server: server::ServerConfig::default(),
+            db: crate::db::DbConfig::default(),
+            storage: crate::db::domain::StorageConfig::default(),
+            log: crate::telemetry::config::LogConfig::default(),
+            telemetry: crate::telemetry::config::OtelConfig::default(),
+            // NOTE: RFC 9068 §2.2.3.1 names the first three role claims; Keycloak's
+            // nested `realm_access.roles` follows them, as this server has always read.
+            auth: ferrohealth_smart::config::AuthSection {
+                role_claims: vec![
+                    "roles".to_owned(),
+                    "groups".to_owned(),
+                    "entitlements".to_owned(),
+                    "realm_access.roles".to_owned(),
+                ],
+                ..ferrohealth_smart::config::AuthSection::default()
+            },
+            authz: authz::AuthzConfig::default(),
+            admin: server::AdminConfig::default(),
+            smart: smart::SmartConfig::default(),
+            management: management::ManagementConfig::default(),
+            signing: crate::versioning::signature::config::SigningConfig::default(),
+            licence: crate::licence::config::LicenceConfig::default(),
+            query: crate::service::query::config::QueryConfig::default(),
+            events: crate::extensions::events::config::EventsConfig::default(),
+            terminology: crate::service::terminology::config::TerminologyConfig::default(),
+            multimedia: crate::extensions::multimedia::config::MultimediaConfig::default(),
+            audit: crate::system_log::config::AuditConfig::default(),
+            privacy: crate::privacy::config::PrivacyConfig::default(),
+            demographic:
+                crate::service::demographic::identifier::config::DemographicConfig::default(),
+            cohort: crate::service::linkage::cohort::config::CohortConfig::default(),
+            usage_report: crate::usage_report::config::UsageReportConfig::default(),
+        }
+    }
 }
 
 /// The annotated default template `ferroehr config default` prints — a
@@ -554,7 +596,7 @@ impl FerroEhrConfig {
             .authz
             .professional
             .as_ref()
-            .map(auth::ProfessionalConfig::validate)
+            .map(ferrohealth_smart::assurance::ProfessionalSection::validate)
         {
             errors.push(ConfigError::semantic(format!("authz: {e}")));
         }
@@ -1212,12 +1254,15 @@ mod tests {
             &[],
         );
         assert_eq!(c.authz.assurance.claim, "loa");
-        assert_eq!(c.authz.assurance.minimum, Some(auth::AssuranceLevel::High));
+        assert_eq!(
+            c.authz.assurance.minimum,
+            Some(ferrohealth_smart::assurance::AssuranceLevel::High)
+        );
         let professional = c.authz.professional.expect("professional table from env");
         assert_eq!(professional.claim, "uzi");
         assert_eq!(
             professional.client_tokens,
-            auth::ClientTokenRule::ClaimAbsent
+            ferrohealth_smart::assurance::ClientTokens::ClaimAbsent
         );
         assert_eq!(professional.acting_for_claim.as_deref(), Some("act.sub"));
     }
@@ -2382,11 +2427,15 @@ mod tests {
             ),
             (
                 "authz.assurance",
-                accepted_fields::<auth::AssuranceConfig>("authz.assurance"),
+                accepted_fields::<ferrohealth_smart::assurance::AssuranceSection>(
+                    "authz.assurance",
+                ),
             ),
             (
                 "authz.professional",
-                accepted_fields::<auth::ProfessionalConfig>("authz.professional"),
+                accepted_fields::<ferrohealth_smart::assurance::ProfessionalSection>(
+                    "authz.professional",
+                ),
             ),
             ("db", accepted_fields::<crate::db::DbConfig>("db")),
             (
@@ -2780,6 +2829,46 @@ mod tests {
             Some("s3cret")
         );
         assert_eq!(oauth.scope, "system/*.read");
+    }
+
+    /// The role keys moved to the shared `[auth]` section: their old place
+    /// under `[authz.rbac]` stops startup naming the key, from the file and
+    /// from the environment, and `[auth] role_claims` keeps this server's
+    /// default when the file leaves it out.
+    #[test]
+    fn the_moved_role_keys_are_refused_at_their_old_place() {
+        for (body, key) in [
+            ("[authz.rbac]\nrole_claims = [\"roles\"]\n", "role_claims"),
+            (
+                "[authz.rbac.basic_roles]\nalice = [\"ADMIN\"]\n",
+                "basic_roles",
+            ),
+        ] {
+            let file = toml_file(body);
+            let err = assemble(Some(file.path()), &env(&[]), &[]).expect_err("moved key");
+            assert!(err.to_string().contains(key), "{key}: {err}");
+        }
+        let err = assemble(
+            None,
+            &env(&[("FERROEHR__AUTHZ__RBAC__ROLE_CLAIMS", "roles")]),
+            &[],
+        )
+        .expect_err("moved env key");
+        assert!(err.to_string().contains("ROLE_CLAIMS"), "{err}");
+
+        let file = toml_file("[auth]\nissuer = \"https://idp.example/r\"\n");
+        let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
+        assert_eq!(
+            c.auth.role_claims,
+            ["roles", "groups", "entitlements", "realm_access.roles"]
+        );
+        assert!(!c.auth.role_claims.iter().any(|claim| claim == "scope"));
+        let c = assemble_ok(
+            None,
+            &env(&[("FERROEHR__AUTH__ROLE_CLAIMS", "app_roles,roles")]),
+            &[],
+        );
+        assert_eq!(c.auth.role_claims, ["app_roles", "roles"]);
     }
 
     /// Every outbound grant is the `ferrohealth-smart` client table, so the

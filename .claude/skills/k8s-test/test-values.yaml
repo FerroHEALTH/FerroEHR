@@ -39,10 +39,7 @@ config:
         # Identity and scopes only; the hash is in `secrets:` above.
         - user: ferroehr
           scopes: [user/composition-*.cruds, user/template-*.cruds, user/aql-*.cruds, __ferroehr.platform]
-  authz:
-    rbac:
-      basic_roles:
-        ferroehr: [ADMIN, USER]
+          roles: [ADMIN, USER]
 
 # A test cluster is not an installation; it sends no usage report (#3623).
 usageReport:

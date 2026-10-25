@@ -42,7 +42,7 @@ Three things do all the work:
    audience list is mandatory, so a server with none refuses to boot rather
    than accepting another service's token. See the
    [bearer settings table](security.md#authentication).
-2. **Role mining** (`[authz.rbac]`): `FERROEHR__AUTHZ__RBAC__ROLE_CLAIMS`
+2. **Role mining** (`[auth]`): `FERROEHR__AUTH__ROLE_CLAIMS`
    (default `["roles","groups","entitlements","realm_access.roles"]`, the RFC 9068
    §2.2.3.1 carriers, then the Keycloak shape) names the
    JWT claim paths whose values become the caller's roles for the
@@ -77,7 +77,7 @@ Entra ID exposes a standards-compliant OIDC issuer per tenant.
    export FERROEHR__AUTH__AUDIENCE=api://ferroehr
    # Entra ID mints no RFC 9068 tokens (`typ` JWT, the scopes in `scp`).
    export FERROEHR__AUTH__TOKEN_PROFILE=jwt
-   export FERROEHR__AUTHZ__RBAC__ROLE_CLAIMS='["roles"]'
+   export FERROEHR__AUTH__ROLE_CLAIMS='["roles"]'
    ```
 
 5. **Verify**: request a token for the app (any OAuth2 client credential or
@@ -131,7 +131,7 @@ broker) rather than pointing anything at LDAP.
    export FERROEHR__AUTH__AUDIENCE=ferroehr-api
    # AD FS mints no RFC 9068 tokens.
    export FERROEHR__AUTH__TOKEN_PROFILE=jwt
-   export FERROEHR__AUTHZ__RBAC__ROLE_CLAIMS='["role"]'
+   export FERROEHR__AUTH__ROLE_CLAIMS='["role"]'
    ```
 
    Discovery works out of the box (`https://adfs.example.com/adfs/.well-known/openid-configuration`).

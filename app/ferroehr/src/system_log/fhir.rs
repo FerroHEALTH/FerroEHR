@@ -489,11 +489,11 @@ const fn balp_outcome(outcome: EventOutcome) -> ihe_atna::balp::Outcome {
     }
 }
 
-const fn assurance(level: crate::config::auth::AssuranceLevel) -> AssuranceLevel {
+const fn assurance(level: ferrohealth_smart::assurance::AssuranceLevel) -> AssuranceLevel {
     match level {
-        crate::config::auth::AssuranceLevel::Low => AssuranceLevel::Low,
-        crate::config::auth::AssuranceLevel::Substantial => AssuranceLevel::Substantial,
-        crate::config::auth::AssuranceLevel::High => AssuranceLevel::High,
+        ferrohealth_smart::assurance::AssuranceLevel::Low => AssuranceLevel::Low,
+        ferrohealth_smart::assurance::AssuranceLevel::Substantial => AssuranceLevel::Substantial,
+        ferrohealth_smart::assurance::AssuranceLevel::High => AssuranceLevel::High,
     }
 }
 
@@ -508,10 +508,10 @@ fn nonempty(value: &str, fallback: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::auth::AssuranceLevel as Level;
     use crate::system_log::categories::{AccessedContent, Classifier, QueryConstraints};
     use crate::system_log::event::ActorAuthentication;
     use base64::Engine;
+    use ferrohealth_smart::assurance::AssuranceLevel as Level;
     use jiff::Timestamp;
     use secrecy::ExposeSecret as _;
 

@@ -16,14 +16,13 @@
 //! ITS-REST leaving the scheme open — our own design, with the IETF OAuth and
 //! JOSE RFCs as the authority for every rule enforced here.
 
-use std::collections::BTreeMap;
 use std::path::Path;
 
 use argon2::{Algorithm, Params, PasswordHash};
 use ferrohealth_smart::config::{AuthMode, AuthSection, ConfigError, IssuerKey, Resolved};
 use secrecy::ExposeSecret;
+use serde::Deserialize;
 use serde::de::IgnoredAny;
-use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::config::secret::redact_userinfo;
@@ -235,43 +234,6 @@ pub enum AuthConfigError {
         /// The private member it carries.
         member: &'static str,
     },
-    /// The assurance claim name is blank.
-    #[error(
-        "authz.assurance.claim is blank: name the token claim that carries the \
-         authentication assurance level (usually `acr`, OpenID Connect Core 1.0 §2)"
-    )]
-    AssuranceClaimBlank,
-    /// A minimum is set and no claim value maps to a level.
-    #[error(
-        "authz.assurance.minimum = {0:?} but authz.assurance.levels maps no claim \
-         value to a level: every patient-data request would be refused"
-    )]
-    AssuranceMinimumWithoutLevels(String),
-    /// No mapped value reaches the minimum.
-    #[error(
-        "authz.assurance.minimum = {0:?} but no value in authz.assurance.levels maps \
-         to that level or above: every patient-data request would be refused"
-    )]
-    AssuranceMinimumUnreachable(String),
-    /// A level value cannot be quoted in the step-up challenge.
-    #[error(
-        "authz.assurance.levels key {0:?} is blank or carries whitespace, a quote, a \
-         backslash or a control character: the refusal names the accepted values in a \
-         space-separated quoted `acr_values` parameter (RFC 9470 §3, RFC 9110 §5.6.4)"
-    )]
-    AssuranceValueUnquotable(String),
-    /// The professional claim name is blank.
-    #[error(
-        "authz.professional.claim is blank: name the token claim that identifies the \
-         natural person (for example `sub`)"
-    )]
-    ProfessionalClaimBlank,
-    /// The acting-for claim name is blank.
-    #[error(
-        "authz.professional.acting_for_claim is blank: remove it, or name the claim a \
-         client token carries the professional's identifier in"
-    )]
-    ActingForClaimBlank,
     /// A Basic user's hash is no PHC string.
     #[error("auth.basic.users[{username:?}].password_hash is not a PHC hash string: {reason}")]
     PasswordHashUnparsable {
@@ -468,195 +430,11 @@ fn check_password_hash(username: &str, phc: &str) -> Result<(), AuthConfigError>
     Ok(())
 }
 
-/// An electronic-identification level of assurance.
-///
-/// The three levels are the eIDAS levels of Regulation (EU) No 910/2014
-/// Art. 8(2): low, substantial and high. Implementing Regulation (EU)
-/// 2026/2099 Art. 6(3) asks for substantial, and high from 26 March 2032,
-/// when a health professional is authenticated for cross-border exchange
-/// (`docs/law/eu/cross-border-identification-2026-2099/text.html Art. 6(3)`).
-/// Ordered, so `High > Substantial > Low`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum AssuranceLevel {
-    /// eIDAS level of assurance low.
-    Low,
-    /// eIDAS level of assurance substantial.
-    Substantial,
-    /// eIDAS level of assurance high.
-    High,
-}
-
-impl AssuranceLevel {
-    /// The configuration and storage spelling (`low`, `substantial`, `high`).
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AssuranceLevel::Low => "low",
-            AssuranceLevel::Substantial => "substantial",
-            AssuranceLevel::High => "high",
-        }
-    }
-}
-
-/// The authentication assurance level a bearer token carries, and the floor a
-/// patient-data request must meet (`[authz.assurance]`).
-///
-/// Off by default: with no `minimum` nothing is refused, and with an empty
-/// `levels` map no level is recorded. EHDS Annex II 3.1 asks an EHR system
-/// used by health professionals for "reliable mechanisms for the
-/// identification and authentication of health professionals"
-/// (`docs/law/eu/ehds/text.html Annex II 3.1`). No openEHR spec governs this —
-/// our own design/extension.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct AssuranceConfig {
-    /// The token claim carrying the authentication context class (default
-    /// `acr`, OpenID Connect Core 1.0 §2); a dotted path reaches into a JSON
-    /// object.
-    pub claim: String,
-    /// Maps each claim value the issuer emits to the level it stands for.
-    ///
-    /// A value the map does not name carries no level.
-    pub levels: BTreeMap<String, AssuranceLevel>,
-    /// The level a patient-data request must carry; unset refuses nothing.
-    pub minimum: Option<AssuranceLevel>,
-}
-
-impl Default for AssuranceConfig {
-    fn default() -> Self {
-        Self {
-            claim: "acr".to_owned(),
-            levels: BTreeMap::new(),
-            minimum: None,
-        }
-    }
-}
-
-impl AssuranceConfig {
-    /// The claim values that meet [`Self::minimum`], in the map's order.
-    ///
-    /// Empty when no minimum is set.
-    #[must_use]
-    pub fn accepted_values(&self) -> Vec<&str> {
-        let Some(minimum) = self.minimum else {
-            return Vec::new();
-        };
-        self.levels
-            .iter()
-            .filter(|(_, level)| **level >= minimum)
-            .map(|(value, _)| value.as_str())
-            .collect()
-    }
-
-    /// Validates the table at boot.
-    ///
-    /// # Errors
-    /// The [`AuthConfigError`] naming the first rule the table breaks.
-    pub fn validate(&self) -> Result<(), AuthConfigError> {
-        if self.minimum.is_none() && self.levels.is_empty() {
-            return Ok(());
-        }
-        if self.claim.trim().is_empty() {
-            return Err(AuthConfigError::AssuranceClaimBlank);
-        }
-        if let Some(value) = self.levels.keys().find(|value| {
-            value.is_empty()
-                || value
-                    .chars()
-                    .any(|c| c.is_whitespace() || c.is_control() || c == '"' || c == '\\')
-        }) {
-            return Err(AuthConfigError::AssuranceValueUnquotable(value.clone()));
-        }
-        if let Some(minimum) = self.minimum {
-            if self.levels.is_empty() {
-                return Err(AuthConfigError::AssuranceMinimumWithoutLevels(
-                    minimum.as_str().to_owned(),
-                ));
-            }
-            if self.accepted_values().is_empty() {
-                return Err(AuthConfigError::AssuranceMinimumUnreachable(
-                    minimum.as_str().to_owned(),
-                ));
-            }
-        }
-        Ok(())
-    }
-}
-
-/// How a client-credentials token is told apart from a token that names a
-/// natural person (`authz.professional.client_tokens`).
-///
-/// A token that lacks [`ProfessionalConfig::claim`] names no natural person
-/// under either rule.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ClientTokenRule {
-    /// A token whose `sub` equals its `client_id` or `azp` names the client
-    /// application: RFC 9068 §2.2 has `sub` identify the client when no
-    /// resource owner is involved.
-    #[default]
-    SubIsClient,
-    /// Only a token lacking the configured claim is a client token.
-    ClaimAbsent,
-}
-
-/// How a bearer token names the natural person behind it
-/// (`[authz.professional]`).
-///
-/// Present, a patient-data request whose token names no natural person is
-/// refused, unless the token is a client token acting for a professional named
-/// in [`Self::acting_for_claim`]. EHDS Annex II 3.2(b) asks the access record
-/// for "the specific natural person or persons having accessed"
-/// (`docs/law/eu/ehds/text.html Annex II 3.2(b)`). No openEHR spec governs
-/// this — our own design/extension.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct ProfessionalConfig {
-    /// The claim identifying the natural person (default `sub`); a dotted path
-    /// reaches into a JSON object.
-    pub claim: String,
-    /// How a client-credentials token is recognised (default `sub_is_client`).
-    pub client_tokens: ClientTokenRule,
-    /// The claim a client token carries the professional's identifier in, when
-    /// the client acts for a named professional; a dotted path reaches into a
-    /// JSON object (for example `act.sub`). Unset refuses every client token
-    /// on patient data.
-    pub acting_for_claim: Option<String>,
-}
-
-impl Default for ProfessionalConfig {
-    fn default() -> Self {
-        Self {
-            claim: "sub".to_owned(),
-            client_tokens: ClientTokenRule::SubIsClient,
-            acting_for_claim: None,
-        }
-    }
-}
-
-impl ProfessionalConfig {
-    /// Validates the table at boot.
-    ///
-    /// # Errors
-    /// The [`AuthConfigError`] naming the first rule the table breaks.
-    pub fn validate(&self) -> Result<(), AuthConfigError> {
-        if self.claim.trim().is_empty() {
-            return Err(AuthConfigError::ProfessionalClaimBlank);
-        }
-        if self
-            .acting_for_claim
-            .as_deref()
-            .is_some_and(|claim| claim.trim().is_empty())
-        {
-            return Err(AuthConfigError::ActingForClaimBlank);
-        }
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use ferrohealth_smart::assurance::{
+        AssuranceError, AssuranceLevel, AssuranceSection, ClientTokens, ProfessionalSection,
+    };
     use ferrohealth_smart::config::{BasicSection, BasicUser};
     use secrecy::SecretString;
 
@@ -1095,25 +873,25 @@ mod tests {
     fn with_assurance(
         levels: &[(&str, AssuranceLevel)],
         minimum: Option<AssuranceLevel>,
-    ) -> AssuranceConfig {
-        AssuranceConfig {
+    ) -> AssuranceSection {
+        AssuranceSection {
             levels: levels
                 .iter()
                 .map(|(value, level)| ((*value).to_owned(), *level))
                 .collect(),
             minimum,
-            ..AssuranceConfig::default()
+            ..AssuranceSection::default()
         }
     }
 
     /// The default assurance block is off: no minimum, no map, nothing refused.
     #[test]
     fn the_assurance_block_is_off_by_default() {
-        let assurance = AssuranceConfig::default();
+        let assurance = AssuranceSection::default();
         assert_eq!(assurance.claim, "acr");
         assert!(assurance.levels.is_empty());
         assert_eq!(assurance.minimum, None);
-        assert_eq!(assurance.accepted_values(), Vec::<&str>::new());
+        assert_eq!(assurance.accepted(), Vec::<&str>::new());
         assert!(with_assurance(&[], None).validate().is_ok());
     }
 
@@ -1123,7 +901,7 @@ mod tests {
     fn a_minimum_without_levels_is_a_boot_error() {
         assert!(matches!(
             with_assurance(&[], Some(AssuranceLevel::Substantial)).validate(),
-            Err(AuthConfigError::AssuranceMinimumWithoutLevels(level)) if level == "substantial"
+            Err(AssuranceError::Unreachable { minimum }) if minimum == "substantial"
         ));
     }
 
@@ -1136,7 +914,7 @@ mod tests {
                 Some(AssuranceLevel::High)
             )
             .validate(),
-            Err(AuthConfigError::AssuranceMinimumUnreachable(level)) if level == "high"
+            Err(AssuranceError::Unreachable { minimum }) if minimum == "high"
         ));
     }
 
@@ -1149,22 +927,19 @@ mod tests {
                 matches!(
                     with_assurance(&[(bad, AssuranceLevel::High)], Some(AssuranceLevel::High))
                         .validate(),
-                    Err(AuthConfigError::AssuranceValueUnquotable(value)) if value == bad
+                    Err(AssuranceError::Value(_))
                 ),
                 "{bad:?}"
             );
         }
     }
 
-    /// A blank claim with a declared map has nothing to read the level from.
+    /// A blank claim has nothing to read the level from.
     #[test]
     fn a_blank_assurance_claim_is_a_boot_error() {
         let mut cfg = with_assurance(&[("x", AssuranceLevel::High)], None);
         cfg.claim = " ".to_owned();
-        assert!(matches!(
-            cfg.validate(),
-            Err(AuthConfigError::AssuranceClaimBlank)
-        ));
+        assert!(matches!(cfg.validate(), Err(AssuranceError::Claim { .. })));
     }
 
     /// The accepted values are those at or above the minimum, in map order.
@@ -1179,7 +954,7 @@ mod tests {
             Some(AssuranceLevel::Substantial),
         );
         assert!(cfg.validate().is_ok());
-        assert_eq!(cfg.accepted_values(), vec!["loa-high", "loa-substantial"]);
+        assert_eq!(cfg.accepted(), vec!["loa-high", "loa-substantial"]);
         assert!(AssuranceLevel::High > AssuranceLevel::Substantial);
         assert!(AssuranceLevel::Substantial > AssuranceLevel::Low);
     }
@@ -1187,30 +962,30 @@ mod tests {
     /// The professional block refuses blank claim names at boot.
     #[test]
     fn blank_professional_claims_are_boot_errors() {
-        let professional = |claim: &str, acting_for: Option<&str>| ProfessionalConfig {
+        let professional = |claim: &str, acting_for: Option<&str>| ProfessionalSection {
             claim: claim.to_owned(),
             acting_for_claim: acting_for.map(str::to_owned),
-            ..ProfessionalConfig::default()
+            ..ProfessionalSection::default()
         };
         assert!(matches!(
             professional("", None).validate(),
-            Err(AuthConfigError::ProfessionalClaimBlank)
+            Err(AssuranceError::Claim { .. })
         ));
         assert!(matches!(
             professional("sub", Some(" ")).validate(),
-            Err(AuthConfigError::ActingForClaimBlank)
+            Err(AssuranceError::Claim { .. })
         ));
         assert!(professional("sub", Some("act.sub")).validate().is_ok());
         assert_eq!(
-            ProfessionalConfig::default().client_tokens,
-            ClientTokenRule::SubIsClient
+            ProfessionalSection::default().client_tokens,
+            ClientTokens::SubIsClient
         );
     }
 
     /// Both blocks deserialize from TOML in the documented spelling.
     #[test]
     fn the_blocks_deserialize_from_toml() {
-        let assurance: AssuranceConfig = toml::from_str(
+        let assurance: AssuranceSection = toml::from_str(
             r#"
             minimum = "substantial"
             [levels]
@@ -1221,7 +996,7 @@ mod tests {
         .expect("parses");
         assert_eq!(assurance.minimum, Some(AssuranceLevel::Substantial));
         assert_eq!(assurance.levels.len(), 2);
-        let professional: ProfessionalConfig = toml::from_str(
+        let professional: ProfessionalSection = toml::from_str(
             r#"
             claim = "professional_id"
             client_tokens = "claim_absent"
@@ -1229,7 +1004,7 @@ mod tests {
             "#,
         )
         .expect("parses");
-        assert_eq!(professional.client_tokens, ClientTokenRule::ClaimAbsent);
+        assert_eq!(professional.client_tokens, ClientTokens::ClaimAbsent);
         assert_eq!(professional.acting_for_claim.as_deref(), Some("act.sub"));
     }
 }

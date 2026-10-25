@@ -229,8 +229,8 @@ pub(crate) fn hash_password(password: &str) -> String {
 }
 
 /// Turns Basic authentication on in `config` for each `(user, roles)`, every
-/// user with the password `pw` and [`FULL_SCOPES`]; the roles go to
-/// `[authz.rbac.basic_roles]`, where the RBAC gate reads a Basic user's roles.
+/// user with the password `pw` and [`FULL_SCOPES`]; the roles go to the
+/// user's `[[auth.basic.users]] roles`.
 pub(crate) fn with_basic_users(config: &mut AppConfig, users: &[(&str, &[&str])]) {
     let hash = hash_password("pw");
     let entries: Vec<(&str, &str, &str)> = users
@@ -238,11 +238,12 @@ pub(crate) fn with_basic_users(config: &mut AppConfig, users: &[(&str, &[&str])]
         .map(|(user, _roles)| (*user, hash.as_str(), FULL_SCOPES))
         .collect();
     config.auth = basic_auth(&entries);
-    for (user, roles) in users {
-        config.rbac.basic_roles.insert(
-            (*user).to_owned(),
-            roles.iter().map(|role| (*role).to_owned()).collect(),
-        );
+    if let Some(basic) = config.auth.basic.as_mut() {
+        for entry in &mut basic.users {
+            if let Some((_, roles)) = users.iter().find(|(user, _)| *user == entry.user) {
+                entry.roles = roles.iter().map(|role| (*role).to_owned()).collect();
+            }
+        }
     }
 }
 

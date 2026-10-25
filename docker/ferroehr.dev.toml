@@ -106,6 +106,7 @@ password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl
 user = "ferroehr-admin"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
+roles = ["ADMIN", "USER"]
 
 # Dev-only READ-ONLY account for the conformance suite's authorization-
 # separation cases (SEC-BASIC): authenticated, but every write operation is
@@ -114,8 +115,5 @@ scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds
 user = "ferroehr-readonly"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
+roles = ["READONLY"]
 
-# The RBAC roles of the dev users; `ferroehr` holds the default USER role.
-[authz.rbac.basic_roles]
-ferroehr-admin = ["ADMIN", "USER"]
-ferroehr-readonly = ["READONLY"]

@@ -234,7 +234,7 @@ fn declared_purpose(req: &Request, backend: &ferroehr::service::FerroEhrService)
 fn caller_organisation(state: &AppState, principal: Option<&Principal>) -> Option<String> {
     let principal = principal?;
     let claim = state.config().audit_organization_claim.as_deref()?;
-    crate::extensions::access::authz::roles::claim_string(&principal.claims, claim)
+    ferrohealth_smart::roles::claim_text(&principal.claims, claim).map(str::to_owned)
 }
 
 /// The ATNA audit middleware, routing emission through the platform's SM

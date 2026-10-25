@@ -146,6 +146,15 @@ pub fn assemble<S: std::hash::BuildHasher>(
         .collect();
 
     let mut builder = Config::builder();
+    // `[auth]` is the shared section, whose own defaults apply to every key the
+    // file leaves out; the role claims keep this server's default instead.
+    match builder.clone().set_default(
+        "auth.role_claims",
+        FerroEhrConfig::default().auth.role_claims,
+    ) {
+        Ok(next) => builder = next,
+        Err(e) => errors.push(ConfigError::new(format!("auth.role_claims default: {e}"))),
+    }
     if let Some(content) = &file_content {
         builder = builder.add_source(File::from_str(content, FileFormat::Toml));
     }

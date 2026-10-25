@@ -497,8 +497,8 @@ not propagate.
 > [!NOTE]
 > A Basic user's Argon2id hash is delivered as a mounted file like the others: put
 > it in `secrets.basicUserPasswordHashes` under the user-id, declare only the
-> `user` and its `scopes` under `config.auth.basic.users`, and its roles under
-> `config.authz.rbac.basic_roles`. Setting `password_hash`
+> `user`, its `scopes` and its `roles` under `config.auth.basic.users`.
+> Setting `password_hash`
 > under `config:` is refused, and the error names the key that carries it. An
 > Argon2id hash is not a plaintext password, but it is an offline cracking target,
 > which is what the boot-time OWASP parameter floor exists to make expensive.
@@ -759,8 +759,7 @@ config:
 ```
 
 or Basic auth, whose password hashes go in `secrets.basicUserPasswordHashes`
-while the user and its scopes stay under `config.auth.basic.users` and its roles
-under `config.authz.rbac.basic_roles`.
+while the user, its scopes and its roles stay under `config.auth.basic.users`.
 
 > [!WARNING]
 > `config.auth.enabled: false` makes the chart render, and serves **every**

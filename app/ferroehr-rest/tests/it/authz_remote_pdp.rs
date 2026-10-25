@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `RemotePdp` wire-contract tests,
+//! Remote decision point wire-contract tests over this CDR's configuration,
 //! driven by `wiremock`: URL = base + policy name; a flat JSON body with exactly
 //! the configured keys; 200 → permit, non-200 → deny; connect/timeout →
 //! `AuthzError` (→ 500 at the PEP); cartesian fan-out order + short-circuit;
@@ -10,11 +10,11 @@
 use std::collections::BTreeMap;
 
 use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AbacParam, PolicyRule, RemoteConfig};
-use ferroehr_rest::extensions::access::authz::engine::{AuthzError, PolicyEngine};
-use ferroehr_rest::extensions::access::authz::remote::RemotePdp;
-use ferroehr_rest::extensions::access::authz::request::{
-    AccessMode, Attr, AuthzRequest, Decision, ResourceKind,
-};
+use ferroehr_rest::extensions::access::authz::remote_pdp;
+use ferroehr_rest::extensions::access::authz::request::{AccessMode, AuthzRequest, ResourceKind};
+use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
+use ferrohealth_authz::remote::RemotePdp;
+use ferrohealth_authz::request::Attr;
 use serde_json::{Value, json};
 use wiremock::matchers::{body_json, method, path};
 use wiremock::{Mock, MockServer, Request, ResponseTemplate};
@@ -53,9 +53,32 @@ fn composition_req<'a>(patient: Option<Attr>, template: Option<Attr>) -> AuthzRe
         roles: &[],
         scopes: &[],
         organization: Some("org-7".to_owned()),
+        subject_patient: None,
         patient,
         template,
     }
+}
+
+/// The verdict of one decision.
+#[derive(Debug, PartialEq, Eq)]
+enum Decision {
+    Permit,
+    Deny,
+}
+
+/// Puts `req` to `pdp`.
+async fn decide(pdp: &RemotePdp, req: &AuthzRequest<'_>) -> Result<Decision, AuthzError> {
+    let subject = req.subject();
+    let request = req
+        .to_request(&subject)
+        .map_err(|e| AuthzError::Load(Box::new(e)))?;
+    pdp.decide(&request).await.map(|decision| {
+        if decision.is_permit() {
+            Decision::Permit
+        } else {
+            Decision::Deny
+        }
+    })
 }
 
 #[tokio::test]
@@ -73,7 +96,7 @@ async fn url_is_base_plus_policy_name_and_body_has_exactly_configured_keys() {
         .await;
 
     let base = format!("{}/rest/v1/policy/execute/name/", server.uri());
-    let pdp = RemotePdp::new(&config(
+    let pdp = remote_pdp(&config(
         &base,
         "has_consent_template",
         vec![AbacParam::Organization, AbacParam::Template],
@@ -85,7 +108,7 @@ async fn url_is_base_plus_policy_name_and_body_has_exactly_configured_keys() {
         Some(Attr::One("p-1".to_owned())),
         Some(Attr::One("t.en.v1".to_owned())),
     );
-    assert_eq!(pdp.decide(&req).await.unwrap(), Decision::Permit);
+    assert_eq!(decide(&pdp, &req).await.unwrap(), Decision::Permit);
 }
 
 /// A 4xx is the policy server DECIDING to refuse, so it denies.
@@ -98,10 +121,10 @@ async fn client_error_denies() {
             .mount(&server)
             .await;
         let base = format!("{}/", server.uri());
-        let pdp = RemotePdp::new(&config(&base, "p", vec![AbacParam::Patient])).expect("build");
+        let pdp = remote_pdp(&config(&base, "p", vec![AbacParam::Patient])).expect("build");
         let req = composition_req(Some(Attr::One("p-1".to_owned())), None);
         assert_eq!(
-            pdp.decide(&req).await.unwrap(),
+            decide(&pdp, &req).await.unwrap(),
             Decision::Deny,
             "status {status} must deny"
         );
@@ -125,11 +148,11 @@ async fn a_server_error_is_not_a_decision() {
             .mount(&server)
             .await;
         let base = format!("{}/", server.uri());
-        let pdp = RemotePdp::new(&config(&base, "p", vec![AbacParam::Patient])).expect("build");
+        let pdp = remote_pdp(&config(&base, "p", vec![AbacParam::Patient])).expect("build");
         let req = composition_req(Some(Attr::One("p-1".to_owned())), None);
-        let outcome = pdp.decide(&req).await;
+        let outcome = decide(&pdp, &req).await;
         assert!(
-            matches!(outcome, Err(AuthzError::Unreachable(_))),
+            matches!(outcome, Err(AuthzError::Remote(_))),
             "status {status} must be a fail-closed error, not a deny: {outcome:?}"
         );
     }
@@ -139,22 +162,22 @@ async fn a_server_error_is_not_a_decision() {
 async fn connection_failure_is_fail_closed_error() {
     // A port nothing listens on → connect error → AuthzError (→ 500 at the PEP).
     let base = "http://127.0.0.1:1/"; // port 1: reliably refused
-    let pdp = RemotePdp::new(&config(base, "p", vec![AbacParam::Patient])).expect("build");
+    let pdp = remote_pdp(&config(base, "p", vec![AbacParam::Patient])).expect("build");
     let req = composition_req(Some(Attr::One("p-1".to_owned())), None);
-    let err = pdp.decide(&req).await.expect_err("must error");
-    assert!(matches!(err, AuthzError::Unreachable(_)), "got {err:?}");
+    let err = decide(&pdp, &req).await.expect_err("must error");
+    assert!(matches!(err, AuthzError::Remote(_)), "got {err:?}");
 }
 
-/// A resource kind with no configured policy DENIES: there is no policy to ask,
-/// so the only safe answer is refusal. Boot validation requires a policy per
+/// A resource kind with no configured policy is no decision: there is no policy
+/// to ask, so the request fails closed. Boot validation requires a policy per
 /// kind under `engine = remote`, making this branch unreachable in a booted
 /// server — it is the fail-closed floor, not a routine path. No openEHR spec
 /// governs authorization — our own design/extension.
 #[tokio::test]
-async fn unconfigured_kind_denies() {
+async fn unconfigured_kind_fails_closed() {
     // Port 1 is reliably refused, so a deny here also proves no HTTP call is made.
     let base = "http://127.0.0.1:1/";
-    let pdp = RemotePdp::new(&config(base, "p", vec![AbacParam::Patient])).expect("build");
+    let pdp = remote_pdp(&config(base, "p", vec![AbacParam::Patient])).expect("build");
     let req = AuthzRequest {
         operation_id: "query_execute_adhoc_query",
         kind: ResourceKind::Query,
@@ -163,10 +186,14 @@ async fn unconfigured_kind_denies() {
         roles: &[],
         scopes: &[],
         organization: None,
+        subject_patient: None,
         patient: Some(Attr::One("p-1".to_owned())),
         template: None,
     };
-    assert_eq!(pdp.decide(&req).await.unwrap(), Decision::Deny);
+    let err = decide(&pdp, &req)
+        .await
+        .expect_err("no policy, no decision");
+    assert!(matches!(err, AuthzError::Remote(_)), "got {err:?}");
 }
 
 #[tokio::test]
@@ -179,7 +206,7 @@ async fn cartesian_fan_out_all_must_permit() {
         .mount(&server)
         .await;
     let base = format!("{}/", server.uri());
-    let pdp = RemotePdp::new(&config(
+    let pdp = remote_pdp(&config(
         &base,
         "p",
         vec![AbacParam::Patient, AbacParam::Template],
@@ -189,7 +216,7 @@ async fn cartesian_fan_out_all_must_permit() {
         Some(Attr::Set(vec!["p1".to_owned(), "p2".to_owned()])),
         Some(Attr::Set(vec!["t1".to_owned(), "t2".to_owned()])),
     );
-    assert_eq!(pdp.decide(&req).await.unwrap(), Decision::Permit);
+    assert_eq!(decide(&pdp, &req).await.unwrap(), Decision::Permit);
 }
 
 #[tokio::test]
@@ -209,21 +236,21 @@ async fn fan_out_short_circuits_on_first_deny() {
         .mount(&server)
         .await;
     let base = format!("{}/", server.uri());
-    let pdp = RemotePdp::new(&config(&base, "p", vec![AbacParam::Patient])).expect("build");
+    let pdp = remote_pdp(&config(&base, "p", vec![AbacParam::Patient])).expect("build");
     let req = composition_req(
         Some(Attr::Set(vec!["p1".to_owned(), "p2".to_owned()])),
         None,
     );
-    assert_eq!(pdp.decide(&req).await.unwrap(), Decision::Deny);
+    assert_eq!(decide(&pdp, &req).await.unwrap(), Decision::Deny);
 }
 
 #[tokio::test]
-async fn empty_set_permits_without_any_call() {
-    let base = "http://127.0.0.1:1/";
-    let pdp = RemotePdp::new(&config(base, "p", vec![AbacParam::Patient])).expect("build");
-    // An empty patient set (empty query result) → no combinations → permit.
+async fn an_empty_set_is_refused_without_any_call() {
+    // An empty patient set has no value to ask about, so the policy request
+    // refuses it before the point (port 1, reliably refused) is reached.
     let req = composition_req(Some(Attr::Set(vec![])), None);
-    assert_eq!(pdp.decide(&req).await.unwrap(), Decision::Permit);
+    let subject = req.subject();
+    assert!(req.to_request(&subject).is_err());
 }
 
 /// A `wiremock` matcher: the request body's `patient` equals `who`.
@@ -285,10 +312,10 @@ async fn the_policy_service_is_called_with_a_client_credentials_token() {
         vec![AbacParam::Organization],
     );
     cfg.remote.oauth = Some(grant(&auth.uri()));
-    let pdp = RemotePdp::new(&cfg).expect("build");
+    let pdp = remote_pdp(&cfg).expect("build");
     for _ in 0..2 {
         assert_eq!(
-            pdp.decide(&composition_req(None, None))
+            decide(&pdp, &composition_req(None, None))
                 .await
                 .expect("decided"),
             Decision::Permit,
@@ -299,7 +326,7 @@ async fn the_policy_service_is_called_with_a_client_credentials_token() {
 
 /// A token endpoint that refuses the client, and a policy service that
 /// refuses a newly obtained token, are no decision: both fail closed as
-/// `Unreachable`, never as a deny.
+/// `Remote` errors, never as a deny.
 #[tokio::test]
 async fn a_refused_grant_or_token_fails_closed() {
     let auth = MockServer::start().await;
@@ -322,12 +349,11 @@ async fn a_refused_grant_or_token_fails_closed() {
         vec![AbacParam::Organization],
     );
     cfg.remote.oauth = Some(grant(&auth.uri()));
-    let pdp = RemotePdp::new(&cfg).expect("build");
-    let err = pdp
-        .decide(&composition_req(None, None))
+    let pdp = remote_pdp(&cfg).expect("build");
+    let err = decide(&pdp, &composition_req(None, None))
         .await
         .expect_err("no token, no decision");
-    assert!(matches!(err, AuthzError::Unreachable(_)), "got {err:?}");
+    assert!(matches!(err, AuthzError::Remote(_)), "got {err:?}");
 
     let auth = MockServer::start().await;
     Mock::given(method("POST"))
@@ -350,10 +376,9 @@ async fn a_refused_grant_or_token_fails_closed() {
         vec![AbacParam::Organization],
     );
     cfg.remote.oauth = Some(grant(&auth.uri()));
-    let pdp = RemotePdp::new(&cfg).expect("build");
-    let err = pdp
-        .decide(&composition_req(None, None))
+    let pdp = remote_pdp(&cfg).expect("build");
+    let err = decide(&pdp, &composition_req(None, None))
         .await
         .expect_err("a refused token is no decision");
-    assert!(matches!(err, AuthzError::Unreachable(_)), "got {err:?}");
+    assert!(matches!(err, AuthzError::Remote(_)), "got {err:?}");
 }

@@ -571,9 +571,8 @@ fn app_config() -> AppConfig {
         terminology_api_enabled: true,
         events_admin_api: true,
         audit_organization_claim: None,
-        role_claims: ferroehr::config::authz::RbacConfig::default().role_claims,
         rbac: ferroehr::config::authz::RbacConfig::default(),
-        assurance: ferroehr::config::auth::AssuranceConfig::default(),
+        assurance: ferrohealth_smart::assurance::AssuranceSection::default(),
         professional: None,
         spec_profile: ferroehr::config::profile::SpecProfile::default(),
     }

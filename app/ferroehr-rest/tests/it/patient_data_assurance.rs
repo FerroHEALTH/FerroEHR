@@ -25,10 +25,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
-use ferroehr::config::auth::{AssuranceConfig, AssuranceLevel, ProfessionalConfig};
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::start;
+use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection, ProfessionalSection};
 use http::{StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::{PgPool, Row};
@@ -40,8 +40,8 @@ const AUDIENCE: &str = "ferroehr";
 const EHR: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
 /// The assurance block every test runs under: substantial or higher.
-fn assurance() -> AssuranceConfig {
-    AssuranceConfig {
+fn assurance() -> AssuranceSection {
+    AssuranceSection {
         levels: [
             ("loa-low".to_owned(), AssuranceLevel::Low),
             ("loa-substantial".to_owned(), AssuranceLevel::Substantial),
@@ -50,14 +50,14 @@ fn assurance() -> AssuranceConfig {
         .into_iter()
         .collect(),
         minimum: Some(AssuranceLevel::Substantial),
-        ..AssuranceConfig::default()
+        ..AssuranceSection::default()
     }
 }
 
 /// The app with the given gate configuration, auditing into the store when
 /// `pool` is given.
 async fn app(
-    professional: Option<ProfessionalConfig>,
+    professional: Option<ProfessionalSection>,
     audited: bool,
 ) -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
@@ -127,7 +127,7 @@ async fn a_token_below_the_minimum_gets_the_step_up_challenge() {
                 .get(header::WWW_AUTHENTICATE)
                 .and_then(|v| v.to_str().ok()),
             Some(
-                r#"Bearer realm="ferroehr", error="insufficient_user_authentication", error_description="patient data requires authentication at assurance level substantial or higher", acr_values="loa-high loa-substantial""#
+                r#"Bearer realm="ferroehr", error="insufficient_user_authentication", acr_values="loa-high loa-substantial""#
             ),
             "{extra}"
         );
@@ -164,7 +164,7 @@ async fn a_token_at_or_above_the_minimum_passes() {
 /// `403` and the openEHR error body.
 #[tokio::test]
 async fn a_client_token_without_acting_for_is_refused() {
-    let (_db, _pool, app) = app(Some(ProfessionalConfig::default()), false).await;
+    let (_db, _pool, app) = app(Some(ProfessionalSection::default()), false).await;
     let token = bearer(&json!({ "sub": "app-1", "client_id": "app-1", "acr": "loa-high" }));
     let (status, headers, body) =
         common::send(&app, common::get_authorized(&ehr_path(), &token)).await;
@@ -187,9 +187,9 @@ async fn a_client_token_without_acting_for_is_refused() {
 /// record carries the client mode, the professional and the level.
 #[tokio::test]
 async fn a_client_acting_for_a_professional_passes_and_is_recorded() {
-    let professional = ProfessionalConfig {
+    let professional = ProfessionalSection {
         acting_for_claim: Some("act.sub".to_owned()),
-        ..ProfessionalConfig::default()
+        ..ProfessionalSection::default()
     };
     let (_db, pool, app) = app(Some(professional), true).await;
     let token = bearer(&json!({

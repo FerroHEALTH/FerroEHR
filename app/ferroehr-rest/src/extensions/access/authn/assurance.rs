@@ -23,16 +23,11 @@
 //! person, so it is refused on patient data whenever either block asks for
 //! one. No openEHR spec governs any of this — our own design/extension.
 
-use std::collections::BTreeMap;
-
-use ferroehr::config::auth::{
-    AssuranceConfig, AssuranceLevel, ClientTokenRule, ProfessionalConfig,
-};
 use ferroehr::system_log::event::{ActingMode, ActorAuthentication};
+use ferrohealth_smart::assurance::{AssuranceSection, ProfessionalSection};
 use http::HeaderValue;
 
-use super::{AuthMethod, Principal};
-use crate::extensions::access::authz::roles::claim_string;
+use super::Principal;
 
 /// The API families that carry no patient data, as paths relative to the API
 /// base path; every other matched route is a patient-data route.
@@ -85,31 +80,27 @@ pub(crate) enum PatientDataRefusal {
 #[derive(Debug)]
 pub(crate) struct PatientDataGate {
     base_path: String,
-    claim: String,
-    levels: BTreeMap<String, AssuranceLevel>,
-    minimum: Option<AssuranceLevel>,
-    /// The values meeting [`Self::minimum`], space-separated, for
-    /// `acr_values`.
-    accepted: String,
-    professional: Option<ProfessionalConfig>,
+    realm: String,
+    assurance: AssuranceSection,
+    professional: Option<ProfessionalSection>,
 }
 
 impl PatientDataGate {
     /// Builds the gate from `[authz.assurance]` and `[authz.professional]`,
-    /// or `None` when no bearer token is admitted (`bearer` false).
+    /// naming `realm` in its challenge, or `None` when no bearer token is
+    /// admitted (`bearer` false).
     #[must_use]
     pub(crate) fn new(
         bearer: bool,
-        assurance: &AssuranceConfig,
-        professional: Option<&ProfessionalConfig>,
+        assurance: &AssuranceSection,
+        professional: Option<&ProfessionalSection>,
         base_path: &str,
+        realm: &str,
     ) -> Option<Self> {
         bearer.then(|| Self {
             base_path: base_path.to_owned(),
-            claim: assurance.claim.clone(),
-            levels: assurance.levels.clone(),
-            minimum: assurance.minimum,
-            accepted: assurance.accepted_values().join(" "),
+            realm: realm.to_owned(),
+            assurance: assurance.clone(),
             professional: professional.cloned(),
         })
     }
@@ -125,39 +116,29 @@ impl PatientDataGate {
             .is_none_or(is_patient_data_path)
     }
 
-    /// Reads what the credential says about the person behind it.
+    /// Reads what the credential says about the person behind it; a Basic
+    /// credential says nothing.
     #[must_use]
     pub(crate) fn actor(&self, principal: &Principal) -> ActorAuthentication {
-        if principal.method == AuthMethod::Basic {
+        let Some(caller) = principal.access.caller() else {
             return ActorAuthentication::default();
-        }
-        let claims = &principal.claims;
-        let assurance_value = claim_string(claims, &self.claim);
-        let assurance_level = assurance_value
-            .as_deref()
-            .and_then(|value| self.levels.get(value).copied());
+        };
+        let assessment = self.assurance.assess(caller);
         let (mode, professional_id) = match &self.professional {
             None => (None, None),
             Some(professional) => {
-                let person = claim_string(claims, &professional.claim);
-                let client = person.is_none()
-                    || (professional.client_tokens == ClientTokenRule::SubIsClient
-                        && names_the_client(principal));
-                if client {
-                    let acting_for = professional
-                        .acting_for_claim
-                        .as_deref()
-                        .and_then(|claim| claim_string(claims, claim));
-                    (Some(ActingMode::Client), acting_for)
-                } else {
-                    (Some(ActingMode::Person), person)
-                }
+                let actor = professional.actor(caller);
+                let mode = actor.mode.map(|mode| match mode {
+                    ferrohealth_smart::assurance::ActingMode::Person => ActingMode::Person,
+                    ferrohealth_smart::assurance::ActingMode::Client => ActingMode::Client,
+                });
+                (mode, actor.professional)
             }
         };
         ActorAuthentication {
             mode,
-            assurance_level,
-            assurance_value,
+            assurance_level: assessment.level,
+            assurance_value: assessment.value,
             professional_id,
         }
     }
@@ -177,7 +158,7 @@ impl PatientDataGate {
         if !self.is_patient_data(matched) {
             return Ok(actor);
         }
-        if let Some(minimum) = self.minimum
+        if let Some(minimum) = self.assurance.minimum
             && actor.assurance_level.is_none_or(|level| level < minimum)
         {
             return Err((PatientDataRefusal::InsufficientAssurance, actor));
@@ -191,35 +172,24 @@ impl PatientDataGate {
     /// The RFC 9470 §3 step-up challenge naming the accepted values.
     #[must_use]
     pub(crate) fn step_up_challenge(&self) -> HeaderValue {
-        let minimum = self.minimum.map_or("", AssuranceLevel::as_str);
-        // Boot validation refuses a level value that is not a quotable token,
-        // so the header is always valid; the fallback keeps the error code.
-        HeaderValue::from_str(&format!(
-            r#"Bearer realm="ferroehr", error="insufficient_user_authentication", error_description="patient data requires authentication at assurance level {minimum} or higher", acr_values="{}""#,
-            self.accepted
-        ))
-        .unwrap_or_else(|_| {
-            HeaderValue::from_static(
-                r#"Bearer realm="ferroehr", error="insufficient_user_authentication""#,
-            )
-        })
+        // Boot validation refuses a level value the challenge cannot carry, so
+        // the header is always valid; the fallback keeps the error code.
+        self.assurance
+            .step_up()
+            .ok()
+            .and_then(|refusal| refusal.challenge(Some(&self.realm)))
+            .and_then(|value| HeaderValue::from_str(&value).ok())
+            .unwrap_or_else(|| {
+                HeaderValue::from_static(r#"Bearer error="insufficient_user_authentication""#)
+            })
     }
-}
-
-/// Whether the token's `sub` names the client application: RFC 9068 §2.2 has
-/// `sub` "correspond to an identifier the authorization server uses to indicate
-/// the client application" when no resource owner is involved, and the client
-/// is `client_id` (RFC 9068 §2.2) or `azp` (OpenID Connect Core 1.0 §2).
-fn names_the_client(principal: &Principal) -> bool {
-    ["client_id", "azp"].iter().any(|claim| {
-        claim_string(&principal.claims, claim).is_some_and(|client| client == principal.subject)
-    })
 }
 
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
+    use ferrohealth_smart::assurance::{AssuranceLevel, ClientTokens};
     use ferrohealth_smart::resource::{Access, Caller, Honoured};
     use serde_json::{Value, json};
 
@@ -244,9 +214,9 @@ mod tests {
 
     fn gate(
         minimum: Option<AssuranceLevel>,
-        professional: Option<&ProfessionalConfig>,
+        professional: Option<&ProfessionalSection>,
     ) -> PatientDataGate {
-        let assurance = AssuranceConfig {
+        let assurance = AssuranceSection {
             levels: [
                 ("loa-low".to_owned(), AssuranceLevel::Low),
                 ("loa-substantial".to_owned(), AssuranceLevel::Substantial),
@@ -255,9 +225,9 @@ mod tests {
             .into_iter()
             .collect(),
             minimum,
-            ..AssuranceConfig::default()
+            ..AssuranceSection::default()
         };
-        PatientDataGate::new(true, &assurance, professional, BASE).expect("gate")
+        PatientDataGate::new(true, &assurance, professional, BASE, "ferroehr").expect("gate")
     }
 
     const EHR: &str = "/ferroehr/rest/openehr/v1/ehr/{ehr_id}";
@@ -342,7 +312,7 @@ mod tests {
         assert_eq!(
             gate.step_up_challenge(),
             HeaderValue::from_static(
-                r#"Bearer realm="ferroehr", error="insufficient_user_authentication", error_description="patient data requires authentication at assurance level substantial or higher", acr_values="loa-high loa-substantial""#
+                r#"Bearer realm="ferroehr", error="insufficient_user_authentication", acr_values="loa-high loa-substantial""#
             )
         );
     }
@@ -351,7 +321,7 @@ mod tests {
     /// is refused on patient data unless it carries the acting-for claim.
     #[test]
     fn a_client_token_needs_a_professional_it_acts_for() {
-        let without = gate(None, Some(&ProfessionalConfig::default()));
+        let without = gate(None, Some(&ProfessionalSection::default()));
         let client = json!({ "sub": "app-1", "client_id": "app-1" });
         let (refusal, actor) = without
             .judge(&bearer(&client), Some(EHR))
@@ -361,9 +331,9 @@ mod tests {
 
         let with = gate(
             Some(AssuranceLevel::Substantial),
-            Some(&ProfessionalConfig {
+            Some(&ProfessionalSection {
                 acting_for_claim: Some("act.sub".to_owned()),
-                ..ProfessionalConfig::default()
+                ..ProfessionalSection::default()
             }),
         );
         let acting = json!({
@@ -388,9 +358,9 @@ mod tests {
     fn a_person_token_names_the_person() {
         let gate = gate(
             None,
-            Some(&ProfessionalConfig {
+            Some(&ProfessionalSection {
                 claim: "professional_id".to_owned(),
-                client_tokens: ClientTokenRule::ClaimAbsent,
+                client_tokens: ClientTokens::ClaimAbsent,
                 acting_for_claim: None,
             }),
         );
@@ -425,7 +395,7 @@ mod tests {
             PatientDataRefusal::InsufficientAssurance
         );
         assert_eq!(
-            gate(None, Some(&ProfessionalConfig::default()))
+            gate(None, Some(&ProfessionalSection::default()))
                 .judge(&basic, Some(EHR))
                 .expect_err("refused")
                 .0,
@@ -433,7 +403,7 @@ mod tests {
         );
         gate(
             Some(AssuranceLevel::Low),
-            Some(&ProfessionalConfig::default()),
+            Some(&ProfessionalSection::default()),
         )
         .judge(&basic, Some(format!("{BASE}/terminology/x").as_str()))
         .expect("not patient data");

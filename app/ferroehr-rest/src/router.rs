@@ -102,6 +102,7 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
                 &cfg.assurance,
                 cfg.professional.as_ref(),
                 &cfg.server.base_path,
+                ferroehr::config::auth::realm(&cfg.auth),
             )
             .map(Arc::new),
             smart: Arc::new(smart::routes::SmartRoutes::new(

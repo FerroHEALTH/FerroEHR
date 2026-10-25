@@ -41,6 +41,7 @@ scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds
 | `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it serves the SMART discovery document only with [`[smart] issuer_metadata_file`](#smart) set. |
 | `timeout_ms` | int | `10000` | One call to the authorization server. |
 | `realm` | string | `""` ⇒ `ferroehr` | The realm every `WWW-Authenticate` challenge names. |
+| `role_claims` | list of string | `["roles","groups","entitlements","realm_access.roles"]` | Token claim paths the caller's roles are read from, in order; dotted paths walk nested claims, and a role is matched without regard to case. A path that is empty, has an empty step or carries whitespace is a boot error. **`scope` is not a role source**; see [Security](../security.md#rbac-role-based-coarse). `[authz.rbac] role_claims`, where this key lived before, is refused at boot. |
 | `scopeless_subjects` | list of string | `[]` | The exact `sub` values whose token, when it carries no resource scope of either the SMART on openEHR or the SMART on FHIR grammar, meets every SMART on openEHR requirement. A token that carries resource scopes gets only its scopes, and the allowlist reaches neither the ADMIN API nor the DEMOGRAPHIC API, which need the product scope. |
 | `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
 | `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
@@ -79,8 +80,7 @@ environment grammar cannot spell an array index.
 | `password_hash` | secret | required | Argon2**id** PHC hash (`$argon2id$v=19$…`), never a plaintext password. Boot-validated against the OWASP floor; see below. |
 | `password_hash_file` | path | unset | Read the hash from a file instead, for a mounted secret. A hash is an offline cracking target, so prefer this wherever the configuration file itself is not treated as sensitive. Exactly one of the pair is required. |
 | `scopes` | list of string | `[]` | The SMART on openEHR scopes the user holds, checked on every route exactly like a token's `scope` claim. A user with none is refused everywhere a requirement applies. |
-
-The user's RBAC roles are [`[authz.rbac.basic_roles]`](#authzrbac).
+| `roles` | list of string | `[]` | The user's RBAC roles, upper-cased on authentication. A user with none holds no role and is refused wherever [`[authz.rbac]`](#authzrbac) asks for one. The former `[authz.rbac.basic_roles]` table is refused at boot. |
 
 `[auth.basic]` itself takes one key beside the users:
 
@@ -162,8 +162,6 @@ reachable from the environment too (`FERROEHR__AUTHZ__ASSURANCE__MINIMUM`,
 | `emergency_access_role` | string | unset | Role that reads data under an EHDS Art. 8 access restriction when the caller also declares one of `[audit] emergency_purpose_codes` (EHDS Art. 11(5)); the access record then carries the emergency mark. Unset, nobody may override a restriction. See [restriction of access](../security.md#restriction-of-access-by-health-professionals-ehds-art-8). |
 | `identifier_reader_role` | string | unset | Role that may read a party's protected national identifiers through `GET {base}/admin/party/identifiers`, beside the admin role. Every read is an access record naming the reader, the party and the scheme. Unset, nobody may. See [reading a party's protected identifiers](../operations-admin-apis.md#reading-a-partys-protected-identifiers). |
 | `subject_audit_role` | string | unset | Role that may read the access log for one subject at a time: `GET /fhir/r4/AuditEvent` with the `patient` parameter required, refused without it. The grant a patient portal holds to serve a person's right to know who accessed their record (GDPR Art. 15, EHDS Art. 9), instead of an admin credential over every patient's log. Unset, the log stays admin-only. See [Audit trail](../audit.md#retrieving-audit-records-iti-81). |
-| `role_claims` | list of string | `["roles","groups","entitlements","realm_access.roles"]` | JWT claim paths mined for roles, in order. Dotted paths walk nested claims. Must be non-empty and contain no blank path. **`scope` is not a role source**; see [Security](../security.md#rbac-role-based-coarse). |
-| `basic_roles` | table of user-id → list of string | empty | The roles of each `[[auth.basic.users]]` user, upper-cased on authentication. A user it does not list holds `user_role`. File-only. |
 | `ehr_access_default` | enum{open,restricted} | `open` | What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits. `restricted` is object-level default-deny: only `admin_role` reaches a setting-less EHR, so an operator can still author the settings that open it. It is enforced whether `enabled` is on or off. With `[auth] enabled = false` nothing could enforce `restricted`, so that combination is a boot error. See [Security](../security.md#per-ehr-access-control-ehr_access). |
 
 > [!NOTE]

@@ -59,7 +59,7 @@ use openehr_its::rest::runtime::ApiError;
 use crate::api::served::ServedMethods;
 use crate::config::AppConfig;
 use crate::extensions::access::authz::AuthzHandle;
-use crate::extensions::access::authz::roles::{RbacDecision, extract_roles};
+use crate::extensions::access::authz::roles::RbacDecision;
 use crate::overview::error::RestError;
 use crate::smart::routes::{Need, SmartRoutes};
 use assurance::{PatientDataGate, PatientDataRefusal};
@@ -90,10 +90,10 @@ pub struct Principal {
     /// The `scope` claim of the token, or the scopes `[[auth.basic.users]]`
     /// grants a Basic user (RFC 6749 §3.3).
     pub scopes: Vec<String>,
-    /// Roles granted to the caller, normalized to upper-case: for Bearer from
-    /// the configured JWT claim paths (defaulting to the RFC 9068 §2.2.3.1
-    /// carriers), for Basic from `[authz.rbac.basic_roles]`. An OAuth2 scope is
-    /// not a role — see [`Self::scopes`].
+    /// Roles granted to the caller, normalized to upper-case: the roles
+    /// `ferrohealth-smart` read from the token's `[auth] role_claims` or a
+    /// Basic user's `[[auth.basic.users]] roles`. An OAuth2 scope is not a
+    /// role — see [`Self::scopes`].
     pub roles: Vec<String>,
     /// The retained, validated JWT claim set (Bearer only; empty for Basic), so
     /// the ABAC layer can resolve subject attributes without re-parsing the
@@ -296,10 +296,6 @@ pub struct Authenticator {
     realm: String,
     /// The issuer whose metadata the SMART discovery document is built from.
     primary: Option<Arc<ResourceServer>>,
-    /// Dotted JWT claim paths mined for RBAC roles (`[authz.rbac] role_claims`).
-    role_claims: Vec<String>,
-    /// The RBAC rules a Basic user's roles are read from.
-    rbac: ferroehr::config::authz::RbacConfig,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -382,8 +378,6 @@ impl Authenticator {
             gate,
             realm: ferroehr::config::auth::realm(&config.auth).to_owned(),
             primary,
-            role_claims: config.role_claims.clone(),
-            rbac: config.rbac.clone(),
         }))
     }
 
@@ -434,7 +428,7 @@ impl Authenticator {
             .await
             .map_err(|denied| AuthError::from_refusal(denied.refusal()))?;
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
-        let roles = self.roles_of(caller);
+        let roles = Self::roles_of(caller);
         let honoured = self.gate.honoured(&access);
         // NOTE: no specification governs this: our own design; a credential the
         // verified-credential cache admitted was authenticated on an earlier request.
@@ -443,14 +437,26 @@ impl Authenticator {
         Ok(Authenticated { principal, fresh })
     }
 
-    /// The roles of `caller`: the configured claim paths of a token, the
-    /// `[authz.rbac.basic_roles]` entry of a Basic user.
-    fn roles_of(&self, caller: &Caller) -> Vec<String> {
-        match caller.via() {
-            Via::Basic => self.rbac.roles_of_basic_user(caller.subject()),
-            Via::Bearer => extract_roles(caller.claims(), &self.role_claims),
+    /// The roles of `caller`, upper-cased.
+    fn roles_of(caller: &Caller) -> Vec<String> {
+        upper_cased(caller.roles())
+    }
+}
+
+/// Returns `roles` upper-cased, each once, in the order first met.
+///
+/// The RBAC gate matches roles without regard to case, and a policy reads the
+/// role set it is handed, so every role reaches both in one spelling (no
+/// specification governs role semantics: our own design).
+fn upper_cased(roles: &[String]) -> Vec<String> {
+    let mut out: Vec<String> = Vec::with_capacity(roles.len());
+    for role in roles {
+        let role = role.to_ascii_uppercase();
+        if !out.contains(&role) {
+            out.push(role);
         }
     }
+    out
 }
 
 /// The boot refusal of an issuer whose metadata or key set could not be read.
@@ -929,7 +935,7 @@ mod tests {
                     }],
                     cache_ttl_seconds: cache_ttl,
                 }),
-                ..AuthSection::default()
+                ..ferroehr::config::FerroEhrConfig::default().auth
             },
             ..AppConfig::default()
         }
@@ -1063,8 +1069,8 @@ mod tests {
         );
         assert_eq!(
             p.principal.roles,
-            vec!["USER".to_owned()],
-            "a Basic user with no [authz.rbac.basic_roles] entry holds the user role"
+            Vec::<String>::new(),
+            "a Basic user granted no role holds none"
         );
         assert!(
             p.fresh,
@@ -1075,10 +1081,11 @@ mod tests {
     #[tokio::test]
     async fn configured_basic_roles_are_upper_cased() {
         let mut config = basic_config(60);
-        config.rbac.basic_roles.insert(
-            "alice".to_owned(),
-            vec!["admin".to_owned(), "user".to_owned()],
-        );
+        if let Some(basic) = config.auth.basic.as_mut()
+            && let Some(alice) = basic.users.first_mut()
+        {
+            alice.roles = vec!["admin".to_owned(), "user".to_owned()];
+        }
         let auth = Authenticator::new(&config).await.unwrap();
         let p = auth
             .authenticate(&headers("Basic YWxpY2U6cHc="))
@@ -1348,32 +1355,28 @@ mod tests {
         assert!(p.scopes.contains(&"openid".to_owned()));
     }
 
+    /// The roles `ferrohealth-smart` reads at this server's default claims,
+    /// as the authenticator hands them on.
+    fn default_roles(claims: &Value) -> Vec<String> {
+        let claims = claims.as_object().cloned().unwrap();
+        upper_cased(&ferrohealth_smart::roles::from_claims(
+            &claims,
+            &ferroehr::config::FerroEhrConfig::default().auth.role_claims,
+        ))
+    }
+
     #[test]
     fn extract_roles_upper_cases_and_dedups() {
-        let claims = json!({
+        let roles = default_roles(&json!({
             "realm_access": { "roles": ["admin", "Admin", "user"] },
             "scope": "user OFFLINE_ACCESS",
-        })
-        .as_object()
-        .cloned()
-        .unwrap();
-        let roles = extract_roles(
-            &claims,
-            &ferroehr::config::authz::RbacConfig::default().role_claims,
-        );
+        }));
         assert_eq!(roles, vec!["ADMIN".to_owned(), "USER".to_owned()]);
     }
 
     #[test]
     fn extract_roles_missing_paths_yields_empty() {
-        let claims = json!({ "sub": "x" }).as_object().cloned().unwrap();
-        assert_eq!(
-            extract_roles(
-                &claims,
-                &ferroehr::config::authz::RbacConfig::default().role_claims
-            ),
-            Vec::<String>::new()
-        );
+        assert_eq!(default_roles(&json!({ "sub": "x" })), Vec::<String>::new());
     }
 
     #[test]
@@ -1382,8 +1385,58 @@ mod tests {
             .as_object()
             .cloned()
             .unwrap();
-        let roles = extract_roles(&claims, &["resource_access.client.roles".to_owned()]);
+        let roles = upper_cased(&ferrohealth_smart::roles::from_claims(
+            &claims,
+            &["resource_access.client.roles"],
+        ));
         assert_eq!(roles, vec!["WRITER".to_owned()]);
+    }
+
+    /// An OAuth2 scope grants a CLIENT delegated authority (RFC 6749 §3.3); it
+    /// asserts nothing about the subject's roles. Mining it made the
+    /// at-least-one-role gate vacuous for every OIDC token, since `openid`
+    /// alone satisfied it.
+    #[test]
+    fn scope_claim_does_not_grant_roles() {
+        let roles = default_roles(&json!({
+            "realm_access": { "roles": ["user", "ferroehr-admin"] },
+            "scope": "openid EHR_READ",
+        }));
+        assert!(roles.contains(&"USER".to_owned()));
+        assert!(roles.contains(&"FERROEHR-ADMIN".to_owned()));
+        assert!(
+            !roles.contains(&"OPENID".to_owned()),
+            "`openid` is a scope, not a role",
+        );
+        assert!(
+            !roles.contains(&"EHR_READ".to_owned()),
+            "a scope must not become a role",
+        );
+    }
+
+    /// The RFC 9068 §2.2.3.1 carriers are read in order, so an issuer using the
+    /// flat `roles`/`groups`/`entitlements` shape needs no configuration.
+    #[test]
+    fn rfc9068_role_claims_extracted() {
+        for carrier in ["roles", "groups", "entitlements"] {
+            assert_eq!(
+                default_roles(&json!({ carrier: ["clinician"] })),
+                vec!["CLINICIAN".to_owned()],
+                "the `{carrier}` claim must carry roles",
+            );
+        }
+    }
+
+    #[test]
+    fn dedups_preserving_order() {
+        // The same role from two configured carriers collapses to one entry.
+        assert_eq!(
+            default_roles(&json!({
+                "roles": ["admin", "Admin"],
+                "realm_access": { "roles": ["ADMIN"] },
+            })),
+            vec!["ADMIN".to_owned()]
+        );
     }
 
     /// Each outcome gets its own stable label, so a burst of one kind is
@@ -1668,7 +1721,7 @@ mod tests {
                 audience: vec![AUDIENCE.to_owned()],
                 jwks_refresh_interval_seconds: refresh_seconds,
                 timeout_ms,
-                ..AuthSection::default()
+                ..ferroehr::config::FerroEhrConfig::default().auth
             }
         }
 

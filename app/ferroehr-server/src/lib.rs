@@ -1274,7 +1274,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         terminology_api_enabled: config.terminology.api_enabled,
         events_admin_api: config.events.admin_api,
         audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
-        role_claims: config.authz.rbac.role_claims.clone(),
         rbac: config.authz.rbac.clone(),
         assurance: config.authz.assurance.clone(),
         professional: config.authz.professional.clone(),

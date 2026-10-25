@@ -354,7 +354,7 @@ secret VALUE refused outright.
 {{- end -}}
 {{- end -}}
 {{- if not $matched -}}
-{{- fail (printf "secrets.basicUserPasswordHashes.%s has no matching entry at config.auth.basic.users[] with user: %s (declare the user and its scopes there, its roles at config.authz.rbac.basic_roles; only the hash belongs in secrets:)" $user $user) -}}
+{{- fail (printf "secrets.basicUserPasswordHashes.%s has no matching entry at config.auth.basic.users[] with user: %s (declare the user, its scopes and its roles there; only the hash belongs in secrets:)" $user $user) -}}
 {{- end -}}
 {{- end -}}
 {{- if .Values.secrets.terminologyClientSecret -}}

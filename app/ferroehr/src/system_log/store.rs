@@ -28,12 +28,12 @@ use jiff_sqlx::Timestamp;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use crate::config::auth::AssuranceLevel;
 use crate::db::acquire::acquire;
 use crate::service::error::ErrorChain;
 use crate::system_log::AuditError;
 use crate::system_log::codes::AtnaAction;
 use crate::system_log::event::{ActingMode, AuditEvent, EventOutcome, EventType, ObjectClass};
+use ferrohealth_smart::assurance::AssuranceLevel;
 
 /// The single-record insert, returning the stored row id.
 const INSERT_ONE: &str = "INSERT INTO audit.audit_event (recorded_at, action, outcome, \
