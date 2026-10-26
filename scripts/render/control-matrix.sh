@@ -36,11 +36,32 @@
 # regenerates the page itself and the page is right the moment it merges. The
 # CI job passes the pull request under check (#3253).
 #
+# THE PULL REQUEST'S OWN DELTA. The tracker moves without a commit: an issue
+# body gains a `Control:` line, an issue is closed as not planned. A full
+# --check then fails every open pull request on rows none of them caused
+# (#4130). CI therefore runs --check --base <rev>, which renders the page
+# twice from ONE tracker read, without and with the pull request, and judges
+# only what the pull request owns:
+#
+#   1. the rows of the issues it closes read exactly as the render with it;
+#   2. every line it adds to the page is a line of that render, and no line it
+#      removes is one, so it may refresh drifted rows but never invent one;
+#   3. the rows it keeps stay in the render's order;
+#   4. a change to this generator re-renders the whole page.
+#
+# Rows main's page has drifted on are left alone. The published site never
+# shows them stale: the docs deploy renders the page from the tracker on every
+# push to main before it builds the book.
+#
 # Usage:
 #   scripts/render/control-matrix.sh                     write the page
 #   scripts/render/control-matrix.sh --closing <pr>      write it as it will read once <pr> merges
 #   scripts/render/control-matrix.sh --check [--closing <pr>]
 #                                                        fail when the committed page is stale
+#   scripts/render/control-matrix.sh --check --closing <pr> --base <rev>
+#                                                        fail only on what <pr>, the change from
+#                                                        <rev> to the working tree, owns
+#   scripts/render/control-matrix.sh --self-test         exercise the delta rules on fixtures
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -109,8 +130,105 @@ die() {
 command -v gh >/dev/null 2>&1 || die "the GitHub CLI (gh) is not installed"
 command -v jq >/dev/null 2>&1 || die "jq is required (brew install jq / preinstalled on CI runners)"
 
+# ── the delta rules ──────────────────────────────────────────────────────────
+# delta_verdict <base page> <head page> <render with the PR> <closing issues>
+#               <generator changed: 0|1>
+# Prints one line per violation and returns 1 when there is any. Pure: no
+# tracker, no git, so --self-test runs it on fixtures.
+rows_of() { grep -E '^\| \[' "$1" || true; }
+delta_verdict() {
+  local base="$1" head="$2" want="$3" closing="$4" generator="$5" bad=0 n
+  local d
+  d="$(mktemp -d)"
+  if [[ "$generator" == "1" ]]; then
+    if ! diff -q "$head" "$want" >/dev/null; then
+      echo "the generator changed, so the page must be re-rendered whole"
+      bad=1
+    fi
+  fi
+  for n in $closing; do
+    grep -F "/issues/$n) |" "$head" | sort > "$d/have" || true
+    grep -F "/issues/$n) |" "$want" | sort > "$d/need" || true
+    if ! cmp -s "$d/have" "$d/need"; then
+      echo "the rows of issue #$n, which this pull request closes, do not read as the render with it"
+      bad=1
+    fi
+  done
+  sort -u "$base" > "$d/base"
+  sort -u "$head" > "$d/head"
+  sort -u "$want" > "$d/want"
+  comm -13 "$d/base" "$d/head" | comm -23 - "$d/want" > "$d/invented"
+  comm -23 "$d/base" "$d/head" | comm -12 - "$d/want" > "$d/dropped"
+  while IFS= read -r n; do
+    echo "added a line the tracker does not render: $n"
+    bad=1
+  done < "$d/invented"
+  while IFS= read -r n; do
+    echo "removed a line the tracker still renders: $n"
+    bad=1
+  done < "$d/dropped"
+  rows_of "$head" > "$d/hrows"
+  rows_of "$want" > "$d/wrows"
+  awk 'NR == FNR { keep[$0] = 1; next } ($0 in keep)' "$d/wrows" "$d/hrows" > "$d/horder"
+  awk 'NR == FNR { keep[$0] = 1; next } ($0 in keep)' "$d/hrows" "$d/wrows" > "$d/worder"
+  if ! cmp -s "$d/horder" "$d/worder"; then
+    echo "the rows are not in the order the generator writes them"
+    bad=1
+  fi
+  rm -rf "$d"
+  return "$bad"
+}
+
+self_test() {
+  local d fails=0
+  d="$(mktemp -d)"
+  local u="https://github.com/o/r"
+  row() { echo "| [GDPR](x) | EU | Art. $1 | c$2 | [#$2]($u/issues/$2) | $3 | $4 |"; }
+  { echo "# Control matrix"; row 5 10 Planned "—"; row 6 11 Planned "—"; row 7 12 Planned "—"; } > "$d/main"
+  # The tracker since main: #11 shipped by #90 without a re-render (drift),
+  # and this pull request, #99, closes #12.
+  { echo "# Control matrix"; row 5 10 Planned "—"; row 6 11 Shipped "[#90]($u/pull/90)"
+    row 7 12 Shipped "[#99]($u/pull/99)"; } > "$d/want"
+  expect() {
+    local name="$1" verdict="$2" got=0
+    shift 2
+    delta_verdict "$@" > "$d/out" || got=1
+    if [[ "$got" != "$verdict" ]]; then
+      echo "self-test FAILED: $name (exit $got, want $verdict)" >&2
+      cat "$d/out" >&2
+      fails=1
+    else
+      echo "self-test ok: $name"
+    fi
+  }
+  # A pull request that closes no control and leaves the page alone passes on
+  # a drifted main.
+  expect "untouched page on a drifted main" 0 "$d/main" "$d/main" "$d/want" "" 0
+  # Its own row, re-rendered; the drifted #11 row left as main has it.
+  { echo "# Control matrix"; row 5 10 Planned "—"; row 6 11 Planned "—"
+    row 7 12 Shipped "[#99]($u/pull/99)"; } > "$d/own"
+  expect "own row re-rendered, drift left alone" 0 "$d/main" "$d/own" "$d/want" "12" 0
+  expect "own row missing" 1 "$d/main" "$d/main" "$d/want" "12" 0
+  # A full refresh is allowed.
+  expect "full re-render" 0 "$d/main" "$d/want" "$d/want" "12" 0
+  { echo "# Control matrix"; row 5 10 Shipped "[#91]($u/pull/91)"; row 6 11 Planned "—"
+    row 7 12 Shipped "[#99]($u/pull/99)"; } > "$d/invent"
+  expect "invented row" 1 "$d/main" "$d/invent" "$d/want" "12" 0
+  { echo "# Control matrix"; row 6 11 Planned "—"; row 7 12 Shipped "[#99]($u/pull/99)"; } > "$d/drop"
+  expect "dropped current row" 1 "$d/main" "$d/drop" "$d/want" "12" 0
+  { echo "# Control matrix"; row 7 12 Shipped "[#99]($u/pull/99)"; row 5 10 Planned "—"
+    row 6 11 Planned "—"; } > "$d/order"
+  expect "rows out of order" 1 "$d/main" "$d/order" "$d/want" "12" 0
+  expect "generator changed without a full render" 1 "$d/main" "$d/own" "$d/want" "12" 1
+  expect "generator changed with a full render" 0 "$d/main" "$d/want" "$d/want" "12" 1
+  rm -rf "$d"
+  [[ "$fails" -eq 0 ]] || die "self-test failed"
+  echo "control-matrix: self-test passed"
+}
+
 CHECK=0
 CLOSING=""
+BASE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --check) CHECK=1 ;;
@@ -119,15 +237,25 @@ while [[ $# -gt 0 ]]; do
       CLOSING="$2"
       shift
       ;;
-    -h | --help)
-      sed -n '/^# Usage:/,/fail when the committed page is stale/p' "$0" | sed 's/^# \{0,1\}//'
+    --base)
+      [[ -n "${2:-}" ]] || die "--base needs a revision"
+      BASE="$2"
+      shift
+      ;;
+    --self-test)
+      self_test
       exit 0
       ;;
-    *) die "unknown argument '$1' (expected --check or --closing <pr>)" ;;
+    -h | --help)
+      sed -n '/^# Usage:/,/delta rules on fixtures/p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    *) die "unknown argument '$1' (expected --check, --closing <pr>, --base <rev> or --self-test)" ;;
   esac
   shift
 done
 [[ -z "$CLOSING" || "$CLOSING" =~ ^[0-9]+$ ]] || die "--closing takes a pull request number, got '$CLOSING'"
+[[ -z "$BASE" || ( "$CHECK" -eq 1 && -n "$CLOSING" ) ]] || die "--base belongs with --check --closing <pr>"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -243,7 +371,8 @@ jq -s 'from_entries' "$WORK/prs.jsonl" > "$WORK/prs.json"
 # The pull request under check, when the caller names one: the issues it will
 # close render as Shipped with it, so the page committed on that PR is the page
 # main carries after the merge.
-echo '{"issues": [], "pr": null}' > "$WORK/closing.json"
+echo '{"issues": [], "pr": null}' > "$WORK/none.json"
+cp "$WORK/none.json" "$WORK/closing.json"
 if [[ -n "$CLOSING" ]]; then
   # shellcheck disable=SC2016 # GraphQL variables, bound by the -f flags
   gh api graphql -f owner="${repo%%/*}" -f name="${repo##*/}" -F number="$CLOSING" \
@@ -256,7 +385,10 @@ if [[ -n "$CLOSING" ]]; then
 fi
 
 # ── render ───────────────────────────────────────────────────────────────────
-OUT="$WORK/control-matrix.md"
+# render <closing.json> <out>: the page as it reads with that closing pull
+# request merged. The delta check renders twice from the one tracker read above.
+render() {
+local closing_json="$1" OUT="$2"
 
 cat > "$OUT" <<'HEADER'
 # Control matrix
@@ -290,9 +422,10 @@ Control-text: <the control, stated as what the product does>
 
 `scripts/render/control-matrix.sh` queries the tracker with the GitHub CLI,
 joins each declared control to its legal source and to its current state, and
-writes this file. A CI job re-runs the generator with `--check` and fails the
-build when the committed page no longer matches the tracker, which is what
-keeps a shipped control from sitting here as "planned".
+writes this file. The site deploy renders it from the tracker on every push
+to main, which is what keeps a shipped control from sitting here as
+"planned". A CI job renders it for every pull request and fails the build
+when the pull request does not carry the rows it changes.
 
 - **Shipped:** the issue is closed as completed. The merged pull request that
   closed it is linked in the last column. The one pull request that closes a
@@ -314,7 +447,8 @@ last regenerated, and from which commit, is the file's own git history.
 
 HEADER
 
-rows="$(jq -r --slurpfile prs "$WORK/prs.json" --slurpfile closing "$WORK/closing.json" '
+local rows
+rows="$(jq -r --slurpfile prs "$WORK/prs.json" --slurpfile closing "$closing_json" '
   ($prs[0]) as $merged | ($closing[0]) as $closing
   | def esc: gsub("\\|"; "\\|");
   def closing_here: ($closing.pr != null) and ([.number] | inside($closing.issues));
@@ -367,8 +501,28 @@ deployment elsewhere answers to its own equivalents rather than to these.
 Adding a jurisdiction is a registry entry plus the controls that cite it.
 SCOPE
 } >> "$OUT"
+}
 
-if [[ "$CHECK" -eq 1 ]]; then
+OUT="$WORK/control-matrix.md"
+render "$WORK/closing.json" "$OUT"
+
+if [[ -n "$BASE" ]]; then
+  [[ -f "$PAGE" ]] || die "$PAGE does not exist: run $SCRIPT"
+  git rev-parse --verify --quiet "$BASE^{commit}" >/dev/null ||
+    die "base revision $BASE is not in this clone (fetch it, or check out with more history)"
+  git show "$BASE:$PAGE" > "$WORK/base.md" 2>/dev/null || : > "$WORK/base.md"
+  generator=0
+  if ! git diff --quiet "$BASE" -- "$SCRIPT"; then generator=1; fi
+  closing_issues="$(jq -r '.issues[]' "$WORK/closing.json" | tr '\n' ' ')"
+  if ! delta_verdict "$WORK/base.md" "$PAGE" "$OUT" "$closing_issues" "$generator" > "$WORK/verdict"; then
+    sed 's/^/control-matrix: /' "$WORK/verdict" >&2
+    diff -u "$PAGE" "$OUT" >&2 || true
+    die "$PAGE does not carry this pull request's own change: run $SCRIPT --closing $CLOSING and commit the result"
+  fi
+  render "$WORK/none.json" "$WORK/plain.md"
+  drift="$(diff "$WORK/base.md" "$WORK/plain.md" | grep -c '^[<>] | \[' || true)"
+  echo "control-matrix: $PAGE carries this pull request's own change ($(jq 'length' "$WORK/controls.json") controls; main's page differs from the tracker on $drift row lines, which the docs deploy renders and this check leaves alone)"
+elif [[ "$CHECK" -eq 1 ]]; then
   [[ -f "$PAGE" ]] || die "$PAGE does not exist — run $SCRIPT"
   if ! diff -u "$PAGE" "$OUT" > "$WORK/diff"; then
     cat "$WORK/diff" >&2

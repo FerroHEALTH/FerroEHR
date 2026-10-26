@@ -349,8 +349,11 @@ chapters, the Clippy book, and the Cargo/rustdoc books.)
   short name stops the render rather than becoming a free-text cell), and is a
   pure function of tracker state: no clock, no build commit, nothing that
   differs between two runs of an unchanged tracker. Enforcement (tier 4): the
-  `control-matrix` CI job runs the generator with `--check` and fails on any
-  difference from the committed page.
+  docs deploy renders the page from the tracker on every push to main, and
+  the `control-matrix` CI job runs the generator with `--check --base` and
+  fails a pull request whose page does not carry the rows it changes (the
+  issues it closes, and every line it adds or removes); rows main's committed
+  page has drifted on fail no pull request (#4130).
 - **No real personal data enters the tree, and the pseudonymisation boundary is
   reviewed when it moves** (issue #3167; the rules are `personal-data.md`,
   restated for contributors in `CONTRIBUTING.md` § Personal data). Tests and

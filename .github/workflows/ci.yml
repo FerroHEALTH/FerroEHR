@@ -1037,9 +1037,17 @@ jobs:
   # The published compliance control matrix is GENERATED from the tracker
   # (scripts/render/control-matrix.sh), the same way the conformance pages
   # regenerate from the committed artifacts: a control's status lives on its
-  # issue, never in the page. This job re-renders and diffs, so a control that
-  # shipped since the last render fails the build instead of sitting on the
-  # public site as "planned".
+  # issue, never in the page.
+  #
+  # The job judges the change under check alone (#4130). The tracker moves
+  # without a commit, so a full re-render would fail every open pull request
+  # on rows none of them caused. `--base HEAD^1` renders the page from one
+  # tracker read without and with the pull request and holds the change from
+  # the first parent to the rows it owns: the issues it closes, and any line
+  # it adds or removes. The first parent of the checked-out commit is main
+  # for a pull request (its merge ref) and the queue entry ahead of it in a
+  # merge group, so fetch-depth 2 reaches it. Main's drift reaches the site
+  # through the docs deploy, which renders the page from the tracker.
   #
   # The page reads nothing but the tracker: open controls render as Planned
   # and the roadmap board is linked for the live column, so the repository
@@ -1058,19 +1066,29 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: The published control matrix matches the tracker
+          fetch-depth: 2
+      - name: The delta rules hold on their fixtures
+        run: bash scripts/render/control-matrix.sh --self-test
+      - name: The control matrix carries this change's own rows
         env:
           GH_TOKEN: ${{ github.token }}
           # The pull request under check: the issues it closes render as
           # Shipped with it, so the PR that closes a control commits the page
-          # main will carry after the merge (#3253). Empty in a merge group.
+          # main will carry after the merge (#3253). A merge group names its
+          # pull request in its head ref, `gh-readonly-queue/<base>/pr-<n>-<sha>`.
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
         run: |
-          if [ -n "$PR_NUMBER" ]; then
-            bash scripts/render/control-matrix.sh --check --closing "$PR_NUMBER"
-          else
-            bash scripts/render/control-matrix.sh --check
+          set -euo pipefail
+          pr="$PR_NUMBER"
+          if [ -z "$pr" ]; then
+            pr="$(printf '%s\n' "$QUEUE_REF" | sed -n 's|.*/pr-\([0-9][0-9]*\)-[0-9a-f]*$|\1|p')"
           fi
+          if [ -z "$pr" ]; then
+            echo "::error::No pull request number in the event (merge group head ref: '$QUEUE_REF')"
+            exit 1
+          fi
+          bash scripts/render/control-matrix.sh --check --closing "$pr" --base HEAD^1
 
   # The prose AROUND the generated pages can go stale where the pages cannot:
   # after the v4.2.0 cut the compliance overview still said "guidance planned,
