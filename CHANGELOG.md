@@ -79,7 +79,7 @@ workflow refuses a tag that has no matching section here.
   searched: a deployment that mounts a file there without naming it starts on
   the environment and the defaults alone. Set
   `FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml`; the Compose files, the
-  conformance stacks and Helm chart 16.0.1 set it. The fallbacks keep their
+  conformance stacks and Helm chart 16.0.2 set it. The fallbacks keep their
   order (the libpq variables, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`,
   `RUST_LOG`, `PORT`), and `ferroehr config check` prints each key beside the
   source that set it.
