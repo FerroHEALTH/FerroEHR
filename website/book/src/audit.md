@@ -517,8 +517,7 @@ Four controls sit on top of it, and they are separate on purpose:
   it off). Each run verifies the records written since the newest link an
   earlier run found intact, and the chain head, so its cost follows the
   records written since rather than the size of the trail
-  (`audit.verify_audit_chain_incremental()`; on 428,000 records a full pass
-  took about 35 s and a run over the last 1,000 records 76 ms). A full pass
+  (`audit.verify_audit_chain_incremental()`). A full pass
   runs every `[audit.store] full_verify_interval_seconds` (default `604800`,
   one week; `0` leaves it to the query above) and after every run that found
   damage, so damage to an older record stays reported. A run that finds damage logs at `ERROR`, one summary line with the
