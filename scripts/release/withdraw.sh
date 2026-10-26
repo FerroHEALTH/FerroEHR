@@ -256,8 +256,8 @@ release, brings FerroEHR into conformity. Timetable: <the dates the
 correction, the withdrawal and the notices took or take place>.
 
 == Notice to distributors, importers and users (Art 30(1)(j)) ==
-The advisory text above, through the advisory, an [Unreleased] entry in
-CHANGELOG.md that the next release's notes carry, and a direct message to
+The advisory text above, through the advisory, a changelog.d/ fragment
+that the next release's notes carry, and a direct message to
 every distributor, importer and user the manufacturer knows.
 
 == Register columns to fill in $ids ==

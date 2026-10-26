@@ -179,9 +179,9 @@ fn take_frame(buffer: &mut Vec<u8>) -> Option<Vec<u8>> {
 }
 
 /// The CA certificate and the leaf it signed, minted for one listener.
-struct Pki {
+pub(crate) struct Pki {
     /// The CA certificate, PEM.
-    ca_pem: String,
+    pub(crate) ca_pem: String,
     /// The leaf certificate, DER.
     leaf: rustls::pki_types::CertificateDer<'static>,
     /// The leaf's private key, PKCS #8 DER.
@@ -191,7 +191,7 @@ struct Pki {
 impl Pki {
     /// Mints the CA and the leaf, valid from yesterday to [`VALIDITY_DAYS`]
     /// from today.
-    fn mint() -> Result<Self, ListenerError> {
+    pub(crate) fn mint() -> Result<Self, ListenerError> {
         use rcgen::{
             BasicConstraints, CertificateParams, DnType, ExtendedKeyUsagePurpose, IsCa, Issuer,
             KeyPair, KeyUsagePurpose,
@@ -240,7 +240,7 @@ impl Pki {
     }
 
     /// The server configuration presenting the leaf.
-    fn server_config(&self) -> Result<Arc<rustls::ServerConfig>, ListenerError> {
+    pub(crate) fn server_config(&self) -> Result<Arc<rustls::ServerConfig>, ListenerError> {
         let pki = |e: rustls::Error| ListenerError::Pki(Box::new(e));
         let key = rustls::pki_types::PrivateKeyDer::Pkcs8(self.leaf_key.clone().into());
         let provider = Arc::new(rustls::crypto::aws_lc_rs::default_provider());

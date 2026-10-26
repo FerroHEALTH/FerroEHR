@@ -15,7 +15,7 @@
 //!
 //! Nothing here deletes. Every statement is scoped to the rows IN FORCE
 //! (`upper_inf`) except the closes, which is what turns an in-force row into a
-//! historical one: a merge, a split or an index correction closes a period and
+//! historical one: an index correction closes a period and
 //! opens the next, so "which party was the subject of this EHR when that
 //! composition was written" stays answerable (GDPR Art. 5(1)(d) accuracy is
 //! served by correcting forward, not by erasing the record of what was
@@ -29,7 +29,7 @@
 //! tried.
 
 use sqlx::postgres::PgRow;
-use sqlx::{PgConnection, PgPool, Row};
+use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
 use crate::db::acquire::{AcquireError, acquire};
@@ -72,21 +72,6 @@ pub(super) fn is_overlap(error: &sqlx::Error) -> bool {
         .is_some_and(|code| code == SQLSTATE_EXCLUSION_VIOLATION)
 }
 
-/// A mapping that was just closed: the EHR it named, and the subject
-/// identifier the row carried, if any.
-///
-/// The subject travels with the EHR, not with the party: a merge moves the
-/// same EHR to another party and the clinical side still carries the same
-/// `EHR_STATUS.subject.external_ref`, so the successor row keeps it; a split
-/// moves the party to a DIFFERENT EHR, whose status this map has never seen,
-/// so the successor row carries no subject until something writes one.
-pub(super) struct ClosedMapping {
-    /// The EHR the closed row named.
-    pub(super) ehr: EhrId,
-    /// The subject identifier the closed row carried.
-    pub(super) subject: Option<SubjectRef>,
-}
-
 /// The EHR `party` is the subject of right now, or `None`.
 ///
 /// # Errors
@@ -102,8 +87,7 @@ pub(super) async fn open_mapping(pool: &PgPool, party: VoId) -> Result<Option<Eh
     Ok(found.map(EhrId))
 }
 
-/// Open a mapping from `party` to `ehr`, starting now, optionally recording
-/// the subject identifier the clinical side carries for it.
+/// Open a mapping from `party` to `ehr`, starting now.
 ///
 /// # Errors
 /// The driver error, including the `23P01` refusal when `party` already holds
@@ -112,64 +96,13 @@ pub(super) async fn open(
     conn: &mut PgConnection,
     party: VoId,
     ehr: EhrId,
-    subject: Option<&SubjectRef>,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        "INSERT INTO subject_ehr \
-         (party_id, ehr_id, subject_id, subject_namespace, subject_type) \
-         VALUES ($1, $2, $3, $4, $5)",
-    )
-    .bind(party.0)
-    .bind(ehr.0)
-    .bind(subject.map(|s| s.id.as_str()))
-    .bind(subject.map(|s| s.namespace.as_str()))
-    .bind(subject.map(|s| s.r#type.as_str()))
-    .execute(conn)
-    .await?;
+    sqlx::query("INSERT INTO subject_ehr (party_id, ehr_id) VALUES ($1, $2)")
+        .bind(party.0)
+        .bind(ehr.0)
+        .execute(conn)
+        .await?;
     Ok(())
-}
-
-/// Close `party`'s mapping in force and return what it named, or `None` when
-/// the party holds none.
-///
-/// The upper bound is `now()` — the TRANSACTION timestamp, so the closing row
-/// and the successor the same transaction opens meet at one instant and the
-/// half-open periods do not overlap.
-///
-/// # Errors
-/// The driver error, when the update fails.
-pub(super) async fn close(
-    conn: &mut PgConnection,
-    party: VoId,
-) -> Result<Option<ClosedMapping>, sqlx::Error> {
-    let closed: Option<PgRow> = sqlx::query(
-        "UPDATE subject_ehr SET sys_period = tstzrange(lower(sys_period), now(), '[)') \
-         WHERE party_id = $1 AND upper_inf(sys_period) \
-         RETURNING ehr_id, subject_id, subject_namespace, subject_type",
-    )
-    .bind(party.0)
-    .fetch_optional(conn)
-    .await?;
-    closed.as_ref().map(closed_mapping).transpose()
-}
-
-/// Reassemble a [`ClosedMapping`] from the `RETURNING` row of [`close`].
-fn closed_mapping(row: &PgRow) -> Result<ClosedMapping, sqlx::Error> {
-    let ehr: EhrId = row.try_get("ehr_id")?;
-    let id: Option<String> = row.try_get("subject_id")?;
-    let namespace: Option<String> = row.try_get("subject_namespace")?;
-    let r#type: Option<String> = row.try_get("subject_type")?;
-    // The pair is held together by a CHECK constraint, so an id without a
-    // namespace cannot be stored; the match reads both rather than assuming it.
-    let subject = match (id, namespace) {
-        (Some(id), Some(namespace)) => Some(SubjectRef {
-            id,
-            namespace,
-            r#type: r#type.unwrap_or_else(|| SubjectRef::DEFAULT_TYPE.to_owned()),
-        }),
-        _ => None,
-    };
-    Ok(ClosedMapping { ehr, subject })
 }
 
 /// Every EHR the `parties` are the subject of right now, distinct.
@@ -327,8 +260,8 @@ pub(crate) async fn set_association_location(
 /// an association, and ending one is exactly what a closed period records. The
 /// role holds no `DELETE` to do otherwise with.
 ///
-/// A row may carry a party mapping as well as the association — one written by
-/// `link_as_subject`, which records the pseudonym it put on `EHR_STATUS` — and
+/// A row may carry a party mapping as well as the association (a database
+/// an earlier release wrote holds such rows), and
 /// ending the association must not end the mapping. So a closed row that named
 /// a party is reopened in the same statement without its subject: the
 /// association leaves force, the mapping stays, and the history keeps the

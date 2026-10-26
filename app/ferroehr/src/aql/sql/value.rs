@@ -766,6 +766,8 @@ pub(super) fn version_field_expr(
                 ],
             ),
         ]),
+        VersionField::ObjectUid => cast(col(voa, VersionRow::VoId), "text"),
+        VersionField::OwnerId => cast(col(voa, VersionRow::EhrId), "text"),
         VersionField::TimeCommitted => col(&audit(), CommitAudit::TimeCommitted),
         VersionField::SystemId => col(&audit(), CommitAudit::SystemId),
         VersionField::ChangeType => col(&audit(), CommitAudit::ChangeType),

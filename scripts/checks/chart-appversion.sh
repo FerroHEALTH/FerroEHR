@@ -55,7 +55,10 @@
 #      `ferroehr.bridgePinnedVersion`, which the image-tag default and the
 #      chart's tag-versus-digest refusal both read), and the DIGEST equals the
 #      `image.digest` of its values section (`terminology:`, `bridge:`), which
-#      is what every install actually runs. Without this the
+#      is what every install actually runs. FerroPIX, a chart dependency since
+#      #3380, has no pinned-version define here (its tag follows the dependency
+#      chart), so only its DIGEST is held, to `ferropix.image.digest`
+#      (#4115). Without this the
 #      annotation is a fourth hand-maintained copy of a version: Artifact Hub
 #      would scan whatever `ferroterm:<tag>` had moved to while the chart
 #      deployed a pinned digest, and the vulnerability report would describe
@@ -69,10 +72,10 @@
 #      FROM Chart.yaml, so a disagreement means it was never regenerated.
 #
 # Usage: scripts/checks/chart-appversion.sh [--self-test]
-#   --self-test mutates a COPY of the chart tree ten ways — a first-party tag
-#   moved off appVersion, an image line with its party marker removed, and each of
+#   --self-test mutates a COPY of the chart tree twelve ways (a first-party tag
+#   moved off appVersion, an image line with its party marker removed, each of
 #   the FerroTERM and FerroBRIDGE tags and digests moved off its pin from either
-#   side (the annotation, the helper, the values file) — and asserts the guard
+#   side, and the FerroPIX digest moved from either side) and asserts the guard
 #   rejects each.
 #   The detectors are arithmetic over text, and a text detector never shown to fail
 #   is a green light nobody has tested (reliability.md §enforcement tiers).
@@ -107,6 +110,8 @@ if [[ "${1:-}" == "--self-test" ]]; then
     "the FerroBRIDGE digest moved off the values pin|${self_chart}|s|\\(ferrobridge:[^@]*\\)@sha256:[0-9a-f]\\{8\\}|\\1@sha256:0000c0de|"
     "the FerroBRIDGE helper pin moved without the annotation|${self_helpers}|/define \"ferroehr\\.bridgePinnedVersion\"/{n;s|^[0-9]*\\.[0-9]*\\.[0-9]*$|9.9.9|;}"
     "the bridge values digest moved without the annotation|${self_values}|/^bridge:/,\$s|^    digest: sha256:[0-9a-f]\\{8\\}|    digest: sha256:0000c0de|"
+    "the FerroPIX digest moved off the values pin|${self_chart}|s|\\(ferropix:[^@]*\\)@sha256:[0-9a-f]\\{8\\}|\\1@sha256:0000c0de|"
+    "the ferropix values digest moved without the annotation|${self_values}|/^ferropix:/,\$s|^    digest: \"sha256:[0-9a-f]\\{8\\}|    digest: \"sha256:0000c0de|"
   )
   for mutation in "${mutations[@]}"; do
     label="${mutation%%|*}"
@@ -204,28 +209,38 @@ fi
 # read inside its own top-level values section, so two pinned images can never
 # be checked against each other's digest.
 # <product>|<repository>|<pinned-version define>|<top-level values key>
+# An empty define holds the digest alone: FerroPIX's tag follows its
+# dependency chart, and the chart pins only its digest.
 third_party=(
   "FerroTERM|ghcr.io/ferrohealth/ferroterm|ferroehr.terminologyPinnedVersion|terminology"
   "FerroBRIDGE|ghcr.io/ferrohealth/ferrobridge|ferroehr.bridgePinnedVersion|bridge"
+  "FerroPIX|ghcr.io/ferrohealth/ferropix||ferropix"
 )
 for entry in "${third_party[@]}"; do
   IFS='|' read -r product repository define section <<<"$entry"
-  pin=$(sed -nE "/define \"${define//./\\.}\"/{n;s/^[[:space:]]*([0-9][0-9A-Za-z.+-]*)[[:space:]]*\$/\\1/p;}" "$HELPERS")
+  pin=""
+  if [[ -n "$define" ]]; then
+    pin=$(sed -nE "/define \"${define//./\\.}\"/{n;s/^[[:space:]]*([0-9][0-9A-Za-z.+-]*)[[:space:]]*\$/\\1/p;}" "$HELPERS")
+  fi
   digest=$(awk -v section="${section}:" '
     $0 == section { inside = 1; next }
     inside && /^[^[:space:]#]/ { inside = 0 }
     inside && /^  image:$/ { image = 1; next }
     inside && image && /^  [^[:space:]]/ { image = 0 }
-    inside && image && /^    digest: sha256:[0-9a-f]+$/ { print $2 }
+    inside && image && /^    digest: "?sha256:[0-9a-f]+"?$/ { gsub(/"/, "", $2); print $2 }
   ' "$VALUES" | head -1)
-  if [[ -z "$pin" ]]; then
+  have=$(grep -oE "image: ${repository//./\\.}[:@][^[:space:]]*" "$CHART" | head -1)
+  have="${have#image: }"
+  if [[ -n "$define" && -z "$pin" ]]; then
     report "could not read the ${product} pin from $HELPERS — '${define}' must be a define whose next line is the bare version, because this guard and the chart's own tag default both read it there."
   elif [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
     report "could not read ${section}.image.digest from $VALUES — the chart pins ${product} by digest, and this guard holds the published annotation to that pin."
+  elif [[ -z "$define" ]]; then
+    if [[ "$have" != "${repository}:"*"@${digest}" ]]; then
+      report "$CHART lists ${product} as '${have:-<absent>}' but the chart deploys the digest '${digest}' (${section}.image.digest in $VALUES). Artifact Hub scans the reference in the annotation, so a stale one reports vulnerabilities for an image nobody runs."
+    fi
   else
     want="${repository}:${pin}@${digest}"
-    have=$(grep -oE "image: ${repository//./\\.}[:@][^[:space:]]*" "$CHART" | head -1)
-    have="${have#image: }"
     if [[ "$have" != "$want" ]]; then
       report "$CHART lists ${product} as '${have:-<absent>}' but the chart deploys '${want}' (tag from ${define} in $HELPERS, digest from ${section}.image.digest in $VALUES). Artifact Hub scans the reference in the annotation, so a stale one reports vulnerabilities for an image nobody runs."
     fi

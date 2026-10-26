@@ -35,6 +35,7 @@ mod admin_integrity_http;
 mod admin_party_delete_http;
 mod admin_party_identifiers_http;
 mod audit_categories;
+mod audit_data_permit;
 mod audit_e2e;
 mod audit_emergency_access;
 mod audit_iti81;

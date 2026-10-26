@@ -281,6 +281,16 @@ pub struct AuditConfig {
     /// this and IHE carries the equivalent in a SAML attribute rather than a
     /// header, so the header is our own design.
     pub purpose_header: String,
+    /// The request header carrying the data permit the caller acts under
+    /// (`FERROEHR__AUDIT__PERMIT_HEADER`), recorded on every access record.
+    ///
+    /// A secondary-use reader such as an ETL batch acts under a data permit a
+    /// health data access body issued (`docs/law/eu/ehds/text.html` Art. 68),
+    /// and the trail records which one beside the purpose. The value is the
+    /// permit's identifier, 1 to 128 characters of letters, digits and
+    /// `.` `_` `:` `/` `#` `-`; anything else is recorded as absent. No
+    /// specification names a header for it: our own design.
+    pub permit_header: String,
     /// The purpose codes this deployment accepts
     /// (`FERROEHR__AUDIT__PURPOSE_CODES`).
     ///
@@ -337,6 +347,7 @@ impl Default for AuditConfig {
             queue_capacity: 8192,
             server_host: None,
             purpose_header: "x-purpose-of-use".to_owned(),
+            permit_header: "x-data-permit".to_owned(),
             purpose_codes: Vec::new(),
             emergency_purpose_codes: Vec::new(),
             legal_basis: None,

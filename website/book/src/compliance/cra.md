@@ -43,9 +43,11 @@ says.
   the Annex II information for FerroEHR, point by point. The notes of each
   GitHub release link the copy of that page frozen for the release, and the
   release lane refuses to publish a release whose notes do not.
-- **[Technical documentation](technical-documentation.md):** the single set
-  for the EHDS and the CRA (CRA Art. 31(3) as EHDS Art. 104(2) replaces it),
-  kept in the repository.
+- **[Technical documentation](https://ferrohealth.eu/docs/ehds/technical-documentation.html):**
+  the single set for the EHDS and the CRA (CRA Art. 31(3) as EHDS Art. 104(2)
+  replaces it): the EHDS Annex III elements of the EHR system in the
+  FerroHEALTH book, at the revision each release pins, and FerroEHR's CRA
+  Annex VII points in the repository.
 - **[Hazard log](hazard-log.md):** the patient-safety hazards of the access
   log, the EHDS part of the risk assessment.
 
@@ -67,7 +69,7 @@ says.
 - **The conformity route.** Cadasto B.V. declares FerroEHR, with FerroBRIDGE,
   as an EHR system under the EHDS, so the CRA requirements are assessed through
   the EHDS procedure (CRA Art. 32(5a), inserted by EHDS Art. 104(3)). The
-  status per EHDS requirement is on [EHDS readiness](ehds-readiness.md).
+  status per EHDS requirement is on [EHDS readiness](https://ferrohealth.eu/docs/ehds/readiness.html).
 
 ## Default product, or important product of class I
 

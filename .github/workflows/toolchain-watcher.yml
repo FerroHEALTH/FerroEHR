@@ -271,23 +271,19 @@ jobs:
             done
           fi
 
-          # 5. The changelog entry, inserted into the existing [Unreleased]
-          #    '### Changed' subsection when there is one — a second '### Changed'
-          #    in the same release section is refused by
-          #    scripts/checks/changelog-structure.sh.
+          # 5. The changelog entry, a fragment under changelog.d/
+          #    (changelog.d/README.md) named for this lane's tracker issue and
+          #    the version. `git add -N` puts the new file in the `git diff`
+          #    that records what to commit.
+          fragment="changelog.d/2278-rust-toolchain-${NEW_VERSION//./-}.changed.md"
           if [ "$msrv_moves" = "1" ]; then
             entry="- **The Rust toolchain moves to ${NEW_VERSION} and the MSRV to ${msrv_target}.** The pinned channel, both container base images (digest re-resolved) and the CI job containers move together; the nine \`openehr-*\` crates move to ${crate_after} and need Rust ${msrv_target} or newer."
           else
             entry="- **The Rust toolchain moves to ${NEW_VERSION}.** The pinned channel, both container base images (digest re-resolved) and the CI job containers move together; the MSRV stays ${msrv_before}."
           fi
-          awk -v entry="$entry" '
-            state == 0 && /^## \[Unreleased\]/            { print; state = 1; next }
-            state == 1 && /^### Changed[[:space:]]*$/     { print; print ""; print entry; state = 2; next }
-            state == 1 && /^## \[/                        { print "### Changed"; print ""; print entry; print ""; print; state = 2; next }
-                                                          { print }
-            END { if (state == 1) { print "### Changed"; print ""; print entry } }
-          ' CHANGELOG.md > CHANGELOG.md.new
-          mv CHANGELOG.md.new CHANGELOG.md
+          printf '%s\n' "$entry" > "$fragment"
+          git add -N "$fragment"
+          bash scripts/release/changelog.sh --check
 
           # ── The properties that make this safe to merge ────────────────────
 

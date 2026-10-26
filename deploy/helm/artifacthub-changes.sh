@@ -15,7 +15,9 @@
 #   deploy/helm/artifacthub-changes.sh <version|Unreleased>   # print the YAML
 #   deploy/helm/artifacthub-changes.sh 3.17.4 --inject        # write into Chart.yaml
 #
-# The parsing lives in artifacthub-changes.awk beside this file.
+# The parsing lives in artifacthub-changes.awk beside this file. CHANGELOG names
+# another file to read, such as the scripts/release/changelog.sh --preview
+# output with the changelog.d/ fragments folded into [Unreleased].
 #
 # Emits `artifacthub.io/changes` and, when the section has a `### Security`
 # subsection, `artifacthub.io/containsSecurityUpdates: "true"`.
@@ -30,7 +32,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CHANGELOG="${REPO_ROOT}/CHANGELOG.md"
+CHANGELOG="${CHANGELOG:-${REPO_ROOT}/CHANGELOG.md}"
 CHART="${SCRIPT_DIR}/ferroehr/Chart.yaml"
 
 VERSION="${1:-Unreleased}"

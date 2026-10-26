@@ -140,7 +140,7 @@ lives in the record:
 | The kind of action | `action` (DICOM `C`/`R`/`U`/`D`/`E`) plus `operation`, the released ITS-REST operation id. It equals the served OpenAPI `operationId` except for the demographic CONTRIBUTION pair, served as `demographic_contribution_create` and `demographic_contribution_get` because the released `contribution_create` and `contribution_get` also name the EHR operations and one document needs unique ids |
 | Whether it succeeded | `outcome`, the DICOM outcome indicator (0 success, 4 minor, 8 serious, 12 major) |
 | Under which role or authority | `roles` — the roles the caller held at access time (the RFC 9068 §2.2.3.1 claim carriers for a bearer, the user definition for Basic), rendered as FHIR `agent.role` on the requestor and as a `RoleIDCode` per role on the DICOM requesting participant |
-| On whose authority, and why | `purpose` and `legal_basis` |
+| On whose authority, and why | `purpose` and `legal_basis`, and `permit`, the identifier of the data permit a secondary-use caller declares it acts under ([Secondary use](compliance/secondary-use.md#the-access-record)) |
 | Which system, and from where | `AuditSourceID` and the source participant's network address (`client_ip`) |
 
 Two of these are the deployment's to supply. `purpose` is only as meaningful as
@@ -302,7 +302,7 @@ side it is a limit of the format, not something this code withholds.
 The common specifications the regulation's Article 36 provides for have not
 been adopted. When they are, this mapping is re-verified against them rather
 than assumed to still hold; see the
-[EHDS readiness page](compliance/ehds-readiness.md).
+[EHDS readiness page](https://ferrohealth.eu/docs/ehds/readiness.html).
 
 ### Emergency access (EHDS Art. 11(5))
 

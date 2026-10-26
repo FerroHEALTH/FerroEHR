@@ -154,7 +154,7 @@ when there is at least one secret value to carry).
 {{- $inlineDb := and (not .Values.database.existingSecret) .Values.database.url }}
 {{- $inlineDomain := include "ferroehr.hasInlineDomainDsn" . }}
 {{- $inlineMigrate := and (not .Values.database.migrateExistingSecret) .Values.database.migrateUrl }}
-{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.basicUserPasswordHashes .Values.secrets.signingKeyPassphrase .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl .Values.secrets.auditFhirFeedUrl .Values.secrets.multimediaAccessKeyId .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret -}}
+{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.basicUserPasswordHashes .Values.secrets.signingKeyPassphrase .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl .Values.secrets.auditFhirFeedUrl .Values.secrets.multimediaAccessKeyId .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.ehrIndexClientSecret -}}
 true
 {{- end -}}
 {{- end }}
@@ -181,7 +181,7 @@ names a Secret nothing created makes the pod fail to mount.
 {{- $inlineDb := and (not .Values.database.existingSecret) .Values.database.url -}}
 {{- $inlineDomain := include "ferroehr.hasInlineDomainDsn" . -}}
 {{- $inlineMigrate := and (not .Values.database.migrateExistingSecret) .Values.database.migrateUrl -}}
-{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.signingKeyPassphrase .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.basicUserPasswordHashes .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl -}}
+{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.signingKeyPassphrase .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.ehrIndexClientSecret .Values.secrets.basicUserPasswordHashes .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl -}}
 true
 {{- end -}}
 {{- end }}
@@ -298,7 +298,7 @@ The `secrets:` key that carries a routed secret, keyed on its leaf name.
   "url" "route it through the matching `secrets:` key — `eventsUrl` (mounted as a file via events.url_file), `auditFhirFeedUrl` (env; that key still has no `*_file` sibling), or `database.existingSecret` for the shared DSN (mounted via db.url_file) and `database.<domain>.existingSecret` for one storage domain's own (mounted via storage.<domain>.url_file)"
   "key_passphrase" "set `secrets.signingKeyPassphrase` instead"
   "secret_access_key" "set `secrets.multimediaSecretAccessKey` instead"
-  "client_secret" "set `secrets.terminologyClientSecret` instead (for [terminology.server.oauth])"
+  "client_secret" "set `secrets.terminologyClientSecret` (for [terminology.server.oauth]) or `secrets.ehrIndexClientSecret` (for [ehr_index.oauth]) instead"
   "password_hash" "set `secrets.basicUserPasswordHashes.<user>` instead, and leave only `user`/`scopes` under `config:` (the chart mounts the hash and injects password_hash_file)"
 -}}
 {{- get $routes . | default "no `secrets:` route exists for this key" -}}
@@ -363,6 +363,29 @@ secret VALUE refused outright.
 {{- fail "secrets.terminologyClientSecret is set and config.terminology.server.oauth declares no grant (declare its token_endpoint or issuer and its client_id there; only the secret belongs here)" -}}
 {{- end -}}
 {{- $_ := set $oauth "client_secret_file" (printf "%s/terminology.server.oauth.client_secret" (include "ferroehr.secretMountPath" $)) -}}
+{{- end -}}
+{{- if .Values.secrets.ehrIndexClientSecret -}}
+{{- $oauth := dig "ehr_index" "oauth" "" $rendered -}}
+{{- if not (kindIs "map" $oauth) -}}
+{{- fail "secrets.ehrIndexClientSecret is set and config.ehr_index.oauth holds no grant (declare its token_endpoint or issuer and its client_id there; only the secret belongs here)" -}}
+{{- end -}}
+{{- $_ := set $oauth "client_secret_file" (printf "%s/ehr_index.oauth.client_secret" (include "ferroehr.secretMountPath" $)) -}}
+{{- end -}}
+{{- /* The EHR index provider. With ferropix.enabled the in-cluster FerroPIX is
+       the IHE patient identity source, injected as the terminology server is
+       below, and a provider or pixm_url the operator also wrote is refused for
+       the same reason. Without it the values must name a source or the local
+       opt-in, because the server refuses to boot on neither. */ -}}
+{{- if not (hasKey $rendered "ehr_index") -}}{{- $_ := set $rendered "ehr_index" (dict) -}}{{- end -}}
+{{- $ehrIndex := get $rendered "ehr_index" -}}
+{{- if $.Values.ferropix.enabled -}}
+{{- if or (hasKey $ehrIndex "provider") (hasKey $ehrIndex "pixm_url") -}}
+{{- fail "ferropix.enabled=true already points config.ehr_index at the in-cluster FerroPIX (provider = \"ihe\" and its pixm_url), so declaring config.ehr_index.provider or config.ehr_index.pixm_url too is two answers to one question: drop them, or set ferropix.enabled=false to name another identity source or provider = \"local\"." -}}
+{{- end -}}
+{{- $_ := set $ehrIndex "provider" "ihe" -}}
+{{- $_ := set $ehrIndex "pixm_url" (include "ferropix.fhirBaseUrl" (dict "Values" $.Values.ferropix "Release" $.Release "Chart" (dict "Name" "ferropix"))) -}}
+{{- else if not (or (eq (toString (get $ehrIndex "provider")) "local") (get $ehrIndex "pixm_url")) -}}
+{{- fail "ferropix.enabled=false and config.ehr_index names no patient identity source: set config.ehr_index.pixm_url and assigning_authority (an IHE PIXm endpoint), or opt in to the in-instance map with config.ehr_index.provider=local for a FerroEHR run on its own, or set ferropix.enabled=true." -}}
 {{- end -}}
 {{- if and $.Values.terminology.enabled $.Values.terminology.wireCdr -}}
 {{- /* The in-cluster FerroTERM is wired the same way the mounted secret paths

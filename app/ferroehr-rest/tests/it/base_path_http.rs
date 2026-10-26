@@ -18,6 +18,7 @@
 
 use axum::Router;
 use ferroehr::config::FerroEhrConfig;
+use ferroehr::service::ehr_index::config::EhrIndexConfig;
 use ferroehr_rest::config::AppConfig;
 use http::{StatusCode, header};
 use serde_json::Value;
@@ -55,7 +56,10 @@ async fn short_base_router() -> (testkit::TestDb, Router) {
 /// behaviour below only matters for a configuration a server would start on.
 #[test]
 fn the_shortened_base_path_passes_boot_validation() {
-    let mut cfg = FerroEhrConfig::default();
+    let mut cfg = FerroEhrConfig {
+        ehr_index: EhrIndexConfig::local(),
+        ..FerroEhrConfig::default()
+    };
     cfg.server.base_path = SHORT_BASE.to_owned();
     assert!(cfg.validate().is_ok());
     assert_eq!(cfg.server.rest_root(), SHORT_ROOT);

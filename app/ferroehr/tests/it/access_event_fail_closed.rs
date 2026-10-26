@@ -32,6 +32,7 @@ use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig;
 use ferroehr::service::demographic::identifier::engine::IdentifierProtection;
+use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::linkage::LinkageError;
 use ferroehr::service::status::CallStatusType;
@@ -115,10 +116,12 @@ async fn a_linkage_resolution_is_withheld_when_its_record_is_rejected() {
         matches!(refused, Err(LinkageError::Unrecorded(_))),
         "the mapping resolved but the result is withheld: {refused:?}"
     );
-    let refused = closed.merge(party, VoId(Uuid::now_v7())).await;
+    let refused = closed
+        .link(VoId(Uuid::now_v7()), EhrId(Uuid::now_v7()))
+        .await;
     assert!(
         matches!(refused, Err(LinkageError::Unrecorded(_))),
-        "a merge whose record is rejected reports so: {refused:?}"
+        "a mapping opened with its record rejected reports so: {refused:?}"
     );
 }
 
@@ -129,7 +132,8 @@ async fn a_subject_lookup_is_withheld_when_its_record_is_rejected() {
     let db = testkit::db().await.expect("testkit database");
     let (sender, _handle) = rejecting_sender().await;
     let closed = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
-        .with_audit(sender);
+        .with_audit(sender)
+        .with_ehr_index(EhrIndexProvider::Local);
 
     let refused = closed
         .has_ehr_for_subject(SubjectRef {

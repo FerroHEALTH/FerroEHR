@@ -34,7 +34,7 @@ links it. The family pages, at fixed addresses:
 
 | Family page | Address | Kept here as a short page linking it |
 |---|---|---|
-| The manufacturer | `manufacturer.html` | (cited from `compliance/cra-user-information.md` point 1, `compliance/information-sheet.md` (a)) |
+| The manufacturer | `manufacturer.html` | (cited from `compliance/cra-user-information.md` point 1) |
 | Security: vulnerability handling, disclosure, advisories, security-only patches, CRA Art 14 reporting, cessation | `security.html` | `SECURITY.md` keeps the supported versions, the reporting routes and scope, the repository settings, `security.txt` |
 | Post-market procedure | `post-market.html` | `compliance/post-market.md` (FerroEHR's channels, registers, withdrawn releases); `docs/post-market.md` (the steps bound to this repository's registers, tracker, release lane and `scripts/release/withdraw.sh`) |
 | The CRA, the manufacturer side | `cra.html` | `compliance/cra.md` (FerroEHR's product facts, its CRA documents, the class I question) |
@@ -42,15 +42,13 @@ links it. The family pages, at fixed addresses:
 | The EHDS EHR system: shared responsibility | `ehds/shared-responsibility.html` | `compliance/shared-responsibility.md` (the usage report, where FerroEHR documents its side) |
 | Licensing and trademarks | `licensing.html` | `licensing.md` (installing a licence, the crate licences, vendored material, REUSE, lineage; `licensing-declarations.sh` and `copyright-holder.sh` read it) |
 | How the products fit together | `architecture.html` | none |
+| The EHDS EHR system: information sheet, instructions for use, readiness, technical documentation (Annex III) | `ehds/information-sheet.html`, `ehds/instructions-for-use.html`, `ehds/readiness.html`, `ehds/technical-documentation.html` | none; the release lane attaches the information sheet and the instructions for use at the revision `docs/ehds/system-documents.env` pins, with this release's facts appended (`scripts/release/accompanying-documents.sh`) |
 
-**Stays in this book, linking the family book:** the information sheet and
-the instructions for use (the release lane attaches them to every release),
-the generated EHDS readiness and technical-documentation pages
-(`website/book/ehds.yaml` + `scripts/render/ehds-pages.sh`), FerroEHR's CRA
+**Stays in this book, linking the family book:** FerroEHR's CRA
 risk assessment and Annex II user information, the hazard log, the claims
 review, the control matrix, the compliance overview, and every installation,
 configuration, API, operations and security page. A moved page keeps its file
-and URL so frozen books and the release notes' links keep resolving. Before
+and URL, or a redirect in `website/book/book.toml` to its family address, so frozen books and the release notes' links keep resolving. Before
 writing a page here, ask whether it is about FerroEHR alone; if it is about
 the family or the manufacturer, it goes to the FerroHEALTH book.
 

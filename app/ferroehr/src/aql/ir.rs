@@ -85,7 +85,9 @@ pub enum Source {
     Rm(RmSource),
     /// A `VERSION v[LATEST_VERSION | ALL_VERSIONS | <standard predicate>]`
     /// envelope; addresses version metadata and sets the scope of the VO(s) it
-    /// contains.
+    /// contains. A `VERSIONED_OBJECT vo` operand is lowered to the same
+    /// envelope under the inherited scope, its variable addressing the
+    /// versioned object's own fields.
     Version(VersionSource),
 }
 
@@ -259,6 +261,13 @@ pub enum VersionField {
     /// `lifecycle_state/defining_code/terminology_id/value` — the constant
     /// `openehr` terminology.
     LifecycleStateTerminology,
+    /// `uid/value` of a `VERSIONED_OBJECT` variable — the versioned object's
+    /// own id, the `object_id` part of its versions' uids (RM common master06
+    /// §`VERSIONED_OBJECT`).
+    ObjectUid,
+    /// `owner_id/id/value` of a `VERSIONED_OBJECT` variable — the id of the
+    /// EHR that owns it (RM common master06 §`VERSIONED_OBJECT`).
+    OwnerId,
 }
 
 /// The FROM containment tree: a boolean tree whose leaves are source

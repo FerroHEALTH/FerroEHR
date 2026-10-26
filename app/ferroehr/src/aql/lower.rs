@@ -229,7 +229,19 @@ impl Planner {
                 predicate,
             } => {
                 let id = self.next_id();
-                if rm_type == "EHR" {
+                if rm_type == "VERSIONED_OBJECT" {
+                    // Opens no relation: like a VERSION envelope it adopts the
+                    // version group of what it contains, and imposes no scope
+                    // of its own (RM common master06 §VERSIONED_OBJECT).
+                    self.sources.push(Source::Version(VersionSource {
+                        id,
+                        var: variable.clone(),
+                        scope: inherited.cloned().unwrap_or(VersionScope::Latest),
+                    }));
+                    if let Some(v) = variable {
+                        self.bind(v, id, BindingKind::VersionedObject)?;
+                    }
+                } else if rm_type == "EHR" {
                     self.clinical_classes.push(rm_type.clone());
                     self.lower_ehr_operand(id, variable.as_deref(), predicate.as_ref())?;
                 } else {

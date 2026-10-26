@@ -20,6 +20,7 @@
 use crate::db::acquire::acquire;
 use crate::ids::EhrId;
 use crate::service::ehr::handle::EhrSummary;
+use crate::service::ehr_index::IndexError;
 use crate::service::ehr_index::types::SubjectRef;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::status::{CallStatusType, SmError};
@@ -30,7 +31,6 @@ use openehr_base::prelude::{ArchetypeId, HierObjectId, ObjectId, ObjectRef, Obje
 use openehr_rm::prelude::{Archetyped, DvText, DvTextData, Ehr, EhrStatus, PartySelf};
 use serde_json::Value;
 use sqlx::Connection as _;
-use uuid::Uuid;
 
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
@@ -252,6 +252,33 @@ impl FerroEhrService {
         subject_id: &str,
         namespace: &str,
     ) -> Result<ServiceResponse, ServiceError> {
+        let found = self.ehr_id_for_subject(subject_id, namespace).await?;
+        // NOTE: no openEHR spec governs this message, our own design: the subject
+        // id is an external patient identifier, so the refusal names only its namespace.
+        let ehr_id = found.ok_or_else(|| {
+            ServiceError::sm(
+                CallStatusType::EhrIdDoesNotExist,
+                format!("no EHR names the requested subject in namespace {namespace}"),
+            )
+        })?;
+        self.ehr_summary(ehr_id).await
+    }
+
+    /// The id of the EHR whose `EHR_STATUS.subject.external_ref` names
+    /// `(subject_id, namespace)`, or `None`, recorded as a subject resolution
+    /// on the access log.
+    ///
+    /// An EHR under a whole-EHR access restriction is not found while the
+    /// request enforces it, exactly as [`Self::ehr_by_subject`] describes.
+    ///
+    /// # Errors
+    /// [`ServiceError::Database`] on a storage failure, and the access-record
+    /// refusal under `fail_mode = "closed"`.
+    pub(in crate::service) async fn ehr_id_for_subject(
+        &self,
+        subject_id: &str,
+        namespace: &str,
+    ) -> Result<Option<EhrId>, ServiceError> {
         let found = crate::storage::ehr_repo::ehr_id_by_subject(
             &mut *acquire(&self.pool).await?,
             subject_id,
@@ -270,15 +297,7 @@ impl FerroEhrService {
             other => other,
         };
         self.emit_subject_resolution(namespace, found)?;
-        // NOTE: no openEHR spec governs this message, our own design: the subject
-        // id is an external patient identifier, so the refusal names only its namespace.
-        let ehr_id = found.ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::EhrIdDoesNotExist,
-                format!("no EHR names the requested subject in namespace {namespace}"),
-            )
-        })?;
-        self.ehr_summary(ehr_id).await
+        Ok(found)
     }
 
     /// Record one subject-to-EHR resolution on the access log.
@@ -307,6 +326,7 @@ impl FerroEhrService {
         event.ehr_id = resolved.map(|id| id.to_string());
         event.result_count = Some(u64::from(resolved.is_some()));
         event.purpose = crate::system_log::access_context::current_purpose();
+        event.permit = crate::system_log::access_context::current_permit();
         if let Some(committer) = crate::service::committer::current_committer() {
             event.user_id = committer.subject;
         }
@@ -548,20 +568,21 @@ impl FerroEhrService {
     }
 
     /// SM `I_EHR_SERVICE.has_ehr_for_subject` — whether an EHR exists whose
-    /// current `EHR_STATUS` names the subject.
+    /// current `EHR_STATUS` names the subject, as the installed EHR index
+    /// provider resolves it into the clinical domain
+    /// ([`crate::service::ehr_index::provider`]).
     ///
     /// # Errors
-    /// [`SmError`] if the subject lookup fails (no matching EHR is
-    /// `Ok(false)`).
+    /// [`SmError`] if no provider is installed, the identity source fails, or
+    /// the subject lookup fails (no matching EHR is `Ok(false)`).
     pub async fn has_ehr_for_subject(&self, a_subject_id: SubjectRef) -> Result<bool, SmError> {
-        match self
-            .ehr_by_subject(&a_subject_id.id, &a_subject_id.namespace)
-            .await
-        {
-            Ok(_) => Ok(true),
-            Err(ServiceError::NotFound(_)) => Ok(false),
-            Err(e) => Err(e.into()),
-        }
+        let Some(subject) = self.clinical_subject(&a_subject_id).await? else {
+            return Ok(false);
+        };
+        Ok(self
+            .ehr_id_for_subject(&subject.id, &subject.namespace)
+            .await?
+            .is_some())
     }
 
     /// SM `I_EHR_SERVICE.create_ehr` — create an EHR with a server-assigned id
@@ -596,7 +617,10 @@ impl FerroEhrService {
     }
 
     /// SM `I_EHR_SERVICE.create_ehr_for_subject` — create an EHR whose
-    /// `EHR_STATUS.subject` names the given subject.
+    /// `EHR_STATUS.subject` names the given subject, as the installed EHR index
+    /// provider resolves it into the clinical domain: the subject itself under
+    /// the local map, the identifier the clinical domain holds for it under an
+    /// IHE patient identity source.
     ///
     /// NOTE: no committal argument. ITS-REST 1.1.0 binds EHR creation to
     /// exactly two operations — `ehr_create` (`POST /ehr`) and
@@ -614,33 +638,33 @@ impl FerroEhrService {
         an_ehr_status: Option<Value>,
     ) -> Result<EhrId, SmError> {
         let ehr_id = EhrId::minted(self.stamp());
-        let status = status_for_subject(
-            an_ehr_status.unwrap_or_else(initial_ehr_status),
-            &a_subject_id,
-        );
-        self.commit_new_ehr(ehr_id, status, None).await?;
-        Ok(ehr_id)
+        self.create_ehr_for_subject_with_id(ehr_id, a_subject_id, an_ehr_status)
+            .await
     }
 
     /// SM `I_EHR_SERVICE.create_ehr_for_subject_with_id` — subject-scoped
-    /// creation under a caller-supplied EHR id.
+    /// creation under a caller-supplied EHR id, the subject resolved as
+    /// [`Self::create_ehr_for_subject`] resolves it.
     ///
     /// No committal argument, for the reason given on
     /// [`Self::create_ehr_for_subject`].
     ///
     /// # Errors
-    /// [`SmError`] when the EHR already exists, the subject already owns an
-    /// EHR, the status is invalid, or storage fails.
+    /// [`SmError`] when no provider is installed, the identity source fails or
+    /// knows no clinical identifier for the subject (`subject_id_does_not_exist`),
+    /// the EHR already exists, the subject already owns an EHR, the status is
+    /// invalid, or storage fails.
     pub async fn create_ehr_for_subject_with_id(
         &self,
         an_ehr_id: EhrId,
         a_subject_id: SubjectRef,
         an_ehr_status: Option<Value>,
     ) -> Result<EhrId, SmError> {
-        let status = status_for_subject(
-            an_ehr_status.unwrap_or_else(initial_ehr_status),
-            &a_subject_id,
-        );
+        let subject = self
+            .clinical_subject(&a_subject_id)
+            .await?
+            .ok_or_else(|| IndexError::SubjectDoesNotExist(a_subject_id.clone()))?;
+        let status = status_for_subject(an_ehr_status.unwrap_or_else(initial_ehr_status), &subject);
         self.commit_new_ehr(an_ehr_id, status, None).await?;
         Ok(an_ehr_id)
     }
@@ -655,33 +679,25 @@ impl FerroEhrService {
     }
 
     /// SM `I_EHR_SERVICE.get_ehrs_for_subject` — the `EHR_SUMMARY` list for a
-    /// subject (≤1 under the one-EHR-per-subject rule; see the note on
-    /// `Self::ehr_by_subject`).
+    /// subject as the installed EHR index provider resolves it (≤1 under the
+    /// one-EHR-per-subject rule; see the note on `Self::ehr_by_subject`).
     ///
     /// # Errors
-    /// [`SmError`] if a read fails, or when a found EHR body carries no
-    /// `ehr_id` (an internal invariant violation).
+    /// [`SmError`] if no provider is installed, the identity source fails, or
+    /// a read fails.
     pub async fn get_ehrs_for_subject(
         &self,
         a_subject_id: SubjectRef,
     ) -> Result<Vec<EhrSummary>, SmError> {
-        // one EHR per subject narrows the List to ≤1 (see `ehr_by_subject`).
+        let Some(subject) = self.clinical_subject(&a_subject_id).await? else {
+            return Ok(Vec::new());
+        };
         match self
-            .ehr_by_subject(&a_subject_id.id, &a_subject_id.namespace)
-            .await
+            .ehr_id_for_subject(&subject.id, &subject.namespace)
+            .await?
         {
-            Ok(resp) => {
-                let ehr_id = resp
-                    .body
-                    .pointer("/ehr_id/value")
-                    .and_then(Value::as_str)
-                    .and_then(|v| Uuid::parse_str(v).ok())
-                    .map(EhrId)
-                    .ok_or_else(|| SmError::exception("EHR body carries no ehr_id"))?;
-                Ok(vec![self.summarize_ehr(ehr_id).await?])
-            }
-            Err(ServiceError::NotFound(_)) => Ok(Vec::new()),
-            Err(e) => Err(e.into()),
+            Some(ehr_id) => Ok(vec![self.summarize_ehr(ehr_id).await?]),
+            None => Ok(Vec::new()),
         }
     }
 
