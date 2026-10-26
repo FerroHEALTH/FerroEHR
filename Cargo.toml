@@ -257,6 +257,14 @@ ferrobridge-term = { version = "=0.1.137", features = ["smart"] }
 # crates.io 2026-10-26 (0.2.11).
 ihe-atna = { version = "=0.2.11", default-features = false }
 ehds-logging = { version = "=0.2.11", default-features = false }
+
+# ── Patient identity (FerroPIX's shared IHE ITI client library) ───────────────
+# The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly. `pixm` is the
+# PIXm Patient Identifier Cross-reference Consumer (ITI-83) the IHE patient
+# identity source of the EHR index is asked through (`[ehr_index]`); `smart` is
+# its ferrohealth-smart token authorizer. Verified on crates.io 2026-10-26
+# (0.0.61, on ihe-atna =0.2.11).
+ihe-iti = { version = "=0.0.61", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 openidconnect = { version = "4", default-features = false }   # OIDC discovery + code flow; HTTP-client agnostic: we supply the pinned reqwest (platform trust store)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits

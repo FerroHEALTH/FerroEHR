@@ -37,6 +37,7 @@ pub mod profile;
 pub mod secret;
 pub mod server;
 pub mod smart;
+pub mod trust;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -107,6 +108,9 @@ pub struct FerroEhrConfig {
     pub demographic: crate::service::demographic::identifier::config::DemographicConfig,
     /// `[cohort]` — the cross-domain cohort-query allow-list and limits.
     pub cohort: crate::service::linkage::cohort::config::CohortConfig,
+    /// `[ehr_index]` — who holds the subject-to-EHR cross-reference: an IHE
+    /// patient identity source (the default) or the in-instance map.
+    pub ehr_index: crate::service::ehr_index::config::EhrIndexConfig,
     /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
     pub usage_report: crate::usage_report::config::UsageReportConfig,
 }
@@ -148,6 +152,7 @@ impl Default for FerroEhrConfig {
             demographic:
                 crate::service::demographic::identifier::config::DemographicConfig::default(),
             cohort: crate::service::linkage::cohort::config::CohortConfig::default(),
+            ehr_index: crate::service::ehr_index::config::EhrIndexConfig::default(),
             usage_report: crate::usage_report::config::UsageReportConfig::default(),
         }
     }
@@ -181,6 +186,7 @@ impl FerroEhrConfig {
                 .map(ConfigError::semantic),
         );
         self.validate_cohort(&mut errors);
+        self.validate_ehr_index(&mut errors);
         self.validate_deployment(&mut errors);
         self.validate_ehr_access(&mut errors);
         errors.extend(self.usage_report.errors());
@@ -374,6 +380,26 @@ impl FerroEhrConfig {
                     ceiling.source
                 )));
             }
+        }
+    }
+
+    /// The `[ehr_index]` provider is chosen and complete: an IHE patient
+    /// identity source with its endpoint, its clinical domain among the
+    /// declared pseudonym namespaces and a readable `ca_file`, or an explicit
+    /// `provider = "local"`. With neither, the refusal names both choices.
+    fn validate_ehr_index(&self, errors: &mut Vec<ConfigError>) {
+        let index = &self.ehr_index;
+        errors.extend(
+            index
+                .problems(&self.privacy.subject_namespaces)
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
+        if index.provider == crate::service::ehr_index::config::ProviderKind::Ihe
+            && let Some(path) = &index.ca_file
+            && let Err(e) = trust::read_trust_roots("ehr_index.ca_file", path)
+        {
+            errors.push(ConfigError::semantic(e.to_string()));
         }
     }
 

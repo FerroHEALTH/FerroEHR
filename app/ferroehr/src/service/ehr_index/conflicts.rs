@@ -55,6 +55,7 @@ impl FerroEhrService {
     /// # Errors
     /// [`IndexError::Service`] on a storage/database fault.
     pub async fn index_conflicts(&self) -> Result<Vec<IndexConflict>, IndexError> {
+        self.local_index("index_conflicts")?;
         let mut conflicts = Vec::new();
 
         // Subjects associated with more than one EHR.

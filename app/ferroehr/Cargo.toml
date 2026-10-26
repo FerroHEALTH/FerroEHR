@@ -125,6 +125,9 @@ rand = "0.8"
 # Feed.
 ihe-atna = { workspace = true, features = ["atna"] }
 ehds-logging.workspace = true
+# The IHE patient identity source of the EHR index (`service::ehr_index::ihe`):
+# the PIXm Patient Identifier Cross-reference Consumer (ITI-83).
+ihe-iti = { workspace = true, features = ["pixm"] }
 
 openehr-base = { path = "../../crates/openehr-base" }
 openehr-term = { path = "../../crates/openehr-term" }

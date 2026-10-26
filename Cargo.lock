@@ -2676,6 +2676,7 @@ dependencies = [
  "http",
  "http-body-util",
  "ihe-atna",
+ "ihe-iti",
  "indexmap 2.14.2",
  "inferno",
  "insta",
@@ -4099,6 +4100,22 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tracing",
+ "url",
+]
+
+[[package]]
+name = "ihe-iti"
+version = "0.0.59"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ecb8c194655776dedcebb062b2e44c29abbbc75fb4065d85c06507847f2e47b9"
+dependencies = [
+ "fhir-types",
+ "http",
+ "ihe-atna",
+ "reqwest",
+ "secrecy",
+ "serde_json",
+ "thiserror 2.0.21",
  "url",
 ]
 
