@@ -366,7 +366,7 @@ async fn the_boot_gate_refuses_two_domains_that_share_one_role() {
     let settings = ferroehr::db::DbConfig::new(db.url());
     let storage = ferroehr::db::domain::StorageConfig {
         party: ferroehr::db::domain::DomainDsn {
-            url: Some(ferroehr::config::secret::SecretUrl::new(format!(
+            url: Some(ferrohealth_secret::secret_url::SecretUrl::new(format!(
                 "{}?application_name=party",
                 db.url()
             ))),
@@ -771,10 +771,10 @@ async fn a_protected_identifier_never_reaches_the_versioned_body() {
         &ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig {
             enabled: true,
             schemes: vec!["nl-bsn".to_owned()],
-            key: Some(ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+            key: Some(ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
             key_file: None,
         },
-        Some(&ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+        Some(&ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
         ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party),
     )
     .expect("the engine builds")
@@ -861,10 +861,10 @@ fn protection_engine(
         &IdentifierProtectionConfig {
             enabled: true,
             schemes: vec!["nl-bsn".to_owned()],
-            key: Some(ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+            key: Some(ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
             key_file: None,
         },
-        Some(&ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+        Some(&ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
         party_pool,
     )
     .expect("the engine builds")
@@ -1004,8 +1004,8 @@ async fn a_failed_party_commit_leaves_no_sealed_identifier() {
 /// so separated credentials need no second connection and no cleanup.
 #[tokio::test]
 async fn a_failed_party_commit_leaves_no_sealed_identifier_on_separated_credentials() {
-    use ferroehr::config::secret::SecretUrl;
     use ferroehr::db::DbConfig;
+    use ferrohealth_secret::secret_url::SecretUrl;
 
     let db = testkit::db().await.expect("testkit database");
     let settings = DbConfig {
@@ -1351,10 +1351,10 @@ async fn an_unregistered_configured_scheme_is_a_configuration_fault() {
         &IdentifierProtectionConfig {
             enabled: true,
             schemes: vec!["zz-invented".to_owned()],
-            key: Some(ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+            key: Some(ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
             key_file: None,
         },
-        Some(&ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+        Some(&ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
         party_pool.clone(),
     )
     .expect("the engine builds")
@@ -1800,10 +1800,10 @@ async fn resolving_an_identifier_is_recorded_as_an_access() {
         &ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig {
             enabled: true,
             schemes: vec!["nl-bsn".to_owned()],
-            key: Some(ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+            key: Some(ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
             key_file: None,
         },
-        Some(&ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+        Some(&ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
         ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party),
     )
     .expect("the engine builds")
@@ -1966,14 +1966,14 @@ async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() 
 
     let db = testkit::db().await.expect("testkit database");
     let settings = DbConfig {
-        url: ferroehr::config::secret::SecretUrl::new(
+        url: ferrohealth_secret::secret_url::SecretUrl::new(
             crate::fixtures::dsn_as(&db, "sealclin", "ferroehr_clinical").await,
         ),
         ..DbConfig::default()
     };
     let storage = ferroehr::db::domain::StorageConfig {
         party: ferroehr::db::domain::DomainDsn {
-            url: Some(ferroehr::config::secret::SecretUrl::new(
+            url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
                 crate::fixtures::dsn_as(&db, "sealdemo", "ferroehr_party").await,
             )),
             url_file: None,
@@ -2274,11 +2274,11 @@ async fn resolving_a_party_to_its_ehr_is_recorded_as_an_access() {
 /// on either of them. If it could, the separation would be a naming convention.
 #[tokio::test]
 async fn an_identity_resolves_to_an_ehr_across_three_separated_credentials() {
-    use ferroehr::config::secret::SecretUrl;
     use ferroehr::db::DbConfig;
     use ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig;
     use ferroehr::service::demographic::identifier::engine::IdentifierProtection;
     use ferroehr::service::demographic::identifier::store::IdentifierStore;
+    use ferrohealth_secret::secret_url::SecretUrl;
 
     let db = testkit::db().await.expect("testkit database");
     let settings = DbConfig {
@@ -2331,10 +2331,10 @@ async fn an_identity_resolves_to_an_ehr_across_three_separated_credentials() {
         &IdentifierProtectionConfig {
             enabled: true,
             schemes: vec!["nl-bsn".to_owned()],
-            key: Some(ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+            key: Some(ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
             key_file: None,
         },
-        Some(&ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+        Some(&ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
         demographic,
     )
     .expect("the engine builds")
@@ -2396,10 +2396,10 @@ async fn the_server_mints_the_subject_pseudonym_and_no_caller_value_enters_it() 
         &ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig {
             enabled: true,
             schemes: vec!["nl-bsn".to_owned()],
-            key: Some(ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+            key: Some(ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
             key_file: None,
         },
-        Some(&ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+        Some(&ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
         ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party),
     )
     .expect("the engine builds")
@@ -2494,7 +2494,7 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
 
     let db = testkit::db().await.expect("testkit database");
     let clinical = ferroehr::db::connect(&DbConfig {
-        url: ferroehr::config::secret::SecretUrl::new(
+        url: ferrohealth_secret::secret_url::SecretUrl::new(
             crate::fixtures::dsn_as(&db, "audclin", "ferroehr_clinical").await,
         ),
         ..DbConfig::default()
@@ -2532,7 +2532,7 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
         .expect("the clinical role verifies the chain");
 
     let reader = ferroehr::db::connect(&DbConfig {
-        url: ferroehr::config::secret::SecretUrl::new(
+        url: ferrohealth_secret::secret_url::SecretUrl::new(
             crate::fixtures::dsn_as(&db, "audread", "ferroehr_clinical_reader").await,
         ),
         ..DbConfig::default()

@@ -28,9 +28,9 @@
 
 use crate::fixtures::{throwaway_password, with_role};
 use ferroehr::config::deployment::DeploymentProfile;
-use ferroehr::config::secret::SecretUrl;
 use ferroehr::db::domain::{Domain, DomainDsn, StorageConfig};
 use ferroehr::db::{DbConfig, DbError, MigrationMode};
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// `SQLSTATE` 42501 `insufficient_privilege` — what `PostgreSQL` reports for a
 /// refused read, whether the missing grant is on the relation or on its schema

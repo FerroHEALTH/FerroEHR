@@ -85,12 +85,12 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (sender, _handle) = start(audit, None, Some(pool.clone()))
         .await
         .expect("the audit sender");
-    let key = ferroehr::config::secret::Secret::new(TEST_ROOT_KEY);
+    let key = ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY);
     let engine = IdentifierProtection::from_config(
         &IdentifierProtectionConfig {
             enabled: true,
             schemes: vec!["nl-bsn".to_owned()],
-            key: Some(ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+            key: Some(ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
             key_file: None,
         },
         Some(&key),

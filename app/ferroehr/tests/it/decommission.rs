@@ -16,12 +16,12 @@
               the fixture (the Rust Book ch11)"
 )]
 
-use ferroehr::config::secret::SecretUrl;
 use ferroehr::db::DbConfig;
 use ferroehr::db::domain::{DomainPools, StorageConfig};
 use ferroehr::decommission::{Decommission, DecommissionError, Erasure};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
+use ferrohealth_secret::secret_url::SecretUrl;
 use sqlx::PgPool;
 use uuid::Uuid;
 

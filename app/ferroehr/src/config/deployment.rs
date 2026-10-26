@@ -497,7 +497,7 @@ fn is_plaintext_http(url: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::secret::SecretUrl;
+    use ferrohealth_secret::secret_url::SecretUrl;
 
     fn separated() -> FerroEhrConfig {
         FerroEhrConfig {

@@ -21,7 +21,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::secret::{SecretUrl, redact_userinfo};
+use crate::config::secret::redact_userinfo;
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// The server-wide disposition for an EHR that carries no
 /// `ACCESS_CONTROL_SETTINGS` of its own — the `ehr_access_default` tri-state's

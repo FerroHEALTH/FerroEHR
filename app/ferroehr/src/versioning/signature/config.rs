@@ -9,13 +9,13 @@
 //! `master06-change_control_package.adoc` §Digital Signature: `OpenPGP`
 //! signature or digest-only integrity check).
 //!
-//! The passphrase is a shared [`crate::config::secret::Secret`] so it can never leak
+//! The passphrase is a shared [`ferrohealth_secret::secret::Secret`] so it can never leak
 //! through a config snapshot (`/management/env`) or a `Debug` log; it has a
 //! `*_file` sibling for file-based indirection, resolved by the loader.
 
 use std::path::PathBuf;
 
-use crate::config::secret::Secret;
+use ferrohealth_secret::secret::Secret;
 use serde::{Deserialize, Serialize};
 
 /// The signing mode: a data-integrity digest, or an `OpenPGP` (RFC 4880) digital
@@ -72,7 +72,7 @@ pub struct SigningConfig {
     /// Armored RFC 4880 secret key; **required for `pgp` mode** (validated at
     /// boot, fail-closed).
     pub key_path: Option<PathBuf>,
-    /// Key passphrase, kept in [`crate::config::secret::Secret`] and redacted from any
+    /// Key passphrase, kept in [`ferrohealth_secret::secret::Secret`] and redacted from any
     /// config snapshot.
     pub key_passphrase: Option<Secret>,
     /// File-based indirection for [`Self::key_passphrase`] (K8s/Docker secrets).

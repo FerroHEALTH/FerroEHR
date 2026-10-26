@@ -785,7 +785,7 @@ mod tests {
     fn empty_url_rejected() {
         let cfg = TerminologyServerConfig {
             enabled: true,
-            url: crate::config::secret::SecretUrl::new("  "),
+            url: ferrohealth_secret::secret_url::SecretUrl::new("  "),
             ..TerminologyServerConfig::default()
         };
         assert!(FhirTerminologyProvider::new(&cfg).is_err());

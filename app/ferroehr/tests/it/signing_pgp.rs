@@ -76,7 +76,7 @@ fn pgp_signer(armored_key: &str, passphrase: Option<&str>) -> Result<Signer, Sig
         enabled: true,
         mode: Mode::Pgp,
         key_path: Some(temp_file(armored_key)),
-        key_passphrase: passphrase.map(ferroehr::config::secret::Secret::new),
+        key_passphrase: passphrase.map(ferrohealth_secret::secret::Secret::new),
         key_passphrase_file: None,
         retired_key_paths: Vec::new(),
         verify_on_read: Some(VerifyOnRead::Strict),

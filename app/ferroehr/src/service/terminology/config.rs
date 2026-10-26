@@ -18,7 +18,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::secret::SecretUrl;
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// The `[terminology]` section: the extension-API toggle and the terminology
 /// server.

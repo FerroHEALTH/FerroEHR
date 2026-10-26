@@ -485,7 +485,7 @@ async fn admin_config_admin_gets_redacted_snapshot() {
     // DB DSN carries a credential; the admin caller receives the tree with the
     // credential masked (structural `SecretUrl` redaction), never the secret.
     let mut cfg = ferroehr::config::FerroEhrConfig::default();
-    cfg.db.url = ferroehr::config::secret::SecretUrl::new(
+    cfg.db.url = ferrohealth_secret::secret_url::SecretUrl::new(
         "postgres://dbuser:TOP_SECRET_PW@db.internal:5432/ferroehr",
     );
     let snapshot = cfg.to_redacted_json().expect("redacted json");
@@ -519,7 +519,7 @@ async fn admin_config_admin_gets_redacted_snapshot() {
 #[tokio::test]
 async fn no_url_userinfo_reaches_admin_config_or_management_env() {
     use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
-    use ferroehr::config::secret::SecretUrl;
+    use ferrohealth_secret::secret_url::SecretUrl;
 
     let leaky = |n: u32| SecretUrl::new(format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}/p"));
     let mut cfg = ferroehr::config::FerroEhrConfig::default();

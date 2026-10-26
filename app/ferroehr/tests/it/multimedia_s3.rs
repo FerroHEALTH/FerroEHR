@@ -93,7 +93,7 @@ impl Seaweed {
         MultimediaConfig {
             enabled: true,
             threshold_bytes: 256,
-            endpoint: Some(ferroehr::config::secret::SecretUrl::new(
+            endpoint: Some(ferrohealth_secret::secret_url::SecretUrl::new(
                 self.endpoint.clone(),
             )),
             bucket: BUCKET.to_owned(),

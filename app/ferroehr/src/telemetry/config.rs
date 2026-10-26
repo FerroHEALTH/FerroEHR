@@ -14,7 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::secret::SecretUrl;
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// The stdout log rendering profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]

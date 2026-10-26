@@ -34,7 +34,7 @@ fn config(server: &str, name: &str, parameters: Vec<AbacParam>) -> AbacConfig {
         enabled: true,
         engine: AbacEngineKind::Remote,
         remote: RemoteConfig {
-            server: Some(ferroehr::config::secret::SecretUrl::new(server)),
+            server: Some(ferrohealth_secret::secret_url::SecretUrl::new(server)),
             connect_timeout_ms: 500,
             request_timeout_ms: 1000,
             oauth: None,

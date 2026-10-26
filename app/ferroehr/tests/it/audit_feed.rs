@@ -31,7 +31,7 @@ fn config(arr_url: &str) -> AuditConfig {
         },
         fhir_feed: FhirFeedConfig {
             enabled: true,
-            url: ferroehr::config::secret::SecretUrl::new(arr_url),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(arr_url),
             poll_interval_ms: 100,
             retry_max_ms: 500,
             oauth: None,

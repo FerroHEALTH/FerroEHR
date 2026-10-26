@@ -13,7 +13,7 @@
 
 use std::path::PathBuf;
 
-use crate::config::secret::SecretUrl;
+use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
 
 /// Contribution-outbox eventing configuration (`[events]`) — our own extension.

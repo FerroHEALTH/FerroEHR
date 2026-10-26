@@ -33,13 +33,14 @@ use serde::Serialize;
 
 use crate::config::FerroEhrConfig;
 use crate::config::deployment::{DatabaseFacts, DeploymentPosture};
-use crate::config::secret::{REDACTED, redact_userinfo};
+use crate::config::secret::redact_userinfo;
 use crate::db::domain::Domain;
 use crate::db::{DatabaseLevels, DbError};
 use crate::licence::state::{LicenceState, LicenceStatus};
 use crate::service::error::ErrorChain;
 use crate::system_log::config::AuditPosture;
 use crate::telemetry::build_info::BuildInfo;
+use ferrohealth_secret::REDACTED;
 
 /// The document's format identifier, bumped when a part changes shape.
 pub const FORMAT: &str = "ferroehr-report/1";
@@ -484,7 +485,7 @@ fn mask_word(text: &str, needle: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::secret::SecretUrl;
+    use ferrohealth_secret::secret_url::SecretUrl;
 
     /// A credential part is masked where it stands alone and kept where it is
     /// part of a longer identifier.

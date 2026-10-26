@@ -268,7 +268,7 @@ async fn fhir_expand_server() -> MockServer {
 fn fhir_provider(base: &str) -> FhirTerminologyProvider {
     let cfg = TerminologyServerConfig {
         enabled: true,
-        url: ferroehr::config::secret::SecretUrl::new(base),
+        url: ferrohealth_secret::secret_url::SecretUrl::new(base),
         request_timeout_ms: 1_500,
         ..TerminologyServerConfig::default()
     };

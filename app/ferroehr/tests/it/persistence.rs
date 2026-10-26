@@ -1283,7 +1283,7 @@ async fn write_nodes_survives_more_than_4095_rows() {
 async fn a_pooled_connection_applies_the_configured_statement_timeout() {
     let db = testkit::db().await.expect("testkit database");
     let settings = db::DbConfig {
-        url: ferroehr::config::secret::SecretUrl::new(db.url()),
+        url: ferrohealth_secret::secret_url::SecretUrl::new(db.url()),
         statement_timeout_ms: 12_345,
         max_connections: 2,
         min_connections: 0,

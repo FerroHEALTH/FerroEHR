@@ -9,7 +9,7 @@
 //! **Off by default** (`enabled = false`): with externalization disabled the
 //! commit/read paths are byte-identical to today's inline behaviour and no
 //! object store is ever contacted. The secret access key is a shared
-//! [`crate::config::secret::Secret`] (never rendered) with a `*_file` sibling.
+//! [`ferrohealth_secret::secret::Secret`] (never rendered) with a `*_file` sibling.
 
 #![expect(
     clippy::doc_markdown,
@@ -19,7 +19,9 @@
 
 use std::path::PathBuf;
 
-use crate::config::secret::{Secret, SecretUrl, redact_userinfo};
+use crate::config::secret::redact_userinfo;
+use ferrohealth_secret::secret::Secret;
+use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
 use url::Url;
 

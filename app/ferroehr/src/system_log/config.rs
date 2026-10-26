@@ -15,7 +15,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::secret::SecretUrl;
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// Behaviour when an audit record cannot be enqueued/delivered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]

@@ -38,7 +38,7 @@ pub struct IdentifierProtectionConfig {
     /// One key per deployment; the per-domain cipher and lookup subkeys are
     /// derived from it, so rotating it is a re-encryption rather than an edit
     /// (the runbook is in the operations page).
-    pub key: Option<crate::config::secret::Secret>,
+    pub key: Option<ferrohealth_secret::secret::Secret>,
     /// A file holding the root key, read at boot
     /// (`FERROEHR__DEMOGRAPHIC__IDENTIFIER_PROTECTION__KEY_FILE`).
     pub key_file: Option<std::path::PathBuf>,

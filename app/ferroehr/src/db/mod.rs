@@ -37,9 +37,9 @@ use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{Connection, PgConnection, PgPool};
 
 use crate::config::deployment::DeploymentProfile;
-use crate::config::secret::SecretUrl;
 use crate::db::acquire::acquire;
 use crate::db::domain::{Domain, DomainLayout, DomainPools, StorageConfig};
+use ferrohealth_secret::secret_url::SecretUrl;
 
 // ── Settings — the `[db]` config section ─────────────────────────────────────
 
