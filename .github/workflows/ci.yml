@@ -205,12 +205,15 @@ jobs:
           else
             base="$PUSH_BEFORE"; head="$PUSH_SHA"
           fi
-          # First push / unknown base: run everything. Every output must be set
-          # here — an unset output reads as `false` downstream, and a skipped job
-          # counts as satisfied in `conclusion`, so omitting one turns "run
-          # everything" into "silently gate nothing".
-          if ! git rev-parse --verify --quiet "$base" >/dev/null; then
-            echo "Base $base unavailable — treating as a change to everything."
+          # First push / unknown base / no merge base: run everything. Every
+          # output must be set here — an unset output reads as `false`
+          # downstream, and a skipped job counts as satisfied in `conclusion`,
+          # so omitting one turns "run everything" into "silently gate nothing".
+          # The paths are the change's own, read from its merge base with the
+          # base (#4129), so a branch behind main is not gated on main's paths.
+          if ! git rev-parse --verify --quiet "$base" >/dev/null \
+            || ! changed=$(bash scripts/lib/changed-paths.sh "$base" "$head"); then
+            echo "Base $base unavailable or unrelated — treating as a change to everything."
             {
               echo "code=true"
               echo "viewer=true"
@@ -224,7 +227,6 @@ jobs:
             } >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          changed=$(git diff --name-only "$base" "$head")
           echo "Changed files:"; echo "$changed"
           # Every output is written here for the reason the fallback above
           # states: an unset output reads as `false` downstream and a skipped
@@ -574,6 +576,8 @@ jobs:
           tool: shellcheck@0.11.0
       - name: Every shell program is clean at severity=style
         run: bash scripts/checks/shellcheck-lane.sh
+      - name: The guards' changed-path helper reads a branch's own change from the merge base
+        run: bash scripts/lib/changed-paths.sh --self-test
       - name: The dangerous-command hook refuses and allows the shapes it documents
         run: bash .claude/hooks/block_dangerous_test.sh
       - name: The crate-version hook refuses a packaged change without a bump
@@ -2449,7 +2453,12 @@ jobs:
             echo "no-crate-bump label set — guard skipped."; exit 0
           fi
           bash scripts/checks/crate-packaged-paths.sh --self-test
-          changed=$(git diff --name-only "$BASE" "$HEAD")
+          # The pull request's own change, from its merge base with main
+          # (#4129): a branch behind main is not judged on main's paths or
+          # credited with main's bump.
+          . scripts/lib/changed-paths.sh
+          FORK=$(change_fork "$BASE" "$HEAD")
+          changed=$(change_paths "$BASE" "$HEAD")
           packaged=0
           # The packaged-path scope is the script the local hook also calls,
           # so the two guards cannot drift (#3573: the bare LICENSE of the
@@ -2470,7 +2479,7 @@ jobs:
             table=$(git show "$HEAD:Cargo.toml" | awk '/^\[workspace\.dependencies\]/{f=1;next} /^\[/{f=0} f && /^[A-Za-z0-9_-]+[. =]/{print $1}' | sed 's/\.workspace$//' | sort -u)
             # `|| true`: a Cargo.toml diff touching no entry (a comment) matches
             # nothing, and grep's exit 1 would end the job silently under pipefail.
-            names=$(git diff "$BASE" "$HEAD" -- Cargo.toml | { grep -E '^[+-][A-Za-z0-9_-]+(\.workspace)?[[:space:]]*=' || true; } | sed -E 's/^[+-]//; s/[[:space:]]*=.*//; s/\.workspace$//' | sort -u)
+            names=$(git diff "$FORK" "$HEAD" -- Cargo.toml | { grep -E '^[+-][A-Za-z0-9_-]+(\.workspace)?[[:space:]]*=' || true; } | sed -E 's/^[+-]//; s/[[:space:]]*=.*//; s/\.workspace$//' | sort -u)
             for name in $names; do
               echo "$table" | grep -qx "$name" || continue
               if git grep -lE "^${name}(\.workspace)?[[:space:]]*=" "$HEAD" -- 'crates/openehr-*/Cargo.toml' >/dev/null 2>&1; then
@@ -2483,7 +2492,7 @@ jobs:
           if [ "$packaged" -eq 0 ]; then
             echo "No packaged crate content touched — guard not required."; exit 0
           fi
-          old=$(git show "$BASE:crates/openehr-base/Cargo.toml" | grep -m1 '^version = ')
+          old=$(git show "$FORK:crates/openehr-base/Cargo.toml" | grep -m1 '^version = ')
           new=$(git show "$HEAD:crates/openehr-base/Cargo.toml" | grep -m1 '^version = ')
           if [ "$old" = "$new" ]; then
             echo "::error::This PR changes packaged content of the published crates/* members but does not bump the lockstep 0.0.x crate version (bump all nine 'version' fields + the internal version requirements — .claude/rules/crates-publishing.md), and does not carry the 'no-crate-bump' label." >&2
@@ -2564,11 +2573,14 @@ jobs:
           if [ "$HAS_LABEL" = "true" ]; then
             echo "no-chart-bump label set — guard skipped."; exit 0
           fi
-          changed=$(git diff --name-only "$BASE" "$HEAD")
+          # From the merge base, as crate-version-guard (#4129).
+          . scripts/lib/changed-paths.sh
+          FORK=$(change_fork "$BASE" "$HEAD")
+          changed=$(change_paths "$BASE" "$HEAD")
           if ! echo "$changed" | grep -qE '^deploy/helm/ferroehr/'; then
             echo "No packaged chart content touched — guard not required."; exit 0
           fi
-          old=$(git show "$BASE:deploy/helm/ferroehr/Chart.yaml" | sed -nE 's/^version: *(.+)$/\1/p')
+          old=$(git show "$FORK:deploy/helm/ferroehr/Chart.yaml" | sed -nE 's/^version: *(.+)$/\1/p')
           new=$(git show "$HEAD:deploy/helm/ferroehr/Chart.yaml" | sed -nE 's/^version: *(.+)$/\1/p')
           if [ "$old" = "$new" ]; then
             echo "::error::This PR changes packaged chart content (deploy/helm/ferroehr/) but leaves Chart.yaml version at $new. A published chart version is taken — bump it (SemVer over the chart's values schema and rendered output), or apply 'no-chart-bump' if the diff provably cannot change what a consumer gets." >&2

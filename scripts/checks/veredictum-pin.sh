@@ -53,7 +53,7 @@ self_test() {
   log="$work/gh.log"
   mkdir -p "$fixture/scripts/checks" "$fixture/scripts/lib" "$stub"
   cp "$here/scripts/checks/veredictum-pin.sh" "$fixture/scripts/checks/"
-  cp "$here/scripts/lib/guard-args.sh" "$fixture/scripts/lib/"
+  cp "$here/scripts/lib/guard-args.sh" "$here/scripts/lib/changed-paths.sh" "$fixture/scripts/lib/"
 
   # The stub answers `gh api repos/<slug>/git/trees/refs/tags/<tag>` (the root
   # tree) and `gh api repos/<slug>/contents/app/veredictum?ref=refs/tags/<tag>`
@@ -188,6 +188,9 @@ STUB
     cat "$log" >&2
     failed=1
   fi
+  # Main carries the bump and the record; a branch forked before them moves
+  # no pin of its own (#4129).
+  expect "a branch behind main's bump is judged on its own change" 0 fail "unchanged" "$recorded" "$same_pin"
   expect "an unknown flag is a usage error" 2 same "usage:" --bogus "$base" "$bumped"
 
   [[ "$failed" -eq 0 ]] || exit 1
@@ -201,6 +204,8 @@ fi
 
 # shellcheck source=scripts/lib/guard-args.sh
 . "$(dirname "$0")/../lib/guard-args.sh"
+# shellcheck source=scripts/lib/changed-paths.sh
+. "$(dirname "$0")/../lib/changed-paths.sh"
 readonly GRAMMAR="[--no-conformance-run] <base> <head> | --self-test"
 guard_known_flags "$GRAMMAR" "--no-conformance-run" "$@"
 has_label=false
@@ -209,10 +214,13 @@ if [[ "${1:-}" == "--no-conformance-run" ]]; then
   shift
 fi
 [[ "$#" -eq 2 ]] || guard_usage "$GRAMMAR"
-base=$1
 head=$2
 
 cd "$(dirname "$0")/../.."
+
+# The pin <head> itself moves: compared from its merge base with <base>, so a
+# branch behind main is never judged on main's bump (#4129).
+base=$(change_fork "$1" "$head") || exit 1
 
 # pin_value REV NAME: the quoted value of NAME in scripts/lib/veredictum.sh at
 # REV, or nothing when the file or the assignment is absent.
@@ -287,7 +295,7 @@ if [[ "$unchanged" == true ]]; then
   echo "the catalogue, specs, schemas and runner trees are identical at both tags — the committed baseline already covers this pin, no record or label needed — OK."
   exit 0
 fi
-if git diff --name-only "$base" "$head" | grep -q '^docs/conformance/ferroehr/'; then
+if change_paths "$base" "$head" | grep -q '^docs/conformance/ferroehr/'; then
   echo "pin bump carries a refreshed docs/conformance/ferroehr/ record — OK."
   exit 0
 fi
