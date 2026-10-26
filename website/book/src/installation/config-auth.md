@@ -116,7 +116,7 @@ environment grammar cannot spell an array index.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `cache_ttl_seconds` | int | `0` | How long a credential that verified is kept, so a repeat request skips the Argon2id derivation (`0` checks every request). The entry is named by a keyed hash of `user-id:password`, never the password, and only a credential that verified is kept, so a wrong password always pays the derivation. The TTL bounds how long a removed user keeps working. Argon2id costs tens of milliseconds of CPU per check by design, so a busy Basic client wants a value such as `60`. |
+| `cache_ttl_seconds` | int | `300` | How long a credential that verified is kept, so a repeat request skips the Argon2id derivation; `0` turns the cache off and checks every request. The entry is named by a keyed hash of `user-id:password` under a key drawn at boot, never the password, and only a credential that verified is kept, so a wrong password always pays the derivation. The cache holds at most 4096 credentials and empties at a restart. The TTL bounds how long a removed user keeps working, which matters only until the restart that applies the new user list. Argon2id costs 10 to 15 ms of CPU per check by design: with the cache off, that cost caps how many Basic requests a core can answer. |
 
 > [!WARNING]
 > **Every `password_hash` must meet the OWASP Argon2id floor: `m>=19456`
