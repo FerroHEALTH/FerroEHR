@@ -470,11 +470,13 @@ version it was hashed under, in `chain_digest_version`:
 
 | Version | Written | Columns the digest covers |
 |---|---|---|
-| `2` | by the current release | every column except `row_hash`, `delivered_syslog_at` and `delivered_fhir_feed_at` |
+| `3` | by the current release | every column except `row_hash`, `delivered_syslog_at` and `delivered_fhir_feed_at`, the retention end (`retention_ends`, `retention_stated`) included |
+| `2` | before the upgrade that introduced version 3 | the version 3 columns without the retention end |
 | `1` | before the upgrade that introduced version 2 | `id`, `recorded_at`, `stored_at`, `action`, `outcome`, `event_code`, `operation`, `principal`, `patient_id`, `resource_class`, `resource_id`, `client_ip`, `token_id`, the `fhir` document, `chain_seq` and the link to the predecessor |
 
-A version 1 record keeps verifying under version 1 after the upgrade; it is not
-rehashed. Its other columns (the purpose, legal basis, categories, assurance
+A record keeps verifying under the version it was written under; it is not
+rehashed. A version 2 record states no retention end, so the store horizon
+reaps it. A version 1 record keeps verifying under version 1 after the upgrade. Its other columns (the purpose, legal basis, categories, assurance
 level, professional and the emergency mark among them) are protected by the
 append-only trigger only, and the `fhir` document repeats some of them. A record
 whose version is lower than its predecessor's is reported, so a record cannot be
