@@ -82,6 +82,7 @@ fn cohort_config(small_cell_threshold: u32) -> CohortConfig {
                 text(PERSON_ARCHETYPE, "at0010", PredicateKind::BirthDate),
             ),
         ]),
+        subjects: false,
     }
 }
 
@@ -270,6 +271,7 @@ fn request(predicates: &[(&str, &str)]) -> CohortQueryRequest {
                 value: (*value).to_owned(),
             })
             .collect(),
+        subjects: Vec::new(),
         purpose: Some("secondary-use".to_owned()),
         query: ferroehr::service::query::request::AqlQueryRequest::default(),
     }

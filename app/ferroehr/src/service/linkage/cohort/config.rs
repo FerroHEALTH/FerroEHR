@@ -101,8 +101,14 @@ pub struct CohortConfig {
     /// nobody can see is worse than a refusal.
     pub max_cohort_size: u32,
     /// The bound predicates, keyed by the name a caller uses
-    /// (`[cohort.predicates]`). Empty — the default — leaves the surface off.
+    /// (`[cohort.predicates]`). Empty — the default — leaves the predicate
+    /// half of the surface off.
     pub predicates: BTreeMap<String, PredicateBinding>,
+    /// Whether a cohort may name its subjects by identifier
+    /// (`FERROEHR__COHORT__SUBJECTS`), each resolved through the installed
+    /// EHR index provider. The one cohort form an IHE patient identity source
+    /// serves, so it turns the surface on without a bound predicate.
+    pub subjects: bool,
 }
 
 impl Default for CohortConfig {
@@ -111,6 +117,7 @@ impl Default for CohortConfig {
             small_cell_threshold: 5,
             max_cohort_size: 100_000,
             predicates: BTreeMap::new(),
+            subjects: false,
         }
     }
 }
@@ -119,7 +126,7 @@ impl CohortConfig {
     /// Whether this deployment serves cohort queries at all.
     #[must_use]
     pub fn is_enabled(&self) -> bool {
-        !self.predicates.is_empty()
+        !self.predicates.is_empty() || self.subjects
     }
 }
 

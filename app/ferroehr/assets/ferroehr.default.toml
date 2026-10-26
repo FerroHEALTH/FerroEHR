@@ -731,6 +731,12 @@ small_cell_threshold = 5
 # The largest cohort a predicate may select. A wider one is refused (422) rather
 # than truncated: a silently shortened cohort is a wrong denominator.
 max_cohort_size = 100000
+# Let a cohort name its subjects by identifier, in any identifier domain, each
+# resolved through the [ehr_index] provider (under the IHE provider, PIXm
+# ITI-83 into this server's clinical domain). It turns the surface on without a
+# bound predicate, and it is the one cohort form the IHE provider serves: it
+# holds no party-to-EHR map, so a predicate is refused there.
+subjects = false
 
 # The allow-list. Only these five keys are bindable; each names the archetype of
 # the ELEMENT's nearest archetyped ancestor, the ELEMENT's at-code, and how the

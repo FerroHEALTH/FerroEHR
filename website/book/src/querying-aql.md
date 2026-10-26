@@ -351,6 +351,26 @@ at-code, and how a value is matched. See
 [Privacy & data minimisation](installation/config-privacy.md#cohort) for the
 keys and their defaults.
 
+**Naming subjects by identifier.** With `[cohort] subjects = true` a request
+may carry `subjects`, a list of `{ "id": …, "namespace": … }` identifiers in
+any identifier domain (an optional `type` defaults to `PERSON`). Each one is
+resolved to its EHRs through the `[ehr_index]` provider, and the result
+intersects with what `cohort` selects. Under the local map the map answers.
+Under an IHE patient identity source FerroEHR asks the PIX Manager to translate
+the identifier forward into its own clinical domain (ITI-83 with
+`targetSystem` set to that domain) and finds the EHR whose `EHR_STATUS`
+carries that pseudonym. A subject no EHR belongs to adds nothing. A subject
+that cannot be resolved, because the identity source fails or no provider is
+installed, fails the whole query rather than shrinking the cohort.
+
+**Under an IHE patient identity source, cohorts name their subjects.** That
+provider keeps no party-to-EHR map, and FerroEHR never asks it to translate a
+pseudonym back into another domain (openEHR RM `EHR_STATUS.subject`; GDPR
+Art. 4(5) and Art. 25). A demographic predicate would need one or the other,
+so a request with a non-empty `cohort` is refused `400` there, before any
+domain or the PIX Manager is asked. The cohort digest takes each subject by
+its namespace alone, so the access record carries no identifier value.
+
 **Running one.**
 
 ```shell
@@ -408,9 +428,11 @@ carrying them would be a second copy of it.
 
 **Limits.** A predicate matching more than `cohort.max_cohort_size` parties
 (default `100000`) is refused `422` rather than truncated — a silently shortened
-cohort is a wrong denominator with nothing on the wire to say so. An unbound
-predicate name, a malformed age band (the form is `<min>-<max>` whole years,
-both inclusive) or a request with no predicate at all is a `400`. An empty
+cohort is a wrong denominator with nothing on the wire to say so. More named
+subjects than that ceiling are refused the same way. An unbound predicate
+name, a malformed age band (the form is `<min>-<max>` whole years, both
+inclusive), a predicate under an IHE identity source, or a request with
+neither a predicate nor a subject is a `400`. An empty
 cohort runs no AQL and answers an empty result set.
 
 **Measured.** The committed record `docs/benchmarks/cohort/record.json`

@@ -1955,7 +1955,13 @@ pub(crate) async fn query_execute_stored_query_version_body(
 /// a SHA-256 digest of the predicate list, which is also how the one access
 /// event this execution records names the cohort.
 ///
-/// The route answers `404` until the deployment binds at least one predicate.
+/// A request may instead, or as well, name its `subjects` by identifier in any
+/// identifier domain, each resolved through the installed EHR index provider;
+/// under an IHE patient identity source that is the only form served, since
+/// the server holds no party-to-EHR map there.
+///
+/// The route answers `404` until the deployment binds at least one predicate
+/// or sets `[cohort] subjects = true`.
 #[utoipa::path(
     post, path = "/query/cohort", tag = "Query",
     request_body(
@@ -1966,8 +1972,11 @@ pub(crate) async fn query_execute_stored_query_version_body(
             "offset": 0,
             "fetch": 100
         }))),
-        description = "`q` REQUIRED (the AQL), `cohort` REQUIRED (the \
-                       predicates, intersected), plus the OPTIONAL `purpose`, \
+        description = "`q` REQUIRED (the AQL), `cohort` (the predicates, \
+                       intersected) and `subjects` (identifiers as `id`, \
+                       `namespace` and an optional `type`, each resolved \
+                       through the EHR index provider), at least one of the two \
+                       non-empty, plus the OPTIONAL `purpose`, \
                        `query_parameters`, `offset` and `fetch`. The last four \
                        are spelled as on the released `AdhocQueryExecute` body, \
                        so a client that already speaks the query API needs no \
@@ -1991,7 +2000,9 @@ pub(crate) async fn query_execute_stored_query_version_body(
                                       boundary leaks.",
          body = serde_json::Value,
          content_type = "application/json"),
-        (status = 400, description = "The request names no predicate, names one \
+        (status = 400, description = "The request names neither a predicate nor \
+                                      a subject, names a predicate under an \
+                                      IHE patient identity source, names one \
                                       the deployment did not bind, carries a \
                                       value the binding's kind cannot read (an \
                                       age band that is not `<min>-<max>`), \
@@ -2000,7 +2011,8 @@ pub(crate) async fn query_execute_stored_query_version_body(
                                       type-check.",
          body = serde_json::Value),
         (status = 404, description = "The deployment binds no cohort predicate \
-                                      (`[cohort.predicates]` is empty), so the \
+                                      (`[cohort.predicates]` is empty) and \
+                                      leaves `[cohort] subjects` off, so the \
                                       surface serves nothing. With \
                                       authentication enabled, an \
                                       unauthenticated request is answered `401` \
@@ -2020,7 +2032,8 @@ pub(crate) async fn query_execute_stored_query_version_body(
                                       `Content-Type` is refused \
                                       (`Resources.md` §\"JSON Format\").",
          body = serde_json::Value),
-        (status = 422, description = "The predicate matched more parties than \
+        (status = 422, description = "The predicate matched, or the request \
+                                      named, more parties than \
                                       `FERROEHR__COHORT__MAX_COHORT_SIZE` \
                                       allows. Refused rather than truncated: a \
                                       silently shortened cohort is a wrong \

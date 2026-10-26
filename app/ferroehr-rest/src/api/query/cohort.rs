@@ -28,6 +28,7 @@ use std::collections::BTreeMap;
 use openehr_its::rest::runtime::ApiError;
 use serde::Deserialize;
 
+use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::linkage::cohort::{CohortOutcome, CohortPredicate, CohortQueryRequest};
 use ferroehr::service::query::request::AqlQueryRequest;
 
@@ -44,7 +45,13 @@ pub(super) struct CohortExecute {
     q: String,
     /// The demographic predicates, intersected. Each names a key the
     /// deployment bound in `[cohort.predicates]`.
+    #[serde(default)]
     cohort: Vec<CohortSelector>,
+    /// The subjects the cohort names by identifier, in any identifier domain,
+    /// each resolved through the installed EHR index provider; intersected
+    /// with what `cohort` selects.
+    #[serde(default)]
+    subjects: Vec<SubjectSelector>,
     /// The caller's declared purpose of use, recorded on the access event when
     /// no purpose header carried one.
     #[serde(default)]
@@ -68,6 +75,20 @@ pub(super) struct CohortSelector {
     name: String,
     /// The value to match, interpreted by the binding's configured kind.
     value: String,
+}
+
+/// One subject the request names, as an `OBJECT_REF` (RM common master04
+/// §`OBJECT_REF`): `id` is `id.value`, `namespace` the identifier domain.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SubjectSelector {
+    /// The identifier value.
+    id: String,
+    /// The identifier domain, e.g. a national-identifier OID URN.
+    namespace: String,
+    /// The `OBJECT_REF.type`; `PERSON` when absent.
+    #[serde(default)]
+    r#type: Option<String>,
 }
 
 /// Execute a cohort query.
@@ -106,6 +127,17 @@ pub(super) async fn execute(
             .map(|selector| CohortPredicate {
                 name: selector.name,
                 value: selector.value,
+            })
+            .collect(),
+        subjects: body
+            .subjects
+            .into_iter()
+            .map(|subject| {
+                let mut named = SubjectRef::person(subject.id, subject.namespace);
+                if let Some(kind) = subject.r#type {
+                    named.r#type = kind;
+                }
+                named
             })
             .collect(),
         purpose: body.purpose,
