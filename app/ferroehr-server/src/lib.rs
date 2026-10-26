@@ -1176,6 +1176,13 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     if let Some(check) = audit_handle.as_ref().and_then(AuditHandle::chain_check) {
         indicators.push(Arc::new(indicators::AuditChainHealth::new(check)));
     }
+    if let Some(delivery) = audit_handle
+        .as_ref()
+        .map(AuditHandle::delivery)
+        .filter(|delivery| !delivery.statuses().is_empty())
+    {
+        indicators.push(Arc::new(indicators::AuditDeliveryHealth::new(delivery)));
+    }
     #[cfg(feature = "events")]
     if let Some(handle) = &events_handle {
         indicators.push(Arc::new(indicators::EventsHealth::new(handle.healthy())));

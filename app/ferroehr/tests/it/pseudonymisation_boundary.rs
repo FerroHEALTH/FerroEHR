@@ -2517,7 +2517,15 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
         )
         .await
         .expect("the clinical role inserts an access record");
-    store.mark_syslog_delivered(id).await;
+    let seq: i64 = sqlx::query_scalar("SELECT chain_seq FROM audit.audit_event WHERE id = $1")
+        .bind(id)
+        .fetch_one(&clinical)
+        .await
+        .expect("the record's chain position");
+    store
+        .mark_fhir_feed_delivered(seq)
+        .await
+        .expect("a delivery stamp is the one sanctioned mutation");
     store
         .verify_chain()
         .await

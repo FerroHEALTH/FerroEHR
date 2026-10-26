@@ -1,18 +1,24 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ITI-20 syslog sink (`[audit.syslog]`), sent through `ihe-atna`.
+//! The ITI-20 syslog route (`[audit.syslog]`), sent through `ihe-atna`.
 //!
 //! The shared crate frames the DICOM audit message as the RFC 5424 message ITI
 //! TF-2 §3.20.4.1.2 fixes (PRI `<85>`, MSGID `IHE+RFC-3881`, the XML as MSG
 //! with no byte order mark), counts its octets for RFC 5425 §4.3, and writes
-//! it to the Audit Record Repository over TLS 1.2 or later. FerroEHR keeps one
-//! connection open, opens a new one when it fails, and says which repository
-//! to reach with which trust and identity.
+//! it to the Audit Record Repository over TLS 1.2 or later. Every frame is
+//! stored in the crate's spool first and delivered from it by the crate's
+//! forwarder (ITI TF-2 §3.20.4.1.1), which keeps one connection, retries
+//! with backoff and closes with `close_notify`. The local audit store keeps
+//! only the FHIR document, so the spool, not the store, holds what syslog has
+//! still to send.
 
+use std::sync::Arc;
 use std::time::Duration;
 
-use ihe_atna::atna::repository::{Connection, Repository, Timeouts, TlsSettings};
+use ihe_atna::atna::forwarder::Forwarder;
+use ihe_atna::atna::repository::{Repository, Timeouts, TlsSettings};
+use ihe_atna::atna::spool::{Bounds, Spool};
 use ihe_atna::atna::syslog::Sender;
 use jiff::Timestamp;
 use secrecy::{SecretSlice, SecretString};
@@ -29,27 +35,31 @@ const TIMEOUTS: Timeouts = Timeouts {
     send: Duration::from_secs(10),
 };
 
+/// How long storing one frame in the spool may take; no specification
+/// governs it: our own design.
+const SPOOL_WRITE_TIMEOUT: Duration = Duration::from_secs(2);
+
 /// The RFC 5424 `PROCID`, the NILVALUE: the process id names no audited fact.
 const PROCID: &str = "-";
 
-/// The open syslog route to the Audit Record Repository.
+/// The syslog route to the Audit Record Repository: the frame builder and
+/// the forwarder that delivers from the spool.
 #[derive(Debug)]
-pub struct SyslogSink {
+pub struct SyslogRoute {
     sender: Sender,
-    repository: Repository,
-    // NOTE: `ihe_atna` 0.1.0's `Connection` is `Send` but not `Sync`; the lock lets the drain share the sink.
-    connection: tokio::sync::Mutex<Option<Connection>>,
+    forwarder: Arc<Forwarder>,
 }
 
-impl SyslogSink {
-    /// The sink `config` names, writing as `hostname` (the server's
+impl SyslogRoute {
+    /// The route `config` names, writing as `hostname` (the server's
     /// `NetworkAccessPointID`, `-` when unknown) and `app_name` (the audit
-    /// source id).
+    /// source id), its spool in `config.spool_dir` or in memory.
     ///
     /// # Errors
     /// [`AuditError::Transport`] when a header field is not printable US-ASCII
     /// of the length RFC 5424 §6.2 allows, the trust or identity files cannot
-    /// be read, or `ihe-atna` refuses the address or the PEM material.
+    /// be read, `ihe-atna` refuses the address or the PEM material, or the
+    /// spool directory cannot be opened.
     pub async fn new(
         config: &SyslogConfig,
         hostname: &str,
@@ -79,62 +89,47 @@ impl SyslogSink {
         };
         let repository = Repository::tls(&address, &TlsSettings { roots, identity }, TIMEOUTS)
             .map_err(|e| AuditError::Transport(Box::new(e)))?;
-        Ok(Self {
-            sender,
+        let bounds = Bounds {
+            max_messages: config.spool_max_messages,
+            max_bytes: config.spool_max_bytes,
+            write_timeout: SPOOL_WRITE_TIMEOUT,
+        };
+        let spool = if let Some(directory) = &config.spool_dir {
+            Spool::open(directory, bounds).map_err(|e| AuditError::Transport(Box::new(e)))?
+        } else {
+            tracing::warn!(
+                "ATNA audit syslog spool is held in memory: a restart loses the records \
+                 not yet delivered (set [audit.syslog] spool_dir)"
+            );
+            Spool::in_memory(bounds)
+        };
+        let forwarder = Forwarder::new(
+            spool,
             repository,
-            connection: tokio::sync::Mutex::new(None),
-        })
+            Duration::from_millis(config.retry_max_ms),
+        );
+        Ok(Self { sender, forwarder })
     }
 
-    /// Sends the audit message `xml`, written at `at`, over the held
-    /// connection, opening one first when none is held or it has closed.
+    /// The forwarder delivering this route's spool, for the caller to run,
+    /// stop and read.
+    #[must_use]
+    pub fn forwarder(&self) -> Arc<Forwarder> {
+        Arc::clone(&self.forwarder)
+    }
+
+    /// Stores the audit message `xml`, written at `at`, in the spool; the
+    /// forwarder delivers it.
     ///
     /// # Errors
-    /// [`AuditError::Transport`] when the repository cannot be reached or the
-    /// frame cannot be written; the connection is dropped, and the next send
-    /// opens a new one.
-    pub async fn send(&self, at: Timestamp, xml: &SecretSlice<u8>) -> Result<(), AuditError> {
+    /// [`AuditError::Transport`] when the spool is full or cannot be written:
+    /// the frame is then not stored and syslog never receives it.
+    pub async fn submit(&self, at: Timestamp, xml: &SecretSlice<u8>) -> Result<(), AuditError> {
         let frame = self.sender.frame(at, xml);
-        let mut slot = self.connection.lock().await;
-        let held = match slot.take() {
-            Some(mut held) => (!held.is_closed().await).then_some(held),
-            None => None,
-        };
-        let mut connection = match held {
-            Some(open) => open,
-            None => self
-                .repository
-                .connect()
-                .await
-                .map_err(|e| AuditError::Transport(Box::new(e)))?,
-        };
-        connection
-            .send(&frame)
+        self.forwarder
+            .submit(frame)
             .await
-            .map_err(|e| AuditError::Transport(Box::new(e)))?;
-        *slot = Some(connection);
-        Ok(())
-    }
-
-    /// Closes the held connection, if any, with a TLS `close_notify`, so every
-    /// frame sent on it reaches the repository before the socket closes.
-    ///
-    /// The drain calls it when it exits: a dropped connection is reset by the
-    /// kernel and can lose the frames sent last (#3959).
-    ///
-    /// # Errors
-    /// [`AuditError::Transport`] when the close fails or the repository does
-    /// not end the stream within the send timeout; a frame sent last may then
-    /// be lost.
-    pub async fn close(&self) -> Result<(), AuditError> {
-        let held = self.connection.lock().await.take();
-        match held {
-            Some(connection) => connection
-                .close()
-                .await
-                .map_err(|e| AuditError::Transport(Box::new(e))),
-            None => Ok(()),
-        }
+            .map_err(|e| AuditError::Transport(Box::new(e)))
     }
 }
 
