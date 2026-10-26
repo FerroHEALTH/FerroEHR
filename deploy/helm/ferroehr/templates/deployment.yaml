@@ -121,8 +121,11 @@ spec:
           # A secret VALUE appears below only where the config key has no
           # `*_file` sibling to point at the mounted volume instead; the rest are
           # `*_FILE` paths, which are not themselves sensitive.
-          {{- if or (eq (include "ferroehr.hasChartSecret" .) "true") .Values.database.existingSecret (eq (include "ferroehr.hasDomainSecret" .) "true") .Values.database.migrateExistingSecret .Values.extraEnv }}
           env:
+            # The server reads the file FERROEHR_CONFIG names and searches for
+            # none, so the mounted ferroehr.toml is named here.
+            - name: FERROEHR_CONFIG
+              value: /etc/ferroehr/ferroehr.toml
             {{- if or .Values.database.existingSecret .Values.database.url }}
             {{- /* The DSN is the credential that reaches patient data, so it is a
                    mounted file and only its PATH is environment: an env VALUE is
@@ -195,7 +198,6 @@ spec:
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-          {{- end }}
           {{- with .Values.extraEnvFrom }}
           envFrom:
             {{- toYaml . | nindent 12 }}
