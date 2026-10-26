@@ -17,25 +17,42 @@
 //! request without one to the sign-in page. The status pill reads the CDR's
 //! status document once, as the page is drawn: the viewer polls nothing in
 //! the background, so an open tab's idle window measures what the reader
-//! does (#3057). No openEHR spec governs the viewer: our own design.
+//! does (#3057).
+//!
+//! The dock and the status document reach both halves: a page sets its dock
+//! wherever it is drawn, and the browser takes the status answer the server
+//! serialized with the page. The shell itself is drawn on the server. No
+//! openEHR spec governs the viewer: our own design.
 
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::theme::Theme;
+#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::tone::Tone;
-use ferrohealth_ui::view::dock::{DecisionBar, decision_bar};
+use ferrohealth_ui::view::dock::DecisionBar;
+#[cfg(not(target_arch = "wasm32"))]
+use ferrohealth_ui::view::dock::decision_bar;
+#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::view::search::{SearchBox, search_box};
+#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::view::shell::{Footer, Shell, TopBar, brand_mark, lockup, shell, topbar};
+#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::view::status::{BannerLink, Reach, StatusPill, banner, status_pill};
+#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::widget::menu::{ThemeChoice, UserLink, UserMenu, user_menu};
+#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::widget::nav::{Entry, Group, Rail, Sidebar, sidebar};
 use leptos::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
 use leptos_router::components::Outlet;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr, tr_with};
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The id of the navigation, which the top bar's Menu button opens.
 const SIDEBAR_ID: &str = "sidebar";
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The id of the user menu.
 const USER_MENU_ID: &str = "user-menu";
 
@@ -56,6 +73,7 @@ pub const FIND_ANSWER_ROUTE: &str = "/api/find_answer";
 /// the search's answers.
 pub const STORED_QUERIES_GLYPH: Glyph = Glyph::SCROLL_TEXT;
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Server › Overview, where the sandbox band's Details lead.
 const SERVER_ROUTE: &str = "/server";
 
@@ -71,8 +89,10 @@ pub struct Dock {
     /// The bar, once the page set one.
     bar: ArcRwSignal<Option<DecisionBar>>,
     /// The promises still open.
+    #[cfg(not(target_arch = "wasm32"))]
     pending: std::sync::Arc<std::sync::atomic::AtomicUsize>,
     /// Woken as each promise closes.
+    #[cfg(not(target_arch = "wasm32"))]
     closed: std::sync::Arc<tokio::sync::Notify>,
 }
 
@@ -82,7 +102,14 @@ impl Dock {
         self.bar.set(Some(bar));
     }
 
+    /// The bar the page set, tracked, as the browser draws it.
+    #[must_use]
+    pub fn docked(&self) -> Option<DecisionBar> {
+        self.bar.get()
+    }
+
     /// The bar, once no promise is open.
+    #[cfg(not(target_arch = "wasm32"))]
     async fn settled(&self) -> Option<DecisionBar> {
         loop {
             let woken = self.closed.notified();
@@ -95,12 +122,20 @@ impl Dock {
 }
 
 /// A page's promise to dock its bar, or to have none, by the time it drops.
+///
+/// Only the server waits on it: the browser draws the dock as the page sets
+/// it.
 #[derive(Debug)]
-pub struct DockPromise(Option<Dock>);
+pub struct DockPromise {
+    /// The dock promised, on the server.
+    #[cfg(not(target_arch = "wasm32"))]
+    dock: Option<Dock>,
+}
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Drop for DockPromise {
     fn drop(&mut self) {
-        if let Some(dock) = self.0.take() {
+        if let Some(dock) = self.dock.take() {
             dock.pending
                 .fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
             dock.closed.notify_waiters();
@@ -112,12 +147,19 @@ impl Drop for DockPromise {
 /// calls [`dock`], so the shell waits for it.
 #[must_use]
 pub fn promise_dock() -> DockPromise {
-    let dock = use_context::<Dock>();
-    if let Some(dock) = &dock {
-        dock.pending
-            .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let dock = use_context::<Dock>();
+        if let Some(dock) = &dock {
+            dock.pending
+                .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+        }
+        DockPromise { dock }
     }
-    DockPromise(dock)
+    #[cfg(target_arch = "wasm32")]
+    {
+        DockPromise {}
+    }
 }
 
 /// Docks `bar` at the foot of the page being drawn.
@@ -129,25 +171,46 @@ pub fn dock(bar: DecisionBar) {
 
 /// The CDR's status document, read once per page: the pill, the band and a
 /// page that shows the deployment read the same answer.
-#[derive(Debug, Clone, Default)]
-pub struct Status(
-    pub std::sync::Arc<tokio::sync::OnceCell<Result<String, crate::error::ViewerError>>>,
-);
+///
+/// The server reads it and serializes the answer with the page, so the
+/// browser reads the same answer and never the CDR.
+#[derive(Clone)]
+pub struct Status(ArcOnceResource<Result<String, crate::error::ViewerError>>);
+
+impl std::fmt::Debug for Status {
+    fn fmt(&self, out: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        out.debug_struct("Status").finish_non_exhaustive()
+    }
+}
 
 impl Status {
+    /// The status document of the page being drawn, read once.
+    #[must_use]
+    pub fn read_once() -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            Self(ArcOnceResource::new(crate::auth::fetch_status()))
+        }
+        // NOTE: Leptos `ArcOnceResource::new`: a hydrating page takes the answer the server
+        // serialized and never polls the future, and the browser reaches no CDR itself.
+        // TODO(#4147): a shell the browser draws fresh asks the server for the status answer.
+        #[cfg(target_arch = "wasm32")]
+        {
+            Self(ArcOnceResource::new(std::future::pending()))
+        }
+    }
+
     /// The status document as the CDR answered it for this page.
     ///
     /// # Errors
     ///
     /// The CDR's refusal of the status read, or its being out of reach.
     pub async fn read(&self) -> Result<String, crate::error::ViewerError> {
-        self.0
-            .get_or_init(|| async { crate::auth::fetch_status().await })
-            .await
-            .clone()
+        self.0.clone().await
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The CDR's status document for the page being drawn.
 ///
 /// # Errors
@@ -160,6 +223,7 @@ pub async fn status() -> Result<String, crate::error::ViewerError> {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The viewer's product name and the lockup's accented word.
 fn lockup_view() -> AnyView {
     lockup(
@@ -171,6 +235,7 @@ fn lockup_view() -> AnyView {
     .into_any()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The footer of every page: the product, its version and About.
 #[must_use]
 pub fn footer() -> Footer {
@@ -181,6 +246,7 @@ pub fn footer() -> Footer {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// One navigation entry.
 fn entry(href: &'static str, label: Msg, glyph: Glyph, exact: bool) -> Entry {
     Entry {
@@ -192,6 +258,7 @@ fn entry(href: &'static str, label: Msg, glyph: Glyph, exact: bool) -> Entry {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The navigation groups, Subscriptions among them when the CDR serves it.
 fn groups(subscriptions: bool) -> Vec<Group> {
     let mut console = vec![
@@ -256,6 +323,7 @@ fn groups(subscriptions: bool) -> Vec<Group> {
     ]
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The navigation, with the page at `current` marked.
 fn navigation(current: &str, subscriptions: bool) -> AnyView {
     sidebar(Sidebar {
@@ -272,13 +340,10 @@ fn navigation(current: &str, subscriptions: bool) -> AnyView {
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The CDR's status as the top bar's pill says it, from the status document.
 fn pill(status: Result<String, crate::error::ViewerError>) -> AnyView {
-    let state = crate::request::state();
-    let address = state
-        .as_ref()
-        .map(|state| state.config.cdr.base_url.clone())
-        .unwrap_or_default();
+    let address = crate::request::settings().cdr_address;
     let (reach, words, detail) = match status {
         Ok(body) => {
             let document = crate::deployment::StatusDocument::parse(&body);
@@ -326,6 +391,7 @@ fn pill(status: Result<String, crate::error::ViewerError>) -> AnyView {
     .into_any()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The sandbox band under the top bar, when the CDR declares the sandbox
 /// deployment profile, its Details leading to Server › Overview unless the
 /// page is that one.
@@ -359,14 +425,15 @@ fn sandbox_band(
     ))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The user menu: who is signed in, Your preferences, Your access, the
 /// theme, Keyboard shortcuts and Sign out.
-fn menu(session: Option<&crate::session::ViewerSession>) -> AnyView {
+fn menu(session: Option<&crate::request::Signed>) -> AnyView {
     let (who, line) = match session {
         Some(session) => {
-            let how = match session.credential {
-                crate::session::Credential::Basic { .. } => tr(Msg::SignedInBasic),
-                crate::session::Credential::Bearer { .. } => tr(Msg::SignedInOidc),
+            let how = match session.method {
+                crate::request::Method::Basic => tr(Msg::SignedInBasic),
+                crate::request::Method::Oidc => tr(Msg::SignedInOidc),
             };
             (session.identity.clone(), how)
         }
@@ -395,6 +462,7 @@ fn menu(session: Option<&crate::session::ViewerSession>) -> AnyView {
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The top bar's search box, its answer open under it when the page answers
 /// a search.
 fn search(typed: String, disabled: Option<String>) -> AnyView {
@@ -415,6 +483,7 @@ fn search(typed: String, disabled: Option<String>) -> AnyView {
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The shell of every signed-in page.
 ///
 /// The top bar's pill, the band and the navigation wait for the CDR in their
@@ -425,11 +494,11 @@ fn search(typed: String, disabled: Option<String>) -> AnyView {
 )]
 #[component]
 pub fn AppShell() -> impl IntoView {
-    let session = crate::request::session();
+    let session = crate::request::signed();
     let current = crate::request::path();
     let dock = Dock::default();
     provide_context(dock.clone());
-    let status = Status::default();
+    let status = Status::read_once();
     provide_context(status.clone());
     let typed = crate::posted::posted()
         .filter(|_| current == FIND_ROUTE)
