@@ -77,7 +77,7 @@ impl Default for MultimediaConfig {
 
 /// Why [`MultimediaConfig::endpoint_url`] refused `multimedia.endpoint`.
 ///
-/// Every message quotes the endpoint only through [`shown`], so no
+/// Every message quotes the endpoint only through [`mask_if_url`], so no
 /// refusal carries a credential.
 #[derive(Debug, thiserror::Error)]
 pub enum EndpointError {

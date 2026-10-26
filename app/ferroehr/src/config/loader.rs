@@ -7,7 +7,7 @@
 //! fallbacks below the canonical `FERROEHR__` forms (`DATABASE_URL_UNPOOLED`,
 //! `DATABASE_URL` and the libpq set for `db.url`, `RUST_LOG` for
 //! `log.filter`, `PORT` for `server.bind`), and the names under the prefix
-//! that set no key. [`load`] and [`assemble`] then resolve every `*_file`
+//! that set no key. [`load_process`] and [`assemble_from`] then resolve every `*_file`
 //! secret sibling and read the CI detection of the usage report. No openEHR
 //! spec governs configuration — our own design.
 
