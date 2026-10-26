@@ -5,10 +5,15 @@
 
 # The NHS Data Dictionary answers lychee's user agent with 403 and a browser
 # with 200 (checked by hand 2026-09-30); lychee 0.24 has no per-host accept.
-exclude = ['^https://www\.datadictionary\.nhs\.uk/']
-
-# gesetze-im-internet.de timed out on 80 requests under the default ten
-# concurrent requests per host, and answers every one when they are spaced.
-[hosts."www.gesetze-im-internet.de"]
-concurrency = 2
-request_interval = "500ms"
+#
+# gesetze-im-internet.de times out and dicom.nema.org resets the connection
+# for every request from the GitHub runner, in each weekly run from 2026-09-14
+# to 2026-10-26 (#3372, #3471, #3730, #3840, #4074), the gesetze-im-internet.de
+# requests spaced two at a time 500 ms apart since 2026-09-30 included. Every
+# reported page answered 200 by hand when checked (2026-10-14, 2026-10-26).
+# The check cannot reach either host from the runner, so it leaves them out.
+exclude = [
+  '^https://www\.datadictionary\.nhs\.uk/',
+  '^https://www\.gesetze-im-internet\.de/',
+  '^https://dicom\.nema\.org/',
+]

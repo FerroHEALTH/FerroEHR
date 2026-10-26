@@ -15,7 +15,7 @@ The semantics covered include:
 
 Unless otherwise stated, in this document, the term 'artefact' refers specifically to these artefact types.
 
-The computable type representing a human-readable identifier, `Hrid`, is defined as a primitive type in the openEHR {openehr_foundation_types}[Foundation Types^] specification, and the `ARCHETYPE_ID` type in the openEHR {openehr_base_types}[Base Types^] specification. The present document is the normative source for the grammar and semantics of these identifiers.
+The computable type representing a human-readable identifier, `Hrid`, is defined as a primitive type in the openEHR {openehr_foundation_types}[Foundation Types^] specification, and the `ARCHETYPE_ID` and `TEMPLATE_ID` types in the openEHR {openehr_base_types}[Base Types^] specification. The present document is the normative source for the grammar and semantics of these identifiers.
 
 == Related Documents
 
@@ -23,7 +23,7 @@ Prerequisite documents for reading this document include:
 
 * The {openehr_overview}[openEHR Architecture Overview^].
 * The {openehr_foundation_types}[openEHR Foundation Types Specification^] (the `Hrid` type).
-* The {openehr_base_types}[openEHR Base Types Specification^] (the `ARCHETYPE_ID` type).
+* The {openehr_base_types}[openEHR Base Types Specification^] (the `ARCHETYPE_ID` and `TEMPLATE_ID` types).
 * The {openehr_resource}[openEHR Resource Model Specification^] (descriptive and lifecycle meta-data of authored artefacts).
 * The {openehr_am_overview}[openEHR Archetype Technology Overview^].
 

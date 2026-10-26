@@ -34,6 +34,7 @@ use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 use crate::system_log::codes::AtnaAction;
 use crate::system_log::event::{ActingMode, AuditEvent, EventOutcome, EventType, ObjectClass};
+
 use ferrohealth_smart::assurance::AssuranceLevel;
 
 /// The single-record insert, returning the stored row id.
@@ -51,13 +52,23 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, 
      event_code, operation, principal, organisation, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, fhir, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
-     acting_mode, assurance_level, assurance_value, professional_id, emergency_access) \
+     acting_mode, assurance_level, assurance_value, professional_id, emergency_access, \
+     retention_ends, retention_stated) \
      SELECT * FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
      $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], \
      $12::text[], $13::text[], $14::text[], $15::text[], $16::bigint[], $17::text[], \
      $18::jsonb[], $19::jsonb[], $20::jsonb[], $21::bigint[], $22::jsonb[], $23::text[], \
      $24::jsonb[], $25::text[], $26::text[], $27::text[], $28::text[], $29::text[], \
-     $30::boolean[])";
+     $30::boolean[], $31::text[]::date[], $32::boolean[])";
+
+/// The first date a stored record may be deleted on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecordEnd {
+    /// On or after this UTC date.
+    On(jiff::civil::Date),
+    /// Never: the record is kept without end.
+    Never,
+}
 
 /// [`INSERT_ONE`] that also enters the record in the FHIR Feed's outbox, in
 /// the same statement.
@@ -99,6 +110,11 @@ impl AuditStore {
         }
     }
 
+    /// `owed` when the FHIR Feed delivers from this store, else `plain`.
+    fn owed(&self, plain: &'static str, owed: &'static LazyLock<String>) -> &'static str {
+        if self.fhir_feed { owed.as_str() } else { plain }
+    }
+
     /// This store as the FHIR Feed's outbox when `owed`: every record it
     /// writes from now on is owed to the feed until
     /// [`Self::mark_fhir_feed_delivered`]. Without it a record is owed to no
@@ -123,12 +139,7 @@ impl AuditStore {
         fhir: &serde_json::Value,
     ) -> Result<Uuid, AuditError> {
         let outcome = outcome_smallint(event);
-        let statement = if self.fhir_feed {
-            INSERT_ONE_OWED.as_str()
-        } else {
-            INSERT_ONE
-        };
-        sqlx::query(statement)
+        sqlx::query(self.owed(INSERT_ONE, &INSERT_ONE_OWED))
             .bind(Timestamp::from(event.timestamp))
             .bind(action_str(event))
             .bind(outcome)
@@ -182,6 +193,38 @@ impl AuditStore {
         &self,
         records: &[(AuditEvent, Option<String>, Option<serde_json::Value>)],
     ) -> Result<(), AuditError> {
+        self.write_batch(records, &[]).await
+    }
+
+    /// Persist a drained batch as [`Self::insert_batch`] does, each record with
+    /// the first date it may be deleted on (`ends`, one per record), which the
+    /// reaper honours ([`Self::reap_due`]).
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the INSERT fails, and [`AuditError::RetentionEnds`]
+    /// when `ends` does not hold one end per record.
+    pub async fn insert_batch_ending(
+        &self,
+        records: &[(AuditEvent, Option<String>, Option<serde_json::Value>)],
+        ends: &[RecordEnd],
+    ) -> Result<(), AuditError> {
+        if ends.len() != records.len() {
+            return Err(AuditError::RetentionEnds {
+                ends: ends.len(),
+                records: records.len(),
+            });
+        }
+        self.write_batch(records, ends).await
+    }
+
+    /// The multi-row `INSERT` behind [`Self::insert_batch`] and
+    /// [`Self::insert_batch_ending`]; a record past the end of `ends` states no
+    /// end and keeps the store horizon.
+    async fn write_batch(
+        &self,
+        records: &[(AuditEvent, Option<String>, Option<serde_json::Value>)],
+        ends: &[RecordEnd],
+    ) -> Result<(), AuditError> {
         if records.is_empty() {
             return Ok(());
         }
@@ -209,10 +252,12 @@ impl AuditStore {
         let mut classified = CategoryColumns::with_capacity(records.len());
         let mut actors = ActorColumns::with_capacity(records.len());
         let mut emergency: Vec<bool> = Vec::with_capacity(records.len());
-        for (event, subject, fhir) in records {
+        let mut retention = RetentionColumns::with_capacity(records.len());
+        for (index, (event, subject, fhir)) in records.iter().enumerate() {
             let Some(fhir) = fhir else {
                 continue;
             };
+            retention.push(ends.get(index));
             recorded_at.push(Timestamp::from(event.timestamp));
             actions.push(action_str(event));
             outcomes.push(outcome_smallint(event));
@@ -241,12 +286,7 @@ impl AuditStore {
         if fhir_docs.is_empty() {
             return Ok(());
         }
-        let statement = if self.fhir_feed {
-            INSERT_BATCH_OWED.as_str()
-        } else {
-            INSERT_BATCH
-        };
-        sqlx::query(statement)
+        sqlx::query(self.owed(INSERT_BATCH, &INSERT_BATCH_OWED))
             .bind(recorded_at)
             .bind(actions)
             .bind(outcomes)
@@ -277,6 +317,8 @@ impl AuditStore {
             .bind(actors.values)
             .bind(actors.professionals)
             .bind(emergency)
+            .bind(retention.ends)
+            .bind(retention.stated)
             .execute(&mut *acquire(&self.pool).await?)
             .await?;
         Ok(())
@@ -389,6 +431,39 @@ impl AuditStore {
             .bind(i32::try_from(retention_years).unwrap_or(i32::MAX))
             .fetch_one(&mut *acquire(&self.pool).await?)
             .await?;
+        u64::try_from(removed).map_err(|e| AuditError::Store(sqlx::Error::Decode(Box::new(e))))
+    }
+
+    /// Delete every record whose own retention end is on or before `today`,
+    /// and every record that states no end (written before per-record ends)
+    /// once it is older than `horizon`; returns the number of reaped rows.
+    ///
+    /// Regulation (EU) 2025/327 Annex II 3.4 asks for periods by category and
+    /// origin, so a record is never deleted before its own end and a longer-kept
+    /// one outlives a shorter-kept one written the same day. The deletion and
+    /// the chain tombstones are `audit.reap_audit_events_due`.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the reap fails.
+    pub async fn reap_due(
+        &self,
+        today: jiff::civil::Date,
+        horizon: crate::system_log::config::Retention,
+    ) -> Result<u64, AuditError> {
+        use crate::system_log::config::Retention;
+        // NOTE: a NULL horizon makes the cutoff NULL, which keeps every record that states no end.
+        let horizon = match horizon {
+            Retention::Forever => None,
+            Retention::Days(days) => Some(format!("{days} days")),
+            Retention::Years(years) => Some(format!("{years} years")),
+        };
+        let removed: i64 = sqlx::query_scalar(
+            "SELECT audit.reap_audit_events_due($1::text::date, now() - $2::text::interval)",
+        )
+        .bind(today.to_string())
+        .bind(horizon)
+        .fetch_one(&mut *acquire(&self.pool).await?)
+        .await?;
         u64::try_from(removed).map_err(|e| AuditError::Store(sqlx::Error::Decode(Box::new(e))))
     }
 
@@ -869,6 +944,30 @@ impl<'a> ActorColumns<'a> {
         self.values.push(event.actor.assurance_value.as_deref());
         self.professionals
             .push(event.actor.professional_id.as_deref());
+    }
+}
+
+/// The retention columns of a batch: each record's end as a `YYYY-MM-DD` text
+/// the statement casts to `date`, and whether the record states one.
+struct RetentionColumns {
+    ends: Vec<Option<String>>,
+    stated: Vec<bool>,
+}
+
+impl RetentionColumns {
+    fn with_capacity(n: usize) -> Self {
+        Self {
+            ends: Vec::with_capacity(n),
+            stated: Vec::with_capacity(n),
+        }
+    }
+
+    fn push(&mut self, end: Option<&RecordEnd>) {
+        self.ends.push(match end {
+            Some(RecordEnd::On(date)) => Some(date.to_string()),
+            Some(RecordEnd::Never) | None => None,
+        });
+        self.stated.push(end.is_some());
     }
 }
 

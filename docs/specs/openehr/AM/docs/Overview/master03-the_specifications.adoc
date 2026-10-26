@@ -2,7 +2,7 @@
 
 The semantics described above are defined in the following set of specifications:
 
-*{openehr_am_id}[Archetype Identification^]*:: a normative specification of archetype and template model identification, versioning, referencing and lifecycle;
+*{openehr_base_artefact_identification}[Artefact Identification^]* (BASE component):: a normative specification of archetype and template model identification, versioning, referencing and lifecycle;
 *{openehr_am_adl2}[The Archetype Definition Language (ADL)^]*:: a normative abstract syntax for archetypes, templates and terminology binding;
 *{openehr_am_aom2}[The Archetype Object Model (AOM)^]*:: the normative structural model of archetypes and templates;
 *{openehr_am_opt2}[The Operational Template (OPT)^]*:: normative description of the semantics of Operational Templates (OPTs);

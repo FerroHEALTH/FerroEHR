@@ -229,7 +229,7 @@ The following is a `P_BMM_CONTAINER_PROPERTY` definition for the model property 
     >
 --------
 
-Indexed containers such as `Hash<K,V>`, `Dictionary<K,V>` etc are also suuported via the `P_BMM_INDEXED_CONTAINER_PROPERTY`, the use of which is shown here:
+Indexed containers such as `Hash<K,V>`, `Dictionary<K,V>` etc are also supported via the `P_BMM_INDEXED_CONTAINER_PROPERTY`, the use of which is shown here:
 
 [source, odin]
 --------

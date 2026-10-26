@@ -6,9 +6,9 @@
 //!
 //! Spec sources (vendored):
 //! `AM/docs/UML/classes/org.openehr.am.aom2.archetype_hrid.adoc` §Functions,
-//! `AM/docs/Identification/master03-artefact_source_id.adoc` §Formal Model (the
+//! `BASE/docs/artefact_identification/master03-artefact_source_id.adoc` §Formal Model (the
 //! `artefact_hrid` / `local_hrid` / `hrid_root` grammar), and
-//! `AM/docs/Identification/master04-versioning.adoc` §Version Numbering (the
+//! `BASE/docs/artefact_identification/master04-versioning.adoc` §Version Numbering (the
 //! `version_id` grammar). The [`FromStr`] reading follows the physical form of
 //! `AM/docs/ADL2/master07.05-adl_identification.adoc`.
 

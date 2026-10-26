@@ -2,7 +2,7 @@
 
 - Source: https://github.com/openEHR/specifications-BASE
 - Ref: master (BASE 1.3.0)
-- Commit: `707b8ac28cea1ccc4410f8e930665d473475350f`
+- Commit: `93abaf9f656b7bc87019458303c9d88f3f688ef8`
 - License: CC-BY-SA 3.0 Unported — the upstream `LICENSE` is vendored verbatim alongside
   this file, from the same pinned commit. Root reference copies:
   `LICENSE-CC-BY-SA-3.0` / `LICENSE-APACHE-2.0`.

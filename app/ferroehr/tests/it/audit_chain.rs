@@ -542,7 +542,6 @@ async fn the_audit_subsystem_schedules_the_chain_check() {
         enabled: true,
         store: StoreConfig {
             verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
             ..StoreConfig::default()
         },
         ..AuditConfig::default()
@@ -619,6 +618,7 @@ fn changed_value(column: &str, data_type: &str) -> Option<String> {
             format!("coalesce(\"{column}\", now()) + interval '1 second'")
         }
         "boolean" => format!("NOT coalesce(\"{column}\", false)"),
+        "date" => format!("coalesce(\"{column}\", current_date) + 1"),
         "bytea" => format!("coalesce(\"{column}\", '\\x'::bytea) || '\\x00'::bytea"),
         _ => return None,
     };
@@ -755,7 +755,11 @@ async fn records_under_the_original_digest_still_verify() {
             .fetch_all(&pool)
             .await
             .expect("versions");
-    assert_eq!(versions, vec![1, 1, 2, 2]);
+    let current: i16 = sqlx::query_scalar("SELECT audit.audit_chain_digest_version()")
+        .fetch_one(&pool)
+        .await
+        .expect("current version");
+    assert_eq!(versions, vec![1, 1, current, current]);
     assert!(
         store.verify_chain().await.expect("verify").is_empty(),
         "a trail spanning both digest versions must verify clean"
@@ -791,6 +795,57 @@ async fn records_under_the_original_digest_still_verify() {
             .iter()
             .any(|(seq, finding)| *seq == Some(4) && finding.contains("older digest version")),
         "a record moved back to the original digest must be reported: {findings:?}"
+    );
+}
+
+/// Records written under digest version 2 keep verifying under the columns
+/// version 2 names after version 3 added the retention columns, and a change
+/// to one of them is still reported.
+#[tokio::test]
+async fn records_under_digest_version_2_still_verify() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AuditStore::new(pool.clone());
+    seed(&store, 2).await;
+
+    for statement in [
+        "UPDATE audit.audit_event SET chain_digest_version = 2 WHERE chain_seq = 1",
+        "UPDATE audit.audit_event e SET row_hash = audit.audit_event_row_digest(e) \
+         WHERE chain_seq = 1",
+        "UPDATE audit.audit_event SET chain_digest_version = 2, prev_hash = \
+         (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 1) WHERE chain_seq = 2",
+        "UPDATE audit.audit_event e SET row_hash = audit.audit_event_row_digest(e) \
+         WHERE chain_seq = 2",
+        "UPDATE audit.audit_chain_state SET head_hash = \
+         (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 2)",
+    ] {
+        with_triggers_disabled(&pool, statement).await;
+    }
+    seed(&store, 2).await;
+
+    let versions: Vec<i16> =
+        sqlx::query_scalar("SELECT chain_digest_version FROM audit.audit_event ORDER BY chain_seq")
+            .fetch_all(&pool)
+            .await
+            .expect("versions");
+    assert_eq!(versions, vec![2, 2, 3, 3]);
+    assert!(
+        store.verify_chain().await.expect("verify").is_empty(),
+        "a trail spanning digest versions 2 and 3 must verify clean"
+    );
+
+    let findings = findings_after(
+        &pool,
+        &["UPDATE audit.audit_event SET emergency_access = NOT coalesce(emergency_access, false) \
+           WHERE chain_seq = 2"
+            .to_owned()],
+    )
+    .await;
+    assert!(
+        findings
+            .iter()
+            .any(|(seq, finding)| *seq == Some(2) && finding.contains("modified")),
+        "a version 2 record is still verified under its own columns: {findings:?}"
     );
 }
 

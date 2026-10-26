@@ -3,7 +3,7 @@
     "rm_publisher": "openehr",
     "schema_name": "base",
     "rm_release": "1.3.0",
-    "schema_revision": "1.3.0.2",
+    "schema_revision": "1.3.0.3",
     "schema_lifecycle_state": "stable",
     "schema_description": "openEHR base types.",
     "schema_author": "Thomas Beale <thomas.beale@openehr.org>, code-generator",
@@ -2851,7 +2851,7 @@
                         }
                     },
                     "post_conditions": {
-                        "Post_result": "Result = (lower_unbounded or lower_included and v >= lower) or v > lower and (upper_unbounded or upper_included and v <= upper or v < upper)"
+                        "Post_result": "Result = (lower_unbounded or (lower_included and e >= lower) or e > lower) and (upper_unbounded or (upper_included and e <= upper) or e < upper)"
                     },
                     "result": {
                         "_type": "P_BMM_SIMPLE_TYPE",
@@ -3449,10 +3449,76 @@
         },
         "TEMPLATE_ID": {
             "name": "TEMPLATE_ID",
-            "documentation": "Identifier for templates. Lexical form to be determined.",
+            "documentation": "Identifier for a template. The human-readable identifier (HRID) form is strongly recommended and is the modern (ADL 2) form: `namespace '::' rm_publisher '-' rm_package '-' rm_class '.' concept_id '.v' version_id`, e.g. `org.example::openEHR-EHR-COMPOSITION.discharge_summary.v1.0.0`.\n\nFor backward compatibility a legacy free-text template name is still permitted, but is deprecated. The HRID grammar is defined by the openEHR Artefact Identification specification and realised by the `Hrid` primitive type; `_is_hrid_` reports whether a given value conforms to it, and the segment and version accessors return their parts when it does (and are empty for a legacy identifier).",
             "ancestors": [
                 "OBJECT_ID"
-            ]
+            ],
+            "functions": {
+                "is_hrid": {
+                    "name": "is_hrid",
+                    "documentation": "True if `_value_` conforms to the openEHR human-readable identifier (HRID) grammar, i.e. is a valid `Hrid`; False for a legacy free-text template identifier.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "Boolean"
+                    }
+                },
+                "namespace": {
+                    "name": "namespace",
+                    "documentation": "The namespace of the identifier, in the form of a reverse domain name, e.g. `\"org.example\"`; mandatory when `_value_` is in HRID (ADL 2) form and empty for a legacy free-text template identifier.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "qualified_rm_class_name": {
+                    "name": "qualified_rm_class_name",
+                    "documentation": "The qualified reference model class name, i.e. `rm_publisher '-' rm_package '-' rm_class`, e.g. `\"openEHR-EHR-COMPOSITION\"`; empty if `_value_` is not an HRID.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "concept_id": {
+                    "name": "concept_id",
+                    "documentation": "The template concept identifier, e.g. `\"discharge_summary\"`; empty if `_value_` is not an HRID.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "version_id": {
+                    "name": "version_id",
+                    "documentation": "The version part of the identifier as it appears after `'.v'`, e.g. `\"1.0.0\"`; empty if `_value_` is not an HRID.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "major_version": {
+                    "name": "major_version",
+                    "documentation": "The major version, i.e. the first numeric segment of `_version_id_`; empty if `_value_` is not an HRID.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "minor_version": {
+                    "name": "minor_version",
+                    "documentation": "The minor version, i.e. the second numeric segment of `_version_id_`; empty if not present or `_value_` is not an HRID.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                },
+                "patch_version": {
+                    "name": "patch_version",
+                    "documentation": "The patch version, i.e. the third numeric segment of `_version_id_`; empty if not present or `_value_` is not an HRID.",
+                    "result": {
+                        "_type": "P_BMM_SIMPLE_TYPE",
+                        "type": "String"
+                    }
+                }
+            }
         },
         "ACCESS_GROUP_REF": {
             "name": "ACCESS_GROUP_REF",

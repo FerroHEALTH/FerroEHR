@@ -19,7 +19,7 @@ impl Archetype {
     /// `short_concept_name` (`org.openehr.am.aom14.archetype.adoc` §Functions):
     /// "The short concept name of the archetype extracted from the
     /// `archetype_id`" — the domain-concept segment, which
-    /// `AM/docs/Identification/master03-artefact_source_id.adoc` §Concept
+    /// `BASE/docs/artefact_identification/master03-artefact_source_id.adoc` §Concept
     /// Identifier calls the "'short' ontological identifier (known in ADL 1.4
     /// as the 'concept' or 'domain concept')", as opposed to the language-bound
     /// rubric `concept_name` returns.

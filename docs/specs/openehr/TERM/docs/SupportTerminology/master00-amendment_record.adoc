@@ -6,11 +6,16 @@
 
 4+^h|*TERM Release 3.1.0 (unreleased)*
 
-|[[latest_issue]]3.1.5
+|[[latest_issue]]3.1.6
+|{spec_tickets}/SPECTERM-36[SPECTERM-36^]: Restored `pt-pt` in the `languages` code set of openehr_external_terminologies.xml (it had been marked DEPRECATED in Release 2.4.0, although it is a valid RFC 5646 tag, like the other language-region tags in the code set); named the replacement codes for the invalid or withdrawn `ji`, `sb`, `sx` and `sz`; corrected the Moldova entries by adding `ro-md` and `ru-md` and deprecating `ro-mo` and `ru-mo` (region `MO` is Macao); documented the policy for region-qualified codes in the `languages` code set description. See also {spec_tickets}/SPECTERM-18[SPECTERM-18^] and {spec_tickets}/SPECPR-95[SPECPR-95^].
+|V Pereira
+|[[latest_issue_date]]10 Oct 2026
+
+|3.1.5
 |{spec_tickets}/SPECTERM-31[SPECTERM-31^]: Added "interoperability" (openEHR code 672) to the term mapping purpose vocabulary in openehr_terminology.xml, with es, ja, pt and zh translations.
 |A Vidrean, +
 S Kohler
-|[[latest_issue_date]]09 Oct 2026
+|09 Oct 2026
 
 |3.1.4
 |{spec_tickets}/SPECPR-450[SPECPR-450^]: Added ng/mL/cm3 and μg/L/cm3 (PSA density) to PropertyUnitData.xml under a new property "Concentration per volume" (openEHR code 765); added the property concepts 761-765 missing from the property vocabulary in openehr_terminology.xml.

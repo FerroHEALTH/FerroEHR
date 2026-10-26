@@ -6,9 +6,46 @@ h|*Class*
 2+^h|*TEMPLATE_ID*
 
 h|*Description*
-2+a|Identifier for templates. Lexical form to be determined.
+2+a|Identifier for a template. The human-readable identifier (HRID) form is strongly recommended and is the modern (ADL 2) form: `namespace '::' rm_publisher '-' rm_package '-' rm_class '.' concept_id '.v' version_id`, e.g. `org.example::openEHR-EHR-COMPOSITION.discharge_summary.v1.0.0`.
+
+For backward compatibility a legacy free-text template name is still permitted, but is deprecated. The HRID grammar is defined by the openEHR Artefact Identification specification and realised by the `Hrid` primitive type; `_is_hrid_` reports whether a given value conforms to it, and the segment and version accessors return their parts when it does (and are empty for a legacy identifier).
 
 h|*Inherit*
 2+|`<<_object_id_class,OBJECT_ID>>`
 
+h|*Functions*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*is_hrid* (): `link:/releases/BASE/{base_release}/foundation_types.html#_boolean_class[Boolean^]`
+a|True if `_value_` conforms to the openEHR human-readable identifier (HRID) grammar, i.e. is a valid `Hrid`; False for a legacy free-text template identifier.
+
+h|*1..1*
+|*namespace* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|The namespace of the identifier, in the form of a reverse domain name, e.g. `"org.example"`; mandatory when `_value_` is in HRID (ADL 2) form and empty for a legacy free-text template identifier.
+
+h|*1..1*
+|*qualified_rm_class_name* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|The qualified reference model class name, i.e. `rm_publisher '-' rm_package '-' rm_class`, e.g. `"openEHR-EHR-COMPOSITION"`; empty if `_value_` is not an HRID.
+
+h|*1..1*
+|*concept_id* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|The template concept identifier, e.g. `"discharge_summary"`; empty if `_value_` is not an HRID.
+
+h|*1..1*
+|*version_id* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|The version part of the identifier as it appears after `'.v'`, e.g. `"1.0.0"`; empty if `_value_` is not an HRID.
+
+h|*1..1*
+|*major_version* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|The major version, i.e. the first numeric segment of `_version_id_`; empty if `_value_` is not an HRID.
+
+h|*1..1*
+|*minor_version* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|The minor version, i.e. the second numeric segment of `_version_id_`; empty if not present or `_value_` is not an HRID.
+
+h|*1..1*
+|*patch_version* (): `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|The patch version, i.e. the third numeric segment of `_version_id_`; empty if not present or `_value_` is not an HRID.
 |===
