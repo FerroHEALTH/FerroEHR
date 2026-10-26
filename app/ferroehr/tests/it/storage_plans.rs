@@ -575,6 +575,15 @@ async fn the_head_row_update_is_heap_only() {
 /// Lower an AQL statement to the SQL the engine runs, scoped to `ehr_ids`
 /// (empty = the population).
 fn aql_sql(aql: &str, ehr_ids: Vec<EhrId>) -> ferroehr::aql::sql::PreparedQuery {
+    aql_sql_limited(aql, ehr_ids, None)
+}
+
+/// [`aql_sql`] with a row limit, as REST `fetch` or AQL `LIMIT` sets it.
+fn aql_sql_limited(
+    aql: &str,
+    ehr_ids: Vec<EhrId>,
+    limit: Option<i64>,
+) -> ferroehr::aql::sql::PreparedQuery {
     let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
     let params = Params::new();
     let ir = ferroehr::aql::plan(&ast, &params, SpecProfile::default()).expect("the AQL plans");
@@ -583,7 +592,7 @@ fn aql_sql(aql: &str, ehr_ids: Vec<EhrId>) -> ferroehr::aql::sql::PreparedQuery 
         ehr_ids,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
-        limit: None,
+        limit,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     };
@@ -707,6 +716,62 @@ fn assert_head_join_by_key(scans: &[Scan]) {
             render(scans)
         );
     }
+}
+
+/// The newest compositions of the population, the first page: the ordering
+/// key is the promoted start time of every COMPOSITION root.
+const NEWEST_AQL: &str = "SELECT c/uid/value, c/context/start_time/value \
+     FROM EHR e CONTAINS COMPOSITION c \
+     ORDER BY c/context/start_time/value DESC, c/uid/value ASC";
+
+/// A population-wide ordered page reads the compositions in start-time order
+/// from `idx_node_hot_composition_start` and stops at the limit, so its cost
+/// does not grow with the number of compositions (#4090).
+#[tokio::test]
+async fn the_newest_compositions_page_reads_the_start_time_index() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    seed(&svc, &pool).await;
+
+    let plan = explain_aql(&pool, aql_sql_limited(NEWEST_AQL, Vec::new(), Some(10))).await;
+    let scans = scans(&plan);
+    assert!(
+        on(&scans, "node_hot")
+            .iter()
+            .any(|s| s.index.as_deref() == Some("idx_node_hot_composition_start")),
+        "#4090: the ordered page enters through the start-time index:\n{}",
+        render(&scans)
+    );
+}
+
+/// A template predicate on a COMPOSITION reads `idx_version_hot_template`
+/// instead of extracting the template id from every root (#4090).
+#[tokio::test]
+async fn a_template_predicate_reads_the_template_index() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    seed(&svc, &pool).await;
+
+    let plan = explain_aql(
+        &pool,
+        aql_sql_limited(
+            "SELECT c FROM EHR e CONTAINS COMPOSITION c \
+             WHERE c/archetype_details/template_id/value = 'no.such.template'",
+            Vec::new(),
+            Some(500),
+        ),
+    )
+    .await;
+    let scans = scans(&plan);
+    assert!(
+        on(&scans, "version_hot")
+            .iter()
+            .any(|s| s.index.as_deref() == Some("idx_version_hot_template")),
+        "#4090: the template predicate enters through the template index:\n{}",
+        render(&scans)
+    );
 }
 
 // ── the commit-time range ────────────────────────────────────────────────────

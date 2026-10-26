@@ -94,6 +94,10 @@ impl Builder<'_> {
         if let Some(expr) = self.promoted_leaf_expr(leaf, mode) {
             return Ok(expr);
         }
+        // A COMPOSITION's template id is the indexed `version.template_id`.
+        if let Some(expr) = self.version_template_expr(leaf, mode) {
+            return Ok(expr);
+        }
         let src = self.source_node(leaf.source.0)?;
         let root_conds = leaf
             .root_predicate
@@ -307,10 +311,12 @@ impl Builder<'_> {
         })
     }
 
-    /// Whether `leaf` reads a column rather than its fragment: uid synthesis
-    /// or a promoted column, both exact single values.
+    /// Whether `leaf` reads a column rather than its fragment: uid synthesis,
+    /// a promoted column or the version's template id, each one exact value.
     pub(super) fn has_column_read(&mut self, leaf: &LeafPath, mode: ValueMode) -> bool {
-        self.version_uid_expr(leaf, mode).is_some() || self.promoted_leaf_expr(leaf, mode).is_some()
+        self.version_uid_expr(leaf, mode).is_some()
+            || self.promoted_leaf_expr(leaf, mode).is_some()
+            || self.version_template_expr(leaf, mode).is_some()
     }
 
     /// Hosts a correlated `EXISTS` of the WHERE clause so the planner keeps it
@@ -386,6 +392,35 @@ impl Builder<'_> {
             )),
             _ => None,
         }
+    }
+
+    /// The committed template id of a `COMPOSITION` root, compared as text:
+    /// `version.template_id`, which the commit path fills from the same
+    /// `archetype_details/template_id/value` (RM common `ARCHETYPED.template_id`)
+    /// and `idx_version_hot_template` indexes, instead of extracting the leaf
+    /// from every root's fragment (#4090). `None` for any other leaf, source
+    /// or mode. No openEHR spec governs the lowering: our own design.
+    fn version_template_expr(&self, leaf: &LeafPath, mode: ValueMode) -> Option<Expr> {
+        if !matches!(mode, ValueMode::Value(Coercion::Text))
+            || !leaf.anchor.is_empty()
+            || leaf.root_predicate.is_some()
+            || leaf.fragment.iter().any(|s| s.predicate.is_some())
+            || !leaf
+                .fragment
+                .iter()
+                .map(|s| s.name.as_str())
+                .eq(crate::aql::constraints::TEMPLATE_PATH)
+        {
+            return None;
+        }
+        let Some(Source::Rm(r)) = self.ir.sources.get(leaf.source.0) else {
+            return None;
+        };
+        if r.rm_type.names() != ["COMPOSITION"] {
+            return None;
+        }
+        let voa = self.vo_alias.get(&leaf.source.0)?;
+        Some(col(voa, VersionRow::TemplateId))
     }
 
     /// The promoted-leaf fast path:
