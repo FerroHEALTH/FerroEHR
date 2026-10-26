@@ -38,10 +38,18 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 17.0.0 -n ferroehr \
+  --version 18.0.0 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
-  --set image.tag=5.4.2
+  --set image.tag=5.4.2 \
+  --set ferropix.enabled=false --set config.ehr_index.provider=local
 ```
+
+The last line opts in to the in-instance EHR index, for a CDR run on its own.
+By default the chart runs FerroPIX, the IHE patient identity source, beside the
+CDR and points the EHR index at it, which needs FerroPIX's own Secrets and an
+issuer: see [FerroPIX](#ferropix-the-patient-identity-source-on-by-default).
+With neither, the render is refused and names both choices, as the server's
+boot would be.
 
 > [!IMPORTANT]
 > **`helm repo add` does not work for this chart, and never will.** There is no
@@ -55,7 +63,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 17.0.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0
 ```
 
 ### Pin two versions, not one
@@ -68,7 +76,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 17.0.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 18.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.4.2` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -168,7 +176,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 17.0.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -316,7 +324,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 17.0.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -768,7 +776,7 @@ while the user, its scopes and its roles stay under `config.auth.basic.users`.
 > development-only choice; the chart makes you state it explicitly rather than
 > reaching it by omission.
 
-## Optional integrations
+## Integrations
 
 ### Any server setting is reachable
 
@@ -787,7 +795,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 17.0.0 -n ferroehr --reuse-values \
+  --version 18.0.0 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -871,6 +879,61 @@ own record: the viewer's OIDC path, the screens behind a session, and whether a
 CNI enforces the viewer's NetworkPolicy. Its screens are documented in the
 [viewer](../viewer/index.md) chapter.
 
+### FerroPIX (the patient identity source, on by default)
+
+The CDR keeps no patient-to-record cross-reference of its own by default: it
+asks an IHE patient identity source over PIXm (ITI-83) which pseudonym the
+clinical domain holds for a patient
+([`[ehr_index]`](config-integrations.md#ehr_index)). The chart takes
+[FerroPIX](https://github.com/FerroHEALTH/FerroPIX) as the chart dependency
+`ferropix` (`oci://ghcr.io/ferrohealth/charts`, pinned in `Chart.lock`), so
+its Deployment, Service, NetworkPolicy and configuration are its own chart's,
+and every key under `ferropix:` is that chart's value. With
+`ferropix.enabled` (the default) the chart writes
+`config.ehr_index.provider = "ihe"` and `config.ehr_index.pixm_url` at the
+FerroPIX Service, and refuses a values file that sets either too. With the
+egress policy on, it adds the rule to FerroPIX's pods.
+
+You supply FerroPIX's PostgreSQL URL and sealing key, its issuer, the
+pseudonymisation domain whose consumer is the CDR's client, and the CDR's side
+of the same facts:
+
+```yaml
+ferropix:
+  database: {existingSecret: ferropix-db}
+  dataKey: {existingSecret: ferropix-data-key}
+  config:
+    server: {public_base_url: https://pix.example.org}
+    auth:
+      audience: [https://pix.example.org/fhir]
+      issuer: [{issuer: https://idp.example.org/realms/pix, clients: [hospital-source]}]
+    pseudonym_domain:
+      - {namespace: urn:oid:2.999.7.1, name: Clinical domain, consumer_client_id: ferroehr}
+config:
+  privacy:
+    subject_namespaces: [urn:oid:2.999.7.1]
+  ehr_index:
+    assigning_authority: urn:oid:2.999.7.1
+    oauth:
+      token_endpoint: https://idp.example.org/realms/pix/protocol/openid-connect/token
+      client_id: ferroehr
+      scope: system/Patient.rs
+secrets:
+  ehrIndexClientSecret: <the client secret>
+```
+
+`secrets.ehrIndexClientSecret` is mounted at
+`/etc/ferroehr-secrets/ehr_index.oauth.client_secret`, and the chart injects
+the matching `client_secret_file`; the production overlay reads it from a
+Secret you own through `extraEnv` instead. Another PIX Manager:
+`ferropix.enabled: false` and `config.ehr_index.pixm_url`. A CDR run on its
+own: `ferropix.enabled: false` and `config.ehr_index.provider: local`.
+
+The restricted-profile gate holds FerroPIX's pods to the Pod Security
+Standards `restricted` profile like every other pod in the release. The two
+properties this chart adds for its own pods, `enableServiceLinks: false` and
+one user-namespace posture across workloads, are FerroPIX's chart's to set.
+
 ### FerroTERM (a terminology server beside the CDR, off by default)
 
 [FerroTERM](https://github.com/FerroHEALTH/FerroTERM) is the Ferro family's
@@ -886,7 +949,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 17.0.0 -n ferroehr --reuse-values \
+  --version 18.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1214,7 +1277,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 17.0.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

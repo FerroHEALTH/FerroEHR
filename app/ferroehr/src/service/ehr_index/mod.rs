@@ -33,8 +33,11 @@
 //! of subject identifiers associated with a given EHR id, and vice versa"). No
 //! wire is mounted, EHR Index having no ITS-REST contract.
 
+pub mod config;
 pub mod conflicts;
+pub mod ihe;
 pub(crate) mod index;
+pub mod provider;
 pub mod types;
 
 use sqlx::Row;
@@ -69,6 +72,27 @@ pub enum IndexError {
     /// A generic service/DB fault (mapped by the shared table).
     #[error(transparent)]
     Service(#[from] ServiceError),
+    /// No provider holds the cross-reference: the service was built without
+    /// one ([`provider::EhrIndexProvider::Unconfigured`]).
+    #[error(
+        "no EHR index provider is installed: configure an IHE patient identity source \
+         ([ehr_index] pixm_url and assigning_authority) or opt in to provider = \"local\""
+    )]
+    Unconfigured,
+    /// The IHE patient identity source holds the cross-reference, so a call
+    /// that would write or scan the local map is not served here.
+    #[error("{operation} is served by the IHE patient identity source, never by the local map")]
+    HeldBySource {
+        /// The `I_EHR_INDEX` operation refused.
+        operation: &'static str,
+    },
+    /// The identity source failed; nothing falls back to the local map.
+    #[error("the IHE patient identity source failed")]
+    IdentitySource(#[source] ihe::IdentitySourceError),
+    /// The identity source answered a clinical-domain identifier the
+    /// `[privacy]` subject rule refuses, so it is no pseudonym.
+    #[error("the IHE patient identity source answered a clinical identifier that is no pseudonym")]
+    NotPseudonymous,
 }
 
 impl From<sqlx::Error> for IndexError {
@@ -111,6 +135,15 @@ impl From<IndexError> for SmError {
                 ),
             ),
             IndexError::Service(e) => e.into(),
+            refused @ (IndexError::Unconfigured | IndexError::NotPseudonymous) => {
+                SmError::exception(refused.to_string())
+            }
+            refused @ IndexError::HeldBySource { .. } => {
+                SmError::new(CallStatusType::NotImplemented, refused.to_string())
+            }
+            IndexError::IdentitySource(source) => {
+                SmError::exception("the IHE patient identity source failed").with_source(source)
+            }
         }
     }
 }

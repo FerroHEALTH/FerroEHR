@@ -1,4 +1,27 @@
 ---
+# Source: ferroehr/charts/ferropix/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ferroehr-ferropix
+  labels:
+    app.kubernetes.io/name: ferropix
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ferropix-0.2.2
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ferropix
+      app.kubernetes.io/instance: ferroehr
+      app.kubernetes.io/component: server
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - port: http
+
+---
 # Source: ferroehr/templates/networkpolicy.yaml
 # Ingress policy for the ferroehr pods, admitting traffic ONLY to the API port
 # (and the management port when it runs on its own listener). Every other inbound
@@ -23,7 +46,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), but from EVERY source — this policy narrows ports, NOT sources (networkPolicy.ingressAllowAll=true). Set networkPolicy.ingressFrom for a PHI workload.
   labels:
-    helm.sh/chart: ferroehr-17.0.0
+    helm.sh/chart: ferroehr-18.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -42,6 +65,27 @@ spec:
           protocol: TCP
 
 ---
+# Source: ferroehr/charts/ferropix/templates/poddisruptionbudget.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ferroehr-ferropix
+  labels:
+    app.kubernetes.io/name: ferropix
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ferropix-0.2.2
+spec:
+  maxUnavailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ferropix
+      app.kubernetes.io/instance: ferroehr
+      app.kubernetes.io/component: server
+
+---
 # Source: ferroehr/templates/poddisruptionbudget.yaml
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -51,7 +95,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-17.0.0
+    helm.sh/chart: ferroehr-18.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -66,13 +110,27 @@ spec:
       app.kubernetes.io/instance: ferroehr
 
 ---
+# Source: ferroehr/charts/ferropix/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ferroehr-ferropix
+  labels:
+    app.kubernetes.io/name: ferropix
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ferropix-0.2.2
+automountServiceAccountToken: false
+
+---
 # Source: ferroehr/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-17.0.0
+    helm.sh/chart: ferroehr-18.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -81,13 +139,97 @@ metadata:
 automountServiceAccountToken: false
 
 ---
+# Source: ferroehr/templates/secret.yaml
+# Chart-managed Secret. In production prefer database.existingSecret (and an
+# external secret store / IRSA for the rest); anything set here is rendered from
+# values, so keep it out of committed values.
+#
+# Two key shapes live here, and the difference is deliberate. A key spelled
+# `<config.path>` is MOUNTED as a read-only file and reached through the config
+# tree's `*_file` sibling — the posture the OWASP Kubernetes Security Cheat Sheet
+# asks for, since an environment variable is readable through /proc/<pid>/environ
+# and inherited by every child process
+# (https://cheatsheetseries.owasp.org/cheatsheets/Kubernetes_Security_Cheat_Sheet.html).
+# A key spelled `FERROEHR__…` is injected as an environment VALUE. Only two are
+# left in that form — `audit.fhir_feed.url` and `multimedia.access_key_id`, the
+# remaining config keys with no `*_file` sibling. The DSN and the AMQP URL moved
+# to files once the server gained `db.url_file` and `events.url_file`.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ferroehr-env
+  labels:
+    helm.sh/chart: ferroehr-18.0.0
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "5.4.2"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+type: Opaque
+stringData:
+  ehr_index.oauth.client_secret: "ci-fixture-not-a-secret"
+
+---
+# Source: ferroehr/charts/ferropix/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ferroehr-ferropix
+  labels:
+    app.kubernetes.io/name: ferropix
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ferropix-0.2.2
+data:
+  ferropix.toml: |
+    profile = "production"
+    
+    [auth]
+      audience = ["https://pix.example.com/fhir"]
+    
+      [[auth.issuer]]
+        clients = ["hospital-source"]
+        issuer = "https://idp.example.com/realms/pix"
+    
+    [db]
+      data_key_file = "/run/secrets/ferropix/data-key"
+      url_file = "/run/secrets/ferropix/db-url"
+    
+    [[domain]]
+      kind = "local"
+      name = "Hospital"
+      source_client_id = "hospital-source"
+      system = "urn:oid:2.999.1.1"
+    
+    [hl7v2]
+      enabled = false
+      listen = "0.0.0.0:2575"
+    
+    [[pseudonym_domain]]
+      consumer_client_id = "ferroehr"
+      name = "Clinical domain"
+      namespace = "urn:oid:2.999.7.1"
+    
+    [server]
+      base_path = ""
+      listen = "0.0.0.0:8080"
+      public_base_url = "https://pix.example.com"
+    
+    [usage_report]
+      deployment = "helm"
+      enabled = true
+      state_dir = "/var/lib/ferropix"
+    
+
+---
 # Source: ferroehr/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-17.0.0
+    helm.sh/chart: ferroehr-18.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -138,6 +280,16 @@ data:
       min_connections = 0
       statement_timeout_ms = 60000
     
+    [ehr_index]
+      assigning_authority = "urn:oid:2.999.7.1"
+      pixm_url = "http://ferroehr-ferropix.ferroehr.svc:8080/fhir"
+      provider = "ihe"
+      [ehr_index.oauth]
+        client_id = "ferroehr"
+        client_secret_file = "/etc/ferroehr-secrets/ehr_index.oauth.client_secret"
+        scope = "system/Patient.rs"
+        token_endpoint = "https://idp.example.com/realms/pix/protocol/openid-connect/token"
+    
     [events]
       enabled = false
       exchange = "ferroehr.events"
@@ -159,6 +311,9 @@ data:
       bucket = "openehr-multimedia"
       enabled = false
       region = "us-east-1"
+    
+    [privacy]
+      subject_namespaces = ["urn:oid:2.999.7.1"]
     
     [server]
       base_path = "/ferroehr/rest/openehr/v1"
@@ -197,13 +352,37 @@ data:
     
 
 ---
+# Source: ferroehr/charts/ferropix/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ferroehr-ferropix
+  labels:
+    app.kubernetes.io/name: ferropix
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ferropix-0.2.2
+    app.kubernetes.io/component: server
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ferropix
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/component: server
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+
+---
 # Source: ferroehr/templates/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-17.0.0
+    helm.sh/chart: ferroehr-18.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -224,6 +403,124 @@ spec:
     app.kubernetes.io/instance: ferroehr
 
 ---
+# Source: ferroehr/charts/ferropix/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ferroehr-ferropix
+  labels:
+    app.kubernetes.io/name: ferropix
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: ferropix-0.2.2
+    app.kubernetes.io/component: server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ferropix
+      app.kubernetes.io/instance: ferroehr
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ferropix
+        app.kubernetes.io/instance: ferroehr
+        app.kubernetes.io/version: "0.0.7"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: ferropix-0.2.2
+        app.kubernetes.io/component: server
+      annotations:
+        checksum/config: ee6e9176aa424e0fff9d033b96790a04bb9d18d98ff452d4778a11adab01c132
+    spec:
+      serviceAccountName: ferroehr-ferropix
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      # Longer than the server's drain window, [server] drain_timeout_ms.
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: ferropix
+          image: "ghcr.io/ferrohealth/ferropix@sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825"
+          imagePullPolicy: IfNotPresent
+          args: ["serve"]
+          env:
+            - name: FERROPIX_CONFIG
+              value: /etc/ferropix/ferropix.toml
+          ports:
+            - name: http
+              containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /health/readiness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/ferropix
+              readOnly: true
+            - name: secrets
+              mountPath: /run/secrets/ferropix
+              readOnly: true
+            - name: state
+              mountPath: /var/lib/ferropix
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: ferroehr-ferropix
+        - name: secrets
+          projected:
+            defaultMode: 0440
+            sources:
+              - secret:
+                  name: ferropix-db
+                  items:
+                    - key: url
+                      path: db-url
+              - secret:
+                  name: ferropix-data-key
+                  items:
+                    - key: data-key
+                      path: data-key
+        - name: state
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+
+---
 # Source: ferroehr/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -233,7 +530,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-17.0.0
+    helm.sh/chart: ferroehr-18.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -258,7 +555,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: ae8cb86596ae60cec94be4e38ba788d013619b21581b544edae9ace8d12f2ff8
+        checksum/config: 4b827c9622ae71a0ed6900726991a9f7a21a551a07c481c3a0bc8e7f9e08fc18
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr
@@ -407,6 +704,11 @@ spec:
                   items:
                     - key: FERROEHR__DB__URL
                       path: db.url
+              - secret:
+                  name: ferroehr-env
+                  items:
+                    - key: ehr_index.oauth.client_secret
+                      path: ehr_index.oauth.client_secret
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname

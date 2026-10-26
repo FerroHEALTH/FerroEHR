@@ -430,6 +430,10 @@
           "description": "The client secret of the grant under config.terminology.server.oauth, which must be declared, or rendering fails.",
           "type": "string"
         },
+        "ehrIndexClientSecret": {
+          "description": "The client secret of the grant under config.ehr_index.oauth, which must be declared, or rendering fails.",
+          "type": "string"
+        },
         "multimediaAccessKeyId": {
           "type": "string"
         },
@@ -1486,6 +1490,16 @@
           "description": "Send the usage report (on by default); false sends nothing."
         }
       }
+    },
+    "ferropix": {
+      "description": "The FerroPIX chart dependency's values, passed through to it; this chart reads only enabled, config.server.base_path and service.port.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
     },
     "bridge": {
       "description": "FerroBRIDGE, the FHIR and openEHR bridge, deployed as its own workload against this release's CDR. Off by default. Cluster-internal while FerroBRIDGE has no inbound authentication (FerroHEALTH/FerroBRIDGE#400): there is no Ingress key and no Service type key, and enabling it without a networkPolicy.ingressFrom peer or a cdr.existingSecret is refused at render.",

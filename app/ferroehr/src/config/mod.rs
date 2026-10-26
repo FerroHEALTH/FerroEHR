@@ -106,6 +106,9 @@ pub struct FerroEhrConfig {
     pub demographic: crate::service::demographic::identifier::config::DemographicConfig,
     /// `[cohort]` — the cross-domain cohort-query allow-list and limits.
     pub cohort: crate::service::linkage::cohort::config::CohortConfig,
+    /// `[ehr_index]` — who holds the subject-to-EHR cross-reference: an IHE
+    /// patient identity source (the default) or the in-instance map.
+    pub ehr_index: crate::service::ehr_index::config::EhrIndexConfig,
     /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
     pub usage_report: crate::usage_report::config::UsageReportConfig,
 }
@@ -138,6 +141,7 @@ impl FerroEhrConfig {
                 .map(ConfigError::semantic),
         );
         self.validate_cohort(&mut errors);
+        self.validate_ehr_index(&mut errors);
         self.validate_deployment(&mut errors);
         self.validate_ehr_access(&mut errors);
         errors.extend(self.usage_report.errors());
@@ -331,6 +335,26 @@ impl FerroEhrConfig {
                     ceiling.source
                 )));
             }
+        }
+    }
+
+    /// The `[ehr_index]` provider is chosen and complete: an IHE patient
+    /// identity source with its endpoint, its clinical domain among the
+    /// declared pseudonym namespaces and readable `[ehr_index.tls]` material, or an explicit
+    /// `provider = "local"`. With neither, the refusal names both choices.
+    fn validate_ehr_index(&self, errors: &mut Vec<ConfigError>) {
+        let index = &self.ehr_index;
+        errors.extend(
+            index
+                .problems(&self.privacy.subject_namespaces)
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
+        if index.provider == crate::service::ehr_index::config::ProviderKind::Ihe
+            && let Err(e) =
+                ferrohealth_server::tls_client::TlsClient::read("ehr_index.tls", &index.tls)
+        {
+            errors.push(ConfigError::semantic(e.to_string()));
         }
     }
 
@@ -835,7 +859,7 @@ mod tests {
     /// registered floor imposes none.
     #[test]
     fn a_retention_below_the_jurisdiction_floor_is_refused() {
-        let mut config = FerroEhrConfig::default();
+        let mut config = standalone();
         config.audit.store.retention_days = 30;
         config.privacy.identifier_scan.rules = vec!["nl-bsn".to_owned()];
         let errors = config
@@ -865,7 +889,7 @@ mod tests {
     #[test]
     fn the_ehds_floor_holds_in_every_member_state_and_a_longer_national_floor_wins() {
         for rule in ["de-kvnr", "fi-hetu", "se-personnummer"] {
-            let mut config = FerroEhrConfig::default();
+            let mut config = standalone();
             config.privacy.identifier_scan.rules = vec![rule.to_owned()];
             config.audit.store.retention_days = 1095;
             let text = config
@@ -880,7 +904,7 @@ mod tests {
             config.validate().expect("the EHDS floor itself passes");
         }
 
-        let mut nl = FerroEhrConfig::default();
+        let mut nl = standalone();
         nl.privacy.identifier_scan.rules = vec!["nl-bsn".to_owned()];
         nl.audit.store.retention_days = 1096;
         let text = nl
@@ -889,7 +913,7 @@ mod tests {
             .to_string();
         assert!(text.contains("floor of 1830 days"), "{text}");
 
-        let mut ch = FerroEhrConfig::default();
+        let mut ch = standalone();
         ch.privacy.identifier_scan.rules = vec!["ch-ahvn13".to_owned()];
         ch.audit.store.retention_days = 366;
         ch.validate()
@@ -902,7 +926,7 @@ mod tests {
     /// (#3346).
     #[test]
     fn the_sgb_v_ceiling_applies_only_to_a_declared_controller() {
-        let mut config = FerroEhrConfig::default();
+        let mut config = standalone();
         config.privacy.identifier_scan.rules = vec!["de-kvnr".to_owned()];
         config.audit.store.retention_days = 0;
         config
@@ -947,7 +971,7 @@ mod tests {
     /// the Dutch five years and the Swiss one year (#3625).
     #[test]
     fn retention_years_meets_a_floor_in_years_exactly() {
-        let mut nl = FerroEhrConfig::default();
+        let mut nl = standalone();
         nl.privacy.identifier_scan.rules = vec!["nl-bsn".to_owned()];
         nl.audit.store.retention_years = Some(4);
         let text = nl
@@ -961,12 +985,12 @@ mod tests {
         nl.audit.store.retention_years = Some(5);
         nl.validate().expect("five years meet the Dutch floor");
 
-        let mut ch = FerroEhrConfig::default();
+        let mut ch = standalone();
         ch.privacy.identifier_scan.rules = vec!["ch-ahvn13".to_owned()];
         ch.audit.store.retention_years = Some(1);
         ch.validate().expect("one year meets the Swiss floor");
 
-        let mut de = FerroEhrConfig::default();
+        let mut de = standalone();
         de.privacy.identifier_scan.rules = vec!["de-kvnr".to_owned()];
         de.audit.store.sgb_v_309_controller = true;
         de.audit.store.retention_years = Some(4);
@@ -981,7 +1005,7 @@ mod tests {
     /// boot error naming the keys.
     #[test]
     fn retention_days_and_retention_years_are_mutually_exclusive() {
-        let mut config = FerroEhrConfig::default();
+        let mut config = standalone();
         config.audit.store.retention_days = 1096;
         config.audit.store.retention_years = Some(3);
         let text = config
@@ -1007,7 +1031,7 @@ mod tests {
     /// (#3346).
     #[test]
     fn a_ceiling_below_a_floor_is_refused() {
-        let mut config = FerroEhrConfig::default();
+        let mut config = standalone();
         config.audit.store.sgb_v_309_controller = true;
         config.privacy.identifier_scan.rules = vec!["de-kvnr".to_owned(), "nl-bsn".to_owned()];
         config.audit.store.retention_days = 1095;
@@ -1027,7 +1051,31 @@ mod tests {
 
     use super::*;
     use crate::config::authz::AbacParam;
+    use crate::service::ehr_index::config::EhrIndexConfig;
     use ferrohealth_secret::secret_url::SecretUrl;
+
+    /// The shipped defaults of a FerroEHR run on its own: the explicit
+    /// `[ehr_index] provider = "local"` opt-in, without which the default IHE
+    /// provider refuses for want of an endpoint.
+    fn standalone() -> FerroEhrConfig {
+        FerroEhrConfig {
+            ehr_index: EhrIndexConfig::local(),
+            ..FerroEhrConfig::default()
+        }
+    }
+
+    /// The shipped defaults, with no identity source and no opt-in, are
+    /// refused, and the refusal names both choices; the opt-in alone passes.
+    #[test]
+    fn the_defaults_refuse_until_an_identity_source_or_local_is_chosen() {
+        let refused = FerroEhrConfig::default()
+            .validate()
+            .expect_err("no identity source and no opt-in");
+        let text = refused.to_string();
+        assert!(text.contains("ehr_index.pixm_url"), "{text}");
+        assert!(text.contains("provider = \"local\""), "{text}");
+        assert!(standalone().validate().is_ok());
+    }
 
     /// `c` serialized as the TOML table `ferroehr config check` renders
     /// (`ferrohealth_config::report::check_report` writes the same table).
@@ -1743,7 +1791,7 @@ mod tests {
 
         let leaky =
             |n: u32| SecretUrl::new(format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}:1/p{n}"));
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.db.url = leaky(1);
         c.db.migrate_url = Some(leaky(2));
         c.storage.clinical.url = Some(leaky(3));
@@ -1793,7 +1841,7 @@ mod tests {
     /// userinfo it carries.
     #[test]
     fn an_issuer_refusal_masks_userinfo() {
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.smart.enabled = true;
         c.smart.public_base_url = Some("https://a:SMART_PW_SENTINEL@cdr.example".to_owned());
         c.auth.issuer = ferrohealth_smart::config::IssuerKey::Flat(
@@ -1825,7 +1873,7 @@ mod tests {
         const S3_KEY: &str = "S3_SECRET_SENTINEL_8c6b";
         const EVENTS_PW: &str = "EVENTS_PW_SENTINEL_2f7e";
 
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.db.url = SecretUrl::new(format!(
             "postgres://dbuser:{DB_PW}@db.internal:5432/ferroehr"
         ));
@@ -1889,6 +1937,9 @@ mod tests {
                 ),
                 ("FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR", "true"),
                 ("FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE", "warn"),
+                // The explicit standalone opt-in, without which the default
+                // IHE provider refuses for want of an endpoint.
+                ("FERROEHR__EHR_INDEX__PROVIDER", "local"),
                 (
                     "FERROEHR__PRIVACY__IDENTIFIER_SCAN__RULES",
                     "nl-bsn,gb-nhs-number",
@@ -1933,6 +1984,7 @@ mod tests {
             &env(&[
                 ("FERROEHR__AUDIT__PURPOSE_CODES", "TREAT,ETREAT"),
                 ("FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES", "ETREAT"),
+                ("FERROEHR__EHR_INDEX__PROVIDER", "local"),
             ]),
             &[],
         );
@@ -1949,7 +2001,7 @@ mod tests {
     /// error naming the code, including when no purpose list is configured.
     #[test]
     fn an_emergency_code_outside_the_purpose_codes_is_refused() {
-        let mut config = FerroEhrConfig::default();
+        let mut config = standalone();
         config.audit.emergency_purpose_codes = vec!["ETREAT".to_owned()];
         let text = config
             .validate()
@@ -1974,7 +2026,7 @@ mod tests {
     /// off, and an `open` default never trips the check.
     #[test]
     fn a_restricted_ehr_default_without_authentication_is_refused() {
-        let mut config = FerroEhrConfig::default();
+        let mut config = standalone();
         config.authz.rbac.ehr_access_default = authz::EhrAccessDefault::Restricted;
         config
             .validate()
@@ -2014,6 +2066,7 @@ mod tests {
                 ),
                 ("FERROEHR__USAGE_REPORT__SLOW_AQL_MS", "250"),
                 ("FERROEHR__USAGE_REPORT__DEPLOYMENT", "compose"),
+                ("FERROEHR__EHR_INDEX__PROVIDER", "local"),
             ]),
             &[],
         );
@@ -2202,7 +2255,7 @@ mod tests {
         use crate::service::linkage::cohort::config::{PredicateBinding, PredicateKind};
 
         let with = |key: &str, binding: PredicateBinding| {
-            let mut c = FerroEhrConfig::default();
+            let mut c = standalone();
             c.cohort.predicates.insert(key.to_owned(), binding);
             c
         };
@@ -2407,6 +2460,7 @@ mod tests {
                 ),
             ),
             ("db", accepted_fields::<crate::db::DbConfig>("db")),
+            ("ehr_index", accepted_fields::<EhrIndexConfig>("ehr_index")),
             (
                 "signing",
                 accepted_fields::<crate::versioning::signature::config::SigningConfig>("signing"),
@@ -2446,7 +2500,7 @@ mod tests {
     #[test]
     fn an_enabled_multimedia_integration_refuses_a_blank_or_relative_endpoint() {
         for bad in ["", "   ", "seaweedfs:8333", "/bucket"] {
-            let mut c = FerroEhrConfig::default();
+            let mut c = standalone();
             c.multimedia.enabled = true;
             c.multimedia.endpoint = Some(SecretUrl::new(bad));
             let errors = c.validate().expect_err("a bad endpoint must be refused");
@@ -2461,7 +2515,7 @@ mod tests {
     /// absolute one is accepted, so the check above cannot be a blanket refusal.
     #[test]
     fn an_absent_or_absolute_multimedia_endpoint_is_accepted() {
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.multimedia.enabled = true;
         c.multimedia.endpoint = None;
         assert!(c.validate().is_ok(), "an absent endpoint is legitimate");
@@ -2473,7 +2527,7 @@ mod tests {
 
     #[test]
     fn validate_pgp_requires_key_path() {
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.signing.mode = crate::versioning::signature::config::Mode::Pgp;
         assert!(c.validate().is_err());
         c.signing.key_path = Some(PathBuf::from("/k.asc"));
@@ -2485,7 +2539,7 @@ mod tests {
     /// tokens this server accepts is refused.
     #[test]
     fn a_served_smart_document_needs_an_issuer() {
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.smart.enabled = true;
         c.smart.public_base_url = Some("https://cdr.example.com".to_owned());
         let err = c
@@ -2526,7 +2580,7 @@ mod tests {
         let jwks = assert_fs::NamedTempFile::new("jwks.json").expect("temp");
         jwks.write_str(&format!(r#"{{"keys":[{{"kty":"oct","k":"{secret_k}"}}]}}"#))
             .expect("write");
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.auth.issuer =
             ferrohealth_smart::config::IssuerKey::Flat("https://idp.example.test".to_owned());
         c.auth.audience = vec!["ferroehr".to_owned()];
@@ -2542,7 +2596,7 @@ mod tests {
     /// section's own unit tests pin (RFC 7519 §4.1.3, RFC 8414 §2, RFC 9068 §4).
     #[test]
     fn validate_reports_auth_section_errors() {
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.auth.issuer =
             ferrohealth_smart::config::IssuerKey::Flat("http://idp.example.test".to_owned());
         c.auth.audience = vec!["ferroehr".to_owned()];
@@ -2561,7 +2615,7 @@ mod tests {
 
     #[test]
     fn validate_management_port_must_differ_from_bind() {
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.server.bind = "0.0.0.0:8080".to_owned();
         c.management.port = Some(8080);
         assert!(c.validate().is_err());
@@ -2580,7 +2634,7 @@ mod tests {
             "/ferroehr/cdr/v1",
             "/ferroehr/rest-api/openehr-1.2.0/v1",
         ] {
-            let mut c = FerroEhrConfig::default();
+            let mut c = standalone();
             c.server.base_path = base_path.to_owned();
             assert!(c.validate().is_ok(), "{base_path} must be accepted");
         }
@@ -2605,7 +2659,7 @@ mod tests {
             ("/ferroehr//v1", "must not contain an empty path segment"),
             ("/ferroehr/re st/v1", "RFC 3986 unreserved characters"),
         ] {
-            let mut c = FerroEhrConfig::default();
+            let mut c = standalone();
             c.server.base_path = base_path.to_owned();
             let err = c
                 .validate()
@@ -2620,7 +2674,7 @@ mod tests {
     /// all in one boot error, so an operator fixes the key in one iteration.
     #[test]
     fn validate_reports_every_broken_base_path_rule_at_once() {
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.server.base_path = "cdr//api/".to_owned();
         let err = c
             .validate()
@@ -2649,7 +2703,7 @@ mod tests {
     /// would have let through into unmintable version ids.
     #[test]
     fn validate_system_id_is_a_legal_uid() {
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         assert!(c.validate().is_ok());
 
         for refused in [
@@ -2689,7 +2743,7 @@ mod tests {
     /// is also what lets every configuration error surface at once.
     #[test]
     fn validate_terminology_server_needs_a_url() {
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.terminology.server.enabled = true;
         let err = c
             .validate()
@@ -2710,7 +2764,7 @@ mod tests {
     fn validate_terminology_server_oauth_shape() {
         use ferrohealth_smart::config::OauthSection;
 
-        let mut c = FerroEhrConfig::default();
+        let mut c = standalone();
         c.terminology.server.enabled = true;
         c.terminology.server.url = SecretUrl::new("https://ts.example/fhir");
         c.terminology.server.oauth = Some(OauthSection::default());

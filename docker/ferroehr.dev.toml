@@ -118,3 +118,8 @@ password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl
 scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
 roles = ["READONLY"]
 
+# The in-instance subject-to-EHR map, the explicit opt-in of a FerroEHR run
+# on its own: development, the UI journeys and the conformance lanes ask no
+# identity source. Without it the server refuses to start.
+[ehr_index]
+provider = "local"

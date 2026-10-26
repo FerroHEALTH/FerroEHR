@@ -64,3 +64,9 @@ api_enabled = true
 enabled = true
 url = "http://ferroterm:8080/r4b"
 fail_on_error = false
+
+# The in-instance subject-to-EHR map, the explicit opt-in of a FerroEHR run
+# on its own: the public sandbox asks no identity source and holds synthetic
+# records only. Without it the server refuses to start.
+[ehr_index]
+provider = "local"

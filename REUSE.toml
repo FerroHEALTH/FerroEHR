@@ -246,6 +246,15 @@ precedence = "override"
 SPDX-FileCopyrightText = "Cadasto B.V."
 SPDX-License-Identifier = "BUSL-1.1"
 
+# The IHE PIXm 3.1.0 excerpt is IHE International's, under the CC-BY-4.0 its
+# package manifest declares; the subtree's PROVENANCE.md records the pin and
+# the attribution.
+[[annotations]]
+path = "corpus/ihe-pixm/**"
+precedence = "override"
+SPDX-FileCopyrightText = "IHE International"
+SPDX-License-Identifier = "CC-BY-4.0"
+
 # The ADL2 regression library inside the openehr-adl corpus is the same
 # upstream repository as the tree above but a different subtree, and it was
 # measured separately (#3150): of 302 archetypes, 111 state a licence and 191
