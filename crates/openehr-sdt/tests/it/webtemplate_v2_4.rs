@@ -863,3 +863,158 @@ fn the_overlay_parents_key_is_the_generators() {
         openehr_adl::opt::OVERLAY_PARENTS_KEY
     );
 }
+
+/// A synthetic ADL 1.4 COMPOSITION whose `category` names an `openehr` code
+/// and whose one context element is a local coded text with an assumed code.
+const ADL14_CODED_COMPOSITION: &str = "\
+archetype (adl_version=1.4)
+\topenEHR-EHR-COMPOSITION.ferro_coded.v1
+
+concept
+\t[at0000]
+
+language
+\toriginal_language = <[ISO_639-1::en]>
+
+description
+\toriginal_author = <
+\t\t[\"name\"] = <\"FerroEHR\">
+\t>
+\tlifecycle_state = <\"AuthorDraft\">
+\tdetails = <
+\t\t[\"en\"] = <
+\t\t\tlanguage = <[ISO_639-1::en]>
+\t\t\tpurpose = <\"A synthetic coded composition.\">
+\t\t>
+\t>
+
+definition
+\tCOMPOSITION[at0000] matches {
+\t\tcategory matches {
+\t\t\tDV_CODED_TEXT matches {
+\t\t\t\tdefining_code matches {[openehr::433]}
+\t\t\t}
+\t\t}
+\t\tcontext matches {
+\t\t\tEVENT_CONTEXT matches {
+\t\t\t\tother_context matches {
+\t\t\t\t\tITEM_TREE[at0001] matches {
+\t\t\t\t\t\titems cardinality matches {0..*; unordered} matches {
+\t\t\t\t\t\t\tELEMENT[at0002] occurrences matches {0..1} matches {
+\t\t\t\t\t\t\t\tvalue matches {
+\t\t\t\t\t\t\t\t\tDV_CODED_TEXT matches {
+\t\t\t\t\t\t\t\t\t\tdefining_code matches {
+\t\t\t\t\t\t\t\t\t\t\t[local::
+\t\t\t\t\t\t\t\t\t\t\tat0003,
+\t\t\t\t\t\t\t\t\t\t\tat0004;
+\t\t\t\t\t\t\t\t\t\t\tat0003]
+\t\t\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t}
+\t\t\t\t\t\t}
+\t\t\t\t\t}
+\t\t\t\t}
+\t\t\t}
+\t\t}
+\t}
+
+ontology
+\tterm_definitions = <
+\t\t[\"en\"] = <
+\t\t\titems = <
+\t\t\t\t[\"at0000\"] = <text = <\"Coded\">; description = <\"Coded\">>
+\t\t\t\t[\"at0001\"] = <text = <\"Tree\">; description = <\"Tree\">>
+\t\t\t\t[\"at0002\"] = <text = <\"Priority\">; description = <\"Priority\">>
+\t\t\t\t[\"at0003\"] = <text = <\"Routine\">; description = <\"Routine\">>
+\t\t\t\t[\"at0004\"] = <text = <\"Urgent\">; description = <\"Urgent\">>
+\t\t\t>
+\t\t>
+\t>
+";
+
+/// An at-coded ADL 2 template over [`ADL14_CODED_COMPOSITION`].
+const ADL14_CODED_TEMPLATE: &str = "\
+template (adl_version=2.4.0; rm_release=1.1.0)
+    openEHR-EHR-COMPOSITION.ferro_coded_template.v1.0.0
+
+specialize
+    openEHR-EHR-COMPOSITION.ferro_coded.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    lifecycle_state = <\"unmanaged\">
+    original_author = <
+        [\"name\"] = <\"FerroEHR\">
+    >
+    details = <
+        [\"en\"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <\"A synthetic template.\">
+        >
+    >
+
+definition
+    COMPOSITION[at0000.1] matches {
+        context matches {
+            EVENT_CONTEXT matches {
+                other_context matches {
+                    ITEM_TREE[at0001] matches {
+                        items matches {
+                            ELEMENT[at0002] occurrences matches {1}
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        [\"en\"] = <
+            [\"at0000.1\"] = <text = <\"Coded template\">; description = <\"Coded template\">>
+        >
+    >
+";
+
+/// An archetype read in the ADL 1.4 dialect keeps a qualified term constraint
+/// verbatim, and the ADL 2 builder reads it as the 1.4 builder reads a
+/// `C_CODE_PHRASE`: an `openehr` code with its terminology and rubric, local
+/// codes with their archetype rubrics and the assumed code as the default.
+#[test]
+fn an_adl14_qualified_term_constraint_reads_as_its_codes() {
+    let mut repo = ArchetypeRepository::new();
+    repo.insert(
+        parse_artefact(ADL14_CODED_COMPOSITION, Dialect::Adl14).expect("the archetype parses"),
+    );
+    let template =
+        parse_artefact(ADL14_CODED_TEMPLATE, Dialect::Adl2).expect("the template parses");
+    let opt = create_opt(&template, &repo).expect("the operational template builds");
+    let wt = build_web_template_v2_4(&opt).expect("the web template builds");
+
+    let category = find(&wt.tree, "category").expect("a category node");
+    let input = category.inputs.first().expect("a code input");
+    assert_eq!(input.terminology.as_deref(), Some("openehr"));
+    let codes: Vec<(&str, Option<&str>)> = input
+        .list
+        .iter()
+        .map(|cv| (cv.value.as_str(), cv.label.as_deref()))
+        .collect();
+    assert_eq!(codes, [("433", Some("event"))]);
+
+    let priority = find(&wt.tree, "priority").expect("a priority node");
+    let input = priority.inputs.first().expect("a code input");
+    assert_eq!(input.terminology, None);
+    let codes: Vec<(&str, Option<&str>)> = input
+        .list
+        .iter()
+        .map(|cv| (cv.value.as_str(), cv.label.as_deref()))
+        .collect();
+    assert_eq!(
+        codes,
+        [("at0003", Some("Routine")), ("at0004", Some("Urgent"))]
+    );
+    assert_eq!(input.default_value, Some(serde_json::json!("at0003")));
+}

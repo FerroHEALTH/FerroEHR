@@ -614,6 +614,9 @@ fn coded_inputs_from(
     term: &ArchetypeTerminology,
     ctc: &CTerminologyCode,
 ) -> Vec<WebTemplateInput> {
+    if let Some(qualified) = Adl14Qualified::parse(&ctc.constraint) {
+        return qualified.inputs(ctx, term);
+    }
     let codes = expand_codes(term, &ctc.constraint);
     let assumed = ctc.assumed_value.as_ref().map(|tc| tc.code_string.as_str());
     if codes.is_empty() {
@@ -634,6 +637,80 @@ fn coded_inputs_from(
     // Local (archetype-defined) value sets have terminology `local` — left
     // implicit (the reference form omits `terminology: "local"`).
     vec![input]
+}
+
+/// An ADL 1.4 qualified term constraint an archetype read in the ADL 1.4
+/// dialect keeps verbatim in `C_TERMINOLOGY_CODE.constraint`:
+/// `terminology::code[,code]*[;assumed]` (ADL 1.4 `master09` §Custom Syntax).
+///
+/// NOTE: no openEHR specification governs reading it here; `openehr-adl` keeps the 1.4 spelling for its converter, and an ADL 2 template over unconverted at-coded archetypes reaches this builder with it, so the builder reads it as the 1.4 builder reads a `C_CODE_PHRASE`.
+#[derive(Debug, PartialEq, Eq)]
+struct Adl14Qualified<'a> {
+    terminology: &'a str,
+    codes: Vec<&'a str>,
+    assumed: Option<&'a str>,
+}
+
+impl<'a> Adl14Qualified<'a> {
+    /// The parts of a verbatim qualified constraint, `None` for an ADL 2
+    /// constraint (an at-code or an ac-code).
+    fn parse(constraint: &'a str) -> Option<Self> {
+        let (terminology, rest) = constraint.trim().split_once("::")?;
+        let (list, assumed) = match rest.split_once(';') {
+            Some((list, assumed)) => (list, Some(assumed.trim())),
+            None => (rest, None),
+        };
+        let codes = list
+            .split(',')
+            .map(str::trim)
+            .filter(|code| !code.is_empty())
+            .collect();
+        Some(Self {
+            terminology: terminology.trim(),
+            codes,
+            assumed: assumed.filter(|code| !code.is_empty()),
+        })
+    }
+
+    /// The `code` input of the constraint, as the 1.4 builder writes it for a
+    /// `C_CODE_PHRASE`: a local code takes its rubric from the archetype, an
+    /// `openehr` code from the openEHR terminology, and a terminology other
+    /// than `local` is named on the input.
+    fn inputs(&self, ctx: &Ctx, term: &ArchetypeTerminology) -> Vec<WebTemplateInput> {
+        let local = self.terminology.eq_ignore_ascii_case("local");
+        let named = (!local).then(|| self.terminology.to_owned());
+        if self.codes.is_empty() {
+            let mut inputs = external_coded_inputs();
+            for input in &mut inputs {
+                input.terminology.clone_from(&named);
+            }
+            return inputs;
+        }
+        let mut input = WebTemplateInput::new(WebTemplateInputType::CodedText, Some("code"));
+        input.list = self
+            .codes
+            .iter()
+            .map(|code| {
+                if local {
+                    coded_value(ctx, term, code)
+                } else {
+                    let label = self
+                        .terminology
+                        .eq_ignore_ascii_case("openehr")
+                        .then(|| openehr_term::bundle::openehr().concept_rubric(code, "en"))
+                        .flatten()
+                        .map_or_else(|| (*code).to_owned(), str::to_owned);
+                    WebTemplateCodedValue::new(*code, Some(label))
+                }
+            })
+            .collect();
+        input.terminology = named;
+        input.default_value = self
+            .assumed
+            .filter(|code| self.codes.contains(code))
+            .map(|code| default_string(&code));
+        vec![input]
+    }
 }
 
 /// The at-codes a `C_TERMINOLOGY_CODE.constraint` admits: an ac-code resolves to
