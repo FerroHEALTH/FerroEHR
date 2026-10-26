@@ -663,10 +663,7 @@ impl FerroEhrService {
             .clinical_subject(&a_subject_id)
             .await?
             .ok_or_else(|| IndexError::SubjectDoesNotExist(a_subject_id.clone()))?;
-        let status = status_for_subject(
-            an_ehr_status.unwrap_or_else(initial_ehr_status),
-            &subject,
-        );
+        let status = status_for_subject(an_ehr_status.unwrap_or_else(initial_ehr_status), &subject);
         self.commit_new_ehr(an_ehr_id, status, None).await?;
         Ok(an_ehr_id)
     }

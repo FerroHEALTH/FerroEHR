@@ -158,6 +158,10 @@ exceptions = [
   # Licensor's code under the same licence: the CDR's one client of its
   # terminology server (owner decision 2026-10-24, #3085).
   { allow = ["BUSL-1.1"], crate = "ferrobridge-term" },
+  # FerroPIX's IHE ITI client library `ihe-iti` is the same Licensor's code under
+  # the same licence: its PIXm Consumer (ITI-83) asks the IHE patient identity
+  # source of the EHR index (#3380).
+  { allow = ["BUSL-1.1"], crate = "ihe-iti" },
 ]
 
 [bans]

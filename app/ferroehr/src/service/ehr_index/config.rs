@@ -11,7 +11,7 @@
 //! to start and names both choices.
 //!
 //! NOTE: no openEHR spec governs where the cross-reference lives (RM common
-//! master04 §PARTY_SELF: "may be done elsewhere for security reasons"): our own design.
+//! master04 §`PARTY_SELF`: "may be done elsewhere for security reasons"): our own design.
 
 use std::path::PathBuf;
 
@@ -205,20 +205,22 @@ mod tests {
 
     #[test]
     fn local_is_an_explicit_opt_in() {
-        assert!(EhrIndexConfig::local().problems(&[]).is_empty());
+        assert_eq!(EhrIndexConfig::local().problems(&[]), Vec::<String>::new());
         let mixed = EhrIndexConfig {
             provider: ProviderKind::Local,
             ..ihe()
         };
-        assert!(!mixed.problems(&[DOMAIN.to_owned()]).is_empty());
+        assert_ne!(mixed.problems(&[DOMAIN.to_owned()]), Vec::<String>::new());
     }
 
     #[test]
     fn a_configured_source_needs_a_declared_pseudonym_domain() {
-        assert!(ihe().problems(&[DOMAIN.to_owned()]).is_empty());
+        assert_eq!(ihe().problems(&[DOMAIN.to_owned()]), Vec::<String>::new());
         let problems = ihe().problems(&["urn:oid:2.999.9".to_owned()]);
         assert!(
-            problems.iter().any(|p| p.contains("privacy.subject_namespaces")),
+            problems
+                .iter()
+                .any(|p| p.contains("privacy.subject_namespaces")),
             "{problems:?}"
         );
     }

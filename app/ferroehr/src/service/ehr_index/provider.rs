@@ -11,7 +11,7 @@
 //! from the local map.
 //!
 //! NOTE: no openEHR spec governs where the cross-reference lives (RM common
-//! master04 §PARTY_SELF): our own design.
+//! master04 §`PARTY_SELF`): our own design.
 
 use std::sync::Arc;
 
@@ -197,7 +197,10 @@ impl FerroEhrService {
     /// [`IndexError::Unconfigured`] with no provider installed, and
     /// [`IndexError::HeldBySource`] under an identity source, which holds the
     /// cross-reference itself.
-    pub(in crate::service) fn local_index(&self, operation: &'static str) -> Result<(), IndexError> {
+    pub(in crate::service) fn local_index(
+        &self,
+        operation: &'static str,
+    ) -> Result<(), IndexError> {
         match &self.ehr_index {
             EhrIndexProvider::Local => Ok(()),
             EhrIndexProvider::Unconfigured => Err(IndexError::Unconfigured),

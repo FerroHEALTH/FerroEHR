@@ -52,6 +52,7 @@ use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
 use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
 
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::status::CallStatusType;
@@ -345,7 +346,8 @@ async fn import_ehr_promotes_the_subject_for_lookup_and_uniqueness() {
     let target_db = testkit::db().await.expect("testkit database");
     let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
         &target_db.pool(),
-    ));
+    ))
+    .with_ehr_index(EhrIndexProvider::Local);
 
     let ehr = source
         .create_ehr(Some(typed(&status_for_subject("patient-import-1"))))
@@ -407,7 +409,8 @@ async fn import_ehr_conflicting_subject_is_rejected_and_rolled_back() {
     let target_db = testkit::db().await.expect("testkit database");
     let target = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
         &target_db.pool(),
-    ));
+    ))
+    .with_ehr_index(EhrIndexProvider::Local);
 
     // The import will carry the subject under namespace "local" (the
     // extract's master09 §Creation Semantics OBJECT_REF rewrite), so the

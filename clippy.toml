@@ -29,7 +29,7 @@ doc-valid-idents = [
   "..",
   "openEHR", "EHRbase", "FerroEHR", "FerroUI", "FerroHEALTH", "FerroAUDIT", "OpenAPI", "PostgreSQL", "JSONB",
   "AQL", "cADL", "dADL", "ODIN", "WebTemplate", "GraphQL",
-  "FHIR", "SNOMED", "LOINC", "DICOM", "IANA", "OAuth2", "OpenID",
+  "FHIR", "SNOMED", "LOINC", "DICOM", "IANA", "OAuth2", "OpenID", "PIXm", "PDQm",
 ]
 
 # ── type-level enforcement of the jiff time pin (docs/VERSIONS.md; sqlx's

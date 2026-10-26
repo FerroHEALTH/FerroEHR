@@ -269,13 +269,6 @@ impl IdentifierProtection {
         Ok(schemes)
     }
 
-    /// The opaque subject pseudonym `party` is known by on the clinical side
-    /// ([`RootKey::subject_pseudonym`]).
-    #[must_use]
-    pub fn subject_pseudonym(&self, party: Uuid) -> Uuid {
-        self.root.subject_pseudonym(party)
-    }
-
     /// The party holding `value` in `scheme`, resolved through the keyed digest.
     ///
     /// # Errors

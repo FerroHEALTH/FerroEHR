@@ -135,14 +135,15 @@ impl From<IndexError> for SmError {
                 ),
             ),
             IndexError::Service(e) => e.into(),
-            refused @ IndexError::Unconfigured => SmError::exception(refused.to_string()),
+            refused @ (IndexError::Unconfigured | IndexError::NotPseudonymous) => {
+                SmError::exception(refused.to_string())
+            }
             refused @ IndexError::HeldBySource { .. } => {
                 SmError::new(CallStatusType::NotImplemented, refused.to_string())
             }
             IndexError::IdentitySource(source) => {
                 SmError::exception("the IHE patient identity source failed").with_source(source)
             }
-            refused @ IndexError::NotPseudonymous => SmError::exception(refused.to_string()),
         }
     }
 }
