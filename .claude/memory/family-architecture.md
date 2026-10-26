@@ -34,6 +34,10 @@ The rules that follow from it:
   - FerroAUDIT: `ihe-atna` (the whole audit trail: sending, forwarding and
     retrieving) and `ehds-logging` (the EHDS access record);
   - FerroUI: `ferrohealth-ui` (every console);
+  - FerroSYS: the system plumbing every product shares (`ferrohealth-secret`,
+    `-config`, `-telemetry`, `-health`, `-server`, `-usage-report`: secrets and
+    redaction, configuration, logging and OpenTelemetry, health, the HTTP
+    stack and drain, the usage report), being built from 2026-10-26;
   - protocol clients and models: `fhir-types` and `ferrobridge-term` from
     FerroBRIDGE, `ihe-iti` and `nl-generic-functions` from FerroPIX, the
     `openehr-*` crates from FerroEHR.
@@ -44,8 +48,9 @@ The rules that follow from it:
   the whole document; WebAssembly is the normal path and the
   no-WebAssembly page only the fallback (FerroUI #410).
 
-Out of scope until the owner says otherwise: FerroFORMS (paused), the
-FerroHEALTH umbrella repository (paused), and Veredictum (being rewritten,
+FerroSYS is shared crates like FerroAUDIT and FerroAUTH, never a control plane
+or a central service. Out of scope until the owner says otherwise: FerroFORMS
+(paused), the FerroHEALTH umbrella repository (paused), and Veredictum (being rewritten,
 so its verdicts are not authority). FerroPULSE receives the products'
 usage report, which release compose files keep on by default with a
 documented off switch.
