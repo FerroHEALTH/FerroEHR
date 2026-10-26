@@ -1054,11 +1054,19 @@ pub(crate) fn emit_module(spec: &ModuleSpec) -> String {
             "\n/// Parse {} {} XML document into {} [`types::{}`].\n\
              ///\n\
              /// # Errors\n\
-             /// Propagates canonical-XML parse errors.\n\
+             /// Propagates canonical-XML parse errors, and refuses a root element other\n\
+             /// than `<{}>`.\n\
              pub fn from_xml{}(xml: &str) -> Result<types::{}, crate::xml::runtime::XmlError> {{\n\
-             crate::xml::runtime::from_xml(xml)\n\
+             crate::xml::runtime::from_xml_rooted(xml, \"{}\")\n\
              }}",
-            e.article, e.what, e.article, e.root_rust, e.suffix, e.root_rust
+            e.article,
+            e.what,
+            e.article,
+            e.root_rust,
+            e.root_element,
+            e.suffix,
+            e.root_rust,
+            e.root_element
         );
         let _ = writeln!(
             b,

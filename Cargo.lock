@@ -2692,7 +2692,7 @@ dependencies = [
  "openehr-lang",
  "openehr-query",
  "openehr-rm",
- "openehr-sdt 0.0.102",
+ "openehr-sdt 0.0.103",
  "openehr-term",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -2785,7 +2785,7 @@ dependencies = [
  "openehr-its",
  "openehr-lang",
  "openehr-rm",
- "openehr-sdt 0.0.102",
+ "openehr-sdt 0.0.103",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
@@ -2832,7 +2832,7 @@ dependencies = [
  "ferroehr",
  "ferroehr-rest",
  "openehr-its",
- "openehr-sdt 0.0.102",
+ "openehr-sdt 0.0.103",
  "reqwest",
  "serde_json",
  "sqlx",
@@ -2865,7 +2865,7 @@ dependencies = [
  "openehr-am",
  "openehr-its",
  "openehr-query",
- "openehr-sdt 0.0.102",
+ "openehr-sdt 0.0.103",
  "openidconnect",
  "reqwest",
  "serde",
@@ -5353,7 +5353,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.21.7",
  "chrono",
  "getrandom 0.2.17",
  "http",
@@ -5487,7 +5487,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "openehr-adl"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "indexmap 2.14.2",
  "openehr-am",
@@ -5503,7 +5503,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-am"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "openehr-base",
  "openehr-lang",
@@ -5513,7 +5513,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-base"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "serde",
  "serde_json",
@@ -5533,7 +5533,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-its"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "async-trait",
  "axum",
@@ -5567,7 +5567,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-lang"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "assert_fs",
  "chumsky",
@@ -5581,7 +5581,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-query"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "chumsky",
  "logos",
@@ -5590,7 +5590,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-rm"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "insta",
  "jsonschema",
@@ -5614,7 +5614,7 @@ checksum = "2ea94a36d6f84491e59c51df4b6d0c4c06b524728e98abb93fcfd29c45e014f7"
 
 [[package]]
 name = "openehr-sdt"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "fancy-regex",
  "indexmap 2.14.2",
@@ -5638,7 +5638,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-term"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "openehr-base",
  "roxmltree",
@@ -6077,7 +6077,7 @@ dependencies = [
  "aes-gcm 0.10.3",
  "aes-kw",
  "argon2 0.5.3",
- "base64 0.22.1",
+ "base64 0.21.7",
  "bitfields",
  "block-padding",
  "blowfish",
@@ -6519,7 +6519,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 2.0.119",

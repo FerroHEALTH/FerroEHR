@@ -12,9 +12,10 @@ pub mod types;
 /// Parse an operational template XML document into an [`types::OperationalTemplate`].
 ///
 /// # Errors
-/// Propagates canonical-XML parse errors.
+/// Propagates canonical-XML parse errors, and refuses a root element other
+/// than `<template>`.
 pub fn from_xml(xml: &str) -> Result<types::OperationalTemplate, crate::xml::runtime::XmlError> {
-    crate::xml::runtime::from_xml(xml)
+    crate::xml::runtime::from_xml_rooted(xml, "template")
 }
 
 /// Serialize an [`types::OperationalTemplate`] back to OPT 1.4 XML (root `<template>`,

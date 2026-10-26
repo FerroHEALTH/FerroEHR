@@ -52,6 +52,15 @@ fn every_opt_template_parses() {
     let mut parsed = 0usize;
     for path in &files {
         let xml = std::fs::read_to_string(path).expect("read opt file");
+        if let Some(citation) = common::schema_invalid_service_opt(path) {
+            assert!(
+                openehr_its::opt14::from_xml(&xml).is_err(),
+                "{} is adjudicated XSD-invalid ({citation}) but parses",
+                path.display()
+            );
+            parsed += 1;
+            continue;
+        }
         match openehr_its::opt14::from_xml(&xml) {
             Ok(_) => parsed += 1,
             Err(e) => failures.push((path.clone(), e.to_string())),
@@ -102,6 +111,10 @@ fn every_official_cnf_robot_template_parses() {
             // type="CODE_PHRASE"/> — no minOccurs="0").
             "minimal_action_removed_language.opt",
             "Template.xsd OPERATIONAL_TEMPLATE.language is mandatory",
+        ),
+        (
+            "clinical_content_validation.opt",
+            "Archetype.xsd C_COMPLEX_OBJECT holds <attributes>, never <children> directly",
         ),
         (
             // Its T_COMPLEX_OBJECT default_value DV_PROPORTION carries only
@@ -161,6 +174,9 @@ fn every_opt_template_round_trips() {
     let mut failures = Vec::new();
     for path in &files {
         let xml = std::fs::read_to_string(path).expect("read opt file");
+        if common::schema_invalid_service_opt(path).is_some() {
+            continue;
+        }
         let opt = match openehr_its::opt14::from_xml(&xml) {
             Ok(o) => o,
             Err(e) => {

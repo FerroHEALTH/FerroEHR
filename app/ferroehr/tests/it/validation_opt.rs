@@ -134,6 +134,15 @@ fn corpus_all_valid_opts_pass() {
     let mut failures = Vec::new();
     for path in &files {
         let xml = std::fs::read_to_string(path).expect("read opt");
+        // NOTE: its-xml-1.0.2-nsv1 Archetype.xsd C_COMPLEX_OBJECT holds <attributes>, never
+        // <children> directly, so the strict reader refuses this file (#3893).
+        if path
+            .file_name()
+            .is_some_and(|n| n == "clinical_content_validation.opt")
+        {
+            assert!(opt14::from_xml(&xml).is_err(), "{} parses", path.display());
+            continue;
+        }
         let opt = match opt14::from_xml(&xml) {
             Ok(opt) => opt,
             Err(e) => {
