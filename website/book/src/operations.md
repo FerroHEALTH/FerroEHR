@@ -784,30 +784,34 @@ only closed-set labels and opaque request/trace ids, so correlation to a
 patient is possible only through the [audit trail](audit.md).
 
 - **Logs** go to stdout (JSON when not attached to a terminal, pretty on a
-  TTY) each line stamped with the trace and span id. Shipping and rotation
-  are the platform's job. `FERROEHR__LOG__FORMAT` (`auto`/`json`/`pretty`) and
-  `FERROEHR__LOG__FILTER` (or `RUST_LOG`, default `info,ferroehr=info`) control
-  them, and the level can be changed at runtime through the `loggers` endpoint
-  below. On boot the server prints a one-time ASCII banner (version, maintainer,
-  project URL, and spec pins) to stdout ahead of the logs; it is suppressed
-  under `FERROEHR__LOG__FORMAT=json` so machine log consumers see only structured
-  lines.
+  TTY). Shipping and rotation are the platform's job.
+  `FERROEHR__TELEMETRY__FORMAT` (`auto`/`json`/`pretty`) and
+  `FERROEHR__TELEMETRY__FILTER` (or `RUST_LOG`, default
+  `info,hyper=warn,tower=warn,h2=warn`) control them, and the level can be
+  changed at runtime through the `loggers` endpoint below. Every request writes
+  one request-log line: method, route template, status, latency and the
+  server's request id. On boot the server prints a one-time ASCII banner
+  (version, maintainer, project URL, and spec pins) to stdout ahead of the
+  logs; it is suppressed under `FERROEHR__TELEMETRY__FORMAT=json` so machine
+  log consumers see only structured lines.
 - **Traces** export to any OpenTelemetry collector (Tempo, Jaeger, and so on)
-  over OTLP, but only when you configure an endpoint; with none set, the
-  tracing layer is not installed at all (zero overhead). Root spans are named
-  by route template, never by a path containing ids.
+  over OTLP, but only when you configure `[telemetry.otlp]`. Each request's
+  span is named by route template, never by a path containing ids. A client's
+  `traceparent` is never read: every request starts a trace of the server's
+  own.
 - **Metrics** come from **one** OpenTelemetry meter provider with up to two
-  readers: a Prometheus reader behind `/management/prometheus`, and (when
-  `telemetry.metrics_push` is on) a periodic OTLP reader. Every instrument
-  reaches both by construction, so a family can never exist on the scrape
-  surface and be missing from the push. The catalogue covers HTTP request
-  duration, active requests and body sizes; authentication failures and
-  authorization decisions (Cedar and remote-PDP); database pool state,
+  readers: a Prometheus reader behind `/management/prometheus`, and (with
+  `[telemetry.otlp]` and `metrics = true`) a periodic OTLP reader. Every
+  instrument reaches both by construction, so a family can never exist on the
+  scrape surface and be missing from the push. The catalogue covers HTTP
+  request duration (`http.server.request.duration`); authentication failures
+  and authorization decisions (Cedar and remote-PDP); database pool state,
   acquire latency and transaction counts; AQL query counts, latency and plan-
   cache events; compositions committed (by openEHR audit change type);
   validation failures and version-signature faults; WebTemplate cache events;
   events published; the whole ATNA audit pipeline; Tokio runtime gauges;
-  process start time; and the `ferroehr_build_info` identity.
+  process start time and resident memory; and the `ferroehr_build_info`
+  identity.
 
   Instrument names carry **no** `_total` suffix and no unit suffix: units are
   declared on the instrument and the Prometheus exporter derives
@@ -818,25 +822,25 @@ The telemetry environment variables:
 
 | Environment variable | Default | Meaning |
 |---|---|---|
-| `FERROEHR__TELEMETRY__OTLP_ENDPOINT` | unset (layer not installed) | OTLP collector endpoint |
-| `FERROEHR__TELEMETRY__SERVICE_NAME` | `ferroehr` | reported service name |
-| `FERROEHR__TELEMETRY__ENVIRONMENT` | `dev` | reported deployment environment |
-| `FERROEHR__TELEMETRY__TRACES_SAMPLE_RATIO` | `1.0` | head sampling ratio (start at `0.1` in production) |
-| `FERROEHR__TELEMETRY__METRICS_PUSH` | `false` | add the periodic OTLP metrics reader beside the Prometheus one |
-| `FERROEHR__TELEMETRY__FLAME_FILE` | unset (layer not installed) | write folded span-timing samples to this file for offline rendering, diagnostic sessions only |
+| `FERROEHR__TELEMETRY__OTLP__ENDPOINT` | unset (nothing exported) | OTLP collector endpoint |
+| `FERROEHR__TELEMETRY__OTLP__TRACES` | `true` | export the spans |
+| `FERROEHR__TELEMETRY__OTLP__METRICS` | `true` | push the metrics beside the Prometheus reader |
+| `FERROEHR__TELEMETRY__OTLP__SAMPLE_RATIO` | `1.0` | share of traces sampled (start at `0.1` in production) |
+| `FERROEHR__TELEMETRY__ENVIRONMENT` | unset | reported deployment environment |
+| `FERROEHR__MANAGEMENT__FLAME_FILE` | unset (layer not installed) | write folded span-timing samples to this file for offline rendering, diagnostic sessions only |
 
 Neither reader is reachable until you say so: the Prometheus surface needs
 `management.enabled` plus an access level on the `prometheus` endpoint (see
 [the management surface](#the-management-surface)), and the OTLP reader needs
-both `otlp_endpoint` and `metrics_push`. A server with neither still records
-every instrument; nothing exports it.
+`telemetry.otlp.endpoint`. A server with neither still records every
+instrument; nothing exports it.
 
 > [!TIP]
 > A single-container dev stack (`grafana/otel-lgtm`, bundling an OTLP
 > collector, Prometheus, Tempo, Grafana, and Loki) ships as a Compose overlay,
 > together with a provisioned Grafana dashboard (request rate/errors/duration,
 > database pool, AQL latency, validation failures, audit health) and a starter
-> alert pack; point the server at it with the two OTLP variables above.
+> alert pack; point the server at it with the OTLP variables above.
 
 **On Kubernetes**, the same keys arrive through the chart's `config`
 passthrough, and the metrics half has a second switch that is easy to miss:
@@ -845,10 +849,11 @@ passthrough, and the metrics half has a second switch that is easy to miss:
 # values.yaml
 config:
   telemetry:
-    otlp_endpoint: http://otel-collector.observability:4317
     environment: production
-    traces_sample_ratio: 0.1
-    metrics_push: true
+    otlp:
+      endpoint: http://otel-collector.observability:4317
+      sample_ratio: 0.1
+      metrics: true
   management:
     enabled: true
     endpoints:
@@ -862,8 +867,8 @@ metrics:
 `metrics.enabled` only adds the scrape **annotations**; the endpoint itself is
 opened by `config.management.endpoints.prometheus`. Both are needed for an
 annotation-discovering Prometheus, and neither is needed if you push over OTLP
-instead. **To turn telemetry off**, drop `otlp_endpoint`; the tracing layer is
-not installed at all when it is unset.
+instead. **To turn the export off**, drop `telemetry.otlp`; nothing is
+exported without it.
 
 **The default dashboard.** The "FerroEHR — service overview" Grafana
 dashboard (request rate/errors/latency, AQL rate and phase latency,

@@ -55,8 +55,8 @@ question: whether the API answers at all.
 
 ![Health](img/server/health.png)
 
-**Metrics** has four tiles (in-flight requests, compositions committed, AQL
-queries, database connections in use) over the whole metric registry: pick a
+**Metrics** has three tiles (compositions committed, AQL queries, database
+connections in use) over the whole metric registry: pick a
 metric and **Show** its current samples with their labels. The choice stays in
 the address (`/server/metrics?metric=db_pool_connections`). For dashboards
 and alerts, scrape `GET /management/prometheus`.

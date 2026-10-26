@@ -31,12 +31,12 @@
     },
     {
       "type": "stat",
-      "title": "In-flight requests",
+      "title": "Request rate",
       "datasource": { "type": "prometheus" },
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
       "targets": [
-        { "expr": "sum(http_server_active_requests)", "legendFormat": "in flight" }
+        { "expr": "sum(rate(http_server_request_duration_seconds_count[5m]))", "legendFormat": "req/s" }
       ]
     },
     {
@@ -57,7 +57,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_server_request_duration_seconds_count{status_class=\"5xx\"}[1h])) / sum(rate(http_server_request_duration_seconds_count[1h]))",
+          "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[1h])) / sum(rate(http_server_request_duration_seconds_count[1h]))",
           "legendFormat": "5xx ratio"
         }
       ]
@@ -92,14 +92,14 @@
     },
     {
       "type": "timeseries",
-      "title": "Error rate by status class (req/s)",
+      "title": "Error rate by status code (req/s)",
       "datasource": { "type": "prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
       "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
       "targets": [
         {
-          "expr": "sum by (status_class) (rate(http_server_request_duration_seconds_count{status_class=~\"4xx|5xx\"}[$__rate_interval]))",
-          "legendFormat": "{{status_class}}"
+          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count{http_response_status_code=~\"4..|5..\"}[$__rate_interval]))",
+          "legendFormat": "{{http_response_status_code}}"
         }
       ]
     },

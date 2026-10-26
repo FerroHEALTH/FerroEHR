@@ -153,7 +153,7 @@ For production, set at least:
   and not accepted by name, instead of running as a sandbox that looks
   identical.
 - **an authentication mechanism:** a Basic user store and/or an `[auth]` issuer.
-- **`log.format = "json"`** for cluster log collectors.
+- **`telemetry.format = "json"`** for cluster log collectors.
 - **`server.cors_permissive`** stays `false`; **`server.swagger_ui`** per
   posture.
 - **`server.system_id`:** this deployment's own openEHR system identifier.

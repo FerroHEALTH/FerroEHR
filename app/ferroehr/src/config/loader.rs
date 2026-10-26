@@ -6,7 +6,7 @@
 //! [`loader`] names what is FerroEHR's own: the `FERROEHR` namespace, the
 //! fallbacks below the canonical `FERROEHR__` forms (`DATABASE_URL_UNPOOLED`,
 //! `DATABASE_URL` and the libpq set for `db.url`, `RUST_LOG` for
-//! `log.filter`, `PORT` for `server.bind`), and the names under the prefix
+//! `telemetry.filter`, `PORT` for `server.bind`), and the names under the prefix
 //! that set no key. [`load_process`] and [`assemble_from`] then resolve every `*_file`
 //! secret sibling and read the CI detection of the usage report. No openEHR
 //! spec governs configuration — our own design.
@@ -90,7 +90,16 @@ impl std::fmt::Display for ConfigErrors {
     }
 }
 
-impl std::error::Error for ConfigErrors {}
+impl std::error::Error for ConfigErrors {
+    // NOTE: RFC 0201 (`Error::source`); a batch of one names its error as the
+    // cause, so the chain reaches the root, and a longer batch has no single cause.
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self.0.as_slice() {
+            [only] => Some(only),
+            _ => None,
+        }
+    }
+}
 
 impl From<ConfigError> for ConfigErrors {
     fn from(error: ConfigError) -> Self {
@@ -113,7 +122,7 @@ pub fn loader() -> Result<Loader, ConfigError> {
         .fallback_composed(libpq::VARIABLES, "db.url", libpq::url)
         .fallback("DATABASE_URL", "db.url", None)
         .fallback("DATABASE_URL_UNPOOLED", "db.url", None)
-        .fallback("RUST_LOG", "log.filter", None)
+        .fallback("RUST_LOG", "telemetry.filter", None)
         .fallback("PORT", "server.bind", Some(all_interfaces));
     Ok(RESERVED
         .iter()
