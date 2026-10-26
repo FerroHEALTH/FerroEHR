@@ -132,6 +132,14 @@ pub enum AuditError {
     /// `ehds-logging` refused a retention or label policy of the access record.
     #[error("the access record policy is invalid")]
     Policy(#[source] Box<dyn std::error::Error + Send + Sync>),
+    /// A batch named a retention end count other than its record count.
+    #[error("{ends} retention ends for {records} audit records")]
+    RetentionEnds {
+        /// How many ends the batch named.
+        ends: usize,
+        /// How many records it held.
+        records: usize,
+    },
 }
 
 /// The loud slim-build refusal for the FHIR-rendering audit sinks.

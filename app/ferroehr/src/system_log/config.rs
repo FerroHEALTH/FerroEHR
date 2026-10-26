@@ -93,10 +93,11 @@ impl Default for StoreConfig {
 }
 
 /// The horizon the local store keeps records for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
 #[serde(rename_all = "lowercase", tag = "unit", content = "value")]
 pub enum Retention {
     /// Records are kept forever (`retention_days = 0`, no `retention_years`).
+    #[default]
     Forever,
     /// Records older than this many days are reaped.
     Days(u32),
