@@ -42,7 +42,7 @@ highest:
 
 Some conventional names sit *below* their `FERROEHR_` forms within layer 3:
 
-- `DATABASE_URL` → `db.url`, and `RUST_LOG` → `log.filter`.
+- `DATABASE_URL` → `db.url`, and `RUST_LOG` → `telemetry.filter`.
 - `PORT` → a `0.0.0.0:<PORT>` value for `server.bind` (the port container
   platforms such as Vercel, Cloud Run and Heroku inject and route traffic
   to).
@@ -100,13 +100,12 @@ the whole configuration.
 Configuration is validated at boot (and by `ferroehr config check`), and the
 server refuses to start on any error:
 
-- **Unknown keys are rejected:** in the file, with the offending line number
-  and a did-you-mean suggestion, and in the `FERROEHR_` environment namespace.
-  A variable in that namespace that is neither a known section nor one of the
-  reserved non-configuration names is a boot error, so a misspelled security
-  key can never be silently ignored. A single-underscore near miss
-  (`FERROEHR_DB_URL`) is reported with the exact uniform spelling it should
-  have had.
+- **Unknown keys are rejected:** in the file, naming the key and the closest
+  valid one, and in every `FERROEHR__…` override, so a misspelled security key
+  can never be silently ignored. Only the uniform `FERROEHR__<SECTION>__<KEY>`
+  form sets a key. Any other `FERROEHR_` variable, such as the single-underscore
+  `FERROEHR_DB_URL`, sets nothing and is left alone, because the viewer's
+  `FERROEHR_VIEWER_` variables share the prefix.
 - **Type errors are boot errors**, naming the key and what was expected.
 - **Semantic errors are aggregated:** one pass reports every problem at once,
   so a broken configuration is fixed in a single iteration.
@@ -286,7 +285,7 @@ rather than inherit from a quickstart. See
 |---|---|---|
 | `[server]`, `[server.limits]`, `[server.rate_limit]`, `[server.connection]`, `[server.tls]`, `[server.identity]` | The HTTP listener, request limits, rate limiting, connection bounds, TLS, the deployment's own identity | [Server, database & telemetry](config-server.md) |
 | `[db]` | PostgreSQL connection, pool, migrations | [Server, database & telemetry](config-server.md) |
-| `[log]`, `[telemetry]` | Log rendering and OpenTelemetry export | [Server, database & telemetry](config-server.md) |
+| `[telemetry]` | The console, the request log and the OpenTelemetry export | [Server, database & telemetry](config-server.md) |
 | `[usage_report]` | The daily installation report to FerroPULSE, on by default; what it sends is on the [Usage report](../usage-report.md) page | [Server, database & telemetry](config-server.md#usage_report) |
 | `[auth]`, `[authz]` | Authentication (Basic, OAuth2/OIDC) and RBAC/ABAC | [Authentication & access](config-auth.md) |
 | `[admin]`, `[management]` | The ADMIN API group and the ops-introspection surface | [Authentication & access](config-auth.md) |

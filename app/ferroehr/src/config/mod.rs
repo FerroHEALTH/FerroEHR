@@ -69,10 +69,9 @@ pub struct FerroEhrConfig {
     /// `[storage]` — one DSN per storage domain (`clinical`, `party`,
     /// `linkage`, `audit`), each defaulting to `[db].url`.
     pub storage: crate::db::domain::StorageConfig,
-    /// `[log]` — logging.
-    pub log: crate::telemetry::config::LogConfig,
-    /// `[telemetry]` — OpenTelemetry export.
-    pub telemetry: crate::telemetry::config::OtelConfig,
+    /// `[telemetry]`: the console, the request log and the OpenTelemetry
+    /// export, the family's shared section.
+    pub telemetry: ferrohealth_telemetry::section::TelemetrySection,
     /// `[auth]` — authentication: the `ferrohealth-smart` section, whose
     /// serialization writes every secret as `***`.
     pub auth: ferrohealth_smart::config::AuthSection,
@@ -1507,17 +1506,11 @@ mod tests {
     }
 
     #[test]
-    fn near_miss_prefix_suggests_the_uniform_spelling() {
-        // The mixed form (a single `_` after the prefix) does not bind; the
-        // sweep names the exact uniform spelling.
-        let err = assemble(None, &env(&[("FERROEHR_DB__URL", "postgres://x")]), &[])
-            .expect_err("near-miss");
-        let msg = err.to_string();
-        assert!(msg.contains("FERROEHR_DB__URL"), "{msg}");
-        assert!(
-            msg.contains("FERROEHR__DB__URL"),
-            "suggestion missing: {msg}"
-        );
+    fn near_miss_prefix_binds_nothing() {
+        // The mixed form (a single `_` after the prefix) is outside the
+        // override grammar, so it sets no key and leaves the default in place.
+        let c = assemble_ok(None, &env(&[("FERROEHR_DB__URL", "postgres://x")]), &[]);
+        assert_eq!(json(&c), json(&FerroEhrConfig::default()));
     }
 
     #[test]
@@ -1533,14 +1526,12 @@ mod tests {
     }
 
     #[test]
-    fn per_subsystem_config_pointer_is_a_boot_error() {
+    fn per_subsystem_config_pointer_is_never_read() {
         // There is ONE configuration file. A per-subsystem `*_CONFIG` pointer
-        // is not a recognized name, so it fails as an unknown
-        // reserved-namespace variable rather than being read and ignored.
-        let err = assemble(None, &env(&[("FERROEHR_SIGNING_CONFIG", "/x.toml")]), &[])
-            .expect_err("retired pointer must fail");
-        let msg = err.to_string();
-        assert!(msg.contains("FERROEHR_SIGNING_CONFIG"), "{msg}");
+        // names no file the loader reads, so the configuration stays the
+        // default.
+        let c = assemble_ok(None, &env(&[("FERROEHR_SIGNING_CONFIG", "/x.toml")]), &[]);
+        assert_eq!(json(&c), json(&FerroEhrConfig::default()));
     }
 
     #[test]
@@ -1566,15 +1557,14 @@ mod tests {
     // ── 4. One grammar, no synonyms ─────────────────────────────────────────
 
     #[test]
-    fn single_separator_spelling_is_a_boot_error() {
-        // A single `_` where the grammar wants `__` is the easiest operator
-        // mistake to make, so it fails at boot naming the variable — never
-        // silently honoured, and never set-but-unread — while the uniform
-        // spelling binds.
-        let err = assemble(None, &env(&[("FERROEHR_DB_MAX_CONNECTIONS", "7")]), &[])
-            .expect_err("a single-separator spelling must fail");
-        let msg = err.to_string();
-        assert!(msg.contains("FERROEHR_DB_MAX_CONNECTIONS"), "{msg}");
+    fn only_the_uniform_spelling_binds() {
+        // NOTE: ferrohealth-config 0.2.5 checks only the `FERROEHR__` override form,
+        // since `FERROEHR_VIEWER` nests under `FERROEHR`; a single `_` sets nothing.
+        let c = assemble_ok(None, &env(&[("FERROEHR_DB_MAX_CONNECTIONS", "7")]), &[]);
+        assert_eq!(
+            c.db.max_connections,
+            FerroEhrConfig::default().db.max_connections
+        );
         let c = assemble_ok(None, &env(&[("FERROEHR__DB__MAX_CONNECTIONS", "7")]), &[]);
         assert_eq!(c.db.max_connections, 7);
     }
@@ -1818,7 +1808,10 @@ mod tests {
         });
         c.usage_report.endpoint = leaky(11);
         c.authz.abac.remote.server = Some(leaky(12));
-        c.telemetry.otlp_endpoint = Some(leaky(13));
+        c.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
+            endpoint: leaky(13),
+            ..ferrohealth_telemetry::section::OtlpSection::default()
+        });
         c.multimedia.endpoint = Some(leaky(14));
 
         let toml = rendered(&c);

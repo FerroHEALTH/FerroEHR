@@ -256,8 +256,6 @@ messages! {
     AqlQueries = "aql-queries",
     /// `Compositions committed`
     CompositionsCommitted = "compositions-committed",
-    /// `In-flight requests`
-    InFlightRequests = "in-flight-requests",
     /// `Older `
     Older = "older",
     ///  Newer

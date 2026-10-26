@@ -399,3 +399,48 @@ pub(crate) fn ips_canonical_composition() -> Value {
     .expect("ips_canonical.json vendored in openehr-its");
     serde_json::from_str(&text).expect("valid canonical composition")
 }
+
+/// The process's one telemetry provider for the tests, with FerroEHR's
+/// instruments registered on its meter, built once as the binary builds it.
+pub(crate) fn telemetry() -> &'static Arc<ferrohealth_telemetry::telemetry::Telemetry> {
+    static TELEMETRY: std::sync::OnceLock<Arc<ferrohealth_telemetry::telemetry::Telemetry>> =
+        std::sync::OnceLock::new();
+    TELEMETRY.get_or_init(|| {
+        let telemetry = ferrohealth_telemetry::telemetry::Telemetry::new(
+            &ferrohealth_telemetry::section::TelemetrySection::default(),
+            ferrohealth_telemetry::telemetry::Service::new(ferroehr::telemetry::SERVICE, "test"),
+        )
+        .expect("build the telemetry provider");
+        ferroehr::telemetry::metrics::init(&telemetry.meter(ferroehr::telemetry::metrics::SCOPE));
+        Arc::new(telemetry)
+    })
+}
+
+/// A live console filter for `/management/loggers`, its subscriber kept for
+/// the life of the test process.
+pub(crate) fn log_filter() -> ferroehr_rest::extensions::management::LogFilter {
+    use tracing_subscriber::layer::SubscriberExt as _;
+
+    type Live = Box<dyn tracing::Subscriber + Send + Sync>;
+    static FILTER: std::sync::OnceLock<(Live, ferroehr_rest::extensions::management::LogFilter)> =
+        std::sync::OnceLock::new();
+    let (_subscriber, filter) = FILTER.get_or_init(|| {
+        let section = ferrohealth_telemetry::section::TelemetrySection::default();
+        let layers = telemetry()
+            .layers::<tracing_subscriber::Registry, _>(
+                &section,
+                &ferrohealth_telemetry::telemetry::Console::new(false, None),
+                std::io::sink,
+            )
+            .expect("console layers");
+        let subscriber: Live = Box::new(tracing_subscriber::registry().with(layers.layers));
+        (
+            subscriber,
+            ferroehr_rest::extensions::management::LogFilter {
+                handle: layers.filter,
+                boot: section.filter,
+            },
+        )
+    });
+    filter.clone()
+}

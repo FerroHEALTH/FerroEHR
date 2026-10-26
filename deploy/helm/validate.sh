@@ -864,7 +864,7 @@ schema_gate() {
 
   local -a acceptances=(
     "config.server.future_api_key=probe"
-    "config.telemetry.otlp_endpoint=http://otel-collector:4317"
+    "config.telemetry.otlp.endpoint=http://otel-collector:4317"
     "global.imageRegistry=registry.example.com"
     "config.deployment_profile=production"
     "config.audit.store.retention_years=5"

@@ -237,8 +237,8 @@ ferrohealth-authz = { version = "=0.1.5", default-features = false }
 ferrohealth-secret = "=0.2.0"
 # The family's configuration loader (FerroSYS): the file, the `FERROEHR__`
 # environment, the fallbacks and `--set`, strict with did-you-mean, and the
-# `config check` rendering. Verified on crates.io 2026-10-26 (0.2.4).
-ferrohealth-config = "=0.2.4"
+# `config check` rendering. Verified on crates.io 2026-10-26 (0.2.5).
+ferrohealth-config = "=0.2.5"
 # The family's health document, indicator registry and process lifecycle
 # (FerroSYS): `/health/readiness` and `/management/health` serve its
 # `Readiness`, and the viewer reads the same document. The default build is the
@@ -250,6 +250,11 @@ ferrohealth-health = { version = "=0.1.1", default-features = false }
 # and a client identity, and sets it on a `reqwest::ClientBuilder` (feature
 # `reqwest`). Verified on crates.io 2026-10-26 (0.3.2).
 ferrohealth-server = { version = "=0.3.2", default-features = false }
+# The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
+# the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
+# request log with its `http.server.request.duration` histogram, and the panic
+# line. Verified on crates.io 2026-10-26 (0.2.1).
+ferrohealth-telemetry = { version = "=0.2.1", features = ["axum", "otlp", "prometheus"] }
 
 # ── Terminology (the client of the one FHIR terminology server) ───────────────
 # FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,
@@ -401,16 +406,10 @@ thirtyfour = { version = "0.37.2", default-features = false, features = ["reqwes
 # ── Observability (opentelemetry set is lockstep: keep versions equal) ────────
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry"] }
-tracing-opentelemetry = "0.34"     # pairs with the opentelemetry 0.33 line
+tracing-opentelemetry = "0.34"     # pairs with the opentelemetry 0.33 line (tests)
 tracing-flame = "0.2"              # span-timing flamegraph capture (folded stacks; render via inferno)
 opentelemetry = "0.33.0"
-opentelemetry_sdk = { version = "0.33.0", features = ["rt-tokio", "experimental_metrics_custom_reader"] }
-opentelemetry-otlp = { version = "0.33.0", features = ["grpc-tonic"] }
-# The PULL surface (/management/prometheus), served from the SAME MeterProvider
-# as the OTLP push — one metrics system, so a family cannot exist on one
-# surface and not the other (#2181). Needs the SDK's custom-reader feature.
-opentelemetry-prometheus = "0.33"
-prometheus = "0.14"
+opentelemetry_sdk = { version = "0.33.0", features = ["rt-tokio"] }
 # In-process sampling CPU profiler. Its own `criterion` feature is pinned to
 # criterion ^0.5 (verified on crates.io 2026-08-04) — incompatible with our
 # criterion 0.8 — so benches implement criterion's `Profiler` trait over this

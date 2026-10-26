@@ -1815,6 +1815,7 @@ async fn resolving_an_identifier_is_recorded_as_an_access() {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         ..AuditConfig::default()
     };
@@ -2049,6 +2050,7 @@ async fn resolving_a_party_to_its_ehr_is_recorded_as_an_access() {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         ..AuditConfig::default()
     };

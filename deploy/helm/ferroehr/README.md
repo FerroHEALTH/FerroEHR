@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). A stock install runs the sandbox deployment profile, which must not hold real patient data; set config.deployment_profile for a production holder.
 
-![Version: 17.0.0](https://img.shields.io/badge/Version-17.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.4.2](https://img.shields.io/badge/AppVersion-5.4.2-informational?style=flat-square)
+![Version: 18.0.0](https://img.shields.io/badge/Version-18.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.4.2](https://img.shields.io/badge/AppVersion-5.4.2-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 17.0.0 \
+  --version 18.0.0 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.4.2
@@ -58,7 +58,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `17.0.0` |
+| the **chart** (templates, defaults, this document) | `--version` | `18.0.0` |
 | the **server image** | `image.tag` | `5.4.2` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -70,7 +70,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:17.0.0 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:18.0.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -78,7 +78,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:17.0.0 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:17.0.0 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:18.0.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.4.2 \
   -R FerroHEALTH/FerroEHR
@@ -274,7 +274,6 @@ Kubernetes: `>=1.36.0-0`
 | config.events.exchange | string | `"ferroehr.events"` |  |
 | config.events.tls | bool | `false` |  |
 | config.files | object | `{}` |  |
-| config.log.format | string | `"json"` |  |
 | config.management.base_path | string | `"/management"` |  |
 | config.management.enabled | bool | `true` |  |
 | config.management.endpoints.env | string | `"off"` |  |
@@ -306,6 +305,7 @@ Kubernetes: `>=1.36.0-0`
 | config.signing.mode | string | `"digest"` |  |
 | config.signing.verify_on_read | string | `"strict"` |  |
 | config.spec_profile | string | `"development"` |  |
+| config.telemetry.format | string | `"json"` |  |
 | config.terminology.api_enabled | bool | `false` |  |
 | database.audit.existingSecret | string | `""` | Reference an existing Secret holding the DSN the audit repository is written through. The audit trail is not a pseudonymisation domain — it is the node's security-surveillance record, strictly outside the EHR content — but it is the one domain a deployment most often wants on its own server, which DSV Art. 4 Abs. 5 asks for. |
 | database.audit.existingSecretKey | string | `"FERROEHR__STORAGE__AUDIT__URL"` | Key WITHIN it holding that DSN. Mounted as a file. |

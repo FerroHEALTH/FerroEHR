@@ -160,6 +160,8 @@ exceptions = [
   # source client, #3380) and the ferrohealth-telemetry it builds on are the
   # same Licensor's code under the same licence (owner ruling 2026-10-26, #4087).
   { allow = ["BUSL-1.1"], crate = "ferrohealth-server" },
+  # FerroSYS's ferrohealth-telemetry, the FerroHEALTH products' console,
+  # request log and OpenTelemetry provider, the same Licensor's code.
   { allow = ["BUSL-1.1"], crate = "ferrohealth-telemetry" },
   # FerroAUDIT, the FerroHEALTH products' shared audit library, is the same
   # Licensor's code under the same licence: `ihe-atna` sends the ATNA trail and

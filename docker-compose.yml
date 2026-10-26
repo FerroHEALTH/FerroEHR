@@ -521,10 +521,10 @@ services:
       # Quickstart: human-readable colored logs in `docker compose logs`.
       # Production/collector deployments override to `json` (or unset — the
       # `auto` default picks json when stdout is not a TTY).
-      FERROEHR__LOG__FORMAT: ${FERROEHR__LOG__FORMAT:-pretty}
+      FERROEHR__TELEMETRY__FORMAT: ${FERROEHR__TELEMETRY__FORMAT:-pretty}
       # Measurement parity (logging equal and minimal on both SUTs):
       # measured comparison runs set warn on BOTH SUTs; default stays info.
-      FERROEHR__LOG__FILTER: ${FERROEHR__LOG__FILTER:-info}
+      FERROEHR__TELEMETRY__FILTER: ${FERROEHR__TELEMETRY__FILTER:-info}
       # The usage report (on by default): https://ferroehr.eu/docs/latest/usage-report.html
       # FERROEHR__USAGE_REPORT__ENABLED=false in your shell sends nothing.
       FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-true}

@@ -35,18 +35,17 @@ services:
     # any other spelling — a single-`_` variable is a startup error, not a
     # silently ignored setting, so these names must stay in this form.
     environment:
-      # Traces AND metrics to the LGTM collector ([telemetry]). Unset
-      # otlp_endpoint would leave the OTel layer out entirely.
-      FERROEHR__TELEMETRY__OTLP_ENDPOINT: http://otel-lgtm:4317
+      # Traces AND metrics to the LGTM collector ([telemetry.otlp]). With no
+      # endpoint nothing is exported.
+      FERROEHR__TELEMETRY__OTLP__ENDPOINT: http://otel-lgtm:4317
       # The push carries every family the Prometheus surface exposes: one meter
       # provider feeds both, so a metric cannot reach one and not the other.
-      FERROEHR__TELEMETRY__METRICS_PUSH: "true"
-      FERROEHR__TELEMETRY__SERVICE_NAME: ferroehr
+      FERROEHR__TELEMETRY__OTLP__METRICS: "true"
+      FERROEHR__TELEMETRY__OTLP__SAMPLE_RATIO: "1.0"
       FERROEHR__TELEMETRY__ENVIRONMENT: dev
-      FERROEHR__TELEMETRY__TRACES_SAMPLE_RATIO: "1.0"
       # Structured stdout so the bundled log pipeline ingests fields, not text
       # (overrides the root stack's dev-friendly `pretty`).
-      FERROEHR__LOG__FORMAT: json
+      FERROEHR__TELEMETRY__FORMAT: json
       # Ops-introspection surface on an internal-only port. Metrics do not
       # depend on it — they arrive over OTLP — but /management/prometheus stays
       # reachable on the compose network for a human comparing the two surfaces.
@@ -135,12 +134,12 @@ configs:
           },
           {
             "type": "stat",
-            "title": "In-flight requests",
+            "title": "Request rate",
             "datasource": { "type": "prometheus" },
             "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
-            "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+            "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
             "targets": [
-              { "expr": "sum(http_server_active_requests)", "legendFormat": "in flight" }
+              { "expr": "sum(rate(http_server_request_duration_seconds_count[5m]))", "legendFormat": "req/s" }
             ]
           },
           {
@@ -161,7 +160,7 @@ configs:
             },
             "targets": [
               {
-                "expr": "sum(rate(http_server_request_duration_seconds_count{status_class=\"5xx\"}[1h])) / sum(rate(http_server_request_duration_seconds_count[1h]))",
+                "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[1h])) / sum(rate(http_server_request_duration_seconds_count[1h]))",
                 "legendFormat": "5xx ratio"
               }
             ]
@@ -196,14 +195,14 @@ configs:
           },
           {
             "type": "timeseries",
-            "title": "Error rate by status class (req/s)",
+            "title": "Error rate by status code (req/s)",
             "datasource": { "type": "prometheus" },
             "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
             "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
             "targets": [
               {
-                "expr": "sum by (status_class) (rate(http_server_request_duration_seconds_count{status_class=~\"4xx|5xx\"}[$$__rate_interval]))",
-                "legendFormat": "{{status_class}}"
+                "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count{http_response_status_code=~\"4..|5..\"}[$$__rate_interval]))",
+                "legendFormat": "{{http_response_status_code}}"
               }
             ]
           },

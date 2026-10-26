@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 17.0.0 -n ferroehr \
+  --version 18.0.0 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.4.2 \
   --set ferropix.enabled=false --set config.ehr_index.provider=local
@@ -63,7 +63,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 17.0.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0
 ```
 
 ### Pin two versions, not one
@@ -76,7 +76,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 17.0.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 18.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.4.2` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -176,7 +176,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 17.0.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -324,7 +324,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 17.0.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -795,7 +795,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 17.0.0 -n ferroehr --reuse-values \
+  --version 18.0.0 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -837,7 +837,7 @@ is an explicit, auditable decision:
 | Terminology server | `config.terminology.server.enabled` | off | The one FHIR terminology server, at `config.terminology.server.url`. To run FerroTERM in the cluster instead, use `terminology.enabled` ([FerroTERM](#ferroterm-a-terminology-server-beside-the-cdr-off-by-default)), which sets these keys for you. |
 | ATNA audit trail | `config.audit.enabled` | **on** | On with the local store only; forwarding (`config.audit.syslog`, `config.audit.fhir_feed`) is opt-in per sink. |
 | Version signing | `config.signing.enabled` | **on** (`config.signing.mode: digest`) | `pgp` mode needs a `config.files` key plus `secrets.signingKeyPassphrase`, and fails closed at boot without a usable key. |
-| OTLP telemetry | `config.telemetry.otlp_endpoint` | unset | Setting the endpoint is all it takes; unset means the OpenTelemetry layer is not installed at all (zero overhead). With `networkPolicy.egress.enabled`, add a rule for the collector, since a blocked exporter drops spans without an error. |
+| OTLP telemetry | `config.telemetry.otlp.endpoint` | unset | Setting the endpoint is all it takes; without a `config.telemetry.otlp` table nothing is exported. With `networkPolicy.egress.enabled`, add a rule for the collector, since a blocked exporter drops spans without an error. |
 
 Full detail on each is in [Beyond the core](../beyond-core/index.md),
 [Security](../security.md), and [Operations](../operations.md).
@@ -949,7 +949,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 17.0.0 -n ferroehr --reuse-values \
+  --version 18.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1277,7 +1277,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 17.0.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

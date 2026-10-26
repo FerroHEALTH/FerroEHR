@@ -1,213 +1,123 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Telemetry initialization.
+//! Telemetry: the family's `ferrohealth-telemetry` provider, with FerroEHR's
+//! own instruments and the span-timing capture beside it.
 //!
-//! The single `tracing` instrumentation API fanned out to stdout logs +
-//! (opt-in) OTLP spans, and one OpenTelemetry `SdkMeterProvider` feeding up to
-//! two readers — the Prometheus scrape surface and the (opt-in) OTLP metrics
-//! push — so every instrument reaches both surfaces (see `metrics.rs`).
+//! [`init`] builds the one OpenTelemetry provider from `[telemetry]`, installs
+//! the console with the optional `[management] flame_file` capture, and
+//! registers FerroEHR's instruments ([`metrics`]) on the shared meter. It
+//! returns a [`TelemetryGuard`] holding the provider, the console filter
+//! handle `/management/loggers` drives, and the samplers; the guard flushes
+//! the exporters on [`TelemetryGuard::shutdown`].
 //!
-//! **No openEHR spec governs this — our own design.** This is operational
-//! observability (spans, gauges, Prometheus scrape), categorically distinct
-//! from the ATNA *audit* trail (`crate::system_log`), which is a
-//! security/medico-legal record. The two are deliberately separate siblings.
-//!
-//! [`init`] builds the meter provider and its readers, builds the `OTel` span
-//! provider when an endpoint is configured (absent ⇒ nothing installed, zero
-//! overhead), sets the
-//! W3C propagator, and installs the subscriber. It returns a [`TelemetryGuard`]
-//! carrying the reload handle, the Prometheus render handle, and the `OTel`
-//! providers; the guard flushes the batch exporter and stops the samplers on
-//! shutdown (explicit async [`TelemetryGuard::shutdown`] + a `Drop` backstop).
+//! No openEHR specification governs this: our own design. Operational
+//! telemetry is separate from the ATNA audit trail (`crate::system_log`).
 
-pub mod config;
-
-use crate::telemetry::config::{OtelConfig, TelemetryConfig};
 pub mod indicators;
-mod layers;
-mod log_sanitize;
 pub mod metrics;
 pub mod samplers;
 
 pub mod build_info;
-pub mod log_reload;
 pub mod provenance;
 
+use std::fs::File;
+use std::io::BufWriter;
+use std::path::Path;
+use std::sync::Arc;
+
 use build_info::BuildInfo;
-use log_reload::LogReload;
-use opentelemetry::KeyValue;
+use ferrohealth_telemetry::section::{Filter, TelemetrySection};
+use ferrohealth_telemetry::telemetry::{Console, FilterHandle, Layers, Service, Telemetry};
 use opentelemetry::metrics::Meter;
-use opentelemetry::trace::TracerProvider as _;
-use opentelemetry_otlp::WithExportConfig as _;
-use opentelemetry_sdk::Resource;
-use opentelemetry_sdk::metrics::SdkMeterProvider;
-use opentelemetry_sdk::propagation::TraceContextPropagator;
-use opentelemetry_sdk::trace::{Sampler, SdkTracerProvider};
 use sqlx::PgPool;
 use tokio::task::JoinHandle;
+use tracing_subscriber::layer::SubscriberExt as _;
+use tracing_subscriber::util::SubscriberInitExt as _;
+use tracing_subscriber::{Layer as _, Registry};
 
-/// The `OTel` instrumentation scope name for this service.
-const SCOPE: &str = "ferroehr";
+/// The `service.name` of every span and metric, and the crate prefix whose
+/// spans are exported.
+pub const SERVICE: &str = "ferroehr";
 
-/// Telemetry setup failure.
+/// The flush guard of the span-timing capture.
+type FlameFlush = tracing_flame::FlushGuard<BufWriter<File>>;
+
+/// The telemetry could not be started.
 #[derive(Debug, thiserror::Error)]
 pub enum TelemetryError {
-    /// The global subscriber could not be installed.
-    #[error("subscriber init failed")]
-    Subscriber(#[from] tracing_subscriber::util::TryInitError),
-    /// An OTLP exporter could not be built.
-    #[error("otlp exporter could not be built")]
-    Exporter(#[from] opentelemetry_otlp::ExporterBuildError),
-    /// The span-flamegraph capture file could not be created.
-    #[error("flame capture file could not be created")]
+    /// The shared provider, the console or the subscriber could not be built.
+    #[error(transparent)]
+    Init(#[from] ferrohealth_telemetry::telemetry::InitError),
+    /// The span-timing capture file could not be created.
+    #[error("the span-timing capture file could not be created")]
     Flame(#[from] tracing_flame::Error),
-    /// The meter provider or its Prometheus reader could not be built.
-    #[error("{0}")]
-    Metrics(String),
+    /// A subscriber is already installed in this process.
+    #[error("a log subscriber is already installed")]
+    Subscriber(#[from] tracing_subscriber::util::TryInitError),
 }
 
-/// Initialize telemetry from configuration. Call once, early in `main`.
+/// Returns the service the telemetry describes: `ferroehr` at
+/// `<version>+<git sha>`.
+#[must_use]
+pub fn service(build: &BuildInfo) -> Service {
+    Service::new(SERVICE, format!("{}+{}", build.version, build.git_sha))
+}
+
+/// Builds the provider `section` asks for, installs the process subscriber on
+/// stdout (with the span-timing capture when `flame_file` is set) and
+/// registers FerroEHR's instruments on the shared meter.
 ///
 /// # Errors
-/// Returns [`TelemetryError`] if the recorder, an OTLP exporter, or the
-/// subscriber cannot be installed.
-pub fn init(cfg: &TelemetryConfig, build: &BuildInfo) -> Result<TelemetryGuard, TelemetryError> {
-    // 1) Metrics: ONE meter provider. The Prometheus reader always serves the
-    //    pull surface; the OTLP periodic reader is added when the push is on,
-    //    so both surfaces carry every instrument.
-    let mut tracer_provider = None;
-    let mut tracer = None;
+///
+/// Returns [`TelemetryError::Init`] when the provider or the console cannot be
+/// built, [`TelemetryError::Flame`] when the capture file cannot be created,
+/// and [`TelemetryError::Subscriber`] when a subscriber is already installed.
+pub fn init(
+    section: &TelemetrySection,
+    flame_file: Option<&Path>,
+    build: &BuildInfo,
+) -> Result<TelemetryGuard, TelemetryError> {
+    let telemetry = Arc::new(Telemetry::new(section, service(build))?);
+    let Layers { mut layers, filter } =
+        telemetry.layers::<Registry, _>(section, &Console::detect(), std::io::stdout)?;
+    let mut flame = None;
+    if let Some(path) = flame_file {
+        let (layer, flush) = tracing_flame::FlameLayer::with_file(path)?;
+        layers.push(layer.boxed());
+        flame = Some(flush);
+    }
+    tracing_subscriber::registry().with(layers).try_init()?;
+    ferrohealth_telemetry::panic::install_hook();
 
-    let otel_resource = resource(&cfg.otel, build);
-    let otlp_reader = if cfg.otel.export_enabled() && cfg.otel.metrics_push {
-        Some(build_metric_reader(
-            cfg.otel
-                .otlp_endpoint
-                .as_ref()
-                .map_or("", ferrohealth_secret::secret_url::SecretUrl::expose),
-        )?)
-    } else {
-        None
-    };
-    let (meter_provider, registry) = metrics::build_provider(otel_resource.clone(), otlp_reader)
-        .map_err(|e| TelemetryError::Metrics(format!("building the meter provider failed: {e}")))?;
-    opentelemetry::global::set_meter_provider(meter_provider.clone());
-    let meter = opentelemetry::global::meter(metrics::SCOPE);
+    let meter = telemetry.meter(metrics::SCOPE);
     metrics::init(&meter);
     metrics::register_static_gauges(&meter, build);
-    let meter_provider = Some(meter_provider);
-
-    // 2) Traces: only when an OTLP endpoint is set.
-    if cfg.otel.export_enabled() {
-        let endpoint = cfg
-            .otel
-            .otlp_endpoint
-            .as_ref()
-            .map_or("", ferrohealth_secret::secret_url::SecretUrl::expose);
-
-        let provider = build_tracer_provider(endpoint, &cfg.otel, otel_resource)?;
-        tracer = Some(provider.tracer(SCOPE));
-        tracer_provider = Some(provider);
-
-        // W3C context propagation for ingress/egress correlation.
-        opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
-    }
-
-    // 3) Logs + the (optional) OTel span layer + the (optional) span-flame
-    //    capture layer.
-    let (reload, flame) = layers::init_subscriber(
-        cfg.log.format,
-        &cfg.log.filter,
-        tracer,
-        cfg.otel.flame_file.as_deref(),
-    )?;
 
     Ok(TelemetryGuard {
-        reload,
-        registry,
-        tracer_provider,
-        meter_provider,
-        meter: Some(meter),
+        telemetry,
+        filter,
+        boot_filter: section.filter.clone(),
+        meter,
         flame,
         sampler: None,
-        shut: false,
     })
 }
 
-/// The OTLP periodic metric reader for the push path.
-///
-/// # Errors
-/// Returns the exporter build error.
-fn build_metric_reader(
-    endpoint: &str,
-) -> Result<
-    opentelemetry_sdk::metrics::PeriodicReader<opentelemetry_otlp::MetricExporter>,
-    TelemetryError,
-> {
-    let exporter = opentelemetry_otlp::MetricExporter::builder()
-        .with_tonic()
-        .with_endpoint(endpoint)
-        .with_temporality(metrics::otlp_temporality())
-        .build()?;
-    Ok(opentelemetry_sdk::metrics::PeriodicReader::builder(exporter).build())
-}
-
-/// The `OTel` resource attributes (`service.name`/`service.version` + git sha,
-/// `deployment.environment`).
-fn resource(otel: &OtelConfig, build: &BuildInfo) -> Resource {
-    Resource::builder()
-        .with_service_name(otel.service_name.clone())
-        .with_attributes([
-            KeyValue::new(
-                "service.version",
-                format!("{}+{}", build.version, build.git_sha),
-            ),
-            KeyValue::new("deployment.environment", otel.environment.clone()),
-            KeyValue::new("deployment.environment.name", otel.environment.clone()),
-        ])
-        .build()
-}
-
-/// Build the batch OTLP/gRPC tracer provider with `parentbased_traceidratio`
-/// sampling.
-fn build_tracer_provider(
-    endpoint: &str,
-    otel: &OtelConfig,
-    resource: Resource,
-) -> Result<SdkTracerProvider, TelemetryError> {
-    let exporter = opentelemetry_otlp::SpanExporter::builder()
-        .with_tonic()
-        .with_endpoint(endpoint)
-        .build()?;
-
-    Ok(SdkTracerProvider::builder()
-        .with_batch_exporter(exporter)
-        .with_resource(resource)
-        .with_sampler(Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(
-            otel.traces_sample_ratio,
-        ))))
-        .build())
-}
-
-/// Owns the telemetry runtime handles and shuts them down on the same path the
-/// ATNA sender drains on.
+/// The running telemetry: the provider, the console filter and the samplers.
 pub struct TelemetryGuard {
-    reload: LogReload,
-    registry: prometheus::Registry,
-    tracer_provider: Option<SdkTracerProvider>,
-    meter_provider: Option<SdkMeterProvider>,
-    meter: Option<Meter>,
-    flame: Option<layers::FlameFlush>,
+    telemetry: Arc<Telemetry>,
+    filter: FilterHandle,
+    boot_filter: Filter,
+    meter: Meter,
+    flame: Option<FlameFlush>,
     sampler: Option<JoinHandle<()>>,
-    shut: bool,
 }
 
 impl std::fmt::Debug for TelemetryGuard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TelemetryGuard")
-            .field("otel_traces", &self.tracer_provider.is_some())
-            .field("otel_metrics_push", &self.meter_provider.is_some())
+            .field("telemetry", &self.telemetry)
             .field("flame_capture", &self.flame.is_some())
             .field("sampler_running", &self.sampler.is_some())
             .finish_non_exhaustive()
@@ -215,62 +125,50 @@ impl std::fmt::Debug for TelemetryGuard {
 }
 
 impl TelemetryGuard {
-    /// The runtime log-filter control handle (for `/management/loggers`).
+    /// Returns the provider, which renders the Prometheus exposition and
+    /// hands out the meter of the request log.
     #[must_use]
-    pub fn log_reload(&self) -> LogReload {
-        self.reload.clone()
+    pub fn telemetry(&self) -> Arc<Telemetry> {
+        Arc::clone(&self.telemetry)
     }
 
-    /// The Prometheus registry backing `/management/prometheus`.
+    /// Returns the handle that replaces the console filter.
     #[must_use]
-    pub fn registry(&self) -> prometheus::Registry {
-        self.registry.clone()
+    pub fn filter(&self) -> FilterHandle {
+        self.filter.clone()
     }
 
-    /// Start the background gauge sampler over the connection pool. Call once
-    /// the pool is connected; the handle is aborted on [`Self::shutdown`].
+    /// Returns the console filter the configuration set at boot.
+    #[must_use]
+    pub fn boot_filter(&self) -> Filter {
+        self.boot_filter.clone()
+    }
+
+    /// Starts the pool and runtime gauges over `pool`; a second call is a
+    /// no-op.
     pub fn start_samplers(&mut self, pool: PgPool) {
-        if self.sampler.is_none()
-            && let Some(meter) = self.meter.clone()
-        {
-            self.sampler = Some(samplers::spawn(pool, meter));
+        if self.sampler.is_none() {
+            self.sampler = Some(samplers::spawn(pool, self.meter.clone()));
         }
     }
 
-    /// Stop the samplers and flush the `OTel` batch exporters. Idempotent-safe:
-    /// after this the `Drop` backstop does nothing.
+    /// Stops the samplers, flushes the span-timing capture and flushes and
+    /// stops the exporters.
     pub async fn shutdown(mut self) {
         if let Some(sampler) = self.sampler.take() {
             sampler.abort();
         }
-        // Flush the span-flame capture first (a buffered local file; dropping
-        // the guard also flushes, but an explicit failure is logged, not lost).
         if let Some(flame) = self.flame.take()
             && let Err(e) = flame.flush()
         {
             tracing::warn!(error = %e, "span-flame flush at shutdown failed");
         }
-        let tracer = self.tracer_provider.take();
-        let meter = self.meter_provider.take();
-        self.shut = true;
-        // Provider shutdown is a blocking flush; keep it off the async worker.
-        // A flush failure at shutdown is logged — telemetry loss is
-        // acceptable, silent loss is not.
-        let flushed = tokio::task::spawn_blocking(move || {
-            if let Some(t) = tracer
-                && let Err(e) = t.shutdown()
-            {
-                tracing::warn!(error = %e, "tracer flush at shutdown failed");
-            }
-            if let Some(m) = meter
-                && let Err(e) = m.shutdown()
-            {
-                tracing::warn!(error = %e, "meter flush at shutdown failed");
-            }
-        })
-        .await;
-        if let Err(e) = flushed {
-            tracing::warn!(error = %e, "telemetry shutdown flush task failed");
+        let telemetry = Arc::clone(&self.telemetry);
+        let flushed = tokio::task::spawn_blocking(move || telemetry.shutdown()).await;
+        match flushed {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => tracing::warn!(error = %e, "telemetry flush at shutdown failed"),
+            Err(e) => tracing::warn!(error = %e, "telemetry shutdown flush task failed"),
         }
     }
 }
@@ -280,25 +178,129 @@ impl Drop for TelemetryGuard {
         if let Some(sampler) = self.sampler.take() {
             sampler.abort();
         }
-        if !self.shut {
-            tracing::warn!(
-                "TelemetryGuard dropped without shutdown(); flushing exporters best-effort"
-            );
-            if let Some(flame) = self.flame.take()
-                && let Err(e) = flame.flush()
-            {
-                tracing::warn!(error = %e, "span-flame flush in Drop failed");
-            }
-            if let Some(t) = self.tracer_provider.take()
-                && let Err(e) = t.shutdown()
-            {
-                tracing::warn!(error = %e, "tracer flush in Drop failed");
-            }
-            if let Some(m) = self.meter_provider.take()
-                && let Err(e) = m.shutdown()
-            {
-                tracing::warn!(error = %e, "meter flush in Drop failed");
-            }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use ferrohealth_telemetry::section::{Format, TelemetrySection};
+    use ferrohealth_telemetry::telemetry::{Console, Layers, Service, Telemetry};
+    use tracing_subscriber::layer::SubscriberExt as _;
+    use tracing_subscriber::{Layer as _, Registry};
+
+    const FORGED: &str = "ok\r\n2026-08-06T00:00:00Z ERROR forged: the patient record was deleted";
+
+    #[derive(Clone, Debug, Default)]
+    struct Capture(Arc<Mutex<Vec<u8>>>);
+
+    impl Capture {
+        fn contents(&self) -> String {
+            let guard = self
+                .0
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            String::from_utf8_lossy(&guard).into_owned()
         }
+    }
+
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for Capture {
+        type Writer = Capture;
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
+    }
+
+    impl std::io::Write for Capture {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            let mut guard = self
+                .0
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            guard.extend_from_slice(buf);
+            Ok(buf.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    /// Writes one event carrying [`FORGED`] through FerroEHR's console in
+    /// `format` and returns what it wrote.
+    fn console_line(format: Format) -> String {
+        let section = TelemetrySection {
+            format,
+            ..TelemetrySection::default()
+        };
+        let telemetry =
+            Telemetry::new(&section, Service::new("ferroehr", "test")).expect("telemetry");
+        let sink = Capture::default();
+        let Layers { layers, filter: _ } = telemetry
+            .layers::<Registry, _>(&section, &Console::new(false, None), sink.clone())
+            .expect("layers");
+        let subscriber = tracing_subscriber::registry().with(layers);
+        tracing::subscriber::with_default(subscriber, || {
+            tracing::error!(value = %FORGED, "a client value reached a logged field: {FORGED}");
+        });
+        sink.contents()
+    }
+
+    #[test]
+    fn a_crlf_bearing_value_cannot_forge_a_log_line() {
+        let captured = console_line(Format::Pretty);
+        assert_eq!(
+            captured.lines().count(),
+            1,
+            "the event must occupy exactly one line: {captured:?}"
+        );
+        assert!(captured.ends_with('\n'), "{captured:?}");
+        assert!(!captured.contains("ok\r\n"), "{captured:?}");
+        assert!(captured.contains(r"ok\r\n"), "{captured:?}");
+    }
+
+    #[test]
+    fn the_json_format_escapes_control_characters_itself() {
+        let captured = console_line(Format::Json);
+        assert_eq!(captured.lines().count(), 1, "{captured:?}");
+        assert!(!captured.contains("ok\r\n"), "{captured:?}");
+    }
+
+    #[test]
+    #[expect(
+        clippy::panic_in_result_fn,
+        reason = "Result-returning test with assertions — the Book ch11 shape \
+                  (testing.md adjudication)"
+    )]
+    fn flame_layer_writes_folded_stacks() -> Result<(), Box<dyn std::error::Error>> {
+        let tmp = assert_fs::TempDir::new()?;
+        let path = tmp.path().join("tracing.folded");
+        let (flame_layer, flush) = tracing_flame::FlameLayer::with_file(&path)?;
+        let subscriber = Registry::default().with(flame_layer.boxed());
+        tracing::subscriber::with_default(subscriber, || {
+            let span = tracing::info_span!("flame_probe_span");
+            let entered = span.enter();
+            std::thread::sleep(std::time::Duration::from_millis(5));
+            drop(entered);
+        });
+        flush.flush()?;
+        let folded = std::fs::read_to_string(&path)?;
+        assert!(
+            folded.contains("flame_probe_span"),
+            "the folded stacks must record the entered span: {folded:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn the_default_section_exports_nothing() {
+        let c = crate::config::FerroEhrConfig::default();
+        assert!(c.telemetry.otlp.is_none());
+        assert_eq!(c.telemetry.format, Format::Auto);
+        assert_eq!(
+            c.telemetry.filter.as_str(),
+            ferrohealth_telemetry::section::DEFAULT_FILTER
+        );
+        assert!(c.management.flame_file.is_none());
     }
 }

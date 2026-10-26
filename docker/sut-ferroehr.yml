@@ -148,10 +148,10 @@ services:
       # Version-signing toggle pass-through (measured comparison runs disable
       # it for throughput parity — upstream has no signing.)
       FERROEHR__SIGNING__ENABLED: ${FERROEHR__SIGNING__ENABLED:-true}
-      FERROEHR__LOG__FORMAT: ${FERROEHR__LOG__FORMAT:-pretty}
+      FERROEHR__TELEMETRY__FORMAT: ${FERROEHR__TELEMETRY__FORMAT:-pretty}
       # Measurement parity (logging equal and minimal on both SUTs):
       # measured comparison runs set warn on BOTH SUTs; default stays info.
-      FERROEHR__LOG__FILTER: ${FERROEHR__LOG__FILTER:-info}
+      FERROEHR__TELEMETRY__FILTER: ${FERROEHR__TELEMETRY__FILTER:-info}
       # The conformance SUT reports nothing to FerroPULSE by default: a test
       # harness is not an installation, and outbound traffic would sit inside
       # the measured window.
