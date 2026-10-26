@@ -63,6 +63,7 @@ mod pseudonymisation_boundary;
 mod relocated_domain_preparation;
 mod report;
 mod schema_preparation_credential;
+mod secondary_use_batch;
 mod service_admin;
 mod service_aql;
 mod service_aql_demographic;

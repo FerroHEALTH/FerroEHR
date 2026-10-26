@@ -24,6 +24,7 @@ use tokio::task_local;
 
 task_local! {
     static DECLARED_PURPOSE: Option<String>;
+    static DECLARED_PERMIT: Option<String>;
     static REQUEST_ROLES: Vec<String>;
     static ACCESS_RESTRICTION_ENFORCED: bool;
 }
@@ -64,6 +65,51 @@ where
     DECLARED_PURPOSE.scope(purpose, fut).await
 }
 
+/// The data permit declared for the current request, if any; `None` outside a
+/// request scope and when the caller declared none.
+#[must_use]
+pub fn current_permit() -> Option<String> {
+    DECLARED_PERMIT.try_with(Clone::clone).ok().flatten()
+}
+
+/// Run `fut` with `permit` published as the request's declared data permit.
+pub async fn with_permit<F>(permit: Option<String>, fut: F) -> F::Output
+where
+    F: Future,
+{
+    DECLARED_PERMIT.scope(permit, fut).await
+}
+
+/// Run `fut` with `purpose` and `permit` published as the request's declared
+/// purpose of use and data permit.
+pub async fn with_declared<F>(purpose: Option<String>, permit: Option<String>, fut: F) -> F::Output
+where
+    F: Future,
+{
+    with_purpose(purpose, with_permit(permit, fut)).await
+}
+
+/// The longest data permit identifier the trail records.
+const PERMIT_MAX_LEN: usize = 128;
+
+/// The declared data permit as the trail records it: the trimmed value when it
+/// is 1 to 128 characters of ASCII letters, digits and `.` `_` `:` `/` `#`
+/// `-`, else `None`.
+///
+/// A permit identifier names a decision of a health data access body
+/// (`docs/law/eu/ehds/text.html` Art. 68); a value outside that form is
+/// recorded as absent rather than verbatim, so a header cannot carry free text
+/// or personal data into the trail. No specification fixes the form: our own
+/// design.
+#[must_use]
+pub fn permit_identifier(declared: &str) -> Option<String> {
+    let value = declared.trim();
+    let allowed =
+        |c: char| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | ':' | '/' | '#' | '-');
+    (!value.is_empty() && value.len() <= PERMIT_MAX_LEN && value.chars().all(allowed))
+        .then(|| value.to_owned())
+}
+
 /// Whether the EHDS Art. 8 restriction of access holds for the current
 /// request: restricted data then reads as absent.
 ///
@@ -88,4 +134,39 @@ where
     F: Future,
 {
     ACCESS_RESTRICTION_ENFORCED.scope(enforced, fut).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::permit_identifier;
+
+    #[test]
+    fn a_permit_identifier_is_recorded_only_in_its_form() {
+        assert_eq!(
+            permit_identifier(" hdab-nl/2026/0042 ").as_deref(),
+            Some("hdab-nl/2026/0042")
+        );
+        assert_eq!(
+            permit_identifier("urn:hdab:permit#7").as_deref(),
+            Some("urn:hdab:permit#7")
+        );
+        assert_eq!(permit_identifier(""), None);
+        assert_eq!(permit_identifier("   "), None);
+        assert_eq!(permit_identifier("permit for J. Jansen"), None);
+        assert_eq!(permit_identifier("vergunning-é"), None);
+        assert_eq!(permit_identifier(&"p".repeat(129)), None);
+        assert_eq!(
+            permit_identifier(&"p".repeat(128)).map(|p| p.len()),
+            Some(128)
+        );
+    }
+
+    #[tokio::test]
+    async fn the_declared_permit_is_seen_only_inside_its_scope() {
+        assert_eq!(super::current_permit(), None);
+        let seen =
+            super::with_permit(Some("hdab-1".to_owned()), async { super::current_permit() }).await;
+        assert_eq!(seen.as_deref(), Some("hdab-1"));
+        assert_eq!(super::current_permit(), None);
+    }
 }

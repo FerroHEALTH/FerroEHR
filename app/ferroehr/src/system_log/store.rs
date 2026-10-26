@@ -40,9 +40,9 @@ const INSERT_ONE: &str = "INSERT INTO audit.audit_event (recorded_at, action, ou
      event_code, operation, principal, organisation, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, fhir, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
-     acting_mode, assurance_level, assurance_value, professional_id, emergency_access) \
+     acting_mode, assurance_level, assurance_value, professional_id, emergency_access, permit) \
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, \
-     $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30) \
+     $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31) \
      RETURNING id";
 
 /// The batched insert: one row per element of the parallel column arrays.
@@ -51,13 +51,13 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, 
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, fhir, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
      acting_mode, assurance_level, assurance_value, professional_id, emergency_access, \
-     retention_ends, retention_stated) \
+     retention_ends, retention_stated, permit) \
      SELECT * FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
      $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], \
      $12::text[], $13::text[], $14::text[], $15::text[], $16::bigint[], $17::text[], \
      $18::jsonb[], $19::jsonb[], $20::jsonb[], $21::bigint[], $22::jsonb[], $23::text[], \
      $24::jsonb[], $25::text[], $26::text[], $27::text[], $28::text[], $29::text[], \
-     $30::boolean[], $31::text[]::date[], $32::boolean[])";
+     $30::boolean[], $31::text[]::date[], $32::boolean[], $33::text[])";
 
 /// The first date a stored record may be deleted on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -128,6 +128,7 @@ impl AuditStore {
             .bind(event.actor.assurance_value.as_deref())
             .bind(event.actor.professional_id.as_deref())
             .bind(event.emergency_access)
+            .bind(event.permit.as_deref())
             .fetch_one(&mut *acquire(&self.pool).await?)
             .await?
             .try_get::<Uuid, _>("id")
@@ -199,8 +200,7 @@ impl AuditStore {
         let mut client_ips: Vec<Option<&str>> = Vec::with_capacity(records.len());
         let mut token_ids: Vec<Option<&str>> = Vec::with_capacity(records.len());
         let mut domains: Vec<&str> = Vec::with_capacity(records.len());
-        let mut purposes: Vec<Option<&str>> = Vec::with_capacity(records.len());
-        let mut legal_bases: Vec<Option<&str>> = Vec::with_capacity(records.len());
+        let mut declared = DeclaredColumns::with_capacity(records.len());
         let mut result_counts: Vec<Option<i64>> = Vec::with_capacity(records.len());
         let mut request_ids: Vec<Option<&str>> = Vec::with_capacity(records.len());
         let mut fhir_docs: Vec<serde_json::Value> = Vec::with_capacity(records.len());
@@ -229,8 +229,7 @@ impl AuditStore {
             client_ips.push(event.client_ip.as_deref());
             token_ids.push(event.token_id.as_deref());
             domains.push(event.domain.as_str());
-            purposes.push(event.purpose.as_deref());
-            legal_bases.push(event.legal_basis.as_deref());
+            declared.push(event);
             result_counts.push(result_count(event));
             request_ids.push(event.request_id.as_deref());
             fhir_docs.push(fhir.clone());
@@ -258,8 +257,8 @@ impl AuditStore {
             .bind(client_ips)
             .bind(token_ids)
             .bind(domains)
-            .bind(purposes)
-            .bind(legal_bases)
+            .bind(declared.purposes)
+            .bind(declared.legal_bases)
             .bind(result_counts)
             .bind(request_ids)
             .bind(fhir_docs)
@@ -277,6 +276,7 @@ impl AuditStore {
             .bind(emergency)
             .bind(retention.ends)
             .bind(retention.stated)
+            .bind(declared.permits)
             .execute(&mut *acquire(&self.pool).await?)
             .await?;
         Ok(())
@@ -847,6 +847,30 @@ impl<'a> ActorColumns<'a> {
         self.values.push(event.actor.assurance_value.as_deref());
         self.professionals
             .push(event.actor.professional_id.as_deref());
+    }
+}
+
+/// The columns of a batch that say on whose authority and why: the declared
+/// purpose, the deployment's legal basis and the declared data permit.
+struct DeclaredColumns<'a> {
+    purposes: Vec<Option<&'a str>>,
+    legal_bases: Vec<Option<&'a str>>,
+    permits: Vec<Option<&'a str>>,
+}
+
+impl<'a> DeclaredColumns<'a> {
+    fn with_capacity(n: usize) -> Self {
+        Self {
+            purposes: Vec::with_capacity(n),
+            legal_bases: Vec::with_capacity(n),
+            permits: Vec::with_capacity(n),
+        }
+    }
+
+    fn push(&mut self, event: &'a AuditEvent) {
+        self.purposes.push(event.purpose.as_deref());
+        self.legal_bases.push(event.legal_basis.as_deref());
+        self.permits.push(event.permit.as_deref());
     }
 }
 
