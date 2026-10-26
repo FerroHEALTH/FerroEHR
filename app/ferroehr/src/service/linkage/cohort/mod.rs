@@ -47,6 +47,18 @@
 //! empty: a caller who cannot tell the two apart will keep re-running the
 //! query with a wider predicate until the boundary leaks.
 //!
+//! ## Under an IHE patient identity source
+//!
+//! With `[ehr_index] provider = "ihe"` the server holds no party-to-EHR map:
+//! it knows each patient only by the pseudonym `EHR_STATUS` carries in its
+//! own clinical domain, and translates a real identifier forward through the
+//! PIX Manager (ITI-83 with `targetSystem` set to that domain), never a
+//! pseudonym back (RM ehr master04 §EHR Status, `EHR_STATUS.subject`; GDPR
+//! Art. 4(5) and Art. 25). So a cohort that names its subjects by identifier
+//! is resolved one subject at a time through that forward translation, and a
+//! cohort that selects on demographic attributes, which would need the map
+//! or the reverse translation, is refused as [`CohortError::IdentityNotHeld`].
+//!
 //! ## Every execution is recorded
 //!
 //! One `linkage`-domain access event per execution, suppressed and failed ones
@@ -64,6 +76,9 @@ use sha2::Digest;
 
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
+use crate::service::ehr_index::IndexError;
+use crate::service::ehr_index::provider::EhrIndexProvider;
+use crate::service::ehr_index::types::SubjectRef;
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
 use crate::service::status::{CallStatusType, SmError};
 use crate::system_log::event::{
@@ -88,6 +103,9 @@ pub struct CohortQueryRequest {
     pub aql: String,
     /// The demographic predicates, intersected.
     pub predicates: Vec<CohortPredicate>,
+    /// The subjects the cohort names by identifier, in any identifier domain;
+    /// their EHRs intersect with what the predicates select.
+    pub subjects: Vec<SubjectRef>,
     /// The caller's declared purpose of use for the access record; falls back
     /// to the request scope's own purpose
     /// ([`crate::system_log::access_context`]).
@@ -144,13 +162,31 @@ pub enum CohortError {
         /// The configured ceiling.
         max: u64,
     },
-    /// The request carries no predicate at all.
+    /// The request carries no predicate and no subject at all.
     ///
     /// An unfiltered cohort is the whole population, which is what the ordinary
     /// ad-hoc query already serves under the population gate; routing it
     /// through here would cross the boundary for nothing.
-    #[error("a cohort query names at least one predicate")]
+    #[error("a cohort query names at least one predicate or subject")]
     NoPredicates,
+    /// The request selects on demographic predicates while an IHE patient
+    /// identity source holds the subject-to-EHR cross-reference: resolving
+    /// the selected parties to EHRs would need the local map, which that
+    /// provider does not keep, or a translation of the clinical pseudonym
+    /// back to another domain, which the server never asks for.
+    #[error(
+        "a cohort predicate selects parties, and under the IHE patient identity source this \
+         server holds no party-to-EHR map and never translates a pseudonym back; name the \
+         cohort's subjects by identifier instead"
+    )]
+    IdentityNotHeld,
+    /// A subject the cohort names could not be resolved: no provider is
+    /// installed, or the identity source failed or answered no pseudonym.
+    #[error("a cohort subject could not be resolved")]
+    Subject(#[source] IndexError),
+    /// The EHR index answered an `ehr_id` that is no UUID.
+    #[error("the EHR index answered an ehr_id that is no UUID")]
+    IndexAnswer(#[source] uuid::Error),
     /// The request pre-scopes the inner query to EHRs of its own.
     #[error("a cohort query carries no `ehr_ids` of its own — the cohort is the scope")]
     ScopeNotAllowed,
@@ -183,10 +219,12 @@ impl From<CohortError> for SmError {
     fn from(error: CohortError) -> Self {
         match error {
             CohortError::Query(inner) | CohortError::Unrecorded(inner) => inner,
+            CohortError::Subject(inner) => SmError::from(inner),
             CohortError::NotConfigured
             | CohortError::UnknownPredicate(_)
             | CohortError::InvalidValue { .. }
             | CohortError::NoPredicates
+            | CohortError::IdentityNotHeld
             | CohortError::ScopeNotAllowed => {
                 let message = error.to_string();
                 Self::new(CallStatusType::PreconditionViolation, message).with_source(error)
@@ -195,7 +233,7 @@ impl From<CohortError> for SmError {
                 let message = error.to_string();
                 Self::new(CallStatusType::ContentInvalid, message).with_source(error)
             }
-            CohortError::Database(_) => {
+            CohortError::Database(_) | CohortError::IndexAnswer(_) => {
                 crate::service::error::internal_fault_caused("execute a cohort query", &error)
                     .with_source(error)
             }
@@ -223,10 +261,13 @@ impl FerroEhrService {
     /// # Errors
     /// [`CohortError::NotConfigured`] when the deployment binds no predicate,
     /// [`CohortError::NoPredicates`] / [`CohortError::ScopeNotAllowed`] /
+    /// [`CohortError::IdentityNotHeld`] /
     /// [`CohortError::UnknownPredicate`] / [`CohortError::InvalidValue`] for a
     /// malformed request, [`CohortError::CohortTooLarge`] above the configured
     /// ceiling, [`CohortError::Acquire`] when no domain connection can be
     /// obtained, [`CohortError::Database`] when a domain read fails,
+    /// [`CohortError::Subject`] when a named subject cannot be resolved,
+    /// [`CohortError::IndexAnswer`] when the index answers no UUID,
     /// [`CohortError::Query`] when the AQL execution fails, and
     /// [`CohortError::Unrecorded`] when the access record could not be taken
     /// under `fail_mode = "closed"`.
@@ -234,7 +275,7 @@ impl FerroEhrService {
         &self,
         request: CohortQueryRequest,
     ) -> Result<CohortOutcome, CohortError> {
-        let hash = definition_hash(&request.predicates);
+        let hash = definition_hash(&request.predicates, &request.subjects);
         let purpose = request
             .purpose
             .clone()
@@ -255,25 +296,24 @@ impl FerroEhrService {
         if !self.cohort.is_enabled() {
             return Err(CohortError::NotConfigured);
         }
-        if request.predicates.is_empty() {
+        if request.predicates.is_empty() && request.subjects.is_empty() {
             return Err(CohortError::NoPredicates);
         }
         if !request.query.ehr_ids.is_empty() {
             return Err(CohortError::ScopeNotAllowed);
         }
-
-        let parties = self.cohort_parties(&request.predicates).await?;
         let max = u64::from(self.cohort.max_cohort_size);
-        let size = u64::try_from(parties.len()).unwrap_or(u64::MAX);
-        if size > max {
-            return Err(CohortError::CohortTooLarge { size, max });
-        }
-
-        // Step two: the crossing. Identifiers in, identifiers out.
-        let party_ids: Vec<VoId> = parties.into_iter().collect();
-        let ehr_ids = super::store::open_mappings(&self.linkage_pool, &party_ids)
-            .await
-            .map_err(CohortError::from)?;
+        let selected = match (request.predicates.is_empty(), request.subjects.is_empty()) {
+            (false, true) => self.predicate_ehrs(&request.predicates, max).await?,
+            (true, false) => self.named_subject_ehrs(&request.subjects, max).await?,
+            (false, false) => {
+                let by_predicate = self.predicate_ehrs(&request.predicates, max).await?;
+                let named = self.named_subject_ehrs(&request.subjects, max).await?;
+                by_predicate.intersection(&named).copied().collect()
+            }
+            (true, true) => return Err(CohortError::NoPredicates),
+        };
+        let ehr_ids: Vec<EhrId> = selected.into_iter().collect();
         let cohort_size = u64::try_from(ehr_ids.len()).unwrap_or(u64::MAX);
 
         // Step three. An empty cohort scopes nothing, and an unscoped AQL is a
@@ -311,6 +351,70 @@ impl FerroEhrService {
             },
             hash,
         ))
+    }
+
+    /// Steps one and two for the predicates: the parties they select, through
+    /// the local map to the EHRs those parties are the subject of.
+    ///
+    /// # Errors
+    /// [`CohortError::IdentityNotHeld`] under an IHE patient identity source,
+    /// [`CohortError::CohortTooLarge`] above `max`, and the predicate and
+    /// store failures.
+    async fn predicate_ehrs(
+        &self,
+        predicates: &[CohortPredicate],
+        max: u64,
+    ) -> Result<BTreeSet<EhrId>, CohortError> {
+        if matches!(self.ehr_index_provider(), EhrIndexProvider::Ihe(_)) {
+            return Err(CohortError::IdentityNotHeld);
+        }
+        let parties = self.cohort_parties(predicates).await?;
+        let size = u64::try_from(parties.len()).unwrap_or(u64::MAX);
+        if size > max {
+            return Err(CohortError::CohortTooLarge { size, max });
+        }
+        // Step two: the crossing. Identifiers in, identifiers out.
+        let party_ids: Vec<VoId> = parties.into_iter().collect();
+        Ok(super::store::open_mappings(&self.linkage_pool, &party_ids)
+            .await
+            .map_err(CohortError::from)?
+            .into_iter()
+            .collect())
+    }
+
+    /// The EHRs of the subjects the cohort names, each resolved by the
+    /// installed provider: under an IHE identity source through the forward
+    /// PIXm translation into the clinical domain, under the local map
+    /// through the map. A subject no EHR belongs to adds nothing.
+    ///
+    /// # Errors
+    /// [`CohortError::CohortTooLarge`] for more than `max` subjects,
+    /// [`CohortError::Subject`] when a subject cannot be resolved, and
+    /// [`CohortError::IndexAnswer`] for an `ehr_id` that is no UUID.
+    async fn named_subject_ehrs(
+        &self,
+        subjects: &[SubjectRef],
+        max: u64,
+    ) -> Result<BTreeSet<EhrId>, CohortError> {
+        let size = u64::try_from(subjects.len()).unwrap_or(u64::MAX);
+        if size > max {
+            return Err(CohortError::CohortTooLarge { size, max });
+        }
+        let mut ehrs = BTreeSet::new();
+        for subject in subjects {
+            let entries = self
+                .provider_subject_ehrs(subject)
+                .await
+                .map_err(CohortError::Subject)?;
+            for entry in entries {
+                let id = entry
+                    .ehr_id
+                    .parse::<uuid::Uuid>()
+                    .map_err(CohortError::IndexAnswer)?;
+                ehrs.insert(EhrId(id));
+            }
+        }
+        Ok(ehrs)
     }
 
     /// Step one: the intersection of every predicate's matching parties.
@@ -422,17 +526,23 @@ impl FerroEhrService {
 }
 
 /// The hex SHA-256 of the canonical predicate list: sorted by name, each
-/// rendered `name=value`, joined by newlines.
+/// rendered `name=value`, joined by newlines, then one `subjects@<namespace>`
+/// line per named subject, sorted.
 ///
 /// Canonicalized so the same cohort has the same identity whichever order a
 /// caller sent it in, and digested so the access record can name the cohort
-/// without carrying what it selected on.
-fn definition_hash(predicates: &[CohortPredicate]) -> String {
+/// without carrying what it selected on. A subject enters by its namespace
+/// alone: a digest over a national identifier's value could be reversed by
+/// trying every value, so it would carry the identifier after all.
+fn definition_hash(predicates: &[CohortPredicate], subjects: &[SubjectRef]) -> String {
     let mut sorted: Vec<&CohortPredicate> = predicates.iter().collect();
     sorted.sort_by(|a, b| (&a.name, &a.value).cmp(&(&b.name, &b.value)));
+    let mut namespaces: Vec<&str> = subjects.iter().map(|s| s.namespace.as_str()).collect();
+    namespaces.sort_unstable();
     let canonical = sorted
         .iter()
         .map(|p| format!("{}={}", p.name, p.value))
+        .chain(namespaces.iter().map(|ns| format!("subjects@{ns}")))
         .collect::<Vec<_>>()
         .join("\n");
     sha2::Sha256::digest(canonical.as_bytes()).iter().fold(
@@ -452,6 +562,10 @@ fn definition_hash(predicates: &[CohortPredicate]) -> String {
 mod tests {
     use super::*;
 
+    fn definition_hash_of(predicates: &[CohortPredicate]) -> String {
+        definition_hash(predicates, &[])
+    }
+
     fn predicate(name: &str, value: &str) -> CohortPredicate {
         CohortPredicate {
             name: name.to_owned(),
@@ -461,12 +575,12 @@ mod tests {
 
     #[test]
     fn the_definition_hash_is_order_independent_and_value_sensitive() {
-        let a = definition_hash(&[predicate("city", "Groningen"), predicate("sex", "F")]);
-        let b = definition_hash(&[predicate("sex", "F"), predicate("city", "Groningen")]);
+        let a = definition_hash_of(&[predicate("city", "Groningen"), predicate("sex", "F")]);
+        let b = definition_hash_of(&[predicate("sex", "F"), predicate("city", "Groningen")]);
         assert_eq!(a, b, "the same cohort has one identity");
         assert_ne!(
             a,
-            definition_hash(&[predicate("city", "Assen"), predicate("sex", "F")]),
+            definition_hash_of(&[predicate("city", "Assen"), predicate("sex", "F")]),
             "a different cohort has a different identity"
         );
         assert_eq!(a.len(), 64, "hex SHA-256");
@@ -477,8 +591,22 @@ mod tests {
     /// the access record.
     #[test]
     fn the_definition_hash_carries_no_predicate_value() {
-        let hash = definition_hash(&[predicate("city", "Groningen")]);
+        let hash = definition_hash_of(&[predicate("city", "Groningen")]);
         assert!(!hash.contains("Groningen") && !hash.contains("city"));
+    }
+
+    /// A named subject enters the digest by its namespace, never its value.
+    #[test]
+    fn the_definition_hash_carries_no_subject_value() {
+        let subject = |id: &str| SubjectRef::person(id, "urn:oid:2.16.840.1.113883.2.4.6.3");
+        let one = definition_hash(&[], &[subject("999990019")]);
+        assert_eq!(one, definition_hash(&[], &[subject("999990020")]));
+        assert_ne!(
+            one,
+            definition_hash(&[], &[]),
+            "a subject cohort is not the empty one"
+        );
+        assert!(!one.contains("999990019"));
     }
 
     #[test]
@@ -494,6 +622,10 @@ mod tests {
             ),
             (
                 CohortError::ScopeNotAllowed,
+                CallStatusType::PreconditionViolation,
+            ),
+            (
+                CohortError::IdentityNotHeld,
                 CallStatusType::PreconditionViolation,
             ),
             (

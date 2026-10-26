@@ -40,13 +40,13 @@ use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_server::tls_client::TlsClientSection;
 
 /// The IG's clinical ("blue") domain, the one the stub answers for.
-const CLINICAL: &str = "urn:oid:1.3.6.1.4.1.21367.13.20.3000";
+pub(crate) const CLINICAL: &str = "urn:oid:1.3.6.1.4.1.21367.13.20.3000";
 /// The IG's source ("red") domain the subjects are named in.
-const RED: &str = "urn:oid:1.3.6.1.4.1.21367.13.20.1000";
+pub(crate) const RED: &str = "urn:oid:1.3.6.1.4.1.21367.13.20.1000";
 /// The IG's red identifier, a synthetic value of the IHE example.
-const RED_ID: &str = "IHERED-994";
+pub(crate) const RED_ID: &str = "IHERED-994";
 /// The operation path under the stub's base (PIXm §2:3.83.4.1.2).
-const OPERATION: &str = "/Patient/$ihe-pix";
+pub(crate) const OPERATION: &str = "/Patient/$ihe-pix";
 /// The media type of every ITI-83 answer (PIXm §2:3.83.4.2.2).
 const FHIR_JSON: &str = "application/fhir+json";
 
@@ -60,7 +60,7 @@ fn ig(file: &str) -> Value {
 }
 
 /// The IG's red-to-blue answer with `value` in the clinical identifier.
-fn red_to_blue(value: &str) -> Value {
+pub(crate) fn red_to_blue(value: &str) -> Value {
     let mut answer = ig("example/Parameters-pixm-response-mohralice-red-to-blue.json");
     let parameters = answer
         .get_mut("parameter")
@@ -77,7 +77,7 @@ fn red_to_blue(value: &str) -> Value {
     answer
 }
 
-fn answer(status: u16, body: &Value) -> ResponseTemplate {
+pub(crate) fn answer(status: u16, body: &Value) -> ResponseTemplate {
     ResponseTemplate::new(status).set_body_raw(body.to_string(), FHIR_JSON)
 }
 
@@ -92,7 +92,7 @@ fn config(base: &str) -> EhrIndexConfig {
 
 /// A service whose provider is the identity source at `base`, with the
 /// clinical domain declared as the pseudonym namespace.
-fn service(db: &testkit::TestDb, base: &str) -> FerroEhrService {
+pub(crate) fn service(db: &testkit::TestDb, base: &str) -> FerroEhrService {
     let policy = PrivacyPolicy::compile(&PrivacyConfig {
         subject_namespaces: vec![CLINICAL.to_owned()],
         ..PrivacyConfig::default()
@@ -104,7 +104,7 @@ fn service(db: &testkit::TestDb, base: &str) -> FerroEhrService {
         .with_ehr_index(EhrIndexProvider::Ihe(Arc::new(source)))
 }
 
-fn red_subject() -> SubjectRef {
+pub(crate) fn red_subject() -> SubjectRef {
     SubjectRef::person(RED_ID, RED)
 }
 

@@ -39,6 +39,7 @@ mod canonical_json_literals;
 mod codec_corpus;
 mod cohort_bench;
 mod cohort_query;
+mod cohort_subjects;
 mod commit_lock_order;
 mod decommission;
 mod directory_item_refs;

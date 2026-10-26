@@ -71,6 +71,7 @@ fn bench_config(n: usize) -> CohortConfig {
                 kind: PredicateKind::Text,
             },
         )]),
+        subjects: false,
     }
 }
 
@@ -248,6 +249,7 @@ async fn measure(
             name: "city".to_owned(),
             value: format!("c{size}"),
         }],
+        subjects: Vec::new(),
         purpose: Some("benchmark".to_owned()),
         query: ferroehr::service::query::request::AqlQueryRequest::default(),
     };

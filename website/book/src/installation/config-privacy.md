@@ -276,7 +276,10 @@ worked example are in [Querying with AQL](../querying-aql.md#cohort-queries-acro
 **Off until a predicate is bound.** Which demographic leaf may be selected on is
 a deployment fact about the archetypes in use, never something the server can
 infer, so `[cohort.predicates]` is empty by default and `POST /query/cohort`
-answers `404` until it is not.
+answers `404` until it is not. `subjects = true` turns the surface on without
+a predicate, for cohorts that name their subjects by identifier. That is the one
+form an IHE patient identity source serves (`[ehr_index] provider = "ihe"`):
+it holds no party-to-EHR map, so a predicate is refused there.
 
 ```toml
 [cohort]
@@ -291,7 +294,8 @@ city = { archetype = "openEHR-DEMOGRAPHIC-ADDRESS.address.v1", node = "at0012", 
 |---|---|---|---|
 | `small_cell_threshold` | int | `5` | The distinct-EHR floor a result set must reach to be served. Below it the rows are withheld and the response is marked `suppressed`; `0` disables suppression. |
 | `max_cohort_size` | int | `100000` | The largest cohort a predicate may select. A wider one is refused `422` rather than truncated: a silently shortened cohort is a wrong denominator. |
-| `predicates` | table | empty | The allow-list, keyed by the name a caller uses. Empty leaves the surface off. |
+| `predicates` | table | empty | The allow-list, keyed by the name a caller uses. Empty, with `subjects` off, leaves the surface off. |
+| `subjects` | bool | `false` | Let a request name its subjects by identifier, in any identifier domain, each resolved through the `[ehr_index]` provider: under the IHE provider by a forward PIXm translation into the server's clinical domain, never back. |
 
 ### The allow-list
 

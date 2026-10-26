@@ -47,6 +47,7 @@ fn bound_config() -> CohortConfig {
                 kind: PredicateKind::Text,
             },
         )]),
+        subjects: false,
     }
 }
 
@@ -267,5 +268,64 @@ async fn an_unconfigured_deployment_answers_not_found() {
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{text}");
+    drop(db);
+}
+
+/// A body that names `subjects` instead of predicates is served under
+/// `[cohort] subjects = true`, each subject resolved through the local map,
+/// and no identifier value reaches the wire.
+#[tokio::test]
+async fn a_cohort_names_its_subjects_by_identifier() {
+    use ferroehr::service::ehr_index::provider::EhrIndexProvider;
+    use ferroehr::service::ehr_index::types::SubjectRef;
+
+    const DOMAIN: &str = "urn:oid:2.999.1.4114";
+    let (db, pool) = common::migrated_pool().await;
+    let service = Arc::new(
+        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+            .with_ehr_index(EhrIndexProvider::Local)
+            .with_cohort(CohortConfig {
+                small_cell_threshold: 0,
+                subjects: true,
+                ..CohortConfig::default()
+            }),
+    );
+    for name in ["wire-a", "wire-b"] {
+        let ehr = service.create_ehr(None).await.expect("create_ehr");
+        service
+            .add_ehr_subject(
+                ehr.to_string(),
+                SubjectRef::person(name, DOMAIN),
+                None,
+                None,
+            )
+            .await
+            .expect("add_ehr_subject");
+        service
+            .create_composition(ehr, uv(&composition(name)))
+            .await
+            .expect("create_composition");
+    }
+    let app = common::router_with(common::api_config(false), service).await;
+    let request = json!({
+        "q": "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
+        "subjects": [{ "id": "wire-a", "namespace": DOMAIN }],
+        "purpose": "secondary-use"
+    })
+    .to_string();
+
+    let (status, text) = common::send_body(
+        &app,
+        common::post_json(&format!("{}/query/cohort", common::BASE), &request),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{text}");
+    let served: Value = serde_json::from_str(&text).expect("a RESULT_SET");
+    assert_eq!(served["meta"]["cohort"]["size"], json!(1), "{served}");
+    assert_eq!(served["rows"].as_array().map(Vec::len), Some(1), "{served}");
+    assert!(
+        !text.contains("wire-a"),
+        "no identifier reaches the wire: {text}"
+    );
     drop(db);
 }
