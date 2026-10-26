@@ -56,8 +56,8 @@ and compares every version uid.
 
 ## Admission (N42a)
 
-A federation admits a node on four identifier conditions. A FerroEHR node
-meets them when the operator configures it as follows:
+A federation admits a node on four identifier conditions. For three of them,
+the operator configures a FerroEHR node as follows:
 
 - **A federation-wide unique `system_id`.** The default, `ferroehr.local`, is
   the same on every node that leaves it unset. Set `[server] system_id` to a
@@ -69,12 +69,8 @@ meets them when the operator configures it as follows:
   Case 1). A federation member imports with `?ehr_id=` set to an id it chose.
 - **No reuse of an `ehr_id`.** A node never issues an id twice; creating an
   EHR under an id it holds is refused (`409`, SM `ehr_create_fail_duplicate_id`).
-- **`ehr_id` generation.** FerroEHR mints a UUIDv7 (RFC 9562 §5.7): a
-  millisecond timestamp, a monotonic counter and 46 bits from a CSPRNG. The
-  specification asks for "UUID-v4 or equivalent" and does not define
-  equivalent; the question is open as
-  [#4121](https://github.com/FerroHEALTH/FerroEHR/issues/4121). A federation
-  operator decides at admission.
+- **`ehr_id` generation.** FerroEHR mints every `ehr_id` as a UUIDv7 (RFC 9562
+  §5.7).
 
 ## Authentication
 
