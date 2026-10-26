@@ -19,7 +19,7 @@
 use std::path::Path;
 
 use argon2::{Algorithm, Params, PasswordHash};
-use ferrohealth_smart::config::{AuthMode, AuthSection, ConfigError, IssuerKey, Resolved};
+use ferrohealth_smart::config::{AuthSection, ConfigError, IssuerKey, Resolved};
 use secrecy::ExposeSecret;
 use serde::Deserialize;
 use serde::de::IgnoredAny;
@@ -122,10 +122,6 @@ pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
 /// # Errors
 /// The [`AuthConfigError`] naming the first rule the section breaks.
 pub fn validate(section: &AuthSection) -> Result<(), AuthConfigError> {
-    // TODO(#4033): check opaque tokens through the crate's introspection verifier.
-    if section.mode == AuthMode::Introspection || section.introspection.is_some() {
-        return Err(AuthConfigError::IntrospectionUnserved);
-    }
     for entry in section.issuers() {
         check_issuer_userinfo(&entry.issuer)?;
         if let Some(path) = entry.jwks_file.as_deref().filter(|path| !path.is_empty()) {
@@ -174,14 +170,6 @@ pub enum AuthConfigError {
          [[auth.basic.users]] entries or an [auth] issuer, or set auth.enabled = false"
     )]
     NoMechanism,
-    /// `[auth]` asks for token introspection, which the server does not
-    /// serve.
-    #[error(
-        "auth.mode = \"introspection\" and [auth.introspection] are not served: this server \
-         checks bearer tokens as JWTs against the issuer's key set; remove both, or set \
-         auth.mode = \"jwt\""
-    )]
-    IntrospectionUnserved,
     /// The `ferrohealth-smart` crate refuses the section.
     #[error("the shared [auth] section is refused")]
     Section {
@@ -459,30 +447,25 @@ mod tests {
         toml::from_str(body)
     }
 
-    /// A section that asks for token introspection is refused at boot, never
-    /// checked as JWTs while the operator believes opaque tokens are served.
+    /// RFC 7662: `mode = "introspection"` is served, and an
+    /// `[auth.introspection]` table beside `mode = "jwt"` is still refused,
+    /// so the table is never ignored while tokens are checked as JWTs.
     #[test]
-    fn token_introspection_is_refused_at_boot() {
-        for body in [
-            "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nmode = \"introspection\"\n",
+    fn token_introspection_is_served_and_its_table_needs_the_mode() {
+        let served = parse(
+            "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nmode = \"introspection\"\n\
+             [introspection.client]\nclient_id = \"cdr\"\nclient_secret = \"s3cret\"\n",
+        )
+        .expect("parses");
+        assert!(validate(&served).is_ok(), "{:?}", validate(&served));
+        let ignored = parse(
             "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\n\
              [introspection]\nendpoint = \"https://idp.example/introspect\"\n",
-        ] {
-            let section = parse(body).expect("the crate accepts the keys");
-            assert!(
-                matches!(
-                    validate(&section),
-                    Err(AuthConfigError::IntrospectionUnserved)
-                ),
-                "introspection must be refused for {body:?}"
-            );
-        }
+        )
+        .expect("parses");
         assert!(
-            !matches!(
-                validate(&parse("mode = \"jwt\"\n").expect("jwt parses")),
-                Err(AuthConfigError::IntrospectionUnserved)
-            ),
-            "mode = \"jwt\" is the served mode"
+            matches!(validate(&ignored), Err(AuthConfigError::Section { .. })),
+            "a table beside mode = \"jwt\" is refused"
         );
     }
 

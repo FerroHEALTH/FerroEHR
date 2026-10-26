@@ -34,7 +34,7 @@ scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds
 | `audience` | list of string | **required with an issuer** | Accepted `aud` values; a token naming none of them is refused (RFC 9068 §4, RFC 8725 §3.9). |
 | `algorithms` | list of string | `["RS256","RS384","PS256","PS384","ES256","ES384"]` | Accepted signature algorithms. Asymmetric only: an `HS*` algorithm is a boot error, and `none` is no algorithm at all (RFC 8725 §3.1, §3.2). |
 | `token_profile` | `rfc9068` or `jwt` | `rfc9068` | `rfc9068` requires `typ` `at+jwt` and the `client_id`, `iat` and `jti` claims (RFC 9068 §2.2, §4). `jwt` admits a plain JWT bearer token (`typ` absent or `JWT`) for an issuer that mints no RFC 9068 tokens, and reads a `scp` array when `scope` is absent. A token typed as another kind of JWT is refused under either. |
-| `mode` | `jwt` | `jwt` | How a bearer token is checked: as a JWT against the issuer's key set. `introspection` (RFC 7662) and an `[auth.introspection]` table are boot errors, because this server does not serve token introspection. |
+| `mode` | `jwt` or `introspection` | `jwt` | How a bearer token is checked. `jwt` checks it as a JWT against the issuer's key set. `introspection` posts an opaque token to the issuer's RFC 7662 endpoint (see [Opaque tokens](#opaque-tokens-by-introspection)); it needs a flat `issuer`, and an `[auth.introspection]` table beside `jwt` is a boot error. |
 | `clock_skew_seconds` | int | `60` | Leeway on `exp`, `nbf` and `iat`. At most `300`. |
 | `jwks_max_age_seconds` | int | `600` | A key set older than this is read again. |
 | `jwks_refresh_interval_seconds` | int | `60` | A token naming an unknown `kid` reads the key set again at most once per interval. |
@@ -68,6 +68,35 @@ subject is stamped into the audit trail, so a token without one is refused with
 `401` rather than recorded under a placeholder identity. A bearer token outside
 the RFC 6750 §2.1 `b64token` alphabet is refused the same way, with `401` and
 `error="invalid_token"`.
+
+### Opaque tokens by introspection
+
+An authorization server that issues opaque access tokens is served with
+`mode = "introspection"`. Each bearer token is posted to the issuer's
+introspection endpoint (RFC 7662 §2.1), and the active response stands in for
+the JWT claims: `sub`, `scope`, the roles of `role_claims`, `aud` against
+`audience` and `iss` against the issuer. An inactive token is a `401`. An
+endpoint that cannot answer is a `503`, because the server cannot decide. An
+active response is reused until its `exp`, at most `cache_max_age_seconds`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `endpoint` | URL | unset | The introspection endpoint; unset reads the `introspection_endpoint` of the issuer's metadata. `https`, or `http` on a loopback host. |
+| `cache_max_age_seconds` | int | `60` | The longest an active response is used; `0` caches nothing. |
+| `cache_capacity` | int | `10000` | The most responses held at once. |
+| `client` | table | unset | The client authentication of the call (RFC 7662 §2.1), with the keys of an outbound grant: `client_id` and `client_secret`, `private_key_jwt` or mutual TLS (see [the grant keys](config-integrations.md#authenticating-to-the-terminology-server)). |
+| `bearer` | table | unset | A client credentials grant whose token authorizes the call instead (SMART App Launch 2.2.0, Token Introspection). Exactly one of `client` and `bearer`. |
+
+```toml
+[auth]
+issuer = "https://idp.example.org/realms/ferroehr"
+audience = ["ferroehr"]
+mode = "introspection"
+
+[auth.introspection.client]
+client_id = "ferroehr-rs"
+client_secret_file = "/run/secrets/introspection-client"
+```
 
 ### The Basic-auth user store
 
