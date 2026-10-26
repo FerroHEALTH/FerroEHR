@@ -284,7 +284,9 @@ on, so hot paths never open the JSON:
 - `citem_num`, the nearest archetyped ancestor, for archetype-anchored path
   resolution;
 - `context_start`, the promoted `EVENT_CONTEXT.start_time` on COMPOSITION
-  roots, serving dashboard ordering from a partial index;
+  roots, serving ordering from two partial indexes: one per EHR for a
+  dashboard, one over the whole population for a query that orders every
+  composition and takes the first page;
 - `path`, the materialized path from the root (`COLLATE "C"`, so byte order
   equals tree order), used only for reassembly, never as an AQL predicate.
 
@@ -338,7 +340,9 @@ re-aggregation, zero translation between storage and wire.
 **AQL** plans over `node`, with one exception: a whole-object projection
 loads the matching `body` rows in a batch instead of reassembling fragments.
 CONTAINS chains become nested-set interval joins, class and archetype
-predicates hit the promoted columns and their indexes, leaf values are
+predicates hit the promoted columns and their indexes, a COMPOSITION's
+`archetype_details/template_id/value` compares the indexed
+`version.template_id`, leaf values are
 extracted from the canonical fragments with `jsonb_path_query_first`, arrays
 are unnested with `jsonb_path_query` as a lateral set-returning function, and
 comparison and ordering go through `ext.openehr_magnitude` (the `IMMUTABLE`
