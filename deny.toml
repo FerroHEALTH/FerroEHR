@@ -163,6 +163,9 @@ exceptions = [
   # FerroSYS's ferrohealth-telemetry, the FerroHEALTH products' console,
   # request log and OpenTelemetry provider, the same Licensor's code.
   { allow = ["BUSL-1.1"], crate = "ferrohealth-telemetry" },
+  # FerroSYS's ferrohealth-usage-report, the FerroHEALTH products' installation
+  # report to FerroPULSE, the same Licensor's code (#4087).
+  { allow = ["BUSL-1.1"], crate = "ferrohealth-usage-report" },
   # FerroAUDIT, the FerroHEALTH products' shared audit library, is the same
   # Licensor's code under the same licence: `ihe-atna` sends the ATNA trail and
   # writes the BALP AuditEvent, `ehds-logging` is the EHDS logging component

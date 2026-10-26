@@ -902,7 +902,7 @@ once a day, with the version, the licence grant type and coarse latency
 figures, and no patient data. `ferroehr usage-report --print` shows the exact
 JSON, and `usageReport.enabled=false` (Helm) or
 `FERROEHR__USAGE_REPORT__ENABLED=false` switches it off. With the chart's egress policy on, it needs a rule for
-`report.ferropulse.eu` on port 443; without one it fails quietly.
+`report.ferropulse.eu` on port 443; without one it logs a warning.
 
 ## The admin and messaging APIs
 

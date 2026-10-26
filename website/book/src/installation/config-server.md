@@ -491,18 +491,20 @@ notice are on the [Usage report](../usage-report.md) page.
 [usage_report]
 enabled = true
 endpoint = "https://report.ferropulse.eu/v1/report"
-slow_aql_ms = 1000
 deployment = "unknown"
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `true` | Send the report. `false` sends nothing and writes nothing to the database for it. In a CI run (`GITHUB_ACTIONS` or `CI` set to `true` or `1`) the report is off whatever this says. Environment: `FERROEHR__USAGE_REPORT__ENABLED`. |
-| `endpoint` | secret URL | `https://report.ferropulse.eu/v1/report` | Where reports go. Must be an absolute `https` URL without credentials (refused at boot, and redacted from every rendering); plain `http` is accepted for a loopback host only. Environment: `FERROEHR__USAGE_REPORT__ENDPOINT`. |
-| `slow_aql_ms` | int | `1000` | Execution time in milliseconds above which an AQL query counts as slow in the daily report. At least `1`. Environment: `FERROEHR__USAGE_REPORT__SLOW_AQL_MS`. |
+| `endpoint` | URL | `https://report.ferropulse.eu/v1/report` | Where reports go. Must be an absolute `https` URL without credentials; plain `http` is accepted for a loopback host only. Anything else is refused when the configuration is read. Environment: `FERROEHR__USAGE_REPORT__ENDPOINT`. |
 | `deployment` | enum{helm,compose,binary,unknown} | `unknown` | How the instance was deployed, as the report states it. The Helm chart sets it to `helm`. Environment: `FERROEHR__USAGE_REPORT__DEPLOYMENT`. |
+| `state_dir` | path | unset | Refused. The section is the one every FerroHEALTH product shares, where this key names the directory of the instance id; FerroEHR keeps the instance id and the counts in the clinical database, so every replica reports as one installation. |
+
+`slow_aql_ms` is no longer a key: the report carries no AQL series. A
+configuration that still sets it is refused at boot; remove the line.
 
 Under the Helm chart, set the switch with `usageReport.enabled`. The chart
 writes `enabled` and `deployment = "helm"` into the rendered file itself and
 refuses to render if either is also set under `config.usage_report`;
-`endpoint` and `slow_aql_ms` pass through `config.usage_report` unchanged.
+`endpoint` passes through `config.usage_report` unchanged.

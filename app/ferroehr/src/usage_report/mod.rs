@@ -1,30 +1,26 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The usage report to `FerroPULSE`.
+//! The usage report to `FerroPULSE`, sent by `ferrohealth-usage-report`.
 //!
-//! One `start` report at each process start and one `daily` report per instance
-//! per day, carrying the installation id, the version, the licence grant type,
-//! the deployment kind, coarse host size and latency aggregates per
-//! route-template group.
+//! One `start` report at each process start and one `daily` report per
+//! installation per day, on `FerroPULSE`'s report envelope v2: the
+//! installation id, the version, the licence grant type, the deployment kind,
+//! coarse host size, FerroEHR's [`product::Status`] and, daily, latency
+//! aggregates per route-template group. No patient data, request path, AQL
+//! text or licence id can reach one: the envelope has no field that could hold
+//! one, and the request log hands the window route templates only. On by
+//! default; `[usage_report] enabled = false`
+//! (`FERROEHR__USAGE_REPORT__ENABLED=false`) stops it, a CI run
+//! (`GITHUB_ACTIONS` or `CI` set to `true` or `1`) stops it whatever the switch
+//! says, and the boot line says which.
 //!
-//! No openEHR spec governs this — our own design. The wire contract is
-//! `FerroPULSE`'s report v1 ([`payload`]). It carries no patient data, no request
-//! path, no AQL text and no licence id: the payload types have no field that
-//! could hold one, and [`window`] records route templates only. On by default;
-//! `[usage_report] enabled = false` (`FERROEHR__USAGE_REPORT__ENABLED=false`)
-//! stops it, a CI run (`GITHUB_ACTIONS` or `CI` set to `true` or `1`) stops it
-//! whatever the switch says, and the boot line says which
-//! ([`reporter::announce`]).
+//! No openEHR spec governs this: our own design. FerroEHR supplies two parts:
 //!
-//! - [`config`]: the `[usage_report]` section.
-//! - [`payload`]: the typed report.
-//! - [`window`]: the in-process metrics window and its rendering.
-//! - [`store`]: the instance id, the cross-replica claims, the shared window.
-//! - [`reporter`]: assembly, sending, scheduling.
+//! - [`product`]: the status, the route groups, the identity and the preview.
+//! - [`store`]: the crate's state store over the clinical database, so every
+//!   replica of an installation shares one id, one start claim and one daily
+//!   report.
 
-pub mod config;
-pub mod payload;
-pub mod reporter;
+pub mod product;
 pub mod store;
-pub mod window;

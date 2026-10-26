@@ -104,9 +104,6 @@ impl FerroEhrService {
     /// Emits `aql_query_duration_seconds{phase}` for `plan` and `execute`, each
     /// recorded only when its phase completes, and `aql_queries_total{outcome}`
     /// exactly once per call, every failure arm routing through [`Failure`].
-    /// A call that reached execution (`ok` or `exec_error`, timeouts included)
-    /// also records its whole duration into the usage report's window; the
-    /// query text never leaves this function that way.
     ///
     /// # Errors
     ///
@@ -118,16 +115,12 @@ impl FerroEhrService {
         name: Option<&str>,
         request: &AqlQueryRequest,
     ) -> Result<QueryOutcome, SmError> {
-        let started = Instant::now();
         let outcome = self.execute_aql_inner(aql, name, request).await;
         let label = match &outcome {
             Ok(_) => "ok",
             Err(failure) => failure.outcome,
         };
         count_query(label);
-        if matches!(label, "ok" | "exec_error") {
-            crate::usage_report::window::record_aql(started.elapsed());
-        }
         outcome.map_err(|failure| failure.error)
     }
 

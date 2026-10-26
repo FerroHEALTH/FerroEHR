@@ -530,7 +530,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         token_endpoint: "https://u3:URL_PW_SENTINEL_3@h3/p".to_owned(),
         ..ferrohealth_smart::config::OauthSection::default()
     });
-    cfg.usage_report.endpoint = leaky(4);
+    // URL 4 was the usage report endpoint, whose type now refuses userinfo.
     cfg.authz.abac.remote.server = Some(leaky(5));
     cfg.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
         endpoint: leaky(6),
@@ -573,7 +573,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
             !body.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked from {uri}: {body}"
         );
-        for n in 1..=7 {
+        for n in (1..=7).filter(|n| *n != 4) {
             assert!(
                 body.contains(&format!("https://***@h{n}/p")),
                 "URL {n} lost its host and path in {uri}: {body}"

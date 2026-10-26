@@ -46,6 +46,7 @@ url.workspace = true
 async-trait.workspace = true
 ferrohealth-config.workspace = true
 ferrohealth-telemetry.workspace = true
+ferrohealth-usage-report.workspace = true
 jiff.workspace = true
 reqwest.workspace = true
 tokio.workspace = true
