@@ -9,9 +9,9 @@
 //!
 //! The issuer is reached through the workspace `reqwest`, whose `rustls`
 //! backend verifies against the platform trust store
-//! (`rustls-platform-verifier`) exactly as the CDR client does, so an issuer
-//! behind a private CA mounted into that store (or named by `SSL_CERT_DIR` /
-//! `SSL_CERT_FILE`) is trusted. No openEHR spec governs this — our own
+//! (`rustls-platform-verifier`) exactly as the CDR client does, and an issuer
+//! behind a private CA is trusted through `auth.oidc.ca_file`, on every
+//! platform (`crate::trust`). No openEHR spec governs this — our own
 //! design/extension.
 
 use std::future::Future;
@@ -93,13 +93,13 @@ pub struct LoginParams {
 
 /// Runs OIDC discovery against the configured issuer.
 ///
-/// The issuer is reached over the platform trust store (module docs), never
-/// following redirects, and through the `resolve` override when one is
-/// configured.
+/// The issuer is reached over the platform trust store and `ca_file` (module
+/// docs), never following redirects, and through the `resolve` override when
+/// one is configured.
 ///
 /// # Errors
-/// `anyhow::Error` on an unreachable/invalid issuer (boot-time failure —
-/// the binary refuses to start with a broken OIDC config).
+/// `anyhow::Error` on an unusable `ca_file` or an unreachable/invalid issuer
+/// (boot-time failure — the binary refuses to start with a broken OIDC config).
 pub async fn discover(config: &OidcConfig) -> anyhow::Result<OidcState> {
     let mut builder = reqwest::Client::builder().redirect(reqwest::redirect::Policy::none()); // SSRF hardening
     // Split-horizon issuer resolution (`host=ip:port`): the canonical
@@ -113,7 +113,8 @@ pub async fn discover(config: &OidcConfig) -> anyhow::Result<OidcState> {
             .ok_or_else(|| anyhow::anyhow!("auth.oidc.resolve must be `host=ip:port`"))?;
         builder = builder.resolve(host.trim(), addr.trim().parse()?);
     }
-    let http = OidcHttpClient(builder.build()?);
+    let ca_file = (!config.ca_file.is_empty()).then(|| std::path::Path::new(&config.ca_file));
+    let http = OidcHttpClient(crate::trust::trusting(builder, "auth.oidc.ca_file", ca_file)?.build()?);
     let issuer = openidconnect::IssuerUrl::new(config.issuer.clone())?;
     let metadata = openidconnect::core::CoreProviderMetadata::discover_async(issuer, &http).await?;
     Ok(OidcState {

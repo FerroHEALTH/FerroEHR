@@ -161,15 +161,14 @@ wait_http "$CDR_URL/ferroehr/rest/status" 150
 wait_http "$KEYCLOAK_URL/auth/realms/ferroehr/.well-known/openid-configuration" 90
 
 # The development CA Keycloak's TLS certificate chains to (docker-compose.dev.yml
-# `keycloak-tls`), for the host-mode viewer: rustls reads SSL_CERT_DIR beside
-# SSL_CERT_FILE on Linux, so the viewer trusts the dev issuer and every public
-# CA. The composed CDR and viewer mount the same CA (docker/viewer/e2e-env.yml).
+# `keycloak-tls`), for the host-mode viewer: `auth.oidc.ca_file` trusts it beside
+# the platform roots on Linux and macOS alike, so the viewer reaches the dev
+# issuer and every public CA. The composed CDR and viewer mount the same CA
+# (docker/viewer/e2e-env.yml).
 DEV_CA_DIR="$ROOT/target/ui-e2e/dev-ca"
 mkdir -p "$DEV_CA_DIR"
 docker compose exec -T keycloak cat /opt/keycloak/conf/tls/ca/ca.crt > "$DEV_CA_DIR/ca.crt"
-VIEWER_TLS_ENV=(SSL_CERT_DIR="$DEV_CA_DIR")
-[[ -f /etc/ssl/certs/ca-certificates.crt ]] \
-  && VIEWER_TLS_ENV+=(SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt)
+VIEWER_TLS_ENV=(FERROEHR_VIEWER__AUTH__OIDC__CA_FILE="$DEV_CA_DIR/ca.crt")
 
 # ── 2. Deterministic Keycloak test passwords (the shipped realm export holds
 #      only hashes; reset via the bootstrap admin API — never edit the realm) ─

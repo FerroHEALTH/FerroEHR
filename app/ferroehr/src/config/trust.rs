@@ -6,11 +6,12 @@
 //!
 //! `reqwest`'s rustls backend verifies through `rustls-platform-verifier`, and
 //! `ClientBuilder::tls_certs_merge` hands extra roots to
-//! `rustls_platform_verifier::Verifier::new_with_extra_roots`, so a PIX
-//! Manager behind a private PKI is trusted on Linux and macOS alike without
-//! touching the platform store. The file is read once, when the client is
-//! built, and an unreadable file, a file that is no PEM, or one with no
-//! certificate refuses the start.
+//! `rustls_platform_verifier::Verifier::new_with_extra_roots`, so an OIDC
+//! issuer, a CDR or a PIX Manager behind a private PKI is trusted on Linux and
+//! macOS alike without touching the platform store. The viewer compiles this
+//! file too, so its clients follow the same rule. The file is read once, when
+//! the client is built, and an unreadable file, a file that is no PEM, or one
+//! with no certificate refuses the start.
 //!
 //! NOTE: no openEHR spec governs outbound TLS trust: our own design.
 
