@@ -95,6 +95,7 @@ fail_on_error = false
 [[auth.basic.users]]
 user = "ferroehr"
 scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
+roles = ["USER"]
 # Argon2id hash of the password "ferroehr".
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
