@@ -14,15 +14,19 @@
 #
 # Sourced by scripts/deploy-probe.sh; never run directly.
 
-# The value of `key` in the `[table]` of a TOML document, or at the top level
-# when `table` is empty. Only what `ferroehr config check` prints is parsed:
-# `key = value` lines under `[table]` headers.
+# The value of `key` in `table`, or at the top level when `table` is empty, as
+# `ferroehr config check` prints it: one `table.key = value  # source` line per
+# key, the source comment dropped.
 toml_value() {
-  local doc="$1" table="$2" key="$3"
-  printf '%s\n' "$doc" | awk -v table="$table" -v key="$key" '
-    /^\[/ { current = $0; gsub(/^\[|\]$/, "", current); next }
-    current == table && $1 == key && $2 == "=" {
-      value = $0; sub(/^[^=]*=[[:space:]]*/, "", value); print value; exit
+  local doc="$1" table="$2" key="$3" dotted
+  dotted="${table:+$table.}$key"
+  printf '%s\n' "$doc" | awk -v dotted="$dotted" '
+    $1 == dotted && $2 == "=" {
+      value = $0
+      sub(/^[^=]*=[[:space:]]*/, "", value)
+      sub(/[[:space:]]+#.*$/, "", value)
+      print value
+      exit
     }
   '
 }
