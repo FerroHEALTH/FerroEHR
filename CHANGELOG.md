@@ -180,7 +180,8 @@ workflow refuses a tag that has no matching section here.
   `http_response_status_code=~"5.."`, as the bundled alert rules and Grafana
   dashboard now read. The `http_server_active_requests`,
   `http_server_request_body_size` and `http_server_response_body_size`
-  series are removed. The viewer's management page loses its in-flight
+  series are removed, and no series on `/management/prometheus` carries the
+  `otel_scope_name` label any more. The viewer's management page loses its in-flight
   requests tile, and the dashboard's in-flight panel shows the request rate.
 
 - **Breaking: responses no longer carry `x-trace-id`, and a client's
