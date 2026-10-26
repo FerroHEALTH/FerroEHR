@@ -72,6 +72,10 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The bundled PostgreSQL image is rebuilt on the 2026-10-21 respin of
+  `postgres:18.6`** (#4084, `sha256:edb0c08d…`), a same-version respin with
+  rebuilt base packages. The respin ships the fixed xz packages, so the
+  `TEMP-1147318-639065` statement leaves `security/vex/postgres-os.openvex.json`.
 - **Breaking: the server reads only the configuration file it is told to
   read** (#4087). The loader is `ferrohealth-config` 0.2.4, the FerroHEALTH
   products' shared one, and it reads the file `--config` or `FERROEHR_CONFIG`
