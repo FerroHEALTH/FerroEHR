@@ -32,6 +32,7 @@ use ferroehr::decommission::{Decommission, Erasure};
 use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
+use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::status::SmError;
 use ferroehr::storage::ehr_repo::ehr_subject_columns;
 use ferroehr::support::{SupportPeriod, today_utc};
@@ -642,7 +643,8 @@ fn mounted_management_endpoints(levels: EndpointLevels) -> String {
 ///
 /// Every optional collaborator is attached here: the audit sender, the local
 /// Audit Record Repository read side (wired only when auditing and the store are
-/// both on), terminology, the subject proxy, and the multimedia store.
+/// both on), terminology, the subject proxy, the multimedia store, and the
+/// EHR index provider the caller built and checked.
 ///
 /// # Errors
 /// Any collaborator whose configuration is enabled but unbuildable — a slim
@@ -654,6 +656,7 @@ fn assemble_service(
     outbox_enabled: bool,
     signer: Arc<Signer>,
     deployment: DeploymentPosture,
+    ehr_index: EhrIndexProvider,
 ) -> anyhow::Result<FerroEhrService> {
     let audit_enabled = audit_sender.is_some();
     // The MRN patterns compiled here; `FerroEhrConfig::validate` already
@@ -689,7 +692,8 @@ fn assemble_service(
         .with_privacy(Arc::new(privacy))
         .with_cohort(config.cohort.clone())
         .with_identifier_protection_opt(identifiers.map(Arc::new))
-        .with_query_config(&config.query);
+        .with_query_config(&config.query)
+        .with_ehr_index(ehr_index);
     if let Some(sender) = audit_sender {
         service = service.with_audit(sender);
     }
@@ -1213,6 +1217,16 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // logged so an operator can see the key took.
     tracing::info!(system_id = %config.server.system_id, "openEHR system identifier");
 
+    // An IHE patient identity source answers its capabilities read here, so an
+    // unreachable one refuses boot rather than the first request (#3380).
+    let ehr_index = EhrIndexProvider::from_config(&config.ehr_index)
+        .context("building the [ehr_index] identity source")?;
+    ehr_index
+        .ready()
+        .await
+        .context("the [ehr_index] identity source did not answer its capabilities read")?;
+    tracing::info!(provider = ehr_index.name(), "EHR index provider");
+
     let audit_enabled = audit_sender.is_some();
     let service = Arc::new(assemble_service(
         &config,
@@ -1221,6 +1235,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         outbox_enabled,
         signer,
         deployment,
+        ehr_index,
     )?);
 
     // The schemas are prepared by now, so a configured identifier scheme the

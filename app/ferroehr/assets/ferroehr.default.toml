@@ -733,6 +733,33 @@ max_cohort_size = 100000
 #? age_band      = { archetype = "openEHR-DEMOGRAPHIC-PERSON.person.v1", node = "at0010", kind = "birth_date" }
 #? organisation  = { archetype = "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1", node = "at0003", kind = "text" }
 
+# ── [ehr_index] — who holds the subject-to-EHR cross-reference ───────────────
+# An IHE patient identity source is the default: FerroEHR asks its PIX Manager
+# over PIXm (ITI-83, the $ihe-pix operation) which identifier the clinical
+# domain holds for a patient, and that identifier is the pseudonym
+# EHR_STATUS.subject carries. Any conformant PIX Manager serves; FerroEHR sends
+# nothing product-specific and does no matching or merging of its own. The
+# server refuses to start until either the endpoint below is set, or a FerroEHR
+# run on its own (development, tests, a single-source installation) opts in to
+# the in-instance map with provider = "local". No silent fallback: a configured
+# source that cannot be reached refuses boot, and a request it fails is an error.
+[ehr_index]
+provider = "ihe"             # ihe | local
+#? pixm_url = "https://pix.example.org/fhir"   # the PIX Manager's FHIR base URL
+#? assigning_authority = "urn:oid:2.999.1"     # the clinical domain; must be one
+                             # of privacy.subject_namespaces
+invocation = "post"          # post (keeps the identifier out of URLs) | get
+                             # (the form ITI-83 prescribes)
+request_timeout_ms = 10000
+#? ca_file = "/etc/ferroehr/pix-ca.pem"   # CAs trusted beside the platform roots
+
+# OAuth2 client-credentials grant whose token every ITI-83 request carries
+# (IUA ITI-72), when the PIX Manager requires one:
+#? [ehr_index.oauth]
+#? token_endpoint = "https://idp.example.org/realms/pix/protocol/openid-connect/token"
+#? client_id = "ferroehr-cdr"
+#? client_secret_file = "/run/secrets/pix-client"
+
 # ── [demographic] — the demographic domain ────────────────────────────────────
 # National-identifier protection: the value leaves the versioned body for
 # `party.national_identifier`, sealed under a per-domain AES-256-GCM key

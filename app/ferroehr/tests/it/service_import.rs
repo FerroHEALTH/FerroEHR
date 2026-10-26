@@ -52,8 +52,8 @@ use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
 use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::demographic::types::PartyKind;
+use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::status::CallStatusType;
 

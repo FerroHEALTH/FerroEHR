@@ -271,10 +271,7 @@ async fn the_local_map_is_not_written_under_an_identity_source() {
     assert_eq!(refused.status, CallStatusType::NotImplemented);
     assert!(svc.index_conflicts().await.is_err());
     assert!(
-        pix.received_requests()
-            .await
-            .expect("recorded")
-            .is_empty(),
+        pix.received_requests().await.expect("recorded").is_empty(),
         "a refused write asks the source nothing"
     );
 
@@ -283,7 +280,10 @@ async fn the_local_map_is_not_written_under_an_identity_source() {
         .has_ehr_for_subject(red_subject())
         .await
         .expect_err("no provider installed");
-    assert!(refused.message.contains("provider = \"local\""), "{refused}");
+    assert!(
+        refused.message.contains("provider = \"local\""),
+        "{refused}"
+    );
     assert!(refused.message.contains("pixm_url"), "{refused}");
 }
 
@@ -358,7 +358,10 @@ async fn the_probe_reads_the_capability_statement() {
         .probe()
         .await
         .expect_err("a 500 is no capability statement");
-    assert!(matches!(error, IdentitySourceError::Refused { .. }), "{error:?}");
+    assert!(
+        matches!(error, IdentitySourceError::Refused { .. }),
+        "{error:?}"
+    );
 
     let other = MockServer::start().await;
     Mock::given(method("GET"))
@@ -370,7 +373,10 @@ async fn the_probe_reads_the_capability_statement() {
         .probe()
         .await
         .expect_err("a Parameters body is no capability statement");
-    assert!(matches!(error, IdentitySourceError::NotAFhirServer), "{error:?}");
+    assert!(
+        matches!(error, IdentitySourceError::NotAFhirServer),
+        "{error:?}"
+    );
 }
 
 /// A PIX Manager behind a private CA is reached with `ca_file` naming that CA,
@@ -398,7 +404,10 @@ async fn a_private_ca_is_trusted_through_ca_file() {
         .probe()
         .await
         .expect_err("the platform roots do not hold the test CA");
-    assert!(matches!(error, IdentitySourceError::Unreachable(_)), "{error:?}");
+    assert!(
+        matches!(error, IdentitySourceError::Unreachable(_)),
+        "{error:?}"
+    );
 
     let missing = EhrIndexConfig {
         ca_file: Some(server.ca_file.with_extension("absent")),

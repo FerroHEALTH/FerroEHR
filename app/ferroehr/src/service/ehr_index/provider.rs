@@ -18,7 +18,8 @@ use std::sync::Arc;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::ehr_index::IndexError;
-use crate::service::ehr_index::ihe::IheIdentitySource;
+use crate::service::ehr_index::config::{EhrIndexConfig, ProviderKind};
+use crate::service::ehr_index::ihe::{IdentitySourceError, IheIdentitySource};
 use crate::service::ehr_index::types::{EhrIndexEntry, ResourceStatus, SubjectRef};
 use crate::service::error::ServiceError;
 use crate::storage::ehr_repo;
@@ -37,6 +38,45 @@ pub enum EhrIndexProvider {
     Local,
     /// An IHE patient identity source asked over PIXm (ITI-83).
     Ihe(Arc<IheIdentitySource>),
+}
+
+impl EhrIndexProvider {
+    /// The provider `[ehr_index]` names. Validation has already refused a
+    /// section that names neither a complete identity source nor
+    /// `provider = "local"`.
+    ///
+    /// # Errors
+    /// [`IdentitySourceError`] when the identity source cannot be built.
+    pub fn from_config(config: &EhrIndexConfig) -> Result<Self, IdentitySourceError> {
+        match config.provider {
+            ProviderKind::Local => Ok(Self::Local),
+            ProviderKind::Ihe => Ok(Self::Ihe(Arc::new(IheIdentitySource::new(config)?))),
+        }
+    }
+
+    /// The boot check: an identity source answers its capabilities read, so an
+    /// unreachable one refuses the start rather than the first request. The
+    /// local map needs no check.
+    ///
+    /// # Errors
+    /// [`IdentitySourceError`] when the identity source does not answer as a
+    /// FHIR server.
+    pub async fn ready(&self) -> Result<(), IdentitySourceError> {
+        match self {
+            Self::Ihe(source) => source.probe().await,
+            Self::Local | Self::Unconfigured => Ok(()),
+        }
+    }
+
+    /// A short name for the boot line: `ihe`, `local` or `unconfigured`.
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Unconfigured => "unconfigured",
+            Self::Local => "local",
+            Self::Ihe(_) => "ihe",
+        }
+    }
 }
 
 impl FerroEhrService {

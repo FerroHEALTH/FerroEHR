@@ -115,7 +115,9 @@ async fn a_linkage_resolution_is_withheld_when_its_record_is_rejected() {
         matches!(refused, Err(LinkageError::Unrecorded(_))),
         "the mapping resolved but the result is withheld: {refused:?}"
     );
-    let refused = closed.link(VoId(Uuid::now_v7()), EhrId(Uuid::now_v7())).await;
+    let refused = closed
+        .link(VoId(Uuid::now_v7()), EhrId(Uuid::now_v7()))
+        .await;
     assert!(
         matches!(refused, Err(LinkageError::Unrecorded(_))),
         "a mapping opened with its record rejected reports so: {refused:?}"

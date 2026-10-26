@@ -2023,7 +2023,6 @@ async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() 
     );
 }
 
-
 /// One linkage access record: domain, principal, purpose, result count and
 /// the FHIR rendering as text.
 type LinkageAccessRow = (String, Option<String>, Option<String>, Option<i64>, String);

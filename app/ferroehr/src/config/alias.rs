@@ -70,6 +70,7 @@ pub(super) const SECTIONS: &[&str] = &[
     "privacy",
     "demographic",
     "cohort",
+    "ehr_index",
     "usage_report",
 ];
 
