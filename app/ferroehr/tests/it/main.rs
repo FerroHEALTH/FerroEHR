@@ -44,6 +44,7 @@ mod decommission;
 mod directory_item_refs;
 mod events_amqp;
 mod ext_functions;
+mod federation_node;
 mod fixtures;
 mod import_concurrency;
 mod item_tag_fixture;

@@ -244,7 +244,10 @@ Practical notes:
   data: existing EHR ids, audit rows and version identifiers are never
   rewritten, and previously issued `OBJECT_VERSION_ID`s stay valid.
 - **Make it unique per system**, so data exchanged between openEHR systems
-  keeps unambiguous provenance.
+  keeps unambiguous provenance. A node of a federation must hold a
+  `system_id` no other member uses (Federation Tier N42a); the default
+  `ferroehr.local` is the same on every node that leaves it unset. See
+  [FerroEHR as a federation node](../beyond-core/federation-node.md#admission-n42a).
 - **`system_id` is not `[server.identity]`.** `system_id` says *which system
   authored the data*; [`[server.identity]`](#serveridentity) is the *display*
   identity of the `OPTIONS` System-Options manifest. Rebranding changes the
