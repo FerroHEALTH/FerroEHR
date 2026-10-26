@@ -482,9 +482,8 @@ data:
   # `secrets:` key carries it) or moves this whole file into the Secret, in which
   # case this ConfigMap is not created at all.
   # NOTE: Helm decodes values through JSON, so every number reaches a template as
-  # a float64 and `toToml` writes it back as a TOML float (`10.0`, `1.6777216e+07`)
-  # — the server's configuration layer coerces those onto integer keys, which is
-  # why the rendered file is accepted as written.
+  # a float64; `ferroehr.integers` turns each whole number back into an integer,
+  # since the server refuses a TOML float on an integer key.
   ferroehr.toml: |
     deployment_profile = "sandbox"
     spec_profile = "development"
@@ -504,11 +503,11 @@ data:
         enabled = true
       [audit.store]
         enabled = true
-        retention_days = 1830.0
+        retention_days = 1830
       [audit.syslog]
         enabled = true
         host = "arr.example.com"
-        port = 6514.0
+        port = 6514
     
     [auth]
       audience = ["ferroehr"]
@@ -529,11 +528,11 @@ data:
         enabled = true
     
     [db]
-      acquire_timeout_secs = 30.0
-      max_connections = 10.0
+      acquire_timeout_secs = 30
+      max_connections = 10
       migrate = "apply"
-      min_connections = 0.0
-      statement_timeout_ms = 60000.0
+      min_connections = 0
+      statement_timeout_ms = 60000
     
     [events]
       enabled = true
@@ -547,7 +546,7 @@ data:
     [management]
       base_path = "/management"
       enabled = true
-      port = 9100.0
+      port = 9100
       [management.endpoints]
         env = "admin_only"
         flamegraph = "off"
@@ -562,11 +561,11 @@ data:
       enabled = true
       endpoint = "https://s3.example.com"
       region = "eu-west-1"
-      threshold_bytes = 262144.0
+      threshold_bytes = 262144
     
     [query]
-      plan_cache_capacity = 256.0
-      timeout_ms = 30000.0
+      plan_cache_capacity = 256
+      timeout_ms = 30000
     
     [server]
       base_path = "/ferroehr/rest/openehr/v1"
@@ -574,19 +573,19 @@ data:
       cors_permissive = false
       swagger_ui = "public"
       [server.connection]
-        header_read_timeout_secs = 10.0
-        http2_keep_alive_interval_secs = 30.0
-        http2_keep_alive_timeout_secs = 10.0
-        max_concurrent_streams = 256.0
+        header_read_timeout_secs = 10
+        http2_keep_alive_interval_secs = 30
+        http2_keep_alive_timeout_secs = 10
+        max_concurrent_streams = 256
       [server.limits]
-        body_bytes = 1.6777216e+07
-        bulk_body_bytes = 6.7108864e+07
+        body_bytes = 16777216
+        bulk_body_bytes = 67108864
       [server.rate_limit]
-        address_burst = 4096.0
-        address_per_second = 2048.0
+        address_burst = 4096
+        address_per_second = 2048
         enabled = true
-        principal_burst = 2048.0
-        principal_per_second = 1024.0
+        principal_burst = 2048
+        principal_per_second = 1024
     
     [signing]
       enabled = true
@@ -1277,7 +1276,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 5953a88caa58e8acbc704b324a2e0768ffc4dc9e8486c238c7a5d8a0b6fb4157
+        checksum/config: 03646fe3978e6b2aa997b9993a70c48c2d271d8a99f7b37f2772ae35c04725fc
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"
