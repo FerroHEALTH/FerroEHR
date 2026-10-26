@@ -11,15 +11,15 @@
 # superuser. Schema CONTENT is owned by the app's sqlx migrators at boot; this
 # image bakes NO migration state (see README.md).
 #
-# Digest-pinned (resolved 2026-10-08, the upstream same-version respin of
-# 2026-10-06): a
+# Digest-pinned (resolved 2026-10-26, the upstream same-version respin of
+# 2026-10-21): a
 # mutable tag can be re-pointed, a digest cannot
 # (docs.docker.com/build/building/best-practices — "pinning to a digest
 # guarantees the same image version"). 18.6 is the latest PG 18 patch
 # (docs/VERSIONS.md; 18.5 was never released upstream); bump the tag AND the
 # digest together — the full pin-site checklist is
 # .claude/rules/image-security.md.
-FROM postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+FROM postgres:18.6@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
 
 # Debian security updates, applied at OUR build time (issue #2408). The
 # upstream image rebuilds on its own cadence, so a fix already published in
@@ -74,6 +74,6 @@ LABEL org.opencontainers.image.title="FerroEHR PostgreSQL" \
       org.opencontainers.image.authors="Cadasto B.V. <https://www.cadasto.com/contact/>" \
       org.opencontainers.image.licenses="BUSL-1.1 AND PostgreSQL" \
       org.opencontainers.image.base.name="postgres:18.6" \
-      org.opencontainers.image.base.digest="sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336" \
+      org.opencontainers.image.base.digest="sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6" \
       eu.ferroehr.image.manufacturer="Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com" \
       eu.ferroehr.image.accompanying-documents="Information sheet and instructions for use: the assets ferroehr-v<version>-information-sheet.md and ferroehr-v<version>-instructions-for-use.md of https://github.com/FerroHEALTH/FerroEHR/releases/tag/v<version>, where <version> is this image's org.opencontainers.image.version"

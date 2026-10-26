@@ -82,6 +82,44 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The bundled PostgreSQL image is rebuilt on the 2026-10-21 respin of
+  `postgres:18.6`** (#4084, `sha256:edb0c08d…`), a same-version respin with
+  rebuilt base packages. The respin ships the fixed xz packages, so the
+  `TEMP-1147318-639065` statement leaves `security/vex/postgres-os.openvex.json`.
+- **Breaking: the server reads only the configuration file it is told to
+  read** (#4087). The loader is `ferrohealth-config` 0.2.4, the FerroHEALTH
+  products' shared one, and it reads the file `--config` or `FERROEHR_CONFIG`
+  names. `./ferroehr.toml` and `/etc/ferroehr/ferroehr.toml` are no longer
+  searched: a deployment that mounts a file there without naming it starts on
+  the environment and the defaults alone. Set
+  `FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml`; the Compose files, the
+  conformance stacks and Helm chart 16.0.2 set it. The fallbacks keep their
+  order (the libpq variables, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`,
+  `RUST_LOG`, `PORT`), and `ferroehr config check` prints each key beside the
+  source that set it.
+
+- **Breaking: the viewer reads only the configuration file
+  `FERROEHR_VIEWER_CONFIG` names** (#4087), through the same
+  `ferrohealth-config` loader as the CDR. `./ferroehr-viewer.toml` and
+  `/etc/ferroehr/viewer.toml` are no longer searched. A variable under
+  `FERROEHR_VIEWER_` that is neither an override nor the Compose port or image
+  parameter refuses the start, and a `*_file` secret loses only its trailing
+  line ending, where all surrounding whitespace was trimmed; an empty file is
+  refused.
+
+- **Breaking: `[auth] role_claims` defaults to `["roles", "groups",
+  "entitlements"]`** (#4087), the RFC 9068 §2.2.3.1 carriers every
+  FerroHEALTH product reads. `realm_access.roles` is no longer in the default:
+  a Keycloak issuer sets `FERROEHR__AUTH__ROLE_CLAIMS=roles,groups,entitlements,realm_access.roles`,
+  as the Keycloak Compose overlay and the viewer's journey stack now do.
+
+- **Breaking: two configuration refusals say less** (#4087). A single-`_`
+  spelling such as `FERROEHR_DB_MAX_CONNECTIONS` still refuses the start
+  naming the variable, without suggesting the `FERROEHR__DB__MAX_CONNECTIONS`
+  form. A refusal of an unknown key in the file names the key and the closest
+  valid one, without its line number; a syntax error still names its line and
+  column.
+
 - **Breaking: `/health/readiness` and `/management/health` serve the
   FerroHEALTH readiness document of `ferrohealth-health` 0.1.1** (#4087). The
   body is `{"state", "phase", "indicators": [{"name", "state", "detail"?}]}`
@@ -261,6 +299,16 @@ Shipped with functional changes because: the patched `ferrohealth-smart` arrives
   GHSA-vphj-3f8c-5hpx).
 
 ### Fixed
+
+- **The agent guard refuses wrapped and re-ordered spellings of a force push
+  or a recursive delete** (#4046). `.claude/hooks/block_dangerous.sh` let
+  through `git -C . push --force … main`, `/usr/bin/git push`, `\rm -rf`,
+  `rm --recursive --force`, `bash -c "rm -rf …"`, `find … -delete` and similar.
+  It now normalises the command first (a path or backslash before the binary,
+  a launcher such as `env` or `sudo`, a `sh -c` or `eval` wrapper, git's global
+  options before the verb), judges every `rm` target and every deleting `find`
+  starting point against `/tmp`, and refuses a push that deletes `main` or
+  `master`. `block_dangerous_test.sh` runs each spelling.
 
 - **A BASE 1.3 `TERMINOLOGY_CODE` keeps its `terminology_id` in XML**
   (#4076). ITS-XML 1.0.2 types `TRANSLATION_DETAILS.language` and the other
