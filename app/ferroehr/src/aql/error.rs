@@ -143,6 +143,14 @@ pub enum AqlFeatureError {
     #[error("FROM source class `{0}` is not in scope (no stored structure; QUERY §FROM)")]
     UnsupportedSourceClass(String),
 
+    /// A path on a `VERSIONED_OBJECT` variable other than its `uid` and its
+    /// `owner_id` (RM common master06 §`VERSIONED_OBJECT`).
+    #[error(
+        "the VERSIONED_OBJECT path `{0}` is not supported; a VERSIONED_OBJECT variable \
+         addresses uid/value and owner_id/id/value (QUERY §FROM)"
+    )]
+    UnsupportedVersionedObjectPath(String),
+
     /// A demographic FROM class outside the served subset of the demographic
     /// extension: `GROUP`, `AGENT`, `PARTY_RELATIONSHIP`, or an abstract class
     /// whose concrete descendants include one of them (`PARTY`, `ACTOR`).

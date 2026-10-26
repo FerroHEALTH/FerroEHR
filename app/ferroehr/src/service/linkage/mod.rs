@@ -232,17 +232,19 @@ impl FerroEhrService {
     }
 }
 
-/// Put the request's actor and declared purpose on a service-emitted record.
+/// Put the request's actor, declared purpose and data permit on a
+/// service-emitted record.
 ///
 /// The protocol adapter's own records get these from the request it still
-/// holds; a record built down here gets them from the two task-locals the
-/// adapter published for the request's scope
+/// holds; a record built down here gets them from the task-locals the adapter
+/// published for the request's scope
 /// ([`crate::service::committer`], [`crate::system_log::access_context`]).
 pub(crate) fn stamp_requester(event: &mut AuditEvent) {
     if let Some(committer) = crate::service::committer::current_committer() {
         event.user_id = committer.subject;
     }
     event.purpose = crate::system_log::access_context::current_purpose();
+    event.permit = crate::system_log::access_context::current_permit();
 }
 
 impl From<store::StoreError> for LinkageError {

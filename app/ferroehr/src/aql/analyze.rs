@@ -73,6 +73,8 @@ pub(crate) enum BindingKind {
     Rm(TypeSet),
     /// A `VERSION` variable.
     Version,
+    /// A `VERSIONED_OBJECT` variable.
+    VersionedObject,
 }
 
 impl Bindings {
@@ -105,6 +107,10 @@ pub(crate) fn analyze_path(
         BindingKind::Version => Ok(PathTarget::Version {
             source,
             field: resolve_version_field(path.path.as_ref())?,
+        }),
+        BindingKind::VersionedObject => Ok(PathTarget::Version {
+            source,
+            field: resolve_versioned_object_field(path.path.as_ref())?,
         }),
         BindingKind::Rm(types) => {
             let root_predicate = path
@@ -449,6 +455,23 @@ fn resolve_version_field(object_path: Option<&ObjectPath>) -> Result<VersionFiel
     };
     let parts: Vec<&str> = op.parts.iter().map(|p| p.name.as_str()).collect();
     version_field_from_parts(&parts)
+}
+
+/// The field a `VERSIONED_OBJECT` path addresses: its `uid` (the bare variable
+/// too) or its `owner_id`, the two attributes of RM common master06
+/// §`VERSIONED_OBJECT` a stored versioned object answers from its versions.
+fn resolve_versioned_object_field(
+    object_path: Option<&ObjectPath>,
+) -> Result<VersionField, AqlError> {
+    let Some(op) = object_path else {
+        return Ok(VersionField::ObjectUid);
+    };
+    let parts: Vec<&str> = op.parts.iter().map(|p| p.name.as_str()).collect();
+    match parts.as_slice() {
+        ["uid"] | ["uid", "value"] => Ok(VersionField::ObjectUid),
+        ["owner_id", "id"] | ["owner_id", "id", "value"] => Ok(VersionField::OwnerId),
+        _ => Err(AqlFeatureError::UnsupportedVersionedObjectPath(parts.join("/")).into()),
+    }
 }
 
 fn version_field_from_parts(parts: &[&str]) -> Result<VersionField, AqlError> {

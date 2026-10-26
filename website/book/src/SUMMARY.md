@@ -73,6 +73,7 @@
   - [Compliance overview](compliance/index.md)
   - [Shared responsibility](compliance/shared-responsibility.md)
   - [Retention, restriction and objection](compliance/retention.md)
+  - [Secondary use](compliance/secondary-use.md)
   - [Control matrix](compliance/control-matrix.md)
   - [Cyber Resilience Act](compliance/cra.md)
   - [CRA information and instructions to the user](compliance/cra-user-information.md)

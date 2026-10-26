@@ -533,6 +533,20 @@ predicate on `commit_audit/time_committed` reads the trunk version current at
 that instant. The `VERSION` variable also exposes commit metadata: the audit, the
 committed time, and the version uid.
 
+A `VERSIONED_OBJECT` operand between the EHR and the version names the
+versioned object itself. Its variable answers `uid/value`, the object id every
+version of it shares, and `owner_id/id/value`, the EHR that owns it; any other
+path on it is refused. It sets no version scope of its own: the `VERSION`
+below it does.
+
+```text
+SELECT vo/uid/value, v/uid/value, c/name/value
+FROM EHR e
+    CONTAINS VERSIONED_OBJECT vo
+        CONTAINS VERSION v[ALL_VERSIONS]
+            CONTAINS COMPOSITION c
+```
+
 ## Terminology in queries
 
 Value filters can be backed by terminology in three ways:
@@ -616,7 +630,8 @@ results. Supported today includes:
   (including `COUNT(DISTINCT)`), `MIN`, `MAX`, `SUM`, `AVG`. `MIN` and `MAX`
   order their operand by type (a quantity by its openEHR magnitude, a date/time
   chronologically, text lexically) so they work over non-numeric leaves;
-- `FROM` over `EHR`, `VERSION` (`LATEST_VERSION` / `ALL_VERSIONS`), and the RM
+- `FROM` over `EHR`, `VERSIONED_OBJECT` (its `uid` and `owner_id`), `VERSION`
+  (`LATEST_VERSION` / `ALL_VERSIONS`), and the RM
   structure classes, with archetype and name predicates, and over `PERSON`,
   `ORGANISATION` and `ROLE` as the experimental demographic extension;
 - `CONTAINS` trees with `AND`, `OR`, and `NOT CONTAINS`;
