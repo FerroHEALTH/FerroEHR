@@ -24,7 +24,15 @@ workflow refuses a tag that has no matching section here.
   identifier in the namespaced HRID form of the Artefact Identification
   reference expression (master03 §Formal Model) yields its parts; a legacy
   free-text template name stays valid and answers `false` and empty parts.
-
+- **The audit store deletes each record at its own retention end**
+  (#3899). Every record stores the first date it may be deleted on: an
+  access record the end `ehds-logging` states for its categories and origins
+  (Regulation (EU) 2025/327 Annex II 3.4), any other record the day after
+  its date of access plus the `[audit.store]` horizon, and none for a record
+  kept without end. The reaper deletes a record on or after that date and
+  never before it, where it deleted by one store-wide horizon. Records
+  written before this release keep the horizon. The end joins the chain
+  digest (version 3), so moving one shows in the chain check.
 - **The FLAT builder builds an `INTERVAL_EVENT` at an abstract `EVENT` node
   when the input names its width** (#3898), on the 0.0.102 crate line. RM
   data_structures §EVENT makes `EVENT` abstract over `POINT_EVENT` and
@@ -32,7 +40,6 @@ workflow refuses a tag that has no matching section here.
   such a node (master05 §INTERVAL_EVENT) now chooses the interval; without
   them the node still builds as a `POINT_EVENT`. The flattener writes those
   rows back for an interval event held at an abstract node.
-
 - **Opaque access tokens are checked by token introspection under `[auth]
   mode = "introspection"`** (#4033). `ferrohealth-smart`'s introspection
   check (RFC 7662) posts each bearer token to the issuer's introspection
@@ -42,7 +49,6 @@ workflow refuses a tag that has no matching section here.
   caller with its scopes and roles and is reused until its `exp`, an inactive
   token is a `401`, and an endpoint that cannot answer is a `503`. The mode
   and the table were refused at boot. Helm chart 15.1.0 names the mode.
-
 - **The ITI-81 audit retrieval applies every search parameter RESTful ATNA
   §3.81.4.1.2.2 says the repository shall support** (#4040): `address`,
   `agent.identifier`, `patient.identifier`, `entity.identifier`,
@@ -69,7 +75,6 @@ workflow refuses a tag that has no matching section here.
   `codes::VersionLifecycleState`), held equal to the embedded terminology.
   Until a `ferrohealth-smart` release requires 0.0.99, the build holds a
   registry copy of `openehr-sdt` 0.0.98 for it beside the workspace 0.0.99.
-
 - **An ADL 2 Web Template names a node under a template overlay by its
   parent archetype.** `openehr_adl::opt::create_opt` records each overlay's
   specialisation parent in the OPT's `other_meta_data`
@@ -89,7 +94,12 @@ workflow refuses a tag that has no matching section here.
   implementation already followed. AM's Archetype Identification document is
   superseded by BASE Artefact Identification (SPECAM-103), and the citations
   move with it. The nine `openehr-*` crates step to 0.0.104.
-
+- **`SECURITY.md` records the `main` ruleset as it stands** (#4067): no
+  approving review, the `conclusion` check, the merge queue, and the
+  organization-admin bypass, with what a bypass merge skips (any lane still
+  running, `ui-e2e` included) and when it is used. The weekly external link
+  check leaves out gesetze-im-internet.de and dicom.nema.org, which refuse the
+  GitHub runner every week while answering by hand (#4074).
 - **The bundled PostgreSQL image is rebuilt on the 2026-10-21 respin of
   `postgres:18.6`** (#4084, `sha256:edb0c08d…`), a same-version respin with
   rebuilt base packages. The respin ships the fixed xz packages, so the
@@ -307,6 +317,16 @@ Shipped with functional changes because: the patched `ferrohealth-smart` arrives
   GHSA-vphj-3f8c-5hpx).
 
 ### Fixed
+
+- **The agent guard refuses wrapped and re-ordered spellings of a force push
+  or a recursive delete** (#4046). `.claude/hooks/block_dangerous.sh` let
+  through `git -C . push --force … main`, `/usr/bin/git push`, `\rm -rf`,
+  `rm --recursive --force`, `bash -c "rm -rf …"`, `find … -delete` and similar.
+  It now normalises the command first (a path or backslash before the binary,
+  a launcher such as `env` or `sudo`, a `sh -c` or `eval` wrapper, git's global
+  options before the verb), judges every `rm` target and every deleting `find`
+  starting point against `/tmp`, and refuses a push that deletes `main` or
+  `master`. `block_dangerous_test.sh` runs each spelling.
 
 - **A BASE 1.3 `TERMINOLOGY_CODE` keeps its `terminology_id` in XML**
   (#4076). ITS-XML 1.0.2 types `TRANSLATION_DETAILS.language` and the other

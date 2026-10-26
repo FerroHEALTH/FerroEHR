@@ -63,6 +63,54 @@ pub struct Recording {
     pub labels: LabelPolicy,
     /// The purposes of use that mark an emergency access (Art. 11(5)).
     pub emergency: EmergencyPurposes,
+    /// The store horizon, which a record outside the EHDS access record is
+    /// kept for.
+    pub horizon: crate::system_log::config::Retention,
+}
+
+/// The first date `event` may be deleted on once stored.
+///
+/// A classified access states its own end through `ehds-logging`'s retention
+/// policy, by its categories and origins (Regulation (EU) 2025/327 Annex II
+/// 3.4); every other record keeps the store horizon, ending the day after
+/// the date of access plus the horizon, as `ehds-logging` counts an end.
+/// A horizon whose end the calendar cannot hold keeps the record without end.
+#[must_use]
+pub fn record_end(event: &AuditEvent, ctx: &AuditContext) -> crate::system_log::store::RecordEnd {
+    use crate::system_log::store::RecordEnd;
+    let ends = match &event.category {
+        Some(category) => {
+            let origins = origins(event);
+            ctx.recording
+                .retention
+                .retain(
+                    event.timestamp,
+                    &category.classification,
+                    origins.iter().filter_map(Origin::key),
+                )
+                .ends()
+        }
+        None => horizon_end(event.timestamp, ctx.recording.horizon),
+    };
+    ends.map_or(RecordEnd::Never, RecordEnd::On)
+}
+
+/// The day after the date of `recorded` plus `horizon`, in UTC; `None` for a
+/// record kept forever or an end past the calendar.
+fn horizon_end(
+    recorded: jiff::Timestamp,
+    horizon: crate::system_log::config::Retention,
+) -> Option<jiff::civil::Date> {
+    use crate::system_log::config::Retention;
+    let accessed = recorded.to_zoned(jiff::tz::TimeZone::UTC).date();
+    let span = match horizon {
+        Retention::Forever => return None,
+        Retention::Days(days) => jiff::Span::new().days(i64::from(days)),
+        Retention::Years(years) => jiff::Span::new().years(i64::from(years)),
+    };
+    // NOTE: an end past the calendar's last day is legitimately absent, so the record
+    // is kept without end rather than refused.
+    accessed.checked_add(span).ok()?.tomorrow().ok()
 }
 
 /// Renders a resolved [`AuditEvent`] as a FHIR R4 `AuditEvent` document.
@@ -140,22 +188,7 @@ fn access_record(
             code: code.clone(),
         })
         .collect();
-    // NOTE: Regulation (EU) 2025/327 Annex II 3.2(e): the origin of stored data is the system
-    // its FEEDER_AUDIT names, which FerroEHR did not ask, so an origin names no endpoint.
-    let origins: Vec<Origin> = event
-        .origins
-        .iter()
-        .map(|system_id| Origin {
-            endpoint: None,
-            node: None,
-            system_id: Some(system_id.clone()),
-            status: None,
-            rows: None,
-            version: None,
-            created_ehr: None,
-            categories: None,
-        })
-        .collect();
+    let origins = origins(event);
     let ehrs = event
         .ehr_id
         .iter()
@@ -217,6 +250,27 @@ fn access_record(
         inserted: None,
         transformations: Vec::new(),
     })
+}
+
+/// The origins of the data an access read, from the systems its `FEEDER_AUDIT`s
+/// name.
+fn origins(event: &AuditEvent) -> Vec<Origin> {
+    // NOTE: Regulation (EU) 2025/327 Annex II 3.2(e): the origin of stored data is the system
+    // its FEEDER_AUDIT names, which FerroEHR did not ask, so an origin names no endpoint.
+    event
+        .origins
+        .iter()
+        .map(|system_id| Origin {
+            endpoint: None,
+            node: None,
+            system_id: Some(system_id.clone()),
+            status: None,
+            rows: None,
+            version: None,
+            created_ehr: None,
+            categories: None,
+        })
+        .collect()
 }
 
 /// Who accessed the data (Annex II 3.2(a), (b)), as the authentication layer
@@ -1132,5 +1186,23 @@ mod tests {
             "ETREAT",
             "the declared code stays on the requesting agent"
         );
+    }
+
+    /// A record outside the EHDS access record ends the day after its date of
+    /// access plus the store horizon, in UTC, and never under a forever horizon.
+    #[test]
+    fn a_horizon_end_is_the_day_after_the_period() {
+        use crate::system_log::config::Retention;
+        let at: Timestamp = "2026-02-28T23:30:00Z".parse().expect("timestamp");
+        let date = |s: &str| s.parse::<jiff::civil::Date>().expect("date");
+        assert_eq!(
+            horizon_end(at, Retention::Days(1)),
+            Some(date("2026-03-02"))
+        );
+        assert_eq!(
+            horizon_end(at, Retention::Years(3)),
+            Some(date("2029-03-01"))
+        );
+        assert_eq!(horizon_end(at, Retention::Forever), None);
     }
 }
