@@ -90,12 +90,13 @@ jobs:
             echo "docs=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if ! git rev-parse --verify --quiet "$PR_BASE" >/dev/null; then
+          # The pull request's own paths, from its merge base (#4129).
+          if ! git rev-parse --verify --quiet "$PR_BASE" >/dev/null \
+            || ! changed=$(bash scripts/lib/changed-paths.sh "$PR_BASE" "$PR_HEAD"); then
             echo "Base $PR_BASE unavailable — treating as a docs change."
             echo "docs=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          changed=$(git diff --name-only "$PR_BASE" "$PR_HEAD")
           echo "Changed files:"; echo "$changed"
           # The site's sources, plus every INPUT the build's own gates read:
           # the committed conformance artifacts and party statements that

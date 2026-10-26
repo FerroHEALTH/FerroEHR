@@ -57,6 +57,9 @@
 # cannot be judged (a local run) and is reported as skipped; set-but-empty is a
 # pull request with no body and fails.
 set -euo pipefail
+
+# shellcheck source=scripts/lib/changed-paths.sh
+. "$(dirname "$0")/../lib/changed-paths.sh"
 cd "$(dirname "$0")/../.."
 
 # The privacy boundary, as path patterns (extended regular expressions, matched
@@ -270,7 +273,8 @@ boundary_hits() { # reads paths on stdin
 
 changed_files() {
   if [[ -n "$base" ]]; then
-    git diff --name-only "$base...$tip" 2>/dev/null || git diff --name-only "$base" "$tip"
+    # The pull request's own paths, read from the merge base (#4129).
+    change_paths "$base" "$tip"
   elif [[ -n "${CHANGED_FILES:-}" ]]; then
     printf '%s\n' "$CHANGED_FILES" | tr ' ' '\n'
   else

@@ -84,13 +84,14 @@ jobs:
           else
             base="$PUSH_BEFORE"; head="$PUSH_SHA"
           fi
+          # The change's own paths, from its merge base (#4129).
           if [ "$EVENT_NAME" = "schedule" ] \
-            || ! git rev-parse --verify --quiet "$base" >/dev/null; then
+            || ! git rev-parse --verify --quiet "$base" >/dev/null \
+            || ! changed="$(bash scripts/lib/changed-paths.sh "$base" "$head")"; then
             echo "No diff to scope (schedule, or base unavailable) — both legs run."
             echo 'languages=["rust","actions"]' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          changed="$(git diff --name-only "$base" "$head")"
           langs=()
           grep -qE '(\.rs$|(^|/)Cargo\.(toml|lock)$)' <<<"$changed" && langs+=('"rust"')
           grep -qE '^\.github/(workflows|actions)/' <<<"$changed" && langs+=('"actions"')

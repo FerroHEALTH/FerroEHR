@@ -20,6 +20,8 @@ set -euo pipefail
 
 # shellcheck source=scripts/lib/guard-args.sh
 . "$(dirname "$0")/../lib/guard-args.sh"
+# shellcheck source=scripts/lib/changed-paths.sh
+. "$(dirname "$0")/../lib/changed-paths.sh"
 
 readonly GRAMMAR='<base> <head> | --self-test'
 readonly UI_PATHS='^app/ferroehr-viewer/(src|style)/'
@@ -29,7 +31,7 @@ readonly SHOT_PATHS='^website/book/src/viewer/img/'
 # run in the repository of the working directory.
 verdict() {
   local base="$1" head="$2" changed
-  changed="$(git diff --name-only "$base...$head")"
+  changed="$(change_paths "$base" "$head")"
   if ! grep -E "$UI_PATHS" >/dev/null <<<"$changed"; then
     echo "No viewer UI paths touched: guard not required."
     return 0
