@@ -711,6 +711,10 @@ jobs:
         run: bash scripts/checks/crate-tests-read-no-app.sh --self-test
       - name: No test in a published crate reads the application tree
         run: bash scripts/checks/crate-tests-read-no-app.sh
+      - name: The server-SQL detector catches what it claims to
+        run: bash scripts/checks/server-holds-no-sql.sh --self-test
+      - name: The wiring binary runs no SQL of its own
+        run: bash scripts/checks/server-holds-no-sql.sh
 
   # No Python anywhere (.claude/rules/rust-style.md §No Python): the tooling
   # languages are bash and Rust. Embedded Python is the worst case — a heredoc

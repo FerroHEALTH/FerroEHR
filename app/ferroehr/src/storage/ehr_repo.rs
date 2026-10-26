@@ -158,6 +158,26 @@ pub async fn ehr_id_by_subject<'e>(
     )
 }
 
+/// The promoted subject `(subject_id, subject_namespace)` of an EHR.
+///
+/// The columns of its current `EHR_STATUS` (RM ehr master04 §EHR Status), or
+/// `None` when the EHR does not exist; either column is `None` when the status
+/// names no subject.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn ehr_subject_columns(
+    pool: &PgPool,
+    ehr_id: EhrId,
+) -> Result<Option<(Option<String>, Option<String>)>, StorageError> {
+    Ok(sqlx::query_as::<_, (Option<String>, Option<String>)>(
+        "SELECT subject_id, subject_namespace FROM ehr WHERE id = $1",
+    )
+    .bind(ehr_id)
+    .fetch_optional(&mut *acquire(pool).await?)
+    .await?)
+}
+
 /// The `ehr` row header `(system_id, time_created)`, or `None` when the EHR
 /// does not exist.
 ///

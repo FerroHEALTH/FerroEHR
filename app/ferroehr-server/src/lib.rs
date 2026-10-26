@@ -33,6 +33,7 @@ use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
 use ferroehr::service::status::SmError;
+use ferroehr::storage::ehr_repo::ehr_subject_columns;
 use ferroehr::support::{SupportPeriod, today_utc};
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::config::AuditPosture;
@@ -1398,9 +1399,9 @@ pub fn authz_resolvers(pool: PgPool, service: Arc<FerroEhrService>) -> AuthzReso
     }
 }
 
-/// A background-only indexed lookup of `ehr.subject_id` and
-/// `ehr.subject_namespace` for the Patient-Number participant object and the
-/// access record's patient.
+/// The subject of an EHR for the Patient-Number participant object and the
+/// access record's patient, read in the background through
+/// `ferroehr::storage::ehr_repo::ehr_subject_columns`.
 fn subject_resolver(pool: PgPool) -> SubjectResolver {
     Arc::new(move |ehr_id: String| {
         let pool = pool.clone();
@@ -1409,13 +1410,7 @@ fn subject_resolver(pool: PgPool) -> SubjectResolver {
             let Ok(id) = Uuid::parse_str(&ehr_id) else {
                 return SubjectLookup::NoSubject;
             };
-            let row = sqlx::query_as::<_, (Option<String>, Option<String>)>(
-                "SELECT subject_id, subject_namespace FROM ehr WHERE id = $1",
-            )
-            .bind(id)
-            .fetch_optional(&pool)
-            .await;
-            match row {
+            match ehr_subject_columns(&pool, EhrId(id)).await {
                 Ok(Some((Some(id), namespace))) => {
                     SubjectLookup::Found(ResolvedSubject { id, namespace })
                 }
