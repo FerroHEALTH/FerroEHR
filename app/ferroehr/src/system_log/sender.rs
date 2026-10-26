@@ -56,7 +56,7 @@ use crate::system_log::AuditError;
 use crate::system_log::chain_check::ChainCheck;
 use crate::system_log::config::{AuditConfig, FailMode, Retention, StoreConfig};
 use crate::system_log::message::AuditContext;
-use crate::system_log::store::AuditStore;
+use crate::system_log::store::{AuditStore, RecordEnd};
 use crate::system_log::syslog::SyslogRoute;
 
 /// The patient subject of an EHR: `EHR_STATUS.subject.external_ref`'s id and
@@ -707,11 +707,12 @@ fn recording(
         retention,
         labels,
         emergency: emergency.clone(),
+        horizon: config.store.retention(),
     })
 }
 
 /// Spawns the local store's upkeep workers onto `workers`: the retention
-/// reaper unless records are kept forever, and the scheduled hash-chain
+/// reaper, which deletes each record at its own end, and the scheduled hash-chain
 /// verification unless `verify_interval_seconds` is `0`, whose shared result is
 /// returned.
 fn spawn_store_upkeep(
@@ -719,9 +720,7 @@ fn spawn_store_upkeep(
     config: &StoreConfig,
     workers: &mut Vec<JoinHandle<()>>,
 ) -> Option<ChainCheck> {
-    if config.retention() != Retention::Forever {
-        workers.push(tokio::spawn(reaper(store.clone(), config.retention())));
-    }
+    workers.push(tokio::spawn(reaper(store.clone(), config.retention())));
     if config.verify_interval_seconds == 0 {
         return None;
     }
@@ -773,7 +772,7 @@ async fn drain(
         .await;
 
         // The store is the durability anchor and is written first.
-        write_to_store(&sinks, &records, &store_healthy).await;
+        write_to_store(&sinks, &records, &ctx, &store_healthy).await;
         if let Some(route) = &sinks.syslog {
             submit_to_syslog(route, &records, &ctx).await;
         }
@@ -866,11 +865,39 @@ async fn render_batch(
 }
 
 /// Writes the batch to the local Audit Record Repository in one multi-row
-/// INSERT.
-async fn write_to_store(sinks: &Sinks, records: &[DrainRecord], store_healthy: &AtomicBool) {
+/// INSERT, each record with its own retention end.
+async fn write_to_store(
+    sinks: &Sinks,
+    records: &[DrainRecord],
+    ctx: &AuditContext,
+    store_healthy: &AtomicBool,
+) {
     if let Some(store) = &sinks.store {
-        store_whole_batch(store, records, store_healthy, sinks.feed_notify.as_ref()).await;
+        let ends = record_ends(records, ctx);
+        store_whole_batch(
+            store,
+            records,
+            &ends,
+            store_healthy,
+            sinks.feed_notify.as_ref(),
+        )
+        .await;
     }
+}
+
+/// The first date each record may be deleted on ([`crate::system_log::fhir::record_end`]).
+#[cfg(feature = "fhir")]
+fn record_ends(records: &[DrainRecord], ctx: &AuditContext) -> Vec<RecordEnd> {
+    records
+        .iter()
+        .map(|(event, _, _)| crate::system_log::fhir::record_end(event, ctx))
+        .collect()
+}
+
+/// A slim build has no store sink ([`start`] refuses one), so no record has an end.
+#[cfg(not(feature = "fhir"))]
+fn record_ends(_records: &[DrainRecord], _ctx: &AuditContext) -> Vec<RecordEnd> {
+    Vec::new()
 }
 
 /// Persists the batch in one multi-row INSERT with bounded jittered retries,
@@ -878,10 +905,11 @@ async fn write_to_store(sinks: &Sinks, records: &[DrainRecord], store_healthy: &
 async fn store_whole_batch(
     store: &AuditStore,
     records: &[DrainRecord],
+    ends: &[RecordEnd],
     store_healthy: &AtomicBool,
     feed_notify: Option<&Arc<Notify>>,
 ) {
-    let insert = || async { store.insert_batch(records).await };
+    let insert = || async { store.insert_batch_ending(records, ends).await };
     #[expect(
         clippy::as_conversions,
         reason = "the batch record count widens exactly: usize is at most 64 bits on \
@@ -1010,11 +1038,10 @@ fn render_audit_event(
 async fn reaper(store: AuditStore, retention: Retention) {
     loop {
         tokio::time::sleep(REAP_INTERVAL).await;
-        let reaped = match retention {
-            Retention::Forever => Ok(0),
-            Retention::Days(days) => store.reap(days).await,
-            Retention::Years(years) => store.reap_years(years).await,
-        };
+        let today = jiff::Timestamp::now()
+            .to_zoned(jiff::tz::TimeZone::UTC)
+            .date();
+        let reaped = store.reap_due(today, retention).await;
         match reaped {
             Ok(0) => {}
             Ok(n) => {

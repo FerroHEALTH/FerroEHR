@@ -498,6 +498,8 @@ services:
       # FERROEHR_ env overrides use the mechanical `__` mapping (TOML path,
       # upper-cased, `__` between segments); they layer on top of the mounted
       # quickstart config (env beats file).
+      # The server reads the file this names and searches for none.
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
       FERROEHR__DB__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
       # Connection-pool ceiling; measured comparison runs raise it in lockstep
       # with the upstream stack's HikariCP pool (config parity — the dominant
@@ -544,7 +546,7 @@ services:
       FERROEHR__MULTIMEDIA__ACCESS_KEY_ID:
       FERROEHR__MULTIMEDIA__SECRET_ACCESS_KEY:
     configs:
-      # Auto-discovered at config search-order position 4 (no pointer needed).
+      # Named by FERROEHR_CONFIG above.
       # The inline quickstart posture — see the `configs:` block at the bottom.
       - source: ferroehr-config
         target: /etc/ferroehr/ferroehr.toml

@@ -180,6 +180,7 @@ image, and FerroTERM.
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
+>   -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
 >   -e FERROEHR__DB__URL=postgres://u:p@db:5432/ferroehr \
 >   --entrypoint /usr/local/bin/ferroehr ghcr.io/ferrohealth/ferroehr:<tag> config check
 > ```

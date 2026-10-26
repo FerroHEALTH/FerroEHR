@@ -8,7 +8,7 @@
 
 /// Identifier for templates. Lexical form to be determined.
 #[doc(alias = "TEMPLATE_ID")]
-// NOTE: the fields stay public deliberately: the release states no constraint over this class's field values, so a validating construction door would check nothing — docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.template_id.adoc: “Identifier for templates. Lexical form to be determined.” — the release states no grammar, and §Syntaxes has no `template_id` production, so there is nothing a construction door could check.
+// NOTE: the fields stay public deliberately: the release states no constraint over this class's field values, so a validating construction door would check nothing — docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc §Template Identifiers: “a legacy free-text template name remains a valid `TEMPLATE_ID`; the HRID form cannot be enforced” — every string is a valid value, so there is nothing a construction door could check.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TemplateId {
     // inherited: OBJECT_ID

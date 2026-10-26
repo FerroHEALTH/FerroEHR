@@ -12,6 +12,11 @@
 |[[latest_issue_date]]10 Oct 2026
 
 |
+|Name `TEMPLATE_ID` (Base Types) among the identifier types of the scheme; its value should be an HRID ({spec_tickets}/SPECBASE-42[SPECBASE-42^]).
+|S Iancu
+|10 Oct 2026
+
+|
 |Follow AOM2 issue 2.4.2: the `namespace` of `ARCHETYPE_HRID` is mandatory, and `physical_id` returns an `Hrid` ({spec_tickets}/SPECBASE-50[SPECBASE-50^], {spec_tickets}/SPECAM-103[SPECAM-103^]).
 |S Iancu
 |10 Oct 2026

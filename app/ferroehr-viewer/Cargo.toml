@@ -109,7 +109,9 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 anyhow.workspace = true
 reqwest.workspace = true
-config.workspace = true
+ferrohealth-config.workspace = true
+ferrohealth-secret.workspace = true
+secrecy.workspace = true
 # The sealed session cookie (AES-256-GCM private jar, #2949): the whole
 # session rides one encrypted cookie so every instance can read it — the
 # viewer runs multi-instance on serverless platforms and keeps no store.

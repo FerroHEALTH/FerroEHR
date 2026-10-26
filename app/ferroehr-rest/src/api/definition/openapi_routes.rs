@@ -1012,8 +1012,8 @@ pub(crate) async fn definition_template_adl2_upload(
                         and the partial \
                         `openEHR-EHR-COMPOSITION.t_vital_signs.v1`). An ADL2 id \
                         is an `ARCHETYPE_HRID`, so the partial form resolves \
-                        against its SEMVER `release_version` axis (AM \
-                        `docs/Identification/master04-versioning.adoc`).",
+                        against its SEMVER `release_version` axis (BASE \
+                        `docs/artefact_identification/master04-versioning.adoc`).",
          example = "openEHR-EHR-COMPOSITION.t_vital_signs.v1"),
         ("Accept" = Option<String>, Header,
          description = "`text/plain` (the ADL2 source; also the default for \

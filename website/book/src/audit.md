@@ -356,9 +356,16 @@ An emergency the caller does not declare is not marked.
 ### Retention, and who chooses it
 
 `[audit.store] retention_days` decides how long the repository keeps a record:
-`0`, the default, keeps them forever, and any other value reaps hourly
-everything older. **The default is deliberate.** An access log is the evidence
-a data subject's right of access is served from, and a repository that silently
+`0`, the default, keeps them forever, and any other value sets the horizon.
+Every record stores the first date it may be deleted on, and the reaper
+deletes each record hourly on or after that date and never before it. An
+access record takes its end from the retention its categories and origins
+call for (Regulation (EU) 2025/327 Annex II 3.4), so two records written the
+same day can end on different dates; every other record ends the day after
+its date of access plus the horizon. A record written before FerroEHR stored
+per-record ends is reaped by the horizon.
+
+**The default is deliberate.** An access log is the evidence a data subject's right of access is served from, and a repository that silently
 forgets is worse than one that grows — so the software keeps everything until
 an operator says otherwise, rather than choosing a horizon on their behalf.
 
@@ -463,11 +470,13 @@ version it was hashed under, in `chain_digest_version`:
 
 | Version | Written | Columns the digest covers |
 |---|---|---|
-| `2` | by the current release | every column except `row_hash`, `delivered_syslog_at` and `delivered_fhir_feed_at` |
+| `3` | by the current release | every column except `row_hash`, `delivered_syslog_at` and `delivered_fhir_feed_at`, the retention end (`retention_ends`, `retention_stated`) included |
+| `2` | before the upgrade that introduced version 3 | the version 3 columns without the retention end |
 | `1` | before the upgrade that introduced version 2 | `id`, `recorded_at`, `stored_at`, `action`, `outcome`, `event_code`, `operation`, `principal`, `patient_id`, `resource_class`, `resource_id`, `client_ip`, `token_id`, the `fhir` document, `chain_seq` and the link to the predecessor |
 
-A version 1 record keeps verifying under version 1 after the upgrade; it is not
-rehashed. Its other columns (the purpose, legal basis, categories, assurance
+A record keeps verifying under the version it was written under; it is not
+rehashed. A version 2 record states no retention end, so the store horizon
+reaps it. A version 1 record keeps verifying under version 1 after the upgrade. Its other columns (the purpose, legal basis, categories, assurance
 level, professional and the emergency mark among them) are protected by the
 append-only trigger only, and the `fhir` document repeats some of them. A record
 whose version is lower than its predecessor's is reported, so a record cannot be

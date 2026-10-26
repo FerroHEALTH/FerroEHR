@@ -33,6 +33,22 @@ workflow refuses a tag that has no matching section here.
   error: nothing falls back to the in-instance map. PDQm is not used (GDPR
   Art. 5(1)(c)).
 
+- **`TEMPLATE_ID` answers its BASE 1.3.0 HRID functions** (#4068), on the
+  0.0.104 crate line. SPECBASE-42 gives `TEMPLATE_ID` `is_hrid`, `namespace`,
+  `qualified_rm_class_name`, `concept_id`, `version_id` and the major, minor
+  and patch versions (BASE base_types master05 §Template Identifiers). An
+  identifier in the namespaced HRID form of the Artefact Identification
+  reference expression (master03 §Formal Model) yields its parts; a legacy
+  free-text template name stays valid and answers `false` and empty parts.
+- **The audit store deletes each record at its own retention end**
+  (#3899). Every record stores the first date it may be deleted on: an
+  access record the end `ehds-logging` states for its categories and origins
+  (Regulation (EU) 2025/327 Annex II 3.4), any other record the day after
+  its date of access plus the `[audit.store]` horizon, and none for a record
+  kept without end. The reaper deletes a record on or after that date and
+  never before it, where it deleted by one store-wide horizon. Records
+  written before this release keep the horizon. The end joins the chain
+  digest (version 3), so moving one shows in the chain check.
 - **The FLAT builder builds an `INTERVAL_EVENT` at an abstract `EVENT` node
   when the input names its width** (#3898), on the 0.0.102 crate line. RM
   data_structures §EVENT makes `EVENT` abstract over `POINT_EVENT` and
@@ -40,7 +56,6 @@ workflow refuses a tag that has no matching section here.
   such a node (master05 §INTERVAL_EVENT) now chooses the interval; without
   them the node still builds as a `POINT_EVENT`. The flattener writes those
   rows back for an interval event held at an abstract node.
-
 - **Opaque access tokens are checked by token introspection under `[auth]
   mode = "introspection"`** (#4033). `ferrohealth-smart`'s introspection
   check (RFC 7662) posts each bearer token to the issuer's introspection
@@ -50,7 +65,6 @@ workflow refuses a tag that has no matching section here.
   caller with its scopes and roles and is reused until its `exp`, an inactive
   token is a `401`, and an endpoint that cannot answer is a `503`. The mode
   and the table were refused at boot. Helm chart 15.1.0 names the mode.
-
 - **The ITI-81 audit retrieval applies every search parameter RESTful ATNA
   §3.81.4.1.2.2 says the repository shall support** (#4040): `address`,
   `agent.identifier`, `patient.identifier`, `entity.identifier`,
@@ -77,7 +91,6 @@ workflow refuses a tag that has no matching section here.
   `codes::VersionLifecycleState`), held equal to the embedded terminology.
   Until a `ferrohealth-smart` release requires 0.0.99, the build holds a
   registry copy of `openehr-sdt` 0.0.98 for it beside the workspace 0.0.99.
-
 - **An ADL 2 Web Template names a node under a template overlay by its
   parent archetype.** `openehr_adl::opt::create_opt` records each overlay's
   specialisation parent in the OPT's `other_meta_data`
@@ -110,6 +123,58 @@ workflow refuses a tag that has no matching section here.
   `ferropix.database.existingSecret`, `ferropix.dataKey.existingSecret`, its
   issuer and pseudonymisation domain, and `config.ehr_index`, or set
   `ferropix.enabled: false` with `config.ehr_index.provider: local`.
+- **The BASE, AM, TERM and LANG specifications are re-vendored** (#4068,
+  #4069, #4070, #4071) at BASE `93abaf9f`, AM `51aa07b2`, TERM `b2dd077d` and
+  LANG `e61a7192`. The TERM `languages` code set restores `pt-pt`, adds
+  `ro-md` and `ru-md`, and names the replacement of each deprecated code
+  (SPECTERM-36), so the `openehr-term` code-set lookup accepts the two new codes. The
+  BASE `Interval.has` post-condition gains its brackets, which the
+  implementation already followed. AM's Archetype Identification document is
+  superseded by BASE Artefact Identification (SPECAM-103), and the citations
+  move with it. The nine `openehr-*` crates step to 0.0.104.
+- **`SECURITY.md` records the `main` ruleset as it stands** (#4067): no
+  approving review, the `conclusion` check, the merge queue, and the
+  organization-admin bypass, with what a bypass merge skips (any lane still
+  running, `ui-e2e` included) and when it is used. The weekly external link
+  check leaves out gesetze-im-internet.de and dicom.nema.org, which refuse the
+  GitHub runner every week while answering by hand (#4074).
+- **The bundled PostgreSQL image is rebuilt on the 2026-10-21 respin of
+  `postgres:18.6`** (#4084, `sha256:edb0c08d…`), a same-version respin with
+  rebuilt base packages. The respin ships the fixed xz packages, so the
+  `TEMP-1147318-639065` statement leaves `security/vex/postgres-os.openvex.json`.
+- **Breaking: the server reads only the configuration file it is told to
+  read** (#4087). The loader is `ferrohealth-config` 0.2.4, the FerroHEALTH
+  products' shared one, and it reads the file `--config` or `FERROEHR_CONFIG`
+  names. `./ferroehr.toml` and `/etc/ferroehr/ferroehr.toml` are no longer
+  searched: a deployment that mounts a file there without naming it starts on
+  the environment and the defaults alone. Set
+  `FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml`; the Compose files, the
+  conformance stacks and Helm chart 16.0.2 set it. The fallbacks keep their
+  order (the libpq variables, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`,
+  `RUST_LOG`, `PORT`), and `ferroehr config check` prints each key beside the
+  source that set it.
+
+- **Breaking: the viewer reads only the configuration file
+  `FERROEHR_VIEWER_CONFIG` names** (#4087), through the same
+  `ferrohealth-config` loader as the CDR. `./ferroehr-viewer.toml` and
+  `/etc/ferroehr/viewer.toml` are no longer searched. A variable under
+  `FERROEHR_VIEWER_` that is neither an override nor the Compose port or image
+  parameter refuses the start, and a `*_file` secret loses only its trailing
+  line ending, where all surrounding whitespace was trimmed; an empty file is
+  refused.
+
+- **Breaking: `[auth] role_claims` defaults to `["roles", "groups",
+  "entitlements"]`** (#4087), the RFC 9068 §2.2.3.1 carriers every
+  FerroHEALTH product reads. `realm_access.roles` is no longer in the default:
+  a Keycloak issuer sets `FERROEHR__AUTH__ROLE_CLAIMS=roles,groups,entitlements,realm_access.roles`,
+  as the Keycloak Compose overlay and the viewer's journey stack now do.
+
+- **Breaking: two configuration refusals say less** (#4087). A single-`_`
+  spelling such as `FERROEHR_DB_MAX_CONNECTIONS` still refuses the start
+  naming the variable, without suggesting the `FERROEHR__DB__MAX_CONNECTIONS`
+  form. A refusal of an unknown key in the file names the key and the closest
+  valid one, without its line number; a syntax error still names its line and
+  column.
 
 - **Breaking: `/health/readiness` and `/management/health` serve the
   FerroHEALTH readiness document of `ferrohealth-health` 0.1.1** (#4087). The
@@ -298,6 +363,16 @@ Shipped with functional changes because: the patched `ferrohealth-smart` arrives
   GHSA-vphj-3f8c-5hpx).
 
 ### Fixed
+
+- **The agent guard refuses wrapped and re-ordered spellings of a force push
+  or a recursive delete** (#4046). `.claude/hooks/block_dangerous.sh` let
+  through `git -C . push --force … main`, `/usr/bin/git push`, `\rm -rf`,
+  `rm --recursive --force`, `bash -c "rm -rf …"`, `find … -delete` and similar.
+  It now normalises the command first (a path or backslash before the binary,
+  a launcher such as `env` or `sudo`, a `sh -c` or `eval` wrapper, git's global
+  options before the verb), judges every `rm` target and every deleting `find`
+  starting point against `/tmp`, and refuses a push that deletes `main` or
+  `master`. `block_dangerous_test.sh` runs each spelling.
 
 - **A BASE 1.3 `TERMINOLOGY_CODE` keeps its `terminology_id` in XML**
   (#4076). ITS-XML 1.0.2 types `TRANSLATION_DETAILS.language` and the other

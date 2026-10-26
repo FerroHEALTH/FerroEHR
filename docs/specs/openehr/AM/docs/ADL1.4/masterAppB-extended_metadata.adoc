@@ -15,7 +15,7 @@ The standard items are defined as follows:
 |==================================================================================================
 |Item	                    |String syntax                                                         | Description
 
-|revision                   |{openehr_am_id}#_version_numbering[extended version string]           |Full version identifier to compensate for only major version numbering in ADL 1.4 identifiers.
+|revision                   |{openehr_base_artefact_identification}#_version_numbering[extended version string]           |Full version identifier to compensate for only major version numbering in ADL 1.4 identifiers.
 |build_uid                  |Guid string                                                           |Changed every save. See AOM2 spec, {openehr_am_aom2}#_machine_identifiers[Machine Identifiers section]
 |original_namespace         |reverse domain name	                                               |See AOM2 spec, {openehr_am_aom2}#_governance_meta_data[Governance Meta-data section].
 |original_publisher         |org name with optional trailing `<>` section containing a domain name or email address|See AOM2 spec, {openehr_am_aom2}#_governance_meta_data[Governance Meta-data section]

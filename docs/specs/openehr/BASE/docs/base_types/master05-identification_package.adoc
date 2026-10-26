@@ -114,6 +114,12 @@ The grammar of archetype identifiers is given below in <<Syntaxes>>.
 
 WARNING: some archetype authoring tools have historically allowed a nonconforming version part within archetype identifiers which included the lifecycle status. This has led to some archetypes having an incorrect identifier whose version part is of the form `.v1draft` or similar.
 
+==== Template Identifiers
+
+The `TEMPLATE_ID` subtype identifies a template. The human-readable identifier (HRID) form is _strongly recommended_ for template identifiers, mirroring the archetype identifier, and is the modern (ADL 2) form: `namespace '::' rm_publisher '-' rm_package '-' rm_class '.' concept_id '.v' version_id`, for example `org.example::openEHR-EHR-COMPOSITION.discharge_summary.v1.0.0`.
+
+For backward compatibility a legacy free-text template name remains a valid `TEMPLATE_ID`; the HRID form cannot be enforced, but the legacy form is _deprecated_ and tooling is encouraged to generate consistent HRID template identifiers. The `_is_hrid()_` function reports whether a value conforms to the HRID grammar, and the segment and version accessors (`namespace()`, `qualified_rm_class_name()`, `concept_id()`, `version_id()`, `major_version()`, `minor_version()`, `patch_version()`) return the parsed parts when it does and are empty for a legacy identifier. The grammar itself is defined canonically in the openEHR {openehr_base_artefact_identification}[Artefact Identification^] specification (realised by the `Hrid` primitive type in Foundation Types).
+
 ==== Terminology Identifiers
 
 The `TERMINOLOGY_ID` subtype defines a globally unique single string identifier for terminologies. Terminology identifier values may include a version, either as part of the name, and/or according to the syntax defined in section 4.3.12 below. Examples of terminology identifiers include:
@@ -223,7 +229,7 @@ include::{uml_export_dir}/classes/{pkg}locatable_ref.adoc[]
 
 The identifiers defined above are defined in their string form by the following EBNF grammar rules.
 
-NOTE: The general human-readable identifier (HRID) grammar shared by archetype and template identifiers - namespacing, reference-model class qualification, concept identifiers, version numbering, and reference precision tiers - is defined canonically in the openEHR {openehr_base_artefact_identification}[Artefact Identification^] specification (realised computationally by the `Hrid` primitive type in Foundation Types). The `archetype_id` production below is a specific application of that grammar. A reference regular expression for the grammar - for validation and tooling - is given there alongside the EBNF.
+NOTE: The general human-readable identifier (HRID) grammar shared by archetype and template identifiers - namespacing, reference-model class qualification, concept identifiers, version numbering, and reference precision tiers - is defined canonically in the openEHR {openehr_base_artefact_identification}[Artefact Identification^] specification (realised computationally by the `Hrid` primitive type in Foundation Types). The `archetype_id` production below is a specific application of that grammar; the recommended `template_id` form follows the same grammar in its ADL 2 form (with the namespace mandatory), whereas a legacy free-text template identifier is unconstrained by it. A reference regular expression for the grammar - for validation and tooling - is given there alongside the EBNF.
 
 [source, ebnf]
 --------

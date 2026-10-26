@@ -281,8 +281,9 @@ realm = ""                   # the challenge realm; empty = "ferroehr"
 scopeless_subjects = []
 # The token claims the caller's roles are read from, in order; a dotted path
 # reaches a nested claim. `scope` is not a role source: a scope grants a client
-# delegated authority (RFC 6749 §3.3). The first three are RFC 9068 §2.2.3.1's.
-role_claims = ["roles", "groups", "entitlements", "realm_access.roles"]
+# delegated authority (RFC 6749 §3.3). The default is RFC 9068 §2.2.3.1's
+# three; a Keycloak issuer adds its nested "realm_access.roles".
+role_claims = ["roles", "groups", "entitlements"]
 capabilities = []            # SMART capabilities the discovery document adds
 scopes_supported = []        # the scopes the discovery document lists; empty = the ones the route table honours
 # product_scope: FerroEHR's own scope, which admits the ADMIN API and, beside

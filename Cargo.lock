@@ -336,12 +336,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arraydeque"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d902e3d592a523def97af8f317b08ce16b7ab854c1985a0c671e6f15cebc236"
-
-[[package]]
 name = "arrayvec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1485,18 +1479,11 @@ version = "0.15.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38e9fbc53afcec54441422f1c596cd054655b32e70e1cbac956651b7b175a404"
 dependencies = [
- "async-trait",
  "convert_case 0.6.0",
- "json5",
  "pathdiff",
- "ron",
- "rust-ini",
- "serde-untagged",
  "serde_core",
- "serde_json",
  "toml",
  "winnow",
- "yaml-rust2",
 ]
 
 [[package]]
@@ -1531,26 +1518,6 @@ name = "const-oid"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
-
-[[package]]
-name = "const-random"
-version = "0.1.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87e00182fe74b066627d63b85fd550ac2998d4b0bd86bfed477a0ae4c7c71359"
-dependencies = [
- "const-random-macro",
-]
-
-[[package]]
-name = "const-random-macro"
-version = "0.1.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9d839f2a20b0aee515dc581a6172f2321f96cab76c1a38a4c584a194955390e"
-dependencies = [
- "getrandom 0.2.17",
- "once_cell",
- "tiny-keccak",
-]
 
 [[package]]
 name = "const-str"
@@ -2275,15 +2242,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dlv-list"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "442039f5147480ba31067cb00ada1adae6892028e40e45fc5de7b7df6dcc1b5f"
-dependencies = [
- "const-random",
-]
-
-[[package]]
 name = "docker_credential"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2567,17 +2525,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1731451909bde27714eacba19c2566362a7f35224f52b153d3f42cf60f72472"
 
 [[package]]
-name = "erased-serde"
-version = "0.4.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2add8a07dd6a8d93ff627029c51de145e12686fbc36ecb298ac22e74cf02dec"
-dependencies = [
- "serde",
- "serde_core",
- "typeid",
-]
-
-[[package]]
 name = "errno"
 version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2664,13 +2611,13 @@ dependencies = [
  "axum",
  "backon",
  "base64 0.23.1",
- "config",
  "criterion",
  "ehds-logging",
  "ferrobridge-term",
  "ferroehr-ext",
+ "ferrohealth-config",
  "ferrohealth-health",
- "ferrohealth-secret 0.1.0",
+ "ferrohealth-secret",
  "ferrohealth-server",
  "ferrohealth-smart",
  "futures",
@@ -2695,7 +2642,7 @@ dependencies = [
  "openehr-lang",
  "openehr-query",
  "openehr-rm",
- "openehr-sdt 0.0.103",
+ "openehr-sdt 0.0.104",
  "openehr-term",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -2714,7 +2661,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_norway",
- "serde_path_to_error",
  "sevenz-rust2",
  "sha2 0.11.1",
  "sqlx",
@@ -2772,7 +2718,7 @@ dependencies = [
  "ferroehr",
  "ferrohealth-authz",
  "ferrohealth-health",
- "ferrohealth-secret 0.1.0",
+ "ferrohealth-secret",
  "ferrohealth-smart",
  "futures",
  "governor",
@@ -2789,7 +2735,7 @@ dependencies = [
  "openehr-its",
  "openehr-lang",
  "openehr-rm",
- "openehr-sdt 0.0.103",
+ "openehr-sdt 0.0.104",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
@@ -2835,9 +2781,10 @@ dependencies = [
  "clap",
  "ferroehr",
  "ferroehr-rest",
+ "ferrohealth-config",
  "ferrohealth-health",
  "openehr-its",
- "openehr-sdt 0.0.103",
+ "openehr-sdt 0.0.104",
  "reqwest",
  "serde_json",
  "sqlx",
@@ -2853,11 +2800,12 @@ dependencies = [
  "anyhow",
  "axum",
  "base64 0.23.1",
- "config",
  "console_error_panic_hook",
  "cookie",
  "csv",
+ "ferrohealth-config",
  "ferrohealth-health",
+ "ferrohealth-secret",
  "ferrohealth-ui",
  "fluent-templates",
  "futures",
@@ -2871,9 +2819,10 @@ dependencies = [
  "openehr-am",
  "openehr-its",
  "openehr-query",
- "openehr-sdt 0.0.103",
+ "openehr-sdt 0.0.104",
  "openidconnect",
  "reqwest",
+ "secrecy",
  "serde",
  "serde_json",
  "thirtyfour",
@@ -2907,6 +2856,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrohealth-config"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f52e1673f6029874a16db04197e547eb015ff85d77014726f6b2675b6bfa17d"
+dependencies = [
+ "ferrohealth-secret",
+ "percent-encoding",
+ "serde",
+ "thiserror 2.0.21",
+ "toml",
+ "tracing",
+]
+
+[[package]]
 name = "ferrohealth-health"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2914,18 +2877,6 @@ checksum = "ca0d0ca4b126d9126a243088689e2e40b8ef0cef39352466196ab4079350d189"
 dependencies = [
  "serde",
  "tokio",
-]
-
-[[package]]
-name = "ferrohealth-secret"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e41064ea7f807d837b9e61d4b8b493d426fb0da7570a915864f71b422d55d87e"
-dependencies = [
- "secrecy",
- "serde",
- "thiserror 2.0.21",
- "url",
 ]
 
 [[package]]
@@ -2949,7 +2900,7 @@ dependencies = [
  "axum",
  "clap",
  "ferrohealth-health",
- "ferrohealth-secret 0.2.0",
+ "ferrohealth-secret",
  "ferrohealth-telemetry",
  "http",
  "hyper-util",
@@ -2978,7 +2929,7 @@ dependencies = [
  "aws-lc-rs",
  "axum",
  "base64 0.23.1",
- "ferrohealth-secret 0.2.0",
+ "ferrohealth-secret",
  "http",
  "jiff",
  "jsonwebtoken",
@@ -3001,7 +2952,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a2f28c60ec0d7f865d0e5af7acea704c0107204e8adcd77d87dc4d807735780"
 dependencies = [
  "axum",
- "ferrohealth-secret 0.2.0",
+ "ferrohealth-secret",
  "http",
  "opentelemetry",
  "opentelemetry_sdk",
@@ -4160,7 +4111,7 @@ checksum = "779a7dae5c1e3f0d351e94b243c66ad144920f30f35881e2df8396897bcac957"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
- "ferrohealth-secret 0.2.0",
+ "ferrohealth-secret",
  "ferrohealth-smart",
  "fhir-types",
  "http",
@@ -4512,16 +4463,6 @@ dependencies = [
  "cfg-if",
  "futures-util",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "json5"
-version = "1.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c77a3f1d413a994290ebe4f96047763a84d04a1f31492c51328402986d7fe5fa"
-dependencies = [
- "serde",
- "ucd-trie",
 ]
 
 [[package]]
@@ -5581,7 +5522,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "openehr-adl"
-version = "0.0.103"
+version = "0.0.104"
 dependencies = [
  "indexmap 2.14.2",
  "openehr-am",
@@ -5597,7 +5538,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-am"
-version = "0.0.103"
+version = "0.0.104"
 dependencies = [
  "openehr-base",
  "openehr-lang",
@@ -5607,7 +5548,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-base"
-version = "0.0.103"
+version = "0.0.104"
 dependencies = [
  "serde",
  "serde_json",
@@ -5627,7 +5568,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-its"
-version = "0.0.103"
+version = "0.0.104"
 dependencies = [
  "async-trait",
  "axum",
@@ -5661,7 +5602,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-lang"
-version = "0.0.103"
+version = "0.0.104"
 dependencies = [
  "assert_fs",
  "chumsky",
@@ -5675,7 +5616,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-query"
-version = "0.0.103"
+version = "0.0.104"
 dependencies = [
  "chumsky",
  "logos",
@@ -5684,7 +5625,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-rm"
-version = "0.0.103"
+version = "0.0.104"
 dependencies = [
  "insta",
  "jsonschema",
@@ -5708,7 +5649,7 @@ checksum = "2ea94a36d6f84491e59c51df4b6d0c4c06b524728e98abb93fcfd29c45e014f7"
 
 [[package]]
 name = "openehr-sdt"
-version = "0.0.103"
+version = "0.0.104"
 dependencies = [
  "fancy-regex",
  "indexmap 2.14.2",
@@ -5732,7 +5673,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-term"
-version = "0.0.103"
+version = "0.0.104"
 dependencies = [
  "openehr-base",
  "roxmltree",
@@ -5881,16 +5822,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68f19d67e5a2795c94e73e0bb1cc1a7edeb2e28efd39e2e1c9b7a40c1108b11c"
 dependencies = [
  "num-traits",
-]
-
-[[package]]
-name = "ordered-multimap"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49203cdcae0030493bad186b28da2fa25645fa276a51b6fec8010d281e02ef79"
-dependencies = [
- "dlv-list",
- "hashbrown 0.14.5",
 ]
 
 [[package]]
@@ -7162,20 +7093,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ron"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81116b9531d61eabc41aeb228e4b6b2435bcca3233b98cf3b3077d4e6e9debb3"
-dependencies = [
- "bitflags 2.13.1",
- "once_cell",
- "serde",
- "serde_derive",
- "typeid",
- "unicode-ident",
-]
-
-[[package]]
 name = "roxmltree"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7216,16 +7133,6 @@ dependencies = [
  "quote",
  "syn 3.0.3",
  "thiserror 2.0.21",
-]
-
-[[package]]
-name = "rust-ini"
-version = "0.21.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "796e8d2b6696392a43bea58116b667fb4c29727dc5abd27d6acf338bb4f688c7"
-dependencies = [
- "cfg-if",
- "ordered-multimap",
 ]
 
 [[package]]
@@ -7589,18 +7496,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-untagged"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9faf48a4a2d2693be24c6289dbe26552776eb7737074e6722891fadbe6c5058"
-dependencies = [
- "erased-serde",
- "serde",
- "serde_core",
- "typeid",
-]
-
-[[package]]
 name = "serde-value"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7713,9 +7608,9 @@ dependencies = [
 
 [[package]]
 name = "serde_spanned"
-version = "1.1.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6662b5879511e06e8999a8a235d848113e942c9124f211511b16466ee2995f26"
+checksum = "4e7523beb55eece201a2356bee0bbca0d1ab466c14c07703b2e0ee6d42cb0c2c"
 dependencies = [
  "serde_core",
 ]
@@ -8774,15 +8669,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tiny-keccak"
-version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c9d3793400a45f954c52e73d068316d76b6f4e36977e3fcebb13a2721e80237"
-dependencies = [
- "crunchy",
-]
-
-[[package]]
 name = "tinystr"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8895,9 +8781,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "1.1.6+spec-1.1.0"
+version = "1.1.8+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "920602543f0911ab71da12c50d59701da54c196d1a2bf5cb4b75667f137a406a"
+checksum = "20489e00e4d8741d6be680764cc12e270655e375a20d1011e844a9c3379e678d"
 dependencies = [
  "indexmap 2.14.2",
  "serde_core",
@@ -8910,9 +8796,9 @@ dependencies = [
 
 [[package]]
 name = "toml_datetime"
-version = "1.1.1+spec-1.1.0"
+version = "1.1.2+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3165f65f62e28e0115a00b2ebdd37eb6f3b641855f9d636d3cd4103767159ad7"
+checksum = "2b86d767906c6c42421dcba507eb9d203e779497710a47782a224bb871653053"
 dependencies = [
  "serde_core",
 ]
@@ -8931,18 +8817,18 @@ dependencies = [
 
 [[package]]
 name = "toml_parser"
-version = "1.1.3+spec-1.1.0"
+version = "1.1.5+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d38ac1cf9b95face32296c0a3ede1fdc270627c9d9c02a7274dd6d960dc4d56"
+checksum = "baa693a8032d7e1cada7d0041e96126df243179ff061456783ac7f12bda4744c"
 dependencies = [
  "winnow",
 ]
 
 [[package]]
 name = "toml_writer"
-version = "1.1.2+spec-1.1.0"
+version = "1.1.3+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d56353a2a665ad0f41a421187180aab746c8c325620617ad883a99a1cbe66d2"
+checksum = "06bdbd8cfc056b8d2e2e85f29b56a3bdbecb527cef81eb39e3e7b98af4652770"
 
 [[package]]
 name = "tonic"
@@ -9271,12 +9157,6 @@ name = "typed-path"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e28f89b80c87b8fb0cf04ab448d5dd0dd0ade2f8891bae878de66a75a28600e"
-
-[[package]]
-name = "typeid"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc7d623258602320d5c55d1bc22793b57daff0ec7efc270ea7d55ce1d5f5471c"
 
 [[package]]
 name = "typenum"
@@ -10100,17 +9980,6 @@ name = "xxhash-rust"
 version = "0.8.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aee1b19627c7c60102ab80d3a9cbe18de90bfe03bfa6c3715447681f0e8c8af6"
-
-[[package]]
-name = "yaml-rust2"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "631a50d867fafb7093e709d75aaee9e0e0d5deb934021fcea25ac2fe09edc51e"
-dependencies = [
- "arraydeque",
- "encoding_rs",
- "hashlink",
-]
 
 [[package]]
 name = "yasna"

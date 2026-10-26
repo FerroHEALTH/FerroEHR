@@ -104,10 +104,9 @@ mod tests {
         assert!(!c.smart.enabled);
         assert!(!c.terminology_api_enabled);
         assert!(!c.events_admin_api);
-        assert!(
-            c.auth
-                .role_claims
-                .contains(&"realm_access.roles".to_owned())
+        assert_eq!(
+            c.auth.role_claims,
+            ferrohealth_smart::roles::default_claims()
         );
     }
 }
