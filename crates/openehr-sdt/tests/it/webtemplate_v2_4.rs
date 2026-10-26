@@ -900,6 +900,12 @@ definition
 \t\t\t\tother_context matches {
 \t\t\t\t\tITEM_TREE[at0001] matches {
 \t\t\t\t\t\titems cardinality matches {0..*; unordered} matches {
+\t\t\t\t\t\t\tELEMENT[at0005] occurrences matches {0..1} matches {
+\t\t\t\t\t\t\t\tvalue matches {
+\t\t\t\t\t\t\t\t\t0|[local::at0006],
+\t\t\t\t\t\t\t\t\t1|[local::at0007]
+\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t}
 \t\t\t\t\t\t\tELEMENT[at0002] occurrences matches {0..1} matches {
 \t\t\t\t\t\t\t\tvalue matches {
 \t\t\t\t\t\t\t\t\tDV_CODED_TEXT matches {
@@ -928,6 +934,9 @@ ontology
 \t\t\t\t[\"at0002\"] = <text = <\"Priority\">; description = <\"Priority\">>
 \t\t\t\t[\"at0003\"] = <text = <\"Routine\">; description = <\"Routine\">>
 \t\t\t\t[\"at0004\"] = <text = <\"Urgent\">; description = <\"Urgent\">>
+\t\t\t\t[\"at0005\"] = <text = <\"Severity\">; description = <\"Severity\">>
+\t\t\t\t[\"at0006\"] = <text = <\"Mild\">; description = <\"Mild\">>
+\t\t\t\t[\"at0007\"] = <text = <\"Severe\">; description = <\"Severe\">>
 \t\t\t>
 \t\t>
 \t>
@@ -1017,4 +1026,33 @@ fn an_adl14_qualified_term_constraint_reads_as_its_codes() {
         [("at0003", Some("Routine")), ("at0004", Some("Urgent"))]
     );
     assert_eq!(input.default_value, Some(serde_json::json!("at0003")));
+}
+
+/// An ordinal of an archetype read in the ADL 1.4 dialect keeps each symbol's
+/// `local::atNNNN` spelling, and the ADL 2 builder reads it as the at-code it
+/// names, with the ordinal value beside it.
+#[test]
+fn an_adl14_ordinal_reads_as_its_symbols() {
+    let mut repo = ArchetypeRepository::new();
+    repo.insert(
+        parse_artefact(ADL14_CODED_COMPOSITION, Dialect::Adl14).expect("the archetype parses"),
+    );
+    let template =
+        parse_artefact(ADL14_CODED_TEMPLATE, Dialect::Adl2).expect("the template parses");
+    let opt = create_opt(&template, &repo).expect("the operational template builds");
+    let wt = build_web_template_v2_4(&opt).expect("the web template builds");
+    let severity = find(&wt.tree, "severity").expect("a severity node");
+    let input = severity.inputs.first().expect("an ordinal input");
+    let symbols: Vec<(&str, Option<&str>, Option<i32>)> = input
+        .list
+        .iter()
+        .map(|cv| (cv.value.as_str(), cv.label.as_deref(), cv.ordinal))
+        .collect();
+    assert_eq!(
+        symbols,
+        [
+            ("at0006", Some("Mild"), Some(0)),
+            ("at0007", Some("Severe"), Some(1))
+        ]
+    );
 }

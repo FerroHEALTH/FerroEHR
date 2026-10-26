@@ -943,7 +943,12 @@ fn ordinal_row(
     for (i, name) in names.iter().enumerate() {
         match (*name, row.members.get(i)) {
             ("symbol", Some(CPrimitiveObject::CTerminologyCode(ctc))) => {
-                code = expand_codes(term, &ctc.constraint).into_iter().next();
+                // An ordinal of an archetype read in the ADL 1.4 dialect keeps its
+                // symbol as `local::atNNNN` (`Adl14Qualified`).
+                code = match Adl14Qualified::parse(&ctc.constraint) {
+                    Some(qualified) => qualified.codes.first().map(|&code| code.to_owned()),
+                    None => expand_codes(term, &ctc.constraint).into_iter().next(),
+                };
             }
             ("value", Some(CPrimitiveObject::CInteger(ci))) => {
                 ordinal = ci
