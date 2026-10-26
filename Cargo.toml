@@ -245,6 +245,11 @@ ferrohealth-config = "=0.2.5"
 # document alone; a server takes `registry`. Verified on crates.io 2026-10-26
 # (0.1.1).
 ferrohealth-health = { version = "=0.1.1", default-features = false }
+# The family's server plumbing (FerroSYS): `tls_client` reads the TLS
+# material of an outbound HTTPS client, the trust roots beside the platform's
+# and a client identity, and sets it on a `reqwest::ClientBuilder` (feature
+# `reqwest`). Verified on crates.io 2026-10-26 (0.3.2).
+ferrohealth-server = { version = "=0.3.2", default-features = false }
 # The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
 # the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
 # request log with its `http.server.request.duration` histogram, and the panic
@@ -273,6 +278,14 @@ ferrobridge-term = { version = "=0.1.139", features = ["smart"] }
 # crates.io 2026-10-26 (0.2.13).
 ihe-atna = { version = "=0.2.13", default-features = false }
 ehds-logging = { version = "=0.2.13", default-features = false }
+
+# ── Patient identity (the shared IHE ITI client library) ─────────────────────
+# The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly. `pixm` is the
+# PIXm Patient Identifier Cross-reference Consumer (ITI-83) the IHE patient
+# identity source of the EHR index is asked through (`[ehr_index]`); `smart` is
+# its ferrohealth-smart token authorizer. Verified on crates.io 2026-10-26
+# (0.0.62, on ihe-atna ^0.2.13 and ferrohealth-smart ^0.7.4).
+ihe-iti = { version = "=0.0.62", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 openidconnect = { version = "4", default-features = false }   # OIDC discovery + code flow; HTTP-client agnostic: we supply the pinned reqwest (platform trust store)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits

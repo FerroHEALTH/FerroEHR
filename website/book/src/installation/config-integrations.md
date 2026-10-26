@@ -1,8 +1,9 @@
 # Integrations
 
-Query execution and the three optional integrations: `[query]`, `[events]`,
-`[terminology]`, `[multimedia]`. Everything except the query knobs is off by
-default, and a disabled integration contacts nothing and mounts no
+Query execution, the patient identity source and the three optional
+integrations: `[query]`, `[ehr_index]`, `[events]`, `[terminology]`,
+`[multimedia]`. Everything except the query knobs and the identity source is
+off by default, and a disabled integration contacts nothing and mounts no
 routes. Precedence, the environment-name grammar, and file discovery are on the
 [Configuration reference](configuration.md) index.
 
@@ -44,6 +45,90 @@ stride skip the rows between the shortened page and its next `offset`, and the
 `RESULT_SET` has nothing to say so. ITS-REST leaves both the `fetch` default and
 its maximum to the implementation. A bulk consumer pages with `offset` and a
 `fetch` at or below the ceiling, or the operator raises the ceiling deliberately.
+
+## `[ehr_index]`
+
+Who holds the cross-reference from a patient to the EHR that records them, the
+openEHR SM `I_EHR_INDEX`. No openEHR specification governs where it lives: the
+RM's `PARTY_SELF` section says the association "may be done elsewhere for
+security reasons", and FerroEHR's design puts it in an IHE patient identity
+source.
+
+**The IHE patient identity source is the default.** FerroEHR asks a PIX
+Manager, as a PIXm Patient Identifier Cross-reference Consumer
+([IHE ITI TF-2 §3.83](https://profiles.ihe.net/ITI/PIXm/ITI-83.html),
+`$ihe-pix`), which identifier the clinical domain holds for a patient that
+another domain's identifier names. That identifier is the pseudonym
+`EHR_STATUS.subject` carries. FerroEHR sends only what ITI-83 specifies, so any
+conformant PIX Manager serves; FerroPIX is the one the compose quickstart and
+the Helm chart run.
+
+**A FerroEHR run on its own opts in to the in-instance map** with
+`provider = "local"`: development, tests, the conformance suites, a
+single-source installation. The map answers the openEHR REST API's
+`GET /ehr?subject_id=…&subject_namespace=…` lookup over `EHR_STATUS` content
+and nothing more. **With neither**, the server refuses to start and the
+refusal names both choices.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `provider` | enum{ihe,local} | `ihe` | Which provider holds the cross-reference. |
+| `pixm_url` | secret URL | required for `ihe` | The PIX Manager's FHIR base, `[base]` of `[base]/Patient/$ihe-pix`. Credentials embedded in it are masked in every rendering. |
+| `assigning_authority` | URI | required for `ihe` | The clinical domain, such as `urn:oid:2.999.7.1`: the `targetSystem` of every ITI-83 query and the namespace the answered pseudonym is stored under. It must be one of `privacy.subject_namespaces`. |
+| `invocation` | enum{post,get} | `post` | `post` sends a `Parameters` body, so a patient identifier never appears in a URL or an access log; `get` is the form ITI-83 prescribes, for a PIX Manager that accepts no `POST`. |
+| `request_timeout_ms` | int | `10000` | How long one ITI-83 exchange may take, connection included. |
+
+```toml
+[privacy]
+subject_namespaces = ["urn:oid:2.999.7.1"]
+
+[ehr_index]
+provider = "ihe"
+pixm_url = "https://pix.example.org/fhir"
+assigning_authority = "urn:oid:2.999.7.1"
+
+[ehr_index.oauth]
+token_endpoint = "https://idp.example.org/realms/pix/protocol/openid-connect/token"
+client_id = "ferroehr"
+client_secret_file = "/run/secrets/pix-client"
+scope = "system/Patient.rs"
+```
+
+`[ehr_index.oauth]` is the client credentials grant every ITI-83 request
+carries, with the keys of the
+[terminology server's grant](#authenticating-to-the-terminology-server); a
+`401` is answered once more under a new token. The client id is the one the
+identity source mints pseudonyms in the clinical domain for, and the scope is
+the one its PIX Manager takes from a Consumer. `[ehr_index.tls]` holds the
+client's TLS material: `trust_roots_file`, a PEM bundle trusted beside the
+platform roots for a PIX Manager behind a private PKI, `client_identity_file`
+(or `client_identity` inline), the chain and key presented for mutual TLS, and
+`min_version` (`"1.3"`, or `"1.2"`).
+
+What each operation asks:
+
+| Operation | Under `ihe` | Under `local` |
+|---|---|---|
+| `has_ehr_for_subject`, `create_ehr_for_subject` | the subject's clinical pseudonym, asked of the source; a subject already in the clinical domain names itself | the subject as given |
+| the EHRs of a subject | the one EHR whose `EHR_STATUS` names the subject's pseudonym | the in-instance map |
+| the subjects of an EHR | the pseudonym its `EHR_STATUS` carries; the source is never asked to resolve it back | the in-instance map |
+| writing the index (`add`, `update`, `remove`) | refused: the source holds the cross-reference | the in-instance map |
+
+**No fallback.** At start the server reads the source's
+`CapabilityStatement` and refuses to start when it does not answer. A request
+the source then fails, refuses or times out on answers with an error that
+carries what the source said, and nothing is answered from the in-instance map.
+An answered pseudonym the `[privacy]` subject rule refuses, or more than one
+identifier in the clinical domain, is refused too.
+
+**FerroEHR does no identity work in either mode.** It matches no patients,
+merges none and links no identifier domains; the identity source does. It asks
+only for the cross-reference ITI-83 answers. PDQm
+([ITI-78](https://profiles.ihe.net/ITI/PDQm/ITI-78.html)) is not used: its
+search answers with the demographic `Patient`, which FerroEHR would only
+discard, so asking for it breaks data minimisation
+([GDPR Art. 5(1)(c)](https://eur-lex.europa.eu/eli/reg/2016/679/oj)), and its
+`$match` is patient matching.
 
 ## `[events]`
 

@@ -27,6 +27,7 @@ multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 
 [dependencies]
 ferrohealth-secret = { workspace = true }
+ferrohealth-server = { workspace = true, features = ["reqwest"] }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferroehr-ext = { path = "../ferroehr-ext", optional = true }
 http.workspace = true
@@ -121,6 +122,10 @@ rand = "0.8"
 # Feed.
 ihe-atna = { workspace = true, features = ["atna"] }
 ehds-logging.workspace = true
+# The IHE patient identity source of the EHR index (`service::ehr_index::ihe`):
+# the PIXm Patient Identifier Cross-reference Consumer (ITI-83), authenticated by
+# the `smart` token authorizer under `[ehr_index.oauth]`.
+ihe-iti = { workspace = true, features = ["pixm", "smart"] }
 
 openehr-base = { path = "../../crates/openehr-base" }
 openehr-term = { path = "../../crates/openehr-term" }

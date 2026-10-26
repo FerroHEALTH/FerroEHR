@@ -280,7 +280,9 @@ async fn run_report_writes_a_redacted_file_naming_an_unreachable_database() -> a
          url = \"postgres://reportuser:{DB_PW}@127.0.0.1:1/ferroehr\"\n\
          migrate_url = \"postgres://migrator:{MIGRATE_PW}@127.0.0.1:1/ferroehr\"\n\
          [events]\n\
-         url = \"amqp://mq:{EVENTS_PW}@broker:5672/vh\"\n"
+         url = \"amqp://mq:{EVENTS_PW}@broker:5672/vh\"\n\
+         [ehr_index]\n\
+         provider = \"local\"\n"
     ))?;
     let output = dir.child("report.json");
     // Assembled with no environment, so a runner's own `FERROEHR_*` variables
@@ -369,6 +371,13 @@ url = "https://u5:URL_PW_SENTINEL_5@h5:443/p5"
 token_endpoint = "https://u6:URL_PW_SENTINEL_6@h6:8443/p6"
 client_id = "client"
 client_secret = "CLIENT_SECRET_SENTINEL"
+
+[privacy]
+subject_namespaces = ["urn:oid:2.999.7.1"]
+
+[ehr_index]
+pixm_url = "https://u7:URL_PW_SENTINEL_7@h7:8443/p7"
+assigning_authority = "urn:oid:2.999.7.1"
 "#,
     );
     assert!(ok, "the configuration checks: {text}");
@@ -383,6 +392,7 @@ client_secret = "CLIENT_SECRET_SENTINEL"
         // NOTE: WHATWG URL Standard §4.5 (URL serializing) omits a scheme's
         // default port, so the grant table's URL 6 names a port that stays.
         (6, 8443),
+        (7, 8443),
     ] {
         assert!(
             text.contains(&format!("://***@h{n}:{port}/p{n}")),

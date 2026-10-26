@@ -542,6 +542,13 @@ secrets:
   # scope — under config.terminology.server.oauth; a secret with no such
   # declaration is a render error.
   terminologyClientSecret: ""
+  # -- The client secret of the identity source's OAuth2 grant
+  # ([ehr_index.oauth]). MOUNTED as
+  # /etc/ferroehr-secrets/ehr_index.oauth.client_secret, and the chart injects
+  # the matching `client_secret_file` into the rendered TOML. Declare the grant
+  # itself (token_endpoint or issuer, client_id, scope) under
+  # config.ehr_index.oauth; a secret with no such declaration is a render error.
+  ehrIndexClientSecret: ""
   # -- S3 access key id for [multimedia] → FERROEHR__MULTIMEDIA__ACCESS_KEY_ID
   # env. Not a secret in the server's own model (it is reported unredacted by
   # /management/env); prefer IRSA/Workload-Identity (leave empty) on cloud.
@@ -836,6 +843,22 @@ config:
   # FerroTERM gets either way.
   terminology:
     api_enabled: false
+
+  # [ehr_index] — who holds the subject-to-EHR cross-reference. An IHE patient
+  # identity source asked over PIXm (ITI-83) is the binary's default; with
+  # `ferropix.enabled` the chart INJECTS `provider = "ihe"` and `pixm_url` (the
+  # in-cluster FerroPIX Service), so declaring either here is refused while it
+  # is on. You still name the clinical domain and the grant:
+  #   ehr_index:
+  #     assigning_authority: urn:oid:2.999.7.1   # also in privacy.subject_namespaces
+  #     oauth:
+  #       token_endpoint: https://idp.example.org/token
+  #       client_id: ferroehr                    # FerroPIX's consumer_client_id
+  #       scope: system/Patient.rs
+  # with the client secret in `secrets.ehrIndexClientSecret`. Another PIX
+  # Manager: `ferropix.enabled: false` and `pixm_url` here. A FerroEHR run on
+  # its own: `ferropix.enabled: false` and `provider: local`. With neither the
+  # render is refused, as the server's boot would be.
 
   # [multimedia] — DV_MULTIMEDIA externalization → S3. Our own extension; no
   # openEHR spec governs it. Off by default
@@ -1680,3 +1703,42 @@ bridge:
   extraVolumes: []
   # -- Extra volume mounts for the FerroBRIDGE container.
   extraVolumeMounts: []
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FerroPIX, the IHE patient identity source FerroEHR asks over PIXm (ITI-83),
+# taken as the chart dependency `ferropix` from
+# oci://ghcr.io/ferrohealth/charts. Every key below is that chart's own value
+# (its README lists them all); this chart adds only the injection of its
+# in-cluster FHIR base into config.ehr_index.pixm_url. FerroPIX needs its own
+# PostgreSQL URL and sealing key Secrets, an issuer, and the
+# pseudonymisation domain whose consumer is FerroEHR's client:
+#   ferropix:
+#     database: {existingSecret: ferropix-db}
+#     dataKey: {existingSecret: ferropix-data-key}
+#     config:
+#       server: {public_base_url: https://pix.example.org}
+#       auth:
+#         audience: [https://pix.example.org/fhir]
+#         issuer: [{issuer: https://idp.example.org, clients: [hospital-source]}]
+#       pseudonym_domain:
+#         - {namespace: urn:oid:2.999.7.1, name: Clinical domain, consumer_client_id: ferroehr}
+# Any conformant PIX Manager can serve instead: set `enabled: false` and
+# config.ehr_index.pixm_url.
+# ─────────────────────────────────────────────────────────────────────────────
+ferropix:
+  # -- Deploy FerroPIX beside the CDR and point config.ehr_index at it.
+  enabled: true
+  image:
+    # -- FerroPIX image digest, the one release 0.0.7 names. Pinned here so
+    # the image this chart deploys is stated by this chart.
+    digest: "sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825"
+  config:
+    server:
+      # -- FerroPIX's `[server] base_path`, read here to build the FHIR base the
+      # CDR is pointed at.
+      base_path: ""
+  service:
+    # -- FerroPIX's Service port, read here to build the FHIR base the CDR is
+    # pointed at.
+    port: 8080
+
