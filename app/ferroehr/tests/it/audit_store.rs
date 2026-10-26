@@ -245,6 +245,91 @@ async fn reap_years_deletes_only_rows_past_the_calendar_horizon() {
     );
 }
 
+/// Each record is deleted on or after its own retention end and never before
+/// it (Regulation (EU) 2025/327 Annex II 3.4): two records written the same
+/// moment with different ends part ways, a record kept without end stays, and
+/// a record that states no end keeps the store horizon.
+#[tokio::test]
+async fn reap_due_deletes_each_record_at_its_own_end() {
+    use ferroehr::system_log::config::Retention;
+    use ferroehr::system_log::store::RecordEnd;
+
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let store = AuditStore::new(pool.clone());
+
+    let today: jiff::civil::Date = "2026-10-26".parse().unwrap();
+    let written: Timestamp = "2026-10-01T08:00:00Z".parse().unwrap();
+    let records: Vec<_> = (0..3)
+        .map(|_| {
+            let event = read_event(written);
+            let rendered = fhir::to_fhir(&event, &ctx(), None).expect("render");
+            (event, None, Some(rendered))
+        })
+        .collect();
+    let ends = [
+        RecordEnd::On(today),
+        RecordEnd::On(today.tomorrow().unwrap()),
+        RecordEnd::Never,
+    ];
+    store
+        .insert_batch_ending(&records, &ends)
+        .await
+        .expect("batch insert with ends");
+    // A record from before per-record ends states none.
+    let legacy = read_event("2020-01-01T00:00:00Z".parse().unwrap());
+    let legacy_fhir = fhir::to_fhir(&legacy, &ctx(), None).expect("render");
+    store
+        .insert_batch(&[(legacy, None, Some(legacy_fhir))])
+        .await
+        .expect("legacy insert");
+
+    // Kept forever, the horizon spares the record that states no end; the
+    // record whose end is today goes, the one ending tomorrow and the one
+    // kept without end stay.
+    assert_eq!(
+        store
+            .reap_due(today, Retention::Forever)
+            .await
+            .expect("reap"),
+        1
+    );
+    let ends_left: Vec<Option<String>> = sqlx::query_scalar(
+        "SELECT retention_ends::text FROM audit.audit_event \
+         WHERE retention_stated ORDER BY chain_seq",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the stated records");
+    assert_eq!(ends_left, vec![Some("2026-10-27".to_owned()), None]);
+
+    // Reaping again the same day removes nothing more; the next day the
+    // second record's end has come, and a horizon reaps the unstated record.
+    assert_eq!(
+        store
+            .reap_due(today, Retention::Forever)
+            .await
+            .expect("reap"),
+        0
+    );
+    assert_eq!(
+        store
+            .reap_due(today.tomorrow().unwrap(), Retention::Days(30))
+            .await
+            .expect("reap"),
+        2
+    );
+    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_event")
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(left, 1, "only the record kept without end remains");
+    assert!(
+        store.verify_chain().await.expect("verify").is_empty(),
+        "the reaped positions are tombstoned, so the chain verifies"
+    );
+}
+
 /// The access-logging fields (#3156) survive the round trip on both write
 /// paths, and the domain is derived from the resource class rather than set by
 /// each call site.

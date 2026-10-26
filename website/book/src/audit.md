@@ -356,9 +356,16 @@ An emergency the caller does not declare is not marked.
 ### Retention, and who chooses it
 
 `[audit.store] retention_days` decides how long the repository keeps a record:
-`0`, the default, keeps them forever, and any other value reaps hourly
-everything older. **The default is deliberate.** An access log is the evidence
-a data subject's right of access is served from, and a repository that silently
+`0`, the default, keeps them forever, and any other value sets the horizon.
+Every record stores the first date it may be deleted on, and the reaper
+deletes each record hourly on or after that date and never before it. An
+access record takes its end from the retention its categories and origins
+call for (Regulation (EU) 2025/327 Annex II 3.4), so two records written the
+same day can end on different dates; every other record ends the day after
+its date of access plus the horizon. A record written before FerroEHR stored
+per-record ends is reaped by the horizon.
+
+**The default is deliberate.** An access log is the evidence a data subject's right of access is served from, and a repository that silently
 forgets is worse than one that grows — so the software keeps everything until
 an operator says otherwise, rather than choosing a horizon on their behalf.
 

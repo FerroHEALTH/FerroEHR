@@ -614,6 +614,7 @@ fn changed_value(column: &str, data_type: &str) -> Option<String> {
             format!("coalesce(\"{column}\", now()) + interval '1 second'")
         }
         "boolean" => format!("NOT coalesce(\"{column}\", false)"),
+        "date" => format!("coalesce(\"{column}\", current_date) + 1"),
         "bytea" => format!("coalesce(\"{column}\", '\\x'::bytea) || '\\x00'::bytea"),
         _ => return None,
     };
