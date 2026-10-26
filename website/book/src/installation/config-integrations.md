@@ -67,7 +67,11 @@ the Helm chart run.
 `provider = "local"`: development, tests, the conformance suites, a
 single-source installation. The map answers the openEHR REST API's
 `GET /ehr?subject_id=…&subject_namespace=…` lookup over `EHR_STATUS` content
-and nothing more. **With neither**, the server refuses to start and the
+and nothing more. An EHR created for a subject through the service's
+`create_ehr_for_subject` enters the map with its creation, as a `Primary`
+association with no location, so a subject cohort finds it; an EHR created
+over `POST /ehr` or `PUT /ehr/{ehr_id}` enters the map only through
+`add_ehr_subject`. **With neither**, the server refuses to start and the
 refusal names both choices.
 
 | Key | Type | Default | Description |

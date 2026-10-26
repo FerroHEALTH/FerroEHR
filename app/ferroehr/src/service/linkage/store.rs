@@ -182,6 +182,21 @@ pub(crate) async fn add_association(
     status: &ResourceStatus,
     location: Option<&LocationDesc>,
 ) -> Result<(), StoreError> {
+    insert_association(&mut *acquire(pool).await?, ehr, subject, status, location).await
+}
+
+/// [`add_association`] on a connection the caller holds, so the write can
+/// ride a linkage transaction the caller commits.
+///
+/// # Errors
+/// [`StoreError::Database`] when the write fails.
+pub(crate) async fn insert_association(
+    conn: &mut PgConnection,
+    ehr: EhrId,
+    subject: &SubjectRef,
+    status: &ResourceStatus,
+    location: Option<&LocationDesc>,
+) -> Result<(), StoreError> {
     sqlx::query(
         "INSERT INTO subject_ehr \
          (ehr_id, subject_id, subject_namespace, subject_type, status, location) \
@@ -197,7 +212,7 @@ pub(crate) async fn add_association(
     .bind(&subject.r#type)
     .bind(sqlx::types::Json(status))
     .bind(location.map(sqlx::types::Json))
-    .execute(&mut *acquire(pool).await?)
+    .execute(conn)
     .await?;
     Ok(())
 }
