@@ -438,7 +438,6 @@ thiserror = "2"                    # v2 current
 anyhow = "1"                       # binaries only
 toml = "1"                         # standalone TOML parser + `config check`/`/management/env` render
 clap = { version = "4", features = ["derive", "env"] }
-arc-swap = "1"
 indexmap = { version = "2", features = ["serde"] }
 # once_cell no longer needed for statics on edition 2024: use std::sync::LazyLock.
 

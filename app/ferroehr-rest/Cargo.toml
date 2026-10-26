@@ -80,7 +80,6 @@ ferrohealth-authz = { workspace = true, features = ["cedar", "remote"] }
 # The remote decision point takes its server as a parsed URL.
 url = { workspace = true }
 reqwest = { workspace = true }
-arc-swap = { workspace = true }
 
 # OpenAPI / Swagger UI. This server serves ONLY the document it generates from
 # its own handlers; the vendored ITS-REST OAS is `emit-rest` codegen input and

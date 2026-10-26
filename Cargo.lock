@@ -2683,7 +2683,6 @@ dependencies = [
 name = "ferroehr-rest"
 version = "5.4.2"
 dependencies = [
- "arc-swap",
  "argon2 0.6.0",
  "assert_fs",
  "async-trait",
