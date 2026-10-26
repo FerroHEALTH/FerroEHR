@@ -134,6 +134,12 @@ workflow refuses a tag that has no matching section here.
 
 ### Fixed
 
+- **An ordinal of an archetype read in the ADL 1.4 dialect lists its
+  at-codes** (#4059). The `symbol` of each `[value, symbol]` row kept the
+  verbatim `local::at0006` spelling, which the ADL 2 builder took for the
+  code and its label; it now reads the at-code with its archetype rubric, as
+  #4056 does for coded text. The nine `openehr-*` crates move to 0.0.101.
+
 - **An ADL 2 Web Template reads the ADL 1.4 term constraints of an archetype
   read in the ADL 1.4 dialect** (#4056). `openehr-adl` keeps such a
   constraint verbatim (`openehr::433`, `local::at0003,at0004;at0003`) for its
