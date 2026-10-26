@@ -221,14 +221,15 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # issuer's key set, Basic users, the SMART on openEHR scopes, the discovery
 # document and the client credentials grant. It checks tokens and never issues
 # them.
-# Verified on crates.io 2026-10-26 (0.7.3, which requires openehr-sdt 0.0.98).
-ferrohealth-smart = { version = "=0.7.3", default-features = false, features = ["fetch"] }
+# Verified on crates.io 2026-10-26 (0.7.5, which requires openehr-sdt 0.0.98
+# and ferrohealth-secret 0.2).
+ferrohealth-smart = { version = "=0.7.5", default-features = false, features = ["fetch"] }
 # The policy decision of the FerroHEALTH family (FerroAUTH, the same
 # Licensor's BUSL-1.1 code): the attribute-based request over the subject
 # ferrohealth-smart authenticates, the Cedar engine (`cedar`) and the remote
 # decision point (`remote`). Pinned exactly beside ferrohealth-smart.
-# Verified on crates.io 2026-10-26 (0.1.3).
-ferrohealth-authz = { version = "=0.1.3", default-features = false }
+# Verified on crates.io 2026-10-26 (0.1.5).
+ferrohealth-authz = { version = "=0.1.5", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -248,8 +249,8 @@ ferrohealth-health = { version = "=0.1.1", default-features = false }
 # carrying the upstream status and its `tx-issue-type` coding. The same
 # Licensor's BUSL-1.1 code (deny.toml). Its crate line moves one patch per
 # change, a breaking one included, so it is pinned exactly. Verified on
-# crates.io 2026-10-26 (0.1.138); `smart` is its ferrohealth-smart token provider.
-ferrobridge-term = { version = "=0.1.138", features = ["smart"] }
+# crates.io 2026-10-26 (0.1.139); `smart` is its ferrohealth-smart token provider.
+ferrobridge-term = { version = "=0.1.139", features = ["smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -260,9 +261,9 @@ ferrobridge-term = { version = "=0.1.138", features = ["smart"] }
 # record, the Art 14(1) categories and their classification map, the Art 9(2)
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
-# crates.io 2026-10-26 (0.2.12).
-ihe-atna = { version = "=0.2.12", default-features = false }
-ehds-logging = { version = "=0.2.12", default-features = false }
+# crates.io 2026-10-26 (0.2.13).
+ihe-atna = { version = "=0.2.13", default-features = false }
+ehds-logging = { version = "=0.2.13", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 openidconnect = { version = "4", default-features = false }   # OIDC discovery + code flow; HTTP-client agnostic: we supply the pinned reqwest (platform trust store)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits

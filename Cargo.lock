@@ -2404,9 +2404,9 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "559af80a436aedd1aa92f6b9bcc1e3ec62aa1e164f6c30cc807be51150d9fee6"
+checksum = "f6eca887ffc4142efe0bff5efa5254386ce32a4790694bc6a8fc014a5a5967e9"
 dependencies = [
  "async-trait",
  "ihe-atna",
@@ -2636,9 +2636,9 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferrobridge-term"
-version = "0.1.138"
+version = "0.1.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "581bfc3f7a4e62073a736a1bb619483e88b21b0c31d4160ae96356c98c6f477e"
+checksum = "fa45eae65effc88ba1a6bd1c0b9e3e3be8f54a4700faedf420ca84b511508a87"
 dependencies = [
  "async-trait",
  "backon",
@@ -2670,7 +2670,7 @@ dependencies = [
  "ferrobridge-term",
  "ferroehr-ext",
  "ferrohealth-health",
- "ferrohealth-secret",
+ "ferrohealth-secret 0.1.0",
  "ferrohealth-smart",
  "futures",
  "hmac 0.13.0",
@@ -2693,7 +2693,7 @@ dependencies = [
  "openehr-lang",
  "openehr-query",
  "openehr-rm",
- "openehr-sdt 0.0.102",
+ "openehr-sdt 0.0.103",
  "openehr-term",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -2770,7 +2770,7 @@ dependencies = [
  "ferroehr",
  "ferrohealth-authz",
  "ferrohealth-health",
- "ferrohealth-secret",
+ "ferrohealth-secret 0.1.0",
  "ferrohealth-smart",
  "futures",
  "governor",
@@ -2787,7 +2787,7 @@ dependencies = [
  "openehr-its",
  "openehr-lang",
  "openehr-rm",
- "openehr-sdt 0.0.102",
+ "openehr-sdt 0.0.103",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
@@ -2835,7 +2835,7 @@ dependencies = [
  "ferroehr-rest",
  "ferrohealth-health",
  "openehr-its",
- "openehr-sdt 0.0.102",
+ "openehr-sdt 0.0.103",
  "reqwest",
  "serde_json",
  "sqlx",
@@ -2869,7 +2869,7 @@ dependencies = [
  "openehr-am",
  "openehr-its",
  "openehr-query",
- "openehr-sdt 0.0.102",
+ "openehr-sdt 0.0.103",
  "openidconnect",
  "reqwest",
  "serde",
@@ -2887,9 +2887,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-authz"
-version = "0.1.3"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b161eb4309fcb660091227738d2246eed8a5fbd7c6ab6bbfa8c9b6f8ffdf056f"
+checksum = "7b2194b6ff39a6427c230602bb8fc7444d1e3b24feefdd8dd932370398f7810f"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -2927,16 +2927,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "ferrohealth-smart"
-version = "0.7.3"
+name = "ferrohealth-secret"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba3025630ed34cfafe8c48feeb571748c5356b2ad06d23671a8e294f37a8e8e5"
+checksum = "2e3ae7119d5b5d61931890e902125642d79baae5dc252525ee4bb2a28fbc5f49"
+dependencies = [
+ "secrecy",
+ "serde",
+ "thiserror 2.0.21",
+ "url",
+]
+
+[[package]]
+name = "ferrohealth-smart"
+version = "0.7.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "153bc745cdbf6d0a9b8ec9570a52f7af455c69bb6f5ee6049f26a3893067c123"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
  "axum",
  "base64 0.23.1",
- "ferrohealth-secret",
+ "ferrohealth-secret 0.2.0",
  "http",
  "jiff",
  "jsonwebtoken",
@@ -4093,13 +4105,13 @@ dependencies = [
 
 [[package]]
 name = "ihe-atna"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ca40cda7a52856549b849204c726f6b3ffa3f270aa0f3f238125bf3ee51200b"
+checksum = "779a7dae5c1e3f0d351e94b243c66ad144920f30f35881e2df8396897bcac957"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
- "ferrohealth-secret",
+ "ferrohealth-secret 0.2.0",
  "ferrohealth-smart",
  "fhir-types",
  "http",
@@ -5503,7 +5515,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "openehr-adl"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "indexmap 2.14.2",
  "openehr-am",
@@ -5519,7 +5531,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-am"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "openehr-base",
  "openehr-lang",
@@ -5529,7 +5541,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-base"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "serde",
  "serde_json",
@@ -5549,7 +5561,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-its"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "async-trait",
  "axum",
@@ -5583,7 +5595,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-lang"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "assert_fs",
  "chumsky",
@@ -5597,7 +5609,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-query"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "chumsky",
  "logos",
@@ -5606,7 +5618,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-rm"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "insta",
  "jsonschema",
@@ -5630,7 +5642,7 @@ checksum = "2ea94a36d6f84491e59c51df4b6d0c4c06b524728e98abb93fcfd29c45e014f7"
 
 [[package]]
 name = "openehr-sdt"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "fancy-regex",
  "indexmap 2.14.2",
@@ -5654,7 +5666,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-term"
-version = "0.0.102"
+version = "0.0.103"
 dependencies = [
  "openehr-base",
  "roxmltree",

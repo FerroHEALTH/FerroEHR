@@ -35,7 +35,20 @@ use serde_json::Value;
 /// entry is an ADJUDICATION, not a skip list: the file stays vendored so the
 /// refusal itself is pinned, and a reader that starts accepting it fails this
 /// gate.
-const ADJUDICATED: &[(&str, &str)] = &[];
+const ADJUDICATED: &[(&str, &str)] = &[
+    (
+        "epsos-active-problems-section-1-3-6-1-4-1-19376-1-5-3-1-3-6.opt",
+        "an annotation <items> (its-xml-1.0.2-nsv1 Template.xsd, type StringDictionaryItem, \
+         simple content in Resource.xsd) holds CDA <section> markup; XML Schema 1.1 Part 1 \
+         §3.4.4.2",
+    ),
+    (
+        "epsos-history-of-past-illness-section-1-3-6-1-4-1-19376-1-5-3-1-3-8.opt",
+        "an annotation <items> (its-xml-1.0.2-nsv1 Template.xsd, type StringDictionaryItem, \
+         simple content in Resource.xsd) holds CDA <act> markup; XML Schema 1.1 Part 1 \
+         §3.4.4.2",
+    ),
+];
 
 /// The RM structure types that must never appear as an `ELEMENT.value`
 /// (`RM data_structures`: `ELEMENT.value: DATA_VALUE [0..1]`).
