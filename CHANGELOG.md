@@ -24,7 +24,7 @@ workflow refuses a tag that has no matching section here.
   which permit a population query, an export or a cohort query ran (EHDS
   Art. 68). A value that is not 1 to 128 characters of letters, digits and
   `.` `_` `:` `/` `#` `-` is recorded as absent. The column joins the tamper
-  chain as digest version 4 (audit migration 0014). The FHIR and DICOM
+  chain as digest version 4 (audit migration 0016). The FHIR and DICOM
   renderings do not carry the permit yet.
 - **AQL takes `VERSIONED_OBJECT` as a FROM class** (#3379), the shape of
   FerroBRIDGE's OMOP batch query (`EHR e CONTAINS VERSIONED_OBJECT vo CONTAINS
