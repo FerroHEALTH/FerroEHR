@@ -2404,9 +2404,9 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.2.11"
+version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88a0cef3a43f94661527270ff412d6d674ea6c9eeb4c08bfca60fad584c21ee4"
+checksum = "559af80a436aedd1aa92f6b9bcc1e3ec62aa1e164f6c30cc807be51150d9fee6"
 dependencies = [
  "async-trait",
  "ihe-atna",
@@ -2636,9 +2636,9 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferrobridge-term"
-version = "0.1.137"
+version = "0.1.138"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9253ad4222615aa4fbe8dfa54944e196a8ecbaff69726531050905e8dac35576"
+checksum = "581bfc3f7a4e62073a736a1bb619483e88b21b0c31d4160ae96356c98c6f477e"
 dependencies = [
  "async-trait",
  "backon",
@@ -2883,9 +2883,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-authz"
-version = "0.1.1"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3d6244b1daaf73054857b084e56b2cd0401fc72b2f7305902f0087f60100906"
+checksum = "b161eb4309fcb660091227738d2246eed8a5fbd7c6ab6bbfa8c9b6f8ffdf056f"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -2914,14 +2914,15 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-smart"
-version = "0.7.1"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e544511f7750de41c5c33e90e7633f6a1fa25a6ad6bb56500b17fb8abe1d11b1"
+checksum = "ba3025630ed34cfafe8c48feeb571748c5356b2ad06d23671a8e294f37a8e8e5"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
  "axum",
  "base64 0.23.1",
+ "ferrohealth-secret",
  "http",
  "jiff",
  "jsonwebtoken",
@@ -4078,12 +4079,13 @@ dependencies = [
 
 [[package]]
 name = "ihe-atna"
-version = "0.2.11"
+version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36f8d363e379e283fe1452e235f9003cbf0207ef56b9fb2364d5aa33d44db6cf"
+checksum = "9ca40cda7a52856549b849204c726f6b3ffa3f270aa0f3f238125bf3ee51200b"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
+ "ferrohealth-secret",
  "ferrohealth-smart",
  "fhir-types",
  "http",
