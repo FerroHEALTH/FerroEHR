@@ -616,10 +616,15 @@ retention_days = 0           # 0 = keep forever; reaped hourly otherwise
 # after which Abs. 3 requires deletion unverzüglich — so a declared controller
 # cannot keep records forever.
 sgb_v_309_controller = false
-# Seconds between two scheduled verifications of the hash chain (one day by
-# default; 0 = off). A finding is logged at ERROR, counted in
+# Seconds between two scheduled verifications of the hash chain (one hour by
+# default; 0 = off). Each run verifies the records written since the last
+# intact link. A finding is logged at ERROR, counted in
 # atna_audit_chain_findings and reported by the audit_chain readiness indicator.
-verify_interval_seconds = 86400
+verify_interval_seconds = 3600
+# Seconds between two scheduled full passes over the hash chain (one week by
+# default; 0 = only on demand, SELECT * FROM audit.verify_audit_chain()). A run
+# that found damage is always followed by a full pass.
+full_verify_interval_seconds = 604800
 
 # The EHDS priority category of every access (Annex II 3.2(c)), classified by
 # ehds-logging (FerroAUDIT): which categories each template, and failing that

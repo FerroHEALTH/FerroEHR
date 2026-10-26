@@ -34,7 +34,7 @@ use ferroehr::system_log::event::{
 use ferroehr::system_log::fhir;
 use ferroehr::system_log::message::AuditContext;
 use ferroehr::system_log::sender;
-use ferroehr::system_log::store::AuditStore;
+use ferroehr::system_log::store::{AuditStore, VerifyScope};
 use ferroehr::telemetry::indicators::AuditChainHealth;
 use ferrohealth_health::document::State;
 use ferrohealth_health::registry::HealthIndicator;
@@ -847,4 +847,163 @@ async fn records_under_digest_version_2_still_verify() {
             .any(|(seq, finding)| *seq == Some(2) && finding.contains("modified")),
         "a version 2 record is still verified under its own columns: {findings:?}"
     );
+}
+
+/// The position the verification checkpoint has reached, `None` before any
+/// intact run.
+async fn checkpoint(pool: &PgPool) -> Option<i64> {
+    sqlx::query_scalar("SELECT through_seq FROM audit.audit_chain_checkpoint")
+        .fetch_optional(pool)
+        .await
+        .expect("the checkpoint")
+}
+
+/// An incremental run verifies the records written after the last intact
+/// link and moves the checkpoint past them; a change to a record behind the
+/// checkpoint is the full pass's to find, and a change after it holds the
+/// checkpoint where it is until it is resolved.
+#[tokio::test]
+async fn an_incremental_run_verifies_from_the_checkpoint() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AuditStore::new(pool.clone());
+    seed(&store, 3).await;
+
+    assert_eq!(checkpoint(&pool).await, None);
+    let first = store
+        .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+        .await
+        .expect("verify");
+    assert!(first.is_empty(), "{first:?}");
+    assert_eq!(checkpoint(&pool).await, Some(3));
+
+    with_triggers_disabled(
+        &pool,
+        "UPDATE audit.audit_event SET principal = 'nobody' WHERE chain_seq = 2",
+    )
+    .await;
+    assert!(
+        store
+            .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+            .await
+            .expect("verify")
+            .is_empty(),
+        "a record behind the checkpoint is outside an incremental run"
+    );
+    let full = store
+        .verify_chain_advancing(VerifyScope::Full)
+        .await
+        .expect("verify");
+    assert!(
+        full.iter()
+            .any(|f| f.chain_seq == Some(2) && f.finding.contains("modified")),
+        "the full pass finds it: {full:?}"
+    );
+    assert_eq!(
+        store.verify_chain().await.expect("verify").len(),
+        full.len()
+    );
+
+    seed(&store, 2).await;
+    with_triggers_disabled(
+        &pool,
+        "UPDATE audit.audit_event SET principal = 'nobody' WHERE chain_seq = 5",
+    )
+    .await;
+    let found = store
+        .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+        .await
+        .expect("verify");
+    assert!(
+        found
+            .iter()
+            .any(|f| f.chain_seq == Some(5) && f.finding.contains("modified")),
+        "a record after the checkpoint is verified: {found:?}"
+    );
+    assert_eq!(
+        checkpoint(&pool).await,
+        Some(3),
+        "a run that finds damage leaves the checkpoint"
+    );
+}
+
+/// An incremental run checks the link from the checkpoint and the chain
+/// head: a record deleted right after the checkpoint, and one deleted from
+/// the end, are both reported.
+#[tokio::test]
+async fn an_incremental_run_detects_deletions_after_the_checkpoint() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AuditStore::new(pool.clone());
+    seed(&store, 2).await;
+    assert!(
+        store
+            .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+            .await
+            .expect("verify")
+            .is_empty()
+    );
+    seed(&store, 3).await;
+
+    with_triggers_disabled(&pool, "DELETE FROM audit.audit_event WHERE chain_seq = 3").await;
+    let middle = store
+        .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+        .await
+        .expect("verify");
+    assert!(
+        middle
+            .iter()
+            .any(|f| f.chain_seq == Some(4) && f.finding.contains("deleted between")),
+        "{middle:?}"
+    );
+
+    with_triggers_disabled(&pool, "DELETE FROM audit.audit_event WHERE chain_seq = 5").await;
+    let end = store
+        .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+        .await
+        .expect("verify");
+    assert!(
+        end.iter()
+            .any(|f| f.finding.contains("deleted from the end of the chain")),
+        "{end:?}"
+    );
+    assert_eq!(checkpoint(&pool).await, Some(2));
+}
+
+/// Retention reaping past the checkpoint record leaves a trail an
+/// incremental run still verifies: the tombstone reaping merged across the
+/// checkpoint accounts for the gap.
+#[tokio::test]
+async fn an_incremental_run_verifies_across_a_reaped_checkpoint() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AuditStore::new(pool.clone());
+
+    let now = Timestamp::now();
+    let insert = async |at: Timestamp| {
+        let event = read_event(at, "8fa1::ferroehr::1");
+        let rendered = fhir::to_fhir(&event, &ctx(), None).expect("render");
+        store.insert(&event, None, &rendered).await.expect("insert");
+    };
+    insert(now - jiff::SignedDuration::from_hours(60 * 24)).await;
+    insert(now - jiff::SignedDuration::from_hours(50 * 24)).await;
+    assert!(
+        store
+            .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+            .await
+            .expect("verify")
+            .is_empty()
+    );
+    assert_eq!(checkpoint(&pool).await, Some(2));
+    insert(now - jiff::SignedDuration::from_hours(40 * 24)).await;
+    insert(now).await;
+
+    assert_eq!(store.reap(30).await.expect("reap"), 3);
+    let after = store
+        .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+        .await
+        .expect("verify");
+    assert!(after.is_empty(), "{after:?}");
+    assert_eq!(checkpoint(&pool).await, Some(4));
+    assert!(store.verify_chain().await.expect("verify").is_empty());
 }

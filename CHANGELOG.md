@@ -85,6 +85,29 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The scheduled audit chain check verifies the records written since the
+  last intact link** (#4100). `audit.verify_audit_chain_incremental()`
+  recomputes only the records after the checkpoint it keeps in
+  `audit.audit_chain_checkpoint`, checks the chain head, and moves the
+  checkpoint when it finds nothing: on 428,000 records a full pass took
+  about 35 s, a run over the last 1,000 records 76 ms and one with nothing
+  new 2 ms. A full pass runs every `[audit.store]
+  full_verify_interval_seconds` (new, default one week, `0` for on demand
+  only) and after any run that found damage, and `SELECT * FROM
+  audit.verify_audit_chain()` stays the full pass on demand. With the
+  cheaper run, `verify_interval_seconds` defaults to one hour, where it was
+  one day. The chain digest is unchanged.
+
+- **The FHIR Feed owes only the records written while it is configured**
+  (#4102). A record waiting for delivery is a row in
+  `audit.fhir_feed_outbox`, which the store writes with the record while
+  `[audit.fhir_feed]` is on and delivery removes. The two partial indexes
+  over the unset delivery stamps, which held every record of a deployment
+  without a sink (about 4.8 MB each at 428,000 records), are dropped; the
+  syslog one served no query, since syslog delivers from its own spool.
+  Records stored before this release and never delivered ship once a feed
+  first runs.
+
 - **The BASE, AM, TERM and LANG specifications are re-vendored** (#4068,
   #4069, #4070, #4071) at BASE `93abaf9f`, AM `51aa07b2`, TERM `b2dd077d` and
   LANG `e61a7192`. The TERM `languages` code set restores `pt-pt`, adds

@@ -140,6 +140,7 @@ async fn audit_capture(suppress_login: bool) -> (SyslogTlsListener, AuditSender)
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         syslog: SyslogConfig {
             enabled: true,
@@ -172,6 +173,7 @@ async fn audit_capture_fail_closed() -> AuditSender {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         syslog: SyslogConfig {
             enabled: true,
@@ -842,6 +844,7 @@ async fn composition_get_records_the_origins_of_the_served_data() {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         ..AuditConfig::default()
     };

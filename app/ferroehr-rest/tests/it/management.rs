@@ -779,6 +779,7 @@ async fn a_management_request_is_recorded_in_the_audit_trail() {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         ..AuditConfig::default()
     };

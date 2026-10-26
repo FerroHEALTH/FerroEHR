@@ -127,6 +127,7 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         syslog: SyslogConfig {
             enabled: true,
