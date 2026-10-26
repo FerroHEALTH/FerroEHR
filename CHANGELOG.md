@@ -213,6 +213,29 @@ workflow refuses a tag that has no matching section here.
   correlate a request through its `x-request-id`, which the request log
   writes on every line.
 
+- **Breaking: the usage report is sent by `ferrohealth-usage-report` 0.1.2**
+  (#4087), the FerroHEALTH products' shared reporter, on the same envelope v2.
+  The `status` object loses `spec_profile`, and `postgres_major` is left out
+  when the database does not answer. The daily metrics lose the `aql` group
+  and the `aql_executions` and `aql_slow` counters, and gain the
+  `responses_4xx` counter. Routes outside the API families (the health
+  family, the management surface, the status and discovery documents) are
+  counted in no group. A replica adds its counts to the shared window at its
+  own daily attempt instead of every five minutes, and a daily report that
+  does not reach the collector keeps its counts for the retry an hour later
+  where it dropped them. A failed or refused send is logged at WARN where it
+  was DEBUG, and the boot line takes the family's wording. The clinical
+  migration `0018_usage_report_envelope` drops the `slow` column and the
+  `aql` rows and adds `usage_report_counter`.
+
+- **Breaking: `[usage_report] slow_aql_ms` is removed** (#4087), with the AQL
+  series it set the threshold of. A file or variable that still sets it
+  refuses the start; remove the key. `state_dir`, the shared section's
+  directory for the instance id, is refused: FerroEHR keeps the instance id
+  and the counts in the clinical database. The endpoint is now refused when
+  the configuration is read, with the same rule (`https`, or `http` to a
+  loopback host, never with credentials).
+
 - **HTTP Basic credentials are cached for 300 seconds by default** (#4088).
   `[auth.basic] cache_ttl_seconds` defaulted to `0`, so every Basic request
   ran the Argon2id derivation, 10 to 15 ms of CPU, which capped the mixed

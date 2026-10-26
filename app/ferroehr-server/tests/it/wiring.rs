@@ -396,9 +396,6 @@ client_secret = "CLIENT_SECRET_SENTINEL"
 issuer = "https://u7:URL_PW_SENTINEL_7@idp.example/realms/r"
 audience = ["ferroehr"]
 
-[usage_report]
-endpoint = "https://u8:URL_PW_SENTINEL_8@report.example/v1/report"
-
 [smart]
 public_base_url = "https://u9:URL_PW_SENTINEL_9@cdr.example"
 "#,
@@ -406,8 +403,18 @@ public_base_url = "https://u9:URL_PW_SENTINEL_9@cdr.example"
     assert!(!ok, "userinfo in these keys is refused: {text}");
     assert!(!text.contains("URL_PW_SENTINEL"), "{text}");
     assert!(text.contains("auth.issuer"), "{text}");
-    assert!(text.contains("usage_report.endpoint"), "{text}");
     assert!(text.contains("smart.public_base_url"), "{text}");
+
+    // The usage report endpoint is refused when the configuration is read.
+    let (ok, text) = config_check(
+        r#"
+[usage_report]
+endpoint = "https://u8:URL_PW_SENTINEL_8@report.example/v1/report"
+"#,
+    );
+    assert!(!ok, "userinfo in the collector URL is refused: {text}");
+    assert!(!text.contains("URL_PW_SENTINEL"), "{text}");
+    assert!(text.contains("usage_report.endpoint"), "{text}");
 }
 
 // ── the boot-installed [privacy] policy ───────────────────────────────────────

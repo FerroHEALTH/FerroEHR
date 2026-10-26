@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The usage report client against a real database and a local mock collector.
+//! The usage report, `ferrohealth-usage-report` wired over FerroEHR's
+//! PostgreSQL store, against a real database and a local mock collector.
 //!
 //! No openEHR spec governs this — our own design. Every payload a test sends is
 //! validated against `FerroPULSE`'s report v2 JSON Schema, vendored with its
@@ -26,15 +27,17 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr::telemetry::indicators::{DbHealth, MigrationsHealth};
-use ferroehr::usage_report::config::{CiDetected, Deployment, UsageReportConfig};
-use ferroehr::usage_report::reporter::{
-    DailyOutcome, EventKind, Identity, StartOutcome, UsageReporter, start,
-};
-use ferroehr::usage_report::window::{record_aql, record_request};
+use ferroehr::usage_report::product::{self, EventKind, FerroEhr, NOTICE, Preview};
+use ferroehr::usage_report::store::PgStore;
 use ferrohealth_health::document::State;
 use ferrohealth_health::lifecycle::Lifecycle;
 use ferrohealth_health::registry::{HealthIndicator, Registry};
-use http::StatusCode;
+use ferrohealth_usage_report::reporter::{
+    Identity, ReportError, Reporter, StartOutcome, start_with_store,
+};
+use ferrohealth_usage_report::section::{Deployment, Endpoint, UsageReportSection};
+use ferrohealth_usage_report::window::Window;
+use http::{Method, StatusCode};
 use serde_json::Value;
 use sqlx::PgPool;
 use wiremock::matchers::{method, path};
@@ -92,20 +95,15 @@ fn embedded_licence() -> LicenceState {
 }
 
 fn identity() -> Identity {
-    Identity::new(
-        &BuildInfo::current(),
-        &embedded_licence(),
-        Deployment::Compose,
-    )
+    product::identity(&BuildInfo::current(), &embedded_licence())
 }
 
-fn config_for(server: &MockServer) -> UsageReportConfig {
-    UsageReportConfig {
-        endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
-            "{}/v1/report",
-            server.uri()
-        )),
-        ..UsageReportConfig::default()
+fn config_for(server: &MockServer) -> UsageReportSection {
+    UsageReportSection {
+        endpoint: Endpoint::new(&format!("{}/v1/report", server.uri()))
+            .expect("the mock collector is on loopback"),
+        deployment: Deployment::Compose,
+        ..UsageReportSection::default()
     }
 }
 
@@ -114,11 +112,31 @@ fn replica_pool(db: &testkit::TestDb) -> PgPool {
     DomainPools::from_shared(&db.pool()).clinical
 }
 
-fn reporter(db: &testkit::TestDb, server: &MockServer) -> UsageReporter {
-    UsageReporter::new(
-        config_for(server),
-        replica_pool(db),
+/// One replica's reporter over the shared database, with its own window.
+async fn reporter(
+    db: &testkit::TestDb,
+    server: &MockServer,
+    window: &Arc<Window>,
+) -> Reporter<FerroEhr> {
+    replica(db, &config_for(server), window).await
+}
+
+/// One replica's reporter to the collector `config` names.
+async fn replica(
+    db: &testkit::TestDb,
+    config: &UsageReportSection,
+    window: &Arc<Window>,
+) -> Reporter<FerroEhr> {
+    let pool = replica_pool(db);
+    let instance = ferroehr::usage_report::store::ensure_instance(&pool)
+        .await
+        .expect("the instance id");
+    Reporter::with_store(
+        config,
         identity(),
+        (instance, Arc::new(PgStore::new(pool.clone()))),
+        Arc::new(FerroEhr::new(pool)),
+        Arc::clone(window),
         Instant::now(),
     )
     .expect("the client builds")
@@ -187,34 +205,61 @@ async fn age_the_start_claim(pool: &PgPool) {
     .expect("age the start claim");
 }
 
-/// Traffic over several route groups and AQL, recorded the way the HTTP layer
-/// and the AQL engine record it.
-fn record_traffic() {
+/// Starts the report the way the server boots it: the crate's
+/// `start_with_store` over FerroEHR's store, product and window.
+async fn start_report(
+    config: &UsageReportSection,
+    pool: &PgPool,
+    ci: Option<&'static str>,
+) -> Option<tokio::task::JoinHandle<()>> {
+    start_with_store(
+        config,
+        &NOTICE,
+        identity(),
+        Arc::new(PgStore::new(pool.clone())),
+        Arc::new(FerroEhr::new(pool.clone())),
+        product::window(),
+        Instant::now(),
+        ci,
+    )
+    .await
+}
+
+/// Traffic over several route groups, recorded the way the request log
+/// records it: the matched route template, never the path.
+fn record_traffic(window: &Window) {
     let base = "/ferroehr/rest/openehr/v1";
+    let record = |method: Method, route: &str, status: StatusCode, ms: u64| {
+        window.record(&method, Some(route), status, Duration::from_millis(ms));
+    };
     for _ in 0..40 {
-        record_request(
+        record(
+            Method::GET,
             &format!("{base}/ehr/{{ehr_id}}/composition/{{uid_based_id}}"),
-            Duration::from_millis(12),
             StatusCode::OK,
+            12,
         );
     }
-    record_request(
+    record(
+        Method::POST,
         &format!("{base}/ehr/{{ehr_id}}/composition"),
-        Duration::from_millis(7_500),
         StatusCode::INTERNAL_SERVER_ERROR,
+        7_500,
     );
-    record_request(
+    record(
+        Method::POST,
         &format!("{base}/query/aql"),
-        Duration::from_millis(60),
         StatusCode::OK,
+        60,
     );
-    record_request(
-        &format!("{base}/ehr"),
-        Duration::from_millis(3),
-        StatusCode::CREATED,
+    record(Method::POST, &format!("{base}/ehr"), StatusCode::CREATED, 3);
+    record(
+        Method::GET,
+        &format!("{base}/ehr/{{ehr_id}}"),
+        StatusCode::NOT_FOUND,
+        2,
     );
-    record_aql(Duration::from_millis(40));
-    record_aql(Duration::from_millis(1_500));
+    record(Method::GET, "/health/readiness", StatusCode::OK, 1);
 }
 
 // ── the validator itself ──────────────────────────────────────────────────────
@@ -253,17 +298,18 @@ fn the_contract_examples_decide_the_validator() {
 async fn start_and_daily_payloads_carry_exactly_the_v2_fields() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let reporter = reporter(&db, &server);
+    let window = product::window();
+    let reporter = reporter(&db, &server, &window).await;
     let validator = envelope_validator();
 
     assert_eq!(
         reporter.send_start().await.expect("start sent"),
         StartOutcome::Sent(StatusCode::NO_CONTENT)
     );
-    record_traffic();
+    record_traffic(&window);
     assert_eq!(
         reporter.send_daily().await.expect("daily sent"),
-        DailyOutcome::Sent(StatusCode::NO_CONTENT)
+        StatusCode::NO_CONTENT
     );
 
     let bodies = received(&server).await;
@@ -295,7 +341,7 @@ async fn start_and_daily_payloads_carry_exactly_the_v2_fields() {
     };
     assert_eq!(keys(start), with("first_start"));
     assert_eq!(keys(daily), with("metrics"));
-    let status = ["db_ok", "migrations_ok", "postgres_major", "spec_profile"];
+    let status = ["db_ok", "migrations_ok", "postgres_major"];
     assert_eq!(keys(&start["status"]), status);
     assert_eq!(keys(&daily["status"]), status);
     assert_eq!(keys(&daily["metrics"]), ["window_24h"]);
@@ -305,15 +351,11 @@ async fn start_and_daily_payloads_carry_exactly_the_v2_fields() {
     );
     assert_eq!(
         keys(&daily["metrics"]["window_24h"]["counters"]),
-        ["aql_executions", "aql_slow"]
+        ["responses_4xx"]
     );
     let group_members = ["errors_5xx", "histogram", "p50_ms", "p95_ms", "p99_ms"];
     assert_eq!(
         keys(&daily["metrics"]["window_24h"]["groups"]["composition"]),
-        group_members
-    );
-    assert_eq!(
-        keys(&daily["metrics"]["window_24h"]["groups"]["aql"]),
         group_members
     );
 
@@ -329,27 +371,14 @@ async fn start_and_daily_payloads_carry_exactly_the_v2_fields() {
 
     let window = &daily["metrics"]["window_24h"];
     assert_eq!(window["requests_bucket"], "1-100");
-    assert_eq!(
-        keys(&window["groups"]),
-        ["aql", "composition", "ehr", "query"]
-    );
+    assert_eq!(keys(&window["groups"]), ["composition", "ehr", "query"]);
     let composition = &window["groups"]["composition"];
     assert_eq!(composition["errors_5xx"], 1);
     assert_eq!(
         composition["histogram"],
         serde_json::json!([0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 1])
     );
-    let aql = &window["groups"]["aql"];
-    assert_eq!(aql["errors_5xx"], 0, "an AQL execution carries no status");
-    assert_eq!(
-        aql["histogram"],
-        serde_json::json!([0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0])
-    );
-    assert_eq!(window["counters"]["aql_executions"], 2);
-    assert_eq!(
-        window["counters"]["aql_slow"], 1,
-        "the default threshold is 1000 ms"
-    );
+    assert_eq!(window["counters"]["responses_4xx"], 1);
 }
 
 /// No route parameter, AQL text or licence identity can reach a report: a
@@ -360,13 +389,17 @@ async fn start_and_daily_payloads_carry_exactly_the_v2_fields() {
 async fn no_route_parameter_query_text_or_licence_id_reaches_the_payload() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let reporter = reporter(&db, &server);
+    let window = product::window();
+    let reporter = reporter(&db, &server, &window).await;
 
     let sentinel_ehr = "5e171e1c-0000-4000-8000-5e171e1c0001";
-    record_request(
-        &format!("/ferroehr/rest/openehr/v1/ehr/{sentinel_ehr}/composition/SENTINEL-UID::x::1"),
-        Duration::from_millis(9),
+    window.record(
+        &Method::GET,
+        Some(&format!(
+            "/ferroehr/rest/openehr/v1/ehr/{sentinel_ehr}/composition/SENTINEL-UID::x::1"
+        )),
         StatusCode::OK,
+        Duration::from_millis(9),
     );
     let service = FerroEhrService::new(&DomainPools::from_shared(&db.pool()));
     let aql = "SELECT e/ehr_id/value FROM EHR e WHERE e/ehr_id/value = 'SENTINEL-AQL-LITERAL'";
@@ -403,10 +436,9 @@ async fn no_route_parameter_query_text_or_licence_id_reaches_the_payload() {
         assert_eq!(body["licence"], "non-commercial");
     }
     let daily = bodies.last().expect("the daily report");
-    let window = &daily["metrics"]["window_24h"];
-    assert_eq!(window["counters"]["aql_executions"], 1);
+    let counted = &daily["metrics"]["window_24h"];
     // The query ran through the service, not the HTTP layer, so it adds no route.
-    assert_eq!(keys(&window["groups"]), ["aql", "composition"]);
+    assert_eq!(keys(&counted["groups"]), ["composition"]);
 }
 
 // ── behaviour ────────────────────────────────────────────────────────────────
@@ -417,27 +449,24 @@ async fn no_route_parameter_query_text_or_licence_id_reaches_the_payload() {
 async fn one_daily_report_per_window_across_two_replicas() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let first = reporter(&db, &server);
-    let second = reporter(&db, &server);
+    let first = reporter(&db, &server, &product::window()).await;
+    let second = reporter(&db, &server, &product::window()).await;
 
     let (a, b) = tokio::join!(first.send_daily(), second.send_daily());
-    let outcomes = [a.expect("first replica"), b.expect("second replica")];
-    let sent = outcomes
-        .iter()
-        .filter(|outcome| matches!(outcome, DailyOutcome::Sent(_)))
-        .count();
+    let outcomes = [a, b];
+    let sent = outcomes.iter().filter(|outcome| outcome.is_ok()).count();
     assert_eq!(sent, 1, "exactly one replica sends: {outcomes:?}");
     assert!(
         outcomes
             .iter()
-            .any(|outcome| matches!(outcome, DailyOutcome::NotDue(_))),
+            .any(|outcome| matches!(outcome, Err(ReportError::SentElsewhere))),
         "the other replica finds the window claimed: {outcomes:?}"
     );
 
     // A later attempt in the same window, from either replica, sends nothing.
     assert!(matches!(
-        first.send_daily().await.expect("first replica again"),
-        DailyOutcome::NotDue(_)
+        first.send_daily().await,
+        Err(ReportError::SentElsewhere)
     ));
     let bodies = received(&server).await;
     assert_eq!(bodies.len(), 1);
@@ -447,14 +476,95 @@ async fn one_daily_report_per_window_across_two_replicas() {
     );
 }
 
+/// A replica that does not hold the daily claim leaves its counts in the
+/// database, and the next daily report carries every replica's counts.
+#[tokio::test]
+async fn the_daily_report_carries_every_replicas_counts() {
+    let db = testkit::db().await.expect("testkit database");
+    let server = collector(204).await;
+    let first_window = product::window();
+    let second_window = product::window();
+    let first = reporter(&db, &server, &first_window).await;
+    let second = reporter(&db, &server, &second_window).await;
+
+    first.send_daily().await.expect("the first daily report");
+    record_traffic(&second_window);
+    assert!(matches!(
+        second.send_daily().await,
+        Err(ReportError::SentElsewhere)
+    ));
+    assert_eq!(
+        second_window.take(),
+        ferrohealth_usage_report::window::Counts::default(),
+        "the counts moved to the store"
+    );
+
+    sqlx::query(
+        "UPDATE usage_report_instance \
+         SET last_daily_sent_at = last_daily_sent_at - interval '1 day'",
+    )
+    .execute(&replica_pool(&db))
+    .await
+    .expect("age the daily claim");
+    first.send_daily().await.expect("the next daily report");
+
+    let bodies = received(&server).await;
+    let [_, daily] = bodies.as_slice() else {
+        panic!("expected two daily reports: {bodies:?}");
+    };
+    let counted = &daily["metrics"]["window_24h"];
+    assert_eq!(keys(&counted["groups"]), ["composition", "ehr", "query"]);
+    assert_eq!(counted["groups"]["composition"]["errors_5xx"], 1);
+    assert_eq!(counted["counters"]["responses_4xx"], 1);
+}
+
+/// A daily report that does not reach the collector puts its counts back in
+/// the database and releases its claim, so the retry carries them.
+#[tokio::test]
+async fn an_unsent_daily_report_keeps_its_counts_for_the_retry() {
+    let db = testkit::db().await.expect("testkit database");
+    // A loopback port nothing listens on: bound, read and released.
+    let port = std::net::TcpListener::bind("127.0.0.1:0")
+        .and_then(|listener| listener.local_addr())
+        .expect("a free loopback port")
+        .port();
+    let config = UsageReportSection {
+        endpoint: Endpoint::new(&format!("http://127.0.0.1:{port}/v1/report"))
+            .expect("a loopback collector"),
+        ..UsageReportSection::default()
+    };
+    let window = product::window();
+    let lost = replica(&db, &config, &window).await;
+    record_traffic(&window);
+    assert!(matches!(
+        lost.send_daily().await,
+        Err(ReportError::Request(_))
+    ));
+
+    let server = collector(204).await;
+    let retry = reporter(&db, &server, &product::window()).await;
+    assert_eq!(
+        retry.send_daily().await.expect("the retry is sent"),
+        StatusCode::NO_CONTENT
+    );
+    let bodies = received(&server).await;
+    let [daily] = bodies.as_slice() else {
+        panic!("expected one daily report: {bodies:?}");
+    };
+    assert_eq!(
+        daily["metrics"]["window_24h"]["groups"]["composition"]["errors_5xx"],
+        1
+    );
+}
+
 /// A second start report within ten minutes is not sent, from this replica or
 /// another one.
 #[tokio::test]
 async fn the_start_report_is_rate_limited_to_one_per_ten_minutes() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let first = reporter(&db, &server);
-    let second = reporter(&db, &server);
+    let first = reporter(&db, &server, &product::window()).await;
+    let second = reporter(&db, &server, &product::window()).await;
 
     assert!(matches!(
         first.send_start().await.expect("first start"),
@@ -479,12 +589,17 @@ async fn first_start_is_true_on_a_fresh_database_and_false_after_a_restart() {
     let server = collector(204).await;
     let pool = replica_pool(&db);
 
-    reporter(&db, &server)
+    reporter(&db, &server, &product::window())
+        .await
         .send_start()
         .await
         .expect("first boot");
     age_the_start_claim(&pool).await;
-    reporter(&db, &server).send_start().await.expect("restart");
+    reporter(&db, &server, &product::window())
+        .await
+        .send_start()
+        .await
+        .expect("restart");
 
     let bodies = received(&server).await;
     let [first, restart] = bodies.as_slice() else {
@@ -495,26 +610,31 @@ async fn first_start_is_true_on_a_fresh_database_and_false_after_a_restart() {
     assert_eq!(first["instance_id"], restart["instance_id"]);
 }
 
-/// `ferroehr usage-report --print` renders through [`UsageReporter::preview`],
+/// `ferroehr usage-report --print` renders through [`product::preview`],
 /// which must equal what a send then carries, for both events.
 #[tokio::test]
 async fn the_preview_equals_what_is_sent() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let reporter = reporter(&db, &server);
+    let window = product::window();
+    let reporter = reporter(&db, &server, &window).await;
     let pool = replica_pool(&db);
+    let config = config_for(&server);
+    let preview = |kind| product::preview(&config, identity(), &pool, &window, kind);
 
     reporter
         .send_start()
         .await
         .expect("the instance is created");
     age_the_start_claim(&pool).await;
-    let start_preview = reporter.preview(EventKind::Start).await.expect("preview");
+    let start_preview = preview(EventKind::Start).await.expect("preview");
     assert!(start_preview.instance_stored);
+    // A restart: the next start report comes from a new process's reporter.
+    let reporter = self::reporter(&db, &server, &window).await;
     reporter.send_start().await.expect("start sent");
 
-    record_traffic();
-    let daily_preview = reporter.preview(EventKind::Daily).await.expect("preview");
+    record_traffic(&window);
+    let daily_preview = preview(EventKind::Daily).await.expect("preview");
     reporter.send_daily().await.expect("daily sent");
 
     let bodies = received(&server).await;
@@ -522,7 +642,7 @@ async fn the_preview_equals_what_is_sent() {
         panic!("expected three reports: {bodies:?}");
     };
     let validator = envelope_validator();
-    let rendered = |preview: &ferroehr::usage_report::reporter::Preview| {
+    let rendered = |preview: &Preview| {
         let body = serde_json::to_value(&preview.report).expect("the preview renders");
         assert_valid_report(&validator, &body);
         body
@@ -543,10 +663,15 @@ async fn the_preview_equals_what_is_sent() {
 async fn the_preview_writes_nothing() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let preview = reporter(&db, &server)
-        .preview(EventKind::Start)
-        .await
-        .expect("preview");
+    let preview = product::preview(
+        &config_for(&server),
+        identity(),
+        &replica_pool(&db),
+        &product::window(),
+        EventKind::Start,
+    )
+    .await
+    .expect("preview");
     assert!(!preview.instance_stored);
     let stored = ferroehr::usage_report::store::read_instance(&replica_pool(&db))
         .await
@@ -561,12 +686,12 @@ async fn nothing_is_sent_when_disabled() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
     let pool = replica_pool(&db);
-    let config = UsageReportConfig {
+    let config = UsageReportSection {
         enabled: false,
         ..config_for(&server)
     };
 
-    let handle = start(&config, &pool, identity(), Instant::now());
+    let handle = start_report(&config, &pool, None).await;
     assert!(handle.is_none(), "a disabled report starts no task");
     let stored = ferroehr::usage_report::store::read_instance(&pool)
         .await
@@ -582,13 +707,13 @@ async fn nothing_is_sent_in_ci() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
     let pool = replica_pool(&db);
-    let config = UsageReportConfig {
-        ci: CiDetected::from_lookup(|name| (name == "GITHUB_ACTIONS").then_some("true")),
-        ..config_for(&server)
-    };
+    let config = config_for(&server);
     assert!(config.enabled, "the switch is on");
+    let ci = ferrohealth_usage_report::section::ci_of(|name| {
+        (name == "GITHUB_ACTIONS").then(|| "true".to_owned())
+    });
 
-    let handle = start(&config, &pool, identity(), Instant::now());
+    let handle = start_report(&config, &pool, ci).await;
     assert!(handle.is_none(), "a CI run starts no task");
     let stored = ferroehr::usage_report::store::read_instance(&pool)
         .await
@@ -610,7 +735,8 @@ async fn boot_and_readiness_are_unaffected_when_the_collector_hangs() {
     let pool = replica_pool(&db);
 
     let booted = Instant::now();
-    let handle = start(&config_for(&server), &pool, identity(), Instant::now())
+    let handle = start_report(&config_for(&server), &pool, None)
+        .await
         .expect("an enabled report starts its task");
     assert!(
         booted.elapsed() < Duration::from_secs(1),

@@ -28,6 +28,7 @@ ferroehr = { path = "../ferroehr", default-features = false }
 ferrohealth-config = { workspace = true }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferrohealth-telemetry.workspace = true
+ferrohealth-usage-report.workspace = true
 ferroehr-rest = { path = "../ferroehr-rest", default-features = false }
 
 anyhow.workspace = true

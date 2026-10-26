@@ -250,6 +250,11 @@ ferrohealth-health = { version = "=0.1.1", default-features = false }
 # request log with its `http.server.request.duration` histogram, and the panic
 # line. Verified on crates.io 2026-10-26 (0.2.1).
 ferrohealth-telemetry = { version = "=0.2.1", features = ["axum", "otlp", "prometheus"] }
+# The family's installation report to FerroPULSE (FerroSYS): envelope v2, the
+# latency window the request log fills (`telemetry`, its `Recorder`), and the
+# start and daily reporter over FerroEHR's PostgreSQL state store. Verified on
+# crates.io 2026-10-26 (0.1.2).
+ferrohealth-usage-report = { version = "=0.1.2", features = ["telemetry"] }
 
 # ── Terminology (the client of the one FHIR terminology server) ───────────────
 # FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,

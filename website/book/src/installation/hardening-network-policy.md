@@ -292,7 +292,7 @@ unless its key is set, so add only the rows you have switched on:
 | Object store | `config.multimedia.enabled` plus `config.multimedia.endpoint` (unset means AWS regional resolution) | 443, or the endpoint's | off-cluster |
 | Syslog audit repository | `config.audit.syslog.enabled` | 6514 TCP (TLS) | off-cluster |
 | FHIR audit repository | `config.audit.fhir_feed.enabled` plus `secrets.auditFhirFeedUrl` | 443 | off-cluster |
-| FerroPULSE usage report | `usageReport.enabled`, **on by default** | 443 | off-cluster, `report.ferropulse.eu`. Without the rule the report fails quietly and nothing else is affected; see [Usage report](../usage-report.md#network) |
+| FerroPULSE usage report | `usageReport.enabled`, **on by default** | 443 | off-cluster, `report.ferropulse.eu`. Without the rule the report logs a warning and nothing else is affected; see [Usage report](../usage-report.md#network) |
 
 The viewer, when enabled, carries its own egress policy rather than
 appearing in this table: it admits the CDR Service, DNS, and outbound HTTPS for an

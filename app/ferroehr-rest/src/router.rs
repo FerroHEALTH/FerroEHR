@@ -66,7 +66,7 @@ use crate::overview::{error, status};
 use crate::smart;
 use crate::state::AppState;
 use ferroehr::config::management::AccessLevel;
-use ferrohealth_telemetry::request_log::{self, Completed, Recorder, RequestId, RequestLog};
+use ferrohealth_telemetry::request_log::{self, RequestId, RequestLog};
 
 /// Per-request timeout.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
@@ -156,12 +156,7 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
     // trail (#3244): every management request is recorded as a system-domain
     // access, `/management/loggers` writes included.
     let audit_state = state.clone();
-    let request_log = observability
-        .request_log
-        .clone()
-        .with_recorder(Arc::new(UsageWindow {
-            base_path: cfg.server.base_path.clone(),
-        }));
+    let request_log = observability.request_log.clone();
     let inner: Router =
         with_shared_stack(inner, cfg.server.limits.ceiling(), cors, request_log, state);
 
@@ -338,26 +333,6 @@ async fn request_id(mut request: axum::extract::Request, next: axum::middleware:
 )]
 fn minted_request_id() -> String {
     uuid::Uuid::new_v4().to_string()
-}
-
-/// Feeds the usage report's latency window with every request of the API
-/// tree, the routes under the REST base path.
-struct UsageWindow {
-    base_path: String,
-}
-
-impl Recorder for UsageWindow {
-    fn record(&self, completed: &Completed<'_>) {
-        if let Some(route) = completed.route
-            && route.starts_with(&self.base_path)
-        {
-            ferroehr::usage_report::window::record_request(
-                route,
-                completed.latency,
-                completed.status,
-            );
-        }
-    }
 }
 
 /// Renders a panicked handler as a `500` in the openEHR `{ error, message }`

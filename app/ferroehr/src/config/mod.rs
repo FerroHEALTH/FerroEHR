@@ -107,7 +107,7 @@ pub struct FerroEhrConfig {
     /// `[cohort]` — the cross-domain cohort-query allow-list and limits.
     pub cohort: crate::service::linkage::cohort::config::CohortConfig,
     /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
-    pub usage_report: crate::usage_report::config::UsageReportConfig,
+    pub usage_report: ferrohealth_usage_report::section::UsageReportSection,
 }
 
 /// The annotated default template `ferroehr config default` prints — a
@@ -140,7 +140,15 @@ impl FerroEhrConfig {
         self.validate_cohort(&mut errors);
         self.validate_deployment(&mut errors);
         self.validate_ehr_access(&mut errors);
-        errors.extend(self.usage_report.errors());
+        if self.usage_report.state_dir.is_some() {
+            // NOTE: no specification governs this: our own design; FerroEHR keeps the
+            // report's state in PostgreSQL, so a state directory would do nothing.
+            errors.push(ConfigError::semantic(
+                "usage_report.state_dir is not used: FerroEHR keeps the usage report state in \
+                 the clinical database"
+                    .to_owned(),
+            ));
+        }
         errors.extend(multimedia_endpoint_errors(&self.multimedia));
         // management.port must differ from the server.bind port.
         if let Some(port) = self.management.port
@@ -1758,13 +1766,21 @@ mod tests {
             token_endpoint: "https://u10:URL_PW_SENTINEL_10@h10:1/p10".to_owned(),
             ..OauthSection::default()
         });
-        c.usage_report.endpoint = leaky(11);
         c.authz.abac.remote.server = Some(leaky(12));
         c.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
             endpoint: leaky(13),
             ..ferrohealth_telemetry::section::OtlpSection::default()
         });
         c.multimedia.endpoint = Some(leaky(14));
+        // URL 11 was the usage report endpoint, whose type refuses userinfo, so it
+        // can hold no sentinel.
+        assert!(
+            ferrohealth_usage_report::section::Endpoint::new(
+                "https://u11:URL_PW_SENTINEL_11@h11:1/p11"
+            )
+            .is_err(),
+            "the usage report endpoint refuses userinfo"
+        );
 
         let toml = rendered(&c);
         let table = c.to_redacted_table().expect("table").to_string();
@@ -1780,7 +1796,7 @@ mod tests {
                 !rendered.contains("URL_PW_SENTINEL"),
                 "URL userinfo leaked into the {surface} rendering: {rendered}"
             );
-            for n in 1..=15 {
+            for n in (1..=15).filter(|n| *n != 11) {
                 assert!(
                     rendered.contains(&format!("https://***@h{n}:1/p{n}")),
                     "URL {n} lost its host and path in the {surface} rendering: {rendered}"
@@ -2012,76 +2028,59 @@ mod tests {
                     "FERROEHR__USAGE_REPORT__ENDPOINT",
                     "https://collector.example/v1/report",
                 ),
-                ("FERROEHR__USAGE_REPORT__SLOW_AQL_MS", "250"),
                 ("FERROEHR__USAGE_REPORT__DEPLOYMENT", "compose"),
             ]),
             &[],
         );
         assert!(!c.usage_report.enabled);
         assert_eq!(
-            c.usage_report.endpoint.expose(),
+            c.usage_report.endpoint.url().as_str(),
             "https://collector.example/v1/report"
         );
-        assert_eq!(c.usage_report.slow_aql_ms, 250);
         assert_eq!(
             c.usage_report.deployment,
-            crate::usage_report::config::Deployment::Compose
+            ferrohealth_usage_report::section::Deployment::Compose
         );
         c.validate()
             .expect("a well-formed usage report section validates");
 
-        let plain = assemble_ok(
+        let refused = assemble(
             None,
             &env(&[(
                 "FERROEHR__USAGE_REPORT__ENDPOINT",
                 "http://collector.example/v1/report",
             )]),
             &[],
+        )
+        .expect_err("plain http off loopback is refused");
+        assert!(
+            refused.to_string().contains("usage_report.endpoint"),
+            "{refused}"
         );
-        let refused = plain
-            .validate()
-            .expect_err("plain http off loopback is refused");
-        assert!(refused.to_string().contains("usage_report.endpoint"));
     }
 
-    /// Assembly reads the CI marker from the same environment snapshot, and a
-    /// CI run switches the report off whatever `enabled` says.
+    /// `slow_aql_ms` left the section with the AQL series, and a state
+    /// directory is refused: the state lives in the clinical database.
     #[test]
-    fn a_ci_environment_switches_the_usage_report_off() {
-        use crate::usage_report::config::{CiDetected, Switch};
-        type Vars<'a> = &'a [(&'a str, &'a str)];
-        let cases: [(Vars<'_>, Option<&str>); 5] = [
-            (&[("GITHUB_ACTIONS", "true")], Some("GITHUB_ACTIONS")),
-            (&[("CI", "1")], Some("CI")),
-            (
-                &[("CI", "TRUE"), ("FERROEHR__USAGE_REPORT__ENABLED", "true")],
-                Some("CI"),
-            ),
-            (&[("CI", "false")], None),
-            (&[], None),
-        ];
-        for (vars, ci) in cases {
-            let c = assemble_ok(None, &env(vars), &[]);
-            assert!(c.usage_report.enabled, "{vars:?}");
-            assert_eq!(c.usage_report.ci.map(CiDetected::variable), ci, "{vars:?}");
-            if ci.is_some() {
-                assert!(
-                    matches!(c.usage_report.switch(), Switch::OffInCi(_)),
-                    "{vars:?}"
-                );
-            } else {
-                assert_eq!(c.usage_report.switch(), Switch::On, "{vars:?}");
-            }
-        }
-        let off = assemble_ok(
+    fn the_usage_report_section_refuses_the_keys_ferroehr_does_not_use() {
+        let gone = assemble(
             None,
-            &env(&[
-                ("GITHUB_ACTIONS", "true"),
-                ("FERROEHR__USAGE_REPORT__ENABLED", "false"),
-            ]),
+            &env(&[("FERROEHR__USAGE_REPORT__SLOW_AQL_MS", "250")]),
+            &[],
+        )
+        .expect_err("slow_aql_ms is no longer a key");
+        assert!(gone.to_string().contains("slow_aql_ms"), "{gone}");
+
+        let c = assemble_ok(
+            None,
+            &env(&[("FERROEHR__USAGE_REPORT__STATE_DIR", "/var/lib/ferroehr")]),
             &[],
         );
-        assert_eq!(off.usage_report.switch(), Switch::OffByConfig);
+        let refused = c.validate().expect_err("a state directory is refused");
+        assert!(
+            refused.to_string().contains("usage_report.state_dir"),
+            "{refused}"
+        );
     }
 
     /// The national-identifier protection section maps from the environment,

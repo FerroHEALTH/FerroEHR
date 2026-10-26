@@ -86,7 +86,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 4);
-    assert_eq!(applied("clinical").await, 17);
+    assert_eq!(applied("clinical").await, 18);
     assert_eq!(applied("party").await, 11);
     assert_eq!(applied("linkage").await, 5);
     assert_eq!(applied("audit").await, 15);
@@ -130,6 +130,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "stored_query",
             "template_ref",
             "template_store",
+            "usage_report_counter",
             "usage_report_instance",
             "usage_report_window",
             "version",

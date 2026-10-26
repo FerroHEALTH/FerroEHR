@@ -401,7 +401,7 @@ secret VALUE refused outright.
        chart. Both keys are injected, so an operator who also wrote either under
        config.usage_report is refused, for the reason the terminology injection
        above gives: an injection that overwrites cannot be told apart from one
-       that agrees. The endpoint and slow_aql_ms pass through config untouched. */ -}}
+       that agrees. The endpoint passes through config untouched. */ -}}
 {{- if not (hasKey $rendered "usage_report") -}}{{- $_ := set $rendered "usage_report" (dict) -}}{{- end -}}
 {{- $usageReport := get $rendered "usage_report" -}}
 {{- if or (hasKey $usageReport "enabled") (hasKey $usageReport "deployment") -}}

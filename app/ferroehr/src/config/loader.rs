@@ -8,8 +8,7 @@
 //! `DATABASE_URL` and the libpq set for `db.url`, `RUST_LOG` for
 //! `telemetry.filter`, `PORT` for `server.bind`), and the names under the prefix
 //! that set no key. [`load_process`] and [`assemble_from`] then resolve every `*_file`
-//! secret sibling and read the CI detection of the usage report. No openEHR
-//! spec governs configuration — our own design.
+//! secret sibling. No openEHR spec governs configuration — our own design.
 
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
@@ -17,11 +16,11 @@ use std::path::Path;
 use crate::db::DbConfig;
 use crate::db::domain::Domain;
 use crate::extensions::events::config::EventsConfig;
-use crate::usage_report::config::{CI_VARIABLES, CiDetected};
 use ferrohealth_config::libpq;
 use ferrohealth_config::loader::{Loaded, Loader};
 use ferrohealth_secret::file::{SecretError, read_secret, read_secret_file};
 use ferrohealth_secret::secret_url::SecretUrl;
+use ferrohealth_usage_report::section::{CI_VARIABLES, ci_of};
 
 use super::FerroEhrConfig;
 
@@ -147,14 +146,22 @@ pub fn load_process(
     let loaded = loader()?
         .load_with::<FerroEhrConfig>(cli_config, overrides)
         .map_err(ConfigError::from)?;
+    let config = finish(loaded.settings().clone())?;
+    Ok((loaded, config))
+}
+
+/// Returns the CI variable of the process environment that switches the usage
+/// report off, by `ferrohealth-usage-report`'s rule (`GITHUB_ACTIONS` or `CI`
+/// set to `true` or `1`).
+#[must_use]
+pub fn usage_report_ci() -> Option<&'static str> {
     // NOTE: no specification governs this: our own design; a CI variable whose
     // name or value is not UTF-8 cannot read `true`, so it is legitimately absent.
     let ci: BTreeMap<String, String> = std::env::vars_os()
         .filter_map(|(name, value)| Some((name.into_string().ok()?, value.into_string().ok()?)))
         .filter(|(name, _)| CI_VARIABLES.contains(&name.as_str()))
         .collect();
-    let config = finish(loaded.settings().clone(), |name| ci.get(name).cloned())?;
-    Ok((loaded, config))
+    ci_of(|name| ci.get(name).cloned())
 }
 
 /// Reads the configuration from explicit inputs, the seam every test drives:
@@ -184,23 +191,14 @@ pub fn assemble_from<S: std::hash::BuildHasher>(
     let loaded = loader()?
         .load_sources_with::<FerroEhrConfig>(text.as_deref(), file, &environment, overrides)
         .map_err(ConfigError::from)?;
-    let config = finish(loaded.settings().clone(), |name| env.get(name).cloned())?;
+    let config = finish(loaded.settings().clone())?;
     Ok((loaded, config))
 }
 
-/// Resolves every `*_file` secret sibling of `config` and reads the CI
-/// detection through `lookup`.
-fn finish(
-    mut config: FerroEhrConfig,
-    lookup: impl Fn(&str) -> Option<String>,
-) -> Result<FerroEhrConfig, ConfigErrors> {
+/// Resolves every `*_file` secret sibling of `config`.
+fn finish(mut config: FerroEhrConfig) -> Result<FerroEhrConfig, ConfigErrors> {
     let mut errors = Vec::new();
     resolve_secret_files(&mut config, &mut errors);
-    let ci = CI_VARIABLES
-        .iter()
-        .filter_map(|name| lookup(name).map(|value| ((*name).to_owned(), value)))
-        .collect::<BTreeMap<String, String>>();
-    config.usage_report.ci = CiDetected::from_lookup(|name| ci.get(name).map(String::as_str));
     if errors.is_empty() {
         Ok(config)
     } else {

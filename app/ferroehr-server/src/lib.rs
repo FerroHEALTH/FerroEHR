@@ -41,8 +41,8 @@ use ferroehr::system_log::sender::{
     AuditHandle, AuditSender, ResolvedSubject, SubjectLookup, SubjectResolver,
 };
 use ferroehr::telemetry::build_info::BuildInfo;
-use ferroehr::usage_report::config::Switch;
-use ferroehr::usage_report::reporter::{EventKind, Identity, NOTICE_URL, UsageReporter};
+use ferroehr::usage_report::product::{self as usage_product, EventKind, FerroEhr, NOTICE_URL};
+use ferroehr::usage_report::store::PgStore;
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::{
@@ -409,11 +409,7 @@ async fn run_usage_report(
     let config = ferroehr::config::load(config_path, overrides)?;
     config.validate()?;
     let licence = load_licence(&config)?;
-    let identity = Identity::new(
-        &BuildInfo::for_profile(config.spec_profile),
-        &licence,
-        config.usage_report.deployment,
-    );
+    let identity = usage_product::identity(&BuildInfo::for_profile(config.spec_profile), &licence);
     let pools = db::connect_domains(&config.db, &config.storage)
         .await
         .context("connecting to PostgreSQL")?;
@@ -421,20 +417,15 @@ async fn run_usage_report(
         ReportEvent::Start => EventKind::Start,
         ReportEvent::Daily => EventKind::Daily,
     };
-    let outcome = async {
-        let reporter = UsageReporter::new(
-            config.usage_report.clone(),
-            pools.clinical.clone(),
-            identity,
-            std::time::Instant::now(),
-        )
-        .context("building the usage report client")?;
-        reporter
-            .preview(kind)
-            .await
-            .context("assembling the usage report")
-    }
-    .await;
+    let outcome = usage_product::preview(
+        &config.usage_report,
+        identity,
+        &pools.clinical,
+        &usage_product::window(),
+        kind,
+    )
+    .await
+    .context("assembling the usage report");
     pools.close().await;
     let preview = outcome?;
     println!("{}", serde_json::to_string(&preview.report)?);
@@ -444,16 +435,15 @@ async fn run_usage_report(
              first start creates the real one"
         );
     }
-    match config.usage_report.switch() {
-        Switch::On => {}
-        Switch::OffByConfig => eprintln!(
+    if !config.usage_report.enabled {
+        eprintln!(
             "note: the usage report is OFF (usage_report.enabled = false); this instance sends \
              nothing"
-        ),
-        Switch::OffInCi(ci) => eprintln!(
-            "note: the usage report is OFF: CI detected ({}); this instance sends nothing",
-            ci.variable()
-        ),
+        );
+    } else if let Some(variable) = ferroehr::config::loader::usage_report_ci() {
+        eprintln!(
+            "note: the usage report is OFF: CI detected ({variable}); this instance sends nothing"
+        );
     }
     eprintln!("details: {NOTICE_URL}");
     Ok(())
@@ -1243,16 +1233,18 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
 
     // Outbound only and detached: neither boot, health nor readiness waits on
     // it, and a slow or unreachable collector reaches none of them.
-    let usage_report = ferroehr::usage_report::reporter::start(
+    let usage_window = usage_product::window();
+    let usage_report = ferrohealth_usage_report::reporter::start_with_store(
         &config.usage_report,
-        &pool,
-        Identity::new(
-            &build_info,
-            service.licence(),
-            config.usage_report.deployment,
-        ),
+        &usage_product::NOTICE,
+        usage_product::identity(&build_info, service.licence()),
+        Arc::new(PgStore::new(pool.clone())),
+        Arc::new(FerroEhr::new(pool.clone())),
+        Arc::clone(&usage_window),
         started,
-    );
+        ferroehr::config::loader::usage_report_ci(),
+    )
+    .await;
 
     // The readiness registry closes over every started subsystem, so it is
     // assembled after the last optional one.
@@ -1265,6 +1257,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         }),
         request_log: RequestLog::new(&config.telemetry.logged_query_parameters)
             .with_metrics(&telemetry.telemetry().meter(telemetry::metrics::SCOPE))
+            .with_recorder(usage_window)
             .serving_tls(config.server.tls.enabled),
         // NOTE: no specification governs this: our own design; each check keeps
         // the one-second bound the probes have always had.

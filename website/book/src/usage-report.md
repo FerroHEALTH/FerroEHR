@@ -9,8 +9,10 @@ switch it off.
 
 This page lists every field the report carries, says when it is sent and how to
 print it before it is sent, gives the switch, and carries the privacy notice for
-the data the collector stores. No openEHR specification governs any of it; the
-report is FerroEHR's own design.
+the data the collector stores. No openEHR specification governs any of it.
+Every FerroHEALTH product sends the same report through the family's shared
+`ferrohealth-usage-report` crate; FerroEHR supplies its `status`, its route
+groups and the database that holds the report's state.
 
 <!-- toc -->
 
@@ -26,22 +28,24 @@ There are two kinds of report, and both are one HTTPS `POST` to
   one per restart.
 - **`daily`:** the first attempt 10 minutes after boot, then roughly every
   24 hours (23.5 to 24.5 hours after the previous one, spread at random). One
-  replica sends it for the whole instance. Every replica adds its counts to a
-  window kept in the database, and the replica that claims the report sends
-  the totals and empties the window. A replica can claim it only when no daily
-  report went out in the last 23 hours, so a restart does not add one.
+  replica sends it for the whole instance. At each of its daily attempts a
+  replica adds its counts to a window kept in the database; the replica that
+  claims the report sends the totals and empties the window, and the counts of
+  a replica that finds the report claimed wait there for the next one. A
+  replica can claim it only when no daily report went out in the last 23
+  hours, so a restart does not add one.
 
 The boot line, with the report on, reads:
 
 ```text
-usage report ON: instance id, version, licence type, deployment, uptime, host size and coarse performance aggregates, at each start and once a day; no patient data. Off: FERROEHR__USAGE_REPORT__ENABLED=false. Details: https://ferroehr.eu/docs/latest/usage-report.html
+usage report ON: instance id, version, licence type, deployment, uptime, host size and coarse request latency per route group, at each start and once a day; no clinical content, identifiers, URLs or request paths. Off: FERROEHR__USAGE_REPORT__ENABLED=false. Details: https://ferroehr.eu/docs/latest/usage-report.html
 ```
 
 It carries the configured endpoint as the structured field `endpoint`. With the
 report off, the line reads:
 
 ```text
-usage report OFF (usage_report.enabled = false): nothing is sent. Details: https://ferroehr.eu/docs/latest/usage-report.html
+usage report OFF: switched off (FERROEHR__USAGE_REPORT__ENABLED=false); nothing is sent. Details: https://ferroehr.eu/docs/latest/usage-report.html
 ```
 
 ## What a report contains
@@ -65,18 +69,17 @@ Every report carries these fields:
 | `status` | both | The instance's state, below. |
 | `metrics` | `daily` | The performance aggregates below. |
 
-The `status` object carries four members:
+The `status` object carries three members:
 
 | Member | What it is |
 |---|---|
 | `db_ok` | Whether the database answered the health check. |
 | `migrations_ok` | Whether the database carries this build's migrations. |
-| `postgres_major` | The PostgreSQL major version, for example `18`. |
-| `spec_profile` | The [`spec_profile`](installation/configuration.md#spec_profile) setting: `development` or `stable`. |
+| `postgres_major` | The PostgreSQL major version, for example `18`. It is left out when the database did not answer. |
 
-Earlier releases send version `1` of the format, which carries the four
-`status` members at the top level and the daily metrics described in that
-release's book.
+Earlier releases send version `1` of the format, or version `2` with a fourth
+`status` member, `spec_profile`, and the AQL series in the daily metrics, as
+described in that release's book.
 
 A start report, formatted here for reading (the server sends it on one line):
 
@@ -97,8 +100,7 @@ A start report, formatted here for reading (the server sends it on one line):
   "status": {
     "db_ok": true,
     "migrations_ok": true,
-    "postgres_major": 18,
-    "spec_profile": "stable"
+    "postgres_major": 18
   }
 }
 ```
@@ -118,15 +120,14 @@ daily report:
         "errors_5xx": 0,
         "histogram": [10, 40, 120, 300, 90, 30, 8, 2, 0, 0, 0]
       },
-      "aql": {
+      "query": {
         "p50_ms": 60.0, "p95_ms": 310.0, "p99_ms": 900.0,
-        "errors_5xx": 0,
+        "errors_5xx": 1,
         "histogram": [0, 5, 40, 200, 500, 300, 120, 30, 4, 1, 0]
       }
     },
     "counters": {
-      "aql_executions": 1200,
-      "aql_slow": 3
+      "responses_4xx": 42
     }
   }
 }
@@ -137,14 +138,14 @@ daily report:
   `100k+`. Each range includes its lower bound and excludes its upper one, so
   `1-100` means 1 to 99.
 - **`groups`:** one entry per group of endpoints that served at least one
-  request, and `aql` when at least one AQL query ran. A request is placed in a group by the route template it matched,
+  request. A request is placed in a group by the route template it matched,
   never by the path the client sent. The groups are `ehr` (EHR and
   `EHR_STATUS`), `composition` (compositions and their version history),
   `contribution`, `query` (query execution), `definition` (templates and
-  stored queries), `directory`, `admin`, and `other` for everything else,
-  such as demographics, messaging and terminology. The `aql` group counts
-  AQL executions wherever the query came from, and its `errors_5xx` is
-  always `0`.
+  stored queries), `directory`, `admin`, and `other` for the demographic,
+  messaging, terminology and FHIR families. The health family, the
+  management surface and the status and discovery documents are counted in
+  no group.
 - **`p50_ms`, `p95_ms`, `p99_ms`:** the median, 95th and 99th percentile
   latency of the group in milliseconds, estimated from its histogram.
 - **`errors_5xx`:** the responses with a 5xx status.
@@ -152,10 +153,8 @@ daily report:
   bounds in milliseconds are 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000,
   and no bound for the last. Counts add up across instances, so a fleet
   percentile comes from summed histograms.
-- **`counters`:** `aql_executions` counts the AQL queries that reached
-  execution, and `aql_slow` the executions that took longer than
-  [`slow_aql_ms`](installation/config-server.md#usage_report) (its default
-  is in the configuration reference).
+- **`counters`:** `responses_4xx` counts the grouped requests answered with a
+  4xx status. It is present once the window holds one.
 
 ## What a report never contains
 
@@ -175,8 +174,8 @@ The collector does record the IP address the report arrives from. See
 send now, and sends nothing. Add `--event daily` for the daily report; the
 default is `--event start`. The command loads the same configuration as the
 server and connects to the database to read the instance id and the shared
-window, to which the running replicas add their counts every five minutes. It
-writes nothing. Run it where the server runs:
+window, to which the running replicas add their counts at their daily
+attempts. It writes nothing. Run it where the server runs:
 
 ```shell
 # Kubernetes (the image has no shell, so call the binary by its path)
@@ -246,17 +245,18 @@ unless you ask for them to be erased.
   nothing else. It does not follow redirects, and nothing the collector answers
   changes the server's configuration or behaviour.
 - **Failures stay local:** a send gives up after 5 seconds without a
-  connection or 10 seconds in total. A failure is logged once at DEBUG. Boot,
-  the health and readiness probes, and request handling never wait on the
-  report, so a slow or unreachable collector affects none of them. A daily
-  attempt that failed before it claimed the window tries again an hour later.
-  A claimed window whose send fails is dropped, not resent.
+  connection or 10 seconds in total. A failure, and a collector that refuses a
+  report, is logged once at WARN. Boot, the health and readiness probes, and
+  request handling never wait on the report, so a slow or unreachable
+  collector affects none of them. A daily report that does not reach the
+  collector puts its counts back in the database, releases its claim, and is
+  tried again an hour later. A report the collector refuses is not resent.
 - **NetworkPolicy egress:** with the chart's
   `networkPolicy.egress.enabled` on, the pod needs a rule in
   `networkPolicy.egress.rules` that admits `report.ferropulse.eu` on port 443.
   A NetworkPolicy cannot match a DNS name, so the rule is an `ipBlock`; see
   [Egress](installation/hardening-network-policy.md#egress-deny-by-default-and-what-it-breaks).
-  Without the rule the report fails quietly and nothing else is affected. If
+  Without the rule the report logs a warning and nothing else is affected. If
   you do not want the report, switch it off: a blocked report is still
   attempted at every start and every day.
 

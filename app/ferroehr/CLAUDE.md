@@ -14,10 +14,11 @@ the manufacturer every surface names; the viewer compiles this file through
 `#[path]`, so it stays dependency-free but for `serde`), `served_vocabulary`
 (the deployment gap codes and OpenAPI family slugs the viewer names; also
 compiled by the viewer through `#[path]`, so it depends on nothing), `report` (the
-redacted deployment report `ferroehr report` writes), `usage_report` (the outbound
-installation report to FerroPULSE: typed payload, cross-replica claims on the
-clinical pool, the in-process latency window fed by `ferroehr-rest`'s HTTP
-metrics layer and AQL execution). Hand-written idiomatic Rust of our own design on the
+redacted deployment report `ferroehr report` writes), `usage_report` (FerroEHR's part of
+the installation report `ferrohealth-usage-report` sends to FerroPULSE: the
+status, the route groups of the latency window the request log fills, the
+preview, and the crate's state store over the clinical pool for the
+cross-replica claims). Hand-written idiomatic Rust of our own design on the
 generated `openehr-*` crates. The binary lives in `app/ferroehr-server`; the REST
 adapter (`ferroehr-rest`) depends on this crate and calls the concrete
 `FerroEhrService` directly. **Zero re-exports: every import names its defining

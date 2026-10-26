@@ -2620,6 +2620,7 @@ dependencies = [
  "ferrohealth-secret",
  "ferrohealth-smart",
  "ferrohealth-telemetry",
+ "ferrohealth-usage-report",
  "futures",
  "hmac 0.13.0",
  "http",
@@ -2777,6 +2778,7 @@ dependencies = [
  "ferrohealth-config",
  "ferrohealth-health",
  "ferrohealth-telemetry",
+ "ferrohealth-usage-report",
  "openehr-its",
  "openehr-sdt 0.0.104",
  "reqwest",
@@ -2947,6 +2949,25 @@ dependencies = [
  "serde",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "ferrohealth-usage-report"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f28aa456d9065b32993b0997e7b5b1819344b4c8e62ea9aa45f3ee8f880d0605"
+dependencies = [
+ "ferrohealth-telemetry",
+ "http",
+ "jiff",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -9376,9 +9397,9 @@ checksum = "552a64d6a0d251ae28bc021838800943cce60c9ec2e60ff331f54e79f696268f"
 
 [[package]]
 name = "uuid"
-version = "1.28.0"
+version = "1.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cc1186384beb7dd8eedea376413fd654937285ea6c9cfbb928dc3043ea4b606"
+checksum = "4a0e2d11620c50695fe12bbbfde96b3477fe606e7284c22d505c12ce51214514"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
