@@ -26,7 +26,7 @@ use crate::system_log::categories::{QueryConstraints, ResourceKind};
 
 /// The fragment path that addresses a root's committed template id
 /// (`archetype_details/template_id/value`, RM common `ARCHETYPED.template_id`).
-const TEMPLATE_PATH: [&str; 3] = ["archetype_details", "template_id", "value"];
+pub(crate) const TEMPLATE_PATH: [&str; 3] = ["archetype_details", "template_id", "value"];
 
 /// The RM classes that hold no priority-category data.
 const NO_CATEGORY_TYPES: [(&str, ResourceKind); 3] = [
