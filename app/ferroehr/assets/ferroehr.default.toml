@@ -352,7 +352,6 @@ claim = "acr"                 # dotted path into a JSON object allowed
 # still apply to the per-EHR gate.
 enabled = true
 admin_role = "ADMIN"
-user_role = "USER"
 readonly_role = "READONLY"   # carriers are refused on every write operation
 # The role that reads the access log for ONE subject at a time (GET
 # /fhir/r4/AuditEvent with `patient` required): what a patient portal holds to

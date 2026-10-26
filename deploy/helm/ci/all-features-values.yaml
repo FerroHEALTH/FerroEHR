@@ -77,7 +77,6 @@ config:
     rbac:
       enabled: true
       admin_role: ADMIN
-      user_role: USER
     abac:
       enabled: true
       engine: cedar

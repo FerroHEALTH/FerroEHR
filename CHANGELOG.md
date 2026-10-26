@@ -64,6 +64,12 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **Breaking: `[authz.rbac] user_role` is retired** (#4038 follow-up). It
+  named a role nothing required once a Basic user's roles became its
+  `[[auth.basic.users]] roles` list. The key now stops startup by name and
+  points at that list. Upgrade: remove `user_role` (on Helm chart 16.0.0,
+  `config.authz.rbac.user_role`), and give each Basic user the roles it needs,
+  for example `roles = ["USER"]`.
 - **Breaking: `ihe-atna`'s forwarder delivers the audit trail, and
   `[audit.fhir_feed] batch_size` and `max_retries` are gone** (#4029). Syslog
   frames are stored in `ihe-atna`'s spool and delivered from it with
