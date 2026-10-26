@@ -18,12 +18,13 @@
 //!   answer `503` until a write succeeds again (prospective "no un-audited
 //!   PHI access" — the emit path is non-blocking, so the failing record's
 //!   own request has already been answered).
-//! - **syslog** (`[audit.syslog]`): the classic ITI-20 feed, sent in-drain;
-//!   with the store on, a successful send stamps `delivered_syslog_at`.
-//! - **`fhir_feed`** (`[audit.fhir_feed]`, ITI-20 ATX:FHIR Feed): with the
-//!   store on, a dedicated outbox worker polls undelivered rows
-//!   (`delivered_fhir_feed_at IS NULL`) and POSTs them — a down ARR loses
-//!   nothing; with the store off it ships in-drain with bounded retries.
+//! - **syslog** (`[audit.syslog]`): the classic ITI-20 feed. The drain stores
+//!   each frame in `ihe-atna`'s spool and the crate's forwarder delivers it
+//!   (ITI TF-2 §3.20.4.1.1); the local store keeps no syslog frame.
+//! - **`fhir_feed`** (`[audit.fhir_feed]`, ITI-20 ATX:FHIR Feed): the crate's
+//!   forwarder delivers from the local store (`delivered_fhir_feed_at IS
+//!   NULL`), so a down ARR loses nothing, or with the store off from an
+//!   in-memory spool.
 //!
 //! Failures are fail-open (drop + `tracing` + a `metrics` counter) or
 //! fail-closed (the REST layer returns `503`); see [`EmitOutcome`].
@@ -42,9 +43,9 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use backon::{ExponentialBuilder, Retryable};
-
+use ihe_atna::atna::forwarder::{Forwarder, Outbox, Status};
 #[cfg(feature = "fhir")]
-use crate::system_log::feed::FeedClient;
+use ihe_atna::atna::spool::Spool;
 use sqlx::PgPool;
 use tokio::sync::{Notify, mpsc};
 use tokio::task::JoinHandle;
@@ -53,12 +54,10 @@ use super::event::{AuditEvent, EmitOutcome};
 
 use crate::system_log::AuditError;
 use crate::system_log::chain_check::ChainCheck;
-#[cfg(feature = "fhir")]
-use crate::system_log::config::FhirFeedConfig;
 use crate::system_log::config::{AuditConfig, FailMode, Retention, StoreConfig};
 use crate::system_log::message::AuditContext;
 use crate::system_log::store::AuditStore;
-use crate::system_log::syslog::SyslogSink;
+use crate::system_log::syslog::SyslogRoute;
 
 /// The patient subject of an EHR: `EHR_STATUS.subject.external_ref`'s id and
 /// namespace.
@@ -309,10 +308,12 @@ impl AuditSender {
 #[derive(Debug)]
 pub struct AuditHandle {
     join: JoinHandle<()>,
-    /// The forwarding/retention workers (outbox poller, reaper). Aborted on
-    /// shutdown after the drain flushes: their state is durable (the store),
-    /// so undelivered rows simply ship on the next boot.
+    /// The retention workers (reaper, chain verification). Aborted on
+    /// shutdown after the drain flushes.
     workers: Vec<JoinHandle<()>>,
+    /// The forwarders, stopped after the drain flushes so their connections
+    /// close cleanly; what they hold is delivered by the next run.
+    deliveries: Vec<Delivery>,
     /// The result of the scheduled hash-chain verification, when it runs.
     chain_check: Option<ChainCheck>,
 }
@@ -323,6 +324,19 @@ impl AuditHandle {
     #[must_use]
     pub fn chain_check(&self) -> Option<ChainCheck> {
         self.chain_check.clone()
+    }
+
+    /// Returns what each forwarder reports, for the health indicator; empty
+    /// when no repository is configured.
+    #[must_use]
+    pub fn delivery(&self) -> DeliveryStatus {
+        DeliveryStatus {
+            sinks: self
+                .deliveries
+                .iter()
+                .map(|delivery| (delivery.sink, Arc::clone(&delivery.status)))
+                .collect(),
+        }
     }
 
     /// Await the drain task, bounded by `timeout`, then stop the background
@@ -337,18 +351,115 @@ impl AuditHandle {
         for worker in self.workers {
             worker.abort();
         }
+        for delivery in self.deliveries {
+            (delivery.stop)();
+            if tokio::time::timeout(timeout, delivery.join).await.is_err() {
+                tracing::warn!(
+                    sink = delivery.sink,
+                    "ATNA audit forwarder did not stop within {timeout:?}"
+                );
+            }
+        }
+    }
+}
+
+/// A status source of one forwarder.
+type StatusFn = Arc<dyn Fn() -> Status + Send + Sync>;
+
+/// One running forwarder: its sink name, its status, how to stop it, and its
+/// task.
+struct Delivery {
+    sink: &'static str,
+    status: StatusFn,
+    stop: Arc<dyn Fn() + Send + Sync>,
+    join: JoinHandle<()>,
+}
+
+impl std::fmt::Debug for Delivery {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Delivery")
+            .field("sink", &self.sink)
+            .field("status", &(self.status)())
+            .finish_non_exhaustive()
+    }
+}
+
+/// What each forwarder reports: its sink (`syslog`, `fhir_feed`) and its
+/// `ihe-atna` [`Status`].
+#[derive(Clone, Default)]
+pub struct DeliveryStatus {
+    sinks: Vec<(&'static str, StatusFn)>,
+}
+
+impl std::fmt::Debug for DeliveryStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self.statuses()).finish()
+    }
+}
+
+impl DeliveryStatus {
+    /// Each sink with its status now.
+    #[must_use]
+    pub fn statuses(&self) -> Vec<(&'static str, Status)> {
+        self.sinks
+            .iter()
+            .map(|(sink, status)| (*sink, status()))
+            .collect()
+    }
+}
+
+/// Spawns `forwarder` onto the runtime as the delivery of `sink`, with the
+/// sampler that moves its delivered and retried counts onto the metrics.
+fn deliver<O: Outbox + 'static>(sink: &'static str, forwarder: &Arc<Forwarder<O>>) -> Delivery {
+    let join = tokio::spawn(Arc::clone(forwarder).run());
+    let reader = Arc::clone(forwarder);
+    let stopper = Arc::clone(forwarder);
+    let sampled = Arc::clone(forwarder);
+    tokio::spawn(sample(sink, move || sampled.status()));
+    Delivery {
+        sink,
+        status: Arc::new(move || reader.status()),
+        stop: Arc::new(move || stopper.stop()),
+        join,
+    }
+}
+
+/// How often a forwarder's counts move onto the metrics.
+const SAMPLE_INTERVAL: Duration = Duration::from_secs(15);
+
+/// Moves the delivered and retried counts of `status` onto
+/// `atna_audit_sent` and `atna_audit_send_failed` as they grow, until the
+/// runtime ends the task.
+#[expect(
+    clippy::infinite_loop,
+    reason = "a detached sampler ended by the runtime, as the reaper is"
+)]
+async fn sample(sink: &'static str, status: impl Fn() -> Status + Send + 'static) {
+    let mut seen = status();
+    loop {
+        tokio::time::sleep(SAMPLE_INTERVAL).await;
+        let now = status();
+        let metrics = crate::telemetry::metrics::metrics();
+        let label = [opentelemetry::KeyValue::new("sink", sink)];
+        metrics
+            .atna_audit_sent
+            .add(now.delivered.saturating_sub(seen.delivered), &label);
+        metrics
+            .atna_audit_send_failed
+            .add(now.retries.saturating_sub(seen.retries), &label);
+        seen = now;
     }
 }
 
 /// The resolved sink set the drain fans out to.
 struct Sinks {
     store: Option<AuditStore>,
-    syslog: Option<SyslogSink>,
-    /// The in-drain FHIR feed (store OFF only; with the store on the outbox
-    /// worker owns delivery).
+    syslog: Option<SyslogRoute>,
+    /// The FHIR feed's spool (store OFF only; with the store on the forwarder
+    /// delivers from the store).
     #[cfg(feature = "fhir")]
-    direct_feed: Option<FeedClient>,
-    /// Wakes the outbox worker after a store insert.
+    feed_spool: Option<Arc<Forwarder<Spool>>>,
+    /// Wakes the store's feed forwarder after a store insert.
     feed_notify: Option<Arc<Notify>>,
 }
 
@@ -372,15 +483,16 @@ pub async fn start(
     resolver: Option<SubjectResolver>,
     pool: Option<PgPool>,
 ) -> Result<(AuditSender, AuditHandle), AuditError> {
+    let mut deliveries = Vec::new();
     let syslog = if config.syslog.enabled {
-        Some(
-            SyslogSink::new(
-                &config.syslog,
-                config.server_host.as_deref().unwrap_or_default(),
-                &config.source_id,
-            )
-            .await?,
+        let route = SyslogRoute::new(
+            &config.syslog,
+            config.server_host.as_deref().unwrap_or_default(),
+            &config.source_id,
         )
+        .await?;
+        deliveries.push(deliver("syslog", &route.forwarder()));
+        Some(route)
     } else {
         None
     };
@@ -400,7 +512,7 @@ pub async fn start(
 
     let mut workers = Vec::new();
     #[cfg(feature = "fhir")]
-    let (feed_notify, direct_feed) = start_feed(&config, store.as_ref(), &mut workers)?;
+    let (feed_notify, feed_spool) = start_feed(&config, store.as_ref(), &mut deliveries)?;
     #[cfg(not(feature = "fhir"))]
     let feed_notify = None;
     let chain_check = store
@@ -434,7 +546,7 @@ pub async fn start(
         store,
         syslog,
         #[cfg(feature = "fhir")]
-        direct_feed,
+        feed_spool,
         feed_notify,
     };
     let join = tokio::spawn(drain(
@@ -468,38 +580,57 @@ pub async fn start(
         AuditHandle {
             join,
             workers,
+            deliveries,
             chain_check,
         },
     ))
 }
 
-/// Starts the ITI-20 ATX:FHIR Feed when it is on: an outbox worker onto
-/// `workers` when the store is on, returning the notify that wakes it, else
-/// the in-drain client.
+/// What starting the feed hands the drain: the notify that wakes the store's
+/// forwarder, or the store-off spool's forwarder.
+#[cfg(feature = "fhir")]
+type FeedStart = (Option<Arc<Notify>>, Option<Arc<Forwarder<Spool>>>);
+
+/// Starts the ITI-20 ATX:FHIR Feed when it is on: a forwarder delivering
+/// from the store when the store is on, returning the notify that wakes it,
+/// else a forwarder delivering from an in-memory spool the drain fills.
 ///
 /// # Errors
-/// [`AuditError::Transport`] when the feed client cannot be built.
+/// [`AuditError::Transport`] when the feed repository cannot be built.
 #[cfg(feature = "fhir")]
 fn start_feed(
     config: &AuditConfig,
     store: Option<&AuditStore>,
-    workers: &mut Vec<JoinHandle<()>>,
-) -> Result<(Option<Arc<Notify>>, Option<FeedClient>), AuditError> {
+    deliveries: &mut Vec<Delivery>,
+) -> Result<FeedStart, AuditError> {
+    use crate::system_log::feed::{StoreOutbox, repository};
     if !config.fhir_feed.enabled {
         return Ok((None, None));
     }
-    let feed = FeedClient::new(&config.fhir_feed)?;
+    let feed = repository(&config.fhir_feed)?;
+    let retry_max = Duration::from_millis(config.fhir_feed.retry_max_ms);
     let Some(store) = store else {
-        return Ok((None, Some(feed)));
+        // NOTE: no specification governs the bounds of the store-off feed's
+        // spool: our own design, about a day of records at a modest rate.
+        let spool = Spool::in_memory(ihe_atna::atna::spool::Bounds {
+            max_messages: 100_000,
+            max_bytes: 256 * 1024 * 1024,
+            write_timeout: Duration::from_secs(2),
+        });
+        let forwarder = Forwarder::fhir_feed(spool, feed, retry_max);
+        deliveries.push(deliver("fhir_feed", &forwarder));
+        return Ok((None, Some(forwarder)));
     };
-    // Outbox-durable delivery: the worker polls undelivered rows.
     let notify = Arc::new(Notify::new());
-    workers.push(tokio::spawn(feed_outbox(
+    let outbox = StoreOutbox::new(
         store.clone(),
-        feed,
-        config.fhir_feed.clone(),
         Arc::clone(&notify),
-    )));
+        Duration::from_millis(config.fhir_feed.poll_interval_ms.max(100)),
+    );
+    deliveries.push(deliver(
+        "fhir_feed",
+        &Forwarder::fhir_feed_from(outbox, feed, retry_max),
+    ));
     Ok((Some(notify), None))
 }
 
@@ -605,7 +736,7 @@ fn spawn_store_upkeep(
 
 async fn drain(
     mut rx: mpsc::Receiver<AuditEvent>,
-    mut sinks: Sinks,
+    sinks: Sinks,
     ctx: AuditContext,
     resolver: Option<SubjectResolver>,
     resolve_subject: bool,
@@ -641,27 +772,15 @@ async fn drain(
         )
         .await;
 
-        // The sink order is the behaviour: the store is the durability
-        // anchor and is written first, so a syslog send can stamp the row it
-        // already persisted.
-        let row_ids = write_to_store(&sinks, &records, &store_healthy).await;
-        if let Some(transport) = &mut sinks.syslog {
-            send_to_syslog(transport, &records, &row_ids, sinks.store.as_ref(), &ctx).await;
+        // The store is the durability anchor and is written first.
+        write_to_store(&sinks, &records, &store_healthy).await;
+        if let Some(route) = &sinks.syslog {
+            submit_to_syslog(route, &records, &ctx).await;
         }
         #[cfg(feature = "fhir")]
-        if let Some(feed) = &sinks.direct_feed {
-            send_to_direct_feed(feed, &records).await;
+        if let Some(forwarder) = &sinks.feed_spool {
+            submit_to_feed_spool(forwarder, &records).await;
         }
-    }
-    // NOTE: RFC 5425 §4.4: a transport sender closes with close_notify once no
-    // record follows, so the last records sent are not lost to a reset.
-    if let Some(transport) = &sinks.syslog
-        && let Err(e) = transport.close().await
-    {
-        crate::telemetry::metrics::metrics()
-            .atna_audit_send_failed
-            .add(1, &[opentelemetry::KeyValue::new("sink", "syslog")]);
-        tracing::warn!("ATNA audit syslog close failed; the records sent last may be lost: {e}");
     }
     tracing::debug!("ATNA audit drain: channel closed, task exiting");
 }
@@ -720,7 +839,7 @@ async fn render_batch(
     sinks: &Sinks,
 ) -> Vec<DrainRecord> {
     #[cfg(feature = "fhir")]
-    let render_fhir = sinks.store.is_some() || sinks.direct_feed.is_some();
+    let render_fhir = sinks.store.is_some() || sinks.feed_spool.is_some();
     #[cfg(not(feature = "fhir"))]
     let render_fhir = sinks.store.is_some();
     let mut records: Vec<DrainRecord> = Vec::with_capacity(batch.len());
@@ -746,25 +865,12 @@ async fn render_batch(
     records
 }
 
-/// Writes the batch to the local Audit Record Repository, returning the stored
-/// row id of each record (`None` where nothing was stored).
-///
-/// Without the syslog sink no per-row delivery stamp is ever needed, so the
-/// whole batch lands in ONE multi-row INSERT; with syslog on, the per-record
-/// path keeps each row id for `delivered_syslog_at`.
-async fn write_to_store(
-    sinks: &Sinks,
-    records: &[DrainRecord],
-    store_healthy: &AtomicBool,
-) -> Vec<Option<uuid::Uuid>> {
-    let Some(store) = &sinks.store else {
-        return vec![None; records.len()];
-    };
-    if sinks.syslog.is_none() {
+/// Writes the batch to the local Audit Record Repository in one multi-row
+/// INSERT.
+async fn write_to_store(sinks: &Sinks, records: &[DrainRecord], store_healthy: &AtomicBool) {
+    if let Some(store) = &sinks.store {
         store_whole_batch(store, records, store_healthy, sinks.feed_notify.as_ref()).await;
-        return vec![None; records.len()];
     }
-    store_each_record(store, records, store_healthy, sinks.feed_notify.as_ref()).await
 }
 
 /// Persists the batch in one multi-row INSERT with bounded jittered retries,
@@ -809,125 +915,54 @@ async fn store_whole_batch(
     }
 }
 
-/// Persists the batch one record at a time, returning the row id of each
-/// record a syslog send may later stamp as delivered.
-async fn store_each_record(
-    store: &AuditStore,
-    records: &[DrainRecord],
-    store_healthy: &AtomicBool,
-    feed_notify: Option<&Arc<Notify>>,
-) -> Vec<Option<uuid::Uuid>> {
-    let mut row_ids: Vec<Option<uuid::Uuid>> = vec![None; records.len()];
-    for (index, (event, subject, rendered)) in records.iter().enumerate() {
-        let Some(rendered) = rendered else {
-            continue;
-        };
-        let insert = || async { store.insert(event, subject.as_deref(), rendered).await };
-        match insert
-            .retry(
-                ExponentialBuilder::default()
-                    .with_jitter()
-                    .with_max_times(2),
-            )
-            .await
-        {
-            Ok(id) => {
-                if let Some(slot) = row_ids.get_mut(index) {
-                    *slot = Some(id);
-                }
-                store_healthy.store(true, Ordering::Relaxed);
-                crate::telemetry::metrics::metrics()
-                    .atna_audit_sent
-                    .add(1, &[opentelemetry::KeyValue::new("sink", "store")]);
-                if let Some(notify) = feed_notify {
-                    notify.notify_one();
-                }
-            }
+/// Stores every record's DICOM PS3.15 §A.5 XML frame in the syslog spool,
+/// which the forwarder delivers.
+async fn submit_to_syslog(route: &SyslogRoute, records: &[DrainRecord], ctx: &AuditContext) {
+    for (event, subject, _) in records {
+        let xml = match crate::system_log::message::to_xml(event, ctx, subject.as_deref()) {
+            Ok(xml) => xml,
             Err(e) => {
-                store_healthy.store(false, Ordering::Relaxed);
                 crate::telemetry::metrics::metrics()
-                    .atna_audit_send_failed
-                    .add(1, &[opentelemetry::KeyValue::new("sink", "store")]);
-                tracing::warn!("ATNA audit store write failed: {e}");
+                    .atna_audit_serialize_failed
+                    .add(1, &[]);
+                tracing::warn!("ATNA audit message serialization failed: {e}");
+                continue;
             }
-        }
-    }
-    row_ids
-}
-
-/// Feeds every record to the classic ITI-20 syslog sink, which is inherently
-/// sequential: one datagram or frame per record.
-async fn send_to_syslog(
-    transport: &mut SyslogSink,
-    records: &[DrainRecord],
-    row_ids: &[Option<uuid::Uuid>],
-    store: Option<&AuditStore>,
-    ctx: &AuditContext,
-) {
-    for (index, (event, subject, _)) in records.iter().enumerate() {
-        let row_id = row_ids.get(index).copied().flatten();
-        send_one_to_syslog(transport, event, subject.as_deref(), row_id, store, ctx).await;
-    }
-}
-
-/// Sends one record as DICOM PS3.15 §A.5 XML and, on success, stamps
-/// `delivered_syslog_at` on the row the store already holds for it.
-async fn send_one_to_syslog(
-    transport: &mut SyslogSink,
-    event: &AuditEvent,
-    subject: Option<&str>,
-    row_id: Option<uuid::Uuid>,
-    store: Option<&AuditStore>,
-    ctx: &AuditContext,
-) {
-    let xml = match crate::system_log::message::to_xml(event, ctx, subject) {
-        Ok(xml) => xml,
-        Err(e) => {
+        };
+        if let Err(e) = route.submit(event.timestamp, &xml).await {
             crate::telemetry::metrics::metrics()
-                .atna_audit_serialize_failed
-                .add(1, &[]);
-            tracing::warn!("ATNA audit message serialization failed: {e}");
-            return;
-        }
-    };
-    match transport.send(event.timestamp, &xml).await {
-        Ok(()) => {
-            crate::telemetry::metrics::metrics()
-                .atna_audit_sent
+                .atna_audit_dropped
                 .add(1, &[opentelemetry::KeyValue::new("sink", "syslog")]);
-            if let (Some(store), Some(id)) = (store, row_id) {
-                store.mark_syslog_delivered(id).await;
-            }
-        }
-        Err(e) => {
-            crate::telemetry::metrics::metrics()
-                .atna_audit_send_failed
-                .add(1, &[opentelemetry::KeyValue::new("sink", "syslog")]);
-            tracing::warn!("ATNA audit syslog send failed: {e}");
+            tracing::warn!(
+                "ATNA audit syslog spool refused a record, which syslog never receives: {e}"
+            );
         }
     }
 }
 
-/// Ships every rendered document to the ITI-20 ATX:FHIR Feed in-drain, the
-/// store-off path (with the store on, the outbox worker owns delivery).
+/// Stores every rendered document in the store-off FHIR feed's spool, which
+/// the forwarder delivers.
 #[cfg(feature = "fhir")]
-async fn send_to_direct_feed(feed: &FeedClient, records: &[DrainRecord]) {
+async fn submit_to_feed_spool(forwarder: &Forwarder<Spool>, records: &[DrainRecord]) {
     for (_, _, rendered) in records {
-        let Some(body) = rendered else {
+        let Some(document) = rendered else {
             continue;
         };
-        match feed.post(body).await {
-            Ok(()) => {
-                crate::telemetry::metrics::metrics()
-                    .atna_audit_sent
-                    .add(1, &[opentelemetry::KeyValue::new("sink", "fhir_feed")]);
-            }
+        let bytes = match serde_json::to_vec(document) {
+            Ok(bytes) => bytes,
             Err(e) => {
                 crate::telemetry::metrics::metrics()
-                    .atna_audit_send_failed
-                    .add(1, &[opentelemetry::KeyValue::new("sink", "fhir_feed")]);
-                tracing::warn!("ATNA audit FHIR feed send failed: {e}");
+                    .atna_audit_serialize_failed
+                    .add(1, &[]);
+                tracing::warn!("ATNA audit FHIR document serialization failed: {e}");
+                continue;
             }
+        };
+        if let Err(e) = forwarder.submit(secrecy::SecretSlice::from(bytes)).await {
+            crate::telemetry::metrics::metrics()
+                .atna_audit_dropped
+                .add(1, &[opentelemetry::KeyValue::new("sink", "fhir_feed")]);
+            tracing::warn!("ATNA audit FHIR feed spool refused a record: {e}");
         }
     }
 }
@@ -962,55 +997,6 @@ fn render_audit_event(
     _subject: Option<&str>,
 ) -> Option<serde_json::Value> {
     None
-}
-
-/// The ITI-20 ATX:FHIR Feed outbox worker: ship undelivered rows oldest-first,
-/// stamping `delivered_fhir_feed_at` per success. On a delivery failure the
-/// batch stops (rows stay pending — durable) and the worker backs off one poll
-/// interval.
-#[cfg(feature = "fhir")]
-async fn feed_outbox(
-    store: AuditStore,
-    feed: FeedClient,
-    config: FhirFeedConfig,
-    notify: Arc<Notify>,
-) {
-    let idle = Duration::from_millis(config.poll_interval_ms.max(100));
-    loop {
-        let batch = match store.pending_fhir_feed(config.batch_size).await {
-            Ok(batch) => batch,
-            Err(e) => {
-                tracing::warn!("ATNA audit feed outbox poll failed: {e}");
-                tokio::time::sleep(idle).await;
-                continue;
-            }
-        };
-        if batch.is_empty() {
-            tokio::select! {
-                () = notify.notified() => {}
-                () = tokio::time::sleep(idle) => {}
-            }
-            continue;
-        }
-        for (id, body) in batch {
-            match feed.post(&body).await {
-                Ok(()) => {
-                    store.mark_fhir_feed_delivered(id).await;
-                    crate::telemetry::metrics::metrics()
-                        .atna_audit_sent
-                        .add(1, &[opentelemetry::KeyValue::new("sink", "fhir_feed")]);
-                }
-                Err(e) => {
-                    crate::telemetry::metrics::metrics()
-                        .atna_audit_send_failed
-                        .add(1, &[opentelemetry::KeyValue::new("sink", "fhir_feed")]);
-                    tracing::warn!("ATNA audit FHIR feed delivery failed (row stays pending): {e}");
-                    tokio::time::sleep(idle).await;
-                    break;
-                }
-            }
-        }
-    }
 }
 
 /// The hourly retention reaper, for a horizon in days or in calendar years.

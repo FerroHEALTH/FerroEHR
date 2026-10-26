@@ -29,7 +29,6 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
-use crate::service::error::ErrorChain;
 use crate::system_log::AuditError;
 use crate::system_log::codes::AtnaAction;
 use crate::system_log::event::{ActingMode, AuditEvent, EventOutcome, EventType, ObjectClass};
@@ -236,75 +235,57 @@ impl AuditStore {
         Ok(())
     }
 
-    /// Stamp a row as delivered by the syslog sink. Delivery stamps are
-    /// best-effort bookkeeping: a failure is logged, never propagated (the
-    /// record itself is already durable).
-    pub async fn mark_syslog_delivered(&self, id: Uuid) {
-        let outcome = self
-            .stamp(
-                "UPDATE audit.audit_event SET delivered_syslog_at = now() WHERE id = $1",
-                id,
-            )
-            .await;
-        if let Err(e) = outcome {
-            tracing::warn!(
-                "audit store: stamping delivered_syslog_at failed: {}",
-                ErrorChain::new(&e)
-            );
-        }
-    }
-
-    /// Stamp a row as delivered by the FHIR feed sink (see
-    /// [`Self::mark_syslog_delivered`] for the best-effort semantics).
-    pub async fn mark_fhir_feed_delivered(&self, id: Uuid) {
-        let outcome = self
-            .stamp(
-                "UPDATE audit.audit_event SET delivered_fhir_feed_at = now() WHERE id = $1",
-                id,
-            )
-            .await;
-        if let Err(e) = outcome {
-            tracing::warn!(
-                "audit store: stamping delivered_fhir_feed_at failed: {}",
-                ErrorChain::new(&e)
-            );
-        }
-    }
-
-    /// Runs one delivery-stamp `UPDATE` binding the row id.
-    async fn stamp(&self, sql: &'static str, id: Uuid) -> Result<(), AuditError> {
-        sqlx::query(sql)
-            .bind(id)
-            .execute(&mut *acquire(&self.pool).await?)
-            .await?;
-        Ok(())
-    }
-
-    /// The oldest rows not yet delivered by the FHIR feed sink (the ITI-20
-    /// ATX:FHIR Feed outbox): `(id, fhir document)`, oldest first.
+    /// The oldest record the FHIR Feed has still to deliver, past the chain
+    /// positions in `skip`, as `(chain_seq, fhir document)`, and how many such
+    /// records there are.
     ///
     /// # Errors
-    /// [`AuditError::Store`] when the SELECT fails.
-    pub async fn pending_fhir_feed(
+    /// [`AuditError::Store`] when a SELECT fails.
+    pub async fn oldest_fhir_feed(
         &self,
-        limit: i64,
-    ) -> Result<Vec<(Uuid, serde_json::Value)>, AuditError> {
-        let rows = sqlx::query(
-            "SELECT id, fhir FROM audit.audit_event \
-             WHERE delivered_fhir_feed_at IS NULL \
-             ORDER BY stored_at ASC LIMIT $1",
+        skip: &[i64],
+    ) -> Result<(Option<(i64, serde_json::Value)>, i64), AuditError> {
+        let mut conn = acquire(&self.pool).await?;
+        let row = sqlx::query(
+            "SELECT chain_seq, fhir FROM audit.audit_event \
+             WHERE delivered_fhir_feed_at IS NULL AND NOT (chain_seq = ANY($1)) \
+             ORDER BY chain_seq ASC LIMIT 1",
         )
-        .bind(limit.max(1))
-        .fetch_all(&mut *acquire(&self.pool).await?)
+        .bind(skip)
+        .fetch_optional(&mut *conn)
         .await?;
-        rows.into_iter()
-            .map(|row| {
+        let waiting: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM audit.audit_event \
+             WHERE delivered_fhir_feed_at IS NULL AND NOT (chain_seq = ANY($1))",
+        )
+        .bind(skip)
+        .fetch_one(&mut *conn)
+        .await?;
+        let oldest = row
+            .map(|row| -> Result<_, AuditError> {
                 Ok((
-                    row.try_get::<Uuid, _>("id")?,
+                    row.try_get::<i64, _>("chain_seq")?,
                     row.try_get::<serde_json::Value, _>("fhir")?,
                 ))
             })
-            .collect()
+            .transpose()?;
+        Ok((oldest, waiting))
+    }
+
+    /// Stamps the record at chain position `chain_seq` as delivered by the
+    /// FHIR Feed.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the UPDATE fails; the record is then
+    /// delivered again, which the repository takes as a second copy.
+    pub async fn mark_fhir_feed_delivered(&self, chain_seq: i64) -> Result<(), AuditError> {
+        sqlx::query(
+            "UPDATE audit.audit_event SET delivered_fhir_feed_at = now() WHERE chain_seq = $1",
+        )
+        .bind(chain_seq)
+        .execute(&mut *acquire(&self.pool).await?)
+        .await?;
+        Ok(())
     }
 
     /// Delete records older than `retention_days` (0 = keep forever).

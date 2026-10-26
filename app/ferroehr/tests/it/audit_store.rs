@@ -529,7 +529,15 @@ async fn the_access_trail_refuses_rewriting_deletion_and_truncation() {
 
     // The one sanctioned mutation still works, so the refusals above are
     // specific rather than a blanket lock.
-    store.mark_syslog_delivered(id).await;
+    let seq: i64 = sqlx::query_scalar("SELECT chain_seq FROM audit.audit_event WHERE id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .expect("the record's chain position");
+    store
+        .mark_fhir_feed_delivered(seq)
+        .await
+        .expect("a delivery stamp is the one sanctioned mutation");
 
     let survives: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_event")
         .fetch_one(&pool)

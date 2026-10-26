@@ -143,6 +143,18 @@ audit message names a patient (ITI TF-2 §3.20.4.1.2.1.1).
 | `tls_ca_file` | path | unset | PEM file with the repository CA to trust beside the platform's roots. |
 | `tls_identity_cert_file` | path | unset | Client-certificate PEM for mutual TLS. |
 | `tls_identity_key_file` | path | unset | Client-key PEM for mutual TLS. |
+| `spool_dir` | path | unset | The directory of the spool every frame is stored in before it is sent. It must give no access to the group or to other users. Unset, the spool is held in memory, and a restart loses the frames not yet delivered. |
+| `spool_max_messages` | int | `100000` | The most frames the spool holds; a frame past it is refused and counted in `atna_audit_dropped`. |
+| `spool_max_bytes` | int | `268435456` | The most bytes the spool holds. |
+| `retry_max_ms` | int | `60000` | The longest wait between two delivery attempts after a failure. |
+
+The drain stores each frame in `ihe-atna`'s spool, and the crate's forwarder
+delivers it: one connection held open, a failed send retried with an
+exponential backoff and jitter, and the connection closed with a TLS
+`close_notify` on shutdown, so nothing is lost to a reset (ITI TF-2
+§3.20.4.1.1, RFC 5425 §4.4). The local audit store keeps only the FHIR
+document, never the syslog frame, so the spool, not the store, is syslog's
+outbox. `delivered_syslog_at` is no longer written.
 
 ### `[audit.fhir_feed]`: the RESTful-ATNA feed (ITI-20 ATX:FHIR Feed)
 
@@ -150,9 +162,18 @@ audit message names a patient (ITI TF-2 §3.20.4.1.2.1.1).
 |---|---|---|---|
 | `enabled` | bool | `false` | `POST` each FHIR `AuditEvent` to an external FHIR Audit Record Repository. |
 | `url` | secret URL | `http://localhost:8080/fhir` | The repository's FHIR base; records go to `{url}/AuditEvent`. Credentials embedded in the URL are redacted from every rendering. |
-| `batch_size` | int | `64` | Outbox rows shipped per poll. |
-| `poll_interval_ms` | int | `2000` | Outbox poll interval when idle. |
-| `max_retries` | int | `3` | Per-record `POST` retries before the record is left pending (local store on) or dropped and metered (store off). |
+| `poll_interval_ms` | int | `2000` | How long the forwarder waits for a new record before it reads the store again. |
+| `retry_max_ms` | int | `60000` | The longest wait between two delivery attempts after a failure. |
+
+`ihe-atna`'s forwarder delivers the feed. With the local store on, it
+delivers from the store, oldest record first: a record not yet delivered has
+no `delivered_fhir_feed_at`, so a repository outage loses nothing, and the
+record is stamped once the repository accepts it. A record the repository
+refuses (a `4xx` other than `401`, `408` or `429`) is set aside until the next
+start. It is reported on `GET /management/health` as `audit_delivery`, and
+the records behind it keep flowing. With the store off, the feed delivers
+from an in-memory spool. `batch_size` and `max_retries` are gone and stop
+startup by name: the forwarder retries until the repository answers.
 
 #### `[audit.fhir_feed.oauth]`: authenticating with OAuth 2.0 client credentials
 
@@ -183,6 +204,6 @@ startup.
 | `refresh_margin_ms` | int | `30000` | How long before the token expires a new one is fetched. |
 | `timeout_ms` | int | `10000` | How long one call to the authorization server may take. |
 
-With the local store on, the feed drains the store's outbox and is therefore
-loss-free across a repository outage. With the store off it ships in-drain, and
-a record that exhausts its retries is dropped and counted.
+With the local store on, the feed delivers from the store and loses nothing
+across a repository outage. With the store off it delivers from an in-memory
+spool, so a restart loses what the spool holds.

@@ -649,14 +649,21 @@ port = 6514
 #? tls_ca_file = "/etc/ferroehr/arr-ca.pem"
 #? tls_identity_cert_file = "/etc/ferroehr/client.pem"
 #? tls_identity_key_file = "/etc/ferroehr/client.key"
+# Every frame is stored in ihe-atna's spool and delivered from it, retried with
+# backoff until the repository takes it. The local store keeps no syslog
+# frame, so the spool is syslog's outbox: set spool_dir (owner-only) for one
+# that survives a restart; unset, it is held in memory.
+#? spool_dir = "/var/lib/ferroehr/atna-spool"
+spool_max_messages = 100000
+spool_max_bytes = 268435456
+retry_max_ms = 60000         # the longest wait between two attempts
 
 # RESTful ATNA feed: FHIR R4 AuditEvent POSTs (IHE ITI-20 ATX:FHIR Feed).
 [audit.fhir_feed]
 enabled = false
 url = "http://localhost:8080/fhir"   # POSTs {url}/AuditEvent; URL creds redacted
-batch_size = 64
-poll_interval_ms = 2000
-max_retries = 3
+poll_interval_ms = 2000      # how long the forwarder waits for a new record before reading the store again
+retry_max_ms = 60000         # the longest wait between two attempts
 
 # ── [privacy] — the clinical-side data-minimisation policy ────────────────────
 # GDPR Art. 4(5) + Art. 25(2); the openEHR RM leaves the subject reference open

@@ -153,6 +153,17 @@ pub struct SyslogConfig {
     /// Client-key PEM file for mutual TLS
     /// (`FERROEHR__AUDIT__SYSLOG__TLS_IDENTITY_KEY_FILE`).
     pub tls_identity_key_file: Option<String>,
+    /// The directory of the `ihe-atna` spool every record is stored in before
+    /// it is sent (`FERROEHR__AUDIT__SYSLOG__SPOOL_DIR`), owner-only; unset,
+    /// the spool is held in memory and a restart loses what it holds.
+    pub spool_dir: Option<std::path::PathBuf>,
+    /// The most records the spool holds (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_MESSAGES`).
+    pub spool_max_messages: usize,
+    /// The most bytes the spool holds (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_BYTES`).
+    pub spool_max_bytes: u64,
+    /// The longest wait between two delivery attempts after a failure, in
+    /// milliseconds (`FERROEHR__AUDIT__SYSLOG__RETRY_MAX_MS`).
+    pub retry_max_ms: u64,
 }
 
 impl Default for SyslogConfig {
@@ -164,6 +175,10 @@ impl Default for SyslogConfig {
             tls_ca_file: None,
             tls_identity_cert_file: None,
             tls_identity_key_file: None,
+            spool_dir: None,
+            spool_max_messages: 100_000,
+            spool_max_bytes: 256 * 1024 * 1024,
+            retry_max_ms: 60_000,
         }
     }
 }
@@ -172,9 +187,9 @@ impl Default for SyslogConfig {
 /// HTTP `POST {url}/AuditEvent` of the FHIR R4 `AuditEvent` (IHE BALP shape)
 /// to an external Audit Record Repository.
 ///
-/// When the local store is on, the feed drains the store's outbox
-/// (`delivered_fhir_feed_at IS NULL`), so a down ARR loses nothing; with the
-/// store off it ships in-drain with bounded retries.
+/// `ihe-atna`'s forwarder delivers it. With the local store on it delivers
+/// from the store (`delivered_fhir_feed_at IS NULL`), so a down ARR loses
+/// nothing; with the store off it delivers from an in-memory spool.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct FhirFeedConfig {
@@ -185,15 +200,13 @@ pub struct FhirFeedConfig {
     /// `AuditEvent` endpoint is `{url}/AuditEvent`. Credentials in the URL
     /// (basic auth) are redacted from every rendering.
     pub url: SecretUrl,
-    /// Outbox rows shipped per poll (`FERROEHR__AUDIT__FHIR_FEED__BATCH_SIZE`).
-    pub batch_size: i64,
-    /// Outbox poll interval when idle, in milliseconds
+    /// How long the forwarder waits for a new record before it reads the
+    /// store again, in milliseconds
     /// (`FERROEHR__AUDIT__FHIR_FEED__POLL_INTERVAL_MS`).
     pub poll_interval_ms: u64,
-    /// Per-record POST retries before the record is left pending (store on)
-    /// or dropped + metered (store off)
-    /// (`FERROEHR__AUDIT__FHIR_FEED__MAX_RETRIES`).
-    pub max_retries: usize,
+    /// The longest wait between two delivery attempts after a failure, in
+    /// milliseconds (`FERROEHR__AUDIT__FHIR_FEED__RETRY_MAX_MS`).
+    pub retry_max_ms: u64,
     /// The OAuth 2.0 client-credentials grant the feed authenticates with
     /// (`[audit.fhir_feed.oauth]`), the IHE IUA authorized client; absent, the
     /// feed sends the Basic credentials of `url`, if any.
@@ -205,9 +218,8 @@ impl Default for FhirFeedConfig {
         Self {
             enabled: false,
             url: SecretUrl::new("http://localhost:8080/fhir"),
-            batch_size: 64,
             poll_interval_ms: 2000,
-            max_retries: 3,
+            retry_max_ms: 60_000,
             oauth: None,
         }
     }
@@ -579,7 +591,7 @@ mod tests {
         assert!(c.suppress_login_events);
         assert!(c.resolve_subject);
         assert_eq!(c.fail_mode, FailMode::Open);
-        assert_eq!(c.fhir_feed.batch_size, 64);
+        assert_eq!(c.fhir_feed.retry_max_ms, 60_000);
         assert!(c.categories.templates.is_empty() && c.categories.archetypes.is_empty());
     }
 

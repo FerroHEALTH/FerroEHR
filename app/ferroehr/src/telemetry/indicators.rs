@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crate::db::acquire::acquire;
 use crate::system_log::chain_check::{ChainCheck, ChainCheckState};
 use crate::system_log::config::AuditPosture;
-use crate::system_log::sender::AuditSender;
+use crate::system_log::sender::{AuditSender, DeliveryStatus};
 use crate::telemetry::health::{Health, HealthIndicator, HealthStatus};
 use async_trait::async_trait;
 use sqlx::PgPool;
@@ -168,6 +168,77 @@ impl HealthIndicator for AuditHealth {
         Health {
             status: HealthStatus::Up,
             detail: Some(detail),
+        }
+    }
+
+    fn required(&self) -> bool {
+        false
+    }
+}
+
+/// `audit_delivery` — reports each forwarder delivering to an external ARR.
+///
+/// Each `ihe-atna` forwarder names the records waiting, those the repository
+/// refused, and whether the last attempt reached it.
+///
+/// A repository that cannot be reached, or a refused record, reads
+/// `DEGRADED`: the records wait in their store and nothing is lost yet, so
+/// readiness never flips. Registered only when a repository is configured.
+#[derive(Debug)]
+pub struct AuditDeliveryHealth {
+    delivery: DeliveryStatus,
+}
+
+impl AuditDeliveryHealth {
+    /// Constructs over the forwarders' shared status.
+    #[must_use]
+    pub fn new(delivery: DeliveryStatus) -> Self {
+        Self { delivery }
+    }
+}
+
+#[async_trait]
+impl HealthIndicator for AuditDeliveryHealth {
+    fn name(&self) -> &'static str {
+        "audit_delivery"
+    }
+
+    async fn check(&self) -> Health {
+        let mut degraded = false;
+        let parts: Vec<String> = self
+            .delivery
+            .statuses()
+            .into_iter()
+            .map(|(sink, status)| {
+                if !status.reachable || status.depth.quarantined > 0 {
+                    degraded = true;
+                }
+                format!(
+                    "{sink}: {} waiting, {} refused, {} delivered, {}{}",
+                    status.depth.waiting(),
+                    status.depth.quarantined,
+                    status.delivered,
+                    if status.reachable {
+                        "reachable"
+                    } else {
+                        "unreachable"
+                    },
+                    if status.durable {
+                        ""
+                    } else {
+                        ", held in memory"
+                    },
+                )
+            })
+            .collect();
+        let detail = parts.join("; ");
+        if degraded {
+            Health::degraded(detail)
+        } else {
+            Health {
+                status: HealthStatus::Up,
+                detail: Some(detail),
+            }
         }
     }
 

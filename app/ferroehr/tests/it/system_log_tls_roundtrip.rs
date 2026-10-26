@@ -13,7 +13,7 @@ use ferroehr::system_log::event::{
     AuditEvent, EmitOutcome, EventActionCode, EventOutcome, ObjectClass,
 };
 use ferroehr::system_log::sender::start;
-use ferroehr::system_log::syslog::SyslogSink;
+use ferroehr::system_log::syslog::SyslogRoute;
 use secrecy::SecretSlice;
 use testkit::syslog_tls::{Ending, SyslogTlsListener};
 
@@ -27,14 +27,16 @@ async fn tls_octet_counted_frame_round_trips() {
         tls_ca_file: Some(listener.ca_file.display().to_string()),
         ..SyslogConfig::default()
     };
-    let sink = SyslogSink::new(&config, "cdr-01", "ferroehr")
+    let route = SyslogRoute::new(&config, "cdr-01", "ferroehr")
         .await
-        .expect("sink");
+        .expect("route");
+    let forwarder = route.forwarder();
+    let run = tokio::spawn(std::sync::Arc::clone(&forwarder).run());
     let at = "2026-07-06T12:00:00Z".parse().expect("instant");
     let xml = SecretSlice::from(b"<AuditMessage/>".to_vec());
-    sink.send(at, &xml).await.expect("tls send");
+    route.submit(at, &xml).await.expect("stored");
     // A second record travels on the same connection.
-    sink.send(at, &xml).await.expect("second send");
+    route.submit(at, &xml).await.expect("second stored");
 
     for _ in 0..2 {
         let received = listener
@@ -48,6 +50,44 @@ async fn tls_octet_counted_frame_round_trips() {
                        <AuditMessage/>";
         assert_eq!(text, format!("{} {message}", message.len()));
     }
+    forwarder.stop();
+    run.await.expect("the forwarder stops");
+}
+
+/// ITI TF-2 §3.20.4.1.1: a record whose first send fails is stored and sent
+/// once the repository answers, so a repository that drops the connection
+/// loses nothing.
+#[tokio::test]
+async fn a_record_whose_send_fails_is_delivered_later() {
+    let mut listener = SyslogTlsListener::bind_refusing(1).await.expect("listener");
+    let config = SyslogConfig {
+        enabled: true,
+        host: "localhost".to_owned(),
+        port: listener.port,
+        tls_ca_file: Some(listener.ca_file.display().to_string()),
+        retry_max_ms: 500,
+        ..SyslogConfig::default()
+    };
+    let route = SyslogRoute::new(&config, "cdr-01", "ferroehr")
+        .await
+        .expect("route");
+    let forwarder = route.forwarder();
+    let run = tokio::spawn(std::sync::Arc::clone(&forwarder).run());
+    let at = "2026-07-06T12:00:00Z".parse().expect("instant");
+    route
+        .submit(at, &SecretSlice::from(b"<AuditMessage/>".to_vec()))
+        .await
+        .expect("stored");
+    assert!(
+        listener.recv(Duration::from_secs(15)).await.is_some(),
+        "the record arrives after the dropped connection"
+    );
+    let status = forwarder.status();
+    assert!(status.retries >= 1, "the first attempt failed: {status:?}");
+    assert_eq!(status.delivered, 1, "{status:?}");
+    assert_eq!(status.depth.waiting(), 0, "{status:?}");
+    forwarder.stop();
+    run.await.expect("the forwarder stops");
 }
 
 /// The drain ends its syslog connection with a TLS `close_notify` when it
