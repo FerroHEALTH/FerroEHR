@@ -46,6 +46,10 @@ RUN_MAX=8
 
 cd "$(dirname "$0")/../.."
 
+# --diff reads the change's own paths from the merge base (#4129).
+# shellcheck source=scripts/lib/changed-paths.sh
+. scripts/lib/changed-paths.sh
+
 mode="${1:---all}"
 files=()
 case "$mode" in
@@ -61,7 +65,7 @@ case "$mode" in
   head="${3:-HEAD}"
   while IFS= read -r f; do
     [[ -f "$f" ]] && files+=("$f")
-  done < <(git diff --name-only "$base" "$head" -- 'crates/*.rs' 'app/*.rs' 'tools/*.rs')
+  done < <(change_paths "$base" "$head" 'crates/*.rs' 'app/*.rs' 'tools/*.rs')
   ;;
 --files)
   shift

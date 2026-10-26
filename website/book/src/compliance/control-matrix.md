@@ -29,9 +29,10 @@ Control-text: <the control, stated as what the product does>
 
 `scripts/render/control-matrix.sh` queries the tracker with the GitHub CLI,
 joins each declared control to its legal source and to its current state, and
-writes this file. A CI job re-runs the generator with `--check` and fails the
-build when the committed page no longer matches the tracker, which is what
-keeps a shipped control from sitting here as "planned".
+writes this file. The site deploy renders it from the tracker on every push
+to main, which is what keeps a shipped control from sitting here as
+"planned". A CI job renders it for every pull request and fails the build
+when the pull request does not carry the rows it changes.
 
 - **Shipped:** the issue is closed as completed. The merged pull request that
   closed it is linked in the last column. The one pull request that closes a
