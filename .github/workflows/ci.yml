@@ -2378,7 +2378,7 @@ jobs:
   # the same PR (freshness, not pixels — owner decision). Escape hatch: the
   # `no-ui-visual-change` label for BFF-only/comment/test changes.
   #
-  # PULL-REQUEST ONLY, deliberately (#2777): both halves — the base..head diff
+  # PULL-REQUEST ONLY, deliberately (#2777): both halves — the merge-base diff
   # and the label — are pull-request payload, and neither exists on a
   # merge_group event. It has already gated this pull request by then.
   ui-screenshot-guard:
@@ -2408,15 +2408,8 @@ jobs:
           if [ "$HAS_LABEL" = "true" ]; then
             echo "no-ui-visual-change label set — guard skipped."; exit 0
           fi
-          changed=$(git diff --name-only "$BASE" "$HEAD")
-          if ! echo "$changed" | grep -qE '^app/ferroehr-viewer/(src|style)/'; then
-            echo "No viewer UI paths touched — guard not required."; exit 0
-          fi
-          if echo "$changed" | grep -qE '^website/book/src/viewer/img/'; then
-            echo "Screenshots refreshed — OK."; exit 0
-          fi
-          echo "::error::This PR changes the viewer UI but does not refresh website/book/src/viewer/img/ (run scripts/ui-e2e.sh with UI_E2E_DOCS_SHOTS=1 and commit the captures), and does not carry the 'no-ui-visual-change' label." >&2
-          exit 1
+          bash scripts/checks/ui-screenshot.sh --self-test
+          bash scripts/checks/ui-screenshot.sh "$BASE" "$HEAD"
 
   # Crate-version guard (the changelog-guard pattern): a PR that changes
   # PACKAGED content of the published crates/* members must bump the lockstep

@@ -441,6 +441,13 @@ Shipped with functional changes because: the patched `ferrohealth-smart` arrives
 
 ### Fixed
 
+- **`ui-screenshot-guard` judges only the pull request's own commits**
+  (#4117). It diffed the base and head commits directly, so a branch behind
+  main failed on main's viewer changes and passed on main's screenshot
+  refresh. `scripts/checks/ui-screenshot.sh` now reads the paths from the
+  merge base (`base...head`), and its `--self-test` runs both cases on a
+  branch behind main before every verdict.
+
 - **A configuration load or check that fails keeps its cause** (#4104).
   Fifteen sites in the server's commands turned the failure into a string,
   so the error chain ended at the message; they now carry the source error.
