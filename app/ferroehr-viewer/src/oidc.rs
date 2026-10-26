@@ -114,7 +114,8 @@ pub async fn discover(config: &OidcConfig) -> anyhow::Result<OidcState> {
         builder = builder.resolve(host.trim(), addr.trim().parse()?);
     }
     let ca_file = (!config.ca_file.is_empty()).then(|| std::path::Path::new(&config.ca_file));
-    let http = OidcHttpClient(crate::trust::trusting(builder, "auth.oidc.ca_file", ca_file)?.build()?);
+    let http =
+        OidcHttpClient(crate::trust::trusting(builder, "auth.oidc.ca_file", ca_file)?.build()?);
     let issuer = openidconnect::IssuerUrl::new(config.issuer.clone())?;
     let metadata = openidconnect::core::CoreProviderMetadata::discover_async(issuer, &http).await?;
     Ok(OidcState {

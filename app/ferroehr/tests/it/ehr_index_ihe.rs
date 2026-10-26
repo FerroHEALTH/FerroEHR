@@ -28,7 +28,6 @@ use uuid::Uuid;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use ferroehr::config::secret::SecretUrl;
 use ferroehr::privacy::PrivacyPolicy;
 use ferroehr::privacy::config::PrivacyConfig;
 use ferroehr::service::FerroEhrService;
@@ -37,6 +36,7 @@ use ferroehr::service::ehr_index::ihe::{IdentitySourceError, IheIdentitySource};
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::status::CallStatusType;
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// The IG's clinical ("blue") domain, the one the stub answers for.
 const CLINICAL: &str = "urn:oid:1.3.6.1.4.1.21367.13.20.3000";

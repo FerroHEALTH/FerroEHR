@@ -57,6 +57,10 @@ pub enum IdentitySourceError {
         /// How many identifiers it answered.
         count: usize,
     },
+    /// The `[ehr_index.oauth]` grant is incomplete or its token client could
+    /// not be built.
+    #[error("the identity source's client-credentials grant is unusable")]
+    Grant(#[source] Box<dyn std::error::Error + Send + Sync>),
     /// The capabilities interaction could not be sent or read.
     #[error("the identity source could not be reached")]
     Unreachable(#[source] reqwest::Error),
@@ -85,7 +89,7 @@ impl std::fmt::Debug for DomainIdentifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DomainIdentifier")
             .field("system", &self.system)
-            .field("value", &crate::config::secret::REDACTED)
+            .field("value", &ferrohealth_secret::REDACTED)
             .finish()
     }
 }
@@ -110,7 +114,9 @@ impl IheIdentitySource {
     ///
     /// The HTTP client follows no redirect, because the request carries a
     /// patient identifier (the `PixmClient::new` contract), and trusts
-    /// `ehr_index.ca_file` beside the platform roots.
+    /// `ehr_index.ca_file` beside the platform roots. With `[ehr_index.oauth]`
+    /// every ITI-83 request carries that grant's access token (IUA ITI-72
+    /// §3.72.4.2), renewed once after a `401`.
     ///
     /// # Errors
     /// [`IdentitySourceError`] when the trust roots, the client, the base URL
@@ -129,7 +135,17 @@ impl IheIdentitySource {
             PixmInvocation::Get => Invocation::Get,
             PixmInvocation::Post => Invocation::Post,
         };
-        let pixm = PixmClient::new(base.clone(), http.clone())?.invoked_by(invocation);
+        let mut pixm = PixmClient::new(base.clone(), http.clone())?.invoked_by(invocation);
+        if let Some(oauth) = &config.oauth {
+            let grant = oauth
+                .resolve()
+                .map_err(|e| IdentitySourceError::Grant(Box::new(e)))?;
+            let source = ferrohealth_smart::client::cache::TokenSource::new(grant)
+                .map_err(|e| IdentitySourceError::Grant(Box::new(e)))?;
+            pixm = pixm.with_authorizer(std::sync::Arc::new(
+                ihe_iti::authorizer::smart::TokenAuthorizer::new(source),
+            ));
+        }
         Ok(Self {
             base,
             pixm,

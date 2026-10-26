@@ -1099,8 +1099,8 @@ mod tests {
 
     use super::*;
     use crate::config::authz::AbacParam;
-    use ferrohealth_secret::secret_url::SecretUrl;
     use crate::service::ehr_index::config::EhrIndexConfig;
+    use ferrohealth_secret::secret_url::SecretUrl;
 
     /// The shipped defaults of a FerroEHR run on its own: the explicit
     /// `[ehr_index] provider = "local"` opt-in, without which the default IHE
