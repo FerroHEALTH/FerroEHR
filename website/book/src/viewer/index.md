@@ -158,8 +158,9 @@ the server configuration.
 One TOML file (`ferroehr-viewer.toml`, read from the path
 `FERROEHR_VIEWER_CONFIG` names; with none named, no file is read), with
 `FERROEHR_VIEWER__<SECTION>__<KEY>` environment overrides. Unknown keys and
-unknown `FERROEHR_VIEWER_` variables are refused at startup, exactly as on the
-CDR:
+unknown `FERROEHR_VIEWER_` variables are refused at startup. The CDR refuses
+only an unknown `FERROEHR__` override, because the viewer's variables share
+its prefix:
 
 | Key | Default | Meaning |
 |---|---|---|

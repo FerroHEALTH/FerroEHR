@@ -99,7 +99,6 @@ openehr-specification-pins = openEHR specification pins
 db-connections-in-use = DB connections in use
 aql-queries = AQL queries
 compositions-committed = Compositions committed
-in-flight-requests = In-flight requests
 older = Older{" "}
 newer = {" "}Newer
 record = Record

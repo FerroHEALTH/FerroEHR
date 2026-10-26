@@ -692,8 +692,10 @@ config:
     # so the engine's typed 408 fires first.
     statement_timeout_ms: 60000
 
-  # [log] — logging. json is correct for cluster log collectors.
-  log:
+  # [telemetry]: the console, the request log and the OpenTelemetry export
+  # (the family's shared section). json is correct for cluster log collectors;
+  # a [telemetry.otlp] table with an endpoint exports spans and metrics.
+  telemetry:
     format: json
 
   # [auth] — authentication: the FerroHEALTH family's shared section (bearer

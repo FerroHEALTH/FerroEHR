@@ -634,7 +634,7 @@ listed.
 | Change events over AMQP (`[events]`) | off | commit notifications, free of PHI by default | telling the provider's other systems that a record changed |
 | Multimedia to S3 (`[multimedia]`) | off | `DV_MULTIMEDIA` bytes above a size threshold, keyed by content hash | storing large attachments of the record outside the database |
 | Access log to syslog (`[audit.syslog]`) and to a FHIR feed (`[audit.fhir_feed]`) | off | access records | an off-box copy of the access log, which the threat model asks for |
-| Traces and metrics over OTLP (`telemetry.otlp_endpoint`) | off | spans and metrics, with identified data sanitised out | operating the instance |
+| Traces and metrics over OTLP (`telemetry.otlp.endpoint`) | off | spans and metrics, with identified data sanitised out | operating the instance |
 
 Each integration except the usage report carries only what its purpose in the
 provider's deployment needs, and only to a destination the deploying

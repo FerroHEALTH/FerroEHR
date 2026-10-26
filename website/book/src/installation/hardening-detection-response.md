@@ -336,7 +336,7 @@ stdout and stderr and never to a file inside the container, which is both the
 [Kubernetes logging
 architecture](https://kubernetes.io/docs/concepts/cluster-administration/logging/)'s
 expectation and a requirement of `readOnlyRootFilesystem: true`: there is nowhere
-to write a log file. Set `config.log.format: json` (the chart's default) for a
+to write a log file. Set `config.telemetry.format: json` (the chart's default) for a
 collector; `pretty` is for a terminal.
 
 **The distinction that matters, because getting it wrong loses the accountability

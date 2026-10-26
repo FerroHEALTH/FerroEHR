@@ -143,6 +143,10 @@ pub struct ManagementConfig {
     /// Limits for the on-demand CPU profiler (`endpoints.flamegraph`).
     #[serde(default)]
     pub profiling: ProfilingConfig,
+    /// Span-timing capture: every span's folded stacks are written to this
+    /// file, for `inferno-flamegraph` to render offline. Unset, nothing is
+    /// captured.
+    pub flame_file: Option<std::path::PathBuf>,
 }
 
 impl Default for ManagementConfig {
@@ -153,6 +157,7 @@ impl Default for ManagementConfig {
             port: None,
             endpoints: EndpointLevels::default(),
             profiling: ProfilingConfig::default(),
+            flame_file: None,
         }
     }
 }

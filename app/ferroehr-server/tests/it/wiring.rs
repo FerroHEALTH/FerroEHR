@@ -353,8 +353,8 @@ enabled = false
 [db]
 url = "postgres://u1:URL_PW_SENTINEL_1@h1:5432/p1"
 
-[telemetry]
-otlp_endpoint = "https://u2:URL_PW_SENTINEL_2@h2:4317/p2"
+[telemetry.otlp]
+endpoint = "https://u2:URL_PW_SENTINEL_2@h2:4317/p2"
 
 [multimedia]
 endpoint = "https://u3:URL_PW_SENTINEL_3@h3:8333/p3"

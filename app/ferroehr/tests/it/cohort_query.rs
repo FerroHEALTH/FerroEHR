@@ -510,6 +510,7 @@ async fn every_execution_is_recorded_as_a_linkage_access() {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         ..AuditConfig::default()
     };

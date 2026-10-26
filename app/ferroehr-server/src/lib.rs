@@ -48,7 +48,7 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::{
     AuthzHandle, AuthzResolvers, ResolveError, build_engine,
 };
-use ferroehr_rest::extensions::management::Observability;
+use ferroehr_rest::extensions::management::{LogFilter, Observability};
 use ferrohealth_health::lifecycle::Lifecycle;
 use ferrohealth_health::registry::{HealthIndicator, Registry};
 use sqlx::PgPool;
@@ -56,8 +56,9 @@ use uuid::Uuid;
 
 use ferroehr::db;
 use ferroehr::service::FerroEhrService;
-use ferroehr::telemetry::config::{LogFormat, ResolvedLogFormat, TelemetryConfig};
 use ferroehr::telemetry::{self, indicators};
+use ferrohealth_telemetry::request_log::RequestLog;
+use ferrohealth_telemetry::section::{Format, Rendering};
 
 /// How long to wait for the audit queue to flush on shutdown.
 const AUDIT_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
@@ -207,8 +208,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             let url = if let Some(url) = url {
                 url
             } else {
-                let config = ferroehr::config::load(cli.config.as_deref(), &cli.set)
-                    .map_err(|e| anyhow::anyhow!("{e}"))?;
+                let config = ferroehr::config::load(cli.config.as_deref(), &cli.set)?;
                 healthcheck_url(&config)?
             };
             healthcheck(&url).await
@@ -235,8 +235,7 @@ async fn run_report(
     config_path: Option<&Path>,
     overrides: &[(String, String)],
 ) -> anyhow::Result<()> {
-    let config =
-        ferroehr::config::load(config_path, overrides).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let config = ferroehr::config::load(config_path, overrides)?;
     write_report(&config, output).await
 }
 
@@ -262,7 +261,7 @@ pub async fn write_report(
     config: &ferroehr::config::FerroEhrConfig,
     output: Option<&Path>,
 ) -> anyhow::Result<()> {
-    config.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
+    config.validate()?;
     let report = Report::gather(config).await;
     let written = serde_json::to_string_pretty(&report).context("serializing the report")?;
     if output == Some(Path::new("-")) {
@@ -283,16 +282,15 @@ async fn run_db(
     config_path: Option<&Path>,
     overrides: &[(String, String)],
 ) -> anyhow::Result<()> {
-    let config =
-        ferroehr::config::load(config_path, overrides).map_err(|e| anyhow::anyhow!("{e}"))?;
-    config.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
-    let telemetry_config = TelemetryConfig {
-        log: config.log.clone(),
-        otel: config.telemetry.clone(),
-    };
+    let config = ferroehr::config::load(config_path, overrides)?;
+    config.validate()?;
     let build_info = BuildInfo::for_profile(config.spec_profile);
-    let telemetry =
-        telemetry::init(&telemetry_config, &build_info).context("initialising telemetry")?;
+    let telemetry = telemetry::init(
+        &config.telemetry,
+        config.management.flame_file.as_deref(),
+        &build_info,
+    )
+    .context("initialising telemetry")?;
 
     // Every subcommand reads the schema on the migration DSN
     // (`[db].migrate_url`, falling back to `[db].url`), which is the
@@ -408,9 +406,8 @@ async fn run_usage_report(
     config_path: Option<&Path>,
     overrides: &[(String, String)],
 ) -> anyhow::Result<()> {
-    let config =
-        ferroehr::config::load(config_path, overrides).map_err(|e| anyhow::anyhow!("{e}"))?;
-    config.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
+    let config = ferroehr::config::load(config_path, overrides)?;
+    config.validate()?;
     let licence = load_licence(&config)?;
     let identity = Identity::new(
         &BuildInfo::for_profile(config.spec_profile),
@@ -528,13 +525,10 @@ fn run_config(
             Ok(())
         }
         ConfigCmd::Check => {
-            let (loaded, cfg) = ferroehr::config::load_with_provenance(config, set)
-                .map_err(|e| anyhow::anyhow!("{e}"))?;
-            cfg.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
-            ferroehr::config::auth::require_mechanism(&cfg.auth)
-                .map_err(|e| anyhow::anyhow!("{e}"))?;
-            let rendered = ferrohealth_config::report::check_report(&loaded)
-                .map_err(|e| anyhow::anyhow!("{e}"))?;
+            let (loaded, cfg) = ferroehr::config::load_with_provenance(config, set)?;
+            cfg.validate()?;
+            ferroehr::config::auth::require_mechanism(&cfg.auth)?;
+            let rendered = ferrohealth_config::report::check_report(&loaded)?;
             print!("{rendered}");
             // The resolved placement of the four storage domains, so an
             // operator can see whether the deployment they configured is the
@@ -591,15 +585,15 @@ async fn healthcheck(url: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Whether the ASCII boot banner prints, given the configured `[log] format`
+/// Whether the ASCII boot banner prints, given the configured `[telemetry] format`
 /// and whether stdout is a terminal.
 ///
 /// Keyed on the RESOLVED rendering rather than the configured value: `format =
 /// "auto"` renders JSON whenever stdout is not a terminal, and a banner ahead of
 /// it would leave a log collector with unparseable first bytes. No openEHR spec
 /// governs logging — our own design.
-fn prints_banner(format: LogFormat, stdout_is_terminal: bool) -> bool {
-    format.resolve(stdout_is_terminal) == ResolvedLogFormat::Pretty
+fn prints_banner(format: Format, stdout_is_terminal: bool) -> bool {
+    format.resolve(stdout_is_terminal) == Rendering::Pretty
 }
 
 /// Summarizes which management endpoints are mounted, and at which access
@@ -1103,18 +1097,12 @@ fn attach_multimedia(
 async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> anyhow::Result<()> {
     let started = std::time::Instant::now();
     // One load + one aggregated validate (all errors at once), then distribute.
-    let config =
-        ferroehr::config::load(config_path, overrides).map_err(|e| anyhow::anyhow!("{e}"))?;
-    config.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
-
-    let telemetry_config = TelemetryConfig {
-        log: config.log.clone(),
-        otel: config.telemetry.clone(),
-    };
+    let config = ferroehr::config::load(config_path, overrides)?;
+    config.validate()?;
 
     // ASCII banner before telemetry/log init, on the same resolved rendering the
     // log layer installs (so JSON output stays pure from the first byte).
-    if prints_banner(telemetry_config.log.format, std::io::stdout().is_terminal()) {
+    if prints_banner(config.telemetry.format, std::io::stdout().is_terminal()) {
         // The posture the configuration alone shows; the cluster check needs
         // the pools and follows in the boot log.
         let declared = DeploymentPosture::evaluate(&config, &DatabaseFacts::default());
@@ -1123,8 +1111,12 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
 
     let build_info =
         BuildInfo::for_profile(config.spec_profile).with_audit(AuditPosture::of(&config.audit));
-    let mut telemetry =
-        telemetry::init(&telemetry_config, &build_info).context("initialising telemetry")?;
+    let mut telemetry = telemetry::init(
+        &config.telemetry,
+        config.management.flame_file.as_deref(),
+        &build_info,
+    )
+    .context("initialising telemetry")?;
 
     warn_boot_postures(&config);
     // The support statement at boot, and a WARN at boot and daily once the
@@ -1247,7 +1239,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     service
         .mirror_category_map(&category_map)
         .await
-        .map_err(|e| anyhow::anyhow!("{e}"))
         .context("mirroring the [audit.categories] map into the retention register")?;
 
     // Outbound only and detached: neither boot, health nor readiness waits on
@@ -1267,8 +1258,14 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // assembled after the last optional one.
     let observability = Observability {
         management: config.management.clone(),
-        prometheus: Some(telemetry.registry()),
-        log_reload: Some(telemetry.log_reload()),
+        telemetry: Some(telemetry.telemetry()),
+        log_filter: Some(LogFilter {
+            handle: telemetry.filter(),
+            boot: telemetry.boot_filter(),
+        }),
+        request_log: RequestLog::new(&config.telemetry.logged_query_parameters)
+            .with_metrics(&telemetry.telemetry().meter(telemetry::metrics::SCOPE))
+            .serving_tls(config.server.tls.enabled),
         // NOTE: no specification governs this: our own design; each check keeps
         // the one-second bound the probes have always had.
         health: Registry::new(indicators).with_timeout(Duration::from_secs(1)),
@@ -1296,8 +1293,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
 
     // RFC 9110 §11.6.1: a 401 challenge must name a scheme applicable to the
     // target resource, and a server with no mechanism has none to name.
-    ferroehr::config::auth::require_mechanism(&app_config.auth)
-        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    ferroehr::config::auth::require_mechanism(&app_config.auth)?;
     log_resolved_posture(
         &app_config,
         audit_enabled,
@@ -1432,7 +1428,22 @@ fn subject_resolver(pool: PgPool) -> SubjectResolver {
 
 #[cfg(test)]
 mod tests {
-    use super::{LogFormat, prints_banner};
+    use super::{Format, prints_banner, run_report};
+
+    /// A configuration that cannot be read keeps its cause: the chain of the
+    /// error a subcommand returns ends at the file system's own error.
+    #[tokio::test]
+    async fn a_configuration_failure_keeps_its_root_cause() {
+        let missing = std::path::Path::new("/nonexistent/ferroehr-test/ferroehr.toml");
+        let err = run_report(None, Some(missing), &[])
+            .await
+            .expect_err("an unreadable configuration file is refused");
+        let root = err.root_cause();
+        let io = root
+            .downcast_ref::<std::io::Error>()
+            .unwrap_or_else(|| panic!("the root cause is the I/O error, not {root}: {err:#}"));
+        assert_eq!(io.kind(), std::io::ErrorKind::NotFound);
+    }
 
     /// The banner follows the RESOLVED rendering: `auto` with stdout piped into
     /// a log collector renders JSON, so no banner may precede it. The terminal
@@ -1440,15 +1451,15 @@ mod tests {
     /// are pinned deterministically.
     #[test]
     fn the_banner_is_keyed_on_the_resolved_log_format() {
-        assert!(!prints_banner(LogFormat::Auto, false));
-        assert!(prints_banner(LogFormat::Auto, true));
+        assert!(!prints_banner(Format::Auto, false));
+        assert!(prints_banner(Format::Auto, true));
         for is_terminal in [false, true] {
             assert!(
-                !prints_banner(LogFormat::Json, is_terminal),
+                !prints_banner(Format::Json, is_terminal),
                 "explicit json never prints the banner"
             );
             assert!(
-                prints_banner(LogFormat::Pretty, is_terminal),
+                prints_banner(Format::Pretty, is_terminal),
                 "explicit pretty always prints the banner"
             );
         }
