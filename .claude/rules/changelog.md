@@ -1,5 +1,5 @@
 ---
-paths: ["CHANGELOG.md", "Cargo.toml", "CITATION.cff", ".zenodo.json", "docker-compose.yml", "deploy/helm/**", ".github/workflows/release*.yml", ".github/workflows/*chart*.yml", ".github/workflows/publish-crates.yml", "scripts/release/**"]
+paths: ["CHANGELOG.md", "changelog.d/**", "scripts/checks/changelog-*.sh", "Cargo.toml", "CITATION.cff", ".zenodo.json", "docker-compose.yml", "deploy/helm/**", ".github/workflows/release*.yml", ".github/workflows/*chart*.yml", ".github/workflows/publish-crates.yml", "scripts/release/**"]
 ---
 
 # Changelog discipline (Keep a Changelog 1.1.0)
@@ -8,15 +8,22 @@ paths: ["CHANGELOG.md", "Cargo.toml", "CITATION.cff", ".zenodo.json", "docker-co
 (https://keepachangelog.com/en/1.1.0/ + SemVer). It is enforced, not
 optional:
 
-- **Every PR that changes user-visible behaviour adds an entry under
-  `## [Unreleased]` in the same PR.** User-visible = the REST surface, AQL
-  semantics, validation behaviour, storage/migrations, configuration, CLI,
+- **Every PR that changes user-visible behaviour adds a fragment under
+  `changelog.d/` in the same PR, and no PR edits `## [Unreleased]`.** The
+  fragment is `changelog.d/<issue>-<kebab-slug>.<section>.md`, its content
+  the entry as it will read in `CHANGELOG.md`; the format is
+  `changelog.d/README.md`. User-visible = the REST surface, AQL semantics,
+  validation behaviour, storage/migrations, configuration, CLI,
   container/compose/Helm artifacts, feature flags. The CI `changelog-guard`
-  job fails the PR otherwise (escape hatch: the `no-changelog` label, only
-  for genuinely invisible changes — internal refactors, CI, docs).
-- Entries go under the standard subsections: `### Added` / `### Changed` /
-  `### Deprecated` / `### Removed` / `### Fixed` / `### Security`. Write for
-  the end user (what changed for them), not commit-message prose.
+  job (`scripts/checks/changelog-guard.sh`) fails the PR without a fragment
+  (escape hatch: the `no-changelog` label, only for genuinely invisible
+  changes such as internal refactors, CI and docs), and fails any PR that
+  writes under `[Unreleased]`, label or not, because that section is the
+  lines every open PR used to conflict on.
+- A fragment's `<section>` is one of the standard subsections: `added`,
+  `changed`, `deprecated`, `removed`, `fixed`, `security` (`### Added` and
+  the rest at the cut). Write for the end user (what changed for them), not
+  commit-message prose.
 - **Releases are milestone-driven (owner 2026-07-20; milestones =
   releases):** the `vX.Y.Z` GitHub milestone collects the release's issues;
   the release is cut when the milestone reaches **zero open issues** (or
@@ -45,9 +52,13 @@ optional:
   `docs/law/eu/cra/text.html`). `scripts/checks/release-notes.sh` composes the
   URL and refuses notes without the link or the support period, in the plan job,
   so a refused release publishes nothing.
-- **Cutting a release** (on a `release/vX.Y.Z` branch): rename
-  `[Unreleased]` → `## [X.Y.Z] - YYYY-MM-DD`, re-add an empty
-  `[Unreleased]`, update the link references at the bottom, bump the
+- **Cutting a release** (on a `release/vX.Y.Z` branch): run
+  `scripts/release/changelog.sh --assemble X.Y.Z YYYY-MM-DD`, which writes
+  `## [X.Y.Z] - YYYY-MM-DD` under a fresh empty `[Unreleased]` from the
+  fragments in Keep a Changelog order (`--preview` shows it first), moves the
+  `[unreleased]` link reference on, adds the version's, and `git rm`s the
+  fragments (the `plan` job refuses a tag that still holds one); add the
+  release's opening paragraph under the heading by hand, bump the
   workspace `version` in the root `Cargo.toml` (+ `Cargo.lock` via a
   `cargo check`, + `CITATION.cff` `version` and
   `date-released` (the `citation-guard` CI job enforces the version match),
@@ -236,8 +247,11 @@ Manufacturer duties under the CRA (`docs/law/eu/cra/text.html` Annex I Part
 II) and the EHDS (`docs/law/eu/ehds/text.html` Art. 28, Annex II 1.1), checked
 by whoever cuts the release, on the `release/vX.Y.Z` branch, before the tag.
 The first two rules are checked by `scripts/checks/changelog-security.sh`: the
-CI `changelog-guard` job runs it over `[Unreleased]` on every pull request,
-and the release `plan` job over the section being cut. The documentation checks at
+CI `changelog-guard` job runs it over `[Unreleased]` with every fragment folded
+in (`scripts/release/changelog.sh --check-preview`) on every pull request,
+and the release `plan` job over the section being cut. In a fragment, the
+reason line is the one `changelog.d/*.security-reason.md` and each entry is a
+`changelog.d/*.security.md` (`changelog.d/README.md`). The documentation checks at
 the end of this list run in the release lane. The hazard-log and claims reviews
 have no check and are refused by hand. `scripts/release/preflight.sh vX.Y.Z`
 runs every check of the release lane before the tag (`docs/release.md`).

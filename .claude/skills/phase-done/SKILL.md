@@ -59,8 +59,9 @@ path-scoped, so they are not in context until read.
 3b. **User docs + changelog updated?** If this work changed a user-visible
    surface (REST, configuration, CLI, deployment artifacts), confirm BOTH:
    the matching `website/book/src` page was updated in-branch
-   (`.claude/rules/docs-website.md`), AND a `CHANGELOG.md [Unreleased]` entry
-   exists (`.claude/rules/changelog.md`; CI `changelog-guard` enforces it).
+   (`.claude/rules/docs-website.md`), AND a changelog fragment under `changelog.d/`
+   exists (`changelog.d/README.md`, `.claude/rules/changelog.md`; CI
+   `changelog-guard` enforces it).
    If not, stop: both are part of the deliverable.
 3c. **Living-reference-doc maintenance:** confirm the living reference docs
    (`docs/architecture.md`, `docs/VERSIONS.md`) were

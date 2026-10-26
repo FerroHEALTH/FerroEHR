@@ -12,7 +12,7 @@ Closes #<!-- tracker issue number — the merge into main auto-closes it -->
 
 - [ ] `cargo fmt --all --check` · `cargo clippy --workspace --all-targets` · `cargo nextest run --workspace`
 - [ ] No test weakened, skipped, or edited to route around a bug
-- [ ] User-visible change → `CHANGELOG.md [Unreleased]` entry (else the `no-changelog` label)
+- [ ] User-visible change → a fragment, `changelog.d/<issue>-<kebab-slug>.<section>.md` (`changelog.d/README.md`), never an edit of `CHANGELOG.md` (else the `no-changelog` label)
 - [ ] REST/config/CLI/deployment change → matching `website/book/src` page updated
 - [ ] Implemented `docs/plans/*.md` plan file deleted (unless another open issue still consumes it)
 - [ ] New issues opened from this work are linked as GitHub relationships (sub-issue / blocked-by via `scripts/gh/rel.sh`), not prose (`.claude/rules/issue-relationships.md`)

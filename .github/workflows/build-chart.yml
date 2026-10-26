@@ -344,17 +344,23 @@ jobs:
         run: |
           set -euo pipefail
           # A release publishes that release's section. A dispatch between
-          # releases publishes what is currently unreleased — and when
-          # Unreleased is EMPTY (the recover-a-failed-tag-publish case, twice
-          # live: 6.0.13 and 6.0.14), it falls back to the packaged appVersion's
-          # own released section, which is what the chart being recovered ships.
+          # releases publishes what is currently unreleased: [Unreleased] with
+          # every changelog.d/ fragment folded in, as the next cut writes it
+          # (scripts/release/changelog.sh --preview). When that is EMPTY (the
+          # recover-a-failed-tag-publish case, twice live: 6.0.13 and 6.0.14),
+          # it falls back to the packaged appVersion's own released section,
+          # which is what the chart being recovered ships.
           if [ "$IS_RELEASE_CUT" = "true" ]; then
             section="$APP"
-          elif awk '/^## \[Unreleased\]/{f=1;next} /^## \[/{exit} f && (/^- /||/^### /){found=1} END{exit !found}' CHANGELOG.md; then
-            section="Unreleased"
           else
-            echo "Unreleased is empty — falling back to the ${APP} section (tag-publish recovery)"
-            section="$APP"
+            bash scripts/release/changelog.sh --preview > "${RUNNER_TEMP}/CHANGELOG.md"
+            export CHANGELOG="${RUNNER_TEMP}/CHANGELOG.md"
+            if awk '/^## \[Unreleased\]/{f=1;next} /^## \[/{exit} f && (/^- /||/^### /){found=1} END{exit !found}' "$CHANGELOG"; then
+              section="Unreleased"
+            else
+              echo "Unreleased is empty — falling back to the ${APP} section (tag-publish recovery)"
+              section="$APP"
+            fi
           fi
           bash deploy/helm/artifacthub-changes.sh "$section" --inject
           bash deploy/helm/release-facts.sh "$APP"

@@ -97,7 +97,7 @@ commit-message wording. Late labels: since #2777 applying a label raises a fresh
    rustfmt wants a chained `.into_any()` — running leptosfmt after a clean
    `cargo fmt --check` leaves the tree rustfmt-dirty. Always finish with
    `cargo fmt --all && cargo fmt --all --check`.
-- **Changelog inserts:** a section (`### Fixed` etc.) may already exist in the target release block — ALWAYS merge the entry into the existing subsection header; blindly inserting a new header creates a duplicate (happened twice, owner-corrected 2026-08-01). Check `grep -n '^###' CHANGELOG.md` for the block first.
+- **Changelog entries are fragments** under `changelog.d/` (`changelog.d/README.md`, #4123), never an edit of `CHANGELOG.md`: the section headers that used to be duplicated by hand (twice, owner-corrected 2026-08-01) are written once by `scripts/release/changelog.sh --assemble` at the cut.
 - **`gh` comment bodies need heredocs:** backticks inside a double-quoted
   `--body` get shell-executed and silently mangle the posted comment. Use
   `--body-file -` with a quoted heredoc (`<<'EOF'`). The SAME trap applies to

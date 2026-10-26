@@ -2687,16 +2687,6 @@ jobs:
             -o /tmp/ixit.schema.json
           bash scripts/checks/ixit-declarations.sh --schema /tmp/ixit.schema.json docs/conformance/party/ferroehr
 
-  # Changelog guard (Keep a Changelog discipline): a PR that changes
-  # user-visible surfaces must update CHANGELOG.md's [Unreleased] section in
-  # the same PR. Escape hatch: the `no-changelog` label for genuinely
-  # invisible changes (internal refactors, CI, docs).
-  #
-  # PULL-REQUEST ONLY, deliberately (#2777): the entry requirement is a
-  # base..head diff plus a label, neither carried by a merge_group event, and
-  # already gated on the pull request. The structure half is a whole-file
-  # check, but it is not worth splitting into a second job for a queue that
-  # cannot change the file between the pull request and the merge.
   # A person's pull request records acceptance of the contribution licensing
   # terms (CONTRIBUTING.md § Licensing of contributions) through the template's
   # checkbox; this gate is what makes the checkbox binding. Bot authors are
@@ -2792,6 +2782,19 @@ jobs:
           export PR_BODY
           bash scripts/checks/privacy-boundary.sh --diff "$PR_BASE" "$PR_HEAD"
 
+  # Changelog guard (Keep a Changelog 1.1.0; the fragments are our own design,
+  # no specification governs them): a PR that changes a user-visible surface
+  # adds a fragment under changelog.d/ (changelog.d/README.md), and no PR
+  # writes under CHANGELOG.md's [Unreleased], the lines every open PR used to
+  # conflict on. Escape hatch: the `no-changelog` label for genuinely
+  # invisible changes (internal refactors, CI, docs); it waives the entry,
+  # never the [Unreleased] refusal or the checks before it.
+  #
+  # PULL-REQUEST ONLY, deliberately (#2777): the entry requirement is a
+  # base..head diff plus a label, neither carried by a merge_group event, and
+  # already gated on the pull request. The fragment and structure checks are
+  # whole-tree checks, but they are not worth a second job for a queue that
+  # cannot change the files between the pull request and the merge.
   changelog:
     name: changelog-guard
     if: github.event_name == 'pull_request'
@@ -2805,20 +2808,30 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      # Structure check runs UNCONDITIONALLY — the no-changelog label waives
-      # the entry requirement below, never the file's Keep-a-Changelog
-      # validity (duplicate '### Added'/'### Fixed' headers in one release
-      # section shipped into release notes twice before this guard).
-      - name: Changelog structure (no duplicate subsections, canonical types)
-        run: bash scripts/checks/changelog-structure.sh
+      # The self-tests prove the assembler, this guard and the Security check.
+      - name: The changelog scripts prove themselves
+        run: |
+          set -euo pipefail
+          bash scripts/release/changelog.sh --self-test
+          bash scripts/checks/changelog-guard.sh --self-test
+          bash scripts/checks/changelog-security.sh --self-test
+      # Runs UNCONDITIONALLY: the no-changelog label waives the entry
+      # requirement below, never the fragments' form or the file's Keep a
+      # Changelog validity (duplicate '### Added'/'### Fixed' headers in one
+      # release section shipped into release notes twice before this guard).
+      - name: Every fragment is well formed and CHANGELOG.md keeps its structure
+        run: |
+          set -euo pipefail
+          bash scripts/release/changelog.sh --check
+          bash scripts/checks/changelog-structure.sh
       # CRA Annex I Part II(2), (4) and (8): a Security entry names its GHSA
       # advisory or VEX statement, and a Security section beside other changes
-      # says why. The release plan runs the same check over the section it cuts.
-      - name: The Unreleased Security section names its advisories and its reason
-        run: |
-          bash scripts/checks/changelog-security.sh --self-test
-          bash scripts/checks/changelog-security.sh
-      - name: Require a CHANGELOG entry for user-visible changes
+      # says why. Checked over [Unreleased] with every fragment folded in, as
+      # the next cut writes it; the release plan runs the same check over the
+      # section it cuts.
+      - name: The next release section keeps its structure and names its advisories and its reason
+        run: bash scripts/release/changelog.sh --check-preview
+      - name: Require a changelog fragment for user-visible changes
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
@@ -2830,24 +2843,11 @@ jobs:
           # Read when the step runs: a re-run replays the event payload (#3948).
           HAS_LABEL=$(gh api "repos/${GH_REPO}/pulls/${PR}" --jq 'any(.labels[].name; . == "no-changelog")')
           if [ "$HAS_LABEL" = "true" ]; then
-            echo "no-changelog label set — guard skipped."; exit 0
+            echo "no-changelog label set: the entry is waived, an [Unreleased] edit is still refused."
+            bash scripts/checks/changelog-guard.sh --waived "$BASE" "$HEAD"
+            exit 0
           fi
-          changed=$(git diff --name-only "$BASE" "$HEAD")
-          if ! echo "$changed" | grep -qE '^(app/|crates/|deploy/|docker/|docker-compose|Cargo\.toml|Cargo\.lock)'; then
-            echo "No user-visible surface touched — guard not required."; exit 0
-          fi
-          # grep -c, never grep -q: -q exits at the first match, git diff then
-          # dies of SIGPIPE, and `pipefail` turns that into a failed pipeline —
-          # so a LARGE changelog diff was reported as "no entry" (this PR).
-          # -c reads the whole diff, so the pipeline always exits cleanly.
-          if echo "$changed" | grep -qx 'CHANGELOG.md'; then
-            added=$(git diff "$BASE" "$HEAD" -- CHANGELOG.md | grep -c '^+.*[^[:space:]]' || true)
-            if [ "${added:-0}" -gt 0 ]; then
-              echo "CHANGELOG.md updated ($added added lines) — OK."; exit 0
-            fi
-          fi
-          echo "::error::This PR changes user-visible surfaces (app/, crates/, deploy/, docker/, manifests) but does not add a CHANGELOG.md [Unreleased] entry (Keep a Changelog 1.1.0). Add one, or apply the 'no-changelog' label if truly invisible." >&2
-          exit 1
+          bash scripts/checks/changelog-guard.sh "$BASE" "$HEAD"
 
   # Citation guard: CITATION.cff must stay CFF-1.2.0-schema-valid and
   # version-consistent with the workspace — a malformed file silently breaks
