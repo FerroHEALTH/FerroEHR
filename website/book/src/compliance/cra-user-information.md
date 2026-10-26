@@ -65,7 +65,7 @@ for its startup banner, `ferroehr --version` and `GET /management/info`, the
 viewer shows them on every screen, and the container images carry them in the
 `eu.ferroehr.image.manufacturer` label
 ([the manufacturer and the deployment report](../operations.md#the-manufacturer-and-the-deployment-report)).
-The [information sheet](information-sheet.md#a-the-manufacturer) repeats them.
+The [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html#a-the-manufacturer) repeats them.
 Cadasto B.V. is the manufacturer of every FerroHEALTH product, and the
 FerroHEALTH book describes it once for all of them:
 [The manufacturer](https://ferrohealth.eu/docs/manufacturer.html).
@@ -115,7 +115,7 @@ identification of the product with digital elements;"
 - **Release date:** the date on the release's heading in the
   [changelog](https://github.com/FerroHEALTH/FerroEHR/blob/main/CHANGELOG.md),
   `## [X.Y.Z] - YYYY-MM-DD`
-  ([information sheet, (b)](information-sheet.md#b-name-version-and-release-date)).
+  ([information sheet, (b)](https://ferrohealth.eu/docs/ehds/information-sheet.html#b-name-version-and-release-date)).
 
 ## 4. Intended purpose, security environment, essential functionalities and security properties
 
@@ -154,7 +154,7 @@ risks;"
 - **Use in accordance with the intended purpose:** the risk register of the
   [CRA risk assessment](cra-risk-assessment.md#how-the-risks-were-analysed)
   rates each risk with the shipped controls, and the
-  [limitations you should know](instructions-for-use.md#limitations-you-should-know)
+  [limitations you should know](https://ferrohealth.eu/docs/ehds/instructions-for-use.html#limitations-you-should-know)
   name the ones that matter before you rely on FerroEHR, among them the shipped
   defaults that favour a first boot and the reach of anyone with a database
   connection.
@@ -180,8 +180,8 @@ EHR system under the EHDS, the CRA asks for one declaration covering both
 acts (CRA Art. 28(3)). When it exists, it is published as an asset of each GitHub
 release it covers and as a page of the book frozen for that release, and this
 section gives its address. The record of the declaration is
-[`annex-iii-6-declaration-of-conformity.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/technical-documentation/annex-iii-6-declaration-of-conformity.md)
-in the technical documentation.
+[Annex III 6](https://ferrohealth.eu/docs/ehds/annex-iii-6-declaration-of-conformity.html)
+of the EHR system's technical documentation in the FerroHEALTH book.
 
 ## 7. Technical security support and the end of the support period
 
@@ -220,9 +220,11 @@ to be handled and to receive security updates;"
 "detailed instructions or an internet address referring to such detailed
 instructions and information on:"
 
-The detailed instructions are the [instructions for use](instructions-for-use.md)
-of the same release, which this book carries and which ride each GitHub
-release as `ferroehr-vX.Y.Z-instructions-for-use.md`. Each point below names
+The detailed instructions are the
+[instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html)
+of the EHR system, which the FerroHEALTH book carries and which ride each
+GitHub release as `ferroehr-vX.Y.Z-instructions-for-use.md`, at the revision
+the release pins and with its versions appended. Each point below names
 the part that answers it.
 
 ### 8(a) Secure use from commissioning on
@@ -232,16 +234,16 @@ lifetime of the product with digital elements to ensure its secure use;"
 
 - **Commissioning:** check what you pulled
   ([verifying releases](../verifying-releases.md)), install
-  ([installing](instructions-for-use.md#installing)), set the deployment
+  ([installing](https://ferrohealth.eu/docs/ehds/instructions-for-use.html#installing)), set the deployment
   profile to `production` and configure the access log, authentication and the
   pseudonymisation boundary
-  ([configuring a deployment in the European Union](instructions-for-use.md#configuring-a-deployment-in-the-european-union)),
+  ([configuring a deployment in the European Union](https://ferrohealth.eu/docs/ehds/instructions-for-use.html#configuring-a-deployment-in-the-european-union)),
   then walk the [go-live checklist](../security/go-live-checklist.md) before
   the instance holds real patient data.
 - **Throughout its lifetime:** the maintenance tasks and how often each falls
   due, from applying security updates to testing backups and acting on an
   access-log chain finding
-  ([maintenance, and how often](instructions-for-use.md#maintenance-and-how-often)).
+  ([maintenance, and how often](https://ferrohealth.eu/docs/ehds/instructions-for-use.html#maintenance-and-how-often)).
 
 ### 8(b) How changes to the product can affect the security of data
 
@@ -348,8 +350,8 @@ SBOM attested on the Helm chart. Where each one is and how to verify it is in
 
 - [Cyber Resilience Act](cra.md): the manufacturer, what applies from when,
   and the questions for counsel.
-- [Instructions for use](instructions-for-use.md) and the
-  [information sheet](information-sheet.md): the documents that accompany each
+- [Instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html) and the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html): the documents that accompany each
   release under the EHDS.
 - [Complaints, incidents and vulnerabilities](post-market.md): the reporting
   channels and procedures.

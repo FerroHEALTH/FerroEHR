@@ -138,6 +138,8 @@ struct SenderInner {
     /// purpose of use in, the codes this deployment accepts (empty accepts
     /// any), and the legal basis it processes under.
     purpose_header: String,
+    /// The header a caller declares the data permit it acts under in.
+    permit_header: String,
     purpose_codes: Vec<String>,
     /// The purposes of use that mark an access as an emergency access, held
     /// by `ehds-logging`.
@@ -200,6 +202,12 @@ impl AuditSender {
     #[must_use]
     pub fn purpose_header(&self) -> &str {
         &self.inner.purpose_header
+    }
+
+    /// The request header a caller declares its data permit in, lowercased.
+    #[must_use]
+    pub fn permit_header(&self) -> &str {
+        &self.inner.permit_header
     }
 
     /// Whether `code` is one this deployment records.
@@ -564,6 +572,7 @@ pub async fn start(
             enabled: config.enabled,
             suppress_login_events: config.suppress_login_events,
             purpose_header: config.purpose_header.to_ascii_lowercase(),
+            permit_header: config.permit_header.to_ascii_lowercase(),
             purpose_codes: config.purpose_codes.clone(),
             emergency,
             legal_basis: config.legal_basis.clone(),
@@ -1154,6 +1163,7 @@ mod tests {
                 enabled: true,
                 suppress_login_events: true,
                 purpose_header: "x-purpose-of-use".to_owned(),
+                permit_header: "x-data-permit".to_owned(),
                 purpose_codes: Vec::new(),
                 emergency: ehds_logging::emergency::EmergencyPurposes::declare(&[
                     ehds_logging::record::Purpose {

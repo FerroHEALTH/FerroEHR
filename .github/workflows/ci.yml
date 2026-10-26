@@ -584,8 +584,12 @@ jobs:
       - run: bash scripts/watch/spec-release.sh --self-test
       - name: The release withdrawal refuses unregistered versions and moves only the floating tags
         run: bash scripts/release/withdraw.sh --self-test
-      - name: The release-notes check refuses notes without the CRA user information or the support period
+      - name: The release-notes check refuses notes without the CRA user information, the support period or the pinned EHDS system documents
         run: bash scripts/checks/release-notes.sh --self-test
+      - name: The EHDS system documents' pin reads, and a page at another revision is refused
+        run: bash scripts/release/system-documents.sh --self-test
+      - name: The attached information sheet and instructions for use carry the stamp, the frozen links and the release's facts
+        run: bash scripts/release/accompanying-documents.sh --self-test
       - name: The release milestone check refuses open items and closes only after every leg
         run: bash scripts/release/milestone.sh --self-test
       - name: The release plan orders tags by version and counts the support period as GNU date does
@@ -1102,27 +1106,6 @@ jobs:
           else
             bash scripts/checks/tracker-status.sh
           fi
-
-  # The two EHDS pages are GENERATED from website/book/ehds.yaml
-  # (scripts/render/ehds-pages.sh), for the reason the control matrix is: a
-  # readiness table typed by hand is wrong the first time a requirement's
-  # status changes, and a stale "shipped" beside a requirement nothing
-  # implements is a false compliance claim on a public site. This job
-  # re-renders and diffs. It needs no token: the source is a committed file,
-  # not the tracker.
-  ehds-pages:
-    name: ehds-pages
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: The published EHDS pages match their source
-        run: bash scripts/render/ehds-pages.sh --check
 
   # String-built-SQL guard: the AQL engine composes SQL from attacker-supplied
   # query text, so a `format!`/`push_str`-assembled clause in `app/ferroehr/src/
@@ -2395,7 +2378,7 @@ jobs:
   # the same PR (freshness, not pixels — owner decision). Escape hatch: the
   # `no-ui-visual-change` label for BFF-only/comment/test changes.
   #
-  # PULL-REQUEST ONLY, deliberately (#2777): both halves — the base..head diff
+  # PULL-REQUEST ONLY, deliberately (#2777): both halves — the merge-base diff
   # and the label — are pull-request payload, and neither exists on a
   # merge_group event. It has already gated this pull request by then.
   ui-screenshot-guard:
@@ -2425,15 +2408,8 @@ jobs:
           if [ "$HAS_LABEL" = "true" ]; then
             echo "no-ui-visual-change label set — guard skipped."; exit 0
           fi
-          changed=$(git diff --name-only "$BASE" "$HEAD")
-          if ! echo "$changed" | grep -qE '^app/ferroehr-viewer/(src|style)/'; then
-            echo "No viewer UI paths touched — guard not required."; exit 0
-          fi
-          if echo "$changed" | grep -qE '^website/book/src/viewer/img/'; then
-            echo "Screenshots refreshed — OK."; exit 0
-          fi
-          echo "::error::This PR changes the viewer UI but does not refresh website/book/src/viewer/img/ (run scripts/ui-e2e.sh with UI_E2E_DOCS_SHOTS=1 and commit the captures), and does not carry the 'no-ui-visual-change' label." >&2
-          exit 1
+          bash scripts/checks/ui-screenshot.sh --self-test
+          bash scripts/checks/ui-screenshot.sh "$BASE" "$HEAD"
 
   # Crate-version guard (the changelog-guard pattern): a PR that changes
   # PACKAGED content of the published crates/* members must bump the lockstep
@@ -2989,7 +2965,6 @@ jobs:
       - docs-claims
       - control-matrix
       - tracker-status
-      - ehds-pages
       - sql-string-building
       - error-hygiene
       - error-source-chain

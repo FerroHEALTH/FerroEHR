@@ -49,6 +49,7 @@ use axum::response::{IntoResponse, Response};
 use http::{HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
 
+use ferroehr::system_log::access_context;
 use ferroehr::system_log::categories::{AccessedContent, ContentIds, ResourceKind};
 use ferroehr::system_log::event::{
     AccessDomain, ActorAuthentication, AuditEvent, EmitOutcome, EventActionCode, EventOutcome,
@@ -128,6 +129,7 @@ pub struct AuditServedEhrs {
 struct AccessContext {
     request_id: Option<String>,
     purpose: Option<String>,
+    permit: Option<String>,
     organisation: Option<String>,
 }
 
@@ -156,6 +158,7 @@ impl<'a> Caller<'a> {
 fn fill_access(event: &mut AuditEvent, access: &AccessContext, state: &AppState) {
     event.request_id.clone_from(&access.request_id);
     event.purpose.clone_from(&access.purpose);
+    event.permit.clone_from(&access.permit);
     event.organisation.clone_from(&access.organisation);
     event.legal_basis = state.backend().audit_legal_basis().map(str::to_owned);
 }
@@ -217,6 +220,15 @@ fn declared_purpose(req: &Request, backend: &ferroehr::service::FerroEhrService)
         .then(|| declared.to_owned())
 }
 
+/// The data permit the caller declared it acts under (`[audit] permit_header`),
+/// in the form [`ferroehr::system_log::access_context::permit_identifier`]
+/// accepts; anything else is recorded as absent.
+fn declared_permit(req: &Request, backend: &ferroehr::service::FerroEhrService) -> Option<String> {
+    let header = backend.audit_permit_header()?;
+    let declared = req.headers().get(header)?.to_str().ok()?;
+    access_context::permit_identifier(declared)
+}
+
 /// The organisation the caller acted for, from the identity token.
 ///
 /// The claim is `[authz.abac] organization_claim`, resolved the same way the
@@ -250,6 +262,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     let path = req.uri().path().to_owned();
     let timestamp = jiff::Timestamp::now();
     let purpose = declared_purpose(&req, state.backend());
+    let permit = declared_permit(&req, state.backend());
     // The correlation id `SetRequestIdLayer::x_request_id` stamped on the request;
     // the response gains it only from `PropagateRequestIdLayer`, which runs
     // outside this layer.
@@ -264,8 +277,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     // operation id describes — carries the same declared purpose this
     // middleware stamps on its own records
     // (`ferroehr::system_log::access_context`).
-    let resp =
-        ferroehr::system_log::access_context::with_purpose(purpose.clone(), next.run(req)).await;
+    let resp = access_context::with_declared(purpose.clone(), permit.clone(), next.run(req)).await;
     let status = resp.status();
 
     let op = resp.extensions().get::<AuditOpId>().copied();
@@ -275,6 +287,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     let access = AccessContext {
         request_id,
         purpose,
+        permit,
         organisation: caller_organisation(&state, caller.principal),
     };
 

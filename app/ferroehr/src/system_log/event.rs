@@ -170,6 +170,9 @@ pub struct AuditEvent {
     /// The purpose-of-use code the caller declared, when the deployment
     /// collects one.
     pub purpose: Option<String>,
+    /// The identifier of the data permit the caller declared it acts under
+    /// (`[audit] permit_header`), when it declared one.
+    pub permit: Option<String>,
     /// Whether the declared purpose is one of the deployment's emergency
     /// purpose codes (`[audit] emergency_purpose_codes`): an access declared
     /// as necessary to protect the vital interests of the data subject
@@ -360,6 +363,7 @@ impl AuditEvent {
             token_id: None,
             domain: AccessDomain::of(object),
             purpose: None,
+            permit: None,
             emergency_access: false,
             legal_basis: None,
             result_count: None,

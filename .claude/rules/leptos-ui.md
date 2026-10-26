@@ -147,8 +147,10 @@ book (leptos-rs/book `main`, Leptos 0.8; `/leptos-lookup`), never memory.
 - **The `ui-screenshot-guard` CI job**: a PR that touches
   `app/ferroehr-viewer/src/` commits refreshed captures under
   `website/book/src/viewer/img/` (`UI_E2E_DOCS_SHOTS=1 scripts/ui-e2e.sh`) or
-  carries the `no-ui-visual-change` label (zero visual effect only). Applying
-  the label raises a fresh run (#2777). The same pass captures every route at
+  carries the `no-ui-visual-change` label (zero visual effect only). It reads
+  only the PR's own commits, from the merge base
+  (`scripts/checks/ui-screenshot.sh`, #4117). Applying the label raises a
+  fresh run (#2777). The same pass captures every route at
   1440 and 390 px, light and dark, as the `ui-route-shots` artifact (#3910).
 
 ## 7. Bundle

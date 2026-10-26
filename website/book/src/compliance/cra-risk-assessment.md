@@ -56,7 +56,7 @@ assessment, 2026-10-07 (the table at the end lists the revisions).
   CRA Art. 13(4) as EHDS Art. 104(1) replaces it lets this assessment "be part
   of the risk assessment required by those Union legal acts". The
   [hazard log](hazard-log.md) is that EHDS-side assessment for the logging
-  component, and the [technical documentation](technical-documentation.md)
+  component, and the [technical documentation](https://ferrohealth.eu/docs/ehds/technical-documentation.html)
   carries both.
 
 ## The basis: intended purpose, use and environment

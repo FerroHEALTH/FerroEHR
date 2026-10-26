@@ -511,6 +511,7 @@ impl FerroEhrService {
         event.ehr_id = Some(ehr_id.to_string());
         event.result_count = Some(1);
         event.purpose = crate::system_log::access_context::current_purpose();
+        event.permit = crate::system_log::access_context::current_permit();
         if let Some(committer) = crate::service::committer::current_committer() {
             event.user_id = committer.subject;
         }
