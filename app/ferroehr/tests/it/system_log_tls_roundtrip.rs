@@ -114,6 +114,7 @@ async fn the_drain_closes_its_connection_with_close_notify_when_it_exits() {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         syslog: SyslogConfig {
             enabled: true,

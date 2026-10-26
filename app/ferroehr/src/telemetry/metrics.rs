@@ -1,17 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The metrics system: ONE `OpenTelemetry` `MeterProvider` feeding both
-//! surfaces.
+//! FerroEHR's own instruments, on the one meter provider of
+//! `ferrohealth-telemetry`.
 //!
 //! **No openEHR spec governs metrics — our own design/extension.**
 //!
-//! # Why one provider
-//!
-//! One [`SdkMeterProvider`] drives up to two readers: a Prometheus reader
-//! serving the pull surface and, when `telemetry.metrics_push` is on, a periodic
-//! OTLP reader. Every instrument reaches both by construction, so a family
-//! cannot exist on one surface and not the other.
+//! The provider is the family's: Prometheus reads it and, with
+//! `[telemetry.otlp]`, OTLP pushes it, so every instrument reaches both. The
+//! HTTP server metrics are the request log's `http.server.request.duration`.
 //!
 //! # Naming
 //!
@@ -27,9 +24,7 @@
 use std::sync::OnceLock;
 
 use opentelemetry::KeyValue;
-use opentelemetry::metrics::{Counter, Histogram, Meter, UpDownCounter};
-use opentelemetry_sdk::metrics::reader::MetricReader;
-use opentelemetry_sdk::metrics::{Instrument, SdkMeterProvider, Stream, Temporality};
+use opentelemetry::metrics::{Counter, Histogram, Meter};
 
 use crate::telemetry::build_info::BuildInfo;
 
@@ -38,14 +33,6 @@ pub const SCOPE: &str = "ferroehr";
 
 // ── Instrument names (no Prometheus suffix — the exporter adds it) ───────────
 
-/// HTTP request duration (`http_route`, `http_request_method`, `status_class`).
-pub const HTTP_REQUEST_DURATION: &str = "http_server_request_duration";
-/// In-flight HTTP requests (`http_route`).
-pub const HTTP_ACTIVE_REQUESTS: &str = "http_server_active_requests";
-/// HTTP request body size (`http_route`).
-pub const HTTP_REQUEST_BODY_SIZE: &str = "http_server_request_body_size";
-/// HTTP response body size (`http_route`).
-pub const HTTP_RESPONSE_BODY_SIZE: &str = "http_server_response_body_size";
 /// Authentication failures (`mechanism`, `reason`).
 pub const AUTH_FAILURES: &str = "auth_failures";
 /// Cedar authorization decisions (`result`).
@@ -106,10 +93,6 @@ pub const PROCESS_RESIDENT_MEMORY: &str = "process_resident_memory";
 
 // ── Bucket ladders ───────────────────────────────────────────────────────────
 
-/// HTTP request duration: 5 ms … 10 s.
-pub const HTTP_DURATION_BUCKETS: &[f64] = &[
-    0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
-];
 /// DB connection-acquire duration: 100 µs … 1 s.
 pub const DB_ACQUIRE_BUCKETS: &[f64] = &[
     0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0,
@@ -118,31 +101,16 @@ pub const DB_ACQUIRE_BUCKETS: &[f64] = &[
 pub const AQL_DURATION_BUCKETS: &[f64] = &[
     0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0,
 ];
-/// HTTP body sizes: 64 B … 16 MiB.
-pub const BODY_SIZE_BUCKETS: &[f64] = &[
-    64.0,
-    256.0,
-    1024.0,
-    4096.0,
-    16384.0,
-    65536.0,
-    262_144.0,
-    1_048_576.0,
-    4_194_304.0,
-    16_777_216.0,
-];
 
 /// Every histogram and its bucket ladder, in one place.
 ///
-/// The ladders are attached as SDK views rather than left to the default
-/// boundaries: `OTel`'s defaults are not ours, and a silently re-bucketed
-/// latency histogram invalidates every dashboard and alert built on it.
+/// Each instrument carries its ladder as explicit bucket boundaries rather
+/// than the default ones: `OTel`'s defaults are not ours, and a silently
+/// re-bucketed latency histogram invalidates every dashboard and alert built
+/// on it.
 #[must_use]
 pub fn histogram_views() -> Vec<(&'static str, &'static [f64])> {
     vec![
-        (HTTP_REQUEST_DURATION, HTTP_DURATION_BUCKETS),
-        (HTTP_REQUEST_BODY_SIZE, BODY_SIZE_BUCKETS),
-        (HTTP_RESPONSE_BODY_SIZE, BODY_SIZE_BUCKETS),
         (DB_POOL_ACQUIRE_DURATION, DB_ACQUIRE_BUCKETS),
         (AQL_QUERY_DURATION, AQL_DURATION_BUCKETS),
     ]
@@ -155,14 +123,6 @@ pub fn histogram_views() -> Vec<(&'static str, &'static [f64])> {
 /// is a compile error instead of a silently-new time series.
 #[derive(Debug)]
 pub struct Metrics {
-    /// HTTP request duration, seconds.
-    pub http_request_duration: Histogram<f64>,
-    /// In-flight HTTP requests.
-    pub http_active_requests: UpDownCounter<i64>,
-    /// HTTP request body size, bytes.
-    pub http_request_body_size: Histogram<u64>,
-    /// HTTP response body size, bytes.
-    pub http_response_body_size: Histogram<u64>,
     /// Authentication failures.
     pub auth_failures: Counter<u64>,
     /// Cedar authorization decisions.
@@ -213,33 +173,9 @@ impl Metrics {
     /// One flat struct literal on purpose: the whole instrument set is visible
     /// in one place, which is what makes an omission obvious. Splitting it into
     /// themed halves would hide exactly that.
-    #[expect(
-        clippy::too_many_lines,
-        reason = "a single struct literal enumerating every instrument; splitting it \
-                  would scatter the set this module exists to keep in one place"
-    )]
     #[must_use]
     pub fn new(meter: &Meter) -> Self {
         Self {
-            http_request_duration: meter
-                .f64_histogram(HTTP_REQUEST_DURATION)
-                .with_description("HTTP server request duration")
-                .with_unit("s")
-                .build(),
-            http_active_requests: meter
-                .i64_up_down_counter(HTTP_ACTIVE_REQUESTS)
-                .with_description("In-flight HTTP requests")
-                .build(),
-            http_request_body_size: meter
-                .u64_histogram(HTTP_REQUEST_BODY_SIZE)
-                .with_description("HTTP request body size")
-                .with_unit("By")
-                .build(),
-            http_response_body_size: meter
-                .u64_histogram(HTTP_RESPONSE_BODY_SIZE)
-                .with_description("HTTP response body size")
-                .with_unit("By")
-                .build(),
             auth_failures: meter
                 .u64_counter(AUTH_FAILURES)
                 .with_description("Authentication failures by mechanism and reason")
@@ -256,6 +192,7 @@ impl Metrics {
                 .f64_histogram(DB_POOL_ACQUIRE_DURATION)
                 .with_description("Database connection acquire latency")
                 .with_unit("s")
+                .with_boundaries(DB_ACQUIRE_BUCKETS.to_vec())
                 .build(),
             db_transactions: meter
                 .u64_counter(DB_TRANSACTIONS)
@@ -269,6 +206,7 @@ impl Metrics {
                 .f64_histogram(AQL_QUERY_DURATION)
                 .with_description("AQL query phase latency")
                 .with_unit("s")
+                .with_boundaries(AQL_DURATION_BUCKETS.to_vec())
                 .build(),
             aql_plan_cache_events: meter
                 .u64_counter(AQL_PLAN_CACHE_EVENTS)
@@ -357,71 +295,6 @@ pub fn init(meter: &Meter) -> &'static Metrics {
     METRICS.get_or_init(|| Metrics::new(meter))
 }
 
-/// A view applying `buckets` to the histogram named `name`.
-///
-/// `SdkMeterProvider::with_view` takes the closure directly
-/// (`Fn(&Instrument) -> Option<Stream>`), so no trait import is involved.
-fn bucket_view(
-    name: &'static str,
-    buckets: &'static [f64],
-) -> impl Fn(&Instrument) -> Option<Stream> + Send + Sync + 'static {
-    move |instrument: &Instrument| {
-        (instrument.name() == name).then(|| {
-            Stream::builder()
-                .with_aggregation(
-                    opentelemetry_sdk::metrics::Aggregation::ExplicitBucketHistogram {
-                        boundaries: buckets.to_vec(),
-                        record_min_max: true,
-                    },
-                )
-                .build()
-                .ok()
-        })?
-    }
-}
-
-/// Build the meter provider with the Prometheus reader always attached, and the
-/// OTLP periodic reader when `otlp_reader` is supplied.
-///
-/// Returns the provider and the Prometheus registry the pull surface renders.
-///
-/// # Errors
-/// Returns the exporter's error if the Prometheus reader cannot be built.
-pub fn build_provider<R: MetricReader>(
-    resource: opentelemetry_sdk::Resource,
-    otlp_reader: Option<R>,
-) -> Result<(SdkMeterProvider, prometheus::Registry), Box<dyn std::error::Error + Send + Sync>> {
-    let registry = prometheus::Registry::new();
-    let prometheus_reader = opentelemetry_prometheus::exporter()
-        .with_registry(registry.clone())
-        .build()?;
-
-    let mut builder = SdkMeterProvider::builder()
-        .with_resource(resource)
-        .with_reader(prometheus_reader);
-    if let Some(reader) = otlp_reader {
-        builder = builder.with_reader(reader);
-    }
-    for (name, buckets) in histogram_views() {
-        builder = builder.with_view(bucket_view(name, buckets));
-    }
-    Ok((builder.build(), registry))
-}
-
-/// Render the Prometheus text exposition for `/management/prometheus`.
-///
-/// # Errors
-/// Returns the encoder's error if the gathered families cannot be encoded.
-pub fn render(registry: &prometheus::Registry) -> Result<String, prometheus::Error> {
-    use prometheus::Encoder as _;
-    let encoder = prometheus::TextEncoder::new();
-    let mut buf = Vec::new();
-    encoder.encode(&registry.gather(), &mut buf)?;
-    // NOTE: `prometheus::Error` is the registry's own error space and carries
-    // no source-bearing variant, so the cause can only travel as its message.
-    String::from_utf8(buf).map_err(|e| prometheus::Error::Msg(e.to_string()))
-}
-
 /// Record the always-`1` build-identity gauge and the process start time.
 ///
 /// Both are observable gauges: their value is a fact about the process rather
@@ -450,18 +323,18 @@ pub fn register_static_gauges(meter: &Meter, build: &BuildInfo) {
         .build();
 }
 
-/// The temporality the OTLP push uses.
-///
-/// Cumulative, matching what the Prometheus surface exposes, so the two
-/// surfaces cannot disagree about the same counter.
-#[must_use]
-pub const fn otlp_temporality() -> Temporality {
-    Temporality::Cumulative
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A provider built exactly as the server builds it, with no export.
+    fn provider() -> ferrohealth_telemetry::telemetry::Telemetry {
+        ferrohealth_telemetry::telemetry::Telemetry::new(
+            &ferrohealth_telemetry::section::TelemetrySection::default(),
+            ferrohealth_telemetry::telemetry::Service::new(super::super::SERVICE, "test"),
+        )
+        .expect("the Prometheus reader should build")
+    }
 
     /// No instrument name may carry a Prometheus suffix: the exporter derives
     /// `_total` from the instrument kind and `_seconds`/`_bytes` from the unit,
@@ -469,10 +342,6 @@ mod tests {
     #[test]
     fn instrument_names_carry_no_prometheus_suffix() {
         let names = [
-            HTTP_REQUEST_DURATION,
-            HTTP_ACTIVE_REQUESTS,
-            HTTP_REQUEST_BODY_SIZE,
-            HTTP_RESPONSE_BODY_SIZE,
             AUTH_FAILURES,
             AUTHZ_CEDAR_DECISIONS,
             AUTHZ_REMOTE_PDP_CALLS,
@@ -511,13 +380,7 @@ mod tests {
     #[test]
     fn every_histogram_has_an_explicit_bucket_ladder() {
         let with_views: Vec<&str> = histogram_views().iter().map(|(name, _)| *name).collect();
-        for name in [
-            HTTP_REQUEST_DURATION,
-            HTTP_REQUEST_BODY_SIZE,
-            HTTP_RESPONSE_BODY_SIZE,
-            DB_POOL_ACQUIRE_DURATION,
-            AQL_QUERY_DURATION,
-        ] {
+        for name in [DB_POOL_ACQUIRE_DURATION, AQL_QUERY_DURATION] {
             assert!(
                 with_views.contains(&name),
                 "histogram {name} has no bucket view — it would take OTel's defaults"
@@ -531,8 +394,7 @@ mod tests {
     /// The viewer reads the rendered view over `/management/metrics`, so the
     /// right-hand column is the wire contract; it cannot import a constant from
     /// here (the viewer never depends on this crate).
-    const VIEWER_RENDERED_NAMES: [(&str, &str); 4] = [
-        (HTTP_ACTIVE_REQUESTS, "http_server_active_requests"),
+    const VIEWER_RENDERED_NAMES: [(&str, &str); 3] = [
         (COMPOSITIONS_COMMITTED, "compositions_committed_total"),
         (AQL_QUERIES, "aql_queries_total"),
         (DB_POOL_CONNECTIONS, "db_pool_connections"),
@@ -548,19 +410,13 @@ mod tests {
     /// otherwise degrade a viewer tile to an em-dash in silence.
     #[test]
     fn exporter_renders_the_viewer_metric_names() {
-        use opentelemetry::metrics::MeterProvider as _;
-
-        let (provider, registry) = build_provider(
-            opentelemetry_sdk::Resource::builder().build(),
-            None::<opentelemetry_sdk::metrics::PeriodicReader<opentelemetry_otlp::MetricExporter>>,
-        )
-        .expect("the Prometheus reader should build");
-        let meter = provider.meter(SCOPE);
+        let telemetry = provider();
+        let meter = telemetry.meter(SCOPE);
         let instruments = Metrics::new(&meter);
         let pool = crate::telemetry::samplers::pool_gauge(&meter);
 
         // A family reaches the exposition only once it carries a measurement.
-        instruments.http_active_requests.add(1, &[]);
+        instruments.db_pool_acquire_duration.record(0.0002, &[]);
         instruments
             .compositions_committed
             .add(1, &[KeyValue::new("change_type", "249")]);
@@ -570,7 +426,9 @@ mod tests {
         pool.record(2, &[KeyValue::new("state", "idle")]);
         pool.record(1, &[KeyValue::new("state", "in_use")]);
 
-        let rendered = render(&registry).expect("the exposition should encode");
+        let rendered = telemetry
+            .render_prometheus()
+            .expect("the exposition should encode");
         for (instrument, exported) in VIEWER_RENDERED_NAMES {
             assert!(
                 exported.starts_with(instrument),
@@ -590,6 +448,10 @@ mod tests {
                 "the exporter renders no sample line for {exported}: {rendered}"
             );
         }
+        assert!(
+            rendered.contains("db_pool_acquire_duration_seconds_bucket{le=\"0.0001\"}"),
+            "the acquire histogram carries its own ladder, not the default one: {rendered}"
+        );
     }
 
     /// One instrument, one kind.
@@ -601,14 +463,8 @@ mod tests {
     /// `db_pool_connections{state="in_use"}` tile reads that family verbatim.
     #[test]
     fn the_pool_gauge_is_the_only_db_pool_connections_stream() {
-        use opentelemetry::metrics::MeterProvider as _;
-
-        let (provider, registry) = build_provider(
-            opentelemetry_sdk::Resource::builder().build(),
-            None::<opentelemetry_sdk::metrics::PeriodicReader<opentelemetry_otlp::MetricExporter>>,
-        )
-        .expect("the Prometheus reader should build");
-        let meter = provider.meter(SCOPE);
+        let telemetry = provider();
+        let meter = telemetry.meter(SCOPE);
         // The whole shipped instrument set plus the sampler's gauge, on one
         // meter, exactly as the server creates them.
         let _instruments = Metrics::new(&meter);
@@ -616,7 +472,9 @@ mod tests {
         pool.record(2, &[KeyValue::new("state", "idle")]);
         pool.record(1, &[KeyValue::new("state", "in_use")]);
 
-        let rendered = render(&registry).expect("the exposition should encode");
+        let rendered = telemetry
+            .render_prometheus()
+            .expect("the exposition should encode");
         assert_eq!(
             rendered.matches("# TYPE db_pool_connections ").count(),
             1,

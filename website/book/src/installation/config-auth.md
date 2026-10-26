@@ -334,6 +334,7 @@ max_frequency = 999
 | `enabled` | bool | `false` | Mount the management router. |
 | `base_path` | string | `/management` | Base path for the management endpoints. |
 | `port` | int | unset ⇒ share the main listener | Serve management on its own listener and port. Must differ from the `server.bind` port, and it is plain HTTP, an internal surface. |
+| `flame_file` | path | unset | Span-timing capture: write the folded stacks of every span to this file, and render offline with `inferno-flamegraph`. Unset, the layer is not installed. For diagnostic sessions: the file grows with span traffic. |
 
 `[management.endpoints]`: `info`, `metrics`, `prometheus`, `env`, `loggers`
 and `flamegraph`, each enum{off,admin_only,private,public}, default `off`.

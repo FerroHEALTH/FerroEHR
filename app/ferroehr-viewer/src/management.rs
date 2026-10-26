@@ -64,8 +64,7 @@ type HeadlineMetric = (&'static str, Msg, Option<(&'static str, &'static str)>);
 // from the counter kind, never written on the instrument — and the correspondence
 // is pinned by the CDR's `exporter_renders_the_viewer_metric_names` test.
 #[cfg(not(target_arch = "wasm32"))]
-const HEADLINE_METRICS: [HeadlineMetric; 4] = [
-    ("http_server_active_requests", Msg::InFlightRequests, None),
+const HEADLINE_METRICS: [HeadlineMetric; 3] = [
     (
         "compositions_committed_total",
         Msg::CompositionsCommitted,

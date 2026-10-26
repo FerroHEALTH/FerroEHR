@@ -182,7 +182,7 @@ Four flamegraph instruments, all built on established crates (the sampling is
 
 - **Async attribution** (a sampled stack under tokio often blames the executor's
   poll loop; a span flame blames the instrumented operation): set
-  `telemetry.flame_file = "/tmp/ferroehr.folded"`; the
+  `management.flame_file = "/tmp/ferroehr.folded"`; the
   [`tracing-flame`](https://docs.rs/tracing-flame/latest/tracing_flame/) layer
   captures span timings as folded stacks, rendered offline:
 

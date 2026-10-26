@@ -216,22 +216,21 @@ statement_timeout_ms = 60000
 #? url = "postgres://ferroehr_migrator:...@audit-db:5432/ferroehr_audit"
 #? url_file = "/run/secrets/db-audit-migrate-dsn"
 
-# ── [log] — logging ──────────────────────────────────────────────────────────
-[log]
-format = "auto"              # auto | json | pretty ; PROD: json
-filter = "info,ferroehr=info"
-
-# ── [telemetry] — OpenTelemetry export (unset endpoint ⇒ OTel off) ────────────
+# ── [telemetry] — console, request log, OpenTelemetry export ──────────────────
+# The FerroHEALTH family's shared section (the ferrohealth-telemetry crate).
+# With no [telemetry.otlp] table nothing is exported.
 [telemetry]
-#? otlp_endpoint = "http://collector:4317"
-service_name = "ferroehr"
-environment = "dev"
-traces_sample_ratio = 1.0    # PROD: 0.1 is a common starting point
-metrics_push = false
-# Span-timing flamegraph capture (tracing-flame): write folded stack samples
-# to this file for offline rendering (inferno-flamegraph < file > flame.svg).
-# Unset ⇒ the layer is not installed (zero overhead). Diagnostic sessions only.
-#? flame_file = "/var/log/ferroehr/tracing.folded"
+format = "auto"              # auto | json | pretty ; PROD: json
+filter = "info,hyper=warn,tower=warn,h2=warn"
+logged_query_parameters = [] # query parameters whose values the request log may carry
+#? environment = "production" # deployment.environment.name on every span and metric
+#? [telemetry.otlp]
+#? endpoint = "http://collector:4317"
+#? traces = true
+#? metrics = true
+#? sample_ratio = 1.0          # PROD: 0.1 is a common starting point
+#? trust_roots_file = "/etc/ferroehr/otlp-ca.pem"
+#? client_identity_file = "/etc/ferroehr/otlp-client.pem"
 
 # ── [auth] — authentication (PROD: configure a mechanism) ─────────────────────
 # The FerroHEALTH family's shared section (the ferrohealth-smart crate): the
@@ -450,6 +449,10 @@ enabled = false
 enabled = false
 base_path = "/management"
 #? port = 9100                # separate listener on every interface, plain HTTP; production: plaintext_listener
+# Span-timing flamegraph capture (tracing-flame): write folded stack samples
+# to this file for offline rendering (inferno-flamegraph < file > flame.svg).
+# Unset, the layer is not installed. Diagnostic sessions only.
+#? flame_file = "/var/log/ferroehr/tracing.folded"
 
 # The single authority for this surface: one level per endpoint, and an
 # endpoint left "off" is not mounted at all (404). Levels: off | private |
@@ -619,10 +622,15 @@ retention_days = 0           # 0 = keep forever; reaped hourly otherwise
 # after which Abs. 3 requires deletion unverzüglich — so a declared controller
 # cannot keep records forever.
 sgb_v_309_controller = false
-# Seconds between two scheduled verifications of the hash chain (one day by
-# default; 0 = off). A finding is logged at ERROR, counted in
+# Seconds between two scheduled verifications of the hash chain (one hour by
+# default; 0 = off). Each run verifies the records written since the last
+# intact link. A finding is logged at ERROR, counted in
 # atna_audit_chain_findings and reported by the audit_chain readiness indicator.
-verify_interval_seconds = 86400
+verify_interval_seconds = 3600
+# Seconds between two scheduled full passes over the hash chain (one week by
+# default; 0 = only on demand, SELECT * FROM audit.verify_audit_chain()). A run
+# that found damage is always followed by a full pass.
+full_verify_interval_seconds = 604800
 
 # The EHDS priority category of every access (Annex II 3.2(c)), classified by
 # ehds-logging (FerroAUDIT): which categories each template, and failing that

@@ -63,6 +63,7 @@ async fn rejecting_sender() -> (ferroehr::system_log::sender::AuditSender, Audit
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         ..AuditConfig::default()
     };

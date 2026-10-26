@@ -23,7 +23,7 @@
 )]
 
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use axum::Router;
@@ -168,6 +168,7 @@ async fn app(
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         categories,
         ..AuditConfig::default()
@@ -737,24 +738,6 @@ where
     }
 }
 
-/// The global meter provider and its Prometheus registry, set once per test
-/// process.
-fn registry() -> &'static prometheus::Registry {
-    static REGISTRY: OnceLock<prometheus::Registry> = OnceLock::new();
-    REGISTRY.get_or_init(|| {
-        let (provider, registry) = ferroehr::telemetry::metrics::build_provider(
-            opentelemetry_sdk::Resource::builder().build(),
-            None::<opentelemetry_sdk::metrics::PeriodicReader<opentelemetry_otlp::MetricExporter>>,
-        )
-        .expect("build the meter provider");
-        opentelemetry::global::set_meter_provider(provider);
-        ferroehr::telemetry::metrics::init(&opentelemetry::global::meter(
-            ferroehr::telemetry::metrics::SCOPE,
-        ));
-        registry
-    })
-}
-
 /// The classification is audit content: neither the template id it rests on
 /// nor the category it yields appears in a span, a log event or a metric label
 /// of the classified request.
@@ -769,7 +752,9 @@ async fn the_classification_never_reaches_spans_logs_or_metrics() {
             },
             ..ManagementConfig::default()
         },
-        prometheus: Some(registry().clone()),
+        telemetry: Some(Arc::clone(common::telemetry())),
+        request_log: ferrohealth_telemetry::request_log::RequestLog::new(&[])
+            .with_metrics(&common::telemetry().meter(ferroehr::telemetry::metrics::SCOPE)),
         ..Observability::default()
     };
     let templates = json!({ IPS: ["Patient-Summaries"] });

@@ -4,7 +4,7 @@ description: >
   Generates a CPU flamegraph to find where the program spends its time —
   against the running server (the GET /management/flamegraph endpoint), a
   code path in isolation (the criterion benches under --profile-time), async
-  span attribution (the tracing-flame layer via telemetry.flame_file), or a
+  span attribution (the tracing-flame layer via management.flame_file), or a
   whole local binary run (cargo flamegraph). Use when the user asks to
   profile, find hotspots, see "where the time goes", or before any
   optimization work (profile-first is the standing perf rule).
@@ -74,9 +74,9 @@ true` as dev-deps.
 
 A sampled stack under tokio often blames the executor's poll loop; a span
 flame attributes wall time to the instrumented operation. Set
-`telemetry.flame_file` (config key, `[telemetry]` section; env
-`FERROEHR__TELEMETRY__FLAME_FILE`) — the layer is installed only when set
-(issue #1862; `ferroehr::telemetry::layers`). Folded stacks render offline:
+`management.flame_file` (config key, `[management]` section; env
+`FERROEHR__MANAGEMENT__FLAME_FILE`) — the layer is installed only when set
+(issue #1862; `ferroehr::telemetry::init`). Folded stacks render offline:
 
 ```bash
 cargo install inferno

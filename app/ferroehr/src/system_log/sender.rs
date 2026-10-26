@@ -22,8 +22,8 @@
 //!   each frame in `ihe-atna`'s spool and the crate's forwarder delivers it
 //!   (ITI TF-2 §3.20.4.1.1); the local store keeps no syslog frame.
 //! - **`fhir_feed`** (`[audit.fhir_feed]`, ITI-20 ATX:FHIR Feed): the crate's
-//!   forwarder delivers from the local store (`delivered_fhir_feed_at IS
-//!   NULL`), so a down ARR loses nothing, or with the store off from an
+//!   forwarder delivers from the local store (`audit.fhir_feed_outbox`),
+//!   so a down ARR loses nothing, or with the store off from an
 //!   in-memory spool.
 //!
 //! Failures are fail-open (drop + `tracing` + a `metrics` counter) or
@@ -507,7 +507,7 @@ pub async fn start(
 
     let store = if config.store.enabled {
         if let Some(pool) = pool {
-            Some(AuditStore::new(pool))
+            Some(AuditStore::new(pool).with_fhir_feed(config.fhir_feed.enabled))
         } else {
             tracing::warn!(
                 "ATNA audit store enabled but no database pool supplied — store sink off"
@@ -738,6 +738,8 @@ fn spawn_store_upkeep(
         store.clone(),
         check.clone(),
         Duration::from_secs(config.verify_interval_seconds),
+        (config.full_verify_interval_seconds != 0)
+            .then(|| Duration::from_secs(config.full_verify_interval_seconds)),
     )));
     Some(check)
 }
@@ -1082,6 +1084,7 @@ mod tests {
                 retention_years: None,
                 sgb_v_309_controller: false,
                 verify_interval_seconds: 0,
+                full_verify_interval_seconds: 0,
             },
             syslog: SyslogConfig {
                 enabled: true,

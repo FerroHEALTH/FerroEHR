@@ -514,8 +514,8 @@ kubectl -n ferroehr-test wait --for=condition=available \
 
 helm upgrade … --set metrics.enabled=true \
                --set config.management.endpoints.prometheus=public \
-               --set config.telemetry.otlp_endpoint=http://otel-collector:4317 \
-               --set config.telemetry.traces_sample_ratio=1.0
+               --set config.telemetry.otlp.endpoint=http://otel-collector:4317 \
+               --set config.telemetry.otlp.sample_ratio=1.0
 ```
 
 `metrics.enabled` only adds the `prometheus.io/*` annotations; the endpoint

@@ -15,6 +15,7 @@ publish = false
 [dependencies]
 ferrohealth-secret = { workspace = true }
 ferrohealth-health = { workspace = true, features = ["registry"] }
+ferrohealth-telemetry.workspace = true
 urlencoding.workspace = true
 # openEHR generated foundation: the domain model + the ITS-REST contract.
 openehr-base = { path = "../../crates/openehr-base" }
@@ -68,19 +69,12 @@ indexmap = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 jiff = { workspace = true }
-# Metrics facade + the Prometheus recorder handle (the HTTP-metrics tower layer
-# and the /management/prometheus render surface).
 # The on-demand CPU flamegraph behind /management/flamegraph (sampling
 # profiler + inferno SVG render; Linux + macOS only, matching our targets).
 pprof = { workspace = true }
 inferno = { workspace = true }
-# Trace-context propagation (W3C traceparent) + the OTel span extension used by
-# the root-span middleware; the export layer itself is installed in the binary.
+# FerroEHR's own instruments (the access-control counters).
 opentelemetry = { workspace = true }
-prometheus = { workspace = true }
-opentelemetry_sdk = { workspace = true }
-opentelemetry-otlp = { workspace = true }
-tracing-opentelemetry = { workspace = true }
 
 # Authentication and the SMART on openEHR scopes: the FerroHEALTH resource-server
 # crate checks every bearer token and Basic credential and enforces the route

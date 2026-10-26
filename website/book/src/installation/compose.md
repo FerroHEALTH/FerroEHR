@@ -515,8 +515,8 @@ Set these in your shell (or an `.env` file) to retune without editing anything:
 | `FERROEHR_DB_CPUS` / `FERROEHR_DB_MEM` | `4` / `4G` | Database container resource ceiling. |
 | `PG_INIT_USER` / `PG_INIT_PASSWORD` / `PG_INIT_DB` | `ferroehr` | App role, password, and database created by the DB image's init script. |
 | `POSTGRES_PASSWORD` | `postgres` | Bootstrap superuser password (init only). |
-| `FERROEHR__LOG__FORMAT` | `pretty` | Log rendering for `docker compose logs`. Set `json` for log collectors. |
-| `FERROEHR__LOG__FILTER` | `info` | Log level filter. |
+| `FERROEHR__TELEMETRY__FORMAT` | `pretty` | Log rendering for `docker compose logs`. Set `json` for log collectors. |
+| `FERROEHR__TELEMETRY__FILTER` | `info` | Log level filter. |
 | `FERROEHR__DB__MAX_CONNECTIONS` | `10` | Server connection-pool ceiling. |
 | `FERROEHR__SERVER__MAX_IN_FLIGHT` | `256` | In-flight request admission cap (`503` past it; `0` disables). |
 | `FERROEHR__SIGNING__ENABLED` | `true` | Version signing. |
@@ -604,9 +604,9 @@ docker compose -f docker-compose.yml -f docker-compose.observability.yml up
 ```
 
 The overlay reconfigures the server for that stack: it exports **traces and
-metrics** over OTLP/gRPC (`FERROEHR__TELEMETRY__OTLP_ENDPOINT` plus
-`FERROEHR__TELEMETRY__METRICS_PUSH=true`), switches stdout to JSON lines
-(`FERROEHR__LOG__FORMAT=json`), and enables the management surface on its own
+metrics** over OTLP/gRPC (`FERROEHR__TELEMETRY__OTLP__ENDPOINT` with
+`FERROEHR__TELEMETRY__OTLP__METRICS=true`), switches stdout to JSON lines
+(`FERROEHR__TELEMETRY__FORMAT=json`), and enables the management surface on its own
 internal port 9464 with `info`, `metrics` and `prometheus` reachable there. That
 port is only published on the Compose network; Grafana's 3000 is the sole
 published port.

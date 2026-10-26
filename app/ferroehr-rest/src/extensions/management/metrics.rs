@@ -19,6 +19,7 @@ use std::collections::BTreeMap;
 use axum::Json;
 use axum::extract::Path;
 use axum::response::{IntoResponse, Response};
+use ferrohealth_telemetry::telemetry::Telemetry;
 use http::{HeaderValue, StatusCode, header};
 use serde::Serialize;
 
@@ -26,13 +27,10 @@ use serde::Serialize;
 const PROM_CONTENT_TYPE: &str = "text/plain; version=0.0.4; charset=utf-8";
 
 /// `GET /management/prometheus`.
-pub(super) fn prometheus(registry: &::prometheus::Registry) -> Response {
-    let Ok(body) = ferroehr::telemetry::metrics::render(registry) else {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "metrics could not be rendered",
-        )
-            .into_response();
+pub(super) fn prometheus(telemetry: &Telemetry) -> Response {
+    let body = match telemetry.render_prometheus() {
+        Ok(body) => body,
+        Err(e) => return unrendered(&e),
     };
     (
         StatusCode::OK,
@@ -41,6 +39,16 @@ pub(super) fn prometheus(registry: &::prometheus::Registry) -> Response {
             HeaderValue::from_static(PROM_CONTENT_TYPE),
         )],
         body,
+    )
+        .into_response()
+}
+
+/// The `500` of a metrics surface whose exposition could not be rendered.
+fn unrendered(e: &ferrohealth_telemetry::telemetry::InitError) -> Response {
+    tracing::error!(error = %e, "the metrics could not be rendered");
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "metrics could not be rendered",
     )
         .into_response()
 }
@@ -71,16 +79,22 @@ pub(super) struct Measurement {
 }
 
 /// `GET /management/metrics`.
-pub(super) fn list(registry: &::prometheus::Registry) -> Json<MetricNames> {
-    let text = ferroehr::telemetry::metrics::render(registry).unwrap_or_default();
+pub(super) fn list(telemetry: &Telemetry) -> Response {
+    let text = match telemetry.render_prometheus() {
+        Ok(text) => text,
+        Err(e) => return unrendered(&e),
+    };
     let mut names: Vec<String> = base_names(&text).into_iter().collect();
     names.sort();
-    Json(MetricNames { names })
+    Json(MetricNames { names }).into_response()
 }
 
 /// `GET /management/metrics/{name}`.
-pub(super) fn detail(registry: &::prometheus::Registry, Path(name): Path<String>) -> Response {
-    let text = ferroehr::telemetry::metrics::render(registry).unwrap_or_default();
+pub(super) fn detail(telemetry: &Telemetry, Path(name): Path<String>) -> Response {
+    let text = match telemetry.render_prometheus() {
+        Ok(text) => text,
+        Err(e) => return unrendered(&e),
+    };
     let (metric_type, help, measurements) = samples_for(&text, &name);
     if measurements.is_empty() && metric_type.is_none() && help.is_none() {
         return (

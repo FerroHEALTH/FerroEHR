@@ -56,15 +56,14 @@ config:
     max_connections: 10
     min_connections: 0
     acquire_timeout_secs: 30
-  log:
+  telemetry:
     format: json
     filter: info,ferroehr=debug
-  telemetry:
-    otlp_endpoint: http://otel-collector:4317
-    service_name: ferroehr
     environment: production
-    traces_sample_ratio: 0.1
-    metrics_push: true
+    otlp:
+      endpoint: http://otel-collector:4317
+      sample_ratio: 0.1
+      metrics: true
   auth:
     enabled: true
     # A token issuer, the mechanism a real deployment supplies; the server reads
