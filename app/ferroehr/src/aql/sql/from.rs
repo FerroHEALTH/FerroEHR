@@ -1188,6 +1188,12 @@ impl Builder<'_> {
                 .and_where(col(&node, Node::VoId).eq(col(&voa, VersionRow::VoId)));
             self.q
                 .and_where(col(&node, Node::SysVersion).eq(col(&voa, VersionRow::SysVersion)));
+            // A class that occurs only as its object's root is the `num = 0`
+            // row, so the node probe is one primary-key row, not a scan of the
+            // whole version's nodes filtered by type (#4089).
+            if is_root_only(&r.rm_type) {
+                self.q.and_where(col(&node, Node::Num).eq(0));
+            }
             // The audit join is summoned lazily (`ensure_audit`) by the
             // version-field expressions that actually read it — a query that
             // never projects/filters audit fields pays no join to the
@@ -1773,6 +1779,22 @@ impl Builder<'_> {
 /// ([`crate::aql::error::AqlFeatureError::DemographicRootPlacement`]).
 pub(super) fn is_vo_root_type(t: &str) -> bool {
     crate::versioning::Kind::from_type(t).is_some()
+}
+
+/// Whether every class in `types` occurs only as the root (`num = 0`) of its
+/// versioned object.
+///
+/// The EHR holds its `EHR_STATUS`, `EHR_ACCESS` and `COMPOSITION`s as separate
+/// versioned objects (RM ehr master04 §The Parts of the EHR), and a
+/// `COMPOSITION` holds only `CONTENT_ITEM`s (RM ehr master05), so none of the
+/// three nests in a tree; a `FOLDER` nests in `FOLDER.folders` and is left out.
+/// Storing the root at `num = 0` is our own design (`crate::storage::codec`).
+pub(super) fn is_root_only(types: &crate::aql::ir::TypeSet) -> bool {
+    !types.is_empty()
+        && types
+            .names()
+            .iter()
+            .all(|t| matches!(t.as_str(), "COMPOSITION" | "EHR_STATUS" | "EHR_ACCESS"))
 }
 
 /// The implicitly lateral FROM function of a left binding on a comma-separated
