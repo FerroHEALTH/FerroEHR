@@ -25,7 +25,7 @@ use serde::Deserialize;
 use serde::de::IgnoredAny;
 use url::Url;
 
-use crate::config::secret::redact_userinfo;
+use ferrohealth_secret::secret_url::RedactedUrl;
 
 /// The protection space every challenge names when `[auth] realm` is empty
 /// (RFC 6750 §3, RFC 7617 §2).
@@ -273,9 +273,9 @@ fn check_issuer_userinfo(issuer: &str) -> Result<(), AuthConfigError> {
         return Ok(());
     };
     if !url.username().is_empty() || url.password().is_some() {
-        return Err(AuthConfigError::IssuerHasUserinfo(redact_userinfo(
-            issuer.trim(),
-        )));
+        return Err(AuthConfigError::IssuerHasUserinfo(
+            RedactedUrl(issuer.trim()).to_string(),
+        ));
     }
     Ok(())
 }

@@ -76,6 +76,9 @@ services:
       # Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068 profile
       # the CDR expects by default.
       FERROEHR__AUTH__TOKEN_PROFILE: jwt
+      # Keycloak writes the realm roles under the nested `realm_access.roles`,
+      # beside the RFC 9068 claims the shared default reads.
+      FERROEHR__AUTH__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
       # The development CA beside the image's own trust store: rustls reads
       # both variables (rustls-native-certs), so public CAs stay trusted.
       SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt

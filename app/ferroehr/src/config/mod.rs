@@ -10,11 +10,11 @@
 //! ([`load`]/[`assemble`]) and no per-subsystem `FERROEHR_*_CONFIG` file
 //! pointers.
 //!
-//! Precedence, lowest first: built-in `Default` impls, the config file, the
-//! `FERROEHR_*` environment (`__` for nesting), then `--set key=value`
-//! overrides. Two conventional aliases sit below their `FERROEHR_` forms within
-//! the env layer, `DATABASE_URL` for `db.url` and `RUST_LOG` for `log.filter`.
-//! [`assemble`] is a pure function of `(file, env_map, overrides)` with no
+//! Precedence, lowest first: built-in `Default` impls, the config file (named
+//! by `--config` or `FERROEHR_CONFIG`), the `FERROEHR__*` environment (`__` for
+//! nesting), then `--set key=value` overrides; the loader is the family's
+//! `ferrohealth-config`, and [`loader::loader`] names its fallbacks.
+//! [`assemble`] is a function of `(file, env_map, overrides)` with no
 //! process-global env, so the whole test plan runs on injected inputs.
 
 #![expect(
@@ -23,23 +23,23 @@
               dump, management env, validity-checker input, OpenAPI schema literals)"
 )]
 
-mod alias;
 pub mod loader;
 
 use crate::config::loader::{ConfigError, ConfigErrors};
-mod strict;
 
 pub mod auth;
 pub mod authz;
 pub mod deployment;
 pub mod management;
 pub mod profile;
-pub mod secret;
 pub mod server;
 pub mod smart;
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+
+use ferrohealth_config::loader::Loaded;
+use ferrohealth_secret::secret_url::RedactedUrl;
 
 use serde::{Deserialize, Serialize};
 
@@ -48,7 +48,7 @@ use serde::{Deserialize, Serialize};
 /// Every section has a `Default`, so the file may be empty or absent
 /// (zero-config boot). `deny_unknown_fields` makes a misspelled top-level
 /// table a boot error.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct FerroEhrConfig {
     /// `spec_profile` — the openEHR specification generation set the server
@@ -109,48 +109,6 @@ pub struct FerroEhrConfig {
     pub cohort: crate::service::linkage::cohort::config::CohortConfig,
     /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
     pub usage_report: crate::usage_report::config::UsageReportConfig,
-}
-
-impl Default for FerroEhrConfig {
-    fn default() -> Self {
-        Self {
-            spec_profile: profile::SpecProfile::default(),
-            deployment_profile: deployment::DeploymentProfile::default(),
-            deployment_accepts: Vec::default(),
-            server: server::ServerConfig::default(),
-            db: crate::db::DbConfig::default(),
-            storage: crate::db::domain::StorageConfig::default(),
-            log: crate::telemetry::config::LogConfig::default(),
-            telemetry: crate::telemetry::config::OtelConfig::default(),
-            // NOTE: RFC 9068 §2.2.3.1 names the first three role claims; Keycloak's
-            // nested `realm_access.roles` follows them, as this server has always read.
-            auth: ferrohealth_smart::config::AuthSection {
-                role_claims: vec![
-                    "roles".to_owned(),
-                    "groups".to_owned(),
-                    "entitlements".to_owned(),
-                    "realm_access.roles".to_owned(),
-                ],
-                ..ferrohealth_smart::config::AuthSection::default()
-            },
-            authz: authz::AuthzConfig::default(),
-            admin: server::AdminConfig::default(),
-            smart: smart::SmartConfig::default(),
-            management: management::ManagementConfig::default(),
-            signing: crate::versioning::signature::config::SigningConfig::default(),
-            licence: crate::licence::config::LicenceConfig::default(),
-            query: crate::service::query::config::QueryConfig::default(),
-            events: crate::extensions::events::config::EventsConfig::default(),
-            terminology: crate::service::terminology::config::TerminologyConfig::default(),
-            multimedia: crate::extensions::multimedia::config::MultimediaConfig::default(),
-            audit: crate::system_log::config::AuditConfig::default(),
-            privacy: crate::privacy::config::PrivacyConfig::default(),
-            demographic:
-                crate::service::demographic::identifier::config::DemographicConfig::default(),
-            cohort: crate::service::linkage::cohort::config::CohortConfig::default(),
-            usage_report: crate::usage_report::config::UsageReportConfig::default(),
-        }
-    }
 }
 
 /// The annotated default template `ferroehr config default` prints — a
@@ -662,25 +620,11 @@ impl FerroEhrConfig {
             .map_err(|e| ConfigError::semantic(format!("rendering config as TOML: {e}")))
     }
 
-    /// Returns the redacted TOML rendering `ferroehr config check` prints.
-    ///
-    /// The rendering is [`Self::to_redacted_json`]'s tree in the
-    /// configuration's own key order, with the unset keys TOML cannot carry
-    /// left out.
-    ///
-    /// # Errors
-    /// [`ConfigError`] if the tree cannot be serialized to TOML.
-    pub fn to_redacted_toml(&self) -> Result<String, ConfigError> {
-        toml::to_string_pretty(&without_nulls(self.to_redacted_json()?))
-            .map_err(|e| ConfigError::semantic(format!("rendering config as TOML: {e}")))
-    }
-
     /// Returns the effective configuration as a redacted JSON tree, the one
     /// redacted tree every rendering derives from.
     ///
     /// The binary builds the `/management/env` and `GET /admin/config`
-    /// snapshot with it; [`Self::to_redacted_toml`] and
-    /// [`Self::to_redacted_table`] render it. No openEHR spec governs
+    /// snapshot with it; [`Self::to_redacted_table`] renders it. No openEHR spec governs
     /// configuration — our own design/extension.
     ///
     /// Redaction is a property of the leaf type rather than of a key-name scan:
@@ -693,7 +637,8 @@ impl FerroEhrConfig {
     /// carries `userinfo`. A field therefore cannot leak by being renamed, and
     /// the `redacted_json_masks_every_secret_field` test enumerates the current
     /// secret set as the standing backstop. On top of the types, every string
-    /// leaf of the tree passes [`secret::redact_userinfo`], so a URL in a key
+    /// leaf of the tree that holds a URL passes `ferrohealth-secret`'s
+    /// [`RedactedUrl`], so a URL in a key
     /// that is not typed `SecretUrl`, or in a configuration no validation has
     /// run over, is masked too. `[auth]` is the `ferrohealth-smart` section,
     /// whose serialization writes each Basic password hash as `***`.
@@ -710,11 +655,22 @@ impl FerroEhrConfig {
     }
 }
 
-/// Masks the `userinfo` of every URL string in `tree`, recursively, with
-/// [`secret::redact_userinfo`].
+/// Returns `text` masked by `ferrohealth-secret`'s [`RedactedUrl`] when it
+/// holds `://`, and as written otherwise: text without `://` has no userinfo
+/// to mask, where [`RedactedUrl`] would mask it whole.
+#[must_use]
+pub fn mask_if_url(text: &str) -> String {
+    if text.contains("://") {
+        RedactedUrl(text).to_string()
+    } else {
+        text.to_owned()
+    }
+}
+
+/// Masks every URL string in `tree`, recursively, by [`mask_if_url`].
 fn mask_url_userinfo(tree: &mut serde_json::Value) {
     match tree {
-        serde_json::Value::String(text) => *text = secret::redact_userinfo(text),
+        serde_json::Value::String(text) => *text = mask_if_url(text),
         serde_json::Value::Array(items) => items.iter_mut().for_each(mask_url_userinfo),
         serde_json::Value::Object(members) => members.values_mut().for_each(mask_url_userinfo),
         serde_json::Value::Null | serde_json::Value::Bool(_) | serde_json::Value::Number(_) => {}
@@ -768,14 +724,15 @@ fn validate_terminology(
     }
 }
 
-/// Assemble the configuration from explicit inputs — the pure seam every test
+/// Assemble the configuration from explicit inputs — the seam every test
 /// drives.
 ///
-/// Runs the strict env + file passes, the conventional-alias layering, the
-/// layered merge, and `*_file` secret resolution.
+/// Reads the file, the environment map and the overrides through
+/// [`loader::loader`], then resolves every `*_file` secret sibling.
 ///
 /// # Errors
-/// [`ConfigErrors`] aggregating unknown-key, type, and file-resolution errors.
+/// [`ConfigErrors`] for an unreadable file, any refusal of the loader, and
+/// any `*_file` secret that cannot be resolved.
 #[expect(
     clippy::implicit_hasher,
     reason = "a boot-once seam over the process environment: no call site \
@@ -786,23 +743,35 @@ pub fn assemble(
     env: &HashMap<String, String>,
     overrides: &[(String, String)],
 ) -> Result<FerroEhrConfig, ConfigErrors> {
-    loader::assemble(file, env, overrides)
+    loader::assemble_from(file, env, overrides).map(|(_loaded, config)| config)
 }
 
-/// Boot loader: a thin process-environment shim over [`assemble`].
+/// Boot loader: reads the configuration of the running process.
 ///
-/// Discovers the config file, snapshots the environment, assembles, and emits
+/// The file is the one `cli_config` or `FERROEHR_CONFIG` names, and without
+/// either only the defaults, the environment and `overrides` stand. Emits
 /// the dev-default-DB boot warning.
 ///
 /// # Errors
-/// [`ConfigErrors`] on discovery failure or any assembly error.
+/// [`ConfigErrors`] on an unreadable file or any refusal of the loader.
 pub fn load(
     cli_config: Option<&Path>,
     overrides: &[(String, String)],
 ) -> Result<FerroEhrConfig, ConfigErrors> {
-    let env: HashMap<String, String> = std::env::vars().collect();
-    let file = loader::discover_file(cli_config, &env)?;
-    let config = assemble(file.as_deref(), &env, overrides)?;
+    let (_loaded, config) = load_with_provenance(cli_config, overrides)?;
+    Ok(config)
+}
+
+/// Reads the configuration of the running process as [`load`] does, with the
+/// loaded tree whose provenance `ferroehr config check` renders.
+///
+/// # Errors
+/// [`ConfigErrors`] on an unreadable file or any refusal of the loader.
+pub fn load_with_provenance(
+    cli_config: Option<&Path>,
+    overrides: &[(String, String)],
+) -> Result<(Loaded<FerroEhrConfig>, FerroEhrConfig), ConfigErrors> {
+    let (loaded, config) = loader::load_process(cli_config, overrides)?;
 
     // The dev default DSN is announced prominently at boot so it is never a
     // silent production trap.
@@ -816,23 +785,7 @@ pub fn load(
         );
     }
 
-    Ok(config)
-}
-
-/// The file discovery order, exposed for `config check`.
-///
-/// # Errors
-/// [`ConfigErrors`] if an explicitly-pointed-at file is missing/unreadable.
-#[expect(
-    clippy::implicit_hasher,
-    reason = "a boot-once seam over the process environment, like `assemble`: \
-              no call site supplies a custom hasher"
-)]
-pub fn discover_file(
-    cli_config: Option<&Path>,
-    env: &HashMap<String, String>,
-) -> Result<Option<PathBuf>, ConfigErrors> {
-    loader::discover_file(cli_config, env)
+    Ok((loaded, config))
 }
 
 /// The year count that satisfies every floor and ceiling in force when no day
@@ -1071,9 +1024,19 @@ mod tests {
 
     use assert_fs::prelude::*;
 
+    use std::path::PathBuf;
+
     use super::*;
     use crate::config::authz::AbacParam;
     use ferrohealth_secret::secret_url::SecretUrl;
+
+    /// `c` serialized as the TOML table `ferroehr config check` renders
+    /// (`ferrohealth_config::report::check_report` writes the same table).
+    fn rendered(c: &FerroEhrConfig) -> String {
+        toml::Table::try_from(c)
+            .expect("the tree renders as TOML")
+            .to_string()
+    }
 
     /// Build an injected env map from `(key, value)` pairs.
     fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
@@ -1539,18 +1502,33 @@ mod tests {
         assert!(err.to_string().contains("max_conections"), "{err}");
     }
 
+    /// A URL loses its userinfo and query; text without `://` keeps its text.
+    #[test]
+    fn mask_if_url_masks_only_a_url() {
+        assert_eq!(
+            mask_if_url("postgres://u:Qz7@db:5432/x?password=Qz7"),
+            "postgres://***@db:5432/x?***"
+        );
+        assert_eq!(
+            mask_if_url("s3.eu-west-1.amazonaws.com"),
+            "s3.eu-west-1.amazonaws.com"
+        );
+    }
+
     // ── 4. One grammar, no synonyms ─────────────────────────────────────────
 
     #[test]
-    fn single_separator_spelling_is_a_boot_error_naming_the_uniform_form() {
+    fn single_separator_spelling_is_a_boot_error() {
         // A single `_` where the grammar wants `__` is the easiest operator
-        // mistake to make, so it fails at boot naming the exact spelling
-        // meant — never silently honoured, and never set-but-unread.
+        // mistake to make, so it fails at boot naming the variable — never
+        // silently honoured, and never set-but-unread — while the uniform
+        // spelling binds.
         let err = assemble(None, &env(&[("FERROEHR_DB_MAX_CONNECTIONS", "7")]), &[])
             .expect_err("a single-separator spelling must fail");
         let msg = err.to_string();
         assert!(msg.contains("FERROEHR_DB_MAX_CONNECTIONS"), "{msg}");
-        assert!(msg.contains("FERROEHR__DB__MAX_CONNECTIONS"), "{msg}");
+        let c = assemble_ok(None, &env(&[("FERROEHR__DB__MAX_CONNECTIONS", "7")]), &[]);
+        assert_eq!(c.db.max_connections, 7);
     }
 
     // ── 5. Secrets ──────────────────────────────────────────────────────────
@@ -1560,7 +1538,7 @@ mod tests {
         let file =
             toml_file("[[auth.basic.users]]\nuser = \"alice\"\npassword_hash = \"topsecret\"\n");
         let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        let rendered = c.to_redacted_toml().expect("toml");
+        let rendered = rendered(&c);
         assert!(!rendered.contains("topsecret"), "secret leaked: {rendered}");
         assert!(
             rendered.contains("password_hash = \"***\""),
@@ -1648,7 +1626,7 @@ mod tests {
         // And a file-delivered DSN redacts exactly like an inline one — the
         // whole point of the `SecretUrl` type is that redaction is a property of
         // the type rather than of how the value arrived.
-        let rendered = via_file.to_redacted_toml().expect("toml");
+        let rendered = rendered(&via_file);
         assert!(
             !rendered.contains("u:p@"),
             "a file-loaded DSN must redact its credentials: {rendered}"
@@ -1795,7 +1773,7 @@ mod tests {
         c.telemetry.otlp_endpoint = Some(leaky(13));
         c.multimedia.endpoint = Some(leaky(14));
 
-        let toml = c.to_redacted_toml().expect("toml");
+        let toml = rendered(&c);
         let table = c.to_redacted_table().expect("table").to_string();
         let json = serde_json::to_string(&c.to_redacted_json().expect("json")).expect("json");
         let debug = format!("{c:?}");
@@ -2209,11 +2187,10 @@ mod tests {
     /// `external_ref.namespace` as if a deployment had declared it.
     #[test]
     fn a_blank_pseudonym_namespace_is_a_boot_error() {
-        let c = assemble_ok(
-            None,
-            &env(&[("FERROEHR__PRIVACY__SUBJECT_NAMESPACES", "  ")]),
-            &[],
-        );
+        // NOTE: no specification governs this: our own design; the loader drops a blank
+        // part of a comma-separated variable, so the blank namespace comes from the file.
+        let file = toml_file("[privacy]\nsubject_namespaces = [\"  \"]\n");
+        let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
         let errors = c
             .validate()
             .expect_err("a blank namespace must refuse boot");
@@ -2315,14 +2292,19 @@ mod tests {
 
     #[test]
     fn template_mentions_every_section() {
-        for section in alias::SECTIONS {
+        let sections = match serde_json::to_value(FerroEhrConfig::default()) {
+            Ok(serde_json::Value::Object(members)) => members.keys().cloned().collect::<Vec<_>>(),
+            other => panic!("the tree serializes as an object: {other:?}"),
+        };
+        for section in sections {
             let header = format!("[{section}]");
             let dotted = format!("[{section}."); // sub-tables count too
             let scalar = format!("\n{section} = "); // top-level scalar keys
             assert!(
                 DEFAULT_TEMPLATE.contains(&header)
                     || DEFAULT_TEMPLATE.contains(&dotted)
-                    || DEFAULT_TEMPLATE.contains(&scalar),
+                    || DEFAULT_TEMPLATE.contains(&scalar)
+                    || DEFAULT_TEMPLATE.contains(&format!("\n#? {section} = ")),
                 "template missing section {section}"
             );
         }
@@ -2827,8 +2809,8 @@ mod tests {
 
     /// The role keys moved to the shared `[auth]` section: their old place
     /// under `[authz.rbac]` stops startup naming the key, from the file and
-    /// from the environment, and `[auth] role_claims` keeps this server's
-    /// default when the file leaves it out.
+    /// from the environment, and `[auth] role_claims` keeps the shared
+    /// section's default when the file leaves it out.
     #[test]
     fn the_moved_role_keys_are_refused_at_their_old_place() {
         for (body, key) in [
@@ -2854,7 +2836,7 @@ mod tests {
         let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
         assert_eq!(
             c.auth.role_claims,
-            ["roles", "groups", "entitlements", "realm_access.roles"]
+            ferrohealth_smart::roles::default_claims()
         );
         assert!(!c.auth.role_claims.iter().any(|claim| claim == "scope"));
         let c = assemble_ok(
