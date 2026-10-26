@@ -1,5 +1,5 @@
 :spec_title: Archetype Identification
 :copyright_year: 2009
-:spec_status: STABLE
+:spec_status: SUPERSEDED
 :keywords: archetype, identification, governance, openehr
 :description: openEHR Archetype Identification

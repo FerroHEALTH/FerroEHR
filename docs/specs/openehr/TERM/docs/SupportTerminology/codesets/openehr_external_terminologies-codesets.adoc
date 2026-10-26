@@ -477,26 +477,28 @@ h| *Code*      h| *Description*       h| *Status*
 | *pl*      a| Polish       | active
 | *pt*      a| Portuguese       | active
 | *pt-br*      a| Portuguese (Brazil)       | active
-| *pt-pt*      a| Portuguese (Portugal) - DEPRECATED       | active
+| *pt-pt*      a| Portuguese (Portugal)       | active
 | *pa*      a| Punjabi, Panjabi       | active
 | *qu*      a| Quechua       | active
 | *qu-bo*      a| Quechua (Bolivia)       | active
 | *qu-ec*      a| Quechua (Ecuador)       | active
 | *qu-pe*      a| Quechua (Peru)       | active
 | *ro*      a| Romanian       | active
-| *ro-mo*      a| Romanian (Moldavia)       | active
+| *ro-md*      a| Romanian (Moldova)       | active
+| *ro-mo*      a| Romanian (Moldavia) - DEPRECATED (MO is Macao; use ro-md)       | active
 | *rm*      a| Romansh, Rhaeto-Romanic       | active
 | *rn*      a| Rundi, Kirundi       | active
 | *ru*      a| Russian       | active
-| *ru-mo*      a| Russian (Moldavia)       | active
+| *ru-md*      a| Russian (Moldova)       | active
+| *ru-mo*      a| Russian (Moldavia) - DEPRECATED (MO is Macao; use ru-md)       | active
 | *se*      a| Northern Sami       | active
-| *sz*      a| Sami (Lappish) - DEPRECATED       | active
+| *sz*      a| Sami (Lappish) - DEPRECATED (use se, Northern Sami)       | active
 | *sm*      a| Samoan       | active
 | *sg*      a| Sango       | active
 | *sc*      a| Sardinian       | active
 | *sr*      a| Serbian       | active
 | *sr-ba*      a| Serbian (Bosnia and Herzegovina)       | active
-| *sb*      a| Serbian - DEPRECATED       | active
+| *sb*      a| Serbian - DEPRECATED (use sr)       | active
 | *sn*      a| Shona       | active
 | *sd*      a| Sindhi       | active
 | *si*      a| Sinhala, Sinhalese       | active
@@ -524,7 +526,7 @@ h| *Code*      h| *Description*       h| *Status*
 | *es-ni*      a| Spanish (Nicaragua)       | active
 | *es-pr*      a| Spanish (Puerto Rico)       | active
 | *su*      a| Sundanese       | active
-| *sx*      a| Sutu - DEPRECATED       | active
+| *sx*      a| Sutu - DEPRECATED (use st)       | active
 | *sw*      a| Swahili       | active
 | *ss*      a| Swati, Swazi       | active
 | *sv*      a| Swedish       | active
@@ -557,7 +559,7 @@ h| *Code*      h| *Description*       h| *Status*
 | *wo*      a| Wolof       | active
 | *xh*      a| Xhosa       | active
 | *yi*      a| Yiddish       | active
-| *ji*      a| Yiddish - DEPRECATED       | active
+| *ji*      a| Yiddish - DEPRECATED (use yi)       | active
 | *yo*      a| Yoruba       | active
 | *za*      a| Zhuang, Chuang       | active
 | *zu*      a| Zulu       | active

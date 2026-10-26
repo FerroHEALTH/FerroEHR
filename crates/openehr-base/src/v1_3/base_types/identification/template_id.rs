@@ -6,9 +6,13 @@
 //! The openEHR `TEMPLATE_ID` spec class, generated from the vendored BMM
 //! meta-model.
 
-/// Identifier for templates. Lexical form to be determined.
+/// Identifier for a template.
+///
+/// The human-readable identifier (HRID) form is strongly recommended and is the modern (ADL 2) form: `namespace '::' rm_publisher '-' rm_package '-' rm_class '.' concept_id '.v' version_id`, e.g. `org.example::openEHR-EHR-COMPOSITION.discharge_summary.v1.0.0`.
+///
+/// For backward compatibility a legacy free-text template name is still permitted, but is deprecated. The HRID grammar is defined by the openEHR Artefact Identification specification and realised by the `Hrid` primitive type; `_is_hrid_` reports whether a given value conforms to it, and the segment and version accessors return their parts when it does (and are empty for a legacy identifier).
 #[doc(alias = "TEMPLATE_ID")]
-// NOTE: the fields stay public deliberately: the release states no constraint over this class's field values, so a validating construction door would check nothing — docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.template_id.adoc: “Identifier for templates. Lexical form to be determined.” — the release states no grammar, and §Syntaxes has no `template_id` production, so there is nothing a construction door could check.
+// NOTE: the fields stay public deliberately: the release states no constraint over this class's field values, so a validating construction door would check nothing — docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc §Template Identifiers: “a legacy free-text template name remains a valid `TEMPLATE_ID`; the HRID form cannot be enforced” — every string is a valid value, so there is nothing a construction door could check.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TemplateId {
     // inherited: OBJECT_ID

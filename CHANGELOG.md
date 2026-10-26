@@ -17,6 +17,14 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **`TEMPLATE_ID` answers its BASE 1.3.0 HRID functions** (#4068), on the
+  0.0.104 crate line. SPECBASE-42 gives `TEMPLATE_ID` `is_hrid`, `namespace`,
+  `qualified_rm_class_name`, `concept_id`, `version_id` and the major, minor
+  and patch versions (BASE base_types master05 §Template Identifiers). An
+  identifier in the namespaced HRID form of the Artefact Identification
+  reference expression (master03 §Formal Model) yields its parts; a legacy
+  free-text template name stays valid and answers `false` and empty parts.
+
 - **The FLAT builder builds an `INTERVAL_EVENT` at an abstract `EVENT` node
   when the input names its width** (#3898), on the 0.0.102 crate line. RM
   data_structures §EVENT makes `EVENT` abstract over `POINT_EVENT` and
@@ -71,6 +79,16 @@ workflow refuses a tag that has no matching section here.
   a free metadata value that is not a bare token and reads a quoted one back.
 
 ### Changed
+
+- **The BASE, AM, TERM and LANG specifications are re-vendored** (#4068,
+  #4069, #4070, #4071) at BASE `93abaf9f`, AM `51aa07b2`, TERM `b2dd077d` and
+  LANG `e61a7192`. The TERM `languages` code set restores `pt-pt`, adds
+  `ro-md` and `ru-md`, and names the replacement of each deprecated code
+  (SPECTERM-36), so the `openehr-term` code-set lookup accepts the two new codes. The
+  BASE `Interval.has` post-condition gains its brackets, which the
+  implementation already followed. AM's Archetype Identification document is
+  superseded by BASE Artefact Identification (SPECAM-103), and the citations
+  move with it. The nine `openehr-*` crates step to 0.0.104.
 
 - **Breaking: `/health/readiness` and `/management/health` serve the
   FerroHEALTH readiness document of `ferrohealth-health` 0.1.1** (#4087). The

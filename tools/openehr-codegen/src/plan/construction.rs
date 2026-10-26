@@ -186,11 +186,11 @@ pub(crate) static CONSTRUCTION: &[Construction] = &[
     Construction {
         class: "TEMPLATE_ID",
         door: Door::PlainRecord {
-            citation: "docs/specs/openehr/BASE/docs/UML/classes/\
-                       org.openehr.base.base_types.template_id.adoc: \u{201c}Identifier for \
-                       templates. Lexical form to be determined.\u{201d} \u{2014} the release \
-                       states no grammar, and \u{a7}Syntaxes has no `template_id` production, so \
-                       there is nothing a construction door could check.",
+            citation: "docs/specs/openehr/BASE/docs/base_types/\
+                       master05-identification_package.adoc \u{a7}Template Identifiers: \
+                       \u{201c}a legacy free-text template name remains a valid `TEMPLATE_ID`; \
+                       the HRID form cannot be enforced\u{201d} \u{2014} every string is a \
+                       valid value, so there is nothing a construction door could check.",
         },
     },
     Construction {

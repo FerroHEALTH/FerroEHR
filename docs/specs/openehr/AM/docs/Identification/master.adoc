@@ -62,28 +62,14 @@ The work reported in this paper has been funded by the following organisations:
 // --------------------------------------------- CHAPTERS -----------------------------------------------
 //
 
-:numbered:
-include::master01-preface.adoc[leveloffset=+1]
-include::master02-overview.adoc[leveloffset=+1]
-include::master03-artefact_source_id.adoc[leveloffset=+1]
-include::master04-versioning.adoc[leveloffset=+1]
-include::master05-lifecycle_mgt.adoc[leveloffset=+1]
-include::master06-distributed_governance.adoc[leveloffset=+1]
-include::master07-referencing.adoc[leveloffset=+1]
-include::master08-uris.adoc[leveloffset=+1]
-include::master09-artefact_authentication.adoc[leveloffset=+1]
-include::master10-scenarios.adoc[leveloffset=+1]
+== Superseded
+
+This specification has been superseded. Its content - the identification system for openEHR knowledge artefacts, covering human-readable and machine identifiers, versioning, lifecycle management, distributed governance, referencing and artefact authentication - has been relocated to the BASE component as the openEHR {openehr_base_artefact_identification}[Artefact Identification^] specification, which is now the normative source. The identifier types it defines are realised by the `Hrid` primitive in the openEHR {openehr_foundation_types}[Foundation Types^] specification and by `ARCHETYPE_ID` and `TEMPLATE_ID` in the openEHR {openehr_base_types}[Base Types^] specification.
+
+Released versions of this document remain available with the corresponding AM releases.
 
 //
 // --------------------------------------------- Amendment Record -----------------------------------------------
 //
 :sectnums!:
 include::master00-amendment_record.adoc[leveloffset=+1]
-
-//
-// --------------------------------------------- REFERENCES -----------------------------------------------
-//
-:numbered!:
-== References
-
-bibliography::[]

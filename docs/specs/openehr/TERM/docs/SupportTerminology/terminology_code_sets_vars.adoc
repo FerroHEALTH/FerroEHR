@@ -29,7 +29,12 @@
    + \
    NOTE: This code set does not cover all languages, whereas ISO 639-2 "alpha-3" covers many more \
    languages of cultural or indigenous interest, but which nevertheless are unlikely \
-   to be supported by current software or operating systems.
+   to be supported by current software or operating systems. \
+   + \
+   Region-qualified tags such as "pt-pt" or "pt-br" are valid RFC-5646 tags and are listed where a regional variant is in use. \
+   A code is marked DEPRECATED only when it is invalid or withdrawn in the IANA Language Subtag Registry, \
+   not because it denotes a regional variant. \
+   Tags are case-insensitive; the conventional form uses an uppercase region subtag, e.g. "pt-PT".
 :languages_links: {openehr_rm_ehr}#_entry_class[ENTRY.language^], \
    {openehr_rm_ehr}#_composition_class[COMPOSITION.language^], \
    {openehr_rm_data_types}#_dv_encapsulated_class[DV_ENCAPSULATED.language^]
