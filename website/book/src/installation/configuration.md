@@ -89,17 +89,11 @@ no way to spell an array index.
 
 ### File discovery
 
-The first of these that exists is loaded (later layers still override its
-values):
-
-1. `--config <path>`,
-2. `FERROEHR_CONFIG=<path>`,
-3. `./ferroehr.toml` (current directory),
-4. `/etc/ferroehr/ferroehr.toml`.
-
-An explicitly pointed-at file (1–2) is fatal if absent; the search-order files
-(3–4) are simply skipped when absent, but fatal if present and unreadable or
-unparseable.
+The server reads the file `--config <path>` names, or else the file
+`FERROEHR_CONFIG=<path>` names; later layers still override its values. A named
+file is fatal if absent, unreadable or unparseable. With neither set, the server
+reads no file and searches no directory: the environment and the defaults make
+the whole configuration.
 
 ### Strict validation
 

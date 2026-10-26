@@ -75,6 +75,7 @@ services:
       FERROEHR__AUTH__ALGORITHMS: "RS256"
       FERROEHR__AUTH__TOKEN_PROFILE: "jwt"
       FERROEHR__AUTH__JWKS_FILE: /etc/ferroehr/cnf-smart-jwks.json
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
     volumes:
       - ./docker/ferroehr.dev.toml:/etc/ferroehr/ferroehr.toml:ro
       - ./docs/conformance/party/smart/jwks.json:/etc/ferroehr/cnf-smart-jwks.json:ro

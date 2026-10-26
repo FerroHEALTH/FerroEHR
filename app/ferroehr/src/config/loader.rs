@@ -1,69 +1,77 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The one configuration loader.
+//! The one configuration loader, over the family's `ferrohealth-config`.
 //!
-//! Performs file discovery plus the pure `config`-crate assembly
-//! (defaults < file < env < `--set`) with the strict passes, the two
-//! conventional aliases, error enrichment, and `*_file` secret resolution.
-//! No openEHR spec governs configuration — our own design.
+//! [`loader`] names what is FerroEHR's own: the `FERROEHR` namespace, the
+//! fallbacks below the canonical `FERROEHR__` forms (`DATABASE_URL_UNPOOLED`,
+//! `DATABASE_URL` and the libpq set for `db.url`, `RUST_LOG` for
+//! `log.filter`, `PORT` for `server.bind`), and the names under the prefix
+//! that set no key. [`load_process`] and [`assemble_from`] then resolve every `*_file`
+//! secret sibling and read the CI detection of the usage report. No openEHR
+//! spec governs configuration — our own design.
 
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::collections::{BTreeMap, HashMap};
+use std::path::Path;
 
 use crate::db::DbConfig;
 use crate::db::domain::Domain;
 use crate::extensions::events::config::EventsConfig;
-use crate::usage_report::config::CiDetected;
-use config::{Config, Environment, File, FileFormat};
-use ferrohealth_secret::secret::Secret;
+use crate::usage_report::config::{CI_VARIABLES, CiDetected};
+use ferrohealth_config::libpq;
+use ferrohealth_config::loader::{Loaded, Loader};
+use ferrohealth_secret::file::{SecretError, read_secret, read_secret_file};
 use ferrohealth_secret::secret_url::SecretUrl;
 
 use super::FerroEhrConfig;
-use super::alias::{CONVENTIONAL, LIST_KEYS};
-use super::strict;
 
-/// One configuration error, rendered as a single human line.
+/// Names under the `FERROEHR_` prefix that set no configuration key and pass
+/// the strict sweep: the healthcheck argument, the build-time variables, and
+/// the Compose parameters that can reach the container environment.
+const RESERVED: &[&str] = &[
+    "FERROEHR_HEALTHCHECK_URL",
+    "FERROEHR_BUILD_EPOCH",
+    "FERROEHR_RUSTC",
+    "FERROEHR_IMAGE",
+    "FERROEHR_POSTGRES_IMAGE",
+    "FERROEHR_VIEWER_IMAGE",
+    "FERROEHR_EHRBASE_IMAGE",
+    "FERROEHR_EHRBASE_POSTGRES_IMAGE",
+    "FERROEHR_PORT",
+    "FERROEHR_DB_PORT",
+    "FERROEHR_S3_PORT",
+    "FERROEHR_VIEWER_PORT",
+    "FERROEHR_TERMINOLOGY_PORT",
+    "FERROEHR_PGP_PORT",
+    "FERROEHR_PGP_DB_PORT",
+    "FERROEHR_EHRBASE_PORT",
+    "FERROEHR_CPUS",
+    "FERROEHR_MEM",
+    "FERROEHR_DB_CPUS",
+    "FERROEHR_DB_MEM",
+    "FERROEHR_TERMINOLOGY_CPUS",
+    "FERROEHR_TERMINOLOGY_MEM",
+];
+
+/// One configuration error.
 #[derive(Debug, thiserror::Error)]
-#[error("{message}")]
-pub struct ConfigError {
-    message: String,
+pub enum ConfigError {
+    /// The file or the environment could not be read into the tree.
+    #[error(transparent)]
+    Load(#[from] ferrohealth_config::error::ConfigError),
+    /// A `*_file` secret sibling could not be resolved.
+    #[error(transparent)]
+    Secret(#[from] SecretError),
+    /// A semantic (cross-field) validation failure.
+    #[error("{0}")]
+    Semantic(String),
 }
 
 impl ConfigError {
-    fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-        }
-    }
-
     /// A semantic (cross-field) validation failure.
     #[must_use]
-    pub fn semantic(message: String) -> Self {
-        Self::new(message)
-    }
-
-    /// An unknown variable in the reserved `FERROEHR_` namespace.
-    #[must_use]
-    pub fn unknown_env(var: &str, suggestion: Option<String>) -> Self {
-        let hint = suggestion.map_or_else(String::new, |s| {
-            format!(
-                " — did you mean the `{s}` section (FERROEHR__{}__…)?",
-                s.to_ascii_uppercase()
-            )
-        });
-        Self::new(format!(
-            "unknown configuration environment variable `{var}`{hint}"
-        ))
-    }
-
-    /// A near-miss in the reserved `FERROEHR_` namespace: the right section but
-    /// the old single-`_` prefix. Suggest the exact uniform spelling.
-    #[must_use]
-    pub fn near_miss_env(var: &str, uniform: &str) -> Self {
-        Self::new(format!(
-            "unknown configuration environment variable `{var}` — did you mean `{uniform}`?"
-        ))
+    pub const fn semantic(message: String) -> Self {
+        Self::Semantic(message)
     }
 }
 
@@ -84,118 +92,106 @@ impl std::fmt::Display for ConfigErrors {
 
 impl std::error::Error for ConfigErrors {}
 
-/// File discovery: `--config` → `FERROEHR_CONFIG` → `./ferroehr.toml` →
-/// `/etc/ferroehr/ferroehr.toml`. An explicitly-pointed-at file must exist; the
-/// search-order files are optional.
+impl From<ConfigError> for ConfigErrors {
+    fn from(error: ConfigError) -> Self {
+        Self(vec![error])
+    }
+}
+
+/// The loader of the `FERROEHR` namespace.
+///
+/// The fallbacks sit below the canonical `FERROEHR__` form of their key, and
+/// a later fallback of the same key wins over an earlier one: for `db.url`
+/// the direct `DATABASE_URL_UNPOOLED` wins over `DATABASE_URL`, which wins
+/// over the URL composed from the libpq set, because a transaction pooler
+/// drops the session `search_path`.
 ///
 /// # Errors
-/// [`ConfigErrors`] if an explicit path is missing/unreadable.
-pub fn discover_file<S: std::hash::BuildHasher>(
+/// [`ConfigError::Load`] if the prefix is refused, which it never is.
+pub fn loader() -> Result<Loader, ConfigError> {
+    let loader = Loader::new("FERROEHR")?
+        .fallback_composed(libpq::VARIABLES, "db.url", libpq::url)
+        .fallback("DATABASE_URL", "db.url", None)
+        .fallback("DATABASE_URL_UNPOOLED", "db.url", None)
+        .fallback("RUST_LOG", "log.filter", None)
+        .fallback("PORT", "server.bind", Some(all_interfaces));
+    Ok(RESERVED
+        .iter()
+        .fold(loader, |loader, name| loader.reserve(*name)))
+}
+
+/// The all-interfaces bind of the platform's `PORT`.
+fn all_interfaces(port: &str) -> String {
+    format!("0.0.0.0:{port}")
+}
+
+/// Reads the configuration of the running process: the file `cli_config` or
+/// `FERROEHR_CONFIG` names, when either does, the process environment, and
+/// `overrides` last.
+///
+/// # Errors
+/// [`ConfigErrors`] for any refusal of the loader or of a `*_file` secret.
+pub fn load_process(
     cli_config: Option<&Path>,
-    env: &HashMap<String, String, S>,
-) -> Result<Option<PathBuf>, ConfigErrors> {
-    if let Some(path) = cli_config {
-        return require(path);
-    }
-    if let Some(path) = env.get("FERROEHR_CONFIG") {
-        return require(Path::new(path));
-    }
-    for candidate in ["./ferroehr.toml", "/etc/ferroehr/ferroehr.toml"] {
-        let path = Path::new(candidate);
-        if path.is_file() {
-            return Ok(Some(path.to_path_buf()));
-        }
-    }
-    Ok(None)
+    overrides: &[(String, String)],
+) -> Result<(Loaded<FerroEhrConfig>, FerroEhrConfig), ConfigErrors> {
+    let loaded = loader()?
+        .load_with::<FerroEhrConfig>(cli_config, overrides)
+        .map_err(ConfigError::from)?;
+    // NOTE: no specification governs this: our own design; a CI variable whose
+    // name or value is not UTF-8 cannot read `true`, so it is legitimately absent.
+    let ci: BTreeMap<String, String> = std::env::vars_os()
+        .filter_map(|(name, value)| Some((name.into_string().ok()?, value.into_string().ok()?)))
+        .filter(|(name, _)| CI_VARIABLES.contains(&name.as_str()))
+        .collect();
+    let config = finish(loaded.settings().clone(), |name| ci.get(name).cloned())?;
+    Ok((loaded, config))
 }
 
-fn require(path: &Path) -> Result<Option<PathBuf>, ConfigErrors> {
-    if path.is_file() {
-        Ok(Some(path.to_path_buf()))
-    } else {
-        Err(ConfigErrors(vec![ConfigError::new(format!(
-            "config file not found or unreadable: {}",
-            path.display()
-        ))]))
-    }
-}
-
-/// The pure assembly seam: file + env + CLI overrides folded into one
-/// validated [`FerroEhrConfig`], strictly (unknown keys rejected).
+/// Reads the configuration from explicit inputs, the seam every test drives:
+/// the file `file` names, the environment `env`, and `overrides` last.
 ///
 /// # Errors
-/// [`ConfigErrors`] collecting every problem found in one pass: an unreadable
-/// file, TOML parse errors, unknown/misspelled keys or env vars, type
-/// mismatches, and cross-field validation failures.
-pub fn assemble<S: std::hash::BuildHasher>(
+/// [`ConfigErrors`] for an unreadable file and for any refusal of the loader
+/// or of a `*_file` secret.
+pub fn assemble_from<S: std::hash::BuildHasher>(
     file: Option<&Path>,
     env: &HashMap<String, String, S>,
     overrides: &[(String, String)],
-) -> Result<FerroEhrConfig, ConfigErrors> {
-    let mut errors = strict::strict_env(env);
-    let file_content = read_config_file(file, &mut errors);
-    let alias_map = conventional_aliases(env);
-
-    // The canonical (uniform-grammar) `FERROEHR__…` variables. Allowlisted
-    // infra names never carry the double prefix, so the prefix check alone
-    // selects the canonical set.
-    let real_map: HashMap<String, String> = env
+) -> Result<(Loaded<FerroEhrConfig>, FerroEhrConfig), ConfigErrors> {
+    let text = file
+        .map(std::fs::read_to_string)
+        .transpose()
+        .map_err(|source| {
+            ConfigError::Load(ferrohealth_config::error::ConfigError::Read {
+                path: file.map(Path::to_path_buf).unwrap_or_default(),
+                source,
+            })
+        })?;
+    let environment: BTreeMap<String, String> = env
         .iter()
-        .filter(|(key, _)| key.starts_with("FERROEHR__"))
-        .map(|(key, value)| (key.clone(), value.clone()))
+        .map(|(name, value)| (name.clone(), value.clone()))
         .collect();
+    let loaded = loader()?
+        .load_sources_with::<FerroEhrConfig>(text.as_deref(), file, &environment, overrides)
+        .map_err(ConfigError::from)?;
+    let config = finish(loaded.settings().clone(), |name| env.get(name).cloned())?;
+    Ok((loaded, config))
+}
 
-    let mut builder = Config::builder();
-    // `[auth]` is the shared section, whose own defaults apply to every key the
-    // file leaves out; the role claims keep this server's default instead.
-    match builder.clone().set_default(
-        "auth.role_claims",
-        FerroEhrConfig::default().auth.role_claims,
-    ) {
-        Ok(next) => builder = next,
-        Err(e) => errors.push(ConfigError::new(format!("auth.role_claims default: {e}"))),
-    }
-    if let Some(content) = &file_content {
-        builder = builder.add_source(File::from_str(content, FileFormat::Toml));
-    }
-    builder = builder.add_source(env_source(alias_map));
-    builder = builder.add_source(env_source(real_map));
-    for (key, value) in overrides {
-        // `set_override` consumes the builder; clone so a rejected key keeps
-        // the builder alive for the remaining overrides (errors aggregate —
-        // the strict pass reports them all at once).
-        match builder.clone().set_override(key.clone(), value.clone()) {
-            Ok(next) => builder = next,
-            Err(e) => errors.push(ConfigError::new(format!("--set {key}={value}: {e}"))),
-        }
-    }
-
-    let config = match builder.build() {
-        // `serde_path_to_error` wraps the deserializer so a refusal names the
-        // SECTION PATH ("authz.rbac"), which plain serde errors do not carry —
-        // the ingredient that lets `enrich` attribute the right file line, or
-        // honestly say the key came from the environment.
-        Ok(built) => match serde_path_to_error::deserialize::<_, FerroEhrConfig>(built) {
-            Ok(config) => Some(config),
-            Err(e) => {
-                let path = e.path().to_string();
-                errors.push(enrich(&path, &e.to_string(), file_content.as_deref()));
-                None
-            }
-        },
-        Err(e) => {
-            errors.push(ConfigError::new(format!("assembling configuration: {e}")));
-            None
-        }
-    };
-
-    let Some(mut config) = config else {
-        return Err(ConfigErrors(errors));
-    };
-
+/// Resolves every `*_file` secret sibling of `config` and reads the CI
+/// detection through `lookup`.
+fn finish(
+    mut config: FerroEhrConfig,
+    lookup: impl Fn(&str) -> Option<String>,
+) -> Result<FerroEhrConfig, ConfigErrors> {
+    let mut errors = Vec::new();
     resolve_secret_files(&mut config, &mut errors);
-    config.usage_report.ci = CiDetected::from_lookup(|name| env.get(name).map(String::as_str));
-
+    let ci = CI_VARIABLES
+        .iter()
+        .filter_map(|name| lookup(name).map(|value| ((*name).to_owned(), value)))
+        .collect::<BTreeMap<String, String>>();
+    config.usage_report.ci = CiDetected::from_lookup(|name| ci.get(name).map(String::as_str));
     if errors.is_empty() {
         Ok(config)
     } else {
@@ -203,388 +199,149 @@ pub fn assemble<S: std::hash::BuildHasher>(
     }
 }
 
-/// Reads the configuration file, recording an unreadable path as an error
-/// rather than aborting the pass (every problem is reported at once).
-fn read_config_file(file: Option<&Path>, errors: &mut Vec<ConfigError>) -> Option<String> {
-    let path = file?;
-    match std::fs::read_to_string(path) {
-        Ok(content) => Some(content),
-        Err(e) => {
-            errors.push(ConfigError::new(format!(
-                "reading config file {}: {e}",
-                path.display()
-            )));
-            None
-        }
-    }
-}
-
-/// The conventional (non-`FERROEHR__`) environment aliases, mapped onto their
-/// canonical keys.
+/// Resolves every `*_file` sibling into its secret field.
 ///
-/// This whole layer sits BELOW the canonical source, so an `FERROEHR__` form
-/// always wins. Within the layer, a transaction-pooled endpoint (pgbouncer)
-/// hands statements to backend connections without the session `search_path`,
-/// which surfaces as intermittent 42P01 "relation does not exist" — so
-/// where a managed-Postgres integration offers the DIRECT endpoint beside the
-/// pooled one (Neon injects both), the direct one wins.
-fn conventional_aliases<S: std::hash::BuildHasher>(
-    env: &HashMap<String, String, S>,
-) -> HashMap<String, String> {
-    let mut alias_map: HashMap<String, String> = HashMap::new();
-    if let Some(value) = env.get("DATABASE_URL_UNPOOLED") {
-        alias_map.insert("FERROEHR__DB__URL".to_owned(), value.clone());
-    }
-    for (external, canonical) in CONVENTIONAL {
-        if let Some(value) = env.get(*external) {
-            alias_map
-                .entry((*canonical).to_owned())
-                .or_insert_with(|| value.clone());
-        }
-    }
-    // The PaaS port convention: container platforms (Vercel, Cloud Run,
-    // Heroku) inject `PORT` and route traffic to it. It carries only the port
-    // half, so it maps to an all-interfaces bind rather than joining the 1:1
-    // CONVENTIONAL table — still layered BELOW `FERROEHR__SERVER__BIND`.
-    if let Some(port) = env.get("PORT") {
-        alias_map
-            .entry("FERROEHR__SERVER__BIND".to_owned())
-            .or_insert_with(|| format!("0.0.0.0:{port}"));
-    }
-    if let Some(dsn) = libpq_dsn(env) {
-        // `or_insert`: a `DATABASE_URL` already claimed this entry in the
-        // CONVENTIONAL loop above, and it outranks the assembled form.
-        alias_map
-            .entry("FERROEHR__DB__URL".to_owned())
-            .or_insert(dsn);
-    }
-    alias_map
-}
-
-/// A DSN assembled from the libpq environment convention (PostgreSQL's own
-/// variable set, <https://www.postgresql.org/docs/current/libpq-envars.html>),
-/// which managed Postgres integrations (Neon on Vercel among them) inject
-/// instead of a URL.
-///
-/// The direct `PGHOST_UNPOOLED` host is preferred over the pooled `PGHOST`
-/// (the same transaction-pooling reason as `DATABASE_URL_UNPOOLED`).
-fn libpq_dsn<S: std::hash::BuildHasher>(env: &HashMap<String, String, S>) -> Option<String> {
-    let host = env.get("PGHOST_UNPOOLED").or_else(|| env.get("PGHOST"))?;
-    let mut dsn = String::from("postgres://");
-    if let Some(user) = env.get("PGUSER") {
-        dsn.push_str(&urlencoding::encode(user));
-        if let Some(password) = env.get("PGPASSWORD") {
-            dsn.push(':');
-            dsn.push_str(&urlencoding::encode(password));
-        }
-        dsn.push('@');
-    }
-    dsn.push_str(host);
-    if let Some(port) = env.get("PGPORT") {
-        dsn.push(':');
-        dsn.push_str(port);
-    }
-    dsn.push('/');
-    dsn.push_str(env.get("PGDATABASE").map_or("postgres", String::as_str));
-    if let Some(sslmode) = env.get("PGSSLMODE") {
-        dsn.push_str("?sslmode=");
-        dsn.push_str(sslmode);
-    }
-    Some(dsn)
-}
-
-/// An `FERROEHR_`-prefixed environment source over an injected map (the hermetic
-/// seam) with the `__` grammar, typed scalars, and comma-separated lists.
-fn env_source(map: HashMap<String, String>) -> Environment {
-    let mut env = Environment::with_prefix("FERROEHR")
-        .separator("__")
-        .try_parsing(true)
-        .list_separator(",")
-        .source(Some(map.into_iter().collect()));
-    for key in LIST_KEYS {
-        env = env.with_list_parse_key(key);
-    }
-    env
-}
-
-/// Enrich a `config`/serde deserialize error: surface the offending key under
-/// its full section path with a did-you-mean (from serde's "expected one of"
-/// list), and attribute a file line only when the key is defined under THAT
-/// section — an env-sourced key is named as such instead of pointing the
-/// operator at an unrelated valid line.
-fn enrich(path: &str, err: &str, file: Option<&str>) -> ConfigError {
-    let Some(field) = between(err, "unknown field `", "`") else {
-        return ConfigError::new(format!("invalid configuration: {err}"));
-    };
-    let section = section_of(path);
-    let full = if section.is_empty() {
-        field.clone()
-    } else {
-        format!("{section}.{field}")
-    };
-    let candidates = expected_fields(err);
-    let refs: Vec<&str> = candidates.iter().map(String::as_str).collect();
-    let suggestion = strict::did_you_mean(&field, &refs);
-    let line = file.and_then(|c| find_key_line_in_section(c, &section, &field));
-    let loc = line.map_or_else(
-        || {
-            let env_form = env_form_of(&section, &field);
-            format!(" (not in the configuration file — check the environment: {env_form})")
-        },
-        |l| format!(" (line {l})"),
-    );
-    let hint = suggestion.map_or_else(String::new, |s| format!("; did you mean `{s}`?"));
-    ConfigError::new(format!("unknown configuration key `{full}`{loc}{hint}"))
-}
-
-/// The section half of a `serde_path_to_error` path: the path up to the failing
-/// struct, with array indices dropped (`auth.basic.users[0]` → the TOML header
-/// form `auth.basic.users`). `serde_path_to_error` reports the unknown FIELD in
-/// the message, so the path IS the section.
-fn section_of(path: &str) -> String {
-    path.split('.')
-        .map(|seg| seg.split_once('[').map_or(seg, |(name, _)| name))
-        .filter(|seg| !seg.is_empty())
-        .collect::<Vec<_>>()
-        .join(".")
-}
-
-/// The `FERROEHR__…` environment spelling of a section + field, so the
-/// not-in-file diagnostic tells the operator exactly which variable to check.
-fn env_form_of(section: &str, field: &str) -> String {
-    let mut parts: Vec<String> = section
-        .split('.')
-        .filter(|s| !s.is_empty())
-        .map(str::to_uppercase)
-        .collect();
-    parts.push(field.to_uppercase());
-    format!("FERROEHR__{}", parts.join("__"))
-}
-
-/// The substring between `start` and the next `end`, if present.
-fn between(haystack: &str, start: &str, end: &str) -> Option<String> {
-    let rest = haystack.split_once(start)?.1;
-    rest.split_once(end).map(|(inner, _)| inner.to_owned())
-}
-
-/// The "expected one of `a`, `b`, …" candidate list from a serde error.
-fn expected_fields(err: &str) -> Vec<String> {
-    let Some(after) = err.split_once("expected one of ").map(|(_, r)| r) else {
-        return Vec::new();
-    };
-    after
-        .split(',')
-        .filter_map(|tok| between(tok, "`", "`"))
-        .collect()
-}
-
-/// The 1-based line where `key` is assigned UNDER `section` (`[section]` or
-/// `[[section]]` headers; the empty section is the top of the file before any
-/// header), for `file:line` diagnostics. A bare name match anywhere else would
-/// misattribute the diagnostic to an unrelated line.
-fn find_key_line_in_section(content: &str, section: &str, key: &str) -> Option<usize> {
-    let mut current = String::new();
-    for (i, line) in content.lines().enumerate() {
-        let trimmed = line.trim_start();
-        if let Some(header) = trimmed
-            .strip_prefix("[[")
-            .and_then(|r| r.split_once("]]"))
-            .map(|(h, _)| h)
-            .or_else(|| {
-                trimmed
-                    .strip_prefix('[')
-                    .and_then(|r| r.split_once(']'))
-                    .map(|(h, _)| h)
-            })
-        {
-            header.trim().clone_into(&mut current);
-            continue;
-        }
-        let is_assign = trimmed
-            .strip_prefix(key)
-            .is_some_and(|r| r.trim_start().starts_with('='));
-        if is_assign && current == section {
-            return Some(i + 1);
-        }
-    }
-    None
-}
-
-/// Resolve every `*_file` sibling into its `Secret`/string field immediately
-/// after extraction: read the file, trim a trailing newline, and reject
-/// when both the inline value and its `*_file` are set.
+/// The key-or-file rule is `ferrohealth-secret`'s: a file's trailing line
+/// ending is removed, an empty file is refused, and both set is refused.
 fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigError>) {
-    resolve_secret(
+    resolve(
         "signing.key_passphrase",
         &mut config.signing.key_passphrase,
-        config.signing.key_passphrase_file.take(),
+        config.signing.key_passphrase_file.take().as_deref(),
         errors,
     );
-    resolve_secret(
+    resolve(
         "demographic.identifier_protection.key",
         &mut config.demographic.identifier_protection.key,
-        config.demographic.identifier_protection.key_file.take(),
+        config
+            .demographic
+            .identifier_protection
+            .key_file
+            .take()
+            .as_deref(),
         errors,
     );
-    resolve_secret(
+    resolve(
         "multimedia.secret_access_key",
         &mut config.multimedia.secret_access_key,
-        config.multimedia.secret_access_key_file.take(),
+        config.multimedia.secret_access_key_file.take().as_deref(),
         errors,
     );
     if let Some(basic) = config.auth.basic.as_mut() {
         for user in &mut basic.users {
-            let Some(path) = user.password_hash_file.take() else {
-                continue;
-            };
-            if user.password_hash.is_some() {
-                errors.push(ConfigError::new(format!(
-                    "set only one of auth.basic.users[{:?}].password_hash / password_hash_file",
-                    user.user
-                )));
-                continue;
-            }
-            match read_trim(&path) {
-                Ok(hash) => user.password_hash = Some(secrecy::SecretString::from(hash)),
-                Err(e) => errors.push(e),
-            }
+            let key = format!("auth.basic.users[{:?}].password_hash", user.user);
+            let file = user.password_hash_file.take();
+            resolve(&key, &mut user.password_hash, file.as_deref(), errors);
         }
     }
 
-    // The credential-bearing URLs. Each has a non-empty dev default, so "the
-    // operator set it" means "it differs from that default" — a default is not
-    // a setting, and comparing against `Default::default()` cannot drift from
-    // the `Default` impl the way a duplicated literal would.
+    // The credential-bearing URLs with a non-empty dev default: "the operator
+    // set it" means "it differs from that default".
     let default_dsn = DbConfig::default().url;
-    resolve_secret_url(
+    let file = config.db.url_file.take();
+    resolve_defaulted(
         "db.url",
         &mut config.db.url,
         &default_dsn,
-        config.db.url_file.take(),
+        file.as_deref(),
         errors,
     );
     for domain in Domain::ALL {
         let settings = config.storage.domain_mut(domain);
         let file = settings.url_file.take();
-        resolve_optional_secret_url(
+        resolve(
             &format!("storage.{domain}.url"),
             &mut settings.url,
-            file,
+            file.as_deref(),
             errors,
         );
         let migrator = config.storage.migrate.domain_mut(domain);
         let file = migrator.url_file.take();
-        resolve_optional_secret_url(
+        resolve(
             &format!("storage.migrate.{domain}.url"),
             &mut migrator.url,
-            file,
+            file.as_deref(),
             errors,
         );
     }
-    resolve_optional_secret_url(
+    resolve(
         "db.migrate_url",
         &mut config.db.migrate_url,
-        config.db.migrate_url_file.take(),
+        config.db.migrate_url_file.take().as_deref(),
         errors,
     );
     let default_broker = EventsConfig::default().url;
-    resolve_secret_url(
+    let file = config.events.url_file.take();
+    resolve_defaulted(
         "events.url",
         &mut config.events.url,
         &default_broker,
-        config.events.url_file.take(),
+        file.as_deref(),
         errors,
     );
 }
 
-/// Read `path`'s contents (trailing newline trimmed) into `target` as a
-/// [`Secret`], unless `target` is already set (both-set is an error).
-fn resolve_secret(
+/// Resolves the optional secret `key` from its inline value or its file.
+fn resolve<T: From<secrecy::SecretString>>(
     key: &str,
-    target: &mut Option<Secret>,
-    file: Option<PathBuf>,
+    target: &mut Option<T>,
+    file: Option<&Path>,
     errors: &mut Vec<ConfigError>,
 ) {
-    let Some(path) = file else { return };
-    if target.is_some() {
-        errors.push(ConfigError::new(format!(
-            "set only one of {key} / {key}_file"
-        )));
-        return;
-    }
-    match read_trim(&path) {
-        Ok(secret) => *target = Some(Secret::new(secret)),
-        Err(e) => errors.push(e),
+    match read_secret(key, target.take(), file) {
+        Ok(value) => *target = value,
+        Err(error) => errors.push(error.into()),
     }
 }
 
-/// Read `path`'s contents into a [`SecretUrl`] field whose unset state is its
-/// own default value.
-fn resolve_secret_url(
+/// Resolves the URL `key`, whose unset state is its own default value, from
+/// its file.
+fn resolve_defaulted(
     key: &str,
     target: &mut SecretUrl,
     default: &SecretUrl,
-    file: Option<PathBuf>,
+    file: Option<&Path>,
     errors: &mut Vec<ConfigError>,
 ) {
     let Some(path) = file else { return };
     if target.expose() != default.expose() {
-        errors.push(ConfigError::new(format!(
-            "set only one of {key} / {key}_file"
-        )));
+        errors.push(
+            SecretError::Both {
+                key: key.to_owned(),
+            }
+            .into(),
+        );
         return;
     }
-    match read_trim(&path) {
-        Ok(url) => *target = SecretUrl::new(url),
-        Err(e) => errors.push(e),
+    match read_secret_file(key, path) {
+        Ok(url) => *target = SecretUrl::from(url),
+        Err(error) => errors.push(error.into()),
     }
-}
-
-/// Read `path`'s contents into `target` as a [`SecretUrl`], unless `target` is
-/// already set (both-set is an error).
-///
-/// The [`Option`] twin of [`resolve_secret_url`], for a URL with no built-in
-/// default: "the operator set it" is simply "it is `Some`".
-fn resolve_optional_secret_url(
-    key: &str,
-    target: &mut Option<SecretUrl>,
-    file: Option<PathBuf>,
-    errors: &mut Vec<ConfigError>,
-) {
-    let Some(path) = file else { return };
-    if target.is_some() {
-        errors.push(ConfigError::new(format!(
-            "set only one of {key} / {key}_file"
-        )));
-        return;
-    }
-    match read_trim(&path) {
-        Ok(url) => *target = Some(SecretUrl::new(url)),
-        Err(e) => errors.push(e),
-    }
-}
-
-fn read_trim(path: &Path) -> Result<String, ConfigError> {
-    std::fs::read_to_string(path)
-        .map(|s| s.trim_end_matches(['\r', '\n']).to_owned())
-        .map_err(|e| ConfigError::new(format!("reading secret file {}: {e}", path.display())))
 }
 
 #[cfg(test)]
 mod tests {
+    use std::path::{Path, PathBuf};
+
     use super::*;
 
+    fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
+            .collect()
+    }
+
+    /// An unknown key set from the environment names its full dotted path and
+    /// the variable that set it.
     #[test]
     fn an_env_sourced_unknown_key_names_its_section_and_the_variable() {
-        // FERROEHR__AUTHZ__RBAC__ENABLD builds a nested authz.rbac.enabld that
-        // RbacConfig rejects: the diagnostic must name the full path and the
-        // environment spelling, never a file line.
-        let env: HashMap<String, String> = [(
-            "FERROEHR__AUTHZ__RBAC__ENABLD".to_owned(),
-            "false".to_owned(),
-        )]
-        .into();
-        let err = assemble(None, &env, &[]).expect_err("the unknown key is refused");
+        let err = assemble_from(
+            None,
+            &env(&[("FERROEHR__AUTHZ__RBAC__ENABLD", "false")]),
+            &[],
+        )
+        .expect_err("the unknown key is refused");
         let text = err.to_string();
         assert!(
             text.contains("authz.rbac.enabld"),
@@ -594,46 +351,216 @@ mod tests {
             text.contains("FERROEHR__AUTHZ__RBAC__ENABLD"),
             "the environment spelling is named: {text}"
         );
-        assert!(!text.contains("(line "), "no file line exists: {text}");
     }
 
+    /// A misspelt key keeps its did-you-mean under its full path.
     #[test]
-    fn a_file_line_is_attributed_only_under_the_owning_section() {
-        // The misattribution twin: a bare `enabled =` exists earlier under
-        // [admin]; the offender lives under [authz.rbac] and must get ITS line.
-        let content =
-            "[admin]\nenabled = true\n\n[authz.rbac]\nadmin_role = \"ADMIN\"\nbogus_key = 1\n";
-        assert_eq!(
-            find_key_line_in_section(content, "authz.rbac", "bogus_key"),
-            Some(6)
-        );
-        assert_eq!(
-            find_key_line_in_section(content, "admin", "enabled"),
-            Some(2)
-        );
-        // The bare name from the WRONG section resolves to nothing.
-        assert_eq!(
-            find_key_line_in_section(content, "authz.rbac", "enabled"),
-            None
-        );
-    }
-
-    #[test]
-    fn sections_normalize_array_indices_and_env_forms_uppercase() {
-        assert_eq!(section_of("auth.basic.users[0]"), "auth.basic.users");
-        assert_eq!(section_of(""), "");
-        assert_eq!(
-            env_form_of("authz.rbac", "enabled"),
-            "FERROEHR__AUTHZ__RBAC__ENABLED"
-        );
-        assert_eq!(env_form_of("", "bogus"), "FERROEHR__BOGUS");
-    }
-
-    #[test]
-    fn the_did_you_mean_hint_survives_the_path_rewrite() {
-        let err = "unknown field `isser`, expected one of `issuer`, `audience`";
-        let text = enrich("auth", err, None).to_string();
+    fn the_did_you_mean_hint_names_the_full_path() {
+        let err = assemble_from(None, &env(&[("FERROEHR__AUTH__ISSER", "https://idp")]), &[])
+            .expect_err("the unknown key is refused");
+        let text = err.to_string();
         assert!(text.contains("auth.isser"), "{text}");
-        assert!(text.contains("did you mean `issuer`?"), "{text}");
+        assert!(text.contains("auth.issuer"), "{text}");
+    }
+
+    /// Every name the loader passes without setting a key is accepted.
+    #[test]
+    fn the_reserved_names_pass_the_sweep() {
+        let pairs: Vec<(&str, &str)> = RESERVED.iter().map(|name| (*name, "1")).collect();
+        assemble_from(None, &env(&pairs), &[]).expect("every reserved name passes");
+    }
+
+    // ── The shipped Compose artifacts must pass this very sweep ───────────────
+    //
+    // A Compose file that spells a reserved-namespace variable any other way
+    // produces a container that CANNOT BOOT, and the failure surfaces only at
+    // `docker compose up`. This guard walks the committed YAML and runs the real
+    // sweep over every variable the CDR service sets, so the drift fails in the
+    // test suite instead. No openEHR spec governs configuration or Compose —
+    // our own design.
+
+    /// The compose service that runs the CDR binary this crate configures.
+    /// Every other service (the database, the viewer with its own
+    /// `FERROEHR_VIEWER__…` namespace, an upstream SUT) is unrelated.
+    const CDR_SERVICE: &str = "ferroehr";
+
+    /// The repository root — this crate lives at `app/ferroehr`.
+    fn repo_root() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+    }
+
+    fn is_yaml(path: &Path) -> bool {
+        matches!(
+            Path::extension(path).and_then(std::ffi::OsStr::to_str),
+            Some("yml" | "yaml")
+        )
+    }
+
+    /// Whether the file is a Compose file at all (as opposed to a Prometheus /
+    /// Grafana asset living beside one).
+    fn declares_services(path: &Path) -> bool {
+        std::fs::read_to_string(path)
+            .is_ok_and(|yaml| yaml.lines().any(|line| line.trim_end() == "services:"))
+    }
+
+    /// Every committed Compose artifact: the root `docker-compose*.yml` files
+    /// plus every `services:`-bearing YAML under `docker/`.
+    fn compose_files() -> Vec<PathBuf> {
+        let root = repo_root();
+        let mut files = Vec::new();
+        for entry in std::fs::read_dir(&root).expect("read repo root").flatten() {
+            let path = entry.path();
+            let is_root_compose = path
+                .file_name()
+                .and_then(std::ffi::OsStr::to_str)
+                .is_some_and(|name| name.starts_with("docker-compose"));
+            if is_root_compose && is_yaml(&path) {
+                files.push(path);
+            }
+        }
+        let mut dirs = vec![root.join("docker")];
+        while let Some(dir) = dirs.pop() {
+            let Ok(entries) = std::fs::read_dir(dir) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    dirs.push(path);
+                } else if is_yaml(&path) && declares_services(&path) {
+                    files.push(path);
+                }
+            }
+        }
+        files.sort();
+        files
+    }
+
+    /// `(service, 1-based line, variable name)` for every `environment:` entry
+    /// in a Compose file. Parsed by indentation, which is all this guard needs:
+    /// these files are uniformly two-space indented, so a service name sits at
+    /// indent 2, its `environment:` key at 4, and the entries below that — in
+    /// either the mapping (`NAME: value`) or the list (`- NAME=value`) form
+    /// (docs.docker.com/reference/compose-file/services/#environment).
+    fn env_entries(yaml: &str) -> Vec<(String, usize, String)> {
+        let mut out = Vec::new();
+        let mut in_services = false;
+        let mut service = String::new();
+        let mut in_env = false;
+        for (index, raw) in yaml.lines().enumerate() {
+            let line = raw.trim_end();
+            let body = line.trim_start();
+            if body.is_empty() || body.starts_with('#') {
+                continue;
+            }
+            match line.len() - body.len() {
+                0 => {
+                    in_services = body == "services:";
+                    service.clear();
+                    in_env = false;
+                }
+                2 => {
+                    service = body.trim_end_matches(':').to_owned();
+                    in_env = false;
+                }
+                4 => in_env = body == "environment:",
+                _ => {
+                    if in_services
+                        && in_env
+                        && !service.is_empty()
+                        && let Some(name) = entry_name(body)
+                    {
+                        out.push((service.clone(), index + 1, name));
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// The variable name of one `environment:` entry, in either form.
+    fn entry_name(entry: &str) -> Option<String> {
+        let name = match entry.strip_prefix("- ") {
+            // List form: `- NAME=value`, or a bare `- NAME` host pass-through.
+            Some(item) => item.trim().split_once('=').map_or(item.trim(), |(n, _)| n),
+            // Mapping form: `NAME: value`.
+            None => entry.split_once(':')?.0,
+        };
+        let name = name.trim();
+        if name.is_empty() {
+            None
+        } else {
+            Some(name.to_owned())
+        }
+    }
+
+    /// The top-level keys of the tree, the sections a `FERROEHR__` variable
+    /// may address.
+    fn sections() -> Vec<String> {
+        match serde_json::to_value(FerroEhrConfig::default()) {
+            Ok(serde_json::Value::Object(members)) => members.keys().cloned().collect(),
+            other => panic!("the tree serializes as an object: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn shipped_compose_env_passes_the_strict_sweep() {
+        let files = compose_files();
+        assert!(
+            files.len() >= 2,
+            "no Compose artifacts discovered — the guard is blind: {files:?}"
+        );
+
+        let mut cdr_entries = Vec::new();
+        for path in &files {
+            let yaml = std::fs::read_to_string(path).expect("read compose file");
+            for (service, line, name) in env_entries(&yaml) {
+                if service == CDR_SERVICE {
+                    cdr_entries.push((path.clone(), line, name));
+                }
+            }
+        }
+
+        assert!(
+            cdr_entries
+                .iter()
+                .any(|(_, _, name)| name == "FERROEHR__DB__URL"),
+            "the CDR service's DSN variable was not extracted — the guard is \
+             blind (Compose layout or service name drift): {cdr_entries:?}"
+        );
+
+        let loader = loader().expect("the loader");
+        let config_variable = loader.config_variable();
+        let mut known: Vec<&str> = RESERVED.to_vec();
+        known.push(config_variable.as_str());
+        known.extend(libpq::VARIABLES);
+        known.extend(["DATABASE_URL", "DATABASE_URL_UNPOOLED", "RUST_LOG", "PORT"]);
+        let sections = sections();
+        let mut failures = Vec::new();
+        for (path, line, name) in &cdr_entries {
+            let one = BTreeMap::from([(name.clone(), String::new())]);
+            for error in ferrohealth_config::strict::sweep("FERROEHR", &one, &known) {
+                failures.push(format!("{}:{line}: {error}", path.display()));
+            }
+            if let Some(tail) = name.strip_prefix("FERROEHR__") {
+                let section = tail
+                    .split("__")
+                    .next()
+                    .unwrap_or_default()
+                    .to_ascii_lowercase();
+                if !sections.contains(&section) {
+                    failures.push(format!(
+                        "{}:{line}: {name} names no section of the configuration",
+                        path.display()
+                    ));
+                }
+            }
+        }
+        assert!(
+            failures.is_empty(),
+            "Compose sets variables the boot-time sweep rejects, so the \
+             composed server cannot start:\n{}",
+            failures.join("\n")
+        );
     }
 }

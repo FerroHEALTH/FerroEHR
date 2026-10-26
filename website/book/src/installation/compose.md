@@ -535,7 +535,7 @@ unset key reaches the server as absent rather than as an empty string.
 
 The server container is passed `FERROEHR__DB__URL` (assembled from the database
 variables), and its configuration file is the inline quickstart config,
-delivered to `/etc/ferroehr/ferroehr.toml` where the server auto-discovers it.
+delivered to `/etc/ferroehr/ferroehr.toml`, which `FERROEHR_CONFIG` names.
 Any other setting from the [configuration reference](configuration.md) can be
 added under the `ferroehr` service's `environment:` block and takes precedence
 over the file. Every variable uses the same `FERROEHR__…` grammar as the rest of

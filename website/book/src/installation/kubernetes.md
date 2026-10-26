@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 16.0.1 -n ferroehr \
+  --version 16.0.2 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.4.2
 ```
@@ -55,7 +55,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.1
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.2
 ```
 
 ### Pin two versions, not one
@@ -68,7 +68,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 16.0.1` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 16.0.2` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.4.2` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -168,10 +168,11 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.1 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.2 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
+>   -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
 >   -e FERROEHR__DB__URL=postgres://u:p@db:5432/ferroehr \
 >   --entrypoint /usr/local/bin/ferroehr ghcr.io/ferrohealth/ferroehr:<tag> config check
 > ```
@@ -315,7 +316,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.1 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.2 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -786,7 +787,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 16.0.1 -n ferroehr --reuse-values \
+  --version 16.0.2 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -885,7 +886,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 16.0.1 -n ferroehr --reuse-values \
+  --version 16.0.2 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1213,7 +1214,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.1 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.2 \
   -n ferroehr -f my-values.yaml | less
 ```
 
