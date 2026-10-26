@@ -1886,10 +1886,7 @@ mod tests {
         }
 
         // Structural placeholders present where a secret was set.
-        assert_eq!(
-            value["auth"]["basic"]["users"][0]["password_hash"],
-            "***"
-        );
+        assert_eq!(value["auth"]["basic"]["users"][0]["password_hash"], "***");
         assert_eq!(value["signing"]["key_passphrase"], "***");
         assert_eq!(value["multimedia"]["secret_access_key"], "***");
         assert_eq!(
