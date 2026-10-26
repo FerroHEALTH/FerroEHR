@@ -505,6 +505,7 @@ pub fn validate_rm_terminology(ty: &str, value: &Value, out: &mut Vec<InvariantV
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openehr_term::codes::AuditChangeType;
 
     /// This table is keyed on the exact wire `_type`, so an invariant declared
     /// on an ancestor reaches a descendant only by being repeated. `ATTESTATION`
@@ -536,10 +537,10 @@ mod tests {
         // The accepting twin: a code the group does carry raises nothing.
         let valid = serde_json::json!({
             "change_type": {
-                "value": "creation",
+                "value": AuditChangeType::Creation.rubric(),
                 "defining_code": {
                     "terminology_id": { "value": "openehr" },
-                    "code_string": "249"
+                    "code_string": AuditChangeType::Creation.code()
                 }
             }
         });

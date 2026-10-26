@@ -234,6 +234,64 @@ fn the_underscore_families_are_taken_whole() {
     }
 }
 
+/// A party whose `external_ref.type` is not the type the builder fills in
+/// keeps it through FLAT and STRUCTURED: master05 gives the reference type no
+/// row, so the flattener writes such a party as `|raw` (master04 §Raw
+/// canonical JSON) and the builder takes it whole.
+#[test]
+fn a_party_reference_of_another_type_round_trips() {
+    let wt = web_template();
+    let mut flat = action_flat();
+    flat.insert("ctx/language".to_owned(), json!("en"));
+    flat.insert("ctx/territory".to_owned(), json!("US"));
+    let composer = party_of("ORGANISATION", "Ward 3", "c-9");
+    let facility = party_of("PERSON", "Dr. Home Visit", "f-2");
+    let provider = party_of("ORGANISATION", "Pharmacy", "pr-2");
+    let performer = json!({
+        "_type": "PARTICIPATION",
+        "function": {"_type": "DV_TEXT", "value": "requester"},
+        "performer": party_of("ORGANISATION", "Clinic", "org-9"),
+    });
+    for (key, value) in [
+        ("minimal/composer|raw".to_owned(), composer.clone()),
+        (
+            "minimal/context/_health_care_facility|raw".to_owned(),
+            facility.clone(),
+        ),
+        (format!("{ENTRY}/_provider|raw"), provider.clone()),
+        (
+            "minimal/context/_participation:0|raw".to_owned(),
+            performer.clone(),
+        ),
+    ] {
+        flat.insert(key, value);
+    }
+    let first = composition_from_flat(&flat, &wt, NOW).unwrap_or_else(|e| panic!("builds: {e}"));
+    decodes(&first);
+    let again_flat = composition_to_flat(&first, &wt).unwrap_or_else(|e| panic!("flattens: {e}"));
+    let from_flat =
+        composition_from_flat(&again_flat, &wt, NOW).unwrap_or_else(|e| panic!("builds: {e}"));
+    let structured = openehr_sdt::flat::convert::composition_to_structured(&first, &wt)
+        .unwrap_or_else(|e| panic!("structures: {e}"));
+    let from_structured =
+        openehr_sdt::flat::convert::composition_from_structured(&structured, &wt, NOW)
+            .unwrap_or_else(|e| panic!("builds from STRUCTURED: {e}"));
+    for (pointer, value) in [
+        ("/composer", composer),
+        ("/context/health_care_facility", facility),
+        ("/content/0/provider", provider),
+        ("/context/participations/0", performer),
+    ] {
+        for (form, rm) in [
+            ("first", &first),
+            ("FLAT", &from_flat),
+            ("STRUCTURED", &from_structured),
+        ] {
+            assert_eq!(rm.pointer(pointer), Some(&value), "{pointer} after {form}");
+        }
+    }
+}
+
 #[test]
 fn a_raw_family_beside_a_suffix_is_refused() {
     let wt = web_template();

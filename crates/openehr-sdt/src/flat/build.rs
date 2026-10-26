@@ -592,6 +592,16 @@ fn build(
     if node.has_input() {
         return build_leaf(node, sim, path);
     }
+    let interval;
+    let node = if is_interval_input(node, sim) {
+        interval = WebTemplateNode {
+            rm_type: "INTERVAL_EVENT".to_owned(),
+            ..node.clone()
+        };
+        &interval
+    } else {
+        node
+    };
 
     let mut obj = Map::new();
     obj.insert("_type".into(), json!(concrete_type(&node.rm_type)));
@@ -1470,6 +1480,21 @@ fn is_multiple(attr: &str) -> bool {
 
 /// Map a (possibly abstract/generic) web-template rm type to the concrete
 /// RM type to instantiate. `EVENT` is abstract → `POINT_EVENT`.
+/// Whether the input at an abstract `EVENT` node asks for an `INTERVAL_EVENT`.
+///
+/// RM data_structures `master06-history_package.adoc` §EVENT makes `EVENT`
+/// abstract over `POINT_EVENT` and `INTERVAL_EVENT`, and only the latter
+/// carries `width`, `math_function` and `sample_count` (master05
+/// §INTERVAL_EVENT `/width`, `/math_function`, `|sample_count`). Input naming
+/// any of them chooses the interval; otherwise the node builds as the point
+/// event [`concrete_type`] gives.
+fn is_interval_input(node: &WebTemplateNode, sim: &SimNode) -> bool {
+    base_type(&node.rm_type) == "EVENT"
+        && (sim.children.contains_key("width")
+            || sim.children.contains_key("math_function")
+            || sim.attrs.contains_key("sample_count"))
+}
+
 fn concrete_type(rm_type: &str) -> &str {
     match base_type(rm_type) {
         "EVENT" => "POINT_EVENT",

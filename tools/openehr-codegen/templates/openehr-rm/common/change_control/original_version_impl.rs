@@ -41,6 +41,7 @@ impl<T> OriginalVersion<T> {
 
 #[cfg(test)]
 mod tests {
+    use openehr_term::codes::{AuditChangeType, VersionLifecycleState};
     use super::*;
     use crate::v1_2::common::generic::audit_details::{AuditDetails, AuditDetailsData};
     use crate::v1_2::common::generic::party_proxy::PartyProxy;
@@ -74,7 +75,7 @@ mod tests {
                     value: "2026-07-07T10:11:12Z".to_owned(),
                 },
                 change_type: DvCodedText {
-                    value: "modification".to_owned(),
+                    value: AuditChangeType::Modification.rubric().to_owned(),
                     hyperlink: None,
                     formatting: None,
                     mappings: openehr_base::containers::present_nonempty(Vec::new()),
@@ -84,7 +85,7 @@ mod tests {
                         terminology_id: TerminologyId {
                             value: "openehr".to_owned(),
                         },
-                        code_string: "251".to_owned(),
+                        code_string: AuditChangeType::Modification.code().to_owned(),
                         preferred_term: None,
                     },
                 },
@@ -110,7 +111,7 @@ mod tests {
                     .collect(),
             ),
             lifecycle_state: DvCodedText {
-                value: "complete".to_owned(),
+                value: VersionLifecycleState::Complete.rubric().to_owned(),
                 hyperlink: None,
                 formatting: None,
                 mappings: openehr_base::containers::present_nonempty(Vec::new()),
@@ -120,7 +121,7 @@ mod tests {
                     terminology_id: TerminologyId {
                         value: "openehr".to_owned(),
                     },
-                    code_string: "532".to_owned(),
+                    code_string: VersionLifecycleState::Complete.code().to_owned(),
                     preferred_term: None,
                 },
             },

@@ -56,6 +56,7 @@ impl RevisionHistory {
 
 #[cfg(test)]
 mod tests {
+    use openehr_term::codes::AuditChangeType;
     use super::*;
     use crate::v1_2::common::generic::attestation::Attestation;
     use crate::v1_2::common::generic::audit_details::AuditDetailsData;
@@ -101,7 +102,7 @@ mod tests {
         AuditDetails::AuditDetails(AuditDetailsData {
             system_id: "ferroehr.local".to_owned(),
             time_committed: dv_date_time(time),
-            change_type: change_type("249", "creation"),
+            change_type: change_type(AuditChangeType::Creation.code(), AuditChangeType::Creation.rubric()),
             description: None,
             committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
         })
@@ -115,7 +116,7 @@ mod tests {
         AuditDetails::Attestation(Attestation {
             system_id: "ferroehr.local".to_owned(),
             time_committed: dv_date_time(time),
-            change_type: change_type("666", "attestation"),
+            change_type: change_type(AuditChangeType::Attestation.code(), AuditChangeType::Attestation.rubric()),
             description: None,
             committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
             attested_view: None,
