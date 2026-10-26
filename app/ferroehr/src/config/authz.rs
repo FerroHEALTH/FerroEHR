@@ -21,7 +21,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::secret::redact_userinfo;
+use ferrohealth_secret::secret_url::RedactedUrl;
 use ferrohealth_secret::secret_url::SecretUrl;
 
 /// The server-wide disposition for an EHR that carries no
@@ -476,7 +476,7 @@ impl AbacConfig {
             .ok_or(AuthzConfigError::RemoteServerMissing)?;
         if !server.ends_with('/') {
             return Err(AuthzConfigError::RemoteServerTrailingSlash(
-                redact_userinfo(server),
+                RedactedUrl(server).to_string(),
             ));
         }
         for kind in REQUIRED_REMOTE_POLICY_KINDS {

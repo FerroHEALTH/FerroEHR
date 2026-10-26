@@ -75,8 +75,8 @@ deployment whose database role has none of those rights (see
 
 Two global flags and three subcommand groups round the CLI out:
 
-- `--config <path>` points at a configuration file, overriding the search
-  order (`FERROEHR_CONFIG`, `./ferroehr.toml`, `/etc/ferroehr/ferroehr.toml`);
+- `--config <path>` points at a configuration file, overriding
+  `FERROEHR_CONFIG` (with neither, the server reads no file);
 - `--set <key>=<value>` is a repeatable dotted-path override with the highest
   precedence of all (`--set db.max_connections=40`);
 - `ferroehr config check` validates the effective configuration and prints it

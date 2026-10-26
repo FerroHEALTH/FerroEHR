@@ -233,8 +233,12 @@ ferrohealth-authz = { version = "=0.1.5", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
-# Verified on crates.io 2026-10-26 (0.1.0).
-ferrohealth-secret = "=0.1.0"
+# Verified on crates.io 2026-10-26 (0.2.0).
+ferrohealth-secret = "=0.2.0"
+# The family's configuration loader (FerroSYS): the file, the `FERROEHR__`
+# environment, the fallbacks and `--set`, strict with did-you-mean, and the
+# `config check` rendering. Verified on crates.io 2026-10-26 (0.2.4).
+ferrohealth-config = "=0.2.4"
 # The family's health document, indicator registry and process lifecycle
 # (FerroSYS): `/health/readiness` and `/management/health` serve its
 # `Readiness`, and the viewer reads the same document. The default build is the
@@ -420,7 +424,6 @@ lapin = "4"                       # AMQP 0.9.1 client (RabbitMQ) — contributio
 # ── Errors & utilities ───────────────────────────────────────────────────────
 thiserror = "2"                    # v2 current
 anyhow = "1"                       # binaries only
-config = "0.15.25"                   # the one server-config loader (W-13); figment removed
 toml = "1"                         # standalone TOML parser + `config check`/`/management/env` render
 clap = { version = "4", features = ["derive", "env"] }
 arc-swap = "1"

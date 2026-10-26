@@ -409,6 +409,7 @@ secret VALUE refused outright.
 {{- end -}}
 {{- $_ := set $usageReport "enabled" $.Values.usageReport.enabled -}}
 {{- $_ := set $usageReport "deployment" "helm" -}}
+{{- include "ferroehr.integers" $rendered -}}
 {{- toToml $rendered -}}
 {{- end }}
 
@@ -1022,7 +1023,7 @@ spec governs this; FerroBRIDGE's own configuration reference defines the keys.
 {{- if not (hasKey $config "mappings") -}}{{- $_ := set $config "mappings" (dict) -}}{{- end -}}
 {{- $_ := set (get $config "mappings") "directory" (include "ferroehr.bridgeMappingsDir" $) -}}
 {{- end -}}
-{{- include "ferroehr.bridgeIntegers" $config -}}
+{{- include "ferroehr.integers" $config -}}
 {{- toToml $config -}}
 {{- end }}
 
@@ -1048,23 +1049,23 @@ whose `password` is.
 {{/*
 Turn every whole-number float in a values subtree back into an integer, in
 place. Helm decodes values through JSON, so `timeout_ms: 5000` reaches a
-template as float64 and `toToml` writes `5000.0`; FerroBRIDGE reads its integer
-keys strictly and refuses a float at boot. A number inside a list is left as it
-is: no FerroBRIDGE key takes a list of integers.
+template as float64 and `toToml` writes `5000.0`; FerroEHR and FerroBRIDGE read
+their integer keys strictly and refuse a float at boot. A number inside a list
+is left as it is: neither server has a key that takes a list of integers.
 */}}
-{{- define "ferroehr.bridgeIntegers" -}}
+{{- define "ferroehr.integers" -}}
 {{- $node := . -}}
 {{- if kindIs "map" $node -}}
 {{- range $key, $value := $node -}}
 {{- if kindIs "float64" $value -}}
 {{- if eq $value (float64 (int64 $value)) -}}{{- $_ := set $node $key (int64 $value) -}}{{- end -}}
 {{- else if or (kindIs "map" $value) (kindIs "slice" $value) -}}
-{{- include "ferroehr.bridgeIntegers" $value -}}
+{{- include "ferroehr.integers" $value -}}
 {{- end -}}
 {{- end -}}
 {{- else if kindIs "slice" $node -}}
 {{- range $value := $node -}}
-{{- if kindIs "map" $value -}}{{- include "ferroehr.bridgeIntegers" $value -}}{{- end -}}
+{{- if kindIs "map" $value -}}{{- include "ferroehr.integers" $value -}}{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- end }}

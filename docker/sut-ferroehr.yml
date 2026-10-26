@@ -123,6 +123,8 @@ services:
       ferroehr-postgres:
         condition: service_healthy
     environment:
+      # The server reads the file this names and searches for none.
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
       FERROEHR__DB__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
       # Connection-pool ceiling; measured comparison runs raise it in lockstep
       # with the upstream stack's HikariCP pool (config parity — the dominant
@@ -156,7 +158,7 @@ services:
       FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-false}
       FERROEHR__USAGE_REPORT__DEPLOYMENT: compose
     volumes:
-      # Auto-discovered at config search-order position 4 (no pointer needed).
+      # Named by FERROEHR_CONFIG above.
       - ./docker/ferroehr.dev.toml:/etc/ferroehr/ferroehr.toml:ro
     ports:
       - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_PORT:-8080}:8080"

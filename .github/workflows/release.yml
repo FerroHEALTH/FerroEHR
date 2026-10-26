@@ -955,7 +955,7 @@ jobs:
         org.opencontainers.image.authors=Cadasto B.V. <https://www.cadasto.com/contact/>
         org.opencontainers.image.licenses=BUSL-1.1 AND PostgreSQL
         org.opencontainers.image.base.name=postgres:18.6
-        org.opencontainers.image.base.digest=sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+        org.opencontainers.image.base.digest=sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
 
   # ── The gate that makes the pushed digests referencable ─────────────────────
   # The same reusable pair containers.yml uses, so the main lane and the
