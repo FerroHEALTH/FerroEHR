@@ -7,7 +7,7 @@ metadata:
     {{- include "ferroehr.labels" . | nindent 4 }}
 data:
   # The whole server configuration as one ferroehr.toml, mounted at
-  # /etc/ferroehr/ferroehr.toml (config search-order position 4). Rendered by
+  # /etc/ferroehr/ferroehr.toml, which the Deployment names in FERROEHR_CONFIG. Rendered by
   # `ferroehr.configToml`, never from .Values.config verbatim: a ConfigMap is not
   # a sensitive object, so a secret-bearing key is either refused (when a
   # `secrets:` key carries it) or moves this whole file into the Secret, in which

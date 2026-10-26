@@ -2,14 +2,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Viewer configuration: one TOML file (`ferroehr-viewer.toml`) with
-//! `FERROEHR_VIEWER__…` environment overrides, mirroring the CDR's
-//! one-file/strict/env-grammar convention.
+//! `FERROEHR_VIEWER__…` environment overrides, read by `ferrohealth-config`
+//! as the CDR's is.
 //!
 //! No openEHR spec governs configuration — our own design. The viewer is
 //! stateless: sessions ride a sealed cookie, and there is no database or local store
 //! of domain state either — every fact it shows lives in the CDR and is read
 //! over ITS-REST.
 
+use std::collections::BTreeMap;
+use std::path::Path;
+
+use ferrohealth_config::loader::Loader;
+use ferrohealth_secret::file::read_secret_file;
+use secrecy::ExposeSecret;
 use serde::Deserialize;
 
 /// The single configuration root for the viewer.
@@ -220,79 +226,78 @@ impl Default for SessionConfig {
 
 /// One configuration error, rendered as a single human line.
 #[derive(Debug, thiserror::Error)]
-#[error("{0}")]
-pub struct ConfigError(String);
+pub enum ConfigError {
+    /// The file or the environment could not be read into the tree.
+    #[error(transparent)]
+    Load(#[from] ferrohealth_config::error::ConfigError),
+    /// A `*_file` secret could not be read.
+    #[error(transparent)]
+    Secret(#[from] ferrohealth_secret::file::SecretError),
+    /// The tree read but one of its values is refused.
+    #[error("{0}")]
+    Invalid(String),
+}
+
+/// The loader of the `FERROEHR_VIEWER` namespace.
+///
+/// The Compose parameters `FERROEHR_VIEWER_PORT` and `FERROEHR_VIEWER_IMAGE`
+/// can reach the container environment, so the sweep passes them.
+///
+/// # Errors
+/// [`ConfigError::Load`] if the prefix is refused, which it never is.
+pub fn loader() -> Result<Loader, ConfigError> {
+    Ok(Loader::new("FERROEHR_VIEWER")?
+        .reserve("FERROEHR_VIEWER_PORT")
+        .reserve("FERROEHR_VIEWER_IMAGE"))
+}
 
 /// Load the viewer configuration: defaults < file < environment.
 ///
-/// File discovery: `$FERROEHR_VIEWER_CONFIG` → `./ferroehr-viewer.toml` →
-/// `/etc/ferroehr/viewer.toml` (search-order files are optional; an
-/// explicitly pointed-at file must exist). Env overrides use the uniform
-/// grammar `FERROEHR_VIEWER__<SECTION>__<KEY>` (e.g.
-/// `FERROEHR_VIEWER__CDR__BASE_URL`).
+/// The file is the one `FERROEHR_VIEWER_CONFIG` names; with none named, no
+/// file is read. Env overrides use the uniform grammar
+/// `FERROEHR_VIEWER__<SECTION>__<KEY>` (e.g. `FERROEHR_VIEWER__CDR__BASE_URL`).
 ///
 /// # Errors
 /// Returns a [`ConfigError`] on an unreadable/invalid file, an unknown key
-/// (strict deserialization), a type mismatch, or an unresolvable
-/// `client_secret_file`.
+/// or variable (strict deserialization), a type mismatch, or an unreadable
+/// `*_file` secret.
 pub fn load() -> Result<ViewerConfig, ConfigError> {
-    let mut builder = config::Config::builder();
+    let loaded = loader()?.load::<ViewerConfig>(None)?;
+    finish(loaded.settings().clone())
+}
 
-    // The one env read that cannot flow through the config tree: it is the
-    // pointer AT the file the tree is assembled from, resolved before any
-    // source exists.
-    #[expect(
-        clippy::disallowed_methods,
-        reason = "this IS the viewer's config-tree loader; the config-file pointer is its bootstrap input and has no earlier source to come from"
-    )]
-    if let Ok(explicit) = std::env::var("FERROEHR_VIEWER_CONFIG") {
-        builder = builder.add_source(config::File::new(&explicit, config::FileFormat::Toml));
-    } else {
-        builder = builder
-            .add_source(
-                config::File::new("ferroehr-viewer.toml", config::FileFormat::Toml).required(false),
-            )
-            .add_source(
-                config::File::new("/etc/ferroehr/viewer.toml", config::FileFormat::Toml)
-                    .required(false),
-            );
-    }
+/// Load the viewer configuration from explicit inputs, the seam the tests
+/// drive: the file text `file`, the environment `env`.
+///
+/// # Errors
+/// Returns every error of [`load`].
+pub fn load_sources(
+    file: Option<&str>,
+    env: &BTreeMap<String, String>,
+) -> Result<ViewerConfig, ConfigError> {
+    let loaded = loader()?.load_sources::<ViewerConfig>(file, None, env)?;
+    finish(loaded.settings().clone())
+}
 
-    let assembled = builder
-        .add_source(
-            config::Environment::with_prefix("FERROEHR_VIEWER")
-                .prefix_separator("__")
-                .separator("__"),
-        )
-        .build()
-        .map_err(|e| ConfigError(format!("configuration assembly: {e}")))?;
-
-    let mut cfg: ViewerConfig = assembled
-        .try_deserialize()
-        .map_err(|e| ConfigError(format!("configuration: {e}")))?;
-
+/// Resolves the `*_file` secrets and checks the values the types cannot.
+fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
     if !cfg.auth.oidc.client_secret_file.is_empty() {
-        let secret = std::fs::read_to_string(&cfg.auth.oidc.client_secret_file).map_err(|e| {
-            ConfigError(format!(
-                "auth.oidc.client_secret_file `{}`: {e}",
-                cfg.auth.oidc.client_secret_file
-            ))
-        })?;
-        secret.trim().clone_into(&mut cfg.auth.oidc.client_secret);
+        let secret = read_secret_file(
+            "auth.oidc.client_secret",
+            Path::new(&cfg.auth.oidc.client_secret_file),
+        )?;
+        secret
+            .expose_secret()
+            .clone_into(&mut cfg.auth.oidc.client_secret);
     }
 
     if !cfg.session.secret_file.is_empty() {
-        let secret = std::fs::read_to_string(&cfg.session.secret_file).map_err(|e| {
-            ConfigError(format!(
-                "session.secret_file `{}`: {e}",
-                cfg.session.secret_file
-            ))
-        })?;
-        secret.trim().clone_into(&mut cfg.session.secret);
+        let secret = read_secret_file("session.secret", Path::new(&cfg.session.secret_file))?;
+        secret.expose_secret().clone_into(&mut cfg.session.secret);
     }
 
     if ferrohealth_ui::i18n::Locale::parse(&cfg.ui.locale).is_err() {
-        return Err(ConfigError(format!(
+        return Err(ConfigError::Invalid(format!(
             "ui.locale `{}` is not a language tag",
             cfg.ui.locale
         )));
@@ -310,7 +315,7 @@ pub fn load() -> Result<ViewerConfig, ConfigError> {
             }
         }
         if !missing.is_empty() {
-            return Err(ConfigError(format!(
+            return Err(ConfigError::Invalid(format!(
                 "auth.oidc.enabled = true requires: {}",
                 missing.join(", ")
             )));
@@ -322,7 +327,9 @@ pub fn load() -> Result<ViewerConfig, ConfigError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{CdrConfig, ViewerConfig};
+    use std::collections::BTreeMap;
+
+    use super::{CdrConfig, ViewerConfig, load_sources};
 
     /// The base path defaults to the CDR's own default, and the product root
     /// derives from it by the CDR's rule: drop the trailing `v1` segment, and
@@ -370,15 +377,13 @@ mod tests {
 
     #[test]
     fn the_login_section_parses_and_defaults_to_empty() {
-        let parsed: ViewerConfig = config::Config::builder()
-            .add_source(config::File::from_str(
+        let parsed = load_sources(
+            Some(
                 "[login]\nnotice = \"demo\"\n\n[[login.links]]\nlabel = \"API reference\"\nhref = \"https://example.org/swagger\"\n",
-                config::FileFormat::Toml,
-            ))
-            .build()
-            .unwrap()
-            .try_deserialize()
-            .unwrap();
+            ),
+            &BTreeMap::new(),
+        )
+        .unwrap();
         assert_eq!(parsed.login.notice, "demo");
         assert_eq!(parsed.login.links.len(), 1);
         assert_eq!(parsed.login.links[0].label, "API reference");
@@ -391,14 +396,32 @@ mod tests {
 
     #[test]
     fn a_login_link_without_an_href_is_refused() {
-        let assembled = config::Config::builder()
-            .add_source(config::File::from_str(
-                "[[login.links]]\nlabel = \"dangling\"\n",
-                config::FileFormat::Toml,
-            ))
-            .build()
-            .unwrap();
-        assert!(assembled.try_deserialize::<ViewerConfig>().is_err());
+        assert!(
+            load_sources(
+                Some("[[login.links]]\nlabel = \"dangling\"\n"),
+                &BTreeMap::new()
+            )
+            .is_err()
+        );
+    }
+
+    /// The uniform variable grammar binds, the Compose parameters pass the
+    /// sweep, and any other variable under the prefix refuses the start.
+    #[test]
+    fn variables_bind_by_the_uniform_grammar_and_strays_are_refused() {
+        let env = BTreeMap::from([
+            (
+                "FERROEHR_VIEWER__CDR__BASE_URL".to_owned(),
+                "http://cdr:8080".to_owned(),
+            ),
+            ("FERROEHR_VIEWER_PORT".to_owned(), "8081".to_owned()),
+        ]);
+        let cfg = load_sources(None, &env).unwrap();
+        assert_eq!(cfg.cdr.base_url, "http://cdr:8080");
+
+        let stray = BTreeMap::from([("FERROEHR_VIEWER_CDR_BASE_URL".to_owned(), "x".to_owned())]);
+        let err = load_sources(None, &stray).unwrap_err().to_string();
+        assert!(err.contains("FERROEHR_VIEWER_CDR_BASE_URL"), "{err}");
     }
 
     #[test]

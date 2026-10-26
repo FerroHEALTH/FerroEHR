@@ -21,9 +21,9 @@
 //! **Nothing in it identifies a person.** It reads the build, the
 //! configuration, the cluster identities and the migration bookkeeping, never
 //! a clinical, demographic or audit relation. The configuration is the
-//! type-redacted tree `ferroehr config check` prints
+//! type-redacted tree
 //! ([`FerroEhrConfig::to_redacted_table`]), every URL `userinfo` masked by
-//! [`redact_userinfo`]; a database error quoted in a reason
+//! [`RedactedUrl`]; a database error quoted in a reason
 //! has every configured DSN's user name and password masked too, since a
 //! refused authentication names the role it tried.
 
@@ -33,7 +33,6 @@ use serde::Serialize;
 
 use crate::config::FerroEhrConfig;
 use crate::config::deployment::{DatabaseFacts, DeploymentPosture};
-use crate::config::secret::redact_userinfo;
 use crate::db::domain::Domain;
 use crate::db::{DatabaseLevels, DbError};
 use crate::licence::state::{LicenceState, LicenceStatus};
@@ -41,6 +40,7 @@ use crate::service::error::ErrorChain;
 use crate::system_log::config::AuditPosture;
 use crate::telemetry::build_info::BuildInfo;
 use ferrohealth_secret::REDACTED;
+use ferrohealth_secret::secret_url::RedactedUrl;
 
 /// The document's format identifier, bumped when a part changes shape.
 pub const FORMAT: &str = "ferroehr-report/1";
@@ -440,7 +440,7 @@ impl Scrubber {
             .split(' ')
             .map(|word| {
                 if word.contains("://") {
-                    redact_userinfo(word)
+                    RedactedUrl(word).to_string()
                 } else {
                     word.to_owned()
                 }

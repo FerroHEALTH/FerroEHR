@@ -3,8 +3,8 @@
 # Configuration model: the server reads ONE `ferroehr.toml`. This
 # chart renders that file from the `config:` block below (typed values mapped
 # 1:1 onto the ferroehr.toml schema) into a ConfigMap mounted at
-# /etc/ferroehr/ferroehr.toml — the server's config search order discovers it
-# automatically. Secrets never go in the ConfigMap: they come from a Secret (see
+# /etc/ferroehr/ferroehr.toml, which the Deployment names in FERROEHR_CONFIG
+# (the server searches for no file). Secrets never go in the ConfigMap: they come from a Secret (see
 # `secrets:` and `database:`) — mounted as read-only FILES wherever the config key
 # has a `*_file` sibling, which is now everything except `audit.fhir_feed.url` and
 # `multimedia.access_key_id`; only the mounted PATH is passed as env. `config.files` mounts genuinely file-shaped material

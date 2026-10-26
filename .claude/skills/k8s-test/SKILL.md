@@ -76,6 +76,7 @@ output.
      -f deploy/helm/ci/default-values.yaml \
      | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/rendered.toml
    docker run --rm -v /tmp/rendered.toml:/etc/ferroehr/ferroehr.toml:ro \
+     -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
      -e FERROEHR__DB__URL=postgres://u:p@db:5432/ferroehr \
      --entrypoint /usr/local/bin/ferroehr ghcr.io/ferrohealth/ferroehr:3.17.3 config check
    # 3.17.3, 2026-08-06: `unknown configuration key statement_timeout_ms` (default

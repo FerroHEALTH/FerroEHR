@@ -42,7 +42,7 @@ ferrobridge-term = { workspace = true, optional = true }
 argon2.workspace = true
 url.workspace = true
 async-trait.workspace = true
-config.workspace = true
+ferrohealth-config.workspace = true
 jiff.workspace = true
 reqwest.workspace = true
 tokio.workspace = true
@@ -73,7 +73,6 @@ sea-query-sqlx.workspace = true
 moka.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-serde_path_to_error.workspace = true
 # OPT 1.4 upload structure validation (`service::template`): a depth-aware scan
 # of the template XML that rejects foreign / duplicated top-level elements the
 # tolerant opt14 codec would otherwise accept (CNF master04 upload_opt-invalid_opt).

@@ -429,8 +429,17 @@ pub(crate) mod test_support {
             issuer: IssuerKey::Flat(ISSUER.to_owned()),
             audience: vec![AUDIENCE.to_owned()],
             jwks_file: jwks_file().display().to_string(),
+            role_claims: keycloak_role_claims(),
             ..ferroehr::config::FerroEhrConfig::default().auth
         }
+    }
+
+    /// The role claims a Keycloak deployment configures: the RFC 9068
+    /// §2.2.3.1 default and Keycloak's nested `realm_access.roles`.
+    pub(crate) fn keycloak_role_claims() -> Vec<String> {
+        let mut claims = ferrohealth_smart::roles::default_claims();
+        claims.push("realm_access.roles".to_owned());
+        claims
     }
 
     /// An RFC 9068 access token carrying `claims`, signed with the test key.

@@ -358,7 +358,7 @@ case-insensitive strings; the defaults are `USER` and `ADMIN`.
 | `FERROEHR__AUTHZ__RBAC__ENABLED` | `true` | the coarse role gate (active only when auth is enabled) |
 | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE` | `ADMIN` | role required for admin operations |
 | `FERROEHR__AUTHZ__RBAC__READONLY_ROLE` | `READONLY` | role marking a principal read-only: refused on every write |
-| `FERROEHR__AUTH__ROLE_CLAIMS` | `["roles","groups","entitlements","realm_access.roles"]` | JWT claim paths mined for roles |
+| `FERROEHR__AUTH__ROLE_CLAIMS` | `["roles","groups","entitlements"]` | JWT claim paths mined for roles; a Keycloak issuer adds `realm_access.roles` |
 | `FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE` | unset | role that reads the access log for ONE subject at a time (`GET /fhir/r4/AuditEvent` with `patient` required). Unset, that log stays admin-only. See [Audit trail](audit.md#getting-the-log-out) |
 
 Roles come from the JWT claims listed in `ROLE_CLAIMS`, or from a Basic user's
@@ -366,8 +366,9 @@ configured roles. The defaults are the carriers
 [RFC 9068 §2.2.3.1](https://www.rfc-editor.org/rfc/rfc9068#section-2.2.3.1) names
 for conveying authorization state (`roles`, `groups`, `entitlements`, of which
 `roles` and `entitlements` are [SCIM](https://www.rfc-editor.org/rfc/rfc7643#section-4.1.2)
-attributes), followed by the widely deployed nested `realm_access.roles`. A claim path may be dotted, so an issuer that
-nests them differently is configuration rather than a code change; a claim
+attributes), the default every FerroHEALTH product shares. A claim path may be
+dotted, so an issuer that nests them differently, such as Keycloak's
+`realm_access.roles`, is configuration rather than a code change; a claim
 carrying a single string and one carrying an array are both accepted.
 
 **A Clinical operation needs at least one role of any name; an Admin operation

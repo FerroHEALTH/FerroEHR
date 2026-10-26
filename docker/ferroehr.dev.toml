@@ -1,9 +1,9 @@
 # Dev-only server configuration for the compose stack.
 #
-# Mounted into the app container at /etc/ferroehr/ferroehr.toml — the server's
-# config search order (position 4) discovers it automatically, so no
-# FERROEHR_CONFIG / --config pointer is needed (mounted by
-# docker-compose.dev.yml and docker/sut-ferroehr.yml). Their env vars
+# Mounted into the app container at /etc/ferroehr/ferroehr.toml, which each
+# service that mounts it names in FERROEHR_CONFIG (docker-compose.dev.yml
+# through docker-compose.yml, docker/sut-ferroehr.yml,
+# docker/sut-spec-stable.yml). Their env vars
 # override individual keys on top of this file (layer 3 beats the file).
 #
 # The out-of-the-box auth posture has authentication ENABLED but no configured

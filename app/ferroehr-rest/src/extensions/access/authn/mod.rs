@@ -1479,13 +1479,13 @@ mod tests {
         assert!(p.scopes.contains(&"openid".to_owned()));
     }
 
-    /// The roles `ferrohealth-smart` reads at this server's default claims,
+    /// The roles `ferrohealth-smart` reads at a Keycloak deployment's claims,
     /// as the authenticator hands them on.
     fn default_roles(claims: &Value) -> Vec<String> {
         let claims = claims.as_object().cloned().unwrap();
         upper_cased(&ferrohealth_smart::roles::from_claims(
             &claims,
-            &ferroehr::config::FerroEhrConfig::default().auth.role_claims,
+            &test_support::keycloak_role_claims(),
         ))
     }
 
