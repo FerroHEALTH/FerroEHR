@@ -68,13 +68,21 @@ pub struct StoreConfig {
     pub sgb_v_309_controller: bool,
     /// Seconds between two scheduled verifications of the store's hash chain
     /// (`FERROEHR__AUDIT__STORE__VERIFY_INTERVAL_SECONDS`); `0` turns the
-    /// schedule off. Default one day.
+    /// schedule off. Default one hour.
     ///
-    /// Each run is `audit.verify_audit_chain()`, a full pass over the trail; a
-    /// finding is logged at `ERROR`, counted and reported by the `audit_chain`
-    /// health indicator (`docs/law/eu/cra/text.html Annex I Part I(2)(f)`:
-    /// "report on corruptions").
+    /// A run verifies the records written since the newest link an earlier run
+    /// found intact (`audit.verify_audit_chain_incremental()`), so its cost
+    /// follows the records written since; a finding is logged at `ERROR`,
+    /// counted and reported by the `audit_chain` health indicator
+    /// (`docs/law/eu/cra/text.html Annex I Part I(2)(f)`: "report on
+    /// corruptions").
     pub verify_interval_seconds: u64,
+    /// Seconds between two scheduled full passes over the hash chain
+    /// (`FERROEHR__AUDIT__STORE__FULL_VERIFY_INTERVAL_SECONDS`), which also
+    /// recompute the records before the checkpoint; `0` leaves the full pass
+    /// to `SELECT * FROM audit.verify_audit_chain()` on demand. Default one
+    /// week. A run that found damage is always followed by a full pass.
+    pub full_verify_interval_seconds: u64,
 }
 
 impl Default for StoreConfig {
@@ -84,10 +92,11 @@ impl Default for StoreConfig {
             retention_days: 0,
             retention_years: None,
             sgb_v_309_controller: false,
-            // One day: a full digest pass over the trail is too heavy for an
-            // hourly cadence on a large repository, and a day bounds how long
-            // damage goes unreported.
-            verify_interval_seconds: 86_400,
+            // One hour: a run recomputes only the records written since the
+            // last one, so the hour bounds how long damage to them goes
+            // unreported; a week bounds it for older records.
+            verify_interval_seconds: 3_600,
+            full_verify_interval_seconds: 604_800,
         }
     }
 }
@@ -188,7 +197,7 @@ impl Default for SyslogConfig {
 /// to an external Audit Record Repository.
 ///
 /// `ihe-atna`'s forwarder delivers it. With the local store on it delivers
-/// from the store (`delivered_fhir_feed_at IS NULL`), so a down ARR loses
+/// from the store (`audit.fhir_feed_outbox`), so a down ARR loses
 /// nothing; with the store off it delivers from an in-memory spool.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]

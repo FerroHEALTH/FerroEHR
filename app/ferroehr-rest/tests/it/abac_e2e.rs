@@ -303,6 +303,7 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         syslog: SyslogConfig {
             enabled: true,
@@ -587,6 +588,7 @@ async fn the_accessing_organisation_reaches_the_stored_record() {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         suppress_login_events: true,
         fail_mode: FailMode::Open,
@@ -662,6 +664,7 @@ async fn the_accessing_organisation_is_recorded_with_the_abac_gate_off() {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         suppress_login_events: true,
         fail_mode: FailMode::Open,
