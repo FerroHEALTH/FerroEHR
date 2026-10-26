@@ -111,7 +111,8 @@ A few more conventions worth knowing before you open a pull request:
 - Behaviour changes come with tests. Snapshot changes must be reviewed, not
   blindly accepted.
 - Any user-visible change (the REST surface, AQL, validation, configuration, the
-  CLI, or the deployment artifacts) adds an entry to the changelog **and**
+  CLI, or the deployment artifacts) adds a changelog fragment under
+  `changelog.d/` (its `README.md` gives the format) **and**
   updates the matching page of this documentation, both in the same pull
   request. CI guards enforce both.
 

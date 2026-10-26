@@ -132,10 +132,13 @@ FerroHEALTH [security policy](https://ferrohealth.eu/docs/security.html).
 1. **On the report or the finding:** open a draft advisory on this repository.
    It is the record until publication.
 2. **Ship the fix** as a security-only patch release. If a functional change
-   has to ride with it, write the reason under the release's `### Security`
-   heading (`.claude/rules/changelog.md`, release procedure).
-3. **The changelog entry** under `### Security` carries the advisory's `GHSA-`
-   identifier.
+   has to ride with it, write the reason in a
+   `changelog.d/*.security-reason.md` fragment, which the cut places first
+   under the release's `### Security` heading (`changelog.d/README.md`,
+   `.claude/rules/changelog.md`, release procedure).
+3. **The changelog fragment** (`changelog.d/<issue>-<slug>.security.md`)
+   carries the advisory's `GHSA-` identifier; CI refuses a Security entry
+   without one.
 4. **Publish the advisory** when the release is published, and request a CVE
    through it where the vulnerability warrants one.
 5. **Enter the register rows** the vulnerability needs (a complaint row for a

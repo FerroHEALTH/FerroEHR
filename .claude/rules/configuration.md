@@ -70,7 +70,7 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
 3. If the change is user-visible, update
    `website/book/src/installation/configuration.md`, the Helm `values.yaml`
    `config:` block + golden renders (`deploy/helm/validate.sh --update`), and
-   `CHANGELOG.md` — same PR.
+   a `changelog.d/` fragment — same PR.
 4. The default TOML + the book page are the schema of record; reconcile
    the deployment/compose spellings against them.
 

@@ -31,6 +31,7 @@ The checks, in the order the plan job runs them:
 | The tag equals the workspace version | `plan.sh` |
 | The changelog has only Keep a Changelog types, each once per section | `scripts/checks/changelog-structure.sh` |
 | The section being cut opens its `### Security` with the reason when it mixes security and functional changes, and every Security entry names a GHSA id or a `security/vex/` path | `scripts/checks/changelog-security.sh --section X.Y.Z` |
+| No fragment is left under `changelog.d/`: the cut assembled every one (`scripts/release/changelog.sh --assemble X.Y.Z YYYY-MM-DD`) | `plan.sh`, `scripts/release/changelog.sh --check` |
 | The technical documentation and the CRA risk assessment follow their paths since the previous release | `scripts/checks/technical-documentation.sh`, `scripts/checks/cra-risk-assessment.sh` |
 | The changelog section becomes the notes, with the support period and the CRA user-information link | `plan.sh notes`, `scripts/checks/release-notes.sh` |
 | The chart's `appVersion`, its unpublished version, the party statement, `CITATION.cff`, `.zenodo.json`, the compose image tags and the documented keys | the scripts `plan.sh` names |

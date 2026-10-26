@@ -169,6 +169,21 @@ check_changelog_security() {
   bash scripts/checks/changelog-security.sh --section "$VERSION"
 }
 
+# The cut assembles every fragment under changelog.d/ into the section it
+# writes and deletes them (scripts/release/changelog.sh --assemble), so a
+# fragment left at the tagged commit is an entry the release notes would miss.
+check_changelog_fragments() {
+  local left
+  bash scripts/release/changelog.sh --check
+  left="$(find changelog.d -maxdepth 1 -type f ! -name README.md | sort)"
+  if [[ -n "$left" ]]; then
+    echo "::error::changelog.d/ still holds fragments the cut did not assemble; run scripts/release/changelog.sh --assemble $VERSION <date> on the release branch:" >&2
+    echo "$left" >&2
+    return 1
+  fi
+  echo "no fragment is left under changelog.d/"
+}
+
 # EHDS Art. 30(2) and CRA Art. 13(3), 13(14): a release that changes the
 # logging component or a declared security-relevant path carries its
 # documentation; the previous release is taken by version.
@@ -241,6 +256,7 @@ check_milestone The milestone titled as the tag holds no open item
 check_version The tag matches the workspace version
 check_changelog_structure Changelog structure (no duplicate subsections, canonical types)
 check_changelog_security The Security section of the cut names its advisories and its reason
+check_changelog_fragments No changelog fragment is left unassembled
 check_change_control The technical documentation and the CRA risk assessment follow their paths
 check_notes The changelog section for this tag becomes the release notes
 check_notes_content The release notes carry the CRA user information and the support period
