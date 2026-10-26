@@ -86,6 +86,11 @@ workflow refuses a tag that has no matching section here.
   schema is now refused; the CNF Robot `valid_templates/validation/clinical_content_validation.opt`
   and two epSOS CKM templates are such documents (#4077, #4078).
 
+- **The shared crates move to their newest lockstep releases**: `ferrohealth-smart` 0.7.3,
+  `ferrohealth-authz` 0.1.3, `ihe-atna` and `ehds-logging` 0.2.12 and `ferrobridge-term`
+  0.1.138. Every secret in the `[auth]` section now renders as `***`, the family
+  mask, and `[auth] ca_file` names a PEM bundle of extra certificate authorities
+  for the issuer's metadata and key set, for an issuer behind a private PKI.
 - **Every secret and every masked URL renders through `ferrohealth-secret`,
   the family's one mask** (en-route finding of #4028). EHR's own
   `config::secret` module gives way to `ferrohealth-secret`'s `Secret`,
