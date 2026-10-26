@@ -127,10 +127,10 @@ text in scope.
 | # | Text | Claim | Art. 28 | Finding | Now reads |
 |---|---|---|---|---|---|
 | 1 | Landing page, "Fits your stack" | "FHIR R4B" | (a) | FerroEHR maps no FHIR resources; it reaches FHIR R4B terminology servers and renders its access log as FHIR R4 `AuditEvent` | "FHIR R4B terminology" |
-| 2 | Book, [instructions for use](instructions-for-use.md), [CRA user information](cra-user-information.md), [configuration](../installation/configuration.md#deployment_profile), [go-live checklist](../security/go-live-checklist.md) | an accepted deployment gap is stated "on `GET /ferroehr/rest/status`" | (a) | the gaps moved to the authenticated `GET /management/status` (#3671); the public status document carries the profile only | "on `GET /management/status`" |
-| 3 | Book, [instructions for use](instructions-for-use.md), the deployment profile | the list of what `production` refuses | (b) | omitted the plaintext audit feed and the plaintext object store (#3676, #3689) | both named |
-| 4 | Book, [instructions for use](instructions-for-use.md), limitations | none on FHIR | (b) | an operator of an earlier release may rely on the removed connector | FerroEHR maps no FHIR resources, and `[fhir]` is refused at boot |
-| 5 | Book, [information sheet](information-sheet.md), (e) | the standards table | (b) | omitted the FHIR terminology operations and RFC 9470, which this release uses | both listed |
+| 2 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), [CRA user information](cra-user-information.md), [configuration](../installation/configuration.md#deployment_profile), [go-live checklist](../security/go-live-checklist.md) | an accepted deployment gap is stated "on `GET /ferroehr/rest/status`" | (a) | the gaps moved to the authenticated `GET /management/status` (#3671); the public status document carries the profile only | "on `GET /management/status`" |
+| 3 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the deployment profile | the list of what `production` refuses | (b) | omitted the plaintext audit feed and the plaintext object store (#3676, #3689) | both named |
+| 4 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), limitations | none on FHIR | (b) | an operator of an earlier release may rely on the removed connector | FerroEHR maps no FHIR resources, and `[fhir]` is refused at boot |
+| 5 | Book, [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), (e) | the standards table | (b) | omitted the FHIR terminology operations and RFC 9470, which this release uses | both listed |
 
 ### Read and kept on 2026-10-08
 
@@ -167,22 +167,22 @@ re-checked on every page, and eleven pages still named the public document.
 | # | Text | Claim | Art. 28 | Finding | Now reads |
 |---|---|---|---|---|---|
 | 1 | Book, [licensing](../licensing.md), [security](../security.md), [go-live checklist](../security/go-live-checklist.md) (two items), [Kubernetes](../installation/kubernetes.md), [authentication configuration](../installation/config-auth.md) (two places), [Compose](../installation/compose.md) (two places), [installation](../installation/index.md), [configuration](../installation/configuration.md#deployment_profile), [command line](../installation/config-cli.md), [DPIA](../security/dpia.md) R9, [compliance overview](index.md) (GDPR Art. 25, DSV Art. 4) | an open or accepted deployment gap, or the licence in force, is reported on `GET /ferroehr/rest/status` (or `/rest/status`) | (a) | the public document carries `status`, the versions, the timestamp and the profile only; the gaps, the licence and the support period are on `GET /management/status` (#3671) | "on `GET /management/status`"; the configuration page adds that the public document carries the profile only |
-| 2 | Book, [instructions for use](instructions-for-use.md), the deployment profile | the list of what `production` refuses | (b) | omitted the role gate off while authentication is on, the `rbac_off` gap this release adds (#3742) | named |
-| 3 | Book, [instructions for use](instructions-for-use.md), limitations | none on how AQL reads repeated nodes | (b) | AQL 1.1.0 does not define the rows of a path through a repeated node; this release changed them (#3733), so another server, or a client written for an earlier release, may count differently | the limitation is stated, with the regrouping a client needs |
-| 4 | Book, [instructions for use](instructions-for-use.md), limitations | none on the audit chain's coverage | (b) | records written before the upgrade keep digest version 1, which leaves out the columns added after the chain was introduced (#3686) | stated, with the columns and the trigger that alone protects them |
+| 2 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the deployment profile | the list of what `production` refuses | (b) | omitted the role gate off while authentication is on, the `rbac_off` gap this release adds (#3742) | named |
+| 3 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), limitations | none on how AQL reads repeated nodes | (b) | AQL 1.1.0 does not define the rows of a path through a repeated node; this release changed them (#3733), so another server, or a client written for an earlier release, may count differently | the limitation is stated, with the regrouping a client needs |
+| 4 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), limitations | none on the audit chain's coverage | (b) | records written before the upgrade keep digest version 1, which leaves out the columns added after the chain was introduced (#3686) | stated, with the columns and the trigger that alone protects them |
 | 5 | Book, [configuration](../installation/configuration.md#deployment_profile), `migrate_on_runtime_credential` | a domain relocated to its own database "is prepared on that domain's runtime DSN" | (a) | `[storage.migrate.<domain>] url` now prepares it on its own migration credential (#3756); only without it does the runtime DSN prepare it and open the gap | both cases stated |
 | 6 | Book, [records of processing](../security/records-of-processing.md), categories of personal data | clinical content "in the `ehr` schema"; parties "in the `demographic` schema" | (a) | the schemas are `clinical` and `party` since the storage rewrite | `clinical` and `party` |
 | 7 | Book, [Kubernetes](../installation/kubernetes.md), server TLS | the viewer's OIDC client "trusts the public roots it is built with", so a private-CA issuer is not trusted | (a) | the viewer's OIDC client verifies against the platform trust store (#3767) | a private-CA issuer is trusted once its CA is in the store or under `SSL_CERT_DIR` |
 | 8 | Book, [querying with AQL](../querying-aql.md), the URL form | how a parameter value binds | (b) | silent on a quoted value, which now binds the JSON string it denotes (#3781) | the quoted form and the malformed case stated |
 | 9 | Book, [templates and validation](../templates-validation.md), the example composition | "a skeleton instance you can fill in", with no limitation | (b) | the example passes the server's own validation except for two open defects (#3779, #3780) and templates whose mandatory content only a slot admits | the exceptions named |
 | 10 | Book, [threat model](../threat-model.md), what each database credential can reach | the writer roles hold `SELECT`, `INSERT`, `UPDATE` and `DELETE` on their schema | (b) | the migration bookkeeping is now read-only to every runtime role, and the boot refuses a writable one | stated below the table |
-| 11 | Book, [information sheet](information-sheet.md), (e) | TERM "3.1.0" | (b) | the server applies amendment 3.1.4 (SPECPR-450), which adds properties and units the template upload and the quantity validation accept (#3717, #3727) | "3.1.0, with amendment 3.1.4 (SPECPR-450)" |
+| 11 | Book, [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), (e) | TERM "3.1.0" | (b) | the server applies amendment 3.1.4 (SPECPR-450), which adds properties and units the template upload and the quantity validation accept (#3717, #3727) | "3.1.0, with amendment 3.1.4 (SPECPR-450)" |
 
 The technical documentation's Annex III 2 named the public status document for
 the deployment posture too; it names `GET /management/status` now.
 | 12 | Repository README, the template-model and example bullets (two places) | every template "generates spec-valid example compositions that pass the server's own validation" | (a) | #3779 and #3780 are open, and a template whose mandatory content only an archetype slot admits has no committable example | "a template \[…\] generates" them, "except for the cases the book's example page lists" |
 | 13 | Repository README, the deployment posture and licence bullets | `sandbox` names every open gap "on `GET /rest/status`"; "`GET /ferroehr/rest/status` reports the grant in force" | (a) | both are on `GET /management/status` (#3671) | "on `GET /management/status`" |
-| 14 | Book, [EHDS readiness](ehds-readiness.md) row 1.2 | its issue reference | (a) | the probe that issue asked for ran (#3692), without `hostUsers: false` or `sslmode=verify-full` | names #3788 for those two |
+| 14 | Book, [EHDS readiness](https://ferrohealth.eu/docs/ehds/readiness.html) row 1.2 | its issue reference | (a) | the probe that issue asked for ran (#3692), without `hostUsers: false` or `sslmode=verify-full` | names #3788 for those two |
 
 ### Read and kept on 2026-10-15
 
@@ -229,7 +229,7 @@ the dump and load archive on zip 9.0.4 (#3798).
 
 | # | Text | Claim | Art. 28 | Finding | Now reads |
 |---|---|---|---|---|---|
-| 1 | Book, [instructions for use](instructions-for-use.md), the usage report | "Every deployment sends a daily usage report to Cadasto B.V. by default" | (a) | the report also goes out at each start, and a server started in a CI run sends none (#3794) | both stated, with the two CI variables |
+| 1 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the usage report | "Every deployment sends a daily usage report to Cadasto B.V. by default" | (a) | the report also goes out at each start, and a server started in a CI run sends none (#3794) | both stated, with the two CI variables |
 | 2 | Book, [operations](../operations.md#the-usage-report), the usage report | "It is on by default" | (a) | off in a CI run, whatever the switch says (#3794) | "on by default outside a CI run" |
 
 ### Read and kept on 2026-10-16
@@ -277,7 +277,7 @@ Nothing. Every text in scope already states these facts.
   [dark mode](../viewer/preferences.md) describes the moon and sun button and
   the theme cookie as FerroUI draws them. No page names a component library
   the viewer no longer uses.
-- **The logging component**: the [EHDS readiness](ehds-readiness.md) page and
+- **The logging component**: the [EHDS readiness](https://ferrohealth.eu/docs/ehds/readiness.html) page and
   the technical documentation say FerroEHR ships the whole logging component
   today and that FerroSYS takes the central store, review, retention and
   retrieval in a later release; nothing calls that split shipped.
@@ -381,7 +381,7 @@ authorised access, personal electronic health data sharing or use of personal
 electronic health data for permitted purposes." The text does not define
 "undue".
 
-The [EHDS readiness](ehds-readiness.md) page marks the row "Shipped" with two
+The [EHDS readiness](https://ferrohealth.eu/docs/ehds/readiness.html) page marks the row "Shipped" with two
 pieces of evidence: the query surface over the whole stored record, and an
 authorisation layer that refuses or permits without a commercial gate. The
 question re-assessed here is whether the authorisation defaults change that,
@@ -465,7 +465,7 @@ the earliest event (#3888); the nine `openehr-*` crates at `0.0.91`.
 
 - **The Art. 8 statements**: [security](../security.md), the
   [audit trail](../audit.md), the [compliance overview](index.md), the
-  [instructions for use](instructions-for-use.md), [EHDS readiness](ehds-readiness.md)
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), [EHDS readiness](https://ferrohealth.eu/docs/ehds/readiness.html)
   rows 1.1 and 1.3 and the [hazard log](hazard-log.md) describe the restriction
   as the code does, and none of them calls it planned any more.
 - **The authentication reference**: [the configuration reference](../installation/config-auth.md),
@@ -494,7 +494,7 @@ at 1.98; the nine `openehr-*` crates at `0.0.95`.
 
 - **[The Rust crates](../crates.md)**: the dependency examples named the crates
   at `0.0.91`; they name `0.0.95`.
-- **[EHDS readiness](ehds-readiness.md)**, the European logging component row
+- **[EHDS readiness](https://ferrohealth.eu/docs/ehds/readiness.html)**, the European logging component row
   (from `website/book/ehds.yaml`): it named `ehds-logging` and `ihe-atna` at
   0.1.1; it names 0.2.4, the version the root `Cargo.toml` pins.
 - **[The hazard log](hazard-log.md)**, the component paragraph: as the row
@@ -507,8 +507,8 @@ at 1.98; the nine `openehr-*` crates at `0.0.95`.
 - **The audit statements**: the README, [security](../security.md), the
   [audit trail](../audit.md), [audit configuration](../installation/config-audit.md),
   the [go-live checklist](../security/go-live-checklist.md), the
-  [information sheet](information-sheet.md) and the
-  [instructions for use](instructions-for-use.md) describe the syslog feed as
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html) and the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html) describe the syslog feed as
   TLS only and the categories by their HL7 Europe codes, as the code does.
 - **The toolchain**: the README and [building from source](../installation/from-source.md)
   name the Rust 1.99 toolchain, and [the Rust crates](../crates.md) the MSRV 1.98.
@@ -547,11 +547,11 @@ touched.
   state the refused ECDSA and Ed448 keys, the subkey the server signs with and
   the retired-key path, as the code does.
 - **The audit statements**: the [hazard log](hazard-log.md) and
-  [EHDS readiness](ehds-readiness.md) name `ehds-logging` and `ihe-atna`
+  [EHDS readiness](https://ferrohealth.eu/docs/ehds/readiness.html) name `ehds-logging` and `ihe-atna`
   0.2.5, the version the root `Cargo.toml` pins.
 - **The landing page, `SECURITY.md`, the crate READMEs, the
-  [information sheet](information-sheet.md), the
-  [instructions for use](instructions-for-use.md), the other image labels and
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the other image labels and
   the chart description** make no claim this release changes.
 
 ### Left open on 2026-10-24, for 5.4.0
@@ -591,8 +591,8 @@ templates only where they work (#3997); the nine `openehr-*` crates at `0.0.98`.
 - **The `405` statement**: content negotiation's "`405` always names the
   allowed methods" holds under SMART as well.
 - **The landing page, `SECURITY.md`, the crate READMEs, the
-  [information sheet](information-sheet.md), the
-  [instructions for use](instructions-for-use.md), the image labels and the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
   chart description** make no claim this release changes.
 
 ### Left open on 2026-10-24, for 5.4.1
@@ -620,15 +620,15 @@ Nothing at the cut: each change above updated its page in its own pull request.
   that a revoked Direct Key signature is not chosen, as the code does.
 - **The viewer statement**: [Templates & EHRs](../viewer/browsing.md) says a
   node offers Build a query on this path only on a COMPOSITION template.
-- **The logging component**: the [EHDS readiness page](ehds-readiness.md),
-  rendered from `website/book/ehds.yaml`, and the [hazard log](hazard-log.md)
+- **The logging component**: the [EHDS readiness page](https://ferrohealth.eu/docs/ehds/readiness.html),
+  rendered from the FerroHEALTH book's `website/book/ehds.yaml`, and the [hazard log](hazard-log.md)
   name `ehds-logging` and `ihe-atna` 0.2.7.
 - **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
   the chart README and [verifying releases](../verifying-releases.md) name chart
   14.0.1 and image 5.4.2.
 - **The landing page, `SECURITY.md`, the crate READMEs, the
-  [information sheet](information-sheet.md), the
-  [instructions for use](instructions-for-use.md), the image labels and the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
   chart description** make no claim this release changes.
 
 ### Left open on 2026-10-25, for 5.4.2

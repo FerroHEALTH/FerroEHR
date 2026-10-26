@@ -142,6 +142,12 @@ notes() {
     echo
     echo "[CRA information and instructions to the user for $tag]($url): the manufacturer, the vulnerability contact, the support period, secure use, updates and decommissioning (Regulation (EU) 2024/2847 Art 13(18) and Annex II)."
   } >>"$out"
+  # EHDS Art. 30(1)(d) and Art. 37: the revision of the EHR system's documents
+  # in the FerroHEALTH book this release relies on, from its pin.
+  {
+    echo
+    bash scripts/checks/release-notes.sh --ehds
+  } >>"$out"
 }
 
 # ── The checks, one function each, run in the order of `list` ───────────────

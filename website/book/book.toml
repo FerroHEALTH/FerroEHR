@@ -22,7 +22,8 @@ enable = true
 # already published keep resolving
 # (https://rust-lang.github.io/mdBook/format/configuration/renderers.html).
 # The two FHIR connector pages were removed with the connector; their old paths
-# land on the section index.
+# land on the section index. The four EHDS system documents moved to the
+# FerroHEALTH book (#3705), where their old paths land.
 [output.html.redirect]
 "/admin-ui/index.html" = "../viewer/index.html"
 "/admin-ui/queries.html" = "../viewer/queries.html"
@@ -38,6 +39,10 @@ enable = true
 "/viewer/demographics.html" = "parties.html"
 "/viewer/operations.html" = "server.html"
 "/viewer/dark-mode.html" = "preferences.html"
+"/compliance/information-sheet.html" = "https://ferrohealth.eu/docs/ehds/information-sheet.html"
+"/compliance/instructions-for-use.html" = "https://ferrohealth.eu/docs/ehds/instructions-for-use.html"
+"/compliance/ehds-readiness.html" = "https://ferrohealth.eu/docs/ehds/readiness.html"
+"/compliance/technical-documentation.html" = "https://ferrohealth.eu/docs/ehds/technical-documentation.html"
 
 [preprocessor.mermaid]
 command = "mdbook-mermaid"

@@ -85,7 +85,7 @@ each advisory's `GHSA-` identifier.
 The maintainers' step-by-step checklist for FerroEHR, with the release tooling
 it runs, is
 [`docs/post-market.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/post-market.md).
-The [technical documentation readiness](technical-documentation.md) page shows
+The [technical documentation readiness](https://ferrohealth.eu/docs/ehds/technical-documentation.html) page shows
 what of the documentation an authority may ask for exists today.
 
 [pvr]: https://github.com/FerroHEALTH/FerroEHR/security/advisories/new

@@ -11,8 +11,15 @@ which routes the CRA's Annex I conformity through the EHDS Chapter III
 procedure. The position is recorded in
 [`docs/architecture.md`](../architecture.md#regulatory-position-ehds-and-cra).
 
-The tree as it stands at a release tag is the documentation of that release.
-No conformity assessment has been carried out and no EU declaration of
+The EHDS Annex III elements describe the EHR system FerroEHR forms with
+FerroBRIDGE, so they live in the FerroHEALTH book
+(<https://ferrohealth.eu/docs/ehds/technical-documentation.html>, one page per
+element), and each FerroEHR release relies on the revision of those pages that
+[`docs/ehds/system-documents.env`](../ehds/system-documents.env) pins, named
+by the FerroHEALTH commit and the date on each page. This tree keeps
+FerroEHR's own CRA Annex VII points and this index. The tree and the pin as
+they stand at a release tag are the documentation of that release. No
+conformity assessment has been carried out and no EU declaration of
 conformity exists; several elements below are incomplete, and each file says
 what is missing.
 
@@ -55,14 +62,23 @@ remain independent ([`docs/architecture.md`](../architecture.md#regulatory-posit
 
 ## Contents
 
+The EHDS Annex III elements, with CRA Annex VII 1(a), (b) and (d), 6 and 7,
+which they answer, are pages of the FerroHEALTH book, at the revision the pin
+names:
+
+| Requirement | Page |
+|---|---|
+| EHDS Annex III 1(a) to (j); CRA Annex VII 1(a), (b), (d) | [Annex III 1](https://ferrohealth.eu/docs/ehds/annex-iii-1-description.html) |
+| EHDS Annex III 2 | [Annex III 2](https://ferrohealth.eu/docs/ehds/annex-iii-2-performance-evaluation.html) |
+| EHDS Annex III 3 | [Annex III 3](https://ferrohealth.eu/docs/ehds/annex-iii-3-common-specifications.html) |
+| EHDS Annex III 4; EHDS Art. 37(2), the testing-environment results; CRA Annex VII 6 | [Annex III 4](https://ferrohealth.eu/docs/ehds/annex-iii-4-verification-and-validation.html) |
+| EHDS Annex III 5 | [Annex III 5](https://ferrohealth.eu/docs/ehds/annex-iii-5-information-sheet.html) |
+| EHDS Annex III 6; CRA Annex VII 7 | [Annex III 6](https://ferrohealth.eu/docs/ehds/annex-iii-6-declaration-of-conformity.html) |
+
+The files of this tree:
+
 | Requirement | File |
 |---|---|
-| EHDS Annex III 1(a) to (j); CRA Annex VII 1(a), (b), (d) | [`annex-iii-1-description.md`](annex-iii-1-description.md) |
-| EHDS Annex III 2 | [`annex-iii-2-performance-evaluation.md`](annex-iii-2-performance-evaluation.md) |
-| EHDS Annex III 3 | [`annex-iii-3-common-specifications.md`](annex-iii-3-common-specifications.md) |
-| EHDS Annex III 4; EHDS Art. 37(2), the testing-environment results; CRA Annex VII 6 | [`annex-iii-4-verification-and-validation.md`](annex-iii-4-verification-and-validation.md) |
-| EHDS Annex III 5 | [`annex-iii-5-information-sheet.md`](annex-iii-5-information-sheet.md) |
-| EHDS Annex III 6; CRA Annex VII 7 | [`annex-iii-6-declaration-of-conformity.md`](annex-iii-6-declaration-of-conformity.md) |
 | CRA Annex VII 2 and 8 | [`cra-annex-vii-2-design-and-vulnerability-handling.md`](cra-annex-vii-2-design-and-vulnerability-handling.md) |
 | CRA Annex VII 3 | [`cra-annex-vii-3-risk-assessment.md`](cra-annex-vii-3-risk-assessment.md) |
 | CRA Annex VII 4 | [`cra-annex-vii-4-support-period.md`](cra-annex-vii-4-support-period.md) |
@@ -81,11 +97,12 @@ to the harmonised software components of an EHR system shall be adequately
 taken into account and reflected in the technical documentation." A release
 whose diff since the previous release touches a module of the logging
 component (the paths in `docs/architecture.md`, and the same list in
-`scripts/checks/technical-documentation.sh`) updates this tree in the same
-release: the file the change affects, and a row in the revision table below.
+`scripts/checks/technical-documentation.sh`) updates, in the same release, the
+file of this tree the change affects or the FerroHEALTH page it affects (and
+moves the pin to that revision), and adds a row to the revision table below.
 `scripts/checks/technical-documentation.sh --since <previous tag>` refuses a
-release that changes those paths and leaves the tree untouched; the release
-procedure in `.claude/rules/changelog.md` runs it.
+release that changes those paths and leaves both the tree and the pin
+untouched; the release procedure in `.claude/rules/changelog.md` runs it.
 
 ## Keeping it for ten years (EHDS Art. 30(3); CRA Art. 13(13))
 
@@ -105,8 +122,12 @@ release's documentation is kept in three places, none of which is rewritten:
   the `docs-dist` branch, which carries the pages this tree cites at that
   release.
 
-The information sheet and the instructions for use of each release are also
-attached to its GitHub release as assets, and GitHub releases are immutable.
+The FerroHEALTH book keeps every revision of the Annex III pages in its
+history, and a release names the revision it relies on in
+`docs/ehds/system-documents.env` and in its notes. The information sheet and
+the instructions for use of each release are attached to its GitHub release
+as assets, with that release's facts appended, and GitHub releases are
+immutable.
 
 ## Translation on request (EHDS Art. 37(3) and (4))
 
@@ -134,7 +155,7 @@ source of every release is public at its tag.
   ([`docs/post-market.md`](../post-market.md#facts-only-the-owner-supplies),
   item 9).
 - **A minimum hardware specification** for
-  [Annex III 1(f)](annex-iii-1-description.md#1f-the-hardware-it-is-intended-to-run-on).
+  [Annex III 1(f)](https://ferrohealth.eu/docs/ehds/annex-iii-1-description.html#1f-the-hardware-it-is-intended-to-run-on).
 
 ## Revisions
 
@@ -144,10 +165,11 @@ source of every release is public at its tag.
 | 2026-10-08 | 4.3.6 | The access record gains the acting mode, the assurance level and the professional behind a client (#3622, audit migration 0009) and the emergency mark (#3624, audit migration 0010), rendered as the [hazard log](../../website/book/src/compliance/hazard-log.md) H2 and H9 state; every record carries its request id (#3665). The hazard log, cited by Annex III 4, names the tests |
 | 2026-10-08 | 4.3.6 | The in-tree FHIR connector is removed (#3080); the ITI-81 `GET /fhir/r4/AuditEvent` route is unchanged and is now the only route in `ferroehr-rest::extensions::fhir` |
 | 2026-10-08 | 4.3.6 | The family-level documentation moved to the FerroHEALTH book at <https://ferrohealth.eu/docs/> (#3701): the statement of intended purpose for the EHR system, the shared responsibility, the post-market procedure and the manufacturer side of the CRA; 1(a) and the vulnerability-handling policy of CRA Annex VII 2 now cite it beside FerroEHR's own pages |
-| 2026-10-15 | 4.3.9 | The tamper chain's digest version 2 covers every column of an access record (#3686, audit migration 0011); records written before keep verifying under version 1, and a record moved back to it is reported. The DICOM and FHIR renderings give the client and the server one data-flow role (#3687), and a FHIR delete record carries the BALP `Delete` agent types (#3750). The physical party delete is classified and names its party (#3683). The audit store and the retention register take every connection through the typed acquire, so a connect failure is an `audit store unavailable` error (#3749). [Annex III 4](annex-iii-4-verification-and-validation.md) names the new tests, and the [hazard log](../../website/book/src/compliance/hazard-log.md) H1, H2 and H7 state the changes; [Annex III 2](annex-iii-2-performance-evaluation.md) names `GET /management/status` for the deployment posture |
+| 2026-10-15 | 4.3.9 | The tamper chain's digest version 2 covers every column of an access record (#3686, audit migration 0011); records written before keep verifying under version 1, and a record moved back to it is reported. The DICOM and FHIR renderings give the client and the server one data-flow role (#3687), and a FHIR delete record carries the BALP `Delete` agent types (#3750). The physical party delete is classified and names its party (#3683). The audit store and the retention register take every connection through the typed acquire, so a connect failure is an `audit store unavailable` error (#3749). [Annex III 4](https://ferrohealth.eu/docs/ehds/annex-iii-4-verification-and-validation.html) names the new tests, and the [hazard log](../../website/book/src/compliance/hazard-log.md) H1, H2 and H7 state the changes; [Annex III 2](https://ferrohealth.eu/docs/ehds/annex-iii-2-performance-evaluation.html) names `GET /management/status` for the deployment posture |
 | 2026-10-19 | 4.3.11 | The scope names the planned split of the logging component with FerroSYS and the three-product EHR system that follows (#3662); 1(a) and Annex III 6 name FerroSYS as the third product from that release |
 | 2026-10-20 | 5.1.0 | The audit FHIR feed authenticates with an OAuth 2.0 client-credentials token, renewed before it expires and fetched again once on a `401`; an unreachable token endpoint leaves the records pending as an unreachable feed does (#3829). The assurance and professional rules the access record reads move under `[authz]` with the move to the shared authentication crate (#3872). [CRA Annex VII 5](cra-annex-vii-5-standards-and-solutions.md) names RFC 9068, RFC 8414, the client-credentials grant and the SMART on openEHR scopes; the [hazard log](../../website/book/src/compliance/hazard-log.md) is reviewed and every test it names still exists |
-| 2026-10-20 | after 5.2.0 | The logging component takes its access record, its categories and their classification, the Art. 9(2) retention floor and the emergency mark from the shared crate `ehds-logging` 0.1.1, and its BALP and DICOM renderings and its ATNA sender from `ihe-atna` 0.1.1 (FerroAUDIT, #3887); FerroEHR's own copies are removed. A record stores each category as its HL7 Europe `<system>\|<code>` token and says what its classification was read from (audit migration 0012, clinical migration 0016); the syslog feed sends over RFC 5425 TLS only. The [hazard log](../../website/book/src/compliance/hazard-log.md) is reviewed and names the moved tests; [Annex III 4](annex-iii-4-verification-and-validation.md) names where the crates' own tests run |
+| 2026-10-20 | after 5.2.0 | The logging component takes its access record, its categories and their classification, the Art. 9(2) retention floor and the emergency mark from the shared crate `ehds-logging` 0.1.1, and its BALP and DICOM renderings and its ATNA sender from `ihe-atna` 0.1.1 (FerroAUDIT, #3887); FerroEHR's own copies are removed. A record stores each category as its HL7 Europe `<system>\|<code>` token and says what its classification was read from (audit migration 0012, clinical migration 0016); the syslog feed sends over RFC 5425 TLS only. The [hazard log](../../website/book/src/compliance/hazard-log.md) is reviewed and names the moved tests; [Annex III 4](https://ferrohealth.eu/docs/ehds/annex-iii-4-verification-and-validation.html) names where the crates' own tests run |
 | 2026-10-20 | 5.2.0 | The access log gains the records of two new reads: a read of a party's protected national identifiers, one record per scheme naming the reader, the party and the scheme (#3776), and the restriction register's own acts (#3682). The access context carries whether a request enforces the EHDS Art. 8 restriction, and an emergency access that overrides it carries the emergency mark (#3682). The [hazard log](../../website/book/src/compliance/hazard-log.md) H9 names the restriction and its test |
 | 2026-10-22 | 5.3.2 | The logging component moves to FerroAUDIT 0.2.4 (`ehds-logging` and `ihe-atna`, #3902): the record writes again the token's `jti`, the ITS-REST operation id as a second `subtype`, `outcomeDesc`, `source.type` and the optional DICOM elements; a Basic user is recorded with no issuer and no client; a retention without end or counted in days is stated as such; the category map takes every archetype id openEHR BASE 1.3.0 admits and keeps each id as the access named it, a stored composition's root archetype in the node table's comparison form (#3908). The ITI-81 search form-decodes its query string, so a `+` is a space (#3891). The component description names the 0.2.4 pins, and the [hazard log](../../website/book/src/compliance/hazard-log.md) is reviewed and every test it names still exists |
 | 2026-10-24 | 5.4.0 | The logging component moves to FerroAUDIT 0.2.5 (`ehds-logging` and `ihe-atna`, #3959): when the audit drain exits it closes its syslog connection with a TLS `close_notify` (RFC 5425 §4.4), so the records it sent last are no longer lost to a connection reset, and it logs and counts a close that fails; the syslog connection sends each record at once. The component description names the 0.2.5 pins, and the [hazard log](../../website/book/src/compliance/hazard-log.md) is reviewed, H5 names the close test and every test it names still exists |
+| 2026-10-26 | after 5.4.2 | The EHDS Annex III elements, the information sheet, the instructions for use and the readiness record move to the FerroHEALTH book as the EHR system's documents (#3705); this tree keeps FerroEHR's CRA Annex VII points, and `docs/ehds/system-documents.env` pins the revision of the family pages each release relies on |
