@@ -408,6 +408,17 @@ fn party_identified(name: &str, id: &str) -> Value {
     })
 }
 
+/// A facility: a [`party_identified`] whose reference is to an `ORGANISATION`,
+/// the type the builder fills in for `_health_care_facility` (master05 gives
+/// the reference type no row, so another type would round-trip as `|raw`).
+fn organisation(name: &str, id: &str) -> Value {
+    let mut party = party_identified(name, id);
+    if let Some(ty) = party.pointer_mut("/external_ref/type") {
+        *ty = json!("ORGANISATION");
+    }
+    party
+}
+
 /// An `ELEMENT` (`at0002`) wrapping `value`.
 fn element(value: Value) -> Value {
     json!({
@@ -728,7 +739,7 @@ fn master05_composition() {
                 "_type": "EVENT_CONTEXT",
                 "start_time": dv_date_time("2021-12-21T14:19:31+01:00"),
                 "setting": dv_coded("other care", "openehr", "238"),
-                "health_care_facility": party_identified("Hospital", "9091"),
+                "health_care_facility": organisation("Hospital", "9091"),
             },
         }),
     );
@@ -1591,7 +1602,7 @@ fn master05_event_context() {
     let flat = flat_context(json!({
         "end_time": dv_date_time("2021-12-21T15:19:31+01:00"),
         "location": "microbiology lab 2",
-        "health_care_facility": party_identified("Hospital", "9091"),
+        "health_care_facility": organisation("Hospital", "9091"),
         "participations": [participation(performer_with_identifiers())],
     }));
     check(
@@ -2018,7 +2029,7 @@ fn master05_party_self() {
 /// master05 §PARTY_IDENTIFIED — 5 rows.
 #[test]
 fn master05_party_identified() {
-    let mut facility = party_identified("Hospital", "9091");
+    let mut facility = organisation("Hospital", "9091");
     merge(
         &mut facility,
         json!({"identifiers": [{"_type": "DV_IDENTIFIER", "id": "122", "issuer": "issuer"}]}),

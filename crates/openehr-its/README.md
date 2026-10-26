@@ -20,10 +20,7 @@ this one.
   over their current generations (RM 1.2.0 / BASE 1.3.0 / AM 2.4.0).
 - **Canonical XML**: generated `ToXml`/`FromXml` implementations over a
   `quick-xml` runtime, serving both published XSD lineages (the root
-  namespace is a serialize-time choice). The readers are strict too: a child
-  element outside a type's closed sequence is refused, and `opt14::from_xml`
-  and the AOM2 readers refuse a root element other than the one the schema
-  publishes.
+  namespace is a serialize-time choice).
 - **ITS-REST contract**: generated DTOs, `#[async_trait]` server traits,
   per-group clients and route tables for every ITS-REST 1.1.0 API group. A
   server implements the traits over `axum`; a consumer calls a CDR through the

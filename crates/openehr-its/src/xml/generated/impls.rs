@@ -69,12 +69,7 @@ impl crate::xml::runtime::FromXml
                     "id" => {
                         __id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ACCESS_GROUP_REF".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -139,12 +134,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ARCHETYPE_ID".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -238,13 +228,7 @@ impl crate::xml::runtime::FromXml
                     "annotations" => {
                         __annotations = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "revision_history" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "AUTHORED_RESOURCE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -329,12 +313,7 @@ impl crate::xml::runtime::FromXml
                         __preferred_term =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "CODE_PHRASE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -412,12 +391,7 @@ impl crate::xml::runtime::FromXml
                     "is_unique" => {
                         __is_unique = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Cardinality".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -489,12 +463,7 @@ impl crate::xml::runtime::FromXml
                     "scheme" => {
                         __scheme = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "GENERIC_ID".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -557,12 +526,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "HIER_OBJECT_ID".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -623,12 +587,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "INTERNET_ID".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -688,12 +647,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ISO_OID".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -816,12 +770,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Iso8601_date".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -883,12 +832,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Iso8601_date_time".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -950,12 +894,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Iso8601_duration".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -1017,12 +956,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Iso8601_time".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -1084,12 +1018,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Iso8601_timezone".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -1215,12 +1144,7 @@ impl crate::xml::runtime::FromXml
                     "path" => {
                         __path = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "LOCATABLE_REF".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -1323,12 +1247,7 @@ impl crate::xml::runtime::FromXml
                         __upper_included =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Multiplicity_interval".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -1453,12 +1372,7 @@ impl crate::xml::runtime::FromXml
                     "id" => {
                         __id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "OBJECT_REF".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -1567,12 +1481,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "OBJECT_VERSION_ID".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -1645,12 +1554,7 @@ impl crate::xml::runtime::FromXml
                     "id" => {
                         __id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "PARTY_REF".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -1752,12 +1656,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                         __upper_included =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Point_interval".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -1861,12 +1760,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                         __upper_included =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Proper_interval".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -1967,12 +1861,7 @@ impl crate::xml::runtime::FromXml
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "RESOURCE_ANNOTATIONS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -2176,13 +2065,7 @@ impl crate::xml::runtime::FromXml
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
                     }
-                    "parent_resource" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "RESOURCE_DESCRIPTION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -2338,13 +2221,7 @@ impl crate::xml::runtime::FromXml
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
                     }
-                    "copyright" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "RESOURCE_DESCRIPTION_ITEM".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -2426,12 +2303,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "TEMPLATE_ID".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -2493,12 +2365,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "TERMINOLOGY_ID".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -2613,12 +2480,7 @@ impl crate::xml::runtime::FromXml
                         __other_contributors
                             .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "TRANSLATION_DETAILS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -2717,12 +2579,7 @@ impl crate::xml::runtime::FromXml
                     "uri" => {
                         __uri = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Terminology_code".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -2795,12 +2652,7 @@ impl crate::xml::runtime::FromXml
                     "text" => {
                         __text = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Terminology_term".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -2961,12 +2813,7 @@ impl crate::xml::runtime::FromXml for openehr_base::v1_3::base_types::identifica
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "UUID".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -3083,12 +2930,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "VERSION_TREE_ID".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -3262,13 +3104,7 @@ impl crate::xml::runtime::FromXml
                     "description" => {
                         __description = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "work_flow_id" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ACTION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -3424,12 +3260,7 @@ impl crate::xml::runtime::FromXml
                     "description" => {
                         __description = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ACTIVITY".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -3601,12 +3432,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::address::Ad
                     "details" => {
                         __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ADDRESS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -3709,12 +3535,7 @@ impl crate::xml::runtime::FromXml
                     "message" => {
                         __message = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ADDRESSED_MESSAGE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -3864,13 +3685,7 @@ impl crate::xml::runtime::FromXml
                     "data" => {
                         __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "work_flow_id" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ADMIN_ENTRY".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -4047,13 +3862,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::agent::Agen
                     "roles" => {
                         __roles.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "reverse_relationships" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "AGENT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -4175,12 +3984,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::archetyped::arch
                     "rm_version" => {
                         __rm_version = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ARCHETYPED".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -4303,12 +4107,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::generic::attesta
                     "is_pending" => {
                         __is_pending = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ATTESTATION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -4418,12 +4217,7 @@ impl crate::xml::runtime::FromXml
                     "committer" => {
                         __committer = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "AUDIT_DETAILS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -4577,12 +4371,7 @@ impl crate::xml::runtime::FromXml
                         __revision_history =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "AUTHORED_RESOURCE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -4693,12 +4482,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::capability:
                         __time_validity =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "CAPABILITY".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -4897,12 +4681,7 @@ impl crate::xml::runtime::FromXml
                     "items" => {
                         __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "CLUSTER".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -4995,12 +4774,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::text::code_p
                         __preferred_term =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "CODE_PHRASE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -5061,12 +4835,7 @@ impl crate::xml::runtime::FromXml
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "CODE_SET_ACCESS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -5193,12 +4962,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::composition::composition
                     "content" => {
                         __content.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "COMPOSITION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -5333,12 +5097,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::contact::Co
                         __time_validity =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "CONTACT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -5543,12 +5302,7 @@ impl crate::xml::runtime::FromXml
                     "audit" => {
                         __audit = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "CONTRIBUTION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -5908,12 +5662,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::basic::dv_bo
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_BOOLEAN".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -6015,12 +5764,7 @@ impl crate::xml::runtime::FromXml
                         __defining_code =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_CODED_TEXT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -6143,12 +5887,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::quantity::dv
                     "magnitude" => {
                         __magnitude = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_COUNT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -6267,12 +6006,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_DATE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -6391,12 +6125,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_DATE_TIME".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -6523,12 +6252,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_DURATION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -6603,12 +6327,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::uri::dv_ehr_
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_EHR_URI".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -6683,7 +6402,7 @@ let mut __value = None;
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
 "value" => { __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
-_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "DV_GENERAL_TIME_SPECIFICATION".to_owned(), child: __c.name.clone() }),
+_ => reader.skip_element()?,
 },
 crate::xml::runtime::XmlEvent::End => break,
 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -6759,12 +6478,7 @@ impl crate::xml::runtime::FromXml
                     "type" => {
                         __type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_IDENTIFIER".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -6866,12 +6580,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                         __upper_included =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_INTERVAL".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -7011,12 +6720,7 @@ impl crate::xml::runtime::FromXml
                     "size" => {
                         __size = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_MULTIMEDIA".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -7251,12 +6955,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_ORDINAL".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -7333,12 +7032,7 @@ impl crate::xml::runtime::FromXml
                     "items" => {
                         __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_PARAGRAPH".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -7421,12 +7115,7 @@ impl crate::xml::runtime::FromXml
                     "formalism" => {
                         __formalism = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_PARSABLE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -7469,7 +7158,7 @@ let mut __value = None;
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
 "value" => { __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
-_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "DV_PERIODIC_TIME_SPECIFICATION".to_owned(), child: __c.name.clone() }),
+_ => reader.skip_element()?,
 },
 crate::xml::runtime::XmlEvent::End => break,
 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -7590,12 +7279,7 @@ impl crate::xml::runtime::FromXml
                     "precision" => {
                         __precision = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_PROPORTION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -7869,12 +7553,7 @@ impl crate::xml::runtime::FromXml
                         __units_display_name =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_QUANTITY".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -7985,12 +7664,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::quantity::dv
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_SCALE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -8068,12 +7742,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::basic::dv_st
                     "is_terminal" => {
                         __is_terminal = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_STATE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -8209,12 +7878,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::text::dv_tex
                     "encoding" => {
                         __encoding = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_TEXT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -8378,12 +8042,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_TIME".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -8495,12 +8154,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::uri::dv_uri:
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "DV_URI".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -8670,12 +8324,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::ehr::ehr::Ehr {
                     "tags" => {
                         __tags.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EHR".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -8797,12 +8446,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::ehr::ehr_access::EhrAcce
                     "settings" => {
                         __settings = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EHR_ACCESS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -8935,12 +8579,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::ehr::ehr_status::EhrStat
                         __other_details =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EHR_STATUS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -9077,12 +8716,7 @@ impl crate::xml::runtime::FromXml
                     "null_reason" => {
                         __null_reason = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ELEMENT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -9344,13 +8978,7 @@ impl crate::xml::runtime::FromXml
                     "data" => {
                         __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "work_flow_id" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EVALUATION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -9551,12 +9179,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::composition::event_conte
                         __participations
                             .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EVENT_CONTEXT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -9715,12 +9338,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::ehr_extract::common::ext
                         __participations
                             .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -9855,12 +9473,7 @@ impl crate::xml::runtime::FromXml
                     "action" => {
                         __action = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_ACTION_REQUEST".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -9987,12 +9600,7 @@ impl crate::xml::runtime::FromXml
                     "items" => {
                         __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_CHAPTER".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -10202,12 +9810,7 @@ impl crate::xml::runtime::FromXml
                         __extract_id_key =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_ENTITY_CHAPTER".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -10330,12 +9933,7 @@ impl crate::xml::runtime::FromXml
                     "item_list" => {
                         __item_list.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_ENTITY_MANIFEST".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -10418,12 +10016,7 @@ impl crate::xml::runtime::FromXml
                     "reason" => {
                         __reason = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_ERROR".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -10528,12 +10121,7 @@ impl crate::xml::runtime::FromXml
                     "items" => {
                         __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_FOLDER".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -10659,12 +10247,7 @@ impl crate::xml::runtime::FromXml
                     "entities" => {
                         __entities.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_MANIFEST".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -10747,12 +10330,7 @@ impl crate::xml::runtime::FromXml
                     "performer" => {
                         __performer = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_PARTICIPATION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -10864,12 +10442,7 @@ impl crate::xml::runtime::FromXml
                     "update_spec" => {
                         __update_spec = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_REQUEST".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -11003,13 +10576,7 @@ impl crate::xml::runtime::FromXml
                         __other_details =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "includes_multimedia" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_SPEC".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -11114,12 +10681,7 @@ impl crate::xml::runtime::FromXml
                         __update_method =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_UPDATE_SPEC".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -11223,14 +10785,7 @@ impl crate::xml::runtime::FromXml
                         __include_data =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "includes_data" => reader.skip_element()?,
-                    "includes_revision_history" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "EXTRACT_VERSION_SPEC".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -11341,12 +10896,7 @@ impl crate::xml::runtime::FromXml
                         __feeder_system_audit =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "FEEDER_AUDIT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -11465,12 +11015,7 @@ impl crate::xml::runtime::FromXml
                         __other_details =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "FEEDER_AUDIT_DETAILS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -11593,12 +11138,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::directory::folde
                     "details" => {
                         __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "FOLDER".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -11833,12 +11373,7 @@ impl crate::xml::runtime::FromXml
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "GENERIC_CONTENT_ITEM".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -11952,12 +11487,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::integration::generic_ent
                     "data" => {
                         __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "GENERIC_ENTRY".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -12113,13 +11643,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::group::Grou
                     "roles" => {
                         __roles.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "reverse_relationships" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "GROUP".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -12299,12 +11823,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                     "events" => {
                         __events.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "HISTORY".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -12412,12 +11931,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                     "item" => {
                         __item = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "IMPORTED_VERSION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -12602,13 +12116,7 @@ impl crate::xml::runtime::FromXml
                     "activities" => {
                         __activities.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "work_flow_id" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "INSTRUCTION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -12737,12 +12245,7 @@ impl crate::xml::runtime::FromXml
                     "wf_details" => {
                         __wf_details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "INSTRUCTION_DETAILS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -12874,12 +12377,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                         __math_function =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "INTERVAL_EVENT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -12990,12 +12488,7 @@ impl crate::xml::runtime::FromXml
                     "reason" => {
                         __reason.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ISM_TRANSITION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -13163,12 +12656,7 @@ impl crate::xml::runtime::FromXml
                     "items" => {
                         __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ITEM_LIST".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -13289,12 +12777,7 @@ impl crate::xml::runtime::FromXml
                     "item" => {
                         __item = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ITEM_SINGLE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -13459,12 +12942,7 @@ impl crate::xml::runtime::FromXml
                     "rows" => {
                         __rows.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ITEM_TABLE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -13568,12 +13046,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::tags::item_tag::
                     "owner_id" => {
                         __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ITEM_TAG".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -13681,12 +13154,7 @@ impl crate::xml::runtime::FromXml
                     "items" => {
                         __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ITEM_TREE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -13843,12 +13311,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Iso8601_date".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -13970,12 +13433,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Iso8601_date_time".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -14075,12 +13533,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Iso8601_duration".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -14180,12 +13633,7 @@ impl crate::xml::runtime::FromXml
                     "value" => {
                         __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "Iso8601_time".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -14364,12 +13812,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::archetyped::link
                     "target" => {
                         __target = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "LINK".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -14881,12 +14324,7 @@ impl crate::xml::runtime::FromXml
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "MEASUREMENT_SERVICE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -14958,12 +14396,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::ehr_extract::message::me
                     "signature" => {
                         __signature = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "MESSAGE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -15165,13 +14598,7 @@ impl crate::xml::runtime::FromXml
                     "state" => {
                         __state = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "work_flow_id" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "OBSERVATION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -15246,7 +14673,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::support::terminology::op
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
-_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "OPENEHR_CODE_SET_IDENTIFIERS".to_owned(), child: __c.name.clone() }),
+_ => reader.skip_element()?,
 },
 crate::xml::runtime::XmlEvent::End => break,
 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -15382,12 +14809,7 @@ impl crate::xml::runtime::FromXml
                     "item" => {
                         __item = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "OPENEHR_CONTENT_ITEM".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -15430,7 +14852,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::support::terminology::op
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
-_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS".to_owned(), child: __c.name.clone() }),
+_ => reader.skip_element()?,
 },
 crate::xml::runtime::XmlEvent::End => break,
 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -15585,13 +15007,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::organisatio
                     "roles" => {
                         __roles.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "reverse_relationships" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ORGANISATION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -15765,12 +15181,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                     "data" => {
                         __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ORIGINAL_VERSION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -15885,12 +15296,7 @@ impl crate::xml::runtime::FromXml
                     "time" => {
                         __time = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "PARTICIPATION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -16035,12 +15441,7 @@ impl crate::xml::runtime::FromXml
                     "identifiers" => {
                         __identifiers.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "PARTY_IDENTIFIED".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -16187,12 +15588,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::party_ident
                     "details" => {
                         __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "PARTY_IDENTITY".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -16355,12 +15751,7 @@ impl crate::xml::runtime::FromXml
                         __relationship =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "PARTY_RELATED".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -16494,12 +15885,7 @@ impl crate::xml::runtime::FromXml
                     "source" => {
                         __source = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "PARTY_RELATIONSHIP".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -16584,12 +15970,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::generic::party_s
                         __external_ref =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "PARTY_SELF".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -17210,13 +16591,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::person::Per
                     "roles" => {
                         __roles.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "reverse_relationships" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "PERSON".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -17378,12 +16753,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                     "data" => {
                         __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "POINT_EVENT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -17498,12 +16868,7 @@ impl crate::xml::runtime::FromXml
                     "range" => {
                         __range = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "REFERENCE_RANGE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -17614,13 +16979,7 @@ impl crate::xml::runtime::FromXml
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
                     }
-                    "parent_resource" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "RESOURCE_DESCRIPTION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -17761,12 +17120,7 @@ impl crate::xml::runtime::FromXml
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "RESOURCE_DESCRIPTION_ITEM".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -17835,12 +17189,7 @@ impl crate::xml::runtime::FromXml
                     "items" => {
                         __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "REVISION_HISTORY".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -17912,12 +17261,7 @@ impl crate::xml::runtime::FromXml
                     "audits" => {
                         __audits.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "REVISION_HISTORY_ITEM".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -18067,13 +17411,7 @@ impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::role::Role 
                     "capabilities" => {
                         __capabilities.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    "reverse_relationships" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "ROLE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -18224,12 +17562,7 @@ impl crate::xml::runtime::FromXml
                     "items" => {
                         __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "SECTION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -18327,12 +17660,7 @@ impl crate::xml::runtime::FromXml
                     "items" => {
                         __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "SYNC_EXTRACT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -18402,12 +17730,7 @@ impl crate::xml::runtime::FromXml
                         __specification =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "SYNC_EXTRACT_REQUEST".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -18498,12 +17821,7 @@ impl crate::xml::runtime::FromXml
                         __all_contributions =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "SYNC_EXTRACT_SPEC".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -18569,12 +17887,7 @@ impl crate::xml::runtime::FromXml
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "TERMINOLOGY_ACCESS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -18627,12 +17940,7 @@ impl crate::xml::runtime::FromXml
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "TERMINOLOGY_SERVICE".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -18700,12 +18008,7 @@ impl crate::xml::runtime::FromXml
                     "target" => {
                         __target = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "TERM_MAPPING".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -18804,13 +18107,7 @@ impl crate::xml::runtime::FromXml
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
                     }
-                    "accreditation" => reader.skip_element()?,
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "TRANSLATION_DETAILS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -18950,12 +18247,7 @@ impl crate::xml::runtime::FromXml
                         __time_created =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "VERSIONED_COMPOSITION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -19033,12 +18325,7 @@ impl crate::xml::runtime::FromXml
                         __time_created =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "VERSIONED_EHR_ACCESS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -19116,12 +18403,7 @@ impl crate::xml::runtime::FromXml
                         __time_created =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "VERSIONED_EHR_STATUS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -19199,12 +18481,7 @@ impl crate::xml::runtime::FromXml
                         __time_created =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "VERSIONED_FOLDER".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -19282,12 +18559,7 @@ impl crate::xml::runtime::FromXml
                         __time_created =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "VERSIONED_OBJECT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -19413,12 +18685,7 @@ impl crate::xml::runtime::FromXml
                         __time_created =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "VERSIONED_PARTY".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -19498,12 +18765,7 @@ impl crate::xml::runtime::FromXml
                     "versions" => {
                         __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "X_CONTRIBUTION".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -19566,7 +18828,7 @@ crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
 "extract_version_count" => { __extract_version_count = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
 "revision_history" => { __revision_history = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
 "versions" => { __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
-_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "X_VERSIONED_COMPOSITION".to_owned(), child: __c.name.clone() }),
+_ => reader.skip_element()?,
 },
 crate::xml::runtime::XmlEvent::End => break,
 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -19670,12 +18932,7 @@ impl crate::xml::runtime::FromXml
                     "versions" => {
                         __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "X_VERSIONED_EHR_ACCESS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -19784,12 +19041,7 @@ impl crate::xml::runtime::FromXml
                     "versions" => {
                         __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "X_VERSIONED_EHR_STATUS".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -19898,12 +19150,7 @@ impl crate::xml::runtime::FromXml
                     "versions" => {
                         __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "X_VERSIONED_FOLDER".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -20024,12 +19271,7 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                     "versions" => {
                         __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "X_VERSIONED_OBJECT".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}
@@ -20188,12 +19430,7 @@ impl crate::xml::runtime::FromXml
                     "versions" => {
                         __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
-                    _ => {
-                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
-                            owner: "X_VERSIONED_PARTY".to_owned(),
-                            child: __c.name.clone(),
-                        });
-                    }
+                    _ => reader.skip_element()?,
                 },
                 crate::xml::runtime::XmlEvent::End => break,
                 crate::xml::runtime::XmlEvent::Text(_) => {}

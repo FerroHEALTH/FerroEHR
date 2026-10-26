@@ -636,8 +636,7 @@ fn emit_struct_from_xml(
          fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {{\n"
     );
     emit_read_accumulators(b, fields, &attrs);
-    let unmodeled = xsd_unmodeled_elements(target.spec, fields, xsd);
-    emit_read_loop(b, target.spec, fields, &attrs, &unmodeled);
+    emit_read_loop(b, fields, &attrs);
     // Each field's value expression is built first, so a class with a
     // validating construction door (`plan::construction`) can hand the same
     // expressions to its constructor instead of a struct literal — one read
@@ -681,36 +680,9 @@ fn emit_read_accumulators(b: &mut String, fields: &[XmlField], attrs: &BTreeSet<
     }
 }
 
-/// The elements the XSD declares for `spec` (its closed `xs:sequence`, ancestors
-/// included) that no model field reads, in name order. They are in the content
-/// model, so the reader skips them; an element that is neither a field nor one
-/// of these is refused.
-fn xsd_unmodeled_elements(spec: &str, fields: &[XmlField], xsd: &XsdModel) -> Vec<String> {
-    if !xsd.types.contains_key(spec) {
-        return Vec::new();
-    }
-    let modeled: BTreeSet<&str> = fields.iter().map(|f| f.wire_name.as_str()).collect();
-    let (_, elems) = xsd.flattened(spec);
-    elems
-        .into_iter()
-        .map(|e| e.name)
-        .filter(|name| !modeled.contains(name.as_str()))
-        .collect::<BTreeSet<_>>()
-        .into_iter()
-        .collect()
-}
-
 /// Emits the event loop that dispatches each child element into its
-/// accumulator. An element the XSD declares and no field reads is skipped
-/// (`unmodeled`); any other element is refused as outside the type's closed
-/// sequence (XML Schema 1.1 Part 1 §3.4.4.2).
-fn emit_read_loop(
-    b: &mut String,
-    spec: &str,
-    fields: &[XmlField],
-    attrs: &BTreeSet<String>,
-    unmodeled: &[String],
-) {
+/// accumulator, skipping elements the type does not declare.
+fn emit_read_loop(b: &mut String, fields: &[XmlField], attrs: &BTreeSet<String>) {
     b.push_str("loop { match reader.read()? {\n");
     b.push_str("crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {\n");
     for f in fields {
@@ -739,14 +711,7 @@ fn emit_read_loop(
             }
         }
     }
-    for name in unmodeled {
-        let _ = writeln!(b, "\"{name}\" => reader.skip_element()?,");
-    }
-    let _ = writeln!(
-        b,
-        "_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild {{ owner: \"{spec}\".to_owned(), child: __c.name.clone() }}),"
-    );
-    b.push_str("},\n");
+    b.push_str("_ => reader.skip_element()?,\n},\n");
     b.push_str("crate::xml::runtime::XmlEvent::End => break,\n");
     b.push_str("crate::xml::runtime::XmlEvent::Text(_) => {}\n");
     b.push_str("crate::xml::runtime::XmlEvent::Eof => return Err(crate::xml::runtime::XmlError::Parse(\"unexpected EOF\".into())),\n");

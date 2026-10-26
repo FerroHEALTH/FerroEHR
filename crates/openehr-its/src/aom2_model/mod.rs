@@ -35,10 +35,9 @@ pub mod types;
 /// Parse a model-form AOM2 archetype XML document into a [`types::AuthoredArchetype`].
 ///
 /// # Errors
-/// Propagates canonical-XML parse errors, and refuses a root element other
-/// than `<archetype>`.
+/// Propagates canonical-XML parse errors.
 pub fn from_xml(xml: &str) -> Result<types::AuthoredArchetype, crate::xml::runtime::XmlError> {
-    crate::xml::runtime::from_xml_rooted(xml, "archetype")
+    crate::xml::runtime::from_xml(xml)
 }
 
 /// Serialize a [`types::AuthoredArchetype`] back to AOM2 model-form archetype XML (root `<archetype>`,

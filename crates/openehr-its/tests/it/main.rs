@@ -48,7 +48,6 @@ mod rest_server;
 mod rm_validation;
 mod xml_abstract_root;
 mod xml_c14n;
-mod xml_closed_content;
 mod xml_diagnostics;
 mod xml_ehrbase;
 mod xml_hash;
