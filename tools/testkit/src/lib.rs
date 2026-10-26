@@ -830,16 +830,31 @@ pub struct SweepReport {
 ///
 /// Safe to call at any time: the drops are force-free, so a database another
 /// process is connected to is skipped rather than torn out from under it.
+/// The pass waits for the sweep lock, so it never runs beside another
+/// process's sweep: a concurrent sweeper that took a free clone's lease
+/// would otherwise make this pass skip the clone and return before the other
+/// pass dropped it.
 ///
 /// # Errors
 ///
 /// Returns [`TestkitError`] when the shared server cannot be acquired or
-/// connected to. Individual drops never fail the call — an in-use database is
-/// counted as [`SweepReport::in_use`] and any other failure is logged.
+/// connected to, or the sweep lock cannot be taken. Individual drops never
+/// fail the call — an in-use database is counted as [`SweepReport::in_use`]
+/// and any other failure is logged.
 pub async fn sweep_stale() -> Result<SweepReport, TestkitError> {
     let server = server().await?;
     let mut admin = connect_ready(server).await?;
+    sqlx::query("SELECT pg_advisory_lock($1)")
+        .bind(SWEEP_LOCK_KEY)
+        .execute(&mut admin)
+        .await?;
     let report = sweep(&mut admin).await;
+    drop(
+        sqlx::query("SELECT pg_advisory_unlock($1)")
+            .bind(SWEEP_LOCK_KEY)
+            .execute(&mut admin)
+            .await,
+    );
     drop(admin.close().await);
     Ok(report)
 }
