@@ -82,7 +82,16 @@ async fn a_record_whose_send_fails_is_delivered_later() {
         listener.recv(Duration::from_secs(15)).await.is_some(),
         "the record arrives after the dropped connection"
     );
+    // The listener holds the record before the forwarder counts it, so the
+    // count is read once the forwarder has moved it, within a bound.
+    let counted = tokio::time::timeout(Duration::from_secs(15), async {
+        while forwarder.status().delivered == 0 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await;
     let status = forwarder.status();
+    assert!(counted.is_ok(), "the delivery is never counted: {status:?}");
     assert!(status.retries >= 1, "the first attempt failed: {status:?}");
     assert_eq!(status.delivered, 1, "{status:?}");
     assert_eq!(status.depth.waiting(), 0, "{status:?}");
