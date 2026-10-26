@@ -87,12 +87,13 @@ module.**
   shipped file a schema change is a NEW file.
   Rules: `.claude/rules/sqlx-conventions.md`.
 - **System log** (`src/system_log/`): the ARR drain batches (`recv_many` → one
-  multi-row UNNEST INSERT when syslog is off) with concurrent memoized subject
-  resolution and rate-limited drop warnings; default `audit.queue_capacity` 8192.
+  multi-row UNNEST INSERT) with concurrent memoized subject resolution and
+  rate-limited drop warnings; default `audit.queue_capacity` 8192.
   The EHDS access record, the categories, the classification, the retention
   floor and the emergency mark come from `ehds-logging`; the BALP and DICOM
-  renderings, the syslog TLS sender and the FHIR feed client from `ihe-atna`
-  (FerroAUDIT, pinned exactly). Never re-implement what those crates hold: a
+  renderings and the delivery come from `ihe-atna` (FerroAUDIT, pinned
+  exactly): syslog frames through its `Spool` and `Forwarder`, the FHIR Feed
+  through a `Forwarder` over the store's `Outbox` (`feed.rs`). Never re-implement what those crates hold: a
   missing field or shape is a FerroAUDIT issue, not local code.
 - **Consume `openehr-*` types directly** — never re-model the RM or re-serialize;
   canonical JSON/XML goes through `openehr-its`.
