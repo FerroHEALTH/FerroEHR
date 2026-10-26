@@ -466,6 +466,14 @@ Shipped with functional changes because: the patched `ferrohealth-smart` arrives
 
 ### Fixed
 
+- **The chart guard holds the FerroPIX Artifact Hub image to its pinned
+  digest** (#4115). `scripts/checks/chart-appversion.sh` checked the
+  FerroTERM and FerroBRIDGE `artifacthub.io/images` entries against their
+  pins, but not the FerroPIX entry the `ferropix` dependency added, so its
+  digest could drift from `ferropix.image.digest` in `values.yaml` and
+  Artifact Hub would scan an image the chart does not run. The guard now
+  compares the two, and `--self-test` moves the digest on either side.
+
 - **`ui-screenshot-guard` judges only the pull request's own commits**
   (#4117). It diffed the base and head commits directly, so a branch behind
   main failed on main's viewer changes and passed on main's screenshot
