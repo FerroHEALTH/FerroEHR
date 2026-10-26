@@ -156,6 +156,11 @@ exceptions = [
   # document, indicator registry and lifecycle, is the same Licensor's code
   # under the same licence (owner ruling 2026-10-26, #4087).
   { allow = ["BUSL-1.1"], crate = "ferrohealth-health" },
+  # FerroSYS's ferrohealth-server (the outbound TLS material of the identity
+  # source client, #3380) and the ferrohealth-telemetry it builds on are the
+  # same Licensor's code under the same licence (owner ruling 2026-10-26, #4087).
+  { allow = ["BUSL-1.1"], crate = "ferrohealth-server" },
+  { allow = ["BUSL-1.1"], crate = "ferrohealth-telemetry" },
   # FerroAUDIT, the FerroHEALTH products' shared audit library, is the same
   # Licensor's code under the same licence: `ihe-atna` sends the ATNA trail and
   # writes the BALP AuditEvent, `ehds-logging` is the EHDS logging component
