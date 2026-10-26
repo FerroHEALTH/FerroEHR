@@ -86,6 +86,8 @@ pub enum ServeError {
 /// Build the application router backed by a concrete service (the `ferroehr`
 /// application injects its DB-backed service here).
 ///
+/// The router is ready to serve, so its lifecycle reads serving.
+///
 /// # Errors
 /// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
 pub async fn build_with(
@@ -94,6 +96,7 @@ pub async fn build_with(
 ) -> Result<axum::Router, ServeError> {
     let authenticator = build_authenticator(&config).await?;
     let state = AppState::with_backend(config, backend);
+    state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
 }
 
@@ -121,7 +124,8 @@ pub async fn serve_with(
 /// [`Observability`] bundle.
 ///
 /// The management surface is merged into the returned router when it is enabled
-/// and not bound to a separate port.
+/// and not bound to a separate port. The router is ready to serve, so the
+/// bundle's lifecycle reads serving.
 ///
 /// # Errors
 /// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
@@ -133,6 +137,7 @@ pub async fn build_full(
 ) -> Result<axum::Router, ServeError> {
     let authenticator = build_authenticator(&config).await?;
     let state = AppState::with_parts(config, backend, authz, observability);
+    state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
 }
 
@@ -208,7 +213,19 @@ pub async fn serve_full(
         None
     };
 
+    // Readiness withdraws the moment the shutdown signal arrives, before the
+    // listener stops accepting.
+    let lifecycle = state.observability().lifecycle.clone();
+    let drain = tokio::spawn({
+        let lifecycle = lifecycle.clone();
+        async move {
+            shutdown_signal().await;
+            lifecycle.drain();
+        }
+    });
+    lifecycle.booted();
     let result = run_server(main_app, &bind, &tls, connection).await;
+    drain.abort();
     if let Some(task) = management_task {
         task.abort();
     }

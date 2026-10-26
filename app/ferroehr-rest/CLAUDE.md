@@ -20,8 +20,9 @@ terminology / management / event-subscription surfaces). Entry point:
 - **The health family is always-on and ungated** (`extensions::health`:
   `/health`, `/health/liveness`, `/health/readiness`), mounted outside the API
   subtree — no auth, no audit, no overload shed, no config switch — and says
-  as little as possible: readiness carries each indicator's name and status,
-  never its detail. **Everything reachable without a credential says only what
+  as little as possible: readiness serves the family document of
+  `ferrohealth-health` without detail (the phase and each indicator's name and
+  state). **Everything reachable without a credential says only what
   a client or probe needs** (owner decision 2026-10-06): the detail lives on the
   `/management` surface behind its per-endpoint access levels —
   `/management/health` (every indicator with its detail) and

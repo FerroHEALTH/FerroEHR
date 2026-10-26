@@ -234,6 +234,12 @@ ferrohealth-authz = { version = "=0.1.3", default-features = false }
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
 # Verified on crates.io 2026-10-26 (0.1.0).
 ferrohealth-secret = "=0.1.0"
+# The family's health document, indicator registry and process lifecycle
+# (FerroSYS): `/health/readiness` and `/management/health` serve its
+# `Readiness`, and the viewer reads the same document. The default build is the
+# document alone; a server takes `registry`. Verified on crates.io 2026-10-26
+# (0.1.1).
+ferrohealth-health = { version = "=0.1.1", default-features = false }
 
 # ── Terminology (the client of the one FHIR terminology server) ───────────────
 # FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,

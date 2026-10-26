@@ -19,17 +19,15 @@
 
 use std::sync::{Arc, OnceLock};
 
-use async_trait::async_trait;
-
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
 use ferroehr::config::server::ServerConfig;
 use ferroehr::telemetry::build_info::BuildInfo;
-use ferroehr::telemetry::health::{Health, HealthIndicator, HealthRegistry};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
+use ferrohealth_health::registry::{Check, HealthIndicator, Outcome, Registry};
 use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
@@ -362,18 +360,13 @@ struct Detailed;
 /// The detail [`Detailed`] reports.
 const INDICATOR_DETAIL: &str = "3 findings; chain broken at position 42 (10.0.0.5:5432)";
 
-#[async_trait]
 impl HealthIndicator for Detailed {
     fn name(&self) -> &'static str {
         "audit_chain"
     }
 
-    async fn check(&self) -> Health {
-        Health::degraded(INDICATOR_DETAIL)
-    }
-
-    fn required(&self) -> bool {
-        false
+    fn check(&self) -> Check<'_> {
+        Box::pin(async { Outcome::degraded(INDICATOR_DETAIL) })
     }
 }
 
@@ -387,7 +380,7 @@ async fn app_with_detail(level: AccessLevel, roles: &[&str]) -> (testkit::TestDb
         status: level,
         ..EndpointLevels::default()
     });
-    observability.health = HealthRegistry::new(vec![Arc::new(Detailed)]);
+    observability.health = Registry::new(vec![Arc::new(Detailed)]);
     build_app(config, authz, observability).await
 }
 
@@ -417,10 +410,11 @@ async fn readiness_is_status_only_and_management_health_carries_the_detail() {
     assert_eq!(
         body,
         serde_json::json!({
-            "status": "DEGRADED",
-            "components": { "audit_chain": { "status": "DEGRADED" } }
+            "state": "degraded",
+            "phase": "serving",
+            "indicators": [{ "name": "audit_chain", "state": "degraded" }]
         }),
-        "the public probe carries statuses only"
+        "the public probe carries states only"
     );
     assert!(
         !body.to_string().contains("detail"),
@@ -433,10 +427,10 @@ async fn readiness_is_status_only_and_management_health_carries_the_detail() {
     );
     let (status, body) = json_of(app, get_auth("/management/health")).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body["status"], "DEGRADED");
+    assert_eq!(body["state"], "degraded");
     assert_eq!(
-        body["components"]["audit_chain"],
-        serde_json::json!({ "status": "DEGRADED", "detail": INDICATOR_DETAIL }),
+        body["indicators"][0],
+        serde_json::json!({ "name": "audit_chain", "state": "degraded", "detail": INDICATOR_DETAIL }),
         "the management view carries the detail: {body}"
     );
 
@@ -445,6 +439,37 @@ async fn readiness_is_status_only_and_management_health_carries_the_detail() {
         status_of(app, get_auth("/management/health")).await,
         StatusCode::FORBIDDEN
     );
+}
+
+/// Readiness is withdrawn the moment the process drains, while every indicator
+/// still answers, and both probes say so. No openEHR spec governs health
+/// probes — our own design.
+#[tokio::test]
+async fn a_draining_process_is_not_ready() {
+    let config = admin_config(&["ADMIN"]);
+    let authz = authz_for(&config, true);
+    let observability = one_endpoint(EndpointLevels {
+        health: AccessLevel::AdminOnly,
+        ..EndpointLevels::default()
+    });
+    let lifecycle = observability.lifecycle.clone();
+    let (_db, app) = build_app(config, authz, observability).await;
+    assert_eq!(
+        status_of(app.clone(), get("/health/readiness")).await,
+        StatusCode::OK,
+        "a built router serves"
+    );
+
+    lifecycle.drain();
+    let (status, body) = json_of(app.clone(), get("/health/readiness")).await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+    assert_eq!(
+        body,
+        serde_json::json!({ "state": "down", "phase": "draining", "indicators": [] })
+    );
+    let (status, body) = json_of(app, get_auth("/management/health")).await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+    assert_eq!(body["phase"], "draining");
 }
 
 /// The licence, the deployment gaps and the support period are served by
@@ -530,7 +555,6 @@ async fn app_with_metrics() -> (testkit::TestDb, Router) {
             ..ManagementConfig::default()
         },
         prometheus: Some(recorder().clone()),
-        health: HealthRegistry::default(),
         build_info: BuildInfo::current(),
         ..Observability::default()
     };

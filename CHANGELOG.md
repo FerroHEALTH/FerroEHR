@@ -72,6 +72,19 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **Breaking: `/health/readiness` and `/management/health` serve the
+  FerroHEALTH readiness document of `ferrohealth-health` 0.1.1** (#4087). The
+  body is `{"state", "phase", "indicators": [{"name", "state", "detail"?}]}`
+  with lowercase states (`up`, `degraded`, `down`), replacing `{"status",
+  "components"}`; the public probe leaves out every `detail`. Readiness also
+  answers `503` while the process boots and from the moment it receives
+  `SIGTERM` or `SIGINT`, before the listener stops. The optional indicators
+  (`audit_sender`, `audit_delivery`, `audit_chain`, `events`) read at worst
+  `degraded`, so a damaged audit chain now reads `degraded` where it read
+  `DOWN`, and an indicator that is up carries no detail. The viewer's health
+  tab reads the same document. Probes that test only the status code are
+  unaffected.
+
 - **The shared crates move to their newest lockstep releases**: `ferrohealth-smart` 0.7.3,
   `ferrohealth-authz` 0.1.3, `ihe-atna` and `ehds-logging` 0.2.12 and `ferrobridge-term`
   0.1.138. Every secret in the `[auth]` section now renders as `***`, the family

@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Concrete health indicators: the dependency-touching checks (DB pool,
-//! migrations, audit sender, event publisher) implementing the
-//! [`HealthIndicator`] trait from [`crate::telemetry::health`].
+//! migrations, audit sender, event publisher) implementing the family's
+//! [`HealthIndicator`] trait.
 //!
 //! The binary constructs them over the live handles and registers them into
-//! the [`HealthRegistry`](crate::telemetry::health::HealthRegistry) at boot;
-//! the HTTP probes live in the protocol adapter (`ferroehr-rest`).
+//! a [`ferrohealth_health::registry::Registry`] at boot; the HTTP probes live
+//! in the protocol adapter (`ferroehr-rest`). `db` and `migrations` read
+//! `down` when they fail, which withdraws readiness; every other indicator
+//! reads at worst `degraded`, so it reports without taking the instance out
+//! of rotation.
 //!
 //! No openEHR spec governs health probes — our own operational design.
 
@@ -18,8 +21,7 @@ use crate::db::acquire::acquire;
 use crate::system_log::chain_check::{ChainCheck, ChainCheckState};
 use crate::system_log::config::AuditPosture;
 use crate::system_log::sender::{AuditSender, DeliveryStatus};
-use crate::telemetry::health::{Health, HealthIndicator, HealthStatus};
-use async_trait::async_trait;
+use ferrohealth_health::registry::{Check, HealthIndicator, Outcome};
 use sqlx::PgPool;
 
 /// `db` — a bounded `SELECT 1` liveness ping. Required for readiness.
@@ -36,31 +38,32 @@ impl DbHealth {
     }
 }
 
-#[async_trait]
 impl HealthIndicator for DbHealth {
     fn name(&self) -> &'static str {
         "db"
     }
 
-    async fn check(&self) -> Health {
-        let mut conn = match acquire(&self.pool).await {
-            Ok(conn) => conn,
-            Err(e) => {
-                tracing::error!(error = %e.driver(), "health: no database connection");
-                return Health::down("database ping failed");
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            let mut conn = match acquire(&self.pool).await {
+                Ok(conn) => conn,
+                Err(e) => {
+                    tracing::error!(error = %e.driver(), "health: no database connection");
+                    return Outcome::down("database ping failed");
+                }
+            };
+            match sqlx::query("SELECT 1").execute(&mut *conn).await {
+                Ok(_) => Outcome::up(),
+                Err(e) => {
+                    // The health family is UNAUTHENTICATED by design (orchestrator
+                    // probes), and an `sqlx::Error` Display can name the DSN host,
+                    // the database, the role, or SQL text. The operator reads the
+                    // cause here; the wire gets the fact alone.
+                    tracing::error!(error = %e, "health: database ping failed");
+                    Outcome::down("database ping failed")
+                }
             }
-        };
-        match sqlx::query("SELECT 1").execute(&mut *conn).await {
-            Ok(_) => Health::up(),
-            Err(e) => {
-                // The health family is UNAUTHENTICATED by design (orchestrator
-                // probes), and an `sqlx::Error` Display can name the DSN host,
-                // the database, the role, or SQL text. The operator reads the
-                // cause here; the wire gets the fact alone.
-                tracing::error!(error = %e, "health: database ping failed");
-                Health::down("database ping failed")
-            }
-        }
+        })
     }
 }
 
@@ -80,34 +83,35 @@ impl MigrationsHealth {
     }
 }
 
-#[async_trait]
 impl HealthIndicator for MigrationsHealth {
     fn name(&self) -> &'static str {
         "migrations"
     }
 
-    async fn check(&self) -> Health {
-        let query = "SELECT (to_regclass('clinical.node') IS NOT NULL \
-             AND to_regclass('clinical.version') IS NOT NULL \
-             AND to_regclass('clinical.vo_head') IS NOT NULL) AS applied";
-        let mut conn = match acquire(&self.pool).await {
-            Ok(conn) => conn,
-            Err(e) => {
-                tracing::error!(error = %e.driver(), "health: no database connection");
-                return Health::down("migration check failed");
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            let query = "SELECT (to_regclass('clinical.node') IS NOT NULL \
+                 AND to_regclass('clinical.version') IS NOT NULL \
+                 AND to_regclass('clinical.vo_head') IS NOT NULL) AS applied";
+            let mut conn = match acquire(&self.pool).await {
+                Ok(conn) => conn,
+                Err(e) => {
+                    tracing::error!(error = %e.driver(), "health: no database connection");
+                    return Outcome::down("migration check failed");
+                }
+            };
+            match sqlx::query_scalar::<_, bool>(query)
+                .fetch_one(&mut *conn)
+                .await
+            {
+                Ok(true) => Outcome::up(),
+                Ok(false) => Outcome::down("core schema tables missing (migrations not applied)"),
+                Err(e) => {
+                    tracing::error!(error = %e, "health: migration check failed");
+                    Outcome::down("migration check failed")
+                }
             }
-        };
-        match sqlx::query_scalar::<_, bool>(query)
-            .fetch_one(&mut *conn)
-            .await
-        {
-            Ok(true) => Health::up(),
-            Ok(false) => Health::down("core schema tables missing (migrations not applied)"),
-            Err(e) => {
-                tracing::error!(error = %e, "health: migration check failed");
-                Health::down("migration check failed")
-            }
-        }
+        })
     }
 }
 
@@ -145,34 +149,23 @@ impl AuditHealth {
     }
 }
 
-#[async_trait]
 impl HealthIndicator for AuditHealth {
     fn name(&self) -> &'static str {
         "audit_sender"
     }
 
-    async fn check(&self) -> Health {
-        let live = self.sender.as_ref().is_some_and(AuditSender::enabled);
-        let cautions = self.posture.cautions();
-        if !live || !self.posture.enabled {
-            return Health::degraded(cautions.first().copied().unwrap_or(
-                "auditing is disabled: no access log is written and the EHDS logging \
-                 component is off (set [audit] enabled = true)",
-            ));
-        }
-        let mut detail = self.posture.summary();
-        for caution in cautions {
-            detail.push_str("; ");
-            detail.push_str(caution);
-        }
-        Health {
-            status: HealthStatus::Up,
-            detail: Some(detail),
-        }
-    }
-
-    fn required(&self) -> bool {
-        false
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            let live = self.sender.as_ref().is_some_and(AuditSender::enabled);
+            let cautions = self.posture.cautions();
+            if !live || !self.posture.enabled {
+                return Outcome::degraded(cautions.first().copied().unwrap_or(
+                    "auditing is disabled: no access log is written and the EHDS logging \
+                     component is off (set [audit] enabled = true)",
+                ));
+            }
+            Outcome::up()
+        })
     }
 }
 
@@ -197,60 +190,54 @@ impl AuditDeliveryHealth {
     }
 }
 
-#[async_trait]
 impl HealthIndicator for AuditDeliveryHealth {
     fn name(&self) -> &'static str {
         "audit_delivery"
     }
 
-    async fn check(&self) -> Health {
-        let mut degraded = false;
-        let parts: Vec<String> = self
-            .delivery
-            .statuses()
-            .into_iter()
-            .map(|(sink, status)| {
-                if !status.reachable || status.depth.quarantined > 0 {
-                    degraded = true;
-                }
-                format!(
-                    "{sink}: {} waiting, {} refused, {} delivered, {}{}",
-                    status.depth.waiting(),
-                    status.depth.quarantined,
-                    status.delivered,
-                    if status.reachable {
-                        "reachable"
-                    } else {
-                        "unreachable"
-                    },
-                    if status.durable {
-                        ""
-                    } else {
-                        ", held in memory"
-                    },
-                )
-            })
-            .collect();
-        let detail = parts.join("; ");
-        if degraded {
-            Health::degraded(detail)
-        } else {
-            Health {
-                status: HealthStatus::Up,
-                detail: Some(detail),
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            let mut degraded = false;
+            let parts: Vec<String> = self
+                .delivery
+                .statuses()
+                .into_iter()
+                .map(|(sink, status)| {
+                    if !status.reachable || status.depth.quarantined > 0 {
+                        degraded = true;
+                    }
+                    format!(
+                        "{sink}: {} waiting, {} refused, {} delivered, {}{}",
+                        status.depth.waiting(),
+                        status.depth.quarantined,
+                        status.delivered,
+                        if status.reachable {
+                            "reachable"
+                        } else {
+                            "unreachable"
+                        },
+                        if status.durable {
+                            ""
+                        } else {
+                            ", held in memory"
+                        },
+                    )
+                })
+                .collect();
+            let detail = parts.join("; ");
+            if degraded {
+                Outcome::degraded(detail)
+            } else {
+                Outcome::up()
             }
-        }
-    }
-
-    fn required(&self) -> bool {
-        false
+        })
     }
 }
 
 /// `audit_chain` — reports the latest scheduled verification of the local
 /// audit store's hash chain.
 ///
-/// Damage reads `DOWN` and an unverifiable trail `DEGRADED`, each naming the
+/// Damage and an unverifiable trail both read `DEGRADED`, each naming the
 /// finding; neither flips readiness, because the trail still records while the
 /// damage is investigated. Registered only when the scheduled verification
 /// runs.
@@ -267,46 +254,37 @@ impl AuditChainHealth {
     }
 }
 
-#[async_trait]
 impl HealthIndicator for AuditChainHealth {
     fn name(&self) -> &'static str {
         "audit_chain"
     }
 
-    async fn check(&self) -> Health {
-        match self.check.state() {
-            ChainCheckState::Pending => Health {
-                status: HealthStatus::Up,
-                detail: Some("the first scheduled verification has not run yet".to_owned()),
-            },
-            ChainCheckState::Intact { at } => Health {
-                status: HealthStatus::Up,
-                detail: Some(format!("hash chain verified intact at {at}")),
-            },
-            ChainCheckState::Damaged {
-                at,
-                total,
-                findings,
-            } => {
-                let first = findings.first().map_or_else(String::new, |finding| {
-                    let position = finding
-                        .chain_seq
-                        .map_or_else(|| "chain state".to_owned(), |seq| format!("position {seq}"));
-                    format!("; first at {position}: {}", finding.finding)
-                });
-                Health::down(format!(
-                    "hash chain DAMAGED at {at}: {total} finding(s){first}; see \
-                     audit.verify_audit_chain()"
-                ))
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            match self.check.state() {
+                ChainCheckState::Pending | ChainCheckState::Intact { .. } => Outcome::up(),
+                ChainCheckState::Damaged {
+                    at,
+                    total,
+                    findings,
+                } => {
+                    let first = findings.first().map_or_else(String::new, |finding| {
+                        let position = finding.chain_seq.map_or_else(
+                            || "chain state".to_owned(),
+                            |seq| format!("position {seq}"),
+                        );
+                        format!("; first at {position}: {}", finding.finding)
+                    });
+                    Outcome::degraded(format!(
+                        "hash chain DAMAGED at {at}: {total} finding(s){first}; see \
+                         audit.verify_audit_chain()"
+                    ))
+                }
+                ChainCheckState::Unverifiable { at, reason } => Outcome::degraded(format!(
+                    "the hash chain could not be verified at {at}: {reason}"
+                )),
             }
-            ChainCheckState::Unverifiable { at, reason } => Health::degraded(format!(
-                "the hash chain could not be verified at {at}: {reason}"
-            )),
-        }
-    }
-
-    fn required(&self) -> bool {
-        false
+        })
     }
 }
 
@@ -332,22 +310,19 @@ impl EventsHealth {
     }
 }
 
-#[async_trait]
 impl HealthIndicator for EventsHealth {
     fn name(&self) -> &'static str {
         "events"
     }
 
-    async fn check(&self) -> Health {
-        if self.healthy.load(Ordering::Relaxed) {
-            Health::up()
-        } else {
-            Health::degraded("event broker unavailable; outbox buffering")
-        }
-    }
-
-    fn required(&self) -> bool {
-        false
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            if self.healthy.load(Ordering::Relaxed) {
+                Outcome::up()
+            } else {
+                Outcome::degraded("event broker unavailable; outbox buffering")
+            }
+        })
     }
 }
 
@@ -355,7 +330,8 @@ impl HealthIndicator for EventsHealth {
 mod tests {
     use super::{AuditHealth, DbHealth, EventsHealth, MigrationsHealth};
     use crate::system_log::config::{AuditConfig, AuditPosture, FailMode};
-    use crate::telemetry::health::{HealthIndicator, HealthStatus};
+    use ferrohealth_health::document::State;
+    use ferrohealth_health::registry::HealthIndicator;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -369,13 +345,13 @@ mod tests {
         });
         let indicator = AuditHealth::disabled(posture);
         assert_eq!(indicator.name(), "audit_sender");
-        assert!(
-            !indicator.required(),
+        let health = indicator.check().await;
+        assert_eq!(
+            health.state(),
+            State::Degraded,
             "a silent trail must not take the instance out of rotation"
         );
-        let health = indicator.check().await;
-        assert_eq!(health.status, HealthStatus::Degraded);
-        let detail = health.detail.unwrap_or_default();
+        let detail = health.detail().unwrap_or_default();
         assert!(
             detail.contains("disabled") && detail.contains("EHDS"),
             "{detail}"
@@ -423,17 +399,17 @@ mod tests {
         let healthy = Arc::new(AtomicBool::new(true));
         let indicator = EventsHealth::new(Arc::clone(&healthy));
         assert_eq!(indicator.name(), "events");
-        assert!(
-            !indicator.required(),
-            "delivery lag must never take the instance out of rotation"
-        );
-        assert_eq!(indicator.check().await.status, HealthStatus::Up);
+        assert_eq!(indicator.check().await.state(), State::Up);
 
         healthy.store(false, Ordering::Relaxed);
         let degraded = indicator.check().await;
-        assert_eq!(degraded.status, HealthStatus::Degraded);
+        assert_eq!(
+            degraded.state(),
+            State::Degraded,
+            "delivery lag must never take the instance out of rotation"
+        );
         assert!(
-            degraded.detail.is_some_and(|d| d.contains("outbox")),
+            degraded.detail().is_some_and(|d| d.contains("outbox")),
             "the degraded detail must say the outbox buffers"
         );
     }
@@ -459,8 +435,8 @@ mod tests {
             DbHealth::new(pool.clone()).check().await,
             MigrationsHealth::new(pool).check().await,
         ] {
-            assert_eq!(health.status, HealthStatus::Down);
-            let detail = health.detail.unwrap_or_default();
+            assert_eq!(health.state(), State::Down);
+            let detail = health.detail().unwrap_or_default();
             for leaked in [
                 "secret_role",
                 "secret_password",
