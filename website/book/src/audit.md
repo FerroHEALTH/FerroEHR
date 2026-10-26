@@ -302,7 +302,7 @@ side it is a limit of the format, not something this code withholds.
 The common specifications the regulation's Article 36 provides for have not
 been adopted. When they are, this mapping is re-verified against them rather
 than assumed to still hold; see the
-[EHDS readiness page](compliance/ehds-readiness.md).
+[EHDS readiness page](https://ferrohealth.eu/docs/ehds/readiness.html).
 
 ### Emergency access (EHDS Art. 11(5))
 
