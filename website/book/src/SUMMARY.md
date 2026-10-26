@@ -34,6 +34,7 @@
 - [Templates & validation](templates-validation.md)
 - [Beyond the core](beyond-core/index.md)
   - [EHR Extract & messaging](beyond-core/messaging.md)
+  - [FerroEHR as a federation node](beyond-core/federation-node.md)
   - [Demographics](beyond-core/demographics.md)
   - [Terminology servers](beyond-core/terminology.md)
   - [Change events (AMQP)](beyond-core/amqp.md)
