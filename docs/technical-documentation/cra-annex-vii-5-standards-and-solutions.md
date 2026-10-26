@@ -37,6 +37,6 @@ each with the files that implement it.
 | OpenSSF Scorecard | `.github/workflows/scorecard.yml` |
 
 The openEHR specifications FerroEHR implements are on the
-[information sheet](../../website/book/src/compliance/information-sheet.md#e-standards-formats-and-specifications).
+[information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html#e-standards-formats-and-specifications), with the versions on the copy each release attaches.
 
 State: available.

@@ -196,7 +196,7 @@ authority.
   [shared responsibility](../compliance/shared-responsibility.md).
 - **It cannot certify anything.** No conformity assessment has been carried
   out and no EU declaration of conformity exists; see
-  [EHDS readiness](../compliance/ehds-readiness.md).
+  [EHDS readiness](https://ferrohealth.eu/docs/ehds/readiness.html).
 
 ## Next
 

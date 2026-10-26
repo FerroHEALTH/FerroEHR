@@ -50,8 +50,10 @@ The rules that follow from it:
 
 FerroSYS is shared crates like FerroAUDIT and FerroAUTH, never a control plane
 or a central service. Out of scope until the owner says otherwise: FerroFORMS
-(paused), the FerroHEALTH umbrella repository (paused), and Veredictum (being rewritten,
-so its verdicts are not authority). FerroPULSE receives the products'
+(paused) and Veredictum (being rewritten,
+so its verdicts are not authority). The FerroHEALTH umbrella repository is
+active again (owner, 2026-10-26): its book holds the family pages and the EHDS
+system documents of FerroEHR with FerroBRIDGE. FerroPULSE receives the products'
 usage report, which release compose files keep on by default with a
 documented off switch.
 
