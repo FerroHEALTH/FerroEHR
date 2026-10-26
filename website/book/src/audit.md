@@ -517,8 +517,9 @@ Four controls sit on top of it, and they are separate on purpose:
   the `atna_audit_chain_findings` counter with `kind = "damage"`. A run that
   cannot verify at all counts as `kind = "unverifiable"`, because a trail that
   cannot be checked is never a pass. The latest result is the `audit_chain`
-  indicator on `GET /health/readiness`: `UP` while intact, `DOWN` with
-  the first finding when damaged, `DEGRADED` when unverifiable. It never flips
+  indicator on `GET /health/readiness`: `UP` while intact and `DEGRADED`
+  when damaged or unverifiable; its detail on `GET /management/health` names
+  the first finding. It never flips
   readiness, because the trail keeps recording while the damage is
   investigated. Alert on the counter or on that component, and use the query
   above to see every finding. Each replica runs its own check.

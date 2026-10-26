@@ -201,7 +201,7 @@ pub(super) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out:
         // `|name`/`|id`/`|id_scheme`/`|id_namespace` suffixes plus the
         // `/_identifier:i` and `/relationship` sub-paths.
         "PARTY_PROXY" | "PARTY_SELF" | "PARTY_IDENTIFIED" | "PARTY_RELATED" => {
-            parties::emit_party(rm, out);
+            parties::emit_party_as(rm, "PERSON", out);
         }
         // master05 §DV_MULTIMEDIA: bare = `uri.value`, plus the attribute set;
         // `/_thumbnail`, `/_charset`, `/_language` are `_`-attribute sub-paths.

@@ -555,6 +555,9 @@ pub(crate) fn emit(composition: &Value, out: &mut SimNode) {
         set_bare(out, "territory", code.clone());
     }
     match composition.get("composer") {
+        // NOTE: master06 §Composer has no reference-type shortcut, so such a composer is
+        // written as `composer|raw` by the flattener (master04 §Raw canonical JSON).
+        Some(c) if !crate::flat::map::parties::ref_type_survives(c, "PERSON") => {}
         Some(c) if c.get("_type").and_then(Value::as_str) == Some("PARTY_SELF") => {
             set_bare(out, "composer_self", json!(true));
             emit_external_ref(c, out);

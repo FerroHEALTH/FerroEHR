@@ -239,7 +239,7 @@ helm install … --set image.tag=local --set image.pullPolicy=Never
 ```bash
 kubectl -n ferroehr-test port-forward svc/ferroehr 8080:8080 &
 curl -s http://127.0.0.1:8080/health/liveness            # OK
-curl -s http://127.0.0.1:8080/health/readiness           # {"status":"UP","components":{…}}
+curl -s http://127.0.0.1:8080/health/readiness           # {"state":"up","phase":"serving","indicators":[…]}
 curl -s http://127.0.0.1:8080/ferroehr/rest/status       # {"status":"UP","server_version":"3.17.3",…}
 
 # The proof that matters: a served openEHR request.
@@ -362,8 +362,8 @@ in production. Take the schema away and watch what recovers on its own:
 kubectl -n ferroehr-test exec deploy/ferroehr-postgres -- \
   psql -U ferroehr -d ferroehr -c 'DROP SCHEMA ehr CASCADE'
 curl -s http://127.0.0.1:8080/health/readiness
-# {"status":"DOWN","components":{"db":{"status":"UP"},
-#  "migrations":{"status":"DOWN","detail":"core schema tables missing (migrations not applied)"}}}
+# {"state":"down","phase":"serving","indicators":[{"name":"db","state":"up"},
+#  {"name":"migrations","state":"down"}]}
 kubectl -n ferroehr-test get pods -l app.kubernetes.io/name=ferroehr \
   -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[0].ready,RESTARTS:.status.containerStatuses[0].restartCount'
 # both READY false, RESTARTS unchanged — readiness gates, liveness does NOT restart

@@ -116,6 +116,16 @@ pub(super) fn build_object_ref(node: &SimNode) -> Option<Value> {
 
 // ── PARTY_PROXY family (master05 §§PARTY_SELF, PARTY_IDENTIFIED, PARTY_RELATED) ─
 
+/// Emit `p` as the master05 suffixes, or as `|raw` when its reference type is
+/// not the `default_party_type` the builder fills in ([`ref_type_survives`]).
+pub(super) fn emit_party_as(p: &Value, default_party_type: &str, out: &mut SimNode) {
+    if ref_type_survives(p, default_party_type) {
+        emit_party(p, out);
+    } else {
+        out.attrs.insert("raw".to_owned(), p.clone());
+    }
+}
+
 /// PARTY_PROXY (`PARTY_SELF`/`PARTY_IDENTIFIED`/`PARTY_RELATED`) → inlined
 /// `|name`/`|id`/`|id_scheme`/`|id_namespace` attrs on `out`, plus `_identifier:i`
 /// (PARTY_IDENTIFIED) and a `/relationship` DV_CODED_TEXT child (PARTY_RELATED).
@@ -235,6 +245,33 @@ pub(super) fn build_party(node: &SimNode, default_party_type: &str) -> Value {
     Value::Object(p)
 }
 
+/// Whether the master05 suffixes carry `party` whole when the builder fills
+/// `default_party_type` in as its `external_ref.type`.
+///
+/// The §§PARTY_IDENTIFIED and PARTY_PROXY tables of master05 define `|id`,
+/// `|id_scheme`, `|id_namespace` and `|name` and no row for the reference
+/// type, so a party whose `external_ref.type` is another type cannot survive
+/// the suffixes; its emitter writes the party as `|raw` instead (master04
+/// §Raw canonical JSON).
+pub(crate) fn ref_type_survives(party: &Value, default_party_type: &str) -> bool {
+    party
+        .pointer("/external_ref/type")
+        .and_then(Value::as_str)
+        .is_none_or(|ty| ty == default_party_type)
+}
+
+/// Whether the inlined performer of `participation` survives the master05
+/// suffixes, whose builder fills `PERSON` in as its reference type.
+pub(crate) fn performer_survives(participation: &Value) -> bool {
+    participation
+        .get("performer")
+        .is_none_or(|performer| ref_type_survives(performer, PERFORMER_REF_TYPE))
+}
+
+/// The `PARTY_REF.type` the performer builder fills in: a participation's
+/// performer is a person (master05 §PARTICIPATION defines no reference-type row).
+const PERFORMER_REF_TYPE: &str = "PERSON";
+
 /// The `PARTY_REF` external reference for a party sim node, when it carries an
 /// `|id` (master05 §PARTY_IDENTIFIED: `|id_namespace` is required when `|id` is
 /// set). A `|id_scheme` makes the id a `GENERIC_ID`; without one it is a
@@ -279,6 +316,10 @@ fn build_party_identifiers(node: &SimNode) -> Vec<Value> {
 /// (`|name`/`|id`/`|id_scheme`/`|id_namespace`, `|identifiers_*:i`), and a
 /// PARTY_RELATED `/relationship` child.
 pub(super) fn emit_participation(p: &Value, out: &mut SimNode) {
+    if !performer_survives(p) {
+        out.attrs.insert("raw".to_owned(), p.clone());
+        return;
+    }
     if let Some(f) = p.pointer("/function/value") {
         out.attrs.insert("function".to_owned(), f.clone());
     }
@@ -376,7 +417,7 @@ fn build_performer(node: &SimNode) -> Value {
     if let Some(name) = node.attrs.get("name") {
         p.insert("name".to_owned(), name.clone());
     }
-    if let Some(ext) = external_ref(node, "PERSON") {
+    if let Some(ext) = external_ref(node, PERFORMER_REF_TYPE) {
         p.insert("external_ref".to_owned(), ext);
     }
     if !identifiers.is_empty() {

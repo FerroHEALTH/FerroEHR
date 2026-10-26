@@ -83,6 +83,7 @@ mod tests {
     use openehr_base::v1_3::prelude::{
         HierObjectId, ObjectId, ObjectRef, ObjectRefData, TerminologyId,
     };
+    use openehr_term::codes::{AuditChangeType, VersionLifecycleState};
 
     fn coded(code: &str, rubric: &str) -> DvCodedText {
         DvCodedText {
@@ -113,7 +114,10 @@ mod tests {
                 accuracy: None,
                 value: "2026-07-07T10:11:12Z".to_owned(),
             },
-            change_type: coded("249", "creation"),
+            change_type: coded(
+                AuditChangeType::Creation.code(),
+                AuditChangeType::Creation.rubric(),
+            ),
             description: None,
             committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
         })
@@ -145,7 +149,10 @@ mod tests {
                 "8849182c-82ad-4088-a07f-48ead4180515::remote.example::1",
             )),
             other_input_version_uids: openehr_base::containers::present_nonempty(Vec::new()),
-            lifecycle_state: coded("532", "complete"),
+            lifecycle_state: coded(
+                VersionLifecycleState::Complete.code(),
+                VersionLifecycleState::Complete.rubric(),
+            ),
             attestations: openehr_base::containers::present_nonempty(Vec::new()),
             data: Some("content".to_owned()),
         }
@@ -209,7 +216,10 @@ mod tests {
         assert_eq!(imported(wrapped()).data(), Some(&"content".to_owned()));
 
         let mut deleted = wrapped();
-        deleted.lifecycle_state = coded("523", "deleted");
+        deleted.lifecycle_state = coded(
+            VersionLifecycleState::Deleted.code(),
+            VersionLifecycleState::Deleted.rubric(),
+        );
         deleted.data = None;
         assert_eq!(imported(deleted).data(), None);
     }

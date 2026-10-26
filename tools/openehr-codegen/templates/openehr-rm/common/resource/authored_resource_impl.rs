@@ -106,6 +106,7 @@ impl Validate for AuthoredResource {
 
 #[cfg(test)]
 mod tests {
+    use openehr_term::codes::AuditChangeType;
     use super::*;
     use crate::v1_2::common::generic::audit_details::{AuditDetails, AuditDetailsData};
     use crate::v1_2::common::generic::party_proxy::PartyProxy;
@@ -178,7 +179,7 @@ mod tests {
                             value: "2026-07-07T10:11:12Z".to_owned(),
                         },
                         change_type: DvCodedText {
-                            value: "creation".to_owned(),
+                            value: AuditChangeType::Creation.rubric().to_owned(),
                             hyperlink: None,
                             formatting: None,
                             mappings: None,
@@ -188,7 +189,7 @@ mod tests {
                                 terminology_id: TerminologyId {
                                     value: "openehr".to_owned(),
                                 },
-                                code_string: "249".to_owned(),
+                                code_string: AuditChangeType::Creation.code().to_owned(),
                                 preferred_term: None,
                             },
                         },

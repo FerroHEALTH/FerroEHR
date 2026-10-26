@@ -40,6 +40,7 @@ scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds
 | `jwks_refresh_interval_seconds` | int | `60` | A token naming an unknown `kid` reads the key set again at most once per interval. |
 | `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it serves the SMART discovery document only with [`[smart] issuer_metadata_file`](#smart) set. |
 | `timeout_ms` | int | `10000` | One call to the authorization server. |
+| `ca_file` | path | unset | A PEM bundle of certificate authorities trusted for the issuer's metadata and key set in addition to the platform roots, for an issuer behind a private PKI. A file that holds no certificate, or one that does not parse, refuses the start. |
 | `realm` | string | `""` ⇒ `ferroehr` | The realm every `WWW-Authenticate` challenge names. |
 | `role_claims` | list of string | `["roles","groups","entitlements","realm_access.roles"]` | Token claim paths the caller's roles are read from, in order; dotted paths walk nested claims, and a role is matched without regard to case. A path that is empty, has an empty step or carries whitespace is a boot error. **`scope` is not a role source**; see [Security](../security.md#rbac-role-based-coarse). `[authz.rbac] role_claims`, where this key lived before, is refused at boot. |
 | `scopeless_subjects` | list of string | `[]` | The exact `sub` values whose token, when it carries no resource scope of either the SMART on openEHR or the SMART on FHIR grammar, meets every SMART on openEHR requirement. A token that carries resource scopes gets only its scopes, and the allowlist reaches neither the ADMIN API nor the DEMOGRAPHIC API, which need the product scope. |
@@ -115,7 +116,7 @@ environment grammar cannot spell an array index.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `cache_ttl_seconds` | int | `0` | How long a credential that verified is kept, so a repeat request skips the Argon2id derivation (`0` checks every request). The entry is named by a keyed hash of `user-id:password`, never the password, and only a credential that verified is kept, so a wrong password always pays the derivation. The TTL bounds how long a removed user keeps working. Argon2id costs tens of milliseconds of CPU per check by design, so a busy Basic client wants a value such as `60`. |
+| `cache_ttl_seconds` | int | `300` | How long a credential that verified is kept, so a repeat request skips the Argon2id derivation; `0` turns the cache off and checks every request. The entry is named by a keyed hash of `user-id:password` under a key drawn at boot, never the password, and only a credential that verified is kept, so a wrong password always pays the derivation. The cache holds at most 4096 credentials and empties at a restart. The TTL bounds how long a removed user keeps working, which matters only until the restart that applies the new user list. Argon2id is slow by design, so with the cache off its cost bounds how many Basic requests a core can answer. |
 
 > [!WARNING]
 > **Every `password_hash` must meet the OWASP Argon2id floor: `m>=19456`

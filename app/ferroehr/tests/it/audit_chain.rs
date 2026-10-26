@@ -35,8 +35,9 @@ use ferroehr::system_log::fhir;
 use ferroehr::system_log::message::AuditContext;
 use ferroehr::system_log::sender;
 use ferroehr::system_log::store::AuditStore;
-use ferroehr::telemetry::health::{HealthIndicator, HealthStatus};
 use ferroehr::telemetry::indicators::AuditChainHealth;
+use ferrohealth_health::document::State;
+use ferrohealth_health::registry::HealthIndicator;
 
 fn ctx() -> AuditContext {
     AuditContext {
@@ -468,13 +469,13 @@ async fn the_chain_check_reports_a_tampered_record_on_the_health_surface() {
     let check = ChainCheck::new();
     let indicator = AuditChainHealth::new(check.clone());
     assert!(matches!(check.state(), ChainCheckState::Pending));
-    assert_eq!(indicator.check().await.status, HealthStatus::Up);
+    assert_eq!(indicator.check().await.state(), State::Up);
 
     assert!(matches!(
         check.run(&store).await,
         ChainCheckState::Intact { .. }
     ));
-    assert_eq!(indicator.check().await.status, HealthStatus::Up);
+    assert_eq!(indicator.check().await.state(), State::Up);
 
     with_triggers_disabled(
         &pool,
@@ -492,11 +493,14 @@ async fn the_chain_check_reports_a_tampered_record_on_the_health_surface() {
         "exactly the tampered record must be reported: {damaged:?}"
     );
     let health = indicator.check().await;
-    assert_eq!(health.status, HealthStatus::Down);
-    let detail = health.detail.expect("a damaged chain names the finding");
+    assert_eq!(
+        health.state(),
+        State::Degraded,
+        "damage is reported and never flips readiness"
+    );
+    let detail = health.detail().expect("a damaged chain names the finding");
     assert!(detail.contains("position 2"), "{detail}");
     assert!(detail.contains("modified"), "{detail}");
-    assert!(!indicator.required(), "damage never flips readiness");
 }
 
 /// The audit subsystem schedules the check whenever the local store is on, so

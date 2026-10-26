@@ -115,6 +115,38 @@ pub enum XmlError {
         /// The class's diagnosis.
         detail: String,
     },
+    /// A child element the parent's type does not declare. Every complex type of
+    /// the ITS-XML schemas is a closed `xs:sequence`, and an element outside the
+    /// content model is invalid (XML Schema 1.1 Part 1 §3.4.4.2), so it is
+    /// refused rather than skipped as if it were absent.
+    #[error("<{child}> is not a child element {owner} declares")]
+    UndeclaredChild {
+        /// The type, or the text element, that holds no such child.
+        owner: String,
+        /// The undeclared element's name.
+        child: String,
+    },
+    /// A tool-emitted extension element no schema declares carries a value that
+    /// would change the constraint's meaning (a `match_negated` of `true`), which
+    /// this reader cannot honour.
+    #[error("<{element}> = {value:?} under {owner} is a tool extension no schema defines")]
+    UnsupportedExtension {
+        /// The type the element was found under.
+        owner: String,
+        /// The extension element's name.
+        element: String,
+        /// The value it carried.
+        value: String,
+    },
+    /// The document's root element is not the global element the schema
+    /// publishes for the type being read.
+    #[error("the root element is <{found}>, the schema publishes <{expected}>")]
+    UnexpectedRoot {
+        /// The element the schema publishes.
+        expected: String,
+        /// The element the document starts with.
+        found: String,
+    },
     /// A reader, decoder, or lexical conversion failed underneath the parse.
     ///
     /// The cause is carried as [`std::error::Error::source`] (RFC 0201) so a
@@ -1036,6 +1068,103 @@ pub fn from_xml<T: FromXml>(xml: &str) -> Result<T, XmlError> {
     }
 }
 
+/// Deserialize a value from a document whose root element must be `root`.
+///
+/// `root` is the global element the schema publishes for the type: for an
+/// operational template `<template>` of type `OPERATIONAL_TEMPLATE` (ITS-XML
+/// `components/AM/Release-1.4/Template.xsd`). The root is compared by local
+/// name, as every element is.
+///
+/// # Errors
+/// [`XmlError::UnexpectedRoot`] for another root element, and the parse
+/// errors of [`from_xml`].
+pub fn from_xml_rooted<T: FromXml>(xml: &str, root: &str) -> Result<T, XmlError> {
+    let mut reader = XmlReader::new(xml);
+    loop {
+        match reader.read()? {
+            XmlEvent::Start(s) if s.name == root => return T::from_xml(&mut reader, &s),
+            XmlEvent::Start(s) => {
+                return Err(XmlError::UnexpectedRoot {
+                    expected: root.to_owned(),
+                    found: s.name,
+                });
+            }
+            XmlEvent::Eof => return Err(XmlError::Parse("no root element".into())),
+            _ => {}
+        }
+    }
+}
+
+/// Write a model `String` in the `OBJECT_ID` shape its schema slot names:
+/// `<tag><value>text</value></tag>`.
+///
+/// The generated writers call it for the fields the emitter's value-wrapped
+/// table names: a BASE 1.3.0 `TERMINOLOGY_CODE.terminology_id` is a `String`,
+/// while ITS-XML 1.0.2 types the slot `CODE_PHRASE`, whose `terminology_id` is
+/// a `TERMINOLOGY_ID` with one `value` element (BaseTypes.xsd).
+///
+/// # Errors
+/// Propagates writer errors.
+pub fn write_value_wrapped(w: &mut XmlWriter, tag: &str, value: &str) -> Result<(), XmlError> {
+    w.write_start(BytesStart::new(tag))?;
+    w.write_text_element("value", value)?;
+    w.write_end(tag)
+}
+
+/// Read a model `String` written in the `OBJECT_ID` shape
+/// ([`write_value_wrapped`]): the text of the one `value` child.
+///
+/// # Errors
+/// [`XmlError::UndeclaredChild`] for a child other than `value`,
+/// [`XmlError::MissingChild`] when `value` is absent, and the parse errors of
+/// the text read.
+pub fn read_value_wrapped(reader: &mut XmlReader, start: &StartTag) -> Result<String, XmlError> {
+    let mut value = None;
+    loop {
+        match reader.read()? {
+            XmlEvent::Start(child) if child.name == "value" => {
+                value = Some(String::from_xml(reader, &child)?);
+            }
+            XmlEvent::Start(child) => {
+                return Err(XmlError::UndeclaredChild {
+                    owner: format!("<{}>", start.name),
+                    child: child.name,
+                });
+            }
+            XmlEvent::End => break,
+            XmlEvent::Text(_) => {}
+            XmlEvent::Eof => return Err(XmlError::Parse("EOF in an OBJECT_ID element".into())),
+        }
+    }
+    value.ok_or_else(|| reader.missing_child(&start.name, "value"))
+}
+
+/// Read a tool-emitted extension element whose only accepted value is `false`.
+///
+/// The generated readers call it for the elements the emitter's extension
+/// allowlist names (`match_negated` on the C_ATTRIBUTE subtypes): no vendored
+/// ITS-XML schema declares them, and a `false` states the default, so it is
+/// read and dropped.
+///
+/// # Errors
+/// [`XmlError::UnsupportedExtension`] for any value other than `false`, and the
+/// parse errors of the text read.
+pub fn read_false_extension(
+    reader: &mut XmlReader,
+    start: &StartTag,
+    owner: &str,
+) -> Result<(), XmlError> {
+    let value = String::from_xml(reader, start)?;
+    if value.trim() == "false" {
+        return Ok(());
+    }
+    Err(XmlError::UnsupportedExtension {
+        owner: owner.to_owned(),
+        element: start.name.clone(),
+        value: value.trim().to_owned(),
+    })
+}
+
 /// A value that deserializes from canonical openEHR XML. `from_xml` is called
 /// after the element's start tag has been read (`start`); it consumes events
 /// through the matching end tag.
@@ -1046,13 +1175,20 @@ pub trait FromXml: Sized {
 }
 
 impl FromXml for String {
-    fn from_xml(reader: &mut XmlReader, _start: &StartTag) -> Result<Self, XmlError> {
+    fn from_xml(reader: &mut XmlReader, start: &StartTag) -> Result<Self, XmlError> {
         let mut text = String::new();
         loop {
             match reader.read()? {
                 XmlEvent::Text(t) => text.push_str(&t),
                 XmlEvent::End => break,
-                XmlEvent::Start(_) => reader.skip_element()?, // stray child in a text leaf
+                // NOTE: a text element has a simple type, so a child element is outside
+                // its content model (XML Schema 1.1 Part 1 §3.4.4.2).
+                XmlEvent::Start(child) => {
+                    return Err(XmlError::UndeclaredChild {
+                        owner: format!("<{}>", start.name),
+                        child: child.name,
+                    });
+                }
                 XmlEvent::Eof => return Err(XmlError::Parse("EOF in text element".into())),
             }
         }

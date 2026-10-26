@@ -16,7 +16,9 @@ use crate::analyze::Model;
 use crate::load::bmm::BmmSchema;
 use crate::load::xsd::XsdModel;
 use crate::plan::construction;
-use crate::plan::overrides::{resolve_default, xml_bmm_only_allowed};
+use crate::plan::overrides::{
+    resolve_default, xml_bmm_only_allowed, xml_tool_extensions, xml_value_wrapped,
+};
 use crate::plan::{XmlField, XmlType};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -397,6 +399,9 @@ fn emit_struct_to_xml(
     b.push_str("w.write_start(__e)?;\n");
     for ename in &elems {
         match by_wire.get(ename.as_str()) {
+            Some(f) if !f.multiple && xml_value_wrapped(spec, &f.wire_name).is_some() => {
+                emit_write_value_wrapped(b, spec, f, validated);
+            }
             Some(f) => emit_write_field(b, f, validated),
             None => unmatched.push((spec.to_owned(), ename.clone())),
         }
@@ -419,6 +424,31 @@ fn emit_write_attr(b: &mut String, f: &XmlField, validated: bool) {
         );
     } else {
         let _ = writeln!(b, "__attrs.push((\"{wire}\", self.{read}.to_string()));");
+    }
+}
+
+/// Writes one model `String` field in the `OBJECT_ID` shape its schema slot
+/// names ([`xml_value_wrapped`]), with the delta as a `// NOTE:`.
+fn emit_write_value_wrapped(b: &mut String, spec: &str, f: &XmlField, validated: bool) {
+    let rust = if validated {
+        format!("{}()", f.rust_name)
+    } else {
+        f.rust_name.clone()
+    };
+    let name = &f.wire_name;
+    if let Some(citation) = xml_value_wrapped(spec, name) {
+        let _ = writeln!(b, "// NOTE: {citation}");
+    }
+    if f.optional {
+        let _ = writeln!(
+            b,
+            "if let Some(v) = &self.{rust} {{ crate::xml::runtime::write_value_wrapped(w, \"{name}\", v)?; }}"
+        );
+    } else {
+        let _ = writeln!(
+            b,
+            "crate::xml::runtime::write_value_wrapped(w, \"{name}\", &self.{rust})?;"
+        );
     }
 }
 
@@ -636,7 +666,8 @@ fn emit_struct_from_xml(
          fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {{\n"
     );
     emit_read_accumulators(b, fields, &attrs);
-    emit_read_loop(b, fields, &attrs);
+    let unmodeled = xsd_unmodeled_elements(target.spec, fields, xsd);
+    emit_read_loop(b, target.spec, fields, &attrs, &unmodeled);
     // Each field's value expression is built first, so a class with a
     // validating construction door (`plan::construction`) can hand the same
     // expressions to its constructor instead of a struct literal — one read
@@ -680,16 +711,48 @@ fn emit_read_accumulators(b: &mut String, fields: &[XmlField], attrs: &BTreeSet<
     }
 }
 
+/// The elements the XSD declares for `spec` (its closed `xs:sequence`, ancestors
+/// included) that no model field reads, in name order. They are in the content
+/// model, so the reader skips them; an element that is neither a field nor one
+/// of these is refused.
+fn xsd_unmodeled_elements(spec: &str, fields: &[XmlField], xsd: &XsdModel) -> Vec<String> {
+    if !xsd.types.contains_key(spec) {
+        return Vec::new();
+    }
+    let modeled: BTreeSet<&str> = fields.iter().map(|f| f.wire_name.as_str()).collect();
+    let (_, elems) = xsd.flattened(spec);
+    elems
+        .into_iter()
+        .map(|e| e.name)
+        .filter(|name| !modeled.contains(name.as_str()))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
 /// Emits the event loop that dispatches each child element into its
-/// accumulator, skipping elements the type does not declare.
-fn emit_read_loop(b: &mut String, fields: &[XmlField], attrs: &BTreeSet<String>) {
+/// accumulator. An element the XSD declares and no field reads is skipped
+/// (`unmodeled`); any other element is refused as outside the type's closed
+/// sequence (XML Schema 1.1 Part 1 §3.4.4.2).
+fn emit_read_loop(
+    b: &mut String,
+    spec: &str,
+    fields: &[XmlField],
+    attrs: &BTreeSet<String>,
+    unmodeled: &[String],
+) {
     b.push_str("loop { match reader.read()? {\n");
     b.push_str("crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {\n");
     for f in fields {
         let var = acc_var(&f.rust_name);
         let wire = &f.wire_name;
         match read_shape(f, attrs) {
-            ReadShape::Attribute | ReadShape::ComplexHash => {}
+            ReadShape::Attribute => {}
+            // A complex-valued hash has no canonical-XML reading, but its element is
+            // declared, so it is skipped rather than refused.
+            ReadShape::ComplexHash => {
+                let _ = writeln!(b, "\"{wire}\" => reader.skip_element()?,");
+            }
             // StringDictionaryItem: `<name id="key">value</name>`, `id` use="required".
             ReadShape::StringHash { .. } => {
                 let _ = writeln!(
@@ -703,6 +766,12 @@ fn emit_read_loop(b: &mut String, fields: &[XmlField], attrs: &BTreeSet<String>)
                     "\"{wire}\" => {{ {var}.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }}"
                 );
             }
+            ReadShape::Single if xml_value_wrapped(spec, wire).is_some() => {
+                let _ = writeln!(
+                    b,
+                    "\"{wire}\" => {{ {var} = Some(crate::xml::runtime::read_value_wrapped(reader, &__c)?); }}"
+                );
+            }
             ReadShape::Single => {
                 let _ = writeln!(
                     b,
@@ -711,7 +780,22 @@ fn emit_read_loop(b: &mut String, fields: &[XmlField], attrs: &BTreeSet<String>)
             }
         }
     }
-    b.push_str("_ => reader.skip_element()?,\n},\n");
+    for name in unmodeled {
+        let _ = writeln!(b, "\"{name}\" => reader.skip_element()?,");
+    }
+    for ext in xml_tool_extensions(spec) {
+        let element = ext.element;
+        let _ = writeln!(b, "// NOTE: {}", ext.citation);
+        let _ = writeln!(
+            b,
+            "\"{element}\" => crate::xml::runtime::read_false_extension(reader, &__c, \"{spec}\")?,"
+        );
+    }
+    let _ = writeln!(
+        b,
+        "_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild {{ owner: \"{spec}\".to_owned(), child: __c.name.clone() }}),"
+    );
+    b.push_str("},\n");
     b.push_str("crate::xml::runtime::XmlEvent::End => break,\n");
     b.push_str("crate::xml::runtime::XmlEvent::Text(_) => {}\n");
     b.push_str("crate::xml::runtime::XmlEvent::Eof => return Err(crate::xml::runtime::XmlError::Parse(\"unexpected EOF\".into())),\n");

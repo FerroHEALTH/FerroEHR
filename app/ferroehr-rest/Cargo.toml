@@ -14,6 +14,7 @@ publish = false
 
 [dependencies]
 ferrohealth-secret = { workspace = true }
+ferrohealth-health = { workspace = true, features = ["registry"] }
 urlencoding.workspace = true
 # openEHR generated foundation: the domain model + the ITS-REST contract.
 openehr-base = { path = "../../crates/openehr-base" }

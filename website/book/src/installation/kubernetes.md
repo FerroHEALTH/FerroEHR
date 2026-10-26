@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 16.0.0 -n ferroehr \
+  --version 16.0.1 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.4.2
 ```
@@ -55,7 +55,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.1
 ```
 
 ### Pin two versions, not one
@@ -68,7 +68,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 16.0.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 16.0.1` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.4.2` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -168,7 +168,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.1 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -315,7 +315,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.1 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -661,7 +661,7 @@ access level, nothing to forget:
 | Probe | Route | Contract |
 |---|---|---|
 | liveness | `/health/liveness` | 200 while the process is up; touches no dependency |
-| readiness | `/health/readiness` | 200 (UP/DEGRADED) or 503 (DOWN): checks the database ping, migrations applied, the audit sender and the event outbox, each bounded at one second |
+| readiness | `/health/readiness` | 200 (up or degraded) or 503 (down, booting or draining): checks the database ping, migrations applied, the audit sender and the event outbox, each bounded at one second |
 | startup | `/health/liveness` | the same constant, with a long failure threshold, so a slow first boot is not killed mid-migration |
 
 That split is deliberate: a database outage must fail *readiness* (the pod stops
@@ -678,9 +678,9 @@ loop).
 
 > [!WARNING]
 > **Migrations run only at boot, so a replaced or wiped database leaves the pods
-> NotReady until something migrates it.** Readiness reports
-> `"migrations": {"status":"DOWN","detail":"core schema tables missing (migrations
-> not applied)"}` while `"db"` reads `UP`: the pod reaches PostgreSQL, finds no
+> NotReady until something migrates it.** Readiness reports the `migrations`
+> indicator `down` (its detail on `/management/health`: `core schema tables
+> missing (migrations not applied)`) while `db` reads `up`: the pod reaches PostgreSQL, finds no
 > schema, and does not migrate again, because migration is a startup step.
 > Liveness keeps passing (correctly: the process is healthy), so the kubelet never
 > restarts the container and the Deployment sits with no ready replicas and no
@@ -688,7 +688,7 @@ loop).
 >
 > ```shell
 > kubectl -n ferroehr get pods                      # Running, not READY
-> curl -s http://ferroehr:8080/health/readiness     # 503, "migrations" DOWN, "db" UP
+> curl -s http://ferroehr:8080/health/readiness     # 503, "migrations" down, "db" up
 > kubectl -n ferroehr rollout restart deploy/ferroehr
 > ```
 >
@@ -786,7 +786,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 16.0.0 -n ferroehr --reuse-values \
+  --version 16.0.1 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -885,7 +885,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 16.0.0 -n ferroehr --reuse-values \
+  --version 16.0.1 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1213,7 +1213,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 16.0.1 \
   -n ferroehr -f my-values.yaml | less
 ```
 

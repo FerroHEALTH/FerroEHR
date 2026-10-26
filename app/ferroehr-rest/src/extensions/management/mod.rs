@@ -44,9 +44,11 @@ use ferroehr::config::deployment::DeploymentPosture;
 use ferroehr::config::management::{AccessLevel, ManagementConfig};
 use ferroehr::licence::state::LicenceStatus;
 use ferroehr::telemetry::build_info::BuildInfo;
-use ferroehr::telemetry::health::{AggregateHealth, HealthRegistry};
 use ferroehr::telemetry::log_reload::LogReload;
 
+use ferrohealth_health::document::Readiness;
+use ferrohealth_health::lifecycle::Lifecycle;
+use ferrohealth_health::registry::Registry;
 use std::sync::Arc;
 
 use axum::Router;
@@ -89,7 +91,9 @@ pub struct ManagementState {
     /// The one process-wide profiling permit (`/flamegraph` concurrency guard).
     pub profiler: flamegraph::ProfilerSlot,
     /// The health-indicator registry `/health` evaluates with every detail.
-    pub health: HealthRegistry,
+    pub health: Registry,
+    /// The process lifecycle the readiness document reports.
+    pub lifecycle: Lifecycle,
     /// The licence in force, as `/status` reports it.
     pub licence: LicenceStatus,
     /// The evaluated deployment posture, as `/status` reports it.
@@ -130,6 +134,7 @@ impl ManagementState {
             env_snapshot: obs.env_snapshot,
             profiler: flamegraph::ProfilerSlot::default(),
             health: obs.health,
+            lifecycle: obs.lifecycle,
             licence: state.backend().licence().status(),
             deployment: state.backend().deployment().clone(),
         }
@@ -152,7 +157,10 @@ pub struct Observability {
     /// The runtime log-filter control (present iff the reloadable filter is set).
     pub log_reload: Option<LogReload>,
     /// The health-indicator registry.
-    pub health: HealthRegistry,
+    pub health: Registry,
+    /// The process lifecycle: booting until the listener serves, draining
+    /// from the shutdown signal on.
+    pub lifecycle: Lifecycle,
     /// Build/spec provenance.
     pub build_info: BuildInfo,
     /// The redacted effective-config snapshot for `/management/env`.
@@ -165,7 +173,8 @@ impl Default for Observability {
             management: ManagementConfig::default(),
             prometheus: None,
             log_reload: None,
-            health: HealthRegistry::default(),
+            health: Registry::default(),
+            lifecycle: Lifecycle::default(),
             build_info: BuildInfo::current(),
             env_snapshot: Arc::new(Value::Null),
         }
@@ -178,7 +187,8 @@ impl std::fmt::Debug for Observability {
             .field("management", &self.management)
             .field("prometheus", &self.prometheus.is_some())
             .field("log_reload", &self.log_reload.is_some())
-            .field("health_indicators", &!self.health.is_empty())
+            .field("health_indicators", &self.health.names())
+            .field("lifecycle", &self.lifecycle.phase())
             .finish_non_exhaustive()
     }
 }
@@ -607,32 +617,32 @@ async fn flamegraph_view(
 /// OUR OWN EXTENSION — no openEHR spec governs this: the ITS-REST resource set
 /// defines no management or introspection surface.
 ///
-/// The same registry evaluation as the public `GET /health/readiness`, with
+/// The same readiness document as the public `GET /health/readiness`, with
 /// each indicator's detail, which the public probe withholds. The status code
-/// follows the aggregate the same way: `200` while `UP` or `DEGRADED`, `503`
-/// once a required indicator is `DOWN`. Access-level gated by the `health`
+/// follows it the same way: `200` while ready, `503` while the process is not
+/// serving or an indicator is `down`. Access-level gated by the `health`
 /// endpoint's configured [`AccessLevel`]; absent (a router `404`, answered
 /// before authentication) unless opted in.
 #[utoipa::path(
     get, path = "/management/health", tag = "management",
     responses(
-        (status = 200, description = "Aggregate UP or DEGRADED; `{status, components: {<name>: {status, detail?}}}`.", body = serde_json::Value),
+        (status = 200, description = "Ready (state `up` or `degraded`); `{state, phase, indicators: [{name, state, detail?}]}`.", body = serde_json::Value),
         (status = 401, description = "Authentication required (access level Private/AdminOnly with auth enabled).", body = serde_json::Value),
         (status = 403, description = "Caller lacks the configured admin scope (access level AdminOnly).", body = serde_json::Value),
-        (status = 503, description = "A required indicator is DOWN; the same body, naming it and why.", body = serde_json::Value)
+        (status = 503, description = "Not ready (not serving, or an indicator is `down`); the same body, naming it and why.", body = serde_json::Value)
     )
 )]
 async fn health_view(State(s): State<ManagementState>) -> Response {
-    AggregateHealthResponse(s.health.evaluate().await).into_response()
+    let document = s.health.readiness(&s.lifecycle).await;
+    (readiness_status(&document), Json(document)).into_response()
 }
 
-/// The aggregate rendered with its own HTTP status
-/// ([`AggregateHealth::http_status`]).
-struct AggregateHealthResponse(AggregateHealth);
-
-impl IntoResponse for AggregateHealthResponse {
-    fn into_response(self) -> Response {
-        (self.0.http_status(), Json(self.0)).into_response()
+/// `200` while `document` is ready, `503` otherwise.
+pub(crate) fn readiness_status(document: &Readiness) -> StatusCode {
+    if document.is_ready() {
+        StatusCode::OK
+    } else {
+        StatusCode::SERVICE_UNAVAILABLE
     }
 }
 
