@@ -72,6 +72,19 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **Breaking: `/health/readiness` and `/management/health` serve the
+  FerroHEALTH readiness document of `ferrohealth-health` 0.1.1** (#4087). The
+  body is `{"state", "phase", "indicators": [{"name", "state", "detail"?}]}`
+  with lowercase states (`up`, `degraded`, `down`), replacing `{"status",
+  "components"}`; the public probe leaves out every `detail`. Readiness also
+  answers `503` while the process boots and from the moment it receives
+  `SIGTERM` or `SIGINT`, before the listener stops. The optional indicators
+  (`audit_sender`, `audit_delivery`, `audit_chain`, `events`) read at worst
+  `degraded`, so a damaged audit chain now reads `degraded` where it read
+  `DOWN`, and an indicator that is up carries no detail. The viewer's health
+  tab reads the same document. Probes that test only the status code are
+  unaffected.
+
 - **HTTP Basic credentials are cached for 300 seconds by default** (#4088).
   `[auth.basic] cache_ttl_seconds` defaulted to `0`, so every Basic request
   ran the Argon2id derivation, 10 to 15 ms of CPU, which capped the mixed
@@ -96,6 +109,7 @@ workflow refuses a tag that has no matching section here.
   constraint, and no schema says how. A CDR upload of a template outside the
   schema is now refused; the CNF Robot `valid_templates/validation/clinical_content_validation.opt`
   and two epSOS CKM templates are such documents (#4077, #4078).
+
 - **Three AQL shapes no longer read every composition** (#4089, #4090),
   measured against a release build on one host holding about 51 000
   compositions. A population query ordered by `c/context/start_time/value`

@@ -39,6 +39,7 @@
               (#1694)"
 )]
 
+use ferrohealth_health::document::Readiness;
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
@@ -167,72 +168,31 @@ pub fn when_management_usable(
 
 // ── Health: the dependency-health indicators ────────────────────────────────
 
-/// One health indicator's contribution to readiness.
+/// The CDR's readiness document and where it was read.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct IndicatorRow {
-    /// The component name (`db`, `migrations`, …).
-    pub name: String,
-    /// `UP`, `DEGRADED` or `DOWN`, as the CDR reported it.
-    pub status: String,
-    /// The CDR's human detail, when it gave one (never clinical content).
-    pub detail: String,
-}
-
-/// The dependency-health body: the aggregate plus every indicator.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ReadinessView {
-    /// The aggregate status (`UP` / `DEGRADED` / `DOWN`).
-    pub status: String,
-    /// Per-indicator rows, name-sorted so both render passes agree
-    /// (hydration determinism).
-    pub components: Vec<IndicatorRow>,
-    /// Whether the rows carry the indicators' detail: `true` when read from
-    /// `/management/health`, `false` from the status-only public probe.
+    /// The family readiness document, its indicators sorted by name.
+    pub readiness: Readiness,
+    /// Whether the indicators carry their detail: `true` when read from
+    /// `/management/health`, `false` from the public probe.
     pub detailed: bool,
 }
 
-/// Distil a `/management/health` or `/health/readiness` body into a
+/// Reads a `/management/health` or `/health/readiness` body into a
 /// [`ReadinessView`].
 ///
-/// Both carry `{status, components: {<name>: {status}}}`; only the management
-/// body adds a `detail` per component. Read defensively: a missing/renamed
-/// field yields an empty string rather than dropping the row, and an
-/// unparseable aggregate renders as `UNKNOWN` instead of erroring — the probe
-/// answering at all is itself information.
-#[must_use]
-pub fn readiness_view(body: &serde_json::Value, detailed: bool) -> ReadinessView {
-    let status = body
-        .get("status")
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or("UNKNOWN")
-        .to_owned();
-    let mut components: Vec<IndicatorRow> = body
-        .get("components")
-        .and_then(serde_json::Value::as_object)
-        .map(|map| {
-            map.iter()
-                .map(|(name, value)| IndicatorRow {
-                    name: name.clone(),
-                    status: value
-                        .get("status")
-                        .and_then(serde_json::Value::as_str)
-                        .unwrap_or("UNKNOWN")
-                        .to_owned(),
-                    detail: value
-                        .get("detail")
-                        .and_then(serde_json::Value::as_str)
-                        .unwrap_or_default()
-                        .to_owned(),
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-    components.sort_by(|a, b| a.name.cmp(&b.name));
-    ReadinessView {
-        status,
-        components,
+/// Both carry the family readiness document; only the management body adds
+/// each indicator's `detail`. The indicators are sorted by name so both render
+/// passes agree (hydration determinism).
+///
+/// # Errors
+/// The parse error when `body` is not the readiness document.
+pub fn readiness_view(body: &str, detailed: bool) -> Result<ReadinessView, serde_json::Error> {
+    let document = serde_json::from_str::<Readiness>(body)?;
+    Ok(ReadinessView {
+        readiness: Readiness::new(document.phase, document.indicators),
         detailed,
-    }
+    })
 }
 
 /// Whether a `/management/health` answer falls back to the public probe.
@@ -282,13 +242,12 @@ pub async fn fetch_readiness() -> Result<ReadinessView, ViewerError> {
     } else {
         crate::cdr::CdrClient::expect_success(response)?.body
     };
-    let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
+    readiness_view(&body, is_detailed).map_err(|e| {
         ViewerError::Internal(tr_served_with(
             Msg::ReadinessJson,
             &[("e", (e).to_string().into())],
         ))
-    })?;
-    Ok(readiness_view(&value, is_detailed))
+    })
 }
 
 // ── Management: the probe ───────────────────────────────────────────────────
@@ -788,6 +747,7 @@ mod tests {
     };
     use crate::error::ViewerError;
     use crate::locale::{Msg, tr};
+    use ferrohealth_health::document::State;
 
     #[test]
     fn only_a_404_means_the_surface_is_absent() {
@@ -836,53 +796,57 @@ mod tests {
 
     #[test]
     fn readiness_rows_are_name_sorted_and_carry_the_detail() {
-        // The CDR's `/management/health` body shape (AggregateHealth): the
-        // aggregate plus one entry per indicator, `detail` only when the
-        // indicator gave one.
+        // The CDR's `/management/health` body: the family readiness document,
+        // `detail` only when the indicator gave one.
         let body = serde_json::json!({
-            "status": "DEGRADED",
-            "components": {
-                "migrations": { "status": "UP" },
-                "audit": { "status": "DOWN", "detail": "sender queue full" },
-                "db": { "status": "UP" }
-            }
-        });
-        let view = readiness_view(&body, true);
+            "state": "degraded",
+            "phase": "serving",
+            "indicators": [
+                { "name": "migrations", "state": "up" },
+                { "name": "audit", "state": "degraded", "detail": "sender queue full" },
+                { "name": "db", "state": "up" }
+            ]
+        })
+        .to_string();
+        let view = readiness_view(&body, true).expect("the readiness document");
         assert!(view.detailed);
-        assert_eq!(view.status, "DEGRADED");
-        let names: Vec<&str> = view.components.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(view.readiness.state, State::Degraded);
+        let names: Vec<&str> = view
+            .readiness
+            .indicators
+            .iter()
+            .map(|c| c.name.as_str())
+            .collect();
         assert_eq!(names, vec!["audit", "db", "migrations"]);
-        let audit = &view.components[0];
-        assert_eq!(audit.status, "DOWN");
-        assert_eq!(audit.detail, "sender queue full");
-        assert_eq!(view.components[1].detail, "");
+        let audit = &view.readiness.indicators[0];
+        assert_eq!(audit.state, State::Degraded);
+        assert_eq!(audit.detail.as_deref(), Some("sender queue full"));
+        assert_eq!(view.readiness.indicators[1].detail, None);
     }
 
     #[test]
-    fn a_readiness_body_without_the_expected_fields_still_renders() {
-        let view = readiness_view(&serde_json::json!({}), false);
-        assert_eq!(
-            view,
-            super::ReadinessView {
-                status: "UNKNOWN".to_owned(),
-                components: Vec::new(),
-                detailed: false,
-            }
-        );
+    fn a_body_that_is_not_the_readiness_document_is_refused() {
+        assert!(readiness_view("{}", false).is_err());
+        assert!(readiness_view(r#"{"status":"UP","components":{}}"#, false).is_err());
     }
 
     #[test]
-    fn the_public_readiness_body_renders_statuses_without_detail() {
-        // The CDR's public `/health/readiness` body (HealthSummary): names and
-        // statuses, no detail.
+    fn the_public_readiness_body_renders_states_without_detail() {
+        // The CDR's public `/health/readiness` body: names and states, no
+        // detail.
         let body = serde_json::json!({
-            "status": "UP",
-            "components": { "db": { "status": "UP" }, "migrations": { "status": "UP" } }
-        });
-        let view = readiness_view(&body, false);
+            "state": "up",
+            "phase": "serving",
+            "indicators": [
+                { "name": "db", "state": "up" },
+                { "name": "migrations", "state": "up" }
+            ]
+        })
+        .to_string();
+        let view = readiness_view(&body, false).expect("the readiness document");
         assert!(!view.detailed);
-        assert_eq!(view.components.len(), 2);
-        assert!(view.components.iter().all(|c| c.detail.is_empty()));
+        assert_eq!(view.readiness.indicators.len(), 2);
+        assert!(view.readiness.indicators.iter().all(|c| c.detail.is_none()));
     }
 
     #[test]

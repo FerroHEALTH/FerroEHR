@@ -49,6 +49,9 @@ leptos_meta.workspace = true
 leptos_router.workspace = true
 # The shared FerroHEALTH console components, tokens, stylesheet, highlighters
 # and table model; it has no render-mode feature and follows leptos's.
+# The family readiness document the CDR serves (the document alone, so it
+# builds for both halves).
+ferrohealth-health.workspace = true
 ferrohealth-ui.workspace = true
 # The viewer's own string catalogs under locales/, in both halves.
 fluent-templates.workspace = true

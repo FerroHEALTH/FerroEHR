@@ -31,7 +31,6 @@ pub mod metrics;
 pub mod samplers;
 
 pub mod build_info;
-pub mod health;
 pub mod log_reload;
 pub mod provenance;
 

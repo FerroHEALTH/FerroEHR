@@ -18,6 +18,7 @@
     reason = "the viewer reads the CDR's OpenAPI and SMART JSON documents to list them"
 )]
 
+use ferrohealth_health::document::State;
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::view::{
@@ -331,6 +332,15 @@ pub fn OverviewTab() -> impl IntoView {
     view! { {page} }
 }
 
+/// The word the health tab shows for an indicator's `state`.
+const fn state_word(state: State) -> &'static str {
+    match state {
+        State::Up => "UP",
+        State::Degraded => "DEGRADED",
+        State::Down => "DOWN",
+    }
+}
+
 /// The flow state of an indicator's status word.
 fn flow_of(status: &str) -> FlowState {
     match status {
@@ -358,19 +368,18 @@ pub fn HealthTab() -> impl IntoView {
                     Column::text("detail", tr(Msg::ServerDetail)).role(Role::Meta),
                 ];
                 let rows = readiness
-                    .components
+                    .readiness
+                    .indicators
                     .iter()
                     .map(|row| {
+                        let word = state_word(row.state);
                         view! {
                             <tr>
                                 <th scope="row" data-role="title">
                                     {row.name.clone()}
                                 </th>
-                                {cell(
-                                    &columns[1],
-                                    state_mark(flow_of(&row.status), &row.status.clone()),
-                                )}
-                                {cell(&columns[2], row.detail.clone())}
+                                {cell(&columns[1], state_mark(flow_of(word), word))}
+                                {cell(&columns[2], row.detail.clone().unwrap_or_default())}
                             </tr>
                         }
                         .into_any()
@@ -380,7 +389,7 @@ pub fn HealthTab() -> impl IntoView {
                 let caption = tr(Msg::ServerDependencies);
                 section(
                     Some(tr(Msg::ServerDependencies)),
-                    u64::try_from(readiness.components.len()).ok(),
+                    u64::try_from(readiness.readiness.indicators.len()).ok(),
                     None,
                     view! {
                         {(!readiness.detailed).then(|| info_note(tr(Msg::ServerPublicReadiness)))}
