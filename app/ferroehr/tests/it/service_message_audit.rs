@@ -43,6 +43,7 @@ fn store_only_config() -> AuditConfig {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         ..AuditConfig::default()
     }

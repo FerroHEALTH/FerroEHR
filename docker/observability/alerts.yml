@@ -14,7 +14,7 @@ groups:
       - alert: HighServerErrorRatio
         # >1% of requests are 5xx over 5m.
         expr: |
-          sum(rate(http_server_request_duration_seconds_count{status_class="5xx"}[5m]))
+          sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
             /
           sum(rate(http_server_request_duration_seconds_count[5m]))
             > 0.01

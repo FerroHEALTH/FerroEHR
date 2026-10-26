@@ -27,6 +27,7 @@ multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 
 [dependencies]
 ferrohealth-secret = { workspace = true }
+ferrohealth-server = { workspace = true, features = ["reqwest"] }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferroehr-ext = { path = "../ferroehr-ext", optional = true }
 http.workspace = true
@@ -44,21 +45,17 @@ argon2.workspace = true
 url.workspace = true
 async-trait.workspace = true
 ferrohealth-config.workspace = true
+ferrohealth-telemetry.workspace = true
 jiff.workspace = true
 reqwest.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
-# Observability (telemetry init): the OTLP export layer + metrics facade +
-# Prometheus recorder. The single `tracing` API fans out to stdout logs and
-# (opt-in) OTLP spans; `metrics` is pulled via the Prometheus recorder.
-tracing-opentelemetry.workspace = true
+# FerroEHR's own instruments on the shared meter (the provider, the OTLP
+# export and the Prometheus reader are ferrohealth-telemetry's) and the
+# span-timing capture behind `[management] flame_file`.
 tracing-flame.workspace = true
 opentelemetry.workspace = true
-opentelemetry_sdk.workspace = true
-opentelemetry-otlp.workspace = true
-opentelemetry-prometheus.workspace = true
-prometheus.workspace = true
 jiff-sqlx.workspace = true
 # FHIR reverse-mapping: `openehr_sdt::flat` FLAT conversion returns an
 # `IndexMap` FLAT map the reverse transform reads leaf-by-leaf.
@@ -125,6 +122,10 @@ rand = "0.8"
 # Feed.
 ihe-atna = { workspace = true, features = ["atna"] }
 ehds-logging.workspace = true
+# The IHE patient identity source of the EHR index (`service::ehr_index::ihe`):
+# the PIXm Patient Identifier Cross-reference Consumer (ITI-83), authenticated by
+# the `smart` token authorizer under `[ehr_index.oauth]`.
+ihe-iti = { workspace = true, features = ["pixm", "smart"] }
 
 openehr-base = { path = "../../crates/openehr-base" }
 openehr-term = { path = "../../crates/openehr-term" }

@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+#
+# The standards FerroEHR supports, with where each release reads the version
+# from, for the information sheet's EHDS Art. 38(2)(e) facts that
+# scripts/release/system-documents.sh appends to the copy a release attaches.
+# Columns, tab-separated: the standard, the source of its version.
+#   versions:<row>   the "Our pin" cell of the docs/VERSIONS.md row that
+#                    starts with <row>; the pin itself lives there only
+#   database         the PostgreSQL row of docs/VERSIONS.md
+#   text:<words>     a fact no pin file carries, stated once here
+openEHR Reference Model (RM)	versions:RM (Reference Model)
+openEHR BASE	versions:BASE (Foundation + Base Types)
+openEHR Archetype Model (AM) and ADL	versions:AM (Archetype Model)
+openEHR Terminology (TERM)	versions:TERM (Terminology)
+openEHR ITS-REST	versions:ITS-REST (REST API)
+openEHR Archetype Query Language (AQL)	versions:QUERY (AQL)
+openEHR canonical XML schemas (ITS-XML)	versions:ITS-XML (XSDs)
+openEHR operational templates (OPT)	text:1.4
+IHE ATNA (ITI-19, ITI-20, ITI-81) and IHE BALP	text:the profile revision is not pinned
+DICOM PS3.15 §A.5 audit message	text:the edition is not pinned
+HL7 FHIR AuditEvent	text:R4
+HL7 FHIR terminology operations	text:R4B
+Syslog	text:RFC 5424 over RFC 5425 TLS
+OAuth 2.0 bearer tokens, JWT, OpenID Connect	text:RFC 6750, RFC 7519, OpenID Connect Core 1.0
+OAuth 2.0 Step Up Authentication Challenge	text:RFC 9470
+SMART App Launch	text:the version is not pinned; PKCE per RFC 7636
+TLS	text:1.3 by default
+PostgreSQL	database

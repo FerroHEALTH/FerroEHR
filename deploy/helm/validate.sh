@@ -48,7 +48,8 @@
 #                                     # README and the published chart-version
 #                                     # pins, then validate
 #
-# No cluster and no network are required for steps 1–4.
+# No cluster is required, and no network beyond fetching the FerroPIX chart
+# dependency Chart.lock pins.
 # The CI gate is the `helm-golden` job in .github/workflows/ci.yml.
 
 set -euo pipefail
@@ -83,6 +84,11 @@ if [[ "$ACTUAL_HELM" != "$PINNED_HELM" ]]; then
   GOLDEN_SKEW=1
   red "helm version skew: pinned ${PINNED_HELM} (${PIN_FILE}), running ${ACTUAL_HELM}"
 fi
+
+# The FerroPIX chart dependency (Chart.yaml), fetched into charts/ at the
+# version and digest Chart.lock records. The one step that needs the network.
+bold "helm dependency build"
+helm dependency build "$CHART_DIR" >/dev/null
 
 # The value sets to validate: <label>:<values-file>
 # The viewer overlay is here because its ABSENCE was a hole, not a saving:
@@ -309,7 +315,8 @@ secret_leak_gate() {
       moved=1
       continue
     fi
-    if grep -qE '^kind: ConfigMap$' <<<"$render"; then
+    # This chart's ConfigMap; the FerroPIX dependency renders its own.
+    if [[ -n "$(yq -r 'select(.kind == "ConfigMap" and ((.metadata.labels["helm.sh/chart"] // "") | test("^ferropix-") | not)) | .metadata.name' <<<"$render")" ]]; then
       red "  config.${path}: a ConfigMap was still rendered"
       moved=1
     fi
@@ -578,6 +585,9 @@ refusal_registry_gate() {
     "_helpers.tpl|refusing to render a secret into the ConfigMap|${base}|--set-string config.db.url=SENTINEL_PROBE|config.db.url;database.existingSecret"
     "_helpers.tpl|has no matching entry at config.auth.basic.users[]|${basic}|--set-string secrets.basicUserPasswordHashes.ghost=SENTINEL_PROBE|secrets.basicUserPasswordHashes.ghost"
     "_helpers.tpl|declares no grant|${base}|--set-string secrets.terminologyClientSecret=SENTINEL_PROBE|secrets.terminologyClientSecret;config.terminology.server.oauth"
+    "_helpers.tpl|config.ehr_index.oauth holds no grant|${base}|--set-string secrets.ehrIndexClientSecret=SENTINEL_PROBE --set config.ehr_index.oauth=null|secrets.ehrIndexClientSecret;config.ehr_index.oauth"
+    "_helpers.tpl|already points config.ehr_index at the in-cluster FerroPIX|${base}|--set config.ehr_index.provider=local|config.ehr_index.provider;ferropix.enabled=false"
+    "_helpers.tpl|config.ehr_index names no patient identity source|${base}|--set ferropix.enabled=false|config.ehr_index.pixm_url;config.ehr_index.provider=local"
     "_helpers.tpl|already points config.terminology.server.url|${base}|--set terminology.enabled=true --set config.terminology.server.url=https://tx.example.com/fhir|config.terminology.server.url;terminology.wireCdr"
     "_helpers.tpl|which inject enabled=true|${base}|--set terminology.enabled=true --set config.terminology.server.enabled=false|config.terminology.server.enabled;terminology.wireCdr"
     "_helpers.tpl|contradicts terminology.failOnError|${base}|--set terminology.enabled=true --set config.terminology.server.fail_on_error=true|config.terminology.server.fail_on_error;terminology.failOnError"
@@ -854,7 +864,7 @@ schema_gate() {
 
   local -a acceptances=(
     "config.server.future_api_key=probe"
-    "config.telemetry.otlp_endpoint=http://otel-collector:4317"
+    "config.telemetry.otlp.endpoint=http://otel-collector:4317"
     "global.imageRegistry=registry.example.com"
     "config.deployment_profile=production"
     "config.audit.store.retention_years=5"
@@ -1046,7 +1056,7 @@ CLAIMS
     [[ "$(yq -r "select(.kind == \"${kind}\") | .spec.template.spec.containers[0].volumeMounts[] | select(.name == \"db-ca\") | .mountPath" <<<"$rendered")" == "/etc/ferroehr-db-ca" ]] \
       || { red "  the ${kind} does not mount the database CA at /etc/ferroehr-db-ca: a verify-full DSN's sslrootcert would name a missing file"; missing=1; }
   done
-  [[ "$(yq -r 'select(.kind == "NetworkPolicy") | .spec.ingress[0].from | length' <<<"$rendered")" -gt 0 ]] \
+  [[ "$(yq -r "select(.kind == \"NetworkPolicy\" and .metadata.name == \"${RELEASE_NAME}\") | .spec.ingress[0].from | length" <<<"$rendered")" -gt 0 ]] \
     || { red "  the NetworkPolicy admits every source: the plaintext_listener acceptance rests on it admitting the ingress controller alone"; missing=1; }
   [[ "$(yq -r 'select(.kind == "Ingress") | .spec.tls | length' <<<"$rendered")" -gt 0 ]] \
     || { red "  the Ingress carries no tls block: the plaintext_listener acceptance rests on TLS ending there"; missing=1; }
@@ -1082,7 +1092,8 @@ migration_job_gate() {
     || { red "  the Job's migrator volume does not project four Secrets (the shared migrator and three domain migrators)"; missing=1; }
   rendered="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values" \
     --set serviceAccount.create=false --set serviceAccount.name=operator-account)"
-  [[ -z "$(yq -r "select(.kind == \"ServiceAccount\") | .metadata.name" <<<"$rendered")" ]] \
+  # The FerroPIX dependency's account is that chart's own (ferropix.serviceAccount).
+  [[ -z "$(yq -r 'select(.kind == "ServiceAccount" and ((.metadata.labels["helm.sh/chart"] // "") | test("^ferropix-") | not)) | .metadata.name' <<<"$rendered")" ]] \
     || { red "  serviceAccount.create=false still renders a ServiceAccount"; missing=1; }
   [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.serviceAccountName' <<<"$rendered")" == "operator-account" ]] \
     || { red "  with serviceAccount.create=false the Job does not run under serviceAccount.name"; missing=1; }

@@ -115,6 +115,22 @@ spec:
         - port: 8080
           protocol: TCP
     {{- end }}
+    {{- if .Values.ferropix.enabled }}
+    # The in-cluster FerroPIX, by pod selector, for the reason FerroTERM's rule
+    # above gives: the chart chose this destination when it wired
+    # config.ehr_index.pixm_url. Omitted, the server refuses to boot, because it
+    # reads the identity source's capabilities at start. 8080 is FerroPIX's
+    # container port; its token endpoint is the operator's `rules`.
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ferropix
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/component: server
+      ports:
+        - port: 8080
+          protocol: TCP
+    {{- end }}
     {{- with .Values.networkPolicy.egress.rules }}
     {{- toYaml . | nindent 4 }}
     {{- end }}

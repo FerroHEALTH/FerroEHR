@@ -23,6 +23,10 @@ secrets:
     clinician: "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
 config:
+  # The in-instance EHR index, the opt-in of a FerroEHR run on its own:
+  # this overlay renders another surface and runs no identity source.
+  ehr_index:
+    provider: local
   auth:
     enabled: true
     basic:
@@ -32,3 +36,7 @@ config:
         - user: clinician
           scopes: [user/composition-*.cruds, user/template-*.cruds, user/aql-*.cruds, __ferroehr.platform]
           roles: [USER]
+
+# No FerroPIX beside it: the local EHR index above.
+ferropix:
+  enabled: false

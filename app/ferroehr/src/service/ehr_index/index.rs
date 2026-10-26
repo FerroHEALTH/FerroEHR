@@ -64,7 +64,10 @@ impl FerroEhrService {
     /// - `precondition_violation` (`400`) — `ehr_id` is not a well-formed UUID,
     ///   or a `start_valid_time`/`end_valid_time` is not an ISO date-time.
     /// - `ehr_id_does_not_exist` — no EHR with that id.
-    /// - `exception` — a database fault while writing.
+    /// - `not_implemented` (`501`) — an IHE patient identity source holds the
+    ///   cross-reference, so the local map is not written.
+    /// - `exception` — no provider is installed, or a database fault while
+    ///   writing.
     pub async fn add_ehr_subject(
         &self,
         ehr_id: String,
@@ -72,6 +75,7 @@ impl FerroEhrService {
         status: Option<ResourceStatus>,
         loc: Option<LocationDesc>,
     ) -> Result<(), SmError> {
+        self.local_index("add_ehr_subject")?;
         let ehr_id = parse_ehr_id(&ehr_id)?;
         self.index_ehr_exists(ehr_id).await?;
         let status = status.unwrap_or_default();
@@ -99,13 +103,17 @@ impl FerroEhrService {
     /// - `ehr_id_does_not_exist` — no EHR with that id.
     /// - `subject_id_does_not_exist` — the subject is not associated with the
     ///   EHR (the update matched no row).
-    /// - `exception` — a database fault while writing.
+    /// - `not_implemented` (`501`) — an IHE patient identity source holds the
+    ///   cross-reference, so the local map is not written.
+    /// - `exception` — no provider is installed, or a database fault while
+    ///   writing.
     pub async fn update_ehr_subject_status(
         &self,
         ehr_id: String,
         subject: SubjectRef,
         status: ResourceStatus,
     ) -> Result<(), SmError> {
+        self.local_index("update_ehr_subject_status")?;
         let ehr_id = parse_ehr_id(&ehr_id)?;
         self.index_ehr_exists(ehr_id).await?;
         validate_status(&status).map_err(IndexError::Service)?;
@@ -130,13 +138,17 @@ impl FerroEhrService {
     /// - `ehr_id_does_not_exist` — no EHR with that id.
     /// - `subject_id_does_not_exist` — the subject is not associated with the
     ///   EHR (the update matched no row).
-    /// - `exception` — a database fault while writing.
+    /// - `not_implemented` (`501`) — an IHE patient identity source holds the
+    ///   cross-reference, so the local map is not written.
+    /// - `exception` — no provider is installed, or a database fault while
+    ///   writing.
     pub async fn update_ehr_subject_loc_desc(
         &self,
         ehr_id: String,
         subject: SubjectRef,
         loc: Option<LocationDesc>,
     ) -> Result<(), SmError> {
+        self.local_index("update_ehr_subject_loc_desc")?;
         let ehr_id = parse_ehr_id(&ehr_id)?;
         self.index_ehr_exists(ehr_id).await?;
         let updated =
@@ -165,12 +177,16 @@ impl FerroEhrService {
     /// - `ehr_id_does_not_exist` — no EHR with that id.
     /// - `subject_id_does_not_exist` — the subject is not associated with the
     ///   EHR (the close matched no row).
-    /// - `exception` — a database fault while writing.
+    /// - `not_implemented` (`501`) — an IHE patient identity source holds the
+    ///   cross-reference, so the local map is not written.
+    /// - `exception` — no provider is installed, or a database fault while
+    ///   writing.
     pub async fn remove_ehr_subject(
         &self,
         ehr_id: String,
         subject: SubjectRef,
     ) -> Result<(), SmError> {
+        self.local_index("remove_ehr_subject")?;
         let ehr_id = parse_ehr_id(&ehr_id)?;
         self.index_ehr_exists(ehr_id).await?;
         let closed = store::close_association(&self.linkage_pool, ehr_id, &subject)
@@ -191,8 +207,12 @@ impl FerroEhrService {
     /// # Errors
     /// - `subject_id_does_not_exist` — the subject has no associations (the
     ///   close matched no row).
-    /// - `exception` — a database fault while writing.
+    /// - `not_implemented` (`501`) — an IHE patient identity source holds the
+    ///   cross-reference, so the local map is not written.
+    /// - `exception` — no provider is installed, or a database fault while
+    ///   writing.
     pub async fn remove_subject(&self, subject: SubjectRef) -> Result<(), SmError> {
+        self.local_index("remove_subject")?;
         let closed = store::close_subject_associations(&self.linkage_pool, &subject)
             .await
             .map_err(IndexError::from)?;
@@ -200,27 +220,31 @@ impl FerroEhrService {
         Ok(require_association(closed, &subject)?)
     }
 
-    /// The subjects associated with an EHR (design-filled read; the SM defines
-    /// no read operations — our own design). Empty for an unknown EHR.
+    /// The subjects associated with an EHR, read from the installed provider
+    /// (design-filled read; the SM defines no read operations — our own
+    /// design). Empty for an unknown EHR.
     ///
     /// # Errors
     /// - `precondition_violation` (`400`) — `ehr_id` is not a well-formed UUID.
-    /// - `exception` — a database fault while reading.
+    /// - `exception` — no provider is installed, the identity source failed, or
+    ///   a database fault while reading.
     pub async fn ehr_subjects(&self, ehr_id: String) -> Result<Vec<EhrIndexEntry>, SmError> {
         let ehr_id = parse_ehr_id(&ehr_id)?;
-        let entries = self.index_ehr_subjects(ehr_id).await;
+        let entries = self.provider_ehr_subjects(ehr_id).await;
         let count = entries.as_ref().map_or(0, |found| entry_count(found));
         self.record_ehr_access(EventActionCode::Read, ehr_id, count, entries.is_ok())?;
         Ok(entries?)
     }
 
-    /// The EHRs associated with a subject (design-filled read; the SM defines
-    /// no read operations — our own design). Empty for an unknown subject.
+    /// The EHRs associated with a subject, read from the installed provider
+    /// (design-filled read; the SM defines no read operations — our own
+    /// design). Empty for an unknown subject.
     ///
     /// # Errors
-    /// - `exception` — a database fault while reading.
+    /// - `exception` — no provider is installed, the identity source failed or
+    ///   answered no pseudonym, or a database fault while reading.
     pub async fn subject_ehrs(&self, subject: SubjectRef) -> Result<Vec<EhrIndexEntry>, SmError> {
-        let entries = self.index_subject_ehrs(&subject).await;
+        let entries = self.provider_subject_ehrs(&subject).await;
         let count = entries.as_ref().map_or(0, |found| entry_count(found));
         self.record_subject_access(EventActionCode::Read, &subject, count, entries.is_ok())?;
         Ok(entries?)

@@ -302,7 +302,7 @@ side it is a limit of the format, not something this code withholds.
 The common specifications the regulation's Article 36 provides for have not
 been adopted. When they are, this mapping is re-verified against them rather
 than assumed to still hold; see the
-[EHDS readiness page](compliance/ehds-readiness.md).
+[EHDS readiness page](https://ferrohealth.eu/docs/ehds/readiness.html).
 
 ### Emergency access (EHDS Art. 11(5))
 
@@ -438,7 +438,7 @@ Records fan out to independently configured sinks (`[audit]` in
 |---|---|---|
 | `[audit.store]` | **on** | The local **Audit Record Repository**: records persist in the dedicated `audit` PostgreSQL schema (append-only and tamper-evident, strictly outside the EHR content), served back via the ITI-81 search below. `retention_days` prunes old records hourly (`0` = keep forever). |
 | `[audit.syslog]` | off | The classic ATNA feed: DICOM PS3.15 XML as RFC 5424 syslog over RFC 5425 TLS to an external ARR, per IHE ITI-20. |
-| `[audit.fhir_feed]` | off | The RESTful-ATNA feed (ITI-20 **ATX: FHIR Feed**): each FHIR `AuditEvent` is `POST`ed to an external FHIR ARR. With the local store on, delivery is **outbox-driven**: an ARR outage loses nothing, pending records ship on recovery. |
+| `[audit.fhir_feed]` | off | The RESTful-ATNA feed (ITI-20 **ATX: FHIR Feed**): each FHIR `AuditEvent` is `POST`ed to an external FHIR ARR. With the local store on, delivery is **outbox-driven**: an ARR outage loses nothing, pending records ship on recovery. The outbox holds the records written while the feed is configured; with the feed off, no record is owed. Records stored before FerroEHR kept an outbox and never delivered ship once a feed runs. |
 
 Emission never blocks the request path: a record is handed to a bounded queue
 (`queue_capacity`) and written by a background drain.
@@ -511,10 +511,16 @@ Four controls sit on top of it, and they are separate on purpose:
   preceding record's, records deleted with no retention record for the removal,
   or records removed from the end of the chain where no successor would have
   noticed.
-- **The server runs that query itself, on a schedule.** With the local store on,
+- **The server runs the check itself, on a schedule.** With the local store on,
   the check runs one minute after boot and then every
-  `[audit.store] verify_interval_seconds` (default `86400`, one day; `0` turns
-  it off). A run that finds damage logs at `ERROR`, one summary line with the
+  `[audit.store] verify_interval_seconds` (default `3600`, one hour; `0` turns
+  it off). Each run verifies the records written since the newest link an
+  earlier run found intact, and the chain head, so its cost follows the
+  records written since rather than the size of the trail
+  (`audit.verify_audit_chain_incremental()`). A full pass
+  runs every `[audit.store] full_verify_interval_seconds` (default `604800`,
+  one week; `0` leaves it to the query above) and after every run that found
+  damage, so damage to an older record stays reported. A run that finds damage logs at `ERROR`, one summary line with the
   finding count and one line per finding (the first 20), and adds the count to
   the `atna_audit_chain_findings` counter with `kind = "damage"`. A run that
   cannot verify at all counts as `kind = "unverifiable"`, because a trail that

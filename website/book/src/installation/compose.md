@@ -97,7 +97,9 @@ empty directory and start it:
 docker compose up
 ```
 
-This pulls and starts the two core services (no profile needed):
+This pulls and starts the core services (no profile needed): the database
+and the server below, and the patient identity source described in
+[The patient identity source (FerroPIX)](#the-patient-identity-source-ferropix).
 
 - **`ferroehr-postgres`:** the database image, with a named data volume, a
   `pg_isready` healthcheck, `pg_stat_statements` preloaded, and a modest tuning
@@ -223,6 +225,56 @@ variables to the `ferroehr` service's `environment:` block; the environment
 layer wins over the inline file. The Basic-auth user store is the one setting
 the environment cannot express (it is an array of tables), so replacing the
 users means editing the inline config or mounting your own TOML file.
+
+## The patient identity source (FerroPIX)
+
+FerroEHR keeps no patient-to-record cross-reference of its own by default. It
+asks an IHE patient identity source over PIXm (ITI-83) which pseudonym the
+clinical domain holds for a patient
+([`[ehr_index]`](config-integrations.md#ehr_index)). The quickstart runs
+FerroPIX as that source, pinned by tag and image-index digest, with four
+services beside the server:
+
+- **`identity-issuer`:** a development OpenID Provider (NAV's
+  `mock-oauth2-server`) that signs any client credentials request, at
+  `http://localhost:8180/quickstart`. It is not for anything real.
+- **`ferropix`:** the PIX Manager, at `http://localhost:8090/fhir`. Its
+  configuration declares the pseudonymisation domain `urn:oid:2.999.7.1` with
+  FerroEHR's client `ferroehr` as its consumer, so it mints a pseudonym the
+  first time FerroEHR asks, and a synthetic identifier domain
+  `urn:oid:2.999.1.1` fed by the client `quickstart-source`.
+- **`ferropix-postgres`** and **`ferropix-key`:** FerroPIX's own database, and
+  a one-shot job that writes its sealing key into a volume, so the file
+  carries no key.
+
+The server's `[ehr_index]` names the endpoint and the grant, and
+`[privacy] subject_namespaces` declares the clinical domain. The server reads
+FerroPIX's `CapabilityStatement` at boot and does not start until it answers.
+
+The issuer, FerroPIX and FerroEHR share the issuer's network namespace. A
+server accepts a plain-`http` issuer only on loopback
+([RFC 8414 §2](https://www.rfc-editor.org/rfc/rfc8414#section-2)), and the
+mock issuer writes the host it was asked on into every token, so all three
+reach it at `http://localhost:8180`. The issuer service therefore publishes the
+ports of all three and answers to the names `ferroehr` and `ferropix` on the
+compose network.
+
+To register a synthetic patient and ask for the pseudonym by hand:
+
+```shell
+SRC=$(curl -s -d grant_type=client_credentials -d client_id=quickstart-source \
+  -d client_secret=any -d 'scope=system/Patient.cud' \
+  http://localhost:8180/quickstart/token | jq -r .access_token)
+curl -s -X PUT -H "Authorization: Bearer $SRC" \
+  -H 'Content-Type: application/fhir+json' \
+  'http://localhost:8090/fhir/Patient?identifier=urn:oid:2.999.1.1%7CH-1' \
+  -d '{"resourceType":"Patient","identifier":[{"system":"urn:oid:2.999.1.1","value":"H-1"}],"name":[{"family":"Synthetic"}]}'
+```
+
+Any conformant PIX Manager can take FerroPIX's place: point `pixm_url`,
+`assigning_authority` and `[ehr_index.oauth]` at it. To run FerroEHR on its
+own instead, set `[ehr_index] provider = "local"` in the inline configuration
+and leave the identity services out.
 
 ## The OIDC variant (Keycloak overlay)
 
@@ -452,7 +504,7 @@ FERROEHR_PORT=8081 docker compose up
 ```
 
 The same works for the other ports (`FERROEHR_VIEWER_PORT`,
-`FERROEHR_S3_PORT`; PostgreSQL publishes no host port — see
+`FERROEHR_PIX_PORT`, `FERROEHR_ISSUER_PORT`, `FERROEHR_S3_PORT`; PostgreSQL publishes no host port — see
 [Connecting to the database](#connecting-to-the-database)). The defaults stay
 fixed on purpose: every URL in this book assumes `localhost:8080`, and
 Docker's automatic ephemeral-port allocation exists only when a mapping
@@ -505,6 +557,9 @@ Set these in your shell (or an `.env` file) to retune without editing anything:
 | `FERROEHR_BIND_HOST` | `127.0.0.1` | Host interface every published port binds. |
 | `FERROEHR_PORT` | `8080` | Host port mapped to the server. |
 | `FERROEHR_VIEWER_PORT` | `3000` | Host port mapped to the viewer. |
+| `FERROEHR_PIX_PORT` | `8090` | Host port mapped to FerroPIX, the patient identity source. |
+| `FERROEHR_ISSUER_PORT` | `8180` | Host port mapped to the development OpenID Provider. |
+| `FERROPIX_POSTGRES_PASSWORD` | `postgres` | FerroPIX's database superuser password (init only). |
 | `FERROEHR_DB_PORT` | not published | Host port for PostgreSQL, read only by the `db-publish` overlay (default `5432` there). |
 | `FERROEHR_S3_PORT` | `8333` | Host port mapped to the S3 gateway (the `s3` profile). |
 | `FERROEHR_BACKUP_CLINICAL_DIR` | `./backups/clinical` | Host directory the clinical dump job writes to (the `backup` profile). |
@@ -515,8 +570,8 @@ Set these in your shell (or an `.env` file) to retune without editing anything:
 | `FERROEHR_DB_CPUS` / `FERROEHR_DB_MEM` | `4` / `4G` | Database container resource ceiling. |
 | `PG_INIT_USER` / `PG_INIT_PASSWORD` / `PG_INIT_DB` | `ferroehr` | App role, password, and database created by the DB image's init script. |
 | `POSTGRES_PASSWORD` | `postgres` | Bootstrap superuser password (init only). |
-| `FERROEHR__LOG__FORMAT` | `pretty` | Log rendering for `docker compose logs`. Set `json` for log collectors. |
-| `FERROEHR__LOG__FILTER` | `info` | Log level filter. |
+| `FERROEHR__TELEMETRY__FORMAT` | `pretty` | Log rendering for `docker compose logs`. Set `json` for log collectors. |
+| `FERROEHR__TELEMETRY__FILTER` | `info` | Log level filter. |
 | `FERROEHR__DB__MAX_CONNECTIONS` | `10` | Server connection-pool ceiling. |
 | `FERROEHR__SERVER__MAX_IN_FLIGHT` | `256` | In-flight request admission cap (`503` past it; `0` disables). |
 | `FERROEHR__SIGNING__ENABLED` | `true` | Version signing. |
@@ -604,9 +659,9 @@ docker compose -f docker-compose.yml -f docker-compose.observability.yml up
 ```
 
 The overlay reconfigures the server for that stack: it exports **traces and
-metrics** over OTLP/gRPC (`FERROEHR__TELEMETRY__OTLP_ENDPOINT` plus
-`FERROEHR__TELEMETRY__METRICS_PUSH=true`), switches stdout to JSON lines
-(`FERROEHR__LOG__FORMAT=json`), and enables the management surface on its own
+metrics** over OTLP/gRPC (`FERROEHR__TELEMETRY__OTLP__ENDPOINT` with
+`FERROEHR__TELEMETRY__OTLP__METRICS=true`), switches stdout to JSON lines
+(`FERROEHR__TELEMETRY__FORMAT=json`), and enables the management surface on its own
 internal port 9464 with `info`, `metrics` and `prometheus` reachable there. That
 port is only published on the Compose network; Grafana's 3000 is the sole
 published port.

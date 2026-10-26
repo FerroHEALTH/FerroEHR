@@ -262,8 +262,31 @@ pub fn loader() -> Result<Loader, ConfigError> {
 /// or variable (strict deserialization), a type mismatch, or an unreadable
 /// `*_file` secret.
 pub fn load() -> Result<ViewerConfig, ConfigError> {
-    let loaded = loader()?.load::<ViewerConfig>(None)?;
+    // NOTE: a variable that is not UTF-8 cannot spell a `FERROEHR_VIEWER_` name, so the
+    // sweep may leave it out; the loader reads the environment itself.
+    let environment: BTreeMap<String, String> = std::env::vars_os()
+        .filter_map(|(name, value)| Some((name.into_string().ok()?, value.into_string().ok()?)))
+        .collect();
+    let viewer_loader = loader()?;
+    sweep(&viewer_loader, &environment)?;
+    let loaded = viewer_loader.load::<ViewerConfig>(None)?;
     finish(loaded.settings().clone())
+}
+
+/// Refuses every variable under `FERROEHR_VIEWER_` that is neither an
+/// override nor a name the loader reserved or reads.
+// NOTE: ferrohealth-config 0.2.5 `strict::sweep`: a binary whose prefix no other binary
+// extends may run the sweep itself, and no FerroHEALTH binary extends `FERROEHR_VIEWER`.
+fn sweep(loader: &Loader, environment: &BTreeMap<String, String>) -> Result<(), ConfigError> {
+    let config = loader.config_variable();
+    let mut known: Vec<&str> = loader.reserved().iter().map(String::as_str).collect();
+    known.push(&config);
+    let mut refusals = ferrohealth_config::strict::sweep(loader.prefix(), environment, &known);
+    match refusals.len() {
+        0 => Ok(()),
+        1 => Err(refusals.remove(0).into()),
+        _ => Err(ferrohealth_config::error::ConfigError::Refusals { refusals }.into()),
+    }
 }
 
 /// Load the viewer configuration from explicit inputs, the seam the tests
@@ -275,7 +298,9 @@ pub fn load_sources(
     file: Option<&str>,
     env: &BTreeMap<String, String>,
 ) -> Result<ViewerConfig, ConfigError> {
-    let loaded = loader()?.load_sources::<ViewerConfig>(file, None, env)?;
+    let viewer_loader = loader()?;
+    sweep(&viewer_loader, env)?;
+    let loaded = viewer_loader.load_sources::<ViewerConfig>(file, None, env)?;
     finish(loaded.settings().clone())
 }
 

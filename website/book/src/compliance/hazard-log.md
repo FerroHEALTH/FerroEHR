@@ -422,7 +422,7 @@ The log is reviewed in the release that changes any module of the component
 listed above, with the hazards, controls and test names checked against that
 release's tree. It is also reviewed when an incident, a complaint or a
 vulnerability shows a hazard the log does not name. The
-[technical documentation](technical-documentation.md) cites it as the
+[technical documentation](https://ferrohealth.eu/docs/ehds/technical-documentation.html) cites it as the
 EHDS-side risk assessment of the component.
 
 | Version | Date | Change |

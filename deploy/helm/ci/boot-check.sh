@@ -86,6 +86,9 @@ bold()  { printf '\033[1m%s\033[0m\n' "$*"; }
 command -v helm   >/dev/null 2>&1 || { red "helm not found on PATH";   exit 1; }
 command -v docker >/dev/null 2>&1 || { red "docker not found on PATH"; exit 1; }
 
+# The FerroPIX chart dependency, at the version and digest Chart.lock records.
+helm dependency build "$CHART_DIR" >/dev/null
+
 # ── Split a rendered Secret/ConfigMap into one file per key ──────────────────
 # Handles both scalar (`key: "value"`) and block (`key: |`) entries, keyed by the
 # object's metadata.name so an external Secret is never confused with the

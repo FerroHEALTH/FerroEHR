@@ -37,7 +37,7 @@
 [![CNF SEC-BASIC](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-sec-basic.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
 [![CNF performance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-performance.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
 <br>
-[![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion)](https://ferroehr.eu/docs/latest/compliance/ehds-readiness.html)
+[![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion)](https://ferrohealth.eu/docs/ehds/readiness.html)
 [![CRA](https://img.shields.io/badge/CRA-risk%20assessment-blue?logo=europeanunion)](https://ferroehr.eu/docs/latest/compliance/cra-risk-assessment.html)
 
 </div>

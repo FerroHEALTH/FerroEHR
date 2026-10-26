@@ -250,6 +250,13 @@ pub struct FerroEhrService {
     /// deployment that has not stated which demographic leaves may be selected
     /// on has not decided. No openEHR spec governs it — our own extension.
     pub(in crate::service) cohort: Arc<linkage::cohort::config::CohortConfig>,
+    /// Who holds the subject-to-EHR cross-reference
+    /// ([`ehr_index::provider::EhrIndexProvider`]).
+    ///
+    /// [`Self::new`] installs none, so every subject-scoped call refuses until
+    /// the binary installs the `[ehr_index]` provider or a test opts in to the
+    /// local map.
+    pub(in crate::service) ehr_index: ehr_index::provider::EhrIndexProvider,
 }
 
 impl FerroEhrService {
@@ -303,6 +310,7 @@ impl FerroEhrService {
             identifiers: None,
             privacy: Arc::new(crate::privacy::PrivacyPolicy::default()),
             cohort: Arc::new(linkage::cohort::config::CohortConfig::default()),
+            ehr_index: ehr_index::provider::EhrIndexProvider::Unconfigured,
         }
     }
 

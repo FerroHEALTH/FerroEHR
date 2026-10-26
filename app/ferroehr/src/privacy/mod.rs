@@ -217,6 +217,17 @@ impl PrivacyPolicy {
         !self.subject_namespaces.is_empty()
     }
 
+    /// Whether `id` under `namespace` is a subject reference the subject rule
+    /// admits on `EHR_STATUS`: a declared pseudonym namespace and a UUID.
+    ///
+    /// Strict where [`Self::findings`] is lenient: with no namespace declared,
+    /// nothing is admitted, because a caller asking holds an identifier whose
+    /// pseudonymity it has to establish.
+    #[must_use]
+    pub fn admits_subject(&self, namespace: &str, id: &str) -> bool {
+        self.subject_namespaces.iter().any(|n| n == namespace) && is_uuid(id)
+    }
+
     /// Whether clinical content may carry a named or identified party proxy.
     #[must_use]
     pub fn identified_parties_allowed(&self) -> bool {
