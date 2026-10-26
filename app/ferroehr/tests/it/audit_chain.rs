@@ -799,27 +799,56 @@ async fn records_under_the_original_digest_still_verify() {
 }
 
 /// Records written under digest version 2 keep verifying under the columns
-/// version 2 names after version 3 added the retention columns, and a change
-/// to one of them is still reported.
+/// version 2 names after later versions added columns, and a change to one of
+/// them is still reported.
 #[tokio::test]
 async fn records_under_digest_version_2_still_verify() {
+    records_under_an_older_digest_version_still_verify(2).await;
+}
+
+/// Records written under digest version 3 keep verifying under the columns
+/// version 3 names after version 4 added the data permit, and a change to one
+/// of them is still reported.
+#[tokio::test]
+async fn records_under_digest_version_3_still_verify() {
+    records_under_an_older_digest_version_still_verify(3).await;
+}
+
+/// Two records rewritten as written under digest version `older`, then two
+/// written under the current version: the trail verifies clean, and a change
+/// to a column `older` covers is reported on its record.
+async fn records_under_an_older_digest_version_still_verify(older: i16) {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AuditStore::new(pool.clone());
     seed(&store, 2).await;
 
+    let current: i16 = sqlx::query_scalar("SELECT audit.audit_chain_digest_version()")
+        .fetch_one(&pool)
+        .await
+        .expect("the current digest version");
+    assert!(
+        current > older,
+        "version {older} is older than the current {current}"
+    );
+
     for statement in [
-        "UPDATE audit.audit_event SET chain_digest_version = 2 WHERE chain_seq = 1",
+        format!("UPDATE audit.audit_event SET chain_digest_version = {older} WHERE chain_seq = 1"),
         "UPDATE audit.audit_event e SET row_hash = audit.audit_event_row_digest(e) \
-         WHERE chain_seq = 1",
-        "UPDATE audit.audit_event SET chain_digest_version = 2, prev_hash = \
-         (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 1) WHERE chain_seq = 2",
+         WHERE chain_seq = 1"
+            .to_owned(),
+        format!(
+            "UPDATE audit.audit_event SET chain_digest_version = {older}, prev_hash = \
+             (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 1) WHERE chain_seq = 2"
+        ),
         "UPDATE audit.audit_event e SET row_hash = audit.audit_event_row_digest(e) \
-         WHERE chain_seq = 2",
+         WHERE chain_seq = 2"
+            .to_owned(),
         "UPDATE audit.audit_chain_state SET head_hash = \
-         (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 2)",
+         (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 2)"
+            .to_owned(),
     ] {
-        with_triggers_disabled(&pool, statement).await;
+        with_triggers_disabled(&pool, &statement).await;
     }
     seed(&store, 2).await;
 
@@ -828,10 +857,14 @@ async fn records_under_digest_version_2_still_verify() {
             .fetch_all(&pool)
             .await
             .expect("versions");
-    assert_eq!(versions, vec![2, 2, 3, 3]);
+    assert_eq!(
+        versions,
+        vec![older, older, current, current],
+        "two records under version {older}, two under the current {current}"
+    );
     assert!(
         store.verify_chain().await.expect("verify").is_empty(),
-        "a trail spanning digest versions 2 and 3 must verify clean"
+        "a trail spanning digest versions {older} and {current} must verify clean"
     );
 
     let findings = findings_after(
@@ -845,7 +878,7 @@ async fn records_under_digest_version_2_still_verify() {
         findings
             .iter()
             .any(|(seq, finding)| *seq == Some(2) && finding.contains("modified")),
-        "a version 2 record is still verified under its own columns: {findings:?}"
+        "a version {older} record is still verified under its own columns: {findings:?}"
     );
 }
 

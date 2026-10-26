@@ -252,6 +252,14 @@ impl FerroEhrService {
         self.audit.as_ref().map(AuditSender::purpose_header)
     }
 
+    /// The request header a caller declares the data permit it acts under in
+    /// ([`config::AuditConfig::permit_header`]), lowercased; `None` when no
+    /// audit sender is wired.
+    #[must_use]
+    pub fn audit_permit_header(&self) -> Option<&str> {
+        self.audit.as_ref().map(AuditSender::permit_header)
+    }
+
     /// Whether `code` is a purpose code this deployment records
     /// ([`config::AuditConfig::purpose_codes`]).
     #[must_use]

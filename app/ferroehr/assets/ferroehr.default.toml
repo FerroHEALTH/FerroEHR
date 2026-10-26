@@ -588,6 +588,9 @@ queue_capacity = 8192
 # purpose of use in, the codes this deployment accepts (empty = record whatever
 # is declared), and the legal basis recorded on every access.
 purpose_header = "x-purpose-of-use"
+# The header a secondary-use caller declares the data permit it acts under in
+# (EHDS Art. 68), recorded on every access as its identifier.
+permit_header = "x-data-permit"
 purpose_codes = []
 # The purpose codes that mark an access as an emergency access in the vital
 # interest of the patient (EHDS Art. 11(5)); each must also be on

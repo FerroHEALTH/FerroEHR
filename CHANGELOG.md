@@ -28,6 +28,30 @@ workflow refuses a tag that has no matching section here.
   as the release whose harness runs FerroEHR as its node. An integration test
   moves an EHR between two nodes under a node-chosen id and finds every
   version uid and its `creating_system_id` unchanged.
+- **The access record names the data permit a secondary-use caller acts
+  under** (#3379). A caller declares the permit's identifier in the header
+  `[audit] permit_header` names (default `x-data-permit`) beside its purpose
+  of use; every access record keeps it as `permit`, so the trail says under
+  which permit a population query, an export or a cohort query ran (EHDS
+  Art. 68). A value that is not 1 to 128 characters of letters, digits and
+  `.` `_` `:` `/` `#` `-` is recorded as absent. The column joins the tamper
+  chain as digest version 4 (audit migration 0016). The FHIR and DICOM
+  renderings do not carry the permit yet.
+- **AQL takes `VERSIONED_OBJECT` as a FROM class** (#3379), the shape of
+  FerroBRIDGE's OMOP batch query (`EHR e CONTAINS VERSIONED_OBJECT vo CONTAINS
+  VERSION v CONTAINS COMPOSITION c`). The QUERY specification lets `FROM` name
+  any RM class (master03 §FROM), and FerroEHR refused this one. The variable
+  answers `uid/value` and `owner_id/id/value` (RM common master06
+  §VERSIONED_OBJECT) and refuses any other path. The operand sets no version
+  scope of its own.
+- **The book records the secondary-use contract with FerroBRIDGE** (#3379).
+  The new Secondary use page states the batch query FerroBRIDGE loads the
+  OMOP CDM from (`time_committed > $since`, ordered by the commit instant and
+  the version uid, paged by `offset` and `fetch`), the marks that take an EHR
+  out of a batch, the reconciliation that removes erased compositions, and
+  where pseudonymisation for research happens. An integration test holds the
+  batch to it. The compliance overview no longer names the withdrawn
+  secondary-use read model (#3160) as planned.
 
 - **The EHR index asks an IHE patient identity source over PIXm (ITI-83) by
   default** (#3380). `[ehr_index] provider = "ihe"` names a PIX Manager by its
@@ -452,6 +476,13 @@ Shipped with functional changes because: the patched `ferrohealth-smart` arrives
   GHSA-vphj-3f8c-5hpx).
 
 ### Fixed
+
+- **`ui-screenshot-guard` judges only the pull request's own commits**
+  (#4117). It diffed the base and head commits directly, so a branch behind
+  main failed on main's viewer changes and passed on main's screenshot
+  refresh. `scripts/checks/ui-screenshot.sh` now reads the paths from the
+  merge base (`base...head`), and its `--self-test` runs both cases on a
+  branch behind main before every verdict.
 
 - **A configuration load or check that fails keeps its cause** (#4104).
   Fifteen sites in the server's commands turned the failure into a string,
