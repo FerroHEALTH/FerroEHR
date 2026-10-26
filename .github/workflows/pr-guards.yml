@@ -63,7 +63,7 @@ jobs:
             *:no-chart-bump) guards=(chart-version-guard) ;;
             *:no-ui-visual-change) guards=(ui-screenshot-guard) ;;
             *:no-conformance-run) guards=(veredictum-pin-guard) ;;
-            edited:) guards=(contribution-licence-guard privacy-boundary-guard tracker-status) ;;
+            edited:) guards=(contribution-licence-guard privacy-boundary-guard tracker-status control-matrix) ;;
             *) echo "::error::no guard reads ${ACTION} ${LABEL}"; exit 1 ;;
           esac
 

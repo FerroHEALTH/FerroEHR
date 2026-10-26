@@ -211,6 +211,8 @@ jobs:
       pages: write
       id-token: write
       contents: read
+      issues: read # the control matrix renders from the tracker
+      pull-requests: read # and links each control's merged closing pull request
     concurrency:
       group: pages
       cancel-in-progress: false
@@ -228,6 +230,14 @@ jobs:
         with:
           lint: "false"
           link-check: "false"
+      # The committed control matrix may lag the tracker: pull requests are
+      # judged only on their own rows (#4130), and an issue body or state
+      # changes without a commit. Rendering it here publishes the tracker as
+      # it reads at this push.
+      - name: Render the control matrix from the tracker
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/render/control-matrix.sh
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - name: Assemble full _site (landing + dev + frozen versions + latest + sitemap)
         run: bash scripts/site/build.sh --full
