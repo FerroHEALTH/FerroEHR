@@ -105,7 +105,7 @@ workflow refuses a tag that has no matching section here.
   rebuilt base packages. The respin ships the fixed xz packages, so the
   `TEMP-1147318-639065` statement leaves `security/vex/postgres-os.openvex.json`.
 - **Breaking: the server reads only the configuration file it is told to
-  read** (#4087). The loader is `ferrohealth-config` 0.2.4, the FerroHEALTH
+  read** (#4087). The loader is `ferrohealth-config` 0.2.5, the FerroHEALTH
   products' shared one, and it reads the file `--config` or `FERROEHR_CONFIG`
   names. `./ferroehr.toml` and `/etc/ferroehr/ferroehr.toml` are no longer
   searched: a deployment that mounts a file there without naming it starts on
@@ -131,12 +131,15 @@ workflow refuses a tag that has no matching section here.
   a Keycloak issuer sets `FERROEHR__AUTH__ROLE_CLAIMS=roles,groups,entitlements,realm_access.roles`,
   as the Keycloak Compose overlay and the viewer's journey stack now do.
 
-- **Breaking: two configuration refusals say less** (#4087). A single-`_`
-  spelling such as `FERROEHR_DB_MAX_CONNECTIONS` still refuses the start
-  naming the variable, without suggesting the `FERROEHR__DB__MAX_CONNECTIONS`
-  form. A refusal of an unknown key in the file names the key and the closest
-  valid one, without its line number; a syntax error still names its line and
-  column.
+- **Breaking: the server no longer refuses a `FERROEHR_` variable outside the
+  override form, and a file refusal says less** (#4087). Only a
+  `FERROEHR__<SECTION>__<KEY>` override that names no key refuses the start.
+  A single-`_` spelling such as `FERROEHR_DB_MAX_CONNECTIONS`, or a
+  per-subsystem pointer such as `FERROEHR_SIGNING_CONFIG`, sets nothing and
+  is left alone, because the viewer's `FERROEHR_VIEWER_` variables share the
+  prefix (`ferrohealth-config` 0.2.5). A refusal of an unknown key in the file
+  names the key and the closest valid one, without its line number; a syntax
+  error still names its line and column.
 
 - **Breaking: `/health/readiness` and `/management/health` serve the
   FerroHEALTH readiness document of `ferrohealth-health` 0.1.1** (#4087). The
@@ -150,6 +153,41 @@ workflow refuses a tag that has no matching section here.
   `DOWN`, and an indicator that is up carries no detail. The viewer's health
   tab reads the same document. Probes that test only the status code are
   unaffected.
+
+- **Breaking: logging, the request log and the OpenTelemetry export move to
+  the `[telemetry]` section of `ferrohealth-telemetry` 0.2.1** (#4087), the
+  FerroHEALTH products' shared one, with no aliases for the old keys. `[log]`
+  is gone: `log.format` and `log.filter` become `telemetry.format` and
+  `telemetry.filter` (`FERROEHR__TELEMETRY__FORMAT`,
+  `FERROEHR__TELEMETRY__FILTER`, `RUST_LOG` still a fallback), and the
+  filter now defaults to `info,hyper=warn,tower=warn,h2=warn` and refuses the
+  start when it does not parse. The export moves to a `[telemetry.otlp]`
+  table: `otlp_endpoint` becomes `otlp.endpoint`, `traces_sample_ratio`
+  becomes `otlp.sample_ratio`, and `metrics_push` becomes `otlp.metrics`,
+  which defaults to `true`, so a configured endpoint now receives the metrics
+  as well as the spans. `telemetry.flame_file` moves to
+  `management.flame_file`. `telemetry.service_name` is removed: the
+  `service.name` is always `ferroehr`. `telemetry.environment` no longer
+  defaults to `dev` and is left off every span and metric unless set. A
+  file or variable that still spells an old key refuses the start, naming
+  it. Helm chart 17.0.0 renames `config.log` to `config.telemetry`.
+
+- **Breaking: the HTTP metrics are the `ferrohealth-telemetry` request log's**
+  (#4087). `http_server_request_duration_seconds` is labelled
+  `http_request_method`, `http_route`, `http_response_status_code` and
+  `url_scheme` (OpenTelemetry HTTP semantic conventions); the
+  `status_class` label is gone, so a query on `status_class="5xx"` becomes
+  `http_response_status_code=~"5.."`, as the bundled alert rules and Grafana
+  dashboard now read. The `http_server_active_requests`,
+  `http_server_request_body_size` and `http_server_response_body_size`
+  series are removed. The viewer's management page loses its in-flight
+  requests tile, and the dashboard's in-flight panel shows the request rate.
+
+- **Breaking: responses no longer carry `x-trace-id`, and a client's
+  `traceparent` is no longer read** (#4087). Every request starts a trace of
+  the server's own, so a caller cannot join or steer the server's traces;
+  correlate a request through its `x-request-id`, which the request log
+  writes on every line.
 
 - **HTTP Basic credentials are cached for 300 seconds by default** (#4088).
   `[auth.basic] cache_ttl_seconds` defaulted to `0`, so every Basic request
@@ -317,6 +355,10 @@ Shipped with functional changes because: the patched `ferrohealth-smart` arrives
   GHSA-vphj-3f8c-5hpx).
 
 ### Fixed
+
+- **A configuration load or check that fails keeps its cause** (#4104).
+  Fifteen sites in the server's commands turned the failure into a string,
+  so the error chain ended at the message; they now carry the source error.
 
 - **The agent guard refuses wrapped and re-ordered spellings of a force push
   or a recursive delete** (#4046). `.claude/hooks/block_dangerous.sh` let

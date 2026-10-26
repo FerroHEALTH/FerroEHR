@@ -237,8 +237,8 @@ ferrohealth-authz = { version = "=0.1.5", default-features = false }
 ferrohealth-secret = "=0.2.0"
 # The family's configuration loader (FerroSYS): the file, the `FERROEHR__`
 # environment, the fallbacks and `--set`, strict with did-you-mean, and the
-# `config check` rendering. Verified on crates.io 2026-10-26 (0.2.4).
-ferrohealth-config = "=0.2.4"
+# `config check` rendering. Verified on crates.io 2026-10-26 (0.2.5).
+ferrohealth-config = "=0.2.5"
 # The family's health document, indicator registry and process lifecycle
 # (FerroSYS): `/health/readiness` and `/management/health` serve its
 # `Readiness`, and the viewer reads the same document. The default build is the
