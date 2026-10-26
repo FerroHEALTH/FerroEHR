@@ -75,7 +75,7 @@ pub struct FerroEhrConfig {
     /// `[telemetry]` — OpenTelemetry export.
     pub telemetry: crate::telemetry::config::OtelConfig,
     /// `[auth]` — authentication: the `ferrohealth-smart` section, whose
-    /// serialization writes every secret as `[redacted]`.
+    /// serialization writes every secret as `***`.
     pub auth: ferrohealth_smart::config::AuthSection,
     /// `[authz]` — RBAC + ABAC.
     pub authz: authz::AuthzConfig,
@@ -722,7 +722,7 @@ impl FerroEhrConfig {
     /// leaf of the tree passes [`secret::redact_userinfo`], so a URL in a key
     /// that is not typed `SecretUrl`, or in a configuration no validation has
     /// run over, is masked too. `[auth]` is the `ferrohealth-smart` section,
-    /// whose serialization writes each Basic password hash as `[redacted]`.
+    /// whose serialization writes each Basic password hash as `***`.
     /// Non-secret identifiers, such as a Basic user's `user` and `scopes`, an
     /// `issuer` without `userinfo`, or `auth.jwks_file` (a path), stay visible.
     ///
@@ -1613,7 +1613,7 @@ mod tests {
         let rendered = c.to_redacted_toml().expect("toml");
         assert!(!rendered.contains("topsecret"), "secret leaked: {rendered}");
         assert!(
-            rendered.contains("[redacted]"),
+            rendered.contains("password_hash = \"***\""),
             "the hash renders masked: {rendered}"
         );
         assert!(!serde_json::to_string(&c).unwrap().contains("topsecret"));
@@ -1860,15 +1860,8 @@ mod tests {
                 "URL userinfo leaked into the {surface} rendering: {rendered}"
             );
             for n in 1..=15 {
-                // URL 10 is the `ferrohealth-smart` grant table, whose `Debug`
-                // masks userinfo with its own `[redacted]` spelling.
-                let mask = if n == 10 && surface == "debug" {
-                    "[redacted]"
-                } else {
-                    "***"
-                };
                 assert!(
-                    rendered.contains(&format!("https://{mask}@h{n}:1/p{n}")),
+                    rendered.contains(&format!("https://***@h{n}:1/p{n}")),
                     "URL {n} lost its host and path in the {surface} rendering: {rendered}"
                 );
             }
@@ -1943,10 +1936,7 @@ mod tests {
         }
 
         // Structural placeholders present where a secret was set.
-        assert_eq!(
-            value["auth"]["basic"]["users"][0]["password_hash"],
-            "[redacted]"
-        );
+        assert_eq!(value["auth"]["basic"]["users"][0]["password_hash"], "***");
         assert_eq!(value["signing"]["key_passphrase"], "***");
         assert_eq!(value["multimedia"]["secret_access_key"], "***");
         assert_eq!(

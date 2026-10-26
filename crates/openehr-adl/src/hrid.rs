@@ -58,7 +58,7 @@ pub(crate) fn hrid_to_string(h: &ArchetypeHrid) -> String {
         "{}-{}-{}.{}.v{}",
         h.rm_publisher, h.rm_package, h.rm_class, h.concept_id, h.release_version
     );
-    let status = h.version_status.as_str();
+    let status = h.version_modifier();
     if !status.is_empty() {
         let _ = write!(s, "-{status}");
         if !h.build_count.is_empty() {
@@ -222,9 +222,8 @@ mod tests {
         assert_eq!(h.rm_publisher, "openEHR");
         assert_eq!(h.rm_class, "OBSERVATION");
         assert_eq!(h.release_version, "1.2.3");
-        // An empty status token is outside the `VERSION_STATUS` constant set, so
-        // `from_wire` preserves it verbatim as `Other` (HRID tolerance).
-        assert_eq!(h.version_status, VersionStatus::Other(String::new()));
+        // No modifier names a released version (`org.openehr.am.aom2.archetype_hrid.adoc`).
+        assert_eq!(h.version_status, VersionStatus::Released);
 
         // 1.4 single-number version normalises to 3 parts.
         let h = parse_hrid("openehr-TASK_PLANNING-TASK_PLAN.good_include.v0").expect("partial");
@@ -233,9 +232,8 @@ mod tests {
         // namespaced + release-candidate with a build count.
         let h = parse_hrid("uk.gov::openEHR-EHR-CLUSTER.device.v1.0.0-rc.2").expect("ns+rc");
         assert_eq!(h.namespace.as_deref(), Some("uk.gov"));
-        // `rc` is not a `VERSION_STATUS` constant (`release_candidate` is), so the
-        // out-of-set token is preserved as `Other`.
-        assert_eq!(h.version_status, VersionStatus::Other("rc".to_owned()));
+        // The `rc` modifier names `release_candidate`.
+        assert_eq!(h.version_status, VersionStatus::ReleaseCandidate);
         assert_eq!(h.build_count, "2");
 
         // alpha with no build count.
@@ -244,6 +242,36 @@ mod tests {
         assert_eq!(h.build_count, "");
 
         assert!(parse_hrid("not-an-hrid").is_err());
+    }
+
+    /// Each HRID modifier reads as the `VERSION_STATUS` it names and writes
+    /// back as the same modifier, so parse and write are inverse
+    /// (`org.openehr.am.aom2.archetype_hrid.adoc`, the `version_status` row).
+    #[test]
+    fn every_version_status_round_trips() {
+        for (hrid, status) in [
+            ("openEHR-EHR-CLUSTER.device.v1.0.0", VersionStatus::Released),
+            (
+                "openEHR-EHR-CLUSTER.device.v1.0.0-rc.2",
+                VersionStatus::ReleaseCandidate,
+            ),
+            (
+                "openEHR-EHR-CLUSTER.device.v1.0.0-alpha.1",
+                VersionStatus::Alpha,
+            ),
+            (
+                "openEHR-EHR-CLUSTER.device.v1.0.0-beta.3",
+                VersionStatus::Beta,
+            ),
+        ] {
+            let parsed = parse_hrid(hrid).expect("a well-formed HRID");
+            assert_eq!(parsed.version_status, status, "{hrid}");
+            assert_eq!(
+                hrid_to_string(&parsed),
+                hrid,
+                "{hrid} writes back unchanged"
+            );
+        }
     }
 
     #[test]

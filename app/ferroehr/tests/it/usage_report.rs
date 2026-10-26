@@ -25,13 +25,15 @@ use ferroehr::licence::state::LicenceState;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::telemetry::build_info::BuildInfo;
-use ferroehr::telemetry::health::{HealthIndicator, HealthRegistry, HealthStatus};
 use ferroehr::telemetry::indicators::{DbHealth, MigrationsHealth};
 use ferroehr::usage_report::config::{CiDetected, Deployment, UsageReportConfig};
 use ferroehr::usage_report::reporter::{
     DailyOutcome, EventKind, Identity, StartOutcome, UsageReporter, start,
 };
 use ferroehr::usage_report::window::{record_aql, record_request};
+use ferrohealth_health::document::State;
+use ferrohealth_health::lifecycle::Lifecycle;
+use ferrohealth_health::registry::{HealthIndicator, Registry};
 use http::StatusCode;
 use serde_json::Value;
 use sqlx::PgPool;
@@ -630,12 +632,14 @@ async fn boot_and_readiness_are_unaffected_when_the_collector_hangs() {
         Arc::new(DbHealth::new(pool.clone())),
         Arc::new(MigrationsHealth::new(pool.clone())),
     ];
+    let lifecycle = Lifecycle::default();
+    lifecycle.booted();
     let readiness = tokio::time::timeout(
         Duration::from_secs(5),
-        HealthRegistry::new(indicators).evaluate(),
+        Registry::new(indicators).readiness(&lifecycle),
     )
     .await
     .expect("readiness answers while the collector hangs");
-    assert_eq!(readiness.status, HealthStatus::Up);
+    assert_eq!(readiness.state, State::Up);
     handle.abort();
 }

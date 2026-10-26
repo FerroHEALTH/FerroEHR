@@ -2750,3 +2750,40 @@ fn a_demographic_root_containing_its_ehr_splits_into_two_halves() {
         );
     }
 }
+
+/// A versioned-object root that occurs only at the root of its tree binds the
+/// `num = 0` row, so its node probe is one primary-key row; a `FOLDER`, which
+/// nests in `FOLDER.folders`, does not (#4089; our own design, no openEHR spec
+/// governs the storage).
+#[test]
+fn a_root_only_class_binds_the_root_row() {
+    for q in [
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c CONTAINS (OBSERVATION o OR INSTRUCTION i)",
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
+        "SELECT s/uid/value FROM EHR e CONTAINS EHR_STATUS s",
+    ] {
+        let sql = build_sql(q);
+        assert!(sql.contains(r#""n1"."num" = $"#), "{q}: {sql}");
+    }
+    let sql = build_sql("SELECT f/uid/value FROM EHR e CONTAINS FOLDER f");
+    assert!(!sql.contains(r#""n1"."num" = $"#), "{sql}");
+}
+
+/// A `COMPOSITION`'s template id compares through the indexed
+/// `version.template_id`, never by extracting the leaf from each root's
+/// fragment (#4090).
+#[test]
+fn a_composition_template_predicate_reads_the_version_column() {
+    for q in [
+        "SELECT c FROM EHR e CONTAINS COMPOSITION c WHERE c/archetype_details/template_id/value = 'vital_signs'",
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o WHERE c/archetype_details/template_id/value = 'vital_signs'",
+    ] {
+        let sql = build_sql(q);
+        assert!(sql.contains(r#""v1"."template_id" = "#), "{q}: {sql}");
+        assert!(!sql.contains("jsonpath"), "{q}: {sql}");
+    }
+    // A projection still returns the stored leaf.
+    let sql =
+        build_sql("SELECT c/archetype_details/template_id/value FROM EHR e CONTAINS COMPOSITION c");
+    assert!(!sql.contains(r#""v1"."template_id""#), "{sql}");
+}

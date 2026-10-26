@@ -17,6 +17,14 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **The FLAT builder builds an `INTERVAL_EVENT` at an abstract `EVENT` node
+  when the input names its width** (#3898), on the 0.0.102 crate line. RM
+  data_structures §EVENT makes `EVENT` abstract over `POINT_EVENT` and
+  `INTERVAL_EVENT`, and a `/width`, `/math_function` or `|sample_count` under
+  such a node (master05 §INTERVAL_EVENT) now chooses the interval; without
+  them the node still builds as a `POINT_EVENT`. The flattener writes those
+  rows back for an interval event held at an abstract node.
+
 - **Opaque access tokens are checked by token introspection under `[auth]
   mode = "introspection"`** (#4033). `ferrohealth-smart`'s introspection
   check (RFC 7662) posts each bearer token to the issuer's introspection
@@ -64,6 +72,62 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **Breaking: `/health/readiness` and `/management/health` serve the
+  FerroHEALTH readiness document of `ferrohealth-health` 0.1.1** (#4087). The
+  body is `{"state", "phase", "indicators": [{"name", "state", "detail"?}]}`
+  with lowercase states (`up`, `degraded`, `down`), replacing `{"status",
+  "components"}`; the public probe leaves out every `detail`. Readiness also
+  answers `503` while the process boots and from the moment it receives
+  `SIGTERM` or `SIGINT`, before the listener stops. The optional indicators
+  (`audit_sender`, `audit_delivery`, `audit_chain`, `events`) read at worst
+  `degraded`, so a damaged audit chain now reads `degraded` where it read
+  `DOWN`, and an indicator that is up carries no detail. The viewer's health
+  tab reads the same document. Probes that test only the status code are
+  unaffected.
+
+- **HTTP Basic credentials are cached for 300 seconds by default** (#4088).
+  `[auth.basic] cache_ttl_seconds` defaulted to `0`, so every Basic request
+  ran the Argon2id derivation, 10 to 15 ms of CPU, which capped the mixed
+  ITS-REST and AQL workload against a release build on one host at 408 op/s;
+  with the cache it reached 1559 op/s. `ferrohealth-smart` 0.7.5 makes 300
+  the default. Only a credential that verified is kept, under a keyed hash
+  drawn at boot, and the cache empties at a restart. Set `0` to check every
+  request. FerroEHR takes `ferrohealth-smart` 0.7.5, `ferrohealth-authz`
+  0.1.5, `ihe-atna` and `ehds-logging` 0.2.13 and `ferrobridge-term` 0.1.139.
+  Helm chart 16.0.1 states the new default.
+
+- **Breaking: the XML readers of `openehr-its` refuse a document outside
+  the schema** (#3893), on the 0.0.103 crate line. A child element a type's
+  closed `xs:sequence` does not declare, or a child element inside a text
+  element, is refused with `XmlError::UndeclaredChild` (XML Schema 1.1 Part 1
+  §3.4.4.2) where it was skipped as if absent, and `opt14::from_xml` and the
+  AOM2 readers refuse a root other than the one the schema publishes
+  (`<template>`, ITS-XML `components/AM/Release-1.4/Template.xsd`) with
+  `XmlError::UnexpectedRoot`. One tool-written element no schema declares,
+  `match_negated` on a `C_ATTRIBUTE`, is read when `false` and refused when
+  `true` (`XmlError::UnsupportedExtension`): a negated match changes the
+  constraint, and no schema says how. A CDR upload of a template outside the
+  schema is now refused; the CNF Robot `valid_templates/validation/clinical_content_validation.opt`
+  and two epSOS CKM templates are such documents (#4077, #4078).
+
+- **Three AQL shapes no longer read every composition** (#4089, #4090),
+  measured against a release build on one host holding about 51 000
+  compositions. A population query ordered by `c/context/start_time/value`
+  with a small `fetch` reads the compositions in start-time order from a new
+  index and stops at the limit: 169 ms became 7 ms at p50. A
+  `c/archetype_details/template_id/value` predicate on a `COMPOSITION` reads
+  the indexed template id of the version: 142 ms became 2 ms for a template
+  nothing matches, and 29 ms became 11 ms for one of thirteen templates. A
+  `COMPOSITION`, `EHR_STATUS` or `EHR_ACCESS` root is bound at its root row,
+  so a containment with `OR` probes one row per version where it read every
+  node of it. Clinical migration 0017 adds the index and the planner
+  statistics, and analyzes the node table once.
+
+- **The shared crates move to their newest lockstep releases**: `ferrohealth-smart` 0.7.3,
+  `ferrohealth-authz` 0.1.3, `ihe-atna` and `ehds-logging` 0.2.12 and `ferrobridge-term`
+  0.1.138. Every secret in the `[auth]` section now renders as `***`, the family
+  mask, and `[auth] ca_file` names a PEM bundle of extra certificate authorities
+  for the issuer's metadata and key set, for an issuer behind a private PKI.
 - **Every secret and every masked URL renders through `ferrohealth-secret`,
   the family's one mask** (en-route finding of #4028). EHR's own
   `config::secret` module gives way to `ferrohealth-secret`'s `Secret`,
@@ -80,6 +144,12 @@ workflow refuses a tag that has no matching section here.
   points at that list. Upgrade: remove `user_role` (on Helm chart 16.0.0,
   `config.authz.rbac.user_role`), and give each Basic user the roles it needs,
   for example `roles = ["USER"]`.
+
+- **The `openehr-rm` tests take the change-type and lifecycle-state codes
+  from `openehr_term::codes`** (#4053), in the codegen templates of both
+  generations, so no literal code or rubric can drift from the embedded
+  terminology.
+
 - **Breaking: `ihe-atna`'s forwarder delivers the audit trail, and
   `[audit.fhir_feed] batch_size` and `max_retries` are gone** (#4029). Syslog
   frames are stored in `ihe-atna`'s spool and delivered from it with
@@ -169,6 +239,11 @@ workflow refuses a tag that has no matching section here.
 
 Shipped with functional changes because: the patched `ferrohealth-smart` arrives in the same dependency move as the family mask and the lockstep releases built on it.
 
+- The zstd bindings move to zstd 0.14.3, zstd-safe 8.2.0 and zstd-sys 2.1.2,
+  past RUSTSEC-2026-0391, RUSTSEC-2026-0398, RUSTSEC-2026-0403 and
+  RUSTSEC-2026-0410. Response compression and the outbound clients' response
+  decompression reach these crates, and the affected functions were not shown
+  unreachable (GHSA-cwhv-87pq-3c3c).
 - `ferrohealth-smart` 0.7.1 masks the userinfo of every URL in its grant
   tables, a URL no parser accepts included. With 0.7.0 a configured
   `token_endpoint` or `issuer` that did not parse could reach the
@@ -176,6 +251,27 @@ Shipped with functional changes because: the patched `ferrohealth-smart` arrives
   GHSA-vphj-3f8c-5hpx).
 
 ### Fixed
+
+- **A BASE 1.3 `TERMINOLOGY_CODE` keeps its `terminology_id` in XML**
+  (#4076). ITS-XML 1.0.2 types `TRANSLATION_DETAILS.language` and the other
+  slots that hold one as `CODE_PHRASE`, whose `terminology_id` carries a
+  `<value>` child; the codec wrote and read bare text instead, so an
+  XSD-valid document read with an empty `terminology_id`. It now writes and
+  reads the `TERMINOLOGY_ID` shape.
+
+- **An archetype HRID's version status reads as the `VERSION_STATUS` it
+  names** (#4051), on the 0.0.102 crate line. AOM2
+  `ARCHETYPE_HRID.version_status` maps `-rc`, `-alpha`, `-beta` and no
+  modifier to `release_candidate`, `alpha`, `beta` and `released`, where `rc`
+  and the empty modifier read as `VersionStatus::Other`. `openehr-adl` writes the
+  HRID back with the modifier (`-rc`, never `-release_candidate`), so parse
+  and write are inverse.
+- **A party reference whose type is not the builder's default survives a FLAT
+  or STRUCTURED round trip** (#4052). master05 gives `PARTY_REF.type` no
+  row, so a `_health_care_facility` that is not an `ORGANISATION`, or a
+  `_provider`, performer, composer, feeder-audit party or `PARTY_PROXY` datum
+  that is not a `PERSON`, is now written as `|raw` (master04 §Raw canonical
+  JSON) and read back whole; it came back with the default type.
 
 - **An ordinal of an archetype read in the ADL 1.4 dialect lists its
   at-codes** (#4059). The `symbol` of each `[value, symbol]` row kept the

@@ -209,7 +209,7 @@ async fn health_endpoint_is_public() {
 /// run with authentication ENABLED and the management surface at its default
 /// (disabled), and all three probes still answer without credentials.
 /// `/health/liveness` is a byte-identical alias of `/health`; `/health/readiness`
-/// renders the indicator aggregate (empty registry in a test build → `UP`).
+/// renders the family readiness document (empty registry in a test build → `up`).
 /// This family is also the ONLY health surface — the retired REST-root
 /// `/ferroehr/rest/status/health` name answers `404`.
 #[tokio::test]
@@ -228,10 +228,11 @@ async fn health_family_is_public_without_the_management_surface() {
         "application/json"
     );
     let v: serde_json::Value = serde_json::from_str(&body).unwrap();
-    assert_eq!(v["status"], "UP");
-    assert!(v.get("components").is_some(), "indicator body: {body}");
-    // The probe body is the aggregate and the components, nothing else.
-    assert_eq!(v.as_object().unwrap().len(), 2, "readiness body: {body}");
+    assert_eq!(v["state"], "up");
+    assert_eq!(v["phase"], "serving");
+    assert!(v.get("indicators").is_some(), "indicator body: {body}");
+    // The probe body is the state, the phase and the indicators, nothing else.
+    assert_eq!(v.as_object().unwrap().len(), 3, "readiness body: {body}");
 
     // There is no second name for health under the REST root: the retired
     // `/ferroehr/rest/status/health` alias is not routed at all.

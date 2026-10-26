@@ -214,6 +214,7 @@ pub fn canonical_form_of_json_with_data(
 
 #[cfg(test)]
 mod tests {
+    use openehr_term::codes::{AuditChangeType, VersionLifecycleState};
     use super::*;
     use crate::v1_2::common::change_control::imported_version::ImportedVersion;
     use crate::v1_2::common::change_control::original_version::OriginalVersion;
@@ -252,14 +253,14 @@ mod tests {
                     accuracy: None,
                     value: "2026-07-07T10:11:12Z".to_owned(),
                 },
-                change_type: coded("249", "creation"),
+                change_type: coded(AuditChangeType::Creation.code(), AuditChangeType::Creation.rubric()),
                 description: None,
                 committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
             }),
             uid: ObjectVersionId::new(value.to_owned()).expect("a well-formed identifier"),
             preceding_version_uid: None,
             other_input_version_uids: openehr_base::containers::present_nonempty(Vec::new()),
-            lifecycle_state: coded("532", "complete"),
+            lifecycle_state: coded(VersionLifecycleState::Complete.code(), VersionLifecycleState::Complete.rubric()),
             attestations: openehr_base::containers::present_nonempty(Vec::new()),
             data: Some("content".to_owned()),
         }
@@ -344,7 +345,7 @@ mod tests {
                     accuracy: None,
                     value: "2026-07-09T08:00:00Z".to_owned(),
                 },
-                change_type: coded("249", "creation"),
+                change_type: coded(AuditChangeType::Creation.code(), AuditChangeType::Creation.rubric()),
                 description: None,
                 committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
             }),
@@ -379,7 +380,7 @@ mod tests {
             version.preceding_version_uid().map(ObjectVersionId::value),
             Some("8849182c-82ad-4088-a07f-48ead4180515::ferroehr.local::1")
         );
-        assert_eq!(version.lifecycle_state().value, "complete");
+        assert_eq!(version.lifecycle_state().value, VersionLifecycleState::Complete.rubric());
         assert_eq!(version.data(), Some(&"content".to_owned()));
     }
 
@@ -429,7 +430,7 @@ mod tests {
                     accuracy: None,
                     value: "2026-07-09T08:00:00Z".to_owned(),
                 },
-                change_type: coded("249", "creation"),
+                change_type: coded(AuditChangeType::Creation.code(), AuditChangeType::Creation.rubric()),
                 description: None,
                 committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
             }),
@@ -440,7 +441,7 @@ mod tests {
             wrapper.preceding_version_uid().map(ObjectVersionId::value),
             Some("8849182c-82ad-4088-a07f-48ead4180515::remote.example::2")
         );
-        assert_eq!(wrapper.lifecycle_state().value, "complete");
+        assert_eq!(wrapper.lifecycle_state().value, VersionLifecycleState::Complete.rubric());
         assert_eq!(wrapper.data(), Some(&"imported content".to_owned()));
     }
 }

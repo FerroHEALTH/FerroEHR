@@ -36,10 +36,11 @@ mod tests {
     use crate::v1_2::data_types::text::code_phrase::CodePhrase;
     use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
     use openehr_base::v1_3::prelude::TerminologyId;
+    use openehr_term::codes::AuditChangeType;
 
     fn change_type() -> DvCodedText {
         DvCodedText {
-            value: "creation".to_owned(),
+            value: AuditChangeType::Creation.rubric().to_owned(),
             hyperlink: None,
             formatting: None,
             mappings: openehr_base::containers::present_nonempty(Vec::new()),
@@ -49,7 +50,7 @@ mod tests {
                 terminology_id: TerminologyId {
                     value: "openehr".to_owned(),
                 },
-                code_string: "249".to_owned(),
+                code_string: AuditChangeType::Creation.code().to_owned(),
                 preferred_term: None,
             },
         }

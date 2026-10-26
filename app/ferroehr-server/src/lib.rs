@@ -42,7 +42,6 @@ use ferroehr::system_log::sender::{
     AuditHandle, AuditSender, ResolvedSubject, SubjectLookup, SubjectResolver,
 };
 use ferroehr::telemetry::build_info::BuildInfo;
-use ferroehr::telemetry::health::{HealthIndicator, HealthRegistry};
 use ferroehr::usage_report::config::Switch;
 use ferroehr::usage_report::reporter::{EventKind, Identity, NOTICE_URL, UsageReporter};
 use ferroehr::versioning::signature::signer::Signer;
@@ -51,6 +50,8 @@ use ferroehr_rest::extensions::access::authz::{
     AuthzHandle, AuthzResolvers, ResolveError, build_engine,
 };
 use ferroehr_rest::extensions::management::Observability;
+use ferrohealth_health::lifecycle::Lifecycle;
+use ferrohealth_health::registry::{HealthIndicator, Registry};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -1281,7 +1282,10 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         management: config.management.clone(),
         prometheus: Some(telemetry.registry()),
         log_reload: Some(telemetry.log_reload()),
-        health: HealthRegistry::new(indicators),
+        // NOTE: no specification governs this: our own design; each check keeps
+        // the one-second bound the probes have always had.
+        health: Registry::new(indicators).with_timeout(Duration::from_secs(1)),
+        lifecycle: Lifecycle::default(),
         build_info,
         env_snapshot,
     };

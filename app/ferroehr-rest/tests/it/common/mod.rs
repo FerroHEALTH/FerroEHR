@@ -73,7 +73,10 @@ pub(crate) async fn router_with(config: AppConfig, service: Arc<FerroEhrService>
     let authenticator = Authenticator::new(&config)
         .await
         .expect("test auth config is valid");
-    let state = AppState::with_backend(config, service);
+    // A router a test drives is serving, as `build_with` marks it.
+    let observability = ferroehr_rest::extensions::management::Observability::default();
+    observability.lifecycle.booted();
+    let state = AppState::with_parts(config, service, None, observability);
     ferroehr_rest::router::router(state, authenticator)
 }
 

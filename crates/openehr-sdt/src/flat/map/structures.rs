@@ -76,8 +76,29 @@ fn emit_locatable_attrs(rm: &Value, out: &mut SimNode) {
         }
     }
     if let Some(fa) = rm.get("feeder_audit").filter(|v| !v.is_null()) {
-        emit_feeder_audit(fa, out.occurrence_mut("_feeder_audit", None));
+        let target = out.occurrence_mut("_feeder_audit", None);
+        if audit_parties_survive(fa) {
+            emit_feeder_audit(fa, target);
+        } else {
+            target.attrs.insert("raw".to_owned(), fa.clone());
+        }
     }
+}
+
+/// Whether every party of both FEEDER_AUDIT_DETAILS survives the master05
+/// suffixes, whose builder fills `PERSON` in as the reference type
+/// ([`parties::ref_type_survives`]); the feeder audit is written whole as
+/// `|raw` otherwise (master04 §Raw canonical JSON).
+fn audit_parties_survive(fa: &Value) -> bool {
+    ["originating_system_audit", "feeder_system_audit"]
+        .iter()
+        .filter_map(|details| fa.get(*details))
+        .flat_map(|details| {
+            ["location", "subject", "provider"]
+                .iter()
+                .filter_map(move |party| details.get(*party))
+        })
+        .all(|party| parties::ref_type_survives(party, "PERSON"))
 }
 
 /// The ELEMENT families: `_null_flavour` and `_null_reason` (master05
@@ -111,7 +132,7 @@ fn emit_entry_attrs(rm: &Value, ty: &str, out: &mut SimNode) {
         parties::emit_object_ref(o, out.occurrence_mut("_work_flow_id", None));
     }
     if let Some(p) = rm.get("provider").filter(|v| !v.is_null()) {
-        parties::emit_party(p, out.occurrence_mut("_provider", None));
+        parties::emit_party_as(p, "PERSON", out.occurrence_mut("_provider", None));
     }
     if let Some(parts) = rm.get("other_participations").and_then(Value::as_array) {
         for (i, p) in parts.iter().enumerate() {
@@ -175,7 +196,11 @@ fn emit_ism_transition_attrs(rm: &Value, out: &mut SimNode) {
 /// input.
 fn emit_event_context_attrs(rm: &Value, out: &mut SimNode) {
     if let Some(hcf) = rm.get("health_care_facility").filter(|v| !v.is_null()) {
-        parties::emit_party(hcf, out.occurrence_mut("_health_care_facility", None));
+        parties::emit_party_as(
+            hcf,
+            "ORGANISATION",
+            out.occurrence_mut("_health_care_facility", None),
+        );
     }
     if let Some(parts) = rm.get("participations").and_then(Value::as_array) {
         for (i, p) in parts.iter().enumerate() {

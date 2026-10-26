@@ -6,8 +6,9 @@
 //! push (against in-memory exporters — the export pipeline is exercised without
 //! a live collector), and readiness reflecting a DOWN database.
 
-use ferroehr::telemetry::health::{Health, HealthIndicator, HealthStatus};
 use ferroehr::telemetry::metrics::{DB_POOL_CONNECTIONS, histogram_views};
+use ferrohealth_health::document::State;
+use ferrohealth_health::registry::HealthIndicator;
 
 /// The histogram bucket ladders as a stable text table, so a re-bucketing is
 /// reviewed deliberately: `OTel`'s defaults are not ours, and a silently changed
@@ -107,7 +108,9 @@ async fn db_health_is_down_when_database_unreachable() {
 
     let indicator = ferroehr::telemetry::indicators::DbHealth::new(pool);
     assert_eq!(indicator.name(), "db");
-    let Health { status, .. } = indicator.check().await;
-    assert_eq!(status, HealthStatus::Down);
-    assert!(indicator.required(), "db is required for readiness");
+    assert_eq!(
+        indicator.check().await.state(),
+        State::Down,
+        "db is required for readiness: its failure withdraws it"
+    );
 }

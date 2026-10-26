@@ -16,6 +16,8 @@
 
 use std::collections::BTreeMap;
 
+use openehr_am::v2_4::aom2::archetype::archetype_hrid_impl::version_status_of_modifier;
+
 /// Apply the whole 1.4→2 `description` transform in place.
 pub(super) fn transform_description(
     desc: &mut openehr_am::v2_4::resource::resource_description::ResourceDescription,
@@ -153,7 +155,8 @@ pub(super) fn set_release_version(
     // `version` may be `1.1.0` or `0.0.1-alpha`; split a `-status.build` tail.
     let (numeric, status, build) = split_version(version);
     hrid.release_version = numeric;
-    hrid.version_status = openehr_base::prelude::VersionStatus::from_wire(status);
+    hrid.version_status = version_status_of_modifier(status)
+        .unwrap_or_else(|| openehr_base::prelude::VersionStatus::from_wire(status));
     hrid.build_count = build;
 }
 

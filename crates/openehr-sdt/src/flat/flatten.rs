@@ -57,6 +57,14 @@ pub fn flatten_composition(
     ctx::emit(composition, doc.occurrence_mut("ctx", None));
     let root = doc.occurrence_mut(&wt.tree.id, None);
     walk(&wt.tree, composition, root);
+    if let Some(composer) = composition
+        .get("composer")
+        .filter(|c| !map::parties::ref_type_survives(c, "PERSON"))
+    {
+        root.occurrence_mut("composer", None)
+            .attrs
+            .insert("raw".to_owned(), composer.clone());
+    }
     doc.prune_empty();
     Ok(doc)
 }
@@ -359,6 +367,11 @@ fn emit_direct_rm_paths(node: &WebTemplateNode, rm: &Value, out: &mut SimNode) {
         }
         "OBSERVATION" => emit_history_origin(rm, out),
         "ACTIVITY" => emit_activity_paths(node, rm, out),
+        // NOTE: an abstract EVENT node holds whichever concrete event the data is
+        // (RM data_structures master06 §EVENT), so an interval keeps its rows.
+        "EVENT" if rm.get("_type").and_then(Value::as_str) == Some("INTERVAL_EVENT") => {
+            emit_interval_event_paths(node, rm, out);
+        }
         "POINT_EVENT" | "EVENT" => {
             emit_direct_leaf(node, out, "time", "DV_DATE_TIME", rm.get("time"));
         }
