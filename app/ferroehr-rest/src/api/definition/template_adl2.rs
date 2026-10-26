@@ -114,7 +114,7 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     let hrid = hrid.as_str();
     let location = format!(
         "{}/definition/template/adl2/{hrid}",
-        state.config().server.base_path
+        state.config().rest.base_path
     );
     // 201_Template_adl2_upload: the body follows `Prefer` — the OPT source on
     // representation, `{template_id}` on identifier, empty on minimal — with

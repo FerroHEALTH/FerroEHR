@@ -18,9 +18,37 @@
 //! quote one fact — and provenance itself derives every pin from the owning
 //! `openehr-*` crate's own pin authority. See that module for the derivation.
 
+use std::sync::LazyLock;
+
 use serde::Serialize;
 
 use crate::telemetry::provenance;
+
+/// The build instant `build.rs` captured, as an ISO-8601 UTC string, or
+/// `unknown` when it recorded none.
+static BUILT_AT: LazyLock<String> = LazyLock::new(|| {
+    env!("FERROEHR_BUILD_EPOCH")
+        .parse::<i64>()
+        .ok()
+        .and_then(|secs| jiff::Timestamp::from_second(secs).ok())
+        .map_or_else(|| "unknown".to_owned(), |ts| ts.to_string())
+});
+
+/// The build facts of this binary in the family's shape.
+///
+/// The name, the version, the commit, the build instant and the compiler
+/// `build.rs` captured. The boot banner reads them, and [`BuildInfo`] carries
+/// the same facts on `/management/info`.
+#[must_use]
+pub fn build() -> ferrohealth_server::build_info::BuildInfo {
+    ferrohealth_server::build_info::BuildInfo::new(
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION"),
+    )
+    .with_commit(env!("REVISION"))
+    .with_built_at(BUILT_AT.as_str())
+    .with_rustc(env!("FERROEHR_RUSTC"))
+}
 
 /// Build- and spec-provenance, captured once. Cheap to clone.
 #[derive(Debug, Clone, Serialize)]
@@ -85,12 +113,13 @@ impl BuildInfo {
     /// serves rather than the compile-time default.
     #[must_use]
     pub fn for_profile(profile: crate::config::profile::SpecProfile) -> Self {
+        let build = build();
         Self {
-            name: env!("CARGO_PKG_NAME"),
-            version: env!("CARGO_PKG_VERSION"),
-            git_sha: env!("REVISION"),
-            build_date: build_date(),
-            rustc: env!("FERROEHR_RUSTC"),
+            name: build.name(),
+            version: build.version(),
+            git_sha: build.commit().unwrap_or("unknown"),
+            build_date: build.built_at().unwrap_or("unknown").to_owned(),
+            rustc: build.rustc().unwrap_or("unknown"),
             spec_profile: profile,
             spec: SpecVersions {
                 its_rest: provenance::ITS_REST,
@@ -121,15 +150,6 @@ impl Default for BuildInfo {
     fn default() -> Self {
         Self::current()
     }
-}
-
-/// Render the build epoch captured by `build.rs` as an ISO-8601 UTC string.
-fn build_date() -> String {
-    env!("FERROEHR_BUILD_EPOCH")
-        .parse::<i64>()
-        .ok()
-        .and_then(|secs| jiff::Timestamp::from_second(secs).ok())
-        .map_or_else(|| "unknown".to_owned(), |ts| ts.to_string())
 }
 
 #[cfg(test)]

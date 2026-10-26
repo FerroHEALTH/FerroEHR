@@ -132,8 +132,8 @@ semi-trusted actor.
 
 - **TLS termination.** Every connection to the API is encrypted, either by the
   server's own listener (`[server.tls]`, TLS 1.3 by default, mutual TLS
-  available) or by an ingress or proxy in front of it. The shipped default is
-  `[server.tls] enabled = false`; the hop behind a proxy is the deploying
+  available) or by an ingress or proxy in front of it. The shipped default
+  leaves `[server.tls]` unset; the hop behind a proxy is the deploying
   organisation's, and the server cannot see whether it is encrypted
   ([B1 network and protocol](../threat-model.md#b1--network-and-protocol),
   [server configuration](../installation/config-server.md)).

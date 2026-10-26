@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::config::server::AdminConfig;
+use ferroehr::config::rest::AdminConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig;
 use ferroehr::service::demographic::identifier::engine::IdentifierProtection;
@@ -59,6 +59,7 @@ const TEST_ROOT_KEY: &str = "000102030405060708090a0b0c0d0e0f1011121314151617181
 /// configured.
 fn config() -> AppConfig {
     let mut config = AppConfig {
+        server: common::server(),
         auth: common::issuer_auth(ISSUER, AUDIENCE),
         admin: AdminConfig { enabled: true },
         ..Default::default()
@@ -105,7 +106,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         .with_audit_store(AuditStore::new(pool.clone()));
     let authz = AuthzHandle::build(
         &AuthzConfig::default(),
-        &config().server.base_path,
+        &config().rest.base_path,
         None,
         common::null_resolvers(),
     )

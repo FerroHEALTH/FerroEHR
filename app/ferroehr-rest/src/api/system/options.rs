@@ -70,11 +70,11 @@ pub const SPEC_ENDPOINTS: &[&str] = &["/ehr", "/demographic", "/definition", "/q
 /// quotes [`ferroehr::telemetry::provenance::CONFORMANCE_PROFILE`] — the last machine-computed ECC
 /// verdict, updated at each conformance re-baseline
 /// (`docs/conformance/ferroehr/CONFORMANCE_REPORT.md` §"Profile verdict"). The manifest
-/// MUST NOT out-claim that verdict. [`crate::config::server::ServerConfig`] carries a
-/// `SystemOptionsConfig` as its `identity` field (the `[server.identity]`
+/// MUST NOT out-claim that verdict. [`ferroehr::config::rest::RestConfig`] carries a
+/// `SystemOptionsConfig` as its `identity` field (the `[rest.identity]`
 /// section of the one config tree), so an operator MAY override any identity
 /// field while the defaults stay measured.
-use ferroehr::config::server::SystemOptionsConfig;
+use ferroehr::config::rest::SystemOptionsConfig;
 
 /// The System Options and Conformance manifest — the `OPTIONS /` response
 /// body (ITS-REST System API `Options` schema,

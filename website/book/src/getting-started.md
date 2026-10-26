@@ -58,7 +58,7 @@ declared `deployment` profile. All clinical API routes live under
 the base path `/ferroehr/rest/openehr/v1`. Interactive OpenAPI documentation is
 served at <http://localhost:8080/ferroehr/rest/swagger-ui>; sign in with the
 API credential when the browser asks (the UI is served to authenticated users by
-default, see [`server.swagger_ui`](installation/config-server.md#server)). If you have no
+default, see [`rest.swagger_ui`](installation/config-server.md#server)). If you have no
 server yet, use the hosted sandbox: <https://sandbox.ferroehr.eu> opens the
 viewer over a live CDR, and the same server's Swagger UI is at
 <https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui>. Both take the public

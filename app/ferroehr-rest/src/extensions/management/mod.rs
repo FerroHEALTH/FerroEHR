@@ -7,7 +7,7 @@
 //!
 //! No openEHR spec governs this — our own operational surface. The orchestrator
 //! probes do not live here: `/health` and its siblings are always-on and public
-//! ([`crate::extensions::health`]) because they must not depend on an operator
+//! (the family stack's `ferrohealth_server::health` routes) because they must not depend on an operator
 //! remembering to enable an introspection surface. What a probe or an
 //! anonymous client may learn ends at a status: the detail behind readiness
 //! (`/management/health`) and the licence, deployment gaps and support period

@@ -534,28 +534,28 @@ web server should send the headers properly instead.
 Four different protections, four different statuses, and an operator should be
 able to tell them apart from the status alone.
 
-**Connection bounds:** `[server.connection]`. The limits that apply *before* a
-request exists, because a client that opens a socket and trickles headers reaches
-none of the others: an HTTP/1 header-read timeout, and an HTTP/2 concurrent-stream
-cap with keep-alive PINGs.
+**Connection bounds:** `[server] header_read_timeout_ms`. The limit that applies
+*before* a request exists, because a client that opens a socket and trickles
+headers reaches none of the others: a client that has not sent its request head
+in time is disconnected, on the plain and the TLS listener alike.
 
-**Body size:** `[server.limits]`. Two tiers: the clinical surface, and the routes
-that accept bulk by design (template upload, `/message/import`, `/message/tdd`).
-Over-limit is `413`. The defaults are sized against the largest operational
-template and example composition in the vendored corpus rather than round
-numbers, and a deployment whose compositions embed large `DV_MULTIMEDIA` data
-raises `body_bytes` deliberately.
+**Body size:** `[server] body_limit_bytes` and `[rest] body_limit_bytes`. Two
+tiers: the routes that accept bulk by design (template upload,
+`/message/import`, `/message/tdd`) take the listener's limit, and the clinical
+surface the narrower `[rest]` one when it is set. Over-limit is `413`. The
+listener's default is the family's 1 MiB; a deployment that uploads operational
+templates raises it (the chart and the Compose files set 64 MiB), and one whose
+compositions embed large `DV_MULTIMEDIA` data raises the clinical tier
+deliberately.
 
-**Request rate:** `[server.rate_limit]`, on by default. The **address** tier sits
-outside authentication so a flood is refused before the server verifies a
-signature per request; the **principal** tier sits inside it, keyed on the
+**Request rate:** `[server.caller_rate]`, unset by default and set by the chart
+and the Compose quickstart. It sits inside authentication, keyed on the
 authenticated subject, because a hospital behind one NAT is a single address and
 address-keying a clinical API would throttle a whole site for one busy client.
-Refusal is `429` with `Retry-After` and the `x-ratelimit-*` headers the limiter
-computed.
+Refusal is `429` with `Retry-After`.
 
-**Concurrency:** `[server].max_in_flight`, the admission cap. Refusal is
-`503` with `Retry-After`.
+**Concurrency:** `[server] max_concurrent_requests`, the admission bound.
+Refusal is `503` with `Retry-After`; the health routes are never refused.
 
 So: `503` means the server is full right now, `429` means you are asking too
 fast, `413` means your payload is too big. Full key tables are on the
@@ -577,12 +577,12 @@ authenticated `/management` surface.
 
 | Surface | Default | Why it is public, or how it is gated |
 |---|---|---|
-| `/health`, `/health/liveness` | **always on, unauthenticated** | Orchestrator probes carry no credential. Both answer a plain-text `OK` with no I/O behind them. |
+| `/health`, `/health/liveness` | **always on, unauthenticated** | Orchestrator probes carry no credential. Liveness answers `{"state":"up"}` with no I/O behind it; `/health` answers the readiness status with the state alone. |
 | `/health/readiness` | **always on, unauthenticated** | An orchestrator probe: `200` while ready, `503` while the process boots or drains or an indicator is `down`. The body is the state, the phase and each indicator's name and state, nothing more. The detail is `/management/health`. |
 | `{rest root}/status` | **always on, unauthenticated** | A documented client contract: status, server version, ITS-REST version, timestamp and the deployment profile. The licence, the deployment gaps and the support period are `/management/status`. |
 | `{rest root}/.well-known/smart-configuration` | mounted only with SMART on | SMART App Launch service discovery, read before the client holds any token (ITS-REST SMART App Launch, *Service Discovery*). |
 | `OPTIONS {base path}` | **always on, unauthenticated** | The ITS-REST System API's options manifest, which its released OpenAPI document declares without security. |
-| `{rest root}/swagger-ui`, `{rest root}/api-docs/*` | **`private`** (`server.swagger_ui`) | Public only if you set `public`; `admin_only` and `off` are the other levels. |
+| `{rest root}/swagger-ui`, `{rest root}/api-docs/*` | **`private`** (`rest.swagger_ui`) | Public only if you set `public`; `admin_only` and `off` are the other levels. |
 | `/management/*` | **not mounted at all** (`management.enabled = false`) | With the master switch off, every route is `404`. |
 | `/management/{info,metrics,prometheus,env,loggers,flamegraph,health,status}` | each **`off`** individually | Even with the master switch on, each endpoint stays unmounted until you name a level for it. There is no global fallback: silence means `off`, so a surface this privileged opens one endpoint at a time, by name. |
 | `management.port` | unset (shares the API listener) | Set it to serve ops introspection from **its own listener** on its own port. It binds all interfaces and always stays plain HTTP even with `[server.tls]` on, so treat it as an internal surface and keep it off any publicly routed port; the interface half of the separation is your network's, not this key's. Under `deployment_profile = "production"` setting it opens the `plaintext_listener` gap, so the server refuses to start unless the gap is accepted by name. |
@@ -610,7 +610,7 @@ error naming the pair:
 | the AMQP URL of the change events | `events.url_file` |
 | the national-identifier root key | `demographic.identifier_protection.key_file` |
 
-(The TLS `cert_file` / `key_file` / `client_ca_file` settings and a static key
+(The TLS `certificate_file` / `client_ca_file` settings and a static key
 set's `auth.jwks_file` are paths by nature and have no inline form at all,
 which is the same property arrived at from the other direction.)
 

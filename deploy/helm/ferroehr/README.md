@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). A stock install runs the sandbox deployment profile, which must not hold real patient data; set config.deployment_profile for a production holder.
 
-![Version: 18.0.0](https://img.shields.io/badge/Version-18.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.4.2](https://img.shields.io/badge/AppVersion-5.4.2-informational?style=flat-square)
+![Version: 19.0.0](https://img.shields.io/badge/Version-19.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.4.2](https://img.shields.io/badge/AppVersion-5.4.2-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 18.0.0 \
+  --version 19.0.0 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.4.2
@@ -58,7 +58,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `18.0.0` |
+| the **chart** (templates, defaults, this document) | `--version` | `19.0.0` |
 | the **server image** | `image.tag` | `5.4.2` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -70,7 +70,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:18.0.0 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:19.0.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -78,7 +78,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:18.0.0 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:18.0.0 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:19.0.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.4.2 \
   -R FerroHEALTH/FerroEHR
@@ -97,7 +97,7 @@ vocabulary, gets a type wrong, or names a value outside the permitted set,
 instead of rendering and ignoring it.
 
 Everything under `config:` stays deliberately open: that vocabulary is the
-**server's** (`ferroehr config default` prints it in full), it is validated by
+**server's** (`app/ferroehr/assets/ferroehr.default.toml` lists it in full), it is validated by
 the binary at boot, and duplicating it here would fork it. So a typo under
 `config:` is caught when the pod starts, not when the chart renders.
 
@@ -286,21 +286,15 @@ Kubernetes: `>=1.36.0-0`
 | config.multimedia.bucket | string | `"openehr-multimedia"` |  |
 | config.multimedia.enabled | bool | `false` |  |
 | config.multimedia.region | string | `"us-east-1"` |  |
-| config.server.base_path | string | `"/ferroehr/rest/openehr/v1"` |  |
-| config.server.bind | string | `"0.0.0.0:8080"` |  |
-| config.server.connection.header_read_timeout_secs | int | `10` |  |
-| config.server.connection.http2_keep_alive_interval_secs | int | `30` |  |
-| config.server.connection.http2_keep_alive_timeout_secs | int | `10` |  |
-| config.server.connection.max_concurrent_streams | int | `256` |  |
-| config.server.cors_permissive | bool | `false` |  |
-| config.server.limits.body_bytes | int | `16777216` |  |
-| config.server.limits.bulk_body_bytes | int | `67108864` |  |
-| config.server.rate_limit.address_burst | int | `4096` |  |
-| config.server.rate_limit.address_per_second | int | `2048` |  |
-| config.server.rate_limit.enabled | bool | `true` |  |
-| config.server.rate_limit.principal_burst | int | `2048` |  |
-| config.server.rate_limit.principal_per_second | int | `1024` |  |
-| config.server.swagger_ui | string | `"private"` |  |
+| config.rest.base_path | string | `"/ferroehr/rest/openehr/v1"` |  |
+| config.rest.body_limit_bytes | int | `16777216` |  |
+| config.rest.cors_permissive | bool | `false` |  |
+| config.rest.swagger_ui | string | `"private"` |  |
+| config.server.body_limit_bytes | int | `67108864` |  |
+| config.server.caller_rate.burst | int | `2048` |  |
+| config.server.caller_rate.requests_per_second | int | `1024` |  |
+| config.server.listen | string | `"0.0.0.0:8080"` |  |
+| config.server.max_concurrent_requests | int | `256` |  |
 | config.signing.enabled | bool | `true` |  |
 | config.signing.mode | string | `"digest"` |  |
 | config.signing.verify_on_read | string | `"strict"` |  |
@@ -351,7 +345,7 @@ Kubernetes: `>=1.36.0-0`
 | image.tag | string | `""` | Image tag. Empty string falls back to .Chart.appVersion. Pin a version in production, never `latest` — and prefer `digest` below, which a tag cannot be substituted for once it is set. |
 | imagePullSecrets | list | `[]` | imagePullSecrets for private registries. |
 | ingress.annotations | object | `{}` | Ingress annotations (TLS issuer, body size, timeouts — controller-specific). |
-| ingress.backendTlsAnnotations | object | `{}` | Annotations added to the Ingress only while config.server.tls.enabled is true: how your controller is told the backend speaks HTTPS, which is controller-specific (ingress-nginx: `nginx.ingress.kubernetes.io/backend-protocol: HTTPS`). The render is refused while server TLS and the Ingress are both on and this is empty, because the controller would otherwise send plain HTTP to a TLS listener. |
+| ingress.backendTlsAnnotations | object | `{}` | Annotations added to the Ingress only while config.server.tls is set: how your controller is told the backend speaks HTTPS, which is controller-specific (ingress-nginx: `nginx.ingress.kubernetes.io/backend-protocol: HTTPS`). The render is refused while server TLS and the Ingress are both on and this is empty, because the controller would otherwise send plain HTTP to a TLS listener. |
 | ingress.className | string | `""` | IngressClass name. Empty leaves the cluster default to apply. |
 | ingress.enabled | bool | `false` | Create an Ingress. TLS termination belongs here (or at a gateway). |
 | ingress.hosts[0].host | string | `"ferroehr.example.com"` |  |

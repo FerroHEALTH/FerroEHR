@@ -505,11 +505,11 @@ services:
       # with the upstream stack's HikariCP pool (config parity — the dominant
       # tunable must match across compared SUTs).
       FERROEHR__DB__MAX_CONNECTIONS: ${FERROEHR__DB__MAX_CONNECTIONS:-10}
-      # In-flight admission cap (503 load shed past it; 0 disables). The
-      # comparison runs raise it so overload manifests as queueing latency —
-      # the same failure mode as upstream's Tomcat admission window — instead
-      # of shed errors tripping the stress envelope's error-rate arm.
-      FERROEHR__SERVER__MAX_IN_FLIGHT: ${FERROEHR__SERVER__MAX_IN_FLIGHT:-256}
+      # Concurrent-request bound (503 load shed past it). The comparison runs
+      # raise it so overload manifests as queueing latency — the same failure
+      # mode as upstream's Tomcat admission window — instead of shed errors
+      # tripping the stress envelope's error-rate arm.
+      FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS: ${FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS:-256}
       # Version-signing toggle pass-through (measured comparison runs disable it
       # for throughput parity — upstream has no signing.)
       FERROEHR__SIGNING__ENABLED: ${FERROEHR__SIGNING__ENABLED:-true}
@@ -769,7 +769,17 @@ configs:
       deployment_profile = "sandbox"
 
       [server]
-      bind = "0.0.0.0:8080"
+      listen = "0.0.0.0:8080"
+      # Template uploads and the /message imports take up to 64 MiB; the largest
+      # operational template in the CKM corpus is 5.4 MB.
+      body_limit_bytes = 67108864
+
+      # Per authenticated caller, refused 429 + Retry-After past it.
+      [server.caller_rate]
+      requests_per_second = 1024
+      burst = 2048
+
+      [rest]
       # Permissive CORS — quickstart only. Production configures explicit origins.
       cors_permissive = true
 

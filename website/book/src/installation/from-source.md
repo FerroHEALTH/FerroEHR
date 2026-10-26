@@ -82,17 +82,13 @@ Two global flags and three subcommand groups round the CLI out:
 - `ferroehr config check` validates the effective configuration and prints it
   redacted, exiting 0 when valid and 1 otherwise, the fastest way to test a
   deployment's configuration before starting it;
-- `ferroehr config default` writes the annotated default configuration
-  template to stdout, which is the reference every key in the
-  [configuration reference](configuration.md) is drawn from;
 - `ferroehr db migrate` applies the embedded migrations and exits, the
   out-of-band schema step, run under a `ferroehr_migrator` DSN;
 - `ferroehr db verify` checks, without issuing any DDL, that the database
   carries exactly this build's migrations, exiting 0 when it does;
 - `ferroehr healthcheck` (used by the container healthcheck and Kubernetes
-  exec probes) probes the status endpoint and exits 0 or 1. It defaults to
-  `http://127.0.0.1:8080/ferroehr/rest/status`; override with `--url` or
-  `FERROEHR_HEALTHCHECK_URL`.
+  exec probes) asks `GET /health/readiness` on the configured `server.listen`
+  port over the loopback and exits 0 on `200`, 1 otherwise.
 
 > [!NOTE]
 > Building from source gives you the same binary the images use: the container

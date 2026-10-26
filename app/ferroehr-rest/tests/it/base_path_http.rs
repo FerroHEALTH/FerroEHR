@@ -38,10 +38,9 @@ async fn short_base_router() -> (testkit::TestDb, Router) {
     // `api_config` supplies the unauthenticated baseline; only the base path
     // and the Swagger surface differ from it here.
     let config = AppConfig {
-        server: ferroehr::config::server::ServerConfig {
-            bind: "127.0.0.1:0".to_owned(),
+        server: common::server(),
+        rest: ferroehr::config::rest::RestConfig {
             base_path: SHORT_BASE.to_owned(),
-            max_in_flight: 1024,
             swagger_ui: ferroehr::config::management::AccessLevel::Public,
             cors_permissive: false,
             ..Default::default()
@@ -60,9 +59,9 @@ fn the_shortened_base_path_passes_boot_validation() {
         ehr_index: EhrIndexConfig::local(),
         ..FerroEhrConfig::default()
     };
-    cfg.server.base_path = SHORT_BASE.to_owned();
+    cfg.rest.base_path = SHORT_BASE.to_owned();
     assert!(cfg.validate().is_ok());
-    assert_eq!(cfg.server.rest_root(), SHORT_ROOT);
+    assert_eq!(cfg.rest.rest_root(), SHORT_ROOT);
 }
 
 /// The API answers under the configured base path, the `Location` it returns

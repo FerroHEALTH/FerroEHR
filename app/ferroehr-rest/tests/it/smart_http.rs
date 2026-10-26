@@ -27,7 +27,7 @@ use tower::ServiceExt;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use ferroehr::config::server::ServerConfig;
+use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::{AuthSection, IssuerKey};
 
@@ -73,10 +73,9 @@ async fn issuer() -> MockServer {
 /// `smart_enabled`, its `patient/` grants bound when `patient_bound`.
 fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
     let mut cfg = AppConfig {
-        server: ServerConfig {
-            bind: "127.0.0.1:0".to_owned(),
+        server: common::server(),
+        rest: RestConfig {
             base_path: BASE.to_owned(),
-            max_in_flight: 1024,
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             cors_permissive: false,
             ..Default::default()
@@ -104,7 +103,7 @@ async fn app(cfg: AppConfig) -> (testkit::TestDb, Router) {
 /// A server with authentication off.
 async fn open_app() -> (testkit::TestDb, Router) {
     let mut cfg = common::api_config(false);
-    BASE.clone_into(&mut cfg.server.base_path);
+    BASE.clone_into(&mut cfg.rest.base_path);
     app(cfg).await
 }
 

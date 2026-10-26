@@ -25,7 +25,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::server::{AdminConfig, ServerConfig};
+use ferroehr::config::rest::{AdminConfig, RestConfig};
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
@@ -84,10 +84,24 @@ pub(crate) async fn router_with(config: AppConfig, service: Arc<FerroEhrService>
 /// the baseline most HTTP tests want (auth-specific tests build their own
 /// [`AppConfig`] via [`router_with`]).
 pub(crate) async fn test_router() -> (testkit::TestDb, Router) {
-    let mut config = AppConfig::default();
+    let mut config = AppConfig {
+        server: server(),
+        ..AppConfig::default()
+    };
     config.auth.enabled = false;
     let (db, service) = test_service().await;
     (db, router_with(config, service).await)
+}
+
+/// The `[server]` section the wire suites serve under: the family defaults with
+/// a body ceiling that admits the operational templates they upload, which a
+/// deployment raises the same way (`server.body_limit_bytes`); the IPS template
+/// alone is larger than the family's 1 MiB default.
+pub(crate) fn server() -> ferrohealth_server::section::ServerSection {
+    ferrohealth_server::section::ServerSection {
+        body_limit_bytes: 64 * 1024 * 1024,
+        ..ferrohealth_server::section::ServerSection::default()
+    }
 }
 
 /// The unauthenticated API configuration the wire suites drive: [`BASE`] as the
@@ -95,10 +109,9 @@ pub(crate) async fn test_router() -> (testkit::TestDb, Router) {
 /// `admin_enabled`.
 pub(crate) fn api_config(admin_enabled: bool) -> AppConfig {
     AppConfig {
-        server: ServerConfig {
-            bind: "127.0.0.1:0".to_owned(),
+        server: server(),
+        rest: RestConfig {
             base_path: BASE.to_owned(),
-            max_in_flight: 1024,
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             cors_permissive: false,
             ..Default::default()

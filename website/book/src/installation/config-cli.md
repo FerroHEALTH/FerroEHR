@@ -17,7 +17,7 @@ Two flags are global: they apply to the server and to every subcommand:
 | `--config <path>` | The configuration file to load, overriding `FERROEHR_CONFIG`. Fatal if missing or unreadable. |
 | `--set <key>=<value>` | A dotted-path override, repeatable, highest precedence of all layers (e.g. `--set db.max_connections=40`). |
 
-With no subcommand, the binary boots the server. `ferroehr --version` prints
+With no subcommand, or with `serve`, the binary boots the server. `ferroehr --version` prints
 the version and the manufacturer of the release:
 
 ```text
@@ -29,12 +29,12 @@ https://www.cadasto.com/contact/
 ### `ferroehr config …`
 
 ```text
-ferroehr config default             # print the annotated default ferroehr.toml
 ferroehr config check [--config P]  # validate file + environment + --set
 ```
 
-`config default` writes the fully-commented template every key's default comes
-from, the starting point for a real `ferroehr.toml`.
+The fully-commented template every key's default comes from, the starting
+point for a real `ferroehr.toml`, is
+[`app/ferroehr/assets/ferroehr.default.toml`](https://github.com/FerroHEALTH/FerroEHR/blob/main/app/ferroehr/assets/ferroehr.default.toml).
 
 `config check` runs the same validation the server runs at boot (the strict
 unknown-key sweep, the type pass, the aggregated semantic rules, and the
@@ -62,12 +62,16 @@ that prepares the schema. See
 
 ### `ferroehr healthcheck`
 
-Probes the running server's status endpoint and exits 0 on a 2xx, 1 otherwise:
-the container `HEALTHCHECK` and the Kubernetes exec-probe fallback.
-
-| Variable | Type | Default | Description |
-|---|---|---|---|
-| `FERROEHR_HEALTHCHECK_URL` | URL | derived: `http://127.0.0.1:<server.bind port><REST root>/status` (`http://127.0.0.1:8080/ferroehr/rest/status` with the defaults) | The URL the subcommand probes; also settable as `--url`. Not part of `ferroehr.toml`. Unset, the subcommand loads the same configuration as the server (file, environment, `--set`) and follows `server.bind` and `server.base_path`, so a shortened base path moves the probe with it. |
+Asks the running server's `GET /health/readiness` and exits 0 on `200`, 1
+otherwise, with the reason on stderr: the container `HEALTHCHECK` and the
+Kubernetes exec-probe fallback. A draining server answers `503`, so it reads
+unhealthy. The subcommand loads the same configuration as the server (file,
+environment, `--set`) and asks the `server.listen` port under
+`server.base_path`, on the loopback when the server listens on every
+interface. With `[server.tls]` set it speaks TLS and accepts exactly the leaf in
+`server.tls.certificate_file`, presenting `server.tls.healthcheck_identity_file`
+to a listener that requires a client certificate. It waits three seconds for
+the answer.
 
 ### `ferroehr usage-report --print`
 
@@ -120,10 +124,12 @@ it `unavailable` with `unreachable: …` as the reason.
 ## Zero-config boot and the production checklist
 
 With no file and no environment, the effective configuration is: listener
-`0.0.0.0:8080` at the ITS-REST base path with Swagger UI; the database at the
+`127.0.0.1:8080` (the container image sets `PORT=8080`, which listens on every
+interface) at the ITS-REST base path with Swagger UI, reading bodies up to
+1 MiB; the database at the
 built-in development DSN with migrations applied at boot; RBAC on; signing on in
 `digest` mode with read-time verification strict; the audit trail on with only
-the local store; rate limiting on; logs in `auto` format at `info`; **and every
+the local store; no caller rate limit; logs in `auto` format at `info`; **and every
 integration off**. The one outbound connection on by default is the
 [usage report](../usage-report.md), which `usage_report.enabled = false`
 switches off.
@@ -154,9 +160,9 @@ For production, set at least:
   identical.
 - **an authentication mechanism:** a Basic user store and/or an `[auth]` issuer.
 - **`telemetry.format = "json"`** for cluster log collectors.
-- **`server.cors_permissive`** stays `false`; **`server.swagger_ui`** per
+- **`rest.cors_permissive`** stays `false`; **`rest.swagger_ui`** per
   posture.
-- **`server.system_id`:** this deployment's own openEHR system identifier.
+- **`rest.system_id`:** this deployment's own openEHR system identifier.
   Choose it before the first EHR is created: it is stored with every EHR, audit
   entry and version identifier, and changing it later never rewrites what is
   already committed.
@@ -203,8 +209,7 @@ sit outside the server's reserved `FERROEHR_` namespace.
 
 Inside that namespace, a handful of names are deliberately **not** configuration
 keys and pass the strict sweep untouched: `FERROEHR_CONFIG` (the config-file
-pointer), `FERROEHR_HEALTHCHECK_URL` (the container healthcheck), the
-build-stamp variables, and the Compose parameterization (image tags, host ports,
+pointer), the build-stamp variables, and the Compose parameterization (image tags, host ports,
 CPU and memory limits). They keep a single `_` by design, which is exactly what
 distinguishes them from configuration keys, and why a single-underscore
 misspelling of a real key is reported at boot with the uniform spelling it

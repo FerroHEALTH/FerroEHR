@@ -501,7 +501,7 @@ async fn run(
             let archetype_id = state.backend().upload_archetype(adl).await?;
             let location = format!(
                 "{}/definition/archetype/adl1.4/{}",
-                state.config().server.base_path,
+                state.config().rest.base_path,
                 urlencoding::encode(&archetype_id)
             );
             let mut resp = negotiate::respond(h, StatusCode::CREATED, &archetype_id);

@@ -41,7 +41,7 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::server::ServerConfig;
+use ferroehr::config::rest::RestConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, SubjectLookup, SubjectResolver, start};
@@ -101,7 +101,8 @@ fn composition() -> Value {
 
 fn rest_config() -> AppConfig {
     let mut config = AppConfig {
-        server: ServerConfig {
+        server: common::server(),
+        rest: RestConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
@@ -113,7 +114,8 @@ fn rest_config() -> AppConfig {
 
 fn auth_off_config() -> AppConfig {
     AppConfig {
-        server: ServerConfig {
+        server: common::server(),
+        rest: RestConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },

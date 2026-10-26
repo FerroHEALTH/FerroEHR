@@ -29,7 +29,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
-use ferroehr::config::server::ServerConfig;
+use ferroehr::config::rest::RestConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::categories::CategoryMapConfig;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
@@ -137,7 +137,8 @@ fn ips_composition() -> Value {
 
 fn config() -> AppConfig {
     AppConfig {
-        server: ServerConfig {
+        server: common::server(),
+        rest: RestConfig {
             swagger_ui: AccessLevel::Off,
             ..Default::default()
         },

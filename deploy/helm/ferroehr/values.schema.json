@@ -499,7 +499,7 @@
           ],
           "default": "sandbox"
         },
-        "server": {
+        "rest": {
           "type": [
             "object",
             "null"
@@ -801,7 +801,7 @@
         "tls": {
           "type": "object",
           "additionalProperties": false,
-          "description": "The trust the in-chart clients (viewer, FerroBRIDGE, the ServiceMonitor scrape) place in the server's own TLS listener; read only while config.server.tls.enabled is true.",
+          "description": "The trust the in-chart clients (viewer, FerroBRIDGE, the ServiceMonitor scrape) place in the server's own TLS listener; read only while config.server.tls is set.",
           "properties": {
             "caExistingSecret": {
               "type": "string",
@@ -885,7 +885,7 @@
           }
         },
         "backendTlsAnnotations": {
-          "description": "Annotations added to the Ingress only while config.server.tls.enabled is true, naming how the controller reaches an HTTPS backend (controller-specific). Required when both are on.",
+          "description": "Annotations added to the Ingress only while config.server.tls is set, naming how the controller reaches an HTTPS backend (controller-specific). Required when both are on.",
           "type": "object",
           "additionalProperties": {
             "type": "string"

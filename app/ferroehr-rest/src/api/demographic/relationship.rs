@@ -1037,7 +1037,7 @@ pub(super) async fn run(
 ) -> Result<Response, RestError> {
     const SEG: &str = "party_relationship";
     let h = &parts.headers;
-    let base = state.config().server.base_path.clone();
+    let base = state.config().rest.base_path.clone();
 
     // PARTY_RELATIONSHIP is not templated → no Simplified-Formats mapping;
     // reject a simplified Content-Type/Accept uniformly.
