@@ -1614,6 +1614,79 @@ pub(crate) fn xml_bmm_only_allowed(spec: &str, wire_name: &str) -> bool {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// emit-xml tool-emitted extension elements (outside every vendored ITS-XML XSD)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One element modelling tools write into a type's content although no vendored
+/// ITS-XML schema declares it there.
+pub(crate) struct XmlToolExtension {
+    /// The owning concrete type's spec name.
+    pub spec: &'static str,
+    /// The element's name.
+    pub element: &'static str,
+    /// Where the element is seen, and why it is read rather than refused.
+    pub citation: &'static str,
+}
+
+/// The tool-emitted extension elements the generated XML readers accept, each
+/// only with the boolean value `false`: a `true` would change the constraint's
+/// meaning in a way no schema defines, so it is refused
+/// (`XmlError::UnsupportedExtension`). Every other element outside a type's
+/// closed `xs:sequence` is refused (XML Schema 1.1 Part 1 §3.4.4.2).
+pub(crate) const XML_TOOL_EXTENSIONS: &[XmlToolExtension] = &[
+    XmlToolExtension {
+        spec: "C_SINGLE_ATTRIBUTE",
+        element: "match_negated",
+        citation: "Not in ITS-XML 1.0.2 Archetype.xsd/Template.xsd nor ITS-XML 2.0.0 \
+                   AM/Release-1.4/Template.xsd; carried by the CNF Robot valid_templates \
+                   cache/case.opt, cache/case2.opt and all_types/ehrn_vital_signs.v2.opt.",
+    },
+    XmlToolExtension {
+        spec: "C_MULTIPLE_ATTRIBUTE",
+        element: "match_negated",
+        citation: "As for C_SINGLE_ATTRIBUTE: the tools write it on both C_ATTRIBUTE subtypes.",
+    },
+];
+
+/// The tool-emitted extension elements accepted under `spec`, each written into
+/// the generated reader with its citation as a `// NOTE:`.
+pub(crate) fn xml_tool_extensions(
+    spec: &str,
+) -> impl Iterator<Item = &'static XmlToolExtension> + '_ {
+    XML_TOOL_EXTENSIONS.iter().filter(move |e| e.spec == spec)
+}
+
+/// One model `String` field the canonical-XML wire carries in the `OBJECT_ID`
+/// shape (`<field><value>text</value></field>`): the owning type's spec name,
+/// the field's wire name, and the schema delta that makes it so.
+pub(crate) struct XmlValueWrapped {
+    /// The owning concrete type's spec name.
+    pub spec: &'static str,
+    /// The field's wire name.
+    pub wire_name: &'static str,
+    /// The model-versus-schema delta.
+    pub citation: &'static str,
+}
+
+/// The model `String` fields written and read in the `OBJECT_ID` shape.
+pub(crate) const XML_VALUE_WRAPPED: &[XmlValueWrapped] = &[XmlValueWrapped {
+    spec: "Terminology_code",
+    wire_name: "terminology_id",
+    citation: "BASE 1.3.0 TERMINOLOGY_CODE.terminology_id is a String; ITS-XML 1.0.2 \
+               Resource.xsd types the slot CODE_PHRASE, whose terminology_id is a \
+               TERMINOLOGY_ID with one value element (BaseTypes.xsd).",
+}];
+
+/// Whether `(spec, wire_name)` is written and read in the `OBJECT_ID` shape;
+/// the citation when it is.
+pub(crate) fn xml_value_wrapped(spec: &str, wire_name: &str) -> Option<&'static str> {
+    XML_VALUE_WRAPPED
+        .iter()
+        .find(|e| e.spec == spec && e.wire_name == wire_name)
+        .map(|e| e.citation)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Assertion-dialect leaf-predicate → runtime-function table
 // ─────────────────────────────────────────────────────────────────────────────
 
