@@ -150,10 +150,10 @@ async fn an_identifier_resolution_is_withheld_when_its_record_is_rejected() {
         &IdentifierProtectionConfig {
             enabled: true,
             schemes: vec!["nl-bsn".to_owned()],
-            key: Some(ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+            key: Some(ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
             key_file: None,
         },
-        Some(&ferroehr::config::secret::Secret::new(TEST_ROOT_KEY)),
+        Some(&ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
         ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party),
     )
     .expect("the engine builds")

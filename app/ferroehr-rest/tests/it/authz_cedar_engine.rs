@@ -168,7 +168,7 @@ async fn remote_permit_when_patient_ok() -> (MockServer, RemotePdp) {
         enabled: true,
         engine: AbacEngineKind::Remote,
         remote: RemoteConfig {
-            server: Some(ferroehr::config::secret::SecretUrl::new(format!(
+            server: Some(ferrohealth_secret::secret_url::SecretUrl::new(format!(
                 "{}/",
                 server.uri()
             ))),

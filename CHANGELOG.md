@@ -64,6 +64,22 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **Every secret and every masked URL renders through `ferrohealth-secret`,
+  the family's one mask** (en-route finding of #4028). EHR's own
+  `config::secret` module gives way to `ferrohealth-secret`'s `Secret`,
+  `SecretUrl` and `RedactedUrl`. A secret still renders as `***` and a URL's
+  userinfo as `***@`, and a URL's query is now masked as `?***` too, in
+  `ferroehr config check`, `GET /admin/config`, `/management/env` and
+  `ferroehr report`. `ferrohealth-smart` moves to 0.7.1 and
+  `ferrohealth-authz` to 0.1.1, `ihe-atna` and `ehds-logging` to 0.2.11, and
+  `ferrobridge-term` to 0.1.137.
+
+- **Breaking: `[authz.rbac] user_role` is retired** (#4038 follow-up). It
+  named a role nothing required once a Basic user's roles became its
+  `[[auth.basic.users]] roles` list. The key now stops startup by name and
+  points at that list. Upgrade: remove `user_role` (on Helm chart 16.0.0,
+  `config.authz.rbac.user_role`), and give each Basic user the roles it needs,
+  for example `roles = ["USER"]`.
 - **Breaking: `ihe-atna`'s forwarder delivers the audit trail, and
   `[audit.fhir_feed] batch_size` and `max_retries` are gone** (#4029). Syslog
   frames are stored in `ihe-atna`'s spool and delivered from it with
@@ -148,6 +164,16 @@ workflow refuses a tag that has no matching section here.
   `[auth] mode = "introspection"` key of the shared section, and an
   `[auth.introspection]` table, are refused at boot: this server checks
   bearer tokens as JWTs only, and a setting it would ignore stops the start.
+
+### Security
+
+Shipped with functional changes because: the patched `ferrohealth-smart` arrives in the same dependency move as the family mask and the lockstep releases built on it.
+
+- `ferrohealth-smart` 0.7.1 masks the userinfo of every URL in its grant
+  tables, a URL no parser accepts included. With 0.7.0 a configured
+  `token_endpoint` or `issuer` that did not parse could reach the
+  configuration renderings and the log in full (CWE-532,
+  GHSA-vphj-3f8c-5hpx).
 
 ### Fixed
 

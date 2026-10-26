@@ -222,7 +222,7 @@ mod tests {
     async fn service(base: &str, fail_on_error: bool) -> FerroEhrService {
         let cfg = TerminologyServerConfig {
             enabled: true,
-            url: crate::config::secret::SecretUrl::new(base),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(base),
             fail_on_error,
             request_timeout_ms: 800,
             oauth: None,

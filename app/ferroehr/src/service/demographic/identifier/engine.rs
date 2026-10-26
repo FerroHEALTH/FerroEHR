@@ -66,7 +66,7 @@ impl IdentifierProtection {
     /// failure this refuses to ship.
     pub fn from_config(
         config: &IdentifierProtectionConfig,
-        key_material: Option<&crate::config::secret::Secret>,
+        key_material: Option<&ferrohealth_secret::secret::Secret>,
         pool: sqlx::PgPool,
     ) -> Result<Option<Self>, EngineError> {
         if !config.enabled {
@@ -370,7 +370,7 @@ mod tests {
             schemes: Vec::new(),
             ..IdentifierProtectionConfig::default()
         };
-        let key = crate::config::secret::Secret::new(
+        let key = ferrohealth_secret::secret::Secret::new(
             "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
         );
         assert!(

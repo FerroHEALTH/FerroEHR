@@ -26,6 +26,7 @@ events = ["dep:ferroehr-ext", "ferroehr-ext/events"]
 multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 
 [dependencies]
+ferrohealth-secret = { workspace = true }
 ferroehr-ext = { path = "../ferroehr-ext", optional = true }
 http.workspace = true
 secrecy.workspace = true

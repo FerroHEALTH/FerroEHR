@@ -357,7 +357,6 @@ case-insensitive strings; the defaults are `USER` and `ADMIN`.
 |---|---|---|
 | `FERROEHR__AUTHZ__RBAC__ENABLED` | `true` | the coarse role gate (active only when auth is enabled) |
 | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE` | `ADMIN` | role required for admin operations |
-| `FERROEHR__AUTHZ__RBAC__USER_ROLE` | `USER` | names the baseline clinical role |
 | `FERROEHR__AUTHZ__RBAC__READONLY_ROLE` | `READONLY` | role marking a principal read-only: refused on every write |
 | `FERROEHR__AUTH__ROLE_CLAIMS` | `["roles","groups","entitlements","realm_access.roles"]` | JWT claim paths mined for roles |
 | `FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE` | unset | role that reads the access log for ONE subject at a time (`GET /fhir/r4/AuditEvent` with `patient` required). Unset, that log stays admin-only. See [Audit trail](audit.md#getting-the-log-out) |
@@ -372,10 +371,10 @@ nests them differently is configuration rather than a code change; a claim
 carrying a single string and one carrying an array are both accepted.
 
 **A Clinical operation needs at least one role of any name; an Admin operation
-needs the admin role.** `USER_ROLE` records what the baseline clinical role is
-called rather than being required by the gate: a Basic user with no `roles`
-list gets `["USER"]`, which satisfies the Clinical class and no Admin
-operation. Disabling RBAC restores authentication-only behaviour.
+needs the admin role.** A Basic user holds the roles its `roles` list names
+and nothing else, so a user with none is refused every Clinical operation;
+`roles = ["USER"]` satisfies the Clinical class and no Admin operation. The
+former `user_role` key is refused at boot. Disabling RBAC restores authentication-only behaviour.
 
 > [!IMPORTANT]
 > **The management surface is not configured here.** `/management/*` is governed

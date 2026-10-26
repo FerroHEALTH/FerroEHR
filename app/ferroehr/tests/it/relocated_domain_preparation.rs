@@ -22,9 +22,9 @@
 
 use crate::fixtures::{throwaway_password, with_role};
 use ferroehr::config::deployment::DeploymentProfile;
-use ferroehr::config::secret::SecretUrl;
 use ferroehr::db::domain::{Domain, DomainDsn, StorageConfig};
 use ferroehr::db::{DbConfig, DbError, MigrationMode};
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// A fresh login role that is a member of `domain_role` and nothing else,
 /// returned as `(login, password)`.

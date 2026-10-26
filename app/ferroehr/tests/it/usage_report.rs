@@ -99,7 +99,10 @@ fn identity() -> Identity {
 
 fn config_for(server: &MockServer) -> UsageReportConfig {
     UsageReportConfig {
-        endpoint: ferroehr::config::secret::SecretUrl::new(format!("{}/v1/report", server.uri())),
+        endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+            "{}/v1/report",
+            server.uri()
+        )),
         ..UsageReportConfig::default()
     }
 }

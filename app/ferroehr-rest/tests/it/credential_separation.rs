@@ -34,10 +34,10 @@
 use std::sync::Arc;
 
 use axum::Router;
-use ferroehr::config::secret::SecretUrl;
 use ferroehr::db::DbConfig;
 use ferroehr::db::domain::{Domain, DomainDsn, StorageConfig};
 use ferroehr::service::FerroEhrService;
+use ferrohealth_secret::secret_url::SecretUrl;
 use http::StatusCode;
 use sqlx::PgPool;
 use uuid::Uuid;

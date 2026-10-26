@@ -18,11 +18,12 @@
 
 use assert_fs::prelude::*;
 use ferroehr::config::FerroEhrConfig;
-use ferroehr::config::secret::{Secret, SecretUrl};
 use ferroehr::db::domain::DomainPools;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::{ManifestEntry, PartStatus, Report};
 use ferroehr::service::FerroEhrService;
+use ferrohealth_secret::secret::Secret;
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// Each sentinel is unique, so a leak names the setting it came from.
 const DB_PW: &str = "DB_PW_SENTINEL_5c1e";

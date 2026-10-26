@@ -186,7 +186,6 @@ reachable from the environment too (`FERROEHR__AUTHZ__ASSURANCE__MINIMUM`,
 |---|---|---|---|
 | `enabled` | bool | `true` | The coarse role gate (active when authentication is enabled). Off, every authenticated caller may use every enabled surface, reported as the `rbac_off` deployment gap. `ehr_access_default` and `admin_role` apply either way. |
 | `admin_role` | string | `ADMIN` | Role required for admin-class operations. A blank value is a boot error. |
-| `user_role` | string | `USER` | Baseline clinical role. |
 | `readonly_role` | string | `READONLY` | Role marking a principal read-only: refused on every write operation (create/update/delete/upload), even alongside granting roles. Reads and AQL queries are still allowed. |
 | `emergency_access_role` | string | unset | Role that reads data under an EHDS Art. 8 access restriction when the caller also declares one of `[audit] emergency_purpose_codes` (EHDS Art. 11(5)); the access record then carries the emergency mark. Unset, nobody may override a restriction. See [restriction of access](../security.md#restriction-of-access-by-health-professionals-ehds-art-8). |
 | `identifier_reader_role` | string | unset | Role that may read a party's protected national identifiers through `GET {base}/admin/party/identifiers`, beside the admin role. Every read is an access record naming the reader, the party and the scheme. Unset, nobody may. See [reading a party's protected identifiers](../operations-admin-apis.md#reading-a-partys-protected-identifiers). |

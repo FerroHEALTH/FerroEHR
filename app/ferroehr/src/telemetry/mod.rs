@@ -86,7 +86,7 @@ pub fn init(cfg: &TelemetryConfig, build: &BuildInfo) -> Result<TelemetryGuard, 
             cfg.otel
                 .otlp_endpoint
                 .as_ref()
-                .map_or("", crate::config::secret::SecretUrl::expose),
+                .map_or("", ferrohealth_secret::secret_url::SecretUrl::expose),
         )?)
     } else {
         None
@@ -105,7 +105,7 @@ pub fn init(cfg: &TelemetryConfig, build: &BuildInfo) -> Result<TelemetryGuard, 
             .otel
             .otlp_endpoint
             .as_ref()
-            .map_or("", crate::config::secret::SecretUrl::expose);
+            .map_or("", ferrohealth_secret::secret_url::SecretUrl::expose);
 
         let provider = build_tracer_provider(endpoint, &cfg.otel, otel_resource)?;
         tracer = Some(provider.tracer(SCOPE));

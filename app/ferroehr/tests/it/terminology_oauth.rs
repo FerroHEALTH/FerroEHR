@@ -20,10 +20,10 @@
 
 use std::sync::Arc;
 
-use ferroehr::config::secret::SecretUrl;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::client::ClientAuth;
 use ferrohealth_smart::config::OauthSection;
 use secrecy::SecretString;

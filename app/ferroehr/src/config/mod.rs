@@ -225,7 +225,10 @@ impl FerroEhrConfig {
                 "authz.abac.remote",
                 remote_in_use,
                 remote.oauth.as_ref(),
-                remote.server.as_ref().map(secret::SecretUrl::expose),
+                remote
+                    .server
+                    .as_ref()
+                    .map(ferrohealth_secret::secret_url::SecretUrl::expose),
             ),
             (
                 "terminology.server",
@@ -681,9 +684,9 @@ impl FerroEhrConfig {
     /// configuration — our own design/extension.
     ///
     /// Redaction is a property of the leaf type rather than of a key-name scan:
-    /// every secret-bearing field is typed [`secret::Secret`], whose
-    /// [`Serialize`] emits the fixed [`secret::REDACTED`] placeholder, or
-    /// [`secret::SecretUrl`], whose [`Serialize`] masks the URL `userinfo`
+    /// every secret-bearing field is typed `ferrohealth-secret`'s `Secret`, whose
+    /// [`Serialize`] emits the fixed `***` placeholder, or
+    /// `SecretUrl`, whose [`Serialize`] masks the URL `userinfo`
     /// component. Every URL key that may carry `userinfo` is a `SecretUrl`;
     /// a URL key whose value is an identifier or is published
     /// (`auth.issuer`, the `smart` URLs) is refused at boot when it
@@ -1070,7 +1073,7 @@ mod tests {
 
     use super::*;
     use crate::config::authz::AbacParam;
-    use crate::config::secret::SecretUrl;
+    use ferrohealth_secret::secret_url::SecretUrl;
 
     /// Build an injected env map from `(key, value)` pairs.
     fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
@@ -1808,9 +1811,9 @@ mod tests {
             );
             for n in 1..=15 {
                 // URL 10 is the `ferrohealth-smart` grant table, whose `Debug`
-                // masks userinfo as a percent-encoded `[redacted]` user.
+                // masks userinfo with its own `[redacted]` spelling.
                 let mask = if n == 10 && surface == "debug" {
-                    "%5Bredacted%5D"
+                    "[redacted]"
                 } else {
                     "***"
                 };
@@ -1847,7 +1850,8 @@ mod tests {
     /// into the fixture.
     #[test]
     fn redacted_json_masks_every_secret_field() {
-        use crate::config::secret::{Secret, SecretUrl};
+        use ferrohealth_secret::secret::Secret;
+        use ferrohealth_secret::secret_url::SecretUrl;
         use ferrohealth_smart::config::{BasicSection, BasicUser};
 
         // Each sentinel is unique so a leak is unambiguously attributable.

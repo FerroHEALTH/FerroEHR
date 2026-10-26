@@ -143,7 +143,7 @@ impl PgpKey {
     /// [`KeyError::Unusable`].
     pub fn load(
         path: &Path,
-        passphrase: Option<&crate::config::secret::Secret>,
+        passphrase: Option<&ferrohealth_secret::secret::Secret>,
         retired_paths: &[std::path::PathBuf],
     ) -> Result<Self, KeyError> {
         let armored = std::fs::read_to_string(path).map_err(|source| KeyError::Read {
@@ -174,7 +174,7 @@ impl PgpKey {
     /// [`KeyError::Unusable`] if the boot check signature fails.
     pub fn from_armored(
         armored: &str,
-        passphrase: Option<&crate::config::secret::Secret>,
+        passphrase: Option<&ferrohealth_secret::secret::Secret>,
     ) -> Result<Self, KeyError> {
         Self::from_parts(armored, passphrase, Vec::new())
     }
@@ -186,7 +186,7 @@ impl PgpKey {
     /// As [`Self::from_armored`].
     pub fn from_parts(
         armored: &str,
-        passphrase: Option<&crate::config::secret::Secret>,
+        passphrase: Option<&ferrohealth_secret::secret::Secret>,
         retired: Vec<SignedPublicKey>,
     ) -> Result<Self, KeyError> {
         let (secret, _headers) = SignedSecretKey::from_string(armored).map_err(KeyError::Parse)?;

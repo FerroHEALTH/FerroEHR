@@ -144,6 +144,10 @@ exceptions = [
   # Cedar engine and remote decision point decide the ABAC tier (owner decision
   # 2026-10-25, #4038).
   { allow = ["BUSL-1.1"], crate = "ferrohealth-authz" },
+  # FerroSYS's ferrohealth-secret, the FerroHEALTH products' one secret mask,
+  # is the same Licensor's code under the same licence (owner ruling
+  # 2026-10-26).
+  { allow = ["BUSL-1.1"], crate = "ferrohealth-secret" },
   # FerroAUDIT, the FerroHEALTH products' shared audit library, is the same
   # Licensor's code under the same licence: `ihe-atna` sends the ATNA trail and
   # writes the BALP AuditEvent, `ehds-logging` is the EHDS logging component

@@ -9,7 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::loader::ConfigError;
-use crate::config::secret::SecretUrl;
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// How the instance was deployed, as the report states it.
 ///

@@ -166,7 +166,7 @@ fn subscription_definition(
 fn events_config(url: String) -> EventsConfig {
     EventsConfig {
         enabled: true,
-        url: ferroehr::config::secret::SecretUrl::new(url),
+        url: ferrohealth_secret::secret_url::SecretUrl::new(url),
         exchange: EXCHANGE.to_owned(),
         poll_interval_ms: 50,
         publish_max_retries: 1,

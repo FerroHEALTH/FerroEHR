@@ -672,8 +672,8 @@ fn the_two_statements_never_cross_the_boundary() {
 /// convention rather than a database fact.
 #[tokio::test]
 async fn the_crossing_runs_on_three_separated_credentials() {
-    use ferroehr::config::secret::SecretUrl;
     use ferroehr::db::DbConfig;
+    use ferrohealth_secret::secret_url::SecretUrl;
 
     let db = testkit::db().await.expect("testkit database");
     let settings = DbConfig {

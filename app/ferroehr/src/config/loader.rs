@@ -11,13 +11,13 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::config::secret::Secret;
-use crate::config::secret::SecretUrl;
 use crate::db::DbConfig;
 use crate::db::domain::Domain;
 use crate::extensions::events::config::EventsConfig;
 use crate::usage_report::config::CiDetected;
 use config::{Config, Environment, File, FileFormat};
+use ferrohealth_secret::secret::Secret;
+use ferrohealth_secret::secret_url::SecretUrl;
 
 use super::FerroEhrConfig;
 use super::alias::{CONVENTIONAL, LIST_KEYS};

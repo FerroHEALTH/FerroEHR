@@ -30,8 +30,8 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::config::secret::SecretUrl;
 use crate::db::DbConfig;
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// One storage domain: the schema it owns, the pool that serves it, and the
 /// runtime roles that hold it.

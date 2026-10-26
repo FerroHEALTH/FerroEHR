@@ -88,7 +88,7 @@ terminology
 fn provider(base: &str) -> FhirTerminologyProvider {
     let cfg = TerminologyServerConfig {
         enabled: true,
-        url: ferroehr::config::secret::SecretUrl::new(base),
+        url: ferrohealth_secret::secret_url::SecretUrl::new(base),
         request_timeout_ms: 800,
         ..TerminologyServerConfig::default()
     };

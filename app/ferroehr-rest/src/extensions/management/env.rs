@@ -103,10 +103,7 @@ mod tests {
         assert!(!url.contains("hunter2"), "password leaked: {url}");
         assert!(url.contains("db.internal:5432"), "host lost: {url}");
         assert!(url.contains("/ferroehr"), "db name lost: {url}");
-        assert_eq!(
-            url,
-            "postgres://***@db.internal:5432/ferroehr?sslmode=require"
-        );
+        assert_eq!(url, "postgres://***@db.internal:5432/ferroehr?***");
     }
 
     #[test]
