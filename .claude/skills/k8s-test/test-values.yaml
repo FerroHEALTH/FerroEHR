@@ -27,6 +27,9 @@ secrets:
     ferroehr: '$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8'
 
 config:
+  # The in-instance EHR index: the live run has no identity source.
+  ehr_index:
+    provider: local
   # No version-skew block: the deploy probe proved the published appVersion
   # image boots on the chart's stock config: defaults (P-K8S-BOOT, run of
   # 2026-08-14). If a future chart introduces keys the published image
@@ -43,4 +46,8 @@ config:
 
 # A test cluster is not an installation; it sends no usage report (#3623).
 usageReport:
+  enabled: false
+
+# No FerroPIX in the live run: the local EHR index above.
+ferropix:
   enabled: false

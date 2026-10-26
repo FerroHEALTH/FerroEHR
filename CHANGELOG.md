@@ -17,6 +17,22 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **The EHR index asks an IHE patient identity source over PIXm (ITI-83) by
+  default** (#3380). `[ehr_index] provider = "ihe"` names a PIX Manager by its
+  FHIR base (`pixm_url`) and the clinical domain (`assigning_authority`, one of
+  `privacy.subject_namespaces`), with the client credentials grant of
+  `[ehr_index.oauth]` (renewed once on a `401`) and the TLS material of
+  `[ehr_index.tls]` (`trust_roots_file`, `client_identity_file`,
+  `min_version`). The client is `ihe-iti` 0.0.62's PIXm Consumer and sends only
+  what ITI-83 specifies, by `POST` unless `invocation = "get"`, so any
+  conformant PIX Manager serves. `has_ehr_for_subject` and
+  `create_ehr_for_subject` ask the source for the subject's pseudonym, and the
+  subjects of an EHR are the pseudonym its `EHR_STATUS` carries; the source is
+  never asked to resolve a pseudonym back. The server reads the source's
+  `CapabilityStatement` at boot, and a source that fails a request is an
+  error: nothing falls back to the in-instance map. PDQm is not used (GDPR
+  Art. 5(1)(c)).
+
 - **`TEMPLATE_ID` answers its BASE 1.3.0 HRID functions** (#4068), on the
   0.0.104 crate line. SPECBASE-42 gives `TEMPLATE_ID` `is_hrid`, `namespace`,
   `qualified_rm_class_name`, `concept_id`, `version_id` and the major, minor
@@ -100,6 +116,28 @@ workflow refuses a tag that has no matching section here.
   `docs/VERSIONS.md` (Art. 38(2)(b) and (e)). The release notes name the
   pinned revisions, and `release-notes.sh` refuses notes that do not.
 
+- **A server with no patient identity source refuses to start** (#3380).
+  The binary's default `[ehr_index]` provider is the IHE one, and without
+  `pixm_url` and `assigning_authority` the refusal names both choices:
+  configure the identity source, or opt in to the in-instance map with
+  `[ehr_index] provider = "local"`, which serves the
+  `GET /ehr?subject_id=…` lookup over `EHR_STATUS` content and nothing more.
+  Upgrade step: a deployment without an identity source adds
+  `[ehr_index] provider = "local"` (`FERROEHR__EHR_INDEX__PROVIDER=local`).
+- **The compose quickstart runs FerroPIX beside FerroEHR** (#3380), pinned by
+  tag and digest, with its own PostgreSQL and a development OpenID Provider,
+  and points `[ehr_index]` at it; FerroPIX mints the pseudonym in
+  `urn:oid:2.999.7.1` on FerroEHR's first ask. The server now runs in the
+  issuer's network namespace, which publishes ports 8080, 8090
+  (`FERROEHR_PIX_PORT`) and 8180 (`FERROEHR_ISSUER_PORT`).
+- **Helm chart 18.0.0 takes FerroPIX as the chart dependency `ferropix`**
+  (#3380), on by default: the chart points `config.ehr_index` at its Service,
+  adds the egress rule to its pods, and routes the grant's client secret
+  through `secrets.ehrIndexClientSecret`. A values file that names no identity
+  source is refused at render. Upgrade step: supply FerroPIX's
+  `ferropix.database.existingSecret`, `ferropix.dataKey.existingSecret`, its
+  issuer and pseudonymisation domain, and `config.ehr_index`, or set
+  `ferropix.enabled: false` with `config.ehr_index.provider: local`.
 - **The scheduled audit chain check verifies the records written since the
   last intact link** (#4100). `audit.verify_audit_chain_incremental()`
   recomputes only the records after the checkpoint it keeps in
@@ -377,6 +415,14 @@ workflow refuses a tag that has no matching section here.
   `[auth] mode = "introspection"` key of the shared section, and an
   `[auth.introspection]` table, are refused at boot: this server checks
   bearer tokens as JWTs only, and a setting it would ignore stops the start.
+
+### Removed
+
+- **FerroEHR holds no identity logic** (#3380): `link_as_subject`, the
+  server-side subject pseudonym (`mint_subject_pseudonym`), the party merge
+  and split, and `resolve_ehr_for_identity`, the national-identifier-to-EHR
+  crossing, are gone. Matching, cross-referencing identifier domains and
+  minting pseudonyms belong to the identity source.
 
 ### Security
 

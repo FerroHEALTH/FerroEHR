@@ -19,6 +19,30 @@
 # treatment); scripts/checks/compose-image-tags.sh guards them against the
 # workspace version in CI.
 #
+# ── The patient identity source ───────────────────────────────────────────────
+# FerroEHR keeps no patient-to-record cross-reference of its own: it asks an IHE
+# patient identity source over PIXm (ITI-83) which pseudonym the clinical domain
+# holds for a patient. This file runs FerroPIX as that source, with its own
+# PostgreSQL and a DEVELOPMENT OpenID Provider (NAV's mock-oauth2-server) that
+# signs any client credentials request, so FerroEHR's client `ferroehr` gets a
+# token whose scope lets it ask, and FerroPIX mints the pseudonym in the domain
+# urn:oid:2.999.7.1 on the first ask. Any conformant PIX Manager can take
+# FerroPIX's place: [ehr_index] below names an endpoint, never a product.
+#
+# The issuer, FerroPIX and FerroEHR share ONE network namespace, the issuer's.
+# A server accepts a plain-http issuer only on loopback (RFC 8414 §2), and the
+# mock issuer writes the host it was asked on into every token's `iss`, so all
+# three must see it at http://localhost:8180. The issuer service therefore
+# publishes the ports of all three and answers to the names `ferroehr` and
+# `ferropix` on the compose network. Published on loopback:
+#   8080  FerroEHR            8090  FerroPIX           8180  the issuer
+# A patient is registered with FerroPIX by its Patient Identity Source, the
+# client `quickstart-source` (https://ferropix.eu/docs/integrate/pixm-manager.html).
+#
+# To run FerroEHR on its own instead (development, a single-source
+# installation), set [ehr_index] provider = "local" in the config block and
+# drop the identity services; the server refuses to start with neither.
+#
 # ── The two quickstart variants ───────────────────────────────────────────────
 # Basic auth only (this file alone):
 #   docker compose up
@@ -333,10 +357,134 @@ services:
     tmpfs:
       - /tmp
 
+  # The development OpenID Provider, and the owner of the network namespace
+  # FerroPIX and FerroEHR join (the header says why). It signs any client
+  # credentials request: the client as `sub` and `client_id`, FerroPIX's FHIR
+  # base as the audience, and the scope asked for. NOT for anything real: name
+  # your own https issuer in [ehr_index.oauth] and in FerroPIX's [[auth.issuer]].
+  identity-issuer:
+    image: ghcr.io/navikt/mock-oauth2-server:6.1.3@sha256:2a813381bf282da46ff36ff386059e7903e25865056af8149f4fb3f1441916b8
+    networks:
+      default:
+        aliases: [ferroehr, ferropix]
+    ports:
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_PORT:-8080}:8080"
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_PIX_PORT:-8090}:8090"
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_ISSUER_PORT:-8180}:8180"
+    environment:
+      # FerroEHR listens on 8080 in this namespace, so the provider moves.
+      SERVER_PORT: "8180"
+      # `$$` is a literal `$` to compose.
+      JSON_CONFIG: >-
+        {"tokenCallbacks":[{"issuerId":"quickstart",
+        "requestMappings":[{"requestParam":"grant_type","match":"client_credentials",
+        "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
+        "aud":["http://localhost:8090/fhir"],"scope":"$${scope}"}}]}]}
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+
+  # The sealing key of FerroPIX's identifier columns, the base64 of 32 random
+  # bytes, written once into its own volume, so this file carries no key.
+  ferropix-key:
+    image: postgres:18.6@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
+    entrypoint: ["sh", "-c", "umask 077; [ -s /key/data-key ] || head -c 32 /dev/urandom | base64 > /key/data-key; chown 65532:65532 /key/data-key"]
+    volumes:
+      - ferropix-key:/key
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+
+  # FerroPIX's store. The server connects as the `ferropix` role the init
+  # script below creates, which owns nothing outside its schema, as FerroPIX's
+  # boot gate requires. The password is a quickstart default on a database that
+  # publishes no port.
+  ferropix-postgres:
+    image: postgres:18.6@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
+    environment:
+      POSTGRES_DB: ferropix
+      POSTGRES_PASSWORD: ${FERROPIX_POSTGRES_PASSWORD:-postgres}
+    configs:
+      - source: ferropix-role
+        target: /docker-entrypoint-initdb.d/10-ferropix-role.sh
+    volumes:
+      - ferropix-pgdata:/var/lib/postgresql
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "ferropix"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # FerroPIX, the IHE patient identity source: a PIXm Manager (ITI-83) that
+  # mints FerroEHR's pseudonyms (its [[pseudonym_domain]] in the config block
+  # below names the client `ferroehr`). Pinned by tag and by the digest of its
+  # image index.
+  ferropix:
+    image: ghcr.io/ferrohealth/ferropix:0.0.7@sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825
+    network_mode: service:identity-issuer
+    depends_on:
+      identity-issuer:
+        condition: service_started
+      ferropix-key:
+        condition: service_completed_successfully
+      ferropix-postgres:
+        condition: service_healthy
+    environment:
+      FERROPIX_CONFIG: /etc/ferropix/ferropix.toml
+      # The image sets 0.0.0.0:8080, which FerroEHR binds in this namespace,
+      # and the environment wins over the file.
+      FERROPIX__SERVER__LISTEN: 0.0.0.0:8090
+      # The usage report follows FerroEHR's switch, so one variable stops both.
+      FERROPIX__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-true}
+    configs:
+      - source: ferropix-config
+        target: /etc/ferropix/ferropix.toml
+      - source: ferropix-db-url
+        target: /etc/ferropix/db-url
+    volumes:
+      - ferropix-key:/var/lib/ferropix-key:ro
+      - ferropix-state:/var/lib/ferropix
+    # NOT `read_only: true`, for the reason the ferroehr service gives: Compose
+    # refuses an inline config in a read-only service.
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    stop_grace_period: 20s
+    # The image's own HEALTHCHECK, stated here because an OCI-format image
+    # carries none to Podman. It asks /health/readiness on 8090.
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/ferropix", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
   ferroehr:
     image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:5.4.2}
+    # The issuer's namespace (the header says why); the issuer publishes 8080
+    # and answers to `ferroehr` on the compose network.
+    network_mode: service:identity-issuer
     depends_on:
       ferroehr-postgres:
+        condition: service_healthy
+      # FerroEHR reads the identity source's capabilities at boot and refuses
+      # to start while it does not answer.
+      ferropix:
         condition: service_healthy
       # Inert without the s3 profile (required: false). With it, this edge does
       # two jobs: the server starts only after the bucket initializer exits 0,
@@ -402,8 +550,6 @@ services:
       # The inline quickstart posture — see the `configs:` block at the bottom.
       - source: ferroehr-config
         target: /etc/ferroehr/ferroehr.toml
-    ports:
-      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_PORT:-8080}:8080"
     # The image is distroless/nonroot and the server binds 8080, so it needs no
     # capability at all — not even NET_BIND_SERVICE (that is for ports < 1024).
     cap_drop: [ALL]
@@ -669,6 +815,27 @@ configs:
       health = "admin_only"
       status = "admin_only"
 
+      # The pseudonym namespace of the clinical domain: EHR_STATUS.subject
+      # names a patient by the UUID FerroPIX mints in it.
+      [privacy]
+      subject_namespaces = ["urn:oid:2.999.7.1"]
+
+      # The IHE patient identity source FerroEHR asks over PIXm (ITI-83), the
+      # FerroPIX service above, with the client credentials grant of the
+      # development issuer. The client id is the one FerroPIX's
+      # [[pseudonym_domain]] names, and system/Patient.rs is the scope its
+      # PIXm Manager takes from a Consumer.
+      [ehr_index]
+      provider = "ihe"
+      pixm_url = "http://localhost:8090/fhir"
+      assigning_authority = "urn:oid:2.999.7.1"
+
+      [ehr_index.oauth]
+      token_endpoint = "http://localhost:8180/quickstart/token"
+      client_id = "ferroehr"
+      client_secret = "quickstart"
+      scope = "system/Patient.rs"
+
       # The terminology server FerroTERM, declared here and switched on by
       # docker-compose.terminology.yml (the overlay only flips the switch, so
       # the two files never disagree about where the server is). Off, the CDR
@@ -678,6 +845,61 @@ configs:
       url = "http://ferroterm:8080/r4b"
       fail_on_error = false
 
+  # FerroPIX's configuration (https://ferropix.eu/docs/operate/configuration.html):
+  # the loopback base, the development issuer, one synthetic identifier domain
+  # under the OID arc 2.999 (ITU-T X.660 reserves it for examples), and the
+  # pseudonymisation domain whose pseudonyms FerroEHR's client mints.
+  ferropix-config:
+    content: |
+      profile = "production"
+
+      [server]
+      public_base_url = "http://localhost:8090"
+
+      [db]
+      url_file = "/etc/ferropix/db-url"
+      data_key_file = "/var/lib/ferropix-key/data-key"
+
+      [auth]
+      audience = ["http://localhost:8090/fhir"]
+
+      # The development issuer signs plain JWTs (`typ` JWT), hence `jwt`.
+      [[auth.issuer]]
+      issuer = "http://localhost:8180/quickstart"
+      clients = ["quickstart-source"]
+      token_profile = "jwt"
+
+      [[domain]]
+      system = "urn:oid:2.999.1.1"
+      name = "Quickstart hospital"
+      kind = "local"
+      source_client_id = "quickstart-source"
+
+      [[pseudonym_domain]]
+      namespace = "urn:oid:2.999.7.1"
+      name = "FerroEHR clinical domain"
+      consumer_client_id = "ferroehr"
+
+      [usage_report]
+      deployment = "compose"
+      state_dir = "/var/lib/ferropix"
+
+  # FerroPIX's connection URL, a file because its production profile reads
+  # every secret from one.
+  ferropix-db-url:
+    content: postgresql://ferropix:ferropix@ferropix-postgres:5432/ferropix
+
+  # Creates the `ferropix` role on the first start of ferropix-postgres.
+  ferropix-role:
+    content: |
+      psql -v ON_ERROR_STOP=1 --username "$$POSTGRES_USER" --dbname "$$POSTGRES_DB" <<'SQL'
+      CREATE ROLE ferropix LOGIN PASSWORD 'ferropix';
+      GRANT CREATE ON DATABASE ferropix TO ferropix;
+      SQL
+
 volumes:
   ferroehr-pgdata:
   ferroehr-seaweedfs:
+  ferropix-key:
+  ferropix-pgdata:
+  ferropix-state:

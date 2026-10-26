@@ -375,6 +375,7 @@ jobs:
           APP: ${{ steps.chart.outputs.effective }}
         run: |
           set -euo pipefail
+          helm dependency build "$CHART_DIR"
           helm package "$CHART_DIR" --app-version "$APP" --destination dist
           ls -l dist
           echo "path=dist/ferroehr-${VERSION}.tgz" >> "$GITHUB_OUTPUT"

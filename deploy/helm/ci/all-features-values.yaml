@@ -36,6 +36,7 @@ secrets:
   multimediaAccessKeyId: AKIAEXAMPLE
   multimediaSecretAccessKey: s3-secret
   terminologyClientSecret: tx-client-secret
+  ehrIndexClientSecret: pix-client-secret
 
 metrics:
   enabled: true
@@ -47,6 +48,17 @@ metrics:
     enabled: true
 
 config:
+  # The clinical domain FerroPIX mints pseudonyms in, and the grant the EHR
+  # index asks it with; the chart injects the provider and the in-cluster
+  # PIXm URL. The client secret is secrets.ehrIndexClientSecret.
+  privacy:
+    subject_namespaces: [urn:oid:2.999.7.1]
+  ehr_index:
+    assigning_authority: urn:oid:2.999.7.1
+    oauth:
+      token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
+      client_id: ferroehr
+      scope: system/Patient.rs
   server:
     bind: "0.0.0.0:8080"
     base_path: /ferroehr/rest/openehr/v1
@@ -316,3 +328,31 @@ bridge:
         ports:
           - protocol: TCP
             port: 443
+
+# FerroPIX, the IHE patient identity source the EHR index asks (the chart's
+# default). Its PostgreSQL URL and sealing key come from Secrets the operator
+# owns; the issuer carries no key material; the pseudonymisation domain names
+# FerroEHR's client as its consumer, so FerroPIX mints the pseudonym on the
+# first ask.
+ferropix:
+  database:
+    existingSecret: ferropix-db
+  dataKey:
+    existingSecret: ferropix-data-key
+  config:
+    server:
+      public_base_url: https://pix.example.com
+    auth:
+      audience: [https://pix.example.com/fhir]
+      issuer:
+        - issuer: https://idp.example.com/realms/pix
+          clients: [hospital-source]
+    domain:
+      - system: urn:oid:2.999.1.1
+        name: Hospital
+        kind: local
+        source_client_id: hospital-source
+    pseudonym_domain:
+      - namespace: urn:oid:2.999.7.1
+        name: Clinical domain
+        consumer_client_id: ferroehr

@@ -8,6 +8,8 @@
 | . as $docs
 | [ $docs[]
     | select(.kind == "Deployment")
+    # The FerroPIX chart dependency's selector is that chart's own contract.
+    | select((.metadata.labels // {})["helm.sh/chart"] // "" | startswith("ferropix-") | not)
     | { name:   .metadata.name,
         labels: (.spec.template.metadata.labels // {}),
         keys:   ((.spec.selector.matchLabels // {}) | keys) } ] as $deps

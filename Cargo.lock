@@ -2618,6 +2618,7 @@ dependencies = [
  "ferrohealth-config",
  "ferrohealth-health",
  "ferrohealth-secret",
+ "ferrohealth-server",
  "ferrohealth-smart",
  "ferrohealth-telemetry",
  "futures",
@@ -2625,6 +2626,7 @@ dependencies = [
  "http",
  "http-body-util",
  "ihe-atna",
+ "ihe-iti",
  "indexmap 2.14.2",
  "inferno",
  "insta",
@@ -2883,6 +2885,34 @@ dependencies = [
  "serde",
  "thiserror 2.0.21",
  "url",
+]
+
+[[package]]
+name = "ferrohealth-server"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "062f4a74610690764d0757719297dd5388e195a394228f853ef554555a95e74e"
+dependencies = [
+ "axum",
+ "clap",
+ "ferrohealth-health",
+ "ferrohealth-secret",
+ "ferrohealth-telemetry",
+ "http",
+ "hyper-util",
+ "ipnet",
+ "reqwest",
+ "rustls",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-rustls",
+ "tower",
+ "tower-http 0.7.1",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -4101,6 +4131,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "ihe-iti"
+version = "0.0.62"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8fef633aa89ecf55dc0b7a27bbd09572bacbfe053c462b9cd388bac74b25eb6"
+dependencies = [
+ "ferrohealth-smart",
+ "fhir-types",
+ "http",
+ "ihe-atna",
+ "reqwest",
+ "secrecy",
+ "serde_json",
+ "thiserror 2.0.21",
+ "url",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4230,9 +4277,9 @@ dependencies = [
 
 [[package]]
 name = "ipnet"
-version = "2.12.1"
+version = "2.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a756c3fac73139e83f14c2d742155dd2b78d3ee56597b419a0579b7bdd6dd78"
+checksum = "791930b43c0d5973160d90a8f3894509f2b273430f5c5c73b668636d0287c5c0"
 dependencies = [
  "serde",
 ]
@@ -9376,9 +9423,9 @@ checksum = "552a64d6a0d251ae28bc021838800943cce60c9ec2e60ff331f54e79f696268f"
 
 [[package]]
 name = "uuid"
-version = "1.28.0"
+version = "1.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cc1186384beb7dd8eedea376413fd654937285ea6c9cfbb928dc3043ea4b606"
+checksum = "4a0e2d11620c50695fe12bbbfde96b3477fe606e7284c22d505c12ce51214514"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",

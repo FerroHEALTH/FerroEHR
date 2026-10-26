@@ -1661,6 +1661,7 @@ jobs:
       - uses: ./.github/actions/helm-pinned
       - name: helm lint (default + all-features value sets)
         run: |
+          helm dependency build deploy/helm/ferroehr
           helm lint deploy/helm/ferroehr -f deploy/helm/ci/default-values.yaml
           helm lint deploy/helm/ferroehr -f deploy/helm/ci/all-features-values.yaml
       # The chart gates read the rendered YAML structurally (yq -o=json | jq),

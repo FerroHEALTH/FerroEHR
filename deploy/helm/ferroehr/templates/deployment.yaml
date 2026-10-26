@@ -410,6 +410,10 @@ spec:
                     - key: terminology.server.oauth.client_secret
                       path: terminology.server.oauth.client_secret
               {{- end }}
+              {{- if .Values.secrets.ehrIndexClientSecret }}
+                    - key: ehr_index.oauth.client_secret
+                      path: ehr_index.oauth.client_secret
+              {{- end }}
               {{- end }}
         {{- end }}
         {{- if .Values.database.caConfigMap }}
