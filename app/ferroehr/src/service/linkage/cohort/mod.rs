@@ -599,14 +599,14 @@ mod tests {
     #[test]
     fn the_definition_hash_carries_no_subject_value() {
         let subject = |id: &str| SubjectRef::person(id, "urn:oid:2.16.840.1.113883.2.4.6.3");
-        let one = definition_hash(&[], &[subject("999990019")]);
-        assert_eq!(one, definition_hash(&[], &[subject("999990020")]));
+        let one = definition_hash(&[], &[subject("synthetic-0019")]);
+        assert_eq!(one, definition_hash(&[], &[subject("synthetic-0020")]));
         assert_ne!(
             one,
             definition_hash(&[], &[]),
             "a subject cohort is not the empty one"
         );
-        assert!(!one.contains("999990019"));
+        assert!(!one.contains("synthetic-0019"));
     }
 
     #[test]
