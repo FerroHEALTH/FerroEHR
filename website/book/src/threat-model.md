@@ -508,28 +508,26 @@ are configuration rather than arithmetic.
 identifier the clinical side carries, the SM's own association metadata and a
 validity period. No name, no address and no plaintext attribute, because a
 row here is already the additional information that re-attributes a record.
-Its role is barred from both domains it joins and both of them from it. The
-one crossing, `resolve_ehr_for_identity`, runs in the application over two
-pools, so no single statement performs the join and no credential could issue
-one. Each resolve, link, merge and split writes a `linkage`-domain access
-event naming the actor, the declared purpose of use and whether anything
-matched, and that event deliberately does not name the EHR that came back.
-`link_as_subject` derives the subject pseudonym server-side and writes it onto
-`EHR_STATUS` itself, so no caller-supplied value becomes a subject reference
-on that path. A merge or a split closes a period rather than deleting a row,
-and the temporal key admits one mapping in force per party. Erasure is the one
-exception, and the role still cannot delete: `linkage.erase_ehr` is a
+Its role is barred from both domains it joins and both of them from it. It
+holds anything only when a FerroEHR run on its own opts in to it with
+`[ehr_index] provider = "local"`; by default the cross-reference lives in an
+IHE patient identity source that FerroEHR asks over PIXm (ITI-83), and the map
+stays empty. FerroEHR matches, links and merges no patients in either mode.
+Each EHR Index operation writes a `linkage`-domain access event naming the
+actor, the declared purpose of use and whether anything matched, and that
+event deliberately does not name the subject identifier. Erasure is the one
+deletion, and the role still cannot delete: `linkage.erase_ehr` is a
 `SECURITY DEFINER` function that removes the rows naming one erased EHR, which
 the admin delete calls once the clinical delete has committed.
 
 **Residual risk.**
 
-- **The crossing exists, and an actor entitled to call it re-identifies a
-  record.** That is its purpose. The access log records who did it; recording
-  is not prevention.
-- **Nothing populates the map.** What it holds is what a consumer wrote, so a
-  deployment that never calls `link` has no map and no crossing, and one that
-  writes it from a batch job has whatever that job decided.
+- **The identity source holds the re-identifying link.** Its controls, who
+  may resolve a pseudonym back to a person, are the source's, and FerroEHR
+  never asks for that resolution.
+- **Under the local map, nothing populates it.** What it holds is what an
+  `I_EHR_INDEX` caller wrote, so a deployment that never writes it has no map,
+  and one that writes it from a batch job has whatever that job decided.
 - **A miss is as informative as a hit.** Asking whether this deployment holds
   a record for a person is itself a disclosure, which is why the miss is
   recorded too.

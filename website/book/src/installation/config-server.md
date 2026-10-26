@@ -1,8 +1,8 @@
 # Server, database & telemetry
 
 The listener and REST surface (`[server]` and its sub-tables), the PostgreSQL
-connection (`[db]`), the two observability sections (`[log]`,
-`[telemetry]`), and the usage report (`[usage_report]`). Precedence, the
+connection (`[db]`), the observability section (`[telemetry]`), and the
+usage report (`[usage_report]`). Precedence, the
 environment-name grammar, and file discovery are on the
 [Configuration reference](configuration.md) index.
 
@@ -421,46 +421,54 @@ without the `party` domain also receives the party migration set, its schema
 and grants and never a row, because the linkage set revokes a function the
 party set creates.
 
-## `[log]`
+## `[telemetry]`
+
+The console, the request log and the OpenTelemetry export: the section every
+FerroHEALTH product shares (`ferrohealth-telemetry`). With no
+`[telemetry.otlp]` table nothing is exported.
 
 ```toml
-[log]
+[telemetry]
 format = "auto"
-filter = "info,ferroehr=info"
+filter = "info,hyper=warn,tower=warn,h2=warn"
+logged_query_parameters = []
+# environment = "production"
+
+# [telemetry.otlp]
+# endpoint = "http://collector:4317"
+# traces = true
+# metrics = true
+# sample_ratio = 1.0
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `format` | enum{auto,json,pretty} | `auto` | Stdout rendering. `auto` picks `json` when stdout is not a TTY and the coloured human format when it is; an explicit `pretty` forces colour even through a pipe. |
-| `filter` | string | `info,ferroehr=info` | Boot log-filter directives; also the value `/management/loggers` resets to. `RUST_LOG` is a recognized lower-priority alias. |
+| `format` | enum{auto,json,pretty} | `auto` | Stdout rendering. `auto` picks `json` when stdout is not a TTY and the human format when it is. `NO_COLOR` turns colour off. |
+| `filter` | string | `info,hyper=warn,tower=warn,h2=warn` | Console filter directives, refused at boot when they do not parse; also the value `/management/loggers` resets to. `RUST_LOG` is a lower-priority fallback. The filter decides what the console writes and never thins a trace. |
+| `logged_query_parameters` | list of strings | `[]` | The query parameters whose values the request log may carry, each cut to 64 characters. Empty, the request log carries no query value. |
+| `environment` | string | unset | The `deployment.environment.name` resource attribute of every span and metric. |
+| `otlp.endpoint` | secret URL | (required in the table) | OTLP/gRPC collector endpoint; `https://` speaks TLS. Credentials in it are masked in every rendering. |
+| `otlp.traces` | bool | `true` | Export FerroEHR's spans. |
+| `otlp.metrics` | bool | `true` | Push the metrics over OTLP beside the Prometheus pull surface. One meter provider feeds both. |
+| `otlp.sample_ratio` | float | `1.0` | The share of traces sampled (`0.1` is a common production start). A client's `traceparent` is never read: every request starts a trace of the server's own. |
+| `otlp.trust_roots_file` | path | unset | PEM trust roots the collector's certificate may chain to, beside the platform's. |
+| `otlp.client_identity_file` | path | unset | PEM client certificate chain and key, for mutual TLS with the collector. |
+
+The `service.name` of every span and metric is `ferroehr`, and
+`service.version` is the release and its commit.
+
+The request log writes one line per request: the method, the matched route
+template, the status, the latency and the server's request id, never a body,
+the raw path or a header value. It records the `http.server.request.duration`
+histogram, scraped as `http_server_request_duration_seconds` with the
+`http_request_method`, `http_route`, `http_response_status_code` and
+`url_scheme` labels.
 
 > [!TIP]
 > The ASCII boot banner follows the rendering that is actually installed, not the
 > configured word: it prints for `pretty`, and for `auto` only when stdout is a
 > terminal. Under `json`, and under `auto` off a terminal (a container, a pipe
 > into a log collector) stdout is parseable JSON from the first byte.
-
-## `[telemetry]`
-
-OpenTelemetry export. With `otlp_endpoint` unset the trace export layer is not
-installed at all, at zero overhead.
-
-```toml
-[telemetry]
-service_name = "ferroehr"
-environment = "dev"
-traces_sample_ratio = 1.0
-metrics_push = false
-```
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `otlp_endpoint` | secret URL | unset | OTLP/gRPC collector endpoint. Unset ⇒ no trace export. Credentials embedded in it are redacted from every rendering. |
-| `service_name` | string | `ferroehr` | The `service.name` resource attribute. |
-| `environment` | string | `dev` | The `deployment.environment` resource attribute. |
-| `traces_sample_ratio` | float | `1.0` | Head-sampling ratio (`0.1` is a common production start). |
-| `metrics_push` | bool | `false` | Also **push** metrics over OTLP, alongside the Prometheus pull surface. Both surfaces are fed by one meter provider, so every instrument reaches both; the push needs `otlp_endpoint` set as well. |
-| `flame_file` | path | unset | Span-timing flamegraph capture: write folded stack samples of every span to this file, and render offline with `inferno-flamegraph`. Unset ⇒ the layer is not installed. For diagnostic sessions, not a standing posture: the file grows with span traffic. |
 
 > [!NOTE]
 > Instrument names carry no Prometheus suffix; the exporter derives one. A

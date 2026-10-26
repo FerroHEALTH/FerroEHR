@@ -34,7 +34,6 @@
 
 mod env;
 pub mod flamegraph;
-pub mod http_metrics;
 mod info_routes;
 mod logger_routes;
 mod metrics;
@@ -44,7 +43,9 @@ use ferroehr::config::deployment::DeploymentPosture;
 use ferroehr::config::management::{AccessLevel, ManagementConfig};
 use ferroehr::licence::state::LicenceStatus;
 use ferroehr::telemetry::build_info::BuildInfo;
-use ferroehr::telemetry::log_reload::LogReload;
+use ferrohealth_telemetry::request_log::RequestLog;
+use ferrohealth_telemetry::section::Filter;
+use ferrohealth_telemetry::telemetry::{FilterHandle, Telemetry};
 
 use ferrohealth_health::document::Readiness;
 use ferrohealth_health::lifecycle::Lifecycle;
@@ -80,10 +81,12 @@ pub struct ManagementState {
     pub authenticator: Arc<Authenticator>,
     /// The RBAC configuration the `AdminOnly` access level gates on.
     pub rbac: RbacConfig,
-    /// The Prometheus render handle (present iff the recorder is installed).
-    pub prometheus: Option<::prometheus::Registry>,
-    /// The runtime log-filter control (present iff the reloadable filter is set).
-    pub log_reload: Option<LogReload>,
+    /// The telemetry provider whose metrics the surface renders (present iff
+    /// telemetry is installed).
+    pub telemetry: Option<Arc<Telemetry>>,
+    /// The console filter `/loggers` replaces (present iff telemetry is
+    /// installed).
+    pub log_filter: Option<LogFilter>,
     /// Build/spec provenance for `/info` and the build-info gauge.
     pub build_info: BuildInfo,
     /// The effective configuration snapshot for `/env` (redacted at render).
@@ -104,8 +107,8 @@ impl std::fmt::Debug for ManagementState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ManagementState")
             .field("config", &self.config)
-            .field("prometheus", &self.prometheus.is_some())
-            .field("log_reload", &self.log_reload.is_some())
+            .field("telemetry", &self.telemetry.is_some())
+            .field("log_filter", &self.log_filter.is_some())
             .finish_non_exhaustive()
     }
 }
@@ -128,8 +131,8 @@ impl ManagementState {
             config: obs.management,
             authenticator,
             rbac,
-            prometheus: obs.prometheus,
-            log_reload: obs.log_reload,
+            telemetry: obs.telemetry,
+            log_filter: obs.log_filter,
             build_info: obs.build_info,
             env_snapshot: obs.env_snapshot,
             profiler: flamegraph::ProfilerSlot::default(),
@@ -139,6 +142,16 @@ impl ManagementState {
             deployment: state.backend().deployment().clone(),
         }
     }
+}
+
+/// The console filter `/management/loggers` reads and replaces, and the
+/// filter the configuration set at boot, which a reset restores.
+#[derive(Debug, Clone)]
+pub struct LogFilter {
+    /// The handle of the running console filter.
+    pub handle: FilterHandle,
+    /// The `[telemetry] filter` the process booted with.
+    pub boot: Filter,
 }
 
 /// The observability inputs the binary assembles for the application state.
@@ -152,10 +165,12 @@ impl ManagementState {
 pub struct Observability {
     /// The management surface configuration.
     pub management: ManagementConfig,
-    /// The Prometheus render handle (present iff the recorder is installed).
-    pub prometheus: Option<::prometheus::Registry>,
-    /// The runtime log-filter control (present iff the reloadable filter is set).
-    pub log_reload: Option<LogReload>,
+    /// The telemetry provider whose metrics the surface renders (present iff
+    /// telemetry is installed).
+    pub telemetry: Option<Arc<Telemetry>>,
+    /// The console filter `/loggers` replaces (present iff telemetry is
+    /// installed).
+    pub log_filter: Option<LogFilter>,
     /// The health-indicator registry.
     pub health: Registry,
     /// The process lifecycle: booting until the listener serves, draining
@@ -165,18 +180,21 @@ pub struct Observability {
     pub build_info: BuildInfo,
     /// The redacted effective-config snapshot for `/management/env`.
     pub env_snapshot: Arc<Value>,
+    /// The request log every request of the main listener passes through.
+    pub request_log: RequestLog,
 }
 
 impl Default for Observability {
     fn default() -> Self {
         Self {
             management: ManagementConfig::default(),
-            prometheus: None,
-            log_reload: None,
+            telemetry: None,
+            log_filter: None,
             health: Registry::default(),
             lifecycle: Lifecycle::default(),
             build_info: BuildInfo::current(),
             env_snapshot: Arc::new(Value::Null),
+            request_log: RequestLog::default(),
         }
     }
 }
@@ -185,8 +203,8 @@ impl std::fmt::Debug for Observability {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Observability")
             .field("management", &self.management)
-            .field("prometheus", &self.prometheus.is_some())
-            .field("log_reload", &self.log_reload.is_some())
+            .field("telemetry", &self.telemetry.is_some())
+            .field("log_filter", &self.log_filter.is_some())
             .field("health_indicators", &self.health.names())
             .field("lifecycle", &self.lifecycle.phase())
             .finish_non_exhaustive()
@@ -233,7 +251,7 @@ pub fn router(state: ManagementState) -> Router {
     }
 
     // ── Prometheus text exposition (only when the recorder is installed) ─────
-    if cfg.endpoints.prometheus.is_mounted() && state.prometheus.is_some() {
+    if cfg.endpoints.prometheus.is_mounted() && state.telemetry.is_some() {
         router = router.route(
             &format!("{base}/prometheus"),
             get(prometheus_text).route_layer(mk(cfg.endpoints.prometheus)),
@@ -241,7 +259,7 @@ pub fn router(state: ManagementState) -> Router {
     }
 
     // ── Actuator-style JSON metrics view (only when the recorder is installed)
-    if cfg.endpoints.metrics.is_mounted() && state.prometheus.is_some() {
+    if cfg.endpoints.metrics.is_mounted() && state.telemetry.is_some() {
         router = router
             .route(
                 &format!("{base}/metrics"),
@@ -286,7 +304,7 @@ pub fn router(state: ManagementState) -> Router {
     }
 
     // ── Loggers (only when a reloadable filter is present) ──────────────────
-    if cfg.endpoints.loggers.is_mounted() && state.log_reload.is_some() {
+    if cfg.endpoints.loggers.is_mounted() && state.log_filter.is_some() {
         router = router.route(
             &format!("{base}/loggers"),
             get(loggers_get)
@@ -414,7 +432,7 @@ async fn info_view(State(s): State<ManagementState>) -> Json<BuildInfo> {
     )
 )]
 async fn prometheus_text(State(s): State<ManagementState>) -> Response {
-    match &s.prometheus {
+    match &s.telemetry {
         Some(handle) => metrics::prometheus(handle),
         None => recorder_unavailable(),
     }
@@ -439,8 +457,8 @@ async fn prometheus_text(State(s): State<ManagementState>) -> Response {
     )
 )]
 async fn metrics_list(State(s): State<ManagementState>) -> Response {
-    match &s.prometheus {
-        Some(handle) => metrics::list(handle).into_response(),
+    match &s.telemetry {
+        Some(handle) => metrics::list(handle),
         None => recorder_unavailable(),
     }
 }
@@ -466,7 +484,7 @@ async fn metrics_list(State(s): State<ManagementState>) -> Response {
     )
 )]
 async fn metrics_detail(State(s): State<ManagementState>, path: Path<String>) -> Response {
-    match &s.prometheus {
+    match &s.telemetry {
         Some(handle) => metrics::detail(handle, path),
         None => recorder_unavailable(),
     }
@@ -511,7 +529,7 @@ async fn env_view(State(s): State<ManagementState>) -> Json<Value> {
     )
 )]
 async fn loggers_get(State(s): State<ManagementState>) -> Response {
-    match &s.log_reload {
+    match &s.log_filter {
         Some(reload) => logger_routes::get(reload).into_response(),
         None => recorder_unavailable(),
     }
@@ -542,7 +560,7 @@ async fn loggers_post(
     State(s): State<ManagementState>,
     body: Json<logger_routes::SetFilter>,
 ) -> Response {
-    match &s.log_reload {
+    match &s.log_filter {
         Some(reload) => logger_routes::set(reload, &body.0),
         None => recorder_unavailable(),
     }
@@ -567,7 +585,7 @@ async fn loggers_post(
     )
 )]
 async fn loggers_reset(State(s): State<ManagementState>) -> Response {
-    match &s.log_reload {
+    match &s.log_filter {
         Some(reload) => logger_routes::reset(reload),
         None => recorder_unavailable(),
     }

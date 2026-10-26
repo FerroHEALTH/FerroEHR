@@ -24,6 +24,7 @@ use crate::fixtures::uv;
 use crate::fixtures::{uid, vo_of};
 use crate::typed_body::typed;
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::{
     LocationDesc, ResourceInstanceType, ResourceStatus, SubjectRef,
 };
@@ -393,7 +394,8 @@ async fn relationship_via_demographic_contribution() {
 async fn ehr_index_add_defaults_primary_and_reads() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_ehr_index(EhrIndexProvider::Local);
     let ehr = seed_ehr(&pool).await;
     let subject = SubjectRef::person("PID-1", "mpi");
 
@@ -423,7 +425,8 @@ async fn ehr_index_add_defaults_primary_and_reads() {
 async fn ehr_index_n_to_m() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_ehr_index(EhrIndexProvider::Local);
 
     let ehr_a = seed_ehr(&pool).await;
     let ehr_b = seed_ehr(&pool).await;
@@ -466,7 +469,8 @@ async fn ehr_index_n_to_m() {
 async fn ehr_index_update_status_loc_and_remove() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_ehr_index(EhrIndexProvider::Local);
     let ehr = seed_ehr(&pool).await;
     let subject = SubjectRef::person("PID-9", "mpi");
 
@@ -539,7 +543,8 @@ async fn ehr_index_update_status_loc_and_remove() {
 async fn ehr_index_remove_subject_wide_and_unknown_ehr() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_ehr_index(EhrIndexProvider::Local);
     let ehr_a = seed_ehr(&pool).await;
     let ehr_b = seed_ehr(&pool).await;
     let subject = SubjectRef::person("W", "mpi");

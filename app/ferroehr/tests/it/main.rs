@@ -42,6 +42,7 @@ mod cohort_query;
 mod commit_lock_order;
 mod decommission;
 mod directory_item_refs;
+mod ehr_index_ihe;
 mod events_amqp;
 mod ext_functions;
 mod federation_node;

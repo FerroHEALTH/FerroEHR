@@ -7,9 +7,11 @@
 //! §3.1), and the [`StoreOutbox`] `ihe-atna`'s forwarder delivers from when
 //! the local audit store is on.
 //!
-//! The store is the feed's outbox: a record not yet delivered is a row whose
-//! `delivered_fhir_feed_at` is unset, read oldest first by its chain position,
-//! and stamped once the repository accepted it. A record the repository
+//! The store is the feed's outbox: a record not yet delivered has a row in
+//! `audit.fhir_feed_outbox`, which the store writes with the record while the
+//! feed is configured, read oldest first by its chain position, and removed
+//! once the repository accepted it, when the record's `delivered_fhir_feed_at`
+//! is stamped. A record the repository
 //! refused is held aside in memory until the next start, because the table is
 //! append-only beside its two delivery stamps (no specification governs where
 //! a refused record waits: our own design).
@@ -17,7 +19,7 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::Duration;
 
 use ihe_atna::atna::bearer::Bearer;
@@ -84,6 +86,8 @@ pub(super) struct StoreOutbox {
     refused: Mutex<BTreeSet<i64>>,
     /// The rows awaiting delivery at the last read.
     waiting: AtomicUsize,
+    /// Whether the records written before the outbox existed are entered in it.
+    backlog: AtomicBool,
 }
 
 impl StoreOutbox {
@@ -96,6 +100,7 @@ impl StoreOutbox {
             idle,
             refused: Mutex::new(BTreeSet::new()),
             waiting: AtomicUsize::new(0),
+            backlog: AtomicBool::new(false),
         }
     }
 
@@ -118,6 +123,20 @@ fn outbox_error(error: AuditError) -> OutboxError {
 #[async_trait::async_trait]
 impl Outbox for StoreOutbox {
     async fn oldest(&self) -> Result<Option<Stored>, OutboxError> {
+        if !self.backlog.load(Ordering::Relaxed) {
+            let moved = self
+                .store
+                .enqueue_fhir_feed_backlog()
+                .await
+                .map_err(outbox_error)?;
+            if moved > 0 {
+                tracing::info!(
+                    records = moved,
+                    "ATNA audit FHIR feed: records stored before the outbox existed are owed"
+                );
+            }
+            self.backlog.store(true, Ordering::Relaxed);
+        }
         let (oldest, waiting) = self
             .store
             .oldest_fhir_feed(&self.refused())

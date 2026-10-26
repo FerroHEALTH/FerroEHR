@@ -4,14 +4,16 @@
 # The technical documentation tree is complete, its links resolve, and a
 # release that changes the logging component updates it.
 #
-# docs/technical-documentation/ is the technical documentation of EHDS Art. 37
-# and Annex III (docs/law/eu/ehds/text.html) and CRA Annex VII
-# (docs/law/eu/cra/text.html). EHDS Art. 30(2) has a change to a harmonised
-# software component "reflected in the technical documentation", and the
-# logging component's modules are the ones docs/architecture.md names under
-# "Regulatory position (EHDS and CRA)". The documents that accompany a release
-# (EHDS Art. 30(1)(d)) are checked here too, because the release lane attaches
-# them and a missing one would ship a release without them.
+# The technical documentation of EHDS Art. 37 and Annex III
+# (docs/law/eu/ehds/text.html) is the EHR system's, FerroEHR with FerroBRIDGE,
+# and lives in the FerroHEALTH book at the revision docs/ehds/system-documents.env
+# pins; docs/technical-documentation/ keeps FerroEHR's CRA Annex VII points
+# (docs/law/eu/cra/text.html) and the index. EHDS Art. 30(2) has a change to a
+# harmonised software component "reflected in the technical documentation", and
+# the logging component's modules are the ones docs/architecture.md names under
+# "Regulatory position (EHDS and CRA)", so such a change moves the tree or the
+# pin. The CRA user information is checked here too, because the release notes
+# link it and a missing point would ship a release without it.
 #
 # Usage:
 #   scripts/checks/technical-documentation.sh                 structure and links
@@ -34,8 +36,7 @@ fi
 guard_no_args "$@"
 
 TREE="docs/technical-documentation"
-SHEET="website/book/src/compliance/information-sheet.md"
-IFU="website/book/src/compliance/instructions-for-use.md"
+PIN="docs/ehds/system-documents.env"
 USERINFO="website/book/src/compliance/cra-user-information.md"
 # The logging component, as docs/architecture.md lists it. Keep the two lists
 # equal: a module added there is added here in the same change. The shared
@@ -79,17 +80,19 @@ for path in "$TREE"/*.md; do
   done < <(grep -oE '\]\([^)]+\)' "$path" | sed -E 's/^\]\((.*)\)$/\1/')
 done
 
-# The accompanying documents exist, the information sheet carries every point
-# of EHDS Art. 38(2), and the CRA user information every point of Annex II
-# (CRA Art. 13(18), Annex VII 1(d); docs/law/eu/cra/text.html), in order
-# and with every lettered sub-point of point 8.
-[[ -f "$IFU" ]] || report "$IFU does not exist"
-if [[ -f "$SHEET" ]]; then
-  for point in a b c d e; do
-    grep -qE "^## \(${point}\) " "$SHEET" || report "$SHEET has no section for Art. 38(2)(${point})"
+# The pin of the EHR system's documents names a full commit and a date for
+# each page, and the CRA user information carries every point of Annex II
+# (CRA Art. 13(18), Annex VII 1(d); docs/law/eu/cra/text.html), in order and
+# with every lettered sub-point of point 8. The information sheet's points of
+# EHDS Art. 38(2) are checked on the fetched page by
+# scripts/release/accompanying-documents.sh.
+if [[ -f "$PIN" ]]; then
+  grep -qE '^FERROHEALTH_COMMIT=[0-9a-f]{40}$' "$PIN" || report "$PIN names no full FERROHEALTH_COMMIT"
+  for key in INFORMATION_SHEET_REVISED INSTRUCTIONS_FOR_USE_REVISED READINESS_REVISED TECHNICAL_DOCUMENTATION_REVISED; do
+    grep -qE "^${key}=[0-9]{4}-[0-9]{2}-[0-9]{2}$" "$PIN" || report "$PIN names no ${key} date"
   done
 else
-  report "$SHEET does not exist"
+  report "$PIN does not exist"
 fi
 if [[ -f "$USERINFO" ]]; then
   # Headings in document order: "## 1. ", ..., "## 8. ", "### 8(a) ", ..., "## 9. ".
@@ -102,7 +105,7 @@ else
 fi
 
 # Change control: a change to the logging component since <ref> comes with a
-# change to the tree.
+# change to the tree or to the pin of the EHR system's documents.
 if [[ -n "$since" ]]; then
   git rev-parse --verify --quiet "${since}^{commit}" >/dev/null \
     || { report "--since $since is not a commit"; exit 1; }
@@ -114,8 +117,8 @@ if [[ -n "$since" ]]; then
     changed="$(printf '%s\n%s' "$changed" "Cargo.toml (the ehds-logging or ihe-atna pin)" | sed '/^$/d')"
   fi
   if [[ -n "$changed" ]]; then
-    if [[ -z "$(git diff --name-only "$since" HEAD -- "$TREE")" ]]; then
-      report "the logging component changed since $since and $TREE did not (EHDS Art. 30(2)):"
+    if [[ -z "$(git diff --name-only "$since" HEAD -- "$TREE" "$PIN")" ]]; then
+      report "the logging component changed since $since and neither $TREE nor $PIN did (EHDS Art. 30(2)):"
       while IFS= read -r f; do echo "  $f" >&2; done <<<"$changed"
     fi
   fi

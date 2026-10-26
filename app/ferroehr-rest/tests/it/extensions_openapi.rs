@@ -21,7 +21,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use axum::Router;
 use axum::body::Body;
@@ -34,7 +34,6 @@ use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig
 use ferroehr::config::server::{AdminConfig, ServerConfig};
 use ferroehr::config::smart::SmartConfig;
 use ferroehr::telemetry::build_info::BuildInfo;
-use ferroehr::telemetry::log_reload::LogReload;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::extensions::openapi::extensions_document;
@@ -522,34 +521,6 @@ async fn first_metric_name(app: &Router) -> String {
     names[0].as_str().expect("metric name").to_owned()
 }
 
-/// The global Prometheus recorder (install-once per test process).
-fn recorder() -> &'static prometheus::Registry {
-    static REGISTRY: OnceLock<prometheus::Registry> = OnceLock::new();
-    REGISTRY.get_or_init(|| {
-        // A real provider, not a bare registry: instruments bind to the global
-        // meter provider, so a registry with nothing attached renders empty.
-        let (provider, registry) = ferroehr::telemetry::metrics::build_provider(
-            opentelemetry_sdk::Resource::builder().build(),
-            None::<opentelemetry_sdk::metrics::PeriodicReader<opentelemetry_otlp::MetricExporter>>,
-        )
-        .expect("build the meter provider");
-        opentelemetry::global::set_meter_provider(provider);
-        ferroehr::telemetry::metrics::init(&opentelemetry::global::meter(
-            ferroehr::telemetry::metrics::SCOPE,
-        ));
-        registry
-    })
-}
-
-/// A no-op reloadable-filter handle so `/management/loggers` mounts.
-fn log_reload() -> LogReload {
-    LogReload::new(
-        "info",
-        Arc::new(|| "info".to_owned()),
-        Arc::new(|_f: &str| Ok(())),
-    )
-}
-
 /// The `AppConfig` used by both the served document and [`full_app`], so the
 /// documented paths and the mounted routes are derived from one config (same
 /// base path). Bearer authentication on, because the SMART discovery document
@@ -611,8 +582,8 @@ async fn full_app() -> Router {
             },
             ..ManagementConfig::default()
         },
-        prometheus: Some(recorder().clone()),
-        log_reload: Some(log_reload()),
+        telemetry: Some(Arc::clone(common::telemetry())),
+        log_filter: Some(common::log_filter()),
         build_info: BuildInfo::current(),
         ..Observability::default()
     };

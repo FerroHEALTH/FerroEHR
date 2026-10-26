@@ -4,8 +4,8 @@
 //! End-to-end test of the RESTful-ATNA feed (IHE ITI-20 **ATX: FHIR Feed**):
 //! events emitted through the sender land in the local store, and the outbox
 //! worker POSTs each stored FHIR R4 `AuditEvent` to the ARR
-//! (`{url}/AuditEvent`, `application/fhir+json`) and stamps
-//! `delivered_fhir_feed_at` — a real `PostgreSQL` 18 (shared testkit harness) plus a
+//! (`{url}/AuditEvent`, `application/fhir+json`), removes it from
+//! `audit.fhir_feed_outbox` and stamps `delivered_fhir_feed_at` — a real `PostgreSQL` 18 (shared testkit harness) plus a
 //! `wiremock` ARR.
 
 use std::time::Duration;
@@ -28,6 +28,7 @@ fn config(arr_url: &str) -> AuditConfig {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         fhir_feed: FhirFeedConfig {
             enabled: true,
@@ -234,6 +235,127 @@ async fn the_feed_authenticates_with_a_client_credentials_token() {
     .await;
     assert!(delivered, "the record is delivered under the renewed token");
 
+    drop(sender);
+    handle.shutdown(Duration::from_secs(2)).await;
+}
+
+/// The store with no FHIR Feed configured: the records it writes.
+fn store_only() -> AuditConfig {
+    let mut config = config("http://127.0.0.1:9/fhir");
+    config.fhir_feed.enabled = false;
+    config
+}
+
+/// Counts the rows `sql` selects.
+#[expect(
+    clippy::expect_used,
+    reason = "clippy.toml `allow-expect-in-tests` reaches only `#[test]` functions, not this \
+              helper; a failed count fails the test that asked for it"
+)]
+async fn count(pool: &sqlx::PgPool, sql: &'static str) -> i64 {
+    sqlx::query_scalar::<_, i64>(sql)
+        .fetch_one(pool)
+        .await
+        .expect("count")
+}
+
+/// With no feed configured no sink is owed a record, so the outbox stays
+/// empty however many records the store holds, and no index covers the
+/// records by an unset delivery stamp.
+#[tokio::test]
+async fn with_no_feed_configured_no_record_is_owed() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let (sender, handle) = sender::start(store_only(), None, Some(pool.clone()))
+        .await
+        .expect("start");
+    for _ in 0..3 {
+        let _ = sender.emit(event());
+    }
+    drop(sender);
+    handle.shutdown(Duration::from_secs(2)).await;
+
+    assert_eq!(
+        count(&pool, "SELECT count(*) FROM audit.audit_event").await,
+        3
+    );
+    assert_eq!(
+        count(&pool, "SELECT count(*) FROM audit.fhir_feed_outbox").await,
+        0
+    );
+    assert_eq!(
+        count(
+            &pool,
+            "SELECT count(*) FROM pg_indexes WHERE schemaname = 'audit' \
+             AND indexdef ILIKE '%delivered_%_at IS NULL%'"
+        )
+        .await,
+        0,
+        "no index grows with records no sink is owed"
+    );
+}
+
+/// A record stored before the outbox existed and never delivered stays owed
+/// to a feed configured later: the first delivery run enters it in the
+/// outbox, once, and the feed delivers it.
+#[tokio::test]
+async fn records_stored_before_the_outbox_are_fed_once_a_feed_runs() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let (sender, handle) = sender::start(store_only(), None, Some(pool.clone()))
+        .await
+        .expect("start");
+    for _ in 0..2 {
+        let _ = sender.emit(event());
+    }
+    drop(sender);
+    handle.shutdown(Duration::from_secs(2)).await;
+    // The migration records the newest position written before it.
+    sqlx::query("UPDATE audit.fhir_feed_backlog SET through_seq = 2")
+        .execute(&pool)
+        .await
+        .expect("the backlog position");
+
+    let arr = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/fhir/AuditEvent"))
+        .respond_with(ResponseTemplate::new(201))
+        .expect(2)
+        .mount(&arr)
+        .await;
+    let (sender, handle) = sender::start(
+        config(&format!("{}/fhir", arr.uri())),
+        None,
+        Some(pool.clone()),
+    )
+    .await
+    .expect("start");
+    let delivered = eventually(
+        || async {
+            count(
+                &pool,
+                "SELECT count(*) FROM audit.audit_event WHERE delivered_fhir_feed_at IS NOT NULL",
+            )
+            .await
+                == 2
+        },
+        Duration::from_secs(10),
+    )
+    .await;
+    assert!(delivered, "both earlier records delivered and stamped");
+    assert_eq!(
+        count(&pool, "SELECT count(*) FROM audit.fhir_feed_outbox").await,
+        0
+    );
+    assert_eq!(
+        count(
+            &pool,
+            "SELECT count(*) FROM audit.fhir_feed_backlog WHERE enqueued_at IS NOT NULL"
+        )
+        .await,
+        1,
+        "the backlog is entered once"
+    );
     drop(sender);
     handle.shutdown(Duration::from_secs(2)).await;
 }

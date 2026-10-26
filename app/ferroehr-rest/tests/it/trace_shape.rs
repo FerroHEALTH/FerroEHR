@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Trace-shape test: drive a request through the root-span
-//! middleware with a capturing subscriber and assert the span is named/attributed
+//! Trace-shape test: drive a request through the request log of
+//! `ferrohealth-telemetry` with a capturing subscriber and assert the span is named/attributed
 //! by **route template** and carries **no PHI** (the `ehr_id` never appears in
 //! any span field name or value).
 
@@ -90,8 +90,9 @@ async fn root_span_is_route_template_and_phi_free() {
     // A templated route carrying an id, wrapped in the root-span middleware.
     let app = Router::new()
         .route("/ehr/{ehr_id}/composition", get(|| async { "ok" }))
-        .layer(middleware::from_fn(
-            ferroehr_rest::extensions::management::http_metrics::root_span,
+        .layer(middleware::from_fn_with_state(
+            ferrohealth_telemetry::request_log::RequestLog::new(&[]),
+            ferrohealth_telemetry::request_log::middleware,
         ));
 
     let ehr_id = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
@@ -106,7 +107,7 @@ async fn root_span_is_route_template_and_phi_free() {
     let captured = spans.lock().expect("lock");
     let root = captured
         .values()
-        .find(|c| c.name == "http_request")
+        .find(|c| c.name == "request")
         .expect("root span captured");
 
     // Named/attributed by route TEMPLATE, not the raw path.
@@ -116,9 +117,9 @@ async fn root_span_is_route_template_and_phi_free() {
         "http.route must be the template"
     );
     assert_eq!(
-        root.fields.get("otel.name").map(String::as_str),
-        Some("POST /ehr/{ehr_id}/composition"),
-        "otel.name must be method + template"
+        root.fields.get("http.request.method").map(String::as_str),
+        Some("POST"),
+        "the span names the method beside the template"
     );
 
     // PHI denylist: the ehr id must not appear in ANY field name or value, and

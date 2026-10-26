@@ -237,14 +237,24 @@ ferrohealth-authz = { version = "=0.1.5", default-features = false }
 ferrohealth-secret = "=0.2.0"
 # The family's configuration loader (FerroSYS): the file, the `FERROEHR__`
 # environment, the fallbacks and `--set`, strict with did-you-mean, and the
-# `config check` rendering. Verified on crates.io 2026-10-26 (0.2.4).
-ferrohealth-config = "=0.2.4"
+# `config check` rendering. Verified on crates.io 2026-10-26 (0.2.5).
+ferrohealth-config = "=0.2.5"
 # The family's health document, indicator registry and process lifecycle
 # (FerroSYS): `/health/readiness` and `/management/health` serve its
 # `Readiness`, and the viewer reads the same document. The default build is the
 # document alone; a server takes `registry`. Verified on crates.io 2026-10-26
 # (0.1.1).
 ferrohealth-health = { version = "=0.1.1", default-features = false }
+# The family's server plumbing (FerroSYS): `tls_client` reads the TLS
+# material of an outbound HTTPS client, the trust roots beside the platform's
+# and a client identity, and sets it on a `reqwest::ClientBuilder` (feature
+# `reqwest`). Verified on crates.io 2026-10-26 (0.3.2).
+ferrohealth-server = { version = "=0.3.2", default-features = false }
+# The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
+# the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
+# request log with its `http.server.request.duration` histogram, and the panic
+# line. Verified on crates.io 2026-10-26 (0.2.1).
+ferrohealth-telemetry = { version = "=0.2.1", features = ["axum", "otlp", "prometheus"] }
 
 # ── Terminology (the client of the one FHIR terminology server) ───────────────
 # FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,
@@ -268,6 +278,14 @@ ferrobridge-term = { version = "=0.1.139", features = ["smart"] }
 # crates.io 2026-10-26 (0.2.13).
 ihe-atna = { version = "=0.2.13", default-features = false }
 ehds-logging = { version = "=0.2.13", default-features = false }
+
+# ── Patient identity (the shared IHE ITI client library) ─────────────────────
+# The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly. `pixm` is the
+# PIXm Patient Identifier Cross-reference Consumer (ITI-83) the IHE patient
+# identity source of the EHR index is asked through (`[ehr_index]`); `smart` is
+# its ferrohealth-smart token authorizer. Verified on crates.io 2026-10-26
+# (0.0.62, on ihe-atna ^0.2.13 and ferrohealth-smart ^0.7.4).
+ihe-iti = { version = "=0.0.62", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 openidconnect = { version = "4", default-features = false }   # OIDC discovery + code flow; HTTP-client agnostic: we supply the pinned reqwest (platform trust store)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
@@ -388,16 +406,10 @@ thirtyfour = { version = "0.37.2", default-features = false, features = ["reqwes
 # ── Observability (opentelemetry set is lockstep: keep versions equal) ────────
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry"] }
-tracing-opentelemetry = "0.34"     # pairs with the opentelemetry 0.33 line
+tracing-opentelemetry = "0.34"     # pairs with the opentelemetry 0.33 line (tests)
 tracing-flame = "0.2"              # span-timing flamegraph capture (folded stacks; render via inferno)
 opentelemetry = "0.33.0"
-opentelemetry_sdk = { version = "0.33.0", features = ["rt-tokio", "experimental_metrics_custom_reader"] }
-opentelemetry-otlp = { version = "0.33.0", features = ["grpc-tonic"] }
-# The PULL surface (/management/prometheus), served from the SAME MeterProvider
-# as the OTLP push — one metrics system, so a family cannot exist on one
-# surface and not the other (#2181). Needs the SDK's custom-reader feature.
-opentelemetry-prometheus = "0.33"
-prometheus = "0.14"
+opentelemetry_sdk = { version = "0.33.0", features = ["rt-tokio"] }
 # In-process sampling CPU profiler. Its own `criterion` feature is pinned to
 # criterion ^0.5 (verified on crates.io 2026-08-04) — incompatible with our
 # criterion 0.8 — so benches implement criterion's `Profiler` trait over this

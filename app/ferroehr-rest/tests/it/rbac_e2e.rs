@@ -127,6 +127,7 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
             retention_years: None,
             sgb_v_309_controller: false,
             verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
         },
         syslog: SyslogConfig {
             enabled: true,
@@ -531,7 +532,10 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
     });
     cfg.usage_report.endpoint = leaky(4);
     cfg.authz.abac.remote.server = Some(leaky(5));
-    cfg.telemetry.otlp_endpoint = Some(leaky(6));
+    cfg.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
+        endpoint: leaky(6),
+        ..ferrohealth_telemetry::section::OtlpSection::default()
+    });
     cfg.multimedia.endpoint = Some(leaky(7));
     let snapshot = cfg.to_redacted_json().expect("redacted json");
 

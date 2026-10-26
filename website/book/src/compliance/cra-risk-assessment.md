@@ -56,7 +56,7 @@ assessment, 2026-10-07 (the table at the end lists the revisions).
   CRA Art. 13(4) as EHDS Art. 104(1) replaces it lets this assessment "be part
   of the risk assessment required by those Union legal acts". The
   [hazard log](hazard-log.md) is that EHDS-side assessment for the logging
-  component, and the [technical documentation](technical-documentation.md)
+  component, and the [technical documentation](https://ferrohealth.eu/docs/ehds/technical-documentation.html)
   carries both.
 
 ## The basis: intended purpose, use and environment
@@ -634,7 +634,7 @@ listed.
 | Change events over AMQP (`[events]`) | off | commit notifications, free of PHI by default | telling the provider's other systems that a record changed |
 | Multimedia to S3 (`[multimedia]`) | off | `DV_MULTIMEDIA` bytes above a size threshold, keyed by content hash | storing large attachments of the record outside the database |
 | Access log to syslog (`[audit.syslog]`) and to a FHIR feed (`[audit.fhir_feed]`) | off | access records | an off-box copy of the access log, which the threat model asks for |
-| Traces and metrics over OTLP (`telemetry.otlp_endpoint`) | off | spans and metrics, with identified data sanitised out | operating the instance |
+| Traces and metrics over OTLP (`telemetry.otlp.endpoint`) | off | spans and metrics, with identified data sanitised out | operating the instance |
 
 Each integration except the usage report carries only what its purpose in the
 provider's deployment needs, and only to a destination the deploying
