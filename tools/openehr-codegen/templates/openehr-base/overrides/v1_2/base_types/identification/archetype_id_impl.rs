@@ -106,8 +106,8 @@ impl ArchetypeId {
     /// BASE base_types master05 §Syntaxes defines only the single-part form
     /// (`version_id = '0' | non-zero-digit, [ number ]`); the three-part
     /// `major.minor.patch` belongs to the AM archetype HRID
-    /// (`docs/specs/openehr/AM/docs/Identification/`), and only the major is
-    /// significant to interface-reference matching (AM master07 §Referencing:
+    /// (`docs/specs/openehr/BASE/docs/artefact_identification/`), and only the major is
+    /// significant to interface-reference matching (BASE artefact_identification master07 §Referencing:
     /// an `ihrid_ref` carries the major version only, and a differing major is
     /// a hard boundary).
     #[must_use]

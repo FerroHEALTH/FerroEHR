@@ -4,12 +4,17 @@
 |===
 |Issue|Details|Raiser, Implementer|Completed
 
+|[[latest_issue]]0.8.0
+|{spec_tickets}/SPECAM-103[SPECAM-103^]: Superseded by the BASE {openehr_base_artefact_identification}[Artefact Identification^] specification, to which the content of this document has been relocated ({spec_tickets}/SPECBASE-50[SPECBASE-50^]); this document is retained as a pointer. Addresses {spec_tickets}/SPECPR-463[SPECPR-463^].
+|S Iancu
+|[[latest_issue_date]]10 Oct 2026
+
 4+^h|*AM Release 2.3.0*
 
-|[[latest_issue]]0.7.9
+|0.7.9
 |{spec_tickets}/SPECPUB-7[SPECPUB-7^]: Convert citations to bibtex form.
 |T Beale
-|[[latest_issue_date]]15 Dec 2019
+|15 Dec 2019
 
 |0.7.8
 |{spec_tickets}/SPECAM-58[SPECAM-58^]. Correct errors and improve examples - S Garde review Nov 2018. Change `_instance_uid_` to `_build_uid_`.

@@ -24,7 +24,7 @@ image::{diagrams_uri}/archetype_hrid_structure.svg[id=archetype_hrid_structure, 
 
 For specialised archetypes, the `_parent_archetype_id_` is also required. This is a string `_reference_` to an archetype, and is normally the 'interface' form of the id, i.e. down to the major version only. In some circumstances, it is useful to include the minor and patch version numbers as well.
 
-An important aspect of identification relates to the rules governing when the HRID namespace changes or is retained, with respect to when 'moves' or 'forks' occur. Its value is always the same as one of the `_original_namespace_` and `_custodian_namespace_` properties inherited from `AUTHORED_RESOURCE._description_` (or both, in the case where they are the same). A full explanation of the identification system and rules is given in the openEHR {openehr_am_id}[Archetype Identification specification^].
+An important aspect of identification relates to the rules governing when the HRID namespace changes or is retained, with respect to when 'moves' or 'forks' occur. Its value is always the same as one of the `_original_namespace_` and `_custodian_namespace_` properties inherited from `AUTHORED_RESOURCE._description_` (or both, in the case where they are the same). A full explanation of the identification system and rules is given in the openEHR {openehr_base_artefact_identification}[Artefact Identification specification^].
 
 === Machine Identifiers
 
@@ -74,7 +74,7 @@ The optional `_resource_package_uri_` property enables the recording of a refere
 
 ==== Lifecycle_state
 
-The `_description_._lifecycle_state_` is an important property of an archetype, which is used to record its state in a defined lifecycle. The lifecycle state machine and versioning rules are explained fully in the openEHR {openehr_am_id}[Archetype Identification specification^]. Here we simply note that the value of the property is a coded term corresponding to one of the macro-state names on the diagram, i.e. 'unmanaged', 'in_development', and so on.
+The `_description_._lifecycle_state_` is an important property of an archetype, which is used to record its state in a defined lifecycle. The lifecycle state machine and versioning rules are explained fully in the openEHR {openehr_base_artefact_identification}[Artefact Identification specification^]. Here we simply note that the value of the property is a coded term corresponding to one of the macro-state names on the diagram, i.e. 'unmanaged', 'in_development', and so on.
 
 ==== Original_namespace and Original_publisher
 

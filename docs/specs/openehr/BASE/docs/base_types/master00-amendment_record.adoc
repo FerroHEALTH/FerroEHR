@@ -6,10 +6,15 @@
 
 4+^h|*BASE Release 1.3.0 (unreleased)*
 
-|[[latest_issue]]1.3.3
-| Redefine `ARCHETYPE_ID` as an exact archetype identifier rather than an identifier-or-reference: `_value_` is now the grammar-validated `Hrid` primitive, its version carries the three-part semantic version, and `namespace`, `major_version`, `minor_version` and `patch_version` accessors are added. The Syntaxes section defers the shared identifier grammar to the {openehr_base_artefact_identification}[Artefact Identification^] specification ({spec_tickets}/SPECBASE-35[SPECBASE-35^], {spec_tickets}/SPECBASE-49[SPECBASE-49^], {spec_tickets}/SPECBASE-50[SPECBASE-50^], {spec_tickets}/SPECPR-363[SPECPR-363^]).
+|[[latest_issue]]1.3.4
+| Define the `TEMPLATE_ID` identifier: the human-readable identifier (HRID) form is strongly recommended and, when used, is the modern (ADL 2) form carrying a mandatory namespace; a legacy free-text name remains permitted but is deprecated. Adds `is_hrid()`, HRID segment/version accessors and a Template Identifiers section ({spec_tickets}/SPECBASE-42[SPECBASE-42^], {spec_tickets}/SPECPR-124[SPECPR-124^]).
 |S Iancu
 |[[latest_issue_date]]10 Oct 2026
+
+|1.3.3
+| Redefine `ARCHETYPE_ID` as an exact archetype identifier rather than an identifier-or-reference: `_value_` is now the grammar-validated `Hrid` primitive, its version carries the three-part semantic version, and `namespace`, `major_version`, `minor_version` and `patch_version` accessors are added. The Syntaxes section defers the shared identifier grammar to the {openehr_base_artefact_identification}[Artefact Identification^] specification ({spec_tickets}/SPECBASE-35[SPECBASE-35^], {spec_tickets}/SPECBASE-49[SPECBASE-49^], {spec_tickets}/SPECBASE-50[SPECBASE-50^], {spec_tickets}/SPECPR-363[SPECPR-363^]).
+|S Iancu
+|10 Oct 2026
 
 |1.3.2
 | Add BMM definition of BASE and render class asciidoc files ({spec_tickets}/SPECBASE-48[SPECBASE-48^]).

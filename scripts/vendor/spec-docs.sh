@@ -47,11 +47,11 @@ INCLUDE_EXT=(adoc md txt csv json yaml yml robot xml opt g4)
 # crates/openehr-its/schemas/json/PROVENANCE.md when the delta leaves the
 # schemas untouched (docs/VERSIONS.md names both).
 COMPONENTS=(
-  "BASE|specifications-BASE|master (BASE 1.3.0)|707b8ac28cea1ccc4410f8e930665d473475350f"
+  "BASE|specifications-BASE|master (BASE 1.3.0)|93abaf9f656b7bc87019458303c9d88f3f688ef8"
   "RM|specifications-RM|master (RM 1.2.0)|654296bb027b03b4b076101e7171f3359f44cebc"
-  "AM|specifications-AM|master (AM 2.4.0 + ADL/AOM/OPT 1.4)|2635f42c45e33f8700cc6e093b6c8af1406322e3"
-  "TERM|specifications-TERM|master (TERM 3.1.0)|d2b05afd73dba9c670455ebb825ac4da6b63362f"
-  "LANG|specifications-LANG|master (LANG 1.1.0)|f1a984361c83ce05e0d23f4f7d6d7253ade5e436"
+  "AM|specifications-AM|master (AM 2.4.0 + ADL/AOM/OPT 1.4)|51aa07b2a09ae16172121fc3cf844993a6c98c07"
+  "TERM|specifications-TERM|master (TERM 3.1.0)|b2dd077d268dff881e81899db58c22b1ed015fad"
+  "LANG|specifications-LANG|master (LANG 1.1.0)|e61a7192a6ecba9d75d48dac4a689526e03eeea0"
   "QUERY|specifications-QUERY|Release-1.1.0|a87bb51fa1c515b863c9610a9444a2d5570dc05a"
   "SM|specifications-SM|master|23ffc4711c10bae2ae43724b1948fe3b24a0964e"
   "CNF|specifications-CNF|master|239dfb4ed2c634ca713aee95df074604a6f5ab56"

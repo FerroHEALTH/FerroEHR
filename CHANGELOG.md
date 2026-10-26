@@ -17,6 +17,13 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **`TEMPLATE_ID` answers its BASE 1.3.0 HRID functions** (#4068), on the
+  0.0.104 crate line. SPECBASE-42 gives `TEMPLATE_ID` `is_hrid`, `namespace`,
+  `qualified_rm_class_name`, `concept_id`, `version_id` and the major, minor
+  and patch versions (BASE base_types master05 §Template Identifiers). An
+  identifier in the namespaced HRID form of the Artefact Identification
+  reference expression (master03 §Formal Model) yields its parts; a legacy
+  free-text template name stays valid and answers `false` and empty parts.
 - **The audit store deletes each record at its own retention end**
   (#3899). Every record stores the first date it may be deleted on: an
   access record the end `ehds-logging` states for its categories and origins
@@ -26,7 +33,6 @@ workflow refuses a tag that has no matching section here.
   never before it, where it deleted by one store-wide horizon. Records
   written before this release keep the horizon. The end joins the chain
   digest (version 3), so moving one shows in the chain check.
-
 - **The FLAT builder builds an `INTERVAL_EVENT` at an abstract `EVENT` node
   when the input names its width** (#3898), on the 0.0.102 crate line. RM
   data_structures §EVENT makes `EVENT` abstract over `POINT_EVENT` and
@@ -34,7 +40,6 @@ workflow refuses a tag that has no matching section here.
   such a node (master05 §INTERVAL_EVENT) now chooses the interval; without
   them the node still builds as a `POINT_EVENT`. The flattener writes those
   rows back for an interval event held at an abstract node.
-
 - **Opaque access tokens are checked by token introspection under `[auth]
   mode = "introspection"`** (#4033). `ferrohealth-smart`'s introspection
   check (RFC 7662) posts each bearer token to the issuer's introspection
@@ -44,7 +49,6 @@ workflow refuses a tag that has no matching section here.
   caller with its scopes and roles and is reused until its `exp`, an inactive
   token is a `401`, and an endpoint that cannot answer is a `503`. The mode
   and the table were refused at boot. Helm chart 15.1.0 names the mode.
-
 - **The ITI-81 audit retrieval applies every search parameter RESTful ATNA
   §3.81.4.1.2.2 says the repository shall support** (#4040): `address`,
   `agent.identifier`, `patient.identifier`, `entity.identifier`,
@@ -71,7 +75,6 @@ workflow refuses a tag that has no matching section here.
   `codes::VersionLifecycleState`), held equal to the embedded terminology.
   Until a `ferrohealth-smart` release requires 0.0.99, the build holds a
   registry copy of `openehr-sdt` 0.0.98 for it beside the workspace 0.0.99.
-
 - **An ADL 2 Web Template names a node under a template overlay by its
   parent archetype.** `openehr_adl::opt::create_opt` records each overlay's
   specialisation parent in the OPT's `other_meta_data`
@@ -82,13 +85,21 @@ workflow refuses a tag that has no matching section here.
 
 ### Changed
 
+- **The BASE, AM, TERM and LANG specifications are re-vendored** (#4068,
+  #4069, #4070, #4071) at BASE `93abaf9f`, AM `51aa07b2`, TERM `b2dd077d` and
+  LANG `e61a7192`. The TERM `languages` code set restores `pt-pt`, adds
+  `ro-md` and `ru-md`, and names the replacement of each deprecated code
+  (SPECTERM-36), so the `openehr-term` code-set lookup accepts the two new codes. The
+  BASE `Interval.has` post-condition gains its brackets, which the
+  implementation already followed. AM's Archetype Identification document is
+  superseded by BASE Artefact Identification (SPECAM-103), and the citations
+  move with it. The nine `openehr-*` crates step to 0.0.104.
 - **`SECURITY.md` records the `main` ruleset as it stands** (#4067): no
   approving review, the `conclusion` check, the merge queue, and the
   organization-admin bypass, with what a bypass merge skips (any lane still
   running, `ui-e2e` included) and when it is used. The weekly external link
   check leaves out gesetze-im-internet.de and dicom.nema.org, which refuse the
   GitHub runner every week while answering by hand (#4074).
-
 - **The bundled PostgreSQL image is rebuilt on the 2026-10-21 respin of
   `postgres:18.6`** (#4084, `sha256:edb0c08d…`), a same-version respin with
   rebuilt base packages. The respin ships the fixed xz packages, so the

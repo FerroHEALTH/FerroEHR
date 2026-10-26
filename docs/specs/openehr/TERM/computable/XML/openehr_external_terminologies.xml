@@ -1,4 +1,4 @@
-<terminology name="openehr" language="en" version="3.1.0" date="2024-04-11">
+<terminology name="openehr" language="en" version="3.1.0" date="2026-10-10">
 	<codeset issuer="ISO" openehr_id="countries" name="countries" external_id="ISO_3166-1">
 		<code value="AF" description="AFGHANISTAN"/>
 		<code value="AX" description="ÅLAND ISLANDS"/>
@@ -437,26 +437,28 @@
 		<code value="pl" description="Polish"/>
 		<code value="pt" description="Portuguese"/>
 		<code value="pt-br" description="Portuguese (Brazil)"/>
-		<code value="pt-pt" description="Portuguese (Portugal) - DEPRECATED"/>
+		<code value="pt-pt" description="Portuguese (Portugal)"/>
 		<code value="pa" description="Punjabi, Panjabi"/>
 		<code value="qu" description="Quechua"/>
 		<code value="qu-bo" description="Quechua (Bolivia)"/>
 		<code value="qu-ec" description="Quechua (Ecuador)"/>
 		<code value="qu-pe" description="Quechua (Peru)"/>
 		<code value="ro" description="Romanian"/>
-		<code value="ro-mo" description="Romanian (Moldavia)"/>
+		<code value="ro-md" description="Romanian (Moldova)"/>
+		<code value="ro-mo" description="Romanian (Moldavia) - DEPRECATED (MO is Macao; use ro-md)"/>
 		<code value="rm" description="Romansh, Rhaeto-Romanic"/>
 		<code value="rn" description="Rundi, Kirundi"/>
 		<code value="ru" description="Russian"/>
-		<code value="ru-mo" description="Russian (Moldavia)"/>
+		<code value="ru-md" description="Russian (Moldova)"/>
+		<code value="ru-mo" description="Russian (Moldavia) - DEPRECATED (MO is Macao; use ru-md)"/>
 		<code value="se" description="Northern Sami"/>
-		<code value="sz" description="Sami (Lappish) - DEPRECATED"/>
+		<code value="sz" description="Sami (Lappish) - DEPRECATED (use se, Northern Sami)"/>
 		<code value="sm" description="Samoan"/>
 		<code value="sg" description="Sango"/>
 		<code value="sc" description="Sardinian"/>
 		<code value="sr" description="Serbian"/>
 		<code value="sr-ba" description="Serbian (Bosnia and Herzegovina)"/>
-		<code value="sb" description="Serbian - DEPRECATED"/>
+		<code value="sb" description="Serbian - DEPRECATED (use sr)"/>
 		<code value="sn" description="Shona"/>
 		<code value="sd" description="Sindhi"/>
 		<code value="si" description="Sinhala, Sinhalese"/>
@@ -484,7 +486,7 @@
 		<code value="es-ni" description="Spanish (Nicaragua)"/>
 		<code value="es-pr" description="Spanish (Puerto Rico)"/>
 		<code value="su" description="Sundanese"/>
-		<code value="sx" description="Sutu - DEPRECATED"/>
+		<code value="sx" description="Sutu - DEPRECATED (use st)"/>
 		<code value="sw" description="Swahili"/>
 		<code value="ss" description="Swati, Swazi"/>
 		<code value="sv" description="Swedish"/>
@@ -517,7 +519,7 @@
 		<code value="wo" description="Wolof"/>
 		<code value="xh" description="Xhosa"/>
 		<code value="yi" description="Yiddish"/>
-		<code value="ji" description="Yiddish - DEPRECATED"/>
+		<code value="ji" description="Yiddish - DEPRECATED (use yi)"/>
 		<code value="yo" description="Yoruba"/>
 		<code value="za" description="Zhuang, Chuang"/>
 		<code value="zu" description="Zulu"/>

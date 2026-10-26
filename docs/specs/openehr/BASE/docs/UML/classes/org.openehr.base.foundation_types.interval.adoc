@@ -49,7 +49,7 @@ h|*1..1 +
 e: `T[1]` +
 ): `<<_boolean_class,Boolean>>` +
  +
-__Post_result__: `Result = (lower_unbounded or lower_included and v >= lower) or v > lower and (upper_unbounded or upper_included and v \<= upper or v < upper)`
+__Post_result__: `Result = (lower_unbounded or (lower_included and e >= lower) or e > lower) and (upper_unbounded or (upper_included and e \<= upper) or e < upper)`
 a|True if the value `e` is properly contained in this Interval.
 
 h|*1..1 +
