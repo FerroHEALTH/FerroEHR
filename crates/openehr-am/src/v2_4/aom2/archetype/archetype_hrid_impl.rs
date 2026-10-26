@@ -91,7 +91,7 @@ impl FromStr for ArchetypeHrid {
             rm_class: (*class).to_owned(),
             concept_id: concept_id.to_owned(),
             release_version,
-            version_status: VersionStatus::from_wire(version_status),
+            version_status,
             build_count,
         })
     }
@@ -111,17 +111,38 @@ pub fn version_marker(s: &str) -> Option<usize> {
         .rposition(|w| matches!(w, [b'.', b'v', third] if third.is_ascii_digit()))
 }
 
+/// The HRID version modifiers and the `VERSION_STATUS` each names: the
+/// `version_status` row of `org.openehr.am.aom2.archetype_hrid.adoc` gives
+/// `"rc"` for release_candidate, `"alpha"`, `"beta"`, and the empty string for
+/// released (`master04-versioning.adoc` §Version Numbering).
+const MODIFIERS: [(&str, VersionStatus); 3] = [
+    ("rc", VersionStatus::ReleaseCandidate),
+    ("alpha", VersionStatus::Alpha),
+    ("beta", VersionStatus::Beta),
+];
+
+/// The `VERSION_STATUS` an HRID version modifier names, the empty modifier
+/// naming `released`; `None` for a token the HRID grammar does not define.
+#[must_use]
+pub fn version_status_of_modifier(modifier: &str) -> Option<VersionStatus> {
+    if modifier.is_empty() {
+        return Some(VersionStatus::Released);
+    }
+    MODIFIERS
+        .iter()
+        .find(|(token, _)| *token == modifier)
+        .map(|(_, status)| status.clone())
+}
+
 /// The version tail as `(release_version, status, build_count)`.
-fn parse_version(version: &str) -> Result<(String, &'static str, String), HridError> {
-    let (status, numeric, build) = if let Some((numeric, build)) = split_status(version, "-rc") {
-        ("rc", numeric, build)
-    } else if let Some((numeric, build)) = split_status(version, "-alpha") {
-        ("alpha", numeric, build)
-    } else if let Some((numeric, build)) = split_status(version, "-beta") {
-        ("beta", numeric, build)
-    } else {
-        ("", version, "")
-    };
+fn parse_version(version: &str) -> Result<(String, VersionStatus, String), HridError> {
+    let (status, numeric, build) = MODIFIERS
+        .iter()
+        .find_map(|(modifier, status)| {
+            split_status(version, &format!("-{modifier}"))
+                .map(|(numeric, build)| (status.clone(), numeric, build))
+        })
+        .unwrap_or((VersionStatus::Released, version, ""));
     let mut parts = numeric.split('.');
     let major = parts.next().unwrap_or("0");
     let minor = parts.next().unwrap_or("0");
@@ -172,6 +193,24 @@ impl ArchetypeHrid {
         self.release_version.split('.').nth(2).unwrap_or("")
     }
 
+    /// Returns the HRID version modifier of `version_status`: `rc`, `alpha`,
+    /// `beta`, or the empty string for released.
+    ///
+    /// The `version_status` row of `org.openehr.am.aom2.archetype_hrid.adoc`.
+    /// `build` has no modifier in the HRID grammar (`master04-versioning.adoc`
+    /// §Version Numbering) and writes the empty one; an out-of-set status
+    /// writes its own token.
+    #[must_use]
+    pub fn version_modifier(&self) -> &str {
+        match &self.version_status {
+            VersionStatus::ReleaseCandidate => "rc",
+            VersionStatus::Alpha => "alpha",
+            VersionStatus::Beta => "beta",
+            VersionStatus::Released | VersionStatus::Build => "",
+            VersionStatus::Other(token) => token.as_str(),
+        }
+    }
+
     /// Returns the full version identifier string.
     ///
     /// `version_id` (`org.openehr.am.aom2.archetype_hrid.adoc` §Functions):
@@ -183,13 +222,7 @@ impl ArchetypeHrid {
     /// modifier.
     #[must_use]
     pub fn version_id(&self) -> String {
-        let modifier = match self.version_status {
-            VersionStatus::ReleaseCandidate => "rc",
-            VersionStatus::Alpha => "alpha",
-            VersionStatus::Beta => "beta",
-            VersionStatus::Released | VersionStatus::Build => "",
-            VersionStatus::Other(ref s) => s.as_str(),
-        };
+        let modifier = self.version_modifier();
         if modifier.is_empty() {
             self.release_version.clone()
         } else {

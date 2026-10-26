@@ -1859,6 +1859,57 @@ fn master05_interval_event() {
     assert_eq!(event["width"]["value"], json!("P30D"));
 }
 
+/// An abstract `EVENT` node builds as the `INTERVAL_EVENT` its input asks
+/// for when it names the width (RM data_structures
+/// `master06-history_package.adoc` §EVENT; master05 §INTERVAL_EVENT), and as
+/// a `POINT_EVENT` otherwise.
+#[test]
+fn an_abstract_event_with_a_width_builds_as_an_interval_event() {
+    let events_aql = format!("{}/data[at0001]/events[at0002]", entry_aql("OBSERVATION"));
+    let mut entry_node = container("OBSERVATION", &entry_aql("OBSERVATION"), "entry");
+    entry_node.node_id = Some(entry_archetype("OBSERVATION"));
+    entry_node.children = vec![repeating("EVENT", &events_aql, "any_event")];
+    let wt = web_template(root_node(vec![entry_node]));
+
+    let built = composition_from_flat(
+        &flat_of(&[
+            ("test/entry/any_event:0/width", json!("PT1H")),
+            ("test/entry/any_event:0/math_function|code", json!("145")),
+            ("test/entry/any_event:0|sample_count", json!(3)),
+        ]),
+        &wt,
+        NOW,
+    )
+    .expect("an abstract EVENT with a width builds");
+    let event = &built["content"][0]["data"]["events"][0];
+    assert_eq!(event["_type"], json!("INTERVAL_EVENT"));
+    assert_eq!(event["width"]["value"], json!("PT1H"));
+    assert_eq!(
+        event["math_function"]["defining_code"]["code_string"],
+        json!("145")
+    );
+    assert_eq!(event["sample_count"], json!(3));
+
+    let again = composition_to_flat(&built, &wt).expect("the interval flattens");
+    assert_eq!(again["test/entry/any_event:0/width"], json!("PT1H"));
+    let rebuilt = composition_from_flat(&again, &wt, NOW).expect("and builds again");
+    assert_eq!(rebuilt["content"][0]["data"]["events"][0], *event);
+
+    let point = composition_from_flat(
+        &flat_of(&[(
+            "test/entry/any_event:0/time",
+            json!("2021-12-21T16:02:58+01:00"),
+        )]),
+        &wt,
+        NOW,
+    )
+    .expect("an abstract EVENT without a width builds");
+    assert_eq!(
+        point["content"][0]["data"]["events"][0]["_type"],
+        json!("POINT_EVENT")
+    );
+}
+
 /// master05 §POINT_EVENT — 1 row.
 #[test]
 fn master05_point_event() {

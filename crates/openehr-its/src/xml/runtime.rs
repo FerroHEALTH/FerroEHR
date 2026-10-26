@@ -115,6 +115,26 @@ pub enum XmlError {
         /// The class's diagnosis.
         detail: String,
     },
+    /// A child element the parent's type does not declare. Every complex type of
+    /// the ITS-XML schemas is a closed `xs:sequence`, and an element outside the
+    /// content model is invalid (XML Schema 1.1 Part 1 §3.4.4.2), so it is
+    /// refused rather than skipped as if it were absent.
+    #[error("<{child}> is not a child element {owner} declares")]
+    UndeclaredChild {
+        /// The type, or the text element, that holds no such child.
+        owner: String,
+        /// The undeclared element's name.
+        child: String,
+    },
+    /// The document's root element is not the global element the schema
+    /// publishes for the type being read.
+    #[error("the root element is <{found}>, the schema publishes <{expected}>")]
+    UnexpectedRoot {
+        /// The element the schema publishes.
+        expected: String,
+        /// The element the document starts with.
+        found: String,
+    },
     /// A reader, decoder, or lexical conversion failed underneath the parse.
     ///
     /// The cause is carried as [`std::error::Error::source`] (RFC 0201) so a
@@ -1036,6 +1056,33 @@ pub fn from_xml<T: FromXml>(xml: &str) -> Result<T, XmlError> {
     }
 }
 
+/// Deserialize a value from a document whose root element must be `root`.
+///
+/// `root` is the global element the schema publishes for the type: for an
+/// operational template `<template>` of type `OPERATIONAL_TEMPLATE` (ITS-XML
+/// `components/AM/Release-1.4/Template.xsd`). The root is compared by local
+/// name, as every element is.
+///
+/// # Errors
+/// [`XmlError::UnexpectedRoot`] for another root element, and the parse
+/// errors of [`from_xml`].
+pub fn from_xml_rooted<T: FromXml>(xml: &str, root: &str) -> Result<T, XmlError> {
+    let mut reader = XmlReader::new(xml);
+    loop {
+        match reader.read()? {
+            XmlEvent::Start(s) if s.name == root => return T::from_xml(&mut reader, &s),
+            XmlEvent::Start(s) => {
+                return Err(XmlError::UnexpectedRoot {
+                    expected: root.to_owned(),
+                    found: s.name,
+                });
+            }
+            XmlEvent::Eof => return Err(XmlError::Parse("no root element".into())),
+            _ => {}
+        }
+    }
+}
+
 /// A value that deserializes from canonical openEHR XML. `from_xml` is called
 /// after the element's start tag has been read (`start`); it consumes events
 /// through the matching end tag.
@@ -1046,13 +1093,20 @@ pub trait FromXml: Sized {
 }
 
 impl FromXml for String {
-    fn from_xml(reader: &mut XmlReader, _start: &StartTag) -> Result<Self, XmlError> {
+    fn from_xml(reader: &mut XmlReader, start: &StartTag) -> Result<Self, XmlError> {
         let mut text = String::new();
         loop {
             match reader.read()? {
                 XmlEvent::Text(t) => text.push_str(&t),
                 XmlEvent::End => break,
-                XmlEvent::Start(_) => reader.skip_element()?, // stray child in a text leaf
+                // NOTE: a text element has a simple type, so a child element is outside
+                // its content model (XML Schema 1.1 Part 1 §3.4.4.2).
+                XmlEvent::Start(child) => {
+                    return Err(XmlError::UndeclaredChild {
+                        owner: format!("<{}>", start.name),
+                        child: child.name,
+                    });
+                }
                 XmlEvent::Eof => return Err(XmlError::Parse("EOF in text element".into())),
             }
         }

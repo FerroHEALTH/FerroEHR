@@ -17,6 +17,14 @@ workflow refuses a tag that has no matching section here.
 
 ### Added
 
+- **The FLAT builder builds an `INTERVAL_EVENT` at an abstract `EVENT` node
+  when the input names its width** (#3898), on the 0.0.102 crate line. RM
+  data_structures §EVENT makes `EVENT` abstract over `POINT_EVENT` and
+  `INTERVAL_EVENT`, and a `/width`, `/math_function` or `|sample_count` under
+  such a node (master05 §INTERVAL_EVENT) now chooses the interval; without
+  them the node still builds as a `POINT_EVENT`. The flattener writes those
+  rows back for an interval event held at an abstract node.
+
 - **Opaque access tokens are checked by token introspection under `[auth]
   mode = "introspection"`** (#4033). `ferrohealth-smart`'s introspection
   check (RFC 7662) posts each bearer token to the issuer's introspection
@@ -80,6 +88,12 @@ workflow refuses a tag that has no matching section here.
   points at that list. Upgrade: remove `user_role` (on Helm chart 16.0.0,
   `config.authz.rbac.user_role`), and give each Basic user the roles it needs,
   for example `roles = ["USER"]`.
+
+- **The `openehr-rm` tests take the change-type and lifecycle-state codes
+  from `openehr_term::codes`** (#4053), in the codegen templates of both
+  generations, so no literal code or rubric can drift from the embedded
+  terminology.
+
 - **Breaking: `ihe-atna`'s forwarder delivers the audit trail, and
   `[audit.fhir_feed] batch_size` and `max_retries` are gone** (#4029). Syslog
   frames are stored in `ihe-atna`'s spool and delivered from it with
@@ -176,6 +190,20 @@ Shipped with functional changes because: the patched `ferrohealth-smart` arrives
   GHSA-vphj-3f8c-5hpx).
 
 ### Fixed
+
+- **An archetype HRID's version status reads as the `VERSION_STATUS` it
+  names** (#4051), on the 0.0.102 crate line. AOM2
+  `ARCHETYPE_HRID.version_status` maps `-rc`, `-alpha`, `-beta` and no
+  modifier to `release_candidate`, `alpha`, `beta` and `released`, where `rc`
+  and the empty modifier read as `VersionStatus::Other`. `openehr-adl` writes the
+  HRID back with the modifier (`-rc`, never `-release_candidate`), so parse
+  and write are inverse.
+- **A party reference whose type is not the builder's default survives a FLAT
+  or STRUCTURED round trip** (#4052). master05 gives `PARTY_REF.type` no
+  row, so a `_health_care_facility` that is not an `ORGANISATION`, or a
+  `_provider`, performer, composer, feeder-audit party or `PARTY_PROXY` datum
+  that is not a `PERSON`, is now written as `|raw` (master04 §Raw canonical
+  JSON) and read back whole; it came back with the default type.
 
 - **An ordinal of an archetype read in the ADL 1.4 dialect lists its
   at-codes** (#4059). The `symbol` of each `[value, symbol]` row kept the
