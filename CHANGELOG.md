@@ -83,6 +83,19 @@ workflow refuses a tag that has no matching section here.
   0.1.5, `ihe-atna` and `ehds-logging` 0.2.13 and `ferrobridge-term` 0.1.139.
   Helm chart 16.0.1 states the new default.
 
+- **Breaking: the XML readers of `openehr-its` refuse a document outside
+  the schema** (#3893), on the 0.0.103 crate line. A child element a type's
+  closed `xs:sequence` does not declare, or a child element inside a text
+  element, is refused with `XmlError::UndeclaredChild` (XML Schema 1.1 Part 1
+  §3.4.4.2) where it was skipped as if absent, and `opt14::from_xml` and the
+  AOM2 readers refuse a root other than the one the schema publishes
+  (`<template>`, ITS-XML `components/AM/Release-1.4/Template.xsd`) with
+  `XmlError::UnexpectedRoot`. One tool-written element no schema declares,
+  `match_negated` on a `C_ATTRIBUTE`, is read when `false` and refused when
+  `true` (`XmlError::UnsupportedExtension`): a negated match changes the
+  constraint, and no schema says how. A CDR upload of a template outside the
+  schema is now refused; the CNF Robot `valid_templates/validation/clinical_content_validation.opt`
+  and two epSOS CKM templates are such documents (#4077, #4078).
 - **Three AQL shapes no longer read every composition** (#4089, #4090),
   measured against a release build on one host holding about 51 000
   compositions. A population query ordered by `c/context/start_time/value`
@@ -224,6 +237,13 @@ Shipped with functional changes because: the patched `ferrohealth-smart` arrives
   GHSA-vphj-3f8c-5hpx).
 
 ### Fixed
+
+- **A BASE 1.3 `TERMINOLOGY_CODE` keeps its `terminology_id` in XML**
+  (#4076). ITS-XML 1.0.2 types `TRANSLATION_DETAILS.language` and the other
+  slots that hold one as `CODE_PHRASE`, whose `terminology_id` carries a
+  `<value>` child; the codec wrote and read bare text instead, so an
+  XSD-valid document read with an empty `terminology_id`. It now writes and
+  reads the `TERMINOLOGY_ID` shape.
 
 - **An archetype HRID's version status reads as the `VERSION_STATUS` it
   names** (#4051), on the 0.0.102 crate line. AOM2
