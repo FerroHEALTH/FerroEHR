@@ -332,12 +332,12 @@ pub fn OverviewTab() -> impl IntoView {
     view! { {page} }
 }
 
-/// The word the family readiness document spells `state` with.
+/// The word the health tab shows for an indicator's `state`.
 const fn state_word(state: State) -> &'static str {
     match state {
-        State::Up => "up",
-        State::Degraded => "degraded",
-        State::Down => "down",
+        State::Up => "UP",
+        State::Degraded => "DEGRADED",
+        State::Down => "DOWN",
     }
 }
 
