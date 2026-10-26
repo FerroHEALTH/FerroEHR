@@ -578,7 +578,7 @@ authenticated `/management` surface.
 | Surface | Default | Why it is public, or how it is gated |
 |---|---|---|
 | `/health`, `/health/liveness` | **always on, unauthenticated** | Orchestrator probes carry no credential. Both answer a plain-text `OK` with no I/O behind them. |
-| `/health/readiness` | **always on, unauthenticated** | An orchestrator probe: `200` while the aggregate is up or degraded, `503` when a required component is down. The body is the aggregate status and each indicator's name and status, nothing more. The detail is `/management/health`. |
+| `/health/readiness` | **always on, unauthenticated** | An orchestrator probe: `200` while ready, `503` while the process boots or drains or an indicator is `down`. The body is the state, the phase and each indicator's name and state, nothing more. The detail is `/management/health`. |
 | `{rest root}/status` | **always on, unauthenticated** | A documented client contract: status, server version, ITS-REST version, timestamp and the deployment profile. The licence, the deployment gaps and the support period are `/management/status`. |
 | `{rest root}/.well-known/smart-configuration` | mounted only with SMART on | SMART App Launch service discovery, read before the client holds any token (ITS-REST SMART App Launch, *Service Discovery*). |
 | `OPTIONS {base path}` | **always on, unauthenticated** | The ITS-REST System API's options manifest, which its released OpenAPI document declares without security. |

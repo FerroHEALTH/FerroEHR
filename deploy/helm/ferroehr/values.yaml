@@ -711,9 +711,9 @@ config:
   # Every route enforces SMART on openEHR scopes: a Basic user's `scopes` and a
   # token's `scope` claim must grant what it calls; a subject listed in
   # `scopeless_subjects` whose token carries no resource scope meets every
-  # SMART on openEHR requirement. `basic.cache_ttl_seconds` (default 0) keeps a
+  # SMART on openEHR requirement. `basic.cache_ttl_seconds` (default 300) keeps a
   # verified Basic credential for that long, so a repeat request skips the
-  # Argon2id derivation; a busy Basic client wants a value such as 60.
+  # Argon2id derivation; 0 checks every request.
   # `mode: introspection` checks opaque tokens at the issuer's RFC 7662
   # endpoint, authenticating with an `introspection.client` grant (its
   # `client_secret_file` a mounted secret) instead of the issuer's key set.

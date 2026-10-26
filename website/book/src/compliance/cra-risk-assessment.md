@@ -413,7 +413,7 @@ corruptions"
   `[audit.store] verify_interval_seconds` (default `86400`; `0` turns it off).
   A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` with
   `kind` `damage` or `unverifiable`, and shown by the `audit_chain` indicator
-  on `GET /health/readiness` (`DOWN` when damaged, `DEGRADED` when
+  on `GET /health/readiness` (`DEGRADED` when damaged or
   unverifiable), which never flips readiness. Each replica runs its own check.
   A deployment that sets the interval to `0` reports a corruption only when
   an operator runs `audit.verify_audit_chain()`.

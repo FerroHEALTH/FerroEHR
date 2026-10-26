@@ -34,7 +34,6 @@ use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig
 use ferroehr::config::server::{AdminConfig, ServerConfig};
 use ferroehr::config::smart::SmartConfig;
 use ferroehr::telemetry::build_info::BuildInfo;
-use ferroehr::telemetry::health::HealthRegistry;
 use ferroehr::telemetry::log_reload::LogReload;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
@@ -614,7 +613,6 @@ async fn full_app() -> Router {
         },
         prometheus: Some(recorder().clone()),
         log_reload: Some(log_reload()),
-        health: HealthRegistry::default(),
         build_info: BuildInfo::current(),
         ..Observability::default()
     };

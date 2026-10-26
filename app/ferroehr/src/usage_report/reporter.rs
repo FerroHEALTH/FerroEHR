@@ -25,7 +25,6 @@ use crate::licence::document::Use;
 use crate::licence::state::LicenceState;
 use crate::service::error::ErrorChain;
 use crate::telemetry::build_info::BuildInfo;
-use crate::telemetry::health::{HealthIndicator as _, HealthStatus};
 use crate::telemetry::indicators::{DbHealth, MigrationsHealth};
 use crate::usage_report::config::{Deployment, Switch, UsageReportConfig};
 use crate::usage_report::payload::{
@@ -34,6 +33,8 @@ use crate::usage_report::payload::{
 };
 use crate::usage_report::store::{self, DailyClaim, StoreError};
 use crate::usage_report::window;
+use ferrohealth_health::document::State;
+use ferrohealth_health::registry::HealthIndicator as _;
 
 /// The book page that carries the full notice.
 pub const NOTICE_URL: &str = "https://ferroehr.eu/docs/latest/usage-report.html";
@@ -343,12 +344,12 @@ impl UsageReporter {
     /// Fills the envelope around `event` from the identity, the database and
     /// the host.
     async fn assemble(&self, instance_id: uuid::Uuid, event: Event) -> Result<Report, ReportError> {
-        let db_ok = DbHealth::new(self.pool.clone()).check().await.status == HealthStatus::Up;
+        let db_ok = DbHealth::new(self.pool.clone()).check().await.state() == State::Up;
         let migrations_ok = MigrationsHealth::new(self.pool.clone())
             .check()
             .await
-            .status
-            == HealthStatus::Up;
+            .state()
+            == State::Up;
         let postgres_major = store::postgres_major(&self.pool).await?;
         Ok(Report {
             schema: SchemaV2,

@@ -317,11 +317,12 @@ product_scope = ""
 #? scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds"]
 #? roles = ["ADMIN", "USER"]
 # How long a Basic credential that verified is kept, so a repeat request skips
-# the Argon2id derivation (0 = every request). The entry is a keyed hash of
-# the credential, never the password; the TTL bounds how long a removed user
-# keeps working.
+# the Argon2id derivation, which costs 10 to 15 ms of CPU per check. Default
+# 300; 0 turns the cache off and checks every request. The entry is a keyed
+# hash of the credential, never the password, and only a credential that
+# verified is kept; the TTL bounds how long a removed user keeps working.
 #? [auth.basic]
-#? cache_ttl_seconds = 60
+#? cache_ttl_seconds = 300
 
 # ── [authz] — RBAC + ABAC ─────────────────────────────────────────────────────
 [authz]

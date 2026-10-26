@@ -377,7 +377,7 @@ probes_health_broken() {
     assert_eq "200" "$(http_code "$CDR/health/liveness")" \
       "liveness must be process-local — restarting cannot fix a dependency"
     local body; body="$(curl -s "$CDR/health/readiness")"
-    assert_contains "$body" '"status":"DOWN"' "readiness must name the failing component"
+    assert_contains "$body" '"state":"down"' "readiness must name the failing component"
     assert_contains "$(curl -s -u "$BASIC" "$CDR/management/health")" '"detail"' \
       "the management view must say why the component is down"
   else

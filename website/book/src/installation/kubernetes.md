@@ -662,7 +662,7 @@ access level, nothing to forget:
 | Probe | Route | Contract |
 |---|---|---|
 | liveness | `/health/liveness` | 200 while the process is up; touches no dependency |
-| readiness | `/health/readiness` | 200 (UP/DEGRADED) or 503 (DOWN): checks the database ping, migrations applied, the audit sender and the event outbox, each bounded at one second |
+| readiness | `/health/readiness` | 200 (up or degraded) or 503 (down, booting or draining): checks the database ping, migrations applied, the audit sender and the event outbox, each bounded at one second |
 | startup | `/health/liveness` | the same constant, with a long failure threshold, so a slow first boot is not killed mid-migration |
 
 That split is deliberate: a database outage must fail *readiness* (the pod stops
@@ -679,9 +679,9 @@ loop).
 
 > [!WARNING]
 > **Migrations run only at boot, so a replaced or wiped database leaves the pods
-> NotReady until something migrates it.** Readiness reports
-> `"migrations": {"status":"DOWN","detail":"core schema tables missing (migrations
-> not applied)"}` while `"db"` reads `UP`: the pod reaches PostgreSQL, finds no
+> NotReady until something migrates it.** Readiness reports the `migrations`
+> indicator `down` (its detail on `/management/health`: `core schema tables
+> missing (migrations not applied)`) while `db` reads `up`: the pod reaches PostgreSQL, finds no
 > schema, and does not migrate again, because migration is a startup step.
 > Liveness keeps passing (correctly: the process is healthy), so the kubelet never
 > restarts the container and the Deployment sits with no ready replicas and no
@@ -689,7 +689,7 @@ loop).
 >
 > ```shell
 > kubectl -n ferroehr get pods                      # Running, not READY
-> curl -s http://ferroehr:8080/health/readiness     # 503, "migrations" DOWN, "db" UP
+> curl -s http://ferroehr:8080/health/readiness     # 503, "migrations" down, "db" up
 > kubectl -n ferroehr rollout restart deploy/ferroehr
 > ```
 >

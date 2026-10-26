@@ -263,3 +263,23 @@ pub(crate) fn excluded(name: &str) -> Option<&'static str> {
 pub(crate) fn service_corpus_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/fixtures/service")
 }
+
+/// The service-corpus OPTs that are XSD-invalid first-hand, so the strict XML
+/// reader refuses them (#3893): each named by file with the schema requirement
+/// it breaks. Every other corpus OPT must parse.
+pub(crate) const SCHEMA_INVALID_SERVICE_OPTS: &[(&str, &str)] = &[(
+    "clinical_content_validation.opt",
+    "a C_COMPLEX_OBJECT carries <children> directly; its-xml-1.0.2-nsv1 Archetype.xsd \
+     C_COMPLEX_OBJECT extends C_DEFINED_OBJECT with the sequence (attributes) only \
+     (XML Schema 1.1 Part 1 §3.4.4.2)",
+)];
+
+/// The adjudication of `path` when it is a [`SCHEMA_INVALID_SERVICE_OPTS`]
+/// file: its citation.
+pub(crate) fn schema_invalid_service_opt(path: &Path) -> Option<&'static str> {
+    let name = path.file_name().and_then(std::ffi::OsStr::to_str)?;
+    SCHEMA_INVALID_SERVICE_OPTS
+        .iter()
+        .find(|(file, _)| *file == name)
+        .map(|(_, citation)| *citation)
+}

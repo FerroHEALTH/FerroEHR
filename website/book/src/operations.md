@@ -316,11 +316,12 @@ below.
 > database is replaced, wiped, or reachable-but-empty does not migrate. It reports
 >
 > ```json
-> {"status":"DOWN","components":{"db":{"status":"UP"},
->  "migrations":{"status":"DOWN","detail":"core schema tables missing (migrations not applied)"}}}
+> {"state":"down","phase":"serving","indicators":[{"name":"db","state":"up"},
+>  {"name":"migrations","state":"down"}]}
 > ```
 >
-> on `/health/readiness` (`503`), leaves the load balancer's rotation, and keeps
+> on `/health/readiness` (`503`), with the detail `core schema tables missing
+> (migrations not applied)` on `/management/health`, leaves the load balancer's rotation, and keeps
 > passing liveness (correctly, since the process is healthy) so nothing restarts
 > it. Under Kubernetes that is a Deployment sitting at `0/N` ready with no error
 > after the first one.
@@ -932,7 +933,7 @@ its own probes.
 |---|---|---|
 | `GET /health` | constant `200 OK` (plain text `OK`), touches nothing | load balancers, `docker` `HEALTHCHECK`, anything that must never be auth-gated |
 | `GET /health/liveness` | identical to `/health`, the same constant answer under the orchestrator-conventional path | Kubernetes `livenessProbe` and `startupProbe` |
-| `GET /health/readiness` | `200` when the aggregate is up or degraded, `503` when a **required** component is down; JSON body with every indicator, each bounded to one second | Kubernetes `readinessProbe`, ops dashboards |
+| `GET /health/readiness` | `200` while ready, `503` while the process boots or drains or an indicator is `down`; the FerroHEALTH readiness document (`state`, `phase` and each indicator's `name` and `state`), each check bounded to one second. Only `db` and `migrations` read `down`; every other indicator reads at worst `degraded` | Kubernetes `readinessProbe`, ops dashboards |
 | `GET /ferroehr/rest/status` | public status document: `status`, `server_version`, `openehr_rest_api_version`, `timestamp` and `deployment.profile`. The full document, which adds `licence` (the grant in force: `state`, `use`, `licensee`, `not_after`, `configured_token`), the whole `deployment` posture (the declared profile, the separations still open and the ones accepted by name) and `support` (`release_date`, `support_ends`, `status`), is `GET /management/status` | version/identity checks; the URL the container's `ferroehr healthcheck` subcommand probes |
 | `GET /management/*` | ops introspection; see below | operators, off by default, enable deliberately |
 
