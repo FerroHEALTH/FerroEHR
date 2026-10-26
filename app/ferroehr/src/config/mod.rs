@@ -69,10 +69,9 @@ pub struct FerroEhrConfig {
     /// `[storage]` — one DSN per storage domain (`clinical`, `party`,
     /// `linkage`, `audit`), each defaulting to `[db].url`.
     pub storage: crate::db::domain::StorageConfig,
-    /// `[log]` — logging.
-    pub log: crate::telemetry::config::LogConfig,
-    /// `[telemetry]` — OpenTelemetry export.
-    pub telemetry: crate::telemetry::config::OtelConfig,
+    /// `[telemetry]`: the console, the request log and the OpenTelemetry
+    /// export, the family's shared section.
+    pub telemetry: ferrohealth_telemetry::section::TelemetrySection,
     /// `[auth]` — authentication: the `ferrohealth-smart` section, whose
     /// serialization writes every secret as `***`.
     pub auth: ferrohealth_smart::config::AuthSection,
@@ -1770,7 +1769,10 @@ mod tests {
         });
         c.usage_report.endpoint = leaky(11);
         c.authz.abac.remote.server = Some(leaky(12));
-        c.telemetry.otlp_endpoint = Some(leaky(13));
+        c.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
+            endpoint: leaky(13),
+            ..ferrohealth_telemetry::section::OtlpSection::default()
+        });
         c.multimedia.endpoint = Some(leaky(14));
 
         let toml = rendered(&c);

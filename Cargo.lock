@@ -2619,6 +2619,7 @@ dependencies = [
  "ferrohealth-health",
  "ferrohealth-secret",
  "ferrohealth-smart",
+ "ferrohealth-telemetry",
  "futures",
  "hmac 0.13.0",
  "http",
@@ -2643,12 +2644,9 @@ dependencies = [
  "openehr-sdt 0.0.104",
  "openehr-term",
  "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry-prometheus",
  "opentelemetry_sdk",
  "pgp",
  "pprof",
- "prometheus",
  "quick-xml 0.42.0",
  "rand 0.8.7",
  "regex",
@@ -2718,6 +2716,7 @@ dependencies = [
  "ferrohealth-health",
  "ferrohealth-secret",
  "ferrohealth-smart",
+ "ferrohealth-telemetry",
  "futures",
  "governor",
  "http",
@@ -2735,11 +2734,8 @@ dependencies = [
  "openehr-rm",
  "openehr-sdt 0.0.104",
  "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
  "pem 4.0.0",
  "pprof",
- "prometheus",
  "rcgen",
  "reqwest",
  "rustls",
@@ -2758,7 +2754,6 @@ dependencies = [
  "tower-http 0.7.1",
  "tower_governor",
  "tracing",
- "tracing-opentelemetry",
  "tracing-subscriber",
  "url",
  "urlencoding",
@@ -2781,6 +2776,7 @@ dependencies = [
  "ferroehr-rest",
  "ferrohealth-config",
  "ferrohealth-health",
+ "ferrohealth-telemetry",
  "openehr-its",
  "openehr-sdt 0.0.104",
  "reqwest",
@@ -2913,6 +2909,29 @@ dependencies = [
  "tower",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "ferrohealth-telemetry"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a2f28c60ec0d7f865d0e5af7acea704c0107204e8adcd77d87dc4d807735780"
+dependencies = [
+ "axum",
+ "ferrohealth-secret",
+ "http",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry-prometheus",
+ "opentelemetry_sdk",
+ "prometheus",
+ "rustls",
+ "secrecy",
+ "serde",
+ "thiserror 2.0.21",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -5667,32 +5686,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "opentelemetry-http"
-version = "0.33.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "302249bd8ee804789faaa7b5b2cbf79bc61cb864714079c644e3828af5b7e811"
-dependencies = [
- "async-trait",
- "bytes",
- "http",
- "opentelemetry",
- "reqwest",
-]
-
-[[package]]
 name = "opentelemetry-otlp"
 version = "0.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0756af24841e367128ef31c831999937b8b5c5197d47914590d8f4e2e88c2e1a"
 dependencies = [
  "http",
- "httpdate",
  "opentelemetry",
- "opentelemetry-http",
  "opentelemetry-proto",
  "opentelemetry_sdk",
  "prost",
- "reqwest",
  "thiserror 2.0.21",
  "tokio",
  "tonic",
@@ -6457,7 +6460,6 @@ dependencies = [
  "lazy_static",
  "memchr",
  "parking_lot",
- "protobuf",
  "thiserror 2.0.21",
 ]
 
@@ -6491,26 +6493,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f94967dc7688f3054c7fac87473ffae4cc4c3904800e2d9f5b857246d8963b0a"
 dependencies = [
  "prost",
-]
-
-[[package]]
-name = "protobuf"
-version = "3.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d65a1d4ddae7d8b5de68153b48f6aa3bba8cb002b243dbdbc55a5afbc98f99f4"
-dependencies = [
- "once_cell",
- "protobuf-support",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "protobuf-support"
-version = "3.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e36c2f31e0a47f9280fb347ef5e461ffcd2c52dd520d8e216b52f93b0b0d7d6"
-dependencies = [
- "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -8783,9 +8765,11 @@ dependencies = [
  "hyper-util",
  "percent-encoding",
  "pin-project",
+ "rustls-native-certs",
  "socket2",
  "sync_wrapper",
  "tokio",
+ "tokio-rustls",
  "tokio-stream",
  "tower",
  "tower-layer",

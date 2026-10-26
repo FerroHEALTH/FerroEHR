@@ -44,21 +44,17 @@ argon2.workspace = true
 url.workspace = true
 async-trait.workspace = true
 ferrohealth-config.workspace = true
+ferrohealth-telemetry.workspace = true
 jiff.workspace = true
 reqwest.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
-# Observability (telemetry init): the OTLP export layer + metrics facade +
-# Prometheus recorder. The single `tracing` API fans out to stdout logs and
-# (opt-in) OTLP spans; `metrics` is pulled via the Prometheus recorder.
-tracing-opentelemetry.workspace = true
+# FerroEHR's own instruments on the shared meter (the provider, the OTLP
+# export and the Prometheus reader are ferrohealth-telemetry's) and the
+# span-timing capture behind `[management] flame_file`.
 tracing-flame.workspace = true
 opentelemetry.workspace = true
-opentelemetry_sdk.workspace = true
-opentelemetry-otlp.workspace = true
-opentelemetry-prometheus.workspace = true
-prometheus.workspace = true
 jiff-sqlx.workspace = true
 # FHIR reverse-mapping: `openehr_sdt::flat` FLAT conversion returns an
 # `IndexMap` FLAT map the reverse transform reads leaf-by-leaf.

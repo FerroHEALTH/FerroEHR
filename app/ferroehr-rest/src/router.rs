@@ -56,7 +56,6 @@ use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetReques
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::timeout::TimeoutLayer;
-use tower_http::trace::TraceLayer;
 
 use crate::api::system;
 use crate::extensions::access::authn::{self, Authenticator};
@@ -67,6 +66,7 @@ use crate::overview::{error, status};
 use crate::smart;
 use crate::state::AppState;
 use ferroehr::config::management::AccessLevel;
+use ferrohealth_telemetry::request_log::{self, Completed, Recorder, RequestId, RequestLog};
 
 /// Per-request timeout.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
@@ -131,13 +131,6 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
     // Above the audit layer so an over-large body is refused before it is read,
     // buffered or audited; the outer `RequestBodyLimitLayer` is the tree ceiling.
     let api = api.layer(from_fn_with_state(state.clone(), crate::limits::middleware));
-    let api = api
-        .layer(axum::middleware::from_fn(
-            management::http_metrics::http_metrics,
-        ))
-        .layer(axum::middleware::from_fn(
-            management::http_metrics::root_span,
-        ));
 
     // Beyond `cfg.max_in_flight` concurrent API requests the excess is shed as
     // `503` + `Retry-After` rather than queued until memory runs out; `0`
@@ -163,7 +156,14 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
     // trail (#3244): every management request is recorded as a system-domain
     // access, `/management/loggers` writes included.
     let audit_state = state.clone();
-    let inner: Router = with_shared_stack(inner, cfg.server.limits.ceiling(), cors, state);
+    let request_log = observability
+        .request_log
+        .clone()
+        .with_recorder(Arc::new(UsageWindow {
+            base_path: cfg.server.base_path.clone(),
+        }));
+    let inner: Router =
+        with_shared_stack(inner, cfg.server.limits.ceiling(), cors, request_log, state);
 
     // The manifest advertises the live mounted-group set, so it never names a
     // group that answers 404; extension families declare themselves through the
@@ -218,8 +218,8 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
 /// The stack is applied in two halves with [`align_transport_error_body`]
 /// between them: `TimeoutLayer` and `RequestBodyLimitLayer` render their own
 /// responses without ever reaching [`crate::overview::error`], so the mapping
-/// must sit OUTSIDE both. Order (outermost → innermost): request-id, tracing,
-/// catch-panic, CORS, body-limit ceiling, timeout, compression.
+/// must sit OUTSIDE both. Order (outermost → innermost): request-id, request
+/// log, catch-panic, CORS, body-limit ceiling, timeout, compression.
 ///
 /// `body_ceiling` is the widest tier any route accepts
 /// ([`BodyLimits::ceiling`](ferroehr::config::server::BodyLimits::ceiling)); the
@@ -228,6 +228,7 @@ fn with_shared_stack(
     inner: Router<AppState>,
     body_ceiling: usize,
     cors: CorsLayer,
+    log: RequestLog,
     state: AppState,
 ) -> Router {
     inner
@@ -246,12 +247,13 @@ fn with_shared_stack(
         .layer(axum::middleware::map_response(align_transport_error_body))
         .layer(
             ServiceBuilder::new()
+                .layer(axum::middleware::from_fn(request_id))
                 .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
                 .layer(PropagateRequestIdLayer::x_request_id())
                 .layer(SetSensitiveRequestHeadersLayer::new(std::iter::once(
                     AUTHORIZATION,
                 )))
-                .layer(TraceLayer::new_for_http().make_span_with(path_only_span))
+                .layer(from_fn_with_state(log, request_log::middleware))
                 .layer(CatchPanicLayer::custom(handle_panic))
                 .layer(cors),
         )
@@ -304,22 +306,58 @@ fn with_security_headers(app: Router) -> Router {
     )
 }
 
-/// Builds the `tower-http` request span, recording the path without its query
-/// string.
-///
-/// `DefaultMakeSpan` would record the whole target, and `subject_id` — an
-/// external patient identifier — is a query parameter (ITS-REST EHR API,
-/// `GET /ehr?subject_id=…`), which identified data must never reach the ordinary
-/// application log. The path keeps only system-assigned ids the audit log records
-/// anyway. The route template is recorded separately by
-/// [`management::http_metrics::root_span`], the span telemetry consumes.
-fn path_only_span(request: &http::Request<axum::body::Body>) -> tracing::Span {
-    tracing::debug_span!(
-        "request",
-        method = %request.method(),
-        path = %request.uri().path(),
-        version = ?request.version(),
-    )
+/// The `X-Request-Id` header.
+const X_REQUEST_ID: HeaderName = HeaderName::from_static("x-request-id");
+
+/// Names the request for the request log: the client's `X-Request-Id` when
+/// it sent one, else a fresh UUID written into the header for the layers
+/// below.
+async fn request_id(mut request: axum::extract::Request, next: axum::middleware::Next) -> Response {
+    let client = request
+        .headers()
+        .get(&X_REQUEST_ID)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
+    let id = if let Some(id) = client.as_deref() {
+        RequestId::new(id, true)
+    } else {
+        let minted = minted_request_id();
+        if let Ok(value) = HeaderValue::from_str(&minted) {
+            request.headers_mut().insert(X_REQUEST_ID, value);
+        }
+        RequestId::new(minted, false)
+    };
+    request.extensions_mut().insert(id);
+    next.run(request).await
+}
+
+/// A fresh request id: random, never a database key.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a request id is non-key randomness, the case the v4 ban allows"
+)]
+fn minted_request_id() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
+/// Feeds the usage report's latency window with every request of the API
+/// tree, the routes under the REST base path.
+struct UsageWindow {
+    base_path: String,
+}
+
+impl Recorder for UsageWindow {
+    fn record(&self, completed: &Completed<'_>) {
+        if let Some(route) = completed.route
+            && route.starts_with(&self.base_path)
+        {
+            ferroehr::usage_report::window::record_request(
+                route,
+                completed.latency,
+                completed.status,
+            );
+        }
+    }
 }
 
 /// Renders a panicked handler as a `500` in the openEHR `{ error, message }`

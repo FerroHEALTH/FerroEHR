@@ -58,8 +58,8 @@ services:
       # The primary's one terminology server (docker/sut-terminology.yml).
       FERROEHR__TERMINOLOGY__SERVER__ENABLED: "true"
       FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR: "false"
-      FERROEHR__LOG__FORMAT: ${FERROEHR__LOG__FORMAT:-pretty}
-      FERROEHR__LOG__FILTER: ${FERROEHR__LOG__FILTER:-info}
+      FERROEHR__TELEMETRY__FORMAT: ${FERROEHR__TELEMETRY__FORMAT:-pretty}
+      FERROEHR__TELEMETRY__FILTER: ${FERROEHR__TELEMETRY__FILTER:-info}
       # As the primary SUT: the harness reports nothing to FerroPULSE by default.
       FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-false}
       FERROEHR__USAGE_REPORT__DEPLOYMENT: compose

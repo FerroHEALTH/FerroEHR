@@ -17,7 +17,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use axum::Router;
 use axum::body::Body;
@@ -29,6 +29,7 @@ use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
 use ferrohealth_health::registry::{Check, HealthIndicator, Outcome, Registry};
 use ferrohealth_smart::config::AuthSection;
+use ferrohealth_telemetry::request_log::RequestLog;
 
 use crate::common;
 use http::{Request, StatusCode, header};
@@ -236,7 +237,7 @@ async fn app_with_mixed_levels(roles: &[&str]) -> (testkit::TestDb, Router) {
     // The recorder is what MOUNTS prometheus/metrics at all; without it they
     // answer 404 whatever their level says, which would make the `public` row
     // below pass for the wrong reason and the `off` row vacuous.
-    observability.prometheus = Some(recorder().clone());
+    observability.telemetry = Some(Arc::clone(common::telemetry()));
     build_app(config, authz, observability).await
 }
 
@@ -518,26 +519,6 @@ async fn management_status_carries_what_the_public_status_withholds() {
     );
 }
 
-/// A process-wide Prometheus recorder (installed once; the global `metrics`
-/// facade the HTTP layer emits through requires a single global recorder).
-fn recorder() -> &'static prometheus::Registry {
-    static REGISTRY: OnceLock<prometheus::Registry> = OnceLock::new();
-    REGISTRY.get_or_init(|| {
-        // A real provider, not a bare registry: instruments bind to the global
-        // meter provider, so a registry with nothing attached renders empty.
-        let (provider, registry) = ferroehr::telemetry::metrics::build_provider(
-            opentelemetry_sdk::Resource::builder().build(),
-            None::<opentelemetry_sdk::metrics::PeriodicReader<opentelemetry_otlp::MetricExporter>>,
-        )
-        .expect("build the meter provider");
-        opentelemetry::global::set_meter_provider(provider);
-        ferroehr::telemetry::metrics::init(&opentelemetry::global::meter(
-            ferroehr::telemetry::metrics::SCOPE,
-        ));
-        registry
-    })
-}
-
 async fn app_with_metrics() -> (testkit::TestDb, Router) {
     // Authentication off: this test exercises the API path, not the gate.
     let config = base_config(AuthSection {
@@ -554,7 +535,9 @@ async fn app_with_metrics() -> (testkit::TestDb, Router) {
             },
             ..ManagementConfig::default()
         },
-        prometheus: Some(recorder().clone()),
+        telemetry: Some(Arc::clone(common::telemetry())),
+        request_log: RequestLog::new(&[])
+            .with_metrics(&common::telemetry().meter(ferroehr::telemetry::metrics::SCOPE)),
         build_info: BuildInfo::current(),
         ..Observability::default()
     };
