@@ -2644,7 +2644,7 @@ dependencies = [
  "openehr-lang",
  "openehr-query",
  "openehr-rm",
- "openehr-sdt 0.0.104",
+ "openehr-sdt 0.0.105",
  "openehr-term",
  "opentelemetry",
  "opentelemetry_sdk",
@@ -2735,7 +2735,7 @@ dependencies = [
  "openehr-its",
  "openehr-lang",
  "openehr-rm",
- "openehr-sdt 0.0.104",
+ "openehr-sdt 0.0.105",
  "opentelemetry",
  "pem 4.0.0",
  "pprof",
@@ -2782,7 +2782,7 @@ dependencies = [
  "ferrohealth-telemetry",
  "ferrohealth-usage-report",
  "openehr-its",
- "openehr-sdt 0.0.104",
+ "openehr-sdt 0.0.105",
  "reqwest",
  "serde_json",
  "sqlx",
@@ -2817,7 +2817,7 @@ dependencies = [
  "openehr-am",
  "openehr-its",
  "openehr-query",
- "openehr-sdt 0.0.104",
+ "openehr-sdt 0.0.105",
  "openidconnect",
  "reqwest",
  "secrecy",
@@ -5543,7 +5543,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "openehr-adl"
-version = "0.0.104"
+version = "0.0.105"
 dependencies = [
  "indexmap 2.14.2",
  "openehr-am",
@@ -5559,7 +5559,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-am"
-version = "0.0.104"
+version = "0.0.105"
 dependencies = [
  "openehr-base",
  "openehr-lang",
@@ -5569,7 +5569,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-base"
-version = "0.0.104"
+version = "0.0.105"
 dependencies = [
  "serde",
  "serde_json",
@@ -5589,7 +5589,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-its"
-version = "0.0.104"
+version = "0.0.105"
 dependencies = [
  "async-trait",
  "axum",
@@ -5605,6 +5605,7 @@ dependencies = [
  "openehr-rm",
  "openehr-term",
  "quick-xml 0.42.0",
+ "regex",
  "reqwest",
  "secrecy",
  "serde",
@@ -5623,7 +5624,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-lang"
-version = "0.0.104"
+version = "0.0.105"
 dependencies = [
  "assert_fs",
  "chumsky",
@@ -5637,7 +5638,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-query"
-version = "0.0.104"
+version = "0.0.105"
 dependencies = [
  "chumsky",
  "logos",
@@ -5646,7 +5647,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-rm"
-version = "0.0.104"
+version = "0.0.105"
 dependencies = [
  "insta",
  "jsonschema",
@@ -5670,7 +5671,7 @@ checksum = "2ea94a36d6f84491e59c51df4b6d0c4c06b524728e98abb93fcfd29c45e014f7"
 
 [[package]]
 name = "openehr-sdt"
-version = "0.0.104"
+version = "0.0.105"
 dependencies = [
  "fancy-regex",
  "indexmap 2.14.2",
@@ -5694,7 +5695,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-term"
-version = "0.0.104"
+version = "0.0.105"
 dependencies = [
  "openehr-base",
  "roxmltree",
