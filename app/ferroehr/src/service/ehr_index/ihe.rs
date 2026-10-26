@@ -17,14 +17,14 @@
 
 use std::time::Duration;
 
+use ferrohealth_server::tls_client::{TlsClient, TlsClientError};
 use ihe_atna::user::OnBehalfOf;
 use ihe_iti::pixm::error::{InvalidInput, PixmError};
 use ihe_iti::pixm::identifier::{CrossReference, SourceIdentifier, TargetSystem};
 use ihe_iti::pixm::{Invocation, PixmClient};
-use secrecy::{ExposeSecret as _, SecretString};
+use secrecy::SecretString;
 use url::Url;
 
-use crate::config::trust::{TrustRootsError, trusting};
 use crate::service::ehr_index::config::{EhrIndexConfig, PixmInvocation};
 
 /// The media type a FHIR server answers the capabilities interaction in (FHIR
@@ -34,9 +34,9 @@ const FHIR_JSON: &str = "application/fhir+json";
 /// Why the identity source could not be built, reached or believed.
 #[derive(Debug, thiserror::Error)]
 pub enum IdentitySourceError {
-    /// The configured `ca_file` cannot serve as trust roots.
-    #[error("the identity source's trust roots are unusable")]
-    TrustRoots(#[from] TrustRootsError),
+    /// The `[ehr_index.tls]` trust roots or client identity are unusable.
+    #[error("the identity source's TLS material is unusable")]
+    Tls(#[from] TlsClientError),
     /// The HTTP client could not be built.
     #[error("the identity source's HTTP client could not be built")]
     Client(#[source] reqwest::Error),
@@ -75,25 +75,6 @@ pub enum IdentitySourceError {
     NotAFhirServer,
 }
 
-/// One identifier a domain holds for a patient: the assigning authority and
-/// the value.
-#[derive(Clone)]
-pub struct DomainIdentifier {
-    /// The assigning authority of the domain, an absolute URI.
-    pub system: String,
-    /// The identifier value, never rendered.
-    pub value: SecretString,
-}
-
-impl std::fmt::Debug for DomainIdentifier {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DomainIdentifier")
-            .field("system", &self.system)
-            .field("value", &ferrohealth_secret::REDACTED)
-            .finish()
-    }
-}
-
 /// The PIX Manager of the configured clinical domain.
 #[derive(Debug, Clone)]
 pub struct IheIdentitySource {
@@ -113,8 +94,8 @@ impl IheIdentitySource {
     /// The identity source `config` names.
     ///
     /// The HTTP client follows no redirect, because the request carries a
-    /// patient identifier (the `PixmClient::new` contract), and trusts
-    /// `ehr_index.ca_file` beside the platform roots. With `[ehr_index.oauth]`
+    /// patient identifier (the `PixmClient::new` contract), and trusts the
+    /// `[ehr_index.tls]` roots beside the platform's. With `[ehr_index.oauth]`
     /// every ITI-83 request carries that grant's access token (IUA ITI-72
     /// §3.72.4.2), renewed once after a `401`.
     ///
@@ -126,7 +107,8 @@ impl IheIdentitySource {
         let builder = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .timeout(timeout);
-        let http = trusting(builder, "ehr_index.ca_file", config.ca_file.as_deref())?
+        let http = TlsClient::read("ehr_index.tls", &config.tls)?
+            .apply(builder)?
             .build()
             .map_err(IdentitySourceError::Client)?;
         let base =
@@ -229,40 +211,5 @@ impl IheIdentitySource {
             1 => Ok(clinical.pop().map(|id| id.value().clone())),
             count => Err(IdentitySourceError::Ambiguous { count }),
         }
-    }
-
-    /// Every identifier the other domains hold for the patient whose clinical
-    /// identifier is `clinical`, in the PIX Manager's order (ITI-83
-    /// §2:3.83.4.2.2.1); empty when the source does not know them.
-    ///
-    /// # Errors
-    /// [`IdentitySourceError::Input`] for an empty `clinical` and
-    /// [`IdentitySourceError::Pixm`] for every refusal or failure.
-    pub async fn identifiers_of(
-        &self,
-        clinical: &str,
-    ) -> Result<Vec<DomainIdentifier>, IdentitySourceError> {
-        let source = SourceIdentifier::new(
-            self.domain.as_str(),
-            SecretString::from(clinical.to_owned()),
-        )?;
-        let answer = self
-            .pixm
-            .cross_reference(&source, &[], &OnBehalfOf::System, self.timeout)
-            .await?;
-        let CrossReference::Matched(found) = answer else {
-            return Ok(Vec::new());
-        };
-        Ok(found
-            .identifiers()
-            .iter()
-            .filter(|id| {
-                id.system() != self.domain.as_str() || id.value().expose_secret() != clinical
-            })
-            .map(|id| DomainIdentifier {
-                system: id.system().to_owned(),
-                value: id.value().clone(),
-            })
-            .collect())
     }
 }

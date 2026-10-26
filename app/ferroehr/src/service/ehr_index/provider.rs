@@ -146,16 +146,17 @@ impl FerroEhrService {
     /// The subjects associated with an EHR, as the installed provider holds
     /// them.
     ///
-    /// Under an identity source, the EHR's clinical identifier comes first and
-    /// every identifier the PIX Manager cross-references it to follows, each
-    /// with a `Primary` status and no location: the source holds no
-    /// `RESOURCE_STATUS` or `LOCATION_DESC`, and FerroEHR invents none beyond
-    /// the SM's own default instance type (`i_ehr_index.adoc`). An EHR whose
-    /// subject is in no clinical-domain namespace has none to answer.
+    /// Under an identity source, the one subject is the clinical identifier
+    /// the EHR's `EHR_STATUS` carries, with a `Primary` status and no
+    /// location: the source holds no `RESOURCE_STATUS` or `LOCATION_DESC`,
+    /// and FerroEHR invents none beyond the SM's own default instance type
+    /// (`i_ehr_index.adoc`). The source is never asked which identifiers other
+    /// domains hold for that pseudonym: resolving it back would hand the CDR
+    /// the additional information GDPR Art. 4(5) keeps separately. An EHR
+    /// whose subject is in no clinical-domain namespace has none to answer.
     ///
     /// # Errors
-    /// [`IndexError::Unconfigured`] with no provider installed,
-    /// [`IndexError::IdentitySource`] when the source fails, and
+    /// [`IndexError::Unconfigured`] with no provider installed, and
     /// [`IndexError::Service`] on a storage fault.
     pub(in crate::service) async fn provider_ehr_subjects(
         &self,
@@ -175,24 +176,12 @@ impl FerroEhrService {
         if namespace != source.domain() {
             return Ok(Vec::new());
         }
-        let others = source
-            .identifiers_of(&clinical)
-            .await
-            .map_err(IndexError::IdentitySource)?;
-        let entry = |subject: SubjectRef| EhrIndexEntry {
+        Ok(vec![EhrIndexEntry {
             ehr_id: ehr_id.to_string(),
-            subject,
+            subject: SubjectRef::person(clinical, namespace),
             status: ResourceStatus::default(),
             location: None,
-        };
-        let mut entries = vec![entry(SubjectRef::person(clinical, namespace))];
-        entries.extend(others.into_iter().map(|other| {
-            entry(SubjectRef::person(
-                secrecy::ExposeSecret::expose_secret(&other.value).to_owned(),
-                other.system,
-            ))
-        }));
-        Ok(entries)
+        }])
     }
 
     /// The EHRs associated with a subject, as the installed provider holds

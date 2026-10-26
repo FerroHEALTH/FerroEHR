@@ -146,19 +146,15 @@ pub struct CdrClient {
 }
 
 impl CdrClient {
-    /// Build the client from configuration, trusting `cdr.ca_file` beside the
-    /// platform roots when one is set.
+    /// Build the client from configuration.
     ///
     /// # Errors
-    /// [`ViewerError::Internal`] when the `ca_file` cannot serve as trust roots
-    /// or the underlying client cannot be constructed.
+    /// [`ViewerError::Internal`] when the underlying client cannot be
+    /// constructed.
     pub fn new(cfg: &crate::config::CdrConfig) -> Result<Self, ViewerError> {
-        let builder = reqwest::Client::builder()
+        let http = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(cfg.request_timeout_secs))
-            .redirect(reqwest::redirect::Policy::none());
-        let ca_file = (!cfg.ca_file.is_empty()).then(|| std::path::Path::new(&cfg.ca_file));
-        let http = crate::trust::trusting(builder, "cdr.ca_file", ca_file)
-            .map_err(|e| ViewerError::Internal(format!("CDR HTTP client: {e}")))?
+            .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|e| ViewerError::Internal(format!("CDR HTTP client: {e}")))?;
         Ok(Self {

@@ -2671,6 +2671,7 @@ dependencies = [
  "ferroehr-ext",
  "ferrohealth-health",
  "ferrohealth-secret 0.1.0",
+ "ferrohealth-server",
  "ferrohealth-smart",
  "futures",
  "hmac 0.13.0",
@@ -2940,6 +2941,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrohealth-server"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "062f4a74610690764d0757719297dd5388e195a394228f853ef554555a95e74e"
+dependencies = [
+ "axum",
+ "clap",
+ "ferrohealth-health",
+ "ferrohealth-secret 0.2.0",
+ "ferrohealth-telemetry",
+ "http",
+ "hyper-util",
+ "ipnet",
+ "reqwest",
+ "rustls",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-rustls",
+ "tower",
+ "tower-http 0.7.1",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "ferrohealth-smart"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2963,6 +2992,25 @@ dependencies = [
  "tower",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "ferrohealth-telemetry"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a2f28c60ec0d7f865d0e5af7acea704c0107204e8adcd77d87dc4d807735780"
+dependencies = [
+ "axum",
+ "ferrohealth-secret 0.2.0",
+ "http",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "secrecy",
+ "serde",
+ "thiserror 2.0.21",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -4133,9 +4181,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.0.61"
+version = "0.0.62"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6b955e2273c2c037a4067634a1324e20f6132a3e6535fb11deae767893ef3cd"
+checksum = "c8fef633aa89ecf55dc0b7a27bbd09572bacbfe053c462b9cd388bac74b25eb6"
 dependencies = [
  "ferrohealth-smart",
  "fhir-types",
@@ -4278,9 +4326,9 @@ dependencies = [
 
 [[package]]
 name = "ipnet"
-version = "2.12.1"
+version = "2.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a756c3fac73139e83f14c2d742155dd2b78d3ee56597b419a0579b7bdd6dd78"
+checksum = "791930b43c0d5973160d90a8f3894509f2b273430f5c5c73b668636d0287c5c0"
 dependencies = [
  "serde",
 ]
@@ -9530,9 +9578,9 @@ checksum = "552a64d6a0d251ae28bc021838800943cce60c9ec2e60ff331f54e79f696268f"
 
 [[package]]
 name = "uuid"
-version = "1.28.0"
+version = "1.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cc1186384beb7dd8eedea376413fd654937285ea6c9cfbb928dc3043ea4b606"
+checksum = "4a0e2d11620c50695fe12bbbfde96b3477fe606e7284c22d505c12ce51214514"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",

@@ -13,11 +13,10 @@
 //! NOTE: no openEHR spec governs where the cross-reference lives (RM common
 //! master04 §`PARTY_SELF`: "may be done elsewhere for security reasons"): our own design.
 
-use std::path::PathBuf;
-
 use serde::{Deserialize, Serialize};
 
 use ferrohealth_secret::secret_url::SecretUrl;
+use ferrohealth_server::tls_client::TlsClientSection;
 
 /// The provider that holds the subject-to-EHR cross-reference.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -65,9 +64,10 @@ pub struct EhrIndexConfig {
     pub invocation: PixmInvocation,
     /// How long one ITI-83 exchange may take, connection included (ms).
     pub request_timeout_ms: u64,
-    /// A PEM bundle of certificate authorities trusted beside the platform
-    /// roots, for a PIX Manager behind a private PKI.
-    pub ca_file: Option<PathBuf>,
+    /// `[ehr_index.tls]`: the trust roots beside the platform's
+    /// (`trust_roots_file`), for a PIX Manager behind a private PKI, and the
+    /// client identity presented for mutual TLS.
+    pub tls: TlsClientSection,
     /// The OAuth 2.0 client credentials grant whose access token every request
     /// carries (IUA ITI-72 §3.72.4.2, `[ehr_index.oauth]`). Unset sends none.
     pub oauth: Option<ferrohealth_smart::config::OauthSection>,
@@ -81,7 +81,7 @@ impl Default for EhrIndexConfig {
             assigning_authority: String::new(),
             invocation: PixmInvocation::Post,
             request_timeout_ms: 10_000,
-            ca_file: None,
+            tls: TlsClientSection::default(),
             oauth: None,
         }
     }

@@ -241,6 +241,11 @@ ferrohealth-secret = "=0.1.0"
 # document alone; a server takes `registry`. Verified on crates.io 2026-10-26
 # (0.1.1).
 ferrohealth-health = { version = "=0.1.1", default-features = false }
+# The family's server plumbing (FerroSYS): `tls_client` reads the TLS
+# material of an outbound HTTPS client, the trust roots beside the platform's
+# and a client identity, and sets it on a `reqwest::ClientBuilder` (feature
+# `reqwest`). Verified on crates.io 2026-10-26 (0.3.2).
+ferrohealth-server = { version = "=0.3.2", default-features = false }
 
 # ── Terminology (the client of the one FHIR terminology server) ───────────────
 # FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,

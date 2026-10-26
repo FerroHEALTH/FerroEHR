@@ -57,11 +57,15 @@ services:
       FERROEHR__MANAGEMENT__ENDPOINTS__INFO: "public"
       FERROEHR__MANAGEMENT__ENDPOINTS__METRICS: "public"
       FERROEHR__MANAGEMENT__ENDPOINTS__PROMETHEUS: "public"
-    expose:
-      - "9464"
     depends_on:
       otel-lgtm:
         condition: service_started
+
+  # The server runs in the identity issuer's network namespace
+  # (docker-compose.yml), so the namespace's owner exposes its management port.
+  identity-issuer:
+    expose:
+      - "9464"
 
   otel-lgtm:
     cap_drop: [ALL]

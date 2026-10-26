@@ -91,11 +91,6 @@ pub mod subscriptions;
 pub mod system_api;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod terminology;
-// NOTE: no openEHR spec governs this, our own design; the outbound `ca_file` rule
-// is the one file the server holds its own clients to.
-#[path = "../../ferroehr/src/config/trust.rs"]
-#[cfg(not(target_arch = "wasm32"))]
-pub mod trust;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod uid;
 

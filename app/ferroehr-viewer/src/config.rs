@@ -74,9 +74,6 @@ pub struct CdrConfig {
     pub management_base_url: String,
     /// Per-request timeout in seconds.
     pub request_timeout_secs: u64,
-    /// A PEM bundle of certificate authorities trusted beside the platform
-    /// roots, for a CDR behind a private PKI. Empty = the platform roots only.
-    pub ca_file: String,
 }
 
 impl Default for CdrConfig {
@@ -86,7 +83,6 @@ impl Default for CdrConfig {
             base_path: "/ferroehr/rest/openehr/v1".to_owned(),
             management_base_url: String::new(),
             request_timeout_secs: 30,
-            ca_file: String::new(),
         }
     }
 }
@@ -189,10 +185,6 @@ pub struct OidcConfig {
     pub resolve: String,
     /// Additional scopes requested beyond `openid`.
     pub scopes: Vec<String>,
-    /// A PEM bundle of certificate authorities trusted beside the platform
-    /// roots, for an issuer behind a private PKI. Empty = the platform roots
-    /// only.
-    pub ca_file: String,
 }
 
 /// Session behaviour (a sealed cookie — no server-side store).
@@ -297,16 +289,6 @@ pub fn load() -> Result<ViewerConfig, ConfigError> {
             ))
         })?;
         secret.trim().clone_into(&mut cfg.session.secret);
-    }
-
-    for (key, path) in [
-        ("cdr.ca_file", &cfg.cdr.ca_file),
-        ("auth.oidc.ca_file", &cfg.auth.oidc.ca_file),
-    ] {
-        if !path.is_empty() {
-            crate::trust::read_trust_roots(key, std::path::Path::new(path))
-                .map_err(|e| ConfigError(e.to_string()))?;
-        }
     }
 
     if ferrohealth_ui::i18n::Locale::parse(&cfg.ui.locale).is_err() {

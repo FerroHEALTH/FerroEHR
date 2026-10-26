@@ -37,7 +37,6 @@ pub mod profile;
 pub mod secret;
 pub mod server;
 pub mod smart;
-pub mod trust;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -385,7 +384,7 @@ impl FerroEhrConfig {
 
     /// The `[ehr_index]` provider is chosen and complete: an IHE patient
     /// identity source with its endpoint, its clinical domain among the
-    /// declared pseudonym namespaces and a readable `ca_file`, or an explicit
+    /// declared pseudonym namespaces and readable `[ehr_index.tls]` material, or an explicit
     /// `provider = "local"`. With neither, the refusal names both choices.
     fn validate_ehr_index(&self, errors: &mut Vec<ConfigError>) {
         let index = &self.ehr_index;
@@ -396,8 +395,8 @@ impl FerroEhrConfig {
                 .map(ConfigError::semantic),
         );
         if index.provider == crate::service::ehr_index::config::ProviderKind::Ihe
-            && let Some(path) = &index.ca_file
-            && let Err(e) = trust::read_trust_roots("ehr_index.ca_file", path)
+            && let Err(e) =
+                ferrohealth_server::tls_client::TlsClient::read("ehr_index.tls", &index.tls)
         {
             errors.push(ConfigError::semantic(e.to_string()));
         }
@@ -1968,6 +1967,9 @@ mod tests {
                 ),
                 ("FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR", "true"),
                 ("FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE", "warn"),
+                // The explicit standalone opt-in, without which the default
+                // IHE provider refuses for want of an endpoint.
+                ("FERROEHR__EHR_INDEX__PROVIDER", "local"),
                 (
                     "FERROEHR__PRIVACY__IDENTIFIER_SCAN__RULES",
                     "nl-bsn,gb-nhs-number",

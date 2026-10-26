@@ -37,13 +37,12 @@ use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::status::CallStatusType;
 use ferrohealth_secret::secret_url::SecretUrl;
+use ferrohealth_server::tls_client::TlsClientSection;
 
 /// The IG's clinical ("blue") domain, the one the stub answers for.
 const CLINICAL: &str = "urn:oid:1.3.6.1.4.1.21367.13.20.3000";
 /// The IG's source ("red") domain the subjects are named in.
 const RED: &str = "urn:oid:1.3.6.1.4.1.21367.13.20.1000";
-/// The IG's third ("green") domain.
-const GREEN: &str = "urn:oid:1.3.6.1.4.1.21367.13.20.2000";
 /// The IG's red identifier, a synthetic value of the IHE example.
 const RED_ID: &str = "IHERED-994";
 /// The operation path under the stub's base (PIXm §2:3.83.4.1.2).
@@ -287,10 +286,11 @@ async fn the_local_map_is_not_written_under_an_identity_source() {
     assert!(refused.message.contains("pixm_url"), "{refused}");
 }
 
-/// The reverse read asks the source which identifiers the other domains hold
-/// for the EHR's clinical identifier (the IG's "red to all" answer).
+/// The subjects of an EHR are the clinical pseudonym its `EHR_STATUS`
+/// carries, and the source is never asked to resolve that pseudonym back to
+/// another domain's identifier (GDPR Art. 4(5)).
 #[tokio::test]
-async fn the_subjects_of_an_ehr_are_the_sources_cross_references() {
+async fn the_subjects_of_an_ehr_are_its_pseudonym_alone() {
     let pix = MockServer::start().await;
     let pseudonym = Uuid::now_v7().to_string();
     Mock::given(method("POST"))
@@ -299,6 +299,7 @@ async fn the_subjects_of_an_ehr_are_the_sources_cross_references() {
             200,
             &ig("example/Parameters-pixm-response-mohralice-red-all.json"),
         ))
+        .expect(0)
         .mount(&pix)
         .await;
     let db = testkit::db().await.expect("testkit database");
@@ -318,15 +319,7 @@ async fn the_subjects_of_an_ehr_are_the_sources_cross_references() {
         .into_iter()
         .map(|entry| (entry.subject.namespace, entry.subject.id))
         .collect();
-    assert_eq!(
-        named,
-        vec![
-            (CLINICAL.to_owned(), pseudonym),
-            (CLINICAL.to_owned(), "IHEBLUE-994".to_owned()),
-            (GREEN.to_owned(), "IHEGREEN-994".to_owned()),
-        ],
-        "the clinical identifier, then every identifier the source answered"
-    );
+    assert_eq!(named, vec![(CLINICAL.to_owned(), pseudonym)]);
 }
 
 /// The boot check reads the PIX Manager's `CapabilityStatement`; a refusal and
@@ -379,10 +372,11 @@ async fn the_probe_reads_the_capability_statement() {
     );
 }
 
-/// A PIX Manager behind a private CA is reached with `ca_file` naming that CA,
-/// beside the platform roots, and not without it.
+/// A PIX Manager behind a private CA is reached with `[ehr_index.tls]
+/// trust_roots_file` naming that CA, beside the platform roots, and not
+/// without it.
 #[tokio::test]
-async fn a_private_ca_is_trusted_through_ca_file() {
+async fn a_private_ca_is_trusted_through_the_tls_roots() {
     let body = serde_json::to_string(&ig("CapabilityStatement-IHE.PIXm.Manager.json"))
         .expect("serializes");
     let server = testkit::https::HttpsServer::answering(FHIR_JSON, body)
@@ -390,7 +384,10 @@ async fn a_private_ca_is_trusted_through_ca_file() {
         .expect("the HTTPS stub starts");
 
     let trusting = EhrIndexConfig {
-        ca_file: Some(server.ca_file.clone()),
+        tls: TlsClientSection {
+            trust_roots_file: Some(server.ca_file.clone()),
+            ..TlsClientSection::default()
+        },
         ..config(&server.base_url)
     };
     IheIdentitySource::new(&trusting)
@@ -410,11 +407,14 @@ async fn a_private_ca_is_trusted_through_ca_file() {
     );
 
     let missing = EhrIndexConfig {
-        ca_file: Some(server.ca_file.with_extension("absent")),
+        tls: TlsClientSection {
+            trust_roots_file: Some(server.ca_file.with_extension("absent")),
+            ..TlsClientSection::default()
+        },
         ..config(&server.base_url)
     };
     assert!(matches!(
         IheIdentitySource::new(&missing),
-        Err(IdentitySourceError::TrustRoots(_))
+        Err(IdentitySourceError::Tls(_))
     ));
 }
