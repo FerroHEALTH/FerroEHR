@@ -83,8 +83,8 @@ static VERSION_TEXT: LazyLock<String> = LazyLock::new(|| {
     about = "openEHR-conformant CDR server"
 )]
 pub struct Cli {
-    /// Path to the config file (overrides the search order: `FERROEHR_CONFIG`,
-    /// `./ferroehr.toml`, `/etc/ferroehr/ferroehr.toml`).
+    /// Path to the config file (overrides `FERROEHR_CONFIG`; with neither, no
+    /// file is read).
     #[arg(long, global = true)]
     config: Option<PathBuf>,
     /// Repeatable dotted-path override, highest precedence (e.g.
@@ -528,12 +528,14 @@ fn run_config(
             Ok(())
         }
         ConfigCmd::Check => {
-            let cfg = ferroehr::config::load(config, set).map_err(|e| anyhow::anyhow!("{e}"))?;
+            let (loaded, cfg) = ferroehr::config::load_with_provenance(config, set)
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
             cfg.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
             ferroehr::config::auth::require_mechanism(&cfg.auth)
                 .map_err(|e| anyhow::anyhow!("{e}"))?;
-            let rendered = cfg.to_redacted_toml().map_err(|e| anyhow::anyhow!("{e}"))?;
-            println!("{rendered}");
+            let rendered = ferrohealth_config::report::check_report(&loaded)
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
+            print!("{rendered}");
             // The resolved placement of the four storage domains, so an
             // operator can see whether the deployment they configured is the
             // one the server would run. It names no DSN.

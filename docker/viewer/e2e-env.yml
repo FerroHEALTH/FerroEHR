@@ -40,6 +40,7 @@ services:
       FERROEHR__AUTH__ISSUER: https://keycloak:8443/auth/realms/ferroehr
       FERROEHR__AUTH__AUDIENCE: ferroehr
       FERROEHR__AUTH__TOKEN_PROFILE: jwt
+      FERROEHR__AUTH__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
       SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
       SSL_CERT_DIR: /run/ferroehr-dev-tls/ca
     volumes:

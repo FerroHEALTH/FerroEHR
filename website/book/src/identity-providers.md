@@ -43,8 +43,8 @@ Three things do all the work:
    than accepting another service's token. See the
    [bearer settings table](security.md#authentication).
 2. **Role mining** (`[auth]`): `FERROEHR__AUTH__ROLE_CLAIMS`
-   (default `["roles","groups","entitlements","realm_access.roles"]`, the RFC 9068
-   §2.2.3.1 carriers, then the Keycloak shape) names the
+   (default `["roles","groups","entitlements"]`, the RFC 9068 §2.2.3.1
+   carriers; a Keycloak realm adds `realm_access.roles`) names the
    JWT claim paths whose values become the caller's roles for the
    [role layer](security.md#authorization). A path may be dotted to walk nested
    claims, and a claim holding a single string is accepted as readily as an
