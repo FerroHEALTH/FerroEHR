@@ -94,3 +94,7 @@ doc_SnomedCT*.pdf
 # none belongs in a git history, and the three are separate directories for
 # exactly that reason.
 /backups/
+
+# The Helm chart dependencies, fetched by `helm dependency build` from
+# deploy/helm/ferroehr/Chart.lock.
+deploy/helm/ferroehr/charts/

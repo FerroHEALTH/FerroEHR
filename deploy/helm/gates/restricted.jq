@@ -15,13 +15,17 @@
     | select(.kind == "Deployment" or .kind == "StatefulSet"
              or .kind == "DaemonSet" or .kind == "Job" or .kind == "CronJob")
     | { kind: .kind, name: .metadata.name,
+        # A workload of the FerroPIX chart dependency is that chart's own; the
+        # two properties below that this chart adds to the restricted profile
+        # are held to this chart's workloads alone.
+        dependency: ((.metadata.labels // {})["helm.sh/chart"] // "" | startswith("ferropix-")),
         replicas: .spec.replicas,
         strategy: (.spec.strategy // {}),
         template: (if .kind == "CronJob"
                    then .spec.jobTemplate.spec.template
                    else .spec.template end) }
     | select(.template != null)
-    | { kind: .kind, name: .name,
+    | { kind: .kind, name: .name, dependency: .dependency,
         replicas: .replicas,
         strategy: .strategy,
         pod: (.template.spec // {}) } ] as $workloads
@@ -37,7 +41,7 @@
         # The kubelet's per-Service link variables land in the reserved
         # FERROEHR_ namespace and the strict env sweep then refuses to boot, so
         # losing this makes every install crash-loop.
-        + ( if ($w.pod.enableServiceLinks != false)
+        + ( if ($w.dependency | not) and ($w.pod.enableServiceLinks != false)
             then ["\($w.kind)/\($w.name): enableServiceLinks must be false"] else [] end )
         + ( [ ($w.pod.volumes // [])[]
               | . as $v
@@ -98,6 +102,7 @@
   # whose viewer shares the host user namespace while its server does not has a
   # posture nobody can state.
   ( [ $workloads[]
+      | select(.dependency | not)
       | { k: "\(.kind)/\(.name)",
           v: [ (if .pod.hostUsers == null then true else .pod.hostUsers end),
                ((.pod.securityContext // {}).supplementalGroupsPolicy) ] } ] as $iso

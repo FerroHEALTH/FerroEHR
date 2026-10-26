@@ -755,14 +755,25 @@ provider = "ihe"             # ihe | local
 invocation = "post"          # post (keeps the identifier out of URLs) | get
                              # (the form ITI-83 prescribes)
 request_timeout_ms = 10000
-#? ca_file = "/etc/ferroehr/pix-ca.pem"   # CAs trusted beside the platform roots
+
+# The TLS material of the PIX Manager client: trust roots beside the
+# platform's, for a source behind a private PKI, and a client identity for
+# mutual TLS (one PEM holding the chain and its key).
+#? [ehr_index.tls]
+#? trust_roots_file = "/etc/ferroehr/pix-ca.pem"
+#? client_identity_file = "/run/secrets/pix-client.pem"
+#? min_version = "1.3"
 
 # OAuth2 client-credentials grant whose token every ITI-83 request carries
-# (IUA ITI-72), when the PIX Manager requires one:
+# (IUA ITI-72), when the PIX Manager requires one. The client id is the one
+# the identity source mints pseudonyms in the clinical domain for, and the
+# scope is the one its PIXm Manager takes from a Consumer:
 #? [ehr_index.oauth]
 #? token_endpoint = "https://idp.example.org/realms/pix/protocol/openid-connect/token"
 #? client_id = "ferroehr-cdr"
-#? client_secret_file = "/run/secrets/pix-client"
+#? client_secret = "..."
+#? client_secret_file = "/run/secrets/pix-client"   # instead of client_secret, a mounted file
+#? scope = "system/Patient.rs"
 
 # ── [demographic] — the demographic domain ────────────────────────────────────
 # National-identifier protection: the value leaves the versioned body for

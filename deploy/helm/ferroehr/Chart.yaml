@@ -22,7 +22,7 @@ type: application
 # A published OCI version is immutable by refusal rather than by the registry —
 # `helm push` over an existing tag replaces it silently — so a correction always
 # ships as a NEW version and the published one stands as it was.
-version: 16.0.1
+version: 17.0.0
 # The DEFAULT container image tag (overridable via image.tag). Equals the
 # workspace version in Cargo.toml, bumped in the release PR beside the
 # docker-compose.yml image tags — one version sweep, the compose treatment
@@ -42,6 +42,17 @@ version: 16.0.1
 # re-checks the pairing against an image, and the `chart-boot` CI job replays it
 # against the image built from the tree.
 appVersion: "5.4.2"
+
+# FerroPIX, the IHE patient identity source the CDR's EHR index asks over PIXm
+# (ITI-83), taken whole as a dependency rather than copied: its Deployment,
+# Service, NetworkPolicy and configuration are its own chart's. The version is
+# pinned exactly, Chart.lock records its digest, and `helm dependency build`
+# fetches it into charts/ before any render (deploy/helm/validate.sh does).
+dependencies:
+  - name: ferropix
+    version: 0.2.2
+    repository: oci://ghcr.io/ferrohealth/charts
+    condition: ferropix.enabled
 
 # A COMPATIBILITY floor, and a real one: 1.36 is the release where the newest
 # field this chart renders became stable.
@@ -214,6 +225,15 @@ annotations:
     # `bridge.image.digest` in values.yaml.
     - name: ferrobridge
       image: ghcr.io/ferrohealth/ferrobridge:0.0.5@sha256:c92e58dac60d0d1cb94b446e2414ebdc2b209a42c87df3aaf0b18d7c51d5c774  # party: third
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    # FerroPIX, deployed by the `ferropix` chart dependency while
+    # `ferropix.enabled` is set (the default). A separate product on its own
+    # release line, so third party on the FerroTERM reasoning; tag and digest
+    # are the ones `ferropix.image.digest` in values.yaml pins.
+    - name: ferropix
+      image: ghcr.io/ferrohealth/ferropix:0.0.7@sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825  # party: third
       platforms:
         - linux/amd64
         - linux/arm64

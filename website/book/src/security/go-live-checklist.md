@@ -159,8 +159,9 @@ must name a listed namespace and carry a UUID, the server stamps `ehr.posture`,
 and a database trigger refuses a non-UUID subject whichever session writes it.
 
 The name is a deployment fact: it identifies the service that mints your
-pseudonyms, and no server can invent it for you. Where FerroEHR mints them
-itself, `link_as_subject` uses the first declared namespace.
+pseudonyms, and no server can invent it for you. FerroEHR mints none; under
+the IHE patient identity source it is the clinical domain's assigning
+authority, `ehr_index.assigning_authority`.
 
 - [ ] `subject_namespaces` names at least one namespace.
 - [ ] The `open_subject_namespace` gap no longer appears on

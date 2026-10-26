@@ -300,6 +300,7 @@ rather than inherit from a quickstart. See
 | `[signing]` | VERSION signing and read-time verification | [Authentication & access](config-auth.md) |
 | `[licence]` | The commercial licence token | [Authentication & access](config-auth.md) |
 | `[query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |
+| `[ehr_index]`, `[ehr_index.oauth]`, `[ehr_index.tls]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm (the default) or the in-instance map | [Integrations](config-integrations.md#ehr_index) |
 | `[events]` | Change eventing | [Integrations](config-integrations.md) |
 | `[terminology]`, `[multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |

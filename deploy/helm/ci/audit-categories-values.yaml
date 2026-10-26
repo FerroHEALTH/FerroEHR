@@ -16,6 +16,10 @@ database:
   existingSecretKey: FERROEHR__DB__URL
 
 config:
+  # The in-instance EHR index, the opt-in of a FerroEHR run on its own:
+  # this overlay renders another surface and runs no identity source.
+  ehr_index:
+    provider: local
   auth:
     issuer: https://idp.example.com/realms/ferroehr
     audience: [ferroehr]
@@ -33,3 +37,7 @@ config:
       archetypes:
         openEHR-EHR-COMPOSITION.report-result.v1: [Laboratory-Reports]
         openEHR-EHR-COMPOSITION.encounter.v1: none
+
+# No FerroPIX beside it: the local EHR index above.
+ferropix:
+  enabled: false
