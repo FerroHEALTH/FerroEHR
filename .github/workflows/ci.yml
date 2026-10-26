@@ -299,7 +299,11 @@ jobs:
           # `FerroEhrService::new()`, which installs no policy. A privacy
           # default that refused the server's own example composition reached
           # main because both PRs that produced it missed this filter.
-          if echo "$changed" | grep -qE '^(app/ferroehr-viewer/|app/ferroehr-server/src/|app/ferroehr/src/privacy/|app/ferroehr/src/config/|app/ferroehr/assets/ferroehr\.default\.toml$|scripts/ui-e2e\.sh$|scripts/cargo-leptos\.sh$|docker-compose\.yml$|docker-compose\.override\.yml$|docker-compose\.dev\.yml$|docker-compose\.keycloak\.yml$|docker/Dockerfile$|docker/viewer/|docker/keycloak/|docker/postgres/|Cargo\.lock$|\.github/workflows/ci\.yml$)' ; then
+          # Authentication and authorization are in it for the same reason: the
+          # battery signs in through Keycloak and seeds as the dev stack's Basic
+          # users, so the access layer of the REST adapter, its config view and
+          # the dev configuration those users live in decide whether it can run.
+          if echo "$changed" | grep -qE '^(app/ferroehr-viewer/|app/ferroehr-server/src/|app/ferroehr/src/privacy/|app/ferroehr/src/config/|app/ferroehr-rest/src/extensions/access/|app/ferroehr-rest/src/smart/|app/ferroehr-rest/src/config\.rs$|app/ferroehr-rest/src/router\.rs$|docker/ferroehr\.dev\.toml$|app/ferroehr/assets/ferroehr\.default\.toml$|scripts/ui-e2e\.sh$|scripts/cargo-leptos\.sh$|docker-compose\.yml$|docker-compose\.override\.yml$|docker-compose\.dev\.yml$|docker-compose\.keycloak\.yml$|docker/Dockerfile$|docker/viewer/|docker/keycloak/|docker/postgres/|Cargo\.lock$|\.github/workflows/ci\.yml$)' ; then
             echo "viewer=true" >> "$GITHUB_OUTPUT"
           else
             echo "viewer=false" >> "$GITHUB_OUTPUT"
