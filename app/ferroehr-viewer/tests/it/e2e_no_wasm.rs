@@ -60,22 +60,14 @@ async fn every_page_and_a_post_work_with_the_webassembly_withheld() {
     h.wait_css("main h1").await;
     not_hydrated(&h, "the dashboard").await;
     for (words, path) in ENTRIES {
-        h.wait_xpath(&format!(
-            "//nav[@aria-label = 'Viewer']//a[starts-with(normalize-space(.), '{words}')]"
-        ))
-        .await
-        .click()
-        .await;
+        common::follow_nav(&h, path).await;
         h.wait_url_contains(path).await;
         h.wait_css("main h1").await;
         not_hydrated(&h, words).await;
     }
 
     // A GET form submits as the browser does.
-    h.wait_xpath("//nav[@aria-label = 'Viewer']//a[starts-with(normalize-space(.), 'Server')]")
-        .await
-        .click()
-        .await;
+    common::follow_nav(&h, "/server").await;
     h.wait_url_contains("/server").await;
     h.wait_xpath("//a[normalize-space(.) = 'API']")
         .await

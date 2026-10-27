@@ -112,9 +112,11 @@ pub fn App() -> impl IntoView {
             <FormNavigator />
             <Routes fallback=|| view! { <crate::routes::Pages /> }>
                 <Route path=path!("/login") view=crate::routes::Pages ssr=SsrMode::Async />
+                // NOTE: no openEHR spec governs this: our own design; the shell draws the pages
+                // itself, since the router can draw an `Outlet` twice in one server render.
                 <ParentRoute path=path!("") view=crate::shell::AppShell ssr=SsrMode::Async>
-                    <Route path=path!("") view=crate::routes::Pages />
-                    <Route path=path!("*any") view=crate::routes::Pages />
+                    <Route path=path!("") view=|| () />
+                    <Route path=path!("*any") view=|| () />
                 </ParentRoute>
             </Routes>
         </Router>

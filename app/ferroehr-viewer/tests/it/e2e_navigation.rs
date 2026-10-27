@@ -27,11 +27,6 @@ use crate::common;
 
 use common::{Harness, login_basic, wait_main_contains};
 
-/// The navigation entry whose words are `words`.
-fn entry(words: &str) -> String {
-    format!("//nav[@aria-label = 'Viewer']//a[starts-with(normalize-space(.), '{words}')]")
-}
-
 /// Fails the journey unless the window kept its mark after `step`.
 async fn kept(h: &Harness, step: &str) {
     assert!(h.document_kept().await, "{step} loaded a new document");
@@ -46,12 +41,12 @@ async fn a_link_draws_its_page_in_the_same_document_and_back_and_forward_walk_it
     h.goto("/").await;
     h.mark_document().await;
 
-    h.wait_xpath(&entry("EHRs")).await.click().await;
+    common::follow_nav(&h, "/ehrs").await;
     h.wait_url_contains("/ehrs").await;
     h.wait_css("main h1").await;
     kept(&h, "following EHRs").await;
 
-    h.wait_xpath(&entry("About")).await.click().await;
+    common::follow_nav(&h, "/about").await;
     h.wait_url_contains("/about").await;
     wait_main_contains(&h, "Manufacturer").await;
     assert!(h.title().await.starts_with("About"), "{}", h.title().await);

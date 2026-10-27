@@ -83,6 +83,10 @@ pub(crate) struct Harness {
     /// only exist in that mode, so [`Harness::goto`] waits for the shell's
     /// hydration marker exactly when one will ever appear.
     js: bool,
+    /// Whether the browser is refused the site bundle
+    /// ([`Harness::start_without_webassembly`]), so a page logs the refused
+    /// bundle file as its one expected error.
+    withheld: bool,
 }
 
 /// Environment lookup for a journey credential/URL.
@@ -148,6 +152,7 @@ impl Harness {
             shots_dir,
             journey,
             js: true,
+            withheld: false,
         };
         // The phone lane runs every journey at 390 px (#3910).
         if env("UI_E2E_VIEWPORT").as_deref() == Some("phone") {
@@ -177,6 +182,7 @@ impl Harness {
             .filter(|e| e.level == "SEVERE")
             .map(|e| e.message)
             .filter(|m| !m.contains("Failed to load resource"))
+            .filter(|m| !(self.withheld && m.contains("/pkg/")))
             .collect();
         assert!(
             severe.is_empty(),
@@ -319,6 +325,7 @@ impl Harness {
             shots_dir,
             journey,
             js: false,
+            withheld: false,
         })
     }
 
@@ -470,6 +477,7 @@ impl Harness {
         .await
         .expect("block the bundle");
         h.js = false;
+        h.withheld = true;
         Some(h)
     }
 
@@ -1551,16 +1559,37 @@ pub(crate) async fn submit_by_key(h: &Harness, key: impl Into<TypingData>) {
     leave_page(h, "the key press", h.press(key)).await;
 }
 
+/// The script that counts the page reads the browser has asked the server
+/// for in this document: a page the router draws asks for its visit and its
+/// model.
+const PAGE_READS: &str = "return performance.getEntriesByType('resource') \
+     .filter((e) => e.name.includes('/api/visit_now') || e.name.includes('/api/load_')) \
+     .length;";
+
+/// How many page reads the browser has asked for in this document
+/// ([`PAGE_READS`]), none while the browser swaps documents.
+async fn page_reads(h: &Harness) -> u64 {
+    // NOTE: a script sent while the browser swaps documents can be refused; that reads as
+    // no new page yet, and the root element's mark tells the new document apart.
+    bounded(
+        "execute(page reads)",
+        h.driver.execute(PAGE_READS, Vec::new()),
+    )
+    .await
+    .map(|answer| answer.json().as_u64().unwrap_or_default())
+    .unwrap_or_default()
+}
+
 /// Mark the page, run `action`, and wait for the page that answers it: a
-/// new document, or a page the router drew in place of the marked one, with
-/// its `main` drawn.
+/// new document, or a page the router drew after it, with its `main` drawn.
 ///
-/// The mark sits on the root element, which only a new document replaces,
-/// and on each part of the page in the shell's column, which the router
-/// replaces when it draws the page a `GET` form or a post names. A probe
-/// that runs before the new page arrives can find an element in the old one
-/// and read it after the browser replaced it, which Chrome answers with
-/// "Node with given id does not belong to the document", an error
+/// The mark sits on the root element, which only a new document replaces.
+/// A page the router draws in the same document asks the server for its
+/// visit and its model first ([`PAGE_READS`]), which the browser's resource
+/// timing counts, so a page drawn over the old one in place is seen too. A
+/// probe that runs before the new page arrives can find an element in the
+/// old one and read it after the browser replaced it, which Chrome answers
+/// with "Node with given id does not belong to the document", an error
 /// [`is_absence`] rightly refuses.
 ///
 /// # Panics
@@ -1570,18 +1599,16 @@ async fn leave_page(h: &Harness, what: &str, action: impl Future<Output = ()>) {
         "execute(mark the page)",
         h.driver.execute(
             "document.documentElement.dataset.e2eLeft = '1'; \
-             document.querySelectorAll('main .fui-column > *') \
-                 .forEach((part) => { part.dataset.e2eLeft = '1'; });",
+             performance.setResourceTimingBufferSize(100000);",
             Vec::new(),
         ),
     )
     .await
     .expect("mark the page before the post");
-    let in_column = is_present(h, "main .fui-column > [data-e2e-left]").await;
+    let before = page_reads(h).await;
     action.await;
     let moved = poll_until_for(Duration::from_secs(15), async || {
-        !is_present(h, "html[data-e2e-left]").await
-            || (in_column && !is_present(h, "main .fui-column > [data-e2e-left]").await)
+        !is_present(h, "html[data-e2e-left]").await || page_reads(h).await > before
     })
     .await;
     assert!(moved, "{what} never brought a new page");
