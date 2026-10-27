@@ -302,10 +302,11 @@ CA. Keycloak also answers plain HTTP on port 8081 for the token call below, and
 the tokens it mints there name the HTTPS issuer. Keycloak's access tokens carry
 `typ: JWT`, so the overlay sets `FERROEHR__AUTH__TOKEN_PROFILE=jwt`.
 
-Every route checks SMART on openEHR scopes, so the realm's client puts four in
-every token: `user/composition-*.cruds`, `user/template-*.cruds` and
-`user/aql-*.cruds` grant every resource family, and `__ferroehr.platform` is the
-product scope the ADMIN and DEMOGRAPHIC APIs need. The roles below then decide.
+Every route checks SMART on openEHR scopes, so the realm puts them in every
+token: `user/composition-*.cruds`, `user/template-*.cruds` and
+`user/aql-*.cruds` grant a user every resource family, the service client gets
+their `system/` twins, and `__ferroehr.platform` is the product scope the ADMIN
+and DEMOGRAPHIC APIs need. The roles below then decide.
 
 The overlay also **turns RBAC on**, deliberately: an identity provider whose
 roles decide nothing is a login screen, not authorization. So the realm ships
@@ -318,12 +319,18 @@ four users whose roles are load-bearing:
 | `auditor` | `auditor` | `USER`, `READONLY` | reads succeed, every write is refused `403` |
 | `nobody` | `nobody` | none | an authenticated caller with no grant |
 
-One confidential client is defined (`ferroehr` /
-`ferroehr-quickstart-secret`, with the password grant enabled so a token can be
-fetched by curl). Fetch a token and call the API with it:
+Two confidential clients are defined, and both put `ferroehr`, the audience the
+server checks, in every access token:
+
+| Client | Secret | Grants |
+|---|---|---|
+| `ferroehr-viewer` | `ferroehr-viewer-quickstart-secret` | the authorization-code flow with PKCE (`S256`), redirecting only to the viewer's origin on port 3000, and the password grant so a token can be fetched by curl |
+| `ferroehr-service` | `ferroehr-service-quickstart-secret` | the client-credentials grant only |
+
+Fetch a user's token and call the API with it:
 
 ```shell
-TOKEN=$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
+TOKEN=$(curl -s -d client_id=ferroehr-viewer -d client_secret=ferroehr-viewer-quickstart-secret \
   -d username=ferroehr -d password=ferroehr -d grant_type=password \
   http://localhost:8081/auth/realms/ferroehr/protocol/openid-connect/token \
   | jq -r .access_token)
@@ -332,19 +339,18 @@ curl -H "Authorization: Bearer $TOKEN" -X POST -i \
   http://localhost:8080/ferroehr/rest/openehr/v1/ehr
 ```
 
-A service with no user behind it takes the client-credentials grant with the
-same client. The client's service account holds `USER`, so the token reaches
-the clinical API and the admin routes refuse it with `403`:
+A service with no user behind it takes the client-credentials grant with
+`ferroehr-service`. Its service account holds `USER`, so the token reaches the
+clinical API and the admin routes refuse it with `403`. Its `system/aql-*`
+grant counts because the overlay names the client in `[smart] backend_clients`
+(`FERROEHR__SMART__BACKEND_CLIENTS`):
 
 ```shell
-TOKEN=$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
+TOKEN=$(curl -s -d client_id=ferroehr-service -d client_secret=ferroehr-service-quickstart-secret \
   -d grant_type=client_credentials \
   http://localhost:8081/auth/realms/ferroehr/protocol/openid-connect/token \
   | jq -r .access_token)
 ```
-
-The client's authorization-code flow requires PKCE (`S256`) and accepts only the
-viewer's origin on port 3000 as a redirect target.
 
 > [!WARNING]
 > The realm, the client secret, the user passwords and the CA are demo values,
