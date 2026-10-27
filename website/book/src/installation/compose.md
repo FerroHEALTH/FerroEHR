@@ -292,15 +292,34 @@ points the server's bearer validation at it. Basic auth from the base file keeps
 working, so the server then advertises `Basic, Bearer`.
 
 The server accepts a token issuer only over HTTPS, or plain HTTP on a loopback
-host, so Keycloak serves the issuer over TLS on the compose network at
-`https://keycloak:8443/auth/realms/ferroehr`. On the first `up`, a one-shot
-`keycloak-tls` service generates a development CA and a certificate for
-`keycloak` into the `keycloak-tls` volume and discards the CA's private key;
-the server trusts that CA (`[auth] ca_file`) beside the public ones. `docker
-compose down --volumes` deletes the volume, and the next `up` generates a new
-CA. Keycloak also answers plain HTTP on port 8081 for the token call below, and
-the tokens it mints there name the HTTPS issuer. Keycloak's access tokens carry
-`typ: JWT`, so the overlay sets `FERROEHR__AUTH__TOKEN_PROFILE=jwt`.
+host, so Keycloak serves the issuer over TLS at
+`https://keycloak.localhost:8443/auth/realms/ferroehr`. The containers resolve
+`keycloak.localhost` through a network alias on the compose network, and a
+browser resolves every `*.localhost` name to the loopback address, where the
+published port lands, so both sides use one issuer URL with no hosts entry. On
+the first `up`, a one-shot `keycloak-tls` service generates a development CA
+and a certificate for that name into the `keycloak-tls` volume and discards
+the CA's private key; the server (`[auth] ca_file`) and the viewer
+(`[auth.oidc.tls] trust_roots_file`) trust that CA beside the public ones.
+`docker compose down --volumes` deletes the volume, and the next `up`
+generates a new CA. Keycloak also answers plain HTTP on port 8081 for the token
+call below, and the tokens it mints there name the HTTPS issuer. Keycloak's
+access tokens carry `typ: JWT`, so the overlay sets
+`FERROEHR__AUTH__TOKEN_PROFILE=jwt`.
+
+Start the viewer too and sign in at <http://localhost:3000> as any user below:
+
+```shell
+docker compose -f docker-compose.yml -f docker-compose.keycloak.yml --profile viewer up
+```
+
+The viewer takes the authorization-code flow with PKCE through the
+`ferroehr-viewer` client and calls the server with the user's token. Your
+browser does not trust the development CA, so it warns once on the Keycloak
+page: accept the warning, or trust the CA, which
+`docker compose cp keycloak:/opt/keycloak/conf/tls/ca/ca.crt .` copies out. A
+browser that does not resolve `*.localhost` needs `127.0.0.1 keycloak.localhost`
+in its hosts file.
 
 Every route checks SMART on openEHR scopes, so the realm puts them in every
 token: `user/composition-*.cruds`, `user/template-*.cruds` and
