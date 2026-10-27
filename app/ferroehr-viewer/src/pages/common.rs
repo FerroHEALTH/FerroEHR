@@ -60,43 +60,12 @@ where
     T: Clone + Send + Sync + serde::Serialize + serde::de::DeserializeOwned + 'static,
     F: FnOnce(T) -> AnyView + Send + 'static,
 {
-    // TODO(#4147): remove this hydration probe once CI shows why the browser misses a model.
-    #[cfg(target_arch = "wasm32")]
-    if !ferrohealth_ui::widget::hydration::hydrated() && model.map(|_| ()).is_none() {
-        probe::<T>();
-    }
     awaited(async move {
         match answered(model.await) {
             Ok(model) => draw(model),
             Err(refusal) => refusal,
         }
     })
-}
-
-/// Says, as a console error, which serialized resource reads as the model
-/// `T` the browser did not find, and why each other one does not.
-#[cfg(target_arch = "wasm32")]
-fn probe<T: serde::de::DeserializeOwned>() {
-    use leptos::web_sys::js_sys::{Object, Reflect};
-    let found = Reflect::get(&window(), &"__RESOLVED_RESOURCES".into()).unwrap_or_default();
-    let keys = Object::keys(&Object::from(found.clone()));
-    let mut lines = Vec::new();
-    for key in keys.iter() {
-        let text = Reflect::get(&found, &key)
-            .ok()
-            .and_then(|value| value.as_string())
-            .unwrap_or_default();
-        let name = key.as_string().unwrap_or_default();
-        match serde_json::from_str::<Result<T, ViewerError>>(&text) {
-            Ok(_) => lines.push(format!("{name}: reads as the model")),
-            Err(error) => lines.push(format!("{name}: {error}")),
-        }
-    }
-    leptos::logging::error!(
-        "hydration probe: {} not found; {}",
-        std::any::type_name::<T>(),
-        lines.join("; ")
-    );
 }
 
 /// The view `draw` makes of the model `model` resolves to, on a page that

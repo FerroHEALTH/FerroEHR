@@ -82,8 +82,9 @@ fn cell_words(value: &serde_json::Value) -> String {
 struct Line {
     /// The column's name.
     name: String,
-    /// Its points over the axis.
-    points: Vec<(f64, f64)>,
+    /// Its points over the axis, `None` where the row's cell is absent, null
+    /// or no number, which JSON cannot carry as a number to the browser.
+    points: Vec<(f64, Option<f64>)>,
 }
 
 /// A result set as a line chart over its first time column, or the row
@@ -115,7 +116,11 @@ fn plot(page: &ResultPage) -> Option<Plot> {
             points: axis
                 .rows
                 .iter()
-                .filter_map(|row| row.values.get(index).map(|value| (row.x, *value)))
+                .filter_map(|row| {
+                    row.values
+                        .get(index)
+                        .map(|value| (row.x, value.is_finite().then_some(*value)))
+                })
                 .collect(),
         })
         .collect();
@@ -197,7 +202,11 @@ fn chart(plot: Plot) -> AnyView {
         .enumerate()
         .map(|(index, line)| Series {
             name: line.name,
-            points: line.points,
+            points: line
+                .points
+                .into_iter()
+                .map(|(x, value)| (x, value.unwrap_or(f64::NAN)))
+                .collect(),
             palette: u8::try_from(index % usize::from(ferrohealth_ui::view::chart::PALETTE))
                 .unwrap_or(0),
         })
@@ -377,7 +386,34 @@ fn not_run(line: String) -> AnyView {
     reason = "a RESULT_SET cell is the CDR's untyped JSON"
 )]
 mod tests {
-    use super::cell_words;
+    use super::{Plot, cell_words, plot};
+    use crate::bff::ehrs::ResultPage;
+
+    #[test]
+    fn a_plot_with_an_absent_value_reaches_the_browser_whole() {
+        let page = ResultPage {
+            columns: vec!["observed".to_owned(), "magnitude".to_owned()],
+            rows: vec![
+                vec![
+                    serde_json::json!("2026-10-01T09:00:00Z"),
+                    serde_json::json!(71.5),
+                ],
+                vec![
+                    serde_json::json!("2026-10-02T09:00:00Z"),
+                    serde_json::Value::Null,
+                ],
+                vec![
+                    serde_json::json!("2026-10-03T09:00:00Z"),
+                    serde_json::json!(70),
+                ],
+            ],
+            offset: 0,
+        };
+        let drawn = plot(&page).expect("two numbers draw a line");
+        let wire = serde_json::to_string(&drawn).expect("a plot serializes");
+        let read: Plot = serde_json::from_str(&wire).expect("the browser reads the plot back");
+        assert_eq!(read, drawn, "{wire}");
+    }
 
     #[test]
     fn a_data_value_reads_as_a_person_reads_it() {

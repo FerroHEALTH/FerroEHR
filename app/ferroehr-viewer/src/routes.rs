@@ -340,7 +340,7 @@ pub async fn preload(path: &str) {
 pub fn Pages() -> impl IntoView {
     let location = leptos_router::hooks::use_location();
     let group = Memo::new(move |_| group_of(Page::of(&location.pathname.get())));
-    move || {
+    let drawn = move || {
         group_view(match group.get() {
             1 => loading!(LRecords),
             2 => loading!(LDefinitions),
@@ -349,7 +349,14 @@ pub fn Pages() -> impl IntoView {
             5 => loading!(LSignIn),
             _ => loading!(LOverview),
         })
-    }
+    };
+    // NOTE: Leptos 0.8 `tachys` renders a view closure once per pass of the server's render,
+    // so the server draws the group once, outside a closure, as the group draws its page.
+    #[cfg(not(target_arch = "wasm32"))]
+    let view = untrack(drawn);
+    #[cfg(target_arch = "wasm32")]
+    let view = drawn.into_any();
+    view
 }
 
 macro_rules! group {
