@@ -470,7 +470,9 @@ async fn run(args: Args) -> anyhow::Result<()> {
         .context("measured phase")?;
     let report = Report::new(args.workers, &timings, started.elapsed())?;
     let json = serde_json::to_string_pretty(&report).context("serialise the report")?;
-    std::fs::write(&args.out, json).with_context(|| format!("write {}", args.out.display()))?;
+    tokio::fs::write(&args.out, json)
+        .await
+        .with_context(|| format!("write {}", args.out.display()))?;
     Ok(())
 }
 

@@ -248,7 +248,9 @@ fn entry_rm_type(payload: &Value) -> String {
 /// the [`Corpus`] this returns.
 async fn seed(svc: &Arc<FerroEhrService>, class: BenchClass) -> Corpus {
     let start = Instant::now();
-    let xml = std::fs::read_to_string(corpus_file("opt")).expect("the vendored OPT is readable");
+    let xml = tokio::fs::read_to_string(corpus_file("opt"))
+        .await
+        .expect("the vendored OPT is readable");
     let template_id = openehr_its::opt14::from_xml(&xml)
         .expect("the vendored OPT parses")
         .template_id
