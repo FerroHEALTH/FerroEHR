@@ -264,8 +264,9 @@ jwks_refresh_interval_seconds = 60   # at most one read per interval on an unkno
 # issuer's metadata; boot refuses a symmetric (oct) key or a private member.
 jwks_file = ""
 timeout_ms = 10000           # one call to the authorization server
-# A PEM bundle of certificate authorities trusted for the issuer's metadata and
-# key set in addition to the platform roots, for an issuer behind a private PKI.
+# A PEM bundle of certificate authorities trusted in addition to the platform
+# roots, for an issuer behind a private PKI: its metadata and key set, and
+# under mode = "introspection" the introspection and token calls too.
 #? ca_file = "/run/secrets/issuer-ca.pem"
 realm = ""                   # the challenge realm; empty = "ferroehr"
 # The exact `sub` values whose token, when it carries no resource scope of

@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 19.2.0 -n ferroehr \
+  --version 19.3.0 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.4.2 \
   --set ferropix.enabled=false --set config.ehr_index.provider=local
@@ -63,7 +63,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.2.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.3.0
 ```
 
 ### Pin two versions, not one
@@ -76,7 +76,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 19.2.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 19.3.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.4.2` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -176,7 +176,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.2.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.3.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -324,7 +324,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.2.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.3.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -656,7 +656,10 @@ peers that verify through the platform verifier stay trusted. For an OIDC
 issuer whose certificate comes from a private CA, name a Secret holding that
 CA in `viewer.auth.oidc.caExistingSecret` (key `viewer.auth.oidc.caExistingSecretKey`,
 `ca.crt` by default): the chart mounts it and points the viewer's
-`auth.oidc.tls.trust_roots_file` at it. The ServiceMonitor reads the Secret from its own namespace, and
+`[auth.oidc.tls] trust_roots_file` at it. For the server's own `[auth]`
+issuer behind a private CA, name the Secret in `auth.caExistingSecret` (key
+`auth.caExistingSecretKey`, `ca.crt` by default): the chart mounts it and points
+the server's `[auth] ca_file` at it. The ServiceMonitor reads the Secret from its own namespace, and
 the `prometheus.io/scheme: https` pod annotation follows the listener when
 `metrics.enabled` is set. With `config.server.tls.client_auth: required` the
 kubelet probes cannot present a client certificate, so the chart refuses to
@@ -797,7 +800,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 19.2.0 -n ferroehr --reuse-values \
+  --version 19.3.0 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -951,7 +954,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 19.2.0 -n ferroehr --reuse-values \
+  --version 19.3.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1279,7 +1282,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.2.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.3.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 
