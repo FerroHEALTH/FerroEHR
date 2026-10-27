@@ -655,7 +655,7 @@ fn engine_error(
     error: &(dyn std::error::Error + 'static),
 ) -> Response {
     let overloaded = std::iter::successors(Some(error), |e| e.source())
-        .filter_map(|e| e.downcast_ref::<SmError>())
+        .filter_map(<dyn std::error::Error>::downcast_ref::<SmError>)
         .find(|sm| sm.status == CallStatusType::ServiceOverloaded);
     let mut resp = match overloaded {
         Some(sm) => RestError::from(sm.clone()).into_response(),

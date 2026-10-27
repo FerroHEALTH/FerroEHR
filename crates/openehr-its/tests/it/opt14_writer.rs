@@ -866,36 +866,8 @@ fn derive_children(
         .copied()
         .filter(|c| head(c).2.is_empty())
         .collect();
-    for opt_child in &own {
-        let (_, _, node_id) = head(opt_child);
-        if node_id.is_empty() {
-            continue;
-        }
-        if !sources.iter().any(|a| head(a).2 == node_id) {
-            return Err(Drift::ArchetypeRevised);
-        }
-    }
-    let redefined = if alternatives.is_empty() {
-        if !opt_alternatives.is_empty() {
-            return Err(Drift::ArchetypeRevised);
-        }
-        false
-    } else if opt_alternatives.is_empty() {
-        if alternatives.iter().any(|a| is_mandatory(head(a).1)) && alternatives.len() == 1 {
-            return Err(Drift::ArchetypeRevised);
-        }
-        if alternatives.len() > 1 {
-            return Err(Drift::Inexpressible);
-        }
-        false
-    } else if let Some(narrowing) =
-        derive_alternatives(&opt_alternatives, &alternatives, attribute_path)?
-    {
-        out.narrowings.push(narrowing);
-        true
-    } else {
-        false
-    };
+    check_node_ids(&own, sources)?;
+    let redefined = redefine_alternatives(&opt_alternatives, &alternatives, attribute_path, out)?;
     for arch_child in sources.iter().filter(|c| !is_root(c)) {
         let (_, arch_occurrences, arch_id) = head(arch_child);
         if arch_id.is_empty() && (redefined || alternatives.len() > 1) {
@@ -940,6 +912,60 @@ fn derive_children(
             derive_attributes(opt_inner, arch_inner, &path, library, out)?;
         }
     }
+    derive_fills(opt, sources, attribute_path, library, out)
+}
+
+/// Every node id the OPT names under an attribute exists in the archetype.
+fn check_node_ids(own: &[&CObject], sources: &[CObject]) -> Result<(), Drift> {
+    for opt_child in own {
+        let (_, _, node_id) = head(opt_child);
+        if !node_id.is_empty() && !sources.iter().any(|a| head(a).2 == node_id) {
+            return Err(Drift::ArchetypeRevised);
+        }
+    }
+    Ok(())
+}
+
+/// Records the redefinition of the anonymous alternatives, if any, and says
+/// whether the attribute's alternatives were redefined.
+fn redefine_alternatives(
+    opt_alternatives: &[&CObject],
+    alternatives: &[&CObject],
+    attribute_path: &str,
+    out: &mut ArchetypeUse,
+) -> Result<bool, Drift> {
+    if alternatives.is_empty() {
+        if !opt_alternatives.is_empty() {
+            return Err(Drift::ArchetypeRevised);
+        }
+        return Ok(false);
+    }
+    if opt_alternatives.is_empty() {
+        if alternatives.iter().any(|a| is_mandatory(head(a).1)) && alternatives.len() == 1 {
+            return Err(Drift::ArchetypeRevised);
+        }
+        if alternatives.len() > 1 {
+            return Err(Drift::Inexpressible);
+        }
+        return Ok(false);
+    }
+    let Some(narrowing) = derive_alternatives(opt_alternatives, alternatives, attribute_path)?
+    else {
+        return Ok(false);
+    };
+    out.narrowings.push(narrowing);
+    Ok(true)
+}
+
+/// Records the slot fill of every archetype root the OPT places under an
+/// attribute.
+fn derive_fills(
+    opt: &[CObject],
+    sources: &[CObject],
+    attribute_path: &str,
+    library: &ArchetypeLibrary,
+    out: &mut ArchetypeUse,
+) -> Result<(), Drift> {
     for filler in opt.iter().filter_map(|c| match c {
         CObject::CArchetypeRoot(r) => Some(r),
         _ => None,

@@ -788,15 +788,8 @@ fn bench_read(
         .expect("the kept version uid is an OBJECT_VERSION_ID");
     let mut group = c.benchmark_group(GROUP);
     configure(&mut group);
-    let mut ops = Vec::new();
-
-    ops.push(measured(
-        rt,
-        pool,
-        &mut group,
-        GROUP,
-        "by_version_uid",
-        |b| {
+    let ops = vec![
+        measured(rt, pool, &mut group, GROUP, "by_version_uid", |b| {
             b.iter_custom(|iters| {
                 rt.block_on(async {
                     let start = Instant::now();
@@ -808,35 +801,28 @@ fn bench_read(
                     start.elapsed()
                 })
             });
-        },
-    ));
-    ops.push(measured(
-        rt,
-        pool,
-        &mut group,
-        GROUP,
-        "latest_by_versioned_object_uid",
-        |b| {
-            b.iter_custom(|iters| {
-                rt.block_on(async {
-                    let start = Instant::now();
-                    for _ in 0..iters {
-                        svc.get_composition_latest(kept.ehr, kept.vo)
-                            .await
-                            .expect("read the latest version");
-                    }
-                    start.elapsed()
-                })
-            });
-        },
-    ));
-    ops.push(measured(
-        rt,
-        pool,
-        &mut group,
-        GROUP,
-        "version_at_time",
-        |b| {
+        }),
+        measured(
+            rt,
+            pool,
+            &mut group,
+            GROUP,
+            "latest_by_versioned_object_uid",
+            |b| {
+                b.iter_custom(|iters| {
+                    rt.block_on(async {
+                        let start = Instant::now();
+                        for _ in 0..iters {
+                            svc.get_composition_latest(kept.ehr, kept.vo)
+                                .await
+                                .expect("read the latest version");
+                        }
+                        start.elapsed()
+                    })
+                });
+            },
+        ),
+        measured(rt, pool, &mut group, GROUP, "version_at_time", |b| {
             b.iter_custom(|iters| {
                 rt.block_on(async {
                     let start = Instant::now();
@@ -848,15 +834,8 @@ fn bench_read(
                     start.elapsed()
                 })
             });
-        },
-    ));
-    ops.push(measured(
-        rt,
-        pool,
-        &mut group,
-        GROUP,
-        "revision_history",
-        |b| {
+        }),
+        measured(rt, pool, &mut group, GROUP, "revision_history", |b| {
             b.iter_custom(|iters| {
                 rt.block_on(async {
                     let start = Instant::now();
@@ -868,8 +847,8 @@ fn bench_read(
                     start.elapsed()
                 })
             });
-        },
-    ));
+        }),
+    ];
     group.finish();
     ops
 }
@@ -890,15 +869,8 @@ fn bench_query(
     };
     let mut group = c.benchmark_group(GROUP);
     configure(&mut group);
-    let mut ops = Vec::new();
-
-    ops.push(measured(
-        rt,
-        pool,
-        &mut group,
-        GROUP,
-        "contains_one_ehr",
-        |b| {
+    let ops = vec![
+        measured(rt, pool, &mut group, GROUP, "contains_one_ehr", |b| {
             b.iter_custom(|iters| {
                 rt.block_on(async {
                     let start = Instant::now();
@@ -910,15 +882,8 @@ fn bench_query(
                     start.elapsed()
                 })
             });
-        },
-    ));
-    ops.push(measured(
-        rt,
-        pool,
-        &mut group,
-        GROUP,
-        "contains_population",
-        |b| {
+        }),
+        measured(rt, pool, &mut group, GROUP, "contains_population", |b| {
             b.iter_custom(|iters| {
                 rt.block_on(async {
                     let start = Instant::now();
@@ -930,8 +895,8 @@ fn bench_query(
                     start.elapsed()
                 })
             });
-        },
-    ));
+        }),
+    ];
     group.finish();
     ops
 }
@@ -1053,57 +1018,49 @@ fn bench_lifecycle(
         .to_string();
     let mut group = c.benchmark_group(GROUP);
     configure(&mut group);
-    let mut ops = Vec::new();
-
-    // Archive and restore are each other's setup, so only the measured half of
-    // the pair is timed; `iter_custom` is what makes that expressible.
-    ops.push(measured(rt, pool, &mut group, GROUP, "archive_ehr", |b| {
-        b.iter_custom(|iters| {
-            rt.block_on(async {
-                let mut total = Duration::ZERO;
-                for _ in 0..iters {
-                    let start = Instant::now();
-                    svc.archive_ehrs(vec![subject.clone()])
-                        .await
-                        .expect("archive the EHR");
-                    total += start.elapsed();
-                    svc.restore_archived_ehrs(vec![subject.clone()])
-                        .await
-                        .expect("restore the EHR");
-                }
-                total
-            })
-        });
-    }));
-    ops.push(measured(rt, pool, &mut group, GROUP, "restore_ehr", |b| {
-        b.iter_custom(|iters| {
-            rt.block_on(async {
-                let mut total = Duration::ZERO;
-                for _ in 0..iters {
-                    svc.archive_ehrs(vec![subject.clone()])
-                        .await
-                        .expect("archive the EHR");
-                    let start = Instant::now();
-                    svc.restore_archived_ehrs(vec![subject.clone()])
-                        .await
-                        .expect("restore the EHR");
-                    total += start.elapsed();
-                }
-                total
-            })
-        });
-    }));
-
-    // NOTE: the seed stamps no `published_at`, so the prune deletes nothing —
-    // which is what makes it repeatable across iterations: the measurement is
-    // the retention statement's scan over the seeded outbox.
-    ops.push(measured(
-        rt,
-        pool,
-        &mut group,
-        GROUP,
-        "retention_prune",
-        |b| {
+    let ops = vec![
+        // Archive and restore are each other's setup, so only the measured half of
+        // the pair is timed; `iter_custom` is what makes that expressible.
+        measured(rt, pool, &mut group, GROUP, "archive_ehr", |b| {
+            b.iter_custom(|iters| {
+                rt.block_on(async {
+                    let mut total = Duration::ZERO;
+                    for _ in 0..iters {
+                        let start = Instant::now();
+                        svc.archive_ehrs(vec![subject.clone()])
+                            .await
+                            .expect("archive the EHR");
+                        total += start.elapsed();
+                        svc.restore_archived_ehrs(vec![subject.clone()])
+                            .await
+                            .expect("restore the EHR");
+                    }
+                    total
+                })
+            });
+        }),
+        measured(rt, pool, &mut group, GROUP, "restore_ehr", |b| {
+            b.iter_custom(|iters| {
+                rt.block_on(async {
+                    let mut total = Duration::ZERO;
+                    for _ in 0..iters {
+                        svc.archive_ehrs(vec![subject.clone()])
+                            .await
+                            .expect("archive the EHR");
+                        let start = Instant::now();
+                        svc.restore_archived_ehrs(vec![subject.clone()])
+                            .await
+                            .expect("restore the EHR");
+                        total += start.elapsed();
+                    }
+                    total
+                })
+            });
+        }),
+        // NOTE: the seed stamps no `published_at`, so the prune deletes nothing —
+        // which is what makes it repeatable across iterations: the measurement is
+        // the retention statement's scan over the seeded outbox.
+        measured(rt, pool, &mut group, GROUP, "retention_prune", |b| {
             b.iter_custom(|iters| {
                 rt.block_on(async {
                     let start = Instant::now();
@@ -1115,8 +1072,8 @@ fn bench_lifecycle(
                     start.elapsed()
                 })
             });
-        },
-    ));
+        }),
+    ];
     group.finish();
     ops
 }
