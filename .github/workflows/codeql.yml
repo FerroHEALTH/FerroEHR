@@ -44,8 +44,13 @@ on:
     - cron: "23 5 * * 1" # Mondays 05:23 UTC (off-the-hour to dodge load spikes)
 
 concurrency:
-  group: codeql-${{ github.ref }}
-  cancel-in-progress: true
+  # A pull request's runs supersede each other; a push or scheduled run gets a
+  # group of its own commit, so every main commit keeps its analysis. A per-ref
+  # group on main cancelled the newest commit's run whenever an older push
+  # started after it, and pending runs in a shared group are replaced even with
+  # cancel-in-progress off (workflow syntax, `concurrency`).
+  group: codeql-${{ case(github.event_name == 'pull_request', github.ref, github.sha) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # No permissions by default — the analyse job grants its own; without this the
 # workflow would inherit the repository default.

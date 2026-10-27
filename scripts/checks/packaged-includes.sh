@@ -88,8 +88,8 @@ for manifest in crates/*/Cargo.toml; do
 
     # An include whose argument is not a plain literal (a `concat!`, a macro, a
     # constant) cannot be resolved here, and silence would read as coverage.
-    if tr '\n' ' ' <"$source_file" |
-      grep -qE 'include_(str|bytes)![[:space:]]*\([[:space:]]*[^"[:space:])]'; then
+    if grep -qE 'include_(str|bytes)![[:space:]]*\([[:space:]]*[^"[:space:])]' \
+      <<<"$(tr '\n' ' ' <"$source_file")"; then
       note "$source_file embeds a computed path this gate cannot resolve — make it a literal, or exempt it here with the reason"
     fi
   done <<<"$packaged"
