@@ -150,13 +150,16 @@ LABEL org.opencontainers.image.title="FerroEHR" \
       eu.ferroehr.image.accompanying-documents="Information sheet and instructions for use: the assets ferroehr-v<version>-information-sheet.md and ferroehr-v<version>-instructions-for-use.md of https://github.com/FerroHEALTH/FerroEHR/releases/tag/v<version>, where <version> is this image's org.opencontainers.image.version"
 
 # ── The hosted-sandbox posture travels in the image (#2974) ────────────────────
-# The compose file, the Caddyfile and the two sandbox configuration files the
-# Hetzner box runs (deploy/hosted/): the box holds no checkout, so its deploy
-# script extracts these from the image it just pulled and installs them with a
-# parse check and .prev rollback. A posture change therefore arrives with the
-# release that carries it, with that artifact's provenance.
+# The compose file, the Caddyfile and the sandbox configuration files of the
+# CDR, the viewer and FerroPIX the Hetzner box runs (deploy/hosted/): the box
+# holds no checkout, so its deploy script extracts these from the image it just
+# pulled and installs them with a parse check and .prev rollback. A posture
+# change therefore arrives with the release that carries it, with that
+# artifact's provenance. The FerroPIX seed script is read in place: the compose
+# file mounts this image into its one-shot (#4242).
 COPY deploy/hosted/docker-compose.yml deploy/hosted/Caddyfile \
      deploy/hosted/ferroehr.sandbox.toml deploy/hosted/ferroehr-viewer.sandbox.toml \
+     deploy/hosted/ferropix.sandbox.toml deploy/hosted/ferropix-seed.sh \
      /opt/sandbox-posture/
 # The licence-free shaped terminology seed (docker/terminology/seed/) travels the
 # same way: the sandbox and the terminology overlay mount this directory into

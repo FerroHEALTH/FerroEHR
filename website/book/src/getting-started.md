@@ -71,12 +71,16 @@ expect it to slow down under heavy use.
 The nightly reset reloads a fixed demo dataset, so the server always answers
 with something to look at:
 
-- **8 EHRs**, each with a mixed record and its own subject id
-  (`sandbox-patient-01` … `-08` in the `ferroehr-sandbox` namespace, so
-  `GET /ehr?subject_id=sandbox-patient-01&subject_namespace=ferroehr-sandbox`
-  finds one). Two of them carry a second `EHR_STATUS` version: patient 07 is
-  not queryable and so never appears in AQL results, patient 08 is not
-  modifiable and refuses writes with a `409`.
+- **8 EHRs**, each with a mixed record and its own patient. The sandbox
+  resolves patients through FerroPIX, the FerroHEALTH patient identity
+  source, as the compose quickstart does: the patients are
+  `sandbox-patient-01` … `-08` in the synthetic hospital domain
+  `urn:oid:2.999.1.1`, and each `EHR_STATUS` names its patient by the
+  pseudonym FerroPIX minted in the clinical domain `urn:oid:2.999.7.1`.
+  `POST /query/cohort` with `subjects` named in the hospital domain finds
+  their EHRs through FerroPIX. Two of them carry a second `EHR_STATUS`
+  version: patient 07 is not queryable and so never appears in AQL results,
+  patient 08 is not modifiable and refuses writes with a `409`.
 - **183 compositions** across **17 ADL 1.4 templates**: sixteen from the
   openEHR CKM (vital signs, problem and medicines lists, lab results,
   referrals, an International Patient Summary, several statutory case-report

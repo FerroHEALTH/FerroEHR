@@ -92,6 +92,21 @@ check() {
   return 0
 }
 
+# The compose file reads posture paths in place, out of the ferroehr image it
+# mounts (FerroTERM's seed, the FerroPIX seed script), so each of those must be
+# baked too: a COPY of the same-named file from deploy/hosted/, or a COPY whose
+# destination is that path.
+compose_paths_baked() {
+  local compose="$1" dockerfile="$2" f base rc=0
+  while IFS= read -r f; do
+    base="${f##*/}"
+    if ! grep -qE "(deploy/hosted/${base}([[:space:]]|\$)|/opt/sandbox-posture/${base}/?([[:space:]]|\$))" "$dockerfile"; then
+      echo "::error::$compose reads ${f} out of the ferroehr image, but $dockerfile bakes nothing there" >&2
+      rc=1
+    fi
+  done < <(grep -oE '/opt/sandbox-posture/[A-Za-z0-9._-]+' "$compose" | sort -u)
+  return "$rc"
+}
 if ! command -v shellcheck >/dev/null 2>&1; then
   echo "::error::shellcheck is not installed, so this guard would pass vacuously" >&2
   echo "install it (https://github.com/koalaman/shellcheck#installing) and re-run." >&2
@@ -119,7 +134,13 @@ if [[ "${1:-}" == "--self-test" ]]; then
     exit 1
   fi
   check "$CLOUD_INIT" >/dev/null
-  echo "hosted-deploy-script: self-test OK (a seeded unquoted expansion is caught, the committed script passes)."
+  printf '    entrypoint: ["sh", "/image/opt/sandbox-posture/unbaked.sh"]\n' > "$scratch/compose.yml"
+  if compose_paths_baked "$scratch/compose.yml" docker/Dockerfile >/dev/null 2>&1; then
+    echo "::error::the self-test's unbaked compose posture path was not caught" >&2
+    exit 1
+  fi
+  compose_paths_baked deploy/hosted/docker-compose.yml docker/Dockerfile >/dev/null
+  echo "hosted-deploy-script: self-test OK (a seeded unquoted expansion and an unbaked compose path are caught, the committed files pass)."
   exit 0
 fi
 
@@ -139,5 +160,11 @@ while IFS= read -r f; do
   fi
 done < <(grep -oE '/opt/sandbox-posture/[A-Za-z0-9._-]+' "$script_tmp" | sort -u)
 rm -f "$script_tmp"
-[[ "$missing" -eq 0 ]]
+
+compose_paths_baked deploy/hosted/docker-compose.yml docker/Dockerfile || missing=1
+
+# An explicit exit: bash before 4.1 does not stop on a failing [[ ]] under set -e.
+if [[ "$missing" -ne 0 ]]; then
+  exit 1
+fi
 echo "hosted-deploy-script: the $SCRIPT_PATH embedded in $CLOUD_INIT is shellcheck-clean and every posture path it reads is baked — OK."

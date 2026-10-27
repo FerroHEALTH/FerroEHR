@@ -17,7 +17,7 @@
     "_type": "PARTY_SELF",
     "external_ref": {
       "_type": "PARTY_REF",
-      "namespace": "ferroehr-sandbox",
+      "namespace": "__SUBJECT_NS__",
       "type": "PERSON",
       "id": {
         "_type": "HIER_OBJECT_ID",

@@ -8,7 +8,7 @@
 #
 # What it deliberately does NOT do: fetch anything from this repository. The
 # box holds no checkout. The posture the box runs — docker-compose.yml, the
-# Caddyfile, the two sandbox configuration files — travels INSIDE the
+# Caddyfile, the sandbox configuration files — travels INSIDE the
 # published ferroehr image at /opt/sandbox-posture, and the one script the CI
 # key may run installs it out of the image it just pulled.
 
@@ -65,12 +65,13 @@ write_files:
       }
 
   # The ONE command the CI key may run. It reads SSH_ORIGINAL_COMMAND and
-  # accepts exactly three verbs: `deploy` (the default — pull, extract the
+  # accepts exactly four verbs: `deploy` (the default — pull, extract the
   # posture out of the pulled image, recreate), `restart` (recreate the CDR
   # so a fresh boot re-runs the migrations — what the reseed needs after its
-  # wipe), and `wipe` (drop the CDR's schemas on the private database, using
+  # wipe), `wipe` (drop the CDR's schemas on the private database, using
   # the DSN this box already holds — the database has no public port and CI
-  # holds no database credential). Nothing is built here, and nothing is
+  # holds no database credential), and `identities` (register the demo
+  # subjects with FerroPIX and answer their pseudonyms, #4242). Nothing is built here, and nothing is
   # fetched from the repository.
   - path: /opt/ferroehr-sandbox/deploy.sh
     permissions: "0755"
@@ -86,7 +87,7 @@ write_files:
       # SSH_ORIGINAL_COMMAND, which selects one of the verbs below.
       #
       # The posture this box runs — docker-compose.yml, the Caddyfile and the
-      # two sandbox configuration files — travels INSIDE the published
+      # sandbox configuration files — travels INSIDE the published
       # ferroehr image at /opt/sandbox-posture (docker/Dockerfile), so a
       # committed posture change arrives with the release that carries it.
       # This script extracts it from the image it just pulled and installs it
@@ -99,12 +100,40 @@ write_files:
 
       verb="${SSH_ORIGINAL_COMMAND:-deploy}"
       case "$verb" in
-        deploy|restart|wipe) ;;
+        deploy|restart|wipe|identities) ;;
         *)
-          echo "deploy: unknown verb '$verb' (this key runs 'deploy', 'restart' or 'wipe')" >&2
+          echo "deploy: unknown verb '$verb' (this key runs 'deploy', 'restart', 'wipe' or 'identities')" >&2
           exit 1
           ;;
       esac
+
+      # `identities` is the reseed's FerroPIX step (#4242): the demo subjects
+      # arrive on stdin, one per line, and the answer on stdout is the file
+      # reseed.sh reads as SANDBOX_IDENTITIES. Under the in-instance map the
+      # answer says so and nothing runs; under FerroPIX the compose file's
+      # one-shot registers each subject and answers its pseudonym.
+      if [[ "$verb" == "identities" ]]; then
+        if ! grep -qE '^provider = "ihe"' ferroehr.sandbox.toml; then
+          echo "provider local"
+          exit 0
+        fi
+        subjects=()
+        while IFS= read -r subject; do
+          [[ -n "$subject" ]] || continue
+          if [[ ! "$subject" =~ ^[A-Za-z0-9._-]{1,64}$ ]] || [[ "${#subjects[@]}" -ge 100 ]]; then
+            echo "identities: refusing subject input" >&2
+            exit 1
+          fi
+          subjects+=("$subject")
+        done
+        if [[ "${#subjects[@]}" -eq 0 ]]; then
+          echo "identities: no subject on stdin" >&2
+          exit 1
+        fi
+        printf '%s\n' "${subjects[@]}" \
+          | docker compose --profile seed run --rm -T ferropix-seed
+        exit 0
+      fi
 
       # `wipe` is the nightly reset's schema drop (sandbox-reseed.yml),
       # executed HERE because the database lives on the private network with
@@ -164,7 +193,8 @@ write_files:
           docker rm -f "$cid" >/dev/null 2>&1 || true
         fi
         rm -f docker-compose.yml.candidate Caddyfile.candidate \
-          ferroehr.sandbox.toml.candidate ferroehr-viewer.sandbox.toml.candidate
+          ferroehr.sandbox.toml.candidate ferroehr-viewer.sandbox.toml.candidate \
+          ferropix.sandbox.toml.candidate
       }
       cid=""
       trap cleanup EXIT
@@ -178,12 +208,14 @@ write_files:
       docker cp "$cid:/opt/sandbox-posture/Caddyfile" Caddyfile.candidate
       docker cp "$cid:/opt/sandbox-posture/ferroehr.sandbox.toml" ferroehr.sandbox.toml.candidate
       docker cp "$cid:/opt/sandbox-posture/ferroehr-viewer.sandbox.toml" ferroehr-viewer.sandbox.toml.candidate
+      docker cp "$cid:/opt/sandbox-posture/ferropix.sandbox.toml" ferropix.sandbox.toml.candidate
 
       # `set -e` fails a failed copy; an EMPTY file it cannot see. A truncated
       # posture stops the deploy here rather than recreating with the old
       # files and reporting success.
       for candidate in docker-compose.yml.candidate Caddyfile.candidate \
-        ferroehr.sandbox.toml.candidate ferroehr-viewer.sandbox.toml.candidate; do
+        ferroehr.sandbox.toml.candidate ferroehr-viewer.sandbox.toml.candidate \
+        ferropix.sandbox.toml.candidate; do
         if [[ ! -s "$candidate" ]]; then
           echo "deploy: $candidate came out of $image empty" >&2
           exit 1
@@ -200,7 +232,8 @@ write_files:
 
       # The replaced copy stays on the box, so a bad posture is recoverable
       # without anyone editing YAML over SSH.
-      for f in docker-compose.yml Caddyfile ferroehr.sandbox.toml ferroehr-viewer.sandbox.toml; do
+      for f in docker-compose.yml Caddyfile ferroehr.sandbox.toml ferroehr-viewer.sandbox.toml \
+        ferropix.sandbox.toml; do
         if ! cmp -s "$f.candidate" "$f"; then
           if [[ -f "$f" ]]; then
             cp -p "$f" "$f.prev"
@@ -211,6 +244,11 @@ write_files:
       done
 
       docker compose pull -q
+      # The CDR and FerroPIX run in the development issuer's network
+      # namespace, and a namespace owner with members cannot be replaced, so
+      # both go first: `up -d` then recreates the issuer when its definition
+      # moved and starts them in the namespace that is current.
+      docker compose rm --stop --force ferroehr ferropix
       docker compose up -d --remove-orphans
 
       # A bind-mounted file's CONTENTS changing is not a configuration change,

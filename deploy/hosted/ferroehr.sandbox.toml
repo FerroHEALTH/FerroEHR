@@ -69,8 +69,30 @@ enabled = true
 url = "http://ferroterm:8080/r4b"
 fail_on_error = false
 
-# The in-instance subject-to-EHR map, the explicit opt-in of a FerroEHR run
-# on its own: the public sandbox asks no identity source and holds synthetic
-# records only. Without it the server refuses to start.
+# The pseudonym namespace of the clinical domain (#4242): EHR_STATUS.subject
+# names a demo patient by the UUID FerroPIX minted for it there.
+[privacy]
+subject_namespaces = ["urn:oid:2.999.7.1"]
+
+# FerroPIX beside the CDR as the IHE patient identity source, asked over PIXm
+# (ITI-83) on the loopback of the development issuer's network namespace,
+# which the CDR, FerroPIX and the issuer share (the compose file says why).
+# The client id is the consumer FerroPIX's [[pseudonym_domain]] names, and
+# system/Patient.rs the scope its PIXm Manager takes from a Consumer. The
+# development issuer checks no client secret, so the one below is no credential.
 [ehr_index]
-provider = "local"
+provider = "ihe"
+pixm_url = "http://localhost:8090/fhir"
+assigning_authority = "urn:oid:2.999.7.1"
+
+[ehr_index.oauth]
+token_endpoint = "http://localhost:8180/sandbox/token"
+client_id = "ferroehr"
+client_secret = "sandbox"
+scope = "system/Patient.rs"
+
+# A cohort may name its patients by identifier in any domain, each resolved
+# through FerroPIX: the visible path from a hospital identifier to an EHR.
+# The small-cell floor stays at its default of 5.
+[cohort]
+subjects = true
