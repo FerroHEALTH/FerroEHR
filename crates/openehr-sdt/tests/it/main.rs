@@ -41,5 +41,6 @@ mod untagged_nodes;
 mod validation;
 mod validation_checklist;
 mod validation_rules;
+mod value_alternatives;
 mod webtemplate;
 mod webtemplate_v2_4;
