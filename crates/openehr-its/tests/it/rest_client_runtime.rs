@@ -21,6 +21,7 @@
 //! server drops.
 
 use std::error::Error;
+use std::hash::{BuildHasher, RandomState};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
@@ -408,11 +409,16 @@ async fn a_provider_failure_carries_its_cause_and_sends_nothing() -> TestResult 
 /// A client's `Debug` never prints the secret of its static credentials.
 #[test]
 fn client_debug_redacts_static_credentials() -> TestResult {
+    // A secret drawn per run, so no fixed string can satisfy the assertion.
+    let secret = format!(
+        "secret-{:016x}",
+        BuildHasher::hash_one(&RandomState::new(), "client-debug")
+    );
     let transport = ReqwestTransport::with_timeout(Duration::from_secs(1))?;
     let client = Client::new(transport, "https://cdr.example.org/openehr/v1".parse()?)?
-        .with_credentials(Credentials::basic("alice", "hunter2"));
+        .with_credentials(Credentials::basic("alice", secret.as_str()));
     let printed = format!("{client:?}");
-    assert!(!printed.contains("hunter2"), "{printed}");
+    assert!(!printed.contains(&secret), "{printed}");
     assert!(printed.contains("alice"));
     Ok(())
 }
