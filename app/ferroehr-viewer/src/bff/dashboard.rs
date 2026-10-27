@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 use crate::activity::ActivityPoint;
 use crate::error::ViewerError;
 
-/// Total EHRs — a fixed count AQL. Validated by [`tests::dashboard_aql_consts_parse`].
+/// Total EHRs — a fixed count AQL. Validated by the `dashboard_aql_consts_parse` test.
 #[cfg(not(target_arch = "wasm32"))]
 const EHR_COUNT_AQL: &str = "SELECT COUNT(*) FROM EHR e";
 /// Total compositions — a fixed count AQL.

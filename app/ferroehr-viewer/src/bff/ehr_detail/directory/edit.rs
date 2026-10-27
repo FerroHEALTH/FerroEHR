@@ -30,7 +30,7 @@
 //! STRIPPED (`strip_keys`) from every body serialized for the CDR and from the
 //! advanced-JSON view — it never appears on the wire, and no openEHR spec governs
 //! it (our own design/extension). Positions are re-derived from the `_key` on
-//! demand (`find_path_by_key`, `find_item_index`), so mutations keep targeting
+//! demand (`find_path_by_key`, `find_item_by_key`), so mutations keep targeting
 //! the `&[usize]` path + index pair after siblings shift.
 
 #![expect(
@@ -236,7 +236,7 @@ pub(crate) fn add_item(root: &mut Value, path: &[usize], item: Value) {
 }
 
 /// Remove the `idx`-th item from the folder at `path`. Callers re-derive `idx`
-/// from the row's ephemeral item identity ([`find_item_index`]) at click time,
+/// from the row's ephemeral item identity ([`find_item_by_key`]) at click time,
 /// so a shifted index can never remove the wrong sibling.
 pub(crate) fn remove_item(root: &mut Value, path: &[usize], idx: usize) {
     if let Some(list) = folder_at_mut(root, path)
