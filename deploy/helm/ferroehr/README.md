@@ -503,6 +503,8 @@ Kubernetes: `>=1.36.0-0`
 | viewer.securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}}` | Container-level security context. Mirrors the server's. |
 | viewer.service.port | int | `3000` | Service port. The container always listens on 3000. |
 | viewer.service.type | string | `"ClusterIP"` | Service type for the viewer. |
+| viewer.telemetry.filter | string | `""` | The viewer's console filter (`[telemetry] filter`). Empty keeps the viewer's default, `info,hyper=warn,tower=warn,h2=warn`. |
+| viewer.telemetry.format | string | `"json"` | The viewer's console rendering (`[telemetry] format`): `json` for a cluster log collector, as the server's `config.telemetry.format`. |
 | viewer.terminationGracePeriodSeconds | int | `20` | Termination grace period for the viewer. Shorter than the server's: it holds no write in flight and nothing to drain but in-flight page renders. |
 | viewer.tolerations | list | `[]` | Tolerations. |
 

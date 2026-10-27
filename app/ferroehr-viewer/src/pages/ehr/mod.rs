@@ -150,9 +150,7 @@ pub async fn facts(ehr_id: &str) -> Result<EhrFacts, ViewerError> {
         crate::bff::ehr_detail::directory::fetch_directory(ehr_id.to_owned()).await,
         Ok(None)
     );
-    let admin = crate::admin::probe_admin_api()
-        .await
-        .is_ok_and(crate::admin::AdminAvailability::usable);
+    let admin = crate::admin::renders_admin_ops(&crate::admin::probe_admin_api().await);
     Ok(EhrFacts {
         summary,
         status,

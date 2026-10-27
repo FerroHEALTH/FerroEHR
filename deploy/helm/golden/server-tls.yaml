@@ -915,6 +915,9 @@ spec:
             # The scheme follows config.server.tls.
             - name: FERROEHR_VIEWER__CDR__BASE_URL
               value: "https://ferroehr:8080"
+            # The console: the family's `[telemetry]`, as the server's.
+            - name: FERROEHR_VIEWER__TELEMETRY__FORMAT
+              value: "json"
             # The CA that signed the server's certificate, beside the image's
             # own roots (`[cdr.tls] trust_roots_file`).
             - name: FERROEHR_VIEWER__CDR__TLS__TRUST_ROOTS_FILE

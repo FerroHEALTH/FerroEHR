@@ -1381,6 +1381,13 @@ viewer:
   tolerations: []
   # -- Affinity.
   affinity: {}
+  telemetry:
+    # -- The viewer's console rendering (`[telemetry] format`): `json` for a
+    # cluster log collector, as the server's `config.telemetry.format`.
+    format: json
+    # -- The viewer's console filter (`[telemetry] filter`). Empty keeps the
+    # viewer's default, `info,hyper=warn,tower=warn,h2=warn`.
+    filter: ""
   # -- Extra environment for the viewer (escape hatch).
   extraEnv: []
 

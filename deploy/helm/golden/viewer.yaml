@@ -634,6 +634,9 @@ spec:
             # The scheme follows config.server.tls.
             - name: FERROEHR_VIEWER__CDR__BASE_URL
               value: "http://ferroehr:8080"
+            # The console: the family's `[telemetry]`, as the server's.
+            - name: FERROEHR_VIEWER__TELEMETRY__FORMAT
+              value: "json"
             # The management surface as the CDR serves it: on its own port when
             # config.management.port is set, under config.management.base_path
             # either way, so the viewer never guesses either.

@@ -100,7 +100,12 @@ async fn the_healthcheck_asks_the_readiness_of_the_served_viewer() {
         .build();
     let lifecycle = Lifecycle::default();
     let health = Health::new(Registry::default(), lifecycle.clone());
-    let app = ferroehr_viewer::server::app(app_state(), options, health);
+    let app = ferroehr_viewer::server::app(
+        app_state(),
+        options,
+        health,
+        ferrohealth_telemetry::request_log::RequestLog::new(&[]),
+    );
     let address = serve(app, None, lifecycle.clone()).await;
     let section = ServerSection {
         listen: address,
