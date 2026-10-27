@@ -85,9 +85,7 @@ fn card(
             )
         }
     };
-    let issuer = crate::request::state()
-        .map(|state| state.config.auth.oidc.issuer.clone())
-        .unwrap_or_default();
+    let issuer = crate::request::settings().oidc_issuer;
     let host = issuer
         .parse::<http::Uri>()
         .ok()

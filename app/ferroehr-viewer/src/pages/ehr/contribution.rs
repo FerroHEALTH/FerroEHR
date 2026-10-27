@@ -839,7 +839,7 @@ pub fn NewContributionPage() -> impl IntoView {
                 .as_ref()
                 .map(|posted| posted.text("committer"))
                 .unwrap_or_default();
-            let you = crate::request::session()
+            let you = crate::request::signed()
                 .map(|session| session.identity)
                 .unwrap_or_default();
             let mut top = None;
