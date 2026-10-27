@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The public health family at the process root: `/health`,
+//! The served documentation of the family health routes: `/health`,
 //! `/health/liveness`, `/health/readiness`.
 //!
 //! NOTE: no openEHR spec governs this — our own operational surface;
@@ -10,84 +10,58 @@
 //! `docs/specs/openehr/ITS-REST/specifications/docs/system/`) and no health
 //! resource at all, so this whole family is our own extension.
 //!
-//! **Always mounted, never gated.** These three routes are mounted
-//! unconditionally by [`crate::router::router`], outside the API subtree — so
-//! outside authentication, outside the ATNA audit layer, and outside the
-//! overload-shed layer. An orchestrator can therefore always probe the
-//! server: no credentials, no configuration to remember, and a saturated
-//! server cannot shed its own probes.
-//!
-//! The three contracts are deliberately different, one per client:
-//!
-//! | Route | Contract | Canonical client |
-//! |---|---|---|
-//! | `GET /health` | constant `OK`, no I/O | load balancers, container `HEALTHCHECK` |
-//! | `GET /health/liveness` | the same constant `OK` (path alias) | container/orchestrator liveness probe |
-//! | `GET /health/readiness` | the family readiness document, evaluated per call; `200` while ready, `503` while booting, draining or an indicator is `down`; the body names the phase and each indicator's state, nothing more | orchestrator readiness probe |
-//!
-//! **The probes say as little as possible.** An orchestrator acts on the
-//! status code alone, and the body is reachable by anyone who can reach the
-//! port, so readiness serves [`Readiness::without_detail`]: no detail string, count,
-//! chain position, host or version. The same evaluation with every
-//! indicator's detail is `GET /management/health`
+//! The routes themselves are the family stack's
+//! (`ferrohealth_server::health::routes`, mounted by `stack::app` under
+//! `server.base_path`, outside authentication, the ATNA audit layer and the
+//! overload bound), so an orchestrator can always probe the server. The stubs
+//! below are their documentation twins, the same pattern as the System
+//! `OPTIONS` manifest's: registered only to build the document, never served.
+//! The detail behind readiness is `GET /management/health`
 //! ([`crate::extensions::management`]), behind the management access gate.
-//! `GET /ferroehr/rest/status` ([`crate::overview::status`]) is a different
-//! contract — the product status document.
 
-use axum::Router;
-use axum::extract::State;
-use axum::response::{IntoResponse, Json, Response};
-use axum::routing::get;
-use http::StatusCode;
+use ferrohealth_server::section::BasePath;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::extensions::management::readiness_status;
 use crate::state::AppState;
-use ferrohealth_health::document::Readiness;
 
-/// The constant liveness body. Reaching a liveness handler at all is the whole
-/// check — the process is running and the router is answering — so the body is
-/// a fixed `OK` with no I/O behind it.
-const LIVENESS_BODY: &str = "OK";
-
-/// The always-on public health routes. Merged into the pre-auth surface by
-/// [`crate::router::router`]; there is no configuration switch, by design.
-pub(crate) fn router() -> Router<AppState> {
-    Router::new()
-        .route("/health", get(root_health))
-        .route("/health/liveness", get(liveness))
-        .route("/health/readiness", get(readiness))
-}
-
-/// The health family's `OpenAPI` document. Unauthenticated — these operations
-/// carry no security requirement in the served document.
-pub(crate) fn openapi() -> utoipa::openapi::OpenApi {
-    OpenApiRouter::<AppState>::new()
+/// The health family's `OpenAPI` document under `base_path`. Unauthenticated —
+/// these operations carry no security requirement in the served document.
+pub(crate) fn openapi(base_path: &BasePath) -> utoipa::openapi::OpenApi {
+    let mut doc = OpenApiRouter::<AppState>::new()
         .routes(routes!(root_health))
         .routes(routes!(liveness))
         .routes(routes!(readiness))
-        .into_openapi()
+        .into_openapi();
+    for route in [
+        ferrohealth_server::health::SUMMARY,
+        ferrohealth_server::health::LIVENESS,
+        ferrohealth_server::health::READINESS,
+    ] {
+        crate::extensions::openapi::rehome_path(&mut doc, route, &base_path.join(route));
+    }
+    doc
 }
 
-/// Process liveness (`GET /health`).
+/// The readiness summary (`GET /health`).
 ///
-/// OUR OWN SURFACE — no openEHR spec governs a health endpoint. Returns the
-/// plain-text body `OK`. Always mounted, unauthenticated (outside the auth and
-/// overload-shed layers).
+/// OUR OWN SURFACE — no openEHR spec governs a health endpoint. Answers the
+/// status readiness answers with the state alone (`{"state": …}`), for a
+/// caller that may not see the indicators. Always mounted, unauthenticated
+/// (outside the auth layer and the overload bound).
 #[utoipa::path(
     get, path = "/health", tag = "status",
     responses(
-        (status = 200, description = "Server process alive; plain-text `OK`.",
-         body = String)
+        (status = 200, description = "Ready to serve; `{state}`.",
+         body = serde_json::Value),
+        (status = 503, description = "Not ready (booting, draining, or an indicator is \
+                                      `down`); `{state}`.",
+         body = serde_json::Value)
     )
 )]
-async fn root_health() -> Response {
-    (StatusCode::OK, LIVENESS_BODY).into_response()
-}
+async fn root_health() {}
 
-/// Process liveness under the orchestrator-conventional path
-/// (`GET /health/liveness`) — a byte-identical alias of [`root_health`].
+/// Process liveness (`GET /health/liveness`).
 ///
 /// OUR OWN SURFACE — no openEHR spec governs a health endpoint. Always
 /// mounted, unauthenticated, and never touches a dependency: a `200` here says
@@ -96,13 +70,11 @@ async fn root_health() -> Response {
 #[utoipa::path(
     get, path = "/health/liveness", tag = "status",
     responses(
-        (status = 200, description = "Server process alive; plain-text `OK`.",
-         body = String)
+        (status = 200, description = "Server process alive; `{\"state\": \"up\"}`.",
+         body = serde_json::Value)
     )
 )]
-async fn liveness() -> Response {
-    (StatusCode::OK, LIVENESS_BODY).into_response()
-}
+async fn liveness() {}
 
 /// Readiness (`GET /health/readiness`) — the family readiness document,
 /// evaluated on every call and served without detail.
@@ -128,11 +100,4 @@ async fn liveness() -> Response {
          body = serde_json::Value)
     )
 )]
-async fn readiness(State(state): State<AppState>) -> Response {
-    let observability = state.observability();
-    let document: Readiness = observability
-        .health
-        .readiness(&observability.lifecycle)
-        .await;
-    (readiness_status(&document), Json(document.without_detail())).into_response()
-}
+async fn readiness() {}

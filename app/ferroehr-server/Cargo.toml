@@ -27,13 +27,14 @@ multimedia = ["ferroehr/multimedia", "ferroehr-rest/multimedia"]
 ferroehr = { path = "../ferroehr", default-features = false }
 ferrohealth-config = { workspace = true }
 ferrohealth-health = { workspace = true, features = ["registry"] }
+# The family CLI skeleton, the healthcheck and the `[server]` section.
+ferrohealth-server.workspace = true
 ferrohealth-telemetry.workspace = true
 ferrohealth-usage-report.workspace = true
 ferroehr-rest = { path = "../ferroehr-rest", default-features = false }
 
 anyhow.workspace = true
 clap.workspace = true
-reqwest.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
@@ -45,7 +46,7 @@ workspace = true
 
 [dev-dependencies]
 # The wiring-seam tests (`tests/it/`) drive `Cli` parsing, the pure-stdout
-# `config default` dispatch and the `[privacy]` policy the run path compiles
+# `config check` dispatch and the `[privacy]` policy the run path compiles
 # out of the shipped defaults: the CLI derive, the async `run` entry point,
 # its `anyhow` result, a temp file for the shipped template, and `openehr-its`
 # for the example COMPOSITION that policy has to accept. Everything past that

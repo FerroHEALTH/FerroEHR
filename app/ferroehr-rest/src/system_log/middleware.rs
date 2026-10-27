@@ -263,14 +263,13 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     let timestamp = jiff::Timestamp::now();
     let purpose = declared_purpose(&req, state.backend());
     let permit = declared_permit(&req, state.backend());
-    // The correlation id `SetRequestIdLayer::x_request_id` stamped on the request;
-    // the response gains it only from `PropagateRequestIdLayer`, which runs
-    // outside this layer.
+    // The server's own request id, which the family stack mints for every
+    // request and the request log names; a client's `X-Request-Id` is echoed
+    // to it and never recorded.
     let request_id = req
-        .headers()
-        .get("x-request-id")
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
+        .extensions()
+        .get::<ferrohealth_telemetry::request_log::RequestId>()
+        .map(|id| id.id().to_owned());
 
     // Published for the handler's task scope so a record the SERVICE layer
     // emits by itself — a pseudonymisation boundary crossing, which no

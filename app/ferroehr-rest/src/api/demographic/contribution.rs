@@ -31,7 +31,7 @@ pub(super) async fn run(
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let base = state.config().server.base_path.clone();
+    let base = state.config().rest.base_path.clone();
 
     match op {
         "contribution_create" => {

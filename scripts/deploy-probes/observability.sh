@@ -31,6 +31,12 @@ obs_up() {
        up -d ferroehr otel-lgtm >/dev/null 2>&1
 }
 
+# Back to the shipped stack for the families that follow.
+obs_down() {
+  dc -f docker-compose.yml up -d ferroehr >/dev/null 2>&1
+  wait_http "$CDR/health/readiness" 150 || true
+}
+
 # The datasource uid for a given type, discovered rather than assumed: the
 # bundled stack provisions its own and the names are not ours to pin.
 obs_datasource_uid() {
@@ -80,6 +86,11 @@ obs_wait_traces() {
 }
 
 probes_observability() {
+  observability_family
+  obs_down
+}
+
+observability_family() {
   bold "observability (traces + metrics at the collector)"
 
   obs_up

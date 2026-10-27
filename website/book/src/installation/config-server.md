@@ -1,6 +1,6 @@
 # Server, database & telemetry
 
-The listener and REST surface (`[server]` and its sub-tables), the PostgreSQL
+The listener (`[server]`), the REST surface (`[rest]`), the PostgreSQL
 connection (`[db]`), the observability section (`[telemetry]`), and the
 usage report (`[usage_report]`). Precedence, the
 environment-name grammar, and file discovery are on the
@@ -10,30 +10,156 @@ environment-name grammar, and file discovery are on the
 
 ## `[server]`
 
-The HTTP listener and REST surface.
+The HTTP listener: the section every FerroHEALTH product shares
+(`ferrohealth-server`), so the keys and their behaviour are the same in each.
+It carries the stack every request passes through: the server's request id,
+the request timeout, the body limit, the concurrency bound, compression, the
+request log, the health routes and the bounded drain on `SIGTERM`.
 
 ```toml
 [server]
-bind = "0.0.0.0:8080"
-base_path = "/ferroehr/rest/openehr/v1"
-max_in_flight = 256
-swagger_ui = "private"
-cors_permissive = false
-system_id = "ferroehr.local"
+listen = "127.0.0.1:8080"
+base_path = ""
+request_timeout_ms = 30000
+header_read_timeout_ms = 30000
+body_limit_bytes = 1048576
+drain_delay_ms = 0
+shutdown_timeout_ms = 10000
+# max_concurrent_requests = 256
+retry_after_s = 1
+trusted_proxies = []
+forwarded_header = "forwarded"
+compression = true
+compression_min_bytes = 1024
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `bind` | string | `0.0.0.0:8080` | Socket address the API listener binds. |
+| `listen` | socket address | `127.0.0.1:8080` | The IP address and port the listener binds. A host name is refused at startup. The published container image sets `PORT=8080`, which the loader maps to `0.0.0.0:8080`; `PORT` alone gives `0.0.0.0:<PORT>`, and `FERROEHR__SERVER__LISTEN` wins over both. |
+| `base_path` | string | empty | The path every route is served under, the health routes included. Empty serves them at the process root. The openEHR API path is [`rest.base_path`](#rest). |
+| `request_timeout_ms` | int | `30000` | A request still running after this long is answered `408` with the openEHR error body. |
+| `header_read_timeout_ms` | int | `30000` | How long a client may take to send its request head, once connected or after its last response; a client still sending then is disconnected. Bounds the slow-header connection, which no other limit reaches. `0` is refused. |
+| `body_limit_bytes` | int | `1048576` (1 MiB) | The largest request body any route reads, refused `413` above it. The bulk routes (operational-template upload, `/message/import`, `/message/tdd`) take up to this; [`rest.body_limit_bytes`](#rest) narrows the rest of the clinical surface below it. **A deployment that uploads operational templates raises this**: the largest template in the vendored CKM corpus is several times the 1 MiB default, and the chart and the Compose files set 64 MiB (`67108864`). |
+| `drain_delay_ms` | int | `0` | On `SIGTERM` or `SIGINT`, readiness answers `503` this long while the listener still accepts, so an orchestrator stops routing first. |
+| `shutdown_timeout_ms` | int | `10000` | Then the listener closes and the requests in flight get this long to finish; a connection still open after it is dropped. |
+| `max_concurrent_requests` | int | unset | The requests served at once. Past it a request is answered `503` with `Retry-After` and the openEHR error body, never queued, so offered load beyond capacity cannot exhaust memory. The health routes are never refused. Unset, there is no bound. |
+| `retry_after_s` | int | `1` | The `Retry-After` of a `503` or `429` the listener writes. |
+| `trusted_proxies` | list | `[]` | The reverse proxies, as addresses or CIDR blocks, whose forwarded client address is believed. Empty, every request is named by its peer address. |
+| `forwarded_header` | enum{forwarded,x-forwarded-for} | `forwarded` | The header a trusted proxy names the client in (`Forwarded` is RFC 7239). |
+| `compression` | bool | `true` | Compress a response with gzip or Brotli when the client accepts one. |
+| `compression_min_bytes` | int | `1024` | The smallest response body that is compressed. |
+
+A refusal the listener writes itself (`408`, `413`, `429`, `503`) and a handler
+that panics (`500`) answer the standard openEHR `{ error, message }` body. `413`
+and `429` are not in the ITS-REST status table; ITS-REST admits them as
+additional, non-conflicting codes, and they are what RFC 9110 §15.5.14 and
+RFC 6585 §4 define for these refusals. A panic's message reaches neither the
+body nor the log.
+
+Every request gets a request id the server mints, which the request log and the
+access record carry and the response returns in `X-Request-Id`. A client's own
+`X-Request-Id` is returned to it unchanged and never recorded.
+
+### `[server.caller_rate]`: per-caller request rates
+
+```toml
+[server.caller_rate]
+requests_per_second = 1024
+burst = 2048
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `requests_per_second` | int | (required in the table) | Sustained requests per second one authenticated subject may send on the clinical API. |
+| `burst` | int | (required in the table) | How many requests one subject may send at once before the rate applies. |
+
+Unset, no caller is limited. The chart and the Compose quickstart set the values
+above.
+
+**This is not `max_concurrent_requests`, and you can tell them apart from the
+status alone.** `max_concurrent_requests` protects *capacity*: too many
+requests in flight at once, from anyone, and the excess is refused `503` +
+`Retry-After`. The caller rate protects *fairness*: one caller asking too often
+over time, refused `429` + `Retry-After`. A `503` means the server is full; a
+`429` means you are asking too fast.
+
+The limit is keyed on the authenticated subject, the only fair key for a
+clinical API: a hospital behind one NAT is a single address. It sits inside
+authentication, so the health routes, the status document and the discovery
+document are never refused by it.
+
+> [!TIP]
+> **Benchmarking this server?** Lift the caller rate first, or you will measure
+> it instead of the server. The project's own measurement lanes compose an
+> overlay that does exactly that, and both instruments refuse to write a record
+> if the server answered any `429`.
+
+### `[server.tls]`: native TLS and mutual-TLS client authentication
+
+Native TLS termination on the main listener, unset by default; deployments
+commonly terminate TLS at an ingress. `client_auth = "required"` is the IHE
+ATNA ITI-19 mutually-authenticated-node posture (see the
+[Audit trail chapter](../audit.md#node-authentication-iti-19-mutual-tls)). The
+separate-port management listener always stays plain HTTP, so under
+`deployment_profile = "production"` setting `[management] port` opens the
+[`plaintext_listener`](configuration.md#deployment_profile) gap.
+
+```toml
+[server.tls]
+certificate_file = "/etc/ferroehr/server.pem"
+key_file = "/etc/ferroehr/server.key"
+client_auth = "none"
+min_version = "1.3"
+# reload_interval_s = 60
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `certificate_file` | path | (required in the table) | Server certificate chain (PEM), the leaf first. A missing, unreadable or certificate-less file stops startup. |
+| `key_file` | path | (required in the table) | Server private key (PEM), read as a secret file. A key that does not belong to the leaf stops startup. |
+| `client_auth` | enum{none,optional,required} | `none` | Client-certificate policy. `optional` verifies a certificate when one is presented and still accepts connections without; `required` rejects any client without a verified certificate at the handshake. |
+| `client_ca_file` | path | unset | The explicit CA bundle client certificates must chain to, never the web PKI. Required unless `client_auth = "none"`. |
+| `min_version` | enum{"1.3","1.2"} | `"1.3"` | The lowest TLS version this listener negotiates. `"1.0"` and `"1.1"` are refused when the configuration is read (RFC 8996). |
+| `reload_interval_s` | int | unset | How often the certificate, key and client CA are read again while the server runs. The files are always read again on `SIGHUP`. A changed pair is served, and a changed client CA verifies, from the next handshake on without a restart; a read that fails is logged and the running configuration stays. |
+| `healthcheck_identity_file` | path | unset | The client certificate chain and key, in one PEM, that `ferroehr healthcheck` presents to a listener requiring one. |
+
+`ferroehr healthcheck` speaks TLS to a TLS listener over the loopback and
+accepts exactly the leaf certificate in `certificate_file`.
+
+> [!NOTE]
+> `min_version` defaults to **1.3 only**, as RFC 9325 §3.1.1 has it supported.
+> Setting `"1.2"` enables 1.2 *alongside* 1.3, with the four forward-secret
+> suites RFC 9325 §4.2 recommends; pick it only for a client that cannot do
+> 1.3, such as an older integration engine or a pinned Java runtime.
+
+> [!NOTE]
+> An EC certificate must name its curve. RFC 5480 §2.1.1 forbids explicit
+> curve parameters, TLS clients refuse such a certificate, and the server
+> refuses the pair at startup. LibreSSL (the `openssl` that ships with macOS)
+> writes explicit parameters from `genpkey` and `req -newkey ec` unless you add
+> `-pkeyopt ec_param_enc:named_curve`; `openssl ecparam -name prime256v1
+> -genkey` writes a named curve.
+
+## `[rest]`
+
+The openEHR REST surface the listener serves.
+
+```toml
+[rest]
+base_path = "/ferroehr/rest/openehr/v1"
+swagger_ui = "private"
+cors_permissive = false
+system_id = "ferroehr.local"
+# body_limit_bytes = 16777216
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
 | `base_path` | string | `/ferroehr/rest/openehr/v1` | ITS-REST base path all API routes hang off. Shortening it is supported; see [below](#base_path-shortening-the-rest-base-path). The served OpenAPI document describes whatever paths this setting produces, never the defaults. |
-| `max_in_flight` | int | `256` | Concurrent-request admission cap (not a rate). Requests beyond it are shed immediately with `503` + `Retry-After`, never queued, so offered load beyond capacity cannot exhaust memory. `0` installs no shedding layer at all. |
 | `swagger_ui` | enum{off,admin_only,private,public} | `private` | Who may read the Swagger UI and the OpenAPI documents under the REST root: `off` does not mount them, `admin_only` needs the admin role, `private` needs any authenticated principal (unauthenticated is `401` with the server's `WWW-Authenticate` challenge, so a browser prompts for the Basic credential), `public` needs nothing. The documents list the whole enabled operation surface, admin and message groups included, so `public` discloses it to anyone who can reach the port; the [hosted sandbox](https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui) sets it deliberately. With authentication off the guard admits everyone, as the management endpoints do. |
 | `cors_permissive` | bool | `false` | Permissive (development) CORS. Left on, any origin may read API responses, so the server warns loudly at boot. Production configures explicit origins at the edge. |
-| `system_id` | string | `ferroehr.local` | **This deployment's own openEHR system identifier**; see [below](#system_id-the-data-authoring-identity). Set a stable, deployment-unique name in production (`FERROEHR__SERVER__SYSTEM_ID`). |
-
-The shed sits on the clinical API subtree only, as its outermost layer: a shed
-request never reaches authentication, auditing, or the request body, and the
-always-on status, health, discovery and management routes are never shed.
+| `system_id` | string | `ferroehr.local` | **This deployment's own openEHR system identifier**; see [below](#system_id-the-data-authoring-identity). Set a stable, deployment-unique name in production (`FERROEHR__REST__SYSTEM_ID`). |
+| `body_limit_bytes` | int | unset | The largest body the ordinary clinical surface accepts, below [`server.body_limit_bytes`](#server), which the bulk routes keep. Unset, every route takes the listener's limit. A value at or above the listener's is refused at startup. The largest example composition in the vendored corpus is 526 KB; raise it if your compositions embed large `DV_MULTIMEDIA` data. |
 
 ### `base_path`: shortening the REST base path
 
@@ -63,20 +189,19 @@ trailing `v1`, plus an `openehr` segment directly before it when you spell one.
 The Swagger UI (`{rest root}/swagger-ui`), the OpenAPI documents
 (`{rest root}/api-docs/…`) and the SMART discovery document
 (`{rest root}/.well-known/smart-configuration`) move with it. The health family
-stays at the process root: `/health`, `/health/liveness`, `/health/readiness`.
+is served under `server.base_path`, which is empty by default, so it stays at the
+process root: `/health`, `/health/liveness`, `/health/readiness`.
 
 Set it from the environment with:
 
 ```bash
-FERROEHR__SERVER__BASE_PATH=/ferroehr/v1
+FERROEHR__REST__BASE_PATH=/ferroehr/v1
 ```
 
 > [!NOTE]
 > The `ferroehr healthcheck` subcommand, which the published container images
-> run as their Docker health check, derives its default URL from the effective
-> configuration (`http://127.0.0.1:<port><REST root>/status`), so it follows a
-> shortened base path on its own. An explicit `FERROEHR_HEALTHCHECK_URL` still
-> wins, for example to probe `/health/readiness`, which no base path affects.
+> run as their Docker health check, asks `GET /health/readiness` on the
+> `server.listen` port over the loopback, so `rest.base_path` does not move it.
 
 ### Behind a path-prefixed reverse proxy
 
@@ -93,123 +218,16 @@ path it serves (nginx `proxy_pass http://cdr:8080/;` with the trailing slash,
 Caddy `handle_path`, Traefik `StripPrefix`). Or shorten the base path:
 
 ```bash
-FERROEHR__SERVER__BASE_PATH=/ferroehr/v1
+FERROEHR__REST__BASE_PATH=/ferroehr/v1
 ```
 
 which gives `https://cdr.example.org/cdr/ferroehr/v1/definition/template/adl1.4`.
 
 Whichever you choose, tell every client. The server builds its `Location`
 headers, its served OpenAPI paths and its SMART discovery document from its own
-`base_path`, and it cannot see a prefix the proxy adds. The
+`rest.base_path`, and it cannot see a prefix the proxy adds. The
 [FerroEHR Viewer](../viewer/index.md) has its own mirror key, `cdr.base_path`,
 which must match.
-
-### `[server.limits]`: request-body sizes
-
-```toml
-[server.limits]
-body_bytes = 16777216        # 16 MiB
-bulk_body_bytes = 67108864   # 64 MiB
-```
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `body_bytes` | int | `16777216` | The largest request body the ordinary clinical surface accepts, in bytes. |
-| `bulk_body_bytes` | int | `67108864` | The largest body the bulk routes accept: operational-template upload, `/message/import`, `/message/tdd`. |
-
-A request over its tier's limit is refused `413 Payload Too Large` with the
-standard openEHR error body. The status is not in the ITS-REST status table; it
-is admitted there as an additional, non-conflicting code, and is what
-RFC 9110 §15.5.14 defines for this refusal.
-
-The defaults are sized against the measured payloads in the vendored clinical
-corpus rather than chosen as round numbers: the clinical tier clears the
-largest operational template in that corpus several times over, and the bulk
-tier is four times the clinical one, for payloads with no published bound (a
-whole-EHR extract, a TDD batch). **Raise `body_bytes` if your compositions
-embed large `DV_MULTIMEDIA` data**: a base64 radiology image can exceed either
-tier on its own, and that is a deliberate operator decision rather than a
-default.
-
-### `[server.rate_limit]`: per-caller request rates
-
-```toml
-[server.rate_limit]
-enabled = true
-principal_per_second = 1024
-principal_burst = 2048
-address_per_second = 2048
-address_burst = 4096
-```
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | bool | `true` | Whether rate limiting is active. Off allocates no limiter state and costs no per-request check. |
-| `principal_per_second` | int | `1024` | Sustained requests per second per authenticated subject, on the clinical API. |
-| `principal_burst` | int | `2048` | How far one principal may burst before refusal. |
-| `address_per_second` | int | `2048` | Sustained requests per second per client address, across the whole tree. |
-| `address_burst` | int | `4096` | How far one address may burst before refusal. |
-
-**This is not `max_in_flight`, and you should be able to tell them apart from
-the status alone.** `max_in_flight` protects *capacity*: too many requests in
-flight at once, from anyone, and the excess is shed `503` + `Retry-After`.
-Rate limiting protects *fairness*: one caller asking too often over time,
-refused `429` + `Retry-After`. A `503` means the server is full; a `429` means
-you are asking too fast.
-
-Two tiers, because they defend different things. The **address** tier sits
-outside authentication, so a flood of unauthenticated requests is refused
-before it can make the server verify a signature per request; a limiter must
-not itself be the expensive path. The **principal** tier sits inside
-authentication, keyed on the authenticated subject, which is the only fair key
-for a clinical API: a hospital behind one NAT is a single address, so an
-address-keyed clinical limit would throttle an entire site because one client
-was busy.
-
-Both defaults sit above this implementation's own measured whole-server
-ceiling, so neither tier can refuse a caller until it is asking for more than
-the server could have served; below that line, capacity is `max_in_flight`'s
-job. **A deployment sized for more than the reference measurement environment
-should raise both in proportion.**
-
-Refusals carry the limiter's own `Retry-After` and `x-ratelimit-*` headers
-alongside the openEHR error body. `429` is the status RFC 6585 §4 defines for
-this refusal, admitted by ITS-REST as an additional, non-conflicting code.
-
-The always-on health family is covered by the address tier only, deliberately:
-an orchestrator probe must never be refused because a principal-keyed bucket
-was exhausted, and probe rates are nowhere near the address ceiling.
-
-> [!TIP]
-> **Benchmarking this server?** Turn the limiter off first, or you will measure
-> it instead of the server. The project's own measurement lanes compose an
-> overlay that does exactly that, and both instruments refuse to write a record
-> if the server answered any `429`.
-
-### `[server.connection]`: bounds before a request exists
-
-```toml
-[server.connection]
-header_read_timeout_secs = 10
-max_concurrent_streams = 256
-http2_keep_alive_interval_secs = 30
-http2_keep_alive_timeout_secs = 10
-```
-
-Every other limit on this page engages once a request has been parsed and
-dispatched: body size, the request timeout, the rate limiter, the in-flight
-shed. A client that opens a socket and then trickles request headers reaches
-none of them, while costing itself almost nothing. This table is where that is
-bounded, and HTTP/1 and HTTP/2 need different bounds because the exposure
-differs: HTTP/1 streams a request head, so it can be trickled; HTTP/2
-multiplexes streams, so the exposure is concurrency.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `header_read_timeout_secs` | int | `10` | How long a connection may take to deliver a complete HTTP/1 request head, in seconds. `0` disables the bound. Applies to both listeners. |
-| `max_concurrent_streams` | int | `256` | The most HTTP/2 streams one connection may have open at once. Bounds the request-setup work a peer can trigger by opening and immediately cancelling streams (the "HTTP/2 Rapid Reset" amplification, CVE-2023-44487). `0` leaves the HTTP library's own default. |
-| `http2_keep_alive_interval_secs` | int | `30` | Interval between HTTP/2 keep-alive PINGs, in seconds. `0` disables them, and a peer that vanishes without a FIN is then held until the operating system notices. |
-| `http2_keep_alive_timeout_secs` | int | `10` | How long to wait for a keep-alive PING response before closing the connection, in seconds. |
 
 ### `system_id`: the data-authoring identity
 
@@ -248,58 +266,13 @@ Practical notes:
   `system_id` no other member uses (Federation Tier N42a); the default
   `ferroehr.local` is the same on every node that leaves it unset. See
   [FerroEHR as a federation node](../beyond-core/federation-node.md#admission-n42a).
-- **`system_id` is not `[server.identity]`.** `system_id` says *which system
-  authored the data*; [`[server.identity]`](#serveridentity) is the *display*
+- **`system_id` is not `[rest.identity]`.** `system_id` says *which system
+  authored the data*; [`[rest.identity]`](#restidentity) is the *display*
   identity of the `OPTIONS` System-Options manifest. Rebranding changes the
   manifest and nothing in stored data; changing `system_id` changes what new
   data says about its origin and leaves the manifest alone.
 
-### `[server.tls]`: native TLS and mutual-TLS client authentication
-
-Native TLS termination on the main listener, off by default; deployments
-commonly terminate TLS at an ingress. `client_auth = "required"` is the IHE
-ATNA ITI-19 mutually-authenticated-node posture (see the
-[Audit trail chapter](../audit.md#node-authentication-iti-19-mutual-tls)). The
-separate-port management listener always stays plain HTTP, so under
-`deployment_profile = "production"` setting `[management] port` opens the
-[`plaintext_listener`](configuration.md#deployment_profile) gap.
-
-```toml
-[server.tls]
-enabled = false
-client_auth = "off"
-min_version = "1.3"
-reload_interval_secs = 60
-```
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | bool | `false` | Terminate TLS natively on the main listener. |
-| `cert_file` | path | unset | Server certificate chain (PEM). Required when enabled; a missing, unreadable or certificate-less file stops startup. |
-| `key_file` | path | unset | Server private key (PEM): PKCS#8, SEC1 (`EC PRIVATE KEY`) or PKCS#1. Required when enabled; a key that does not belong to the first certificate in `cert_file` stops startup. |
-| `client_auth` | enum{off,optional,required} | `off` | Client-certificate policy. `optional` verifies a certificate when one is presented and still accepts connections without; `required` rejects any client without a verified certificate at the handshake. |
-| `client_ca_file` | path | unset | The explicit CA bundle client certificates must chain to, never the web PKI. Required unless `client_auth = "off"`. |
-| `min_version` | enum{"1.3","1.2"} | `"1.3"` | The lowest TLS version this listener negotiates. |
-| `reload_interval_secs` | integer | `60` | How often `cert_file`, `key_file` and `client_ca_file` are re-read while the server runs. A changed pair is served, and a changed client CA verifies, every new handshake without a restart; a file that fails to load is logged with its cause and the previous one stays in service. `0` reads them once, at startup. |
-
-> [!NOTE]
-> `min_version` defaults to **1.3 only**, following the OWASP Transport Layer
-> Security Cheat Sheet: web applications must default to TLS 1.3 and may
-> support TLS 1.2 for compatibility. Setting `"1.2"` enables 1.2 *alongside*
-> 1.3, never instead of it; pick it only for a client that genuinely cannot
-> do 1.3, such as an older integration engine or a pinned Java runtime.
-> TLS 1.1 and 1.0 are not selectable at all: RFC 8996 deprecates them, and
-> neither this key nor the TLS library offers them.
-
-> [!NOTE]
-> An EC certificate must name its curve. RFC 5480 §2.1.1 forbids explicit
-> curve parameters, TLS clients refuse such a certificate, and the server
-> refuses it at startup with a message saying so. LibreSSL (the `openssl`
-> that ships with macOS) writes explicit parameters from `genpkey` and
-> `req -newkey ec` unless you add `-pkeyopt ec_param_enc:named_curve`;
-> `openssl ecparam -name prime256v1 -genkey` writes a named curve.
-
-### `[server.identity]`
+### `[rest.identity]`
 
 The System-Options manifest identity (`OPTIONS` on the API base path, e.g.
 `OPTIONS /ferroehr/rest/openehr/v1`, the System API's one location). This is

@@ -23,47 +23,35 @@
 
 use std::time::Duration;
 
-use ferroehr::config::server::ConnectionConfig;
+use ferrohealth_health::lifecycle::Lifecycle;
+use ferrohealth_server::section::ServerSection;
 use tokio::io::AsyncReadExt as _;
 use tokio::io::AsyncWriteExt as _;
 
-/// Serve a trivial router on an ephemeral port through the crate's real
-/// listener path, returning the bound port.
-async fn serve(connection: ConnectionConfig) -> u16 {
+/// Serve a trivial router on an ephemeral port through the family listener
+/// FerroEHR serves on, with a header-read bound of one second, returning the
+/// bound port.
+async fn serve() -> u16 {
     let app = axum::Router::new().route("/ok", axum::routing::get(|| async { "OK" }));
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
     let port = listener.local_addr().expect("addr").port();
-    listener.set_nonblocking(true).expect("nonblocking");
-
+    let section = ServerSection {
+        header_read_timeout_ms: std::num::NonZeroU64::new(1_000).expect("non-zero"),
+        ..ServerSection::default()
+    };
     tokio::spawn(async move {
-        let mut server = axum_server::from_tcp(listener)
-            .expect("from_tcp")
-            .handle(axum_server::Handle::new());
-        let builder = server.http_builder();
-        // The timer is not optional when a timeout is set — hyper panics per
-        // connection without it. This mirrors `run_server`'s own wiring so the
-        // test exercises the real configuration rather than a simplified one.
-        builder
-            .http1()
-            .timer(hyper_util::rt::TokioTimer::new())
-            .header_read_timeout(connection.header_read_timeout());
-        builder
-            .http2()
-            .timer(hyper_util::rt::TokioTimer::new())
-            .max_concurrent_streams(connection.stream_cap());
-        let _served = server.serve(app.into_make_service()).await;
+        let _served = ferrohealth_server::serve::run(
+            listener,
+            app,
+            &section,
+            Lifecycle::default(),
+            std::future::pending(),
+        )
+        .await;
     });
-
-    for _ in 0..100 {
-        if tokio::net::TcpStream::connect(("127.0.0.1", port))
-            .await
-            .is_ok()
-        {
-            return port;
-        }
-        tokio::time::sleep(Duration::from_millis(20)).await;
-    }
-    panic!("the listener never came up");
+    port
 }
 
 /// A connection that opens and trickles a partial request head is dropped once
@@ -73,11 +61,7 @@ async fn serve(connection: ConnectionConfig) -> u16 {
 /// matters, not the number.
 #[tokio::test]
 async fn a_stalled_connection_is_dropped_rather_than_held() {
-    let port = serve(ConnectionConfig {
-        header_read_timeout_secs: 1,
-        ..ConnectionConfig::default()
-    })
-    .await;
+    let port = serve().await;
 
     let mut socket = tokio::net::TcpStream::connect(("127.0.0.1", port))
         .await
@@ -112,11 +96,7 @@ async fn a_stalled_connection_is_dropped_rather_than_held() {
 /// is a bound on stalling rather than a shorter deadline for everyone.
 #[tokio::test]
 async fn a_complete_request_is_unaffected_by_the_bound() {
-    let port = serve(ConnectionConfig {
-        header_read_timeout_secs: 1,
-        ..ConnectionConfig::default()
-    })
-    .await;
+    let port = serve().await;
 
     let mut socket = tokio::net::TcpStream::connect(("127.0.0.1", port))
         .await
@@ -136,27 +116,4 @@ async fn a_complete_request_is_unaffected_by_the_bound() {
         text.starts_with("HTTP/1.1 200"),
         "a complete request must be served: {text}"
     );
-}
-
-/// Zero disables the bound, which must remain expressible: an operator behind a
-/// proxy that already enforces one should be able to turn this off.
-#[test]
-fn zero_disables_the_header_bound() {
-    let off = ConnectionConfig {
-        header_read_timeout_secs: 0,
-        ..ConnectionConfig::default()
-    };
-    assert!(off.header_read_timeout().is_none());
-    assert!(ConnectionConfig::default().header_read_timeout().is_some());
-}
-
-/// The HTTP/2 bounds are on by default, because HTTP/2's exposure is stream
-/// concurrency rather than a trickled head — the rapid-reset amplification
-/// class, which `max_concurrent_streams` is what bounds.
-#[test]
-fn the_http2_bounds_are_on_by_default() {
-    let cfg = ConnectionConfig::default();
-    assert!(cfg.stream_cap().is_some());
-    assert!(cfg.http2_keep_alive_interval().is_some());
-    assert!(cfg.http2_keep_alive_timeout() > Duration::ZERO);
 }

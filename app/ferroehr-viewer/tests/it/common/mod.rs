@@ -711,6 +711,35 @@ impl Element {
         .await;
     }
 
+    /// Replace its value with `text` as a paste does: one `input` event of
+    /// type `insertFromPaste` carrying the whole text.
+    ///
+    /// [`Self::send_keys`] fires a key and an `input` event per character,
+    /// and the code editor reworks its whole text on each, so a document of
+    /// a few kilobytes costs time quadratic in its length on the debug build.
+    ///
+    /// # Panics
+    /// When the `WebDriver` answers with anything but success.
+    pub(crate) async fn paste(&self, text: &str) {
+        let arg = self
+            .inner
+            .to_json()
+            .expect("an element handle serializes as a script argument");
+        element_command(&format!("paste({})", self.what), async {
+            self.inner
+                .handle()
+                .execute(
+                    "arguments[0].value = arguments[1]; \
+                     arguments[0].dispatchEvent(new InputEvent('input', \
+                       {bubbles: true, inputType: 'insertFromPaste', data: arguments[1]}));",
+                    vec![arg, serde_json::Value::String(text.to_owned())],
+                )
+                .await
+                .map(|_| ())
+        })
+        .await;
+    }
+
     /// Its rendered text.
     ///
     /// # Panics

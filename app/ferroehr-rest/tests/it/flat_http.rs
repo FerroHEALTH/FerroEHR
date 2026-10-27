@@ -40,7 +40,7 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferroehr::config::server::ServerConfig;
+use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::AuthSection;
 
@@ -85,10 +85,9 @@ fn web_template() -> openehr_sdt::flat::webtemplate::model::WebTemplate {
 
 fn config() -> AppConfig {
     AppConfig {
-        server: ServerConfig {
-            bind: "127.0.0.1:0".to_owned(),
+        server: common::server(),
+        rest: RestConfig {
             base_path: BASE.to_owned(),
-            max_in_flight: 1024,
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             cors_permissive: false,
             ..Default::default()

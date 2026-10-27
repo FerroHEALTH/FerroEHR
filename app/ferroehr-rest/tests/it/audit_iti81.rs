@@ -44,7 +44,10 @@ const BASE: &str = "/ferroehr/rest/openehr/v1";
 const WINDOW: &str = "date=ge2026-07-01";
 
 fn rest_config() -> AppConfig {
-    let mut config = AppConfig::default();
+    let mut config = AppConfig {
+        server: common::server(),
+        ..AppConfig::default()
+    };
     common::with_basic_users(
         &mut config,
         &[
@@ -65,7 +68,7 @@ fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
         subject: Arc::new(|_| Box::pin(async { Ok::<_, ResolveError>(None) })),
         template_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
     };
-    AuthzHandle::build(&cfg, &rest_config().server.base_path, None, resolvers).map(Arc::new)
+    AuthzHandle::build(&cfg, &rest_config().rest.base_path, None, resolvers).map(Arc::new)
 }
 
 fn basic(name: &str) -> String {

@@ -421,6 +421,41 @@ async fn ehr_index_add_defaults_primary_and_reads() {
     assert_eq!(ehrs[0].ehr_id, ehr.to_string());
 }
 
+/// Under the local provider an EHR created for a subject enters the map with
+/// its creation, so `subject_ehrs` finds it, and a refused second create for
+/// the same subject enters nothing.
+#[tokio::test]
+async fn ehr_index_local_map_holds_an_ehr_created_for_a_subject() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_ehr_index(EhrIndexProvider::Local);
+    let subject = SubjectRef::person("PID-4138", "mpi");
+
+    let ehr = svc
+        .create_ehr_for_subject(subject.clone(), None)
+        .await
+        .expect("create an EHR for the subject");
+
+    let ehrs = svc
+        .subject_ehrs(subject.clone())
+        .await
+        .expect("subject ehrs");
+    assert_eq!(ehrs.len(), 1, "the created EHR is in the local map");
+    assert_eq!(ehrs[0].ehr_id, ehr.to_string());
+    assert_eq!(ehrs[0].subject, subject);
+    assert_eq!(ehrs[0].status.instance_type, ResourceInstanceType::Primary);
+    assert!(ehrs[0].location.is_none());
+
+    let refused = svc
+        .create_ehr_for_subject(subject.clone(), None)
+        .await
+        .expect_err("the subject already owns an EHR");
+    assert_eq!(refused.status, CallStatusType::EhrForSubjectAlreadyExists);
+    let ehrs = svc.subject_ehrs(subject).await.expect("subject ehrs");
+    assert_eq!(ehrs.len(), 1, "a refused create enters nothing");
+}
+
 #[tokio::test]
 async fn ehr_index_n_to_m() {
     let db = testkit::db().await.expect("testkit database");

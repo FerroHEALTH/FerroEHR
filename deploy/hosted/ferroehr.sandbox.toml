@@ -20,7 +20,11 @@ deployment_profile = "sandbox"
 
 [server]
 # The image's own port; Caddy terminates TLS in front of it.
-bind = "0.0.0.0:8080"
+listen = "0.0.0.0:8080"
+# Template uploads and the /message imports, up to 64 MiB.
+body_limit_bytes = 67108864
+
+[rest]
 # Browser tinkering against the demo is the point.
 cors_permissive = true
 # The public API reference the documentation links to; the default asks for the

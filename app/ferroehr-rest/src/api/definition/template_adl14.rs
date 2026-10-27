@@ -108,7 +108,7 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
         .to_owned();
     let location = format!(
         "{}/definition/template/adl1.4/{}",
-        state.config().server.base_path,
+        state.config().rest.base_path,
         urlencoding::encode(&template_id)
     );
     Ok(upload_response(h, &location, &template_id, &xml))

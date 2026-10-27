@@ -31,7 +31,7 @@ use serde_json::Value;
 use tower::ServiceExt;
 
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
-use ferroehr::config::server::{AdminConfig, ServerConfig};
+use ferroehr::config::rest::{AdminConfig, RestConfig};
 use ferroehr::config::smart::SmartConfig;
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr_rest::config::AppConfig;
@@ -131,7 +131,7 @@ fn a_non_default_base_path_moves_the_documented_paths() {
     const ROOT: &str = "/gateway/v1";
 
     let mut cfg = app_config();
-    cfg.server.base_path = BASE.to_owned();
+    cfg.rest.base_path = BASE.to_owned();
     let doc = serde_json::to_value(extensions_document(&cfg)).expect("serialise doc");
     let paths = doc["paths"].as_object().expect("paths object");
 
@@ -528,7 +528,8 @@ async fn first_metric_name(app: &Router) -> String {
 /// documented path is mounted.
 fn app_config() -> AppConfig {
     AppConfig {
-        server: ServerConfig {
+        server: ferrohealth_server::section::ServerSection::default(),
+        rest: RestConfig {
             swagger_ui: AccessLevel::Public,
             ..Default::default()
         },
@@ -552,6 +553,7 @@ fn app_config() -> AppConfig {
 /// enabled, so every documented path is mounted.
 async fn full_app() -> Router {
     let config = AppConfig {
+        server: common::server(),
         auth: AuthSection {
             issuer: IssuerKey::Flat(common::metadata_issuer().await.to_owned()),
             audience: vec!["ferroehr".to_owned()],

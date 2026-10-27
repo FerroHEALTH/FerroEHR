@@ -618,28 +618,27 @@ natively and can demand a verified client certificate:
 
 ```toml
 [server.tls]
-enabled = true
-cert_file = "/etc/ferroehr/server.pem"
+certificate_file = "/etc/ferroehr/server.pem"
 key_file = "/etc/ferroehr/server.key"
 min_version = "1.3"               # 1.3 (default) | 1.2
-client_auth = "required"          # off | optional | required
+client_auth = "required"          # none | optional | required
 client_ca_file = "/etc/ferroehr/client-ca.pem"
 ```
 
-The protocol floor is **TLS 1.3 only** by default, following the OWASP
-Transport Layer Security cheat sheet. Setting `min_version = "1.2"` enables
+The protocol floor is **TLS 1.3 only** by default, as RFC 9325 §3.1.1 has it
+supported. Setting `min_version = "1.2"` enables
 1.2 *alongside* 1.3, never instead of it, for a client that genuinely cannot
 do 1.3, such as an older integration engine or a pinned Java runtime. TLS 1.1
-and 1.0 are not selectable at all.
+and 1.0 are refused when the configuration is read (RFC 8996).
 
 With `client_auth = "required"`, only clients presenting a certificate
 chaining to your explicit trust anchor complete the handshake: the IHE
 mutually-authenticated-node posture. Deployments terminating TLS at an
-ingress keep `[server.tls]` off and enforce mTLS there instead.
+ingress leave `[server.tls]` unset and enforce mTLS there instead.
 
 > [!WARNING]
 > The separate-port management listener (`management.port`) stays **plain HTTP**
-> even with `[server.tls]` enabled, and it binds all interfaces. Treat it as an
+> even with `[server.tls]` set, and it binds all interfaces. Treat it as an
 > internal surface and keep it off any publicly routed port. Under
 > `deployment_profile = "production"` setting it opens the `plaintext_listener`
 > gap, so the server refuses to start unless the gap is accepted by name.

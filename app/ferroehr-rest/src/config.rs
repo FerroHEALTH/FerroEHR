@@ -8,8 +8,9 @@
 //! adapter-side assembly the router consumes.
 
 use ferroehr::config::authz::RbacConfig;
-use ferroehr::config::server::{AdminConfig, ServerConfig};
+use ferroehr::config::rest::{AdminConfig, RestConfig};
 use ferroehr::config::smart::SmartConfig;
+use ferrohealth_server::section::ServerSection;
 use ferrohealth_smart::assurance::{AssuranceSection, ProfessionalSection};
 use ferrohealth_smart::config::AuthSection;
 
@@ -21,8 +22,11 @@ use ferrohealth_smart::config::AuthSection;
 /// (`[terminology].api_enabled`, `[events].admin_api`).
 #[derive(Debug, Clone)]
 pub struct AppConfig {
-    /// `[server]` — listener + REST surface + System-Options identity.
-    pub server: ServerConfig,
+    /// `[server]` — the listener and the stack around the routes: the
+    /// family's section.
+    pub server: ServerSection,
+    /// `[rest]` — the REST surface and the System-Options identity.
+    pub rest: RestConfig,
     /// `[auth]` — authentication: the `ferrohealth-smart` section (issuers,
     /// Basic users, product scope).
     pub auth: AuthSection,
@@ -54,7 +58,8 @@ pub struct AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            server: ServerConfig::default(),
+            server: ServerSection::default(),
+            rest: RestConfig::default(),
             auth: ferroehr::config::FerroEhrConfig::default().auth,
             admin: AdminConfig::default(),
             smart: SmartConfig::default(),
@@ -74,10 +79,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn server_defaults_are_sane() {
-        let c = ServerConfig::default();
+    fn rest_defaults_are_sane() {
+        let c = RestConfig::default();
         assert_eq!(c.base_path, "/ferroehr/rest/openehr/v1");
-        assert_eq!(c.max_in_flight, 256);
+        assert_eq!(c.body_limit_bytes, None);
         assert_eq!(
             c.swagger_ui,
             ferroehr::config::management::AccessLevel::Private

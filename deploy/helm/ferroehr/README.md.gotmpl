@@ -97,7 +97,7 @@ vocabulary, gets a type wrong, or names a value outside the permitted set,
 instead of rendering and ignoring it.
 
 Everything under `config:` stays deliberately open: that vocabulary is the
-**server's** (`ferroehr config default` prints it in full), it is validated by
+**server's** (`app/ferroehr/assets/ferroehr.default.toml` lists it in full), it is validated by
 the binary at boot, and duplicating it here would fork it. So a typo under
 `config:` is caught when the pod starts, not when the chart renders.
 
