@@ -68,7 +68,7 @@ the operator configures a FerroEHR node as follows:
   without `ehr_id` re-uses the source EHR's id (RM common master06 §Copying,
   Case 1). A federation member imports with `?ehr_id=` set to an id it chose.
 - **No reuse of an `ehr_id`.** A node never issues an id twice; creating an
-  EHR under an id it holds is refused (`409`, SM `ehr_create_fail_duplicate_id`).
+  EHR under an id it holds is refused (`409 Conflict`, ITS-REST EHR API `PUT /ehr/{ehr_id}`).
 - **`ehr_id` generation.** FerroEHR mints every `ehr_id` as a UUIDv7 (RFC 9562
   §5.7).
 

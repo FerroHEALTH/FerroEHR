@@ -12,9 +12,8 @@ is stored on the viewer's side.
 
 > [!NOTE]
 > The terminology API is **this server's own extension**. openEHR's REST release
-> publishes no terminology contract, so the operations come from the openEHR
-> Service Model (`I_TERMINOLOGY_SERVICE`) while the URLs and JSON envelopes are
-> this server's. A different openEHR server will not serve them.
+> publishes no terminology contract, so the operations, URLs and JSON envelopes
+> are this server's own design over the openEHR TERM specification. A different openEHR server will not serve them.
 
 ## Switching it on
 

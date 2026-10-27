@@ -32,8 +32,8 @@ per object, and tier partitions instead of mirror tables) and its own typed AQL
 engine,
 and acceptance measured by the openEHR conformance suite (EHRbase is prior art,
 not an oracle); the application is five crates with zero re-exports, and its
-service layer follows the openEHR SM Platform Service Model (one module per SM
-chapter, concrete methods).
+service layer is its own design (one module per domain area, concrete
+methods), judged by what goes in and comes out over the wire.
 
 ## The generated openEHR foundation (done)
 
@@ -180,10 +180,10 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   refuses the other's rows. GDPR Art. 4(5) and Art. 32(1)(a); no openEHR spec
   governs storage layout or database roles.
 - **`linkage`** — the third pseudonymisation domain: `subject_ehr`, the EHR id /
-  demographic subject cross-reference (the SM's EHR Index, `I_EHR_INDEX`) —
+  demographic subject cross-reference (the EHR index) —
   which party and which subject identifier name which EHR, temporal under a
   PG18 `UNIQUE … WITHOUT OVERLAPS` so a merge or split closes a row rather than
-  deleting it. Identifiers and the SM's own association metadata, no attributes;
+  deleting it. Identifiers and their association metadata, no attributes;
   `linkage.erase_ehr` is the `SECURITY DEFINER` function the admin delete calls
   so erasure reaches the map without the role holding `DELETE`. The service
   reaches it through its own pool, never through the clinical or party one.
@@ -249,8 +249,8 @@ Base path `/ferroehr/rest/openehr/v1`, implementing the generated ITS-REST
 1.1.0 server traits over `axum` with a `tower-http` middleware stack and
 content negotiation (canonical JSON/XML via `openehr-its`). Extensions: admin
 API (plus the own-design activity-report, archive/restore and dump/load routes under
-the same gate), the `/message` group realizing the SM Message component
-(EHR-Extract export/import — the release publishes no such API),
+the same gate), the `/message` group (EHR-Extract export/import over the RM EHR
+Extract model; ITS-REST publishes no such API, so the routes are our own design),
 the always-on public health family (`/health`, `/health/liveness`,
 `/health/readiness`), `/rest/status`, the ops-introspection `/management/*`
 surface, item tags (there is no EhrScape surface). **Auth:** Basic +
@@ -259,8 +259,8 @@ shipped RBAC/ABAC `access` module in `ferroehr-rest`.
 
 ### The access layer (`ferroehr-rest::extensions::access`) — our own design
 
-ITS-REST makes authentication a `SHOULD` and mandates no scheme, and the SM
-places authorization out of band, so **only the 401-vs-403 split is
+ITS-REST makes authentication a `SHOULD` and mandates no scheme, and no openEHR
+specification governs authorization, so **only the 401-vs-403 split is
 spec-grounded**: a missing or rejected credential is `401` with a
 `WWW-Authenticate` challenge, an authenticated-but-refused caller is `403`.
 Everything finer is our own design, built to the IETF OAuth2/JOSE RFCs and
@@ -389,10 +389,9 @@ arrow beyond the generated crates' own is `openehr-sdt → openehr-its`). Root
 workspace `members = ["crates/*", "app/*", "tools/*"]`. Arrows:
 `ferroehr-server → {ferroehr-rest, ferroehr}`, `ferroehr-rest → ferroehr`,
 `ferroehr → ferroehr-ext` (optional, feature-forwarded),
-`app/* → crates/openehr-*`. The SM Platform Service Model is realized as the
-*structure* of `ferroehr::service` — one module per SM chapter, concrete
-methods (no trait catalog), SM call semantics as the design authority — with
-zero re-exports anywhere (every import names its defining module).
+`app/* → crates/openehr-*`. `ferroehr::service` is our own design: one module
+per domain area, concrete methods (no trait catalog), with zero re-exports
+anywhere (every import names its defining module).
 
 ### Repository scope: what lives here, and where each boundary runs
 
@@ -413,27 +412,31 @@ own repositories by the same rule: a sibling reaches the CDR over ITS-REST, and
 shared code travels as a published crate. The structure of the application
 layer itself is #3086.
 
-### SM platform component map
+### The service layer — our own design
 
-The service layer realizes the openEHR **SM Platform Service Model**
-(vendored SM spec `docs/specs/openehr/SM/docs/openehr_platform/`). One
-`ferroehr::service` module per SM component; the SM interfaces map to concrete
-`FerroEhrService` methods (there is no trait catalog):
+No openEHR specification governs how a CDR is built inside. The oracles are
+what goes in and comes out: BASE, RM, AM, TERM, QUERY/AQL, ITS-REST, ITS-JSON,
+ITS-XML and the serialisation formats. The openEHR Service Model (SM) text is
+vendored under `docs/specs/openehr/SM/` as reference only: it describes
+internal service interfaces, openEHR holds no implementation to them, and no
+feature is added, kept or reported missing because SM names it.
 
-| SM component | SM interface(s) | Realization (`ferroehr::service`) | Status |
-|---|---|---|---|
-| EHR | `I_EHR_SERVICE`, `I_EHR_STATUS`, `I_EHR_COMPOSITION`, `I_EHR_DIRECTORY`, `I_EHR_CONTRIBUTION` | `service::ehr` (status/composition/directory/contributions/tags/access modules) | implemented |
-| Definitions | `I_DEFINITION_ADL14`/`ADL2`/`QUERY` | `service::definition` (adl14/adl2/query_store/wire modules) | implemented |
-| Demographic | `I_DEMOGRAPHIC_SERVICE`, `I_PARTY`, `I_PARTY_RELATIONSHIP` | `service::demographic` | implemented |
-| Query | `I_QUERY_SERVICE` | `service::query` | implemented |
-| Validity checking | `I_VALIDITY_CHECKER` | `service::validity` | implemented |
-| System Log | `I_SYSTEM_LOG` (stub; "IHE ATNA-compliant") | `ferroehr::system_log` (dual DICOM PS3.15 + FHIR `AuditEvent`/BALP rendering, written and sent by the shared FerroAUDIT crates `ihe-atna` and `ehds-logging`; local Audit Record Repository in the `audit` schema, on by default; syslog + ITI-20 ATX:FHIR Feed forwarding sinks; the ITI-81 retrieval as the read side; ITI-19 mTLS via `[server.tls]`) | implemented |
-| Admin | `I_ADMIN_SERVICE` (+archive/dump-load) | `service::admin` | implemented |
-| EHR Index | `I_EHR_INDEX` | `service::ehr_index` over `linkage.subject_ehr` | implemented |
-| Terminology | `I_TERMINOLOGY_SERVICE` | `service::terminology` (in-process `openehr-term` bundle + one FHIR R4B terminology server, FerroTERM in every shipped deployment, reached through the published `ferrobridge-term` client with an optional OAuth2 client-credentials grant; commit-time ac-code constraint-binding resolution) | implemented |
-| Message | `I_MESSAGE_SERVICE`, `I_EHR_EXTRACT_SERVICE` | `service::message` | implemented |
-| Message (TDD) | `I_TDD_SERVICE` | not realised: Template Data Documents removed ([#4199](https://github.com/FerroHEALTH/FerroEHR/issues/4199)) | not realised |
-| Subject Proxy | `I_SUBJECT_PROXY_SERVICE`, `I_DATA_BINDING` | not realised ([#3431](https://github.com/FerroHEALTH/FerroEHR/issues/3431)) | not realised |
+`ferroehr::service` holds one module per domain area, each a set of concrete
+`FerroEhrService` methods (there is no trait catalog) that the protocol
+adapter (`ferroehr-rest`) calls directly:
+
+| Area | Module | Wire surface it serves |
+|---|---|---|
+| EHR | `service::ehr` (status/composition/directory/contributions/tags/access modules) | ITS-REST EHR API |
+| Definitions | `service::definition` (adl14/adl2/query_store/wire modules) | ITS-REST Definition API |
+| Demographic | `service::demographic` | ITS-REST Demographic API |
+| Query | `service::query` | ITS-REST Query API, AQL |
+| Validity checking | `service::validity` | RM and AM invariants at commit |
+| System log | `ferroehr::system_log` (dual DICOM PS3.15 + FHIR `AuditEvent`/BALP rendering, written and sent by the shared FerroAUDIT crates `ihe-atna` and `ehds-logging`; local Audit Record Repository in the `audit` schema, on by default; syslog + ITI-20 ATX:FHIR Feed forwarding sinks; the ITI-81 retrieval as the read side; ITI-19 mTLS via `[server.tls]`) | IHE ATNA, BALP |
+| Admin | `service::admin` (+archive/dump-load) | ITS-REST Admin API plus our own extension routes |
+| EHR index | `service::ehr_index` over `linkage.subject_ehr` | our own extension |
+| Terminology | `service::terminology` (in-process `openehr-term` bundle + one FHIR R4B terminology server, FerroTERM in every shipped deployment, reached through the published `ferrobridge-term` client with an optional OAuth2 client-credentials grant; commit-time ac-code constraint-binding resolution) | TERM, AQL terminology function |
+| Message | `service::message` | `/message` extension (RM EHR Extract) |
 
 | Crate | Role | Kind |
 |---|---|---|
@@ -448,7 +451,7 @@ The service layer realizes the openEHR **SM Platform Service Model**
 | `openehr-adl` | ADL 2.4 engine: ADL2/cADL/ODIN parser, AOM2 validation, flattener, OPT2, ADL 1.4→2 conversion | hand-written |
 | `openehr-codegen` | BMM/XSD/OAS → Rust generator (+ `emit-rm-model`) | tooling |
 | `ferroehr-rest` | ITS-REST protocol adapter (axum) + auth + ATNA audit middleware; `access` module = RBAC/ABAC authz; calls the concrete `FerroEhrService` | application |
-| `ferroehr` | The platform library: storage, service layer (one module per SM chapter), AQL engine, `versioning` (change control plus the VERSION `signature` signing under `versioning::signature`), validation, templates, the full config tree, telemetry, `privacy`, `system_log`, `licence` (the boot-verified grant in force and the identifier stamp it keys), `usage_report` (FerroEHR's status, route groups and PostgreSQL state store for the `start` and `daily` installation reports that `ferrohealth-usage-report` sends to FerroPULSE, on by default, envelope v2 in FerroHEALTH/FerroPULSE `docs/report-v2.md`, vendored schema in `corpus/ferropulse/`) | application |
+| `ferroehr` | The platform library: storage, service layer (one module per domain area), AQL engine, `versioning` (change control plus the VERSION `signature` signing under `versioning::signature`), validation, templates, the full config tree, telemetry, `privacy`, `system_log`, `licence` (the boot-verified grant in force and the identifier stamp it keys), `usage_report` (FerroEHR's status, route groups and PostgreSQL state store for the `start` and `daily` installation reports that `ferrohealth-usage-report` sends to FerroPULSE, on by default, envelope v2 in FerroHEALTH/FerroPULSE `docs/report-v2.md`, vendored schema in `corpus/ferropulse/`) | application |
 | `ferroehr-server` | The wiring-only binary (config → pool → migrations → service → serve); bin name `ferroehr` | application |
 | `ferroehr-ext` | Optional integrations behind additive features (`events`, `multimedia`): the AMQP events transport, the content-addressed multimedia store | application |
 | `ferroehr-viewer` | The Leptos SSR viewer: its own binary and OCI image, consuming the CDR strictly over ITS-REST | application |
@@ -566,7 +569,7 @@ answers them:
 ## Build state
 
 The openEHR-conformant CDR is shipped: the generated spec/ITS foundation plus
-the full application (persistence, greenfield storage, REST + auth, the SM
+the full application (persistence, greenfield storage, REST + auth, the
 service layer, templates, WebTemplate/FLAT/STRUCTURED, validation, the AQL
 engine, conformance). Everything not yet built — the plugin system, further
 enterprise capabilities, refinement, performance — is ordinary tracker work:

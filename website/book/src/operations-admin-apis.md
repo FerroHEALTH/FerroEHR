@@ -78,8 +78,7 @@ is then erased in the linkage domain, and the externalized multimedia blobs no
 surviving version still references are removed from the object store.
 
 **A party delete announces itself the same way.** `DELETE
-{base}/admin/party/{party_id}` is the SM `physical_party_delete` operation on
-the wire. The released Admin API defines deletion for EHRs only, so the route
+{base}/admin/party/{party_id}` deletes a party physically. The released Admin API defines deletion for EHRs only, so the route
 is our own extension, and the served OpenAPI document says so. It writes one
 erasure tombstone on the party domain's own outbox before its transaction
 commits, naming the party and every `PARTY_RELATIONSHIP` erased with it. A

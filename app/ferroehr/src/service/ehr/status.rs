@@ -494,8 +494,8 @@ impl FerroEhrService {
             if let sqlx::Error::Database(db) = &e
                 && db.constraint() == Some("uq_ehr_subject")
             {
-                // NOTE: SM ehr_call_status_type.adoc declares
-                // ehr_for_subject_already_exists for the one-EHR-per-subject rule.
+                // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
+                // id and namespace pair; the status token is our own.
                 return ServiceError::sm(
                     CallStatusType::EhrForSubjectAlreadyExists,
                     format!(
@@ -544,8 +544,8 @@ impl FerroEhrService {
                 crate::storage::ehr_repo::ehr_id_by_subject(&mut *tx, subject_id, namespace).await?
             && owner != ehr_id
         {
-            // NOTE: SM ehr_call_status_type.adoc declares
-            // ehr_for_subject_already_exists for the one-EHR-per-subject rule.
+            // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
+            // id and namespace pair; the status token is our own.
             return Err(ServiceError::sm(
                 CallStatusType::EhrForSubjectAlreadyExists,
                 format!(

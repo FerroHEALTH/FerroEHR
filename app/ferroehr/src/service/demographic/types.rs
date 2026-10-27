@@ -9,9 +9,8 @@
 /// concrete `ACTOR`/`PARTY` leaves of the RM demographic package the wire
 /// routes are keyed by).
 ///
-/// NOTE: the SM addresses parties only by versioned-object id; the
-/// per-kind routing is our wire extension (module NOTE) — the RM `_type`
-/// of the payload is the authority, `kind` the route key.
+/// NOTE: ITS-REST Demographic API keys each route by party kind; the RM
+/// `_type` of the payload is the authority, `kind` the route key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PartyKind {
     /// `AGENT` (`/demographic/agent`).

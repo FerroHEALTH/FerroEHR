@@ -51,8 +51,8 @@ use crate::service::error::ServiceError;
 pub(crate) fn parse_opt(xml: &str) -> Result<OperationalTemplate, ServiceError> {
     require_well_formed_xml(xml)?;
     openehr_its::opt14::from_xml(xml).map_err(|e| {
-        // NOTE: i_definition_adl14.adoc §upload_opt .Errors declares
-        // invalid_template for a semantically invalid operational template.
+        // NOTE: no specification names this status token: our own design for a
+        // semantically invalid operational template.
         ServiceError::Unprocessable {
             status: crate::service::status::CallStatusType::InvalidTemplate,
             violation: crate::service::error::Violation::new(format!("invalid OPT 1.4 XML: {e}")),

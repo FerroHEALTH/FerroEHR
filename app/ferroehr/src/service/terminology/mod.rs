@@ -3,14 +3,10 @@
 
 //! The Terminology component of the platform crate.
 //!
-//! The concrete realization of the SM `I_TERMINOLOGY_SERVICE` interface on
+//! The terminology calls on
 //! [`FerroEhrService`](crate::service::FerroEhrService), plus the AQL
-//! terminology seam.
-//!
-//! Spec: `docs/specs/openehr/SM/docs/openehr_platform/
-//! master12-terminology_service.adoc` + `UML/classes/i_terminology_service.adoc`
-//! (the 9 calls and their preconditions) and the extract model
-//! (`terminology_extract.adoc`). BASE
+//! terminology seam. Our own design over TERM; the call and extract names
+//! borrow from the openEHR SM text, kept as reference and never an oracle. BASE
 //! `docs/architecture_overview/master12-terminology.adoc` keeps the openEHR
 //! support terminology inside the platform (§Terminology to Support the
 //! Reference Model) and places the resolver of an archetype constraint binding
@@ -20,14 +16,14 @@
 //!
 //! Module tree, one file per concern:
 //!
-//! - [`types`] — the SM extract data model (`Terminology_description`,
+//! - [`types`] — the extract data model (`Terminology_description`,
 //!   `Terminology_extract`, `Term_code`/`Defined_term`, relationships).
 //! - `bundle` — the in-process `openehr-term` bundle provider (TERM 3.1.0), the
 //!   openEHR support terminology.
 //! - [`fhir`] — [`FhirTerminologyProvider`](fhir::FhirTerminologyProvider), the
 //!   client of the one FHIR R4B terminology server (opt-in via
 //!   [`TerminologyServerConfig`](config::TerminologyServerConfig)).
-//! - `routing` — the 9 SM calls on `FerroEhrService`.
+//! - `routing` — the 9 terminology calls on `FerroEhrService`.
 //! - `binding` — commit-time resolution of archetype constraint bindings
 //!   (ac-code value sets) against the terminology server.
 //! - `expander` — the AQL `TERMINOLOGY()` seam

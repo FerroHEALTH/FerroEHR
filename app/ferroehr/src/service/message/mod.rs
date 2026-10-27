@@ -3,12 +3,11 @@
 
 //! The Message service.
 //!
-//! The platform crate's realization of SM `I_MESSAGE_SERVICE` /
-//! `I_EHR_EXTRACT_SERVICE`
-//! (`docs/specs/openehr/SM/docs/openehr_platform/master09-message_service.adoc`
-//! and the UML classes `i_message_service.adoc`, `i_ehr_extract_service.adoc`).
+//! EHR Extract export and import over the RM EHR Extract model, behind the
+//! `/message` extension. Our own design; the operation names borrow from the
+//! openEHR SM text, kept as reference and never an oracle.
 //!
-//! The layout mirrors the spec's own export / import decomposition, each
+//! The layout follows the export / import split, each
 //! file carrying its public `FerroEhrService` methods and the machinery behind
 //! them:
 //!
@@ -19,11 +18,6 @@
 //!   parse a received `EXTRACT` and dispatch clone against append; the
 //!   `IMPORTED_VERSION` replay is [`crate::versioning`] (RM common master06
 //!   §Copying).
-//!
-//! `I_MESSAGE_SERVICE` declares no functions (`i_message_service.adoc`), so it
-//! gets no code. `I_TDD_SERVICE` (`i_tdd_service.adoc`) is not realized: the
-//! Template Data Document is a template-tooling format of the ADL 1.4 era that
-//! the canonical and Simplified Formats cover, removed by owner decision (#4199).
 //!
 //! # Cross-module wiring
 //!

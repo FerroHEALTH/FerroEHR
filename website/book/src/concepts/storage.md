@@ -88,13 +88,13 @@ files and refuses any difference beyond the kind `CHECK` and the foreign keys
 into the `ehr` relation, which the party domain has none of.
 
 The third domain is one table. `linkage.subject_ehr` is the EHR id / subject
-cross-reference — the service the openEHR Service Model calls EHR Index — and
+cross-reference (the EHR index), and
 it records which party and which subject identifier name which EHR,
 temporally: a merge, a split or an index correction closes the row in force and
 opens its successor, and the temporal key
 (`UNIQUE (party_id, sys_period WITHOUT OVERLAPS)`) admits one
-open mapping per party. It carries identifiers, the association metadata the
-Service Model defines, and a validity period, and nothing else, because a row
+open mapping per party. It carries identifiers, their association metadata,
+and a validity period, and nothing else, because a row
 here is already the additional information that re-attributes a record to a
 person. It holds no foreign key into either schema it joins, since PostgreSQL
 enforces a foreign key by reading the referenced row and no credential here

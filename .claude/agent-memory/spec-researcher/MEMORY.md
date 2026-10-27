@@ -1,5 +1,7 @@
 # Memory index
 
+- **Read first:** the openEHR Service Model (SM) is not an authority (owner ruling 2026-10-27, `.claude/memory/sm-not-an-authority.md`). Entries below that call SM an oracle or ground a verdict on it predate the ruling: re-ground such a verdict on BASE, RM, AM, TERM, QUERY or the ITS docs text, or record it as our own design.
+
 - [Unconstrained / open attribute validation semantics](unconstrained-attribute-validation.md) — where the "no constraint = any RM-valid value allowed" rule lives (AOM1.4/ADL1.4/CNF)
 - [RM class definitions location](rm-class-defs-location.md) — RM class attribute tables (existence) live in docs/UML/classes, included by master chapters
 - [Official spec only](feedback-official-spec-only.md) — answer only from docs/specs/openehr; never treat ADRs / docs/design as spec authority (owner, emphatic)

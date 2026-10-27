@@ -68,7 +68,7 @@ async fn template_upload_list_get_roundtrip() {
     );
 
     // Retrieve returns the stored OPT XML verbatim.
-    // NOTE: the SM `I_DEFINITION_ADL14::get_opt` is UUID-keyed (OPTs are stored
+    // NOTE: `get_opt` is UUID-keyed (OPTs are stored
     // UUID-keyed; `list_matching_opts` still matches on `template_id`) and
     // returns the OPT XML as a `String`, so resolve the uuid via `list_opts`.
     let opt_uuid = svc
@@ -129,9 +129,8 @@ async fn template_upload_list_get_roundtrip() {
 async fn get_unknown_template_is_not_found() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    // NOTE: `get_opt` is UUID-keyed at the SM seam, so an unknown OPT is an
-    // absent (well-formed) uuid → 404 (`template_does_not_exist`,
-    // `definition_call_status_type.adoc`).
+    // NOTE: `get_opt` is UUID-keyed at the service seam, so an unknown OPT is an
+    // absent (well-formed) uuid → 404 (`template_does_not_exist`).
     let err = svc
         .get_opt(uuid::Uuid::now_v7().to_string())
         .await

@@ -28,9 +28,9 @@ use ferrohealth_secret::secret_url::SecretUrl;
 /// `ACCESS_CONTROL_SETTINGS` of its own — the `ehr_access_default` tri-state's
 /// two states.
 ///
-/// NOTE: no openEHR spec governs this — our own design/extension; the SM places
-/// authorization out of band (SM `openehr_platform/master02-overview.adoc`
-/// §General Assumptions), and RM `master07` only defines the per-EHR object.
+/// NOTE: no openEHR spec governs this — our own design/extension; ITS-REST
+/// mandates no authorization scheme, and RM `master07` only defines the
+/// per-EHR object.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum EhrAccessDefault {

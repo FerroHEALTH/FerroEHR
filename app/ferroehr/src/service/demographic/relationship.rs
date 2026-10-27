@@ -20,13 +20,9 @@
 //! other, and an inline `relationships` list in a committed PARTY body stays
 //! RM-valid data that is validated, stored and served verbatim.
 //!
-//! NOTE: two SM asymmetries are normalized to the PARTY pattern —
-//! `i_party_relationship.adoc` gives no `has_party_relationship` precondition on
-//! `get_party_relationship` yet lists `versioned_object_does_not_exist`, so an
-//! unknown id is a `404` as on the PARTY get; and `update_party_relationship`'s
-//! `definitions_valid` precondition reduces to the same structural check as the
-//! PARTY's `valid_content` (`validate::relationship_check`), so the
-//! normalization is behaviour-preserving.
+//! NOTE: no specification governs this: our own design; a relationship follows
+//! the PARTY pattern, an unknown id is a `404` and an update runs the PARTY's
+//! structural check (`validate::relationship_check`).
 
 #![expect(
     clippy::disallowed_types,

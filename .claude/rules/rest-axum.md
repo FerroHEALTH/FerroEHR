@@ -15,8 +15,9 @@ Endpoint semantics (methods, status codes, headers, `Prefer`/`If-Match`
 handling, error bodies) come from the vendored spec text — never from memory
 or another server: `docs/specs/openehr/ITS-REST/` (the REST spec + API
 definitions behind the generated contract) and
-`docs/specs/openehr/SM/docs/openehr_platform/` (the abstract service model the
-REST API realizes). The CNF chapters
+the RM, AM, QUERY and TERM texts for the content each endpoint carries (the
+SM text under `docs/specs/openehr/SM/` is reference only, never an oracle:
+owner ruling 2026-10-27). The CNF chapters
 `docs/specs/openehr/CNF/docs/platform_test_schedule/master06`-`master12`
 (EHR / COMPOSITION / CONTRIBUTION / DIRECTORY / demographic / querying /
 admin) + the Robot suites under `CNF/tests/platform/robot/<API_GROUP>/` are a

@@ -23,10 +23,19 @@ intuition.
   `docs/specs/openehr/CNF/docs/platform_test_schedule/` and
   `CNF/tests/platform/robot/` tell you WHICH behaviours to cover — they are NOT
   authority for the correct answer. Derive every enforceable expectation from
-  the RELEASED spec component (RM / BASE / AM / QUERY / TERM / ITS-XML / SM /
+  the RELEASED spec component (RM / BASE / AM / QUERY / TERM / ITS-XML /
   ITS-REST docs text); where the schedule or a Robot data set conflicts with a
   released spec, the RELEASED SPEC WINS, and an expectation with no
   released-spec ground is not enforceable.
+- **The Service Model (SM) is not an authority (owner ruling 2026-10-27).**
+  SM describes internal service interfaces, and openEHR holds no
+  implementation to them. The oracles are what goes in and comes out: BASE,
+  RM, AM, TERM, QUERY/AQL, ITS-REST, ITS-JSON, ITS-XML and the serialisation
+  formats. How FerroEHR is built inside is its own design: never justify, add
+  or keep a feature because SM names it, never cite SM as the ground for a
+  decision, and never mark something "not realised" against SM as if that
+  were a conformance gap. The vendored SM text under `docs/specs/openehr/SM/`
+  stays as reference.
 - **The ITS-REST wire-oracle order: docs text first; the released OAS fills
   docs-text SILENCE; the register only when BOTH are silent (owner rulings
   2026-07-24 + 2026-07-28).** Read `docs/specs/openehr/ITS-REST/` prose (esp.

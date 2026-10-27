@@ -63,9 +63,8 @@ pub struct DefinedTerm {
     /// `text` (1..1) — text of term.
     pub text: String,
     /// `language` (0..1) — code representing the language (ISO 639 / IETF
-    /// RFC 5646). NOTE: the SM types this as `Terminology_code`; we
-    /// carry the bare code string (the native API resolves rubrics per
-    /// language directly against the `openehr-term` bundle).
+    /// RFC 5646), carried as the bare code string (the native API resolves
+    /// rubrics per language directly against the `openehr-term` bundle).
     pub language: Option<String>,
     /// `is_preferred_term` (0..1) — true if this term is the preferred term
     /// among alternatives, if supported within the scoping terminology.
@@ -115,8 +114,7 @@ pub struct TerminologyRelation {
     /// `local_code` (0..1) — local code defining this relation.
     pub local_code: Option<String>,
     /// `external_code` (0..1) — code from another terminology that defines a
-    /// relation used by this terminology. NOTE: the SM types this as
-    /// `Terminology_code`; carried here as the bare code string.
+    /// relation used by this terminology, carried as the bare code string.
     pub external_code: Option<String>,
 }
 

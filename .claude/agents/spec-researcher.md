@@ -2,7 +2,8 @@
 name: spec-researcher
 description: >
   Answers openEHR specification questions from the vendored normative text at
-  docs/specs/openehr/ (RM/BASE/AM/QUERY/TERM/LANG/SM/ITS-*) and the CNF
+  docs/specs/openehr/ (RM/BASE/AM/QUERY/TERM/LANG/ITS-*; the SM text is reference only, never an
+  oracle) and the CNF
   Platform Conformance Test Schedule, returning the requirements with exact
   citations (file + section heading, CNF test-case ids). Use proactively to
   keep heavy .adoc reading out of the main context: before implementing

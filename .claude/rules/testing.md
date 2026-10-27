@@ -60,7 +60,7 @@ applies to every crate — generated and hand-written alike.
   2026-07-24; openEHR CNF never released a stable version):
   `docs/specs/openehr/CNF/docs/platform_test_schedule/` names WHICH behaviours
   to exercise, but the CORRECT behaviour is derived from the RELEASED spec
-  components (RM / BASE / AM / QUERY / TERM / ITS-XML / SM / ITS-REST docs text) —
+  components (RM / BASE / AM / QUERY / TERM / ITS-XML / ITS-REST docs text) —
   where the schedule and a released spec conflict, the released spec wins. The
   upstream Robot suites under `CNF/tests/platform/robot/` are stalled reference
   material; their official DATA fixtures are adopted into the runner corpus only
@@ -156,7 +156,7 @@ Never park tests for crate X under crate Y's `tests/` directory.
 
 A green pipeline over a thin catalogue proves almost nothing — the real
 acceptance bar is COVERAGE. The CNF catalogue (Veredictum's `artifacts`)
-must exercise EVERYTHING the spec defines on the wire: every SM operation,
+must exercise EVERYTHING the spec defines on the wire: every ITS-REST operation,
 every status-code branch (200/201/204/400/404/409/412/422/…), every
 required/conditional header (`ETag`, `Location`, `Last-Modified`, `Prefer`,
 `If-Match`), content-negotiation variants (JSON + XML, `Accept` q-values),

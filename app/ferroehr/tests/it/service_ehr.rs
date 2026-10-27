@@ -63,7 +63,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
     // ── EHR create + retrieve ────────────────────────────────────────────────
-    // NOTE: the SM `create_ehr` returns the new UUID; the RM `EHR` body is read
+    // NOTE: `create_ehr` returns the new UUID; the RM `EHR` body is read
     // via `ehr_object`, and the ETag/Location meta (ehr_id == uid) is exactly
     // that returned uuid, so the meta assertions fold into the uuid/body checks.
     let ehr_uuid = svc.create_ehr(None).await.expect("ehr_create");
@@ -2528,9 +2528,9 @@ async fn subject_identity_is_matched_exactly_and_never_case_folded() {
     // service reconciles. Deliberately NOT the BASE base_types master05
     // §Composite Identifiers and Case rule, which governs OBJECT_VERSION_ID-
     // shaped composite identifiers, not an opaque demographic id.
-    // NOTE: no openEHR spec governs the comparison — our own design; SM
-    // i_ehr_service.adoc names `ehr_for_subject_already_exists` without saying
-    // what counts as the same subject.
+    // NOTE: no openEHR spec governs the comparison — our own design; ITS-REST
+    // `409_EHR` names the subject id and namespace pair without saying how
+    // they compare.
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 

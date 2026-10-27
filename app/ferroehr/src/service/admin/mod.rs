@@ -3,13 +3,10 @@
 
 //! The Admin service (`service/admin/`) — the openEHR **Admin component**.
 //!
-//! Realizes SM `I_ADMIN_SERVICE` / `I_ADMIN_ARCHIVE` / `I_ADMIN_DUMP_LOAD`
-//! (`docs/specs/openehr/SM/docs/openehr_platform/master15-admin_service.adoc`
-//! and the UML classes `i_admin_service.adoc`, `i_admin_archive.adoc`,
-//! `i_admin_dump_load.adoc`; `master02-overview.adoc` frames Admin as
-//! "administrative facilities … such as back-up").
+//! Our own design behind the ITS-REST Admin API and our admin extensions; the
+//! operation names borrow from the openEHR SM text, kept as reference and never an oracle.
 //!
-//! One file per SM admin interface concern; each file carries both the public
+//! One file per admin concern; each file carries both the public
 //! `FerroEhrService` methods (parse ids/time bounds at the boundary) and the
 //! machinery behind them:
 //!
@@ -19,12 +16,11 @@
 //!   / `versioned_composition_count` / `composition_version_count`.
 //! - `archive` — `I_ADMIN_ARCHIVE.archive_ehrs` / `archive_parties`.
 //! - [`marks`] — the legal marks: the restriction register, the research
-//!   objection and the retention register. No SM interface declares any of
-//!   them; our own extension.
+//!   objection and the retention register; our own extension.
 //! - `dump_load` — `I_ADMIN_DUMP_LOAD.export_ehrs` / `load_ehrs`.
-//! - [`integrity`] — the storage-parity sweep, our own extension: no SM
-//!   interface declares it and no openEHR spec governs storage mechanics.
-//! - [`types`] — the SM information classes of the ADMIN group
+//! - [`integrity`] — the storage-parity sweep, our own extension: no openEHR
+//!   spec governs storage mechanics.
+//! - [`types`] — the information classes of the ADMIN group
 //!   (`EXPORT_SPEC`, `DUMP_LOAD_FAIL_REPORT`, the format enumerations).
 //!
 //! # Cross-module wiring

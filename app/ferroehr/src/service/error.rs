@@ -714,13 +714,9 @@ impl From<ServiceError> for SmError {
     /// `500`-class `Internal` row substitutes a curated status and message,
     /// because its detail must not reach a client.
     ///
-    /// NOTE: `CALL_STATUS` (`SM/docs/UML/classes/call_status.adoc` §Attributes)
-    /// declares five scalars and no slot for a per-path violation list, so a
-    /// `ValidationFailed`'s violations are joined into `message` on the SM route
-    /// while the direct `ApiError` route keeps them as `validationErrors[]`.
-    /// Both renderings satisfy the release, which assigns the 422 row a meaning
-    /// but no body shape (overview `Requests_and_responses.md` §HTTP status
-    /// codes; `responses/422.yaml` declares no schema).
+    /// NOTE: ITS-REST overview `Requests_and_responses.md` §HTTP status codes
+    /// gives the 422 row a meaning but no body shape (`responses/422.yaml`), so
+    /// joining the violations into `message` here is our own design.
     fn from(e: ServiceError) -> Self {
         use super::status::CallStatusType as S;
         match e {

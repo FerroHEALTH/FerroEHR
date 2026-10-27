@@ -94,8 +94,8 @@ impl FerroEhrService {
         crate::validation::validate_opt_artefact(&opt)?;
 
         let template_id = opt.template_id.value;
-        // NOTE: i_definition_adl14.adoc §upload_opt .Errors declares
-        // invalid_template for a semantically invalid operational template.
+        // NOTE: no specification names this status token: our own design for a
+        // semantically invalid operational template.
         if template_id.trim().is_empty() {
             return Err(ServiceError::Unprocessable {
                 status: crate::service::status::CallStatusType::InvalidTemplate,

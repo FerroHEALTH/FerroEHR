@@ -10,7 +10,7 @@
 /// Realizes the SM `time_interval: Interval<Iso8601_date_time> [0..1]`
 /// parameter of the four `i_admin_service.adoc` statistics calls.
 ///
-/// NOTE: the SM `Interval` is treated as **closed** `[lower, upper]` — the
+/// NOTE: the range is treated as **closed** `[lower, upper]` — the
 /// default openEHR `Interval` bound inclusivity — matched against each
 /// CONTRIBUTION/version audit `time_committed`. An invalid ISO bound is a `400`
 /// (rejected at the service boundary before the query runs), and so is a

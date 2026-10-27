@@ -57,7 +57,7 @@ edge to the pin-bump work.
    its cited spec source — docs text first; the released OAS is citable ONLY
    for behaviour the docs text is silent on, and loses on any conflict).
 3. Read the governing RELEASED spec text FIRST-HAND (`/spec-lookup`; the
-   ITS-REST docs text + overview `Requests_and_responses`, SM interface,
+   ITS-REST docs text + overview `Requests_and_responses`,
    RM/QUERY/BASE/AM/TERM/ITS-XML). The CNF schedule is only a GUIDE to WHICH
    behaviour to check — re-derive the correct answer from the released
    component, never from the schedule's own assertion, the OAS, the Robot set,
@@ -77,7 +77,7 @@ edge to the pin-bump work.
   match observed SUT behaviour** — expectations trace to spec text only.
 - **Only the RELEASED spec components are the oracle (owner rulings
   2026-07-24 + 2026-07-28).** Adjudicate against the released components
-  (RM / BASE / AM / QUERY / TERM / ITS-XML / **SM** / ITS-REST **docs text**),
+  (RM / BASE / AM / QUERY / TERM / ITS-XML / ITS-REST **docs text**),
   with one ordered supplement: **the vendored released OAS**
   (`crates/openehr-its/vendor/rest-oas/`) is part of the release's own
   specification artifacts (ITS-REST overview `Specifications.md`) and grounds
@@ -91,12 +91,13 @@ edge to the pin-bump work.
   "ambiguity" that exists ONLY because a guide source is
   stale/incomplete/self-contradictory — with no released-component ground —
   is not a spec gap: re-ground it on a released component, or drop it and
-  make the case gating. **SM and the ITS-REST docs
-  text are BOTH oracles** (owner ruling 2026-07-24) — SM anchors the operation
-  + the naming the case cores use, ITS-REST binds it to the wire; an SM
-  operation the released ITS-REST does not yet realize is a genuine SM↔ITS
-  realization gap (verdict N/A-with-citation on this ITS + an upstream
-  alignment candidate), NOT a REFUTE.
+  make the case gating. **The Service Model (SM) is not an oracle** (owner
+  ruling 2026-10-27, superseding the 2026-07-24 ruling that made it one): it
+  describes internal service interfaces openEHR holds no implementation to.
+  The case cores keep SM operation names as identifiers only; an SM operation
+  the released ITS-REST does not realize has no wire contract to test, so the
+  verdict is N/A-with-citation on this ITS, never a REFUTE and never a gap
+  FerroEHR owes.
 - **A red run is not presumptive evidence of an app bug** (the first live
   triage attributed 7/7 defects to the runner) — nor of a runner bug.
   Every row gets the full derivation; no attribution without a citation.

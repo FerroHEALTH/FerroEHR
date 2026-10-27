@@ -63,7 +63,7 @@ component programs are open vs released is read from the milestones
 (`gh api … /milestones`), never copied forward. Milestone routing for a fix
 whose program has closed: [[component-fixes-ride-current-patch]].
 
-**SM-program refinements (v3.19.0, 2026-08-21):** DEVELOPMENT-state model
+**SM-program refinements (v3.19.0, 2026-08-21; the SM program is retired by the 2026-10-27 ruling in [[sm-not-an-authority]], kept here as history):** DEVELOPMENT-state model
 documents (SDF, Simplified IM-B) get adjudication-verification chapters —
 the audit question is "does the never-implement adjudication hold and is it
 flagged", walkable in-session with no researcher fan-out. Upstream defects
