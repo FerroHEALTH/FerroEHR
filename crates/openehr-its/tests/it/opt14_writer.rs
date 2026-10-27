@@ -37,8 +37,9 @@ use openehr_base::v1_3::base_types::identification::template_id::TemplateId;
 use openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId;
 use openehr_base::v1_3::base_types::terminology::code_phrase::CodePhrase;
 use openehr_its::opt14::types::{
-    Archetype, ArchetypeInternalRef, ArchetypeSlot, Assertion, CArchetypeRoot, CAttribute, CObject,
-    ExprItem, Intervalofinteger, OperationalTemplate,
+    Archetype, ArchetypeInternalRef, ArchetypeSlot, Assertion, CArchetypeRoot, CAttribute,
+    CMultipleAttribute, CObject, CSingleAttribute, Cardinality, ExprItem, Intervalofinteger,
+    OperationalTemplate,
 };
 use openehr_its::opt14_writer::{
     ArchetypeLibrary, ArchetypeUse, Narrowing, NodeClone, SlotFill, TemplateDefinition, WriteError,
@@ -1931,4 +1932,131 @@ fn an_open_attribute_holds_archetypes_beside_a_constraint() {
         .expect("content");
     let kinds: Vec<&str> = attribute_parts(content).2.iter().map(kind).collect();
     assert_eq!(kinds, ["C_COMPLEX_OBJECT", "C_ARCHETYPE_ROOT"]);
+}
+
+#[test]
+fn a_clone_of_a_node_that_cannot_repeat_is_refused() {
+    let library = library();
+    let build = |id: &str, clone: NodeClone| {
+        let mut root = archetype_use(id);
+        root.narrowings.push(Narrowing::Clone(clone));
+        openehr_its::opt14_writer::build(&template("Clone", root), &library)
+    };
+    assert!(
+        matches!(
+            build(BIRTH_SUMMARY, NodeClone::new("/data[at0001]", name_constraint("x"))),
+            Err(WriteError::CloneNotAdmitted { reason, .. }) if reason.contains("single-valued")
+        ),
+        "a child of a single-valued attribute has no second copy"
+    );
+    assert!(
+        matches!(
+            build(
+                ADDRESS,
+                NodeClone::new("/items[at0020]", name_constraint("x"))
+            ),
+            Err(WriteError::NotAComplexObject { .. })
+        ),
+        "a slot is no complex object to name"
+    );
+    let mut renamed = NodeClone::new(STREET, name_constraint("x"));
+    renamed.narrowings.push(Narrowing::Constrain {
+        path: "/".to_owned(),
+        attribute: name_constraint("y"),
+    });
+    assert!(
+        matches!(
+            build(ADDRESS, renamed),
+            Err(WriteError::AttributeConstrained { .. })
+        ),
+        "a copy carries its clone name already"
+    );
+}
+
+fn single(name: &str, existence: Intervalofinteger) -> CAttribute {
+    CAttribute::CSingleAttribute(CSingleAttribute {
+        rm_attribute_name: name.to_owned(),
+        existence,
+        children: Vec::new(),
+    })
+}
+
+fn element_with(attribute: CAttribute) -> CObject {
+    let mut element = complex("ELEMENT", "at0001");
+    if let CObject::CComplexObject(o) = &mut element {
+        o.occurrences = closed(0, 1);
+        o.attributes.push(attribute);
+    }
+    element
+}
+
+#[test]
+fn a_redefinition_overlays_the_attributes_it_names() {
+    let library = library();
+    let redefine = |object: CObject| {
+        let mut root = archetype_use(ADDRESS);
+        root.narrowings.push(Narrowing::Redefine {
+            path: "/items".to_owned(),
+            objects: vec![object],
+        });
+        openehr_its::opt14_writer::build(&template("Address", root), &library)
+    };
+    let built = redefine(element_with(single("value", closed(0, 0)))).expect("builds");
+    let street = root_items(&built)
+        .iter()
+        .find(|c| head(c).2 == "at0001")
+        .expect("the street");
+    assert!(
+        own_attributes(street)
+            .iter()
+            .all(|a| attribute_parts(a).0 != "value"),
+        "an attribute at existence {{0}} is removed"
+    );
+    assert!(
+        root_items(&built).iter().any(|c| head(c).2 == "at0002"),
+        "a named node no object redefines stays"
+    );
+    assert!(
+        matches!(
+            redefine(element_with(single("value", closed(0, 2)))),
+            Err(WriteError::Widening {
+                what: "existence",
+                ..
+            })
+        ),
+        "a wider existence is refused"
+    );
+    assert!(
+        matches!(
+            redefine(element_with(single("no_such_attribute", closed(0, 1)))),
+            Err(WriteError::AttributeNotInModel { .. })
+        ),
+        "an attribute the type lacks is refused"
+    );
+    let multiple = CAttribute::CMultipleAttribute(CMultipleAttribute {
+        rm_attribute_name: "value".to_owned(),
+        existence: closed(0, 1),
+        children: Vec::new(),
+        cardinality: Cardinality {
+            is_ordered: false,
+            is_unique: false,
+            interval: closed(0, 1),
+        },
+    });
+    assert!(
+        matches!(
+            redefine(element_with(multiple)),
+            Err(WriteError::RedefinitionUnmatched { .. })
+        ),
+        "a single-valued attribute stays single-valued"
+    );
+    let mut excluded = element_with(single("value", closed(0, 1)));
+    if let CObject::CComplexObject(o) = &mut excluded {
+        o.occurrences = closed(0, 0);
+    }
+    let built = redefine(excluded).expect("builds");
+    assert!(
+        root_items(&built).iter().all(|c| head(c).2 != "at0001"),
+        "an object at occurrences {{0}} removes the node"
+    );
 }
