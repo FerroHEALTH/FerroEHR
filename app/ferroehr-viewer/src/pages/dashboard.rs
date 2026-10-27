@@ -6,7 +6,8 @@
 //! `design/consoles/ferroehr/`, page 01).
 //!
 //! The counts come from fixed AQL and the template and stored-query lists
-//! ([`crate::bff::dashboard`]); a namespace whose stored query did not run
+//! ([`crate::bff::dashboard`]), read on the server into one [`Dashboard`]
+//! model that both halves draw; a namespace whose stored query did not run
 //! shows no total rather than a short one. A CDR that does not answer turns
 //! the page into its refusal. No openEHR spec governs the viewer: our own
 //! design.
@@ -21,13 +22,80 @@ use ferrohealth_ui::view::surface::{Header, Stat, page_heading, stat_card};
 use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
 use ferrohealth_ui::widget::action_menu::{Act, Action};
 use leptos::prelude::*;
+use leptos::server;
 use leptos_meta::Title;
+use serde::{Deserialize, Serialize};
 
-use crate::bff::dashboard::{NamespaceTile, commit_trend, dashboard_counts, namespace_tiles};
+use crate::activity::ActivityPoint;
+use crate::bff::dashboard::NamespaceTile;
+use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{awaited, refused, state_mark};
+use crate::session_client::SessionAwareClient;
+
+/// One namespace tile and the link that opens Stored queries on it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NamespaceLink {
+    /// The tile.
+    tile: NamespaceTile,
+    /// Stored queries, filtered to the tile's namespace.
+    href: String,
+}
+
+/// What the dashboard draws, read from the CDR on the server.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Dashboard {
+    /// The EHRs the CDR holds.
+    ehrs: i64,
+    /// The compositions the CDR holds.
+    compositions: i64,
+    /// The operational templates the CDR holds.
+    templates: u32,
+    /// The stored queries, or `None` when the CDR refused the list.
+    stored: Option<u32>,
+    /// Compositions committed per day.
+    trend: Result<Vec<ActivityPoint>, ViewerError>,
+    /// The stored queries' matches by namespace.
+    tiles: Result<Vec<NamespaceLink>, ViewerError>,
+}
+
+/// Reads the dashboard's model from the CDR.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session, and the
+/// refusal of the headline counts, which leaves the page nothing to draw.
+#[server(client = SessionAwareClient)]
+pub async fn load_dashboard() -> Result<Dashboard, ViewerError> {
+    crate::session::require_session().await?;
+    let (ehrs, compositions, templates) = crate::bff::dashboard::dashboard_counts().await?;
+    // NOTE: no openEHR spec governs this: our own design; a stored-query list
+    // the CDR refused is an unknown count, drawn as the dash (R12), never 0.
+    let stored = crate::queries_api::list_stored_queries()
+        .await
+        .ok()
+        .map(|rows| u32::try_from(rows.len()).unwrap_or(u32::MAX));
+    let trend = crate::bff::dashboard::commit_trend().await;
+    let tiles = crate::bff::dashboard::namespace_tiles().await.map(|tiles| {
+        tiles
+            .into_iter()
+            .map(|tile| NamespaceLink {
+                href: namespace_href(&tile),
+                tile,
+            })
+            .collect()
+    });
+    Ok(Dashboard {
+        ehrs,
+        compositions,
+        templates,
+        stored,
+        trend,
+        tiles,
+    })
+}
 
 /// The link that opens Stored queries on the namespace of `tile`.
+#[cfg(not(target_arch = "wasm32"))]
 fn namespace_href(tile: &NamespaceTile) -> String {
     let unqualified = crate::query_namespace::group_label(None);
     let key = if tile.label == unqualified {
@@ -84,9 +152,7 @@ fn stats(ehrs: i64, compositions: i64, templates: u32, stored: Option<u32>) -> A
 const ACTIVITY_DAYS: u16 = 30;
 
 /// The compositions-per-day card.
-fn activity_card(
-    points: Result<Vec<crate::activity::ActivityPoint>, crate::error::ViewerError>,
-) -> AnyView {
+fn activity_card(points: Result<Vec<ActivityPoint>, ViewerError>) -> AnyView {
     let body = match points {
         Ok(points) if points.is_empty() => list_empty(
             tr(Msg::DashboardNoCompositions),
@@ -138,7 +204,7 @@ fn activity_card(
 }
 
 /// The matches-by-namespace card.
-fn namespaces_card(tiles: Result<Vec<NamespaceTile>, crate::error::ViewerError>) -> AnyView {
+fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> AnyView {
     let (count, body) = match tiles {
         Ok(tiles) if tiles.is_empty() => (
             None,
@@ -156,7 +222,7 @@ fn namespaces_card(tiles: Result<Vec<NamespaceTile>, crate::error::ViewerError>)
             ];
             let rows = tiles
                 .iter()
-                .map(|tile| {
+                .map(|NamespaceLink { tile, href }| {
                     let sub = tr_with(
                         Msg::DashboardQueries,
                         &[("count", u64::from(tile.members).into())],
@@ -172,10 +238,9 @@ fn namespaces_card(tiles: Result<Vec<NamespaceTile>, crate::error::ViewerError>)
                             &tr(Msg::DashboardNoTotal),
                         ),
                     };
-                    let href = namespace_href(tile);
                     let label = tile.label.clone();
                     let sub = view! { <span class="fui-row-sub">{sub}</span> }.into_any();
-                    let title = title_cell(Some(&href), label, Some(sub));
+                    let title = title_cell(Some(href), label, Some(sub));
                     let matches = cell(&columns[1], matches);
                     view! { <tr>{title} {matches}</tr> }.into_any()
                 })
@@ -233,10 +298,10 @@ fn heading(subtitle: String, actions: ActionGroup) -> AnyView {
 )]
 #[component]
 pub fn DashboardPage() -> impl IntoView {
+    let model = OnceResource::new(load_dashboard());
     let body = awaited(async move {
-        let host = crate::request::settings().cdr_address;
-        let (ehrs, compositions, templates) = match dashboard_counts().await {
-            Ok(counts) => counts,
+        let dashboard = match model.await {
+            Ok(dashboard) => dashboard,
             Err(error) => {
                 let retry = ferrohealth_ui::view::button::link_button(
                     "/".to_owned(),
@@ -254,14 +319,14 @@ pub fn DashboardPage() -> impl IntoView {
                 .into_any();
             }
         };
-        // NOTE: no openEHR spec governs this: our own design; a stored-query list
-        // the CDR refused is an unknown count, drawn as the dash (R12), never 0.
-        let stored = crate::queries_api::list_stored_queries()
-            .await
-            .ok()
-            .map(|rows| u32::try_from(rows.len()).unwrap_or(u32::MAX));
-        let trend = commit_trend().await;
-        let tiles = namespace_tiles().await;
+        let Dashboard {
+            ehrs,
+            compositions,
+            templates,
+            stored,
+            trend,
+            tiles,
+        } = dashboard;
         let actions = if ehrs == 0 && compositions == 0 && templates == 0 {
             ActionGroup::primary(Action::new(
                 Some(Glyph::UPLOAD),
@@ -271,6 +336,7 @@ pub fn DashboardPage() -> impl IntoView {
         } else {
             ActionGroup::none()
         };
+        let host = crate::request::settings().cdr_address;
         let subtitle = tr_with(Msg::DashboardSubtitle, &[("host", host.into())]);
         view! {
             {heading(subtitle, actions)}

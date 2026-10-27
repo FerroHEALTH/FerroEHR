@@ -39,7 +39,6 @@
 // (`target_arch = "wasm32"`) are chosen by compilation target, never by Cargo
 // feature, so `--all-features` over the workspace can never turn both on.
 
-#[cfg(not(target_arch = "wasm32"))]
 pub mod activity;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod adl2;
@@ -96,7 +95,6 @@ pub mod uid;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod app;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod bff;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cdr;
@@ -109,7 +107,6 @@ pub mod export;
 pub mod flash;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod oidc;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod pages;
 pub mod paging;
 pub mod posted;
