@@ -930,8 +930,8 @@ struct Choice {
 struct Picker {
     /// The folder's `_key`.
     folder: String,
-    /// The EHR's compositions, when the CDR listed them.
-    choices: Option<Vec<Choice>>,
+    /// The EHR's compositions, or the CDR's refusal of the list.
+    choices: Result<Vec<Choice>, Refused>,
 }
 
 /// What Edit the directory's form holds.
@@ -1044,7 +1044,7 @@ async fn load_edit(ehr_id: String) -> EditModel {
                         })
                         .collect()
                 })
-                .ok();
+                .map_err(|error| Refused::new(tr(Msg::DirectoryCompositionsRefused), error));
             Some(Picker { folder, choices })
         }
         None => None,
@@ -1058,6 +1058,47 @@ async fn load_edit(ehr_id: String) -> EditModel {
         unsaved,
         picker,
     }))
+}
+
+/// The picker of a reference to add: the EHR's compositions to choose from,
+/// or the CDR's refusal of the list where the choice would be.
+fn picker_view(Picker { folder, choices }: Picker) -> AnyView {
+    let choices = match choices {
+        Ok(choices) => choices,
+        Err(refusal) => return refusal.view(),
+    };
+    let options = choices
+        .into_iter()
+        .map(|choice| {
+            let words = format!("{} · {}", choice.name, shortened(&choice.uid));
+            view! { <option value=choice.uid>{words}</option> }
+        })
+        .collect_view();
+    view! {
+        <div class="fui-transform-options">
+            <input type="hidden" name="reference_to" value=folder />
+            <div class="fui-field is-id">
+                <label for="d-reference" class="fui-label">
+                    {tr(Msg::DirectoryReferenceLabel)}
+                </label>
+                <select id="d-reference" name="reference" class="fui-select">
+                    {options}
+                </select>
+            </div>
+            <div class="fui-transform-run">
+                <button
+                    type="submit"
+                    name="intent"
+                    value="edit"
+                    class="fui-button fui-button-secondary"
+                >
+                    {ferrohealth_ui::icon::icon(Glyph::FILE_PLUS, "16")}
+                    {tr(Msg::DirectoryAddReference)}
+                </button>
+            </div>
+        </div>
+    }
+    .into_any()
 }
 
 /// Edit the directory's form, its decision bar docked.
@@ -1141,41 +1182,7 @@ fn edit_form(ehr_id: &str, editor: Editor) -> AnyView {
         root_key,
         renaming: renaming.clone(),
     };
-    let picker = picker.map(|Picker { folder, choices }| {
-        let options = choices.map(|choices| {
-            choices
-                .into_iter()
-                .map(|choice| {
-                    let words = format!("{} · {}", choice.name, shortened(&choice.uid));
-                    view! { <option value=choice.uid>{words}</option> }
-                })
-                .collect_view()
-        });
-        view! {
-            <div class="fui-transform-options">
-                <input type="hidden" name="reference_to" value=folder />
-                <div class="fui-field is-id">
-                    <label for="d-reference" class="fui-label">
-                        {tr(Msg::DirectoryReferenceLabel)}
-                    </label>
-                    <select id="d-reference" name="reference" class="fui-select">
-                        {options}
-                    </select>
-                </div>
-                <div class="fui-transform-run">
-                    <button
-                        type="submit"
-                        name="intent"
-                        value="edit"
-                        class="fui-button fui-button-secondary"
-                    >
-                        {ferrohealth_ui::icon::icon(Glyph::FILE_PLUS, "16")}
-                        {tr(Msg::DirectoryAddReference)}
-                    </button>
-                </div>
-            </div>
-        }
-    });
+    let picker = picker.map(picker_view);
     let rename_keep = renaming.map(|key| {
         view! {
             <input type="hidden" name="renaming" value=key />
@@ -1258,5 +1265,61 @@ pub fn DirectoryEditPage() -> impl IntoView {
         <Title text=tr(Msg::DirectoryEditTitle) />
         {heading}
         <div class="fui-stack">{body}</div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Choice, Picker, picker_view};
+    use crate::error::ViewerError;
+    use crate::locale::{Msg, tr};
+    use crate::pages::common::Refused;
+
+    fn drawn(picker: Picker) -> String {
+        leptos::prelude::Owner::new()
+            .with(|| leptos::prelude::RenderHtml::to_html(picker_view(picker)))
+    }
+
+    #[test]
+    fn a_refused_composition_list_draws_its_refusal_in_place_of_the_picker() {
+        let html = drawn(Picker {
+            folder: "f1".to_owned(),
+            choices: Err(Refused::new(
+                tr(Msg::DirectoryCompositionsRefused),
+                ViewerError::Cdr {
+                    status: 403,
+                    message: "the query is not allowed".to_owned(),
+                },
+            )),
+        });
+        assert!(
+            html.contains(&tr(Msg::DirectoryCompositionsRefused)),
+            "the refusal's summary is drawn: {html}"
+        );
+        assert!(
+            html.contains("the query is not allowed"),
+            "the CDR's own words are drawn: {html}"
+        );
+        assert!(
+            !html.contains("<select"),
+            "no empty picker is drawn as if the EHR had no compositions: {html}"
+        );
+    }
+
+    #[test]
+    fn a_listed_composition_is_offered_by_the_picker() {
+        let html = drawn(Picker {
+            folder: "f1".to_owned(),
+            choices: Ok(vec![Choice {
+                uid: "0199c2a4-7e1b-4c3e-9a51-4f2d8b6e1a01".to_owned(),
+                name: "Vital signs".to_owned(),
+            }]),
+        });
+        assert!(html.contains("<select"), "the picker is drawn: {html}");
+        assert!(
+            html.contains("value=\"0199c2a4-7e1b-4c3e-9a51-4f2d8b6e1a01\""),
+            "the composition is offered: {html}"
+        );
+        assert!(!html.contains(&tr(Msg::DirectoryCompositionsRefused)));
     }
 }

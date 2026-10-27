@@ -123,8 +123,8 @@ struct Shown {
     older: Option<String>,
     /// The id of the version shown.
     version_uid: String,
-    /// Its envelope facts, when the CDR gave them.
-    facts: Option<VersionedObjectFacts>,
+    /// Its envelope facts, or the CDR's refusal of them.
+    facts: Result<VersionedObjectFacts, Refused>,
     /// Its document, the subject id masked.
     document: String,
     /// Whether it lets the EHR be queried.
@@ -181,7 +181,7 @@ async fn load_status(ehr_id: String) -> EhrModel<StatusPanel> {
         };
         let facts = fetch_versioned_status(ehr_id.clone(), shown.version_uid.clone())
             .await
-            .ok();
+            .map_err(|error| Refused::new(tr(Msg::StatusFactsRefused), error));
         StatusPanel::Shown(Box::new(Shown {
             versions: versions.map_err(|error| Refused::new(tr(Msg::StatusHistoryRefused), error)),
             latest_number,
@@ -227,7 +227,7 @@ fn status_panel(ehr_id: &str, shown: StatusPanel) -> AnyView {
         tr(Msg::FactVersion),
         version_number(&version_uid).into_any(),
     )];
-    if let Some(facts) = &facts {
+    if let Ok(facts) = &facts {
         rows.push((tr(Msg::FactContribution), short(&facts.contribution_uid)));
         rows.push((
             tr(Msg::FactSigned),
@@ -246,11 +246,15 @@ fn status_panel(ehr_id: &str, shown: StatusPanel) -> AnyView {
             tr(Msg::StatusEdit),
         )
     });
+    let refused_facts = facts.err().map(|refusal| refusal.view());
     let this = section(
         Some(tr(Msg::StatusThisVersion)),
         None,
         edit,
-        definitions(rows),
+        view! {
+            {definitions(rows)}
+            {refused_facts}
+        },
     );
     let document = document_section(
         tr_with(
@@ -607,5 +611,53 @@ pub fn StatusEditPage() -> impl IntoView {
         <Title text=tr(Msg::StatusEditTitle) />
         {heading}
         <div class="fui-stack">{body}</div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Shown, StatusPanel, status_panel};
+    use crate::error::ViewerError;
+    use crate::locale::{Msg, tr};
+    use crate::pages::common::Refused;
+
+    #[test]
+    fn a_refused_envelope_draws_its_refusal_where_the_facts_would_be() {
+        let html = leptos::prelude::Owner::new().with(|| {
+            let shown = Shown {
+                versions: Err(Refused::new(
+                    tr(Msg::StatusHistoryRefused),
+                    ViewerError::Internal("history".to_owned()),
+                )),
+                latest_number: "1".to_owned(),
+                older: None,
+                version_uid: "8849182c-82ad-4088-a07f-48ead4180515::ferroehr::1".to_owned(),
+                facts: Err(Refused::new(
+                    tr(Msg::StatusFactsRefused),
+                    ViewerError::Cdr {
+                        status: 503,
+                        message: "the versioned status is unavailable".to_owned(),
+                    },
+                )),
+                document: "{}".to_owned(),
+                is_queryable: true,
+            };
+            leptos::prelude::RenderHtml::to_html(status_panel(
+                "8849182c-82ad-4088-a07f-48ead4180515",
+                StatusPanel::Shown(Box::new(shown)),
+            ))
+        });
+        assert!(
+            html.contains(&tr(Msg::StatusFactsRefused)),
+            "the refusal's summary is drawn: {html}"
+        );
+        assert!(
+            html.contains("the versioned status is unavailable"),
+            "the CDR's own words are drawn: {html}"
+        );
+        assert!(
+            !html.contains(&tr(Msg::FactLifecycle)),
+            "no envelope fact is drawn as if read: {html}"
+        );
     }
 }
