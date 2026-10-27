@@ -30,20 +30,25 @@ use ferrohealth_ui::view::versions::{Standing, version_cell};
 use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu, row_menu};
 use leptos::prelude::*;
 use leptos_meta::Title;
+#[cfg(not(target_arch = "wasm32"))]
 use leptos_router::hooks::use_params_map;
+use serde::{Deserialize, Serialize};
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{
-    awaited, count, document_section, info_note, panel, plain_section, refused, section, when,
+    Refused, count, document_section, drawn, info_note, page_model, panel, plain_section, section,
+    when,
 };
-use crate::pages::results::{Answered, chart_asked, not_run, results};
+use crate::pages::results::Answer;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::queries_api::{
     StoredQueryRow, fetch_stored_query, list_stored_queries, run_stored_query,
 };
-use crate::query_namespace::{
-    VersionResolution, bare_name_of, group_by_namespace, resolve_version,
-};
+use crate::query_namespace::{VersionResolution, bare_name_of};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::query_namespace::{group_by_namespace, resolve_version};
 
 /// The key the dashboard's namespace tile names the unqualified queries by.
 pub const UNQUALIFIED: &str = "-";
@@ -78,6 +83,7 @@ fn open_in_query(name: &str, version: &str) -> String {
     )
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The order of two semantic versions, newest first.
 fn newest_first(a: &str, b: &str) -> std::cmp::Ordering {
     let key = |version: &str| -> Vec<u64> {
@@ -90,16 +96,15 @@ fn newest_first(a: &str, b: &str) -> std::cmp::Ordering {
 }
 
 /// The parameters a query text names, as code, or a dash for none.
-fn parameters(aql: &str) -> AnyView {
-    let names = crate::aql_text::placeholders(aql);
+fn parameters(names: &[String]) -> AnyView {
     if names.is_empty() {
         return view! { <span class="fui-muted">{tr(Msg::RelationshipNone)}</span> }.into_any();
     }
     names
-        .into_iter()
+        .iter()
         .map(|name| {
             view! {
-                <code>{name}</code>
+                <code>{name.clone()}</code>
                 " "
             }
         })
@@ -107,22 +112,60 @@ fn parameters(aql: &str) -> AnyView {
         .into_any()
 }
 
-/// The stored queries grouped by namespace, as a table.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one page part: the reads it waits on and the view it draws"
-)]
-fn table(rows: &[StoredQueryRow], only: Option<&str>) -> (AnyView, usize, usize) {
-    let columns = [
-        Column::text("name", tr(Msg::QueryName)).role(Role::Title),
-        Column::text("version", tr(Msg::ColumnVersion)).role(Role::Sub),
-        Column::text("parameters", tr(Msg::QueryParameters)).role(Role::Meta),
-        Column::text("menu", tr(Msg::ColumnActions)).role(Role::Menu),
-    ];
-    let mut body = Vec::new();
+/// One version of a stored query, as a listing shows it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct Member {
+    /// Its qualified name.
+    name: String,
+    /// Its version.
+    version: String,
+    /// Whether a newer version of the same name is listed.
+    older: bool,
+    /// The parameters its text names.
+    parameters: Vec<String>,
+}
+
+/// The stored queries of one namespace.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct Group {
+    /// The namespace, `None` for the unqualified ones.
+    namespace: Option<String>,
+    /// How many distinct names it holds.
+    names: usize,
+    /// Its versions, in the CDR's order.
+    members: Vec<Member>,
+}
+
+/// The stored queries the listing shows.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum Listing {
+    /// The CDR holds none.
+    Empty,
+    /// The groups the filter keeps, and the distinct names in them.
+    Groups {
+        /// The groups.
+        groups: Vec<Group>,
+        /// The distinct names.
+        names: usize,
+    },
+    /// The CDR's refusal.
+    Refused(Refused),
+}
+
+/// Stored queries' model: the namespace the address keeps and the listing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct Listed {
+    /// The namespace kept, if any.
+    only: Option<String>,
+    /// The listing.
+    listing: Listing,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// The stored queries grouped by namespace, the groups `only` keeps.
+fn grouped(rows: &[StoredQueryRow], only: Option<&str>) -> Listing {
+    let mut groups = Vec::new();
     let mut names = 0;
-    let mut versions = 0;
-    let mut index = 0_usize;
     for group in group_by_namespace(rows) {
         let key = group
             .namespace
@@ -135,7 +178,50 @@ fn table(rows: &[StoredQueryRow], only: Option<&str>) -> (AnyView, usize, usize)
         distinct.sort_unstable();
         distinct.dedup();
         names += distinct.len();
-        versions += group.members.len();
+        let members = group
+            .members
+            .iter()
+            .map(|row| Member {
+                name: row.name.clone(),
+                version: row.version.clone(),
+                older: group.members.iter().any(|other| {
+                    other.name == row.name && newest_first(&other.version, &row.version).is_lt()
+                }),
+                parameters: crate::aql_text::placeholders(&row.query),
+            })
+            .collect();
+        groups.push(Group {
+            namespace: group.namespace,
+            names: distinct.len(),
+            members,
+        });
+    }
+    Listing::Groups { groups, names }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads Stored queries: the listing, kept to the namespace the address names.
+async fn load_listing() -> Listed {
+    let only = crate::request::query("namespace").filter(|namespace| !namespace.is_empty());
+    let listing = match list_stored_queries().await {
+        Ok(rows) if rows.is_empty() => Listing::Empty,
+        Ok(rows) => grouped(&rows, only.as_deref()),
+        Err(error) => Listing::Refused(Refused::new(tr(Msg::QueriesRefused), error)),
+    };
+    Listed { only, listing }
+}
+
+/// The stored queries grouped by namespace, as a table.
+fn table(groups: Vec<Group>) -> AnyView {
+    let columns = [
+        Column::text("name", tr(Msg::QueryName)).role(Role::Title),
+        Column::text("version", tr(Msg::ColumnVersion)).role(Role::Sub),
+        Column::text("parameters", tr(Msg::QueryParameters)).role(Role::Meta),
+        Column::text("menu", tr(Msg::ColumnActions)).role(Role::Menu),
+    ];
+    let mut body = Vec::new();
+    let mut index = 0_usize;
+    for group in groups {
         let label = match &group.namespace {
             Some(namespace) => view! { <code>{namespace.clone()}</code> }.into_any(),
             None => tr(Msg::QueriesUnqualified).into_any(),
@@ -150,7 +236,7 @@ fn table(rows: &[StoredQueryRow], only: Option<&str>) -> (AnyView, usize, usize)
                         tr_with(
                             Msg::QueriesGroupCount,
                             &[
-                                ("names", count(distinct.len())),
+                                ("names", count(group.names)),
                                 ("versions", count(group.members.len())),
                             ],
                         ),
@@ -159,11 +245,8 @@ fn table(rows: &[StoredQueryRow], only: Option<&str>) -> (AnyView, usize, usize)
             },
         ));
         for row in &group.members {
-            let older = group.members.iter().any(|other| {
-                other.name == row.name && newest_first(&other.version, &row.version).is_lt()
-            });
             let href = stored_query_href(&row.name, &row.version);
-            let sub = older.then(|| {
+            let sub = row.older.then(|| {
                 view! { <span class="fui-row-sub">{tr(Msg::QueriesOlderVersion)}</span> }.into_any()
             });
             let menu = row_menu(
@@ -197,7 +280,7 @@ fn table(rows: &[StoredQueryRow], only: Option<&str>) -> (AnyView, usize, usize)
                     <tr>
                         {title_cell(Some(&href), bare_name_of(&row.name).to_owned(), sub)}
                         {cell(&columns[1], row.version.clone())}
-                        {cell(&columns[2], parameters(&row.query))} {menu_cell(menu)}
+                        {cell(&columns[2], parameters(&row.parameters))} {menu_cell(menu)}
                     </tr>
                 }
                 .into_any(),
@@ -206,24 +289,62 @@ fn table(rows: &[StoredQueryRow], only: Option<&str>) -> (AnyView, usize, usize)
         }
     }
     let caption = tr(Msg::NavStoredQueries);
-    let table = data_table(DataTable {
+    data_table(DataTable {
         caption: &caption,
         columns: &columns,
         sorting: Sorting::default(),
         body: Body::Rows(body.collect_view().into_any()),
     })
-    .into_any();
-    (table, names, versions)
+    .into_any()
+}
+
+/// Stored queries' list page.
+fn listed(listed: Listed) -> AnyView {
+    let Listed { only, listing } = listed;
+    let write = ferrohealth_ui::view::button::link_button(
+        "/query/aql".to_owned(),
+        ferrohealth_ui::view::button::Variant::Ghost,
+        Some(Glyph::SQUARE_TERMINAL),
+        tr(Msg::DashboardWriteOne),
+    );
+    let (list, total) = match listing {
+        Listing::Empty => (list_empty(tr(Msg::DashboardNoStoredQuery), None), Some(0)),
+        Listing::Groups { groups, names } => (table(groups), u64::try_from(names).ok()),
+        Listing::Refused(refusal) => (refusal.view(), None),
+    };
+    let chips = only.as_ref().map(|namespace| {
+        let words = if namespace == UNQUALIFIED {
+            tr(Msg::QueriesUnqualified)
+        } else {
+            namespace.clone()
+        };
+        active_filters(
+            ActiveFilters {
+                chips: vec![FilterChip {
+                    label: tr_with(Msg::QueriesNamespaceChip, &[("value", words.into())]),
+                    remove: "/queries".to_owned(),
+                }],
+                clear: "/queries".to_owned(),
+                shown: None,
+            },
+            None,
+        )
+    });
+    let card = list_card(ListCard {
+        title: tr(Msg::NavStoredQueries),
+        count: total.map(ferrohealth_ui::view::template::list::HeadingCount::All),
+        order: None,
+        tabs: None,
+        actions: Some(write),
+        body: list,
+        pager: None,
+    });
+    view! { <div class="fui-list-page">{chips} {card}</div> }.into_any()
 }
 
 /// Stored queries.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
 #[component]
 pub fn StoredQueriesPage() -> impl IntoView {
-    let only = crate::request::query("namespace").filter(|namespace| !namespace.is_empty());
     let heading = page_heading(
         Header {
             title: tr(Msg::NavStoredQueries).into(),
@@ -235,52 +356,8 @@ pub fn StoredQueriesPage() -> impl IntoView {
         },
         ActionGroup::none(),
     );
-    let body = awaited(async move {
-        let write = ferrohealth_ui::view::button::link_button(
-            "/query/aql".to_owned(),
-            ferrohealth_ui::view::button::Variant::Ghost,
-            Some(Glyph::SQUARE_TERMINAL),
-            tr(Msg::DashboardWriteOne),
-        );
-        let (list, total) = match list_stored_queries().await {
-            Ok(rows) if rows.is_empty() => {
-                (list_empty(tr(Msg::DashboardNoStoredQuery), None), Some(0))
-            }
-            Ok(rows) => {
-                let (table, names, _versions) = table(&rows, only.as_deref());
-                (table, u64::try_from(names).ok())
-            }
-            Err(error) => (refused(tr(Msg::QueriesRefused), &error, None), None),
-        };
-        let chips = only.as_ref().map(|namespace| {
-            let words = if namespace == UNQUALIFIED {
-                tr(Msg::QueriesUnqualified)
-            } else {
-                namespace.clone()
-            };
-            active_filters(
-                ActiveFilters {
-                    chips: vec![FilterChip {
-                        label: tr_with(Msg::QueriesNamespaceChip, &[("value", words.into())]),
-                        remove: "/queries".to_owned(),
-                    }],
-                    clear: "/queries".to_owned(),
-                    shown: None,
-                },
-                None,
-            )
-        });
-        let card = list_card(ListCard {
-            title: tr(Msg::NavStoredQueries),
-            count: total.map(ferrohealth_ui::view::template::list::HeadingCount::All),
-            order: None,
-            tabs: None,
-            actions: Some(write),
-            body: list,
-            pager: None,
-        });
-        view! { <div class="fui-list-page">{chips} {card}</div> }.into_any()
-    });
+    let model = page_model!(load_listing());
+    let body = drawn(model, listed);
     view! {
         <Title text=tr(Msg::NavStoredQueries) />
         {heading}
@@ -288,6 +365,7 @@ pub fn StoredQueriesPage() -> impl IntoView {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The name and the version the route names.
 fn params() -> (String, String) {
     use_params_map().with_untracked(|params| {
@@ -320,17 +398,42 @@ impl QueryTab {
     }
 }
 
-/// A stored query's page: its header with Open in Query and Delete version,
-/// its tabs over `body`, and the delete confirmation.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
-)]
-async fn query_page<F, Fut>(name: String, version: String, tab: QueryTab, body: F) -> AnyView
+/// A stored query's page around the panel of one tab.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct Frame<T> {
+    /// The qualified name.
+    name: String,
+    /// The version shown: the one the route names, or the latest.
+    version: String,
+    /// Whether a newer version exists.
+    older: bool,
+    /// How many versions the CDR holds.
+    versions: usize,
+    /// The refusal of a Delete version the page answers.
+    acted: Option<Refused>,
+    /// Whether the address asks to confirm a delete.
+    confirm: bool,
+    /// The tab's panel, or the refusal of the listing.
+    panel: Result<T, Refused>,
+}
+
+/// A stored query's page: the deleted version's redirect, or the page.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum Page<T> {
+    /// The version was deleted and the reader sent to Stored queries.
+    Deleted,
+    /// The page.
+    Shown(Box<Frame<T>>),
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads a stored query's page: the Delete version it answers, its
+/// versions, and the panel `body` loads from them and the version shown.
+async fn load_page<T, F>(version: String, body: F) -> Page<T>
 where
-    F: FnOnce(Vec<StoredQueryRow>, String) -> Fut,
-    Fut: Future<Output = AnyView>,
+    F: AsyncFnOnce(String, Vec<StoredQueryRow>, String) -> T,
 {
+    let (name, _) = params();
     let acted = match crate::posted::posted_for("delete-version") {
         Some(posted) => {
             match crate::admin::admin_delete_stored_query(name.clone(), posted.text("version"))
@@ -342,9 +445,9 @@ where
                         &Done::ok(tr(Msg::QueriesDeleted))
                             .line(format!("{name} {}", posted.text("version"))),
                     );
-                    return ().into_any();
+                    return Page::Deleted;
                 }
-                Err(error) => Some(refused(tr(Msg::QueriesDeleteRefused), &error, None)),
+                Err(error) => Some(Refused::new(tr(Msg::QueriesDeleteRefused), error)),
             }
         }
         None => None,
@@ -370,6 +473,46 @@ where
         version
     };
     let older = !latest.is_empty() && version != latest;
+    let confirm = crate::request::query("confirm").as_deref() == Some("delete");
+    let count = versions.len();
+    let panel = match rows {
+        Ok(_) => Ok(body(name.clone(), versions, version.clone()).await),
+        Err(error) => Err(Refused::new(tr(Msg::QueriesRefused), error)),
+    };
+    Page::Shown(Box::new(Frame {
+        name,
+        version,
+        older,
+        versions: count,
+        acted,
+        confirm,
+        panel,
+    }))
+}
+
+/// A stored query's page: its header with Open in Query and Delete version,
+/// its tabs over the panel `body` draws, and the delete confirmation.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page frame: the header, the tabs and the delete confirmation"
+)]
+fn page_view<T>(
+    page: Page<T>,
+    tab: QueryTab,
+    body: impl FnOnce(&str, &str, T) -> AnyView,
+) -> AnyView {
+    let Page::Shown(frame) = page else {
+        return ().into_any();
+    };
+    let Frame {
+        name,
+        version,
+        older,
+        versions,
+        acted,
+        confirm,
+        panel,
+    } = *frame;
     let mut tabs = vec![Tab::new(
         QueryTab::Definition.key(),
         stored_query_href(&name, &version),
@@ -389,7 +532,7 @@ where
             tr(Msg::CompositionVersions),
         )
         .count(
-            u64::try_from(versions.len()).unwrap_or(u64::MAX),
+            u64::try_from(versions).unwrap_or(u64::MAX),
             tr(Msg::CompositionVersions),
         ),
     );
@@ -435,8 +578,7 @@ where
         ))
         .more(more),
     );
-    let confirm = (crate::request::query("confirm").as_deref() == Some("delete"))
-        .then(|| delete_form(&name, &version));
+    let confirm = confirm.then(|| delete_form(&name, &version));
     let dialog = danger_dialog(
         Confirmation {
             id: DELETE_DIALOG.into(),
@@ -452,9 +594,10 @@ where
         },
         delete_button(&name, &version),
     );
-    let panel = match rows {
-        Ok(_) => body(versions, version.clone()).await,
-        Err(error) => refused(tr(Msg::QueriesRefused), &error, None),
+    let acted = acted.map(|refusal| refusal.view());
+    let panel = match panel {
+        Ok(found) => body(&name, &version, found),
+        Err(refusal) => refusal.view(),
     };
     view! {
         <Title text=bare_name_of(&name).to_owned() />
@@ -509,6 +652,105 @@ fn delete_form(name: &str, version: &str) -> AnyView {
     })
 }
 
+/// A stored query's Definition panel.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum Definition {
+    /// The CDR's refusal of the version.
+    Refused(Refused),
+    /// The version.
+    Shown {
+        /// Its AQL.
+        aql: String,
+        /// The latest version, when this one is older.
+        latest: Option<String>,
+        /// When it was saved, empty when the listing does not say.
+        saved: String,
+        /// The parameters its text names.
+        parameters: Vec<String>,
+    },
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads the Definition: the version's AQL and its facts.
+async fn load_definition() -> Page<Definition> {
+    let (_, version) = params();
+    load_page(version, async |name, versions, version| {
+        let aql = match fetch_stored_query(name.clone(), version.clone()).await {
+            Ok(aql) => aql,
+            Err(error) => {
+                if crate::pages::common::is_status(&error, http::StatusCode::NOT_FOUND) {
+                    crate::request::set_status(http::StatusCode::NOT_FOUND);
+                }
+                return Definition::Refused(Refused::new(tr(Msg::QueriesStoredRefused), error));
+            }
+        };
+        let saved = versions
+            .iter()
+            .find(|row| row.version == version)
+            .map(|row| row.saved.clone())
+            .unwrap_or_default();
+        let latest = versions
+            .first()
+            .map(|row| row.version.clone())
+            .filter(|latest| *latest != version);
+        let parameters = crate::aql_text::placeholders(&aql);
+        Definition::Shown {
+            aql,
+            latest,
+            saved,
+            parameters,
+        }
+    })
+    .await
+}
+
+/// The Definition panel, drawn.
+fn definition(name: &str, version: &str, found: Definition) -> AnyView {
+    let (aql, latest, saved, names) = match found {
+        Definition::Refused(refusal) => return panel(plain_section(refusal.view())),
+        Definition::Shown {
+            aql,
+            latest,
+            saved,
+            parameters,
+        } => (aql, latest, saved, parameters),
+    };
+    let older = latest.map(|latest| {
+        plain_section(info_note(view! {
+            {tr_with(
+                Msg::QueriesReadingOlder,
+                &[("version", version.to_owned().into()), ("latest", latest.clone().into())],
+            )}
+            " "
+            <a href=stored_query_href(
+                name,
+                &latest,
+            )>{tr_with(Msg::QueriesReadVersion, &[("version", latest.clone().into())])}</a>
+        }))
+    });
+    let mut facts = vec![(tr(Msg::QueriesType), "AQL".into_any())];
+    if !saved.is_empty() {
+        facts.push((tr(Msg::QueriesSaved), when(&saved)));
+    }
+    facts.push((tr(Msg::QueryParameters), parameters(&names)));
+    panel(view! {
+        {older}
+        {section(Some(tr(Msg::PartyFacts)), None, None, definitions(facts))}
+        {document_section(
+            tr_with(
+                Msg::QueriesAqlTitle,
+                &[
+                    ("name", bare_name_of(name).to_owned().into()),
+                    ("version", version.to_owned().into()),
+                ],
+            ),
+            Language::Aql,
+            aql,
+            "stored-aql",
+        )}
+    })
+}
+
 /// A stored query's Definition.
 #[expect(
     clippy::must_use_candidate,
@@ -516,64 +758,191 @@ fn delete_form(name: &str, version: &str) -> AnyView {
 )]
 #[component]
 pub fn StoredQueryPage() -> impl IntoView {
-    let (name, version) = params();
-    let page = awaited(query_page(
-        name.clone(),
-        version,
-        QueryTab::Definition,
-        move |versions, version| async move {
-            let aql = match fetch_stored_query(name.clone(), version.clone()).await {
-                Ok(aql) => aql,
-                Err(error) => {
-                    if crate::pages::common::is_status(&error, http::StatusCode::NOT_FOUND) {
-                        crate::request::set_status(http::StatusCode::NOT_FOUND);
-                    }
-                    return panel(plain_section(refused(
-                        tr(Msg::QueriesStoredRefused),
-                        &error,
-                        None,
-                    )));
-                }
-            };
-            let row = versions.iter().find(|row| row.version == version);
-            let latest = versions.first().map(|row| row.version.clone());
-            let older = latest.as_ref().filter(|latest| **latest != version).map(|latest| {
-            plain_section(info_note(view! {
-                {tr_with(
-                    Msg::QueriesReadingOlder,
-                    &[("version", version.clone().into()), ("latest", latest.clone().into())],
-                )}
-                " "
-                <a href=stored_query_href(
-                    &name,
-                    latest,
-                )>{tr_with(Msg::QueriesReadVersion, &[("version", latest.clone().into())])}</a>
-            }))
-        });
-            let mut facts = vec![(tr(Msg::QueriesType), "AQL".into_any())];
-            if let Some(row) = row.filter(|row| !row.saved.is_empty()) {
-                facts.push((tr(Msg::QueriesSaved), when(&row.saved)));
+    let model = page_model!(load_definition());
+    drawn(model, |page| {
+        page_view(page, QueryTab::Definition, definition)
+    })
+}
+
+/// A stored query's Run form as the post leaves it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct RunForm {
+    /// Which version a run sends.
+    mode: VersionResolution,
+    /// The version typed.
+    typed: String,
+    /// Each parameter the text names and its value.
+    values: Vec<(String, String)>,
+    /// Why the version typed does not fit the choice.
+    version_error: Option<String>,
+    /// What the run answered, when one was asked.
+    answer: Option<Answer>,
+}
+
+/// A stored query's Run panel.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+enum Run {
+    /// The CDR's refusal of the version.
+    Refused(Refused),
+    /// The form.
+    Form(Box<RunForm>),
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads Run: the form as the post leaves it, and the run it asks.
+async fn load_run() -> Page<Run> {
+    let (_, version) = params();
+    let posted = crate::posted::posted();
+    load_page(version, async move |name, _versions, version| {
+        let aql = match fetch_stored_query(name.clone(), version.clone()).await {
+            Ok(aql) => aql,
+            Err(error) => {
+                return Run::Refused(Refused::new(tr(Msg::QueriesStoredRefused), error));
             }
-            facts.push((tr(Msg::QueryParameters), parameters(&aql)));
-            panel(view! {
-                {older}
-                {section(Some(tr(Msg::PartyFacts)), None, None, definitions(facts))}
-                {document_section(
-                    tr_with(
-                        Msg::QueriesAqlTitle,
-                        &[
-                            ("name", bare_name_of(&name).to_owned().into()),
-                            ("version", version.clone().into()),
-                        ],
-                    ),
-                    Language::Aql,
-                    aql,
-                    "stored-aql",
-                )}
+        };
+        let mode = posted.as_ref().map_or(VersionResolution::Latest, |posted| {
+            VersionResolution::from_str_or_exact(&posted.text("res"))
+        });
+        let typed = posted
+            .as_ref()
+            .map(|posted| posted.text("run_version"))
+            .unwrap_or_default();
+        let values: Vec<(String, String)> = crate::aql_text::placeholders(&aql)
+            .into_iter()
+            .map(|param| {
+                let value = posted
+                    .as_ref()
+                    .map(|posted| posted.text(&format!("p-{param}")))
+                    .unwrap_or_default();
+                (param, value)
             })
-        },
-    ));
-    view! { {page} }
+            .collect();
+        let bindings = values.iter().cloned().collect();
+        let parameters_json = crate::aql_text::parameters_json(&bindings).to_string();
+        let mut version_error = None;
+        let answer = if posted
+            .as_ref()
+            .is_some_and(|posted| posted.intent() == "run")
+        {
+            match resolve_version(mode, &typed) {
+                Ok(sent) => Some(Answer::of(
+                    run_stored_query(
+                        name.clone(),
+                        sent.unwrap_or_default(),
+                        parameters_json.clone(),
+                        0,
+                        true,
+                    )
+                    .await,
+                    &aql,
+                    &parameters_json,
+                )),
+                Err(error) => {
+                    version_error = Some(error.to_string());
+                    Some(Answer::NotRun(tr(Msg::QueriesFixVersion)))
+                }
+            }
+        } else {
+            None
+        };
+        Run::Form(Box::new(RunForm {
+            mode,
+            typed,
+            values,
+            version_error,
+            answer,
+        }))
+    })
+    .await
+}
+
+/// The Run panel, drawn.
+fn run(name: &str, version: &str, found: Run) -> AnyView {
+    let RunForm {
+        mode,
+        typed,
+        values,
+        version_error,
+        answer,
+    } = match found {
+        Run::Refused(refusal) => return panel(plain_section(refusal.view())),
+        Run::Form(form) => *form,
+    };
+    let modes: Vec<(&'static str, String)> = VersionResolution::ALL
+        .iter()
+        .map(|each| (each.as_str(), tr(each.label())))
+        .collect();
+    // NOTE: leptos-ui.md §15.8: the version field shows whatever the choice, so a page with no
+    // WebAssembly can pick Prefix or Exact and type the version in one post.
+    let version_field = Field::new("rv", tr(Msg::ColumnVersion))
+        .help(tr(Msg::QueriesVersionHelp))
+        .after(version_error.map(|error| view! { <p class="fui-field-error">{error}</p> }))
+        .view(view! {
+            <input
+                id="rv"
+                name="run_version"
+                type="text"
+                class="fui-input fui-mono"
+                value=typed.clone()
+                placeholder="1 or 1.1"
+            />
+        });
+    let sends = match mode {
+        VersionResolution::Latest => format!("POST /query/{name}"),
+        VersionResolution::Prefix | VersionResolution::Exact => {
+            format!("POST /query/{name}/{}", typed.trim())
+        }
+    };
+    let sends = view! { <p class="fui-small fui-muted">{tr(Msg::QueriesSends)} " " <code>{sends}</code></p> };
+    let names = values.len();
+    let fields = values
+        .into_iter()
+        .map(|(param, value)| {
+            let id = format!("p-{param}");
+            Field::new(id.clone(), param)
+                .help(tr(Msg::QueriesParamHelp))
+                .view(view! {
+                    <input
+                        id=id.clone()
+                        name=id
+                        type="text"
+                        class="fui-input fui-mono"
+                        spellcheck="false"
+                        value=value
+                    />
+                })
+        })
+        .collect_view();
+    panel(view! {
+        <form id=RUN_FORM method="post" action=format!("{}/run", stored_query_href(name, version))>
+            <input type="hidden" name="default-intent" value="run" />
+            {section(
+                Some(tr(Msg::ColumnVersion)),
+                None,
+                None,
+                view! {
+                    {choice_group("res", tr(Msg::QueriesWhichVersion), &modes, mode.as_str())}
+                    {version_field}
+                    {sends}
+                },
+            )}
+            {section(
+                Some(tr(Msg::QueryParameters)),
+                u64::try_from(names).ok(),
+                None,
+                view! {
+                    <div class="fui-form-grid">{fields}</div>
+                    <div class="fui-transform-run">
+                        <button type="submit" class="fui-button fui-button-primary">
+                            {ferrohealth_ui::icon::icon(Glyph::PLAY, "16")}
+                            {tr(Msg::QueryRun)}
+                        </button>
+                    </div>
+                },
+            )}
+            {Answer::view(answer)}
+        </form>
+    })
 }
 
 /// A stored query's Run.
@@ -581,180 +950,86 @@ pub fn StoredQueryPage() -> impl IntoView {
     clippy::must_use_candidate,
     reason = "#[component] rewrites the fn; the router always consumes the value"
 )]
-#[expect(
-    clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
-)]
 #[component]
 pub fn StoredQueryRunTab() -> impl IntoView {
-    let (name, version) = params();
-    let posted = crate::posted::posted();
-    let page = awaited(query_page(
-        name.clone(),
-        version,
-        QueryTab::Run,
-        move |_versions, version| async move {
-            let aql = match fetch_stored_query(name.clone(), version.clone()).await {
-                Ok(aql) => aql,
-                Err(error) => {
-                    return panel(plain_section(refused(
-                        tr(Msg::QueriesStoredRefused),
-                        &error,
-                        None,
-                    )));
-                }
-            };
-            let mode = posted.as_ref().map_or(VersionResolution::Latest, |posted| {
-                VersionResolution::from_str_or_exact(&posted.text("res"))
-            });
-            let typed = posted
-                .as_ref()
-                .map(|posted| posted.text("run_version"))
-                .unwrap_or_default();
-            let names = crate::aql_text::placeholders(&aql);
-            let values: Vec<(String, String)> = names
-                .iter()
-                .map(|param| {
-                    (
-                        param.clone(),
-                        posted
-                            .as_ref()
-                            .map(|posted| posted.text(&format!("p-{param}")))
-                            .unwrap_or_default(),
-                    )
-                })
-                .collect();
-            let bindings = values.iter().cloned().collect();
-            let parameters_json = crate::aql_text::parameters_json(&bindings).to_string();
-            let chart = chart_asked();
-            let mut version_error = None;
-            let answer = if posted
-                .as_ref()
-                .is_some_and(|posted| posted.intent() == "run")
-            {
-                match resolve_version(mode, &typed) {
-                    Ok(sent) => Some(
-                        match run_stored_query(
-                            name.clone(),
-                            sent.unwrap_or_default(),
-                            parameters_json.clone(),
-                            0,
-                            true,
-                        )
-                        .await
-                        {
-                            Ok(page) => results(&Answered {
-                                page: &page,
-                                aql: &aql,
-                                parameters: &parameters_json,
-                                chart,
-                            }),
-                            Err(error) => section(
-                                Some(tr(Msg::ResultsTitle)),
-                                None,
-                                None,
-                                refused(tr(Msg::QueryRunRefused), &error, None),
-                            ),
-                        },
-                    ),
-                    Err(error) => {
-                        version_error = Some(error.to_string());
-                        Some(not_run(tr(Msg::QueriesFixVersion)))
-                    }
-                }
-            } else {
-                None
-            };
-            let modes: Vec<(&'static str, String)> = VersionResolution::ALL
-                .iter()
-                .map(|each| (each.as_str(), tr(each.label())))
-                .collect();
-            // NOTE: leptos-ui.md §15.8: the version field shows whatever the choice, so a page with no
-            // WebAssembly can pick Prefix or Exact and type the version in one post.
-            let version_field = Field::new("rv", tr(Msg::ColumnVersion))
-                .help(tr(Msg::QueriesVersionHelp))
-                .after(
-                    version_error
-                        .clone()
-                        .map(|error| view! { <p class="fui-field-error">{error}</p> }),
-                )
-                .view(view! {
-                    <input
-                        id="rv"
-                        name="run_version"
-                        type="text"
-                        class="fui-input fui-mono"
-                        value=typed.clone()
-                        placeholder="1 or 1.1"
-                    />
-                });
-            let sends = match mode {
-                VersionResolution::Latest => format!("POST /query/{name}"),
-                VersionResolution::Prefix | VersionResolution::Exact => {
-                    format!("POST /query/{name}/{}", typed.trim())
-                }
-            };
-            let sends = view! { <p class="fui-small fui-muted">{tr(Msg::QueriesSends)} " " <code>{sends}</code></p> };
-            let fields = values
-                .iter()
-                .map(|(param, value)| {
-                    let id = format!("p-{param}");
-                    Field::new(id.clone(), param.clone())
-                        .help(tr(Msg::QueriesParamHelp))
-                        .view(view! {
-                            <input
-                                id=id.clone()
-                                name=id
-                                type="text"
-                                class="fui-input fui-mono"
-                                spellcheck="false"
-                                value=value.clone()
-                            />
-                        })
-                })
-                .collect_view();
-            panel(view! {
-                <form
-                    id=RUN_FORM
-                    method="post"
-                    action=format!("{}/run", stored_query_href(&name, &version))
-                >
-                    <input type="hidden" name="default-intent" value="run" />
-                    {section(
-                        Some(tr(Msg::ColumnVersion)),
-                        None,
-                        None,
-                        view! {
-                            {choice_group(
-                                "res",
-                                tr(Msg::QueriesWhichVersion),
-                                &modes,
-                                mode.as_str(),
-                            )}
-                            {version_field}
-                            {sends}
-                        },
-                    )}
-                    {section(
-                        Some(tr(Msg::QueryParameters)),
-                        u64::try_from(names.len()).ok(),
-                        None,
-                        view! {
-                            <div class="fui-form-grid">{fields}</div>
-                            <div class="fui-transform-run">
-                                <button type="submit" class="fui-button fui-button-primary">
-                                    {ferrohealth_ui::icon::icon(Glyph::PLAY, "16")}
-                                    {tr(Msg::QueryRun)}
-                                </button>
-                            </div>
-                        },
-                    )}
-                    {answer.unwrap_or_else(|| not_run(tr(Msg::ResultsNotRun)))}
-                </form>
+    let model = page_model!(load_run());
+    drawn(model, |page| page_view(page, QueryTab::Run, run))
+}
+
+/// One version of a stored query, as Versions lists it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct VersionRow {
+    /// The version.
+    version: String,
+    /// When it was saved, empty when the listing does not say.
+    saved: String,
+    /// The parameters its text names.
+    parameters: Vec<String>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads Versions: every version of the stored query, newest first.
+async fn load_versions() -> Page<Vec<VersionRow>> {
+    load_page(String::new(), async |_name, versions, _version| {
+        versions
+            .into_iter()
+            .map(|row| VersionRow {
+                parameters: crate::aql_text::placeholders(&row.query),
+                version: row.version,
+                saved: row.saved,
             })
+            .collect()
+    })
+    .await
+}
+
+/// The Versions panel, drawn.
+fn versions(name: &str, _version: &str, versions: Vec<VersionRow>) -> AnyView {
+    let columns = [
+        Column::text("version", tr(Msg::ColumnVersion)).role(Role::Title),
+        Column::text("saved", tr(Msg::QueriesSaved)).role(Role::Sub),
+        Column::text("parameters", tr(Msg::QueryParameters)).role(Role::Meta),
+    ];
+    let total = versions.len();
+    let rows = versions
+        .into_iter()
+        .enumerate()
+        .map(|(place, row)| {
+            let standing = if place == 0 {
+                Standing::Current
+            } else {
+                Standing::Older
+            };
+            let href = stored_query_href(name, &row.version);
+            view! {
+                <tr>
+                    {title_cell(Some(&href), version_cell(&row.version, standing), None)}
+                    {cell(
+                        &columns[1],
+                        if row.saved.is_empty() { ().into_any() } else { when(&row.saved) },
+                    )} {cell(&columns[2], parameters(&row.parameters))}
+                </tr>
+            }
+            .into_any()
+        })
+        .collect_view()
+        .into_any();
+    let caption = tr(Msg::CompositionVersions);
+    let table = data_table(DataTable {
+        caption: &caption,
+        columns: &columns,
+        sorting: Sorting::default(),
+        body: Body::Rows(rows),
+    });
+    panel(section(
+        Some(tr(Msg::CompositionVersions)),
+        u64::try_from(total).ok(),
+        None,
+        view! {
+            {ferrohealth_ui::view::surface::section_intro(tr(Msg::QueriesVersionsIntro))}
+            {table}
         },
-    ));
-    view! { {page} }
+    ))
 }
 
 /// A stored query's Versions.
@@ -764,57 +1039,6 @@ pub fn StoredQueryRunTab() -> impl IntoView {
 )]
 #[component]
 pub fn StoredQueryVersionsTab() -> impl IntoView {
-    let (name, _) = params();
-    let page = awaited(query_page(
-        name.clone(),
-        String::new(),
-        QueryTab::Versions,
-        move |versions, _| async move {
-            let columns = [
-                Column::text("version", tr(Msg::ColumnVersion)).role(Role::Title),
-                Column::text("saved", tr(Msg::QueriesSaved)).role(Role::Sub),
-                Column::text("parameters", tr(Msg::QueryParameters)).role(Role::Meta),
-            ];
-            let rows = versions
-                .iter()
-                .enumerate()
-                .map(|(place, row)| {
-                    let standing = if place == 0 {
-                        Standing::Current
-                    } else {
-                        Standing::Older
-                    };
-                    let href = stored_query_href(&name, &row.version);
-                    view! {
-                        <tr>
-                            {title_cell(Some(&href), version_cell(&row.version, standing), None)}
-                            {cell(
-                                &columns[1],
-                                if row.saved.is_empty() { ().into_any() } else { when(&row.saved) },
-                            )} {cell(&columns[2], parameters(&row.query))}
-                        </tr>
-                    }
-                    .into_any()
-                })
-                .collect_view()
-                .into_any();
-            let caption = tr(Msg::CompositionVersions);
-            let table = data_table(DataTable {
-                caption: &caption,
-                columns: &columns,
-                sorting: Sorting::default(),
-                body: Body::Rows(rows),
-            });
-            panel(section(
-                Some(tr(Msg::CompositionVersions)),
-                u64::try_from(versions.len()).ok(),
-                None,
-                view! {
-                    {ferrohealth_ui::view::surface::section_intro(tr(Msg::QueriesVersionsIntro))}
-                    {table}
-                },
-            ))
-        },
-    ));
-    view! { {page} }
+    let model = page_model!(load_versions());
+    drawn(model, |page| page_view(page, QueryTab::Versions, versions))
 }

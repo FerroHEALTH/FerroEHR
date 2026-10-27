@@ -69,7 +69,6 @@ pub mod management;
 pub mod manufacturer;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod queries_api;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod query_namespace;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scopes;
