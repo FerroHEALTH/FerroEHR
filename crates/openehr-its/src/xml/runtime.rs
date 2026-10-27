@@ -738,6 +738,8 @@ struct Frame {
     offset: usize,
     ordinal: u32,
     children_seen: std::collections::BTreeMap<String, u32>,
+    /// The `xmlns:prefix` declarations on this element, as `(prefix, uri)`.
+    namespaces: Vec<(String, String)>,
 }
 
 /// The element the reader closed most recently, kept as the facts a
@@ -838,7 +840,23 @@ impl<'a> XmlReader<'a> {
             offset,
             ordinal,
             children_seen: std::collections::BTreeMap::new(),
+            namespaces: start
+                .attrs
+                .iter()
+                .filter_map(|(k, v)| Some((k.strip_prefix("xmlns:")?.to_owned(), v.clone())))
+                .collect(),
         });
+    }
+
+    /// Returns the namespace URI bound to `prefix` at the current element: the
+    /// innermost `xmlns:prefix` declaration in scope.
+    fn namespace_uri(&self, prefix: &str) -> Option<&str> {
+        self.frames
+            .iter()
+            .rev()
+            .flat_map(|frame| frame.namespaces.iter())
+            .find(|(p, _)| p == prefix)
+            .map(|(_, uri)| uri.as_str())
     }
 
     /// Pop the frame of the element just closed, remembering it as the element
@@ -1238,8 +1256,24 @@ impl FromXml for serde_json::Value {
 
 impl FromXml for XmlAny {
     fn from_xml(reader: &mut XmlReader, start: &StartTag) -> Result<Self, XmlError> {
+        let mut attrs = start.attrs.clone();
+        // NOTE: XML Schema Part 1 §2.6.1: an `xsi:type` value is a QName, so the subtree,
+        // written back on its own, carries the binding of that value's prefix with it.
+        let type_prefix = attrs
+            .iter()
+            .find(|(k, _)| k == "xsi:type" || (k.ends_with(":type") && k.contains("xsi")))
+            .and_then(|(_, v)| v.split_once(':'))
+            .map(|(prefix, _)| format!("xmlns:{prefix}"));
+        if let Some(key) = type_prefix
+            && start.attr(&key).is_none()
+            && let Some(uri) = key
+                .strip_prefix("xmlns:")
+                .and_then(|prefix| reader.namespace_uri(prefix))
+        {
+            attrs.push((key.clone(), uri.to_owned()));
+        }
         let mut any = XmlAny {
-            attrs: start.attrs.clone(),
+            attrs,
             content: Vec::new(),
         };
         loop {
@@ -1319,6 +1353,27 @@ mod real_lexical_tests {
             xsd_double_lexical(f64::NAN)
                 .parse::<f64>()
                 .is_ok_and(f64::is_nan)
+        );
+    }
+}
+
+#[cfg(test)]
+mod xml_any_namespace_tests {
+    use super::{XmlAny, from_xml};
+
+    /// An `xsi:type` QName whose prefix an ancestor declares keeps its binding
+    /// when the subtree is written back on its own (XML Schema Part 1 §2.6.1).
+    #[test]
+    fn an_xsi_type_prefix_bound_on_an_ancestor_travels_with_the_subtree() {
+        let xml = "<outer xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" \
+                   xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\
+                   <item xsi:type=\"xsd:string\">archetype_id/value</item></outer>";
+        let outer: XmlAny = from_xml(xml).expect("well-formed");
+        let item = outer.child("item").expect("the item");
+        assert_eq!(item.attr("xsi:type"), Some("xsd:string"));
+        assert_eq!(
+            item.attr("xmlns:xsd"),
+            Some("http://www.w3.org/2001/XMLSchema")
         );
     }
 }
