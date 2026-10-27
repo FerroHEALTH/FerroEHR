@@ -31,6 +31,14 @@
 #   curl -H "Authorization: Bearer $TOKEN" -X POST -i \
 #     http://localhost:8080/ferroehr/rest/openehr/v1/ehr
 #
+# A service with no user behind it takes the client-credentials grant
+# (RFC 6749 §4.4) with the same client; its service account holds USER:
+#
+#   TOKEN=$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
+#     -d grant_type=client_credentials \
+#     http://localhost:8081/auth/realms/ferroehr/protocol/openid-connect/token \
+#     | jq -r .access_token)
+#
 # Every route checks SMART on openEHR scopes, so the realm's client puts them
 # in every token: `user/composition-*.cruds`, `user/template-*.cruds` and
 # `user/aql-*.cruds` (every resource family), and `__ferroehr.platform`, the
@@ -101,7 +109,7 @@ services:
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
-    image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
+    image: quay.io/keycloak/keycloak:26.8.1@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b
     user: "0"
     entrypoint: ["bash", "/usr/local/bin/keycloak-tls.sh"]
     configs:
@@ -115,9 +123,9 @@ services:
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
-    # Digest-pinned quay.io/keycloak/keycloak:26.7.0 (current release), resolved
-    # 2026-07-24 (docs.docker.com/build/building/best-practices).
-    image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
+    # Digest-pinned quay.io/keycloak/keycloak:26.8.1 (current release), resolved
+    # 2026-10-27 (docs.docker.com/build/building/best-practices).
+    image: quay.io/keycloak/keycloak:26.8.1@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b
     command: ["start-dev", "--import-realm"]
     depends_on:
       keycloak-tls:
@@ -214,7 +222,10 @@ configs:
   # A MINIMAL demo realm, inline so the downloaded overlay is self-sufficient
   # (docs.docker.com/reference/compose-file/configs — the `content` attribute).
   # One confidential client (`ferroehr` / ferroehr-quickstart-secret, password
-  # grant enabled for curl-friendly token fetching) and four users. A realm
+  # grant enabled for curl-friendly token fetching, its service account
+  # holding USER for the client-credentials grant, the authorization-code flow
+  # bound to PKCE S256 and to the viewer's origin on port 3000) and four
+  # users. A realm
   # that declares `clientScopes` gets none of Keycloak's built-in ones, so the
   # two the CDR reads are declared as Keycloak defines them: `basic` (the
   # `sub` claim) and `roles` (the realm roles in `realm_access.roles`, the
@@ -448,6 +459,14 @@ configs:
               }
             ],
             "realmRoles": []
+          },
+          {
+            "username": "service-account-ferroehr",
+            "enabled": true,
+            "serviceAccountClientId": "ferroehr",
+            "realmRoles": [
+              "USER"
+            ]
           }
         ],
         "clients": [
@@ -462,11 +481,16 @@ configs:
             "directAccessGrantsEnabled": true,
             "serviceAccountsEnabled": true,
             "redirectUris": [
-              "*"
+              "http://localhost:3000/*",
+              "http://127.0.0.1:3000/*"
             ],
             "webOrigins": [
-              "*"
+              "http://localhost:3000",
+              "http://127.0.0.1:3000"
             ],
+            "attributes": {
+              "pkce.code.challenge.method": "S256"
+            },
             "protocolMappers": [
               {
                 "name": "ferroehr-audience",

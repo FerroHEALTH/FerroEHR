@@ -171,7 +171,7 @@ mkdir -p "$DEV_CA_DIR"
 docker compose exec -T keycloak cat /opt/keycloak/conf/tls/ca/ca.crt > "$DEV_CA_DIR/ca.crt"
 
 # ── 2. Deterministic Keycloak test passwords (the shipped realm export holds
-#      only hashes; reset via the bootstrap admin API — never edit the realm) ─
+#      the dev passwords; reset via the bootstrap admin API — never edit the realm) ─
 echo "── resetting Keycloak test-user passwords"
 # The admin API of the realm the stack ships.
 KC_REALM_ADMIN="$KEYCLOAK_URL/auth/admin/realms/ferroehr"
@@ -189,8 +189,8 @@ for pair in "ferroehr-admin:E2ePass-admin1!" "ferroehr-user:E2ePass-user1!"; do
 done
 
 # Register the viewer's redirect URI on the realm client (the shipped
-# export's relative "/*" is rootUrl-relative and rejects our origin) — via
-# the admin API, never by editing the realm file.
+# export registers the composed viewer at port 3000; the host-mode viewer at
+# 3300 is added here) — via the admin API, never by editing the realm file.
 echo "── registering the viewer redirect URI on the ferroehr client"
 CLIENT_ID=$(curl -sf -H "Authorization: Bearer $KC_TOKEN" \
   "$KC_REALM_ADMIN/clients?clientId=ferroehr" \

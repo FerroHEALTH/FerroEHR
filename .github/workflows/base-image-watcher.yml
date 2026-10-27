@@ -4,7 +4,9 @@
 # .github/workflows/base-image-watcher.yml
 #
 # Weekly check that the digest-pinned postgres base is still the newest bytes
-# upstream publishes for its major (issue #2410). Two staleness classes, both
+# upstream publishes for its major (issue #2410), and that the digest-pinned
+# Keycloak of the compose files is the newest Keycloak release (the `keycloak`
+# job below, with the same run colour). Two staleness classes, both
 # invisible to the vulnerability scans until they surface as findings:
 #
 #   * a NEWER PATCH TAG on the pinned major (PostgreSQL quarterly/security
@@ -109,6 +111,89 @@ jobs:
         uses: ./.github/actions/file-watcher-issue
         with:
           title: "chore(images): the pinned postgres base is stale — newer upstream bytes exist"
+          body-file: body.md
+          type: Task
+          labels: chore
+
+  # The development and quickstart identity provider (docker-compose.dev.yml,
+  # docker-compose.keycloak.yml), digest-pinned, which no Dependabot ecosystem
+  # reads: the docker ecosystem here covers Dockerfiles only. The newest
+  # release is the one keycloak/keycloak marks Latest on GitHub, and its digest
+  # is what quay.io serves for that tag; compose-image-tags.sh holds every
+  # compose file to the one pin read below.
+  keycloak:
+    name: compare pinned Keycloak to upstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write # file/update the one tracking issue below
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare the pinned Keycloak to upstream
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ref=$(grep -m1 -oE 'quay\.io/keycloak/keycloak:[0-9]+\.[0-9]+\.[0-9]+@sha256:[0-9a-f]{64}' docker-compose.dev.yml)
+          pinned_tag=${ref#*:}; pinned_tag=${pinned_tag%@*}
+          pinned_digest=${ref#*@}
+
+          newest_tag=$(gh api repos/keycloak/keycloak/releases/latest --jq '.tag_name')
+          if ! grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' <<<"$newest_tag"; then
+            echo "::error::keycloak/keycloak's latest release '${newest_tag}' is not an X.Y.Z tag"
+            exit 1
+          fi
+
+          # The manifest-list digest each tag resolves to, the form the compose
+          # files pin.
+          digest_of() {
+            curl -fsSL --retry 3 \
+                "https://quay.io/api/v1/repository/keycloak/keycloak/tag/?specificTag=$1&onlyActiveTags=true" \
+              | jq -er '.tags[0].manifest_digest'
+          }
+          current_digest=$(digest_of "$pinned_tag")
+          newest_digest=$(digest_of "$newest_tag")
+
+          stale=""
+          {
+            echo "Pinned: \`quay.io/keycloak/keycloak:${pinned_tag}@${pinned_digest}\`"
+            if [ "$newest_tag" != "$pinned_tag" ]; then
+              stale=1
+              echo "- a newer release exists upstream: \`quay.io/keycloak/keycloak:${newest_tag}@${newest_digest}\`"
+            fi
+            if [ "$current_digest" != "$pinned_digest" ]; then
+              stale=1
+              echo "- the pinned tag has been re-pointed upstream: \`${pinned_tag}\` now resolves to \`${current_digest}\`"
+            fi
+            if [ -z "$stale" ]; then
+              echo "- upstream has nothing newer; the pin is current"
+            fi
+          } > details.md
+          echo "stale=${stale:-0}" >> "$GITHUB_OUTPUT"
+          cat details.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write the tracking-issue body
+        if: steps.check.outputs.stale == '1'
+        run: |
+          set -euo pipefail
+          {
+            printf 'The weekly base-image watcher found the digest-pinned Keycloak behind upstream.\n\n'
+            cat details.md
+            printf '\nRemedy: move every `quay.io/keycloak/keycloak` reference in the compose files to the new\n'
+            printf 'tag and digest in one change (`scripts/checks/compose-image-tags.sh` holds them together),\n'
+            printf 'after reading the Keycloak upgrading guide for every version in between.\n'
+          } > body.md
+
+      - name: File or update the tracking issue
+        if: steps.check.outputs.stale == '1'
+        uses: ./.github/actions/file-watcher-issue
+        with:
+          title: "chore(images): the pinned Keycloak is stale — a newer upstream release exists"
           body-file: body.md
           type: Task
           labels: chore

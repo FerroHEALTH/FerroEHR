@@ -15,13 +15,17 @@
 # also keep its three `${FERROEHR_*_IMAGE:-…}` defaults. The hosted sandbox's
 # compose file (deploy/hosted/docker-compose.yml) deliberately tracks the
 # `:latest` release pointer instead (#2974), so its defaults are held to that
-# pointer. Dependency-free: grep + sed only.
+# pointer. Every Keycloak `image:` in the same compose files names one
+# `quay.io/keycloak/keycloak:X.Y.Z@sha256:<digest>`, so the dev lanes and the
+# quickstart overlay run the same identity provider. Dependency-free: grep +
+# sed only.
 #
 # Usage: scripts/checks/compose-image-tags.sh [--self-test]
-#   --self-test mutates a COPY of the compose files four ways (a stale tag in
+#   --self-test mutates a COPY of the compose files six ways (a stale tag in
 #   the terminology overlay, a stale tag on every postgres reference of
 #   docker-compose.yml after the first, a removed quickstart default, a
-#   versioned hosted default) and asserts the guard rejects each, then that
+#   versioned hosted default, a Keycloak tag moved in one file, a Keycloak
+#   reference without its digest) and asserts the guard rejects each, then that
 #   the unmutated copy passes.
 set -Eeuo pipefail
 
@@ -41,6 +45,8 @@ if [[ "$#" -eq 1 && "$1" == "--self-test" ]]; then
     "a stale tag on a later postgres reference of docker-compose.yml|${self_root}/docker-compose.yml|/ferroehr-postgres:[0-9]/{x;s/^/x/;/^xx/{x;s|ferroehr-postgres:[0-9][0-9.]*}|ferroehr-postgres:0.0.1}|;x;};x;}"
     "docker-compose.yml without its viewer default|${self_root}/docker-compose.yml|s|\${FERROEHR_VIEWER_IMAGE:-[^}]*}|ghcr.io/ferrohealth/ferroehr-viewer:local|"
     "a versioned hosted default|${self_root}/deploy/hosted/docker-compose.yml|s|ferrohealth/ferroehr:latest|ferrohealth/ferroehr:1.2.3|"
+    "a Keycloak tag the quickstart overlay alone moves|${self_root}/docker-compose.keycloak.yml|s|quay.io/keycloak/keycloak:[0-9][0-9.]*@|quay.io/keycloak/keycloak:1.0.0@|g"
+    "a Keycloak reference without a digest|${self_root}/docker-compose.dev.yml|s|\(quay.io/keycloak/keycloak:[0-9][0-9.]*\)@sha256:[0-9a-f]*|\1|g"
   )
   for mutation in "${mutations[@]}"; do
     label="${mutation%%|*}"
@@ -117,6 +123,36 @@ shopt -u nullglob
 if [[ "$checked" -eq 0 ]]; then
   echo "::error::no compose file pins a FerroEHR release tag; the guard has nothing to check, so its scan is broken." >&2
   rc=1
+fi
+
+# Every Keycloak reference names one release, pinned by digest: the dev lanes
+# and the quickstart overlay run the same identity provider, so a bump that
+# misses a file splits them, and the base-image watcher reads the pin from
+# docker-compose.dev.yml alone. No specification governs this: our own design.
+keycloak_refs=()
+shopt -s nullglob
+for file in "$ROOT_DIR"/docker-compose*.yml "$ROOT_DIR"/docker/*.yml; do
+  while IFS=: read -r line ref; do
+    [[ -n "$ref" ]] || continue
+    rel="${file#"$ROOT_DIR"/}"
+    if [[ ! "$ref" =~ ^quay\.io/keycloak/keycloak:[0-9]+\.[0-9]+\.[0-9]+@sha256:[0-9a-f]{64}$ ]]; then
+      echo "::error::$rel:$line names '$ref'; a Keycloak image is pinned as quay.io/keycloak/keycloak:X.Y.Z@sha256:<digest>." >&2
+      rc=1
+    fi
+    keycloak_refs+=("$ref")
+  done < <(grep -nE '^[[:space:]]*image:[[:space:]]*"?quay\.io/keycloak/keycloak' "$file" \
+    | sed -E 's/^([0-9]+):[[:space:]]*image:[[:space:]]*"?([^[:space:]"]+).*/\1:\2/' || true)
+done
+shopt -u nullglob
+if [[ "${#keycloak_refs[@]}" -eq 0 ]]; then
+  echo "::error::no compose file names a Keycloak image; the guard has nothing to check, so its scan is broken." >&2
+  rc=1
+elif [[ "$(printf '%s\n' "${keycloak_refs[@]}" | sort -u | wc -l | tr -d ' ')" -ne 1 ]]; then
+  echo "::error::the compose files name more than one Keycloak image; every reference carries the same tag and digest:" >&2
+  printf '%s\n' "${keycloak_refs[@]}" | sort | uniq -c >&2
+  rc=1
+else
+  echo "every Keycloak reference (${#keycloak_refs[@]}) is ${keycloak_refs[0]}."
 fi
 
 # The hosted sandbox's compose defaults deliberately carry NO version: the box

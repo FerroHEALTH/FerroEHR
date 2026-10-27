@@ -91,6 +91,23 @@ probes_oidc() {
   fi
   probe_done
 
+  # A service with no user behind it: the client-credentials grant (RFC 6749
+  # §4.4) of the same client, whose service account the realm gives USER.
+  probe "P-OIDC-SERVICE" "working" "compose" "#4240" \
+    "a client-credentials token reaches the clinical API"
+  local service
+  service="$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
+    -d grant_type=client_credentials \
+    "$KC_REALM/protocol/openid-connect/token" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$service" ]]; then
+    probe_fail "an access token from the client-credentials grant" "the token endpoint returned none" \
+      "the realm's client must have its service account enabled"
+  else
+    assert_eq "201" "$(http_code -X POST -H "Authorization: Bearer $service" "$API/ehr")" \
+      "a service account without a role is refused by the RBAC gate"
+  fi
+  probe_done
+
   # The one spec-grounded rule in the whole access layer, observed on the wire
   # rather than inferred: a request with NO credential is 401 and the response
   # must carry a challenge naming a scheme the server implements (RFC 9110

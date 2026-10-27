@@ -552,14 +552,10 @@
       "serviceAccountClientId": "ferroehr",
       "credentials": [],
       "disableableCredentialTypes": [],
-      "requiredActions": [
-        "TERMS_AND_CONDITIONS",
-        "VERIFY_EMAIL",
-        "UPDATE_PASSWORD",
-        "UPDATE_PROFILE"
-      ],
+      "requiredActions": [],
       "realmRoles": [
-        "default-roles-ferroehr"
+        "default-roles-ferroehr",
+        "USER"
       ],
       "clientRoles": {
         "ferroehr": [
@@ -739,9 +735,13 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "bT5T4oWn3xNdBytQsl2cfpBDi1pp15Va",
       "redirectUris": [
-        "/*"
+        "http://127.0.0.1:3000/*",
+        "http://localhost:3000/*"
       ],
-      "webOrigins": [],
+      "webOrigins": [
+        "http://127.0.0.1:3000",
+        "http://localhost:3000"
+      ],
       "notBefore": 0,
       "bearerOnly": false,
       "consentRequired": false,
@@ -760,7 +760,8 @@
         "post.logout.redirect.uris": "+",
         "display.on.consent.screen": "false",
         "oauth2.device.authorization.grant.enabled": "false",
-        "backchannel.logout.revoke.offline.tokens": "false"
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "pkce.code.challenge.method": "S256"
       },
       "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": true,

@@ -14,9 +14,10 @@
 # over TLS with the development CA `keycloak-tls` generates
 # (docker-compose.dev.yml), and the CDR and the viewer add that CA beside
 # their own trust store (the CDR through `[auth] ca_file`, the viewer through
-# `[auth.oidc.tls] trust_roots_file`). The CDR reads the issuer's metadata at boot, so it waits for
-# Keycloak. Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068
-# profile the CDR expects by default, hence `token_profile = "jwt"`.
+# `[auth.oidc.tls] trust_roots_file`). The CDR reads the issuer's metadata at
+# boot, so it waits for Keycloak. Keycloak's access tokens carry `typ: JWT`,
+# outside the RFC 9068 profile the CDR expects by default, hence
+# `token_profile = "jwt"`.
 #
 # The CDR block turns two opt-in extensions on for the run, both of which
 # answer `404` as if unmounted while they are off — so the viewer's journeys
