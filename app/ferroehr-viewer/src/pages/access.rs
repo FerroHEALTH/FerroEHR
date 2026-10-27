@@ -4,7 +4,7 @@
 //! Your access: who you are, how you signed in, this session's scopes as
 //! parsed grants (E8), and a previewer that reads any scope.
 //!
-//! Whether a scope is a scope is decided by `openehr_sdt::smart_scopes`, the
+//! Whether a scope is a scope is decided by `ferrohealth_smart::openehr::smart_scopes`, the
 //! grammar the CDR's scope gate enforces with
 //! (`docs/specs/openehr/ITS-REST/docs/smart_app_launch/master08-scopes.adoc`
 //! §Resource Scopes), so the page never explains a scope the CDR would refuse
@@ -13,6 +13,7 @@
 //! token may ask for and grants nothing by itself: the CDR decides every
 //! request. No openEHR spec governs the viewer: our own design.
 
+use ferrohealth_smart::openehr::smart_scopes::{self, Permissions, SmartScope};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::scope::{
@@ -22,7 +23,6 @@ use ferrohealth_ui::view::surface::{Header, definitions, page_heading};
 use ferrohealth_ui::view::transform::{Density, Run, RunState, run_button, transform_options};
 use leptos::prelude::*;
 use leptos_meta::Title;
-use openehr_sdt::smart_scopes::{self, Permissions, SmartScope};
 
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{card_panel, quiet, section};

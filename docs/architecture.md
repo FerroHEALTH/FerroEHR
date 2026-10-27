@@ -315,8 +315,7 @@ spec text — there is no vendor-quirk mode and no feature flag; vendor
 implementations are prior art only. Simplified Formats is a STABLE ITS-REST
 1.1.0 sub-specification with no machine-readable model, so it is hand-written
 in `openehr-sdt`, beside the template-independent RM-instance validation
-(`openehr_sdt::rm_instance`) and the SMART scope grammar
-(`openehr_sdt::smart_scopes`), over the `openehr-its` wire layer.
+(`openehr_sdt::rm_instance`), over the `openehr-its` wire layer.
 
 **A node under a template overlay carries its parent archetype's id** in the
 ADL 2 Web Template: no specification governs this, it is our own design. ADL2
@@ -404,7 +403,7 @@ its own has one verdict and one boundary.
 | The viewer (`app/ferroehr-viewer`) | stays here, as the one in-tree consumer of the CDR | the wire: ITS-REST only, never a crate dependency on `app/ferroehr` or `app/ferroehr-rest`; it draws in `ferrohealth-ui`, the component library every FerroHEALTH console shares |
 | The FHIR and OMOP connectors | FerroBRIDGE, a sibling product; the in-tree FHIR connector was retired in its favour (#3702) | the wire: FerroBRIDGE reaches the CDR over ITS-REST only |
 | The spec layer (`crates/openehr-*`) | published on crates.io on one lockstep line | crates.io: `openehr-its` splits into the `json`, `xml`, `opt14`, `schema-validation`, `rest`, `rest-server` and `rest-client` features, so a consumer with no HTTP server takes `default-features = false, features = ["json", "opt14"]` and no HTTP engine |
-| SMART on openEHR scope handling | the grammar is `openehr_sdt::smart_scopes`, a published crate; checking tokens and scopes is `ferrohealth-smart`, the family crate every product shares | crates.io: the CDR consumes both as dependencies and keeps only its route-to-requirement table (`ferroehr-rest::smart`) |
+| SMART on openEHR scope handling | the grammar (`ferrohealth_smart::openehr::smart_scopes`) and checking tokens and scopes are both `ferrohealth-smart`, the family crate every product shares | crates.io: the CDR consumes both as dependencies and keeps only its route-to-requirement table (`ferroehr-rest::smart`) |
 
 The other products of the family (FerroTERM, FerroFORMS, FerroFED and the
 platform services) and the conformance instrument (Veredictum) live in their
@@ -446,7 +445,7 @@ adapter (`ferroehr-rest`) calls directly:
 | `openehr-term` | TERM classes + terminology bundle | generated + hand-written |
 | `openehr-lang` | BMM/P_BMM object model | generated |
 | `openehr-its` | Canonical JSON/XML + ITS-REST contract + OPT 1.4/AOM2 archetype XML + runtimes + wire validation + gates | generated + hand-written |
-| `openehr-sdt` | Simplified Formats (`flat`: FLAT / STRUCTURED / Web Template) + RM-instance validation (`rm_instance`) + the SMART scope grammar (`smart_scopes`), over `openehr-its` | hand-written |
+| `openehr-sdt` | Simplified Formats (`flat`: FLAT / STRUCTURED / Web Template) + RM-instance validation (`rm_instance`), over `openehr-its` | hand-written |
 | `openehr-query` | AQL 1.1 lexer + parser + AST | hand-written |
 | `openehr-adl` | ADL 2.4 engine: ADL2/cADL/ODIN parser, AOM2 validation, flattener, OPT2, ADL 1.4→2 conversion | hand-written |
 | `openehr-codegen` | BMM/XSD/OAS → Rust generator (+ `emit-rm-model`) | tooling |

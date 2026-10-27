@@ -1,7 +1,7 @@
 [package]
 name = "openehr-sdt"
-version = "0.0.110"
-description = "openEHR Simplified Data Template formats (FLAT / STRUCTURED / Web Template), template-independent RM-instance validation, and the SMART on openEHR scope grammar, hand-written over the openehr-its wire layer"
+version = "0.0.111"
+description = "openEHR Simplified Data Template formats (FLAT / STRUCTURED / Web Template), and template-independent RM-instance validation, hand-written over the openehr-its wire layer"
 edition.workspace = true
 rust-version.workspace = true
 license = "BUSL-1.1"
@@ -12,10 +12,7 @@ keywords = ["openehr", "flat", "webtemplate", "healthcare", "validation"]
 categories = ["encoding", "data-structures"]
 include = ["src/**", "README.md", "LICENSE"]
 
-# EVERY dependency is optional and belongs to the `flat` layer or above, so
-# `default-features = false` yields the dependency-free `smart_scopes` island
-# alone — the std-only SMART scope grammar a REST client compiled to
-# `wasm32-unknown-unknown` (the viewer) parses with.
+# EVERY dependency is optional and belongs to the `flat` layer or above.
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
@@ -30,12 +27,12 @@ fancy-regex = { workspace = true, optional = true }
 moka = { workspace = true, optional = true }
 # The wire layer this crate builds on: canonical JSON, the XML runtime and the
 # OPT 1.4 reader (`opt14` pulls `xml` and `json` in).
-openehr-its = { path = "../openehr-its", version = "0.0.110", default-features = false, optional = true }
-openehr-base = { path = "../openehr-base", version = "0.0.110", optional = true }
-openehr-rm = { path = "../openehr-rm", version = "0.0.110", optional = true }
-openehr-am = { path = "../openehr-am", version = "0.0.110", optional = true }
-openehr-lang = { path = "../openehr-lang", version = "0.0.110", optional = true }
-openehr-term = { path = "../openehr-term", version = "0.0.110", optional = true }
+openehr-its = { path = "../openehr-its", version = "0.0.111", default-features = false, optional = true }
+openehr-base = { path = "../openehr-base", version = "0.0.111", optional = true }
+openehr-rm = { path = "../openehr-rm", version = "0.0.111", optional = true }
+openehr-am = { path = "../openehr-am", version = "0.0.111", optional = true }
+openehr-lang = { path = "../openehr-lang", version = "0.0.111", optional = true }
+openehr-term = { path = "../openehr-term", version = "0.0.111", optional = true }
 
 [features]
 default = ["full"]

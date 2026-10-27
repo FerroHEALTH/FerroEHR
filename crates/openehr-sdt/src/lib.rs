@@ -22,9 +22,6 @@
 //!   [`rm_instance::validate_composition`] entry point. It composes the
 //!   template pass of `flat::validation` over the RM pass, and
 //!   `flat::validation` reads its report shape back, so the two are one layer.
-//! - [`smart_scopes`] — the SMART on openEHR resource-scope grammar
-//!   (`docs/specs/openehr/ITS-REST/docs/smart_app_launch/master08-scopes.adoc`),
-//!   std-only, always compiled.
 //!
 //! # Features
 //!
@@ -34,10 +31,8 @@
 //! `full` is both. A `wasm32-unknown-unknown` consumer takes
 //! `default-features = false, features = ["flat"]`.
 //!
-//! Taken with `default-features = false` and nothing else the crate compiles to
-//! [`smart_scopes`] alone — no dependency of any kind — so a REST client that
-//! must parse scope strings in the browser (the viewer's scope previewer)
-//! shares the very grammar the CDR enforces instead of carrying a second parser.
+//! The SMART on openEHR scope grammar is `ferrohealth_smart::openehr::smart_scopes`,
+//! in the family's authorization crate.
 
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
@@ -46,12 +41,10 @@
 pub mod flat;
 #[cfg(feature = "flat")]
 pub mod rm_instance;
-pub mod smart_scopes;
 
 /// The openEHR specification version this crate implements.
 ///
-/// The ITS-REST release the Simplified Formats and SMART App Launch
-/// sub-specifications belong to. The pin is deliberately independent of the
+/// The ITS-REST release the Simplified Formats sub-specification belongs to. The pin is deliberately independent of the
 /// crates.io package version, which is the crate's own `SemVer` line and moves
 /// only with this implementation's code.
 pub const SPEC_VERSION: &str = "1.1.0";

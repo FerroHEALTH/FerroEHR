@@ -1,4 +1,4 @@
-# `openehr-sdt` — Simplified Formats, RM-instance validation, SMART scope grammar (HAND-WRITTEN)
+# `openehr-sdt` — Simplified Formats, RM-instance validation (HAND-WRITTEN)
 
 Three hand-written ITS-REST surfaces over the `openehr-its` wire layer. Nothing
 here is generated: the specifications are prose sub-specifications of ITS-REST
@@ -11,17 +11,14 @@ reverse, zero re-exports.
 |---|---|---|
 | `src/flat/` — Simplified Formats (FLAT / STRUCTURED / Web Template) | hand-written | edit normally, with spec citations |
 | `src/rm_instance/` — template-independent RM-instance validation (`ValidationMessage`, `validate_rm_and_terminology{,_as}`, the composed `validate_composition`) | hand-written | edit normally, with spec citations |
-| `src/smart_scopes.rs` — the SMART on openEHR scope grammar (master08 resource scopes + master07/09 launch contexts) | hand-written (std-only, always compiled) | edit normally, with spec citations. It is the ONE grammar the CDR's scope gate and scope-previewing REST clients (the viewer) parse with |
 
 **Features (`default = ["full"]`, `full = ["flat", "cache"]`).** `flat` pulls
 `openehr-its` with `opt14` (canonical JSON, canonical XML, the OPT 1.4
 reader) plus the five generated spec crates and the regex/serde
-stack; `cache` adds `moka` for `flat::cache`. `smart_scopes` sits under no
-feature: `default-features = false` alone must compile it to std only, so
-nothing under it may reach for serde, a spec crate, or any other dependency.
-A new dependency is optional and joins the `flat` layer or above. CI checks
-`--no-default-features` and `--no-default-features --features flat` on
-`wasm32-unknown-unknown`.
+stack; `cache` adds `moka` for `flat::cache`. The SMART on openEHR scope
+grammar lives in `ferrohealth-smart` (`openehr::smart_scopes`). A new
+dependency is optional and joins the `flat` layer or above. CI checks
+`--no-default-features --features flat` on `wasm32-unknown-unknown`.
 
 **`rm_instance` and `flat::validation` are one layer.** `rm_instance` holds the
 template-independent whole-instance passes and composes the template pass of
@@ -58,7 +55,7 @@ FLAT + STRUCTURED data instances and the Web Template model. This is the ITS-RES
 - Consumes `openehr-rm`/`openehr-am` types and the `openehr_its::json` entry
   points directly (canonical JSON with `_type` tagging); never re-models the
   RM. `openehr_sdt::SPEC_VERSION` is the ITS-REST release (1.1.0) the
-  Simplified Formats and SMART App Launch specifications belong to; no
+  Simplified Formats specification belongs to; no
   separate pin.
 
 ## Gates

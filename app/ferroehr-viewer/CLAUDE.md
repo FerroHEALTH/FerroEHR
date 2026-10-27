@@ -104,7 +104,7 @@ that FerroUI lacks is filed on FerroUI and added there, never built here.
   (`bff::ehr_detail::composition_filter`): fixed fragments chosen by which
   filters are filled, every value a binding. Never concatenate a value into
   AQL.
-- Every scope the viewer explains is parsed by `openehr_sdt::smart_scopes`,
+- Every scope the viewer explains is parsed by `ferrohealth_smart::openehr::smart_scopes`,
   the grammar the CDR enforces with; never a second parser.
 - Every BFF fan-out is bounded by `cdr::FANOUT_CONCURRENCY`.
 - Optional CDR surfaces are probe-and-hide: the management tabs on
