@@ -74,6 +74,7 @@ for path in "$TREE"/*.md; do
   while IFS= read -r target; do
     case "$target" in
       http://* | https://* | mailto:* | \#*) continue ;;
+      *) ;;
     esac
     file="${target%%#*}"
     [[ -e "$TREE/$file" ]] || report "$path links $target, which does not resolve"
@@ -112,15 +113,13 @@ if [[ -n "$since" ]]; then
   changed="$(git diff --name-only "$since" HEAD -- "${LOGGING_PATHS[@]}")"
   # The shared crates the component is built on (ehds-logging, ihe-atna) are
   # part of it too: a moved pin in the root Cargo.toml is a change to it.
-  pins() { git show "$1:Cargo.toml" 2>/dev/null | grep -E '^(ehds-logging|ihe-atna) = ' || true; }
+  pins() { local rev="$1"; git show "$rev:Cargo.toml" 2>/dev/null | grep -E '^(ehds-logging|ihe-atna) = ' || true; }
   if [[ "$(pins "$since")" != "$(pins HEAD)" ]]; then
     changed="$(printf '%s\n%s' "$changed" "Cargo.toml (the ehds-logging or ihe-atna pin)" | sed '/^$/d')"
   fi
-  if [[ -n "$changed" ]]; then
-    if [[ -z "$(git diff --name-only "$since" HEAD -- "$TREE" "$PIN")" ]]; then
-      report "the logging component changed since $since and neither $TREE nor $PIN did (EHDS Art. 30(2)):"
-      while IFS= read -r f; do echo "  $f" >&2; done <<<"$changed"
-    fi
+  if [[ -n "$changed" && -z "$(git diff --name-only "$since" HEAD -- "$TREE" "$PIN")" ]]; then
+    report "the logging component changed since $since and neither $TREE nor $PIN did (EHDS Art. 30(2)):"
+    while IFS= read -r f; do echo "  $f" >&2; done <<<"$changed"
   fi
 fi
 

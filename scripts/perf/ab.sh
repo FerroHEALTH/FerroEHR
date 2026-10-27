@@ -66,9 +66,11 @@ fi
 git -C "$ROOT_DIR" show "$prev_tag:docker-compose.yml" >"$out/previous-compose.yml"
 
 compose_of() {
-  case "$1" in
+  local side="$1"
+  case "$side" in
   previous) echo "$out/previous-compose.yml" ;;
   candidate) echo "$ROOT_DIR/docker-compose.yml" ;;
+  *) echo "ab: no compose file for side '$side'" >&2; return 1 ;;
   esac
 }
 

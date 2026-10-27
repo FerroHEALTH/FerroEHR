@@ -65,13 +65,14 @@ report() { printf '%s\n' "$*" >&2; failures=$((failures + 1)); }
 
 # The value of `org.opencontainers.image.<key>` in a Dockerfile LABEL block.
 dockerfile_label() {
-  awk -v key="org.opencontainers.image.$2=" '
+  local dockerfile="$1" key="$2"
+  awk -v key="org.opencontainers.image.$key=" '
     index($0, key) {
       i = index($0, key) + length(key)
       v = substr($0, i)
       sub(/^"/, "", v); sub(/"[[:space:]]*\\?[[:space:]]*$/, "", v)
       print v; exit
-    }' "$1"
+    }' "$dockerfile"
 }
 
 # The value declared in the workflow's `labels:` block for one lane. A lane is
@@ -81,7 +82,8 @@ dockerfile_label() {
 # `github.repository_owner` in the workflow, so the lane opener is matched by
 # its trailing `/<name>` rather than by a hard-coded owner.
 workflow_label() {
-  awk -v lane="/$1" -v key="org.opencontainers.image.$2=" '
+  local lane="$1" key="$2"
+  awk -v lane="/$lane" -v key="org.opencontainers.image.$key=" '
     /image: ghcr\.io\// {
       line = $0
       sub(/^[[:space:]]*/, "", line); sub(/[[:space:]]*$/, "", line)

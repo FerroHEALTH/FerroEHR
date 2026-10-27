@@ -48,7 +48,8 @@ readonly VENDORED='^(docs/specs/|corpus/|website/book/theme/|(crates|tools)/[^/]
 
 # A shell shebang, direct or through env: bash, sh, dash, ksh, zsh.
 shell_shebang() {
-  head -n 1 "$1" 2>/dev/null | grep -Eq '^#!.*[/ ](bash|sh|dash|ksh|zsh)([[:space:]]|$)'
+  local file="$1"
+  head -n 1 "$file" 2>/dev/null | grep -Eq '^#!.*[/ ](bash|sh|dash|ksh|zsh)([[:space:]]|$)'
 }
 
 collect() {
