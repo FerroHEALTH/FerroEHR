@@ -206,6 +206,8 @@ services:
       FERROTERM_UI: "off"
       FERROTERM_LOG_FORMAT: json
       RUST_LOG: info
+      # A test stack is no installation (scripts/checks/usage-report-off.sh).
+      FERROTERM__USAGE_REPORT__ENABLED: "false"
     volumes:
       - type: bind
         source: ./docker/terminology/seed

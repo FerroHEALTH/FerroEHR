@@ -220,6 +220,7 @@ k8s_install() {
   helm upgrade --install "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
     -f "$K8S_AUTH_VALUES" \
     --set usageReport.enabled=false \
+    --set ferropix.usageReport.enabled=false \
     --set database.existingSecret=ferroehr-db \
     --set image.repository="$PROBE_K8S_IMAGE_REPO" \
     --set image.tag="$PROBE_K8S_IMAGE_TAG" \
