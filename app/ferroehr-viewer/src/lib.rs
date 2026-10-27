@@ -45,7 +45,6 @@ pub mod adl2;
 pub mod admin;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod aql_text;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod auth;
 pub mod builder;
 #[cfg(not(target_arch = "wasm32"))]
