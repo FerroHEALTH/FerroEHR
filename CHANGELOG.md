@@ -17,6 +17,1013 @@ has no matching section here.
 
 ## [Unreleased]
 
+## [5.5.0] - 2026-10-27
+
+5.5.0 moves the server and the viewer onto the FerroHEALTH family's shared configuration, HTTP, telemetry, authorization and audit crates, and it carries breaking changes for every deployment, each with its upgrade step under Changed or Removed. Before you upgrade: name the configuration file with `FERROEHR_CONFIG` (or `--config`), since `./ferroehr.toml` and `/etc/ferroehr/ferroehr.toml` are no longer searched; move the REST keys from `[server]` to `[rest]` and rename `server.bind` to `server.listen`; move `[authz.rbac] role_claims` and `[authz.rbac.basic_roles]` to `[auth] role_claims` and each `[[auth.basic.users]] roles`, and remove `user_role`; rename `token_url` to `token_endpoint` in the outbound OAuth tables; remove `[audit.fhir_feed] batch_size`, `max_retries` and `[usage_report] slow_aql_ms`; list a reverse proxy in `[server] trusted_proxies`; and give the viewer `server.listen` in place of `LEPTOS_SITE_ADDR`. The server refuses to start without a patient identity source for its EHR index unless `[ehr_index] provider = "local"` is set, ITI-81 audit retrieval requires a `date` parameter, and Template Data Document import is gone. Helm chart 20.0.0 carries `appVersion` 5.5.0. Security carries two advisories, GHSA-vphj-3f8c-5hpx and GHSA-cwhv-87pq-3c3c.
+
+### Added
+
+- **The access record names the data permit a secondary-use caller acts
+  under** (#3379). A caller declares the permit's identifier in the header
+  `[audit] permit_header` names (default `x-data-permit`) beside its purpose
+  of use; every access record keeps it as `permit`, so the trail says under
+  which permit a population query, an export or a cohort query ran (EHDS
+  Art. 68). A value that is not 1 to 128 characters of letters, digits and
+  `.` `_` `:` `/` `#` `-` is recorded as absent. The column joins the tamper
+  chain as digest version 4 (audit migration 0016). The FHIR rendering
+  carries it too (#4120).
+
+- **AQL takes `VERSIONED_OBJECT` as a FROM class** (#3379), the shape of
+  FerroBRIDGE's OMOP batch query (`EHR e CONTAINS VERSIONED_OBJECT vo CONTAINS
+  VERSION v CONTAINS COMPOSITION c`). The QUERY specification lets `FROM` name
+  any RM class (master03 §FROM), and FerroEHR refused this one. The variable
+  answers `uid/value` and `owner_id/id/value` (RM common master06
+  §VERSIONED_OBJECT) and refuses any other path. The operand sets no version
+  scope of its own.
+
+- **The book records the secondary-use contract with FerroBRIDGE** (#3379).
+  The new Secondary use page states the batch query FerroBRIDGE loads the
+  OMOP CDM from (`time_committed > $since`, ordered by the commit instant and
+  the version uid, paged by `offset` and `fetch`), the marks that take an EHR
+  out of a batch, the reconciliation that removes erased compositions, and
+  where pseudonymisation for research happens. An integration test holds the
+  batch to it. The compliance overview no longer names the withdrawn
+  secondary-use read model (#3160) as planned.
+
+- **The EHR index asks an IHE patient identity source over PIXm (ITI-83) by
+  default** (#3380). `[ehr_index] provider = "ihe"` names a PIX Manager by its
+  FHIR base (`pixm_url`) and the clinical domain (`assigning_authority`, one of
+  `privacy.subject_namespaces`), with the client credentials grant of
+  `[ehr_index.oauth]` (renewed once on a `401`) and the TLS material of
+  `[ehr_index.tls]` (`trust_roots_file`, `client_identity_file`,
+  `min_version`). The client is `ihe-iti` 0.0.62's PIXm Consumer and sends only
+  what ITI-83 specifies, by `POST` unless `invocation = "get"`, so any
+  conformant PIX Manager serves. `has_ehr_for_subject` and
+  `create_ehr_for_subject` ask the source for the subject's pseudonym, and the
+  subjects of an EHR are the pseudonym its `EHR_STATUS` carries; the source is
+  never asked to resolve a pseudonym back. The server reads the source's
+  `CapabilityStatement` at boot, and a source that fails a request is an
+  error: nothing falls back to the in-instance map. PDQm is not used (GDPR
+  Art. 5(1)(c)).
+
+- **The book states FerroEHR's contract as a federation node** (#3383).
+  The new page "FerroEHR as a federation node" reads the openEHR Federation
+  Tier with AQL 1.0.0 from the node's side. It lists the endpoints a gateway
+  uses and resolution by the local `ehr_id` alone. It gives the four
+  admission conditions of N42a and the configuration that meets them: a
+  unique `system_id`, and an import under an `ehr_id` the node chose. It also
+  covers authentication by the deployment's own authorization server and the
+  refusals the node applies whatever the gateway did. It names FerroFED 0.0.13
+  as the release whose harness runs FerroEHR as its node. An integration test
+  moves an EHR between two nodes under a node-chosen id and finds every
+  version uid and its `creating_system_id` unchanged.
+
+- **The FLAT builder builds an `INTERVAL_EVENT` at an abstract `EVENT` node
+  when the input names its width** (#3898), on the 0.0.102 crate line. RM
+  data_structures §EVENT makes `EVENT` abstract over `POINT_EVENT` and
+  `INTERVAL_EVENT`, and a `/width`, `/math_function` or `|sample_count` under
+  such a node (master05 §INTERVAL_EVENT) now chooses the interval; without
+  them the node still builds as a `POINT_EVENT`. The flattener writes those
+  rows back for an interval event held at an abstract node.
+
+- **The audit store deletes each record at its own retention end**
+  (#3899). Every record stores the first date it may be deleted on: an
+  access record the end `ehds-logging` states for its categories and origins
+  (Regulation (EU) 2025/327 Annex II 3.4), any other record the day after
+  its date of access plus the `[audit.store]` horizon, and none for a record
+  kept without end. The reaper deletes a record on or after that date and
+  never before it, where it deleted by one store-wide horizon. Records
+  written before this release keep the horizon. The end joins the chain
+  digest (version 3), so moving one shows in the chain check.
+
+- **The viewer trusts a private CA for the CDR and the OIDC issuer on every
+  platform**: `[cdr.tls]` and `[auth.oidc.tls]` take `trust_roots_file`, a PEM
+  bundle trusted beside the platform's roots, with `client_identity`
+  (`_file`) for mutual TLS and `min_version`, read through
+  `ferrohealth_server::tls_client`. A file that cannot be read or holds no
+  certificate refuses the start. The Helm chart names the CDR's CA through
+  `cdr.tls.trust_roots_file` in place of `SSL_CERT_DIR`, and
+  `viewer.auth.oidc.caExistingSecret` mounts an issuer CA; the UI journeys
+  pass the development Keycloak CA the same way (#3909).
+
+- **Opaque access tokens are checked by token introspection under `[auth]
+  mode = "introspection"`** (#4033). `ferrohealth-smart`'s introspection
+  check (RFC 7662) posts each bearer token to the issuer's introspection
+  endpoint, named by its metadata or by `[auth.introspection] endpoint`, and
+  authenticates as the client of `[auth.introspection.client]` or with the
+  token of `[auth.introspection.bearer]`. An active response admits the
+  caller with its scopes and roles and is reused until its `exp`, an inactive
+  token is a `401`, and an endpoint that cannot answer is a `503`. The mode
+  and the table were refused at boot. Helm chart 15.1.0 names the mode.
+
+- **The ITI-81 audit retrieval applies every search parameter RESTful ATNA
+  §3.81.4.1.2.2 says the repository shall support** (#4040): `address`,
+  `agent.identifier`, `patient.identifier`, `entity.identifier`,
+  `entity-type`, `entity-role`, `source.identifier`, `type`, `subtype` and
+  `outcome`, beside `patient`, `agent`, `entity` and `action`. Several
+  comma-separated values match any of them, and a repeated parameter must
+  match too. Tokens take the `code`, `|code` and `system|code` forms of FHIR
+  R4 Search §3.1.1.4.10. These parameters were a `400` `not-supported`. The
+  subject-scoped audit role still names exactly one subject, by `patient` or
+  `patient.identifier`.
+
+- **The `openehr-*` crates carry the APIs FerroBRIDGE kept local copies of**
+  (#4047, #4048), on the 0.0.99 crate line. The FLAT builder takes a value
+  whole under `|raw` (Simplified Formats master04 §Raw canonical JSON) on
+  `ROLE.performer` (`<root>/performer|raw`, a `PARTY_REF`), on the COMPOSITION
+  `language`, `territory` and `composer`, and on the `_feeder_audit`,
+  `_link:i`, `_participation:i`, `_other_participation:i`, `_provider` and
+  `_health_care_facility` families. A `ctx/` key still wins over a path
+  spelling of the same attribute, and a raw value of the wrong class, or one
+  beside another suffix, is refused as `InvalidRaw`. `openehr-am` implements
+  `FromStr` for `ArchetypeHrid` (`openehr_adl::hrid::parse_hrid` now reads
+  through it), `openehr-base` adds `TerminologyId::new(name, version_id)`,
+  and `openehr-term` names the `audit_change_type` and
+  `version_lifecycle_state` concepts (`codes::AuditChangeType`,
+  `codes::VersionLifecycleState`), held equal to the embedded terminology.
+  Until a `ferrohealth-smart` release requires 0.0.99, the build holds a
+  registry copy of `openehr-sdt` 0.0.98 for it beside the workspace 0.0.99.
+
+- **An ADL 2 Web Template names a node under a template overlay by its
+  parent archetype.** `openehr_adl::opt::create_opt` records each overlay's
+  specialisation parent in the OPT's `other_meta_data`
+  (`template_overlay_parents`), and the ADL 2 builder uses the parent's id
+  for the node, its paths and its slot admissions, so data and mappings
+  written against the published archetype match. An ADL 2 header now quotes
+  a free metadata value that is not a bare token and reads a quoted one back (#4048).
+
+- **`TEMPLATE_ID` answers its BASE 1.3.0 HRID functions** (#4068), on the
+  0.0.104 crate line. SPECBASE-42 gives `TEMPLATE_ID` `is_hrid`, `namespace`,
+  `qualified_rm_class_name`, `concept_id`, `version_id` and the major, minor
+  and patch versions (BASE base_types master05 §Template Identifiers). An
+  identifier in the namespaced HRID form of the Artefact Identification
+  reference expression (master03 §Formal Model) yields its parts; a legacy
+  free-text template name stays valid and answers `false` and empty parts.
+
+- **`openehr-its` writes an OPT 1.4**, on the 0.0.105 crate line:
+  `opt14_writer::build` and `write` assemble an operational template from a
+  template definition (the root archetype, the archetypes placed in its slots
+  or open attributes, and the occurrences, existences and attribute
+  constraints it narrows) and the AM 1.4 archetypes it names. Internal
+  references are inlined and deleted nodes removed (OPT2 raw flattening), a
+  slot filler is checked against the slot's assertions and type, a widening is
+  refused, and the output is byte-deterministic, valid against ITS-XML
+  `Template.xsd` and accepted by the template upload (#4083).
+
+- The server runs the FerroHEALTH HTTP stack of `ferrohealth-server` 0.3.4,
+  and `[server]` is its section, the same keys in every FerroHEALTH product:
+  `listen`, `base_path` (a path every route is served under, the health routes
+  included; empty by default), `request_timeout_ms` (a request still running
+  is answered `408`), `header_read_timeout_ms`, `body_limit_bytes`,
+  `drain_delay_ms` and `shutdown_timeout_ms` (on `SIGTERM` readiness turns
+  `503` at once, the listener closes after the delay, and the requests in
+  flight get the bound to finish), `max_concurrent_requests` with
+  `retry_after_s`, `trusted_proxies` with `forwarded_header`, and `compression`
+  with `compression_min_bytes`. `[server.caller_rate]` (`requests_per_second`,
+  `burst`) limits each authenticated caller. `[server.tls]`
+  (`certificate_file`, `key_file`, `client_auth`, `client_ca_file`,
+  `min_version`, `reload_interval_s`, `healthcheck_identity_file`) reads the
+  files again on `SIGHUP` too, and the management listener on its own port
+  drains with the main one under the same bound (#4087).
+
+- `[rest]` holds the openEHR REST surface: `base_path`, `swagger_ui`,
+  `cors_permissive`, `system_id`, `[rest.identity]` and `body_limit_bytes`,
+  the clinical body tier below `server.body_limit_bytes`, which the
+  template-upload and `/message` routes keep (#4087).
+
+- `ferroehr serve` names the default command beside `config check` and
+  `healthcheck` (#4087).
+
+- **The viewer serves the family's health routes and commands**:
+  `/health/liveness`, `/health/readiness` and `/health`, `ferroehr-viewer
+  config check` (reads the configuration and builds the CDR and issuer
+  clients without reaching either), `--config` and `--set key=value`, the
+  `[server]` table with listener TLS, and the bounded drain on `SIGTERM`
+  (`server.drain_delay_ms`, `server.shutdown_timeout_ms`). `ferroehr-viewer`
+  with no subcommand still serves (#4139).
+
+- **The OPT 1.4 writer clones nodes and narrows types**, on the 0.0.106
+  crate line: `opt14_writer::Narrowing::Clone` copies an archetype node that
+  may occur more than once under its own node id, told apart by a `name`
+  constraint and carrying its own narrowings and slot fills, and refuses a
+  clone of a node that occurs at most once, a name another copy carries, or
+  copies the attribute's cardinality cannot hold (AOM2 VSONCO, VACMCU,
+  VACMCO). `Narrowing::Redefine` narrows an attribute's children to
+  conforming subtypes (a `DV_TEXT` value to a `DV_CODED_TEXT`) or drops
+  alternatives, keeping the archetype's other constraints, and refuses a type
+  that does not conform (AOM2 VSONCT). An attribute the template constrains
+  can also hold archetypes placed by a slot fill. The writer now rebuilds 143
+  of the 305 CKM operational templates to their upstream node tree, up from
+  67 (#4150).
+
+- The OPT 1.4 writer refuses a redefined leaf constraint that admits a value
+  the archetype's does not, as AOM2 Phase 2 validation (VPOV) requires: a
+  string list or pattern, an integer or real list or range, a boolean, a date,
+  time, date/time or duration range, pattern or timezone validity, a code
+  phrase's terminology or code list, a quantity's property, units, magnitude
+  or precision, and an ordinal list. Each refusal is a `WriteError::Widening`
+  naming the archetype, the path and the constraint. The openehr crates move
+  to 0.0.107 (#4163).
+
+- **The Helm chart mounts a private issuer CA for the server**:
+  `auth.caExistingSecret` (with `auth.caExistingSecretKey`, `ca.crt` by
+  default) mounts the Secret's PEM bundle and points the server's
+  `[auth] ca_file` at it, as `viewer.auth.oidc.caExistingSecret` does for the
+  viewer. Chart 19.3.0 (#4235).
+
+- **The quickstart viewer signs in through the Keycloak overlay**: with
+  `--profile viewer`, the viewer at `http://localhost:3000` takes the
+  authorization-code flow with PKCE through the demo realm's
+  `ferroehr-viewer` client and calls the server with the user's token. The
+  issuer moves to `https://keycloak.localhost:8443`, a name the containers
+  resolve through a network alias and a browser resolves to the loopback
+  address with no hosts entry, and the development certificate names it (#4243).
+
+### Changed
+
+- **A server with no patient identity source refuses to start** (#3380).
+  The binary's default `[ehr_index]` provider is the IHE one, and without
+  `pixm_url` and `assigning_authority` the refusal names both choices:
+  configure the identity source, or opt in to the in-instance map with
+  `[ehr_index] provider = "local"`, which serves the
+  `GET /ehr?subject_id=…` lookup over `EHR_STATUS` content and nothing more.
+  Upgrade step: a deployment without an identity source adds
+  `[ehr_index] provider = "local"` (`FERROEHR__EHR_INDEX__PROVIDER=local`).
+
+- **The compose quickstart runs FerroPIX beside FerroEHR** (#3380), pinned by
+  tag and digest, with its own PostgreSQL and a development OpenID Provider,
+  and points `[ehr_index]` at it; FerroPIX mints the pseudonym in
+  `urn:oid:2.999.7.1` on FerroEHR's first ask. The server now runs in the
+  issuer's network namespace, which publishes ports 8080, 8090
+  (`FERROEHR_PIX_PORT`) and 8180 (`FERROEHR_ISSUER_PORT`).
+
+- **Helm chart 19.0.0 takes FerroPIX as the chart dependency `ferropix`**
+  (#3380), on by default: the chart points `config.ehr_index` at its Service,
+  adds the egress rule to its pods, and routes the grant's client secret
+  through `secrets.ehrIndexClientSecret`. A values file that names no identity
+  source is refused at render. Upgrade step: supply FerroPIX's
+  `ferropix.database.existingSecret`, `ferropix.dataKey.existingSecret`, its
+  issuer and pseudonymisation domain, and `config.ehr_index`, or set
+  `ferropix.enabled: false` with `config.ehr_index.provider: local`.
+
+- **The EHDS system documents live in the FerroHEALTH book, and each release
+  attaches them at a pinned revision** (#3705). The EHR system Cadasto B.V.
+  declares is FerroEHR with FerroBRIDGE, so its information sheet (EHDS
+  Art. 38), instructions for use (Art. 30(1)(d)), readiness record and
+  technical documentation (Art. 37, Annex III) move to
+  <https://ferrohealth.eu/docs/ehds/>, and the old addresses in this book
+  redirect there. `docs/ehds/system-documents.env` pins the FerroHEALTH commit
+  and the revision of each page. The release lane fetches the two attached
+  pages at that commit, refuses a page whose `Revised` line differs from the
+  pin, and appends this release's facts under "This copy": the system version
+  (this FerroEHR release with the FerroBRIDGE release its chart runs beside),
+  the release date and the versions of the standards, read from
+  `docs/VERSIONS.md` (Art. 38(2)(b) and (e)). The release notes name the
+  pinned revisions, and `release-notes.sh` refuses notes that do not.
+
+- **Breaking: the XML readers of `openehr-its` refuse a document outside
+  the schema** (#3893), on the 0.0.103 crate line. A child element a type's
+  closed `xs:sequence` does not declare, or a child element inside a text
+  element, is refused with `XmlError::UndeclaredChild` (XML Schema 1.1 Part 1
+  §3.4.4.2) where it was skipped as if absent, and `opt14::from_xml` and the
+  AOM2 readers refuse a root other than the one the schema publishes
+  (`<template>`, ITS-XML `components/AM/Release-1.4/Template.xsd`) with
+  `XmlError::UnexpectedRoot`. One tool-written element no schema declares,
+  `match_negated` on a `C_ATTRIBUTE`, is read when `false` and refused when
+  `true` (`XmlError::UnsupportedExtension`): a negated match changes the
+  constraint, and no schema says how. A CDR upload of a template outside the
+  schema is now refused; the CNF Robot `valid_templates/validation/clinical_content_validation.opt`
+  and two epSOS CKM templates are such documents (#4077, #4078).
+
+- **`[auth] ca_file` is trusted under introspection mode too**: with
+  `ferrohealth-smart` 0.8.6 the server reads an introspecting issuer's
+  metadata, and calls its introspection and token endpoints, trusting the
+  bundle beside the platform roots and the grant's own `ca_file`. The e2e
+  compose overlay names the development Keycloak CA through
+  `FERROEHR__AUTH__CA_FILE` in place of `SSL_CERT_FILE` and `SSL_CERT_DIR` (#3909).
+
+- **The shared crates move to their newest lockstep releases**: `ferrohealth-smart` 0.7.3,
+  `ferrohealth-authz` 0.1.3, `ihe-atna` and `ehds-logging` 0.2.12 and `ferrobridge-term`
+  0.1.138. Every secret in the `[auth]` section now renders as `***`, the family
+  mask, and `[auth] ca_file` names a PEM bundle of extra certificate authorities
+  for the issuer's metadata and key set, for an issuer behind a private PKI (#3909).
+
+- **Breaking: the audit trail believes a forwarded client address only from a
+  trusted proxy** (#4025). The source network address of an audit record
+  (`client_ip`, the DICOM `NetworkAccessPointID`, the FHIR `AuditEvent`
+  network) is the address the family server stack names: the connection's
+  peer, or the client a peer listed in `[server] trusted_proxies` names in
+  the `[server] forwarded_header` (RFC 7239 §8.1). FerroEHR read the first
+  `X-Forwarded-For` hop from any caller, so a client could write any address
+  into the trail. A deployment behind a reverse proxy lists the proxy in
+  `trusted_proxies` and sets `forwarded_header = "x-forwarded-for"` when the
+  proxy does not send `Forwarded`; until then its records name the proxy.
+
+- FerroEHR moves to `ferrohealth-usage-report` 0.2.0 (#4025). The report
+  FerroEHR sends is unchanged.
+
+- **The CDR takes up `ferrohealth-smart` 0.6.0 and `ferrobridge-term`
+  0.1.134** (#4026, #4027). Token checking, Basic users, the discovery
+  document and every outbound client credentials token behave as before.
+  The terminology client now
+  refuses, before sending, a code with no system on an STU3 server; the
+  CDR's server is R4B, so its binding checks are unchanged. The new
+  `[auth] mode = "introspection"` key of the shared section, and an
+  `[auth.introspection]` table, are refused at boot: this server checks
+  bearer tokens as JWTs only, and a setting it would ignore stops the start.
+
+- **Every secret and every masked URL renders through `ferrohealth-secret`,
+  the family's one mask** (en-route finding of #4028). EHR's own
+  `config::secret` module gives way to `ferrohealth-secret`'s `Secret`,
+  `SecretUrl` and `RedactedUrl`. A secret still renders as `***` and a URL's
+  userinfo as `***@`, and a URL's query is now masked as `?***` too, in
+  `ferroehr config check`, `GET /admin/config`, `/management/env` and
+  `ferroehr report`. `ferrohealth-smart` moves to 0.7.1 and
+  `ferrohealth-authz` to 0.1.1, `ihe-atna` and `ehds-logging` to 0.2.11, and
+  `ferrobridge-term` to 0.1.137.
+
+- **Breaking: the outbound client credentials tables take the
+  `ferrohealth-smart` client table, so `token_url` is now `token_endpoint`**
+  (#4028). `[terminology.server.oauth]`, `[audit.fhir_feed.oauth]` and
+  `[authz.abac.remote.oauth]` are the family's shared grant: the old key
+  `token_url` stops startup by name, and each table gains `private_key_jwt`
+  (RFC 7523), mutual TLS (`tls_client_auth` and
+  `self_signed_tls_client_auth`, RFC 8705), `ca_file`, `refresh_margin_ms` and
+  `timeout_ms`. `issuer`, `client_id`, the client secret, `scope`, `audience`
+  and `resource` keep their names. Upgrade: rename `token_url` to
+  `token_endpoint` in each table (in the Helm chart, under
+  `config.terminology.server.oauth` and the other two), or
+  `..._OAUTH__TOKEN_URL` to `..._OAUTH__TOKEN_ENDPOINT` in the environment.
+  `ferrohealth-smart` moves to 0.7.0 and `ihe-atna` and `ehds-logging` to
+  0.2.10, the FHIR Feed sends its bearer token through `ihe-atna`, and every
+  BALP AuditEvent's `source.observer` carries an `identifier` beside its
+  `display`.
+
+- **Breaking: `ihe-atna`'s forwarder delivers the audit trail, and
+  `[audit.fhir_feed] batch_size` and `max_retries` are gone** (#4029). Syslog
+  frames are stored in `ihe-atna`'s spool and delivered from it with
+  backoff, retried until the repository takes them, so a failed send is no
+  longer lost. The local audit store keeps only the FHIR document, so the
+  spool, not the store, is syslog's outbox, and `delivered_syslog_at` is no
+  longer written. New `[audit.syslog]` keys: `spool_dir` (a spool that
+  survives a restart; unset, it is held in memory), `spool_max_messages`,
+  `spool_max_bytes` and `retry_max_ms`. The FHIR Feed delivers from the store
+  through an `ihe-atna` outbox, or with the store off from an in-memory
+  spool. A record the repository refuses is set aside until the next start,
+  and the records behind it flow on. `retry_max_ms` takes the place of
+  `batch_size` and `max_retries`, which stop startup by name. A new
+  `audit_delivery` health indicator reports each forwarder. Upgrade: remove
+  `batch_size` and `max_retries` from `[audit.fhir_feed]`, and set
+  `[audit.syslog] spool_dir` to a directory only the server can read.
+
+- **Breaking: the ITI-81 audit retrieval (`GET /fhir/r4/AuditEvent`) requires
+  a `date` parameter** (#4030). The query is now read by `ihe-atna`'s
+  `retrieve`, the family's audit crate, and the answer written by it:
+  RESTful ATNA §3.81.4.1.2.1 has at least one `date` present, so a query
+  without one is a `400` `OperationOutcome`. A `date` value takes every FHIR
+  prefix (`eq` when none, so `date=2026-07-12` is that whole day, read in
+  UTC), `patient`, `agent` and `entity` also answer to their `.identifier`
+  forms, `_count=0` returns the total alone, and the Bundle carries `self` and
+  `next` links. A parameter the local store cannot apply yet is a `400`
+  `not-supported` where it was silently ignored. Upgrade: an API client, a
+  patient portal on the subject-scoped audit role included, adds a date
+  window to every retrieval (for example `date=ge2026-07-01`); the viewer's
+  audit page sends the last 30 days when no window is set. `ihe-atna` and
+  `ehds-logging` move to 0.2.8.
+
+- **Breaking: `[authz.rbac] user_role` is retired** (#4038 follow-up). It
+  named a role nothing required once a Basic user's roles became its
+  `[[auth.basic.users]] roles` list. The key now stops startup by name and
+  points at that list. Upgrade: remove `user_role` (on Helm chart 16.0.0,
+  `config.authz.rbac.user_role`), and give each Basic user the roles it needs,
+  for example `roles = ["USER"]`.
+
+- **Breaking: the caller's roles come from `ferrohealth-smart`, so the two
+  role keys move to `[auth]`, and the policy decision is
+  `ferrohealth-authz` 0.1.0** (#4038). `[authz.rbac] role_claims` is now
+  `[auth] role_claims` (same default, `realm_access.roles` included), and
+  `[authz.rbac.basic_roles]` is now the `roles` list of each
+  `[[auth.basic.users]]` entry; both old places stop startup by name. Roles
+  stay upper-cased, and a Basic user whose entry lists no role holds none,
+  where a user absent from `basic_roles` used to hold `user_role`.
+  `[authz.assurance]` and `[authz.professional]` keep their keys and are read
+  by the shared sections; the RFC 9470 step-up challenge on patient data no
+  longer carries an `error_description`. The Cedar engine and the remote
+  decision point are the family's: the Cedar schema and the remote wire body
+  are unchanged, a remote resource kind with no policy is a `500` instead of
+  a `403` (boot validation already refuses that configuration), and
+  `authz_cedar_decisions` and `authz_remote_pdp_calls` count one per decision
+  where they counted one per attribute combination. Upgrade: move
+  `role_claims` from `[authz.rbac]` to `[auth]`
+  (`FERROEHR__AUTH__ROLE_CLAIMS` in the environment), and each user's entry
+  of `[authz.rbac.basic_roles]` to `roles` under its `[[auth.basic.users]]`
+  table (in the Helm chart, under `config.auth.basic.users`), and give a user
+  that had no entry `roles = ["USER"]`. Helm chart 15.0.0 takes the same keys
+  (`config.auth.role_claims`, `roles` under `config.auth.basic.users`, and
+  `token_endpoint` in each grant). `ferrobridge-term` moves to 0.1.136,
+  whose `SmartToken` replaces the terminology client's own token adapter
+  (#4031).
+
+- **The `openehr-rm` tests take the change-type and lifecycle-state codes
+  from `openehr_term::codes`** (#4053), in the codegen templates of both
+  generations, so no literal code or rubric can drift from the embedded
+  terminology.
+
+- **`SECURITY.md` records the `main` ruleset as it stands** (#4067): no
+  approving review, the `conclusion` check, the merge queue, and the
+  organization-admin bypass, with what a bypass merge skips (any lane still
+  running, `ui-e2e` included) and when it is used. The weekly external link
+  check leaves out gesetze-im-internet.de and dicom.nema.org, which refuse the
+  GitHub runner every week while answering by hand (#4074).
+
+- **The BASE, AM, TERM and LANG specifications are re-vendored** (#4068,
+  #4069, #4070, #4071) at BASE `93abaf9f`, AM `51aa07b2`, TERM `b2dd077d` and
+  LANG `e61a7192`. The TERM `languages` code set restores `pt-pt`, adds
+  `ro-md` and `ru-md`, and names the replacement of each deprecated code
+  (SPECTERM-36), so the `openehr-term` code-set lookup accepts the two new codes. The
+  BASE `Interval.has` post-condition gains its brackets, which the
+  implementation already followed. AM's Archetype Identification document is
+  superseded by BASE Artefact Identification (SPECAM-103), and the citations
+  move with it. The nine `openehr-*` crates step to 0.0.104.
+
+- **The bundled PostgreSQL image is rebuilt on the 2026-10-21 respin of
+  `postgres:18.6`** (#4084, `sha256:edb0c08d…`), a same-version respin with
+  rebuilt base packages. The respin ships the fixed xz packages, so the
+  `TEMP-1147318-639065` statement leaves `security/vex/postgres-os.openvex.json`.
+
+- **Breaking: the server reads only the configuration file it is told to
+  read** (#4087). The loader is `ferrohealth-config` 0.2.5, the FerroHEALTH
+  products' shared one, and it reads the file `--config` or `FERROEHR_CONFIG`
+  names. `./ferroehr.toml` and `/etc/ferroehr/ferroehr.toml` are no longer
+  searched: a deployment that mounts a file there without naming it starts on
+  the environment and the defaults alone. Set
+  `FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml`; the Compose files, the
+  conformance stacks and Helm chart 16.0.2 set it. The fallbacks keep their
+  order (the libpq variables, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`,
+  `RUST_LOG`, `PORT`), and `ferroehr config check` prints each key beside the
+  source that set it.
+
+- **Breaking: the viewer reads only the configuration file
+  `FERROEHR_VIEWER_CONFIG` names** (#4087), through the same
+  `ferrohealth-config` loader as the CDR. `./ferroehr-viewer.toml` and
+  `/etc/ferroehr/viewer.toml` are no longer searched. A variable under
+  `FERROEHR_VIEWER_` that is neither an override nor the Compose port or image
+  parameter refuses the start, and a `*_file` secret loses only its trailing
+  line ending, where all surrounding whitespace was trimmed; an empty file is
+  refused.
+
+- **Breaking: `[auth] role_claims` defaults to `["roles", "groups",
+  "entitlements"]`** (#4087), the RFC 9068 §2.2.3.1 carriers every
+  FerroHEALTH product reads. `realm_access.roles` is no longer in the default:
+  a Keycloak issuer sets `FERROEHR__AUTH__ROLE_CLAIMS=roles,groups,entitlements,realm_access.roles`,
+  as the Keycloak Compose overlay and the viewer's journey stack now do.
+
+- **Breaking: the server no longer refuses a `FERROEHR_` variable outside the
+  override form, and a file refusal says less** (#4087). Only a
+  `FERROEHR__<SECTION>__<KEY>` override that names no key refuses the start.
+  A single-`_` spelling such as `FERROEHR_DB_MAX_CONNECTIONS`, or a
+  per-subsystem pointer such as `FERROEHR_SIGNING_CONFIG`, sets nothing and
+  is left alone, because the viewer's `FERROEHR_VIEWER_` variables share the
+  prefix (`ferrohealth-config` 0.2.5). A refusal of an unknown key in the file
+  names the key and the closest valid one, without its line number; a syntax
+  error still names its line and column.
+
+- **Breaking: `/health/readiness` and `/management/health` serve the
+  FerroHEALTH readiness document of `ferrohealth-health` 0.1.1** (#4087). The
+  body is `{"state", "phase", "indicators": [{"name", "state", "detail"?}]}`
+  with lowercase states (`up`, `degraded`, `down`), replacing `{"status",
+  "components"}`; the public probe leaves out every `detail`. Readiness also
+  answers `503` while the process boots and from the moment it receives
+  `SIGTERM` or `SIGINT`, before the listener stops. The optional indicators
+  (`audit_sender`, `audit_delivery`, `audit_chain`, `events`) read at worst
+  `degraded`, so a damaged audit chain now reads `degraded` where it read
+  `DOWN`, and an indicator that is up carries no detail. The viewer's health
+  tab reads the same document. Probes that test only the status code are
+  unaffected.
+
+- **Breaking: logging, the request log and the OpenTelemetry export move to
+  the `[telemetry]` section of `ferrohealth-telemetry` 0.2.1** (#4087), the
+  FerroHEALTH products' shared one, with no aliases for the old keys. `[log]`
+  is gone: `log.format` and `log.filter` become `telemetry.format` and
+  `telemetry.filter` (`FERROEHR__TELEMETRY__FORMAT`,
+  `FERROEHR__TELEMETRY__FILTER`, `RUST_LOG` still a fallback), and the
+  filter now defaults to `info,hyper=warn,tower=warn,h2=warn` and refuses the
+  start when it does not parse. The export moves to a `[telemetry.otlp]`
+  table: `otlp_endpoint` becomes `otlp.endpoint`, `traces_sample_ratio`
+  becomes `otlp.sample_ratio`, and `metrics_push` becomes `otlp.metrics`,
+  which defaults to `true`, so a configured endpoint now receives the metrics
+  as well as the spans. `telemetry.flame_file` moves to
+  `management.flame_file`. `telemetry.service_name` is removed: the
+  `service.name` is always `ferroehr`. `telemetry.environment` no longer
+  defaults to `dev` and is left off every span and metric unless set. A
+  file or variable that still spells an old key refuses the start, naming
+  it. Helm chart 17.0.0 renames `config.log` to `config.telemetry`.
+
+- **Breaking: the HTTP metrics are the `ferrohealth-telemetry` request log's**
+  (#4087). `http_server_request_duration_seconds` is labelled
+  `http_request_method`, `http_route`, `http_response_status_code` and
+  `url_scheme` (OpenTelemetry HTTP semantic conventions); the
+  `status_class` label is gone, so a query on `status_class="5xx"` becomes
+  `http_response_status_code=~"5.."`, as the bundled alert rules and Grafana
+  dashboard now read. The `http_server_active_requests`,
+  `http_server_request_body_size` and `http_server_response_body_size`
+  series are removed, and no series on `/management/prometheus` carries the
+  `otel_scope_name` label any more. The viewer's management page loses its in-flight
+  requests tile, and the dashboard's in-flight panel shows the request rate.
+
+- **Breaking: responses no longer carry `x-trace-id`, and a client's
+  `traceparent` is no longer read** (#4087). Every request starts a trace of
+  the server's own, so a caller cannot join or steer the server's traces;
+  correlate a request through its `x-request-id`, which the request log
+  writes on every line.
+
+- Breaking: the REST-surface keys move from `[server]` to `[rest]`:
+  `server.base_path`, `server.swagger_ui`, `server.cors_permissive`,
+  `server.system_id` and `[server.identity]` are `rest.base_path`,
+  `rest.swagger_ui`, `rest.cors_permissive`, `rest.system_id` and
+  `[rest.identity]` (`FERROEHR__REST__…`), with no alias; the old names are
+  refused at startup. Upgrade: rename the keys, and move a `[server.identity]`
+  table to `[rest.identity]` (#4087).
+
+- Breaking: `server.bind` is `server.listen`, an IP address and a port; a host
+  name such as `localhost:8080` refuses the start. It listens on
+  `0.0.0.0:8080` by default, as before. Upgrade: rename the key (#4087).
+
+- Breaking: the request-body limit is `server.body_limit_bytes`, 64 MiB by
+  default, the ceiling of every route and the limit of the template-upload and
+  `/message` routes, and `rest.body_limit_bytes` (unset by default) narrows the
+  other routes below it, where it was 16 MiB. The chart sets 16 MiB. Upgrade:
+  set `rest.body_limit_bytes = 16777216` to keep the old clinical limit (#4087).
+
+- Breaking: `server.max_in_flight` is `server.max_concurrent_requests`, unset
+  (no bound) by default where it was 256, and the bound now covers every
+  FerroEHR route (the status document, SMART discovery and the management
+  surface included); only the health routes are never refused. Upgrade: set
+  `max_concurrent_requests = 256` to keep the old bound (#4087).
+
+- Breaking: `[server.rate_limit]` is `[server.caller_rate]`
+  (`requests_per_second`, `burst`) keyed on the authenticated subject, and
+  limits nobody until the table is set, where the principal tier was on by
+  default; the per-address tier is gone. The chart and the Compose quickstart
+  set 1024 per second with a burst of 2048. A `429` carries `Retry-After` and
+  no `x-ratelimit-*` headers (#4087).
+
+- Breaking: `[server.tls]` takes the family keys: the table's presence turns
+  TLS on (`enabled` is gone), `cert_file` is `certificate_file`,
+  `reload_interval_secs` is `reload_interval_s` (unset by default, where the
+  files were read every 60 seconds; `SIGHUP` always reads them), and
+  `client_auth = "off"` is `"none"`. The chart's `config.server.tls` follows,
+  and an empty table means TLS off (#4087).
+
+- Breaking: `[server.connection]` is `[server] header_read_timeout_ms` (30000
+  by default, where the bound was 10 seconds, and `0` is refused);
+  `max_concurrent_streams` and the HTTP/2 keep-alive keys are gone (#4087).
+
+- Breaking: `ferroehr healthcheck` asks `GET /health/readiness` on the
+  `server.listen` port (over TLS with `[server.tls]` set) and exits 1 while the
+  server drains, where it asked `{rest root}/status`; the reason on stderr reads
+  `healthcheck: unhealthy: …`. `GET /health` answers the readiness status with
+  `{"state": …}` and `GET /health/liveness` answers `{"state":"up"}`, where both
+  answered a plain-text `OK` (#4087).
+
+- The request id is the server's own, minted for every request and carried by
+  the request log and the access record; a client's `X-Request-Id` is returned
+  to it unchanged and no longer recorded. A request past
+  `server.request_timeout_ms` or over the body limit, a refused caller and a
+  panicked handler answer the openEHR `{ error, message }` body, and the panic
+  message reaches neither the body nor the log. Responses are compressed at the
+  default gzip and Brotli quality, from 1 KiB up (#4087).
+
+- The boot banner is the FerroHEALTH banner: the wordmark, the build line
+  `ferroehr <version> (<commit>)`, and the facts (manufacturer, profile, pins,
+  support period, deployment) as one list, with the sandbox notice below (#4087).
+
+- Chart 19.0.0: `config.server` carries `max_concurrent_requests` and
+  `caller_rate`, and `config.rest` the REST surface; the rendered
+  `ferroehr.toml` changes accordingly (#4087).
+
+- **Breaking: the usage report is sent by `ferrohealth-usage-report` 0.1.2**
+  (#4087), the FerroHEALTH products' shared reporter, on the same envelope v2.
+  The `status` object loses `spec_profile`, and `postgres_major` is left out
+  when the database does not answer. The daily metrics lose the `aql` group
+  and the `aql_executions` and `aql_slow` counters, and gain the
+  `responses_4xx` counter. Routes outside the API families (the health
+  family, the management surface, the status and discovery documents) are
+  counted in no group. A replica adds its counts to the shared window at its
+  own daily attempt instead of every five minutes, and a daily report that
+  does not reach the collector keeps its counts for the retry an hour later
+  where it dropped them. A failed or refused send is logged at WARN where it
+  was DEBUG, and the boot line takes the family's wording. The clinical
+  migration `0018_usage_report_envelope` drops the `slow` column and the
+  `aql` rows and adds `usage_report_counter`.
+
+- **HTTP Basic credentials are cached for 300 seconds by default** (#4088).
+  `[auth.basic] cache_ttl_seconds` defaulted to `0`, so every Basic request
+  ran the Argon2id derivation, 10 to 15 ms of CPU, which capped the mixed
+  ITS-REST and AQL workload against a release build on one host at 408 op/s;
+  with the cache it reached 1559 op/s. `ferrohealth-smart` 0.7.5 makes 300
+  the default. Only a credential that verified is kept, under a keyed hash
+  drawn at boot, and the cache empties at a restart. Set `0` to check every
+  request. FerroEHR takes `ferrohealth-smart` 0.7.5, `ferrohealth-authz`
+  0.1.5, `ihe-atna` and `ehds-logging` 0.2.13 and `ferrobridge-term` 0.1.139.
+  Helm chart 16.0.1 states the new default.
+
+- **Three AQL shapes no longer read every composition** (#4089, #4090),
+  measured against a release build on one host holding about 51 000
+  compositions. A population query ordered by `c/context/start_time/value`
+  with a small `fetch` reads the compositions in start-time order from a new
+  index and stops at the limit: 169 ms became 7 ms at p50. A
+  `c/archetype_details/template_id/value` predicate on a `COMPOSITION` reads
+  the indexed template id of the version: 142 ms became 2 ms for a template
+  nothing matches, and 29 ms became 11 ms for one of thirteen templates. A
+  `COMPOSITION`, `EHR_STATUS` or `EHR_ACCESS` root is bound at its root row,
+  so a containment with `OR` probes one row per version where it read every
+  node of it. Clinical migration 0017 adds the index and the planner
+  statistics, and analyzes the node table once.
+
+- **The scheduled audit chain check verifies the records written since the
+  last intact link** (#4100). `audit.verify_audit_chain_incremental()`
+  recomputes only the records after the checkpoint it keeps in
+  `audit.audit_chain_checkpoint`, checks the chain head, and moves the
+  checkpoint when it finds nothing: on 428,000 records a full pass took
+  about 35 s, a run over the last 1,000 records 76 ms and one with nothing
+  new 2 ms. A full pass runs every `[audit.store]
+  full_verify_interval_seconds` (new, default one week, `0` for on demand
+  only) and after any run that found damage, and `SELECT * FROM
+  audit.verify_audit_chain()` stays the full pass on demand. With the
+  cheaper run, `verify_interval_seconds` defaults to one hour, where it was
+  one day. The chain digest is unchanged.
+
+- **The FHIR Feed owes only the records written while it is configured**
+  (#4102). A record waiting for delivery is a row in
+  `audit.fhir_feed_outbox`, which the store writes with the record while
+  `[audit.fhir_feed]` is on and delivery removes. The two partial indexes
+  over the unset delivery stamps, which held every record of a deployment
+  without a sink (about 4.8 MB each at 428,000 records), are dropped; the
+  syslog one served no query, since syslog delivers from its own spool.
+  Records stored before this release and never delivered ship once a feed
+  first runs.
+
+- **The FHIR `AuditEvent` carries the data permit** (#4120). The stored
+  record, the ITI-81 retrieval and the ATX: FHIR Feed write the permit a
+  caller declared in `[audit] permit_header` at `agent.policy` of the user
+  agent, after the token's `jti` (FHIR R4 `AuditEvent.agent.policy`), on an
+  access record and on every other record. The DICOM audit message over
+  syslog has no element for a policy (DICOM PS3.15 A.5.1.1), so it carries
+  none.
+
+- **The per-EHR access record of an Extract export or import carries the
+  declared purpose and data permit** (#4120), taken from the request as the
+  other service-layer access records take them, so the subject-scoped ITI-81
+  retrieval answers an export of `GET /message/export/{ehr_id}` with its
+  permit.
+
+- **FerroEHR's own `[server]` defaults again** (#4120): with no `listen` and
+  no `body_limit_bytes` in the file or the environment, the server listens on
+  `0.0.0.0:8080` and reads bodies up to 64 MiB, and a partial `[server]` table
+  keeps both for the keys it does not name (`ferrohealth-config` 0.2.6
+  `Loader::defaults`). The container image no longer sets `PORT=8080`, and
+  the quickstart Compose file, the dev configuration and chart 19.0.1 no
+  longer write the two keys. Upgrade: a bare binary that must stay on the
+  loopback sets `listen = "127.0.0.1:8080"`.
+
+- **The shared crates move to their newest releases** (#4120):
+  `ferrohealth-smart` 0.8.3, `ferrohealth-authz` 0.2.2, `ihe-atna` and
+  `ehds-logging` 0.3.1, `ihe-iti` 0.0.65, `ferrobridge-term` 0.1.140,
+  `ferrohealth-server` 0.3.5 and `ferrohealth-config` 0.2.6.
+
+- **A pull request records its changelog entry as a fragment under
+  `changelog.d/` and no longer edits `CHANGELOG.md`** (#4123). The fragment is
+  `changelog.d/<issue>-<kebab-slug>.<section>.md`, in the format
+  `changelog.d/README.md` gives, and the release cut assembles the fragments
+  into the new version's section with `scripts/release/changelog.sh --assemble`.
+  The `changelog-guard` job refuses a malformed fragment and a pull request that
+  writes under `[Unreleased]`, so two open pull requests no longer conflict on
+  the changelog.
+
+- **The chart pins the FerroPIX release beside its digest.**
+  `ferropix.image.tag` (`0.0.7`) states the release whose image
+  `ferropix.image.digest` pins, and `scripts/checks/chart-appversion.sh` now
+  holds the tag in the chart's Artifact Hub images entry to it, as it holds
+  the digest. The dependency chart still deploys the digest, so the rendered
+  manifests do not change (#4131).
+
+- **Breaking: the viewer listens on `server.listen`, not `LEPTOS_SITE_ADDR`.**
+  The viewer reads the family's `[server]` table from `ferrohealth-server`
+  0.3.5, defaulting to `127.0.0.1:3000` (the image sets `0.0.0.0:3000` through
+  `FERROEHR_VIEWER__SERVER__LISTEN`). A `LEPTOS_SITE_ADDR` that names another
+  address refuses the start and names the key that replaced it; unset it.
+  `server.base_path` and `server.caller_rate` are refused, since the viewer's
+  pages are served at `/` and it mounts no per-caller limit (#4139).
+
+- **Breaking: `ferroehr-viewer healthcheck` asks `/health/readiness`** over the
+  loopback (over TLS when `server.tls` is set) and exits `0` only on `200`,
+  where it asked `/login` at `LEPTOS_SITE_ADDR` and took any `2xx` or `3xx`. A
+  draining viewer is now unhealthy. The Helm chart's viewer probes ask
+  `/health/liveness` and `/health/readiness`, where all three asked `/` (#4139).
+
+- **Breaking: the viewer's browser security headers are the family console's.**
+  `Referrer-Policy` is `no-referrer` (was `strict-origin-when-cross-origin`),
+  `Cross-Origin-Opener-Policy: same-origin` is new, and the content-hashed
+  bundle under `/pkg/` is `Cache-Control: no-cache`, revalidated on each load,
+  where it was `public, max-age=31536000, immutable`. Every document stays
+  `no-store` under the nonce Content-Security-Policy (#4139).
+
+- **Breaking: every request to the viewer that is not a safe method passes the
+  family same-origin check**, server function calls and the result export
+  included, where only page form posts compared `Origin` with `Host`. The
+  browser's `Sec-Fetch-Site: same-origin` passes; without it `Origin` or
+  `Referer` must name `auth.oidc.public_base_url`, and a request that shows
+  neither is refused `403`. A post without a session now returns to the page
+  it was posted to after the sign-in, rather than to the page its `Referer`
+  named (#4139).
+
+- **Breaking: the viewer's CDR and OIDC clients speak TLS 1.3 at least** by
+  default, as every family client does; `cdr.tls.min_version` and
+  `auth.oidc.tls.min_version` set to `"1.2"` lower it. A request now runs under
+  the stack's `server.request_timeout_ms` (60 s) and `server.body_limit_bytes`
+  (16 MiB), and a form post's ceiling is that limit (#4139).
+
+- The viewer hydrates the whole page on FerroUI 0.5: the server draws the
+  first page and the browser draws every page after it, so a link or a
+  filter no longer reloads the document, and the browser's back and forward
+  walk the pages it drew. The pages load their code in six groups as they
+  are first opened. Every page still works with no WebAssembly, and a post
+  still answers with the page it was posted to (#4147).
+
+- **The book and the architecture no longer claim the openEHR Service Model as
+  the design of the service layer** (#4211). The service layer is FerroEHR's
+  own design, judged by what goes in and comes out (BASE, RM, AM, TERM,
+  QUERY/AQL, ITS-REST, ITS-JSON, ITS-XML and the serialisation formats); the
+  vendored SM text stays as reference only. No behaviour changes.
+
+- **Breaking: the viewer logs through the family's `[telemetry]` section of
+  `ferrohealth-telemetry` 0.2.2, as the CDR does** (#4214). The console writes
+  to stdout where it wrote to stderr, and `telemetry.format` defaults to
+  `auto`, which renders `json` when stdout is not a terminal, so a container's
+  log is now JSON lines; set `FERROEHR_VIEWER__TELEMETRY__FORMAT=pretty` for
+  the old human lines. `RUST_LOG` is now the lower-priority fallback of
+  `telemetry.filter` (`FERROEHR_VIEWER__TELEMETRY__FILTER` wins over it), the
+  filter defaults to `info,hyper=warn,tower=warn,h2=warn` where it was `info`,
+  and a filter that does not parse refuses the start where it fell back to
+  `info`. Each request writes the CDR's request line (method, matched route,
+  status, latency, request id), and a panic writes the CDR's one fixed line
+  without the panic message. `[telemetry.otlp]` exports the viewer's spans and
+  its `http.server.request.duration` metric as `service.name`
+  `ferroehr-viewer`. Helm chart 19.2.0 sets the viewer's format and filter
+  from `viewer.telemetry`, and the Compose viewer services set
+  `FERROEHR_VIEWER__TELEMETRY__FORMAT`.
+
+- The viewer takes FerroUI 0.5.4: its skip link keeps the browser's own
+  fragment navigation under hydration, so the viewer no longer patches the
+  link after the page hydrates, and a code editor's key costs the edit, not
+  the length of the text (#4227).
+
+- **The quickstart Keycloak overlay names its development CA through
+  `[auth] ca_file`**: `docker-compose.keycloak.yml` sets
+  `FERROEHR__AUTH__CA_FILE` in place of `SSL_CERT_FILE` and `SSL_CERT_DIR`,
+  which only the Linux platform verifier reads (#4236).
+
+- **The development and quickstart Keycloak moves to 26.8.1, and its realms
+  form a complete OIDC example**: both compose files pin
+  `quay.io/keycloak/keycloak:26.8.1` by digest, held together by
+  `scripts/checks/compose-image-tags.sh` and watched weekly by the base-image
+  watcher. In both realms the authorization-code flow requires PKCE (`S256`)
+  and accepts only the viewer origins on port 3000 as redirect targets (the
+  quickstart realm accepted any), and a service account holding `USER` lets a
+  client-credentials token reach the clinical API (#4240).
+
+- The hosted sandbox (sandbox.ferroehr.eu) resolves patients through FerroPIX
+  0.0.10, the FerroHEALTH patient identity source, as the compose quickstart
+  does: FerroPIX runs beside the CDR on loopback with its database on the
+  database box, each `EHR_STATUS` names its patient by the pseudonym FerroPIX
+  minted in the clinical domain `urn:oid:2.999.7.1`, and `POST /query/cohort`
+  takes `subjects` in the synthetic hospital domain `urn:oid:2.999.1.1`. The
+  nightly reseed registers the demo patients with FerroPIX through the deploy
+  script's new `identities` verb before it seeds, so after a reset the CDR's
+  EHRs and FerroPIX's identities agree. FerroTERM moves from 0.1.6 to 0.3.1
+  on the same index layout, the viewer's memory limit from 1536m to 1024m, and
+  `deploy/hosted/sandbox-ferropix-rollout.sh` carries the operator steps on
+  both boxes (#4242).
+
+- **Breaking: the quickstart Keycloak realm gives the viewer and a backend
+  service their own clients**: `ferroehr-viewer`
+  (`ferroehr-viewer-quickstart-secret`) takes the authorization-code flow with
+  PKCE and the password grant, and `ferroehr-service`
+  (`ferroehr-service-quickstart-secret`) takes only the client-credentials
+  grant, with the `system/` SMART on openEHR scopes and a `client_id` claim. Both
+  put `ferroehr` in `aud`. The single `ferroehr` client and its
+  `ferroehr-quickstart-secret` are gone, so a script that fetched a token with
+  them moves to `ferroehr-viewer`. The overlay names `ferroehr-service` in
+  `[smart] backend_clients`, so its `system/aql-*` grant runs AQL. The dev realm
+  makes the same split and drops the unused Keycloak Authorization Services, and
+  `scripts/ui-e2e.sh` keeps its scratch files under `target/ui-e2e/` (#4245).
+
+- **The Helm chart's `usageReport.enabled` reaches the other products it
+  runs**: FerroTERM (`FERROTERM__USAGE_REPORT__ENABLED`) and a FerroBRIDGE
+  release from 0.0.7 on (`[usage_report]`) follow it, each overridable with
+  `terminology.usageReport.enabled` or `bridge.usageReport.enabled`. The
+  FerroPIX dependency chart reads only `ferropix.usageReport.enabled`, so the
+  chart now refuses to render `usageReport.enabled=false` while that stays
+  true: a release you switched off sent FerroPIX's report regardless. Upgrading
+  a release that sets `usageReport.enabled=false` with FerroPIX on takes
+  `--set ferropix.usageReport.enabled=false` as well. Chart 20.0.0 (#4270).
+
+### Removed
+
+- **FerroEHR holds no identity logic** (#3380): `link_as_subject`, the
+  server-side subject pseudonym (`mint_subject_pseudonym`), the party merge
+  and split, and `resolve_ehr_for_identity`, the national-identifier-to-EHR
+  crossing, are gone. Matching, cross-referencing identifier domains and
+  minting pseudonyms belong to the identity source.
+
+- Breaking: `ferroehr config default` is gone with no alias; the annotated
+  template is `app/ferroehr/assets/ferroehr.default.toml` in the repository.
+  `ferroehr healthcheck --url` and `FERROEHR_HEALTHCHECK_URL` are gone too: the
+  probe follows `server.listen` and `server.base_path`. Upgrade: copy the
+  template from the repository, and probe another URL with an HTTP client of
+  your own (#4087).
+
+- **Breaking: `[usage_report] slow_aql_ms` is removed** (#4087), with the AQL
+  series it set the threshold of. A file or variable that still sets it
+  refuses the start; remove the key. `state_dir`, the shared section's
+  directory for the instance id, is refused: FerroEHR keeps the instance id
+  and the counts in the clinical database. The endpoint is now refused when
+  the configuration is read, with the same rule (`https`, or `http` to a
+  loopback host, never with credentials).
+
+- **Breaking: Template Data Document (TDD) import is removed** (#4199). `POST /message/tdd/{ehr_id}` and `POST /message/tdd/{ehr_id}/batch` are gone and answer `404`, with the service behind them, the `message-tdd` extension and the `Tds` capability in the conformance statement. TDD and the Template Data Schema (TDS) come from the template tooling of the ADL 1.4 era and are no current openEHR format; send the composition as canonical JSON or XML, or as FLAT or STRUCTURED against its Web Template. The `/message` group keeps the four EHR Extract routes, and `server.body_limit_bytes` now covers template upload and `/message/import` alone.
+
+- **Breaking: `openehr-sdt` drops the `flat::tdd` module** (#4199): `from_tdd`, `from_tdd_with` and `TDD_TEMPLATE_NS` are removed, with the `FlatError::TddXml`, `FlatError::TddAttribute` and `FlatError::TddElement` variants and the crate's `quick-xml` dependency. The openEHR crates move to 0.0.109 together.
+
+- **Breaking: `openehr-sdt` 0.0.111 no longer carries `smart_scopes`.** The
+  SMART on openEHR scope grammar moved, with its API and tests, to
+  `ferrohealth-smart` 0.8.5 as `ferrohealth_smart::openehr::smart_scopes`, so
+  a consumer of `openehr_sdt::smart_scopes` names that path. FerroEHR pins
+  `ferrohealth-smart` 0.8.5, its scope gate and the viewer's scope previewer
+  (both halves) parse with it, and the build resolves one `openehr-sdt`.
+  Token checking and the scopes a token grants behave as before (#4206).
+
+### Fixed
+
+- A Cedar policy's `principal.patient` is the caller's patient claim
+  (`[authz.abac] patient_claim`) (#4038). It was the patient of the object in
+  play, so a rule such as `principal.patient == resource.patient` in the shipped
+  `consent.cedar` held for every object a query touched.
+
+- **The agent guard refuses wrapped and re-ordered spellings of a force push
+  or a recursive delete** (#4046). `.claude/hooks/block_dangerous.sh` let
+  through `git -C . push --force … main`, `/usr/bin/git push`, `\rm -rf`,
+  `rm --recursive --force`, `bash -c "rm -rf …"`, `find … -delete` and similar.
+  It now normalises the command first (a path or backslash before the binary,
+  a launcher such as `env` or `sudo`, a `sh -c` or `eval` wrapper, git's global
+  options before the verb), judges every `rm` target and every deleting `find`
+  starting point against `/tmp`, and refuses a push that deletes `main` or
+  `master`. `block_dangerous_test.sh` runs each spelling.
+
+- **An archetype HRID's version status reads as the `VERSION_STATUS` it
+  names** (#4051), on the 0.0.102 crate line. AOM2
+  `ARCHETYPE_HRID.version_status` maps `-rc`, `-alpha`, `-beta` and no
+  modifier to `release_candidate`, `alpha`, `beta` and `released`, where `rc`
+  and the empty modifier read as `VersionStatus::Other`. `openehr-adl` writes the
+  HRID back with the modifier (`-rc`, never `-release_candidate`), so parse
+  and write are inverse.
+
+- **A party reference whose type is not the builder's default survives a FLAT
+  or STRUCTURED round trip** (#4052). master05 gives `PARTY_REF.type` no
+  row, so a `_health_care_facility` that is not an `ORGANISATION`, or a
+  `_provider`, performer, composer, feeder-audit party or `PARTY_PROXY` datum
+  that is not a `PERSON`, is now written as `|raw` (master04 §Raw canonical
+  JSON) and read back whole; it came back with the default type.
+
+- **An ADL 2 Web Template reads the ADL 1.4 term constraints of an archetype
+  read in the ADL 1.4 dialect** (#4056). `openehr-adl` keeps such a
+  constraint verbatim (`openehr::433`, `local::at0003,at0004;at0003`) for its
+  1.4 to 2 converter, and an at-coded ADL 2 template over unconverted
+  archetypes carried it into the ADL 2 builder, which took the whole string
+  for one local code. The builder now reads it as the OPT 1.4 builder reads a
+  `C_CODE_PHRASE`: an `openehr` code carries its terminology and rubric,
+  local codes their archetype rubrics, and the assumed code becomes the
+  default. The nine `openehr-*` crates move to 0.0.100.
+
+- **An ordinal of an archetype read in the ADL 1.4 dialect lists its
+  at-codes** (#4059). The `symbol` of each `[value, symbol]` row kept the
+  verbatim `local::at0006` spelling, which the ADL 2 builder took for the
+  code and its label; it now reads the at-code with its archetype rubric, as
+  #4056 does for coded text. The nine `openehr-*` crates move to 0.0.101.
+
+- **A BASE 1.3 `TERMINOLOGY_CODE` keeps its `terminology_id` in XML**
+  (#4076). ITS-XML 1.0.2 types `TRANSLATION_DETAILS.language` and the other
+  slots that hold one as `CODE_PHRASE`, whose `terminology_id` carries a
+  `<value>` child; the codec wrote and read bare text instead, so an
+  XSD-valid document read with an empty `terminology_id`. It now writes and
+  reads the `TERMINOLOGY_ID` shape.
+
+- **A configuration load or check that fails keeps its cause** (#4104).
+  Fifteen sites in the server's commands turned the failure into a string,
+  so the error chain ended at the message; they now carry the source error.
+
+- **Cohort queries work under the IHE patient identity source.** That
+  provider keeps no party-to-EHR map, so a cohort selected by a demographic
+  predicate found no EHR. `POST /query/cohort` now takes `subjects`,
+  identifiers in any domain, each resolved through the `[ehr_index]`
+  provider: under the IHE provider by a PIXm (ITI-83) translation forward into
+  the server's clinical domain, never back. The new `[cohort] subjects = true`
+  turns the surface on without a predicate. Under the IHE provider a
+  predicate is refused `400`, and a failing identity source fails the query
+  instead of shrinking the cohort. The cohort digest takes each subject by
+  namespace only (#4114).
+
+- **The chart guard holds the FerroPIX Artifact Hub image to its pinned
+  digest** (#4115). `scripts/checks/chart-appversion.sh` checked the
+  FerroTERM and FerroBRIDGE `artifacthub.io/images` entries against their
+  pins, but not the FerroPIX entry the `ferropix` dependency added, so its
+  digest could drift from `ferropix.image.digest` in `values.yaml` and
+  Artifact Hub would scan an image the chart does not run. The guard now
+  compares the two, and `--self-test` moves the digest on either side.
+
+- **`ui-screenshot-guard` judges only the pull request's own commits**
+  (#4117). It diffed the base and head commits directly, so a branch behind
+  main failed on main's viewer changes and passed on main's screenshot
+  refresh. `scripts/checks/ui-screenshot.sh` now reads the paths from the
+  merge base (`base...head`), and its `--self-test` runs both cases on a
+  branch behind main before every verdict.
+
+- **The usage report groups a request by the route below the openEHR API
+  mount** (`server.base_path` followed by `rest.base_path`). A REST root that
+  contains an API family word, such as `/ferroehr/ehr/v1`, no longer places a
+  query or definition route under `ehr`, and a route outside the mount counts
+  in no group, as before #4128 (#4132).
+
+- **The local EHR index holds an EHR created for a subject.** Under
+  `[ehr_index] provider = "local"`, `create_ehr_for_subject` now enters the
+  subject in the local map with the EHR's creation, as a `Primary`
+  association with no location, so `subject_ehrs` and a subject cohort find
+  the EHR. Before, only `EHR_STATUS` named the subject and the map stayed
+  empty until `add_ehr_subject` ran (#4138).
+
+- `[smart] issuer_metadata_file` is read by the same parse as metadata
+  fetched from an issuer (#4165), so a file that repeats a member name is a
+  boot error. It used to be read as it stood, keeping whichever value the
+  parser took.
+
+- The viewer draws the CDR's refusal where it used to draw nothing: on an
+  EHR's Status tab when the version's envelope read is refused, in place of
+  the contribution, signed and lifecycle facts, and in Edit the directory's
+  reference picker when the composition list is refused, in place of an empty
+  select (#4170).
+
+- The access record of every route that addresses one EHR names that EHR, read from the matched route's `{ehr_id}` parameter: `GET /message/export/{ehr_id}` and `POST /message/import/{ehr_id}` recorded none, so a patient's ITI-81 search missed them, and `DELETE /admin/ehr/all` no longer names an EHR `all`. The Extract record of an export or import names the requesting user where it named `UNKNOWN`, and a read of `GET /admin/restriction` is recorded against its EHR (GDPR Art. 15(1)(c), EHDS Art. 9(2)) (#4192).
+
+- The compose-built viewer image builds its WebAssembly bindings again: its wasm-bindgen CLI now follows the wasm-bindgen version `Cargo.lock` resolves instead of a separate pin that had fallen behind it. A CI guard holds every other wasm-bindgen and cargo-leptos pin to the lock and to one another, and CI builds the viewer image from source whenever its Dockerfile changes (#4222).
+
+- The viewer takes FerroUI 0.5.3: the top bar's search no longer panics when
+  a navigation leaves the page while its answer panel is being placed, and a
+  search that finds the session over now sends every other open viewer tab
+  to sign-in too (#4224).
+
+- **A composition commits when an element's value matches any one of the
+  alternatives its template allows** (#4226), on the 0.0.110 crate line. ADL
+  1.4 §"Single-valued Attributes" makes the object constraints under a
+  single-valued attribute alternatives, only one of which the data needs to
+  match. The free text of an open coded value-set (FLAT or STRUCTURED
+  `|other`, a canonical `DV_TEXT`) was refused as `expected RM type
+  conforming to DV_CODED_TEXT but found DV_TEXT` where the template allows
+  `DV_TEXT` beside `DV_CODED_TEXT`, and a value that matched only a later
+  alternative of the same type, such as a second `DV_QUANTITY` with other
+  units, was checked against the first alone. When no alternative matches,
+  the refusal names every alternative with what each one found, and FLAT
+  writes a value under one of several same-type alternatives, not under each.
+
+- `POST /query/cohort` and an AQL query rooted at a demographic class now leave out every EHR the population gate leaves out: an EHR whose current `EHR_STATUS.is_queryable` is `false` and an EHR under a research objection no longer answer rows in a cohort or a demographic join, as they already did not in an ad-hoc population query (RM `EHR_STATUS.is_queryable`: "True if this EHR should be included in population queries"). The research objection leak was a privacy defect. A query scoped to one EHR by `ehr_id` and an EXTRACT's criteria still answer the EHR they name (#4247).
+
+- **The hosted sandbox's database box runs a pinned image** (#4252).
+  `deploy/hosted/cloud-init-postgres.yaml` defaults `FERROEHR_POSTGRES_IMAGE`
+  to `ghcr.io/ferrohealth/ferroehr-postgres:5.4.2` by its index digest, where
+  the box ran the moving `latest` tag of the image's pre-FerroHEALTH
+  namespace, and `compose-image-tags.sh` holds the default and the hosted
+  README to one release reference. Step 6 of `sandbox-ferropix-rollout.sh`
+  moves the box onto the pin: it refuses a change of PostgreSQL major,
+  recreates the container on its data volume and checks the CDR's readiness
+  and a `ferropix` login afterwards. Step 1 of the script no longer prints an
+  empty line for each container that is absent.
+
+### Security
+
+Shipped with functional changes because: the patched `ferrohealth-smart` arrives in the same dependency move as the family mask and the lockstep releases built on it. The zstd move is a lock-only update that a security-only 5.4.3 could have carried; the maintainer chose to ship it in 5.5.0, released the day after the fix landed, instead of cutting a separate patch.
+
+- `ferrohealth-smart` 0.7.1 masks the userinfo of every URL in its grant
+  tables, a URL no parser accepts included. With 0.7.0 a configured
+  `token_endpoint` or `issuer` that did not parse could reach the
+  configuration renderings and the log in full (CWE-532,
+  GHSA-vphj-3f8c-5hpx) (#4050).
+
+- The zstd bindings move to zstd 0.14.3, zstd-safe 8.2.0 and zstd-sys 2.1.2,
+  past RUSTSEC-2026-0391, RUSTSEC-2026-0398, RUSTSEC-2026-0403 and
+  RUSTSEC-2026-0410. Response compression and the outbound clients' response
+  decompression reach these crates, and the affected functions were not shown
+  unreachable (GHSA-cwhv-87pq-3c3c) (#4095).
+
 ## [5.4.2] - 2026-10-25
 
 5.4.2 is a patch release with no breaking change: a deployment upgrades in place. Helm chart 14.0.1 carries `appVersion` 5.4.2 and changes nothing else.
@@ -12269,7 +13276,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.4.2...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...HEAD
+[5.5.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.4.2...v5.5.0
 [5.4.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.4.1...v5.4.2
 [5.4.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.4.0...v5.4.1
 [5.4.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.3.3...v5.4.0
