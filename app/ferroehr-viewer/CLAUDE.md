@@ -49,6 +49,10 @@ consumes is spec-bound (`docs/specs/openehr/ITS-REST/` and the served
 - **A form never holds another form**: the HTML parser drops a nested one.
   The results pane (E7) rides the page's own form: Table and Chart are its
   submits, and each export is a submit with `formaction`.
+- **The request state is shared** (`crate::request::Visit`, read once by the
+  server and provided through `SharedValue`): a view reads the path, query,
+  display cookies, who is signed in and the settings through `crate::request`
+  on both halves, and never the credential or the session cookie.
 - **Session listings keep their position in a cookie** (`crate::paging`,
   FerroUI `leptos-ui.md` §0): the EHRs, an EHR's compositions and
   contributions, the audit log. Filters stay in the URL.

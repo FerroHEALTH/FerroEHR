@@ -70,7 +70,7 @@ pub fn NotFoundPage() -> impl IntoView {
 #[must_use]
 pub fn forbidden(title: String, needs: String) -> AnyView {
     crate::request::set_status(http::StatusCode::FORBIDDEN);
-    let who = crate::request::session().map_or_else(String::new, |session| session.identity);
+    let who = crate::request::signed().map_or_else(String::new, |session| session.identity);
     error_page(ErrorPage {
         status: Status::Forbidden,
         title,

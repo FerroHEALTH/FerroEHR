@@ -96,11 +96,16 @@ fn viewer_title(mut section: String) -> String {
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
+    // NOTE: the Leptos book, `ssr/22_life_cycle`: what the server read of the request reaches a
+    // hydrating page serialized, so both halves draw the same page.
+    crate::request::provide_visit();
+    crate::posted::provide_posted();
     ferrohealth_ui::i18n::provide_locale(crate::locale::current());
-    let flash = crate::flash::take();
+    let flash = crate::flash::shared();
     view! {
         <Title formatter=viewer_title text=product() />
         <Router>
+            <crate::posted::FollowNavigation />
             <Routes fallback=crate::pages::errors::not_found_page>
                 <Route
                     path=path!("/login")
