@@ -115,7 +115,9 @@ openehr-am = { path = "../../crates/openehr-am" }
 axum.workspace = true
 tokio.workspace = true
 tracing.workspace = true
-tracing-subscriber.workspace = true
+# The family's `[telemetry]`: the console, the panic line, the request log the
+# stack writes and the OpenTelemetry export, as the CDR's.
+ferrohealth-telemetry.workspace = true
 anyhow.workspace = true
 reqwest.workspace = true
 ferrohealth-config.workspace = true

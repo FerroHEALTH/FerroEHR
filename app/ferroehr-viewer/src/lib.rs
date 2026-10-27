@@ -107,6 +107,8 @@ pub mod session;
 pub mod shell;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod state;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod telemetry;
 
 /// Room in the browser half's read-only data that nothing reads.
 ///

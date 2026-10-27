@@ -612,6 +612,10 @@ services:
       # session cookie flag opts out here; a TLS-fronted deployment (the hosted
       # sandbox, the chart behind an ingress) keeps the default `true`.
       FERROEHR_VIEWER__SESSION__COOKIE_SECURE: "false"
+      # The CDR's console in `docker compose logs`: the same section and the
+      # same request line; `json` (or unset, `auto`) for a log collector.
+      FERROEHR_VIEWER__TELEMETRY__FORMAT: ${FERROEHR_VIEWER__TELEMETRY__FORMAT:-pretty}
+      FERROEHR_VIEWER__TELEMETRY__FILTER: ${FERROEHR_VIEWER__TELEMETRY__FILTER:-info}
     ports:
       - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_VIEWER_PORT:-3000}:3000"
     cap_drop: [ALL]

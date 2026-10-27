@@ -1275,6 +1275,26 @@
         "affinity": {
           "type": "object"
         },
+        "telemetry": {
+          "description": "The viewer's console: the family's `[telemetry]` section, rendered as `FERROEHR_VIEWER__TELEMETRY__*` variables.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "description": "The console rendering.",
+              "type": "string",
+              "enum": [
+                "auto",
+                "json",
+                "pretty"
+              ]
+            },
+            "filter": {
+              "description": "The console filter directive; empty keeps the viewer's default.",
+              "type": "string"
+            }
+          }
+        },
         "extraEnv": {
           "type": "array"
         },
@@ -1420,7 +1440,7 @@
               "type": "boolean"
             },
             "extraIngressFrom": {
-              "description": "Further peers admitted beside the CDR's pods. There is deliberately no admit-everything BOOLEAN here, and each peer is admitted exactly as written — so the peer itself is constrained: an empty peer, or an empty podSelector/namespaceSelector inside one, selects every pod in the namespace or in every namespace and is refused.",
+              "description": "Further peers admitted beside the CDR's pods. There is deliberately no admit-everything BOOLEAN here, and each peer is admitted exactly as written \u2014 so the peer itself is constrained: an empty peer, or an empty podSelector/namespaceSelector inside one, selects every pod in the namespace or in every namespace and is refused.",
               "type": "array",
               "items": {
                 "$ref": "#/definitions/narrowingNetworkPolicyPeer"

@@ -18,6 +18,7 @@ use ferrohealth_server::console::{self, ConsoleHeaders, CspNonce};
 use ferrohealth_server::health::Health;
 use ferrohealth_server::same_origin::{self, SameOrigin};
 use ferrohealth_server::stack::{self, StackPolicy};
+use ferrohealth_telemetry::request_log::RequestLog;
 use leptos::prelude::LeptosOptions;
 use leptos_axum::LeptosRoutes;
 
@@ -25,15 +26,26 @@ use crate::session::{SESSION_KEY, ViewerSession};
 use crate::state::AppState;
 
 /// The viewer as it serves: [`router`] and the health routes inside the
-/// family stack (`ferrohealth_server::stack::app`), which applies the
-/// request timeout, the body limit and the overload bound of `[server]`.
-pub fn app(app_state: AppState, leptos_options: LeptosOptions, health: Health) -> axum::Router {
+/// family stack (`ferrohealth_server::stack::app`).
+///
+/// The stack applies the request timeout, the body limit and the overload
+/// bound of `[server]`, and writes `request_log`
+/// ([`crate::telemetry::request_log`]).
+pub fn app(
+    app_state: AppState,
+    leptos_options: LeptosOptions,
+    health: Health,
+    request_log: RequestLog,
+) -> axum::Router {
     let section = app_state.config.server.clone();
     stack::app(
         router(app_state, leptos_options),
         health,
         &section,
-        StackPolicy::default(),
+        StackPolicy {
+            request_log,
+            ..StackPolicy::default()
+        },
     )
 }
 
