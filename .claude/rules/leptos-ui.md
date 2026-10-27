@@ -201,16 +201,18 @@ brotli-compressed, is over the number below, which it reads from this table.
 |---|---|
 | WebAssembly, brotli-compressed | 450000 bytes |
 
-The release build on 2026-10-27, on FerroUI 0.5.1 with the whole page
-hydrated, the pages in six lazy groups and `--split`, measured 448763 brotli
+The release build on 2026-10-27, on FerroUI 0.5.2 with the whole page
+hydrated, the pages in six lazy groups and `--split`, measured 449938 brotli
 bytes for the entry WebAssembly every page loads (399352 for the shell alone
 with stub pages, 425829 on FerroUI 0.3.6 in islands mode); a group's chunks
 load with its pages and are not counted. The entry carries the shell, the
-router, both catalogs and the read-only data of every page, which the split
-leaves in the entry; what keeps it in budget is one route for the router
-(`routes::Pages`, one erased `Suspend` for every group), the page models read
-as server functions only from the groups, and the shell reading its status on
-the server alone. Raise the budget only in the change that needs the room,
+router and both catalogs whole. What keeps it in budget: one route for the
+router (`routes::Pages`, one erased `Suspend` for every group), the page
+models read as server functions from the groups alone, the shell reading its
+status on the server alone, and `SPLIT_ROOM` (`src/lib.rs`), without which
+the splitter leaves every page's read-only data in the entry (493008). The
+next room comes from the viewer's catalog, which the entry carries whole for
+the shell's few words. Raise the budget only in the change that needs the room,
 with the new measurement.
 
 ## 8. Strings and locales

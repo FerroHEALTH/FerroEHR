@@ -129,7 +129,7 @@ pub fn AccessPage() -> impl IntoView {
     let idle = crate::request::settings().idle_minutes;
     let (who, how, method, scopes) = match &session {
         Some(session) => {
-            let (how, method) = match session.method {
+            let (how, method) = match session.method() {
                 crate::request::Method::Basic => (tr(Msg::AccessHowBasic), "basic"),
                 crate::request::Method::Oidc => (tr(Msg::AccessHowOidc), "oidc"),
             };

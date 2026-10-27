@@ -363,8 +363,6 @@ pub struct ShellReading {
     pub detail: Option<String>,
     /// The sandbox band's line, when the CDR declares the sandbox profile.
     pub sandbox: Option<String>,
-    /// Whether the CDR is out of reach, so the search waits.
-    pub down: bool,
     /// Whether the CDR serves the subscriptions API.
     pub subscriptions: bool,
 }
@@ -438,7 +436,6 @@ impl ShellReading {
             words,
             detail,
             sandbox,
-            down: matches!(status, Err(crate::error::ViewerError::CdrUnreachable(_))),
             subscriptions,
         }
     }
@@ -508,7 +505,7 @@ fn sandbox_band(line: Option<&String>, current: &str) -> Option<AnyView> {
 fn menu(session: Option<&crate::request::Signed>) -> AnyView {
     let (who, line) = match session {
         Some(session) => {
-            let how = match session.method {
+            let how = match session.method() {
                 crate::request::Method::Basic => tr(Msg::SignedInBasic),
                 crate::request::Method::Oidc => tr(Msg::SignedInOidc),
             };
@@ -617,7 +614,7 @@ pub fn AppShell() -> impl IntoView {
             }
             .into_any()
         };
-        let disabled = status.down.then(|| tr(Msg::SearchWaits));
+        let disabled = (status.reach == PillReach::Unreachable).then(|| tr(Msg::SearchWaits));
         let band = {
             let line = status.sandbox.clone();
             (move || {

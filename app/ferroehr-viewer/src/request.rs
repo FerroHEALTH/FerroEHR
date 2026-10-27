@@ -35,7 +35,7 @@ use crate::error::ViewerError;
 const KEPT_PREFIX: &str = "ferroehr-viewer-";
 
 /// How the signed-in reader's session reaches the CDR.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
     /// Basic authentication, checked against the CDR at sign-in.
     Basic,
@@ -48,14 +48,27 @@ pub enum Method {
 pub struct Signed {
     /// The display identity.
     pub identity: String,
-    /// How the session reaches the CDR.
-    pub method: Method,
+    /// Whether the session reaches the CDR with a bearer token from the
+    /// viewer's OpenID Connect sign-in ([`Signed::method`]).
+    pub oidc: bool,
     /// The scopes granted to the session's token, empty for Basic.
     pub scopes: Vec<String>,
 }
 
+impl Signed {
+    /// How the session reaches the CDR.
+    #[must_use]
+    pub const fn method(&self) -> Method {
+        if self.oidc {
+            Method::Oidc
+        } else {
+            Method::Basic
+        }
+    }
+}
+
 /// The viewer's own settings a page shows.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Settings {
     /// The CDR's base address.
     pub cdr_address: String,
@@ -74,8 +87,13 @@ pub struct Visit {
     pub kept: String,
     /// Who is signed in, when the request carries a session.
     pub signed: Option<Signed>,
-    /// The viewer's own settings.
-    pub settings: Settings,
+    /// The CDR's base address ([`Settings::cdr_address`]).
+    pub cdr_address: String,
+    /// The minutes a session stays open while the reader does nothing
+    /// ([`Settings::idle_minutes`]).
+    pub idle_minutes: u64,
+    /// The OpenID Provider's issuer ([`Settings::oidc_issuer`]).
+    pub oidc_issuer: String,
     /// The instant the server read its clock for the page, in milliseconds
     /// since the Unix epoch: every relative time and every today the page
     /// draws counts from it, on both halves ([`now`]).
@@ -88,7 +106,9 @@ impl Default for Visit {
             path_and_query: "/".to_owned(),
             kept: String::new(),
             signed: None,
-            settings: Settings::default(),
+            cdr_address: String::new(),
+            idle_minutes: 0,
+            oidc_issuer: String::new(),
             now: 0,
         }
     }
@@ -99,25 +119,27 @@ impl Visit {
     #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn requested() -> Self {
-        let state = state();
+        let settings = state()
+            .map(|state| Settings {
+                cdr_address: state.config.cdr.base_url.clone(),
+                idle_minutes: state.config.session.idle_minutes,
+                oidc_issuer: state.config.auth.oidc.issuer.clone(),
+            })
+            .unwrap_or_default();
         Self {
             path_and_query: requested_path_and_query(),
             kept: kept_of(&cookies()),
             signed: session().map(|session| Signed {
                 identity: session.identity,
-                method: match session.credential {
-                    crate::session::Credential::Basic { .. } => Method::Basic,
-                    crate::session::Credential::Bearer { .. } => Method::Oidc,
-                },
+                oidc: matches!(
+                    session.credential,
+                    crate::session::Credential::Bearer { .. }
+                ),
                 scopes: session.scopes,
             }),
-            settings: state
-                .map(|state| Settings {
-                    cdr_address: state.config.cdr.base_url.clone(),
-                    idle_minutes: state.config.session.idle_minutes,
-                    oidc_issuer: state.config.auth.oidc.issuer.clone(),
-                })
-                .unwrap_or_default(),
+            cdr_address: settings.cdr_address,
+            idle_minutes: settings.idle_minutes,
+            oidc_issuer: settings.oidc_issuer,
             now: jiff::Timestamp::now().as_millisecond(),
         }
     }
@@ -532,7 +554,12 @@ pub fn signed() -> Option<Signed> {
 /// The viewer's own settings a page shows.
 #[must_use]
 pub fn settings() -> Settings {
-    Visit::current().settings
+    let visit = Visit::current();
+    Settings {
+        cdr_address: visit.cdr_address,
+        idle_minutes: visit.idle_minutes,
+        oidc_issuer: visit.oidc_issuer,
+    }
 }
 
 /// The instant the page is drawn at, read once by the server for the whole

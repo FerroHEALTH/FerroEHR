@@ -159,12 +159,13 @@ done
 }
 # The page is server-rendered and its no-JS form works by design, so typing
 # before the WASM hydrates posts a document and reads as the #2164 defect
-# although the bundle may attach a moment later. Wait (bounded) for the marker
-# the hydrated app sets on <body> (`app::mark_hydration`); a bundle that never
-# hydrates still fails, with its own message.
+# although the bundle may attach a moment later. Wait (bounded) for the mark
+# FerroUI's hydrate writes on the root element once the page has hydrated
+# (`data-ferroui-hydrated`); a bundle that never hydrates still fails, with
+# its own message.
 HYDRATED=""
 for _ in $(seq 1 30); do
-  HYDRATED=$(find_element 'body[data-hydrated]')
+  HYDRATED=$(find_element 'html[data-ferroui-hydrated]')
   [[ -n "$HYDRATED" ]] && break
   sleep 1
 done
