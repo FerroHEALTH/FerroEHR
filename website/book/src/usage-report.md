@@ -138,8 +138,10 @@ daily report:
   `100k+`. Each range includes its lower bound and excludes its upper one, so
   `1-100` means 1 to 99.
 - **`groups`:** one entry per group of endpoints that served at least one
-  request. A request is placed in a group by the route template it matched,
-  never by the path the client sent. The groups are `ehr` (EHR and
+  request. A request is placed in a group by the part of the route template
+  it matched below `server.base_path`, never by the path the client sent, so
+  a base path such as `/ferroehr/ehr/v1` does not move a query into `ehr`.
+  Routes outside the base path count in no group. The groups are `ehr` (EHR and
   `EHR_STATUS`), `composition` (compositions and their version history),
   `contribution`, `query` (query execution), `definition` (templates and
   stored queries), `directory`, `admin`, and `other` for the demographic,

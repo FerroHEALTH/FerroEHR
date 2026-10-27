@@ -259,7 +259,7 @@ ferrohealth-telemetry = { version = "=0.2.1", features = ["axum", "otlp", "prome
 # latency window the request log fills (`telemetry`, its `Recorder`), and the
 # start and daily reporter over FerroEHR's PostgreSQL state store. Verified on
 # crates.io 2026-10-26 (0.1.2).
-ferrohealth-usage-report = { version = "=0.1.2", features = ["telemetry"] }
+ferrohealth-usage-report = { version = "=0.2.0", features = ["telemetry"] }
 
 # ── Terminology (the client of the one FHIR terminology server) ───────────────
 # FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,
