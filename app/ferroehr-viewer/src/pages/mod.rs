@@ -3,10 +3,11 @@
 
 //! The pages of the viewer, each a route of `crate::app`.
 //!
-//! A page whose model loads apart from its view compiles for both halves;
-//! the others are drawn on the server alone (islands mode). No openEHR spec
-//! governs the viewer: our own design.
+//! A page that draws from a serializable model compiles on both halves; the
+//! others still draw on the server alone. No openEHR spec governs the viewer:
+//! our own design.
 
+// TODO(#4116): every page draws from a model and compiles for wasm32.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod about;
 #[cfg(not(target_arch = "wasm32"))]
@@ -17,13 +18,11 @@ pub mod common;
 pub mod composition;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod configuration;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod dashboard;
 pub mod ehr;
 pub mod ehrs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod errors;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod find;
 pub mod item_tags;
 #[cfg(not(target_arch = "wasm32"))]

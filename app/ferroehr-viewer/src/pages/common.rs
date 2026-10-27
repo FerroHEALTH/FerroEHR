@@ -559,17 +559,14 @@ pub struct LastDays {
     pub ticks: Vec<(u32, String)>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The days between two labelled days counted back from the last, as the
 /// FerroEHR mockups label a 30-day chart on 22 Sep, 1 Oct, 11 Oct and 21 Oct.
 const TICK_EVERY: u32 = 10;
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The fewest days a tick counted back from the last keeps from the first
 /// day, half of [`TICK_EVERY`], so the two labels never meet.
 const TICK_CLEARANCE: u32 = 5;
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The places an axis over `days` days names: 0, and the last place with
 /// every tenth before it that keeps clear of 0.
 fn tick_places(days: u32) -> Vec<u32> {
@@ -614,7 +611,6 @@ pub fn axis_day(date: jiff::civil::Date) -> String {
     )
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The last `days` days up to today, each with the count `points` holds for
 /// it and 0 for a day it holds none.
 #[must_use]
@@ -622,7 +618,6 @@ pub fn last_days(points: &[crate::activity::ActivityPoint], days: u16) -> LastDa
     last_days_to(points, days, jiff::Zoned::now().date())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// [`last_days`] up to `today`.
 fn last_days_to(
     points: &[crate::activity::ActivityPoint],

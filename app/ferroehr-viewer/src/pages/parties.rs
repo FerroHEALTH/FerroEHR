@@ -1701,10 +1701,6 @@ async fn load_edit_party() -> Editing<PartyEditor> {
 }
 
 /// Edit a party's page, its decision bar docked.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one editor: its heading, its refusal, its docked decisions and its document"
-)]
 fn edit_party_view(uid: &str, editor: PartyEditor) -> AnyView {
     let PartyEditor {
         kind,

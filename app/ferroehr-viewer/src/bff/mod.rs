@@ -15,7 +15,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub mod audit;
 pub mod composition;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod dashboard;
 pub mod demographics;
 pub mod ehr_detail;
@@ -35,9 +34,9 @@ pub mod wire;
 /// The rows one page of a listing holds: FerroUI's default page size.
 pub const PAGE_SIZE: u32 = ferrohealth_ui::table::model::DEFAULT_SIZE;
 
-#[cfg(not(target_arch = "wasm32"))]
 /// A body pretty-printed for reading in `format`: JSON indented, canonical
 /// XML as the CDR sent it, and a body that is no JSON passed through whole.
+#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 #[expect(
     clippy::disallowed_types,
