@@ -2441,7 +2441,8 @@ jobs:
   # PACKAGED content of the published crates/* members must bump the lockstep
   # 0.0.x crate version in the same PR — published versions are immutable
   # (.claude/rules/crates-publishing.md; local twin:
-  # .claude/hooks/crate_version_bump_guard.sh). Escape hatch: the
+  # .claude/hooks/crate_version_bump_guard.sh). The check is
+  # scripts/checks/crate-version-guard.sh, which runs locally too. Escape hatch: the
   # `no-crate-bump` label for diffs that provably do not alter packaged bytes.
   #
   # PULL-REQUEST ONLY, deliberately (#2777): it compares the pull request's
@@ -2475,78 +2476,10 @@ jobs:
             echo "no-crate-bump label set — guard skipped."; exit 0
           fi
           bash scripts/checks/crate-packaged-paths.sh --self-test
-          # The pull request's own change, from its merge base with main
-          # (#4129): a branch behind main is not judged on main's paths or
-          # credited with main's bump.
-          . scripts/lib/changed-paths.sh
-          FORK=$(change_fork "$BASE" "$HEAD")
-          changed=$(change_paths "$BASE" "$HEAD")
-          packaged=0
-          # The packaged-path scope is the script the local hook also calls,
-          # so the two guards cannot drift (#3573: the bare LICENSE of the
-          # BUSL crates passed both inline copies).
-          verdict=0
-          echo "$changed" | bash scripts/checks/crate-packaged-paths.sh || verdict=$?
-          case "$verdict" in
-            0) packaged=1 ;;
-            1) ;;
-            *) echo "::error::scripts/checks/crate-packaged-paths.sh failed (exit $verdict)." >&2; exit 1 ;;
-          esac
-          # A ROOT [workspace.dependencies] version change alters the PACKAGED
-          # manifest of every crates/* member consuming the entry with
-          # `workspace = true` (cargo package renders the concrete
-          # requirement) without touching any crates/* file — the path scope
-          # alone let PR #3021 through (#3036).
-          if [ "$packaged" -eq 0 ] && echo "$changed" | grep -qx 'Cargo.toml'; then
-            table=$(git show "$HEAD:Cargo.toml" | awk '/^\[workspace\.dependencies\]/{f=1;next} /^\[/{f=0} f && /^[A-Za-z0-9_-]+[. =]/{print $1}' | sed 's/\.workspace$//' | sort -u)
-            # `|| true`: a Cargo.toml diff touching no entry (a comment) matches
-            # nothing, and grep's exit 1 would end the job silently under pipefail.
-            names=$(git diff "$FORK" "$HEAD" -- Cargo.toml | { grep -E '^[+-][A-Za-z0-9_-]+(\.workspace)?[[:space:]]*=' || true; } | sed -E 's/^[+-]//; s/[[:space:]]*=.*//; s/\.workspace$//' | sort -u)
-            for name in $names; do
-              echo "$table" | grep -qx "$name" || continue
-              if git grep -lE "^${name}(\.workspace)?[[:space:]]*=" "$HEAD" -- 'crates/openehr-*/Cargo.toml' >/dev/null 2>&1; then
-                echo "workspace dependency '$name' changed and crates/* members consume it — packaged requirements move."
-                packaged=1
-                break
-              fi
-            done
-          fi
-          if [ "$packaged" -eq 0 ]; then
-            echo "No packaged crate content touched — guard not required."; exit 0
-          fi
-          old=$(git show "$FORK:crates/openehr-base/Cargo.toml" | grep -m1 '^version = ')
-          new=$(git show "$HEAD:crates/openehr-base/Cargo.toml" | grep -m1 '^version = ')
-          if [ "$old" = "$new" ]; then
-            echo "::error::This PR changes packaged content of the published crates/* members but does not bump the lockstep 0.0.x crate version (bump all nine 'version' fields + the internal version requirements — .claude/rules/crates-publishing.md), and does not carry the 'no-crate-bump' label." >&2
-            exit 1
-          fi
-          # Lockstep: all nine crates carry ONE version, and every internal
-          # dependency requirement names exactly that version.
-          #
-          # fuzz/ is its OWN workspace (never a root member), so its lock records
-          # the nine by path dependency and goes stale silently when the bump
-          # lands — the fuzz lane then builds against manifests the lock
-          # contradicts, and `--locked` there means nothing (issue #2762).
-          ver=$(echo "$new" | sed -E 's/version = "([^"]+)".*/\1/')
-          fuzz_lock=$(git show "$HEAD:fuzz/Cargo.lock")
-          for c in base rm am adl term lang query its sdt; do
-            v=$(git show "$HEAD:crates/openehr-$c/Cargo.toml" | grep -m1 '^version = ' | sed -E 's/version = "([^"]+)".*/\1/')
-            if [ "$v" != "$ver" ]; then
-              echo "::error::crates/openehr-$c is at $v but the lockstep version is $ver — bump all nine together." >&2
-              exit 1
-            fi
-            locked=$(awk -v n="\"openehr-$c\"" '$1 == "name" && $3 == n { hit = 1; next } hit && $1 == "version" { gsub(/"/, "", $3); print $3; exit }' <<< "$fuzz_lock")
-            if [ "$locked" != "$ver" ]; then
-              echo "::error::fuzz/Cargo.lock records openehr-$c ${locked:-nothing} but the lockstep version is $ver — refresh it with 'cargo update --manifest-path fuzz/Cargo.toml --workspace' and commit the lock in this PR." >&2
-              exit 1
-            fi
-          done
-          reqs=$(git grep -hoE 'path = "\.\./openehr-[a-z]+", version = "[0-9.]+"' "$HEAD" -- 'crates/*/Cargo.toml' | grep -oE 'version = "[0-9.]+"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sort -u)
-          if [ "$reqs" != "$ver" ]; then
-            echo "::error::internal openehr-* version requirements ($reqs) do not all match the lockstep version $ver — update every 'version =' on the path dependencies too." >&2
-            exit 1
-          fi
-          echo "Lockstep crate version bumped to $ver — OK."
+          bash scripts/checks/crate-version-guard.sh --self-test
+          # The guard reads the pull request's own change, from its merge base
+          # with main (#4129).
+          bash scripts/checks/crate-version-guard.sh "$BASE" "$HEAD"
 
   # Chart-version guard (the crate-version-guard pattern, issue #2108): a PR that
   # changes PACKAGED chart content must bump `Chart.yaml` version in the same PR.
