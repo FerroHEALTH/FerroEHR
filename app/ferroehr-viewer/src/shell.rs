@@ -446,11 +446,9 @@ impl ShellReading {
 #[cfg(not(target_arch = "wasm32"))]
 async fn shell_reading() -> ShellReading {
     let status = status().await;
-    let subscriptions = crate::subscriptions::probe_event_subscriptions()
-        .await
-        .is_ok_and(|availability| {
-            availability == crate::subscriptions::SubscriptionAvailability::Available
-        });
+    let subscriptions = crate::subscriptions::renders_event_subscriptions(
+        &crate::subscriptions::probe_event_subscriptions().await,
+    );
     ShellReading::of(&status, subscriptions)
 }
 

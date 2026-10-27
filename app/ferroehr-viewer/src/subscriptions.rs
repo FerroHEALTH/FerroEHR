@@ -42,7 +42,8 @@
               hydrate target"
 )]
 
-use leptos::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
+use leptos::prelude::expect_context;
 use leptos::server;
 use serde::{Deserialize, Serialize};
 
@@ -143,47 +144,6 @@ pub fn renders_event_subscriptions(probe: &Result<SubscriptionAvailability, View
         .as_ref()
         .copied()
         .is_ok_and(SubscriptionAvailability::usable)
-}
-
-/// The eventing gate: one probe [`Resource`].
-///
-/// Created in component setup — never inside a `Suspend` closure, which re-runs
-/// and would re-create the resource.
-#[must_use]
-pub fn event_subscription_gate() -> Resource<Result<SubscriptionAvailability, ViewerError>> {
-    Resource::new(|| (), |()| async move { probe_event_subscriptions().await })
-}
-
-/// Render `affordance` only when the gate found the group mounted; otherwise
-/// render nothing at all (probe-and-hide).
-///
-/// The probe is resolved INSIDE the `<Suspense>`: an SSR'd `ErrorBoundary`
-/// fallback mismatches at hydration in leptos 0.8, and a render-time resource
-/// read is itself a hydration mismatch. `affordance` creates no resources, so
-/// re-runs are safe, and it is shared through an `Arc` because the `Suspend`
-/// closure must not consume its environment.
-#[must_use]
-pub fn when_event_subscriptions_usable(
-    gate: Resource<Result<SubscriptionAvailability, ViewerError>>,
-    affordance: impl Fn() -> AnyView + Send + Sync + 'static,
-) -> AnyView {
-    let affordance: std::sync::Arc<dyn Fn() -> AnyView + Send + Sync> =
-        std::sync::Arc::new(affordance);
-    view! {
-        <Suspense fallback=|| ()>
-            {move || {
-                let affordance = std::sync::Arc::clone(&affordance);
-                Suspend::new(async move {
-                    if renders_event_subscriptions(&gate.await) {
-                        affordance()
-                    } else {
-                        ().into_any()
-                    }
-                })
-            }}
-        </Suspense>
-    }
-    .into_any()
 }
 
 /// Whether a submitted subscription name can succeed.
