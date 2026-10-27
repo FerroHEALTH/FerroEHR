@@ -50,7 +50,7 @@ probes_oidc() {
 
   # The documented recipe, verbatim: fetch a token with the password grant.
   local token
-  token="$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
+  token="$(curl -s -d client_id=ferroehr-viewer -d client_secret=ferroehr-viewer-quickstart-secret \
     -d username=ferroehr -d password=ferroehr -d grant_type=password \
     "$KC_REALM/protocol/openid-connect/token" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')"
 
@@ -92,11 +92,11 @@ probes_oidc() {
   probe_done
 
   # A service with no user behind it: the client-credentials grant (RFC 6749
-  # §4.4) of the same client, whose service account the realm gives USER.
+  # §4.4) of the realm's service client, whose service account holds USER.
   probe "P-OIDC-SERVICE" "working" "compose" "#4240" \
-    "a client-credentials token reaches the clinical API"
+    "a client-credentials token reaches the clinical API and AQL"
   local service
-  service="$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
+  service="$(curl -s -d client_id=ferroehr-service -d client_secret=ferroehr-service-quickstart-secret \
     -d grant_type=client_credentials \
     "$KC_REALM/protocol/openid-connect/token" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')"
   if [[ -z "$service" ]]; then
@@ -105,6 +105,10 @@ probes_oidc() {
   else
     assert_eq "201" "$(http_code -X POST -H "Authorization: Bearer $service" "$API/ehr")" \
       "a service account without a role is refused by the RBAC gate"
+    assert_eq "200" "$(http_code -X POST -H "Authorization: Bearer $service" \
+      -H 'Content-Type: application/json' -d '{"q":"SELECT e/ehr_id/value FROM EHR e LIMIT 1"}' \
+      "$API/query/aql")" \
+      "a system/aql-* grant counts only for a client listed in [smart] backend_clients"
   fi
   probe_done
 
@@ -136,7 +140,7 @@ probes_oidc() {
 # A token for one of the demo identities, or empty if the grant is refused.
 oidc_token_for() {
   local username="$1" password="$2"
-  curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
+  curl -s -d client_id=ferroehr-viewer -d client_secret=ferroehr-viewer-quickstart-secret \
     -d "username=$username" -d "password=$password" -d grant_type=password \
     "$KC_REALM/protocol/openid-connect/token" \
     | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'

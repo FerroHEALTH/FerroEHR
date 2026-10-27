@@ -24,7 +24,7 @@
 # tokens it mints there still name the https issuer, so the CDR accepts them.
 # Get a bearer token and call the API:
 #
-#   TOKEN=$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
+#   TOKEN=$(curl -s -d client_id=ferroehr-viewer -d client_secret=ferroehr-viewer-quickstart-secret \
 #     -d username=ferroehr -d password=ferroehr -d grant_type=password \
 #     http://localhost:8081/auth/realms/ferroehr/protocol/openid-connect/token \
 #     | jq -r .access_token)
@@ -32,17 +32,19 @@
 #     http://localhost:8080/ferroehr/rest/openehr/v1/ehr
 #
 # A service with no user behind it takes the client-credentials grant
-# (RFC 6749 §4.4) with the same client; its service account holds USER:
+# (RFC 6749 §4.4) with its own client, `ferroehr-service`, whose service account
+# holds USER and whose tokens carry the `system/` scopes:
 #
-#   TOKEN=$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
+#   TOKEN=$(curl -s -d client_id=ferroehr-service -d client_secret=ferroehr-service-quickstart-secret \
 #     -d grant_type=client_credentials \
 #     http://localhost:8081/auth/realms/ferroehr/protocol/openid-connect/token \
 #     | jq -r .access_token)
 #
-# Every route checks SMART on openEHR scopes, so the realm's client puts them
-# in every token: `user/composition-*.cruds`, `user/template-*.cruds` and
-# `user/aql-*.cruds` (every resource family), and `__ferroehr.platform`, the
-# product scope the ADMIN and DEMOGRAPHIC APIs need. The roles then decide.
+# Every route checks SMART on openEHR scopes, so the realm puts them in every
+# token: `user/composition-*.cruds`, `user/template-*.cruds` and
+# `user/aql-*.cruds` (every resource family) for a user, their `system/` twins
+# for the service, and `__ferroehr.platform`, the product scope the ADMIN and
+# DEMOGRAPHIC APIs need. The roles then decide.
 #
 # FOUR demo identities, because role separation cannot be shown with one user.
 # RBAC is ENABLED in this overlay (the base quickstart leaves it off), so these
@@ -78,8 +80,8 @@ services:
       # is the canonical KC_HOSTNAME below: token `iss` claims match it no
       # matter which host the token was requested from.
       FERROEHR__AUTH__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak:8443/auth}/realms/ferroehr
-      # Required: the audience this CDR answers to (RFC 7519 §4.1.3), the
-      # realm's client id.
+      # Required: the audience this CDR answers to (RFC 7519 §4.1.3), which the
+      # realm's two clients put in every access token.
       FERROEHR__AUTH__AUDIENCE: ferroehr
       # Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068 profile
       # the CDR expects by default.
@@ -98,6 +100,9 @@ services:
       # authenticated caller may use every surface and the four users below are
       # decoration.
       FERROEHR__AUTHZ__RBAC__ENABLED: "true"
+      # The realm's service client, whose system/aql-* grant counts only when
+      # it is named here (SMART on openEHR §Resource Scopes).
+      FERROEHR__SMART__BACKEND_CLIENTS: ferroehr-service
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 
@@ -221,21 +226,22 @@ configs:
 
   # A MINIMAL demo realm, inline so the downloaded overlay is self-sufficient
   # (docs.docker.com/reference/compose-file/configs — the `content` attribute).
-  # One confidential client (`ferroehr` / ferroehr-quickstart-secret, password
-  # grant enabled for curl-friendly token fetching, its service account
-  # holding USER for the client-credentials grant, the authorization-code flow
-  # bound to PKCE S256 and to the viewer's origin on port 3000) and four
-  # users. A realm
-  # that declares `clientScopes` gets none of Keycloak's built-in ones, so the
-  # two the CDR reads are declared as Keycloak defines them: `basic` (the
-  # `sub` claim) and `roles` (the realm roles in `realm_access.roles`, the
-  # CDR's default role claim). The four SMART scopes are default client scopes
-  # of the client, so every token carries them in `scope`.
-  # The client's `oidc-audience-mapper` is LOAD-BEARING, not decoration: the
-  # CDR sets FERROEHR__AUTH__AUDIENCE=ferroehr above, and Keycloak puts a
-  # client into `aud` only when a mapper says so or the token carries that
-  # client's own roles. Without it the realm emits no `ferroehr` audience and
-  # every bearer call is refused 401 (RFC 7519 §4.1.3 audience validation).
+  # Two confidential clients and four users. `ferroehr-viewer`
+  # (ferroehr-viewer-quickstart-secret) is the viewer's: the authorization-code
+  # flow bound to PKCE S256 and to the viewer's origin on port 3000, plus the
+  # password grant for curl-friendly token fetching. `ferroehr-service`
+  # (ferroehr-service-quickstart-secret) has only the client-credentials grant,
+  # a service account holding USER, the `system/` scopes and a `client_id`
+  # claim, which `[smart] backend_clients` matches. A realm that declares
+  # `clientScopes` gets none of Keycloak's built-in ones, so the two the CDR
+  # reads are declared as Keycloak defines them: `basic` (the `sub` claim) and
+  # `roles` (the realm roles in `realm_access.roles`, the CDR's default role
+  # claim). The SMART scopes are default client scopes, so every token carries
+  # them in `scope`.
+  # Each client's `oidc-audience-mapper` is LOAD-BEARING, not decoration: the
+  # CDR sets FERROEHR__AUTH__AUDIENCE=ferroehr above, and Keycloak puts
+  # `ferroehr` into `aud` only because the mapper names it. Without it every
+  # bearer call is refused 401 (RFC 7519 §4.1.3 audience validation).
   keycloak-realm:
     content: |
       {
@@ -374,6 +380,33 @@ configs:
             }
           },
           {
+            "name": "system/composition-*.cruds",
+            "description": "SMART on openEHR scope",
+            "protocol": "openid-connect",
+            "attributes": {
+              "include.in.token.scope": "true",
+              "display.on.consent.screen": "false"
+            }
+          },
+          {
+            "name": "system/template-*.cruds",
+            "description": "SMART on openEHR scope",
+            "protocol": "openid-connect",
+            "attributes": {
+              "include.in.token.scope": "true",
+              "display.on.consent.screen": "false"
+            }
+          },
+          {
+            "name": "system/aql-*.cruds",
+            "description": "SMART on openEHR scope",
+            "protocol": "openid-connect",
+            "attributes": {
+              "include.in.token.scope": "true",
+              "display.on.consent.screen": "false"
+            }
+          },
+          {
             "name": "__ferroehr.platform",
             "description": "FerroEHR product scope",
             "protocol": "openid-connect",
@@ -461,9 +494,9 @@ configs:
             "realmRoles": []
           },
           {
-            "username": "service-account-ferroehr",
+            "username": "service-account-ferroehr-service",
             "enabled": true,
-            "serviceAccountClientId": "ferroehr",
+            "serviceAccountClientId": "ferroehr-service",
             "realmRoles": [
               "USER"
             ]
@@ -471,15 +504,15 @@ configs:
         ],
         "clients": [
           {
-            "clientId": "ferroehr",
-            "name": "FerroEHR quickstart client",
+            "clientId": "ferroehr-viewer",
+            "name": "FerroEHR viewer",
             "enabled": true,
             "protocol": "openid-connect",
             "publicClient": false,
-            "secret": "ferroehr-quickstart-secret",
+            "secret": "ferroehr-viewer-quickstart-secret",
             "standardFlowEnabled": true,
             "directAccessGrantsEnabled": true,
-            "serviceAccountsEnabled": true,
+            "serviceAccountsEnabled": false,
             "redirectUris": [
               "http://localhost:3000/*",
               "http://127.0.0.1:3000/*"
@@ -497,7 +530,7 @@ configs:
                 "protocol": "openid-connect",
                 "protocolMapper": "oidc-audience-mapper",
                 "config": {
-                  "included.client.audience": "ferroehr",
+                  "included.custom.audience": "ferroehr",
                   "access.token.claim": "true",
                   "id.token.claim": "false"
                 }
@@ -509,6 +542,49 @@ configs:
               "user/composition-*.cruds",
               "user/template-*.cruds",
               "user/aql-*.cruds",
+              "__ferroehr.platform"
+            ]
+          },
+          {
+            "clientId": "ferroehr-service",
+            "name": "FerroEHR service",
+            "enabled": true,
+            "protocol": "openid-connect",
+            "publicClient": false,
+            "secret": "ferroehr-service-quickstart-secret",
+            "standardFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": true,
+            "protocolMappers": [
+              {
+                "name": "ferroehr-audience",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-audience-mapper",
+                "config": {
+                  "included.custom.audience": "ferroehr",
+                  "access.token.claim": "true",
+                  "id.token.claim": "false"
+                }
+              },
+              {
+                "name": "client_id",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-usersessionmodel-note-mapper",
+                "config": {
+                  "user.session.note": "client_id",
+                  "claim.name": "client_id",
+                  "jsonType.label": "String",
+                  "access.token.claim": "true",
+                  "id.token.claim": "false"
+                }
+              }
+            ],
+            "defaultClientScopes": [
+              "basic",
+              "roles",
+              "system/composition-*.cruds",
+              "system/template-*.cruds",
+              "system/aql-*.cruds",
               "__ferroehr.platform"
             ]
           }

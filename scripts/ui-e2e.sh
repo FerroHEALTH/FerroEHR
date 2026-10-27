@@ -168,6 +168,10 @@ wait_http "$KEYCLOAK_URL/auth/realms/ferroehr/.well-known/openid-configuration" 
 # CDR and viewer mount the same CA (docker/viewer/e2e-env.yml).
 DEV_CA_DIR="$ROOT/target/ui-e2e/dev-ca"
 mkdir -p "$DEV_CA_DIR"
+# The harness's scratch files, beside its other artifacts and never in /tmp,
+# which two runs on one host would share.
+E2E_TMP="$ROOT/target/ui-e2e/tmp"
+mkdir -p "$E2E_TMP"
 docker compose exec -T keycloak cat /opt/keycloak/conf/tls/ca/ca.crt > "$DEV_CA_DIR/ca.crt"
 
 # ── 2. Deterministic Keycloak test passwords (the shipped realm export holds
@@ -191,9 +195,9 @@ done
 # Register the viewer's redirect URI on the realm client (the shipped
 # export registers the composed viewer at port 3000; the host-mode viewer at
 # 3300 is added here) — via the admin API, never by editing the realm file.
-echo "── registering the viewer redirect URI on the ferroehr client"
+echo "── registering the viewer redirect URI on the ferroehr-viewer client"
 CLIENT_ID=$(curl -sf -H "Authorization: Bearer $KC_TOKEN" \
-  "$KC_REALM_ADMIN/clients?clientId=ferroehr" \
+  "$KC_REALM_ADMIN/clients?clientId=ferroehr-viewer" \
   | jq -r '.[0].id')
 curl -sf -H "Authorization: Bearer $KC_TOKEN" \
   "$KC_REALM_ADMIN/clients/$CLIENT_ID" \
@@ -203,9 +207,9 @@ curl -sf -H "Authorization: Bearer $KC_TOKEN" \
       # than accumulating duplicate redirect URIs on the Keycloak client.
       .redirectUris = ((.redirectUris // []) + [$origin + "/*"] | unique)
       | .webOrigins = ((.webOrigins // []) + [$origin] | unique)
-    ' > /tmp/kc-client.json
+    ' > "$E2E_TMP/kc-client.json"
 curl -sf -X PUT -H "Authorization: Bearer $KC_TOKEN" -H "$CT_JSON" \
-  -d @/tmp/kc-client.json \
+  -d @"$E2E_TMP/kc-client.json" \
   "$KC_REALM_ADMIN/clients/$CLIENT_ID"
 
 # ── 2b. Seed clinical data over REST (never the database): one template, one
@@ -226,17 +230,17 @@ SEEDED_EHR_ID=$(curl -sf -u ferroehr:ferroehr -X POST "$CDR_V1/ehr" \
   -H "Prefer: return=representation" -H "$ACCEPT_JSON" \
   | jq -r '.ehr_id.value')
 curl -sf -u ferroehr:ferroehr "$CDR_V1/definition/template/adl1.4/$SEED_TEMPLATE/example" \
-  -H "$ACCEPT_JSON" > /tmp/ui-e2e-example.json
+  -H "$ACCEPT_JSON" > "$E2E_TMP/example.json"
 SEED_VUID=$(curl -sf -D - -o /dev/null -u ferroehr:ferroehr -X POST \
   "$CDR_V1/ehr/$SEEDED_EHR_ID/composition" \
   -H "$CT_JSON" -H "$ACCEPT_JSON" -H "Prefer: return=minimal" \
-  --data-binary @/tmp/ui-e2e-example.json \
+  --data-binary @"$E2E_TMP/example.json" \
   | tr -d '\r' | sed -n 's/^[Ee][Tt]ag: W\/"\(.*\)"$/\1/p')
 SEEDED_VO_ID="${SEED_VUID%%::*}"
 curl -sf -o /dev/null -u ferroehr:ferroehr -X PUT \
   "$CDR_V1/ehr/$SEEDED_EHR_ID/composition/$SEEDED_VO_ID" \
   -H "$CT_JSON" -H "$ACCEPT_JSON" \
-  -H "If-Match: \"$SEED_VUID\"" --data-binary @/tmp/ui-e2e-example.json
+  -H "If-Match: \"$SEED_VUID\"" --data-binary @"$E2E_TMP/example.json"
 echo "   seeded EHR $SEEDED_EHR_ID / composition $SEEDED_VO_ID (2 versions)"
 # Three more single-composition EHRs committed as FLAT with real quantity
 # magnitudes (the example generator emits only the skeleton — issue #94 —
@@ -322,8 +326,8 @@ else
   FERROEHR_VIEWER__AUTH__OIDC__ENABLED="true" \
   FERROEHR_VIEWER__AUTH__OIDC__ISSUER="https://keycloak:8443/auth/realms/ferroehr" \
   FERROEHR_VIEWER__AUTH__OIDC__RESOLVE="keycloak=127.0.0.1:8443" \
-  FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID="ferroehr" \
-  FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET="bT5T4oWn3xNdBytQsl2cfpBDi1pp15Va" \
+  FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID="ferroehr-viewer" \
+  FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET="dev-viewer-Qm7xT2vK9pLw4sNc" \
   FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL="$VIEWER_URL" \
   FERROEHR_VIEWER__AUTH__OIDC__TLS__TRUST_ROOTS_FILE="$DEV_CA_DIR/ca.crt" \
     "$ROOT/target/debug/ferroehr-viewer" &
