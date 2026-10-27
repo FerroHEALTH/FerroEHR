@@ -1770,6 +1770,20 @@ async fn read_edit_party(kind: &str, uid: String) -> Editing<PartyEditor> {
     }))
 }
 
+/// The words of Save for an editor opened at the version `opened`: the
+/// version the save makes.
+fn save_words(opened: &str) -> String {
+    version_number(opened).parse::<u32>().map_or_else(
+        |_| tr(Msg::EditorSave),
+        |number| {
+            tr_with(
+                RecordsMsg::EditorSaveAsVersion,
+                &[("version", number.saturating_add(1).into())],
+            )
+        },
+    )
+}
+
 /// Edit a party's page, its decision bar docked.
 fn edit_party_view(uid: &str, editor: PartyEditor) -> AnyView {
     let PartyEditor {
@@ -1814,15 +1828,7 @@ fn edit_party_view(uid: &str, editor: PartyEditor) -> AnyView {
         }
         .into_any()
     });
-    let save = version_number(&opened).parse::<u32>().map_or_else(
-        |_| tr(Msg::EditorSave),
-        |number| {
-            tr_with(
-                RecordsMsg::EditorSaveAsVersion,
-                &[("version", number.saturating_add(1).into())],
-            )
-        },
-    );
+    let save = save_words(&opened);
     dock_editor(EditorDock {
         form: EDIT_FORM.to_owned(),
         line: line.1,

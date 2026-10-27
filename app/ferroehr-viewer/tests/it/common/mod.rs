@@ -258,7 +258,23 @@ impl Harness {
                         .collect::<Vec<_>>()
                         .join("\n")
                 };
-                panic!("waiting for `{css}` at {url}: {e}\nbrowser console:\n{console}");
+                // TODO(#4147): remove this probe of the serialized resources once CI has shown them.
+                let serialized = bounded(
+                    "execute(serialized resources)",
+                    self.driver.execute(
+                        "return Array.from(document.scripts).map((s) => s.textContent) \
+                             .filter((t) => t.includes('__RESOLVED_RESOURCES')) \
+                             .join(' ').split('__RESOLVED_RESOURCES[').slice(1) \
+                             .map((e) => e.slice(0, 90)).join('\\n');",
+                        Vec::new(),
+                    ),
+                )
+                .await
+                .map(|answer| answer.json().to_string())
+                .unwrap_or_default();
+                panic!(
+                    "waiting for `{css}` at {url}: {e}\nbrowser console:\n{console}\nserialized:\n{serialized}"
+                );
             }
         }
     }

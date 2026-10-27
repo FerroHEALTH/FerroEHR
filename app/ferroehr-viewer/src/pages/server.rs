@@ -830,6 +830,30 @@ async fn read_logging() -> Tabbed<Logging> {
     .await
 }
 
+/// The confirmation of Apply, which posts the log form.
+fn apply_dialog() -> AnyView {
+    confirm_dialog(
+        Confirmation {
+            id: APPLY_DIALOG.into(),
+            title: tr(ConsoleMsg::ServerApplyTitle).into(),
+            message: tr(ConsoleMsg::ServerApplyMessage).into(),
+        },
+        view! {
+            <button
+                type="submit"
+                form=LOG_FORM
+                name="intent"
+                value="apply-filter"
+                class="fui-button fui-button-primary"
+            >
+                {ferrohealth_ui::icon::icon(Glyph::CHECK, "16")}
+                {tr(ConsoleMsg::ServerApplyConfirm)}
+            </button>
+        },
+    )
+    .into_any()
+}
+
 /// Logging, drawn.
 fn logging(model: Logging) -> AnyView {
     let (top, loggers, typed) = match model {
@@ -896,25 +920,7 @@ fn logging(model: Logging) -> AnyView {
             </div>
         </form>
     };
-    let dialog = confirm_dialog(
-        Confirmation {
-            id: APPLY_DIALOG.into(),
-            title: tr(ConsoleMsg::ServerApplyTitle).into(),
-            message: tr(ConsoleMsg::ServerApplyMessage).into(),
-        },
-        view! {
-            <button
-                type="submit"
-                form=LOG_FORM
-                name="intent"
-                value="apply-filter"
-                class="fui-button fui-button-primary"
-            >
-                {ferrohealth_ui::icon::icon(Glyph::CHECK, "16")}
-                {tr(ConsoleMsg::ServerApplyConfirm)}
-            </button>
-        },
-    );
+    let dialog = apply_dialog();
     let top = top.map(|refusal| refusal.view());
     view! {
         {top}
@@ -1016,13 +1022,8 @@ async fn read_api() -> Tabbed<Api> {
     .await
 }
 
-/// API, drawn.
-fn api(model: Api) -> AnyView {
-    let Api {
-        family,
-        families,
-        listed,
-    } = model;
+/// The form that picks the API family `family` shows of `families`.
+fn family_pick(family: &str, families: &[(String, String)]) -> AnyView {
     let options = families
         .iter()
         .map(|(key, words)| {
@@ -1033,7 +1034,7 @@ fn api(model: Api) -> AnyView {
             }
         })
         .collect_view();
-    let pick = view! {
+    view! {
         <form method="get" action="/server/api" class="fui-transform-options">
             {Field::new("api-f", tr(ConsoleMsg::ServerApiFamily))
                 .view(
@@ -1050,7 +1051,18 @@ fn api(model: Api) -> AnyView {
                 </button>
             </div>
         </form>
-    };
+    }
+    .into_any()
+}
+
+/// API, drawn.
+fn api(model: Api) -> AnyView {
+    let Api {
+        family,
+        families,
+        listed,
+    } = model;
+    let pick = family_pick(&family, &families);
     let words = families
         .into_iter()
         .find(|(key, _)| *key == family)
