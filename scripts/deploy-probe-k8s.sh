@@ -397,7 +397,7 @@ probes_k8s_production() {
   if helm status "$K8S_PROD_RELEASE" -n "$K8S_PROD_NS" >/dev/null 2>&1; then
     helm uninstall "$K8S_PROD_RELEASE" -n "$K8S_PROD_NS" --wait >/dev/null 2>&1
   fi
-  if ! helm upgrade --install "${helm_args[@]}" --set usageReport.enabled=false --timeout 6m >"$PROBE_TMP/prod-helm.log" 2>&1; then
+  if ! helm upgrade --install "${helm_args[@]}" --set usageReport.enabled=false --set ferropix.usageReport.enabled=false --timeout 6m >"$PROBE_TMP/prod-helm.log" 2>&1; then
     probe_fail "the release installed, its migration Job having prepared all four clusters" \
       "$(tail -4 "$PROBE_TMP/prod-helm.log")" \
       "a failed pre-install Job lands here: kubectl -n $K8S_PROD_NS logs job/${K8S_PROD_RELEASE}-migrate"
@@ -453,7 +453,7 @@ probes_k8s_production() {
   # Re-pointed at the clinical cluster, the upgrade's Job prepares every set
   # there, so the boot reaches the posture check instead of stopping at verify.
   k8s_prod_secrets shared
-  if ! helm upgrade "${helm_args[@]}" --set usageReport.enabled=false --timeout 6m >"$PROBE_TMP/prod-helm-shared.log" 2>&1; then
+  if ! helm upgrade "${helm_args[@]}" --set usageReport.enabled=false --set ferropix.usageReport.enabled=false --timeout 6m >"$PROBE_TMP/prod-helm-shared.log" 2>&1; then
     probe_fail "the upgrade's migration Job prepared the shared cluster" \
       "$(tail -4 "$PROBE_TMP/prod-helm-shared.log")"
     probe_done

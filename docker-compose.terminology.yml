@@ -74,6 +74,9 @@ services:
       FERROTERM_LOG_FORMAT: ${FERROTERM_LOG_FORMAT:-pretty}
       FERROTERM_DEFAULT_LANGUAGE: ${FERROTERM_DEFAULT_LANGUAGE:-en}
       RUST_LOG: ${RUST_LOG:-info}
+      # A FerroTERM release that sends a usage report follows FerroEHR's switch,
+      # so one variable stops both; 0.1.6 sends none and ignores the key.
+      FERROTERM__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-true}
     volumes:
       # docs.docker.com/reference/compose-file/services/#volumes, type image.
       - type: image
@@ -122,6 +125,7 @@ services:
     command: ["--rf2", "/rf2/release.zip", "--out", "/data/index"]
     environment:
       TMPDIR: /tmp
+      FERROTERM__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-true}
     volumes:
       # Defaults to /dev/null so the plain `up` parses; a build without
       # FERROTERM_RF2 fails at once on an empty archive, which is the intent.

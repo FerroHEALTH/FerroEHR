@@ -74,6 +74,7 @@ impl FerroTerm {
             .with_env_var("FERROTERM_CODESYSTEMS", "/data/codesystems")
             .with_env_var("FERROTERM_UI", "off")
             .with_env_var("FERROTERM_LOG_FORMAT", "json")
+            .with_env_var("FERROTERM__USAGE_REPORT__ENABLED", "false")
             .with_mount(Mount::bind_mount(
                 seed.to_string_lossy().into_owned(),
                 "/data/codesystems",
