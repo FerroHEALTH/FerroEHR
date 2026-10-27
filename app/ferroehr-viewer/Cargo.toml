@@ -29,16 +29,17 @@ path = "src/main.rs"
 [dependencies]
 openehr-query = { path = "../../crates/openehr-query" }
 
-# `openehr-sdt` is taken WITHOUT default features, so in the browser half it
-# contributes only the std-only SMART scope grammar (`openehr_sdt::smart_scopes`,
-# master08): the ONE parser the CDR's scope gate and the viewer's scope previewer
-# share, so what the drawer explains can never drift from what the CDR enforces.
-# Parsing a scope string is a pure function, so the previewer runs in the browser
-# rather than round-tripping the BFF. `openehr-its` without default features
-# compiles empty. The heavy surfaces (`openehr_its::opt14` and
-# `openehr_sdt::flat` for the query-builder path catalog) ride each crate's
-# `full` feature, which the server half below adds back, so they stay out of
-# the WASM bundle.
+# The SMART on openEHR scope grammar (`ferrohealth_smart::openehr::smart_scopes`,
+# master08) is the ONE parser the CDR's scope gate and the viewer's scope
+# previewer share, so what the drawer explains can never drift from what the CDR
+# enforces. Parsing a scope string is a pure function, so the previewer runs in
+# the browser rather than round-tripping the BFF; built for wasm32, the crate is
+# the grammar alone, with no dependency.
+ferrohealth-smart = { workspace = true, features = ["openehr-scopes"] }
+# `openehr-its` and `openehr-sdt` without default features compile empty. The
+# heavy surfaces (`openehr_its::opt14` and `openehr_sdt::flat` for the
+# query-builder path catalog) ride each crate's `full` feature, which the server
+# half below adds back, so they stay out of the WASM bundle.
 openehr-its = { path = "../../crates/openehr-its", default-features = false }
 openehr-sdt = { path = "../../crates/openehr-sdt", default-features = false }
 
@@ -103,7 +104,7 @@ leptos_meta = { workspace = true, features = ["ssr"] }
 leptos_router = { workspace = true, features = ["ssr"] }
 leptos_axum.workspace = true
 # The full ITS surface BFF-side (OPT parsing + WebTemplate building); the
-# scope grammar itself is in both halves (see the dependency comment above).
+# scope grammar itself is in both halves (see the ferrohealth-smart comment above).
 openehr-its = { path = "../../crates/openehr-its", default-features = false, features = ["full"] }
 openehr-sdt = { path = "../../crates/openehr-sdt", default-features = false, features = ["full"] }
 # The AOM2 operational-template type the ADL2 detail screen's path catalog is

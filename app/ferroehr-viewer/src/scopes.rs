@@ -4,7 +4,7 @@
 //! The scope previewer's presentation model: one pure function from a SMART
 //! scope string to the grant the viewer renders for it.
 //!
-//! **The parse is never ours.** It is `openehr_sdt::smart_scopes` — the
+//! **The parse is never ours.** It is `ferrohealth_smart::openehr::smart_scopes` — the
 //! ONE SMART on openEHR grammar
 //! (`docs/specs/openehr/ITS-REST/docs/smart_app_launch/master08-scopes.adoc`
 //! §Resource Scopes, plus the master07/master09 launch contexts), the same code
@@ -25,7 +25,7 @@
 
 use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, tr, tr_with};
-use openehr_sdt::smart_scopes::{
+use ferrohealth_smart::openehr::smart_scopes::{
     Compartment, LaunchContext, Permissions, ResourceScope, ResourceSelector, SmartScope,
 };
 

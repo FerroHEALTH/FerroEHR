@@ -218,9 +218,9 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # (the same Licensor's BUSL-1.1 code, deny.toml): token validation against the
 # issuer's key set, Basic users, the SMART on openEHR scopes, the discovery
 # document and the client credentials grant. It checks tokens and never issues
-# them.
-# Verified on crates.io 2026-10-27 (0.8.3).
-ferrohealth-smart = { version = "=0.8.3", default-features = false, features = ["fetch"] }
+# them. Built for wasm32 it is the scope grammar alone (the viewer's browser half).
+# Verified on crates.io 2026-10-27 (0.8.5).
+ferrohealth-smart = { version = "=0.8.5", default-features = false, features = ["fetch"] }
 # The policy decision of the FerroHEALTH family (FerroAUTH, the same
 # Licensor's BUSL-1.1 code): the attribute-based request over the subject
 # ferrohealth-smart authenticates, the Cedar engine (`cedar`) and the remote
@@ -480,14 +480,6 @@ criterion = { version = "0.8.2", features = ["html_reports"] }
 # Full debuginfo on ~400 deps + 18 workspace crates made dev builds/links slow
 # and grew target/ past 190 GB. Line tables keep file:line backtraces for our
 # code; dependencies get none (their debuginfo is never read in this repo).
-# ferrohealth-smart's `openehr` feature names the published openehr-sdt, and
-# cargo keeps a registry copy apart from the workspace member of the same
-# version, so the workspace member stands in for it (#4002). It applies only
-# while both name the same 0.0.x: a crate line bump here may build a temporary
-# duplicate openehr-sdt until the next ferrohealth-smart release takes it up.
-[patch.crates-io]
-openehr-sdt = { path = "crates/openehr-sdt" }
-
 [profile.dev]
 debug = "line-tables-only"
 # rustc's `linker_messages` lint surfaces Apple ld's "__eh_frame section too

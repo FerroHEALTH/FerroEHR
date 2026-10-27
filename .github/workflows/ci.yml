@@ -1213,12 +1213,11 @@ jobs:
   # `schema-validation` (jsonschema) and the three ITS-REST features (`rest`,
   # `rest-server` with axum, `rest-client` with reqwest) are not part of that
   # selection (the lane after this one clippies them natively); `openehr-sdt`
-  # adds the Simplified Formats (`flat`) on top and keeps the dependency-free
-  # `smart_scopes` island under `default-features = false`.
+  # adds the Simplified Formats (`flat`) on top.
   # Nothing else in CI compiles those selections: the clippy job runs
   # --all-features, and the viewer's wasm lane takes the crates with
-  # default-features = false, which reaches only the scope-grammar island. So
-  # the property was claimed by the manifests and checked by no lane at all.
+  # default-features = false. So the property was claimed by the manifests and
+  # checked by no lane at all.
   #
   # Library target only, no --all-targets: the crates' dev-dependencies
   # (testkit -> sqlx, tokio -> mio) are native by construction and cannot build
@@ -1248,9 +1247,6 @@ jobs:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo clippy --locked -p openehr-its --target wasm32-unknown-unknown --no-default-features --features opt14,xml,json -- -D warnings
       - run: cargo clippy --locked -p openehr-sdt --target wasm32-unknown-unknown --no-default-features --features flat -- -D warnings
-      # The island the manifest promises a scope-parsing client: no feature, no
-      # dependency, and it must still compile for the browser on its own.
-      - run: cargo clippy --locked -p openehr-sdt --target wasm32-unknown-unknown --no-default-features -- -D warnings
 
   # ── openehr-its: the three ITS-REST features, each on its own ──────────────
   # `rest` is the contract both halves share (DTOs, param structs, route tables,

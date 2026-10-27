@@ -70,7 +70,7 @@ opentelemetry = { workspace = true }
 # Authentication and the SMART on openEHR scopes: the FerroHEALTH resource-server
 # crate checks every bearer token and Basic credential and enforces the route
 # table's `Requirement`s (`extensions::access::authn`, `smart`), and re-exports
-# the openehr-sdt scope grammar those requirements are typed over.
+# the SMART on openEHR scope grammar those requirements are typed over.
 ferrohealth-smart = { workspace = true, features = ["axum", "openehr"] }
 sha2 = { workspace = true }
 
