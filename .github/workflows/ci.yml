@@ -1518,6 +1518,8 @@ jobs:
         with:
           components: rustfmt
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: The drift check reads exactly the generated files, hand-written siblings excluded
+        run: bash scripts/checks/codegen-drift.sh --self-test
       - name: Regenerate and diff
         run: bash scripts/checks/codegen-drift.sh
       # The committed codegen inputs reproduce byte-identically from their
