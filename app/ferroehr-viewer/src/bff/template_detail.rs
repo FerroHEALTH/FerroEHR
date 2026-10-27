@@ -20,6 +20,7 @@
 //! own tab-gated resource: it is a different CDR resource whose fetch runs the
 //! CDR's example generator.
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 
@@ -27,6 +28,7 @@ use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
 use crate::format::ReprFormat;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_with};
 
 /// Template identity + language metadata for the detail header card,

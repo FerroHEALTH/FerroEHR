@@ -12,7 +12,9 @@
 //! HRID; the page reads the release the address names, the latest for none,
 //! and builds its paths from the operational JSON, since the CDR has no Web
 //! Template for ADL 2. The family is the address's `family`, the tab its
-//! `tab`. No openEHR spec governs the viewer's pages: our own design.
+//! `tab`. Each page reads the CDR and answers its post on the server, into
+//! one model that both halves draw. No openEHR spec governs the viewer's
+//! pages: our own design.
 
 use std::collections::BTreeSet;
 
@@ -42,29 +44,42 @@ use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu, row_menu};
 use ferrohealth_ui::widget::tree::{TreeData, TreeKind, TreeNode, TreeWords};
 use ferrohealth_ui::widget::upload::UploadWords;
 use leptos::prelude::*;
+use leptos::server;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params_map;
+use serde::{Deserialize, Serialize};
 
-use crate::adl2::{TemplateFamily, family_versions, split_hrid};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::adl2::family_versions;
+use crate::adl2::{TemplateFamily, split_hrid};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::template_adl2::{
     fetch_adl2_catalog, fetch_adl2_example, fetch_adl2_json, fetch_adl2_source,
 };
-use crate::bff::template_detail::{TemplateDetail, fetch_example, fetch_template_detail};
+use crate::bff::template_detail::TemplateDetail;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::bff::template_detail::{fetch_example, fetch_template_detail};
+use crate::bff::templates::TemplateRow;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::templates::{
-    TemplateRow, delete_adl2_artefact, list_adl2_templates, list_templates, upload_adl2_template,
+    delete_adl2_artefact, list_adl2_templates, list_templates, upload_adl2_template,
     upload_template,
 };
 use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::format::ReprFormat;
 use crate::islands::SourceUpload;
 use crate::locale::{Msg, message, tr, tr_with};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::pages::common::discarded;
 use crate::pages::common::{
-    EditorDock, ago, awaited, card_panel, count, discarded, dock_editor, document_section,
-    findings_of, info_note, panel, plain_section, refused, section, when,
+    EditorDock, ago, awaited, card_panel, count, dock_editor, document_section, findings_of,
+    info_note, panel, plain_section, refused, section, when,
 };
+use crate::session_client::SessionAwareClient;
 
 /// The id of Delete template's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-template";
@@ -245,8 +260,10 @@ fn inline_confirm(family: TemplateFamily, template_id: &str, action: &str) -> Op
     })
 }
 
-/// Deletes the template a post names. `Some` holds the refusal.
-async fn delete_posted(back: &str) -> Option<AnyView> {
+/// Deletes the template a post names and sends the browser to `back`; `Some`
+/// holds the CDR's refusal.
+#[cfg(not(target_arch = "wasm32"))]
+async fn delete_posted(back: &str) -> Option<ViewerError> {
     let posted = crate::posted::posted_for("delete-template")?;
     let template = posted.text("template");
     let done = match TemplateFamily::from_query(&posted.text("family")) {
@@ -258,8 +275,40 @@ async fn delete_posted(back: &str) -> Option<AnyView> {
             redirect_with(back, &Done::ok(tr(Msg::TemplateDeleted)).line(template));
             None
         }
-        Err(error) => Some(refused(tr(Msg::TemplateDeleteRefused), &error, None)),
+        Err(error) => Some(error),
     }
+}
+
+/// The refusal of a delete the page answered.
+fn delete_refused(acted: Option<&ViewerError>) -> Option<AnyView> {
+    acted.map(|error| refused(tr(Msg::TemplateDeleteRefused), error, None))
+}
+
+/// What Templates read: the delete it answered and both families' lists.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Templates {
+    /// The CDR's refusal of the delete posted.
+    acted: Option<ViewerError>,
+    /// The ADL 1.4 templates.
+    adl14: Result<Vec<TemplateRow>, ViewerError>,
+    /// The ADL 2 templates.
+    adl2: Result<Vec<TemplateRow>, ViewerError>,
+}
+
+/// Answers a delete posted to Templates, which returns to `family`, and reads
+/// both families' lists.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = SessionAwareClient)]
+pub async fn load_templates(
+    /// The family the page shows.
+    family: TemplateFamily,
+) -> Result<Templates, ViewerError> {
+    crate::session::require_session().await?;
+    let acted = delete_posted(&format!("/templates?family={}", family.as_query())).await;
+    let (adl14, adl2) = (list_templates().await, list_adl2_templates().await);
+    Ok(Templates { acted, adl14, adl2 })
 }
 
 /// Templates.
@@ -269,7 +318,7 @@ async fn delete_posted(back: &str) -> Option<AnyView> {
 )]
 #[expect(
     clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
+    reason = "one page component: the model it reads and the view it draws"
 )]
 #[component]
 pub fn TemplatesPage() -> impl IntoView {
@@ -290,23 +339,28 @@ pub fn TemplatesPage() -> impl IntoView {
             Act::Link(format!("/templates/upload?family={}", family.as_query())),
         )),
     );
+    let model = OnceResource::new(load_templates(family));
     let body = awaited(async move {
-        let acted = delete_posted(&format!("/templates?family={}", family.as_query())).await;
-        let (adl14, adl2) = (list_templates().await, list_adl2_templates().await);
-        let needle = find.to_lowercase();
-        let keep = |rows: &Result<Vec<TemplateRow>, ViewerError>| -> Result<Vec<TemplateRow>, ViewerError> {
-            rows.clone().map(|rows| {
-                rows.into_iter()
-                    .filter(|row| {
-                        needle.is_empty()
-                            || row.template_id.to_lowercase().contains(&needle)
-                            || row.concept.to_lowercase().contains(&needle)
-                            || row.archetype_id.to_lowercase().contains(&needle)
-                    })
-                    .collect()
-            })
+        let Templates { acted, adl14, adl2 } = match model.await {
+            Ok(templates) => templates,
+            Err(error) => return refused(tr(Msg::TemplatesRefused), &error, None),
         };
-        let (adl14, adl2) = (keep(&adl14), keep(&adl2));
+        let acted = delete_refused(acted.as_ref());
+        let needle = find.to_lowercase();
+        let keep =
+            |rows: Result<Vec<TemplateRow>, ViewerError>| -> Result<Vec<TemplateRow>, ViewerError> {
+                rows.map(|rows| {
+                    rows.into_iter()
+                        .filter(|row| {
+                            needle.is_empty()
+                                || row.template_id.to_lowercase().contains(&needle)
+                                || row.concept.to_lowercase().contains(&needle)
+                                || row.archetype_id.to_lowercase().contains(&needle)
+                        })
+                        .collect()
+                })
+            };
+        let (adl14, adl2) = (keep(adl14), keep(adl2));
         let size = |rows: &Result<Vec<TemplateRow>, ViewerError>| {
             rows.as_ref()
                 .ok()
@@ -398,10 +452,51 @@ pub fn TemplatesPage() -> impl IntoView {
 /// The id of Upload's form.
 const UPLOAD_FORM: &str = "template-upload";
 
+/// What Upload read of the post it answered.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Uploaded {
+    /// No upload was posted.
+    Fresh,
+    /// The CDR refused the upload.
+    Refused(ViewerError),
+    /// The upload succeeded and the browser was sent on.
+    Left,
+}
+
+/// Answers an upload posted to Upload a template, of `family`.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = SessionAwareClient)]
+pub async fn load_upload(
+    /// The family uploaded to.
+    family: TemplateFamily,
+) -> Result<Uploaded, ViewerError> {
+    crate::session::require_session().await?;
+    let Some(posted) = crate::posted::posted_for("save") else {
+        return Ok(Uploaded::Fresh);
+    };
+    let source = posted.get("source-text").unwrap_or_default();
+    let uploaded = match family {
+        TemplateFamily::Adl14 => upload_template(source).await.map(|id| template_href(&id)),
+        TemplateFamily::Adl2 => upload_adl2_template(source).await.map(|id| {
+            let (stem, release) = split_hrid(&id);
+            adl2_href(stem, release)
+        }),
+    };
+    Ok(match uploaded {
+        Ok(href) => {
+            redirect_with(&href, &Done::ok(tr(Msg::TemplateUploaded)));
+            Uploaded::Left
+        }
+        Err(error) => Uploaded::Refused(error),
+    })
+}
+
 /// Upload a template, of the family the address names.
 #[expect(
     clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
+    reason = "one page component: the model it reads and the view it draws"
 )]
 #[component]
 pub fn UploadTemplatePage() -> impl IntoView {
@@ -409,11 +504,21 @@ pub fn UploadTemplatePage() -> impl IntoView {
     let family = posted.as_ref().map_or_else(asked_family, |posted| {
         TemplateFamily::from_query(&posted.text("family"))
     });
+    #[cfg(not(target_arch = "wasm32"))]
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&format!("/templates?family={}", family.as_query()));
     }
+    let model = OnceResource::new(load_upload(family));
     let dock_promise = crate::shell::promise_dock();
     let page = awaited(async move {
+        let uploaded = model.await;
+        #[cfg_attr(
+            target_arch = "wasm32",
+            expect(
+                clippy::no_effect_underscore_binding,
+                reason = "the browser's promise holds nothing; only the server waits on it"
+            )
+        )]
         let _dock_promise = dock_promise;
         let source = posted
             .as_ref()
@@ -421,36 +526,20 @@ pub fn UploadTemplatePage() -> impl IntoView {
             .unwrap_or_default();
         let mut top = None;
         let mut line = (Glyph::UPLOAD, tr(Msg::TemplateNotYet));
-        if posted
-            .as_ref()
-            .is_some_and(|posted| posted.intent() == "save")
-        {
-            let uploaded = match family {
-                TemplateFamily::Adl14 => upload_template(source.clone())
-                    .await
-                    .map(|id| template_href(&id)),
-                TemplateFamily::Adl2 => upload_adl2_template(source.clone()).await.map(|id| {
-                    let (stem, release) = split_hrid(&id);
-                    adl2_href(stem, release)
-                }),
-            };
-            match uploaded {
-                Ok(href) => {
-                    redirect_with(&href, &Done::ok(tr(Msg::TemplateUploaded)));
-                    return ().into_any();
-                }
-                Err(error) => {
-                    line = (Glyph::CIRCLE_X, tr(Msg::TemplateNotUploaded));
-                    let found = findings_of(&error, &source, "source-text")
-                        .map(|(heading, file)| diagnostics(&heading, &file));
-                    top = Some(
-                        view! {
-                            {refused(tr(Msg::TemplateUploadRefused), &error, None)}
-                            {found.map(card_panel)}
-                        }
-                        .into_any(),
-                    );
-                }
+        match uploaded {
+            Ok(Uploaded::Fresh) => {}
+            Ok(Uploaded::Left) => return ().into_any(),
+            Ok(Uploaded::Refused(error)) | Err(error) => {
+                line = (Glyph::CIRCLE_X, tr(Msg::TemplateNotUploaded));
+                let found = findings_of(&error, &source, "source-text")
+                    .map(|(heading, file)| diagnostics(&heading, &file));
+                top = Some(
+                    view! {
+                        {refused(tr(Msg::TemplateUploadRefused), &error, None)}
+                        {found.map(card_panel)}
+                    }
+                    .into_any(),
+                );
             }
         }
         dock_editor(EditorDock {
@@ -542,8 +631,8 @@ pub fn UploadTemplatePage() -> impl IntoView {
 }
 
 /// The tabs of a template.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TemplateTab {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TemplateTab {
     /// Its identity and use.
     Overview,
     /// Its path catalog.
@@ -702,26 +791,52 @@ fn paths_panel(template_id: &str, base: &str, root: &CatalogNode, note: Option<S
     })
 }
 
-/// The Example tab: the options as a `GET` form and the example the CDR
-/// builds.
+/// The example options the address names: the format's key, the detail and
+/// the type.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExampleAsk {
+    /// The key of the format asked for.
+    format: String,
+    /// The detail asked for.
+    detail: ExampleDetail,
+    /// The type asked for.
+    kind: ExampleType,
+}
+
+impl ExampleAsk {
+    /// The options the address names.
+    fn asked() -> Self {
+        Self {
+            format: crate::request::query("format").unwrap_or_default(),
+            detail: match crate::request::query("detail").as_deref() {
+                Some("medium") => ExampleDetail::Medium,
+                Some("complete") => ExampleDetail::Complete,
+                _ => ExampleDetail::Required,
+            },
+            kind: match crate::request::query("type").as_deref() {
+                Some("output") => ExampleType::Output,
+                _ => ExampleType::Input,
+            },
+        }
+    }
+
+    /// The format asked for among `formats`, canonical JSON for none.
+    fn format(&self, formats: &[(&'static str, ReprFormat)]) -> ReprFormat {
+        formats
+            .iter()
+            .find(|(key, _)| *key == self.format)
+            .map_or(ReprFormat::CanonicalJson, |(_, format)| *format)
+    }
+}
+
+/// The Example tab's options as a `GET` form, `ask` chosen among `formats`.
 fn example_options(
     base: &str,
     formats: &[(&'static str, ReprFormat)],
-) -> (AnyView, ReprFormat, ExampleDetail, ExampleType) {
-    let format_key = crate::request::query("format").unwrap_or_default();
-    let format = formats
-        .iter()
-        .find(|(key, _)| *key == format_key)
-        .map_or(ReprFormat::CanonicalJson, |(_, format)| *format);
-    let kind = match crate::request::query("type").as_deref() {
-        Some("output") => ExampleType::Output,
-        _ => ExampleType::Input,
-    };
-    let detail = match crate::request::query("detail").as_deref() {
-        Some("medium") => ExampleDetail::Medium,
-        Some("complete") => ExampleDetail::Complete,
-        _ => ExampleDetail::Required,
-    };
+    ask: &ExampleAsk,
+) -> (AnyView, ReprFormat) {
+    let format = ask.format(formats);
+    let (kind, detail) = (ask.kind, ask.detail);
     let format_options = formats
         .iter()
         .map(|(key, each)| {
@@ -792,10 +907,10 @@ fn example_options(
         </form>
     }
     .into_any();
-    (form, format, detail, kind)
+    (form, format)
 }
 
-/// The example the CDR built, or its refusal.
+/// The example the CDR built, pretty-printed on the server, or its refusal.
 fn example_panel(
     form: AnyView,
     format: ReprFormat,
@@ -812,7 +927,7 @@ fn example_panel(
             } else {
                 Language::Json
             },
-            crate::bff::pretty_body(&text, format),
+            text,
             "template-example",
         ),
         Ok(None) => plain_section(info_note(tr(Msg::TemplateNoExample))),
@@ -825,12 +940,14 @@ fn example_panel(
 }
 
 /// The header of a template: its name, its family line, Build a query (for a
-/// template the query builder reaches, `queryable`) and the More menu.
+/// template the query builder reaches, `queryable`), the More menu with the
+/// template's `download` address, and what comes `after`.
 fn template_header(
     title: String,
     subtitle: String,
     template_id: &str,
     family: TemplateFamily,
+    download: String,
     after: Option<AnyView>,
     queryable: bool,
 ) -> AnyView {
@@ -841,7 +958,7 @@ fn template_header(
             Item::new(Action::new(
                 Some(Glyph::DOWNLOAD),
                 tr(Msg::TemplateDownload),
-                Act::Link(crate::download::template_href(family, template_id)),
+                Act::Link(download),
             )),
             Item::new(Action::new(
                 Some(Glyph::COPY),
@@ -885,6 +1002,91 @@ fn template_header(
     .into_any()
 }
 
+/// What one ADL 1.4 template's page read.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Template {
+    /// The CDR's refusal of the delete posted.
+    acted: Option<ViewerError>,
+    /// The template, carrying only the parts its tab draws.
+    detail: Result<TemplateDetail, ViewerError>,
+    /// The template's download address.
+    download: String,
+    /// When it was uploaded, on the Overview tab.
+    uploaded: Option<String>,
+    /// The example the CDR built, on the Example tab of a root it builds
+    /// examples for.
+    example: Option<Result<Option<String>, ViewerError>>,
+}
+
+/// Answers a delete posted to the ADL 1.4 template `template_id` and reads
+/// what its tab `tab` draws, the example as `ask` names it.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = SessionAwareClient)]
+pub async fn load_template(
+    /// The template's id.
+    template_id: String,
+    /// The tab shown.
+    tab: TemplateTab,
+    /// The example options the address names.
+    ask: ExampleAsk,
+) -> Result<Template, ViewerError> {
+    crate::session::require_session().await?;
+    let acted = delete_posted("/templates").await;
+    let download = crate::download::template_href(TemplateFamily::Adl14, &template_id);
+    let mut detail = fetch_template_detail(template_id.clone()).await;
+    let mut uploaded = None;
+    let mut example = None;
+    match &mut detail {
+        Err(error) => {
+            if crate::pages::common::is_status(error, http::StatusCode::NOT_FOUND) {
+                crate::request::set_status(http::StatusCode::NOT_FOUND);
+            }
+        }
+        Ok(detail) => {
+            // NOTE: no openEHR spec governs this: our own design; the model keeps
+            // only what the tab draws, so the page carries no unshown source.
+            if tab != TemplateTab::Source {
+                detail.source = String::new();
+            }
+            if tab != TemplateTab::Paths {
+                detail.catalog.children = Vec::new();
+            }
+            match tab {
+                TemplateTab::Example => {
+                    let formats = crate::example_options::example_formats(&detail.catalog.rm_type);
+                    if !formats.is_empty() {
+                        let format = ask.format(formats);
+                        example = Some(
+                            fetch_example(template_id.clone(), format, ask.detail, ask.kind)
+                                .await
+                                .map(|text| Some(crate::bff::pretty_body(&text, format))),
+                        );
+                    }
+                }
+                TemplateTab::Overview => {
+                    uploaded = list_templates()
+                        .await
+                        .ok()
+                        .and_then(|rows| {
+                            rows.into_iter().find(|row| row.template_id == template_id)
+                        })
+                        .map(|row| row.created);
+                }
+                TemplateTab::Paths | TemplateTab::Source | TemplateTab::Json => {}
+            }
+        }
+    }
+    Ok(Template {
+        acted,
+        detail,
+        download,
+        uploaded,
+        example,
+    })
+}
+
 /// One ADL 1.4 template.
 #[expect(
     clippy::must_use_candidate,
@@ -892,23 +1094,35 @@ fn template_header(
 )]
 #[expect(
     clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
+    reason = "one page component: the model it reads and the view it draws"
 )]
 #[component]
 pub fn TemplatePage() -> impl IntoView {
     let template_id = use_params_map()
         .with_untracked(|params| params.get("template_id"))
         .unwrap_or_default();
-    let tab = TemplateTab::asked();
+    let tab = match TemplateTab::asked() {
+        TemplateTab::Json => TemplateTab::Overview,
+        tab => tab,
+    };
+    let ask = ExampleAsk::asked();
+    let model = OnceResource::new(load_template(template_id.clone(), tab, ask.clone()));
     let page = awaited(async move {
-        let acted = delete_posted("/templates").await;
         let base = template_href(&template_id);
-        let detail: TemplateDetail = match fetch_template_detail(template_id.clone()).await {
+        let Template {
+            acted,
+            detail,
+            download,
+            uploaded,
+            example,
+        } = match model.await {
+            Ok(template) => template,
+            Err(error) => return refused(tr(Msg::TemplateRefused), &error, None),
+        };
+        let acted = delete_refused(acted.as_ref());
+        let detail: TemplateDetail = match detail {
             Ok(detail) => detail,
             Err(error) => {
-                if crate::pages::common::is_status(&error, http::StatusCode::NOT_FOUND) {
-                    crate::request::set_status(http::StatusCode::NOT_FOUND);
-                }
                 return view! {
                     <Title text=template_id.clone() />
                     {template_header(
@@ -916,6 +1130,7 @@ pub fn TemplatePage() -> impl IntoView {
                         tr(Msg::TemplateAdl14Line),
                         &template_id,
                         TemplateFamily::Adl14,
+                        download,
                         None,
                         true,
                     )}
@@ -935,11 +1150,6 @@ pub fn TemplatePage() -> impl IntoView {
         .into_iter()
         .map(|each| Tab::new(each.key(), tab_of(&base, each), each.label()))
         .collect();
-        let tab = if tab == TemplateTab::Json {
-            TemplateTab::Overview
-        } else {
-            tab
-        };
         let body = match tab {
             TemplateTab::Paths => paths_panel(&template_id, &base, &detail.catalog, None),
             TemplateTab::Source => panel(document_section(
@@ -951,25 +1161,18 @@ pub fn TemplatePage() -> impl IntoView {
             TemplateTab::Example => {
                 let root = detail.catalog.rm_type.clone();
                 let formats = crate::example_options::example_formats(&root);
-                if formats.is_empty() {
-                    panel(plain_section(info_note(tr_with(
+                match example {
+                    Some(example) if !formats.is_empty() => {
+                        let (form, format) = example_options(&base, formats, &ask);
+                        example_panel(form, format, example)
+                    }
+                    _ => panel(plain_section(info_note(tr_with(
                         Msg::TemplateNoExampleForRoot,
                         &[("root", root.into())],
-                    ))))
-                } else {
-                    let (form, format, level, kind) = example_options(&base, formats);
-                    let example = fetch_example(template_id.clone(), format, level, kind)
-                        .await
-                        .map(Some);
-                    example_panel(form, format, example)
+                    )))),
                 }
             }
             _ => {
-                let uploaded = list_templates()
-                    .await
-                    .ok()
-                    .and_then(|rows| rows.into_iter().find(|row| row.template_id == template_id))
-                    .map(|row| row.created);
                 let meta = &detail.meta;
                 let mut facts = vec![
                     (tr(Msg::TemplateConcept), meta.concept.clone().into_any()),
@@ -1030,6 +1233,7 @@ pub fn TemplatePage() -> impl IntoView {
                 ),
                 &template_id,
                 TemplateFamily::Adl14,
+                download,
                 None,
                 queryable,
             )}
@@ -1044,6 +1248,159 @@ pub fn TemplatePage() -> impl IntoView {
     view! { {page} }
 }
 
+/// What the tab of an ADL 2 template read.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Adl2Body {
+    /// Its identity, from the list.
+    Overview,
+    /// Its path catalog.
+    Paths(Result<Option<CatalogNode>, ViewerError>),
+    /// Its source.
+    Source(Result<Option<String>, ViewerError>),
+    /// Its operational JSON, pretty-printed.
+    Json(Result<Option<String>, ViewerError>),
+    /// The example the CDR built, pretty-printed.
+    Example(Result<Option<String>, ViewerError>),
+}
+
+/// What one ADL 2 template's page read.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Adl2Template {
+    /// The CDR's refusal of the delete posted.
+    acted: Option<ViewerError>,
+    /// The HRID without its release.
+    stem: String,
+    /// Every release the CDR holds of the template, oldest first.
+    releases: Vec<String>,
+    /// The latest release.
+    latest: Option<String>,
+    /// The release read.
+    release: Option<String>,
+    /// The HRID read.
+    hrid: String,
+    /// The template's row in the list.
+    row: Option<TemplateRow>,
+    /// The tab shown.
+    tab: TemplateTab,
+    /// What the tab read.
+    body: Adl2Body,
+    /// The template's download address.
+    download: String,
+}
+
+/// What an ADL 2 template's page loads: the page, or nothing for a post or
+/// a release choice it answered by sending the browser on.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Adl2Page {
+    /// The page.
+    Read(Box<Adl2Template>),
+    /// The browser was sent on.
+    Left,
+}
+
+/// The tabs an ADL 2 template offers: Overview alone for an older release.
+fn adl2_tabs(older: bool) -> Vec<TemplateTab> {
+    let mut tabs = vec![TemplateTab::Overview];
+    if !older {
+        tabs.extend([
+            TemplateTab::Paths,
+            TemplateTab::Source,
+            TemplateTab::Json,
+            TemplateTab::Example,
+        ]);
+    }
+    tabs
+}
+
+/// Answers a delete posted to the ADL 2 template `asked_id`, sends a release
+/// `chosen` in the form on to its page, and reads the release
+/// `asked_release` names, the latest for none, with what its tab `tab`
+/// draws.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = SessionAwareClient)]
+pub async fn load_adl2_template(
+    /// The template id the address names.
+    asked_id: String,
+    /// The release the address names.
+    asked_release: Option<String>,
+    /// The release chosen in the release form.
+    chosen: Option<String>,
+    /// The tab the address names.
+    tab: TemplateTab,
+    /// The example options the address names.
+    ask: ExampleAsk,
+) -> Result<Adl2Page, ViewerError> {
+    crate::session::require_session().await?;
+    let acted = delete_posted("/templates?family=adl2").await;
+    let (stem, named) = split_hrid(&asked_id);
+    let stem = stem.to_owned();
+    let listed = list_adl2_templates().await;
+    let ids: Vec<String> = listed
+        .as_ref()
+        .map(|rows| rows.iter().map(|row| row.template_id.clone()).collect())
+        .unwrap_or_default();
+    let releases = family_versions(&ids, &stem);
+    let latest = releases.last().cloned();
+    let release = asked_release
+        .clone()
+        .or_else(|| named.map(str::to_owned))
+        .or_else(|| latest.clone());
+    let hrid = release
+        .as_ref()
+        .map_or_else(|| stem.clone(), |release| format!("{stem}.v{release}"));
+    if let Some(chosen) = chosen {
+        leptos_axum::redirect(&adl2_href(
+            &stem,
+            (Some(&chosen) != latest.as_ref()).then_some(chosen.as_str()),
+        ));
+        return Ok(Adl2Page::Left);
+    }
+    let row = listed
+        .as_ref()
+        .ok()
+        .and_then(|rows| rows.iter().find(|row| row.template_id == hrid).cloned());
+    let older = release.is_some() && release != latest;
+    let tab = if adl2_tabs(older).contains(&tab) {
+        tab
+    } else {
+        TemplateTab::Overview
+    };
+    let version = release.clone();
+    let body = match tab {
+        TemplateTab::Paths => Adl2Body::Paths(fetch_adl2_catalog(hrid.clone(), version).await),
+        TemplateTab::Source => Adl2Body::Source(fetch_adl2_source(hrid.clone(), version).await),
+        TemplateTab::Json => {
+            Adl2Body::Json(fetch_adl2_json(hrid.clone(), version).await.map(|json| {
+                json.map(|json| crate::bff::pretty_body(&json, ReprFormat::CanonicalJson))
+            }))
+        }
+        TemplateTab::Example => {
+            let format = ask.format(crate::example_options::CANONICAL_EXAMPLE_FORMATS);
+            Adl2Body::Example(
+                fetch_adl2_example(hrid.clone(), format, ask.detail, ask.kind)
+                    .await
+                    .map(|text| text.map(|text| crate::bff::pretty_body(&text, format))),
+            )
+        }
+        TemplateTab::Overview => Adl2Body::Overview,
+    };
+    let download = crate::download::template_href(TemplateFamily::Adl2, &hrid);
+    Ok(Adl2Page::Read(Box::new(Adl2Template {
+        acted,
+        stem,
+        releases,
+        latest,
+        release,
+        hrid,
+        row,
+        tab,
+        body,
+        download,
+    })))
+}
+
 /// One ADL 2 template, at the release the address names or the latest.
 #[expect(
     clippy::must_use_candidate,
@@ -1051,7 +1408,7 @@ pub fn TemplatePage() -> impl IntoView {
 )]
 #[expect(
     clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
+    reason = "one page component: the model it reads and the view it draws"
 )]
 #[component]
 pub fn Adl2TemplatePage() -> impl IntoView {
@@ -1061,30 +1418,34 @@ pub fn Adl2TemplatePage() -> impl IntoView {
             params.get("release"),
         )
     });
-    let tab = TemplateTab::asked();
+    let ask = ExampleAsk::asked();
+    let model = OnceResource::new(load_adl2_template(
+        asked_id.clone(),
+        asked_release.clone(),
+        crate::request::query("release"),
+        TemplateTab::asked(),
+        ask.clone(),
+    ));
     let page = awaited(async move {
-        let acted = delete_posted("/templates?family=adl2").await;
-        let (stem, named) = split_hrid(&asked_id);
-        let stem = stem.to_owned();
-        let listed = list_adl2_templates().await;
-        let ids: Vec<String> = listed
-            .as_ref()
-            .map(|rows| rows.iter().map(|row| row.template_id.clone()).collect())
-            .unwrap_or_default();
-        let releases = family_versions(&ids, &stem);
-        let latest = releases.last().cloned();
-        let release = asked_release
-            .clone()
-            .or_else(|| named.map(str::to_owned))
-            .or_else(|| latest.clone());
-        let hrid = release
-            .as_ref()
-            .map_or_else(|| stem.clone(), |release| format!("{stem}.v{release}"));
+        let template = match model.await {
+            Ok(Adl2Page::Read(template)) => *template,
+            Ok(Adl2Page::Left) => return ().into_any(),
+            Err(error) => return refused(tr(Msg::TemplateRefused), &error, None),
+        };
+        let Adl2Template {
+            acted,
+            stem,
+            releases,
+            latest,
+            release,
+            hrid,
+            row,
+            tab,
+            body,
+            download,
+        } = template;
+        let acted = delete_refused(acted.as_ref());
         let base = adl2_href(&stem, asked_release.as_deref());
-        let row = listed
-            .as_ref()
-            .ok()
-            .and_then(|rows| rows.iter().find(|row| row.template_id == hrid).cloned());
         let older = release.is_some() && release != latest;
         let after = if older {
             Some(info_note(view! {
@@ -1141,37 +1502,15 @@ pub fn Adl2TemplatePage() -> impl IntoView {
         } else {
             None
         };
-        if let Some(chosen) = crate::request::query("release") {
-            leptos_axum::redirect(&adl2_href(
-                &stem,
-                (Some(&chosen) != latest.as_ref()).then_some(chosen.as_str()),
-            ));
-            return ().into_any();
-        }
         let title = row
             .as_ref()
             .map_or_else(|| stem.clone(), |row| row.concept.clone());
-        let mut tabs = vec![TemplateTab::Overview];
-        if !older {
-            tabs.extend([
-                TemplateTab::Paths,
-                TemplateTab::Source,
-                TemplateTab::Json,
-                TemplateTab::Example,
-            ]);
-        }
-        let tab = if tabs.contains(&tab) {
-            tab
-        } else {
-            TemplateTab::Overview
-        };
-        let tab_list: Vec<Tab> = tabs
+        let tab_list: Vec<Tab> = adl2_tabs(older)
             .iter()
             .map(|each| Tab::new(each.key(), tab_of(&base, *each), each.label()))
             .collect();
-        let version = release.clone();
-        let body = match tab {
-            TemplateTab::Paths => match fetch_adl2_catalog(hrid.clone(), version).await {
+        let body = match body {
+            Adl2Body::Paths(catalog) => match catalog {
                 Ok(Some(root)) => {
                     paths_panel(&hrid, &base, &root, Some(tr(Msg::TemplateAdl2Paths)))
                 }
@@ -1182,7 +1521,7 @@ pub fn Adl2TemplatePage() -> impl IntoView {
                     None,
                 ))),
             },
-            TemplateTab::Source => match fetch_adl2_source(hrid.clone(), version).await {
+            Adl2Body::Source(source) => match source {
                 Ok(Some(source)) => panel(document_section(
                     tr(Msg::TemplateSourceTitle),
                     Language::Plain,
@@ -1196,14 +1535,14 @@ pub fn Adl2TemplatePage() -> impl IntoView {
                     None,
                 ))),
             },
-            TemplateTab::Json => match fetch_adl2_json(hrid.clone(), version).await {
+            Adl2Body::Json(json) => match json {
                 Ok(Some(json)) => panel(document_section(
                     tr_with(
                         Msg::TemplateJsonTitle,
                         &[("release", release.clone().unwrap_or_default().into())],
                     ),
                     Language::Json,
-                    crate::bff::pretty_body(&json, ReprFormat::CanonicalJson),
+                    json,
                     "template-json",
                 )),
                 Ok(None) => panel(plain_section(info_note(tr(Msg::TemplateNoSource)))),
@@ -1213,13 +1552,15 @@ pub fn Adl2TemplatePage() -> impl IntoView {
                     None,
                 ))),
             },
-            TemplateTab::Example => {
-                let (form, format, level, kind) =
-                    example_options(&base, crate::example_options::CANONICAL_EXAMPLE_FORMATS);
-                let example = fetch_adl2_example(hrid.clone(), format, level, kind).await;
+            Adl2Body::Example(example) => {
+                let (form, format) = example_options(
+                    &base,
+                    crate::example_options::CANONICAL_EXAMPLE_FORMATS,
+                    &ask,
+                );
                 example_panel(form, format, example)
             }
-            TemplateTab::Overview => {
+            Adl2Body::Overview => {
                 let mut facts = vec![(tr(Msg::TemplateConcept), title.clone().into_any())];
                 if let Some(release) = &release {
                     facts.push((tr(Msg::TemplateRelease), release.clone().into_any()));
@@ -1253,7 +1594,7 @@ pub fn Adl2TemplatePage() -> impl IntoView {
         let subtitle = tr_with(Msg::TemplateAdl2Subtitle, &[("hrid", hrid.clone().into())]);
         view! {
             <Title text=title.clone() />
-            {template_header(title, subtitle, &hrid, TemplateFamily::Adl2, after, true)}
+            {template_header(title, subtitle, &hrid, TemplateFamily::Adl2, download, after, true)}
             <div class="fui-stack">
                 {acted} {inline_confirm(TemplateFamily::Adl2, &hrid, &base)}
                 {binder(tr(Msg::TemplateViews), tab_list, tab.key(), body)}

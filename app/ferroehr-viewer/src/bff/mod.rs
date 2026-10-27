@@ -27,11 +27,8 @@ pub mod ehrs;
 pub mod item_tags;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod system;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod template_adl2;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod template_detail;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod templates;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod wire;
