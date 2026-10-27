@@ -268,7 +268,9 @@ async fn directory_item_picker_add_remove_journey() {
             tail(&removed)
         ))
         .await;
-    remove.click().await;
+    // Remove posts the form: wait for the page that answers it before reading
+    // the tree, or the read can land on the document the post replaces.
+    common::submit_control(&h, remove).await;
     h.wait_css("#directory-edit").await;
     common::poll_until(async || {
         common::read_text(&h, TREE)
