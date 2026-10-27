@@ -67,9 +67,10 @@ impl FerroEhrService {
     /// (`crate::system_log::codes`); the export-vs-import direction is carried
     /// by the [`EventActionCode`] (`Read` out / `Create` in). The native
     /// service layer has no HTTP principal, so `user_id` stays empty and the
-    /// ATNA renderer supplies `UNKNOWN`. `content` is what the Extract served
-    /// or landed, which the record carries as its EHDS priority categories
-    /// (Annex II 3.2(c), `docs/law/eu/ehds/text.html`).
+    /// ATNA renderer supplies `UNKNOWN`; the purpose and the data permit the
+    /// caller declared (EHDS Art. 68) are the request's. `content` is what the
+    /// Extract served or landed, which the record carries as its EHDS priority
+    /// categories (Annex II 3.2(c), `docs/law/eu/ehds/text.html`).
     ///
     /// # Errors
     /// The `service_overloaded` [`SmError`] when the sender rejected the record
@@ -87,6 +88,8 @@ impl FerroEhrService {
         let id = ehr_id.to_string();
         event.ehr_id = Some(id.clone());
         event.object_id = Some(id);
+        event.purpose = crate::system_log::access_context::current_purpose();
+        event.permit = crate::system_log::access_context::current_permit();
         event.category = content.and_then(|content| self.audit_classify(&content, action));
         self.record_access(event)
     }

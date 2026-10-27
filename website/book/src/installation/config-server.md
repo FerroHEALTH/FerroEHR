@@ -18,11 +18,11 @@ request log, the health routes and the bounded drain on `SIGTERM`.
 
 ```toml
 [server]
-listen = "127.0.0.1:8080"
+listen = "0.0.0.0:8080"
 base_path = ""
 request_timeout_ms = 30000
 header_read_timeout_ms = 30000
-body_limit_bytes = 1048576
+body_limit_bytes = 67108864
 drain_delay_ms = 0
 shutdown_timeout_ms = 10000
 # max_concurrent_requests = 256
@@ -35,11 +35,11 @@ compression_min_bytes = 1024
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `listen` | socket address | `127.0.0.1:8080` | The IP address and port the listener binds. A host name is refused at startup. The published container image sets `PORT=8080`, which the loader maps to `0.0.0.0:8080`; `PORT` alone gives `0.0.0.0:<PORT>`, and `FERROEHR__SERVER__LISTEN` wins over both. |
+| `listen` | socket address | `0.0.0.0:8080` | The IP address and port the listener binds: every interface at the port the container image exposes. A host name is refused at startup. `PORT` alone gives `0.0.0.0:<PORT>`, and `FERROEHR__SERVER__LISTEN` wins over both. Set `127.0.0.1:8080` to keep a bare binary on the loopback. |
 | `base_path` | string | empty | The path every route is served under, the health routes included. Empty serves them at the process root. The openEHR API path is [`rest.base_path`](#rest). |
 | `request_timeout_ms` | int | `30000` | A request still running after this long is answered `408` with the openEHR error body. |
 | `header_read_timeout_ms` | int | `30000` | How long a client may take to send its request head, once connected or after its last response; a client still sending then is disconnected. Bounds the slow-header connection, which no other limit reaches. `0` is refused. |
-| `body_limit_bytes` | int | `1048576` (1 MiB) | The largest request body any route reads, refused `413` above it. The bulk routes (operational-template upload, `/message/import`, `/message/tdd`) take up to this; [`rest.body_limit_bytes`](#rest) narrows the rest of the clinical surface below it. **A deployment that uploads operational templates raises this**: the largest template in the vendored CKM corpus is several times the 1 MiB default, and the chart and the Compose files set 64 MiB (`67108864`). |
+| `body_limit_bytes` | int | `67108864` (64 MiB) | The largest request body any route reads, refused `413` above it. The bulk routes (operational-template upload, `/message/import`, `/message/tdd`) take up to this; [`rest.body_limit_bytes`](#rest) narrows the rest of the clinical surface below it. The largest operational template in the vendored CKM corpus is 5.4 MB. |
 | `drain_delay_ms` | int | `0` | On `SIGTERM` or `SIGINT`, readiness answers `503` this long while the listener still accepts, so an orchestrator stops routing first. |
 | `shutdown_timeout_ms` | int | `10000` | Then the listener closes and the requests in flight get this long to finish; a connection still open after it is dropped. |
 | `max_concurrent_requests` | int | unset | The requests served at once. Past it a request is answered `503` with `Retry-After` and the openEHR error body, never queued, so offered load beyond capacity cannot exhaust memory. The health routes are never refused. Unset, there is no bound. |

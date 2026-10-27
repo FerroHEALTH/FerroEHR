@@ -648,14 +648,12 @@ config:
 
   # [server] — the HTTP listener: the FerroHEALTH family's section, the same
   # keys in every product (the configuration reference lists them all).
+  # The server's own defaults are `listen = "0.0.0.0:8080"`, the port the
+  # Service, the probes and the NetworkPolicy name, and a 64 MiB
+  # `body_limit_bytes` for the bulk routes (template upload, the /message
+  # imports); the largest operational template in the vendored CKM corpus is
+  # 5.4 MB.
   server:
-    # An IP address and a port; the Service, the probes and the NetworkPolicy
-    # name port 8080.
-    listen: "0.0.0.0:8080"
-    # The largest request body any route reads, refused 413 above it. The bulk
-    # routes (template upload, the /message imports) take up to this; the
-    # largest operational template in the vendored CKM corpus is 5.4 MB.
-    body_limit_bytes: 67108864
     # The requests served at once; past it a request is answered 503 with
     # Retry-After, and the health probes are never refused.
     max_concurrent_requests: 256

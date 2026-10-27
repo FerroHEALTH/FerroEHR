@@ -107,6 +107,10 @@ impl From<ConfigError> for ConfigErrors {
 
 /// The loader of the `FERROEHR` namespace.
 ///
+/// FerroEHR's `[server]` defaults (every interface, port 8080, a 64 MiB body
+/// ceiling) sit under every source, so a partial `[server]` table keeps the
+/// product's value for each key it does not name.
+///
 /// The fallbacks sit below the canonical `FERROEHR__` form of their key, and
 /// a later fallback of the same key wins over an earlier one: for `db.url`
 /// the direct `DATABASE_URL_UNPOOLED` wins over `DATABASE_URL`, which wins
@@ -114,9 +118,11 @@ impl From<ConfigError> for ConfigErrors {
 /// drops the session `search_path`.
 ///
 /// # Errors
-/// [`ConfigError::Load`] if the prefix is refused, which it never is.
+/// [`ConfigError::Load`] if the prefix is refused or the `[server]` defaults
+/// do not serialize to a table, neither of which happens.
 pub fn loader() -> Result<Loader, ConfigError> {
     let loader = Loader::new("FERROEHR")?
+        .defaults("server", &FerroEhrConfig::default().server)?
         .fallback_composed(libpq::VARIABLES, "db.url", libpq::url)
         .fallback("DATABASE_URL", "db.url", None)
         .fallback("DATABASE_URL_UNPOOLED", "db.url", None)
@@ -336,6 +342,44 @@ mod tests {
             .iter()
             .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
             .collect()
+    }
+
+    /// With no source, `[server]` takes FerroEHR's defaults: every interface
+    /// at port 8080 and a 64 MiB body ceiling.
+    #[test]
+    fn the_server_defaults_are_the_products() {
+        let (loaded, config) = assemble_from(None, &env(&[]), &[]).expect("zero-config load");
+        assert_eq!(config.server.listen.to_string(), "0.0.0.0:8080");
+        assert_eq!(config.server.body_limit_bytes, 64 * 1024 * 1024);
+        assert_eq!(
+            loaded.provenance().source("server.body_limit_bytes"),
+            ferrohealth_config::provenance::Source::Default
+        );
+    }
+
+    /// A partial `[server]` table keeps the product's value for every key it
+    /// does not name, and the value it names wins.
+    #[test]
+    fn a_partial_server_table_keeps_the_product_defaults() {
+        let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp");
+        assert_fs::prelude::FileWriteStr::write_str(
+            &file,
+            "[server]\nlisten = \"10.0.0.5:9090\"\nrequest_timeout_ms = 5000\n",
+        )
+        .expect("write");
+        let (_, config) =
+            assemble_from(Some(file.path()), &env(&[]), &[]).expect("a partial table loads");
+        assert_eq!(config.server.listen.to_string(), "10.0.0.5:9090");
+        assert_eq!(config.server.request_timeout_ms, 5000);
+        assert_eq!(config.server.body_limit_bytes, 64 * 1024 * 1024);
+
+        let (_, config) = assemble_from(
+            Some(file.path()),
+            &env(&[("FERROEHR__SERVER__BODY_LIMIT_BYTES", "1048576")]),
+            &[],
+        )
+        .expect("an override loads");
+        assert_eq!(config.server.body_limit_bytes, 1_048_576);
     }
 
     /// An unknown key set from the environment names its full dotted path and

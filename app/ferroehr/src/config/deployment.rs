@@ -575,13 +575,14 @@ mod tests {
     }
 
     /// The shipped default is `sandbox`, and a stock configuration on one
-    /// cluster, published on every interface as the container images run it,
-    /// is exactly the deployment that must not hold real data: every gap but
-    /// the audit-off one is open, and boot is permitted.
+    /// cluster, published on every interface as the built-in listener is, is
+    /// exactly the deployment that must not hold real data: every gap but the
+    /// audit-off one is open, and boot is permitted. A loopback listener is
+    /// no gap.
     #[test]
     fn the_default_is_sandbox_and_a_stock_deployment_names_its_gaps() {
-        let mut config = FerroEhrConfig::default();
-        config.server.listen = "0.0.0.0:8080".parse().expect("an address");
+        let config = FerroEhrConfig::default();
+        assert_eq!(config.server.listen.to_string(), "0.0.0.0:8080");
         assert_eq!(config.deployment_profile, DeploymentProfile::Sandbox);
         let clusters = ClusterIdentities {
             clinical: Some("1".to_owned()),
@@ -604,11 +605,12 @@ mod tests {
             "auditing and authentication are on by default, so neither is a gap"
         );
         assert!(posture.permits_boot());
-        let loopback =
-            DeploymentPosture::evaluate(&FerroEhrConfig::default(), &on(clusters_of("1")));
+        let mut on_loopback = FerroEhrConfig::default();
+        on_loopback.server.listen = "127.0.0.1:8080".parse().expect("an address");
+        let loopback = DeploymentPosture::evaluate(&on_loopback, &on(clusters_of("1")));
         assert!(
             !loopback.gaps.contains(&DeploymentGap::PlaintextListener),
-            "the built-in listen address is loopback: {loopback:?}"
+            "a loopback listener is no gap: {loopback:?}"
         );
     }
 

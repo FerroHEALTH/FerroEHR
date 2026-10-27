@@ -48,7 +48,7 @@ use serde::{Deserialize, Serialize};
 /// Every section has a `Default`, so the file may be empty or absent
 /// (zero-config boot). `deny_unknown_fields` makes a misspelled top-level
 /// table a boot error.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct FerroEhrConfig {
     /// `spec_profile` — the openEHR specification generation set the server
@@ -117,6 +117,49 @@ pub struct FerroEhrConfig {
     pub ehr_index: crate::service::ehr_index::config::EhrIndexConfig,
     /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
     pub usage_report: ferrohealth_usage_report::section::UsageReportSection,
+}
+
+impl Default for FerroEhrConfig {
+    /// Every section's own default, except FerroEHR's `[server]`: the
+    /// listener on every interface at port 8080, the port the images expose,
+    /// and a 64 MiB body ceiling, since the largest operational template in
+    /// the vendored CKM corpus is 5.4 MB. The loader layers this section
+    /// under the file ([`loader::loader`]), so a partial `[server]` table
+    /// keeps both. No openEHR spec governs configuration: our own design.
+    fn default() -> Self {
+        Self {
+            spec_profile: profile::SpecProfile::default(),
+            deployment_profile: deployment::DeploymentProfile::default(),
+            deployment_accepts: Vec::new(),
+            server: ferrohealth_server::section::ServerSection {
+                listen: std::net::SocketAddr::from(([0, 0, 0, 0], 8080)),
+                body_limit_bytes: 64 * 1024 * 1024,
+                ..ferrohealth_server::section::ServerSection::default()
+            },
+            rest: rest::RestConfig::default(),
+            db: crate::db::DbConfig::default(),
+            storage: crate::db::domain::StorageConfig::default(),
+            telemetry: ferrohealth_telemetry::section::TelemetrySection::default(),
+            auth: ferrohealth_smart::config::AuthSection::default(),
+            authz: authz::AuthzConfig::default(),
+            admin: rest::AdminConfig::default(),
+            smart: smart::SmartConfig::default(),
+            management: management::ManagementConfig::default(),
+            signing: crate::versioning::signature::config::SigningConfig::default(),
+            licence: crate::licence::config::LicenceConfig::default(),
+            query: crate::service::query::config::QueryConfig::default(),
+            events: crate::extensions::events::config::EventsConfig::default(),
+            terminology: crate::service::terminology::config::TerminologyConfig::default(),
+            multimedia: crate::extensions::multimedia::config::MultimediaConfig::default(),
+            audit: crate::system_log::config::AuditConfig::default(),
+            privacy: crate::privacy::config::PrivacyConfig::default(),
+            demographic:
+                crate::service::demographic::identifier::config::DemographicConfig::default(),
+            cohort: crate::service::linkage::cohort::config::CohortConfig::default(),
+            ehr_index: crate::service::ehr_index::config::EhrIndexConfig::default(),
+            usage_report: ferrohealth_usage_report::section::UsageReportSection::default(),
+        }
+    }
 }
 
 /// The annotated default template, shipped as
