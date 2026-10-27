@@ -63,7 +63,7 @@ fetch() {
   if [[ -n "${EHDS_PAGES_DIR:-}" ]]; then
     cp "$EHDS_PAGES_DIR/$page.md" "$file"
   else
-    curl --fail --silent --show-error --location \
+    curl --proto =https --fail --silent --show-error --location \
       "https://raw.githubusercontent.com/FerroHEALTH/FerroHEALTH/$commit/website/book/src/ehds/$page.md" \
       -o "$file" || die "ehds/$page.md could not be fetched at FerroHEALTH $commit"
   fi

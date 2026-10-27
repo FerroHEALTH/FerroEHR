@@ -75,7 +75,7 @@ look() {
 # only prints it.
 change() {
   trace "$@"
-  if [ "$DRY_RUN" -eq 1 ]; then
+  if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "  (dry run: not run)" >&3
     return 0
   fi
@@ -92,7 +92,7 @@ digest() {
 published() {
   local draft
   draft="$(look gh release view "$1" --repo "$REPO" --json isDraft --jq .isDraft 2> /dev/null)" || return 1
-  [ "$draft" = false ]
+  [[ "$draft" = false ]]
 }
 
 # newer A B: whether version A is later than version B.
@@ -100,9 +100,9 @@ newer() {
   local a1 a2 a3 b1 b2 b3
   IFS=. read -r a1 a2 a3 <<< "$1"
   IFS=. read -r b1 b2 b3 <<< "$2"
-  [ "$a1" -ne "$b1" ] && { [ "$a1" -gt "$b1" ]; return; }
-  [ "$a2" -ne "$b2" ] && { [ "$a2" -gt "$b2" ]; return; }
-  [ "$a3" -gt "$b3" ]
+  [[ "$a1" -ne "$b1" ]] && { [[ "$a1" -gt "$b1" ]]; return; }
+  [[ "$a2" -ne "$b2" ]] && { [[ "$a2" -gt "$b2" ]]; return; }
+  [[ "$a3" -gt "$b3" ]]
 }
 
 # rows VERSION: the register rows whose `versions` column names VERSION.
@@ -127,30 +127,30 @@ chart_from_notes() {
 
 run() {
   VERSION='' TO='' CHART='' DRY_RUN=0
-  while [ $# -gt 0 ]; do
+  while [[ $# -gt 0 ]]; do
     case "$1" in
-      --to) [ $# -ge 2 ] || usage; TO="${2#v}"; shift 2 ;;
-      --chart) [ $# -ge 2 ] || usage; CHART="$2"; shift 2 ;;
+      --to) [[ $# -ge 2 ]] || usage; TO="${2#v}"; shift 2 ;;
+      --chart) [[ $# -ge 2 ]] || usage; CHART="$2"; shift 2 ;;
       --dry-run) DRY_RUN=1; shift ;;
       -*) usage ;;
-      *) [ -z "$VERSION" ] || usage; VERSION="${1#v}"; shift ;;
+      *) [[ -z "$VERSION" ]] || usage; VERSION="${1#v}"; shift ;;
     esac
   done
   local semver='^[0-9]+\.[0-9]+\.[0-9]+$'
   [[ "$VERSION" =~ $semver ]] || usage
   [[ "$TO" =~ $semver ]] || usage
-  [ -z "$CHART" ] || [[ "$CHART" =~ $semver ]] || usage
+  [[ -z "$CHART" ]] || [[ "$CHART" =~ $semver ]] || usage
   ROOT="${WITHDRAW_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
   TODAY="${WITHDRAW_TODAY:-$(date -u +%Y-%m-%d)}"
   local line="${VERSION%.*}" to_line="${TO%.*}"
 
-  [ -f "$ROOT/$REGISTER" ] || die "$REGISTER is missing."
+  [[ -f "$ROOT/$REGISTER" ]] || die "$REGISTER is missing."
   local found ids summaries
   found="$(rows "$VERSION")"
-  [ -n "$found" ] || die "no row in $REGISTER names $VERSION in its versions column: enter the finding first (EHDS Art 30(1)(i) and (o))."
+  [[ -n "$found" ]] || die "no row in $REGISTER names $VERSION in its versions column: enter the finding first (EHDS Art 30(1)(i) and (o))."
   ids="$(printf '%s\n' "$found" | cut -f1 | paste -sd, - | sed 's/,/, /g')"
   summaries="$(printf '%s\n' "$found" | cut -f5)"
-  [ -z "$(rows "$TO")" ] || die "the correcting release $TO is itself named in $REGISTER."
+  [[ -z "$(rows "$TO")" ]] || die "the correcting release $TO is itself named in $REGISTER."
   newer "$TO" "$VERSION" || die "the correcting release $TO is not later than $VERSION."
   for command in docker gh; do
     command -v "$command" > /dev/null || die "$command is not installed."
@@ -162,17 +162,17 @@ run() {
   local image withdrawn target tag current moves='' kept=''
   for image in $IMAGES; do
     withdrawn="$(digest "$image" "$VERSION")"
-    if [ -z "$withdrawn" ]; then
+    if [[ -z "$withdrawn" ]]; then
       echo "withdraw: $image has no $VERSION tag; nothing to move there." >&2
       continue
     fi
     target="$(digest "$image" "$TO")"
-    [ -n "$target" ] || die "$image has $VERSION but no $TO tag to move to."
+    [[ -n "$target" ]] || die "$image has $VERSION but no $TO tag to move to."
     for tag in "$line" latest; do
       current="$(digest "$image" "$tag")"
-      if [ "$current" != "$withdrawn" ]; then
+      if [[ "$current" != "$withdrawn" ]]; then
         echo "withdraw: $image:$tag does not point at $VERSION; it stays." >&2
-      elif [ "$tag" = "$line" ] && [ "$to_line" != "$line" ]; then
+      elif [[ "$tag" = "$line" ]] && [[ "$to_line" != "$line" ]]; then
         kept="$kept$image:$tag"$'\n'
         echo "withdraw: $image:$tag points at $VERSION and no $line release corrects it; it stays." >&2
       else
@@ -183,30 +183,30 @@ run() {
 
   # The chart version is read before anything moves too.
   local chart_line
-  if [ -z "$CHART" ]; then
+  if [[ -z "$CHART" ]]; then
     CHART="$(chart_from_notes "$VERSION")"
   fi
-  if [ -n "$CHART" ]; then
+  if [[ -n "$CHART" ]]; then
     command -v helm > /dev/null || die "helm is not installed."
     local app
     app="$(look helm show chart "$CHART_REF" --version "$CHART" 2> /dev/null \
       | awk '$1 == "appVersion:" { gsub(/"/, "", $2); print $2; exit }')" || true
-    [ -n "$app" ] || die "chart $CHART is not published at $CHART_REF."
-    [ "$app" = "$VERSION" ] || die "chart $CHART ships appVersion $app, not $VERSION: pass the chart version the release shipped with --chart."
+    [[ -n "$app" ]] || die "chart $CHART is not published at $CHART_REF."
+    [[ "$app" = "$VERSION" ]] || die "chart $CHART ships appVersion $app, not $VERSION: pass the chart version the release shipped with --chart."
     chart_line="Helm chart version $CHART of $CHART_REF, which ships $VERSION"
   else
     chart_line="the Helm chart version that shipped $VERSION (the release notes name none: pass --chart)"
   fi
 
   while IFS=' ' read -r image tag target; do
-    [ -n "$image" ] || continue
+    [[ -n "$image" ]] || continue
     change docker buildx imagetools create -t "$image:$tag" "$image@$target"
   done <<< "$moves"
 
   local moved verb=Moved
-  [ "$DRY_RUN" -eq 0 ] || verb='To move (dry run)'
+  [[ "$DRY_RUN" -eq 0 ]] || verb='To move (dry run)'
   moved="$(printf '%s' "$moves" | awk 'NF { print "  - " $1 ":" $2 }')"
-  [ -n "$moved" ] || moved="  - none: every floating tag already pointed elsewhere"
+  [[ -n "$moved" ]] || moved="  - none: every floating tag already pointed elsewhere"
 
   cat << EOF
 
@@ -220,7 +220,7 @@ in the advisory and in SECURITY.md instead.
 $verb to $TO:
 $moved
 EOF
-  if [ -n "$kept" ]; then
+  if [[ -n "$kept" ]]; then
     printf 'Still pointing at %s, because no %s release corrects it (move these deployments by hand to %s):\n' "$VERSION" "$line" "$TO"
     printf '%s' "$kept" | awk 'NF { print "  - " $0 }'
   fi
@@ -267,7 +267,7 @@ every distributor, importer and user the manufacturer knows.
   users_told        <date>, <the route: advisory, Discussions, direct messages>
   closed            <date>, once every column above is filled
 EOF
-  if [ "$DRY_RUN" -eq 1 ]; then
+  if [[ "$DRY_RUN" -eq 1 ]]; then
     echo
     echo "withdraw: dry run, nothing was changed."
   fi
@@ -326,7 +326,7 @@ SHIM
   # fixture: a fresh register and registry. 4.3.3 and 4.2.9 are in the
   # register, 4.3.4 corrects them; the viewer's latest points elsewhere.
   fixture() {
-    if [ -d "$stub" ]; then rm -r "$stub" "$root"; fi
+    if [[ -d "$stub" ]]; then rm -r "$stub" "$root"; fi
     mkdir -p "$root/docs/registers" "$stub/releases" "$stub/charts"
     {
       printf '# a comment\n'
@@ -359,7 +359,7 @@ SHIM
     n=$((n + 1))
     PATH="$work/bin:$PATH" STUB="$stub" WITHDRAW_ROOT="$root" WITHDRAW_TODAY=2026-10-06 \
       "$BASH" "$0" "$@" > "$work/out" 2>&1 || status=$?
-    if [ "$status" -ne "$want" ]; then
+    if [[ "$status" -ne "$want" ]]; then
       echo "withdraw: self-test case $n ($*) exited $status, wanted $want:" >&2
       cat "$work/out" >&2
       failed=1
@@ -429,7 +429,7 @@ SHIM
   check 'the missing chart version is named' grep -q 'pass --chart' "$work/out"
   check 'nothing moved' grep -q 'none: every floating tag already pointed elsewhere' "$work/out"
 
-  if [ "$failed" -ne 0 ]; then
+  if [[ "$failed" -ne 0 ]]; then
     echo "withdraw: self-test FAILED" >&2
     exit 1
   fi
@@ -437,8 +437,8 @@ SHIM
 }
 
 exec 3>&2
-if [ "${1:-}" = --self-test ]; then
-  [ $# -eq 1 ] || usage
+if [[ "${1:-}" = --self-test ]]; then
+  [[ $# -eq 1 ]] || usage
   self_test
 else
   run "$@"

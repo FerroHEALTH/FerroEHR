@@ -37,7 +37,7 @@ command -v curl >/dev/null 2>&1 || { echo "curl not found on PATH" >&2; exit 1; 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-curl --fail --silent --show-error --location -o "$work/package.tgz" "$URL"
+curl --proto =https --fail --silent --show-error --location -o "$work/package.tgz" "$URL"
 actual="$(shasum -a 256 "$work/package.tgz" | cut -d' ' -f1)"
 if [[ "$actual" != "$SHA256" ]]; then
   echo "error: ${URL} has sha256 ${actual}, the pin is ${SHA256}" >&2

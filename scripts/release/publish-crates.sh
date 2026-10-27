@@ -114,7 +114,7 @@ do_verify() {
     # run.
     got=""
     for _ in 1 2 3 4 5 6; do
-      if body="$(curl -sSL --fail -H 'User-Agent: ferroehr-publish-verify' \
+      if body="$(curl --proto '=https' -sSL --fail -H 'User-Agent: ferroehr-publish-verify' \
         "https://crates.io/api/v1/crates/$crate/versions" 2>/dev/null)"; then
         got="$(printf '%s' "$body" |
           jq -r --arg v "$want" '.versions[]? | select(.num == $v) | .num' |
