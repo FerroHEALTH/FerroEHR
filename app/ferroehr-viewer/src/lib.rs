@@ -13,8 +13,6 @@
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
 #![doc(test(attr(deny(warnings))))]
-// NOTE: FerroUI's sign-in view nests deep enough that computing its layout inside an async page passes the default limit of 128 (rustc reference, `recursion_limit`).
-#![recursion_limit = "256"]
 // Every `#[component]` in this crate expands `#[derive(TypedBuilder)]` on its
 // generated props struct, and that derive emits an inherent `builder()` whose
 // name matches a trait method already in scope — so `same_name_method` fires
