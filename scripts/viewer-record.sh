@@ -40,6 +40,9 @@ PG_IMAGE="${VIEWER_RECORD_PG_IMAGE:-$(grep -o -m 1 'ghcr.io/ferrohealth/ferroehr
 PG_PORT="${VIEWER_RECORD_PG_PORT:-55432}"
 CDR_PORT="${VIEWER_RECORD_PORT:-18080}"
 PG_NAME="ferroehr-viewer-record-pg"
+# The throwaway database's role, which the image's init script creates.
+PG_ROLE="ferroehr"
+PG_SECRET="ferroehr"
 WORK="$(mktemp -d)"
 SERVER_PID=""
 
@@ -84,16 +87,16 @@ else
   echo "── starting PostgreSQL ($PG_IMAGE)"
   docker rm -f "$PG_NAME" >/dev/null 2>&1 || true
   docker run -d --name "$PG_NAME" -p "127.0.0.1:$PG_PORT:5432" \
-    -e POSTGRES_PASSWORD=postgres -e PG_INIT_USER=ferroehr \
-    -e PG_INIT_PASSWORD=ferroehr -e PG_INIT_DB=ferroehr "$PG_IMAGE" >/dev/null
+    -e POSTGRES_PASSWORD=postgres -e PG_INIT_USER="$PG_ROLE" \
+    -e PG_INIT_PASSWORD="$PG_SECRET" -e PG_INIT_DB="$PG_ROLE" "$PG_IMAGE" >/dev/null
   for _ in $(seq 1 60); do
-    if docker exec "$PG_NAME" pg_isready -U ferroehr -d ferroehr >/dev/null 2>&1; then break; fi
+    if docker exec "$PG_NAME" pg_isready -U "$PG_ROLE" -d "$PG_ROLE" >/dev/null 2>&1; then break; fi
     sleep 1
   done
   CDR_URL="http://127.0.0.1:$CDR_PORT"
   echo "── starting ferroehr on $CDR_URL"
   FERROEHR_CONFIG=docker/ferroehr.dev.toml \
-    FERROEHR__DB__URL="postgres://ferroehr:ferroehr@127.0.0.1:$PG_PORT/ferroehr" \
+    FERROEHR__DB__URL="postgres://$PG_ROLE:$PG_SECRET@127.0.0.1:$PG_PORT/$PG_ROLE" \
     FERROEHR__SERVER__LISTEN="127.0.0.1:$CDR_PORT" \
     FERROEHR__AUTHZ__RBAC__ENABLED=false \
     FERROEHR__USAGE_REPORT__ENABLED=false \
@@ -105,6 +108,8 @@ wait_for "$CDR_URL/health/readiness" 120
 
 V1="$CDR_URL/ferroehr/rest/openehr/v1"
 AUTH=(-u ferroehr:ferroehr)
+JSON=(-H "Content-Type: application/json")
+ACCEPT=(-H "Accept: application/json")
 # quiet CURL-ARGS...: a call whose answer only matters when it fails.
 quiet() {
   if ! curl -sS --fail-with-body -o "$WORK/answer" "$@"; then
@@ -118,7 +123,7 @@ ask() {
   quiet "$@" || return 1
   cat "$WORK/answer"
 }
-ehrs=$(ask "${AUTH[@]}" -X POST "$V1/query/aql" -H "Content-Type: application/json" \
+ehrs=$(ask "${AUTH[@]}" -X POST "$V1/query/aql" "${JSON[@]}" \
   -d '{"q":"SELECT COUNT(*) FROM EHR e"}' | jq -r '.rows[0][0]')
 if [[ "$ehrs" != "0" ]]; then
   echo "FATAL: the CDR already holds $ehrs EHRs; the recording needs an empty one" >&2
@@ -134,8 +139,8 @@ quiet "${AUTH[@]}" -X POST "$V1/definition/template/adl1.4" \
   --data-binary @app/ferroehr-viewer/tests/fixtures/minimal_evaluation.opt
 
 # The subject is a synthetic record number (.claude/rules/personal-data.md).
-EHR=$(ask "${AUTH[@]}" -X POST "$V1/ehr" -H "Content-Type: application/json" \
-  -H "Accept: application/json" -H "Prefer: return=representation" -d '{
+EHR=$(ask "${AUTH[@]}" -X POST "$V1/ehr" "${JSON[@]}" \
+  "${ACCEPT[@]}" -H "Prefer: return=representation" -d '{
     "_type": "EHR_STATUS",
     "name": {"_type": "DV_TEXT", "value": "EHR Status"},
     "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
@@ -149,13 +154,13 @@ EHR=$(ask "${AUTH[@]}" -X POST "$V1/ehr" -H "Content-Type: application/json" \
 etag_of() { tr -d '\r' | sed -n 's/^[Ee][Tt]ag: W\/"\(.*\)"$/\1/p'; }
 
 ask "${AUTH[@]}" "$V1/definition/template/adl1.4/$TEMPLATE/example" \
-  -H "Accept: application/json" >"$WORK/example.json"
+  "${ACCEPT[@]}" >"$WORK/example.json"
 VUID=$(curl -sS --fail-with-body -D - -o /dev/null "${AUTH[@]}" -X POST "$V1/ehr/$EHR/composition" \
-  -H "Content-Type: application/json" -H "Prefer: return=minimal" \
+  "${JSON[@]}" -H "Prefer: return=minimal" \
   --data-binary @"$WORK/example.json" | etag_of)
 COMPOSITION="${VUID%%::*}"
 quiet "${AUTH[@]}" -X PUT "$V1/ehr/$EHR/composition/$COMPOSITION" \
-  -H "Content-Type: application/json" -H "If-Match: \"$VUID\"" \
+  "${JSON[@]}" -H "If-Match: \"$VUID\"" \
   --data-binary @"$WORK/example.json"
 
 FLAT_VUID=$(curl -sS --fail-with-body -D - -o /dev/null "${AUTH[@]}" -X POST "$V1/ehr/$EHR/composition" \
@@ -168,10 +173,10 @@ FLAT_VUID=$(curl -sS --fail-with-body -D - -o /dev/null "${AUTH[@]}" -X POST "$V
 COMPOSITION_FLAT="${FLAT_VUID%%::*}"
 
 quiet "${AUTH[@]}" -X PUT "$V1/ehr/$EHR/composition/$COMPOSITION/tags" \
-  -H "Content-Type: application/json" -d '[{"key": "reviewed", "value": "yes"}]'
+  "${JSON[@]}" -d '[{"key": "reviewed", "value": "yes"}]'
 
 quiet "${AUTH[@]}" -X POST "$V1/ehr/$EHR/directory" \
-  -H "Content-Type: application/json" -d "{
+  "${JSON[@]}" -d "{
     \"_type\": \"FOLDER\", \"name\": {\"_type\": \"DV_TEXT\", \"value\": \"root\"},
     \"archetype_node_id\": \"openEHR-EHR-FOLDER.generic.v1\",
     \"folders\": [{\"_type\": \"FOLDER\",
@@ -202,7 +207,7 @@ party() {
       "details": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Details"},
         "archetype_node_id": "at0001", "items": $items}}]}' \
     | ask "${AUTH[@]}" -X POST "$V1/demographic/$segment" \
-      -H "Content-Type: application/json" -H "Accept: application/json" \
+      "${JSON[@]}" "${ACCEPT[@]}" \
       -H "Prefer: return=representation" --data-binary @- \
     | jq -r '.uid.value | split("::")[0]'
 }
@@ -216,11 +221,11 @@ RELATIONSHIP=$(jq -nc --arg s "$PARTY" --arg t "$ORGANISATION" '{
     "target": {"_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
       "id": {"_type": "HIER_OBJECT_ID", "value": $t}}}' \
   | ask "${AUTH[@]}" -X POST "$V1/demographic/party_relationship" \
-    -H "Content-Type: application/json" -H "Accept: application/json" \
+    "${JSON[@]}" "${ACCEPT[@]}" \
     -H "Prefer: return=representation" --data-binary @- \
   | jq -r '.uid.value | split("::")[0]')
 quiet "${AUTH[@]}" -X PUT "$V1/demographic/person/$PARTY/tags" \
-  -H "Content-Type: application/json" -d '[{"key": "follow-up", "value": "2026-11-04"}]'
+  "${JSON[@]}" -d '[{"key": "follow-up", "value": "2026-11-04"}]'
 
 QUERY="org.example.cardio::latest"
 quiet "${AUTH[@]}" -X PUT "$V1/definition/query/$QUERY" \
