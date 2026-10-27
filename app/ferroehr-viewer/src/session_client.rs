@@ -76,10 +76,12 @@ pub fn signed_out_url(path: &str, search: &str) -> String {
     format!("/login?expired=1&next={}", urlencoding::encode(&next))
 }
 
-/// Records that a server function answered "this session is over", and in
-/// the browser loads the sign-in page with the page in view as the place to
-/// return to, as the pre-render guard does for a document request.
-fn note_session_ended() {
+/// Records that the session is over, as a server function or the visit
+/// answered.
+///
+/// In the browser it loads the sign-in page with the page in view as the
+/// place to return to, as the pre-render guard does for a document request.
+pub fn note_session_ended() {
     SESSION_ENDED.update(|epoch| *epoch = epoch.wrapping_add(1));
     #[cfg(target_arch = "wasm32")]
     {

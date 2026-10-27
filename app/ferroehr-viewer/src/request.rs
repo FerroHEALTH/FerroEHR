@@ -10,8 +10,9 @@
 //! serialized with the page and both halves draw the same page (the Leptos
 //! book, "Life Cycle of a Page Load"). The browser draws every page after the
 //! first itself: the route group sets the visit's address as the router
-//! moves and asks the server for the rest again ([`follow_address`]) after
-//! each navigation and each post drawn in the page. The visit carries no session cookie and no credential, so
+//! moves and asks the server for the rest again ([`visited`]) before it
+//! draws the page after each navigation and each post drawn in the page. The
+//! visit carries no session cookie and no credential, so
 //! neither reaches a script. A read outside the app falls back to the
 //! request itself, and a page's model read as a server function reads the
 //! visit of the page that asked ([`visiting`]). No openEHR spec governs the
@@ -230,18 +231,17 @@ pub fn provide_visit() {
 
 /// Sets the address of the visit to `href`, the page the router draws.
 ///
-/// The route group calls it before the page reads the visit; `posts` counts
+/// `true` when the browser draws that page after the first, so the route
+/// group asks the server for the rest of the visit ([`visited`]) before it
+/// draws it. The route group calls it before the page reads the visit; `posts` counts
 /// the posts the router has drawn in the page. The form the first page
 /// answered lets go once the page is another one or a post drawn in the page
-/// followed it.
-///
-/// The server's visit is the request's, and a hydrating page keeps the one
-/// the server drew, so only a page the browser draws after it follows; for
-/// that page the browser asks the server for the rest of the visit again
-/// ([`asked::visit_now`]).
-pub fn follow_address(href: &str, posts: u32) {
+/// followed it. The server's visit is the request's, and a hydrating page
+/// keeps the one the server drew.
+#[must_use]
+pub fn follow_address(href: &str, posts: u32) -> bool {
     if cfg!(not(target_arch = "wasm32")) || !ferrohealth_ui::widget::hydration::hydrated() {
-        return;
+        return false;
     }
     if let Some(Visits(visits)) = use_context::<Visits>()
         && visits.with_untracked(|visit| visit.path_and_query != href)
@@ -252,7 +252,50 @@ pub fn follow_address(href: &str, posts: u32) {
     if posts > 0 {
         crate::posted::let_go();
     }
-    refresh(href.to_owned());
+    true
+}
+
+/// Asks the server for the visit of the page at `href` the browser is about
+/// to draw, so a preference or a position a post just kept reaches it.
+///
+/// `false` when the page must not be drawn: the session it was signed in
+/// with has ended, and the browser loads the sign-in page instead, or the
+/// language changed, and the browser loads the page again in it.
+/// A page drawn over an ended session would ask its model of the server and
+/// be refused; the visit says so first, with no refusal.
+pub async fn visited(href: String) -> bool {
+    let Some(Visits(visits)) = use_context::<Visits>() else {
+        return true;
+    };
+    let now = match asked::visit_now(href).await {
+        Ok(now) => now,
+        Err(error) => {
+            leptos::logging::warn!("the visit did not come: {error}");
+            return true;
+        }
+    };
+    let (before, signed) =
+        visits.with_untracked(|visit| (visit.kept.clone(), visit.signed.is_some()));
+    if signed && now.signed.is_none() {
+        crate::session_client::note_session_ended();
+        return false;
+    }
+    if follow_root(&before, &now) {
+        return false;
+    }
+    // NOTE: no openEHR spec governs this: our own design; the address is the
+    // router's, so an answer to an earlier navigation never moves the page.
+    let kept = visits.with_untracked(|visit| visit.path_and_query.clone());
+    let now = Visit {
+        path_and_query: kept,
+        ..now
+    };
+    if visits.with_untracked(|visit| visit.kept != now.kept || visit.signed != now.signed) {
+        visits.set(now);
+    } else {
+        visits.update_untracked(|visit| *visit = now);
+    }
+    true
 }
 
 /// Marks a page's model read as a server function: the response is the
@@ -314,40 +357,6 @@ pub mod asked {
     ) -> Result<Visit, ViewerError> {
         Ok(Visit::of_page(&href))
     }
-}
-
-/// Asks the server for the visit of the page at `href` again, so a
-/// preference or a position a post just kept, or a session that ended,
-/// reaches the page drawn in the browser.
-fn refresh(href: String) {
-    let Some(Visits(visits)) = use_context::<Visits>() else {
-        return;
-    };
-    leptos::task::spawn_local(async move {
-        match asked::visit_now(href).await {
-            Ok(now) => {
-                let before = visits.with_untracked(|visit| visit.kept.clone());
-                if follow_root(&before, &now) {
-                    return;
-                }
-                // NOTE: no openEHR spec governs this: our own design; the address is the
-                // router's, so an answer to an earlier navigation never moves the page.
-                let kept = visits.with_untracked(|visit| visit.path_and_query.clone());
-                let now = Visit {
-                    path_and_query: kept,
-                    ..now
-                };
-                if visits
-                    .with_untracked(|visit| visit.kept != now.kept || visit.signed != now.signed)
-                {
-                    visits.set(now);
-                } else {
-                    visits.update_untracked(|visit| *visit = now);
-                }
-            }
-            Err(error) => leptos::logging::warn!("the visit did not come: {error}"),
-        }
-    });
 }
 
 /// The path and query of the router's location `path` and raw query

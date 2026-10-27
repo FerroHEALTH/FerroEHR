@@ -362,26 +362,52 @@ macro_rules! group {
             /// The pages the group draws.
             pub const PAGES: &'static [Page] = &[$(Page::$page),+];
 
-            /// The page the address names, drawn again as the address
-            /// changes.
+            /// The page the address names, drawn again in the browser as the
+            /// address changes.
             fn draw() -> AnyView {
                 let location = leptos_router::hooks::use_location();
-                let kept = crate::request::kept_memo();
+                // NOTE: Leptos 0.8 `tachys` renders a view closure once per pass of the
+                // server's render, so the server draws the page once, outside a closure.
+                #[cfg(not(target_arch = "wasm32"))]
+                let view = {
+                    crate::shell::undock();
+                    Self::page(&location.pathname.get_untracked())
+                };
                 // NOTE: no openEHR spec governs this: our own design; the group stays drawn
                 // while the address stays in it, so it draws the page the address names.
-                (move || {
-                    let path = location.pathname.get();
-                    let href = crate::request::address(&path, &location.search.get());
-                    let posts = ferrohealth_ui::widget::submit::posts().get();
-                    kept.track();
-                    crate::request::follow_address(&href, posts);
-                    crate::shell::undock();
-                    match Page::of(&path) {
-                        $(Some(Page::$page) => drawn($draw),)+
-                        _ => crate::pages::errors::not_found_page(),
-                    }
-                })
-                .into_any()
+                #[cfg(target_arch = "wasm32")]
+                let view = {
+                    let kept = crate::request::kept_memo();
+                    (move || {
+                        let path = location.pathname.get();
+                        let href = crate::request::address(&path, &location.search.get());
+                        let posts = ferrohealth_ui::widget::submit::posts().get();
+                        kept.track();
+                        let after = crate::request::follow_address(&href, posts);
+                        crate::shell::undock();
+                        if !after {
+                            return Self::page(&path);
+                        }
+                        Suspend::new(send_wrapper::SendWrapper::new(async move {
+                            if crate::request::visited(href).await {
+                                Self::page(&path)
+                            } else {
+                                ().into_any()
+                            }
+                        }))
+                        .into_any()
+                    })
+                    .into_any()
+                };
+                view
+            }
+
+            /// The page at the address path `path`.
+            fn page(path: &str) -> AnyView {
+                match Page::of(path) {
+                    $(Some(Page::$page) => drawn($draw),)+
+                    _ => crate::pages::errors::not_found_page(),
+                }
             }
         }
 

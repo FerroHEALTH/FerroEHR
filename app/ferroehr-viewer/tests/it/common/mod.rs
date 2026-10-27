@@ -1551,29 +1551,37 @@ pub(crate) async fn submit_by_key(h: &Harness, key: impl Into<TypingData>) {
     leave_page(h, "the key press", h.press(key)).await;
 }
 
-/// Mark the document, run `action`, and wait for the page that answers it: a
-/// new document without the mark, with its `main` drawn.
+/// Mark the page, run `action`, and wait for the page that answers it: a
+/// new document, or a page the router drew in place of the marked one, with
+/// its `main` drawn.
 ///
-/// A probe that runs before the new document arrives can find an element in
-/// the old one and read it after the browser replaced it, which Chrome
-/// answers with "Node with given id does not belong to the document", an
-/// error [`is_absence`] rightly refuses.
+/// The mark sits on the root element, which only a new document replaces,
+/// and on each part of the page in the shell's column, which the router
+/// replaces when it draws the page a `GET` form or a post names. A probe
+/// that runs before the new page arrives can find an element in the old one
+/// and read it after the browser replaced it, which Chrome answers with
+/// "Node with given id does not belong to the document", an error
+/// [`is_absence`] rightly refuses.
 ///
 /// # Panics
 /// When the mark cannot be set or no page answers within 15 s.
 async fn leave_page(h: &Harness, what: &str, action: impl Future<Output = ()>) {
     bounded(
-        "execute(mark the document)",
+        "execute(mark the page)",
         h.driver.execute(
-            "document.documentElement.dataset.e2eLeft = '1';",
+            "document.documentElement.dataset.e2eLeft = '1'; \
+             document.querySelectorAll('main .fui-column > *') \
+                 .forEach((part) => { part.dataset.e2eLeft = '1'; });",
             Vec::new(),
         ),
     )
     .await
-    .expect("mark the document before the post");
+    .expect("mark the page before the post");
+    let in_column = is_present(h, "main .fui-column > [data-e2e-left]").await;
     action.await;
     let moved = poll_until_for(Duration::from_secs(15), async || {
         !is_present(h, "html[data-e2e-left]").await
+            || (in_column && !is_present(h, "main .fui-column > [data-e2e-left]").await)
     })
     .await;
     assert!(moved, "{what} never brought a new page");

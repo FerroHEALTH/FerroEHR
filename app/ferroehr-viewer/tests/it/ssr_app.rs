@@ -1095,3 +1095,24 @@ async fn a_composition_template_node_offers_a_query_on_its_path() {
         node.main()
     );
 }
+
+/// The server reads a page's model once: the page is drawn outside the route
+/// group's view closure, which the server's render runs once per pass, so the
+/// browser hydrates over the one model the page was drawn from.
+#[tokio::test]
+async fn the_server_reads_a_page_model_once() {
+    let viewer = Viewer::start().await;
+    let cookie = viewer.sign_in().await;
+    for path in ["/templates", "/audit", "/query/aql", "/ehrs"] {
+        let page = viewer.page(&cookie, path).await;
+        assert_eq!(page.status, http::StatusCode::OK, "{path}: {}", page.body);
+        let models = page
+            .body
+            .split("__RESOLVED_RESOURCES[")
+            .skip(1)
+            .filter_map(|entry| entry.split_once("] = ").map(|(_, rest)| rest))
+            .filter(|rest| rest.starts_with("\"{\\\"Ok\\\""))
+            .count();
+        assert_eq!(models, 1, "{path} serializes its model once");
+    }
+}
