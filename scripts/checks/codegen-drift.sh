@@ -121,7 +121,7 @@ self_test() {
   git init -q -b main
   mkdir -p crates/openehr-x/src
   _emit_same
-  printf '// SPDX-License-Identifier: Apache-2.0\n// Mentions @generated past the first line.\npub const CODE: u8 = 0;\n' >crates/openehr-x/src/codes.rs
+  printf '// Hand-written: no generator writes this file.\n// It mentions @generated past the first line.\npub const CODE: u8 = 0;\n' >crates/openehr-x/src/codes.rs
   git add -A
   git -c user.name=self-test -c user.email=self-test@invalid -c commit.gpgsign=false \
     commit -qm fixture
