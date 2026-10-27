@@ -152,6 +152,7 @@ jobs:
       code: ${{ steps.filter.outputs.code }}
       viewer: ${{ steps.filter.outputs.viewer }}
       server_dockerfile: ${{ steps.filter.outputs.server_dockerfile }}
+      viewer_dockerfile: ${{ steps.filter.outputs.viewer_dockerfile }}
       helm: ${{ steps.filter.outputs.helm }}
       chart_boot: ${{ steps.filter.outputs.chart_boot }}
       deploy: ${{ steps.filter.outputs.deploy }}
@@ -221,6 +222,7 @@ jobs:
               echo "viewer=true"
               echo "msrv=true"
               echo "server_dockerfile=true"
+              echo "viewer_dockerfile=true"
               echo "helm=true"
               echo "chart_boot=true"
               echo "deploy=true"
@@ -2272,6 +2274,31 @@ jobs:
           target: runtime-from-source
           push: false
 
+  # The viewer's compose/local target (docker/viewer/Dockerfile
+  # runtime-from-source), on the same terms as the server's above: the
+  # published viewer image packages `runtime-prebuilt`, so a broken in-image
+  # build (a wasm-bindgen CLI the lock no longer matches, #4222) shipped
+  # unnoticed until a compose user built it.
+  viewer-image-from-source:
+    name: viewer image (from source)
+    needs: changes
+    if: needs.changes.outputs.viewer_dockerfile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/viewer/Dockerfile
+          target: runtime-from-source
+          push: false
+
   # Screenshot-freshness guard (the changelog-guard pattern): a PR that
   # changes the viewer UI must re-capture the published book screenshots in
   # the same PR (freshness, not pixels — owner decision). Escape hatch: the
@@ -2777,6 +2804,24 @@ jobs:
       - name: compose image tags match the workspace version
         run: bash scripts/checks/compose-image-tags.sh
 
+  # Viewer tool-pin guard (#4222): the wasm-bindgen CLI must equal the
+  # wasm-bindgen Cargo.lock resolves, and every cargo-leptos pin must agree,
+  # or a viewer build in one lane fails its bindings step while CI is green.
+  viewer-tool-pins:
+    name: viewer-tool-pins
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: viewer tool-pin guard self-test
+        run: bash scripts/checks/viewer-tool-pins.sh --self-test
+      - name: viewer tool pins match Cargo.lock and one another
+        run: bash scripts/checks/viewer-tool-pins.sh
+
   # ── The one-check aggregate gate (the rust-analyzer/ruff pattern) ───────────
   # A single job that needs everything and passes iff nothing failed — skipped
   # jobs count as satisfied, exactly like branch protection treats them. Point
@@ -2838,6 +2883,7 @@ jobs:
       - viewer-login-smoke
       - deploy-probe
       - server-image-from-source
+      - viewer-image-from-source
       - ui-screenshot-guard
       - contribution-licence
       - privacy-boundary
@@ -2846,6 +2892,7 @@ jobs:
       - changelog
       - citation
       - compose-version-guard
+      - viewer-tool-pins
       - crate-version
       - chart-version
       - chart-appversion
