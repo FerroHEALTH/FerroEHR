@@ -56,9 +56,9 @@
 #      chart's tag-versus-digest refusal both read), and the DIGEST equals the
 #      `image.digest` of its values section (`terminology:`, `bridge:`), which
 #      is what every install actually runs. FerroPIX, a chart dependency since
-#      #3380, has no pinned-version define here (its tag follows the dependency
-#      chart), so only its DIGEST is held, to `ferropix.image.digest`
-#      (#4115). Without this the
+#      #3380, has no pinned-version define here: its tag is held to
+#      `ferropix.image.tag` (#4131) and its digest to `ferropix.image.digest`
+#      (#4115), both in its values section. Without this the
 #      annotation is a fourth hand-maintained copy of a version: Artifact Hub
 #      would scan whatever `ferroterm:<tag>` had moved to while the chart
 #      deployed a pinned digest, and the vulnerability report would describe
@@ -72,11 +72,10 @@
 #      FROM Chart.yaml, so a disagreement means it was never regenerated.
 #
 # Usage: scripts/checks/chart-appversion.sh [--self-test]
-#   --self-test mutates a COPY of the chart tree twelve ways (a first-party tag
-#   moved off appVersion, an image line with its party marker removed, each of
-#   the FerroTERM and FerroBRIDGE tags and digests moved off its pin from either
-#   side, and the FerroPIX digest moved from either side) and asserts the guard
-#   rejects each.
+#   --self-test mutates a COPY of the chart tree fourteen ways (a first-party
+#   tag moved off appVersion, an image line with its party marker removed, and
+#   each of the FerroTERM, FerroBRIDGE and FerroPIX tags and digests moved off
+#   its pin from either side) and asserts the guard rejects each.
 #   The detectors are arithmetic over text, and a text detector never shown to fail
 #   is a green light nobody has tested (reliability.md §enforcement tiers).
 # Callers: the `chart-appversion` job in ci.yml, and the `plan` job of
@@ -112,6 +111,8 @@ if [[ "${1:-}" == "--self-test" ]]; then
     "the bridge values digest moved without the annotation|${self_values}|/^bridge:/,\$s|^    digest: sha256:[0-9a-f]\\{8\\}|    digest: sha256:0000c0de|"
     "the FerroPIX digest moved off the values pin|${self_chart}|s|\\(ferropix:[^@]*\\)@sha256:[0-9a-f]\\{8\\}|\\1@sha256:0000c0de|"
     "the ferropix values digest moved without the annotation|${self_values}|/^ferropix:/,\$s|^    digest: \"sha256:[0-9a-f]\\{8\\}|    digest: \"sha256:0000c0de|"
+    "the FerroPIX tag moved off the values pin|${self_chart}|s|ferropix:[0-9][^@]*@|ferropix:9.9.9@|"
+    "the ferropix values tag moved without the annotation|${self_values}|/^ferropix:/,\$s|^    tag: \"[0-9][^\"]*\"|    tag: \"9.9.9\"|"
   )
   for mutation in "${mutations[@]}"; do
     label="${mutation%%|*}"
@@ -209,8 +210,9 @@ fi
 # read inside its own top-level values section, so two pinned images can never
 # be checked against each other's digest.
 # <product>|<repository>|<pinned-version define>|<top-level values key>
-# An empty define holds the digest alone: FerroPIX's tag follows its
-# dependency chart, and the chart pins only its digest.
+# An empty define reads the tag from the section's own `image.tag`: FerroPIX
+# is deployed by its dependency chart, so this chart pins no helper define for
+# it, and the tag its values state is the one the annotation must name.
 third_party=(
   "FerroTERM|ghcr.io/ferrohealth/ferroterm|ferroehr.terminologyPinnedVersion|terminology"
   "FerroBRIDGE|ghcr.io/ferrohealth/ferrobridge|ferroehr.bridgePinnedVersion|bridge"
@@ -218,9 +220,16 @@ third_party=(
 )
 for entry in "${third_party[@]}"; do
   IFS='|' read -r product repository define section <<<"$entry"
-  pin=""
   if [[ -n "$define" ]]; then
     pin=$(sed -nE "/define \"${define//./\\.}\"/{n;s/^[[:space:]]*([0-9][0-9A-Za-z.+-]*)[[:space:]]*\$/\\1/p;}" "$HELPERS")
+  else
+    pin=$(awk -v section="${section}:" '
+      $0 == section { inside = 1; next }
+      inside && /^[^[:space:]#]/ { inside = 0 }
+      inside && /^  image:$/ { image = 1; next }
+      inside && image && /^  [^[:space:]]/ { image = 0 }
+      inside && image && /^    tag: "?[0-9][0-9A-Za-z.+-]*"?$/ { gsub(/"/, "", $2); print $2 }
+    ' "$VALUES" | head -1)
   fi
   digest=$(awk -v section="${section}:" '
     $0 == section { inside = 1; next }
@@ -231,18 +240,21 @@ for entry in "${third_party[@]}"; do
   ' "$VALUES" | head -1)
   have=$(grep -oE "image: ${repository//./\\.}[:@][^[:space:]]*" "$CHART" | head -1)
   have="${have#image: }"
+  if [[ -n "$define" ]]; then
+    tag_source="${define} in $HELPERS"
+  else
+    tag_source="${section}.image.tag in $VALUES"
+  fi
   if [[ -n "$define" && -z "$pin" ]]; then
     report "could not read the ${product} pin from $HELPERS — '${define}' must be a define whose next line is the bare version, because this guard and the chart's own tag default both read it there."
+  elif [[ -z "$pin" ]]; then
+    report "could not read ${section}.image.tag from $VALUES — it states the ${product} release the pinned digest belongs to, and this guard holds the published annotation's tag to it."
   elif [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
     report "could not read ${section}.image.digest from $VALUES — the chart pins ${product} by digest, and this guard holds the published annotation to that pin."
-  elif [[ -z "$define" ]]; then
-    if [[ "$have" != "${repository}:"*"@${digest}" ]]; then
-      report "$CHART lists ${product} as '${have:-<absent>}' but the chart deploys the digest '${digest}' (${section}.image.digest in $VALUES). Artifact Hub scans the reference in the annotation, so a stale one reports vulnerabilities for an image nobody runs."
-    fi
   else
     want="${repository}:${pin}@${digest}"
     if [[ "$have" != "$want" ]]; then
-      report "$CHART lists ${product} as '${have:-<absent>}' but the chart deploys '${want}' (tag from ${define} in $HELPERS, digest from ${section}.image.digest in $VALUES). Artifact Hub scans the reference in the annotation, so a stale one reports vulnerabilities for an image nobody runs."
+      report "$CHART lists ${product} as '${have:-<absent>}' but the chart deploys '${want}' (tag from ${tag_source}, digest from ${section}.image.digest in $VALUES). Artifact Hub scans the reference in the annotation, so a stale one reports vulnerabilities for an image nobody runs."
     fi
   fi
 done

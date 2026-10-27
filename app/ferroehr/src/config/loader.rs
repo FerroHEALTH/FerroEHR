@@ -6,7 +6,7 @@
 //! [`loader`] names what is FerroEHR's own: the `FERROEHR` namespace, the
 //! fallbacks below the canonical `FERROEHR__` forms (`DATABASE_URL_UNPOOLED`,
 //! `DATABASE_URL` and the libpq set for `db.url`, `RUST_LOG` for
-//! `telemetry.filter`, `PORT` for `server.bind`), and the names under the prefix
+//! `telemetry.filter`, `PORT` for `server.listen`), and the names under the prefix
 //! that set no key. [`load_process`] and [`assemble_from`] then resolve every `*_file`
 //! secret sibling. No openEHR spec governs configuration — our own design.
 
@@ -25,10 +25,9 @@ use ferrohealth_usage_report::section::{CI_VARIABLES, ci_of};
 use super::FerroEhrConfig;
 
 /// Names under the `FERROEHR_` prefix that set no configuration key and pass
-/// the strict sweep: the healthcheck argument, the build-time variables, and
+/// the strict sweep: the build-time variables and
 /// the Compose parameters that can reach the container environment.
 const RESERVED: &[&str] = &[
-    "FERROEHR_HEALTHCHECK_URL",
     "FERROEHR_BUILD_EPOCH",
     "FERROEHR_RUSTC",
     "FERROEHR_IMAGE",
@@ -122,7 +121,7 @@ pub fn loader() -> Result<Loader, ConfigError> {
         .fallback("DATABASE_URL", "db.url", None)
         .fallback("DATABASE_URL_UNPOOLED", "db.url", None)
         .fallback("RUST_LOG", "telemetry.filter", None)
-        .fallback("PORT", "server.bind", Some(all_interfaces));
+        .fallback("PORT", "server.listen", Some(all_interfaces));
     Ok(RESERVED
         .iter()
         .fold(loader, |loader, name| loader.reserve(*name)))

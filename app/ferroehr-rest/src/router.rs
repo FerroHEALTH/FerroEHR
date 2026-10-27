@@ -1,32 +1,29 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Router assembly and the `tower-http` middleware stack.
+//! Router assembly: FerroEHR's routes inside the family stack.
 //!
 //! Every ITS-REST resource path is relative to the configured API base path
 //! (overview `Resources.md` §Resource identification), so the generated API
-//! surface ([`crate::api`]) nests under `cfg.base_path`. The `/rest/status`
-//! document hangs off the `/ferroehr/rest` root, the always-on health family
-//! answers at the process root, and the System Options manifest answers at the
-//! base-path root itself.
+//! surface ([`crate::api`]) nests under `rest.base_path`. The `/rest/status`
+//! document hangs off the `/ferroehr/rest` root and the System Options manifest
+//! answers at the base-path root itself.
 //!
-//! Layer order over the nested API, innermost first: authentication, ATNA audit
-//! (wrapping auth so it observes auth rejections), HTTP metrics, root span, then
-//! overload shedding — outermost on that subtree, so a shed request is rejected
-//! before auth, audit, or reading the body. The whole tree is then wrapped in the
-//! shared `tower-http` stack (request-id, tracing, CORS, body limit, timeout,
-//! compression), with `align_transport_error_body` between the CORS layer and the
-//! body-limit/timeout pair to re-render their `408`/`413` in the openEHR
-//! `{ error, message }` shape. The System Options `OPTIONS` endpoint mounts above
-//! the CORS layer, which would otherwise treat it as a preflight.
+//! [`routes`] is FerroEHR's own: over the nested API, innermost first, the
+//! caller rate (`[server.caller_rate]`, keyed on the authenticated subject),
+//! authentication, the ATNA audit (wrapping auth so it observes auth
+//! rejections) and the clinical body tier; then CORS over the whole surface,
+//! with the System Options `OPTIONS` endpoint mounted beside it, since the CORS
+//! layer would otherwise treat it as a preflight. [`router`] wraps those routes
+//! in `ferrohealth_server::stack::app`, which adds the request id, the panic
+//! catch, the request timeout, the body limit, the overload bound, compression,
+//! the request log and the health routes, and writes its panics and refusals in
+//! the openEHR `{ error, message }` body ([`stack_policy`]). The trailing-slash
+//! normalization runs before routing and the security headers outermost.
 //!
-//! Shedding is scoped to the API subtree, so the health family, `/rest/status`,
-//! SMART discovery and the management surface are never shed and an operator can
-//! always reach an overloaded server. No openEHR spec governs server overload —
-//! our own design (RFC 9110 §15.6.4).
-//!
-//! `NormalizePathLayer` is applied at serve time (it must wrap the router to run
-//! before routing); see [`crate::serve_with`].
+//! The overload bound covers every FerroEHR route and never the health routes,
+//! so an orchestrator can always probe an overloaded server. No openEHR spec
+//! governs server overload — our own design (RFC 9110 §15.6.4).
 
 #![allow(
     clippy::disallowed_types,
@@ -35,53 +32,85 @@
               cfg(test)-only, so #[expect] would be unfulfilled in the non-test build"
 )]
 
-use std::any::Any;
 use std::sync::Arc;
-use std::time::Duration;
 
 use axum::Router;
 use axum::middleware::from_fn_with_state;
 use axum::response::{IntoResponse, Response};
-use http::StatusCode;
-use http::header::{AUTHORIZATION, CONTENT_TYPE};
+use ferrohealth_server::caller_rate::{self, CallerKey, CallerLimit};
+use ferrohealth_server::health::Health;
+use ferrohealth_server::panic::PanicBody;
+use ferrohealth_server::refusal::RefusalBody;
+use ferrohealth_server::stack::{self, StackPolicy};
+use http::header::AUTHORIZATION;
 use http::{HeaderName, HeaderValue, header};
 use openehr_its::rest::runtime::ApiError;
-use tower::ServiceBuilder;
-use tower_http::CompressionLevel;
-use tower_http::catch_panic::CatchPanicLayer;
-use tower_http::compression::CompressionLayer;
+use tower::{Layer as _, ServiceBuilder};
 use tower_http::cors::CorsLayer;
-use tower_http::limit::RequestBodyLimitLayer;
-use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
+use tower_http::normalize_path::NormalizePathLayer;
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
 use tower_http::set_header::SetResponseHeaderLayer;
-use tower_http::timeout::TimeoutLayer;
 
 use crate::api::system;
-use crate::extensions::access::authn::{self, Authenticator};
-use crate::extensions::health;
+use crate::extensions::access::authn::{self, Authenticator, Principal};
 use crate::extensions::management::{self, ManagementState};
 use crate::extensions::openapi;
 use crate::overview::{error, status};
 use crate::smart;
 use crate::state::AppState;
 use ferroehr::config::management::AccessLevel;
-use ferrohealth_telemetry::request_log::{self, RequestId, RequestLog};
+use ferrohealth_telemetry::request_log::RequestLog;
 
-/// Per-request timeout.
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
-
-/// Assembles the full application router.
-///
-/// Mounts the ITS-REST API (behind the auth layer) nested under the base path,
-/// the always-on public health family, the status + SMART-discovery endpoints,
-/// the System Options manifest, the optional Swagger UI, and the shared
-/// `tower-http` middleware stack.
+/// Assembles the full application: [`routes`] inside the family stack, the
+/// management surface merged when it shares the main listener, the
+/// trailing-slash normalization and the security headers.
 pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
     let cfg = state.config().clone();
-    let mgmt_rbac = management_rbac(&state);
     let observability = state.observability().clone();
-    let rest_root = cfg.server.rest_root();
+    let product = routes(state.clone(), &authenticator);
+    // Only when enabled and not bound to a separate port (which the binary
+    // serves on its own listener).
+    let product = if observability.management.enabled && observability.management.port.is_none() {
+        product.merge(audited_management(state, authenticator))
+    } else {
+        product
+    };
+    let health = Health::new(
+        observability.health.clone(),
+        observability.lifecycle.clone(),
+    );
+    let app = stack::app(
+        product,
+        health,
+        &cfg.server,
+        stack_policy(observability.request_log.clone()),
+    );
+    with_security_headers(normalized(app))
+}
+
+/// The management surface inside the audit trail (#3244): every management
+/// request is recorded as a system-domain access, `/management/loggers` writes
+/// included.
+fn audited_management(state: AppState, authenticator: Arc<Authenticator>) -> Router {
+    management::router(ManagementState::from_app_state(
+        &state,
+        authenticator,
+        management_rbac(&state),
+    ))
+    .layer(from_fn_with_state(
+        state,
+        crate::system_log::middleware::middleware,
+    ))
+}
+
+/// FerroEHR's routes without the family stack.
+///
+/// The ITS-REST API behind authentication, nested under the base path, the
+/// status and SMART-discovery endpoints, the optional Swagger UI and the System
+/// Options manifest.
+pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
+    let cfg = state.config().clone();
+    let rest_root = cfg.rest.rest_root();
 
     // A known path called with a method it does not serve renders `405` with the
     // openEHR body (overview §HTTP Methods); axum supplies the mandatory `Allow`
@@ -93,26 +122,35 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
     // `ApiError::NotImplemented`.
     let api =
         crate::api::api_router().method_not_allowed_fallback(error::method_not_allowed_handler);
+    // Added before the authentication layer, which in axum's outermost-last
+    // ordering puts it inside: the subject it keys on exists only after auth.
+    let api = match cfg.server.caller_rate {
+        Some(rate) => api
+            .layer(from_fn_with_state(
+                CallerLimit::new(rate),
+                caller_rate::limit,
+            ))
+            .layer(axum::middleware::from_fn(caller_key)),
+        None => api,
+    };
     let api = api.layer(from_fn_with_state(
         authn::AuthLayer {
-            authenticator: Arc::clone(&authenticator),
+            authenticator: Arc::clone(authenticator),
             authz: state.authz(),
             patient_data: authn::assurance::PatientDataGate::new(
                 authenticator.bearer_admitted(),
                 &cfg.assurance,
                 cfg.professional.as_ref(),
-                &cfg.server.base_path,
+                &cfg.rest.base_path,
                 ferroehr::config::auth::realm(&cfg.auth),
             )
             .map(Arc::new),
             smart: Arc::new(smart::routes::SmartRoutes::new(
-                &cfg.server.base_path,
+                &cfg.rest.base_path,
                 ferroehr::config::auth::product_scope(&cfg.auth),
                 cfg.smart.demographic_clients.clone(),
             )),
-            served: Arc::new(crate::api::served::ServedMethods::new(
-                &cfg.server.base_path,
-            )),
+            served: Arc::new(crate::api::served::ServedMethods::new(&cfg.rest.base_path)),
         },
         authn::middleware,
     ));
@@ -122,43 +160,26 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
         state.clone(),
         crate::system_log::middleware::middleware,
     ));
-    // Added before the authentication layer, which in axum's outermost-last
-    // ordering puts it inside: the subject it keys on exists only after auth.
-    let api = match crate::rate_limit::principal_layer(&cfg.server.rate_limit) {
-        Some(tier) => api.layer(tier),
-        None => api,
-    };
     // Above the audit layer so an over-large body is refused before it is read,
-    // buffered or audited; the outer `RequestBodyLimitLayer` is the tree ceiling.
+    // buffered or audited; the stack's body limit is the ceiling of every route.
     let api = api.layer(from_fn_with_state(state.clone(), crate::limits::middleware));
 
-    // Beyond `cfg.max_in_flight` concurrent API requests the excess is shed as
-    // `503` + `Retry-After` rather than queued until memory runs out; `0`
-    // installs no layer.
-    let api = crate::overload::shed_layer(api, cfg.server.max_in_flight);
+    let inner = mount_public_surface(&cfg, &state, authenticator, api, &rest_root);
 
-    let inner = mount_public_surface(&cfg, &state, &authenticator, api, &rest_root);
-
-    let cors = if cfg.server.cors_permissive {
+    let cors = if cfg.rest.cors_permissive {
         CorsLayer::very_permissive()
     } else {
         CorsLayer::new()
     };
-
-    // The address-keyed tier covers the whole tree, health family included: a
-    // flood at any path is refused here, before authentication.
-    let inner = match crate::rate_limit::address_layer(&cfg.server.rate_limit) {
-        Some(tier) => inner.layer(tier),
-        None => inner,
-    };
-
-    // The management surface sits outside the API tree but inside the audit
-    // trail (#3244): every management request is recorded as a system-domain
-    // access, `/management/loggers` writes included.
-    let audit_state = state.clone();
-    let request_log = observability.request_log.clone();
-    let inner: Router =
-        with_shared_stack(inner, cfg.server.limits.ceiling(), cors, request_log, state);
+    let inner: Router = inner
+        .layer(
+            ServiceBuilder::new()
+                .layer(SetSensitiveRequestHeadersLayer::new(std::iter::once(
+                    AUTHORIZATION,
+                )))
+                .layer(cors),
+        )
+        .with_state(state);
 
     // The manifest advertises the live mounted-group set, so it never names a
     // group that answers 404; extension families declare themselves through the
@@ -176,83 +197,74 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
         endpoints.push("/admin".to_owned());
     }
     let manifest = Arc::new(system::options::SystemManifest::new(
-        cfg.server.identity.clone(),
+        cfg.rest.identity.clone(),
         endpoints,
     ));
 
     // The API base-path root is the one location the System API defines
-    // (`system.openapi.yaml`: servers `{baseUrl}/v1`, path `/`). The mount sits
-    // above CORS so `OPTIONS` is not eaten as a preflight; every other request
-    // falls through to the CORS-wrapped application.
-    let app: Router = Router::new()
-        .route(&cfg.server.base_path, system::options::route(manifest))
-        .fallback_service(inner);
-
-    // Only when enabled and not bound to a separate port (which the binary
-    // serves on its own listener).
-    let app = if observability.management.enabled && observability.management.port.is_none() {
-        let mgmt = management::router(ManagementState::from_app_state(
-            &audit_state,
-            authenticator,
-            mgmt_rbac,
-        ))
-        .layer(from_fn_with_state(
-            audit_state,
-            crate::system_log::middleware::middleware,
-        ));
-        app.merge(mgmt)
-    } else {
-        app
-    };
-    with_security_headers(app)
+    // (`system.openapi.yaml`: servers `{baseUrl}/v1`, path `/`). The route is
+    // merged beside the CORS-wrapped surface so `OPTIONS` is not eaten as a
+    // preflight.
+    inner.merge(Router::new().route(&cfg.rest.base_path, system::options::route(manifest)))
 }
 
-/// Applies the shared request stack and binds the state, yielding a
-/// protocol-complete, state-less service.
+/// Puts the authenticated subject on the request as the caller the
+/// `[server.caller_rate]` limit keys on.
 ///
-/// The stack is applied in two halves with [`align_transport_error_body`]
-/// between them: `TimeoutLayer` and `RequestBodyLimitLayer` render their own
-/// responses without ever reaching [`crate::overview::error`], so the mapping
-/// must sit OUTSIDE both. Order (outermost → innermost): request-id, request
-/// log, catch-panic, CORS, body-limit ceiling, timeout, compression.
+/// Runs inside the authentication layer, so [`Principal`] is in the request
+/// extensions. A request without one means authentication is disabled
+/// altogether; those share a single key, which is the honest behaviour: with no
+/// identity there is nothing fairer to key on. No openEHR spec governs request
+/// rates — our own design.
+async fn caller_key(mut request: axum::extract::Request, next: axum::middleware::Next) -> Response {
+    let subject = request.extensions().get::<Principal>().map_or_else(
+        || Arc::from("-"),
+        |principal| Arc::from(principal.subject.as_str()),
+    );
+    request.extensions_mut().insert(CallerKey(subject));
+    next.run(request).await
+}
+
+/// What FerroEHR decides inside the family stack.
 ///
-/// `body_ceiling` is the widest tier any route accepts
-/// ([`BodyLimits::ceiling`](ferroehr::config::server::BodyLimits::ceiling)); the
-/// narrower per-family tier is applied inside, by [`crate::limits`].
-fn with_shared_stack(
-    inner: Router<AppState>,
-    body_ceiling: usize,
-    cors: CorsLayer,
-    log: RequestLog,
-    state: AppState,
-) -> Router {
-    inner
-        .layer(
-            ServiceBuilder::new()
-                .layer(RequestBodyLimitLayer::new(body_ceiling))
-                .layer(TimeoutLayer::with_status_code(
-                    StatusCode::REQUEST_TIMEOUT,
-                    REQUEST_TIMEOUT,
-                ))
-                // NOTE (docs.rs tower-http `CompressionLayer::quality`):
-                // Fastest — the default brotli/gzip levels spend visible
-                // per-response CPU for a marginal ratio gain on ~KB bodies.
-                .layer(CompressionLayer::new().quality(CompressionLevel::Fastest)),
-        )
-        .layer(axum::middleware::map_response(align_transport_error_body))
-        .layer(
-            ServiceBuilder::new()
-                .layer(axum::middleware::from_fn(request_id))
-                .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
-                .layer(PropagateRequestIdLayer::x_request_id())
-                .layer(SetSensitiveRequestHeadersLayer::new(std::iter::once(
-                    AUTHORIZATION,
-                )))
-                .layer(from_fn_with_state(log, request_log::middleware))
-                .layer(CatchPanicLayer::custom(handle_panic))
-                .layer(cors),
-        )
-        .with_state(state)
+/// A panic and each refusal the stack writes (`408`, `413`, `429`, `503`)
+/// answer the openEHR `{ error, message }` body, and the request log is the one
+/// the observability bundle carries.
+#[must_use]
+pub fn stack_policy(request_log: RequestLog) -> StackPolicy {
+    StackPolicy {
+        panic_body: panic_body(),
+        refusal_body: refusal_body(),
+        request_log,
+    }
+}
+
+/// Renders a panicked handler as a `500` in the openEHR `{ error, message }`
+/// body every other error path emits ([`crate::overview::error`]).
+///
+/// The panic payload never reaches the body or the log. No openEHR spec governs
+/// the error-body shape (a MAY, `Requests_and_responses.md` §HTTP status codes)
+/// — our own design.
+fn panic_body() -> PanicBody {
+    Arc::new(|_uri, _request_id| {
+        error::RestError(ApiError::Internal(error::INTERNAL_MESSAGE.to_owned())).into_response()
+    })
+}
+
+/// Renders a refusal the stack writes itself in the openEHR
+/// `{ error, message }` body, keeping its status.
+///
+/// `408` is a predefined status (`Requests_and_responses.md` §HTTP status
+/// codes) and `413`, `429` and `503` additional codes the same section permits;
+/// the error body itself is a MAY there, so this is consistency across our own
+/// surface.
+fn refusal_body() -> RefusalBody {
+    Arc::new(|_uri, _request_id, status, reason| error::status_error_response(status, reason))
+}
+
+/// Trims a trailing slash before routing, so `/ehr/` and `/ehr` reach one route.
+fn normalized(app: Router) -> Router {
+    Router::new().fallback_service(NormalizePathLayer::trim_trailing_slash().layer(app))
 }
 
 /// Applies the response headers every surface carries, per the OWASP HTTP
@@ -301,113 +313,16 @@ fn with_security_headers(app: Router) -> Router {
     )
 }
 
-/// The `X-Request-Id` header.
-const X_REQUEST_ID: HeaderName = HeaderName::from_static("x-request-id");
-
-/// Names the request for the request log: the client's `X-Request-Id` when
-/// it sent one, else a fresh UUID written into the header for the layers
-/// below.
-async fn request_id(mut request: axum::extract::Request, next: axum::middleware::Next) -> Response {
-    let client = request
-        .headers()
-        .get(&X_REQUEST_ID)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
-    let id = if let Some(id) = client.as_deref() {
-        RequestId::new(id, true)
-    } else {
-        let minted = minted_request_id();
-        if let Ok(value) = HeaderValue::from_str(&minted) {
-            request.headers_mut().insert(X_REQUEST_ID, value);
-        }
-        RequestId::new(minted, false)
-    };
-    request.extensions_mut().insert(id);
-    next.run(request).await
-}
-
-/// A fresh request id: random, never a database key.
-#[expect(
-    clippy::disallowed_methods,
-    reason = "a request id is non-key randomness, the case the v4 ban allows"
-)]
-fn minted_request_id() -> String {
-    uuid::Uuid::new_v4().to_string()
-}
-
-/// Renders a panicked handler as a `500` in the openEHR `{ error, message }`
-/// body every other error path emits ([`crate::overview::error`]), never
-/// tower-http's default `text/plain`.
+/// Mounts the public, pre-auth surface around the API tree: the REST-root
+/// status surface, the config-gated SMART `/.well-known/smart-configuration`
+/// document (SMART master04 §Service Discovery; an empty router when SMART is
+/// disabled), and the Swagger UI plus `OpenAPI` documents at the access level
+/// `rest.swagger_ui` names — `public` is open, `private`/`admin_only` sit
+/// behind the same access guard the management endpoints use, `off` is not
+/// mounted.
 ///
-/// The panic payload is logged but never echoed into the response. No openEHR
-/// spec governs the error-body shape (a MAY, `Requests_and_responses.md` §HTTP
-/// status codes) — our own design.
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "tower-http's `CatchPanicLayer` handler contract hands the panic \
-              payload over by value"
-)]
-fn handle_panic(err: Box<dyn Any + Send + 'static>) -> Response {
-    let detail = if let Some(s) = err.downcast_ref::<&str>() {
-        (*s).to_owned()
-    } else if let Some(s) = err.downcast_ref::<String>() {
-        s.clone()
-    } else {
-        "unknown panic payload".to_owned()
-    };
-    tracing::error!(panic = %detail, "request handler panicked");
-    error::RestError(ApiError::Internal(error::INTERNAL_MESSAGE.to_owned())).into_response()
-}
-
-/// Aligns the two transport-layer error responses the `tower-http` stack renders
-/// on its own onto the openEHR `{ error, message }` body
-/// ([`crate::overview::error`]).
-///
-/// `TimeoutLayer` builds its `408` as a bare status and `RequestBodyLimitLayer`
-/// its `413` as `text/plain`; neither passes through
-/// [`crate::overview::error::RestError`], so without this mapping they would be
-/// the only error responses in a foreign shape. `408` is a predefined status
-/// (`Requests_and_responses.md` §HTTP status codes) and `413` one of the
-/// additional codes the same section permits; the error body itself is a MAY
-/// there, so this is consistency across our own surface.
-///
-/// A response that already carries a JSON body came from a handler and passes
-/// through untouched.
-async fn align_transport_error_body(response: Response) -> Response {
-    let status = response.status();
-    let message = match status {
-        StatusCode::REQUEST_TIMEOUT => {
-            "the request exceeded the maximum execution time and was aborted"
-        }
-        StatusCode::PAYLOAD_TOO_LARGE => {
-            "the request body exceeds the maximum size accepted by this server"
-        }
-        _ => return response,
-    };
-    let already_rendered = response
-        .headers()
-        .get(CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok())
-        .is_some_and(|value| value.starts_with("application/json"));
-    if already_rendered {
-        return response;
-    }
-    error::status_error_response(status, message)
-}
-
-/// Mounts the public, pre-auth surface around the API tree: the always-on health
-/// family, the REST-root status surface, the config-gated SMART
-/// `/.well-known/smart-configuration` document (SMART master04 §Service
-/// Discovery; an empty router when SMART is disabled), and the Swagger UI plus
-/// `OpenAPI` documents at the access level `server.swagger_ui` names — `public`
-/// sits beside the health family, `private`/`admin_only` sit behind the same
-/// access guard the management endpoints use, `off` is not mounted.
-///
-/// No openEHR spec governs this — our own operational surface. The health family
-/// ([`crate::extensions::health`]) is mounted unconditionally and ungated,
-/// outside the API subtree, so an orchestrator can probe the server without
-/// credentials, without any configuration enabled, and without the overload-shed
-/// layer being able to shed the probe.
+/// No openEHR spec governs this — our own operational surface. The health
+/// routes are the family stack's, outside these routes and their guards.
 fn mount_public_surface(
     cfg: &crate::config::AppConfig,
     state: &AppState,
@@ -419,12 +334,11 @@ fn mount_public_surface(
     let discovery = smart::discovery::router(cfg, rest_root, authenticator);
 
     let mut inner = Router::new()
-        .nest(&cfg.server.base_path, api)
-        .merge(health::router())
+        .nest(&cfg.rest.base_path, api)
         .merge(status::router(rest_root))
         .merge(discovery);
 
-    match cfg.server.swagger_ui {
+    match cfg.rest.swagger_ui {
         AccessLevel::Off => {}
         AccessLevel::Public => inner = inner.merge(openapi::swagger_router(cfg)),
         level @ (AccessLevel::Private | AccessLevel::AdminOnly) => {
@@ -459,30 +373,44 @@ fn management_rbac(state: &AppState) -> ferroehr::config::authz::RbacConfig {
         })
 }
 
-/// Builds the standalone management router for separate-port mode, which the
-/// binary serves on the management listener when `management.port` is set.
+/// Builds the standalone management application for separate-port mode.
+///
+/// The binary serves it on the management listener when `management.port` is
+/// set: the management routes inside the family stack, with the same health
+/// routes.
 pub fn management_router(state: &AppState, authenticator: Arc<Authenticator>) -> Router {
-    management::router(ManagementState::from_app_state(
+    let observability = state.observability();
+    let health = Health::new(
+        observability.health.clone(),
+        observability.lifecycle.clone(),
+    );
+    let routes = management::router(ManagementState::from_app_state(
         state,
         authenticator,
         management_rbac(state),
+    ));
+    normalized(stack::app(
+        routes,
+        health,
+        &state.config().server,
+        stack_policy(observability.request_log.clone()),
     ))
 }
 
 #[cfg(test)]
 mod tests {
-    use axum::body::{Body, to_bytes};
-    use axum::response::Response;
+    use axum::body::to_bytes;
     use http::StatusCode;
 
-    use super::{align_transport_error_body, handle_panic};
+    use super::{panic_body, refusal_body};
 
-    /// a panicked handler renders the standard openEHR `{ error, message }`
-    /// JSON 500 body (never tower-http's default text/plain), and the panic
-    /// payload is never echoed into the response.
+    /// A panicked handler renders the standard openEHR `{ error, message }`
+    /// JSON 500 body (never a bare status), and nothing of the request reaches
+    /// it.
     #[tokio::test]
-    async fn catch_panic_renders_openehr_json_body() {
-        let resp = handle_panic(Box::new("secret panic detail"));
+    async fn the_panic_body_is_the_openehr_error_body() {
+        let uri: http::Uri = "/ferroehr/rest/openehr/v1/ehr".parse().unwrap();
+        let resp = panic_body()(&uri, "0190a6f3-request-id");
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(
             resp.headers().get(http::header::CONTENT_TYPE).unwrap(),
@@ -491,97 +419,26 @@ mod tests {
         let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
         let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(body["error"], "Internal Server Error");
-        let message = body["message"].as_str().unwrap();
-        assert!(
-            !message.contains("secret panic detail"),
-            "panic payload must not leak into the response body"
-        );
+        assert!(body["message"].as_str().is_some());
     }
 
-    async fn json_body(resp: Response) -> (StatusCode, serde_json::Value) {
-        let status = resp.status();
-        assert_eq!(
-            resp.headers().get(http::header::CONTENT_TYPE).unwrap(),
-            "application/json"
-        );
-        let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
-        (status, serde_json::from_slice(&bytes).unwrap())
-    }
-
-    /// The `tower-http` `TimeoutLayer` renders `408` as a bare status with an
-    /// empty body; the alignment re-renders it in the openEHR
-    /// `{ error, message }` shape. `408` is a predefined status in the spec's
-    /// own table (ITS-REST `Requests_and_responses.md` §HTTP status codes —
-    /// "Request maximum execution time is reached, therefore the server aborted
-    /// the request"), so only the body shape is ours to choose.
+    /// Each refusal the stack writes keeps its status and carries the reason in
+    /// the openEHR `{ error, message }` shape.
     #[tokio::test]
-    async fn layer_produced_408_is_rendered_as_the_openehr_error_body() {
-        let mut bare = Response::new(Body::empty());
-        *bare.status_mut() = StatusCode::REQUEST_TIMEOUT;
-        let (status, body) = json_body(align_transport_error_body(bare).await).await;
-        assert_eq!(status, StatusCode::REQUEST_TIMEOUT);
-        assert_eq!(body["error"], "Request Timeout");
-        assert!(
-            body.get("message")
-                .and_then(serde_json::Value::as_str)
-                .is_some()
-        );
-    }
-
-    /// The `RequestBodyLimitLayer` renders `413` as `text/plain`; the alignment
-    /// re-renders it in the openEHR `{ error, message }` shape. `413` is not in
-    /// the spec's status table but is permitted as an additional,
-    /// non-conflicting code (`Requests_and_responses.md` §HTTP status codes).
-    #[tokio::test]
-    async fn layer_produced_413_is_rendered_as_the_openehr_error_body() {
-        let mut bare = Response::new(Body::from("length limit exceeded"));
-        *bare.status_mut() = StatusCode::PAYLOAD_TOO_LARGE;
-        bare.headers_mut().insert(
-            http::header::CONTENT_TYPE,
-            http::HeaderValue::from_static("text/plain; charset=utf-8"),
-        );
-        let (status, body) = json_body(align_transport_error_body(bare).await).await;
-        assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
-        assert_eq!(body["error"], "Payload Too Large");
-        assert!(
-            body["message"]
-                .as_str()
-                .is_some_and(|m| !m.contains("length limit exceeded")),
-            "the tower-http text body must be replaced, not embedded"
-        );
-    }
-
-    /// A handler-produced `408` (the AQL query-execution timeout, rendered
-    /// through `RestError`) already carries the openEHR body and must pass
-    /// through the alignment untouched — its message names the real cause.
-    #[tokio::test]
-    async fn handler_produced_408_passes_through_unchanged() {
-        let original = crate::overview::error::status_error_response(
-            StatusCode::REQUEST_TIMEOUT,
-            "query aborted after 5000ms",
-        );
-        let (status, body) = json_body(align_transport_error_body(original).await).await;
-        assert_eq!(status, StatusCode::REQUEST_TIMEOUT);
-        assert_eq!(body["message"], "query aborted after 5000ms");
-    }
-
-    /// Every other status is returned byte-for-byte: the alignment is scoped to
-    /// the two layer-produced transport errors and must never touch a success
-    /// or another error path.
-    #[tokio::test]
-    async fn other_statuses_are_untouched() {
-        let mut ok = Response::new(Body::from("hello"));
-        ok.headers_mut().insert(
-            http::header::CONTENT_TYPE,
-            http::HeaderValue::from_static("text/plain"),
-        );
-        let resp = align_transport_error_body(ok).await;
-        assert_eq!(resp.status(), StatusCode::OK);
-        assert_eq!(
-            resp.headers().get(http::header::CONTENT_TYPE).unwrap(),
-            "text/plain"
-        );
-        let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
-        assert_eq!(bytes.as_ref(), b"hello");
+    async fn a_refusal_is_the_openehr_error_body_with_its_status() {
+        let uri: http::Uri = "/ferroehr/rest/openehr/v1/ehr".parse().unwrap();
+        for (status, error) in [
+            (StatusCode::REQUEST_TIMEOUT, "Request Timeout"),
+            (StatusCode::PAYLOAD_TOO_LARGE, "Payload Too Large"),
+            (StatusCode::TOO_MANY_REQUESTS, "Too Many Requests"),
+            (StatusCode::SERVICE_UNAVAILABLE, "Service Unavailable"),
+        ] {
+            let resp = refusal_body()(&uri, "id", status, "the reason");
+            assert_eq!(resp.status(), status);
+            let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+            let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(body["error"], error, "{status}");
+            assert_eq!(body["message"], "the reason");
+        }
     }
 }

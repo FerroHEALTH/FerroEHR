@@ -25,7 +25,7 @@ All clinical API routes hang off a configurable base path, which defaults to:
 
 Every path in these chapters is relative to that base. So "`POST /ehr`" means
 `POST http://your-host:8080/ferroehr/rest/openehr/v1/ehr`. The base path is set
-with `FERROEHR__SERVER__BASE_PATH`, and it may be shortened as far as
+with `FERROEHR__REST__BASE_PATH`, and it may be shortened as far as
 `/ferroehr/v1` (see
 [Shortening the REST base path](../installation/config-server.md#base_path-shortening-the-rest-base-path)).
 
@@ -72,8 +72,8 @@ Two things to know before you build discovery on it:
   FerroEHR's own extension families (health, management, messaging, item tags,
   the archetype-source routes) declare themselves through the served OpenAPI
   document instead.
-- **The identity fields are configurable** (`[server.identity]`, see
-  [Server, database & telemetry](../installation/config-server.md#serveridentity));
+- **The identity fields are configurable** (`[rest.identity]`, see
+  [Server, database & telemetry](../installation/config-server.md#restidentity));
   their defaults are the build's own provenance and the last machine-computed
   conformance verdict, so an unmodified deployment never over-claims.
 

@@ -38,7 +38,7 @@ pub(super) async fn run(
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
-    let base = state.config().server.base_path.clone();
+    let base = state.config().rest.base_path.clone();
 
     match op {
         "versioned_ehr_status_get" => {

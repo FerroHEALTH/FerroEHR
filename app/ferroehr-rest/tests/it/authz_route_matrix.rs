@@ -45,7 +45,7 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::management::AccessLevel;
-use ferroehr::config::server::{AdminConfig, ServerConfig};
+use ferroehr::config::rest::{AdminConfig, RestConfig};
 use ferroehr::config::smart::SmartConfig;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
@@ -494,7 +494,8 @@ fn mounted(cfg: &AppConfig) -> Vec<(String, String)> {
 /// requests), the admin group reachable so the RBAC gate is what decides.
 fn matrix_config() -> AppConfig {
     AppConfig {
-        server: ServerConfig {
+        server: common::server(),
+        rest: RestConfig {
             // ON: the PUBLIC table declares the OAS/Swagger routes, and they are
             // mounted only when this is set — with it off the coverage assertion
             // reports them as declared-but-unmounted.
@@ -517,7 +518,7 @@ fn matrix_config() -> AppConfig {
 fn authz() -> Option<Arc<AuthzHandle>> {
     AuthzHandle::build(
         &AuthzConfig::default(),
-        &matrix_config().server.base_path,
+        &matrix_config().rest.base_path,
         None,
         common::null_resolvers(),
     )
@@ -529,6 +530,7 @@ fn authz() -> Option<Arc<AuthzHandle>> {
 async fn served_config() -> AppConfig {
     let issuer = common::metadata_issuer().await;
     AppConfig {
+        server: common::server(),
         auth: AuthSection {
             issuer: IssuerKey::Flat(issuer.to_owned()),
             audience: vec![AUDIENCE.to_owned()],
@@ -873,7 +875,8 @@ async fn the_swagger_surface_honours_its_access_level() {
         let (pg, pool) = common::migrated_pool().await;
         let base = served_config().await;
         let cfg = AppConfig {
-            server: ServerConfig {
+            server: common::server(),
+            rest: RestConfig {
                 swagger_ui: level,
                 ..Default::default()
             },

@@ -33,7 +33,7 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::management::AccessLevel;
-use ferroehr::config::server::{AdminConfig, ServerConfig};
+use ferroehr::config::rest::{AdminConfig, RestConfig};
 use ferroehr::config::smart::SmartConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
@@ -222,7 +222,8 @@ fn mounted(cfg: &AppConfig) -> BTreeMap<(String, String), Option<String>> {
 /// the table is checked against what is served.
 fn config() -> AppConfig {
     AppConfig {
-        server: ServerConfig {
+        server: common::server(),
+        rest: RestConfig {
             swagger_ui: AccessLevel::Public,
             ..Default::default()
         },
@@ -259,12 +260,13 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         .with_audit_store(AuditStore::new(pool.clone()));
     let authz = AuthzHandle::build(
         &AuthzConfig::default(),
-        &config().server.base_path,
+        &config().rest.base_path,
         None,
         common::null_resolvers(),
     )
     .map(Arc::new);
     let served = AppConfig {
+        server: common::server(),
         auth: AuthSection {
             issuer: IssuerKey::Flat(common::metadata_issuer().await.to_owned()),
             audience: vec![AUDIENCE.to_owned()],
@@ -431,8 +433,9 @@ async fn every_route_writes_exactly_one_access_record() {
     );
 }
 
-/// The access record carries the correlation id the client received in
-/// `x-request-id`, so a record can be matched to the response that caused it.
+/// The access record carries the server's request id, the one a client that
+/// sent none receives in `x-request-id`, so a record can be matched to the
+/// response that caused it and to its request-log line.
 #[tokio::test]
 async fn the_access_record_carries_the_request_id_the_client_received() {
     let (_db, pool, app) = app().await;

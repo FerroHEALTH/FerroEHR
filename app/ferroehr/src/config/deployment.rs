@@ -33,7 +33,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::config::FerroEhrConfig;
-use crate::config::server::binds_loopback;
+use crate::config::rest::binds_loopback;
 use crate::db::MigrationMode;
 
 /// How rigorously this deployment is held to the separations.
@@ -162,7 +162,7 @@ pub enum DeploymentGap {
     /// names the wider exposure.
     RbacOff,
     /// A listener speaks plaintext on an address reachable off the host: the
-    /// main listener with `server.tls.enabled = false` and a non-loopback bind,
+    /// main listener with no `[server.tls]` and a non-loopback `server.listen`,
     /// or the separate management listener (`management.port`), which always
     /// binds every interface in plain HTTP.
     ///
@@ -268,10 +268,10 @@ impl DeploymentGap {
                  [authz.rbac] enabled = true and give each user the roles it needs"
             }
             Self::PlaintextListener => {
-                "a listener serves plain HTTP on a routable address ([server] bind with \
-                 [server.tls] off, or [management] port, which binds every interface without \
+                "a listener serves plain HTTP on a routable address ([server] listen with \
+                 no [server.tls], or [management] port, which binds every interface without \
                  TLS), so clinical data and credentials cross the network unencrypted; enable \
-                 [server.tls] or bind to loopback, unset [management] port so the surface shares \
+                 [server.tls] or listen on loopback, unset [management] port so the surface shares \
                  the main listener, or accept plaintext_listener by name when a TLS-terminating \
                  ingress fronts the port or the management port is unreachable off the host"
             }
@@ -414,7 +414,7 @@ impl DeploymentPosture {
         } else if !config.authz.rbac.enabled {
             gaps.push(DeploymentGap::RbacOff);
         }
-        let plaintext_main = !config.server.tls.enabled && !binds_loopback(&config.server.bind);
+        let plaintext_main = config.server.tls.is_none() && !binds_loopback(config.server.listen);
         let plaintext_management = config.management.enabled && config.management.port.is_some();
         if plaintext_main || plaintext_management {
             gaps.push(DeploymentGap::PlaintextListener);
@@ -535,12 +535,13 @@ mod tests {
                 },
                 ..crate::config::authz::AuthzConfig::default()
             },
-            server: crate::config::server::ServerConfig {
-                tls: crate::config::server::TlsConfig {
-                    enabled: true,
-                    ..crate::config::server::TlsConfig::default()
-                },
-                ..crate::config::server::ServerConfig::default()
+            server: ferrohealth_server::section::ServerSection {
+                listen: "0.0.0.0:8443".parse().expect("an address"),
+                tls: Some(ferrohealth_server::section::TlsSection::new(
+                    "server.pem".into(),
+                    "server.key".into(),
+                )),
+                ..ferrohealth_server::section::ServerSection::default()
             },
             ..FerroEhrConfig::default()
         }
@@ -574,11 +575,13 @@ mod tests {
     }
 
     /// The shipped default is `sandbox`, and a stock configuration on one
-    /// cluster is exactly the deployment that must not hold real data: every
-    /// gap but the audit-off one is open, and boot is permitted.
+    /// cluster, published on every interface as the container images run it,
+    /// is exactly the deployment that must not hold real data: every gap but
+    /// the audit-off one is open, and boot is permitted.
     #[test]
     fn the_default_is_sandbox_and_a_stock_deployment_names_its_gaps() {
-        let config = FerroEhrConfig::default();
+        let mut config = FerroEhrConfig::default();
+        config.server.listen = "0.0.0.0:8080".parse().expect("an address");
         assert_eq!(config.deployment_profile, DeploymentProfile::Sandbox);
         let clusters = ClusterIdentities {
             clinical: Some("1".to_owned()),
@@ -601,6 +604,22 @@ mod tests {
             "auditing and authentication are on by default, so neither is a gap"
         );
         assert!(posture.permits_boot());
+        let loopback =
+            DeploymentPosture::evaluate(&FerroEhrConfig::default(), &on(clusters_of("1")));
+        assert!(
+            !loopback.gaps.contains(&DeploymentGap::PlaintextListener),
+            "the built-in listen address is loopback: {loopback:?}"
+        );
+    }
+
+    /// Every storage domain on the one cluster `id`.
+    fn clusters_of(id: &str) -> ClusterIdentities {
+        ClusterIdentities {
+            clinical: Some(id.to_owned()),
+            party: Some(id.to_owned()),
+            linkage: Some(id.to_owned()),
+            audit: Some(id.to_owned()),
+        }
     }
 
     /// `production` refuses every open gap by name and lists the remedy.
@@ -947,33 +966,28 @@ mod tests {
         );
     }
 
-    /// `production` refuses a plaintext listener on a routable or ambiguous
-    /// address, exempts a loopback bind, and boots once `plaintext_listener`
-    /// is accepted by name (CRA Annex I Part I(2)(e)).
+    /// `production` refuses a plaintext listener on a routable address,
+    /// exempts a loopback one, and boots once `plaintext_listener` is accepted
+    /// by name (CRA Annex I Part I(2)(e)).
     #[test]
     fn production_refuses_a_routable_plaintext_listener_and_exempts_loopback() {
         let mut config = production(separated());
-        config.server.tls.enabled = false;
-        for bind in [
-            "0.0.0.0:8080",
-            "10.0.0.4:8080",
-            "[::]:8080",
-            "ferroehr.internal:8080",
-        ] {
-            config.server.bind = bind.to_owned();
+        config.server.tls = None;
+        for bind in ["0.0.0.0:8080", "10.0.0.4:8080", "[::]:8080"] {
+            config.server.listen = bind.parse().expect("an address");
             let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
             assert_eq!(posture.gaps, [DeploymentGap::PlaintextListener], "{bind}");
             assert!(!posture.permits_boot(), "{bind}");
         }
 
         for bind in ["127.0.0.1:8080", "[::1]:8080"] {
-            config.server.bind = bind.to_owned();
+            config.server.listen = bind.parse().expect("an address");
             let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
             assert!(posture.gaps.is_empty(), "{bind} is loopback: {posture:?}");
             assert!(posture.permits_boot(), "{bind}");
         }
 
-        config.server.bind = "0.0.0.0:8080".to_owned();
+        config.server.listen = "0.0.0.0:8080".parse().expect("an address");
         config.deployment_accepts = vec![DeploymentGap::PlaintextListener];
         let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(accepted.permits_boot());

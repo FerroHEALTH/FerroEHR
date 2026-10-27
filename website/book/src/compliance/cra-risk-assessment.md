@@ -339,7 +339,7 @@ transit by state of the art mechanisms, and by using other technical means"
 - **How:** in transit, rustls with TLS 1.3 by default and mutual TLS, or a
   TLS-terminating ingress; integrations offer TLS (`amqps`, syslog over TLS,
   HTTPS-only S3 by default); a renewed server certificate is served without a
-  restart, every `[server.tls] reload_interval_secs`. At rest, protected
+  restart, on `SIGHUP` and every `[server.tls] reload_interval_s`. At rest, protected
   national identifiers sealed under AES-256-GCM with a keyed lookup digest,
   per party version, inside the party commit; a write response serves the
   sealed form, an import or admin load carrying a protected value in plaintext

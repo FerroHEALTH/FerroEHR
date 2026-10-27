@@ -15,6 +15,7 @@
 //! their dedicated `CallStatusType` variants — never the generic
 //! `versioned_object_does_not_exist` (`i_ehr_index.adoc §Errors`).
 
+use sqlx::{Connection as _, PgConnection, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
@@ -52,6 +53,48 @@ fn entry_count(entries: &[EhrIndexEntry]) -> u64 {
 }
 
 impl FerroEhrService {
+    /// Open a linkage transaction on `conn` holding the `Primary` association
+    /// of `subject` with the EHR about to be created, which
+    /// [`Self::finish_created_association`] commits once the EHR has.
+    ///
+    /// Staging before the clinical commit puts every failure of the map write
+    /// ahead of the EHR, and a refused EHR create drops the transaction, so
+    /// the map never names an EHR that was not created.
+    ///
+    /// # Errors
+    /// [`IndexError::Service`] when the transaction cannot begin or the write
+    /// fails.
+    pub(in crate::service) async fn stage_created_association<'c>(
+        &self,
+        conn: &'c mut PgConnection,
+        ehr_id: EhrId,
+        subject: &SubjectRef,
+    ) -> Result<Transaction<'c, Postgres>, IndexError> {
+        let mut tx = conn.begin().await.map_err(IndexError::from)?;
+        store::insert_association(&mut tx, ehr_id, subject, &ResourceStatus::default(), None)
+            .await
+            .map_err(IndexError::from)?;
+        Ok(tx)
+    }
+
+    /// Commit the association [`Self::stage_created_association`] staged, and
+    /// record it as the index write [`Self::add_ehr_subject`] records.
+    ///
+    /// # Errors
+    /// [`SmError`] when the commit fails, which leaves the created EHR outside
+    /// the map until [`Self::add_ehr_subject`] enters it, or when the access
+    /// record is refused under `fail_mode = "closed"`.
+    pub(in crate::service) async fn finish_created_association(
+        &self,
+        tx: Transaction<'_, Postgres>,
+        ehr_id: EhrId,
+        subject: &SubjectRef,
+    ) -> Result<(), SmError> {
+        let outcome = tx.commit().await.map_err(IndexError::from);
+        self.record_index_access(EventActionCode::Create, ehr_id, subject, 1, outcome.is_ok())?;
+        Ok(outcome?)
+    }
+
     /// SM `add_ehr_subject` (I1): associate `subject` with `ehr_id` with an
     /// optional status + location. The EHR must exist.
     ///

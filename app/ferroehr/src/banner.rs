@@ -2,17 +2,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The startup ASCII-art banner printed to stdout before the structured
-//! startup logs, in the spirit of the reference implementation's Spring banner.
+//! startup logs.
 //!
-//! No openEHR spec governs this — it is our own presentation. The wordmark is a
-//! fixed, hand-committed static string (generated once with a `FIGlet`
-//! "standard" font and vendored here), so the boot path carries **zero** runtime
-//! dependency and no font-asset load for a fixed piece of art. The version is
-//! substituted from `CARGO_PKG_VERSION` at build time; the load-bearing spec
-//! pins are read from [`crate::telemetry::provenance`] — the derived
-//! crate-version constants — never re-typed here.
+//! No openEHR spec governs this — it is our own presentation. The layout is
+//! the family's (`ferrohealth_server::build_info::banner`: the wordmark, the
+//! build line, then the facts as a list), printed only when the console renders
+//! `pretty`. The wordmark is a fixed, hand-committed static string (generated
+//! once with a `FIGlet` "standard" font and vendored here), the load-bearing
+//! spec pins are read from [`crate::telemetry::provenance`] — the derived
+//! crate-version constants — never re-typed here, and FerroEHR adds the
+//! sandbox notice below the facts.
 
 use std::fmt::Write as _;
+
+use ferrohealth_server::build_info::{BuildInfo, banner};
+use ferrohealth_telemetry::section::Rendering;
 
 use crate::manufacturer::MANUFACTURER;
 
@@ -24,49 +28,63 @@ const WORDMARK: &str = r"
 |  ___|__ _ __ _ __ ___ | ____| | | |  _ \
 | |_ / _ \ '__| '__/ _ \|  _| | |_| | |_) |
 |  _|  __/ |  | | | (_) | |___|  _  |  _ <
-|_|  \___|_|  |_|  \___/|_____|_| |_|_| \_\";
+|_|  \___|_|  |_|  \___/|_____|_| |_|_| \_\
+
+";
 
 /// The project's public repository.
 const PROJECT_URL: &str = "https://github.com/FerroHEALTH/FerroEHR";
 
-/// Renders the full banner for the given product `version` and ACTIVE
-/// generation set.
+/// Renders the banner of `build` for the ACTIVE generation set, or `None` when
+/// the console does not render `pretty`.
 ///
-/// Kept parameterized (rather than reading `CARGO_PKG_VERSION` / a global)
-/// so it is unit-testable; [`print()`] supplies the real values, `support`
-/// being [`crate::support::SupportPeriod::describe_on`] for today. The pins
-/// are read from the shared [`crate::telemetry::provenance`] source and the
-/// manufacturer's name, postal address and contact from [`MANUFACTURER`], so
-/// the banner can never drift from what the server actually serves.
+/// Kept parameterized so it is unit-testable; [`print()`] supplies the real
+/// values, `support` being [`crate::support::SupportPeriod::describe_on`] for
+/// today. The pins are read from the shared [`crate::telemetry::provenance`]
+/// source and the manufacturer's name, postal address and contact from
+/// [`MANUFACTURER`], so the banner can never drift from what the server
+/// actually serves.
 #[must_use]
 pub fn render(
-    version: &str,
+    build: &BuildInfo,
     profile: crate::config::profile::SpecProfile,
     deployment: &crate::config::deployment::DeploymentPosture,
     support: &str,
+    rendering: Rendering,
     colour: bool,
-) -> String {
-    let mut out = format!(
-        "{WORDMARK}\n\n  \
-         openEHR-conformant Clinical Data Repository · v{version}\n  \
-         Maintained by Ruben Talstra · {PROJECT_URL}\n  \
-         Manufactured by {} · {}\n  \
-         {} · {}\n\n",
-        MANUFACTURER.name, MANUFACTURER.website, MANUFACTURER.postal_address, MANUFACTURER.email,
-    );
-    let pins: &[(&str, &str)] = &[
-        ("Profile", profile.as_str()),
-        ("openEHR RM", crate::telemetry::provenance::rm_for(profile)),
-        ("ITS-REST", crate::telemetry::provenance::ITS_REST),
-        ("AQL", crate::telemetry::provenance::AQL),
-        ("PostgreSQL", crate::telemetry::provenance::PG_TARGET),
+) -> Option<String> {
+    let facts = [
+        (
+            "Product",
+            "openEHR-conformant Clinical Data Repository".to_owned(),
+        ),
+        ("Maintainer", format!("Ruben Talstra · {PROJECT_URL}")),
+        (
+            "Manufacturer",
+            format!("{} · {}", MANUFACTURER.name, MANUFACTURER.website),
+        ),
+        (
+            "Contact",
+            format!("{} · {}", MANUFACTURER.postal_address, MANUFACTURER.email),
+        ),
+        ("Profile", profile.as_str().to_owned()),
+        (
+            "openEHR RM",
+            crate::telemetry::provenance::rm_for(profile).to_owned(),
+        ),
+        (
+            "ITS-REST",
+            crate::telemetry::provenance::ITS_REST.to_owned(),
+        ),
+        ("AQL", crate::telemetry::provenance::AQL.to_owned()),
+        (
+            "PostgreSQL",
+            crate::telemetry::provenance::PG_TARGET.to_owned(),
+        ),
+        ("Support", support.to_owned()),
+        ("Deployment", deployment.profile.to_string()),
     ];
-    for (label, pin) in pins {
-        // Left-pad the version column so the pins line up as a list.
-        let _ = writeln!(out, "  {label:<12}{pin}");
-    }
-    let _ = writeln!(out, "  {:<12}{support}", "Support");
-    let _ = writeln!(out, "  {:<12}{}", "Deployment", deployment.profile);
+    let mut out = banner(build, WORDMARK, &facts, rendering)?;
     // The sandbox notice: red where a terminal shows colour, and the same
     // words where it does not, because colour is the first thing a scraped
     // log loses (#3226).
@@ -91,7 +109,7 @@ pub fn render(
             }
         }
     }
-    out
+    Some(out)
 }
 
 /// Greedy word wrap at `width` columns, for the banner's fixed-width lines.
@@ -113,35 +131,32 @@ fn wrap(text: &str, width: usize) -> Vec<String> {
     lines
 }
 
-/// Print the banner to stdout. Called from the binary before telemetry/log
-/// initialisation so the structured formatter never mangles the art.
+/// Prints the banner of `build` to stdout when the console renders `pretty`.
+/// Called from the binary before telemetry/log initialisation so the
+/// structured formatter never mangles the art.
 #[expect(
     clippy::print_stdout,
     reason = "the boot banner IS console output, and it prints before any \
               tracing subscriber exists"
 )]
 pub fn print(
+    build: &BuildInfo,
     profile: crate::config::profile::SpecProfile,
     deployment: &crate::config::deployment::DeploymentPosture,
-    colour: bool,
+    rendering: Rendering,
 ) {
     let support = crate::support::SupportPeriod::current().describe_on(crate::support::today_utc());
-    println!(
-        "{}",
-        render(
-            env!("CARGO_PKG_VERSION"),
-            profile,
-            deployment,
-            &support,
-            colour
-        )
-    );
+    if let Some(text) = render(build, profile, deployment, &support, rendering, true) {
+        println!("{text}");
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::config::deployment::{DeploymentGap, DeploymentPosture, DeploymentProfile};
+
+    const SUPPORT: &str = "newest release only; fixes published until the end of October 2031";
 
     fn sandbox() -> DeploymentPosture {
         DeploymentPosture {
@@ -151,42 +166,63 @@ mod tests {
         }
     }
 
+    fn build(version: &'static str) -> BuildInfo {
+        BuildInfo::new("ferroehr", version).with_commit("0123456789ab")
+    }
+
+    fn rendered(
+        version: &'static str,
+        profile: crate::config::profile::SpecProfile,
+        deployment: &DeploymentPosture,
+        colour: bool,
+    ) -> String {
+        render(
+            &build(version),
+            profile,
+            deployment,
+            SUPPORT,
+            Rendering::Pretty,
+            colour,
+        )
+        .expect("a pretty console prints the banner")
+    }
+
+    /// Only a `pretty` console prints the banner: a JSON log keeps its first
+    /// byte for the collector.
+    #[test]
+    fn only_a_pretty_console_prints_the_banner() {
+        assert!(
+            render(
+                &build("1.0.0"),
+                crate::config::profile::SpecProfile::Development,
+                &sandbox(),
+                SUPPORT,
+                Rendering::Json,
+                false,
+            )
+            .is_none()
+        );
+    }
+
     /// The sandbox notice names the rule and every open gap, with or without
     /// colour; a production banner carries neither.
     #[test]
     fn the_sandbox_notice_survives_without_colour() {
-        let plain = render(
-            "1.0.0",
-            crate::config::profile::SpecProfile::Development,
-            &sandbox(),
-            "newest release only; fixes published until the end of October 2031",
-            false,
-        );
+        let development = crate::config::profile::SpecProfile::Development;
+        let plain = rendered("1.0.0", development, &sandbox(), false);
         // The notice is wrapped to the banner's width, so compare on words.
         let words = plain.split_whitespace().collect::<Vec<_>>().join(" ");
         assert!(words.contains("must not hold real patient data"), "{plain}");
         assert!(plain.contains("shared_credential"), "{plain}");
         assert!(!plain.contains("\x1b["), "no escape codes without colour");
-        let coloured = render(
-            "1.0.0",
-            crate::config::profile::SpecProfile::Development,
-            &sandbox(),
-            "newest release only; fixes published until the end of October 2031",
-            true,
-        );
+        let coloured = rendered("1.0.0", development, &sandbox(), true);
         assert!(coloured.contains("\x1b[1;31m"), "{coloured}");
         let production = DeploymentPosture {
             profile: DeploymentProfile::Production,
             gaps: Vec::new(),
             accepted: Vec::new(),
         };
-        let quiet = render(
-            "1.0.0",
-            crate::config::profile::SpecProfile::Development,
-            &production,
-            "newest release only; fixes published until the end of October 2031",
-            true,
-        );
+        let quiet = rendered("1.0.0", development, &production, true);
         assert!(
             quiet.contains("production") && !quiet.contains("SANDBOX"),
             "{quiet}"
@@ -195,14 +231,13 @@ mod tests {
 
     #[test]
     fn banner_contains_version_maintainer_and_url() {
-        let b = render(
+        let b = rendered(
             "9.9.9",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
-            "newest release only; fixes published until the end of October 2031",
             false,
         );
-        assert!(b.contains("v9.9.9"), "version must be substituted");
+        assert!(b.contains("ferroehr 9.9.9 (0123456)"), "{b}");
         assert!(b.contains("Ruben Talstra"), "maintainer credit must appear");
         assert!(
             b.contains("https://github.com/FerroHEALTH/FerroEHR"),
@@ -214,39 +249,35 @@ mod tests {
         assert!(b.contains("PostgreSQL"));
     }
 
-    /// The banner reports the ACTIVE generation, not a fixed pin: the stable
-    /// profile prints the released RM version.
     /// The banner names the manufacturer with its postal address, its single
     /// point of contact and its website (Regulation (EU) 2025/327,
     /// `docs/law/eu/ehds/text.html` Art. 30(1)(g)).
     #[test]
     fn banner_names_the_manufacturer() {
-        let b = render(
+        let b = rendered(
             "9.9.9",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
-            "newest release only; fixes published until the end of October 2031",
             false,
         );
         assert!(
-            b.contains("  Manufactured by Cadasto B.V. · https://www.cadasto.com/contact/\n"),
+            b.contains("Cadasto B.V. · https://www.cadasto.com/contact/\n"),
             "{b}"
         );
         assert!(
-            b.contains(
-                "  Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands · info@cadasto.com\n"
-            ),
+            b.contains("Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands · info@cadasto.com\n"),
             "{b}"
         );
     }
 
+    /// The banner reports the ACTIVE generation, not a fixed pin: the stable
+    /// profile prints the released RM version.
     #[test]
     fn banner_follows_the_active_profile() {
-        let b = render(
+        let b = rendered(
             "9.9.9",
             crate::config::profile::SpecProfile::Stable,
             &sandbox(),
-            "newest release only; fixes published until the end of October 2031",
             false,
         );
         assert!(b.contains("stable"));
@@ -255,15 +286,18 @@ mod tests {
 
     #[test]
     fn banner_lines_are_within_100_chars() {
-        for line in render(
-            env!("CARGO_PKG_VERSION"),
+        let support =
+            crate::support::SupportPeriod::current().describe_on(crate::support::today_utc());
+        let text = render(
+            &crate::telemetry::build_info::build(),
             crate::config::profile::SpecProfile::default(),
             &sandbox(),
-            &crate::support::SupportPeriod::current().describe_on(crate::support::today_utc()),
+            &support,
+            Rendering::Pretty,
             false,
         )
-        .lines()
-        {
+        .expect("a pretty console prints the banner");
+        for line in text.lines() {
             assert!(
                 line.chars().count() <= 100,
                 "banner line exceeds 100 chars ({}): {line:?}",
@@ -274,33 +308,27 @@ mod tests {
 
     #[test]
     fn banner_uses_real_package_version() {
-        assert!(
-            render(
-                env!("CARGO_PKG_VERSION"),
-                crate::config::profile::SpecProfile::default(),
-                &sandbox(),
-                "newest release only; fixes published until the end of October 2031",
-                false,
-            )
-            .contains(env!("CARGO_PKG_VERSION"))
-        );
+        let text = render(
+            &crate::telemetry::build_info::build(),
+            crate::config::profile::SpecProfile::default(),
+            &sandbox(),
+            SUPPORT,
+            Rendering::Pretty,
+            false,
+        )
+        .expect("a pretty console prints the banner");
+        assert!(text.contains(env!("CARGO_PKG_VERSION")));
     }
 
     /// The banner states the support period's end month (CRA Art. 13(19)).
     #[test]
     fn banner_states_the_support_period() {
-        let b = render(
+        let b = rendered(
             "9.9.9",
             crate::config::profile::SpecProfile::Development,
             &sandbox(),
-            "newest release only; fixes published until the end of October 2031",
             false,
         );
-        assert!(
-            b.contains(
-                "  Support     newest release only; fixes published until the end of October 2031\n"
-            ),
-            "{b}"
-        );
+        assert!(b.contains(&format!("  Support       {SUPPORT}\n")), "{b}");
     }
 }
