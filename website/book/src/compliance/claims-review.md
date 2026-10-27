@@ -443,7 +443,7 @@ cut, after the texts in scope have been read.
 | 2026-10-24 | 5.4.0, after `de38ec433` | none | nothing |
 | 2026-10-24 | 5.4.1, after `9fdd36091` | 2 claims, in two book pages: the compliance index named `[terminology.external]` and a terminology route, and the crates page pinned `0.0.97` | nothing |
 | 2026-10-25 | 5.4.2, after `2333f98ba` | none; the changes of this release updated their own pages in the pull requests that made them | nothing |
-| 2026-10-27 | 5.5.0, after `0af3c232d` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4195 | the conformance chapter bars still count the CNF TDD cases, which only a new measured run removes (#4204) |
+| 2026-10-27 | 5.5.0, after `0af3c232d` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4192 | the conformance chapter bars still count the CNF TDD cases, which only a new measured run removes (#4204) |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -645,7 +645,7 @@ the family's `ferrohealth-server`, `ferrohealth-config`, `ferrohealth-telemetry`
 the renamed and retired configuration keys under Changed and Removed (#4087,
 #4038, #4028, #4139, #4214); the EHR index asks an IHE patient identity source
 over PIXm by default (#3380); opaque access tokens are checked by introspection
-(#4033); `[auth] ca_file` trusts a private issuer CA (#4238); the audit trail is
+(#4033); `[auth] ca_file` trusts a private issuer CA (#3909); the audit trail is
 delivered and retrieved through `ihe-atna` and carries the data permit (#4029,
 #4030, #4120); Template Data Document import is removed (#4199); the quickstart
 Keycloak overlay trusts its CA through `ca_file` and signs the viewer in
@@ -653,7 +653,7 @@ Keycloak overlay trusts its CA through `ca_file` and signs the viewer in
 
 ### Changed on 2026-10-27, for 5.5.0
 
-- **The hazard log**: H2 named `ehr_id_from_various_paths`, which #4195
+- **The hazard log**: H2 named `ehr_id_from_various_paths`, which #4192
   replaced with `ehr_id_from_the_matched_route`; the log names the new test.
 
 ### Read and kept on 2026-10-27, for 5.5.0
