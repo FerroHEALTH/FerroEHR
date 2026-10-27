@@ -4,12 +4,11 @@
 //! The Message service.
 //!
 //! The platform crate's realization of SM `I_MESSAGE_SERVICE` /
-//! `I_EHR_EXTRACT_SERVICE` / `I_TDD_SERVICE`
+//! `I_EHR_EXTRACT_SERVICE`
 //! (`docs/specs/openehr/SM/docs/openehr_platform/master09-message_service.adoc`
-//! and the UML classes `i_message_service.adoc`, `i_ehr_extract_service.adoc`,
-//! `i_tdd_service.adoc`).
+//! and the UML classes `i_message_service.adoc`, `i_ehr_extract_service.adoc`).
 //!
-//! The layout mirrors the spec's own export / import / TDD decomposition, each
+//! The layout mirrors the spec's own export / import decomposition, each
 //! file carrying its public `FerroEhrService` methods and the machinery behind
 //! them:
 //!
@@ -20,21 +19,19 @@
 //!   parse a received `EXTRACT` and dispatch clone against append; the
 //!   `IMPORTED_VERSION` replay is [`crate::versioning`] (RM common master06
 //!   §Copying).
-//! - `tdd` — `I_TDD_SERVICE.import_tdd` / `import_tdds`: TDD XML to COMPOSITION
-//!   to validated commit.
 //!
 //! `I_MESSAGE_SERVICE` declares no functions (`i_message_service.adoc`), so it
-//! gets no code.
+//! gets no code. `I_TDD_SERVICE` (`i_tdd_service.adoc`) is not realized: the
+//! Template Data Document is a template-tooling format of the ADL 1.4 era that
+//! the canonical and Simplified Formats cover, removed by owner decision (#4199).
 //!
 //! # Cross-module wiring
 //!
 //! `import` reaches [`crate::versioning`]'s `commit_import` /
 //! `commit_demographic_import`, and `export` reaches its `original_version` /
-//! `versioned_object` / `revision_history` and the version reads. `tdd` resolves
-//! the OPT and commits through the validated COMPOSITION path
-//! (`FerroEhrService::web_template_for` / `get_template_xml` /
-//! `create_composition`). A completed export or import emits one EHR-Extract
-//! audit event (`FerroEhrService::emit_extract_audit`) for non-repudiation (BASE
+//! `versioned_object` / `revision_history` and the version reads. A completed
+//! export or import emits one EHR-Extract audit event
+//! (`FerroEhrService::emit_extract_audit`) for non-repudiation (BASE
 //! `architecture_overview/master07-security.adoc` §Non-repudiation).
 //! `EXTRACT_SPEC.criteria` and `commit_time_interval` remain typed rejects (the
 //! NOTEs in `export`). The extension REST wire lives in `ferroehr-rest`, ITS-REST
@@ -42,7 +39,6 @@
 
 mod export;
 mod import;
-mod tdd;
 
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;

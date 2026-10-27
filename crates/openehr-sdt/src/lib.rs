@@ -12,7 +12,7 @@
 //! no machine-readable model to generate from.
 //!
 //! - [`flat`] — **ITS-REST Formats**: openEHR Simplified Formats (FLAT /
-//!   STRUCTURED data instances, the Web Template model, TDD import). The
+//!   STRUCTURED data instances, the Web Template model). The
 //!   *Formats* specification is a STABLE ITS-REST 1.1.0 sub-specification
 //!   (`docs/specs/openehr/ITS-REST/docs/simplified_formats/`) over the
 //!   Simplified Data Template (`simplified_data_template/`).

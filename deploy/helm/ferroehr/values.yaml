@@ -1290,6 +1290,14 @@ viewer:
       # -- The viewer's own externally-reachable base URL, used to build the
       # OIDC redirect. Must match what the identity provider has registered.
       publicBaseUrl: ""
+      # -- Name of an existing Secret holding a PEM bundle of the certificate
+      # authorities the viewer trusts for the issuer, beside the image's own
+      # roots: for an issuer behind a private PKI. The chart mounts the key as
+      # a file and points `[auth.oidc.tls] trust_roots_file` at it. Empty
+      # trusts the image's roots alone.
+      caExistingSecret: ""
+      # -- Key within `caExistingSecret` carrying the PEM bundle.
+      caExistingSecretKey: ca.crt
   # -- Name of an existing Secret holding the viewer's OIDC client secret. The
   # chart mounts that key as a FILE and passes only its path, so the credential
   # never enters the pod's environment — the same discipline the server's DSN

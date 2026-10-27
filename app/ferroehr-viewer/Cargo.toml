@@ -93,10 +93,11 @@ wasm-bindgen-futures.workspace = true
 
 # The server half.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-# The per-request CSP nonce (src/server.rs): `leptos::nonce::Nonce` +
-# `HydrationScripts` stamping `nonce=` on the bootstrap script. Named
-# explicitly rather than inherited from leptos_axum, so the strict script-src
-# cannot lose its nonce to a feature change upstream.
+# The per-request CSP nonce (src/server.rs): the nonce
+# `ferrohealth_server::console` mints, re-provided as `leptos::nonce::Nonce` so
+# `HydrationScripts` stamps `nonce=` on the bootstrap script. Named explicitly
+# rather than inherited from leptos_axum, so the strict script-src cannot lose
+# its nonce to a feature change upstream.
 leptos = { workspace = true, features = ["ssr", "nonce"] }
 leptos_meta = { workspace = true, features = ["ssr"] }
 leptos_router = { workspace = true, features = ["ssr"] }
@@ -118,22 +119,34 @@ anyhow.workspace = true
 reqwest.workspace = true
 ferrohealth-config.workspace = true
 ferrohealth-secret.workspace = true
+# The family's server plumbing: the stack with the health routes, the bounded
+# drain, `cli::Common` and the healthcheck, the console's browser security
+# headers and same-origin check (`console`), and the outbound TLS of the OIDC
+# and CDR clients (`reqwest`).
+ferrohealth-server = { workspace = true, features = ["console", "reqwest"] }
+# The readiness registry and lifecycle the health routes read.
+ferrohealth-health = { workspace = true, features = ["registry"] }
+clap.workspace = true
+# The public URL the same-origin check compares `Origin` with.
+url.workspace = true
 secrecy.workspace = true
 # The sealed session cookie (AES-256-GCM private jar, #2949): the whole
 # session rides one encrypted cookie so every instance can read it — the
 # viewer runs multi-instance on serverless platforms and keeps no store.
 cookie.workspace = true
 base64.workspace = true
-# The browser security-header layer (`SetResponseHeaderLayer`). Server-only:
-# headers are a response property.
+# The hydration bundle's file service (`ServeDir`).
 tower-http.workspace = true
 csv.workspace = true
 openidconnect.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 indexmap.workspace = true
+# A test CA and a server certificate minted at run time, for the outbound TLS
+# tests of the CDR and issuer clients.
+rcgen.workspace = true
 # `ServiceExt::oneshot`: the CSP-nonce tests drive a stub router through the
-# security layer in-process, with no listener.
+# console headers in-process, with no listener.
 tower.workspace = true
 # E2E journeys (tests/e2e_*.rs): Rust-native WebDriver + the async runtime;
 # the browser-console gate reads the browser log via thirtyfour's legacy-log API.
@@ -157,10 +170,9 @@ site-pkg-dir = "pkg"
 site-addr = "127.0.0.1:3000"
 reload-port = 3001
 lib-profile-release = "wasm-release"
-# Content-hashed /pkg filenames (`ferroehr-viewer.<md5>.wasm`). This is what
-# makes the year-long immutable Cache-Control the server sends for /pkg
-# TRUE rather than a promise: a rebuilt asset is a different URL, so a cached
-# copy can never be stale. The manifest cargo-leptos writes beside the server
+# Content-hashed /pkg filenames (`ferroehr-viewer.<md5>.wasm`): a rebuilt
+# asset is a different URL, so a browser revalidating its cached copy
+# (`no-cache`) never runs a stale bundle against a new page. The manifest cargo-leptos writes beside the server
 # binary (`hash.txt`) is what the renderer reads the names back from, so it
 # ships next to the binary in the image; the runtime half is the separate
 # `LEPTOS_HASH_FILES` variable, which the binary reads at startup.

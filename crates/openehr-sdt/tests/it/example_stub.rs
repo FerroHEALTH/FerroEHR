@@ -4,7 +4,7 @@
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
 //! Example-COMPOSITION synthesis of RM-mandatory ENTRY structural attributes.
 //!
-//! Regression coverage for the defect where the FLAT/TDD composition builder
+//! Regression coverage for the defect where the FLAT composition builder
 //! synthesised a blind `at0001` placeholder for a *constrained* structural
 //! attribute the simplified form carried no content under (e.g. the CKM
 //! "International Patient Summary" `ACTION.medication` whose `description` the

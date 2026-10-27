@@ -7,8 +7,8 @@ ehr/definition/demographic/query/admin/system, each group carrying its own
 spec-flagged extension routes beside the released ones: `demographic::relationship`,
 `definition::archetype`, `admin::{archive, report, dump_load}` — plus `api::message`,
 a group that is extension ALL THE WAY DOWN: the release publishes no
-message/extract/TDD API at all, so `message::{extract, tdd}` mount SM
-`I_EHR_EXTRACT_SERVICE` / `I_TDD_SERVICE` under a `/message` resource root of
+message/extract API at all, so `message::extract` mounts SM
+`I_EHR_EXTRACT_SERVICE` under a `/message` resource root of
 our own, on the ordinary clinical authentication class rather than the admin
 gate), `router`, `state`, `formats`
 (content negotiation), `overview`, `limits` (the clinical body tier), `config`, `system_log`

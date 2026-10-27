@@ -302,7 +302,10 @@ impl Viewer {
                         http::header::CONTENT_TYPE,
                         "application/x-www-form-urlencoded",
                     )
-                    .header(http::header::ORIGIN, "http://viewer.test");
+                    .header(http::header::ORIGIN, "http://viewer.test")
+                    // What a browser sends with a form of the viewer's own page
+                    // (W3C Fetch Metadata Request Headers §2.4).
+                    .header("sec-fetch-site", "same-origin");
                 fields
                     .iter()
                     .map(|(name, value)| {
@@ -456,25 +459,34 @@ async fn a_guarded_page_without_a_session_redirects_to_the_sign_in_keeping_its_a
 async fn a_form_of_another_origin_is_refused() {
     let viewer = Viewer::start().await;
     let cookie = viewer.sign_in().await;
-    let request = http::Request::builder()
-        .method(http::Method::POST)
-        .uri("/query/aql")
-        .header(http::header::HOST, "viewer.test")
-        .header(http::header::ORIGIN, "https://evil.example")
-        .header(http::header::COOKIE, &cookie)
-        .header(
-            http::header::CONTENT_TYPE,
-            "application/x-www-form-urlencoded",
-        )
-        .body(axum::body::Body::from("intent=run&aql=SELECT+1"))
-        .expect("the request fixture builds");
-    let response = viewer
-        .service
-        .clone()
-        .oneshot(request)
-        .await
-        .expect("the service is infallible");
-    assert_eq!(response.status(), http::StatusCode::FORBIDDEN);
+    for (name, value) in [
+        ("origin", "https://evil.example"),
+        ("sec-fetch-site", "cross-site"),
+    ] {
+        let request = http::Request::builder()
+            .method(http::Method::POST)
+            .uri("/query/aql")
+            .header(http::header::HOST, "viewer.test")
+            .header(name, value)
+            .header(http::header::COOKIE, &cookie)
+            .header(
+                http::header::CONTENT_TYPE,
+                "application/x-www-form-urlencoded",
+            )
+            .body(axum::body::Body::from("intent=run&aql=SELECT+1"))
+            .expect("the request fixture builds");
+        let response = viewer
+            .service
+            .clone()
+            .oneshot(request)
+            .await
+            .expect("the service is infallible");
+        assert_eq!(
+            response.status(),
+            http::StatusCode::FORBIDDEN,
+            "{name}: {value}"
+        );
+    }
 }
 
 #[tokio::test]

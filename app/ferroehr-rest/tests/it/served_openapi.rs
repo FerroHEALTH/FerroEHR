@@ -1491,12 +1491,12 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         operations: 2,
     },
     NonSpecFamily {
-        // The whole SM MESSAGE component (I_EHR_EXTRACT_SERVICE +
-        // I_TDD_SERVICE); the release publishes no message API at all.
+        // The SM MESSAGE component (I_EHR_EXTRACT_SERVICE); the release
+        // publishes no message API at all.
         label: "the MESSAGE extension group",
         prefixes: &["/ferroehr/rest/openehr/v1/message/"],
         flag: "no its-rest operation governs this",
-        operations: 6,
+        operations: 4,
     },
     NonSpecFamily {
         label: "the operational status document",
