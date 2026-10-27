@@ -24,17 +24,22 @@
 //! [`require_session`](crate::session::require_session) first, and the CDR
 //! credential never reaches client-visible state.
 
-#![expect(
+#![allow(
     clippy::disallowed_types,
     reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694)"
+              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
+              hydrate target"
 )]
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr, tr_with};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr;
+use crate::locale::{Msg, tr_with};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::served_vocabulary::OPENAPI_FAMILIES;
 
 /// Where the CDR serves its SMART service-discovery document, relative to the
@@ -79,6 +84,7 @@ pub async fn fetch_smart_config() -> Result<Option<String>, ViewerError> {
 /// [`OPENAPI_FAMILIES`], which the server holds its own family set to, and a
 /// deployment that does not serve a family answers `404`, a first-class state
 /// on the card.
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn openapi_families() -> impl Iterator<Item = (&'static str, String)> {
     std::iter::once(("", tr(Msg::CompleteSurface))).chain(
         OPENAPI_FAMILIES
@@ -336,6 +342,7 @@ pub(crate) type Endpoint = (String, String, String);
 /// to the first path segment, then `"default"`), as sorted `(group, rows)`
 /// where each row is `(METHOD, path)`. Sorted throughout so server and client
 /// render the identical structure (no non-deterministic order).
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn group_openapi_paths(doc: &serde_json::Value) -> Vec<(String, Vec<Endpoint>)> {
     const METHODS: [&str; 8] = [
         "get", "put", "post", "delete", "patch", "options", "head", "trace",

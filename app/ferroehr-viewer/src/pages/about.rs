@@ -17,9 +17,10 @@ use ferrohealth_ui::view::template::about::{
 };
 use leptos::prelude::*;
 use leptos_meta::Title;
+use serde::{Deserialize, Serialize};
 
 use crate::locale::{Msg, tr, tr_with};
-use crate::pages::common::awaited;
+use crate::pages::common::{Refused, drawn, page_model};
 
 /// The route the manifest's Download reads the document from.
 pub const DOWNLOAD_ROUTE: &str = "/about/manifest.json";
@@ -27,98 +28,129 @@ pub const DOWNLOAD_ROUTE: &str = "/about/manifest.json";
 /// The FerroEHR book, the viewer's documentation.
 const BOOK: &str = "https://ferroehr.eu/docs/latest/";
 
+/// About's model: the versions it names, the release, the manufacturer's
+/// address and the manifest as the CDR sent it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct Model {
+    /// The CDR's version.
+    cdr_version: String,
+    /// The REST API release the manifest names.
+    rest: String,
+    /// The viewer's product and version.
+    release: String,
+    /// The manufacturer's support address.
+    support: String,
+    /// The manifest pretty-printed, or the CDR's refusal of it.
+    manifest: Result<String, Refused>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads About: the status the shell read and the conformance manifest.
+async fn load() -> Model {
+    let status = crate::shell::status().await;
+    let document = match crate::request::state() {
+        Some(state) => crate::system_api::fetch_conformance_document(&state).await,
+        None => Err(crate::error::ViewerError::Internal(tr(Msg::AboutNoState))),
+    };
+    // NOTE: no openEHR spec governs this: our own design; a manifest that does
+    // not parse leaves its versions unknown, and the card shows it as sent.
+    let manifest = document
+        .as_deref()
+        .ok()
+        .and_then(|text| serde_json::from_str::<crate::system_api::ConformanceManifest>(text).ok());
+    let cdr_version = status
+        .ok()
+        .and_then(|body| crate::deployment::StatusDocument::parse(&body))
+        .and_then(|document| document.server_version)
+        .unwrap_or_else(|| tr(Msg::UnknownVersion));
+    let rest = manifest
+        .as_ref()
+        .map(|manifest| manifest.restapi_specs_version.clone())
+        .filter(|version| !version.is_empty())
+        .unwrap_or_else(|| tr(Msg::UnknownVersion));
+    Model {
+        cdr_version,
+        rest,
+        release: crate::shell::footer().release(),
+        support: crate::manufacturer::MANUFACTURER.email.to_owned(),
+        manifest: document
+            .map(|text| crate::bff::pretty_body(&text, crate::format::ReprFormat::CanonicalJson))
+            .map_err(|error| Refused::new(tr(Msg::AboutManifestRefused), error)),
+    }
+}
+
+/// About, drawn from its model.
+fn about(model: Model) -> AnyView {
+    let Model {
+        cdr_version,
+        rest,
+        release,
+        support,
+        manifest,
+    } = model;
+    let versions = vec![
+        (
+            tr(Msg::AboutCdr),
+            tr_with(Msg::AboutCdrVersion, &[("version", cdr_version.into())]).into_any(),
+        ),
+        (
+            tr(Msg::AboutOpenEhrRest),
+            tr_with(Msg::AboutRestVersion, &[("version", rest.into())]).into_any(),
+        ),
+        (
+            tr(Msg::AboutFerroUi),
+            tr_with(
+                Msg::AboutFerroUiVersion,
+                &[("version", ferrohealth_ui_version().into())],
+            )
+            .into_any(),
+        ),
+    ];
+    let (document, cards) = match manifest {
+        Ok(text) => (Some(text), Vec::new()),
+        Err(refusal) => (None, vec![refusal.view()]),
+    };
+    let self_description = document.map(|text| SelfDescription {
+        title: tr(Msg::AboutManifest),
+        line: tr(Msg::AboutManifestLine),
+        language: Language::Json,
+        text,
+        copy_id: "manifest-copy".to_owned(),
+        download: DOWNLOAD_ROUTE.to_owned(),
+    });
+    about_page(Page {
+        header: Header {
+            title: tr(Msg::NavAbout).into(),
+            subtitle: Some(tr(Msg::AboutSubtitle).into()),
+            crumbs: Vec::new(),
+            mono: false,
+            badge: None,
+            subtitle_view: None,
+        },
+        release,
+        versions,
+        manufacturer: Manufacturer {
+            licence: tr(Msg::AboutLicence),
+            support: Link {
+                label: support.clone(),
+                href: format!("mailto:{support}"),
+            },
+            documentation: Some(Link {
+                label: tr(Msg::AboutBook),
+                href: BOOK.to_owned(),
+            }),
+        },
+        cards,
+        self_description,
+        replica: None,
+    })
+}
+
 /// About.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
 #[component]
 pub fn AboutPage() -> impl IntoView {
-    let body = awaited(async move {
-        let status = crate::shell::status().await;
-        let document = match crate::request::state() {
-            Some(state) => crate::system_api::fetch_conformance_document(&state).await,
-            None => Err(crate::error::ViewerError::Internal(tr(Msg::AboutNoState))),
-        };
-        // NOTE: no openEHR spec governs this: our own design; a manifest that does
-        // not parse leaves its versions unknown, and the card shows it as sent.
-        let manifest = document.as_deref().ok().and_then(|text| {
-            serde_json::from_str::<crate::system_api::ConformanceManifest>(text).ok()
-        });
-        let cdr_version = status
-            .ok()
-            .and_then(|body| crate::deployment::StatusDocument::parse(&body))
-            .and_then(|document| document.server_version)
-            .unwrap_or_else(|| tr(Msg::UnknownVersion));
-        let rest = manifest
-            .as_ref()
-            .map(|manifest| manifest.restapi_specs_version.clone())
-            .filter(|version| !version.is_empty())
-            .unwrap_or_else(|| tr(Msg::UnknownVersion));
-        let versions = vec![
-            (
-                tr(Msg::AboutCdr),
-                tr_with(Msg::AboutCdrVersion, &[("version", cdr_version.into())]).into_any(),
-            ),
-            (
-                tr(Msg::AboutOpenEhrRest),
-                tr_with(Msg::AboutRestVersion, &[("version", rest.into())]).into_any(),
-            ),
-            (
-                tr(Msg::AboutFerroUi),
-                tr_with(
-                    Msg::AboutFerroUiVersion,
-                    &[("version", ferrohealth_ui_version().into())],
-                )
-                .into_any(),
-            ),
-        ];
-        let (document, cards) = match document {
-            Ok(text) => (Some(text), Vec::new()),
-            Err(error) => (
-                None,
-                vec![crate::pages::common::refused(
-                    tr(Msg::AboutManifestRefused),
-                    &error,
-                    None,
-                )],
-            ),
-        };
-        let self_description = document.map(|text| SelfDescription {
-            title: tr(Msg::AboutManifest),
-            line: tr(Msg::AboutManifestLine),
-            language: Language::Json,
-            text: crate::bff::pretty_body(&text, crate::format::ReprFormat::CanonicalJson),
-            copy_id: "manifest-copy".to_owned(),
-            download: DOWNLOAD_ROUTE.to_owned(),
-        });
-        about_page(Page {
-            header: Header {
-                title: tr(Msg::NavAbout).into(),
-                subtitle: Some(tr(Msg::AboutSubtitle).into()),
-                crumbs: Vec::new(),
-                mono: false,
-                badge: None,
-                subtitle_view: None,
-            },
-            release: crate::shell::footer().release(),
-            versions,
-            manufacturer: Manufacturer {
-                licence: tr(Msg::AboutLicence),
-                support: Link {
-                    label: crate::manufacturer::MANUFACTURER.email.to_owned(),
-                    href: format!("mailto:{}", crate::manufacturer::MANUFACTURER.email),
-                },
-                documentation: Some(Link {
-                    label: tr(Msg::AboutBook),
-                    href: BOOK.to_owned(),
-                }),
-            },
-            cards,
-            self_description,
-            replica: None,
-        })
-    });
+    let model = page_model!(load());
+    let body = drawn(model, about);
     view! {
         <Title text=tr(Msg::NavAbout) />
         {body}

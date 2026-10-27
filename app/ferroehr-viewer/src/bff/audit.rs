@@ -21,12 +21,16 @@
               hydrate target"
 )]
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::PAGE_SIZE;
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::Msg;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::{tr, tr_with};
 
 /// One distilled audit record: the promoted facts the table shows plus the
 /// full stored `AuditEvent` JSON for the raw view. Client-safe fields only

@@ -246,6 +246,7 @@ pub fn match_summary(row: &SubscriptionRow) -> String {
 /// Names the object, carries the CDR's own diagnostic verbatim, and names the
 /// next action. The `409` here is a duplicate NAME (the CDR's unique key), not
 /// the admin deletes' "still referenced by committed data".
+#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn subscription_failure_copy(object: &str, error: &ViewerError) -> String {
     match error {
