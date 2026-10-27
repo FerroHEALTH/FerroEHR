@@ -293,13 +293,21 @@ k8s_prod_secrets() {
 # example Secret names replaced by the ones created above, its example identity
 # provider's metadata replaced by the committed CNF test key set (the server
 # reads an issuer at boot, and idp.example.com does not resolve), the image
-# under probe, and no usage report from a probe instance. Every separation the
-# overlay makes stays its own.
+# under probe, and no usage report from a probe instance. FerroPIX is off and
+# the EHR index is the in-instance map: this harness measures the CDR's own
+# separations, and FerroPIX would need a database, a sealing key and an issuer
+# of its own. Every separation the overlay makes stays its own.
 k8s_prod_overrides() {
   cat > "$K8S_PROD_OVERRIDES" <<YAML
 usageReport:
   enabled: false
+ferropix:
+  enabled: false
 config:
+  ehr_index:
+    provider: local
+    assigning_authority: null
+    oauth: null
   auth:
     jwks_file: /etc/ferroehr/probe-jwks.json
   files:
@@ -518,6 +526,11 @@ render_check() {
     'jwks_file = "/etc/ferroehr/probe-jwks.json"'; do
     grep -qF -- "$want" <<<"$rendered" || { red "  the production install render lacks: ${want}"; failed=1; }
   done
+  grep -qF 'provider = "local"' <<<"$rendered" || { red "  the production install render does not run the in-instance EHR index"; failed=1; }
+  if grep -qE 'name: [a-z0-9-]*ferropix' <<<"$rendered"; then
+    red "  the production install render still deploys FerroPIX, which no probe Secret backs"
+    failed=1
+  fi
   [[ "$(grep -c -- '- key: dsn' <<<"$rendered")" -ge 12 ]] \
     || { red "  fewer than twelve projections read the probe's 'dsn' key (the Deployment: four domains, three domain migrators, the migrator; the Job: the migrator and three domain migrators)"; failed=1; }
   [[ "$failed" -eq 0 ]] || exit 1

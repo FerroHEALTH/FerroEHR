@@ -189,6 +189,13 @@ spec:
               value: {{ .Values.terminology.defaultLanguage | quote }}
             - name: RUST_LOG
               value: {{ .Values.terminology.logLevel | quote }}
+            # The usage report: terminology.usageReport.enabled, or the
+            # top-level switch when that is empty. A release before 0.1.8
+            # sends none and reads neither variable.
+            - name: FERROTERM__USAGE_REPORT__ENABLED
+              value: {{ include "ferroehr.siblingUsageReport" (dict "values" .Values.terminology "root" .) | quote }}
+            - name: FERROTERM__USAGE_REPORT__DEPLOYMENT
+              value: "helm"
             {{- with .Values.terminology.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
