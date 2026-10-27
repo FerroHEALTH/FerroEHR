@@ -40,7 +40,5 @@ pub mod results;
 pub mod server;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod subscriptions;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod templates;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod terminology;

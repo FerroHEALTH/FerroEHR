@@ -11,7 +11,8 @@
 //! (`docs/specs/openehr/SM/docs/UML/classes/terminology_service.adoc`) as the
 //! CDR serves them under `terminology` ([`crate::terminology`]); a CDR with
 //! the terminology API off answers `404`, and the page says so once. Every
-//! form is a `GET`, so an answer keeps its address. No openEHR spec governs
+//! form is a `GET`, so an answer keeps its address, and each tab reads its
+//! answers on the server into one model that both halves draw. No openEHR spec governs
 //! the viewer's pages: our own design.
 
 use ferrohealth_ui::icon::Glyph;
@@ -25,15 +26,20 @@ use ferrohealth_ui::view::load_report::{Arrival, LoadReport, Outcome, load_repor
 use ferrohealth_ui::view::surface::{Crumb, Header, definitions, page_heading};
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use leptos::prelude::*;
+use leptos::server;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params_map;
+use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{awaited, card_panel, panel, plain_section, refused, section};
+use crate::session_client::SessionAwareClient;
+use crate::terminology::{TermRow, TerminologyDescriptor};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::terminology::{
-    TerminologyDescriptor, check_subsumption, fetch_term, fetch_terminology_description,
-    fetch_value_set, list_terminologies, validate_value_set_code,
+    check_subsumption, fetch_term, fetch_terminology_description, fetch_value_set,
+    list_terminologies, validate_value_set_code,
 };
 
 /// The value sets of the openEHR terminology the Value sets tab offers, as
@@ -132,15 +138,44 @@ fn off() -> AnyView {
     })
 }
 
-/// A tab of Terminology over `body`, with the terminology ids for its forms;
-/// the note alone when the API is off.
-async fn term_page<F, Fut>(tab: TermTab, body: F) -> AnyView
+/// What a tab of Terminology read: the terminology ids for its forms and the
+/// tab's own answer.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Tabbed<T> {
+    /// The terminologies the CDR serves.
+    ids: Vec<String>,
+    /// What the tab read.
+    read: T,
+}
+
+/// A tab's model: `None` when the CDR has the terminology API off, and the
+/// refusal of the terminology list as the error.
+type TabModel<T> = Result<Option<Tabbed<T>>, ViewerError>;
+
+/// Reads the terminologies the CDR serves, then the tab's answer over them.
+#[cfg(not(target_arch = "wasm32"))]
+async fn tabbed<T, F, Fut>(read: F) -> TabModel<T>
 where
     F: FnOnce(Vec<String>) -> Fut,
-    Fut: Future<Output = AnyView>,
+    Fut: Future<Output = T>,
 {
-    let ids = match list_terminologies().await {
-        Ok(Some(ids)) => ids,
+    crate::session::require_session().await?;
+    let Some(ids) = list_terminologies().await? else {
+        return Ok(None);
+    };
+    let read = read(ids.clone()).await;
+    Ok(Some(Tabbed { ids, read }))
+}
+
+/// A tab of Terminology over what `body` draws of its model; the note alone
+/// when the API is off.
+fn term_page<T>(
+    tab: TermTab,
+    model: TabModel<T>,
+    body: impl FnOnce(&[String], T) -> AnyView,
+) -> AnyView {
+    let Tabbed { ids, read } = match model {
+        Ok(Some(tabbed)) => tabbed,
         Ok(None) => {
             return view! {
                 {heading()}
@@ -160,7 +195,7 @@ where
         .into_iter()
         .map(|each| Tab::new(each.key(), each.href(), each.label()))
         .collect();
-    let panel = body(ids).await;
+    let panel = body(&ids, read);
     view! {
         {heading()}
         <div class="fui-stack">{binder(tr(Msg::TermOperations), tabs, tab.key(), panel)}</div>
@@ -225,9 +260,10 @@ fn answer(outcome: Outcome, title: AnyView) -> AnyView {
     })
 }
 
-/// The terminology a form names, the first the CDR serves for none.
-fn chosen(ids: &[String]) -> String {
-    crate::request::query("terminology")
+/// The terminology a form names, `asked`, the first the CDR serves for none.
+#[cfg(not(target_arch = "wasm32"))]
+fn chosen(ids: &[String], asked: String) -> String {
+    Some(asked)
         .filter(|id| !id.is_empty())
         .or_else(|| ids.iter().find(|id| *id == "openehr").cloned())
         .or_else(|| ids.first().cloned())
@@ -235,23 +271,34 @@ fn chosen(ids: &[String]) -> String {
 }
 
 /// The page of the terminology `id`.
+#[cfg(not(target_arch = "wasm32"))]
 fn terminology_href(id: &str) -> String {
     format!("/terminology/{}", urlencoding::encode(id))
 }
 
-/// Terminologies: the code sets the CDR serves, each with its descriptor.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn TerminologiesTab() -> impl IntoView {
-    let page = awaited(term_page(TermTab::Terminologies, |ids| async move {
-        let columns = [
-            Column::text("terminology", tr(Msg::TermTerminology)).role(Role::Title),
-            Column::text("publisher", tr(Msg::TermPublisher)).role(Role::Sub),
-            Column::text("version", tr(Msg::ColumnVersion)).role(Role::Meta),
-        ];
+/// One served terminology, as its row reads.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Served {
+    /// Its id.
+    id: String,
+    /// Its name, the id for none.
+    name: String,
+    /// Its publisher.
+    publisher: String,
+    /// Its versions, joined.
+    version: String,
+    /// Its page.
+    href: String,
+}
+
+/// Reads the terminologies the CDR serves, each with its descriptor.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session, and the
+/// refusal of the terminology list.
+#[server(client = SessionAwareClient)]
+pub async fn load_terminologies() -> Result<Option<Tabbed<Vec<Served>>>, ViewerError> {
+    tabbed(|ids| async move {
         let mut rows = Vec::new();
         for id in &ids {
             let descriptor = fetch_terminology_description(id.clone()).await;
@@ -267,41 +314,92 @@ pub fn TerminologiesTab() -> impl IntoView {
                 ),
                 _ => (id.clone(), String::new(), String::new()),
             };
-            let href = terminology_href(id);
-            let sub = view! {
-                <span class="fui-row-sub">
-                    <code>{id.clone()}</code>
-                </span>
-            }
-            .into_any();
-            rows.push(
-                view! {
-                    <tr>
-                        {title_cell(Some(&href), name, Some(sub))} {cell(&columns[1], publisher)}
-                        {cell(&columns[2], version)}
-                    </tr>
-                }
-                .into_any(),
-            );
+            rows.push(Served {
+                id: id.clone(),
+                name,
+                publisher,
+                version,
+                href: terminology_href(id),
+            });
         }
-        let caption = tr(Msg::TermTerminologies);
-        let table = data_table(DataTable {
-            caption: &caption,
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(rows.collect_view().into_any()),
-        });
-        panel(section(
-            Some(tr(Msg::TermServed)),
-            u64::try_from(ids.len()).ok(),
-            None,
-            table,
-        ))
-    }));
+        rows
+    })
+    .await
+}
+
+/// Terminologies: the code sets the CDR serves, each with its descriptor.
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the router always consumes the value"
+)]
+#[component]
+pub fn TerminologiesTab() -> impl IntoView {
+    let model = OnceResource::new(load_terminologies());
+    let page = awaited(async move {
+        term_page(TermTab::Terminologies, model.await, |ids, served| {
+            let columns = [
+                Column::text("terminology", tr(Msg::TermTerminology)).role(Role::Title),
+                Column::text("publisher", tr(Msg::TermPublisher)).role(Role::Sub),
+                Column::text("version", tr(Msg::ColumnVersion)).role(Role::Meta),
+            ];
+            let rows = served
+                .into_iter()
+                .map(|row| {
+                    let sub = view! {
+                        <span class="fui-row-sub">
+                            <code>{row.id.clone()}</code>
+                        </span>
+                    }
+                    .into_any();
+                    view! {
+                        <tr>
+                            {title_cell(Some(&row.href), row.name, Some(sub))}
+                            {cell(&columns[1], row.publisher)} {cell(&columns[2], row.version)}
+                        </tr>
+                    }
+                    .into_any()
+                })
+                .collect_view();
+            let caption = tr(Msg::TermTerminologies);
+            let table = data_table(DataTable {
+                caption: &caption,
+                columns: &columns,
+                sorting: Sorting::default(),
+                body: Body::Rows(rows.into_any()),
+            });
+            panel(section(
+                Some(tr(Msg::TermServed)),
+                u64::try_from(ids.len()).ok(),
+                None,
+                table,
+            ))
+        })
+    });
     view! {
         <Title text=tr(Msg::NavTerminology) />
         {page}
     }
+}
+
+/// Reads the descriptor of the terminology `id`; `None` when the CDR has the
+/// terminology API off.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session, and the CDR's
+/// refusal of the descriptor, a `404` setting the page's status.
+#[server(client = SessionAwareClient)]
+pub async fn load_terminology(
+    /// The terminology's id.
+    id: String,
+) -> Result<Option<TerminologyDescriptor>, ViewerError> {
+    crate::session::require_session().await?;
+    let descriptor = fetch_terminology_description(id).await;
+    if let Err(error) = &descriptor
+        && crate::pages::common::is_status(error, http::StatusCode::NOT_FOUND)
+    {
+        crate::request::set_status(http::StatusCode::NOT_FOUND);
+    }
+    descriptor
 }
 
 /// One terminology: its descriptor.
@@ -314,9 +412,9 @@ pub fn TerminologyPage() -> impl IntoView {
     let id = use_params_map()
         .with_untracked(|params| params.get("id"))
         .unwrap_or_default();
+    let model = OnceResource::new(load_terminology(id.clone()));
     let page = awaited(async move {
-        let descriptor: Result<Option<TerminologyDescriptor>, ViewerError> =
-            fetch_terminology_description(id.clone()).await;
+        let descriptor = model.await;
         let name = match &descriptor {
             Ok(Some(descriptor)) if !descriptor.name.is_empty() => descriptor.name.clone(),
             _ => id.clone(),
@@ -393,12 +491,7 @@ pub fn TerminologyPage() -> impl IntoView {
                 })
             }
             Ok(None) => off(),
-            Err(error) => {
-                if crate::pages::common::is_status(&error, http::StatusCode::NOT_FOUND) {
-                    crate::request::set_status(http::StatusCode::NOT_FOUND);
-                }
-                refused(tr(Msg::TermRefused), &error, None)
-            }
+            Err(error) => refused(tr(Msg::TermRefused), &error, None),
         };
         view! {
             <Title text=name />
@@ -410,6 +503,46 @@ pub fn TerminologyPage() -> impl IntoView {
     view! { {page} }
 }
 
+/// What Look up read: the terminology the form names and, for a code
+/// typed, the code's first term, `None` for an undefined code.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Lookup {
+    /// The terminology looked in.
+    terminology: String,
+    /// The CDR's answer, when a code was typed.
+    term: Option<Result<Option<TermRow>, ViewerError>>,
+}
+
+/// Reads Look up's answer for `code` in the terminology `asked`, at `at`.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session, and the
+/// refusal of the terminology list.
+#[server(client = SessionAwareClient)]
+pub async fn load_lookup(
+    /// The terminology the address names.
+    asked: String,
+    /// The code typed.
+    code: String,
+    /// The effective date typed.
+    at: String,
+) -> Result<Option<Tabbed<Lookup>>, ViewerError> {
+    tabbed(|ids| async move {
+        let terminology = chosen(&ids, asked);
+        let term = if code.trim().is_empty() {
+            None
+        } else {
+            Some(
+                fetch_term(terminology.clone(), code, at)
+                    .await
+                    .map(|extract| extract.and_then(|extract| extract.terms.into_iter().next())),
+            )
+        };
+        Lookup { terminology, term }
+    })
+    .await
+}
+
 /// Look up a code.
 #[expect(
     clippy::must_use_candidate,
@@ -417,92 +550,135 @@ pub fn TerminologyPage() -> impl IntoView {
 )]
 #[component]
 pub fn LookupTab() -> impl IntoView {
-    let page = awaited(term_page(TermTab::Lookup, |ids| async move {
-        let terminology = chosen(&ids);
-        let code = crate::request::query("code").unwrap_or_default();
-        let at = crate::request::query("at").unwrap_or_default();
-        let form = view! {
-            <form method="get" action="/terminology/lookup" class="fui-transform-options">
-                {terminology_field("l-t", &ids, &terminology)}
-                {code_field("l-c", "code", tr(Msg::TermCode), &code)}
-                {crate::pages::common::date_field(
-                    "l-d",
-                    "at",
-                    tr(Msg::TermEffectiveDate),
-                    &at,
-                    false,
-                )}
-                {run(Glyph::SEARCH, tr(Msg::TermLookUp))}
-            </form>
-        };
-        let shown = if code.trim().is_empty() {
-            None
-        } else {
-            Some(
-                match fetch_term(terminology.clone(), code.clone(), at.clone()).await {
-                    Ok(Some(extract)) => match extract.terms.first() {
-                        Some(term) => {
-                            let facts = definitions(vec![
-                                (tr(Msg::TermLanguage), term.language.clone().into_any()),
-                                (
-                                    tr(Msg::TermPreferred),
-                                    tr(if term.preferred { Msg::Yes } else { Msg::No }).into_any(),
-                                ),
-                            ]);
-                            view! {
-                                {answer(
-                                    Outcome::Ok,
-                                    view! {
-                                        {tr(Msg::TermDefined)}
-                                        " "
-                                        {coding(
-                                            Coding::new(term.code.clone(), term.text.clone())
-                                                .system(terminology.clone()),
-                                            Layout::Inline,
-                                        )}
-                                    }
-                                        .into_any(),
-                                )}
-                                {facts}
-                            }
-                            .into_any()
-                        }
-                        None => answer(
-                            Outcome::Warn,
-                            tr_with(
-                                Msg::TermUndefined,
-                                &[
-                                    ("terminology", terminology.clone().into()),
-                                    ("code", code.clone().into()),
-                                ],
-                            )
-                            .into_any(),
+    let code = crate::request::query("code").unwrap_or_default();
+    let at = crate::request::query("at").unwrap_or_default();
+    let model = OnceResource::new(load_lookup(
+        crate::request::query("terminology").unwrap_or_default(),
+        code.clone(),
+        at.clone(),
+    ));
+    let page = awaited(async move {
+        term_page(TermTab::Lookup, model.await, |ids, lookup| {
+            let Lookup { terminology, term } = lookup;
+            let form = view! {
+                <form method="get" action="/terminology/lookup" class="fui-transform-options">
+                    {terminology_field("l-t", ids, &terminology)}
+                    {code_field("l-c", "code", tr(Msg::TermCode), &code)}
+                    {crate::pages::common::date_field(
+                        "l-d",
+                        "at",
+                        tr(Msg::TermEffectiveDate),
+                        &at,
+                        false,
+                    )}
+                    {run(Glyph::SEARCH, tr(Msg::TermLookUp))}
+                </form>
+            };
+            let shown = term.map(|term| match term {
+                Ok(Some(term)) => {
+                    let facts = definitions(vec![
+                        (tr(Msg::TermLanguage), term.language.clone().into_any()),
+                        (
+                            tr(Msg::TermPreferred),
+                            tr(if term.preferred { Msg::Yes } else { Msg::No }).into_any(),
                         ),
-                    },
-                    Ok(None) => answer(
-                        Outcome::Warn,
-                        tr_with(
-                            Msg::TermUndefined,
-                            &[
-                                ("terminology", terminology.clone().into()),
-                                ("code", code.clone().into()),
-                            ],
-                        )
-                        .into_any(),
-                    ),
-                    Err(error) => refused(tr(Msg::TermLookupRefused), &error, None),
-                },
-            )
-        };
-        panel(view! {
-            {plain_section(form)}
-            {shown.map(plain_section)}
+                    ]);
+                    view! {
+                        {answer(
+                            Outcome::Ok,
+                            view! {
+                                {tr(Msg::TermDefined)}
+                                " "
+                                {coding(
+                                    Coding::new(term.code.clone(), term.text.clone())
+                                        .system(terminology.clone()),
+                                    Layout::Inline,
+                                )}
+                            }
+                                .into_any(),
+                        )}
+                        {facts}
+                    }
+                    .into_any()
+                }
+                Ok(None) => answer(
+                    Outcome::Warn,
+                    tr_with(
+                        Msg::TermUndefined,
+                        &[
+                            ("terminology", terminology.clone().into()),
+                            ("code", code.clone().into()),
+                        ],
+                    )
+                    .into_any(),
+                ),
+                Err(error) => refused(tr(Msg::TermLookupRefused), &error, None),
+            });
+            panel(view! {
+                {plain_section(form)}
+                {shown.map(plain_section)}
+            })
         })
-    }));
+    });
     view! {
         <Title text=tr(Msg::TermLookup) />
         {page}
     }
+}
+
+/// What Value sets read: the terminology the form names, the members of the
+/// value set typed and the verdict on the code typed against it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSets {
+    /// The terminology the value set belongs to.
+    terminology: String,
+    /// The value set's members, `None` for no value set of that id, when one
+    /// was typed.
+    members: Option<Result<Option<Vec<TermRow>>, ViewerError>>,
+    /// Whether the code typed is a member, `None` for no value set of that
+    /// id, when a value set and a code were typed.
+    verdict: Option<Result<Option<bool>, ViewerError>>,
+}
+
+/// Reads Value sets' answers: the value set `set` of the terminology
+/// `asked` expanded, and `candidate` validated against it.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session, and the
+/// refusal of the terminology list.
+#[server(client = SessionAwareClient)]
+pub async fn load_value_sets(
+    /// The terminology the address names.
+    asked: String,
+    /// The value set typed.
+    set: String,
+    /// The code typed to validate.
+    candidate: String,
+) -> Result<Option<Tabbed<ValueSets>>, ViewerError> {
+    tabbed(|ids| async move {
+        let terminology = chosen(&ids, asked);
+        if set.trim().is_empty() {
+            return ValueSets {
+                terminology,
+                members: None,
+                verdict: None,
+            };
+        }
+        let members = fetch_value_set(terminology.clone(), set.clone())
+            .await
+            .map(|extract| extract.map(|extract| extract.terms));
+        let verdict = if candidate.trim().is_empty() {
+            None
+        } else {
+            Some(validate_value_set_code(terminology.clone(), set, candidate, String::new()).await)
+        };
+        ValueSets {
+            terminology,
+            members: Some(members),
+            verdict,
+        }
+    })
+    .await
 }
 
 /// Value sets: expand one, and validate a code against it.
@@ -512,154 +688,191 @@ pub fn LookupTab() -> impl IntoView {
 )]
 #[expect(
     clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
+    reason = "one page component: the model it reads and the view it draws"
 )]
 #[component]
 pub fn ValueSetsTab() -> impl IntoView {
-    let page = awaited(term_page(TermTab::ValueSets, |ids| async move {
-        let terminology = chosen(&ids);
-        let set = crate::request::query("set").unwrap_or_default();
-        let candidate = crate::request::query("candidate").unwrap_or_default();
-        let suggestions = (terminology == "openehr").then(|| {
-            view! {
-                <datalist id="v-groups">
-                    {OPENEHR_GROUPS
-                        .iter()
-                        .map(|group| view! { <option value=*group></option> })
-                        .collect_view()}
-                </datalist>
-            }
-        });
-        let form = view! {
-            <form method="get" action="/terminology/valuesets" class="fui-transform-options">
-                {terminology_field("v-t", &ids, &terminology)}
-                {Field::new("v-g", tr(Msg::TermValueSet))
-                    .view(
-                        view! {
-                            <input
-                                id="v-g"
-                                name="set"
-                                type="text"
-                                class="fui-input fui-mono"
-                                list="v-groups"
-                                value=set.clone()
-                            />
-                        },
-                    )}
-                {suggestions}
-                {run(Glyph::LIST_CHECKS, tr(Msg::TermExpand))}
-            </form>
-        };
-        if set.trim().is_empty() {
-            return panel(plain_section(form));
-        }
-        let members = match fetch_value_set(terminology.clone(), set.clone()).await {
-            Ok(Some(extract)) => {
-                let total = extract.terms.len();
-                let list = view! {
-                    <ul class="fui-code-list">
-                        {extract
-                            .terms
-                            .iter()
-                            .map(|term| {
-                                view! {
-                                    <li>
-                                        {coding(
-                                            Coding::new(term.code.clone(), term.text.clone()),
-                                            Layout::Inline,
-                                        )}
-                                    </li>
-                                }
-                            })
-                            .collect_view()}
-                    </ul>
-                };
-                section(
-                    Some(tr(Msg::TermMembers)),
-                    u64::try_from(total).ok(),
-                    None,
-                    list,
-                )
-            }
-            Ok(None) => plain_section(answer(
-                Outcome::Warn,
-                tr_with(Msg::TermNoValueSet, &[("set", set.clone().into())]).into_any(),
-            )),
-            Err(error) => plain_section(refused(tr(Msg::TermValueSetRefused), &error, None)),
-        };
-        let validate_form = view! {
-            <form method="get" action="/terminology/valuesets" class="fui-transform-options">
-                <input type="hidden" name="terminology" value=terminology.clone() />
-                <input type="hidden" name="set" value=set.clone() />
-                {code_field("v-c", "candidate", tr(Msg::TermCode), &candidate)}
-                <div class="fui-transform-run">
-                    <button type="submit" class="fui-button fui-button-secondary">
-                        {ferrohealth_ui::icon::icon(Glyph::SHIELD_CHECK, "16")}
-                        {tr(Msg::TermValidate)}
-                    </button>
-                </div>
-            </form>
-        };
-        let verdict = if candidate.trim().is_empty() {
-            None
-        } else {
-            Some(
-                match validate_value_set_code(
-                    terminology.clone(),
-                    set.clone(),
-                    candidate.clone(),
-                    String::new(),
-                )
-                .await
-                {
-                    Ok(Some(true)) => answer(
-                        Outcome::Ok,
-                        tr_with(
-                            Msg::TermMember,
-                            &[
-                                ("code", candidate.clone().into()),
-                                ("set", set.clone().into()),
-                            ],
-                        )
-                        .into_any(),
-                    ),
-                    Ok(Some(false)) => answer(
-                        Outcome::Warn,
-                        tr_with(
-                            Msg::TermNotMember,
-                            &[
-                                ("code", candidate.clone().into()),
-                                ("set", set.clone().into()),
-                            ],
-                        )
-                        .into_any(),
-                    ),
-                    Ok(None) => answer(
-                        Outcome::Warn,
-                        tr_with(Msg::TermNoValueSet, &[("set", set.clone().into())]).into_any(),
-                    ),
-                    Err(error) => refused(tr(Msg::TermValidateRefused), &error, None),
-                },
-            )
-        };
-        panel(view! {
-            {plain_section(form)}
-            {members}
-            {section(
-                Some(tr(Msg::TermValidateTitle)),
-                None,
-                None,
+    let set = crate::request::query("set").unwrap_or_default();
+    let candidate = crate::request::query("candidate").unwrap_or_default();
+    let model = OnceResource::new(load_value_sets(
+        crate::request::query("terminology").unwrap_or_default(),
+        set.clone(),
+        candidate.clone(),
+    ));
+    let page = awaited(async move {
+        term_page(TermTab::ValueSets, model.await, |ids, read| {
+            let ValueSets {
+                terminology,
+                members,
+                verdict,
+            } = read;
+            let suggestions = (terminology == "openehr").then(|| {
                 view! {
-                    {validate_form}
-                    {verdict}
-                },
-            )}
+                    <datalist id="v-groups">
+                        {OPENEHR_GROUPS
+                            .iter()
+                            .map(|group| view! { <option value=*group></option> })
+                            .collect_view()}
+                    </datalist>
+                }
+            });
+            let form = view! {
+                <form method="get" action="/terminology/valuesets" class="fui-transform-options">
+                    {terminology_field("v-t", ids, &terminology)}
+                    {Field::new("v-g", tr(Msg::TermValueSet))
+                        .view(
+                            view! {
+                                <input
+                                    id="v-g"
+                                    name="set"
+                                    type="text"
+                                    class="fui-input fui-mono"
+                                    list="v-groups"
+                                    value=set.clone()
+                                />
+                            },
+                        )}
+                    {suggestions}
+                    {run(Glyph::LIST_CHECKS, tr(Msg::TermExpand))}
+                </form>
+            };
+            let Some(members) = members else {
+                return panel(plain_section(form));
+            };
+            let members = match members {
+                Ok(Some(terms)) => {
+                    let total = terms.len();
+                    let list = view! {
+                        <ul class="fui-code-list">
+                            {terms
+                                .iter()
+                                .map(|term| {
+                                    view! {
+                                        <li>
+                                            {coding(
+                                                Coding::new(term.code.clone(), term.text.clone()),
+                                                Layout::Inline,
+                                            )}
+                                        </li>
+                                    }
+                                })
+                                .collect_view()}
+                        </ul>
+                    };
+                    section(
+                        Some(tr(Msg::TermMembers)),
+                        u64::try_from(total).ok(),
+                        None,
+                        list,
+                    )
+                }
+                Ok(None) => plain_section(answer(
+                    Outcome::Warn,
+                    tr_with(Msg::TermNoValueSet, &[("set", set.clone().into())]).into_any(),
+                )),
+                Err(error) => plain_section(refused(tr(Msg::TermValueSetRefused), &error, None)),
+            };
+            let validate_form = view! {
+                <form method="get" action="/terminology/valuesets" class="fui-transform-options">
+                    <input type="hidden" name="terminology" value=terminology.clone() />
+                    <input type="hidden" name="set" value=set.clone() />
+                    {code_field("v-c", "candidate", tr(Msg::TermCode), &candidate)}
+                    <div class="fui-transform-run">
+                        <button type="submit" class="fui-button fui-button-secondary">
+                            {ferrohealth_ui::icon::icon(Glyph::SHIELD_CHECK, "16")}
+                            {tr(Msg::TermValidate)}
+                        </button>
+                    </div>
+                </form>
+            };
+            let verdict = verdict.map(|verdict| match verdict {
+                Ok(Some(true)) => answer(
+                    Outcome::Ok,
+                    tr_with(
+                        Msg::TermMember,
+                        &[
+                            ("code", candidate.clone().into()),
+                            ("set", set.clone().into()),
+                        ],
+                    )
+                    .into_any(),
+                ),
+                Ok(Some(false)) => answer(
+                    Outcome::Warn,
+                    tr_with(
+                        Msg::TermNotMember,
+                        &[
+                            ("code", candidate.clone().into()),
+                            ("set", set.clone().into()),
+                        ],
+                    )
+                    .into_any(),
+                ),
+                Ok(None) => answer(
+                    Outcome::Warn,
+                    tr_with(Msg::TermNoValueSet, &[("set", set.clone().into())]).into_any(),
+                ),
+                Err(error) => refused(tr(Msg::TermValidateRefused), &error, None),
+            });
+            panel(view! {
+                {plain_section(form)}
+                {members}
+                {section(
+                    Some(tr(Msg::TermValidateTitle)),
+                    None,
+                    None,
+                    view! {
+                        {validate_form}
+                        {verdict}
+                    },
+                )}
+            })
         })
-    }));
+    });
     view! {
         <Title text=tr(Msg::TermValueSets) />
         {page}
     }
+}
+
+/// What Hierarchy read: the terminology the form names and, for two codes
+/// typed, whether the first subsumes the second.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Subsumption {
+    /// The terminology tested in.
+    terminology: String,
+    /// The CDR's verdict, `None` with the terminology API off, when two codes
+    /// were typed.
+    verdict: Option<Result<Option<bool>, ViewerError>>,
+}
+
+/// Reads whether `broader` subsumes `narrower` in the terminology `asked`.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session, and the
+/// refusal of the terminology list.
+#[server(client = SessionAwareClient)]
+pub async fn load_subsumption(
+    /// The terminology the address names.
+    asked: String,
+    /// The broader code typed.
+    broader: String,
+    /// The narrower code typed.
+    narrower: String,
+) -> Result<Option<Tabbed<Subsumption>>, ViewerError> {
+    tabbed(|ids| async move {
+        let terminology = chosen(&ids, asked);
+        let verdict = if broader.trim().is_empty() || narrower.trim().is_empty() {
+            None
+        } else {
+            Some(check_subsumption(terminology.clone(), broader, narrower).await)
+        };
+        Subsumption {
+            terminology,
+            verdict,
+        }
+    })
+    .await
 }
 
 /// Hierarchy: whether one code is broader than another.
@@ -669,21 +882,27 @@ pub fn ValueSetsTab() -> impl IntoView {
 )]
 #[component]
 pub fn SubsumptionTab() -> impl IntoView {
-    let page = awaited(term_page(TermTab::Subsumption, |ids| async move {
-        let terminology = chosen(&ids);
-        let broader = crate::request::query("broader").unwrap_or_default();
-        let narrower = crate::request::query("narrower").unwrap_or_default();
-        let form = view! {
-            <form method="get" action="/terminology/subsumption" class="fui-transform-options">
-                {terminology_field("s-t", &ids, &terminology)}
-                {code_field("s-a", "broader", tr(Msg::TermBroader), &broader)}
-                {code_field("s-b", "narrower", tr(Msg::TermNarrower), &narrower)}
-                {run(Glyph::NETWORK, tr(Msg::TermTest))}
-            </form>
-        };
-        let verdict = if broader.trim().is_empty() || narrower.trim().is_empty() {
-            None
-        } else {
+    let broader = crate::request::query("broader").unwrap_or_default();
+    let narrower = crate::request::query("narrower").unwrap_or_default();
+    let model = OnceResource::new(load_subsumption(
+        crate::request::query("terminology").unwrap_or_default(),
+        broader.clone(),
+        narrower.clone(),
+    ));
+    let page = awaited(async move {
+        term_page(TermTab::Subsumption, model.await, |ids, read| {
+            let Subsumption {
+                terminology,
+                verdict,
+            } = read;
+            let form = view! {
+                <form method="get" action="/terminology/subsumption" class="fui-transform-options">
+                    {terminology_field("s-t", ids, &terminology)}
+                    {code_field("s-a", "broader", tr(Msg::TermBroader), &broader)}
+                    {code_field("s-b", "narrower", tr(Msg::TermNarrower), &narrower)}
+                    {run(Glyph::NETWORK, tr(Msg::TermTest))}
+                </form>
+            };
             let words = |msg| {
                 tr_with(
                     msg,
@@ -694,7 +913,7 @@ pub fn SubsumptionTab() -> impl IntoView {
                 )
                 .into_any()
             };
-            Some(match check_subsumption(terminology.clone(), broader.clone(), narrower.clone()).await {
+            let verdict = verdict.map(|verdict| match verdict {
                 Ok(Some(true)) => answer(Outcome::Ok, words(Msg::TermSubsumes)),
                 Ok(Some(false)) => view! {
                     {answer(Outcome::Warn, words(Msg::TermNotSubsumes))}
@@ -704,13 +923,13 @@ pub fn SubsumptionTab() -> impl IntoView {
                 .into_any(),
                 Ok(None) => off(),
                 Err(error) => refused(tr(Msg::TermSubsumptionRefused), &error, None),
+            });
+            panel(view! {
+                {plain_section(form)}
+                {verdict.map(plain_section)}
             })
-        };
-        panel(view! {
-            {plain_section(form)}
-            {verdict.map(plain_section)}
         })
-    }));
+    });
     view! {
         <Title text=tr(Msg::TermHierarchy) />
         {page}

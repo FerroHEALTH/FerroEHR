@@ -26,6 +26,7 @@
 //! Absence (`404`) is `Ok(None)`, a first-class state rather than an error;
 //! tab and version state live in the URL.
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 
@@ -33,6 +34,7 @@ use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
 use crate::format::ReprFormat;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_with};
 
 /// Fetch the stored ADL2 operational-template SOURCE.

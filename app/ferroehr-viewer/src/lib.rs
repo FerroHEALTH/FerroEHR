@@ -40,7 +40,6 @@
 // feature, so `--all-features` over the workspace can never turn both on.
 
 pub mod activity;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod adl2;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod admin;
@@ -48,7 +47,6 @@ pub mod admin;
 pub mod aql_text;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod auth;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod builder;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod chart_model;
@@ -56,7 +54,6 @@ pub mod clinical;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod deployment;
 pub mod error;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod example_options;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod feedback;
@@ -86,7 +83,6 @@ pub mod session_client;
 pub mod subscriptions;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod system_api;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod terminology;
 pub mod uid;
 

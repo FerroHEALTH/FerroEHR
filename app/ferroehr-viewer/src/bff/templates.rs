@@ -19,14 +19,14 @@
               hydrate target"
 )]
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 
 use crate::adl2::TemplateFamily;
 use crate::error::ViewerError;
-use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::locale::{tr_served, tr_served_with};
+use crate::locale::{Msg, tr_served, tr_served_with};
 
 /// Which template a delete addresses — the id, and the family that decides
 /// WHICH wire route removes it.
