@@ -69,9 +69,11 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
 # the build. scripts/checks/viewer-tool-pins.sh holds every other pin to it.
 # `sh` on Debian is dash, which has no `pipefail`, so the tool downloads below
 # need bash: each is `curl … | tar … > file`, and without pipefail a failed
-# curl leaves tar's exit status to decide. The redirect creates the file
-# regardless, so the next build's cache check would find it and `install` a
-# truncated binary — a silent bad build rather than a failed one.
+# curl leaves tar's exit status to decide. Each download lands in a `.part`
+# file and moves into the cache only on success, so a failed fetch never
+# leaves a truncated binary for the next build's cache check to `install`.
+# wasm-bindgen ships its Linux CLI as a static musl build only on x86_64, so
+# its download takes the musl triple on both architectures.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN --mount=type=cache,target=/opt/tool-cache,sharing=locked \
     --mount=type=bind,source=Cargo.lock,target=/tmp/Cargo.lock \
@@ -81,18 +83,21 @@ RUN --mount=type=cache,target=/opt/tool-cache,sharing=locked \
       echo "Cargo.lock resolves no single wasm-bindgen version: '${WASM_BINDGEN_VERSION}'" >&2; exit 1; \
     fi; \
     case "${TARGETARCH}" in \
-      amd64) triple=x86_64-unknown-linux-gnu ;; \
-      arm64) triple=aarch64-unknown-linux-gnu ;; \
+      amd64) arch=x86_64 ;; \
+      arm64) arch=aarch64 ;; \
       *) echo "unsupported TARGETARCH ${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
+    triple="${arch}-unknown-linux-gnu"; wasm_triple="${arch}-unknown-linux-musl"; \
     cache="/opt/tool-cache/${triple}"; mkdir -p "$cache"; \
     if [ ! -f "$cache/cargo-leptos-${CARGO_LEPTOS_VERSION}" ]; then \
       curl -sSfL "https://github.com/leptos-rs/cargo-leptos/releases/download/v${CARGO_LEPTOS_VERSION}/cargo-leptos-${triple}.tar.gz" \
-        | tar -xz -O "cargo-leptos-${triple}/cargo-leptos" > "$cache/cargo-leptos-${CARGO_LEPTOS_VERSION}"; \
+        | tar -xz -O "cargo-leptos-${triple}/cargo-leptos" > "$cache/cargo-leptos.part" \
+        && mv "$cache/cargo-leptos.part" "$cache/cargo-leptos-${CARGO_LEPTOS_VERSION}"; \
     fi; \
     if [ ! -f "$cache/wasm-bindgen-${WASM_BINDGEN_VERSION}" ]; then \
-      curl -sSfL "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-${triple}.tar.gz" \
-        | tar -xz -O "wasm-bindgen-${WASM_BINDGEN_VERSION}-${triple}/wasm-bindgen" > "$cache/wasm-bindgen-${WASM_BINDGEN_VERSION}"; \
+      curl -sSfL "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-${wasm_triple}.tar.gz" \
+        | tar -xz -O "wasm-bindgen-${WASM_BINDGEN_VERSION}-${wasm_triple}/wasm-bindgen" > "$cache/wasm-bindgen.part" \
+        && mv "$cache/wasm-bindgen.part" "$cache/wasm-bindgen-${WASM_BINDGEN_VERSION}"; \
     fi; \
     install -m0755 "$cache/cargo-leptos-${CARGO_LEPTOS_VERSION}" /usr/local/bin/cargo-leptos; \
     install -m0755 "$cache/wasm-bindgen-${WASM_BINDGEN_VERSION}" /usr/local/bin/wasm-bindgen
