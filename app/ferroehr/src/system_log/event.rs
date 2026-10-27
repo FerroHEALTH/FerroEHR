@@ -146,7 +146,8 @@ pub struct AuditEvent {
     /// the store records that as NULL, and an authenticated caller with no
     /// roles as the empty array.
     pub roles: Vec<String>,
-    /// The client network address (`X-Forwarded-For` first hop / peer), if known.
+    /// The client network address: the peer, or the hop a `[server]
+    /// trusted_proxies` peer forwarded, when the request came over a connection.
     pub client_ip: Option<String>,
     /// The owning EHR id, for optional background subject enrichment.
     pub ehr_id: Option<String>,
