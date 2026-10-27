@@ -17,8 +17,11 @@
 # The check refuses, in every workflow and composite action and in every shell
 # program this repository wrote (the scope of shellcheck-lane.sh), a line
 # where a pipe feeds `head` or a `grep` carrying -q, -m, -l, --quiet, --silent
-# or --max-count. Comment lines are skipped. `sed q` and `awk exit` stop early
-# too and are not matched: review carries them.
+# or --max-count. Comment lines are skipped, and so is this script, whose
+# self-test cases are the refused shapes. A line that runs the shape on
+# purpose, to prove it fails, ends in `# pipe-early-exit: deliberate`.
+# `sed q` and `awk exit` stop early too and are not matched: review carries
+# them.
 #
 # Usage:
 #   scripts/checks/pipe-early-exit.sh              every file in scope
@@ -35,6 +38,8 @@ readonly HEAD='head([[:space:]]|$)'
 readonly PATTERN="${PIPE}(${GREP_EARLY}|${HEAD})"
 # A line whose first non-blank character is `#` is a comment in shell and YAML.
 readonly COMMENT='^[[:space:]]*#'
+readonly DELIBERATE='# pipe-early-exit: deliberate$'
+readonly SELF='scripts/checks/pipe-early-exit.sh'
 
 readonly VENDORED='^(docs/specs/|corpus/|website/book/theme/|(crates|tools)/[^/]+/vendor/)'
 
@@ -46,7 +51,7 @@ scan() {
     out=$(grep -nE -- "$PATTERN" "$f" || true)
     [[ -n "$out" ]] || continue
     while IFS= read -r line; do
-      [[ "${line#*:}" =~ $COMMENT ]] && continue
+      [[ "${line#*:}" =~ $COMMENT || "$line" =~ $DELIBERATE ]] && continue
       printf '%s:%s\n' "$f" "$line"
     done <<<"$out"
   done
@@ -57,7 +62,7 @@ collect() {
   local f all
   all=$(git ls-files)
   grep -E '^\.github/(workflows|actions)/.*\.ya?ml$' <<<"$all" || true
-  grep -E '\.sh$' <<<"$all" | grep -Ev "$VENDORED" || true
+  grep -E '\.sh$' <<<"$all" | grep -Ev "$VENDORED" | grep -Fxv "$SELF" || true
   while IFS= read -r f; do
     [[ -f "$f" ]] || continue
     if grep -Eq '^#!.*[/ ](bash|sh|dash|ksh|zsh)([[:space:]]|$)' <<<"$(sed -n 1p "$f")"; then
@@ -69,7 +74,7 @@ collect() {
 self_test() {
   local failures=0 want text got
   while IFS='|' read -r want text; do
-    if grep -qE -- "$PATTERN" <<<"$text" && ! [[ "$text" =~ $COMMENT ]]; then
+    if grep -qE -- "$PATTERN" <<<"$text" && ! [[ "$text" =~ $COMMENT || "$text" =~ $DELIBERATE ]]; then
       got=refused
     else
       got=allowed
@@ -100,9 +105,10 @@ allowed|head -n 1 "$f"
 allowed|# never `printf | grep -q` here
 allowed|  # list | head -1
 allowed|run: |
+allowed|(set -o pipefail; printf '%s\n' "$big" | grep -qx x) # pipe-early-exit: deliberate
 CASES
   [[ "$failures" -eq 0 ]] || return 1
-  echo "pipe-early-exit: self-test OK (11 early readers on a pipe refused, 10 safe forms allowed)."
+  echo "pipe-early-exit: self-test OK (11 early readers on a pipe refused, 11 safe forms allowed)."
 }
 
 case "${1-}" in

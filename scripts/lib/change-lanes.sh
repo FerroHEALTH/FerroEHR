@@ -83,7 +83,7 @@ self_test() {
   fi
   # The old form, run on the same list: the match comes first, grep -q exits
   # on it, and the producer is left writing into a closed pipe.
-  if (set -o pipefail; printf '%s\n' "Cargo.toml" "$big" | grep -qx 'Cargo.toml'); then
+  if (set -o pipefail; printf '%s\n' "Cargo.toml" "$big" | grep -qx 'Cargo.toml'); then # pipe-early-exit: deliberate
     echo "self-test: the pipe form did not fail on a match first in a large list; the list does not exercise SIGPIPE" >&2
     failures=1
   fi
