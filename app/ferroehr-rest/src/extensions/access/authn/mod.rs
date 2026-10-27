@@ -46,7 +46,7 @@ use axum::extract::{FromRequestParts, MatchedPath, OriginalUri, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_smart::guard::Gate;
-use ferrohealth_smart::metadata::ServerMetadata;
+use ferrohealth_smart::metadata::{DiscoveryError, ServerMetadata, parse_metadata};
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
@@ -504,7 +504,9 @@ fn unreadable_issuer(issuer: &str, error: &ResourceError) -> String {
 }
 
 /// Reads the RFC 8414 §2 authorization-server metadata at `path`
-/// (`[smart] issuer_metadata_file`).
+/// (`[smart] issuer_metadata_file`) through the shared parse, which refuses a
+/// repeated member name (RFC 8259 §4); `ResourceServer::with_metadata` then
+/// refuses another issuer (RFC 8414 §3.3).
 ///
 /// A document that does not parse is named by its JSON failure class and
 /// position, never by the parser's message, which quotes the input.
@@ -515,14 +517,24 @@ async fn issuer_metadata(path: &str) -> Result<ServerMetadata, String> {
     let text = tokio::fs::read_to_string(path)
         .await
         .map_err(|e| format!("smart.issuer_metadata_file {path} could not be read: {e}"))?;
-    serde_json::from_str(&text).map_err(|e| {
-        format!(
-            "smart.issuer_metadata_file {path} is not an RFC 8414 metadata document: \
-             {:?} error at line {}, column {}",
-            e.classify(),
-            e.line(),
-            e.column()
-        )
+    let absolute = std::path::absolute(path)
+        .map_err(|e| format!("smart.issuer_metadata_file {path} could not be resolved: {e}"))?;
+    let location = url::Url::from_file_path(&absolute)
+        .map_err(|()| format!("smart.issuer_metadata_file {path} is not a file path"))?;
+    parse_metadata(&location, &text).map_err(|e| {
+        let position = match &e {
+            DiscoveryError::Metadata { source, .. }
+            | DiscoveryError::RepeatedName { source, .. } => {
+                format!(
+                    ": {:?} error at line {}, column {}",
+                    source.classify(),
+                    source.line(),
+                    source.column()
+                )
+            }
+            _ => String::new(),
+        };
+        format!("smart.issuer_metadata_file {path} is refused: {e}{position}")
     })
 }
 
@@ -1802,6 +1814,35 @@ mod tests {
             panic!("a document that does not parse is refused");
         };
         assert!(!message.contains("s3cr3t"), "{message}");
+    }
+
+    /// The metadata file goes through the shared parse: RFC 8414 §3.3 refuses
+    /// metadata naming another issuer, and RFC 8259 §4 leaves a repeated member
+    /// name to each parser, so the shared parse refuses it.
+    #[tokio::test]
+    async fn a_metadata_file_of_another_issuer_or_with_a_repeated_member_is_refused() {
+        let foreign = MetadataFile::new(
+            "foreign",
+            &json!({ "issuer": "https://foreign.example", "token_endpoint": "https://foreign.example/token" })
+                .to_string(),
+        );
+        let Err(message) = with_metadata_file(Some(&foreign)).await else {
+            panic!("metadata of a foreign issuer is refused");
+        };
+        assert!(message.contains("issuer_metadata_file"), "{message}");
+        assert!(message.contains("https://foreign.example"), "{message}");
+
+        let repeated = MetadataFile::new(
+            "repeated",
+            &format!(
+                r#"{{"issuer": "{ISSUER}", "token_endpoint": "{ISSUER}/token", "x_note": "a", "x_note": "b"}}"#
+            ),
+        );
+        let Err(message) = with_metadata_file(Some(&repeated)).await else {
+            panic!("metadata with a repeated member is refused");
+        };
+        assert!(message.contains("issuer_metadata_file"), "{message}");
+        assert!(message.contains("repeats a member name"), "{message}");
     }
 
     /// The issuer's key set, read over its `jwks_uri`: the boot read, the
