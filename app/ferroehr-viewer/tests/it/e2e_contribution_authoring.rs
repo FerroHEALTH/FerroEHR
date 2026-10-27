@@ -266,6 +266,9 @@ async fn a_refused_member_commits_nothing_and_keeps_the_staging() {
     h.goto(&format!("/ehrs/{ehr_id}/contribution/new")).await;
     stage_composition_create(&h, 1, &document).await;
     common::submit(&h, "button[name='intent'][value='stage']").await;
+    // The stage post is a full navigation, so the page hydrates again; typing
+    // into the editor island before it does races the WebAssembly start-up.
+    h.wait_hydrated().await;
     h.wait_css("#kind-2").await.select_by_value("create").await;
     fill(&h, "#staged-2", &unvalidatable).await;
     common::submit(&h, "#editor-dock button[value='save']").await;
