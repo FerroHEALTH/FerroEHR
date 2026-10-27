@@ -105,7 +105,6 @@ pub fn App() -> impl IntoView {
     crate::posted::provide_posted();
     ferrohealth_ui::i18n::provide_locale(crate::locale::current());
     ferrohealth_ui::widget::prefetch::routes(crate::routes::ROUTES);
-    ferrohealth_ui::widget::hydration::mark();
     let flash = crate::flash::shared();
     view! {
         <Title formatter=viewer_title text=product() />

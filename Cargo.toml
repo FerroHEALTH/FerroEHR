@@ -396,7 +396,7 @@ leptos_router = "0.8.17"
 # The shared FerroHEALTH console components, role tokens, stylesheet and table
 # model (FerroUI), pinned exactly: a console moves its pin after looking at its
 # own screens.
-ferrohealth-ui = "=0.5.1"
+ferrohealth-ui = "=0.5.2"
 # The viewer's string catalogs (#300): Project Fluent messages embedded at
 # build time from app/ferroehr-viewer/locales/, the crate and version
 # ferrohealth-ui catalogs its own words with, so one locale drives both.

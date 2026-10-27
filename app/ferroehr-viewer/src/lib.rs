@@ -108,13 +108,15 @@ pub mod shell;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod state;
 
-/// The WebAssembly entry: hydrates the page the server drew, whole, its lazy
-/// routes loading their code from their own chunks.
+/// The WebAssembly entry: loads the code of the page's lazy group
+/// ([`routes::preload`]), then hydrates the page the server drew, whole,
+/// with FerroUI's `widget::hydration::hydrate`.
 ///
 /// The browser then draws every page after the first itself (FerroUI
-/// `docs/consoles.md`, "How a console builds"); the root element carries
-/// FerroUI's `data-ferroui-hydrated` once the page has hydrated, which the
-/// browser journeys wait for before they act.
+/// `docs/consoles.md`, "How a console builds"). Until the page has hydrated
+/// a click or a submit is the browser's own, and the root element then
+/// carries `data-ferroui-hydrated`, which the browser journeys wait for
+/// before they act.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
@@ -126,6 +128,6 @@ pub fn hydrate() {
             .pathname()
             .unwrap_or_default();
         routes::preload(&path).await;
-        leptos::mount::hydrate_lazy(app::App);
+        ferrohealth_ui::widget::hydration::hydrate(app::App);
     });
 }
