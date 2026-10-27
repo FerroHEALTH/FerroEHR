@@ -47,6 +47,11 @@ jobs:
       actions: write # read the CI run and re-run its guard jobs
       pull-requests: read # the head commit of the pull request now
     steps:
+      # Only for scripts/lib/gh-retry.sh, the API retry the step below sources.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/lib
       - name: Re-run the guards the change affects once the CI run completes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -76,25 +81,15 @@ jobs:
             esac
           }
 
-          # Every API read goes through retry: GitHub answers 5xx bursts of a minute
-          # or more, so it backs off for about five minutes before failing the job.
-          retry() {
-            local delay=5 waited=0 out
-            until out=$("$@"); do
-              if [ "${waited}" -ge 300 ]; then
-                echo "::error::gave up after ${waited}s of failed reads: $*" >&2
-                return 1
-              fi
-              sleep "${delay}"
-              waited=$((waited + delay))
-              delay=$((delay * 2 > 60 ? 60 : delay * 2))
-            done
-            printf '%s\n' "${out}"
-          }
+          # Every API read goes through gh_retry: GitHub answers 5xx bursts of
+          # several minutes, so it backs off for fifteen before failing the job,
+          # and says the API failed rather than a guard (#4173).
+          # shellcheck source=scripts/lib/gh-retry.sh
+          . scripts/lib/gh-retry.sh
 
           run=""
           for _ in $(seq 1 30); do
-            run=$(retry gh run list --workflow ci.yml --commit "${HEAD}" --event pull_request \
+            run=$(gh_retry gh run list --workflow ci.yml --commit "${HEAD}" --event pull_request \
               --limit 1 --json databaseId --jq '.[0].databaseId // empty') || exit 1
             [ -n "${run}" ] && break
             sleep 10
@@ -107,24 +102,24 @@ jobs:
           handled=" "
           for _ in $(seq 1 20); do
             while :; do
-              status=$(retry gh run view "${run}" --json status --jq .status) || exit 1
+              status=$(gh_retry gh run view "${run}" --json status --jq .status) || exit 1
               [ "${status}" = completed ] && break
               sleep 30
             done
-            conclusion=$(retry gh run view "${run}" --json conclusion --jq .conclusion) || exit 1
+            conclusion=$(gh_retry gh run view "${run}" --json conclusion --jq .conclusion) || exit 1
             if [ "${conclusion}" = "cancelled" ]; then
               echo "CI run ${run} was cancelled; the run that replaced it reads the pull request itself"
               exit 0
             fi
             # Re-running an older commit's run would cancel the newer commit's
             # run, which shares its concurrency group.
-            current=$(retry gh api "repos/${GH_REPO}/pulls/${PR}" --jq .head.sha) || exit 1
+            current=$(gh_retry gh api "repos/${GH_REPO}/pulls/${PR}" --jq .head.sha) || exit 1
             if [ "${current}" != "${HEAD}" ]; then
               echo "the pull request moved past ${HEAD}; the run of its new head reads the pull request itself"
               exit 0
             fi
             # A failed read is retried, never taken for a missing guard (#3951).
-            jobs=$(retry gh run view "${run}" --json jobs \
+            jobs=$(gh_retry gh run view "${run}" --json jobs \
               --jq '.jobs[] | "\(.name)\t\(.databaseId) \(.conclusion)"') || exit 1
             next=""
             for guard in "${guards[@]}"; do
