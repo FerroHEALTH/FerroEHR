@@ -207,15 +207,14 @@ pub fn shortened(id: &str) -> String {
 /// ago", "4 min ago", with the full timestamp in its tooltip and the moment
 /// in `datetime`.
 ///
-/// It is drawn by the server alone, against the server's clock when the page
-/// is drawn.
+/// It counts from the instant the server read for the page
+/// ([`crate::request::now`]), so both halves draw the same text.
 #[must_use]
 pub fn ago(raw: &str) -> AnyView {
-    ferrohealth_ui::view::time::relative(raw, &clock(jiff::Timestamp::now())).into_any()
+    ferrohealth_ui::view::time::relative(raw, &clock(crate::request::now())).into_any()
 }
 
-/// The server's clock at `now` in the instant form FerroUI's relative time
-/// reads.
+/// The instant `now` in the form FerroUI's relative time reads.
 fn clock(now: jiff::Timestamp) -> String {
     now.to_string()
 }
@@ -293,7 +292,8 @@ pub fn warn_note(body: impl IntoView + 'static) -> AnyView {
     .into_any()
 }
 
-/// Today, by the server's clock in UTC, as a date picker counts days.
+/// Today in UTC, at the instant the server read for the page
+/// ([`crate::request::now`]), as a date picker counts days.
 ///
 /// # Panics
 ///
@@ -304,9 +304,7 @@ pub fn warn_note(body: impl IntoView + 'static) -> AnyView {
     reason = "jiff's civil date is always a day of the proleptic Gregorian calendar with a year of 1 to 9999, which calendar::Day::new accepts"
 )]
 pub fn today() -> ferrohealth_ui::calendar::Day {
-    let date = jiff::Timestamp::now()
-        .to_zoned(jiff::tz::TimeZone::UTC)
-        .date();
+    let date = utc_date(crate::request::now());
     let day = u16::try_from(date.year())
         .ok()
         .zip(u8::try_from(date.month()).ok())
@@ -611,11 +609,17 @@ pub fn axis_day(date: jiff::civil::Date) -> String {
     )
 }
 
-/// The last `days` days up to today, each with the count `points` holds for
-/// it and 0 for a day it holds none.
+/// The last `days` days up to today in UTC, at the instant the server read
+/// for the page, each with the count `points` holds for it and 0 for a day it
+/// holds none.
 #[must_use]
 pub fn last_days(points: &[crate::activity::ActivityPoint], days: u16) -> LastDays {
-    last_days_to(points, days, jiff::Zoned::now().date())
+    last_days_to(points, days, utc_date(crate::request::now()))
+}
+
+/// The civil date in UTC at `instant`.
+fn utc_date(instant: jiff::Timestamp) -> jiff::civil::Date {
+    instant.to_zoned(jiff::tz::TimeZone::UTC).date()
 }
 
 /// [`last_days`] up to `today`.
@@ -766,8 +770,8 @@ fn locate(text: &str, path: &str) -> Option<ferrohealth_ui::view::diagnostics::P
 #[cfg(test)]
 mod tests {
     use super::{
-        axis_day, clock, findings_of, last_days_to, locate, path_in, shortened, status_words,
-        tick_places,
+        axis_day, clock, findings_of, last_days, last_days_to, locate, path_in, shortened,
+        status_words, tick_places, today,
     };
     use crate::activity::ActivityPoint;
     use crate::error::ViewerError;
@@ -789,12 +793,28 @@ mod tests {
     }
 
     #[test]
-    fn a_time_in_a_list_reads_relative_to_the_server_clock_and_an_unknown_value_as_it_stands() {
+    fn a_time_in_a_list_reads_relative_to_the_page_instant_and_an_unknown_value_as_it_stands() {
         let now = clock("2026-10-21T09:42:11Z".parse().expect("an instant"));
         assert_eq!("2026-10-21T09:42:11Z", now);
         assert_eq!("13 s ago", relative_reading("2026-10-21T09:41:58Z", &now));
         assert_eq!("2 h ago", relative_reading("2026-10-21T07:40:00Z", &now));
         assert_eq!("not a time", relative_reading("not a time", &now));
+    }
+
+    #[test]
+    fn today_and_the_activity_window_count_from_the_instant_the_page_carries() {
+        let owner = leptos::prelude::Owner::new();
+        owner.with(|| {
+            leptos::prelude::provide_context(crate::request::Visit {
+                now: "2026-10-23T23:30:00Z".parse().expect("an instant"),
+                ..crate::request::Visit::default()
+            });
+            assert_eq!(
+                ferrohealth_ui::calendar::Day::new(2026, 10, 23),
+                Some(today())
+            );
+            assert_eq!(last_days(&[], 30).last, "2026-10-23");
+        });
     }
 
     #[test]
