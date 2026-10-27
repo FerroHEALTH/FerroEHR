@@ -2434,7 +2434,7 @@ pub fn rest_path_identifiers() -> Result<Vec<RestPathIdentifierCheck>, Error> {
         .map(|e| e.path())
         .filter(|p| {
             p.file_name()
-                .and_then(|n| n.to_str())
+                .and_then(std::ffi::OsStr::to_str)
                 .is_some_and(|n| n.ends_with("-codegen.openapi.yaml"))
         })
         .collect();
@@ -2493,7 +2493,7 @@ pub fn request_media() -> Result<Vec<RequestMediaCheck>, Error> {
         let path = entry.map_err(|e| e.to_string())?.path();
         if path
             .file_name()
-            .and_then(|n| n.to_str())
+            .and_then(std::ffi::OsStr::to_str)
             .is_some_and(|n| n.ends_with("-codegen.openapi.yaml"))
         {
             for op in oas::Oas::parse_file(&path)?.operations() {

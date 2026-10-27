@@ -95,63 +95,18 @@ fn literals(source: &str) -> Vec<Literal> {
             }
             continue;
         }
-        let raw_hashes = (current == 'r').then(|| {
-            let mut hashes = 0;
-            while chars.get(index + 1 + hashes) == Some(&'#') {
-                hashes += 1;
-            }
-            hashes
-        });
-        let opens_raw =
-            raw_hashes.is_some_and(|hashes| chars.get(index + 1 + hashes) == Some(&'"'));
-        if !opens_raw && current != '"' {
+        let raw_hashes = raw_opening(&chars, index);
+        if raw_hashes.is_none() && current != '"' {
             only_whitespace_since_literal = false;
             index += 1;
             continue;
         }
 
         let opened = line;
-        let mut text = String::new();
-        let mut cursor;
-        if opens_raw {
-            let hashes = raw_hashes.unwrap_or(0);
-            cursor = index + 2 + hashes;
-            while let Some(&character) = chars.get(cursor) {
-                if character == '"'
-                    && (0..hashes).all(|offset| chars.get(cursor + 1 + offset) == Some(&'#'))
-                {
-                    cursor += 1 + hashes;
-                    break;
-                }
-                if character == '\n' {
-                    line += 1;
-                }
-                text.push(character);
-                cursor += 1;
-            }
-        } else {
-            cursor = index + 1;
-            while let Some(&character) = chars.get(cursor) {
-                if character == '\\' {
-                    // An escape: skip the escaped character, and keep counting
-                    // lines through a line continuation.
-                    if chars.get(cursor + 1) == Some(&'\n') {
-                        line += 1;
-                    }
-                    cursor += 2;
-                    continue;
-                }
-                if character == '"' {
-                    cursor += 1;
-                    break;
-                }
-                if character == '\n' {
-                    line += 1;
-                }
-                text.push(character);
-                cursor += 1;
-            }
-        }
+        let (text, cursor) = match raw_hashes {
+            Some(hashes) => raw_body(&chars, index + 2 + hashes, hashes, &mut line),
+            None => quoted_body(&chars, index + 1, &mut line),
+        };
         if only_whitespace_since_literal && let Some(previous) = out.last_mut() {
             previous.text.push(' ');
             previous.text.push_str(&text);
@@ -162,6 +117,64 @@ fn literals(source: &str) -> Vec<Literal> {
         index = cursor;
     }
     out
+}
+
+/// The number of `#` marks when a raw string literal (`r"…"`, `r#"…"#`) opens
+/// at `index`, or `None` when none does.
+fn raw_opening(chars: &[char], index: usize) -> Option<usize> {
+    if chars.get(index) != Some(&'r') {
+        return None;
+    }
+    let mut hashes = 0;
+    while chars.get(index + 1 + hashes) == Some(&'#') {
+        hashes += 1;
+    }
+    (chars.get(index + 1 + hashes) == Some(&'"')).then_some(hashes)
+}
+
+/// The text of a raw string literal whose content starts at `cursor`, and the
+/// index just past its closing delimiter; `line` counts the newlines crossed.
+fn raw_body(chars: &[char], mut cursor: usize, hashes: usize, line: &mut usize) -> (String, usize) {
+    let mut text = String::new();
+    while let Some(&character) = chars.get(cursor) {
+        if character == '"'
+            && (0..hashes).all(|offset| chars.get(cursor + 1 + offset) == Some(&'#'))
+        {
+            return (text, cursor + 1 + hashes);
+        }
+        if character == '\n' {
+            *line += 1;
+        }
+        text.push(character);
+        cursor += 1;
+    }
+    (text, cursor)
+}
+
+/// The text of a quoted string literal whose content starts at `cursor`, and
+/// the index just past its closing quote; `line` counts the newlines crossed.
+fn quoted_body(chars: &[char], mut cursor: usize, line: &mut usize) -> (String, usize) {
+    let mut text = String::new();
+    while let Some(&character) = chars.get(cursor) {
+        if character == '\\' {
+            // An escape: skip the escaped character, and keep counting lines
+            // through a line continuation.
+            if chars.get(cursor + 1) == Some(&'\n') {
+                *line += 1;
+            }
+            cursor += 2;
+            continue;
+        }
+        if character == '"' {
+            return (text, cursor + 1);
+        }
+        if character == '\n' {
+            *line += 1;
+        }
+        text.push(character);
+        cursor += 1;
+    }
+    (text, cursor)
 }
 
 /// The domain schemas a piece of SQL text qualifies a relation with.

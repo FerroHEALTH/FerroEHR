@@ -376,8 +376,7 @@ impl FerroEhrService {
         // Step two: the crossing. Identifiers in, identifiers out.
         let party_ids: Vec<VoId> = parties.into_iter().collect();
         Ok(super::store::open_mappings(&self.linkage_pool, &party_ids)
-            .await
-            .map_err(CohortError::from)?
+            .await?
             .into_iter()
             .collect())
     }
