@@ -24,9 +24,10 @@ MODE="${1:---dev-only}"
 log() { printf '\033[1;33m[build-site]\033[0m %s\n' "$*"; }
 
 build_book() {
-  # $1 = site-url (with trailing slash), $2 = absolute dest dir
-  log "book -> $2  (site-url $1)"
-  MDBOOK_OUTPUT__HTML__SITE_URL="$1" mdbook build "$ROOT/website/book" -d "$2" >/dev/null
+  # The site URL carries its trailing slash; the destination is absolute.
+  local site_url="$1" dest="$2"
+  log "book -> $dest  (site-url $site_url)"
+  MDBOOK_OUTPUT__HTML__SITE_URL="$site_url" mdbook build "$ROOT/website/book" -d "$dest" >/dev/null
 }
 
 # 1. Conformance claims are derived from the committed runner artifacts. The

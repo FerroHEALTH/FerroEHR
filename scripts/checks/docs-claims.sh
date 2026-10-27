@@ -101,6 +101,7 @@ trap 'rm -rf "$work"' EXIT
 # `config.audit`). A `#?` line documents a real optional/secret/derived key and
 # counts; a plain `#` comment does not.
 toml_paths() {
+  local file="$1"
   awk '
     { line = $0
       sub(/^[[:space:]]*/, "", line)
@@ -116,12 +117,13 @@ toml_paths() {
         for (i = 2; i < n; i++) { print acc; acc = acc "." seg[i] }
         if (n > 1) print acc
       }
-    }' "$1" | sort -u
+    }' "$file" | sort -u
 }
 
 # values.yaml flattened to dotted paths by indentation. Our own file, two-space
 # indented; list items and comments are skipped.
 values_paths() {
+  local file="$1"
   awk '
     /^[[:space:]]*#/ { next }
     /^[[:space:]]*$/ { next }
@@ -137,7 +139,7 @@ values_paths() {
       path = stack[0]
       for (i = 1; i <= lvl; i++) path = path "." stack[i]
       print path
-    }' "$1" | sort -u
+    }' "$file" | sort -u
 }
 
 toml_paths "$TOML" > "$work/toml"
@@ -165,7 +167,8 @@ files=$(collect "$@")
 # the list once and test against that.
 files_spaced=" ${files//$'\n'/ } "
 in_files() {
-  case "$files_spaced" in *" $1 "*) return 0 ;; *) return 1 ;; esac
+  local page="$1"
+  case "$files_spaced" in *" $page "*) return 0 ;; *) return 1 ;; esac
 }
 
 # ── 1. configuration keys ────────────────────────────────────────────────────

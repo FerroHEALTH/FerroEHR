@@ -68,6 +68,7 @@ case "${1:-}" in
     since="$2"
     shift 2
     ;;
+  *) ;;
 esac
 guard_no_args "$@"
 

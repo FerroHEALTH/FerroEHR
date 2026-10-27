@@ -41,7 +41,9 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
 
 body {
   margin: 0;
@@ -333,5 +335,5 @@ section { padding: clamp(3rem, 7vw, 5rem) 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { scroll-behavior: auto; transition: none !important; }
+  * { transition: none !important; }
 }

@@ -127,6 +127,7 @@ case "${1:-}" in
     ehds_section
     exit 0
     ;;
+  *) ;;
 esac
 [[ "$#" -eq 2 ]] || guard_usage "$GRAMMAR"
 guard_known_flags "$GRAMMAR" "" "$@"

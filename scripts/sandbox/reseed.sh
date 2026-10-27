@@ -45,11 +45,16 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 HDR="$WORK/headers"
 BODY="$WORK/body"
+CT_JSON='Content-Type: application/json'
+CT_PLAIN='Content-Type: text/plain'
 
 # ── the manifest ─────────────────────────────────────────────────────────────
 
 # Read the manifest with a jq filter, raw output.
-mf() { jq -r "$1" "$MANIFEST"; }
+mf() { local filter="$1"; jq -r "$filter" "$MANIFEST"; }
+
+# Every EHR entry of the manifest, one compact JSON object per line.
+manifest_ehrs() { jq -c '.ehrs[]' "$MANIFEST"; }
 
 SUBJECT_NS="$(mf '.subject_namespace')"
 
@@ -94,7 +99,8 @@ expect() {
 
 # The last value of response header `$1`, case-insensitively.
 header_value() {
-  tr -d '\r' < "$HDR" | awk -v want="$1" '
+  local name="$1"
+  tr -d '\r' < "$HDR" | awk -v want="$name" '
     BEGIN { want = tolower(want) ":" }
     tolower($1) == want { sub(/^[^:]*:[ ]*/, ""); print }
   ' | tail -1
@@ -173,7 +179,8 @@ echo "==> $adl14_count ADL 1.4 operational templates"
 # by that depth first and by name second; plain `LC_ALL=C sort` put `exam-…`
 # before `exam.` because `-` sorts before `.`.
 adls_parents_first() {
-  find "$1" -name '*.adls' | while read -r f; do
+  local dir="$1"
+  find "$dir" -name '*.adls' | while read -r f; do
     concept="$(basename "$f" | cut -d. -f2)"
     depth="${concept//[^-]/}"
     printf '%d\t%s\n' "${#depth}" "$f"
@@ -187,7 +194,7 @@ accepted=0
 refused=0
 while read -r adls; do
   code=$(request "archetype $(basename "$adls")" POST "$BASE/definition/template/adl2" \
-    -H 'Content-Type: text/plain' --data-binary @"$adls")
+    -H "$CT_PLAIN" --data-binary @"$adls")
   case "$code" in
     200 | 201 | 409) accepted=$((accepted + 1)) ;;
     422) refused=$((refused + 1)) ;;
@@ -214,7 +221,7 @@ while read -r rel; do
     exit 1
   }
   code=$(request "adl2 artefact $(basename "$rel")" POST "$BASE/definition/template/adl2" \
-    -H 'Content-Type: text/plain' --data-binary @"$file")
+    -H "$CT_PLAIN" --data-binary @"$file")
   expect "adl2 artefact $(basename "$rel")" "$code" 201 409
   adl2_artefacts=$((adl2_artefacts + 1))
 done < <(mf '.adl2.artefacts[]')
@@ -227,7 +234,7 @@ while read -r rel; do
     exit 1
   }
   code=$(request "adl2 template $(basename "$rel")" POST "$BASE/definition/template/adl2" \
-    -H 'Content-Type: text/plain' --data-binary @"$file")
+    -H "$CT_PLAIN" --data-binary @"$file")
   expect "adl2 template $(basename "$rel")" "$code" 201 409
   adl2_templates=$((adl2_templates + 1))
 done < <(mf '.adl2.templates[].file')
@@ -257,7 +264,7 @@ while read -r entry; do
     404)
       render "$status_file" "$WORK/status.json" "__SUBJECT_ID__=$subject"
       code=$(request "ehr create $subject" POST "$BASE/ehr" \
-        -H 'Content-Type: application/json' --data-binary @"$WORK/status.json")
+        -H "$CT_JSON" --data-binary @"$WORK/status.json")
       expect "ehr create $subject" "$code" 201
       ehrs[index]=$(etag_uid)
       created[index]=yes
@@ -266,7 +273,7 @@ while read -r entry; do
   esac
   : > "$WORK/comps.$index"
   index=$((index + 1))
-done < <(jq -c '.ehrs[]' "$MANIFEST")
+done < <(manifest_ehrs)
 echo "==> ${#ehrs[@]} demo EHRs ($reused reused)"
 
 # ── 6. compositions ──────────────────────────────────────────────────────────
@@ -282,7 +289,7 @@ commit_series() {
   local ehr="${ehrs[$slot]}" ovid vo code first=""
   for _ in $(seq 1 "$copies"); do
     code=$(request "$label" POST "$BASE/ehr/$ehr/composition" \
-      -H 'Content-Type: application/json' -H 'Prefer: return=minimal' \
+      -H "$CT_JSON" -H 'Prefer: return=minimal' \
       --data-binary @"$body")
     expect "$label" "$code" 201
     ovid=$(etag_uid)
@@ -296,7 +303,7 @@ commit_series() {
   jq 'del(.uid)' "$body" > "$WORK/update.json"
   for _ in $(seq 1 "$versions"); do
     code=$(request "$label version" PUT "$BASE/ehr/$ehr/composition/$vo" \
-      -H 'Content-Type: application/json' -H "If-Match: \"$ovid\"" \
+      -H "$CT_JSON" -H "If-Match: \"$ovid\"" \
       --data-binary @"$WORK/update.json")
     expect "$label version" "$code" 200 204
     ovid=$(etag_uid)
@@ -355,7 +362,7 @@ while read -r slot; do
     "__COMPOSITION_2__=$(sed -n 2p "$WORK/comps.$slot")" \
     "__COMPOSITION_3__=$(sed -n 3p "$WORK/comps.$slot")"
   code=$(request "directory $ehr" POST "$BASE/ehr/$ehr/directory" \
-    -H 'Content-Type: application/json' --data-binary @"$WORK/folder.json")
+    -H "$CT_JSON" --data-binary @"$WORK/folder.json")
   expect "directory $ehr" "$code" 201 409
   directories=$((directories + 1))
 done < <(mf '.directory.ehrs[]')
@@ -382,11 +389,11 @@ while read -r entry; do
   current=$(etag_uid)
   render "$SEED_DIR/$final" "$WORK/status.json" "__SUBJECT_ID__=$subject"
   code=$(request "ehr_status update $ehr" PUT "$BASE/ehr/$ehr/ehr_status" \
-    -H 'Content-Type: application/json' -H "If-Match: \"$current\"" \
+    -H "$CT_JSON" -H "If-Match: \"$current\"" \
     --data-binary @"$WORK/status.json")
   expect "ehr_status update $ehr" "$code" 200 204
   statuses=$((statuses + 1))
-done < <(jq -c '.ehrs[]' "$MANIFEST")
+done < <(manifest_ehrs)
 echo "==> $statuses further EHR_STATUS versions"
 
 # ── 9. demographics ──────────────────────────────────────────────────────────
@@ -395,7 +402,7 @@ persons=()
 index=0
 while read -r rel; do
   code=$(request "person $(basename "$rel")" POST "$BASE/demographic/person" \
-    -H 'Content-Type: application/json' --data-binary @"$SEED_DIR/$rel")
+    -H "$CT_JSON" --data-binary @"$SEED_DIR/$rel")
   expect "person $(basename "$rel")" "$code" 201
   ovid=$(etag_uid)
   persons[index]="${ovid%%::*}"
@@ -408,7 +415,7 @@ while read -r entry; do
   performer=$(printf '%s' "$entry" | jq -r '.performer')
   render "$SEED_DIR/$file" "$WORK/role.json" "__PERFORMER__=${persons[$performer]}"
   code=$(request "role $(basename "$file")" POST "$BASE/demographic/role" \
-    -H 'Content-Type: application/json' --data-binary @"$WORK/role.json")
+    -H "$CT_JSON" --data-binary @"$WORK/role.json")
   expect "role $(basename "$file")" "$code" 201
   roles=$((roles + 1))
 done < <(jq -c '.demographics.roles[]' "$MANIFEST")
@@ -422,7 +429,7 @@ while read -r entry; do
     "__SOURCE__=${persons[$source_index]}" "__TARGET__=${persons[$target_index]}"
   code=$(request "relationship $(basename "$file")" POST \
     "$BASE/demographic/party_relationship" \
-    -H 'Content-Type: application/json' --data-binary @"$WORK/relationship.json")
+    -H "$CT_JSON" --data-binary @"$WORK/relationship.json")
   expect "relationship $(basename "$file")" "$code" 201
   relationships=$((relationships + 1))
 done < <(jq -c '.demographics.relationships[]' "$MANIFEST")
@@ -445,7 +452,7 @@ while read -r entry; do
     exit 1
   }
   code=$(request "query $name" PUT "$BASE/definition/query/$name/$version" \
-    -H 'Content-Type: text/plain' --data-binary @"$aql")
+    -H "$CT_PLAIN" --data-binary @"$aql")
   expect "query $name" "$code" 200 201 409
 
   parameters=$(printf '%s' "$entry" | jq -c '.parameters // empty')
@@ -454,7 +461,7 @@ while read -r entry; do
       | jq --arg e "${ehrs[0]}" '{query_parameters: walk(if . == "__EHR_0__" then $e else . end)}' \
         > "$WORK/params.json"
     code=$(request "query run $name" POST "$BASE/query/$name" \
-      -H 'Content-Type: application/json' --data-binary @"$WORK/params.json")
+      -H "$CT_JSON" --data-binary @"$WORK/params.json")
   else
     code=$(request "query run $name" GET "$BASE/query/$name")
   fi
@@ -475,7 +482,7 @@ echo "==> $queries stored AQL queries, each answering rows"
 render "$SEED_DIR/$(mf '.marker.status')" "$WORK/marker.json" \
   "__SUBJECT_ID__=$MARKER_SUBJECT"
 code=$(request "marker create" POST "$BASE/ehr" \
-  -H 'Content-Type: application/json' --data-binary @"$WORK/marker.json")
+  -H "$CT_JSON" --data-binary @"$WORK/marker.json")
 expect "marker create" "$code" 201 409
 
 echo "==> seeded ${#ehrs[@]} EHRs, $compositions compositions (+$extra versions), $directories directories, ${#persons[@]} persons, $queries stored queries"

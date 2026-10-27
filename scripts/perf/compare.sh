@@ -101,22 +101,25 @@ self_test() {
   trap 'rm -rf "$tmp"' RETURN
   # report DIR N THROUGHPUT P95: writes run-N.json into DIR.
   report() {
-    mkdir -p "$1"
+    local dir="$1" n="$2" throughput="$3" p95="$4"
+    mkdir -p "$dir"
     printf '{"workers":8,"operations":2000,"elapsed_seconds":1,"throughput_ops_per_second":%s,"p50_ms":1,"p95_ms":%s,"by_operation":{"aql_contains":{"count":1,"p50_ms":1,"p95_ms":%s}}}\n' \
-      "$3" "$4" "$4" >"$1/run-$2.json"
+      "$throughput" "$p95" "$p95" >"$dir/run-$n.json"
   }
   # side_of DIR T1 T2 T3 P1 P2 P3
   side_of() {
-    report "$1" 1 "$2" "$5"
-    report "$1" 2 "$3" "$6"
-    report "$1" 3 "$4" "$7"
+    local dir="$1" t1="$2" t2="$3" t3="$4" p1="$5" p2="$6" p3="$7"
+    report "$dir" 1 "$t1" "$p1"
+    report "$dir" 2 "$t2" "$p2"
+    report "$dir" 3 "$t3" "$p3"
   }
   # expect NAME WANT_STATUS WANT_LINE PREV CAND
   expect() {
+    local name="$1" want_status="$2" want_line="$3" prev="$4" cand="$5"
     status=0
-    out="$(compare "$4" "$5" 2>&1)" || status=$?
-    if [[ "$status" != "$2" ]] || ! grep -qF -- "$3" <<<"$out"; then
-      echo "self-test FAILED: $1 (exit $status, wanted $2 and '$3')" >&2
+    out="$(compare "$prev" "$cand" 2>&1)" || status=$?
+    if [[ "$status" != "$want_status" ]] || ! grep -qF -- "$want_line" <<<"$out"; then
+      echo "self-test FAILED: $name (exit $status, wanted $want_status and '$want_line')" >&2
       echo "$out" >&2
       exit 1
     fi

@@ -27,7 +27,7 @@ impl SubjectRef {
     /// The `OBJECT_REF.type` a subject reference carries when none was
     /// recorded: the common MPI case the SM's own wording assumes ("patient or
     /// other subject or care identifiers", `master07 §Overview`).
-    pub const DEFAULT_TYPE: &'static str = "PERSON";
+    pub const DEFAULT_TYPE: &str = "PERSON";
 
     /// A subject reference of the default `PERSON` type.
     #[must_use]
