@@ -280,6 +280,9 @@ struct StandIns {
     ids: Vec<String>,
     /// Every instant the run stamped.
     instants: Vec<jiff::Timestamp>,
+    /// Every HTTP date (`Last-Modified`) the run stamped. A whole second is
+    /// no rank among the instants, so these all take the reads' stand-in.
+    dates: Vec<jiff::Timestamp>,
     /// Every base64 SHA-256 digest (a version signature), in order of first
     /// appearance.
     digests: Vec<String>,
@@ -292,6 +295,8 @@ struct Replacements {
     ids: BTreeMap<String, String>,
     /// An instant the run stamped to its stand-in.
     instants: BTreeMap<jiff::Timestamp, jiff::Timestamp>,
+    /// An HTTP date the run stamped to its stand-in.
+    dates: BTreeMap<jiff::Timestamp, jiff::Timestamp>,
     /// A digest to its stand-in.
     digests: BTreeMap<String, String>,
 }
@@ -319,7 +324,7 @@ impl StandIns {
                 && instant >= window.0
                 && instant <= window.1
             {
-                self.instants.push(instant);
+                self.dates.push(instant);
             }
         });
     }
@@ -356,9 +361,12 @@ impl StandIns {
             .zip(1_u64..)
             .map(|(digest, n)| (digest.clone(), format!("sha256:{n:0>43}=")))
             .collect();
+        let read = epoch + jiff::SignedDuration::from_hours(1);
+        let dates = self.dates.iter().map(|date| (*date, read)).collect();
         Replacements {
             ids,
             instants,
+            dates,
             digests,
         }
     }
@@ -378,7 +386,7 @@ impl Replacements {
     /// `text` with its UUIDs and run instants replaced.
     fn replace(&self, text: &str) -> String {
         if let Some(instant) = http_date(text) {
-            if let Some(stand_in) = self.instants.get(&instant) {
+            if let Some(stand_in) = self.dates.get(&instant) {
                 return jiff::fmt::rfc2822::DateTimePrinter::new()
                     .timestamp_to_rfc9110_string(stand_in)
                     .expect("a stand-in instant prints as an HTTP date");
@@ -500,8 +508,7 @@ fn http_date(text: &str) -> Option<jiff::Timestamp> {
         .ok()
 }
 
-/// `stand_in` written as `written` was: with a fraction when it had one, in
-/// its offset.
+/// `stand_in` with a six-digit fraction, in the offset `written` carries.
 fn rewrite(written: &str, stand_in: jiff::Timestamp) -> String {
     let (offset, suffix) = match written
         .len()
@@ -527,10 +534,9 @@ fn rewrite(written: &str, stand_in: jiff::Timestamp) -> String {
         .to_datetime(stand_in)
         .strftime("%Y-%m-%dT%H:%M:%S")
         .to_string();
-    // The CDR drops a fraction's trailing zeros, so its width varies per run.
-    if written.contains('.') {
-        out.push_str(".000000");
-    }
+    // The CDR drops a fraction's trailing zeros, so its width varies per run:
+    // a stand-in always carries six.
+    out.push_str(".000000");
     out.push_str(suffix);
     out
 }

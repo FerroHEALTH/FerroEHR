@@ -38,7 +38,7 @@
   "headers": {
    "content-type": "application/json"
   },
-  "response": "[{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-01T09:00:10.000000Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}]"
+  "response": "[{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-01T09:00:08.000000Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}]"
  },
  {
   "method": "GET",
@@ -48,7 +48,7 @@
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-01T09:00:10.000000Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}"
+  "response": "{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-01T09:00:08.000000Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}"
  },
  {
   "method": "GET",
@@ -58,7 +58,7 @@
   "headers": {
    "content-type": "application/json"
   },
-  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-01T09:00:01.000000Z\",\"version\":\"1\"}]"
+  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-01T09:00:00.000000Z\",\"version\":\"1\"}]"
  },
  {
   "method": "GET",
@@ -100,7 +100,7 @@
   "headers": {
    "content-type": "application/json"
   },
-  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-01T09:00:01.000000Z\",\"version\":\"1\"}]"
+  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-01T09:00:00.000000Z\",\"version\":\"1\"}]"
  },
  {
   "method": "GET",
@@ -150,7 +150,7 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000003::ferroehr.local::1\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:08 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
   "response": "{\"_type\":\"PARTY_RELATIONSHIP\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"employment\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.employment.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000003::ferroehr.local::1\"},\"target\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demographic\",\"type\":\"ORGANISATION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000004\"}},\"source\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demographic\",\"type\":\"PERSON\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000005\"}}}"
  },
@@ -172,7 +172,7 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000005::ferroehr.local::1\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
   "response": "{\"_type\":\"PERSON\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"PERSON\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PERSON.person.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000005::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-DEMOGRAPHIC-PERSON.person.v1\"},\"rm_version\":\"1.1.0\"},\"identities\":[{\"_type\":\"PARTY_IDENTITY\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"legal name\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1\",\"details\":{\"_type\":\"ITEM_TREE\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Details\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"ELEMENT\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Given name\"},\"archetype_node_id\":\"at0002\",\"value\":{\"_type\":\"DV_TEXT\",\"value\":\"Demo\"}},{\"_type\":\"ELEMENT\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Family name\"},\"archetype_node_id\":\"at0003\",\"value\":{\"_type\":\"DV_TEXT\",\"value\":\"Person 0417\"}}]}}]}"
  },
@@ -204,9 +204,9 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000005\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000005::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:07.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"PARTY creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
+  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000005::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:06.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"PARTY creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
  },
  {
   "method": "GET",
@@ -216,9 +216,9 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000003\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:08 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000003::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:09.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"PARTY_RELATIONSHIP creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
+  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000003::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:07.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"PARTY_RELATIONSHIP creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
  },
  {
   "method": "GET",
@@ -229,7 +229,7 @@
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000002\""
   },
-  "response": "{\"_type\":\"EHR\",\"system_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"},\"ehr_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000002\"},\"ehr_status\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_STATUS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000006\"}},\"ehr_access\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_ACCESS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000007\"}},\"directory\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000008\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:02.000000Z\"},\"folders\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000008\"}}]}"
+  "response": "{\"_type\":\"EHR\",\"system_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"},\"ehr_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000002\"},\"ehr_status\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_STATUS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000006\"}},\"ehr_access\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_ACCESS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000007\"}},\"directory\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000008\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:01.000000Z\"},\"folders\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000008\"}}]}"
  },
  {
   "method": "GET",
@@ -239,7 +239,7 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
   "response": "{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}}"
  },
@@ -261,7 +261,7 @@
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"rows\":[{\"uid\":\"00000000-0000-7000-8000-00000000000a\",\"time_committed\":\"2026-10-01T09:00:06.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000b\",\"time_committed\":\"2026-10-01T09:00:05.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000c\",\"time_committed\":\"2026-10-01T09:00:04.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"modification\",\"change_type\":\"251\"},{\"uid\":\"00000000-0000-7000-8000-00000000000d\",\"time_committed\":\"2026-10-01T09:00:03.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000e\",\"time_committed\":\"2026-10-01T09:00:02.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"}],\"total\":5}"
+  "response": "{\"rows\":[{\"uid\":\"00000000-0000-7000-8000-00000000000a\",\"time_committed\":\"2026-10-01T09:00:05.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000b\",\"time_committed\":\"2026-10-01T09:00:04.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000c\",\"time_committed\":\"2026-10-01T09:00:03.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"modification\",\"change_type\":\"251\"},{\"uid\":\"00000000-0000-7000-8000-00000000000d\",\"time_committed\":\"2026-10-01T09:00:02.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000e\",\"time_committed\":\"2026-10-01T09:00:01.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"}],\"total\":5}"
  },
  {
   "method": "GET",
@@ -271,7 +271,7 @@
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"rows\":[{\"uid\":\"00000000-0000-7000-8000-00000000000a\",\"time_committed\":\"2026-10-01T09:00:06.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000b\",\"time_committed\":\"2026-10-01T09:00:05.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000c\",\"time_committed\":\"2026-10-01T09:00:04.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"modification\",\"change_type\":\"251\"},{\"uid\":\"00000000-0000-7000-8000-00000000000d\",\"time_committed\":\"2026-10-01T09:00:03.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000e\",\"time_committed\":\"2026-10-01T09:00:02.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"}],\"total\":5}"
+  "response": "{\"rows\":[{\"uid\":\"00000000-0000-7000-8000-00000000000a\",\"time_committed\":\"2026-10-01T09:00:05.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000b\",\"time_committed\":\"2026-10-01T09:00:04.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000c\",\"time_committed\":\"2026-10-01T09:00:03.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"modification\",\"change_type\":\"251\"},{\"uid\":\"00000000-0000-7000-8000-00000000000d\",\"time_committed\":\"2026-10-01T09:00:02.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000e\",\"time_committed\":\"2026-10-01T09:00:01.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"}],\"total\":5}"
  },
  {
   "method": "GET",
@@ -281,7 +281,7 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000008::ferroehr.local::1\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
   "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000008::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000009\"}}]}]}"
  },
@@ -293,7 +293,7 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000008::ferroehr.local::1\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
   "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000008::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000009\"}}]}]}"
  },
@@ -305,7 +305,7 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
   "response": "{\"_type\":\"EHR_STATUS\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR Status\"},\"archetype_node_id\":\"openEHR-EHR-EHR_STATUS.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-EHR_STATUS.generic.v1\"},\"rm_version\":\"1.2.0\"},\"subject\":{\"_type\":\"PARTY_SELF\",\"external_ref\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demo.hospital.mrn\",\"type\":\"PERSON\",\"id\":{\"_type\":\"GENERIC_ID\",\"value\":\"p-0417\",\"scheme\":\"mrn\"}}},\"is_queryable\":true,\"is_modifiable\":true}"
  },
@@ -327,9 +327,9 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000009\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
-  "response": "{\"_type\":\"VERSIONED_COMPOSITION\",\"uid\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000009\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000002\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:03.000000Z\"}}"
+  "response": "{\"_type\":\"VERSIONED_COMPOSITION\",\"uid\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000009\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000002\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:02.000000Z\"}}"
  },
  {
   "method": "GET",
@@ -339,9 +339,9 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000009\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:03.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]},{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:04.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"modification\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"251\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION update\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
+  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:02.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]},{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:03.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"modification\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"251\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION update\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
  },
  {
   "method": "GET",
@@ -351,9 +351,9 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
-  "response": "{\"_type\":\"ORIGINAL_VERSION\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"},\"contribution\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"CONTRIBUTION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-00000000000c\"}},\"commit_audit\":{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:04.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"modification\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"251\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION update\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}},\"lifecycle_state\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"complete\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"532\"}},\"preceding_version_uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::1\"},\"data\":{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}},\"signature\":\"sha256:0000000000000000000000000000000000000000001=\"}"
+  "response": "{\"_type\":\"ORIGINAL_VERSION\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"},\"contribution\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"CONTRIBUTION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-00000000000c\"}},\"commit_audit\":{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:03.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"modification\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"251\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION update\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}},\"lifecycle_state\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"complete\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"532\"}},\"preceding_version_uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::1\"},\"data\":{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}},\"signature\":\"sha256:0000000000000000000000000000000000000000001=\"}"
  },
  {
   "method": "GET",
@@ -363,9 +363,9 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000006\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
-  "response": "{\"_type\":\"VERSIONED_EHR_STATUS\",\"uid\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000006\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000002\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:02.000000Z\"}}"
+  "response": "{\"_type\":\"VERSIONED_EHR_STATUS\",\"uid\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000006\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000002\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:01.000000Z\"}}"
  },
  {
   "method": "GET",
@@ -375,9 +375,9 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000006\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:02.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
+  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:01.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
  },
  {
   "method": "GET",
@@ -387,9 +387,9 @@
   "headers": {
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"",
-   "last-modified": "Thu, 01 Oct 2026 09:00:00 GMT"
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
-  "response": "{\"_type\":\"ORIGINAL_VERSION\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"},\"contribution\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"CONTRIBUTION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-00000000000e\"}},\"commit_audit\":{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:02.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}},\"lifecycle_state\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"complete\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"532\"}},\"data\":{\"_type\":\"EHR_STATUS\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR Status\"},\"archetype_node_id\":\"openEHR-EHR-EHR_STATUS.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-EHR_STATUS.generic.v1\"},\"rm_version\":\"1.2.0\"},\"subject\":{\"_type\":\"PARTY_SELF\",\"external_ref\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demo.hospital.mrn\",\"type\":\"PERSON\",\"id\":{\"_type\":\"GENERIC_ID\",\"value\":\"p-0417\",\"scheme\":\"mrn\"}}},\"is_queryable\":true,\"is_modifiable\":true},\"signature\":\"sha256:0000000000000000000000000000000000000000002=\"}"
+  "response": "{\"_type\":\"ORIGINAL_VERSION\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"},\"contribution\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"CONTRIBUTION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-00000000000e\"}},\"commit_audit\":{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:01.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}},\"lifecycle_state\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"complete\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"532\"}},\"data\":{\"_type\":\"EHR_STATUS\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR Status\"},\"archetype_node_id\":\"openEHR-EHR-EHR_STATUS.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-EHR_STATUS.generic.v1\"},\"rm_version\":\"1.2.0\"},\"subject\":{\"_type\":\"PARTY_SELF\",\"external_ref\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demo.hospital.mrn\",\"type\":\"PERSON\",\"id\":{\"_type\":\"GENERIC_ID\",\"value\":\"p-0417\",\"scheme\":\"mrn\"}}},\"is_queryable\":true,\"is_modifiable\":true},\"signature\":\"sha256:0000000000000000000000000000000000000000002=\"}"
  },
  {
   "method": "POST",
@@ -455,7 +455,7 @@
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000015\""
   },
-  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC\"},\"q\":\"SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/ehr_id/value\"},{\"name\":\"#1\",\"path\":\"/time_created/value\"}],\"rows\":[[\"00000000-0000-7000-8000-000000000002\",\"2026-10-01T09:00:02.000000+00:00\"]]}"
+  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC\"},\"q\":\"SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/ehr_id/value\"},{\"name\":\"#1\",\"path\":\"/time_created/value\"}],\"rows\":[[\"00000000-0000-7000-8000-000000000002\",\"2026-10-01T09:00:01.000000+00:00\"]]}"
  },
  {
   "method": "POST",
@@ -466,7 +466,7 @@
    "content-type": "application/json",
    "etag": "W/\"00000000-0000-7000-8000-000000000016\""
   },
-  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\"},\"q\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/commit_audit/time_committed/value\"}],\"rows\":[[\"2026-10-01T09:00:05.000000+00:00\"],[\"2026-10-01T09:00:04.000000+00:00\"]]}"
+  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\"},\"q\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/commit_audit/time_committed/value\"}],\"rows\":[[\"2026-10-01T09:00:04.000000+00:00\"],[\"2026-10-01T09:00:03.000000+00:00\"]]}"
  },
  {
   "method": "GET",
@@ -497,6 +497,6 @@
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"name\":\"ferroehr\",\"version\":\"5.4.2\",\"git_sha\":\"344307b0bb4d\",\"build_date\":\"2026-10-27T07:32:53Z\",\"rustc\":\"rustc 1.99.1 (58cf8f9c3 2026-10-13)\",\"spec_profile\":\"development\",\"spec\":{\"its_rest\":\"1.1.0\",\"aql\":\"1.1.0\",\"rm\":\"1.2.0\",\"base\":\"1.3.0\",\"am\":\"1.4.0 + 2.4.0\",\"term\":\"3.1.0\"},\"postgres_target\":\"18.6+\",\"manufacturer\":{\"name\":\"Cadasto B.V.\",\"postal_address\":\"Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands\",\"email\":\"info@cadasto.com\",\"website\":\"https://www.cadasto.com/contact/\"},\"support\":{\"release_date\":\"2026-10-25\",\"support_ends\":\"2031-10\",\"status\":\"supported\"},\"audit\":{\"enabled\":true,\"fail_mode\":\"open\",\"local_store\":true,\"retention_days\":0,\"retention_years\":null,\"category_map\":\"sha256:1132e548840144251cfff2071c1f468cc55ebcdb98fe35b88cf2b99788bdf006\"}}"
+  "response": "{\"name\":\"ferroehr\",\"version\":\"5.4.2\",\"git_sha\":\"7fa86201b779\",\"build_date\":\"2026-10-27T08:01:28Z\",\"rustc\":\"rustc 1.99.1 (58cf8f9c3 2026-10-13)\",\"spec_profile\":\"development\",\"spec\":{\"its_rest\":\"1.1.0\",\"aql\":\"1.1.0\",\"rm\":\"1.2.0\",\"base\":\"1.3.0\",\"am\":\"1.4.0 + 2.4.0\",\"term\":\"3.1.0\"},\"postgres_target\":\"18.6+\",\"manufacturer\":{\"name\":\"Cadasto B.V.\",\"postal_address\":\"Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands\",\"email\":\"info@cadasto.com\",\"website\":\"https://www.cadasto.com/contact/\"},\"support\":{\"release_date\":\"2026-10-25\",\"support_ends\":\"2031-10\",\"status\":\"supported\"},\"audit\":{\"enabled\":true,\"fail_mode\":\"open\",\"local_store\":true,\"retention_days\":0,\"retention_years\":null,\"category_map\":\"sha256:1132e548840144251cfff2071c1f468cc55ebcdb98fe35b88cf2b99788bdf006\"}}"
  }
 ]
