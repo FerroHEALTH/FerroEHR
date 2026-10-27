@@ -25,10 +25,19 @@
 GRAFANA="http://localhost:${PROBE_GRAFANA_PORT:-13000}"
 GRAFANA_AUTH="admin:admin"
 
+# The overlay changes the identity issuer, which owns the network namespace the
+# server and FerroPIX join, so all three are recreated together: a member left
+# on the old namespace cannot reach the others.
 obs_up() {
   GRAFANA_PORT="${PROBE_GRAFANA_PORT:-13000}" \
     dc -f docker-compose.yml -f docker-compose.observability.yml \
-       up -d ferroehr otel-lgtm >/dev/null 2>&1
+       up -d --force-recreate identity-issuer ferropix ferroehr otel-lgtm >/dev/null 2>&1
+}
+
+# Back to the shipped namespace for the families that follow.
+obs_down() {
+  dc -f docker-compose.yml up -d --force-recreate identity-issuer ferropix ferroehr >/dev/null 2>&1
+  wait_http "$CDR/health/readiness" 150 || true
 }
 
 # The datasource uid for a given type, discovered rather than assumed: the
@@ -80,6 +89,11 @@ obs_wait_traces() {
 }
 
 probes_observability() {
+  observability_family
+  obs_down
+}
+
+observability_family() {
   bold "observability (traces + metrics at the collector)"
 
   obs_up

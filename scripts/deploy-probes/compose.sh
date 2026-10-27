@@ -437,24 +437,27 @@ probes_management_separate_listener() {
 
   local overlay="$PROBE_TMP/mgmt-port.yml"
   local mport="${PROBE_MGMT_PORT:-19090}"
+  # The server runs in the identity issuer's network namespace, so the issuer
+  # publishes the port, and the namespace's three members are recreated together.
   cat > "$overlay" <<YAML
 services:
-  ferroehr:
+  identity-issuer:
     ports:
       - "127.0.0.1:${mport}:9090"
+  ferroehr:
     environment:
       FERROEHR__MANAGEMENT__PORT: "9090"
 YAML
 
   probe "P-MGMT-PORT" "working" "server" "#2162" \
     "with management.port set, the surface is served from its own listener"
-  dc -f docker-compose.yml -f "$overlay" up -d ferroehr >/dev/null 2>&1
+  dc -f docker-compose.yml -f "$overlay" up -d --force-recreate identity-issuer ferropix ferroehr >/dev/null 2>&1
   if ! wait_http "$CDR/health/readiness" 120; then
     probe_fail "a serving CDR with a separate management listener" \
       "$(dc logs --tail 5 ferroehr 2>&1 | tail -3)" \
       "a second listener that fails to bind takes the whole process down at boot"
     probe_done
-    dc -f docker-compose.yml up -d ferroehr >/dev/null 2>&1
+    dc -f docker-compose.yml up -d --force-recreate identity-issuer ferropix ferroehr >/dev/null 2>&1
     wait_http "$CDR/health/readiness" 120 || true
     return 0
   fi
@@ -481,7 +484,7 @@ YAML
   probe_done
 
   # Back to the shipped posture for anything that follows.
-  dc -f docker-compose.yml up -d ferroehr >/dev/null 2>&1
+  dc -f docker-compose.yml up -d --force-recreate identity-issuer ferropix ferroehr >/dev/null 2>&1
   wait_http "$CDR/health/readiness" 120 || true
 }
 
