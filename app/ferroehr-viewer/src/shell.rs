@@ -39,6 +39,7 @@ use ferrohealth_ui::view::status::{BannerLink, Reach, StatusPill, banner, status
 use ferrohealth_ui::widget::menu::{ThemeChoice, UserLink, UserMenu, user_menu};
 use ferrohealth_ui::widget::nav::{Entry, Group, Rail, Sidebar, sidebar};
 use leptos::prelude::*;
+use leptos_router::components::Outlet;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_with;
@@ -646,7 +647,11 @@ pub fn AppShell() -> impl IntoView {
             }),
             banner: Some(band),
             sidebar: nav,
-            content: view! { <crate::routes::Pages /> }.into_any(),
+            content: view! {
+                <crate::routes::Pages />
+                <Outlet />
+            }
+            .into_any(),
             dock: Some(docked),
             footer: footer(),
         })
