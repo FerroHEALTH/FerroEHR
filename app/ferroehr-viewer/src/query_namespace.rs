@@ -22,7 +22,10 @@
 //! governs the viewer. Only the name format these rules read is spec-bound,
 //! cited above.
 
+use serde::{Deserialize, Serialize};
+
 use crate::locale::Msg;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::queries_api::StoredQueryRow;
 
 /// The heading for stored queries whose name carries no namespace.
@@ -36,6 +39,7 @@ pub const UNQUALIFIED_LABEL: &str = "unqualified";
 /// One derived group: the namespace (`None` for the unqualified bucket) and
 /// its member stored queries in listing order. A plain record — it is built
 /// from a listing, never stored.
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QueryNamespaceGroup {
     /// The namespace prefix shared by every member, or `None` when the members
@@ -155,7 +159,7 @@ pub fn load_href(route: &str, name: &str, version: &str) -> String {
 /// is used, then the latest query version matching supplied prefix will be
 /// used." (ITS-REST `specifications/docs/query/Qualified_query_name.md`
 /// §Qualified query name).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VersionResolution {
     /// No `version` at all — the CDR uses the latest version of the query.
     Latest,
@@ -343,6 +347,7 @@ pub fn next_minor(version: &str) -> Option<String> {
 /// Group a stored-query listing by the namespace of each name: namespaced
 /// groups first, sorted by namespace, then the unqualified bucket (omitted
 /// when empty). Members keep the CDR's listing order.
+#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn group_by_namespace(rows: &[StoredQueryRow]) -> Vec<QueryNamespaceGroup> {
     let mut named: std::collections::BTreeMap<String, Vec<StoredQueryRow>> =

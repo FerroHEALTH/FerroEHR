@@ -30,11 +30,8 @@ pub mod login;
 pub mod parties;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod preferences;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod queries;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod query;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod results;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;

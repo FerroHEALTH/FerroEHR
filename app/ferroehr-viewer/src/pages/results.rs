@@ -17,22 +17,28 @@
 
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Sorting, cell, data_table};
 use ferrohealth_ui::view::chart::{LineChart, Series};
-use ferrohealth_ui::view::results::{Export, ResultsPane, SHOWN, Shown, Switch, results_pane};
+use ferrohealth_ui::view::results::{Export, ResultsPane, Shown, Switch, results_pane};
 use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehrs::{ResultPage, cell_text};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::chart_model::AxisScale;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
-use crate::pages::common::{count, quiet, section};
+use crate::pages::common::{Refused, count, quiet, section};
 
 /// The name the view the results show rides as, so the next Run keeps it;
 /// the switch's own `shown` wins.
 const SHOWN_DEFAULT: &str = "default-shown";
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Whether the reader asked for the chart.
-#[must_use]
-pub fn chart_asked() -> bool {
+fn chart_asked() -> bool {
+    use ferrohealth_ui::view::results::SHOWN;
     crate::posted::posted().is_some_and(|posted| {
         posted
             .get(SHOWN)
@@ -41,6 +47,7 @@ pub fn chart_asked() -> bool {
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The words of one result cell: a data value read as a person reads it (a
 /// quantity with its unit, a text, a code or a time by its value), anything
 /// else as the CDR sent it.
@@ -69,31 +76,100 @@ fn cell_words(value: &serde_json::Value) -> String {
     }
 }
 
+/// One numeric column of a result set as a line of the chart.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct Line {
+    /// The column's name.
+    name: String,
+    /// Its points over the axis.
+    points: Vec<(f64, f64)>,
+}
+
+/// A result set as a line chart over its first time column, or the row
+/// order.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct Plot {
+    /// The lines.
+    lines: Vec<Line>,
+    /// The first and the last tick with their labels.
+    ticks: Vec<(f64, String)>,
+    /// Each point's time, on a time axis.
+    times: Vec<(f64, String)>,
+    /// What the axis is.
+    axis: String,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// The numeric columns of a result set as a line chart over its first time
+/// column, or the row order; `None` when it has nothing to draw.
+fn plot(page: &ResultPage) -> Option<Plot> {
+    let model = crate::chart_model::derive(&page.columns, &page.rows)?;
+    let axis = model.axis(0)?;
+    let lines = model
+        .series
+        .iter()
+        .enumerate()
+        .map(|(index, spec)| Line {
+            name: spec.name.clone(),
+            points: axis
+                .rows
+                .iter()
+                .filter_map(|row| row.values.get(index).map(|value| (row.x, *value)))
+                .collect(),
+        })
+        .collect();
+    let span = axis.span();
+    let ticks = match (axis.rows.first(), axis.rows.last()) {
+        (Some(first), Some(last)) => {
+            let label = |x: f64| match axis.scale {
+                AxisScale::Time => crate::chart_model::time_tick_label(x, span),
+                AxisScale::RowOrder => format!("{x:.0}"),
+            };
+            vec![(first.x, label(first.x)), (last.x, label(last.x))]
+        }
+        _ => Vec::new(),
+    };
+    let times = match axis.scale {
+        AxisScale::Time => axis
+            .rows
+            .iter()
+            .filter_map(|row| {
+                crate::chart_model::time_point_label(row.x).map(|label| (row.x, label))
+            })
+            .collect(),
+        AxisScale::RowOrder => Vec::new(),
+    };
+    Some(Plot {
+        lines,
+        ticks,
+        times,
+        axis: axis.label.clone(),
+    })
+}
+
 /// The rows of a result set as a table.
-fn table(page: &ResultPage) -> AnyView {
-    let columns: Vec<Column> = page
-        .columns
+fn table(columns: &[String], rows: &[Vec<String>]) -> AnyView {
+    let columns: Vec<Column> = columns
         .iter()
         .map(|name| Column::owned(name.clone(), name.clone()))
         .collect();
-    let rows = page
-        .rows
+    let rows = rows
         .iter()
         .map(|row| {
             let cells = columns
                 .iter()
                 .zip(row.iter())
                 .enumerate()
-                .map(|(index, (column, value))| {
+                .map(|(index, (column, words))| {
                     if index == 0 {
                         view! {
                             <th scope="row" data-role="title">
-                                <code>{cell_words(value)}</code>
+                                <code>{words.clone()}</code>
                             </th>
                         }
                         .into_any()
                     } else {
-                        cell(column, cell_words(value))
+                        cell(column, words.clone())
                     }
                 })
                 .collect_view();
@@ -111,49 +187,25 @@ fn table(page: &ResultPage) -> AnyView {
     .into_any()
 }
 
-/// The numeric columns of a result set as a line chart over its first time
-/// column, or the row order; `None` when it has nothing to draw.
-fn chart(page: &ResultPage) -> Option<AnyView> {
-    let model = crate::chart_model::derive(&page.columns, &page.rows)?;
-    let axis = model.axis(0)?;
-    let series = model
-        .series
-        .iter()
+/// A plot, drawn.
+fn chart(plot: Plot) -> AnyView {
+    let names: Vec<String> = plot.lines.iter().map(|line| line.name.clone()).collect();
+    let series = plot
+        .lines
+        .into_iter()
         .enumerate()
-        .map(|(index, spec)| Series {
-            name: spec.name.clone(),
-            points: axis
-                .rows
-                .iter()
-                .filter_map(|row| row.values.get(index).map(|value| (row.x, *value)))
-                .collect(),
+        .map(|(index, line)| Series {
+            name: line.name,
+            points: line.points,
             palette: u8::try_from(index % usize::from(ferrohealth_ui::view::chart::PALETTE))
                 .unwrap_or(0),
         })
         .collect();
-    let span = axis.span();
-    let ticks = match (axis.rows.first(), axis.rows.last()) {
-        (Some(first), Some(last)) => {
-            let label = |x: f64| match axis.scale {
-                AxisScale::Time => crate::chart_model::time_tick_label(x, span),
-                AxisScale::RowOrder => format!("{x:.0}"),
-            };
-            vec![(first.x, label(first.x)), (last.x, label(last.x))]
-        }
-        _ => Vec::new(),
-    };
-    let x_labels = match axis.scale {
-        AxisScale::Time => axis
-            .rows
-            .iter()
-            .filter_map(|row| {
-                crate::chart_model::time_point_label(row.x)
-                    .map(|label| (row.x, ferrohealth_ui::view::time::reading(&label)))
-            })
-            .collect(),
-        AxisScale::RowOrder => Vec::new(),
-    };
-    let names: Vec<String> = model.series.iter().map(|spec| spec.name.clone()).collect();
+    let x_labels = plot
+        .times
+        .iter()
+        .map(|(x, label)| (*x, ferrohealth_ui::view::time::reading(label)))
+        .collect();
     let chart = LineChart {
         id: "results-chart",
         label: tr(Msg::ResultsChartLabel),
@@ -161,74 +213,139 @@ fn chart(page: &ResultPage) -> Option<AnyView> {
             Msg::ResultsChartSummary,
             &[
                 ("series", names.join(", ").into()),
-                ("axis", axis.label.clone().into()),
+                ("axis", plot.axis.clone().into()),
             ],
         ),
         series,
-        x_ticks: ticks,
+        x_ticks: plot.ticks,
         x_labels,
         y_range: None,
     };
-    Some(
-        view! {
-            {line_chart(&chart, ChartWords::of_page())}
-            <p class="fui-small fui-muted">
-                {tr_with(Msg::ResultsAxis, &[("axis", axis.label.clone().into())])}
-            </p>
+    view! {
+        {line_chart(&chart, ChartWords::of_page())}
+        <p class="fui-small fui-muted">
+            {tr_with(Msg::ResultsAxis, &[("axis", plot.axis.into())])}
+        </p>
+    }
+    .into_any()
+}
+
+/// What a run answered: the rows as words, the chart they draw, and what the
+/// exports run again.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Ran {
+    /// The column names.
+    columns: Vec<String>,
+    /// Each row's cells, as words.
+    rows: Vec<Vec<String>>,
+    /// The chart, when the rows have numbers to draw.
+    plot: Option<Plot>,
+    /// Whether the AQL carries its own row window.
+    own_window: bool,
+    /// The AQL that ran, for the exports.
+    aql: String,
+    /// Its parameters as a JSON object text, for the exports.
+    parameters: String,
+    /// Whether the reader asked for the chart.
+    chart: bool,
+    /// The route the exports post to.
+    export: String,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Ran {
+    /// What `page` answered to `aql` with `parameters`.
+    fn of(page: &ResultPage, aql: &str, parameters: &str) -> Self {
+        Self {
+            columns: page.columns.clone(),
+            rows: page
+                .rows
+                .iter()
+                .map(|row| row.iter().map(cell_words).collect())
+                .collect(),
+            plot: if page.rows.is_empty() {
+                None
+            } else {
+                plot(page)
+            },
+            own_window: crate::aql_text::carries_own_window(aql),
+            aql: aql.to_owned(),
+            parameters: parameters.to_owned(),
+            chart: chart_asked(),
+            export: crate::export::EXPORT_ROUTE.to_owned(),
         }
-        .into_any(),
-    )
+    }
+}
+
+/// The Results section of a run.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Answer {
+    /// Nothing ran, and the line saying why.
+    NotRun(String),
+    /// What the run answered.
+    Ran(Box<Ran>),
+    /// The CDR's refusal of the run.
+    Refused(Refused),
+}
+
+impl Answer {
+    #[cfg(not(target_arch = "wasm32"))]
+    /// The answer of a run of `aql` with `parameters`.
+    #[must_use]
+    pub fn of(outcome: Result<ResultPage, ViewerError>, aql: &str, parameters: &str) -> Self {
+        match outcome {
+            Ok(page) => Self::Ran(Box::new(Ran::of(&page, aql, parameters))),
+            Err(error) => Self::Refused(Refused::new(tr(Msg::QueryRunRefused), error)),
+        }
+    }
+
+    /// The Results section `answer` draws, or the one before a run.
+    #[must_use]
+    pub fn view(answer: Option<Self>) -> AnyView {
+        match answer {
+            None => not_run(tr(Msg::ResultsNotRun)),
+            Some(Self::NotRun(line)) => not_run(line),
+            Some(Self::Ran(ran)) => results(*ran),
+            Some(Self::Refused(refusal)) => {
+                section(Some(tr(Msg::ResultsTitle)), None, None, refusal.view())
+            }
+        }
+    }
 }
 
 /// An item of the Export menu for the run in `format`: a submit of the
 /// page's own form, which the Results section always sits in, sent to
 /// `/export/aql/<format>` by `formaction`.
-fn export(format: &str) -> Export {
+fn export(route: &str, format: &str) -> Export {
     Export::Submit {
-        action: format!("{}/{format}", crate::export::EXPORT_ROUTE),
+        action: format!("{route}/{format}"),
         form: None,
     }
 }
 
-/// What a run answered, as the Results section.
-#[derive(Debug)]
-pub struct Answered<'a> {
-    /// The page of rows.
-    pub page: &'a ResultPage,
-    /// The AQL that ran, for the exports.
-    pub aql: &'a str,
-    /// Its parameters as a JSON object text, for the exports.
-    pub parameters: &'a str,
-    /// Whether the reader asked for the chart.
-    pub chart: bool,
-}
-
 /// The Results section of a run (E7).
-#[must_use]
-pub fn results(answered: &Answered<'_>) -> AnyView {
-    let page = answered.page;
-    let total = page.rows.len();
-    let window = if crate::aql_text::carries_own_window(answered.aql) {
+fn results(ran: Ran) -> AnyView {
+    let total = ran.rows.len();
+    let window = if ran.own_window {
         tr_with(Msg::ResultsWindowOwn, &[("count", count(total))])
     } else {
         tr_with(Msg::ResultsWindow, &[("count", count(total))])
     };
-    let asked = if answered.chart {
+    let asked = if ran.chart {
         Shown::Chart
     } else {
         Shown::Table
     };
-    let drawn = if total == 0 { None } else { chart(page) };
-    let numeric = drawn.is_some();
-    let (shown, body) = match drawn.filter(|_| answered.chart) {
-        Some(chart) => (Shown::Chart, chart),
+    let numeric = ran.plot.is_some();
+    let (shown, body) = match ran.plot.filter(|_| ran.chart) {
+        Some(plot) => (Shown::Chart, chart(plot)),
         None if total == 0 => (Shown::Table, ().into_any()),
-        None => (Shown::Table, table(page)),
+        None => (Shown::Table, table(&ran.columns, &ran.rows)),
     };
     let body = view! {
         <input type="hidden" name=SHOWN_DEFAULT value=asked.key() />
-        <input type="hidden" name="q" value=answered.aql.to_owned() />
-        <input type="hidden" name="parameters_json" value=answered.parameters.to_owned() />
+        <input type="hidden" name="q" value=ran.aql />
+        <input type="hidden" name="parameters_json" value=ran.parameters />
         {body}
     }
     .into_any();
@@ -238,16 +355,15 @@ pub fn results(answered: &Answered<'_>) -> AnyView {
         numeric,
         shown,
         switch: Switch::Form { form: None },
-        csv: export("csv"),
-        json: export("json"),
+        csv: export(&ran.export, "csv"),
+        json: export(&ran.export, "json"),
         window,
         body,
     })
 }
 
 /// The Results section before a run.
-#[must_use]
-pub fn not_run(line: String) -> AnyView {
+fn not_run(line: String) -> AnyView {
     section(Some(tr(Msg::ResultsTitle)), None, None, quiet(line))
 }
 

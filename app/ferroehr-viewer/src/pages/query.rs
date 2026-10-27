@@ -16,6 +16,7 @@
 //! across ([`crate::builder::lift`]). No openEHR spec governs the viewer's
 //! pages: our own design; the queries are openEHR AQL.
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::collections::BTreeMap;
 
 use ferrohealth_ui::highlight::Language;
@@ -23,35 +24,45 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::code::{Code, CodeHead, code_section};
+#[cfg(not(target_arch = "wasm32"))]
+use ferrohealth_ui::view::conditions::{ADD_CONDITION, ADD_GROUP, REMOVE, REMOVE_GROUP};
 use ferrohealth_ui::view::conditions::{
-    ADD_CONDITION, ADD_GROUP, Choice, Condition, ConditionGroup, Match, Operand, REMOVE,
-    REMOVE_GROUP, condition_groups,
+    Choice, Condition, ConditionGroup, Match, Operand, condition_groups,
 };
-use ferrohealth_ui::view::diagnostics::{DiagnosticsWords, FileFindings, Finding};
+#[cfg(not(target_arch = "wasm32"))]
+use ferrohealth_ui::view::diagnostics::Finding;
+use ferrohealth_ui::view::diagnostics::{DiagnosticsWords, FileFindings};
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::popover::PopoverForm;
 use ferrohealth_ui::view::surface::{Header, page_heading};
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::widget::action_menu::{Act, Action};
-use ferrohealth_ui::widget::editor::{EditorWords, caret_at};
+use ferrohealth_ui::widget::editor::EditorWords;
+#[cfg(not(target_arch = "wasm32"))]
+use ferrohealth_ui::widget::editor::caret_at;
 use ferrohealth_ui::widget::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use leptos::prelude::*;
 use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::builder::catalog::CatalogNode;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::builder::model::{
     BoolOp, BuilderQuery, Criterion, CriterionKind, CriterionNode, OrderRule, QueryShape,
     SelectedColumn,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{
-    awaited, count, info_note, marks_of, panel, plain_section, refused, section, warn_note,
+    Refused, count, drawn, info_note, marks_of, page_model, panel, plain_section, section,
+    warn_note,
 };
-use crate::pages::results::{Answered, chart_asked, not_run, results};
+use crate::pages::results::Answer;
 
 /// The id of the query's form.
 pub const QUERY_FORM: &str = "query-form";
@@ -59,6 +70,7 @@ pub const QUERY_FORM: &str = "query-form";
 /// The id of Save to the CDR's popover.
 const SAVE_POPOVER: &str = "save-query";
 
+#[cfg(not(target_arch = "wasm32"))]
 /// What a post asks the query page.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Step {
@@ -70,6 +82,7 @@ enum Step {
     Save,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The step a post asks: an add or remove is an edit whatever the form's
 /// default intent says.
 fn step(posted: Option<&crate::posted::Posted>) -> Step {
@@ -111,31 +124,62 @@ fn heading(save: PopoverForm) -> AnyView {
     .into_any()
 }
 
-/// Save to the CDR: the namespace, the name and the version, fields of the
-/// query's form, and the submit that saves. A stored query opened from the
-/// CDR (`loaded`, its qualified name and version) fills them with its
-/// namespace, its bare name and the next minor version, since its own
-/// version is immutable on the CDR.
-fn save_popover(
-    posted: Option<&crate::posted::Posted>,
+/// Save to the CDR's fields as the page fills them, and what the version
+/// field says is wrong.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+struct SaveFields {
+    /// The namespace.
+    namespace: String,
+    /// The bare name.
+    name: String,
+    /// The version.
+    version: String,
+    /// What stopped the save.
     problem: Option<String>,
-    loaded: Option<(&str, &str)>,
-) -> PopoverForm {
-    let seed = loaded.map(|(name, version)| {
-        let (namespace, bare) = crate::query_namespace::split_qualified(name);
-        let next = crate::query_namespace::next_minor(version).unwrap_or_default();
-        (namespace, bare, next)
-    });
-    let field = |name: &str| match (posted, &seed) {
-        (Some(posted), _) => posted.text(name),
-        (None, Some((namespace, bare, next))) => match name {
-            "save_namespace" => namespace.clone(),
-            "save_name" => bare.clone(),
-            "save_version" => next.clone(),
-            _ => String::new(),
-        },
-        (None, None) => String::new(),
-    };
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl SaveFields {
+    /// The fields as the post left them, or, for a stored query opened from
+    /// the CDR (`loaded`, its qualified name and version), its namespace, its
+    /// bare name and the next minor version, since its own version is
+    /// immutable on the CDR.
+    fn of(
+        posted: Option<&crate::posted::Posted>,
+        problem: Option<String>,
+        loaded: Option<(&str, &str)>,
+    ) -> Self {
+        let (namespace, name, version) = match (posted, loaded) {
+            (Some(posted), _) => (
+                posted.text("save_namespace"),
+                posted.text("save_name"),
+                posted.text("save_version"),
+            ),
+            (None, Some((name, version))) => {
+                let (namespace, bare) = crate::query_namespace::split_qualified(name);
+                let next = crate::query_namespace::next_minor(version).unwrap_or_default();
+                (namespace, bare, next)
+            }
+            (None, None) => (String::new(), String::new(), String::new()),
+        };
+        Self {
+            namespace,
+            name,
+            version,
+            problem,
+        }
+    }
+}
+
+/// Save to the CDR: the namespace, the name and the version, fields of the
+/// query's form, and the submit that saves.
+fn save_popover(fields: SaveFields) -> PopoverForm {
+    let SaveFields {
+        namespace,
+        name,
+        version,
+        problem,
+    } = fields;
     let error = problem.map(|problem| view! { <p class="fui-field-error">{problem}</p> });
     PopoverForm {
         id: SAVE_POPOVER.into(),
@@ -153,7 +197,7 @@ fn save_popover(
                             form=QUERY_FORM
                             type="text"
                             class="fui-input fui-mono"
-                            value=field("save_namespace")
+                            value=namespace
                         />
                     },
                 )}
@@ -166,7 +210,7 @@ fn save_popover(
                             form=QUERY_FORM
                             type="text"
                             class="fui-input fui-mono"
-                            value=field("save_name")
+                            value=name
                         />
                     },
                 )}
@@ -181,7 +225,7 @@ fn save_popover(
                             form=QUERY_FORM
                             type="text"
                             class="fui-input fui-mono"
-                            value=field("save_version")
+                            value=version
                             placeholder="1.0.0"
                         />
                     },
@@ -203,6 +247,7 @@ fn save_popover(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The newest version the CDR holds of the stored query `name`, the one it
 /// assigned to a save that named none; empty when the listing does not say.
 async fn saved_version(name: &str) -> String {
@@ -224,12 +269,13 @@ async fn saved_version(name: &str) -> String {
         .unwrap_or_default()
 }
 
-/// Saves `aql` as the stored query the post names. `Ok(None)` is no save
-/// asked; `Err` is what the popover says.
+#[cfg(not(target_arch = "wasm32"))]
+/// Saves `aql` as the stored query the post names. `Ok(())` is a save made
+/// or none asked; `Err` is what the popover says and the CDR's refusal.
 async fn save(
     posted: Option<&crate::posted::Posted>,
     aql: &str,
-) -> Result<(), Box<(String, Option<AnyView>)>> {
+) -> Result<(), Box<(String, Option<Refused>)>> {
     let Some(posted) = posted else {
         return Ok(());
     };
@@ -270,7 +316,7 @@ async fn save(
             };
             Err(Box::new((
                 problem,
-                Some(refused(tr(Msg::QuerySaveRefused), &error, None)),
+                Some(Refused::new(tr(Msg::QuerySaveRefused), error)),
             )))
         }
     }
@@ -328,7 +374,7 @@ struct Draft {
 }
 
 /// One data point a template offers.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct Leaf {
     /// Its path.
     path: String,
@@ -342,6 +388,7 @@ struct Leaf {
     unit: Option<String>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Every selectable data point under `node`, named with its parents (the
 /// composition itself left out).
 fn leaves(node: &CatalogNode, trail: &[String], out: &mut Vec<Leaf>) {
@@ -397,6 +444,7 @@ fn condition_key(parent: &str, place: usize) -> String {
     format!("{parent}.c{place}")
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The group's choices as the form posted them.
 fn read_group(group: &mut UiGroup, key: &str, posted: &crate::posted::Posted) {
     if let Some(matching) = posted.get(&format!("{key}-match")) {
@@ -420,6 +468,7 @@ fn read_group(group: &mut UiGroup, key: &str, posted: &crate::posted::Posted) {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The group the key names.
 fn group_at<'a>(root: &'a mut UiGroup, key: &str) -> Option<&'a mut UiGroup> {
     let mut parts = key.split('.');
@@ -433,6 +482,7 @@ fn group_at<'a>(root: &'a mut UiGroup, key: &str) -> Option<&'a mut UiGroup> {
     Some(group)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Applies the add or remove the post names to the groups.
 fn restructure(root: &mut UiGroup, posted: &crate::posted::Posted, first: &str) {
     if let Some(key) = posted.get(ADD_CONDITION)
@@ -470,6 +520,7 @@ fn restructure(root: &mut UiGroup, posted: &crate::posted::Posted, first: &str) 
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The builder as the post leaves it: the form's previous state, its fields
 /// read over it, and its step applied.
 fn draft_of_post(posted: &crate::posted::Posted, offered: &[String]) -> Draft {
@@ -538,6 +589,7 @@ const SHAPES: [(&str, Msg); 4] = [
     ("ehrs", Msg::QueryShapeEhrs),
 ];
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The model shape of a shape key.
 fn shape_of(key: &str) -> QueryShape {
     match key {
@@ -548,6 +600,7 @@ fn shape_of(key: &str) -> QueryShape {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The shape key of a model shape.
 const fn shape_key(shape: QueryShape) -> &'static str {
     match shape {
@@ -558,6 +611,7 @@ const fn shape_key(shape: QueryShape) -> &'static str {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Why the builder cannot lower its draft.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 enum DraftError {
@@ -572,6 +626,7 @@ enum DraftError {
     Limit(String),
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The constraint of one condition on a data point of `rm_type`, and whether
 /// it is negated.
 fn kind_of(
@@ -656,6 +711,7 @@ fn kind_of(
     Ok((kind, negated))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The criterion tree of a group, `None` for a group with nothing in it.
 fn node_of(group: &UiGroup, offered: &[Leaf]) -> Result<Option<CriterionNode>, DraftError> {
     let mut children = Vec::new();
@@ -691,6 +747,7 @@ fn node_of(group: &UiGroup, offered: &[Leaf]) -> Result<Option<CriterionNode>, D
     }))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The builder query a draft lowers from.
 fn query_of(draft: &Draft, offered: &[Leaf]) -> Result<BuilderQuery, DraftError> {
     let shape = shape_of(&draft.shape);
@@ -733,6 +790,7 @@ fn query_of(draft: &Draft, offered: &[Leaf]) -> Result<BuilderQuery, DraftError>
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The form conditions of one lifted criterion: a negated range becomes a
 /// group of its own that matches the opposite.
 fn conditions_of(criterion: &Criterion, group: &mut UiGroup) {
@@ -810,6 +868,7 @@ fn conditions_of(criterion: &Criterion, group: &mut UiGroup) {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The form group of a lifted criterion tree.
 fn group_of(node: &CriterionNode) -> UiGroup {
     match node {
@@ -839,6 +898,7 @@ fn group_of(node: &CriterionNode) -> UiGroup {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The draft of a lifted builder query.
 fn draft_of_query(query: &BuilderQuery) -> Draft {
     Draft {
@@ -1053,6 +1113,7 @@ fn state_of(draft: &Draft) -> String {
     serde_json::to_string(draft).expect("a draft of strings and bools should always serialize")
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The data points a template offers, or the refusal of its catalog.
 async fn offered(template: &str) -> Result<Vec<Leaf>, ViewerError> {
     if template.is_empty() {
@@ -1101,282 +1162,329 @@ fn built_view(aql: &str) -> AnyView {
     )
 }
 
-/// Query: Build.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[expect(
-    clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
-)]
-#[component]
-pub fn BuildTab() -> impl IntoView {
-    let posted = crate::posted::posted();
-    let page = awaited(async move {
-        let templates = crate::bff::templates::list_templates().await;
-        let mut ids: Vec<String> = templates
-            .as_ref()
-            .map(|rows| {
-                rows.iter()
-                    .filter(|row| row.is_composition())
-                    .map(|row| row.template_id.clone())
-                    .collect()
-            })
-            .unwrap_or_default();
-        ids.sort();
-        ids.dedup();
-        let mut lifted = None;
-        let mut draft = match &posted {
-            Some(posted) if posted.intent() == "lift" => {
-                match crate::builder::lift::from_aql(&posted.get("aql").unwrap_or_default()) {
-                    Ok(query) => draft_of_query(&query),
-                    Err(error) => {
-                        lifted = Some(warn_note(tr_with(
-                            Msg::QueryCannotBuild,
-                            &[("reason", error.to_string().into())],
-                        )));
-                        Draft::default()
-                    }
-                }
-            }
-            Some(posted) => {
-                let template = posted.text("template");
-                let paths: Vec<String> = offered(&template)
-                    .await
-                    .map(|leaves| leaves.into_iter().map(|leaf| leaf.path).collect())
-                    .unwrap_or_default();
-                draft_of_post(posted, &paths)
-            }
-            None => Draft {
-                template: crate::request::query("template").unwrap_or_default(),
-                shape: "data".to_owned(),
-                columns: crate::request::query("path")
-                    .map(|path| vec![(path, String::new())])
-                    .unwrap_or_default(),
-                limit: "50".to_owned(),
-                ..Draft::default()
-            },
-        };
-        if draft.template.is_empty() {
-            draft.template = ids.first().cloned().unwrap_or_default();
-        }
-        if draft.shape.is_empty() {
-            "data".clone_into(&mut draft.shape);
-        }
-        let leaves = offered(&draft.template).await;
-        let (leaves, catalog_trouble) = match leaves {
-            Ok(leaves) => (leaves, None),
-            Err(error) => (
-                Vec::new(),
-                Some(refused(tr(Msg::QueryCatalogRefused), &error, None)),
-            ),
-        };
-        if posted.is_none()
-            && draft.shape == "data"
-            && draft.columns.is_empty()
-            && let Some(first) = leaves.first()
-        {
-            draft.columns.push((first.path.clone(), String::new()));
-        }
-        let built = query_of(&draft, &leaves)
-            .map_err(|error| error.to_string())
-            .and_then(|query| {
-                crate::builder::lower::to_aql(&query).map_err(|error| error.to_string())
-            });
-        let mut save_problem = None;
-        let mut top = None;
-        let chart = chart_asked();
-        let mut answer = None;
-        match (step(posted.as_ref()), &built) {
-            (Step::Run, Ok(aql)) => {
-                answer = Some(
-                    match crate::queries_api::run_aql(aql.clone(), String::new(), 0).await {
-                        Ok(page) => results(&Answered {
-                            page: &page,
-                            aql,
-                            parameters: "",
-                            chart,
-                        }),
-                        Err(error) => section(
-                            Some(tr(Msg::ResultsTitle)),
-                            None,
-                            None,
-                            refused(tr(Msg::QueryRunRefused), &error, None),
-                        ),
-                    },
-                );
-            }
-            (Step::Save, Ok(aql)) => {
-                if let Err(refused_save) = save(posted.as_ref(), aql).await {
-                    let (problem, refusal) = *refused_save;
-                    save_problem = Some(problem);
-                    top = refusal;
-                }
-            }
-            (Step::Run | Step::Save, Err(reason)) => {
-                top = Some(warn_note(tr_with(
-                    Msg::QueryNotBuilt,
-                    &[("reason", reason.clone().into())],
-                )));
-            }
-            _ => {}
-        }
-        let template_options = ids
-            .iter()
-            .map(|id| {
-                view! {
-                    <option value=id.clone() selected=*id == draft.template>
-                        {id.clone()}
-                    </option>
-                }
-            })
-            .collect_view();
-        let shape_options = SHAPES
-            .iter()
-            .map(|(key, words)| {
-                view! {
-                    <option value=*key selected=*key == draft.shape>
-                        {tr(*words)}
-                    </option>
-                }
-            })
-            .collect_view();
-        let options = view! {
-            <div class="fui-transform-options">
-                {Field::new("q-t", tr(Msg::FilterTemplate))
-                    .view(
-                        view! {
-                            <select id="q-t" name="template" class="fui-select">
-                                {template_options}
-                            </select>
-                        },
-                    )}
-                {Field::new("q-shape", tr(Msg::QueryReturns))
-                    .view(
-                        view! {
-                            <select id="q-shape" name="shape" class="fui-select">
-                                {shape_options}
-                            </select>
-                        },
-                    )} <div class="fui-transform-run">
-                    <button
-                        type="submit"
-                        name="intent"
-                        value="edit"
-                        class="fui-button fui-button-secondary"
-                    >
-                        {tr(Msg::StagedApply)}
-                    </button>
-                </div>
-            </div>
-        };
-        let points = (draft.shape == "data").then(|| {
-            section(
-                Some(tr(Msg::QueryDataPoints)),
-                u64::try_from(draft.columns.len()).ok(),
-                None,
-                columns_view(&draft, &leaves),
-            )
-        });
-        let conditions = condition_groups(view_group(&draft.root, "g", 1, &leaves));
-        let order_options = leaves
-            .iter()
-            .map(|leaf| {
-                view! {
-                    <option value=leaf.path.clone() selected=leaf.path == draft.order>
-                        {leaf.label.clone()}
-                    </option>
-                }
-            })
-            .collect_view();
-        let order = view! {
-            <div class="fui-transform-options">
-                {Field::new("q-o", tr(Msg::QueryOrderBy))
-                    .view(
-                        view! {
-                            <select id="q-o" name="order" class="fui-select">
-                                <option value="">{tr(Msg::QueryNoOrder)}</option>
-                                {order_options}
-                            </select>
-                        },
-                    )}
-                {Field::new("q-d", tr(Msg::QueryDirection))
-                    .view(
-                        view! {
-                            <select id="q-d" name="direction" class="fui-select">
-                                <option value="desc" selected=draft.descending>
-                                    {tr(Msg::QueryNewestFirst)}
-                                </option>
-                                <option value="asc" selected=!draft.descending>
-                                    {tr(Msg::QueryOldestFirst)}
-                                </option>
-                            </select>
-                        },
-                    )}
-                {Field::new("q-l", tr(Msg::QueryLimit))
-                    .view(
-                        view! {
-                            <input
-                                id="q-l"
-                                name="limit"
-                                type="text"
-                                inputmode="numeric"
-                                class="fui-input"
-                                value=draft.limit.clone()
-                            />
-                        },
-                    )}
-            </div>
-        };
-        let built_section = match &built {
-            Ok(aql) => section(Some(tr(Msg::QueryItBuilds)), None, None, built_view(aql)),
-            Err(reason) => section(
-                Some(tr(Msg::QueryItBuilds)),
-                None,
-                None,
-                info_note(tr_with(
-                    Msg::QueryNotBuilt,
-                    &[("reason", reason.clone().into())],
-                )),
-            ),
-        };
-        let state = state_of(&draft);
-        let aql = built.clone().unwrap_or_default();
-        view! {
-            <Title text=tr(Msg::NavQuery) />
-            {heading(save_popover(posted.as_ref(), save_problem, None))}
-            <div class="fui-stack">
-                {lifted} {top} {catalog_trouble} <form id=QUERY_FORM method="post" action="/query">
-                    <input type="hidden" name="default-intent" value="run" />
-                    <button type="submit" class="fui-sr-only" tabindex="-1">
-                        {tr(Msg::QueryRun)}
-                    </button>
-                    <input type="hidden" name="state" value=state />
-                    <input type="hidden" name="aql" value=aql />
-                    {binder(
-                        tr(Msg::QueryWays),
-                        tabs(),
-                        "build",
-                        panel(
-                            view! {
-                                {plain_section(options)}
-                                {points}
-                                {section(Some(tr(Msg::QueryConditions)), None, None, conditions)}
-                                {section(Some(tr(Msg::QueryOrderLimit)), None, None, order)}
-                                {built_section}
-                                {answer.unwrap_or_else(|| not_run(tr(Msg::ResultsNotRun)))}
-                            },
-                        ),
-                    )}
-                </form>
-            </div>
-        }
-        .into_any()
-    });
-    view! { {page} }
+/// What stops Build before or after its step.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum Top {
+    /// The draft does not build, and why.
+    NotBuilt(String),
+    /// The CDR's refusal.
+    Refused(Refused),
 }
 
+/// Build's model: the form as the post leaves it, what it builds, and what
+/// its step answered.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct Build {
+    /// The composition templates the CDR holds.
+    ids: Vec<String>,
+    /// The builder.
+    draft: Draft,
+    /// The data points the template offers.
+    leaves: Vec<Leaf>,
+    /// Why the AQL opened from the AQL tab does not build.
+    lifted: Option<String>,
+    /// What stopped the step.
+    top: Option<Top>,
+    /// The refusal of the template's catalog.
+    catalog: Option<Refused>,
+    /// The AQL the draft builds, or why it does not.
+    built: Result<String, String>,
+    /// What a run answered.
+    answer: Option<Answer>,
+    /// Save to the CDR's fields.
+    save: SaveFields,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads Build: the draft the post leaves, the AQL it builds, and the run or
+/// the save the post asks.
+async fn load_build() -> Build {
+    let posted = crate::posted::posted();
+    let templates = crate::bff::templates::list_templates().await;
+    let mut ids: Vec<String> = templates
+        .as_ref()
+        .map(|rows| {
+            rows.iter()
+                .filter(|row| row.is_composition())
+                .map(|row| row.template_id.clone())
+                .collect()
+        })
+        .unwrap_or_default();
+    ids.sort();
+    ids.dedup();
+    let mut lifted = None;
+    let mut draft = match &posted {
+        Some(posted) if posted.intent() == "lift" => {
+            match crate::builder::lift::from_aql(&posted.get("aql").unwrap_or_default()) {
+                Ok(query) => draft_of_query(&query),
+                Err(error) => {
+                    lifted = Some(error.to_string());
+                    Draft::default()
+                }
+            }
+        }
+        Some(posted) => {
+            let template = posted.text("template");
+            let paths: Vec<String> = offered(&template)
+                .await
+                .map(|leaves| leaves.into_iter().map(|leaf| leaf.path).collect())
+                .unwrap_or_default();
+            draft_of_post(posted, &paths)
+        }
+        None => Draft {
+            template: crate::request::query("template").unwrap_or_default(),
+            shape: "data".to_owned(),
+            columns: crate::request::query("path")
+                .map(|path| vec![(path, String::new())])
+                .unwrap_or_default(),
+            limit: "50".to_owned(),
+            ..Draft::default()
+        },
+    };
+    if draft.template.is_empty() {
+        draft.template = ids.first().cloned().unwrap_or_default();
+    }
+    if draft.shape.is_empty() {
+        "data".clone_into(&mut draft.shape);
+    }
+    let (leaves, catalog) = match offered(&draft.template).await {
+        Ok(leaves) => (leaves, None),
+        Err(error) => (
+            Vec::new(),
+            Some(Refused::new(tr(Msg::QueryCatalogRefused), error)),
+        ),
+    };
+    if posted.is_none()
+        && draft.shape == "data"
+        && draft.columns.is_empty()
+        && let Some(first) = leaves.first()
+    {
+        draft.columns.push((first.path.clone(), String::new()));
+    }
+    let built = query_of(&draft, &leaves)
+        .map_err(|error| error.to_string())
+        .and_then(|query| crate::builder::lower::to_aql(&query).map_err(|error| error.to_string()));
+    let mut save_problem = None;
+    let mut top = None;
+    let mut answer = None;
+    match (step(posted.as_ref()), &built) {
+        (Step::Run, Ok(aql)) => {
+            answer = Some(Answer::of(
+                crate::queries_api::run_aql(aql.clone(), String::new(), 0).await,
+                aql,
+                "",
+            ));
+        }
+        (Step::Save, Ok(aql)) => {
+            if let Err(refused_save) = save(posted.as_ref(), aql).await {
+                let (problem, refusal) = *refused_save;
+                save_problem = Some(problem);
+                top = refusal.map(Top::Refused);
+            }
+        }
+        (Step::Run | Step::Save, Err(reason)) => top = Some(Top::NotBuilt(reason.clone())),
+        _ => {}
+    }
+    Build {
+        ids,
+        save: SaveFields::of(posted.as_ref(), save_problem, None),
+        draft,
+        leaves,
+        lifted,
+        top,
+        catalog,
+        built,
+        answer,
+    }
+}
+
+/// Build, drawn.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page: the form and every section of it"
+)]
+fn build(model: Build) -> AnyView {
+    let Build {
+        ids,
+        draft,
+        leaves,
+        lifted,
+        top,
+        catalog,
+        built,
+        answer,
+        save,
+    } = model;
+    let lifted = lifted
+        .map(|reason| warn_note(tr_with(Msg::QueryCannotBuild, &[("reason", reason.into())])));
+    let top = top.map(|top| match top {
+        Top::NotBuilt(reason) => {
+            warn_note(tr_with(Msg::QueryNotBuilt, &[("reason", reason.into())]))
+        }
+        Top::Refused(refusal) => refusal.view(),
+    });
+    let catalog = catalog.map(|refusal| refusal.view());
+    let template_options = ids
+        .iter()
+        .map(|id| {
+            view! {
+                <option value=id.clone() selected=*id == draft.template>
+                    {id.clone()}
+                </option>
+            }
+        })
+        .collect_view();
+    let shape_options = SHAPES
+        .iter()
+        .map(|(key, words)| {
+            view! {
+                <option value=*key selected=*key == draft.shape>
+                    {tr(*words)}
+                </option>
+            }
+        })
+        .collect_view();
+    let options = view! {
+        <div class="fui-transform-options">
+            {Field::new("q-t", tr(Msg::FilterTemplate))
+                .view(
+                    view! {
+                        <select id="q-t" name="template" class="fui-select">
+                            {template_options}
+                        </select>
+                    },
+                )}
+            {Field::new("q-shape", tr(Msg::QueryReturns))
+                .view(
+                    view! {
+                        <select id="q-shape" name="shape" class="fui-select">
+                            {shape_options}
+                        </select>
+                    },
+                )} <div class="fui-transform-run">
+                <button
+                    type="submit"
+                    name="intent"
+                    value="edit"
+                    class="fui-button fui-button-secondary"
+                >
+                    {tr(Msg::StagedApply)}
+                </button>
+            </div>
+        </div>
+    };
+    let points = (draft.shape == "data").then(|| {
+        section(
+            Some(tr(Msg::QueryDataPoints)),
+            u64::try_from(draft.columns.len()).ok(),
+            None,
+            columns_view(&draft, &leaves),
+        )
+    });
+    let conditions = condition_groups(view_group(&draft.root, "g", 1, &leaves));
+    let order_options = leaves
+        .iter()
+        .map(|leaf| {
+            view! {
+                <option value=leaf.path.clone() selected=leaf.path == draft.order>
+                    {leaf.label.clone()}
+                </option>
+            }
+        })
+        .collect_view();
+    let order = view! {
+        <div class="fui-transform-options">
+            {Field::new("q-o", tr(Msg::QueryOrderBy))
+                .view(
+                    view! {
+                        <select id="q-o" name="order" class="fui-select">
+                            <option value="">{tr(Msg::QueryNoOrder)}</option>
+                            {order_options}
+                        </select>
+                    },
+                )}
+            {Field::new("q-d", tr(Msg::QueryDirection))
+                .view(
+                    view! {
+                        <select id="q-d" name="direction" class="fui-select">
+                            <option value="desc" selected=draft.descending>
+                                {tr(Msg::QueryNewestFirst)}
+                            </option>
+                            <option value="asc" selected=!draft.descending>
+                                {tr(Msg::QueryOldestFirst)}
+                            </option>
+                        </select>
+                    },
+                )}
+            {Field::new("q-l", tr(Msg::QueryLimit))
+                .view(
+                    view! {
+                        <input
+                            id="q-l"
+                            name="limit"
+                            type="text"
+                            inputmode="numeric"
+                            class="fui-input"
+                            value=draft.limit.clone()
+                        />
+                    },
+                )}
+        </div>
+    };
+    let built_section = match &built {
+        Ok(aql) => section(Some(tr(Msg::QueryItBuilds)), None, None, built_view(aql)),
+        Err(reason) => section(
+            Some(tr(Msg::QueryItBuilds)),
+            None,
+            None,
+            info_note(tr_with(
+                Msg::QueryNotBuilt,
+                &[("reason", reason.clone().into())],
+            )),
+        ),
+    };
+    let state = state_of(&draft);
+    let aql = built.unwrap_or_default();
+    view! {
+        <Title text=tr(Msg::NavQuery) />
+        {heading(save_popover(save))}
+        <div class="fui-stack">
+            {lifted} {top} {catalog} <form id=QUERY_FORM method="post" action="/query">
+                <input type="hidden" name="default-intent" value="run" />
+                <button type="submit" class="fui-sr-only" tabindex="-1">
+                    {tr(Msg::QueryRun)}
+                </button>
+                <input type="hidden" name="state" value=state />
+                <input type="hidden" name="aql" value=aql />
+                {binder(
+                    tr(Msg::QueryWays),
+                    tabs(),
+                    "build",
+                    panel(
+                        view! {
+                            {plain_section(options)}
+                            {points}
+                            {section(Some(tr(Msg::QueryConditions)), None, None, conditions)}
+                            {section(Some(tr(Msg::QueryOrderLimit)), None, None, order)}
+                            {built_section}
+                            {Answer::view(answer)}
+                        },
+                    ),
+                )}
+            </form>
+        </div>
+    }
+    .into_any()
+}
+
+/// Query: Build.
+#[component]
+pub fn BuildTab() -> impl IntoView {
+    let model = page_model!(load_build());
+    drawn(model, build)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 /// The grammar check of `aql`: its findings, placed on their lines, or
 /// `None` when it parses.
 fn grammar(aql: &str) -> Option<(String, FileFindings)> {
@@ -1432,6 +1540,7 @@ fn grammar(aql: &str) -> Option<(String, FileFindings)> {
     ))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The parameters a run binds, as the form holds them: each name and value.
 fn parameters_of(posted: Option<&crate::posted::Posted>, aql: &str) -> Vec<(String, String)> {
     let mut rows: Vec<(String, String)> = Vec::new();
@@ -1537,6 +1646,7 @@ fn parameters_view(rows: &[(String, String)]) -> AnyView {
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The parameters as the JSON object a run sends.
 fn parameters_json(rows: &[(String, String)]) -> String {
     let bindings: BTreeMap<String, String> = rows
@@ -1547,173 +1657,219 @@ fn parameters_json(rows: &[(String, String)]) -> String {
     crate::aql_text::parameters_json(&bindings).to_string()
 }
 
-/// Query: AQL.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[expect(
-    clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
-)]
-#[component]
-pub fn AqlTab() -> impl IntoView {
+/// The note above the AQL editor.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum Note {
+    /// The stored query opened from the CDR: its name and version.
+    Opened(String, String),
+    /// The AQL came from Build.
+    BuildMade,
+}
+
+/// The AQL tab's model: the query as the post leaves it, its grammar check,
+/// and what its step answered.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct Written {
+    /// The AQL.
+    aql: String,
+    /// The note above the editor.
+    note: Option<Note>,
+    /// The CDR's refusal of an open or a save.
+    top: Option<Refused>,
+    /// Each parameter a run binds: its name and value.
+    rows: Vec<(String, String)>,
+    /// The grammar check's heading and findings, `None` when the AQL parses.
+    findings: Option<(String, FileFindings)>,
+    /// What a run answered.
+    answer: Option<Answer>,
+    /// Whether Build can take the AQL.
+    buildable: bool,
+    /// Save to the CDR's fields.
+    save: SaveFields,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads the AQL tab: the query the post or the address names, and the run
+/// or the save the post asks.
+async fn load_written() -> Written {
     let posted = crate::posted::posted();
-    let page = awaited(async move {
-        let mut note = None;
-        let mut top = None;
-        let mut loaded = None;
-        let aql = match &posted {
-            Some(posted) => posted.get("aql").unwrap_or_default(),
-            None => match (
-                crate::request::query("name"),
-                crate::request::query("version"),
-            ) {
-                (Some(name), Some(version)) => {
-                    match crate::queries_api::fetch_stored_query(name.clone(), version.clone())
-                        .await
-                    {
-                        Ok(text) => {
-                            loaded = Some((name.clone(), version.clone()));
-                            note = Some(info_note(tr_with(
-                                Msg::QueryOpenedStored,
-                                &[("name", name.into()), ("version", version.into())],
-                            )));
-                            text
-                        }
-                        Err(error) => {
-                            top = Some(refused(tr(Msg::QueryStoredRefused), &error, None));
-                            String::new()
-                        }
+    let mut note = None;
+    let mut top = None;
+    let mut loaded = None;
+    let aql = match &posted {
+        Some(posted) => posted.get("aql").unwrap_or_default(),
+        None => match (
+            crate::request::query("name"),
+            crate::request::query("version"),
+        ) {
+            (Some(name), Some(version)) => {
+                match crate::queries_api::fetch_stored_query(name.clone(), version.clone()).await {
+                    Ok(text) => {
+                        note = Some(Note::Opened(name.clone(), version.clone()));
+                        loaded = Some((name, version));
+                        text
+                    }
+                    Err(error) => {
+                        top = Some(Refused::new(tr(Msg::QueryStoredRefused), error));
+                        String::new()
                     }
                 }
-                _ => String::new(),
-            },
-        };
-        if posted
+            }
+            _ => String::new(),
+        },
+    };
+    if posted
+        .as_ref()
+        .is_some_and(|posted| posted.intent() == "opened")
+    {
+        note = Some(Note::BuildMade);
+    }
+    let rows = parameters_of(posted.as_ref(), &aql);
+    let parameters = parameters_json(&rows);
+    let findings = (!aql.trim().is_empty()).then(|| grammar(&aql)).flatten();
+    let mut save_problem = None;
+    let mut answer = None;
+    match step(posted.as_ref()) {
+        Step::Run if aql.trim().is_empty() => {
+            answer = Some(Answer::NotRun(tr(Msg::QueryNothingToRun)));
+        }
+        Step::Run if findings.is_some() => {
+            answer = Some(Answer::NotRun(tr(Msg::QueryGrammarStops)));
+        }
+        Step::Run => {
+            answer = Some(Answer::of(
+                crate::queries_api::run_aql(aql.clone(), parameters.clone(), 0).await,
+                &aql,
+                &parameters,
+            ));
+        }
+        Step::Save if findings.is_some() => save_problem = Some(tr(Msg::QueryGrammarStops)),
+        Step::Save => {
+            if let Err(refused_save) = save(posted.as_ref(), &aql).await {
+                let (problem, refusal) = *refused_save;
+                save_problem = Some(problem);
+                top = refusal;
+            }
+        }
+        Step::Edit => {}
+    }
+    let buildable = !aql.trim().is_empty()
+        && findings.is_none()
+        && crate::builder::lift::from_aql(&aql).is_ok();
+    let save = SaveFields::of(
+        posted.as_ref(),
+        save_problem,
+        loaded
             .as_ref()
-            .is_some_and(|posted| posted.intent() == "opened")
-        {
-            note = Some(info_note(tr(Msg::QueryBuildMade)));
-        }
-        let rows = parameters_of(posted.as_ref(), &aql);
-        let parameters = parameters_json(&rows);
-        let findings = (!aql.trim().is_empty()).then(|| grammar(&aql)).flatten();
-        let chart = chart_asked();
-        let mut save_problem = None;
-        let mut answer = None;
-        match step(posted.as_ref()) {
-            Step::Run if aql.trim().is_empty() => {
-                answer = Some(not_run(tr(Msg::QueryNothingToRun)));
-            }
-            Step::Run if findings.is_some() => answer = Some(not_run(tr(Msg::QueryGrammarStops))),
-            Step::Run => {
-                answer = Some(
-                    match crate::queries_api::run_aql(aql.clone(), parameters.clone(), 0).await {
-                        Ok(page) => results(&Answered {
-                            page: &page,
-                            aql: &aql,
-                            parameters: &parameters,
-                            chart,
-                        }),
-                        Err(error) => section(
-                            Some(tr(Msg::ResultsTitle)),
-                            None,
-                            None,
-                            refused(tr(Msg::QueryRunRefused), &error, None),
-                        ),
-                    },
-                );
-            }
-            Step::Save if findings.is_some() => save_problem = Some(tr(Msg::QueryGrammarStops)),
-            Step::Save => {
-                if let Err(refused_save) = save(posted.as_ref(), &aql).await {
-                    let (problem, refusal) = *refused_save;
-                    save_problem = Some(problem);
-                    top = refusal;
-                }
-            }
-            Step::Edit => {}
-        }
-        let buildable = !aql.trim().is_empty()
-            && findings.is_none()
-            && crate::builder::lift::from_aql(&aql).is_ok();
-        let to_build = buildable.then(|| {
-            view! {
-                <button
-                    type="submit"
-                    form=QUERY_FORM
-                    formaction="/query"
-                    name="intent"
-                    value="lift"
-                    class="fui-button fui-button-ghost fui-button-small"
-                >
-                    {ferrohealth_ui::icon::icon(Glyph::LIST_CHECKS, "14")}
-                    {tr(Msg::QueryOpenInBuild)}
-                </button>
-            }
-        });
-        let editor = view! {
-            <CodeEditor
-                setup=EditorSetup {
-                    field: EditorField::Aql,
-                    language: EditorLanguage::Aql,
-                    text: aql.clone(),
-                    opened: None,
-                    marks: marks_of(findings.as_ref()),
-                    label: tr(Msg::QueryTheAql),
-                    lead: tr(Msg::QueryAql),
-                    facts: vec![tr(Msg::EditorUtf8)],
-                    findings: findings.clone(),
-                }
-                words=EditorWords::of_page()
-                diagnostics=DiagnosticsWords::of_page()
-            />
-        };
-        view! {
-            <Title text=tr(Msg::QueryAqlTitle) />
-            {heading(
-                save_popover(
-                    posted.as_ref(),
-                    save_problem,
-                    loaded.as_ref().map(|(name, version)| (name.as_str(), version.as_str())),
-                ),
-            )}
-            <div class="fui-stack">
-                {top} <form id=QUERY_FORM method="post" action="/query/aql">
-                    <input type="hidden" name="default-intent" value="run" />
-                    <button type="submit" class="fui-sr-only" tabindex="-1">
-                        {tr(Msg::QueryRun)}
-                    </button>
-                    {binder(
-                        tr(Msg::QueryWays),
-                        tabs(),
-                        "aql",
-                        panel(
-                            view! {
-                                {plain_section(
-                                    view! {
-                                        {note}
-                                        <div class="fui-cluster">{to_build}</div>
-                                        {editor}
-                                    },
-                                )}
-                                {section(
-                                    Some(tr(Msg::QueryParameters)),
-                                    u64::try_from(rows.len()).ok(),
-                                    None,
-                                    parameters_view(&rows),
-                                )}
-                                {answer.unwrap_or_else(|| not_run(tr(Msg::ResultsNotRun)))}
-                            },
-                        ),
-                    )}
-                </form>
-            </div>
-        }
-        .into_any()
+            .map(|(name, version)| (name.as_str(), version.as_str())),
+    );
+    Written {
+        aql,
+        note,
+        top,
+        rows,
+        findings,
+        answer,
+        buildable,
+        save,
+    }
+}
+
+/// The AQL tab, drawn.
+fn written(model: Written) -> AnyView {
+    let Written {
+        aql,
+        note,
+        top,
+        rows,
+        findings,
+        answer,
+        buildable,
+        save,
+    } = model;
+    let note = note.map(|note| match note {
+        Note::Opened(name, version) => info_note(tr_with(
+            Msg::QueryOpenedStored,
+            &[("name", name.into()), ("version", version.into())],
+        )),
+        Note::BuildMade => info_note(tr(Msg::QueryBuildMade)),
     });
-    view! { {page} }
+    let top = top.map(|refusal| refusal.view());
+    let to_build = buildable.then(|| {
+        view! {
+            <button
+                type="submit"
+                form=QUERY_FORM
+                formaction="/query"
+                name="intent"
+                value="lift"
+                class="fui-button fui-button-ghost fui-button-small"
+            >
+                {ferrohealth_ui::icon::icon(Glyph::LIST_CHECKS, "14")}
+                {tr(Msg::QueryOpenInBuild)}
+            </button>
+        }
+    });
+    let editor = view! {
+        <CodeEditor
+            setup=EditorSetup {
+                field: EditorField::Aql,
+                language: EditorLanguage::Aql,
+                text: aql,
+                opened: None,
+                marks: marks_of(findings.as_ref()),
+                label: tr(Msg::QueryTheAql),
+                lead: tr(Msg::QueryAql),
+                facts: vec![tr(Msg::EditorUtf8)],
+                findings,
+            }
+            words=EditorWords::of_page()
+            diagnostics=DiagnosticsWords::of_page()
+        />
+    };
+    view! {
+        <Title text=tr(Msg::QueryAqlTitle) />
+        {heading(save_popover(save))}
+        <div class="fui-stack">
+            {top} <form id=QUERY_FORM method="post" action="/query/aql">
+                <input type="hidden" name="default-intent" value="run" />
+                <button type="submit" class="fui-sr-only" tabindex="-1">
+                    {tr(Msg::QueryRun)}
+                </button>
+                {binder(
+                    tr(Msg::QueryWays),
+                    tabs(),
+                    "aql",
+                    panel(
+                        view! {
+                            {plain_section(
+                                view! {
+                                    {note}
+                                    <div class="fui-cluster">{to_build}</div>
+                                    {editor}
+                                },
+                            )}
+                            {section(
+                                Some(tr(Msg::QueryParameters)),
+                                u64::try_from(rows.len()).ok(),
+                                None,
+                                parameters_view(&rows),
+                            )}
+                            {Answer::view(answer)}
+                        },
+                    ),
+                )}
+            </form>
+        </div>
+    }
+    .into_any()
+}
+
+/// Query: AQL.
+#[component]
+pub fn AqlTab() -> impl IntoView {
+    let model = page_model!(load_written());
+    drawn(model, written)
 }
 
 #[cfg(test)]
