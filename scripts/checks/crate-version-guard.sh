@@ -205,6 +205,10 @@ self_test() {
   trap "rm -rf '$tmp'" EXIT
   cd "$tmp"
   git init -q -b main
+  # A commit past the loose-object limit starts `git maintenance --auto` detached,
+  # which still writes the packs under .git while the EXIT trap removes it (#4237).
+  git config gc.auto 0
+  git config maintenance.auto false
   _write_root_manifest 1.0.0
   _write_manifests 0.0.1
   _write_fuzz_lock 0.0.1
