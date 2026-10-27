@@ -568,7 +568,7 @@ missing_domains() {
       "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE n.nspname IN ($(sql_in_list "$(domain_field "$record" 3)"))
           AND c.relkind = 'r'" 2>/dev/null)"
-    [ "${tables:-0}" -gt 0 ] 2>/dev/null || printf '%s, ' "$name"
+    [[ "${tables:-0}" -gt 0 ]] 2>/dev/null || printf '%s, ' "$name"
   done
 }
 
@@ -585,7 +585,7 @@ probes_domain_roles() {
 
   local absent
   absent="$(missing_domains)"
-  if [ -n "$absent" ]; then
+  if [[ -n "$absent" ]]; then
     uncovered "the pseudonymisation domain roles" "$(domains_absent_reason "$absent")"
     return
   fi
@@ -615,7 +615,7 @@ probes_domain_roles() {
     "SELECT rolname FROM pg_roles
       WHERE rolname IN ($(sql_in_list "$(domain_all_roles | tr '\n' ' ')"))
         AND rolinherit" 2>/dev/null)"
-  if [ -n "$inheriting" ]; then
+  if [[ -n "$inheriting" ]]; then
     probe_fail "every domain role NOINHERIT" "$inheriting" \
       "an inheriting domain role can pick up another domain's grants through membership"
   fi
@@ -636,7 +636,7 @@ probes_domain_roles() {
     name="$(domain_field "$record" 1)"
     others=""
     for other_record in "${PROBE_DOMAINS[@]}"; do
-      if [ "$(domain_field "$other_record" 1)" = "$name" ]; then continue; fi
+      if [[ "$(domain_field "$other_record" 1)" = "$name" ]]; then continue; fi
       others="${others:+$others }$(domain_field "$other_record" 3)"
     done
     breach="$(dc exec -T ferroehr-postgres psql -qtAX -U ferroehr -d ferroehr -c \
@@ -649,7 +649,7 @@ probes_domain_roles() {
           AND c.relkind IN ('r','p','v','m','f')
           AND has_table_privilege(r.rolname, c.oid, 'SELECT')
         LIMIT 5" 2>/dev/null)"
-    if [ -n "$breach" ]; then
+    if [[ -n "$breach" ]]; then
       probe_fail "no $name role reaching another domain" "$breach" \
         "the boundary is the whole point of the split; a readable relation defeats it"
     fi
@@ -709,7 +709,7 @@ probes_backup_restore() {
 
   local absent
   absent="$(missing_domains)"
-  if [ -n "$absent" ]; then
+  if [[ -n "$absent" ]]; then
     uncovered "per-domain logical backups" "$(domains_absent_reason "$absent")"
     return
   fi
@@ -742,11 +742,11 @@ probes_backup_restore() {
     raw="$(dc -f docker-compose.yml --profile backup run --rm --quiet-pull \
         "ferroehr-backup-$name" 2>&1)"
     status=$?
-    [ "$status" -eq 0 ] || dump_status=$status
+    [[ "$status" -eq 0 ]] || dump_status=$status
     dump_log="${dump_log}[$name exit=$status] $(printf '%s' "$raw" \
       | grep -vE '^time="|^ *Container |orphan containers' | tr '\n' ' ')"
   done
-  if [ "$dump_status" -ne 0 ]; then
+  if [[ "$dump_status" -ne 0 ]]; then
     probe_fail "every dump job exits 0" "exit $dump_status" \
       "the recipe reported: $(printf '%s' "$dump_log" | tail -c 400)"
     probe_done
@@ -759,9 +759,9 @@ probes_backup_restore() {
     name="$(domain_field "$record" 1)"
     found="$(find "$dumps/$name" -name "$name-*.dump" -print -quit 2>/dev/null)"
     dump_files+=("$found")
-    [ -n "$found" ] || missing="${missing:+$missing }$name"
+    [[ -n "$found" ]] || missing="${missing:+$missing }$name"
   done
-  if [ -n "$missing" ]; then
+  if [[ -n "$missing" ]]; then
     # A dump that produced no file says nothing about WHY on its own, and the
     # answer is usually about the target rather than about postgres: who the
     # job runs as, and what the mount looks like from inside it.
@@ -801,7 +801,7 @@ probes_backup_restore() {
     assert_contains "${tocs[$i]}" "${markers[0]}" \
       "the $name dump must carry ${markers[0]}; the dump job reported: ${dump_log:0:300}"
     for j in "${!PROBE_DOMAINS[@]}"; do
-      if [ "$i" -eq "$j" ]; then continue; fi
+      if [[ "$i" -eq "$j" ]]; then continue; fi
       for marker in "${markers[@]}"; do
         assert_not_contains "${tocs[$j]}" "$marker" \
           "a $(domain_field "${PROBE_DOMAINS[$j]}" 1) backup carrying $marker defeats the split"
@@ -833,7 +833,7 @@ probes_backup_restore() {
   local restored_dsn verify_out
   restored_dsn="$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' \
     "$(dc ps -q ferroehr)" 2>/dev/null | sed -n 's/^FERROEHR__DB__URL=//p')"
-  if [ -z "$restored_dsn" ]; then
+  if [[ -z "$restored_dsn" ]]; then
     probe_fail "the server container's FERROEHR__DB__URL" "(empty)" \
       "without it this probe would build a DSN of its own and measure that instead"
     probe_done
