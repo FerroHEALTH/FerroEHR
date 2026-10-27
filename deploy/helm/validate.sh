@@ -1261,6 +1261,43 @@ viewer_oidc_ca_gate() {
 }
 viewer_oidc_ca_gate
 
+# ── The server trusts a private issuer CA only when one is named ────────────
+# auth.caExistingSecret mounts the Secret's key as a file and names it in
+# `[auth] ca_file`; unset, neither the variable nor the volume renders.
+server_issuer_ca_gate() {
+  bold "── server: the issuer's CA when one is named ───────────"
+  local render wrong=0 ca_file volume secret
+  for secret in "" issuer-ca; do
+    local -a extra=()
+    [[ -z "$secret" ]] || extra+=(--set "auth.caExistingSecret=${secret}")
+    if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" \
+                   -f "${CI_DIR}/default-values.yaml" ${extra[@]+"${extra[@]}"} \
+                   -s templates/deployment.yaml 2>&1)"; then
+      red "  server: the chart no longer renders${secret:+ with auth.caExistingSecret=$secret}:"
+      printf '%s\n' "$render" | sed -n 1,4p
+      FAIL=1
+      return
+    fi
+    ca_file="$(printf '%s' "$render" | yq -r '.spec.template.spec.containers[0].env[] | select(.name == "FERROEHR__AUTH__CA_FILE") | .value')"
+    volume="$(printf '%s' "$render" | yq -r '.spec.template.spec.volumes[] | select(.name == "issuer-ca") | .secret.secretName')"
+    if [[ -z "$secret" ]]; then
+      [[ -z "$ca_file" && -z "$volume" ]] \
+        || { red "  server, no CA named: the issuer CA still renders ('${ca_file}', '${volume}')"; wrong=1; }
+    else
+      [[ "$ca_file" == "/etc/ferroehr-issuer-ca/ca.crt" ]] \
+        || { red "  server, CA named: ca_file is '${ca_file}', not /etc/ferroehr-issuer-ca/ca.crt"; wrong=1; }
+      [[ "$volume" == "$secret" ]] \
+        || { red "  server, CA named: the issuer-ca volume reads '${volume}', not ${secret}"; wrong=1; }
+    fi
+  done
+  if [[ "$wrong" -eq 0 ]]; then
+    echo "  server: the issuer's CA is mounted and named only when auth.caExistingSecret is set"
+  else
+    FAIL=1
+  fi
+}
+server_issuer_ca_gate
+
 for case in "${CASES[@]}"; do
   label="${case%%:*}"
   values="${case##*:}"

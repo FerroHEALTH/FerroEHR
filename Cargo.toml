@@ -219,8 +219,8 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # issuer's key set, Basic users, the SMART on openEHR scopes, the discovery
 # document and the client credentials grant. It checks tokens and never issues
 # them. Built for wasm32 it is the scope grammar alone (the viewer's browser half).
-# Verified on crates.io 2026-10-27 (0.8.5).
-ferrohealth-smart = { version = "=0.8.5", default-features = false, features = ["fetch"] }
+# Verified on crates.io 2026-10-27 (0.8.6).
+ferrohealth-smart = { version = "=0.8.6", default-features = false, features = ["fetch"] }
 # The policy decision of the FerroHEALTH family (FerroAUTH, the same
 # Licensor's BUSL-1.1 code): the attribute-based request over the subject
 # ferrohealth-smart authenticates, the Cedar engine (`cedar`) and the remote

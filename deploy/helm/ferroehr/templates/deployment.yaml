@@ -126,6 +126,11 @@ spec:
             # none, so the mounted ferroehr.toml is named here.
             - name: FERROEHR_CONFIG
               value: /etc/ferroehr/ferroehr.toml
+            {{- if .Values.auth.caExistingSecret }}
+            # The issuer's CA, beside the image's own roots (`[auth] ca_file`).
+            - name: FERROEHR__AUTH__CA_FILE
+              value: /etc/ferroehr-issuer-ca/ca.crt
+            {{- end }}
             {{- if or .Values.database.existingSecret .Values.database.url }}
             {{- /* The DSN is the credential that reaches patient data, so it is a
                    mounted file and only its PATH is environment: an env VALUE is
@@ -285,6 +290,11 @@ spec:
             {{- if .Values.database.caConfigMap }}
             {{- include "ferroehr.dbCaMount" . | nindent 12 }}
             {{- end }}
+            {{- if .Values.auth.caExistingSecret }}
+            - name: issuer-ca
+              mountPath: /etc/ferroehr-issuer-ca
+              readOnly: true
+            {{- end }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -418,6 +428,14 @@ spec:
         {{- end }}
         {{- if .Values.database.caConfigMap }}
         {{- include "ferroehr.dbCaVolume" . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.auth.caExistingSecret }}
+        - name: issuer-ca
+          secret:
+            secretName: {{ .Values.auth.caExistingSecret }}
+            items:
+              - key: {{ .Values.auth.caExistingSecretKey }}
+                path: ca.crt
         {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}

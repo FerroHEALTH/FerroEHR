@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). A stock install runs the sandbox deployment profile, which must not hold real patient data; set config.deployment_profile for a production holder.
 
-![Version: 19.2.0](https://img.shields.io/badge/Version-19.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.4.2](https://img.shields.io/badge/AppVersion-5.4.2-informational?style=flat-square)
+![Version: 19.3.0](https://img.shields.io/badge/Version-19.3.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.4.2](https://img.shields.io/badge/AppVersion-5.4.2-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 19.2.0 \
+  --version 19.3.0 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.4.2
@@ -58,7 +58,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `19.2.0` |
+| the **chart** (templates, defaults, this document) | `--version` | `19.3.0` |
 | the **server image** | `image.tag` | `5.4.2` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -70,7 +70,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:19.2.0 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:19.3.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -78,7 +78,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:19.2.0 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:19.2.0 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:19.3.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.4.2 \
   -R FerroHEALTH/FerroEHR
@@ -190,6 +190,8 @@ Kubernetes: `>=1.36.0-0`
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Pod affinity/anti-affinity rules. Empty = none. |
+| auth.caExistingSecret | string | `""` | Name of an existing Secret holding a PEM bundle of the certificate authorities the server trusts for its `[auth]` issuer (the metadata, the key set and, under introspection, the introspection and token calls), beside the image's own roots: for an issuer behind a private PKI. The chart mounts the key as a file and points `[auth] ca_file` at it. Empty trusts the image's roots alone. |
+| auth.caExistingSecretKey | string | `"ca.crt"` | Key within `caExistingSecret` carrying the PEM bundle. |
 | autoscaling.behavior | object | `{}` | Scaling behaviour, passed through verbatim to `spec.behavior`. Empty leaves the documented defaults, which are already asymmetric in the right direction for a clinical API: scale-up is immediate, scale-down waits out a 300-second stabilization window so a traffic trough cannot tear down capacity that is about to be needed. Set this only to make it MORE conservative — e.g. a `scaleDown.policies` entry capping how many pods may go per minute (https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#configurable-scaling-behavior). |
 | autoscaling.enabled | bool | `false` | Horizontal pod autoscaling. When on, the chart omits replicas and the HPA owns the count. |
 | autoscaling.maxReplicas | int | `6` | Upper bound the HPA may scale to. |

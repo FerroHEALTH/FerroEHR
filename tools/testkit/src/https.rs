@@ -43,6 +43,20 @@ impl HttpsServer {
         content_type: &'static str,
         body: String,
     ) -> Result<Self, ListenerError> {
+        Self::answering_with(content_type, |_base_url| body).await
+    }
+
+    /// Binds a server like [`Self::answering`] whose body `body` builds from
+    /// the server's own base URL, for a document that names its origin (an
+    /// authorization server's metadata names its `issuer`).
+    ///
+    /// # Errors
+    /// [`ListenerError`] when the PKI is unusable, the port cannot be bound or
+    /// the CA file cannot be written.
+    pub async fn answering_with(
+        content_type: &'static str,
+        body: impl FnOnce(&str) -> String,
+    ) -> Result<Self, ListenerError> {
         let pki = Pki::mint()?;
         let acceptor = TlsAcceptor::from(pki.server_config()?);
         let listener = TcpListener::bind(("127.0.0.1", 0)).await?;
@@ -53,6 +67,8 @@ impl HttpsServer {
             std::process::id()
         ));
         tokio::fs::write(&ca_file, pki.ca_pem.as_bytes()).await?;
+        let base_url = format!("https://localhost:{port}");
+        let body = body(&base_url);
         let response = format!(
             "HTTP/1.1 200 OK\r\ncontent-type: {content_type}\r\ncontent-length: {}\r\n\
              connection: close\r\n\r\n{body}",
@@ -75,10 +91,7 @@ impl HttpsServer {
                 }));
             }
         }));
-        Ok(Self {
-            base_url: format!("https://localhost:{port}"),
-            ca_file,
-        })
+        Ok(Self { base_url, ca_file })
     }
 }
 
