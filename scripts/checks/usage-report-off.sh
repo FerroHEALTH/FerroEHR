@@ -146,13 +146,14 @@ readonly FAMILY_IMAGE="ghcr\\.io/ferrohealth/($FAMILY)[:@]"
 # family server image without that server's switch in its own `environment`:
 # KEY set to false, or to an interpolation of OWN_KEY, which every Compose
 # launcher exports as false. A service that merges an `x-` anchor
-# (`<<: *name`) runs the anchor's image.
+# (`<<: *name`) runs the anchor's image; one whose `entrypoint` names another
+# binary of the image starts no server.
 compose_findings() {
   awk -v own="$OWN_KEY" -v img="$FAMILY_IMAGE" -v file="$1" -v sq="'" '
     function close_block() {
       if (kind == "anchor" && product != "") anchor_image[name] = product
-      if (kind == "service") { svc[++n] = name; svc_image[name] = product; svc_merge[name] = merge }
-      kind = ""; name = ""; product = ""; merge = ""
+      if (kind == "service") { svc[++n] = name; svc_image[name] = product; svc_merge[name] = merge; svc_entry[name] = entry }
+      kind = ""; name = ""; product = ""; merge = ""; entry = ""
     }
     /^[[:space:]]*#/ { next }
     /^[^[:space:]]/ {
@@ -165,6 +166,7 @@ compose_findings() {
     }
     kind == "" { next }
     /^[[:space:]]+image:/ && match($0, img) { product = toupper(substr($0, RSTART + 20, RLENGTH - 21)) }
+    /^[[:space:]]+entrypoint:/ { entry = $0 }
     match($0, /<<:[[:space:]]*\*[A-Za-z0-9_-]+/) { merge = substr($0, RSTART, RLENGTH); sub(/.*\*/, "", merge) }
     match($0, /[A-Z]+__USAGE_REPORT__ENABLED[[:space:]]*[:=]/) {
       key = substr($0, RSTART, RLENGTH); sub(/[[:space:]]*[:=]$/, "", key)
@@ -176,6 +178,8 @@ compose_findings() {
       for (i = 1; i <= n; i++) {
         s = svc[i]; p = svc_image[s]
         if (p == "" && svc_merge[s] != "") p = anchor_image[svc_merge[s]]
+        # An entrypoint naming another binary of the image (an index build) serves nothing.
+        if (p != "" && svc_entry[s] != "" && svc_entry[s] !~ ("/" tolower(p) "([^-a-z]|$)")) continue
         if (p != "" && !((s, p "__USAGE_REPORT__ENABLED") in ok))
           printf "%s: %s (%s__USAGE_REPORT__ENABLED)\n", file, s, p
       }
@@ -259,7 +263,7 @@ self_test() {
   # Sibling servers: Compose services, a docker run, and a Rust harness.
   mkdir -p "$tmp/app/bare/tests" "$tmp/app/held/src"
   # shellcheck disable=SC2016 # the fixture is literal Compose text, never expanded here
-  printf 'x-node: &node\n  image: ghcr.io/ferrohealth/ferroehr:5.4.2\nservices:\n  ferroehr:\n    image: ghcr.io/ferrohealth/ferroehr:5.4.2\n    environment:\n      FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-true}\n  ferropix:\n    image: ghcr.io/ferrohealth/ferropix:0.0.7\n    environment:\n      FERROPIX_CONFIG: /etc/ferropix.toml\n  ferroterm:\n    image: ghcr.io/ferrohealth/ferroterm:0.1.6\n    environment:\n      FERROTERM__USAGE_REPORT__ENABLED: "false"\n  node-a:\n    <<: *node\n    environment:\n      FERROEHR__DB__URL: x\n  ferroehr-postgres:\n    image: ghcr.io/ferrohealth/ferroehr-postgres:5.4.2\n' >"$tmp/docker-compose.sib.yml"
+  printf 'x-node: &node\n  image: ghcr.io/ferrohealth/ferroehr:5.4.2\nservices:\n  ferroehr:\n    image: ghcr.io/ferrohealth/ferroehr:5.4.2\n    environment:\n      FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-true}\n  ferropix:\n    image: ghcr.io/ferrohealth/ferropix:0.0.7\n    environment:\n      FERROPIX_CONFIG: /etc/ferropix.toml\n  ferroterm:\n    image: ghcr.io/ferrohealth/ferroterm:0.1.6\n    environment:\n      FERROTERM__USAGE_REPORT__ENABLED: "false"\n  node-a:\n    <<: *node\n    environment:\n      FERROEHR__DB__URL: x\n  ferroehr-postgres:\n    image: ghcr.io/ferrohealth/ferroehr-postgres:5.4.2\n  ferroterm-build:\n    image: ghcr.io/ferrohealth/ferroterm:1.0.0\n    entrypoint: ["/usr/local/bin/ferroterm-build"]\n  ferropix-serve:\n    image: ghcr.io/ferrohealth/ferropix:1.0.0\n    entrypoint: ["/usr/local/bin/ferropix", "serve"]\n' >"$tmp/docker-compose.sib.yml"
   printf 'services:\n  ferropix:\n    image: ghcr.io/ferrohealth/ferropix:0.0.7\n' >"$tmp/deploy/hosted/docker-compose.yml"
   printf '#!/usr/bin/env bash\nexport FERROEHR__USAGE_REPORT__ENABLED=false\ndocker run -d ghcr.io/ferrohealth/ferropix:0.0.7\n' >"$tmp/scripts/pix-run-on.sh"
   printf '#!/usr/bin/env bash\ndocker run -d -e FERROPIX__USAGE_REPORT__ENABLED=false ghcr.io/ferrohealth/ferropix:0.0.7\n' >"$tmp/scripts/pix-run-off.sh"
@@ -288,7 +292,7 @@ self_test() {
   for name in scripts/on.sh scripts/array-on.sh scripts/long-on.sh scripts/helm-on.sh scripts/fam/orphan.sh \
     .github/workflows/run-on.yml .github/workflows/run-job-env.yml "scripts/helm-pix-on.sh (ferropix.usageReport.enabled)" \
     "docker-compose.sib.yml: ferropix (FERROPIX__USAGE_REPORT__ENABLED)" \
-    "docker-compose.sib.yml: node-a (FERROEHR__USAGE_REPORT__ENABLED)" \
+    "docker-compose.sib.yml: ferropix-serve (FERROPIX__USAGE_REPORT__ENABLED)" "docker-compose.sib.yml: node-a (FERROEHR__USAGE_REPORT__ENABLED)" \
     "scripts/pix-run-on.sh (FERROPIX__USAGE_REPORT__ENABLED)" "app/bare (FERROTERM__USAGE_REPORT__ENABLED)"; do
     grep -qxF "$name" <<<"$found" || {
       echo "self-test: $name was not caught" >&2
@@ -304,12 +308,12 @@ self_test() {
     fi
   done
   # Only the two unswitched services of the Compose fixture, none in an exempt tree.
-  if grep -E 'docker-compose\.sib\.yml: (ferroehr|ferroterm|ferroehr-postgres) |deploy/hosted|app/held' <<<"$found"; then
+  if grep -E 'docker-compose\.sib\.yml: (ferroehr|ferroterm|ferroehr-postgres|ferroterm-build) |deploy/hosted|app/held' <<<"$found"; then
     echo "self-test: a switched, exempt or non-server service was wrongly caught" >&2
     failures=1
   fi
   [[ "$failures" -eq 0 ]] || return 1
-  echo "usage-report-off: self-test OK (twelve unswitched launchers caught, sixteen clean or exempt cases allowed)."
+  echo "usage-report-off: self-test OK (thirteen unswitched launchers caught, seventeen clean or exempt cases allowed)."
 }
 
 report() {
