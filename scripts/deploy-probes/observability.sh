@@ -27,16 +27,18 @@ GRAFANA_AUTH="admin:admin"
 
 # The overlay changes the identity issuer, which owns the network namespace the
 # server and FerroPIX join, so all three are recreated together: a member left
-# on the old namespace cannot reach the others.
+# on the old namespace cannot reach the others. `--no-deps` keeps the databases
+# and the one-shot FerroPIX key job as they are: re-running the key job would
+# leave FerroPIX unable to read its own store.
 obs_up() {
   GRAFANA_PORT="${PROBE_GRAFANA_PORT:-13000}" \
     dc -f docker-compose.yml -f docker-compose.observability.yml \
-       up -d --force-recreate identity-issuer ferropix ferroehr otel-lgtm >/dev/null 2>&1
+       up -d --no-deps --force-recreate identity-issuer ferropix ferroehr otel-lgtm >/dev/null 2>&1
 }
 
 # Back to the shipped namespace for the families that follow.
 obs_down() {
-  dc -f docker-compose.yml up -d --force-recreate identity-issuer ferropix ferroehr >/dev/null 2>&1
+  dc -f docker-compose.yml up -d --no-deps --force-recreate identity-issuer ferropix ferroehr >/dev/null 2>&1
   wait_http "$CDR/health/readiness" 150 || true
 }
 
