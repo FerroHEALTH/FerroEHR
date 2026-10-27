@@ -22,6 +22,7 @@ use leptos_meta::Title;
 use leptos_router::hooks::use_params_map;
 
 use crate::locale::{Msg, tr, tr_with};
+use crate::pages::common::{drawn, page_model};
 
 /// The tab the address names: Appearance for none.
 fn section() -> Section {
@@ -82,9 +83,14 @@ fn reveal_row(back: &str, saved: bool) -> AnyView {
     })
 }
 
-/// The language the browser asks for, among those the viewer ships.
-fn browser_locale() -> Locale {
-    let header = use_context::<http::request::Parts>()
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads the languages the browser asks for, its `Accept-Language` header.
+#[expect(
+    clippy::unused_async,
+    reason = "a page model loads through a future, read once on the server"
+)]
+async fn load() -> String {
+    use_context::<http::request::Parts>()
         .and_then(|parts| {
             parts
                 .headers
@@ -92,8 +98,7 @@ fn browser_locale() -> Locale {
                 .and_then(|value| value.to_str().ok())
                 .map(str::to_owned)
         })
-        .unwrap_or_default();
-    Locale::negotiate_with(&header, crate::locale::catalog(), Locale::english())
+        .unwrap_or_default()
 }
 
 /// Your preferences.
@@ -103,29 +108,32 @@ fn browser_locale() -> Locale {
 )]
 #[component]
 pub fn PreferencesPage() -> impl IntoView {
-    let section = section();
-    let routes = routes();
-    let saved = crate::request::query("saved");
-    let own = if section == Section::Language {
-        let saved_reveal = saved.as_deref() == Some(crate::prefs::REVEAL);
-        vec![reveal_row(routes.of(section), saved_reveal)]
-    } else {
-        Vec::new()
-    };
-    let page = preferences_page(Page {
-        section,
-        routes,
-        reading: true,
-        preferences: crate::prefs::current(),
-        action: crate::prefs::PREFERENCE_ROUTE.to_owned(),
-        saved,
-        accent: tr(Msg::BrandAccent),
-        languages: crate::locale::shipped(),
-        browser: browser_locale(),
-        week_from_language: Weekday::Monday,
-        shortcuts: None,
-        reset: crate::prefs::RESET_ROUTE.to_owned(),
-        own,
+    let model = page_model!(load());
+    let page = drawn(model, |accepted: String| {
+        let section = section();
+        let routes = routes();
+        let saved = crate::request::query("saved");
+        let own = if section == Section::Language {
+            let saved_reveal = saved.as_deref() == Some(crate::prefs::REVEAL);
+            vec![reveal_row(routes.of(section), saved_reveal)]
+        } else {
+            Vec::new()
+        };
+        preferences_page(Page {
+            section,
+            routes,
+            reading: true,
+            preferences: crate::prefs::current(),
+            action: crate::prefs::PREFERENCE_ROUTE.to_owned(),
+            saved,
+            accent: tr(Msg::BrandAccent),
+            languages: crate::locale::shipped(),
+            browser: Locale::negotiate_with(&accepted, crate::locale::catalog(), Locale::english()),
+            week_from_language: Weekday::Monday,
+            shortcuts: None,
+            reset: crate::prefs::RESET_ROUTE.to_owned(),
+            own,
+        })
     });
     view! {
         <Title text=tr(Msg::YourPreferences) />

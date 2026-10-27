@@ -60,7 +60,6 @@ pub mod feedback;
 pub mod format;
 pub mod islands;
 pub mod locale;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod management;
 // NOTE: no openEHR spec governs this — our own design; the viewer links no
 // application crate, so it compiles the manufacturer's one source file itself.
@@ -71,7 +70,6 @@ pub mod manufacturer;
 pub mod queries_api;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod query_namespace;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod scopes;
 // NOTE: no openEHR spec governs this — our own design; the gap codes and the
 // OpenAPI family slugs come from the one file the server holds itself to.
@@ -79,7 +77,6 @@ pub mod scopes;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod served_vocabulary;
 pub mod session_client;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod subscriptions;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod system_api;

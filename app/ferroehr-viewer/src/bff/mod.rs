@@ -12,7 +12,6 @@
 //! The areas the converted pages read compile for both halves, the server
 //! functions as their browser stubs; the others stay on the server.
 
-#[cfg(not(target_arch = "wasm32"))]
 pub mod audit;
 pub mod composition;
 pub mod dashboard;
@@ -21,7 +20,6 @@ pub mod ehr_detail;
 pub mod ehr_tags;
 pub mod ehrs;
 pub mod item_tags;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod system;
 pub mod template_adl2;
 pub mod template_detail;

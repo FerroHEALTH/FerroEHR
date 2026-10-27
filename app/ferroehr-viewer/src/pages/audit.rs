@@ -32,14 +32,20 @@ use ferrohealth_ui::view::template::list::{
 use ferrohealth_ui::widget::identifier::{Domain, KEEP, Masked};
 use leptos::prelude::*;
 use leptos_meta::Title;
+#[cfg(not(target_arch = "wasm32"))]
 use leptos_router::hooks::use_params_map;
+use serde::{Deserialize, Serialize};
 
 use crate::bff::PAGE_SIZE;
-use crate::bff::audit::{ACTIONS, AuditPage as Listed, AuditRow, OUTCOMES, search_audit};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::bff::audit::search_audit;
+use crate::bff::audit::{ACTIONS, AuditPage as Listed, AuditRow, OUTCOMES};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{
-    ago, awaited, card_panel, date_range, document_section, refused, section, state_mark, when,
+    Refused, ago, card_panel, date_range, document_section, drawn, page_model, section, state_mark,
+    when,
 };
 use crate::paging::Listing;
 
@@ -108,6 +114,7 @@ impl Filters {
         !self.pairs("").is_empty()
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     /// Runs the search for the page starting at `offset`.
     async fn search(&self, offset: u32) -> Result<Listed, ViewerError> {
         search_audit(
@@ -145,6 +152,7 @@ fn patient(row: &AuditRow) -> AnyView {
     .into_any()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The stored record with its patient identifier masked as the list masks
 /// it.
 fn masked_record(row: &AuditRow) -> String {
@@ -333,6 +341,90 @@ fn store_off() -> AnyView {
     })
 }
 
+/// The Audit log's model.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum LogModel {
+    /// The page of records the kept position finds.
+    Listed(Listed),
+    /// The CDR keeps no local audit store.
+    StoreOff,
+    /// The CDR's refusal.
+    Refused(Refused),
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads the Audit log: the page of records the request's filters and the
+/// kept position find, read again at the last page when the kept one is past
+/// it.
+async fn load_log() -> LogModel {
+    let filters = Filters::read();
+    let paging = Paging {
+        page: crate::paging::current(Listing::Audit).page,
+        size: PAGE_SIZE,
+    };
+    let asked = Window::over(u32::MAX, paging);
+    let refused = |error| LogModel::Refused(Refused::new(tr(Msg::AuditRefused), error));
+    let page = match filters.search(asked.start).await {
+        Ok(page) => page,
+        Err(error) => return refused(error),
+    };
+    if !page.available {
+        return LogModel::StoreOff;
+    }
+    let window = Window::over(page.total, paging);
+    if window.start == asked.start {
+        return LogModel::Listed(page);
+    }
+    match filters.search(window.start).await {
+        Ok(page) => LogModel::Listed(page),
+        Err(error) => refused(error),
+    }
+}
+
+/// The Audit log's list card over the page `page`.
+fn log_card(page: &Listed, filters: &Filters) -> AnyView {
+    let paging = Paging {
+        page: crate::paging::current(Listing::Audit).page,
+        size: PAGE_SIZE,
+    };
+    let fields = crate::paging::fields(Listing::Audit);
+    let window = Window::over(page.total, paging);
+    let list = if page.rows.is_empty() {
+        list_empty(
+            tr(if filters.any() {
+                Msg::AuditNoMatch
+            } else {
+                Msg::AuditEmpty
+            }),
+            None,
+        )
+    } else {
+        table(page, filters)
+    };
+    let pager = (window.pages > 1).then(|| {
+        post_pager(
+            PagerListing::new(tr(Msg::AuditPages)).sizes(SIZES),
+            window,
+            PostTo {
+                id: "audit-pager",
+                action: crate::paging::PAGING_ROUTE,
+                fields: &fields,
+            },
+        )
+    });
+    list_card(ListCard {
+        title: tr(Msg::AuditRecords),
+        count: Some(ferrohealth_ui::view::template::list::HeadingCount::All(
+            u64::from(page.total),
+        )),
+        order: None,
+        tabs: None,
+        actions: None,
+        body: list,
+        pager,
+    })
+}
+
 /// The Audit log.
 #[expect(
     clippy::must_use_candidate,
@@ -340,71 +432,128 @@ fn store_off() -> AnyView {
 )]
 #[component]
 pub fn AuditPage() -> impl IntoView {
-    let filters = Filters::read();
-    let kept = crate::paging::current(Listing::Audit);
-    let fields = crate::paging::fields(Listing::Audit);
-    let body = awaited(async move {
-        let paging = Paging {
-            page: kept.page,
-            size: PAGE_SIZE,
-        };
-        let asked = Window::over(u32::MAX, paging);
-        let mut page = match filters.search(asked.start).await {
-            Ok(page) => page,
-            Err(error) => return refused(tr(Msg::AuditRefused), &error, None),
-        };
-        if !page.available {
-            return store_off();
+    let model = page_model!(load_log());
+    let body = drawn(model, |model| match model {
+        LogModel::Listed(page) => {
+            let filters = Filters::read();
+            let card = log_card(&page, &filters);
+            view! { <div class="fui-list-page">{toolbar(&filters)} {chips(&filters)} {card}</div> }
+                .into_any()
         }
-        let window = Window::over(page.total, paging);
-        if window.start != asked.start {
-            page = match filters.search(window.start).await {
-                Ok(page) => page,
-                Err(error) => return refused(tr(Msg::AuditRefused), &error, None),
-            };
-        }
-        let list = if page.rows.is_empty() {
-            list_empty(
-                tr(if filters.any() {
-                    Msg::AuditNoMatch
-                } else {
-                    Msg::AuditEmpty
-                }),
-                None,
-            )
-        } else {
-            table(&page, &filters)
-        };
-        let pager = (window.pages > 1).then(|| {
-            post_pager(
-                PagerListing::new(tr(Msg::AuditPages)).sizes(SIZES),
-                window,
-                PostTo {
-                    id: "audit-pager",
-                    action: crate::paging::PAGING_ROUTE,
-                    fields: &fields,
-                },
-            )
-        });
-        let card = list_card(ListCard {
-            title: tr(Msg::AuditRecords),
-            count: Some(ferrohealth_ui::view::template::list::HeadingCount::All(
-                u64::from(page.total),
-            )),
-            order: None,
-            tabs: None,
-            actions: None,
-            body: list,
-            pager,
-        });
-        view! { <div class="fui-list-page">{toolbar(&filters)} {chips(&filters)} {card}</div> }
-            .into_any()
+        LogModel::StoreOff => store_off(),
+        LogModel::Refused(refusal) => refusal.view(),
     });
     view! {
         <Title text=tr(Msg::NavAudit) />
         {heading()}
         {body}
     }
+}
+
+/// One audit record's model.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum RecordModel {
+    /// The record, and its stored form with the patient identifier masked.
+    Found {
+        /// The record.
+        row: Box<AuditRow>,
+        /// Its stored form, masked.
+        masked: String,
+    },
+    /// No record answers the address.
+    Gone,
+    /// The CDR keeps no local audit store.
+    StoreOff,
+    /// The CDR's refusal.
+    Refused(Refused),
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads one audit record: found again by the filters and the instant it
+/// was recorded at.
+async fn load_record() -> RecordModel {
+    let place = use_params_map()
+        .with_untracked(|params| params.get("id"))
+        .and_then(|id| id.parse::<u32>().ok());
+    if place.is_none() {
+        crate::request::set_status(http::StatusCode::NOT_FOUND);
+        return RecordModel::Gone;
+    }
+    let at = crate::request::query("at").unwrap_or_default();
+    let mut bounded = Filters::read();
+    bounded.to.clone_from(&at);
+    let found = match bounded.search(0).await {
+        Ok(page) if !page.available => return RecordModel::StoreOff,
+        Ok(page) => page.rows.into_iter().find(|row| row.recorded == at),
+        Err(error) => return RecordModel::Refused(Refused::new(tr(Msg::AuditRefused), error)),
+    };
+    let Some(row) = found else {
+        crate::request::set_status(http::StatusCode::NOT_FOUND);
+        return RecordModel::Gone;
+    };
+    let masked = masked_record(&row);
+    RecordModel::Found {
+        row: Box::new(row),
+        masked,
+    }
+}
+
+/// One audit record, drawn.
+fn record(row: &AuditRow, masked: String) -> AnyView {
+    let facts = definitions(vec![
+        (tr(Msg::AuditWhen), when(&row.recorded)),
+        (
+            tr(Msg::AuditPrincipal),
+            if row.principal.is_empty() {
+                tr(Msg::AuditUnknown)
+            } else {
+                row.principal.clone()
+            }
+            .into_any(),
+        ),
+        (tr(Msg::AuditPatient), patient(row)),
+        (
+            tr(Msg::AuditWhat),
+            view! { <code>{row.resource.clone()}</code> }.into_any(),
+        ),
+        (tr(Msg::AuditAction), row.action.clone().into_any()),
+        (tr(Msg::AuditOutcome), outcome(row)),
+    ]);
+    let back = Filters::read().pairs("");
+    let back = if back.is_empty() {
+        "/audit".to_owned()
+    } else {
+        format!("/audit?{}", back.join("&"))
+    };
+    let heading = page_heading(
+        Header {
+            title: event(row).into(),
+            subtitle: Some(tr(Msg::AuditStoredAs).into()),
+            crumbs: vec![Crumb::new(tr(Msg::NavAudit), back)],
+            mono: false,
+            badge: None,
+            subtitle_view: None,
+        },
+        ActionGroup::none(),
+    );
+    view! {
+        <Title text=event(row) />
+        {heading}
+        <div class="fui-stack">
+            {card_panel(
+                view! {
+                    {section(Some(tr(Msg::AuditTheEvent)), None, None, facts)}
+                    {document_section(
+                        tr(Msg::AuditAsStored),
+                        Language::Json,
+                        masked,
+                        "audit-record",
+                    )}
+                },
+            )}
+        </div>
+    }
+    .into_any()
 }
 
 /// One audit record.
@@ -414,101 +563,24 @@ pub fn AuditPage() -> impl IntoView {
 )]
 #[component]
 pub fn AuditRecordPage() -> impl IntoView {
-    let place = use_params_map()
-        .with_untracked(|params| params.get("id"))
-        .and_then(|id| id.parse::<u32>().ok());
-    let filters = Filters::read();
-    let at = crate::request::query("at").unwrap_or_default();
-    let page = awaited(async move {
-        let Some(_place) = place else {
-            crate::request::set_status(http::StatusCode::NOT_FOUND);
-            return view! {
-                {heading()}
-                {crate::pages::common::info_note(tr(Msg::AuditRecordGone))}
-            }
-            .into_any();
-        };
-        let mut bounded = filters.clone();
-        bounded.to.clone_from(&at);
-        let found = match bounded.search(0).await {
-            Ok(page) if !page.available => {
-                return view! {
-                    {heading()}
-                    {store_off()}
-                }
-                .into_any();
-            }
-            Ok(page) => page.rows.into_iter().find(|row| row.recorded == at),
-            Err(error) => {
-                return view! {
-                    {heading()}
-                    {refused(tr(Msg::AuditRefused), &error, None)}
-                }
-                .into_any();
-            }
-        };
-        let Some(row) = found else {
-            crate::request::set_status(http::StatusCode::NOT_FOUND);
-            return view! {
-                {heading()}
-                {crate::pages::common::info_note(tr(Msg::AuditRecordGone))}
-            }
-            .into_any();
-        };
-        let facts = definitions(vec![
-            (tr(Msg::AuditWhen), when(&row.recorded)),
-            (
-                tr(Msg::AuditPrincipal),
-                if row.principal.is_empty() {
-                    tr(Msg::AuditUnknown)
-                } else {
-                    row.principal.clone()
-                }
-                .into_any(),
-            ),
-            (tr(Msg::AuditPatient), patient(&row)),
-            (
-                tr(Msg::AuditWhat),
-                view! { <code>{row.resource.clone()}</code> }.into_any(),
-            ),
-            (tr(Msg::AuditAction), row.action.clone().into_any()),
-            (tr(Msg::AuditOutcome), outcome(&row)),
-        ]);
-        let back = filters.pairs("");
-        let back = if back.is_empty() {
-            "/audit".to_owned()
-        } else {
-            format!("/audit?{}", back.join("&"))
-        };
-        let heading = page_heading(
-            Header {
-                title: event(&row).into(),
-                subtitle: Some(tr(Msg::AuditStoredAs).into()),
-                crumbs: vec![Crumb::new(tr(Msg::NavAudit), back)],
-                mono: false,
-                badge: None,
-                subtitle_view: None,
-            },
-            ActionGroup::none(),
-        );
-        view! {
-            <Title text=event(&row) />
-            {heading}
-            <div class="fui-stack">
-                {card_panel(
-                    view! {
-                        {section(Some(tr(Msg::AuditTheEvent)), None, None, facts)}
-                        {document_section(
-                            tr(Msg::AuditAsStored),
-                            Language::Json,
-                            masked_record(&row),
-                            "audit-record",
-                        )}
-                    },
-                )}
-            </div>
+    let model = page_model!(load_record());
+    let page = drawn(model, |model| match model {
+        RecordModel::Found { row, masked } => record(&row, masked),
+        RecordModel::Gone => view! {
+            {heading()}
+            {crate::pages::common::info_note(tr(Msg::AuditRecordGone))}
         }
-        .into_any()
+        .into_any(),
+        RecordModel::StoreOff => view! {
+            {heading()}
+            {store_off()}
+        }
+        .into_any(),
+        RecordModel::Refused(refusal) => view! {
+            {heading()}
+            {refusal.view()}
+        }
+        .into_any(),
     });
     view! { {page} }
 }

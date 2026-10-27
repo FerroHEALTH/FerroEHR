@@ -13,11 +13,6 @@
 //! only by editing the file and restarting, so nothing here can be changed.
 //! No openEHR spec governs configuration: our own design.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "the viewer reads the CDR's configuration JSON tree to draw its leaves"
-)]
-
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
@@ -30,9 +25,10 @@ use ferrohealth_ui::view::template::settings::{How, Setting, SettingsPage, Sourc
 use leptos::prelude::*;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params_map;
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
 
 use crate::locale::{Msg, tr};
+use crate::pages::common::{Refused, drawn, page_model};
 
 /// The id of the dialog the file line's How configuration works opens.
 const HOW_DIALOG: &str = "how-configuration";
@@ -68,7 +64,6 @@ fn how_dialog() -> AnyView {
     )
     .into_any()
 }
-use crate::pages::common::{awaited, refused};
 
 /// The sections of Configuration, each with the top-level keys of the CDR's
 /// configuration it holds; the viewer's own is last.
@@ -107,6 +102,7 @@ const SECTIONS: [(&str, Msg, &[&str]); 7] = [
     ("viewer", Msg::ConfigViewer, &[]),
 ];
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The section a top-level key belongs to: the one that names it, else
 /// Operations.
 fn section_of(top: &str) -> &'static str {
@@ -116,10 +112,60 @@ fn section_of(top: &str) -> &'static str {
         .map_or("operations", |(key, _, _)| key)
 }
 
+/// A leaf of the CDR's configuration as the page draws it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum Leaf {
+    /// A flag.
+    Flag(bool),
+    /// A string.
+    Text(String),
+    /// A number, as the CDR wrote it.
+    Number(String),
+    /// A null or an empty list.
+    Nothing,
+    /// A list, each item as text.
+    Items(Vec<String>),
+    /// An empty object.
+    Blank,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the viewer reads the CDR's configuration JSON tree to draw its leaves"
+)]
+impl From<&serde_json::Value> for Leaf {
+    fn from(value: &serde_json::Value) -> Self {
+        use serde_json::Value;
+        match value {
+            Value::Bool(yes) => Self::Flag(*yes),
+            Value::String(text) => Self::Text(text.clone()),
+            Value::Number(number) => Self::Number(number.to_string()),
+            Value::Null => Self::Nothing,
+            Value::Array(items) if items.is_empty() => Self::Nothing,
+            Value::Array(items) => Self::Items(
+                items
+                    .iter()
+                    .map(|item| match item {
+                        Value::String(text) => text.clone(),
+                        other => other.to_string(),
+                    })
+                    .collect(),
+            ),
+            Value::Object(_) => Self::Blank,
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 /// Every leaf of a configuration tree as its dotted key and value.
-fn leaves(prefix: &str, value: &Value, out: &mut Vec<(String, Value)>) {
+#[expect(
+    clippy::disallowed_types,
+    reason = "the viewer reads the CDR's configuration JSON tree to draw its leaves"
+)]
+fn leaves(prefix: &str, value: &serde_json::Value, out: &mut Vec<(String, Leaf)>) {
     match value {
-        Value::Object(object) => {
+        serde_json::Value::Object(object) => {
             for (key, child) in object {
                 let path = if prefix.is_empty() {
                     key.clone()
@@ -129,7 +175,7 @@ fn leaves(prefix: &str, value: &Value, out: &mut Vec<(String, Value)>) {
                 leaves(&path, child, out);
             }
         }
-        other => out.push((prefix.to_owned(), other.clone())),
+        other => out.push((prefix.to_owned(), Leaf::from(other))),
     }
 }
 
@@ -148,45 +194,38 @@ fn is_redacted(text: &str) -> bool {
     text == "***" || text.contains("://***")
 }
 
+/// The words of a setting without a value.
+fn none() -> AnyView {
+    view! { <span class="fui-muted">{tr(Msg::RelationshipNone)}</span> }.into_any()
+}
+
 /// The value of a setting as the row draws it.
-fn value_view(value: &Value) -> AnyView {
+fn value_view(value: &Leaf) -> AnyView {
     match value {
-        Value::Bool(true) => badge(Tone::Ok, tr(Msg::ConfigOn)).into_any(),
-        Value::Bool(false) => badge(Tone::Neutral, tr(Msg::ConfigOff)).into_any(),
-        Value::String(text) if is_redacted(text) => secret_state(&SecretState::Redacted),
-        Value::String(text) if text.is_empty() => {
-            view! { <span class="fui-muted">{tr(Msg::RelationshipNone)}</span> }.into_any()
-        }
-        Value::String(text) => view! { <code>{text.clone()}</code> }.into_any(),
-        Value::Number(number) => number.to_string().into_any(),
-        Value::Null => {
-            view! { <span class="fui-muted">{tr(Msg::RelationshipNone)}</span> }.into_any()
-        }
-        Value::Array(items) if items.is_empty() => {
-            view! { <span class="fui-muted">{tr(Msg::RelationshipNone)}</span> }.into_any()
-        }
-        Value::Array(items) => items
+        Leaf::Flag(true) => badge(Tone::Ok, tr(Msg::ConfigOn)).into_any(),
+        Leaf::Flag(false) => badge(Tone::Neutral, tr(Msg::ConfigOff)).into_any(),
+        Leaf::Text(text) if is_redacted(text) => secret_state(&SecretState::Redacted),
+        Leaf::Text(text) if text.is_empty() => none(),
+        Leaf::Text(text) => view! { <code>{text.clone()}</code> }.into_any(),
+        Leaf::Number(number) => number.clone().into_any(),
+        Leaf::Nothing => none(),
+        Leaf::Items(items) => items
             .iter()
-            .map(|item| match item {
-                Value::String(text) => view! {
-                    <code>{text.clone()}</code>
+            .map(|item| {
+                view! {
+                    <code>{item.clone()}</code>
                     " "
                 }
-                .into_any(),
-                other => view! {
-                    <code>{other.to_string()}</code>
-                    " "
-                }
-                .into_any(),
+                .into_any()
             })
             .collect_view()
             .into_any(),
-        Value::Object(_) => ().into_any(),
+        Leaf::Blank => ().into_any(),
     }
 }
 
 /// One setting row of a CDR configuration leaf.
-fn setting(key: &str, value: &Value) -> Setting {
+fn setting(key: &str, value: &Leaf) -> Setting {
     Setting {
         label: label_of(key),
         description: String::new(),
@@ -209,93 +248,197 @@ fn own(label: Msg, description: Msg, key: &str, value: AnyView) -> Setting {
     }
 }
 
-/// A secret of the viewer's own: read from its file, set inline, or unset.
-fn own_secret(file: &str, inline: &str) -> AnyView {
-    let state = if !file.is_empty() {
-        SecretState::Set(file.to_owned())
-    } else if !inline.is_empty() {
-        SecretState::Redacted
-    } else {
-        SecretState::Unset
-    };
-    secret_state(&state)
+/// Where a secret of the viewer's own comes from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum OwnSecret {
+    /// Read from this file.
+    File(String),
+    /// Set inline.
+    Inline,
+    /// Unset.
+    Unset,
 }
 
+impl OwnSecret {
+    #[cfg(not(target_arch = "wasm32"))]
+    /// The secret read from `file` or set as `inline`.
+    fn of(file: &str, inline: &str) -> Self {
+        if !file.is_empty() {
+            Self::File(file.to_owned())
+        } else if !inline.is_empty() {
+            Self::Inline
+        } else {
+            Self::Unset
+        }
+    }
+
+    /// The secret, drawn.
+    fn view(&self) -> AnyView {
+        let state = match self {
+            Self::File(file) => SecretState::Set(file.clone()),
+            Self::Inline => SecretState::Redacted,
+            Self::Unset => SecretState::Unset,
+        };
+        secret_state(&state)
+    }
+}
+
+/// The viewer's own settings, as the configuration it loaded holds them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct Own {
+    /// `cdr.base_url`.
+    base_url: String,
+    /// `cdr.base_path`.
+    base_path: String,
+    /// `cdr.management_base_url`.
+    management_base_url: String,
+    /// `auth.basic_enabled`.
+    basic: bool,
+    /// `auth.oidc.issuer`, when OpenID Connect sign-in is on.
+    oidc: Option<String>,
+    /// `auth.oidc.client_secret_file` or `client_secret`.
+    oidc_secret: OwnSecret,
+    /// `session.idle_minutes`.
+    idle_minutes: u64,
+    /// `session.secret_file` or `secret`.
+    session_secret: OwnSecret,
+    /// `ui.locale`.
+    locale: String,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 /// The viewer's own settings, from the configuration it loaded.
-fn viewer_settings() -> Vec<Setting> {
-    let Some(state) = crate::request::state() else {
+fn read_own() -> Option<Own> {
+    let state = crate::request::state()?;
+    let config = &state.config;
+    Some(Own {
+        base_url: config.cdr.base_url.clone(),
+        base_path: config.cdr.base_path.clone(),
+        management_base_url: config.cdr.management_base_url.clone(),
+        basic: config.auth.basic_enabled,
+        oidc: config
+            .auth
+            .oidc
+            .enabled
+            .then(|| config.auth.oidc.issuer.clone()),
+        oidc_secret: OwnSecret::of(
+            &config.auth.oidc.client_secret_file,
+            &config.auth.oidc.client_secret,
+        ),
+        idle_minutes: config.session.idle_minutes,
+        session_secret: OwnSecret::of(&config.session.secret_file, &config.session.secret),
+        locale: config.ui.locale.clone(),
+    })
+}
+
+/// The viewer's own settings as rows.
+fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
+    let Some(config) = loaded else {
         return Vec::new();
     };
-    let config = &state.config;
     let code = |text: &str| view! { <code>{text.to_owned()}</code> }.into_any();
-    let on = |yes: bool| value_view(&Value::Bool(yes));
+    let on = |yes: bool| value_view(&Leaf::Flag(yes));
     vec![
         own(
             Msg::ConfigCdrAddress,
             Msg::ConfigCdrAddressLine,
             "cdr.base_url",
-            code(&config.cdr.base_url),
+            code(&config.base_url),
         ),
         own(
             Msg::ConfigCdrBasePath,
             Msg::ConfigCdrBasePathLine,
             "cdr.base_path",
-            code(&config.cdr.base_path),
+            code(&config.base_path),
         ),
         own(
             Msg::ConfigManagementAddress,
             Msg::ConfigManagementAddressLine,
             "cdr.management_base_url",
-            code(&config.cdr.management_base_url),
+            code(&config.management_base_url),
         ),
         own(
             Msg::ConfigBasicSignIn,
             Msg::ConfigBasicSignInLine,
             "auth.basic_enabled",
-            on(config.auth.basic_enabled),
+            on(config.basic),
         ),
         own(
             Msg::ConfigOidcSignIn,
             Msg::ConfigOidcSignInLine,
             "auth.oidc.issuer",
-            if config.auth.oidc.enabled {
-                code(&config.auth.oidc.issuer)
-            } else {
-                on(false)
-            },
+            config.oidc.as_deref().map_or_else(|| on(false), code),
         ),
         own(
             Msg::ConfigOidcSecret,
             Msg::ConfigOidcSecretLine,
             "auth.oidc.client_secret_file",
-            own_secret(
-                &config.auth.oidc.client_secret_file,
-                &config.auth.oidc.client_secret,
-            ),
+            config.oidc_secret.view(),
         ),
         own(
             Msg::ConfigIdle,
             Msg::ConfigIdleLine,
             "session.idle_minutes",
-            crate::locale::tr_with(
-                Msg::ConfigMinutes,
-                &[("count", config.session.idle_minutes.into())],
-            )
-            .into_any(),
+            crate::locale::tr_with(Msg::ConfigMinutes, &[("count", config.idle_minutes.into())])
+                .into_any(),
         ),
         own(
             Msg::ConfigSessionKey,
             Msg::ConfigSessionKeyLine,
             "session.secret_file",
-            own_secret(&config.session.secret_file, &config.session.secret),
+            config.session_secret.view(),
         ),
         own(
             Msg::ConfigLanguage,
             Msg::ConfigLanguageLine,
             "ui.locale",
-            code(&config.ui.locale),
+            code(&config.locale),
         ),
     ]
+}
+
+/// The settings a section shows.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum Shown {
+    /// The CDR's leaves of the section, by their dotted key.
+    Cdr(Vec<(String, Leaf)>),
+    /// The viewer's own, when the render was given its configuration.
+    Viewer(Option<Own>),
+    /// The CDR's refusal of its configuration.
+    Refused(Refused),
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads the settings of `section`: the viewer's own, or the CDR's leaves
+/// that belong to it.
+#[expect(
+    clippy::disallowed_types,
+    reason = "the viewer reads the CDR's configuration JSON tree to draw its leaves"
+)]
+async fn load(section: String) -> Shown {
+    if section == "viewer" {
+        return Shown::Viewer(read_own());
+    }
+    match crate::bff::system::fetch_admin_config().await {
+        Ok(body) => match serde_json::from_str::<serde_json::Value>(&body) {
+            Ok(tree) => {
+                let mut all = Vec::new();
+                leaves("", &tree, &mut all);
+                Shown::Cdr(
+                    all.into_iter()
+                        .filter(|(key, _)| {
+                            section_of(key.split('.').next().unwrap_or(key)) == section
+                        })
+                        .collect(),
+                )
+            }
+            Err(error) => Shown::Refused(Refused::new(
+                tr(Msg::ConfigRefused),
+                crate::error::ViewerError::Internal(error.to_string()),
+            )),
+        },
+        Err(error) => Shown::Refused(Refused::new(tr(Msg::ConfigRefused), error)),
+    }
 }
 
 /// Configuration.
@@ -309,39 +452,18 @@ pub fn ConfigurationPage() -> impl IntoView {
         .with_untracked(|params| params.get("section"))
         .filter(|section| SECTIONS.iter().any(|(key, _, _)| key == section))
         .unwrap_or_else(|| "deployment".to_owned());
-    let page = awaited(async move {
+    let model = page_model!(load(section.clone()));
+    let page = drawn(model, move |shown| {
         let viewer = section == "viewer";
-        let (settings, trouble) = if viewer {
-            (viewer_settings(), None)
-        } else {
-            match crate::bff::system::fetch_admin_config().await {
-                Ok(body) => match serde_json::from_str::<Value>(&body) {
-                    Ok(tree) => {
-                        let mut all = Vec::new();
-                        leaves("", &tree, &mut all);
-                        let rows = all
-                            .iter()
-                            .filter(|(key, _)| {
-                                section_of(key.split('.').next().unwrap_or(key)) == section
-                            })
-                            .map(|(key, value)| setting(key, value))
-                            .collect();
-                        (rows, None)
-                    }
-                    Err(error) => (
-                        Vec::new(),
-                        Some(refused(
-                            tr(Msg::ConfigRefused),
-                            &crate::error::ViewerError::Internal(error.to_string()),
-                            None,
-                        )),
-                    ),
-                },
-                Err(error) => (
-                    Vec::new(),
-                    Some(refused(tr(Msg::ConfigRefused), &error, None)),
-                ),
-            }
+        let (settings, trouble) = match shown {
+            Shown::Cdr(rows) => (
+                rows.iter()
+                    .map(|(key, value)| setting(key, value))
+                    .collect(),
+                None,
+            ),
+            Shown::Viewer(own) => (viewer_settings(own), None),
+            Shown::Refused(refusal) => (Vec::new(), Some(refusal.view())),
         };
         let tabs = SECTIONS
             .iter()
