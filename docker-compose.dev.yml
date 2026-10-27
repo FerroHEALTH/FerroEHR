@@ -97,7 +97,7 @@ services:
     security_opt:
       - no-new-privileges:true
     profiles: [keycloak]
-    image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
+    image: quay.io/keycloak/keycloak:26.8.1@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b
     # Root only because a fresh named volume is root-owned; no capability.
     user: "0"
     entrypoint: ["bash", "/usr/local/bin/keycloak-tls.sh"]
@@ -113,9 +113,9 @@ services:
     security_opt:
       - no-new-privileges:true
     profiles: [keycloak]
-    # Digest-pinned quay.io/keycloak/keycloak:26.7.0 (current release), resolved
-    # 2026-07-24 (docs.docker.com/build/building/best-practices).
-    image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
+    # Digest-pinned quay.io/keycloak/keycloak:26.8.1 (current release), resolved
+    # 2026-10-27 (docs.docker.com/build/building/best-practices).
+    image: quay.io/keycloak/keycloak:26.8.1@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b
     command: ["start-dev", "--import-realm"]
     depends_on:
       keycloak-tls:

@@ -332,6 +332,20 @@ curl -H "Authorization: Bearer $TOKEN" -X POST -i \
   http://localhost:8080/ferroehr/rest/openehr/v1/ehr
 ```
 
+A service with no user behind it takes the client-credentials grant with the
+same client. The client's service account holds `USER`, so the token reaches
+the clinical API and the admin routes refuse it with `403`:
+
+```shell
+TOKEN=$(curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
+  -d grant_type=client_credentials \
+  http://localhost:8081/auth/realms/ferroehr/protocol/openid-connect/token \
+  | jq -r .access_token)
+```
+
+The client's authorization-code flow requires PKCE (`S256`) and accepts only the
+viewer's origin on port 3000 as a redirect target.
+
 > [!WARNING]
 > The realm, the client secret, the user passwords and the CA are demo values,
 > served by a Keycloak in `start-dev` mode. For a real deployment, drop this
