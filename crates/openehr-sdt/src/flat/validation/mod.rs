@@ -571,7 +571,7 @@ fn sibling_index_from_segments<'a>(
 pub(crate) fn prepare_walk(node: &mut WebTemplateNode) {
     let plan = NodeWalk::build(node);
     node.walk = Some(Box::new(plan));
-    for child in &mut node.children {
+    for child in node.children.iter_mut().chain(node.alternatives.iter_mut()) {
         prepare_walk(child);
     }
 }
@@ -690,6 +690,23 @@ fn collect_unenforceable(node: &WebTemplateNode, out: &mut Vec<UnenforceableCons
     }
 }
 
+/// `node` followed by every alternative folded into it, depth first.
+fn collect_alternatives<'a>(node: &'a WebTemplateNode, out: &mut Vec<&'a WebTemplateNode>) {
+    out.push(node);
+    for alt in &node.alternatives {
+        collect_alternatives(alt, out);
+    }
+}
+
+/// The RM types of `nodes`, comma-separated, for a refusal message.
+fn rm_types(nodes: &[&WebTemplateNode]) -> String {
+    nodes
+        .iter()
+        .map(|n| n.rm_type.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 impl Validator {
     fn push(&mut self, path: impl Into<String>, message: impl Into<String>, kind: ValidationKind) {
         self.out.push(ValidationMessage {
@@ -740,7 +757,19 @@ impl Validator {
         }
     }
 
+    /// Visit an instance node matched to `wt`, or to any of the alternatives
+    /// the builder folded into it.
     fn walk(&mut self, instance: &Value, wt: &WebTemplateNode) {
+        if wt.alternatives.is_empty() {
+            self.walk_node(instance, wt);
+        } else {
+            self.visit_choice(instance, &[wt]);
+        }
+    }
+
+    /// Visit an instance node against `wt` alone, ignoring its folded
+    /// alternatives.
+    fn walk_node(&mut self, instance: &Value, wt: &WebTemplateNode) {
         if let Some(inst_type) = instance.get("_type").and_then(Value::as_str)
             && !subtype::conforms(inst_type, &wt.rm_type)
         {
@@ -1079,32 +1108,81 @@ impl Validator {
         }
     }
 
-    /// Route a matched instance node to the type-choice alternative it conforms
-    /// to; if it conforms to none, report a single `WrongType`.
-    #[expect(
-        clippy::indexing_slicing,
-        reason = "`visit_choice` is only reached from `check_group` with `members.len() > 1`, so `group[0]` exists"
-    )]
+    /// Validate a matched instance node against a set of alternative object
+    /// constraints on one single-valued attribute: the group members and the
+    /// alternatives folded into each.
+    ///
+    /// The instance is valid when it matches any one alternative whose RM type
+    /// it conforms to, tried with an exact type match first. When none matches,
+    /// the refusal names every alternative and keeps each one's findings.
+    // NOTE: ADL 1.4 `master05-cadl.adoc` §"Single-valued Attributes": alternative
+    // constraints, "only one of which needs to be matched by the data" (AOM 1.4
+    // `C_SINGLE_ATTRIBUTE.children`).
     fn visit_choice(&mut self, target: &Value, group: &[&WebTemplateNode]) {
-        match target.get("_type").and_then(Value::as_str) {
-            Some(it) => {
-                if let Some(alt) = group.iter().find(|c| subtype::conforms(it, &c.rm_type)) {
-                    self.walk(target, alt);
-                } else {
-                    let expected: Vec<&str> = group.iter().map(|c| c.rm_type.as_str()).collect();
-                    self.push(
-                        &group[0].aql_path,
-                        format!(
-                            "value type {it} conforms to none of the permitted types [{}]",
-                            expected.join(", ")
-                        ),
-                        ValidationKind::WrongType,
-                    );
-                }
+        let mut candidates: Vec<&WebTemplateNode> = Vec::new();
+        for member in group {
+            collect_alternatives(member, &mut candidates);
+        }
+        let Some(&first) = candidates.first() else {
+            return;
+        };
+        // No `_type`: recurse against the first alternative; the RM-invariant
+        // pass covers structural issues.
+        let Some(it) = target.get("_type").and_then(Value::as_str) else {
+            self.walk_node(target, first);
+            return;
+        };
+        let mut conforming: Vec<&WebTemplateNode> = candidates
+            .iter()
+            .copied()
+            .filter(|c| subtype::conforms(it, &c.rm_type))
+            .collect();
+        conforming.sort_by_key(|c| c.rm_type != it);
+        if conforming.is_empty() {
+            self.push(
+                &first.aql_path,
+                format!(
+                    "value type {it} conforms to none of the permitted types [{}]",
+                    rm_types(&candidates)
+                ),
+                ValidationKind::WrongType,
+            );
+            return;
+        }
+        let mut refusals: Vec<(Vec<ValidationMessage>, Vec<ConstraintBindingCheck>)> = Vec::new();
+        for alt in &conforming {
+            let mark = self.out.len();
+            let bindings_mark = self.bindings.len();
+            self.walk_node(target, alt);
+            if self.out.len() == mark {
+                return;
             }
-            // No `_type`: recurse against the first alternative; the RM-invariant
-            // pass covers structural issues.
-            None => self.walk(target, group[0]),
+            refusals.push((
+                self.out.split_off(mark),
+                self.bindings.split_off(bindings_mark),
+            ));
+        }
+        if let [(findings, bindings)] = refusals.as_mut_slice() {
+            self.out.append(findings);
+            self.bindings.append(bindings);
+            return;
+        }
+        self.push(
+            &first.aql_path,
+            format!(
+                "value of type {it} matches none of the alternatives [{}]",
+                rm_types(&conforming)
+            ),
+            ValidationKind::WrongType,
+        );
+        for (alt, (findings, _)) in conforming.iter().zip(refusals) {
+            for finding in findings {
+                self.push(
+                    finding.path,
+                    format!("alternative {}: {}", alt.rm_type, finding.message),
+                    finding.kind,
+                );
+            }
         }
     }
 

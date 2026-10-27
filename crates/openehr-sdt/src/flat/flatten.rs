@@ -200,6 +200,11 @@ fn walk_child(
             .children
             .iter()
             .any(|c| c.id != child.id && c.aql_path == child.aql_path);
+    // NOTE: no openEHR spec governs which of several same-type alternatives
+    // carries a value in FLAT, our own design: the first one, so it is emitted once.
+    if in_choice && shadowed_by_earlier_alternative(node, child) {
+        return;
+    }
     let occurrences = occurrences_of(child, rm, &rel, in_choice, names);
     if occurrences.is_empty() {
         return;
@@ -226,6 +231,15 @@ fn walk_child(
             map::emit_rm_attrs(element, "ELEMENT", slot);
         }
     }
+}
+
+/// Whether an earlier choice alternative of `node` shares `child`'s path and
+/// RM type, and so already emits every value `child` would.
+fn shadowed_by_earlier_alternative(node: &WebTemplateNode, child: &WebTemplateNode) -> bool {
+    node.children
+        .iter()
+        .take_while(|c| !std::ptr::eq(*c, child))
+        .any(|c| c.aql_path == child.aql_path && base_type(&c.rm_type) == base_type(&child.rm_type))
 }
 
 /// One emitted occurrence of a template child: the RM value its relative path

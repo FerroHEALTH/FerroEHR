@@ -320,6 +320,18 @@ pub struct WebTemplateNode {
     #[serde(skip)]
     pub structural_stubs: Vec<WebTemplateStructuralStub>,
 
+    /// The other object constraints on this node's attribute that the builder
+    /// folded into it: the `DV_TEXT` beside a `DV_CODED_TEXT` that the node
+    /// presents as an open value-set with `|other` (ITS-REST
+    /// `simplified_formats` master04 §"Open Value-Sets and the `|other`
+    /// Suffix"), or a coded sibling the compactor dropped. They stay out of
+    /// the metadata document, and the validation walk accepts an instance
+    /// that matches this node or any one of them (ADL 1.4 `master05-cadl.adoc`
+    /// §"Single-valued Attributes": "only one of which needs to be matched by
+    /// the data"). Validation-only; `#[serde(skip)]`.
+    #[serde(skip)]
+    pub alternatives: Vec<WebTemplateNode>,
+
     // ── build-time scratch (never serialized) ────────────────────────────────
     /// Full `parent/segment` id chain, used to scope dedup and cardinality ids.
     #[serde(skip)]
@@ -387,6 +399,7 @@ impl WebTemplateNode {
             constraint_bindings: Vec::new(),
             closed_attributes: Vec::new(),
             structural_stubs: Vec::new(),
+            alternatives: Vec::new(),
             full_id: String::new(),
             alt_json_id: None,
             name_code: None,

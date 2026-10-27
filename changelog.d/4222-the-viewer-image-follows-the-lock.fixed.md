@@ -1,0 +1,1 @@
+- The compose-built viewer image builds its WebAssembly bindings again: its wasm-bindgen CLI now follows the wasm-bindgen version `Cargo.lock` resolves instead of a separate pin that had fallen behind it. A CI guard holds every other wasm-bindgen and cargo-leptos pin to the lock and to one another, and CI builds the viewer image from source whenever its Dockerfile changes.

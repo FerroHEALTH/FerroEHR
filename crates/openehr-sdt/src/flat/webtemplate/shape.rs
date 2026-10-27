@@ -102,8 +102,9 @@ pub(super) fn post_process(node: &mut WebTemplateNode) {
 
 /// Merges an ELEMENT's coded-text and text alternatives for ONE attribute into a
 /// coded text with `other` (master04 §"Open Value-Sets and the `|other`
-/// Suffix"); a `value` beside a `null_flavour` constrains two attributes and
-/// stays two children.
+/// Suffix"), keeping the text node in the coded node's `alternatives`; a
+/// `value` beside a `null_flavour` constrains two attributes and stays two
+/// children.
 fn post_process_element(node: &mut WebTemplateNode) {
     if let [first_child, second_child] = node.children.as_slice()
         && first_child.aql_path == second_child.aql_path
@@ -137,7 +138,24 @@ fn compact_to_coded_with_other(node: &mut WebTemplateNode, coded: usize, text: u
     let mut other = WebTemplateInput::new(WebTemplateInputType::Text, Some("other"));
     other.list_open = Some(true);
     coded_child.inputs.push(other);
-    node.children.remove(text);
+    let text_child = node.children.remove(text);
+    keep_as_alternative(&mut node.children, coded, text, text_child);
+}
+
+/// Records a folded sibling on the node that absorbed it, so the validation
+/// walk still accepts what the folded constraint allows.
+///
+/// `kept` and `dropped` are the two indices before `dropped` was removed.
+fn keep_as_alternative(
+    children: &mut [WebTemplateNode],
+    kept: usize,
+    dropped: usize,
+    folded: WebTemplateNode,
+) {
+    let kept = if dropped < kept { kept - 1 } else { kept };
+    if let Some(node) = children.get_mut(kept) {
+        node.alternatives.push(folded);
+    }
 }
 
 fn post_process_composition(node: &mut WebTemplateNode) {
@@ -690,7 +708,7 @@ fn is_skippable(rm_type: &str) -> bool {
 /// Merge a two-child `DV_CODED_TEXT` + `DV_TEXT` pair with equal paths into a
 /// coded-text-with-`other` — the open-value-set discriminator of master04
 /// §"Open Value-Sets and the `|other` Suffix" (`listOpen: true` plus an `other`
-/// free-text input).
+/// free-text input), keeping the text node in the coded node's `alternatives`.
 fn compact_coded_text_with_other(children: &mut Vec<WebTemplateNode>) {
     let [first, second] = children.as_slice() else {
         return;
@@ -712,7 +730,8 @@ fn compact_coded_text_with_other(children: &mut Vec<WebTemplateNode>) {
         let mut other = WebTemplateInput::new(WebTemplateInputType::Text, Some("other"));
         other.list_open = Some(true);
         coded_child.inputs.push(other);
-        children.remove(text);
+        let text_child = children.remove(text);
+        keep_as_alternative(children, coded, text, text_child);
     }
 }
 
@@ -727,7 +746,8 @@ fn compact_coded_text_with_other(children: &mut Vec<WebTemplateNode>) {
 /// nodes is compacted — if one carries a validation-constrained input and the
 /// other does not, the constrained one is kept and the other dropped; otherwise
 /// the two coded lists are unioned (dedup by code, order preserved) onto the
-/// first node and the second is dropped.
+/// first node and the second is dropped. A dropped node moves to the kept
+/// node's `alternatives`, which the validation walk still accepts.
 ///
 /// Our coded-text nodes fold `defining_code` into the node's `inputs`, so the
 /// qualifying pair is two same-path `DV_CODED_TEXT`/`CODE_PHRASE` siblings and the
@@ -743,7 +763,8 @@ fn compact_multiple_coded_texts(children: &mut Vec<WebTemplateNode>) {
         groups.entry(child.aql_path.clone()).or_default().push(i);
     }
 
-    let mut to_remove: Vec<usize> = Vec::new();
+    // (keep, drop) pairs: the dropped sibling folds into the kept one.
+    let mut to_remove: Vec<(usize, usize)> = Vec::new();
     // (keep, drop) pairs whose coded lists are unioned.
     let mut merges: Vec<(usize, usize)> = Vec::new();
     for idxs in groups.values() {
@@ -756,20 +777,27 @@ fn compact_multiple_coded_texts(children: &mut Vec<WebTemplateNode>) {
             is_input_constrained(&children[a]),
             is_input_constrained(&children[b]),
         ) {
-            (true, false) => to_remove.push(b),
-            (false, true) => to_remove.push(a),
+            (true, false) => to_remove.push((a, b)),
+            (false, true) => to_remove.push((b, a)),
             _ => merges.push((a, b)),
         }
     }
 
     for (keep, drop) in merges {
         union_coded_lists(children, keep, drop);
-        to_remove.push(drop);
+        to_remove.push((keep, drop));
     }
 
-    to_remove.sort_unstable();
-    to_remove.dedup();
-    for i in to_remove.into_iter().rev() {
+    // The dropped coded constraint stays an alternative of the kept node
+    // (ADL 1.4 master05-cadl §"Single-valued Attributes").
+    for &(keep, drop) in &to_remove {
+        let folded = children[drop].clone();
+        children[keep].alternatives.push(folded);
+    }
+    let mut dropped: Vec<usize> = to_remove.into_iter().map(|(_, drop)| drop).collect();
+    dropped.sort_unstable();
+    dropped.dedup();
+    for i in dropped.into_iter().rev() {
         children.remove(i);
     }
 }
