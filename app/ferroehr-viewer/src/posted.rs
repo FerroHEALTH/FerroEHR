@@ -11,8 +11,8 @@
 //! beside the fields as they were posted, so a draft is never lost. A field
 //! that can carry clinical content therefore never reaches a URL. The app
 //! shares the form with the browser as the page's other request state is
-//! shared ([`provide_posted`]), and the browser lets it go at the first
-//! navigation within the page ([`FollowNavigation`]). No openEHR spec governs
+//! shared ([`provide_posted`]), and the browser lets it go as it draws the
+//! first page after the one posted to ([`let_go`]). No openEHR spec governs
 //! this: our own design.
 
 use std::sync::Arc;
@@ -121,27 +121,12 @@ pub fn provide_posted() {
     provide_context(PostedNow(ArcRwSignal::new(posted)));
 }
 
-/// Lets the shared form go at the first navigation within the page.
-///
-/// It sits inside the router. Effects run in the browser alone, so the
-/// server draws nothing for it.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn FollowNavigation() -> impl IntoView {
-    let location = leptos_router::hooks::use_location();
-    let now = use_context::<PostedNow>();
-    Effect::watch(
-        move || (location.pathname.get(), location.search.get()),
-        move |_, _, _| {
-            if let Some(now) = &now {
-                now.navigated();
-            }
-        },
-        false,
-    );
+/// Lets the shared form go: the browser draws a page after the one posted
+/// to, which answers no post.
+pub fn let_go() {
+    if let Some(now) = use_context::<PostedNow>() {
+        now.navigated();
+    }
 }
 
 /// The form the page answers, when the request posted one.

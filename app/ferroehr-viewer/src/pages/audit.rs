@@ -32,15 +32,12 @@ use ferrohealth_ui::view::template::list::{
 use ferrohealth_ui::widget::identifier::{Domain, KEEP, Masked};
 use leptos::prelude::*;
 use leptos_meta::Title;
-#[cfg(not(target_arch = "wasm32"))]
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
 use crate::bff::PAGE_SIZE;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::bff::audit::search_audit;
 use crate::bff::audit::{ACTIONS, AuditPage as Listed, AuditRow, OUTCOMES};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{
@@ -352,11 +349,24 @@ enum LogModel {
     Refused(Refused),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the Audit log: the page of records the request's filters and the
 /// kept position find, read again at the last page when the kept one is past
 /// it.
-async fn load_log() -> LogModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_log(
+    /// The path and query of the page.
+    href: String,
+) -> Result<LogModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_log().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_log`] reads, on the server.
+async fn read_log() -> LogModel {
     let filters = Filters::read();
     let paging = Paging {
         page: crate::paging::current(Listing::Audit).page,
@@ -468,13 +478,26 @@ enum RecordModel {
     Refused(Refused),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads one audit record: found again by the filters and the instant it
 /// was recorded at.
-async fn load_record() -> RecordModel {
-    let place = use_params_map()
-        .with_untracked(|params| params.get("id"))
-        .and_then(|id| id.parse::<u32>().ok());
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_record(
+    /// The path and query of the page.
+    href: String,
+    /// The record's place the route names.
+    id: Option<String>,
+) -> Result<RecordModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_record(id).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_record`] reads, on the server.
+async fn read_record(id: Option<String>) -> RecordModel {
+    let place = id.and_then(|id| id.parse::<u32>().ok());
     if place.is_none() {
         crate::request::set_status(http::StatusCode::NOT_FOUND);
         return RecordModel::Gone;
@@ -563,7 +586,8 @@ fn record(row: &AuditRow, masked: String) -> AnyView {
 )]
 #[component]
 pub fn AuditRecordPage() -> impl IntoView {
-    let model = page_model!(load_record());
+    let id = crate::routes::params().with(|params| params.get("id"));
+    let model = page_model!(load_record(id));
     let page = drawn(model, |model| match model {
         RecordModel::Found { row, masked } => record(&row, masked),
         RecordModel::Gone => view! {

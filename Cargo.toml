@@ -396,7 +396,7 @@ leptos_router = "0.8.17"
 # The shared FerroHEALTH console components, role tokens, stylesheet and table
 # model (FerroUI), pinned exactly: a console moves its pin after looking at its
 # own screens.
-ferrohealth-ui = { version = "=0.4.0", features = ["split"] }
+ferrohealth-ui = "=0.5.1"
 # The viewer's string catalogs (#300): Project Fluent messages embedded at
 # build time from app/ferroehr-viewer/locales/, the crate and version
 # ferrohealth-ui catalogs its own words with, so one locale drives both.
@@ -404,6 +404,10 @@ ferrohealth-ui = { version = "=0.4.0", features = ["split"] }
 fluent-templates = { version = "0.15.1", default-features = false, features = ["macros", "walkdir"] }
 wasm-bindgen = "0.2.129"
 console_error_panic_hook = "0.1"
+# The viewer's browser half awaits a lazy route group's code itself (the
+# future `LazyRoute::view` returns is not `Send`), as leptos_router's own
+# nested router does with the same crate (verified on crates.io 2026-10-27).
+send_wrapper = { version = "0.6.0", features = ["futures"] }
 # E2E WebDriver client (dev-dep of the viewer). Default features off: the
 # `manager` feature downloads and unpacks a WebDriver binary through zip 8
 # (RUSTSEC-2026-0367/0368/0369, #3806); the journeys reach a chromedriver

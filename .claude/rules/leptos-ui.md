@@ -12,13 +12,14 @@ before any viewer change:
 - the consumer guide, [`docs/consoles.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/docs/consoles.md):
   how a console takes the library, what it keeps local, how it moves to a
   new release;
-- the component rules, [`.claude/rules/leptos-ui.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.3.7/.claude/rules/leptos-ui.md):
+- the component rules, [`.claude/rules/leptos-ui.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.5.2/.claude/rules/leptos-ui.md):
   the mandates (§0), the four-layer interaction contract (§1), reactivity,
   views, forms, tables and paging, accessibility to WCAG 2.2 AA, tokens and
   themes, icons, the bundle (§12), the catalogs (§13), the book's rules (§14)
-  and the island rules (§15);
-- the crate discipline, [`crates/ferrohealth-ui/CLAUDE.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/crates/ferrohealth-ui/CLAUDE.md):
-  the interaction contract, islands mode and the list of ready islands;
+  and the hydration rules (§15);
+- the crate discipline, [`crates/ferrohealth-ui/CLAUDE.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.5.2/crates/ferrohealth-ui/CLAUDE.md):
+  the interaction contract, the whole page hydrated and the list of ready
+  components;
 - the reviewed design, [`design/README.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/design/README.md),
   [`design/COMPONENTS.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/design/COMPONENTS.md)
   (the component IDs such as R9, F13 and E1 to E8, the family rules, the
@@ -26,10 +27,10 @@ before any viewer change:
   [`design/consoles/ferroehr/`](https://github.com/FerroHEALTH/FerroUI/tree/main/design/consoles/ferroehr).
 
 **The pin decides the version you read.** The viewer pins `ferrohealth-ui =
-"=0.3.7"` (root `Cargo.toml`, with its `split` feature), so the component rules, the guide, the crate
-discipline and the design are read at the tag `v0.3.7`. The viewer runs in
-islands mode under the four-layer interaction contract since the console
-rollout (FerroHEALTH/FerroUI#161).
+"=0.5.2"` (root `Cargo.toml`), so the component rules, the guide, the crate
+discipline and the design are read at the tag `v0.5.2`. The viewer hydrates
+the whole page and draws every page after the first in the browser, under
+the four-layer interaction contract (FerroHEALTH/FerroUI#410, #4116).
 FerroUI's `design/` is the only design source: a design folder anywhere
 else is stale and never synced from.
 
@@ -54,8 +55,8 @@ book (leptos-rs/book `main`, Leptos 0.8; `/leptos-lookup`), never memory.
   depend on `app/ferroehr` or `app/ferroehr-rest`.
 - **Every route and every `#[server]` fn is a public HTTP endpoint**
   (`server/25_server_functions`). A page is behind the login guard; a post is
-  refused from another origin; a `#[server]` fn an island calls enforces the
-  session itself and is declared
+  refused from another origin; every `#[server]` fn enforces the session
+  itself (a page's model through `crate::request::visiting`) and is declared
   `#[server(client = crate::session_client::SessionAwareClient)]`. CDR
   credentials never leave the server.
 
@@ -64,9 +65,13 @@ book (leptos-rs/book `main`, Leptos 0.8; `/leptos-lookup`), never memory.
 - One crate, two halves: the server binary and the rlib on the host, the
   cdylib on `wasm32-unknown-unknown`. They are chosen by compilation target
   (`cfg(target_arch = "wasm32")`), never by a Cargo feature pair. Server-only
-  dependencies sit under `[target.'cfg(not(target_arch = "wasm32"))'.dependencies]`,
-  and every module but the islands, the errors, the locale, the session
-  client and the request state is server-only (`src/lib.rs`).
+  dependencies sit under `[target.'cfg(not(target_arch = "wasm32"))'.dependencies]`.
+  The app, the routes, the shell, the pages and every module they draw from
+  compile on both halves; the server-only modules are the ones `src/lib.rs`
+  gates (`admin`, `aql_text`, `cdr`, `chart_model`, `config`, `download`,
+  `export`, `feedback`, `manufacturer`, `oidc`, `queries_api`, `server`,
+  `served_vocabulary`, `session`, `state`, `system_api`), and a server-only
+  helper inside a shared module carries its own `cfg`.
 - **The request state reaches both halves through shared values.** The
   server reads the path, the query, the display cookies, who is signed in,
   the viewer's settings and the instant it draws the page at once per page
@@ -76,26 +81,43 @@ book (leptos-rs/book `main`, Leptos 0.8; `/leptos-lookup`), never memory.
   through an `ArcOnceResource` (`crate::shell::Status`). A view reads them
   through the same functions on both halves (`request::path`,
   `request::query`, `request::signed`, `request::settings`, `request::now`,
-  `prefs::current`, `paging::current`, `posted::posted`), and never reads the
-  clock itself; `request::session`, `request::state`, `set_status` and
-  `set_cookie` stay on the server. The visit carries no session cookie and
-  no credential. The posted form lets go at the first navigation within the
-  page.
+  `prefs::current`, `paging::current`, `posted::posted`,
+  `routes::params`), and never reads the clock itself; `request::session`,
+  `request::state`, `set_status` and `set_cookie` stay on the server. The
+  visit carries no session cookie and no credential. In the browser the route
+  group sets the visit's address before it draws a page
+  (`request::follow_address`), `request::FollowVisit` asks the server for the
+  rest after each navigation and post, and the posted form lets go once the
+  browser draws another page.
 - WASM is 32-bit: never `usize`/`isize` in an island prop, a server-fn
   argument or any serialized shared type.
 - **Views are built in `.into_any()`-erased sections**: plain `cargo` builds
   have no `erase_components`, and a monolithic `view!` blows rustc's layout
   recursion in `cargo test` codegen.
 - The site is built with `--split` (the wrapper `scripts/cargo-leptos.sh`
-  adds it): FerroUI's lazy islands import from a placeholder module that only
-  the split rewrites, and without it no island hydrates (FerroUI #331).
+  adds it): the lazy route groups import from a placeholder module that only
+  the split rewrites, and without it nothing hydrates.
 
-## 2. Pages are drawn on the server
+## 2. Pages: the server draws the first, the browser every page after it
 
-- Every route is `SsrMode::Async` and answers `GET` and `POST`: a post renders
-  the page it was posted to, with `crate::posted::posted()` as the form. A
-  page's reads are awaited in `pages::common::awaited` (a `Suspense` over one
+- The pages sit in six lazy groups (`src/routes.rs`): `routes::ROUTES` is the
+  one route table, the shell's one route (`routes::Pages`) loads the group
+  that holds the page the address names, and the group draws that page again
+  as the address changes. A new page joins `ROUTES`, `routes::Page` and its
+  group. A route parameter is read with `routes::params()`, never
+  `use_params_map`, since the router holds one route.
+- The server answers every document `SsrMode::Async` and every route takes
+  `GET` and `POST`: a post renders the page it was posted to, with
+  `crate::posted::posted()` as the form. A page's model is one server function
+  (`load_…`, under `page_model!`) around a server-only `read_…`: the server's
+  render calls it in place and the browser asks for it after a navigation.
+  It is drawn with `pages::common::drawn` or `docked` (a `Suspense` over one
   `Suspend`); never a `Resource` the browser re-runs.
+- A link and a `GET` form navigate in the page (FerroUI's `FormNavigator`);
+  a viewer post loads a new document, the server's answer; FerroUI's
+  preference, theme, rail and pager forms post in the background. A link to
+  a route that is no page carries `rel="external"` or `download`
+  (FerroUI's `Act::Download`), and an export submit FerroUI's `RELOADS`.
 - A form's default action is a hidden `default-intent`; a submit button's
   `name="intent"` wins (`Posted::intent`), whatever the order of the fields.
 - A success redirects (`crate::flash::redirect_with`, a toast in a flash
@@ -109,16 +131,19 @@ book (leptos-rs/book `main`, Leptos 0.8; `/leptos-lookup`), never memory.
 - A table row is one link (FerroUI R9); another control in the row sits in
   `.fui-table-actions` or the row menu.
 
-## 3. Islands
+## 3. Hydration
 
-- An island is the only part of a page the browser hydrates. Its props cross
-  as serialized data, its words are resolved on the server (`*Words::of_page()`),
-  and the page around it works without it: a control an island drives is a
-  link or a submit until it hydrates (FerroUI's §15).
-- An editor is editable from the first paint; never wait for the island to
+- The browser entry hydrates the whole page with FerroUI's
+  `widget::hydration::hydrate`, which writes `data-ferroui-hydrated` on the
+  root element once the page and its lazy group have hydrated and leaves
+  every click and submit to the browser until then. Nothing changes a node
+  the server drew before that mark, and a browser journey waits for it.
+- A page works without the WebAssembly: a control a component drives is a
+  link or a submit until the page hydrates (FerroUI's §15).
+- An editor is editable from the first paint; never wait for hydration to
   enable a field a page with no WebAssembly needs.
-- The viewer's own islands live in `src/islands.rs`: the code editor, the
-  template source upload, the subject reveal.
+- The viewer's own components live in `src/components.rs`: the code editor,
+  the template source upload, the subject reveal.
 
 ## 4. URL state and patient data
 
@@ -176,13 +201,17 @@ brotli-compressed, is over the number below, which it reads from this table.
 |---|---|
 | WebAssembly, brotli-compressed | 450000 bytes |
 
-The release build on 2026-10-24, on FerroUI 0.3.6 in islands mode with
-`--split` and its `split` feature, measured 425829 brotli bytes for the
-WebAssembly every page loads (424918 on FerroUI 0.3.4,
-1425689 on FerroUI 0.1.4 with whole-page hydration); the lazy islands' chunks
-load only on a page that draws them and are not counted. The budget leaves
-about 8% for growth. Raise it only in the change that needs the room, with the
-new measurement.
+The release build on 2026-10-27, on FerroUI 0.5.1 with the whole page
+hydrated, the pages in six lazy groups and `--split`, measured 448763 brotli
+bytes for the entry WebAssembly every page loads (399352 for the shell alone
+with stub pages, 425829 on FerroUI 0.3.6 in islands mode); a group's chunks
+load with its pages and are not counted. The entry carries the shell, the
+router, both catalogs and the read-only data of every page, which the split
+leaves in the entry; what keeps it in budget is one route for the router
+(`routes::Pages`, one erased `Suspend` for every group), the page models read
+as server functions only from the groups, and the shell reading its status on
+the server alone. Raise the budget only in the change that needs the room,
+with the new measurement.
 
 ## 8. Strings and locales
 

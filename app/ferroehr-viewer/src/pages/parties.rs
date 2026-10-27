@@ -38,7 +38,6 @@ use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::widget::editor::EditorWords;
 use leptos::prelude::*;
 use leptos_meta::Title;
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
 use crate::bff::demographics::contribution::ContributionState;
@@ -64,11 +63,10 @@ use crate::bff::demographics::{
 };
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
 use crate::clinical::RenderedSection;
-#[cfg(not(target_arch = "wasm32"))]
+use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
-use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::locale::{Msg, message, tr, tr_with};
 use crate::pages::common::{
     EditorDock, Refused, ago, at_time_row, card_panel, count, dock_editor, docked,
@@ -169,15 +167,11 @@ fn collect_text(node: &serde_json::Value, words: &mut Vec<String>) {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// The kind and the id the route names.
-fn party_params() -> (Option<PartyKind>, String) {
-    use_params_map().with_untracked(|params| {
+/// The kind's segment and the id the route names.
+fn party_route() -> (String, String) {
+    crate::routes::params().with(|params| {
         (
-            params
-                .get("kind")
-                .as_deref()
-                .and_then(PartyKind::from_segment),
+            params.get("kind").unwrap_or_default(),
             params.get("uid").unwrap_or_default(),
         )
     })
@@ -185,8 +179,8 @@ fn party_params() -> (Option<PartyKind>, String) {
 
 /// The id the route names.
 fn uid_param() -> String {
-    use_params_map()
-        .with_untracked(|params| params.get("uid"))
+    crate::routes::params()
+        .with(|params| params.get("uid"))
         .unwrap_or_default()
 }
 
@@ -333,10 +327,23 @@ enum PartiesModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Parties: opens the party the address asks for, or reads the tag
 /// index.
-async fn load_parties() -> PartiesModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_parties(
+    /// The path and query of the page.
+    href: String,
+) -> Result<PartiesModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_parties().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_parties`] reads, on the server.
+async fn read_parties() -> PartiesModel {
     let kind = crate::request::query("kind")
         .as_deref()
         .and_then(PartyKind::from_segment)
@@ -554,9 +561,22 @@ enum Creating<T> {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads New party: answers its post (Discard, Start over, Create).
-async fn load_new_party() -> Creating<NewParty> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_new_party(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Creating<NewParty>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_new_party().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_new_party`] reads, on the server.
+async fn read_new_party() -> Creating<NewParty> {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect("/parties");
@@ -1093,16 +1113,33 @@ enum PartyModel {
     NoKind,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the party `uid` of `kind`: answers its post, reads its versions,
 /// the version asked for and what the tab shows; a party the CDR does not
 /// hold, or a kind it has not, answers `404`.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_party(
+    /// The path and query of the page.
+    href: String,
+    /// The kind of party the route names, as its segment.
+    kind: String,
+    /// The party the route names.
+    uid: String,
+) -> Result<PartyModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_party(&kind, uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_party`] reads, on the server.
 #[expect(
     clippy::too_many_lines,
     reason = "one loader: the versions, the version in view, the post and the tab's read"
 )]
-async fn load_party() -> PartyModel {
-    let (kind, uid) = party_params();
+async fn read_party(kind: &str, uid: String) -> PartyModel {
+    let kind = PartyKind::from_segment(kind);
     let Some(kind) = kind else {
         crate::request::set_status(http::StatusCode::NOT_FOUND);
         return PartyModel::NoKind;
@@ -1245,15 +1282,7 @@ fn party_missing(uid: &str, refusal: &Refused) -> AnyView {
 
 /// The page of an address that names no kind of party.
 fn no_kind() -> AnyView {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        crate::pages::errors::not_found_page()
-    }
-    // TODO(#4147): the not-found page draws on the browser half too.
-    #[cfg(target_arch = "wasm32")]
-    {
-        ().into_any()
-    }
+    crate::pages::errors::not_found_page()
 }
 
 /// The tabs of a party: its versions alone when it is deleted.
@@ -1442,7 +1471,8 @@ fn party_view(uid: &str, party: Party) -> AnyView {
 #[component]
 pub fn PartyPage() -> impl IntoView {
     let uid = uid_param();
-    let model = page_model!(load_party());
+    let (kind_segment, uid_segment) = party_route();
+    let model = page_model!(load_party(kind_segment, uid_segment));
     let page = drawn(model, move |model| match model {
         PartyModel::Shown(party) => party_view(&uid, *party),
         PartyModel::Missing(refusal) => party_missing(&uid, &refusal),
@@ -1630,11 +1660,28 @@ enum Editing<T> {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Edit a party: answers its post (Discard, Save) over the current
 /// version.
-async fn load_edit_party() -> Editing<PartyEditor> {
-    let (kind, uid) = party_params();
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_edit_party(
+    /// The path and query of the page.
+    href: String,
+    /// The kind of party the route names, as its segment.
+    kind: String,
+    /// The party the route names.
+    uid: String,
+) -> Result<Editing<PartyEditor>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_edit_party(&kind, uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_edit_party`] reads, on the server.
+async fn read_edit_party(kind: &str, uid: String) -> Editing<PartyEditor> {
+    let kind = PartyKind::from_segment(kind);
     let posted = crate::posted::posted();
     let Some(kind) = kind else {
         crate::request::set_status(http::StatusCode::NOT_FOUND);
@@ -1823,7 +1870,8 @@ fn not_editing<T>(model: Editing<T>, draw: impl FnOnce(T) -> AnyView) -> AnyView
 pub fn EditPartyPage() -> impl IntoView {
     let uid = uid_param();
     let dock_promise = crate::shell::promise_dock();
-    let model = page_model!(load_edit_party());
+    let (kind_segment, uid_segment) = party_route();
+    let model = page_model!(load_edit_party(kind_segment, uid_segment));
     let page = docked(model, dock_promise, move |model| {
         not_editing(model, |editor| edit_party_view(&uid, editor))
     });
@@ -1868,10 +1916,25 @@ enum RelationshipModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the relationship `uid`: answers its delete and reads its versions;
 /// one the CDR does not hold answers `404`.
-async fn load_relationship(uid: String) -> RelationshipModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_relationship(
+    /// The path and query of the page.
+    href: String,
+    /// The id the route names.
+    uid: String,
+) -> Result<RelationshipModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_relationship(uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_relationship`] reads, on the server.
+async fn read_relationship(uid: String) -> RelationshipModel {
     let state = match fetch_relationship(uid.clone()).await {
         Ok(Some(state)) => state,
         Ok(None) => return RelationshipModel::Deleted,
@@ -2121,10 +2184,23 @@ struct NewRelationship {
     unwritten: Option<Unwritten>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads New relationship: answers its post (Discard, Create) and names the
 /// source party.
-async fn load_new_relationship() -> Creating<NewRelationship> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_new_relationship(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Creating<NewRelationship>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_new_relationship().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_new_relationship`] reads, on the server.
+async fn read_new_relationship() -> Creating<NewRelationship> {
     let posted = crate::posted::posted();
     let field = |name: &str| {
         posted
@@ -2365,10 +2441,25 @@ struct RelationshipEditor {
     unwritten: Option<Unwritten>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Edit a relationship: answers its post (Discard, Save) over the
 /// current version.
-async fn load_edit_relationship(uid: String) -> Editing<RelationshipEditor> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_edit_relationship(
+    /// The path and query of the page.
+    href: String,
+    /// The id the route names.
+    uid: String,
+) -> Result<Editing<RelationshipEditor>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_edit_relationship(uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_edit_relationship`] reads, on the server.
+async fn read_edit_relationship(uid: String) -> Editing<RelationshipEditor> {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&relationship_href(&uid));
@@ -2576,10 +2667,25 @@ pub fn EditRelationshipPage() -> impl IntoView {
     view! { {page} }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the demographic contribution `uid`; one the CDR does not hold
 /// answers `404`.
-async fn load_party_contribution(uid: String) -> Result<ContributionState, Refused> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_party_contribution(
+    /// The path and query of the page.
+    href: String,
+    /// The id the route names.
+    uid: String,
+) -> Result<Result<ContributionState, Refused>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_party_contribution(uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_party_contribution`] reads, on the server.
+async fn read_party_contribution(uid: String) -> Result<ContributionState, Refused> {
     match fetch_demographic_contribution(uid).await {
         Ok(mut state) => {
             state.body =

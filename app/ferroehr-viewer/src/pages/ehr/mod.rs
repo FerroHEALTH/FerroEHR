@@ -35,7 +35,6 @@ use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::widget::identifier::{Domain, KEEP};
 use ferrohealth_ui::widget::identifier::{IdentifierWords, Masked};
 use leptos::prelude::*;
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -82,8 +81,8 @@ impl EhrTab {
 /// The EHR id the route names.
 #[must_use]
 pub fn ehr_id_param() -> String {
-    use_params_map()
-        .with_untracked(|params| params.get("ehr_id"))
+    crate::routes::params()
+        .with(|params| params.get("ehr_id"))
         .unwrap_or_default()
 }
 
@@ -379,7 +378,7 @@ fn subject(ehr_id: &str, subject: Option<&SubjectFacts>) -> AnyView {
         ),
         Who::Masked(masked) => Subject::External(
             view! {
-                <crate::islands::SubjectReveal
+                <crate::components::SubjectReveal
                     id="subject".to_owned()
                     ehr_id=ehr_id.to_owned()
                     masked=masked.clone()

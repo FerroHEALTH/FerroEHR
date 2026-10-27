@@ -4,8 +4,8 @@
 ITS-REST-1.1.0 CDR, this server or any other. It is a **pure REST client**:
 everything it does goes through the CDR's public API (never the database),
 so what you see in the viewer is exactly what the API serves. The whole
-application is Rust (Leptos, drawn on the server, with WebAssembly islands)
-on FerroUI, the component library the FerroHEALTH consoles share; there is no
+application is Rust (Leptos, drawn on the server and hydrated in the browser,
+which then draws each page after the first itself) on FerroUI, the component library the FerroHEALTH consoles share; there is no
 hand-written JavaScript anywhere, including its browser tests.
 
 <!-- toc -->

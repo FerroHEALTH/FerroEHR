@@ -154,9 +154,23 @@ enum LoginModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the sign-in page: answers its Basic post and reads the screen.
-async fn load_login() -> LoginModel {
+///
+/// # Errors
+/// None of its own: the server function fails only when the browser cannot
+/// reach it.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_login(
+    /// The path and query of the page.
+    href: String,
+) -> Result<LoginModel, ViewerError> {
+    crate::request::visiting_public(&href);
+    Ok(read_login().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_login`] reads, on the server.
+async fn read_login() -> LoginModel {
     let attempt = match crate::posted::posted() {
         Some(posted) => {
             let username = posted.text("username");

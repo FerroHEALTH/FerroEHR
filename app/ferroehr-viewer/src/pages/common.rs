@@ -31,45 +31,61 @@ where
     view! { <Suspense fallback=|| ()>{Suspend::new(answer)}</Suspense> }.into_any()
 }
 
-/// The resource of a page's model, read once by `load` on the server.
+/// The resource of a page's model, read by its server function.
 ///
-/// The loader is the one place a page reads or writes the CDR, answers its
-/// post and redirects; the view draws the model it resolves to on either
-/// half. A hydrating browser takes the model the server serialized and never
-/// polls a future (Leptos `OnceResource`).
+/// `page_model!(load(args))` calls the server function `load` with the
+/// address of the page being drawn before `args`: on the server a plain call,
+/// in the browser a call to the viewer's server for a page it draws after a
+/// navigation. The loader is the one place a page reads or writes the CDR,
+/// answers its post and redirects; the view draws the model it resolves to on
+/// either half. A hydrating browser takes the model the server serialized and
+/// never polls the future (Leptos `OnceResource`).
 macro_rules! page_model {
-    ($load:expr) => {{
-        #[cfg(not(target_arch = "wasm32"))]
-        let model = ::leptos::prelude::OnceResource::new($load);
-        // TODO(#4147): a page the browser draws fresh asks the server for its model.
-        #[cfg(target_arch = "wasm32")]
-        let model = ::leptos::prelude::OnceResource::new(::std::future::pending());
-        model
-    }};
+    ($load:ident ( $($arg:expr),* $(,)? )) => {
+        ::leptos::prelude::OnceResource::new($load(crate::request::path_and_query() $(, $arg)*))
+    };
 }
 pub(crate) use page_model;
 
+/// The model `answer` holds, or its refusal drawn when the server function
+/// that reads it did not answer.
+fn answered<T>(answer: Result<T, ViewerError>) -> Result<T, AnyView> {
+    answer.map_err(|error| refused(tr(Msg::PageRefused), &error, None))
+}
+
 /// The view `draw` makes of the model `model` resolves to.
 #[must_use]
-pub fn drawn<T, F>(model: OnceResource<T>, draw: F) -> AnyView
+pub fn drawn<T, F>(model: OnceResource<Result<T, ViewerError>>, draw: F) -> AnyView
 where
     T: Clone + Send + Sync + serde::Serialize + serde::de::DeserializeOwned + 'static,
     F: FnOnce(T) -> AnyView + Send + 'static,
 {
-    awaited(async move { draw(model.await) })
+    awaited(async move {
+        match answered(model.await) {
+            Ok(model) => draw(model),
+            Err(refusal) => refusal,
+        }
+    })
 }
 
 /// The view `draw` makes of the model `model` resolves to, on a page that
 /// docks a decision bar: `promise` is held until the view is drawn, so the
 /// shell waits for the dock the view sets.
 #[must_use]
-pub fn docked<T, F>(model: OnceResource<T>, promise: crate::shell::DockPromise, draw: F) -> AnyView
+pub fn docked<T, F>(
+    model: OnceResource<Result<T, ViewerError>>,
+    promise: crate::shell::DockPromise,
+    draw: F,
+) -> AnyView
 where
     T: Clone + Send + Sync + serde::Serialize + serde::de::DeserializeOwned + 'static,
     F: FnOnce(T) -> AnyView + Send + 'static,
 {
     awaited(async move {
-        let view = draw(model.await);
+        let view = match answered(model.await) {
+            Ok(model) => draw(model),
+            Err(refusal) => refusal,
+        };
         #[cfg_attr(
             target_arch = "wasm32",
             expect(
@@ -805,8 +821,11 @@ mod tests {
     fn today_and_the_activity_window_count_from_the_instant_the_page_carries() {
         let owner = leptos::prelude::Owner::new();
         owner.with(|| {
-            leptos::prelude::provide_context(crate::request::Visit {
-                now: "2026-10-23T23:30:00Z".parse().expect("an instant"),
+            crate::request::provide(crate::request::Visit {
+                now: "2026-10-23T23:30:00Z"
+                    .parse::<jiff::Timestamp>()
+                    .expect("an instant")
+                    .as_millisecond(),
                 ..crate::request::Visit::default()
             });
             assert_eq!(

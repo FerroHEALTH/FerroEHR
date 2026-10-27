@@ -37,7 +37,6 @@ use ferrohealth_ui::view::template::list::list_empty;
 use ferrohealth_ui::widget::editor::EditorWords;
 use leptos::prelude::*;
 use leptos_meta::Title;
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -48,11 +47,10 @@ use crate::bff::ehr_detail::contributions::ContributionPage as Listed;
 use crate::bff::ehr_detail::contributions::{
     contribution_activity, fetch_contribution, list_contributions,
 };
-#[cfg(not(target_arch = "wasm32"))]
+use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
-use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::locale::{Msg, message, tr, tr_with};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::pages::common::discarded;
@@ -60,7 +58,6 @@ use crate::pages::common::{
     EditorDock, LastDays, Refused, ago, card_panel, count, dock_editor, docked, document_section,
     drawn, page_model, panel, section, shortened, version_number, when,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_href, ehr_id_param, ehr_view, tab_href};
 use crate::paging::Listing;
@@ -179,9 +176,24 @@ struct ContributionsPanel {
     list: Result<Listed, Refused>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the Contributions tab.
-async fn load_tab(ehr_id: String) -> EhrModel<ContributionsPanel> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_tab(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+) -> Result<EhrModel<ContributionsPanel>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_tab(ehr_id).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_tab`] reads, on the server.
+async fn read_tab(ehr_id: String) -> EhrModel<ContributionsPanel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let activity = contribution_activity(ehr_id.clone())
             .await
@@ -380,10 +392,27 @@ enum ContributionModel {
     Refused(Refused),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the contribution `uid` of the EHR `ehr_id`; one the CDR does not
 /// hold answers `404`.
-async fn load_contribution(ehr_id: String, uid: String) -> ContributionModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_contribution(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+    /// The id the route names.
+    uid: String,
+) -> Result<ContributionModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_contribution(ehr_id, uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_contribution`] reads, on the server.
+async fn read_contribution(ehr_id: String, uid: String) -> ContributionModel {
     let body = match fetch_contribution(ehr_id, uid).await {
         Ok(body) => body,
         Err(error) => {
@@ -448,8 +477,8 @@ fn contribution_view(ehr_id: &str, facts: &Read, record: String) -> AnyView {
 #[component]
 pub fn ContributionPage() -> impl IntoView {
     let ehr_id = ehr_id_param();
-    let uid = use_params_map()
-        .with_untracked(|params| params.get("uid"))
+    let uid = crate::routes::params()
+        .with(|params| params.get("uid"))
         .unwrap_or_default();
     let title = tr_with(Msg::ContributionTitle, &[("id", shortened(&uid).into())]);
     let mut trail = crumbs(&ehr_id);
@@ -890,10 +919,25 @@ enum NewModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads New contribution: answers its post (Discard, a step of the form,
 /// Commit) and reads what its changes start from and what the picks offer.
-async fn load_new(ehr_id: String) -> NewModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_new(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+) -> Result<NewModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_new(ehr_id).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_new`] reads, on the server.
+async fn read_new(ehr_id: String) -> NewModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&tab_href(&ehr_id, EhrTab::Contributions));
@@ -1105,7 +1149,7 @@ pub fn NewContributionPage() -> impl IntoView {
 mod tests {
     use super::drafts;
     use crate::bff::ehr_detail::commit::staged::StagedKind;
-    use crate::islands::EditorField;
+    use crate::components::EditorField;
     use crate::posted::Posted;
 
     fn posted(fields: &[(&str, &str)]) -> Posted {

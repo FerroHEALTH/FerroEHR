@@ -621,7 +621,7 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             "/about".to_owned(),
-            vec!["ferrohealth-ui 0.4.0", "The conformance manifest"],
+            vec!["ferrohealth-ui 0.5.1", "The conformance manifest"],
         ),
         ("/access".to_owned(), vec!["Signed in as", "ferroehr"]),
         (
@@ -824,10 +824,12 @@ async fn a_run_draws_the_rows_and_the_exports_post_the_query_again() {
     let main = answer.main();
     assert!(main.contains(&id("ehr")), "{main}");
     let csv = main
-        .find(r#"type="submit" formaction="/export/aql/csv" role="menuitem""#)
+        .find(
+            r#"type="submit" formaction="/export/aql/csv" data-ferroui-reloads="" role="menuitem""#,
+        )
         .unwrap_or_else(|| panic!("Export's CSV item submits the run's form: {main}"));
     let json = main
-        .find(r#"type="submit" formaction="/export/aql/json" role="menuitem""#)
+        .find(r#"type="submit" formaction="/export/aql/json" data-ferroui-reloads="" role="menuitem""#)
         .unwrap_or_else(|| panic!("Export's JSON item submits the run's form: {main}"));
     assert!(csv < json, "Export lists CSV before JSON: {main}");
     assert!(

@@ -1,8 +1,9 @@
 # `ferroehr-viewer`: the viewer (a FerroUI console over ITS-REST)
 
-A standalone Leptos 0.8 app in islands mode, built by cargo-leptos (the server
-binary and the WebAssembly islands, the two halves chosen by compilation
-target, never by Cargo feature) with its own OCI image. It is a REST client
+A standalone Leptos 0.8 app that hydrates the whole page, built by
+cargo-leptos (the server binary and the WebAssembly, split by route group, the
+two halves chosen by compilation target, never by Cargo feature) with its own
+OCI image. It is a REST client
 of the CDR; no openEHR spec governs the viewer (our own design); the wire it
 consumes is spec-bound (`docs/specs/openehr/ITS-REST/` and the served
 `openapi.json`).
@@ -21,16 +22,32 @@ consumes is spec-bound (`docs/specs/openehr/ITS-REST/` and the served
    slugs).
 3. **Every route is a public HTTP endpoint.** A page checks the session
    itself (the login guard in `src/server.rs`); a post is checked for its
-   `Origin`; a `#[server]` fn left for an island checks the session too and
-   is declared with `crate::session_client::SessionAwareClient`.
+   `Origin`; every `#[server]` fn checks the session too (a page's model
+   through `crate::request::visiting`) and is declared with
+   `crate::session_client::SessionAwareClient`.
 
 ## How a page works (FerroUI's interaction contract)
 
-- **The server draws every page whole** (`SsrMode::Async`); the browser
-  hydrates only the islands (`src/islands.rs` and FerroUI's own). Every link
-  is a link and every action a form, so each page works with no WebAssembly:
-  native elements first (`<dialog>` with `command`/`commandfor`, `popover`,
-  `<details>`), then Rust behaviour in an island, never hand-written JS.
+- **The server draws the first page whole** (`SsrMode::Async`) and the
+  browser hydrates it, then draws every page after it itself: the pages sit
+  in six lazy route groups (`src/routes.rs`, overview, records, definitions,
+  queries, console and the sign-in), each drawing the page its address names
+  (`routes::Page::of`), and the shell is drawn once (`shell::AppShell`, with
+  FerroUI's `follow_path`). A link and a `GET` form navigate in the page
+  (FerroUI's `FormNavigator`); FerroUI's own preference, theme, rail and
+  pager forms post in the background; every other post, an export and a
+  download load a new document. Every link is a link and every action a
+  form, so each page works with no WebAssembly: native elements first
+  (`<dialog>` with `command`/`commandfor`, `popover`, `<details>`), then Rust
+  behaviour in a component, never hand-written JS. A link to a route that
+  is no page (a download) carries `rel="external"` or `download`.
+- **A page reads one model through its server function** (`page_model!`,
+  `common::drawn`, `common::docked`): the server-only `read_…` answers the
+  post, reads the CDR, redirects and sets the status; the `load_…` server
+  function around it checks the session and reads the visit of the page
+  that asked (`request::visiting`), so the server's render calls it in
+  place and the browser asks for it after a navigation. A route parameter
+  the loader needs is an argument, never a `use_params_map` inside it.
 - **A post renders the page it was posted to.** Every route takes `GET` and
   `POST`; `crate::posted::posted()` is the form the page answers. A form's
   default action rides as `default-intent` and the submitter's own `intent`
@@ -52,7 +69,12 @@ consumes is spec-bound (`docs/specs/openehr/ITS-REST/` and the served
 - **The request state is shared** (`crate::request::Visit`, read once by the
   server and provided through `SharedValue`): a view reads the path, query,
   display cookies, who is signed in and the settings through `crate::request`
-  on both halves, and never the credential or the session cookie.
+  on both halves, and never the credential or the session cookie. In the
+  browser the route group sets the visit's address as the router moves, and
+  `request::FollowVisit` asks the server for the rest again after each
+  navigation and post (`request::asked::visit_now`), setting the root's
+  theme, density, motion and hints and loading the page anew for a new
+  language.
 - **Session listings keep their position in a cookie** (`crate::paging`,
   FerroUI `leptos-ui.md` §0): the EHRs, an EHR's compositions and
   contributions, the audit log. Filters stay in the URL.
@@ -129,8 +151,12 @@ do not silence `linker_messages`.
 (the browser half, `--lib`), `cargo nextest run -p ferroehr-viewer` (the
 in-process `ssr_app` suite replays a recorded CDR, `tests/fixtures/cdr/`),
 leptosfmt (src and tests) then cargo fmt, `bash scripts/cargo-leptos.sh build`
-(the wrapper: it freezes `Cargo.lock` and builds with `--split`, which
-FerroUI's lazy islands need, FerroUI #331). The E2E journeys (the `e2e_*`
-modules under `tests/it/`, skip-with-reason via `UI_E2E_BASE_URL`) gate merges
-in CI at 1440 px and at 390 px (`UI_E2E_VIEWPORT=phone`); a UI-visual change
-re-captures the book's screenshots (`UI_E2E_DOCS_SHOTS`, `ui-screenshot-guard`).
+(the wrapper: it freezes `Cargo.lock` and builds with `--split`, which the
+lazy route groups need: without it the glue imports a placeholder no browser
+resolves and nothing hydrates). The E2E journeys (the `e2e_*` modules under
+`tests/it/`, skip-with-reason via `UI_E2E_BASE_URL`) gate merges in CI at
+1440 px and at 390 px (`UI_E2E_VIEWPORT=phone`), each waiting for FerroUI's
+`data-ferroui-hydrated` before it acts; `e2e_navigation` holds a navigation
+to the same document and `e2e_no_wasm` every page with the WebAssembly
+withheld. A UI-visual change re-captures the book's screenshots
+(`UI_E2E_DOCS_SHOTS`, `ui-screenshot-guard`).

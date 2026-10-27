@@ -46,7 +46,6 @@ use ferrohealth_ui::widget::upload::UploadWords;
 use leptos::prelude::*;
 use leptos::server;
 use leptos_meta::Title;
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -66,12 +65,12 @@ use crate::bff::templates::{
     upload_template,
 };
 use crate::builder::catalog::CatalogNode;
+use crate::components::SourceUpload;
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::format::ReprFormat;
-use crate::islands::SourceUpload;
 use crate::locale::{Msg, message, tr, tr_with};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::pages::common::discarded;
@@ -615,7 +614,7 @@ pub fn UploadTemplatePage() -> impl IntoView {
                                             } else {
                                                 &[".opt", ".xml"]
                                             },
-                                            crate::islands::SOURCE_MAX_BYTES,
+                                            crate::components::SOURCE_MAX_BYTES,
                                         )
                                     />
                                 },
@@ -958,7 +957,7 @@ fn template_header(
             Item::new(Action::new(
                 Some(Glyph::DOWNLOAD),
                 tr(Msg::TemplateDownload),
-                Act::Link(download),
+                Act::Download(download),
             )),
             Item::new(Action::new(
                 Some(Glyph::COPY),
@@ -1098,8 +1097,8 @@ pub async fn load_template(
 )]
 #[component]
 pub fn TemplatePage() -> impl IntoView {
-    let template_id = use_params_map()
-        .with_untracked(|params| params.get("template_id"))
+    let template_id = crate::routes::params()
+        .with(|params| params.get("template_id"))
         .unwrap_or_default();
     let tab = match TemplateTab::asked() {
         TemplateTab::Json => TemplateTab::Overview,
@@ -1412,7 +1411,7 @@ pub async fn load_adl2_template(
 )]
 #[component]
 pub fn Adl2TemplatePage() -> impl IntoView {
-    let (asked_id, asked_release) = use_params_map().with_untracked(|params| {
+    let (asked_id, asked_release) = crate::routes::params().with(|params| {
         (
             params.get("template_id").unwrap_or_default(),
             params.get("release"),

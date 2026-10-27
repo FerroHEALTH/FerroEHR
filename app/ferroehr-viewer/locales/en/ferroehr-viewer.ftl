@@ -1290,6 +1290,7 @@ sign-in-cdr-unreachable = The CDR did not answer. You can still try to sign in.
 ## Common words
 
 try-again = Try again
+page-refused = This page could not be read.
 unknown-count = —
 upload-a-template = Upload a template
 your-preferences = Your preferences

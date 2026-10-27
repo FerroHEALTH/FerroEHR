@@ -3,11 +3,11 @@
 
 //! The pages of the viewer, each a route of `crate::app`.
 //!
-//! A page that draws from a serializable model compiles on both halves; the
-//! others still draw on the server alone. No openEHR spec governs the viewer:
-//! our own design.
+//! Every page draws from a serializable model its server function reads, so
+//! it compiles on both halves: the server draws the first page, and the
+//! browser every page after it. No openEHR spec governs the viewer: our own
+//! design.
 
-// TODO(#4116): every page draws from a model and compiles for wasm32.
 pub mod about;
 pub mod access;
 pub mod audit;
@@ -17,7 +17,6 @@ pub mod configuration;
 pub mod dashboard;
 pub mod ehr;
 pub mod ehrs;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod errors;
 pub mod find;
 pub mod item_tags;

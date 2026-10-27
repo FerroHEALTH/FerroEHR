@@ -28,7 +28,6 @@ use ferrohealth_ui::view::tabs::{Tab, binder};
 use leptos::prelude::*;
 use leptos::server;
 use leptos_meta::Title;
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
@@ -409,8 +408,8 @@ pub async fn load_terminology(
 )]
 #[component]
 pub fn TerminologyPage() -> impl IntoView {
-    let id = use_params_map()
-        .with_untracked(|params| params.get("id"))
+    let id = crate::routes::params()
+        .with(|params| params.get("id"))
         .unwrap_or_default();
     let model = OnceResource::new(load_terminology(id.clone()));
     let page = awaited(async move {

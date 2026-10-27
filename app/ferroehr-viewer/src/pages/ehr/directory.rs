@@ -53,6 +53,7 @@ use crate::bff::ehr_detail::directory::{
     DirectoryAtTime, DirectoryState, DirectorySubtree, delete_directory, fetch_directory,
     fetch_directory_at_time, fetch_directory_subtree, list_directory_versions, update_directory,
 };
+use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::{Msg, message, tr, tr_with};
@@ -62,7 +63,6 @@ use crate::pages::common::{
     EditorDock, Refused, at_time_row, card_panel, dock_editor, docked, drawn, info_note,
     page_model, panel, plain_section, quiet, section, shortened, version_number,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_id_param, ehr_view, tab_href};
 
@@ -408,7 +408,7 @@ struct Unsaved {
 #[cfg(not(target_arch = "wasm32"))]
 impl Unsaved {
     /// The refusal `error` of what `summary` says.
-    fn new(summary: String, error: crate::error::ViewerError) -> Self {
+    fn new(summary: String, error: ViewerError) -> Self {
         Self {
             conflict: is_status(&error, http::StatusCode::PRECONDITION_FAILED),
             refusal: Refused::new(summary, error),
@@ -549,18 +549,33 @@ enum DirectoryPanel {
 fn unreadable(error: &serde_json::Error) -> Refused {
     Refused::new(
         tr(Msg::DirectoryRefused),
-        crate::error::ViewerError::Internal(error.to_string()),
+        ViewerError::Internal(error.to_string()),
     )
 }
 
+/// Loads the Directory tab: answers its post, then reads the version the
+/// address asks for, its versions and the folder at the path asked for.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_tab(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+) -> Result<EhrModel<DirectoryPanel>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_tab(ehr_id).await)
+}
+
 #[cfg(not(target_arch = "wasm32"))]
+/// What [`load_tab`] reads, on the server.
 #[expect(
     clippy::too_many_lines,
     reason = "one loader: the post, the version asked for, its versions and the folder at a path"
 )]
-/// Loads the Directory tab: answers its post, then reads the version the
-/// address asks for, its versions and the folder at the path asked for.
-async fn load_tab(ehr_id: String) -> EhrModel<DirectoryPanel> {
+async fn read_tab(ehr_id: String) -> EhrModel<DirectoryPanel> {
     let acted = act(&ehr_id).await;
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let asked = crate::request::query("version");
@@ -589,7 +604,7 @@ async fn load_tab(ehr_id: String) -> EhrModel<DirectoryPanel> {
             .max(reach)
             .clamp(HISTORY_WINDOW, HISTORY_MAX);
         let versions = list_directory_versions(ehr_id.clone(), window).await;
-        let shown: Result<Option<(DirectoryState, Option<String>)>, crate::error::ViewerError> =
+        let shown: Result<Option<(DirectoryState, Option<String>)>, ViewerError> =
             match (&at, &asked) {
                 (Some(at), _) => fetch_directory_at_time(ehr_id.clone(), at.clone())
                     .await
@@ -966,10 +981,25 @@ enum EditModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Edit the directory: answers its post (Discard, an edit of the
 /// tree, Save, Overwrite) over the directory the CDR holds.
-async fn load_edit(ehr_id: String) -> EditModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_edit(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+) -> Result<EditModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_edit(ehr_id).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_edit`] reads, on the server.
+async fn read_edit(ehr_id: String) -> EditModel {
     let posted = crate::posted::posted();
     if crate::pages::common::discarded(posted.as_ref()) {
         leptos_axum::redirect(&tab_href(&ehr_id, EhrTab::Directory));

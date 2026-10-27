@@ -30,10 +30,9 @@ use ferrohealth_ui::view::versions::{Standing, version_cell};
 use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu, row_menu};
 use leptos::prelude::*;
 use leptos_meta::Title;
-#[cfg(not(target_arch = "wasm32"))]
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
+use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::{Msg, tr, tr_with};
@@ -199,9 +198,22 @@ fn grouped(rows: &[StoredQueryRow], only: Option<&str>) -> Listing {
     Listing::Groups { groups, names }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Stored queries: the listing, kept to the namespace the address names.
-async fn load_listing() -> Listed {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_listing(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Listed, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_listing().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_listing`] reads, on the server.
+async fn read_listing() -> Listed {
     let only = crate::request::query("namespace").filter(|namespace| !namespace.is_empty());
     let listing = match list_stored_queries().await {
         Ok(rows) if rows.is_empty() => Listing::Empty,
@@ -365,10 +377,9 @@ pub fn StoredQueriesPage() -> impl IntoView {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The name and the version the route names.
 fn params() -> (String, String) {
-    use_params_map().with_untracked(|params| {
+    crate::routes::params().with(|params| {
         (
             params.get("name").unwrap_or_default(),
             params.get("version").unwrap_or_default(),
@@ -429,11 +440,10 @@ enum Page<T> {
 #[cfg(not(target_arch = "wasm32"))]
 /// Loads a stored query's page: the Delete version it answers, its
 /// versions, and the panel `body` loads from them and the version shown.
-async fn load_page<T, F>(version: String, body: F) -> Page<T>
+async fn load_page<T, F>(name: String, version: String, body: F) -> Page<T>
 where
     F: AsyncFnOnce(String, Vec<StoredQueryRow>, String) -> T,
 {
-    let (name, _) = params();
     let acted = match crate::posted::posted_for("delete-version") {
         Some(posted) => {
             match crate::admin::admin_delete_stored_query(name.clone(), posted.text("version"))
@@ -670,11 +680,27 @@ enum Definition {
     },
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the Definition: the version's AQL and its facts.
-async fn load_definition() -> Page<Definition> {
-    let (_, version) = params();
-    load_page(version, async |name, versions, version| {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_definition(
+    /// The path and query of the page.
+    href: String,
+    /// The stored query the route names.
+    name: String,
+    /// The version the route names.
+    version: String,
+) -> Result<Page<Definition>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_definition(name, version).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_definition`] reads, on the server.
+async fn read_definition(name: String, version: String) -> Page<Definition> {
+    load_page(name, version, async |name, versions, version| {
         let aql = match fetch_stored_query(name.clone(), version.clone()).await {
             Ok(aql) => aql,
             Err(error) => {
@@ -758,7 +784,8 @@ fn definition(name: &str, version: &str, found: Definition) -> AnyView {
 )]
 #[component]
 pub fn StoredQueryPage() -> impl IntoView {
-    let model = page_model!(load_definition());
+    let (name, version) = params();
+    let model = page_model!(load_definition(name, version));
     drawn(model, |page| {
         page_view(page, QueryTab::Definition, definition)
     })
@@ -788,12 +815,28 @@ enum Run {
     Form(Box<RunForm>),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Run: the form as the post leaves it, and the run it asks.
-async fn load_run() -> Page<Run> {
-    let (_, version) = params();
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_run(
+    /// The path and query of the page.
+    href: String,
+    /// The stored query the route names.
+    name: String,
+    /// The version the route names.
+    version: String,
+) -> Result<Page<Run>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_run(name, version).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_run`] reads, on the server.
+async fn read_run(name: String, version: String) -> Page<Run> {
     let posted = crate::posted::posted();
-    load_page(version, async move |name, _versions, version| {
+    load_page(name, version, async move |name, _versions, version| {
         let aql = match fetch_stored_query(name.clone(), version.clone()).await {
             Ok(aql) => aql,
             Err(error) => {
@@ -952,7 +995,8 @@ fn run(name: &str, version: &str, found: Run) -> AnyView {
 )]
 #[component]
 pub fn StoredQueryRunTab() -> impl IntoView {
-    let model = page_model!(load_run());
+    let (name, version) = params();
+    let model = page_model!(load_run(name, version));
     drawn(model, |page| page_view(page, QueryTab::Run, run))
 }
 
@@ -967,10 +1011,25 @@ struct VersionRow {
     parameters: Vec<String>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Versions: every version of the stored query, newest first.
-async fn load_versions() -> Page<Vec<VersionRow>> {
-    load_page(String::new(), async |_name, versions, _version| {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_versions(
+    /// The path and query of the page.
+    href: String,
+    /// The stored query the route names.
+    name: String,
+) -> Result<Page<Vec<VersionRow>>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_versions(name).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_versions`] reads, on the server.
+async fn read_versions(name: String) -> Page<Vec<VersionRow>> {
+    load_page(name, String::new(), async |_name, versions, _version| {
         versions
             .into_iter()
             .map(|row| VersionRow {
@@ -1039,6 +1098,7 @@ fn versions(name: &str, _version: &str, versions: Vec<VersionRow>) -> AnyView {
 )]
 #[component]
 pub fn StoredQueryVersionsTab() -> impl IntoView {
-    let model = page_model!(load_versions());
+    let (name, _) = params();
+    let model = page_model!(load_versions(name));
     drawn(model, |page| page_view(page, QueryTab::Versions, versions))
 }

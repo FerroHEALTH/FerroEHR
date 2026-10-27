@@ -19,6 +19,7 @@ use leptos::prelude::*;
 use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
 
+use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{Refused, drawn, page_model};
 
@@ -44,13 +45,26 @@ struct Model {
     manifest: Result<String, Refused>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads About: the status the shell read and the conformance manifest.
-async fn load() -> Model {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Model, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_page().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load`] reads, on the server.
+async fn read_page() -> Model {
     let status = crate::shell::status().await;
     let document = match crate::request::state() {
         Some(state) => crate::system_api::fetch_conformance_document(&state).await,
-        None => Err(crate::error::ViewerError::Internal(tr(Msg::AboutNoState))),
+        None => Err(ViewerError::Internal(tr(Msg::AboutNoState))),
     };
     // NOTE: no openEHR spec governs this: our own design; a manifest that does
     // not parse leaves its versions unknown, and the card shows it as sent.
@@ -159,7 +173,7 @@ pub fn AboutPage() -> impl IntoView {
 
 /// The FerroUI release the viewer draws with: the exact pin of the
 /// workspace manifest, held to it by a test.
-const FERROHEALTH_UI: &str = "0.4.0";
+const FERROHEALTH_UI: &str = "0.5.1";
 
 /// The FerroUI release the viewer draws with.
 fn ferrohealth_ui_version() -> String {

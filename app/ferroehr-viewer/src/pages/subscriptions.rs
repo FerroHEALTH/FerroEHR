@@ -27,10 +27,9 @@ use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
 use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu, row_menu};
 use leptos::prelude::*;
 use leptos_meta::Title;
-#[cfg(not(target_arch = "wasm32"))]
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
+use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::{Msg, message, tr, tr_with};
@@ -174,9 +173,22 @@ enum ListModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Subscriptions: the list, and the toggle a post asks for.
-async fn load_list() -> ListModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_list(
+    /// The path and query of the page.
+    href: String,
+) -> Result<ListModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_list().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_list`] reads, on the server.
+async fn read_list() -> ListModel {
     let rows = match list_event_subscriptions().await {
         Ok(Some(rows)) => rows,
         Ok(None) => return ListModel::Off,
@@ -536,10 +548,23 @@ enum NewModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads New subscription: answers its post (Discard, Save) and reads the
 /// templates it offers.
-async fn load_new() -> NewModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_new(
+    /// The path and query of the page.
+    href: String,
+) -> Result<NewModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_new().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_new`] reads, on the server.
+async fn read_new() -> NewModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect("/subscriptions");
@@ -663,13 +688,25 @@ enum EditModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Edit a subscription: finds it, answers its post (Discard, Save,
 /// Delete) and reads the templates it offers.
-async fn load_edit() -> EditModel {
-    let name = use_params_map()
-        .with_untracked(|params| params.get("name"))
-        .unwrap_or_default();
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_edit(
+    /// The path and query of the page.
+    href: String,
+    /// The subscription the route names.
+    name: String,
+) -> Result<EditModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_edit(name).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_edit`] reads, on the server.
+async fn read_edit(name: String) -> EditModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect("/subscriptions");
@@ -817,7 +854,10 @@ fn edit_editor(editor: Editor) -> AnyView {
 #[component]
 pub fn EditSubscriptionPage() -> impl IntoView {
     let dock_promise = crate::shell::promise_dock();
-    let model = page_model!(load_edit());
+    let name = crate::routes::params()
+        .with(|params| params.get("name"))
+        .unwrap_or_default();
+    let model = page_model!(load_edit(name));
     let page = docked(model, dock_promise, |model| match model {
         EditModel::Editor(editor) => edit_editor(*editor),
         EditModel::Off => view! {

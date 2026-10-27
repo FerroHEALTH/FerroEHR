@@ -24,9 +24,9 @@ use ferrohealth_ui::view::tabs::{Tab, TabRow};
 use ferrohealth_ui::view::template::settings::{How, Setting, SettingsPage, Source, settings_page};
 use leptos::prelude::*;
 use leptos_meta::Title;
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
+use crate::error::ViewerError;
 use crate::locale::{Msg, tr};
 use crate::pages::common::{Refused, drawn, page_model};
 
@@ -408,14 +408,29 @@ enum Shown {
     Refused(Refused),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the settings of `section`: the viewer's own, or the CDR's leaves
 /// that belong to it.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load(
+    /// The path and query of the page.
+    href: String,
+    /// The section the route names.
+    section: String,
+) -> Result<Shown, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_page(section).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load`] reads, on the server.
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the CDR's configuration JSON tree to draw its leaves"
 )]
-async fn load(section: String) -> Shown {
+async fn read_page(section: String) -> Shown {
     if section == "viewer" {
         return Shown::Viewer(read_own());
     }
@@ -434,7 +449,7 @@ async fn load(section: String) -> Shown {
             }
             Err(error) => Shown::Refused(Refused::new(
                 tr(Msg::ConfigRefused),
-                crate::error::ViewerError::Internal(error.to_string()),
+                ViewerError::Internal(error.to_string()),
             )),
         },
         Err(error) => Shown::Refused(Refused::new(tr(Msg::ConfigRefused), error)),
@@ -448,8 +463,8 @@ async fn load(section: String) -> Shown {
 )]
 #[component]
 pub fn ConfigurationPage() -> impl IntoView {
-    let section = use_params_map()
-        .with_untracked(|params| params.get("section"))
+    let section = crate::routes::params()
+        .with(|params| params.get("section"))
         .filter(|section| SECTIONS.iter().any(|(key, _, _)| key == section))
         .unwrap_or_else(|| "deployment".to_owned());
     let model = page_model!(load(section.clone()));

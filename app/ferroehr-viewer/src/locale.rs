@@ -2635,6 +2635,8 @@ messages! {
     StatTemplates = "stat-templates",
     /// `Try again`
     TryAgain = "try-again",
+    /// `This page could not be read.`
+    PageRefused = "page-refused",
     /// `—`
     UnknownCount = "unknown-count",
     /// `Upload a template`

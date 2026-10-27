@@ -25,11 +25,9 @@ use serde::{Deserialize, Serialize};
 use crate::bff::ehr_tags::{EhrTargetKind, list_ehr_tags, resolve_ehr_target};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::bff::item_tags::{TagGroup, group_by_target};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{Refused, drawn, page_model, shortened};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, ehr_id_param, ehr_view, tab_href};
 
@@ -238,9 +236,24 @@ async fn tagged(ehr_id: &str, groups: Vec<TagGroup>) -> Result<Vec<Tagged>, View
     Ok(named)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the tab: the tags the request's filters find.
-async fn load(ehr_id: String) -> EhrModel<Panel> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+) -> Result<EhrModel<Panel>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_page(ehr_id).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load`] reads, on the server.
+async fn read_page(ehr_id: String) -> EhrModel<Panel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let filters = Filters::read();
         let tags = list_ehr_tags(

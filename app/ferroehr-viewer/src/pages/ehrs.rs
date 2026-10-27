@@ -38,6 +38,7 @@ use serde::{Deserialize, Serialize};
 use crate::bff::ehrs::{
     ResultPage, cell_text, create_ehr, find_ehr_by_subject, is_uuid, list_ehrs,
 };
+use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::{Msg, tr, tr_with};
@@ -234,9 +235,22 @@ async fn found(typed: String, namespace: String) -> EhrsModel {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the EHRs list: the find a post asks, or the page of the list.
-async fn load_list() -> EhrsModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_list(
+    /// The path and query of the page.
+    href: String,
+) -> Result<EhrsModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_list().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_list`] reads, on the server.
+async fn read_list() -> EhrsModel {
     if let Some(posted) = crate::posted::posted_for("find") {
         let typed = posted.text("find");
         let namespace = posted.text("namespace");
@@ -442,9 +456,22 @@ enum NewModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads New EHR: answers its post (Discard, Create).
-async fn load_new() -> NewModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_new(
+    /// The path and query of the page.
+    href: String,
+) -> Result<NewModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_new().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_new`] reads, on the server.
+async fn read_new() -> NewModel {
     let posted = crate::posted::posted();
     if crate::pages::common::discarded(posted.as_ref()) {
         leptos_axum::redirect("/ehrs");

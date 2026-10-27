@@ -55,6 +55,17 @@ const POLL_STEP: Duration = Duration::from_millis(200);
 /// only observes a rendered page (module docs).
 const HYDRATION_WAIT: Duration = Duration::from_mins(1);
 
+/// The words [`Harness::mark_document`] leaves on the window.
+const DOCUMENT_MARK: &str = "drawn-in-this-document";
+
+/// The site bundle's files a browser without WebAssembly is refused: the
+/// entry's WebAssembly and glue and the lazy routes' chunks.
+const WITHHELD: [&str; 3] = [
+    "*/pkg/ferroehr-viewer*",
+    "*/pkg/__wasm_split*",
+    "*/pkg/*.wasm",
+];
+
 /// The width of a phone screen, in CSS pixels.
 pub(crate) const PHONE_WIDTH: u32 = 390;
 
@@ -416,8 +427,9 @@ impl Harness {
         panic!("a toast never cleared (it would intercept the next click)");
     }
 
-    /// Wait until client hydration has completed on the current page (the
-    /// shell stamps `data-hydrated` on `<body>` from a browser-only effect).
+    /// Wait until client hydration has completed on the current page
+    /// (FerroUI writes `data-ferroui-hydrated` on the root element once the
+    /// page and its lazy route have hydrated).
     /// Required before driving any control whose handler exists only
     /// hydrated — a click or file selection landing earlier is silently
     /// lost, and a same-value re-send fires no later event (#2285).
@@ -427,8 +439,89 @@ impl Harness {
     /// which differs by an order of magnitude between the two lanes (module
     /// docs).
     pub(crate) async fn wait_hydrated(&self) {
-        self.wait_css_for("body[data-hydrated]", HYDRATION_WAIT)
+        self.wait_css_for("html[data-ferroui-hydrated]", HYDRATION_WAIT)
             .await;
+    }
+
+    /// Start a journey whose browser is refused the site bundle's
+    /// WebAssembly, its glue and its chunks, so no page hydrates, as on a
+    /// page whose WebAssembly has not loaded or will not; the stylesheets
+    /// still load.
+    ///
+    /// # Panics
+    /// When the stack env is set but the browser session cannot start, or
+    /// the browser refuses the blocked addresses.
+    pub(crate) async fn start_without_webassembly(journey: &'static str) -> Option<Self> {
+        let mut h = Self::start(journey).await?;
+        let cdp = h.driver.cdp();
+        bounded(
+            "cdp(Network.enable)",
+            cdp.send_raw("Network.enable", serde_json::json!({})),
+        )
+        .await
+        .expect("enable the network domain");
+        bounded(
+            "cdp(Network.setBlockedURLs)",
+            cdp.send_raw(
+                "Network.setBlockedURLs",
+                serde_json::json!({ "urls": WITHHELD }),
+            ),
+        )
+        .await
+        .expect("block the bundle");
+        h.js = false;
+        Some(h)
+    }
+
+    /// Marks the window, which a document the browser loads anew does not
+    /// carry, so [`Self::document_kept`] tells a page the router drew from a
+    /// page the browser loaded.
+    ///
+    /// # Panics
+    /// When the browser refuses the script.
+    pub(crate) async fn mark_document(&self) {
+        bounded(
+            "execute(mark)",
+            self.driver.execute(
+                &format!("window.ferroehrJourney = '{DOCUMENT_MARK}';"),
+                Vec::new(),
+            ),
+        )
+        .await
+        .expect("mark the window");
+    }
+
+    /// Whether the window still carries the mark of [`Self::mark_document`].
+    ///
+    /// # Panics
+    /// When the browser refuses the script.
+    pub(crate) async fn document_kept(&self) -> bool {
+        let answer = bounded(
+            "execute(read the mark)",
+            self.driver
+                .execute("return window.ferroehrJourney || null;", Vec::new()),
+        )
+        .await
+        .expect("read the window's mark");
+        answer.json().as_str() == Some(DOCUMENT_MARK)
+    }
+
+    /// Goes back one page in the browser's history.
+    ///
+    /// # Panics
+    /// When the browser does not answer.
+    pub(crate) async fn back(&self) {
+        bounded("back()", self.driver.back()).await.expect("back");
+    }
+
+    /// Goes forward one page in the browser's history.
+    ///
+    /// # Panics
+    /// When the browser does not answer.
+    pub(crate) async fn forward(&self) {
+        bounded("forward()", self.driver.forward())
+            .await
+            .expect("forward");
     }
 
     /// Numbered step screenshot: `{journey}-{step}-{slug}.png`.

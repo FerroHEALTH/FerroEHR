@@ -27,7 +27,7 @@ read-only commands (git diff/log, `git -C <FerroUI checkout> show`, cargo
 clippy dry runs, grep).
 
 **First, read FerroUI, which leads the viewer's UI.** The viewer pins
-`ferrohealth-ui` in the root `Cargo.toml` (`=0.3.7` today, tag `v0.3.7`).
+`ferrohealth-ui` in the root `Cargo.toml` (`=0.5.2` today, tag `v0.5.2`).
 Read, from a FerroUI checkout or from GitHub (FerroHEALTH/FerroUI):
 
 - `.claude/rules/leptos-ui.md` at the tag matching the pin: the component
@@ -35,7 +35,8 @@ Read, from a FerroUI checkout or from GitHub (FerroHEALTH/FerroUI):
 - `docs/consoles.md`, `crates/ferrohealth-ui/CLAUDE.md`, `design/README.md`,
   `design/COMPONENTS.md` and `design/consoles/ferroehr/` on `main` until the
   pin reaches a tag that carries them: the consumer guide, the interaction
-  contract and islands mode, and the reviewed design with its component IDs.
+  contract and the whole page hydrated, and the reviewed design with its
+  component IDs.
 
 Then read `.claude/rules/leptos-ui.md` of this repository in full: it is
 the viewer's own checklist and names the pin and the rollout
@@ -61,8 +62,9 @@ Review priority (report in this order):
    elements first (`<dialog>`, `popover`, `<details>`, links, GET and POST
    forms); behaviour in Rust compiled to WebAssembly; every page working
    without the WebAssembly, with a link or a form behind every important
-   action; no hand-written JavaScript and no npm. Until the rollout moves
-   the viewer to islands, flag new work that makes the move harder.
+   action; no hand-written JavaScript and no npm. Flag code that grows the
+   entry WebAssembly: a page, a route or a server function reachable from the
+   app or the shell rather than from its lazy group (`src/routes.rs`).
 4. **Hydration hazards:** view structure branched on `cfg!` or target;
    invalid HTML (block-in-`<p>`, `<table>` without `<tbody>`); browser-only
    APIs outside `Effect::new`; server-only deps outside the

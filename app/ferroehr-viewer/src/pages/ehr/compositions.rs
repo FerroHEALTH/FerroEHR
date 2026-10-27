@@ -24,9 +24,9 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehrs::cell_text;
+use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{Refused, ago, drawn, page_model, shortened};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, ehr_href, ehr_id_param, ehr_view};
 use crate::paging::Listing;
@@ -190,9 +190,24 @@ struct Panel {
     rows: Result<Vec<Row>, Refused>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the tab: the page of compositions the request's filters find.
-async fn load(ehr_id: String) -> EhrModel<Panel> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+) -> Result<EhrModel<Panel>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_page(ehr_id).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load`] reads, on the server.
+async fn read_page(ehr_id: String) -> EhrModel<Panel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let filters = Filters::read();
         let window = OpenWindow::of(crate::paging::current(Listing::Compositions), 0);

@@ -33,6 +33,7 @@ use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
 
 use crate::bff::system::Endpoint;
+use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::{Msg, tr, tr_with};
@@ -239,9 +240,22 @@ struct Overview {
     build: Result<Option<BuildInfoView>, Refused>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Overview: the status the shell read and the build information.
-async fn load_overview() -> Tabbed<Overview> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_overview(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Tabbed<Overview>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_overview().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_overview`] reads, on the server.
+async fn read_overview() -> Tabbed<Overview> {
     load_tab(ServerTab::Overview, || async {
         let status = crate::shell::status().await;
         let document = status
@@ -432,9 +446,22 @@ fn flow_of(status: &str) -> FlowState {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Health: the readiness document.
-async fn load_health() -> Tabbed<Result<ReadinessView, Refused>> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_health(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Tabbed<Result<ReadinessView, Refused>>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_health().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_health`] reads, on the server.
+async fn read_health() -> Tabbed<Result<ReadinessView, Refused>> {
     load_tab(ServerTab::Health, || async {
         fetch_readiness()
             .await
@@ -516,9 +543,22 @@ struct Metrics {
     samples: Option<Result<Option<MetricDetailView>, Refused>>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Metrics: the headline, the names and the picked metric.
-async fn load_metrics() -> Tabbed<Metrics> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_metrics(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Tabbed<Metrics>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_metrics().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_metrics`] reads, on the server.
+async fn read_metrics() -> Tabbed<Metrics> {
     load_tab(ServerTab::Metrics, || async {
         let refused = |error| Refused::new(tr(Msg::ServerMetricsRefused), error);
         let headline = fetch_headline_metrics().await.map_err(refused);
@@ -708,9 +748,22 @@ enum Logging {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Logging: answers its post (Apply, Reset) and reads the filters.
-async fn load_logging() -> Tabbed<Logging> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_logging(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Tabbed<Logging>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_logging().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_logging`] reads, on the server.
+async fn read_logging() -> Tabbed<Logging> {
     load_tab(ServerTab::Logging, || async {
         let posted = crate::posted::posted();
         let mut top = None;
@@ -905,13 +958,26 @@ struct Api {
     listed: Result<Document, Refused>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads API: the document of the family the address picks.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_api(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Tabbed<Api>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_api().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_api`] reads, on the server.
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the CDR's OpenAPI JSON document to list it"
 )]
-async fn load_api() -> Tabbed<Api> {
+async fn read_api() -> Tabbed<Api> {
     load_tab(ServerTab::Api, || async {
         let family = crate::request::query("family")
             .filter(|family| crate::bff::system::openapi_families().any(|(key, _)| key == family))
@@ -926,9 +992,7 @@ async fn load_api() -> Tabbed<Api> {
                     groups: crate::bff::system::group_openapi_paths(&document),
                     text: crate::bff::pretty_body(&body, crate::format::ReprFormat::CanonicalJson),
                 }),
-                Err(error) => Err(refused(crate::error::ViewerError::Internal(
-                    error.to_string(),
-                ))),
+                Err(error) => Err(refused(ViewerError::Internal(error.to_string()))),
             },
             Err(error) => Err(refused(error)),
         };
@@ -1070,13 +1134,26 @@ struct Smart {
     text: String,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads SMART: the CDR's discovery document, `None` when it serves none.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_smart(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Tabbed<Result<Option<Smart>, Refused>>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_smart().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_smart`] reads, on the server.
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the CDR's SMART JSON document to list it"
 )]
-async fn load_smart() -> Tabbed<Result<Option<Smart>, Refused>> {
+async fn read_smart() -> Tabbed<Result<Option<Smart>, Refused>> {
     use serde_json::Value;
     load_tab(ServerTab::Smart, || async {
         let refused = |error| Refused::new(tr(Msg::ServerSmartRefused), error);
@@ -1087,7 +1164,7 @@ async fn load_smart() -> Tabbed<Result<Option<Smart>, Refused>> {
             return Ok(None);
         };
         let document: Value = serde_json::from_str(&body)
-            .map_err(|error| refused(crate::error::ViewerError::Internal(error.to_string())))?;
+            .map_err(|error| refused(ViewerError::Internal(error.to_string())))?;
         let list = |key: &str| -> Vec<String> {
             document
                 .get(key)

@@ -19,15 +19,15 @@ use ferrohealth_ui::view::preferences::{
 };
 use leptos::prelude::*;
 use leptos_meta::Title;
-use leptos_router::hooks::use_params_map;
 
+use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{drawn, page_model};
 
 /// The tab the address names: Appearance for none.
 fn section() -> Section {
-    use_params_map()
-        .with_untracked(|params| params.get("section"))
+    crate::routes::params()
+        .with(|params| params.get("section"))
         .and_then(|key| match key.as_str() {
             "reading" => Some(Section::Language),
             "keyboard" => Some(Section::Keyboard),
@@ -83,13 +83,26 @@ fn reveal_row(back: &str, saved: bool) -> AnyView {
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the languages the browser asks for, its `Accept-Language` header.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load(
+    /// The path and query of the page.
+    href: String,
+) -> Result<String, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_page().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load`] reads, on the server.
 #[expect(
     clippy::unused_async,
     reason = "a page model loads through a future, read once on the server"
 )]
-async fn load() -> String {
+async fn read_page() -> String {
     use_context::<http::request::Parts>()
         .and_then(|parts| {
             parts

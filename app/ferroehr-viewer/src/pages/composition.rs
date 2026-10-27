@@ -36,7 +36,6 @@ use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::widget::editor::EditorWords;
 use leptos::prelude::*;
 use leptos_meta::Title;
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
 use crate::bff::composition::VersionedCompositionDetails;
@@ -49,12 +48,11 @@ use crate::bff::composition::{
 use crate::bff::ehr_tags::{delete_ehr_tag, fetch_ehr_tags, set_ehr_tag};
 use crate::bff::wire::VersionEntry;
 use crate::clinical::{RenderedNode, RenderedSection};
-#[cfg(not(target_arch = "wasm32"))]
+use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::format::ReprFormat;
-use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::locale::{Msg, message, tr, tr_with};
 use crate::pages::common::{
     EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, docked, document_section,
@@ -694,8 +692,8 @@ fn delete_dialog(ehr_id: &str, uid: &str, name: &str, latest: &str, count: usize
 
 /// The composition id the route names.
 fn uid_param() -> String {
-    use_params_map()
-        .with_untracked(|params| params.get("uid"))
+    crate::routes::params()
+        .with(|params| params.get("uid"))
         .unwrap_or_default()
 }
 
@@ -752,15 +750,32 @@ enum CompositionModel {
     Missing(Refused),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the composition `uid` of the EHR `ehr_id`: answers its post, reads
 /// its versions, the version in view and what the tab asked for shows; a
 /// composition the CDR does not hold answers `404`.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+    /// The id the route names.
+    uid: String,
+) -> Result<CompositionModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_page(ehr_id, uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load`] reads, on the server.
 #[expect(
     clippy::too_many_lines,
     reason = "one loader: the versions, the version in view, the post and the tab's read"
 )]
-async fn load(ehr_id: String, uid: String) -> CompositionModel {
+async fn read_page(ehr_id: String, uid: String) -> CompositionModel {
     let asked = crate::request::query("version");
     let at = crate::request::query("at");
     let mut versions = fetch_versions(ehr_id.clone(), uid.clone()).await;
@@ -1130,10 +1145,27 @@ enum EditModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Edit as a new version: answers its post (Discard, Save) over the
 /// latest version.
-async fn load_edit(ehr_id: String, uid: String) -> EditModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_edit(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+    /// The id the route names.
+    uid: String,
+) -> Result<EditModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_edit(ehr_id, uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_edit`] reads, on the server.
+async fn read_edit(ehr_id: String, uid: String) -> EditModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&composition_href(&ehr_id, &uid));
@@ -1377,10 +1409,25 @@ fn new_format(format_key: &str) -> ReprFormat {
         .map_or(ReprFormat::CanonicalJson, |(_, format)| *format)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads New composition: answers its post (Discard, Commit) and reads the
 /// templates.
-async fn load_new(ehr_id: String) -> NewModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_new(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+) -> Result<NewModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_new(ehr_id).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_new`] reads, on the server.
+async fn read_new(ehr_id: String) -> NewModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&ehr_href(&ehr_id));

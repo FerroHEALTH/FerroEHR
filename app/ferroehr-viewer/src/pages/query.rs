@@ -52,11 +52,10 @@ use crate::builder::model::{
     BoolOp, BuilderQuery, Criterion, CriterionKind, CriterionNode, OrderRule, QueryShape,
     SelectedColumn,
 };
-#[cfg(not(target_arch = "wasm32"))]
+use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
-use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{
     Refused, count, drawn, info_note, marks_of, page_model, panel, plain_section, section,
@@ -1195,10 +1194,23 @@ struct Build {
     save: SaveFields,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Build: the draft the post leaves, the AQL it builds, and the run or
 /// the save the post asks.
-async fn load_build() -> Build {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_build(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Build, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_build().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_build`] reads, on the server.
+async fn read_build() -> Build {
     let posted = crate::posted::posted();
     let templates = crate::bff::templates::list_templates().await;
     let mut ids: Vec<String> = templates
@@ -1688,10 +1700,23 @@ struct Written {
     save: SaveFields,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the AQL tab: the query the post or the address names, and the run
 /// or the save the post asks.
-async fn load_written() -> Written {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_written(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Written, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_written().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_written`] reads, on the server.
+async fn read_written() -> Written {
     let posted = crate::posted::posted();
     let mut note = None;
     let mut top = None;

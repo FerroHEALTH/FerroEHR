@@ -37,9 +37,10 @@ use crate::bff::ehr_detail::status::{
     fetch_status_version_at_time, fetch_versioned_status, parse_status_state, update_ehr_status,
 };
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
+use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
+use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
-use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::locale::{Msg, message, tr, tr_with};
 use crate::pages::common::{
     EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, docked, document_section,
@@ -47,7 +48,6 @@ use crate::pages::common::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use crate::pages::common::{is_status, version_uid_at};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_id_param, ehr_view, tab_href};
 
@@ -140,10 +140,25 @@ enum StatusPanel {
     Refused(Refused),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the Status tab: the version the request asks for, its facts and the
 /// versions.
-async fn load_status(ehr_id: String) -> EhrModel<StatusPanel> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_status(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+) -> Result<EhrModel<StatusPanel>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_status(ehr_id).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_status`] reads, on the server.
+async fn read_status(ehr_id: String) -> EhrModel<StatusPanel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |facts| {
         let asked = crate::request::query("version");
         let at = crate::request::query("at");
@@ -155,24 +170,23 @@ async fn load_status(ehr_id: String) -> EhrModel<StatusPanel> {
         };
         let versions = fetch_status_revision_history(ehr_id.clone()).await;
         let latest_number = version_number(&current.version_uid);
-        let shown: Result<(EhrStatusState, Option<String>), crate::error::ViewerError> =
-            match (&asked, &at) {
-                (_, Some(at)) => fetch_status_version_at_time(ehr_id.clone(), at.clone())
+        let shown: Result<(EhrStatusState, Option<String>), ViewerError> = match (&asked, &at) {
+            (_, Some(at)) => fetch_status_version_at_time(ehr_id.clone(), at.clone())
+                .await
+                .and_then(|body| parse_status_state(&body, None))
+                .map(|state| {
+                    let number = version_number(&state.version_uid);
+                    (state, Some(number))
+                }),
+            (Some(number), None) if *number != latest_number => {
+                let uid = version_uid_at(&current.version_uid, number);
+                fetch_ehr_status_version(ehr_id.clone(), uid)
                     .await
                     .and_then(|body| parse_status_state(&body, None))
-                    .map(|state| {
-                        let number = version_number(&state.version_uid);
-                        (state, Some(number))
-                    }),
-                (Some(number), None) if *number != latest_number => {
-                    let uid = version_uid_at(&current.version_uid, number);
-                    fetch_ehr_status_version(ehr_id.clone(), uid)
-                        .await
-                        .and_then(|body| parse_status_state(&body, None))
-                        .map(|state| (state, Some(number.clone())))
-                }
-                _ => Ok((current.clone(), None)),
-            };
+                    .map(|state| (state, Some(number.clone())))
+            }
+            _ => Ok((current.clone(), None)),
+        };
         let (shown, older) = match shown {
             Ok(shown) => shown,
             Err(error) => {
@@ -355,10 +369,25 @@ enum EditModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Edit status: answers its post (Discard, Save) and reads the current
 /// status.
-async fn load_edit(ehr_id: String) -> EditModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_edit(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+) -> Result<EditModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_edit(ehr_id).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_edit`] reads, on the server.
+async fn read_edit(ehr_id: String) -> EditModel {
     let posted = crate::posted::posted();
     if crate::pages::common::discarded(posted.as_ref()) {
         leptos_axum::redirect(&tab_href(&ehr_id, EhrTab::Status));

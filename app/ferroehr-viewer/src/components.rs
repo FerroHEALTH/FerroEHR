@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The viewer's own islands: the parts of a page whose library widget shares
-//! state with the viewer's code, each the one part of its page the browser
-//! hydrates (FerroUI `leptos-ui.md` §1 and §15).
+//! The viewer's own components: the parts of a page whose library widget
+//! shares state with the viewer's code (FerroUI `docs/consoles.md`, "What the
+//! console owns").
 //!
 //! - [`SubjectReveal`]: an EHR's masked subject id (R13) and its Reveal,
 //!   which reads the id from the CDR through [`reveal_subject`].
@@ -12,22 +12,10 @@
 //! - [`SourceUpload`]: the upload field of a template source, whose file is
 //!   read into the text area the form posts.
 //!
-//! Each takes its words as props the server resolved, so the browser carries
-//! no catalog, and each works with the WebAssembly withheld: the masked id's
-//! Reveal is a link to the page that shows it, and the text areas post with
-//! their forms. No openEHR spec governs the viewer: our own design.
-#![expect(
-    clippy::mem_forget,
-    reason = "the island macro of leptos_macro 0.8 keeps each hydrated island alive by forgetting its view state, in the browser entry it writes"
-)]
-#![expect(
-    clippy::must_use_candidate,
-    reason = "the #[island] macro drops a #[must_use] from the function it writes"
-)]
-#![expect(
-    missing_docs,
-    reason = "the #[island] macro writes an undocumented struct of each island's props as they cross to the browser"
-)]
+//! Each draws on both halves and hydrates with the page, and each works with
+//! the WebAssembly withheld: the masked id's Reveal is a link to the page
+//! that shows it, and the text areas post with their forms. No openEHR spec
+//! governs the viewer: our own design.
 
 use std::borrow::Cow;
 
@@ -77,7 +65,11 @@ pub async fn reveal_subject(
 /// the mask, and Reveal reads the id for `seconds`, the reader's preference
 /// capped by the server. Before the page hydrates Reveal is a link to
 /// `fallback`, the EHR's page showing the id.
-#[island]
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the page always consumes the value"
+)]
+#[component]
 pub fn SubjectReveal(
     /// The id of the identifier's element.
     id: String,
@@ -116,7 +108,7 @@ pub fn SubjectReveal(
     )
 }
 
-/// The languages an editor island highlights, as they cross to the browser.
+/// The languages a code editor highlights, as they cross to the browser.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EditorLanguage {
     /// Canonical JSON, a FLAT or a STRUCTURED document.
@@ -172,7 +164,7 @@ impl EditorField {
     }
 }
 
-/// What a code editor island draws: its text, its marks and its words.
+/// What a code editor draws: its text, its marks and its words.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditorSetup {
     /// The text area it fills.
@@ -199,11 +191,11 @@ pub struct EditorSetup {
 /// editor with its gutter marks and the status line, and the CDR's
 /// diagnostics beside it in step with the cursor when it refused the
 /// document (B3).
-#[island]
 #[expect(
     clippy::needless_pass_by_value,
-    reason = "an island takes its props by value, as they arrive from the page"
+    reason = "a component takes its props by value, as the page hands them over"
 )]
+#[component]
 pub fn CodeEditor(
     /// What it draws.
     setup: EditorSetup,
@@ -274,7 +266,11 @@ pub const SOURCE_MAX_BYTES: u64 = 16 * 1024 * 1024;
 /// The upload field of a template source: the file chosen or dropped is
 /// read into the text area the form posts as `source-text`, and a source can
 /// be pasted there with no WebAssembly.
-#[island]
+#[expect(
+    clippy::must_use_candidate,
+    reason = "#[component] rewrites the fn; the page always consumes the value"
+)]
+#[component]
 pub fn SourceUpload(
     /// The source the text area opens with, as the form last posted it.
     source: String,
