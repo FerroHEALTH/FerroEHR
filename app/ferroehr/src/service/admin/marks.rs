@@ -122,12 +122,15 @@ impl FerroEhrService {
     /// - `precondition_violation` (`400`) — a malformed EHR id.
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `exception` — a database fault.
+    /// - `service_overloaded` — the access record was refused under
+    ///   `[audit] fail_mode = "closed"`.
     pub async fn restriction_register(
         &self,
         ehr_id: &str,
     ) -> Result<Vec<marks::RestrictionRow>, SmError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         self.check_mark_target(ehr_id, None).await?;
+        self.emit_mark_access(EventActionCode::Read, ehr_id, None, "restriction")?;
         Ok(marks::restrictions(&self.pool, ehr_id)
             .await
             .map_err(ServiceError::Storage)?)

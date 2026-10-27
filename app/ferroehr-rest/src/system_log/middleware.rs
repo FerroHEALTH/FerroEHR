@@ -42,7 +42,7 @@
 
 use std::collections::BTreeMap;
 
-use axum::extract::{Request, State};
+use axum::extract::{FromRequestParts, RawPathParams, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_server::client_address::ClientAddress;
@@ -260,6 +260,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     // Capture request-side facts before the request is consumed.
     let client_ip = client_ip(&req);
     let path = req.uri().path().to_owned();
+    let (req, route_ehr_id) = route_ehr_id(req).await;
     let timestamp = jiff::Timestamp::now();
     let purpose = declared_purpose(&req, state.backend());
     let permit = declared_permit(&req, state.backend());
@@ -304,10 +305,12 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         // EventIdentification); the id is ours.
         event.event_type = Some(EventType::RestOperation(op));
         fill_common(&mut event, caller, client_ip.clone(), timestamp);
+        // NOTE: EHDS Art. 9(2)(c) (`docs/law/eu/ehds/text.html`), the record names
+        // whose data was accessed, so the subject-scoped ITI-81 retrieval finds it.
         event.ehr_id = object
             .as_ref()
             .and_then(|o| o.ehr_id.clone())
-            .or_else(|| ehr_id_from_path(&path));
+            .or(route_ehr_id);
         event.object_id = object
             .as_ref()
             .and_then(|o| o.uid.clone())
@@ -496,12 +499,33 @@ fn client_ip(req: &Request) -> Option<String> {
         .map(|ClientAddress(address)| address.to_string())
 }
 
-/// Extracts the `ehr_id` path parameter, the segment after the first exact `ehr`
-/// segment.
+/// The route parameter every route that addresses one EHR names it by.
+const EHR_PARAMETER: &str = "ehr_id";
+
+/// The EHR the matched route names: its `{ehr_id}` path parameter.
 ///
-/// `POST /ehr` has none, so its EHR id comes from the response `AuditObject`.
-fn ehr_id_from_path(path: &str) -> Option<String> {
-    segment_after(path, "ehr")
+/// The ITS-REST routes under `/ehr/{ehr_id}` and the extension routes that
+/// address one EHR (`/admin/ehr/{ehr_id}`, `/message/export/{ehr_id}`,
+/// `/message/import/{ehr_id}`, `/message/tdd/{ehr_id}`) all name it by that
+/// parameter, so the router's own match decides and a literal segment such as
+/// `/admin/ehr/all` is never taken for an id. `POST /ehr` has none; its EHR id
+/// comes from the response `AuditObject`.
+///
+/// The request is handed back whole, for the layers inside to serve.
+async fn route_ehr_id(req: Request) -> (Request, Option<String>) {
+    let (mut parts, body) = req.into_parts();
+    // NOTE: no specification governs this: our own design; a rejection means the
+    // route matched no parameter or a non-UTF-8 one the handler refuses itself.
+    let ehr_id = RawPathParams::from_request_parts(&mut parts, &())
+        .await
+        .ok()
+        .and_then(|params| {
+            params
+                .iter()
+                .find(|(name, _)| *name == EHR_PARAMETER)
+                .map(|(_, value)| value.to_owned())
+        });
+    (Request::from_parts(parts, body), ehr_id)
 }
 
 /// Derives the participant-object id from the request path for operations whose
@@ -585,25 +609,80 @@ mod tests {
         );
     }
 
-    #[test]
-    fn ehr_id_from_various_paths() {
+    /// The EHR id `route_ehr_id` reads for `path` once `routes` matched it.
+    async fn routed_ehr_id(templates: &[&str], path: &str) -> Option<String> {
+        use tower::ServiceExt as _;
+        let mut app = axum::Router::new();
+        for template in templates {
+            app = app.route(template, axum::routing::any(|| async {}));
+        }
+        let app = app.layer(axum::middleware::from_fn(
+            |req: Request, next: Next| async move {
+                let (req, found) = route_ehr_id(req).await;
+                let mut resp = next.run(req).await;
+                if let Some(found) = found {
+                    resp.headers_mut()
+                        .insert("x-ehr", HeaderValue::from_str(&found).unwrap());
+                }
+                resp
+            },
+        ));
+        let resp = app
+            .oneshot(Request::get(path).body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK, "{path} should match a route");
+        resp.headers()
+            .get("x-ehr")
+            .map(|v| v.to_str().unwrap().to_owned())
+    }
+
+    #[tokio::test]
+    async fn ehr_id_from_the_matched_route() {
+        let routes = [
+            "/ehr",
+            "/ehr/{ehr_id}",
+            "/ehr/{ehr_id}/composition/{uid_based_id}",
+            "/ehr/{ehr_id}/ehr_status",
+            "/admin/ehr/all",
+            "/admin/ehr/{ehr_id}",
+            "/message/export/{ehr_id}",
+            "/message/import/{ehr_id}",
+            "/message/tdd/{ehr_id}",
+            "/message/tdd/{ehr_id}/batch",
+            "/definition/template/adl1.4/{template_id}",
+        ];
+        let some = |id: &str| Some(id.to_owned());
         assert_eq!(
-            ehr_id_from_path("/ferroehr/rest/openehr/v1/ehr/abc-123/composition/x"),
-            Some("abc-123".to_owned())
+            routed_ehr_id(&routes, "/ehr/abc-123/composition/x").await,
+            some("abc-123")
         );
         assert_eq!(
-            ehr_id_from_path("/ferroehr/rest/openehr/v1/ehr/abc-123"),
-            Some("abc-123".to_owned())
+            routed_ehr_id(&routes, "/ehr/abc-123").await,
+            some("abc-123")
         );
-        // Create has no id segment.
-        assert_eq!(ehr_id_from_path("/ferroehr/rest/openehr/v1/ehr"), None);
-        // Admin delete carries the id after `ehr`.
         assert_eq!(
-            ehr_id_from_path("/ferroehr/rest/openehr/v1/admin/ehr/zzz"),
-            Some("zzz".to_owned())
+            routed_ehr_id(&routes, "/ehr/abc-123/ehr_status").await,
+            some("abc-123")
         );
-        // "ehr_status" / "versioned_ehr_status" are not the exact `ehr` segment.
-        assert_eq!(ehr_id_from_path("/definition/template/adl1.4"), None);
+        // Create has no id parameter.
+        assert_eq!(routed_ehr_id(&routes, "/ehr").await, None);
+        // Admin delete carries the id; the literal `all` route names none.
+        assert_eq!(routed_ehr_id(&routes, "/admin/ehr/zzz").await, some("zzz"));
+        assert_eq!(routed_ehr_id(&routes, "/admin/ehr/all").await, None);
+        // The extension routes name the EHR after a segment other than `ehr`.
+        for path in [
+            "/message/export/e-1",
+            "/message/import/e-1",
+            "/message/tdd/e-1",
+            "/message/tdd/e-1/batch",
+        ] {
+            assert_eq!(routed_ehr_id(&routes, path).await, some("e-1"), "{path}");
+        }
+        assert_eq!(
+            routed_ehr_id(&routes, "/definition/template/adl1.4/t").await,
+            None
+        );
     }
 
     #[test]
