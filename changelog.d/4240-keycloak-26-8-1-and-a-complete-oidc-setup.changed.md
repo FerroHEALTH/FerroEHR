@@ -5,5 +5,4 @@
   watcher. The `ferroehr` client of both realms requires PKCE (`S256`) on the
   authorization-code flow, accepts only the viewer origins on port 3000 as
   redirect targets (the quickstart realm accepted any), and its service account
-  holds `USER`, so a client-credentials token reaches the clinical API. The
-  e2e overlay's server trusts the development CA through `[auth] ca_file`.
+  holds `USER`, so a client-credentials token reaches the clinical API.
