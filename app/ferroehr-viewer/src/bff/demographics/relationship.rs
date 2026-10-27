@@ -39,18 +39,24 @@
               hydrate target"
 )]
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::demographics::PartyKind;
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr, tr_with};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::uid::container_uid_of;
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The `PARTY_REF` namespace the viewer writes.
 ///
 /// `OBJECT_REF.namespace` is a free string with only a legality rule — "local",
@@ -329,6 +335,7 @@ pub async fn delete_relationship(
     Ok(())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Assemble a `PARTY_RELATIONSHIP` create body from the form's fields.
 ///
 /// Pure and unit-tested. Refuses what the RM refuses before any round trip: a
@@ -391,6 +398,7 @@ pub struct RelationshipDraft {
     pub details: String,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// One `PARTY_REF` for a relationship end.
 ///
 /// # Errors
@@ -433,6 +441,7 @@ fn party_ref(uid: &str, kind: &str, end: &str) -> Result<Value, String> {
     Ok(Value::Object(reference))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// A `DV_TEXT` carrying `value`.
 fn dv_text(value: &str) -> Value {
     let mut text = serde_json::Map::new();
@@ -441,6 +450,7 @@ fn dv_text(value: &str) -> Value {
     Value::Object(text)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Read a `details` draft: `None` when blank, `Some(object)` otherwise.
 ///
 /// `PARTY_RELATIONSHIP.details` is an `ITEM_STRUCTURE` `0..1`

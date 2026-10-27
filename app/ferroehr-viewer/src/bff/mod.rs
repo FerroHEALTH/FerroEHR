@@ -9,24 +9,33 @@
 //! [`require_session`](crate::session::require_session) first (it is a
 //! public endpoint), and the CDR credential never leaves the server. The wire
 //! is ITS-REST (`docs/specs/openehr/ITS-REST/`); the pages are our own design.
+//! The areas the converted pages read compile for both halves, the server
+//! functions as their browser stubs; the others stay on the server.
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod audit;
 pub mod composition;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod dashboard;
 pub mod demographics;
 pub mod ehr_detail;
 pub mod ehr_tags;
 pub mod ehrs;
 pub mod item_tags;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod system;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod template_adl2;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod template_detail;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod templates;
 pub mod wire;
 
 /// The rows one page of a listing holds: FerroUI's default page size.
 pub const PAGE_SIZE: u32 = ferrohealth_ui::table::model::DEFAULT_SIZE;
 
+#[cfg(not(target_arch = "wasm32"))]
 /// A body pretty-printed for reading in `format`: JSON indented, canonical
 /// XML as the CDR sent it, and a body that is no JSON passed through whole.
 #[must_use]

@@ -18,6 +18,7 @@ use ferrohealth_ui::table::view::{
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::template::list::list_empty;
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::bff::item_tags::ItemTagRow;
 use crate::error::ViewerError;
@@ -28,7 +29,7 @@ use crate::pages::common::{count, refused, section};
 const REMOVE: &str = "remove-tag:";
 
 /// What a post to a Tags tab asks.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TagAct {
     /// Set the tag `key`, with its optional value and target path.
     Set {
@@ -43,6 +44,7 @@ pub enum TagAct {
     Remove(String),
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// What the post asks the Tags tab, when it asks anything.
 #[must_use]
 pub fn tag_act() -> Option<TagAct> {
@@ -60,6 +62,7 @@ pub fn tag_act() -> Option<TagAct> {
         .map(|key| TagAct::Remove(key.to_owned()))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The toast that says what a tag act did to `object`.
 #[must_use]
 pub fn tag_done(act: &TagAct, object: &str) -> crate::flash::Done {
@@ -82,7 +85,7 @@ pub fn tag_done(act: &TagAct, object: &str) -> crate::flash::Done {
 }
 
 /// What a Tags tab draws.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TagPanel {
     /// What the object is, in the reader's words: "composition", "party".
     pub collection: String,

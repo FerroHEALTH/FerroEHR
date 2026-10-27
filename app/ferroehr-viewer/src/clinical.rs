@@ -27,10 +27,11 @@
 )]
 
 use crate::locale::{Msg, tr, tr_with};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// One node of the rendered document.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RenderedNode {
     /// A structural RM node rendered as a titled section.
     Section(RenderedSection),
@@ -53,7 +54,7 @@ impl RenderedNode {
 
 /// A structural RM node: its heading, its RM type, its archetype node id and
 /// its children.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderedSection {
     /// The RM path of this node (the `<For>` key).
     pub key: String,
@@ -70,7 +71,7 @@ pub struct RenderedSection {
 
 /// A leaf: one label, one rendered value, and the terminology code behind it
 /// where the value was coded.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderedRow {
     /// The RM path of this leaf (the `<For>` key).
     pub key: String,

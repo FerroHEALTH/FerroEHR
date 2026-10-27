@@ -15,8 +15,11 @@
 
 use serde_json::Value;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr, tr_with};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr;
+use crate::locale::{Msg, tr_with};
 
 /// Read an `other_details` draft: `None` for a blank draft (the attribute is
 /// removed), `Some(value)` for a JSON object.

@@ -36,6 +36,7 @@
               hydrate target"
 )]
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
@@ -46,6 +47,7 @@ use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_with};
 pub mod edit;
 

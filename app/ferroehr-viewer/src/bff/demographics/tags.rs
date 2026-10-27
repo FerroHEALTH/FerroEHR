@@ -30,12 +30,15 @@
               hydrate target"
 )]
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::demographics::PartyKind;
 use crate::bff::item_tags::ItemTagRow;
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;

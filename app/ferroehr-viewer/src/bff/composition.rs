@@ -31,6 +31,7 @@
               hydrate target"
 )]
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
@@ -38,10 +39,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::bff::wire::VersionEntry;
-// Server-side pretty-printing happens in the #[server] body only.
-#[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_with};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{tr_served, tr_served_with};

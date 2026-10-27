@@ -31,6 +31,81 @@ where
     view! { <Suspense fallback=|| ()>{Suspend::new(answer)}</Suspense> }.into_any()
 }
 
+/// The resource of a page's model, read once by `load` on the server.
+///
+/// The loader is the one place a page reads or writes the CDR, answers its
+/// post and redirects; the view draws the model it resolves to on either
+/// half. A hydrating browser takes the model the server serialized and never
+/// polls a future (Leptos `OnceResource`).
+macro_rules! page_model {
+    ($load:expr) => {{
+        #[cfg(not(target_arch = "wasm32"))]
+        let model = ::leptos::prelude::OnceResource::new($load);
+        // TODO(#4147): a page the browser draws fresh asks the server for its model.
+        #[cfg(target_arch = "wasm32")]
+        let model = ::leptos::prelude::OnceResource::new(::std::future::pending());
+        model
+    }};
+}
+pub(crate) use page_model;
+
+/// The view `draw` makes of the model `model` resolves to.
+#[must_use]
+pub fn drawn<T, F>(model: OnceResource<T>, draw: F) -> AnyView
+where
+    T: Clone + Send + Sync + serde::Serialize + serde::de::DeserializeOwned + 'static,
+    F: FnOnce(T) -> AnyView + Send + 'static,
+{
+    awaited(async move { draw(model.await) })
+}
+
+/// The view `draw` makes of the model `model` resolves to, on a page that
+/// docks a decision bar: `promise` is held until the view is drawn, so the
+/// shell waits for the dock the view sets.
+#[must_use]
+pub fn docked<T, F>(model: OnceResource<T>, promise: crate::shell::DockPromise, draw: F) -> AnyView
+where
+    T: Clone + Send + Sync + serde::Serialize + serde::de::DeserializeOwned + 'static,
+    F: FnOnce(T) -> AnyView + Send + 'static,
+{
+    awaited(async move {
+        let view = draw(model.await);
+        #[cfg_attr(
+            target_arch = "wasm32",
+            expect(
+                clippy::no_effect_underscore_binding,
+                reason = "the browser's promise holds nothing; only the server waits on it"
+            )
+        )]
+        let _kept = promise;
+        view
+    })
+}
+
+/// A refusal a page's model carries: the sentence saying what did not happen
+/// and the viewer error behind it.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Refused {
+    /// What did not happen.
+    pub summary: String,
+    /// Why.
+    pub error: ViewerError,
+}
+
+impl Refused {
+    /// The refusal `error` of what `summary` says.
+    #[must_use]
+    pub const fn new(summary: String, error: ViewerError) -> Self {
+        Self { summary, error }
+    }
+
+    /// The refusal, drawn.
+    #[must_use]
+    pub fn view(&self) -> AnyView {
+        refused(self.summary.clone(), &self.error, None)
+    }
+}
+
 /// The refusal of `error`, with the sentence `summary` saying what did not
 /// happen and the request it answered, when known.
 #[must_use]
@@ -471,7 +546,7 @@ pub fn count(n: usize) -> ferrohealth_ui::i18n::Arg {
 
 /// The days of an activity chart: each day's count by its place, the first
 /// and the last day, and the days its axis names.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct LastDays {
     /// Each day's place from 0 and its count, every day of the window.
     pub counts: Vec<(u32, u32)>,
@@ -484,14 +559,17 @@ pub struct LastDays {
     pub ticks: Vec<(u32, String)>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The days between two labelled days counted back from the last, as the
 /// FerroEHR mockups label a 30-day chart on 22 Sep, 1 Oct, 11 Oct and 21 Oct.
 const TICK_EVERY: u32 = 10;
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The fewest days a tick counted back from the last keeps from the first
 /// day, half of [`TICK_EVERY`], so the two labels never meet.
 const TICK_CLEARANCE: u32 = 5;
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The places an axis over `days` days names: 0, and the last place with
 /// every tenth before it that keeps clear of 0.
 fn tick_places(days: u32) -> Vec<u32> {
@@ -536,6 +614,7 @@ pub fn axis_day(date: jiff::civil::Date) -> String {
     )
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The last `days` days up to today, each with the count `points` holds for
 /// it and 0 for a day it holds none.
 #[must_use]
@@ -543,6 +622,7 @@ pub fn last_days(points: &[crate::activity::ActivityPoint], days: u16) -> LastDa
     last_days_to(points, days, jiff::Zoned::now().date())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// [`last_days`] up to `today`.
 fn last_days_to(
     points: &[crate::activity::ActivityPoint],
