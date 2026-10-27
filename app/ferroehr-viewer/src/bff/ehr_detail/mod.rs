@@ -44,6 +44,7 @@ pub mod contributions;
 pub mod directory;
 pub mod status;
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
@@ -51,6 +52,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_with};
 
 /// The EHR resource's own summary facts, flattened for the detail header.

@@ -25,6 +25,7 @@
               (#1694)"
 )]
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
@@ -33,6 +34,7 @@ use serde_json::Value;
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr, tr_with};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -212,6 +214,7 @@ pub(crate) fn parse_ehr_id(body: &str) -> Result<String, ViewerError> {
         .ok_or_else(|| ViewerError::Internal(tr(Msg::EhrResponseCarriedNoEhrId)))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Whether `value` is a UUID in the RFC 9562 §4 string representation
 /// (`8-4-4-4-12` lower- or upper-case hex with hyphens).
 ///
@@ -373,19 +376,14 @@ pub async fn find_ehr_by_subject(
     parse_ehr_id(&response.body).map(Some)
 }
 
-/// The detail-route href for one EHR id. The id is user- or CDR-supplied, so
-/// the path segment is percent-encoded with `urlencoding` — an id carrying `/`,
-/// `#`, `?` or `%` would otherwise address a different route.
-///
-/// Encoding is also what keeps the `?find=` redirect safe: the returned path
-/// becomes a `Location` header value server-side, and `urlencoding::encode`
-/// emits only unreserved ASCII plus `%XX`, so a submitted id carrying a control
-/// character or a non-ASCII byte can never reach the header builder.
+#[cfg(not(target_arch = "wasm32"))]
+/// The detail-route href for one EHR id ([`crate::pages::ehr::ehr_href`]).
 #[must_use]
 pub(crate) fn ehr_detail_href(ehr_id: &str) -> String {
-    format!("/ehrs/{}", urlencoding::encode(ehr_id))
+    crate::pages::ehr::ehr_href(ehr_id)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Render one raw AQL cell value as display text: strings verbatim, JSON null
 /// as empty, anything else as compact JSON.
 pub(crate) fn cell_text(value: &Value) -> String {

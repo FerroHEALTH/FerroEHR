@@ -16,14 +16,11 @@
 //! nothing is kept between requests. No openEHR spec governs the viewer's
 //! pages: our own design.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "the viewer reads the CDR's CONTRIBUTION JSON wire for its audit and versions"
-)]
-
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::model::{Paging, Window};
+#[cfg(not(target_arch = "wasm32"))]
+use ferrohealth_ui::table::model::Paging;
+use ferrohealth_ui::table::model::Window;
 use ferrohealth_ui::table::pager::{Listing as PagerListing, PostTo, post_pager};
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
@@ -41,24 +38,34 @@ use ferrohealth_ui::widget::editor::EditorWords;
 use leptos::prelude::*;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params_map;
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::commit::commit_contribution;
 use crate::bff::ehr_detail::commit::staged::{StagedChange, StagedKind};
+use crate::bff::ehr_detail::contributions::ContributionPage as Listed;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::contributions::{
-    ContributionPage as Listed, contribution_activity, fetch_contribution, list_contributions,
+    contribution_activity, fetch_contribution, list_contributions,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::locale::{Msg, message, tr, tr_with};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::pages::common::discarded;
 use crate::pages::common::{
-    EditorDock, ago, awaited, card_panel, count, discarded, dock_editor, document_section, panel,
-    refused, section, shortened, version_number, when,
+    EditorDock, LastDays, Refused, ago, card_panel, count, dock_editor, docked, document_section,
+    drawn, page_model, panel, section, shortened, version_number, when,
 };
-use crate::pages::ehr::{EhrTab, crumbs, ehr_href, ehr_id_param, ehr_page, tab_href};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::pages::ehr::EhrModel;
+use crate::pages::ehr::{EhrTab, crumbs, ehr_href, ehr_id_param, ehr_view, tab_href};
 use crate::paging::Listing;
 
+#[cfg(not(target_arch = "wasm32"))]
 /// How many days the activity chart covers.
 const ACTIVITY_DAYS: u16 = 30;
 
@@ -73,12 +80,11 @@ pub fn contribution_href(ehr_id: &str, uid: &str) -> String {
 }
 
 /// The contributions per day of the last [`ACTIVITY_DAYS`] days.
-fn activity(points: Result<Vec<crate::activity::ActivityPoint>, ViewerError>) -> AnyView {
-    let points = match points {
-        Ok(points) => points,
-        Err(error) => return refused(tr(Msg::ContributionsActivityRefused), &error, None),
+fn activity(days: Result<LastDays, Refused>) -> AnyView {
+    let days = match days {
+        Ok(days) => days,
+        Err(refusal) => return refusal.view(),
     };
-    let days = crate::pages::common::last_days(&points, ACTIVITY_DAYS);
     let total: u32 = days.counts.iter().map(|(_, count)| *count).sum();
     let most = days
         .counts
@@ -149,6 +155,7 @@ fn change_words(rubric: &str) -> String {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Reads the page of contributions the paging asks for, the last page when
 /// it asks past the end.
 async fn page_of(ehr_id: &str, paging: Paging) -> Result<(Listed, Window), ViewerError> {
@@ -162,6 +169,81 @@ async fn page_of(ehr_id: &str, paging: Paging) -> Result<(Listed, Window), Viewe
     Ok((page, window))
 }
 
+/// The Contributions tab's model: the contributions per day and the page of
+/// the list.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ContributionsPanel {
+    /// The contributions per day, or the CDR's refusal of them.
+    activity: Result<LastDays, Refused>,
+    /// The page of the list, or the CDR's refusal of it.
+    list: Result<Listed, Refused>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads the Contributions tab.
+async fn load_tab(ehr_id: String) -> EhrModel<ContributionsPanel> {
+    crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
+        let activity = contribution_activity(ehr_id.clone())
+            .await
+            .map(|points| crate::pages::common::last_days(&points, ACTIVITY_DAYS))
+            .map_err(|error| Refused::new(tr(Msg::ContributionsActivityRefused), error));
+        let list = page_of(&ehr_id, crate::paging::current(Listing::Contributions))
+            .await
+            .map(|(page, _)| page)
+            .map_err(|error| Refused::new(tr(Msg::ContributionsRefused), error));
+        ContributionsPanel { activity, list }
+    })
+    .await
+}
+
+/// The Contributions tab's panel.
+fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> AnyView {
+    let ContributionsPanel { activity, list } = model;
+    let chart = self::activity(activity);
+    let list = match list {
+        Ok(page) if page.total == 0 => section(
+            Some(tr(Msg::EhrTabContributions)),
+            Some(0),
+            None,
+            list_empty(tr(Msg::ContributionsEmpty), None),
+        ),
+        Ok(page) => {
+            let window = Window::over(page.total, crate::paging::current(Listing::Contributions));
+            let fields = crate::paging::fields(Listing::Contributions);
+            let pager = (window.pages > 1).then(|| {
+                post_pager(
+                    PagerListing::new(tr(Msg::ContributionsPages)),
+                    window,
+                    PostTo {
+                        id: "contributions-pager",
+                        action: crate::paging::PAGING_ROUTE,
+                        fields: &fields,
+                    },
+                )
+            });
+            section(
+                Some(tr(Msg::EhrTabContributions)),
+                Some(u64::from(page.total)),
+                None,
+                view! {
+                    {listing(ehr_id, &page)}
+                    {pager.map(|pager| view! { <div class="fui-list-foot">{pager}</div> })}
+                },
+            )
+        }
+        Err(refusal) => section(
+            Some(tr(Msg::EhrTabContributions)),
+            None,
+            None,
+            refusal.view(),
+        ),
+    };
+    panel(view! {
+        {section(Some(tr(Msg::ContributionsPerDayTitle)), None, None, chart)}
+        {list}
+    })
+}
+
 /// An EHR's Contributions tab.
 #[expect(
     clippy::must_use_candidate,
@@ -170,67 +252,15 @@ async fn page_of(ehr_id: &str, paging: Paging) -> Result<(Listed, Window), Viewe
 #[component]
 pub fn ContributionsTab() -> impl IntoView {
     let ehr_id = ehr_id_param();
-    let paging = crate::paging::current(Listing::Contributions);
-    let fields = crate::paging::fields(Listing::Contributions);
     let title = tr_with(
         Msg::ContributionsTitle,
         &[("id", shortened(&ehr_id).into())],
     );
-    let body = awaited({
-        let ehr_id = ehr_id.clone();
-        async move {
-            ehr_page(
-                ehr_id.clone(),
-                EhrTab::Contributions,
-                move |_facts| async move {
-                    let chart = activity(contribution_activity(ehr_id.clone()).await);
-                    let list = match page_of(&ehr_id, paging).await {
-                        Ok((page, _)) if page.total == 0 => section(
-                            Some(tr(Msg::EhrTabContributions)),
-                            Some(0),
-                            None,
-                            list_empty(tr(Msg::ContributionsEmpty), None),
-                        ),
-                        Ok((page, window)) => {
-                            let pager = (window.pages > 1).then(|| {
-                                post_pager(
-                                    PagerListing::new(tr(Msg::ContributionsPages)),
-                                    window,
-                                    PostTo {
-                                        id: "contributions-pager",
-                                        action: crate::paging::PAGING_ROUTE,
-                                        fields: &fields,
-                                    },
-                                )
-                            });
-                            section(
-                                Some(tr(Msg::EhrTabContributions)),
-                                Some(u64::from(page.total)),
-                                None,
-                                view! {
-                                    {listing(&ehr_id, &page)}
-                                    {pager
-                                        .map(|pager| {
-                                            view! { <div class="fui-list-foot">{pager}</div> }
-                                        })}
-                                },
-                            )
-                        }
-                        Err(error) => section(
-                            Some(tr(Msg::EhrTabContributions)),
-                            None,
-                            None,
-                            refused(tr(Msg::ContributionsRefused), &error, None),
-                        ),
-                    };
-                    panel(view! {
-                        {section(Some(tr(Msg::ContributionsPerDayTitle)), None, None, chart)}
-                        {list}
-                    })
-                },
-            )
-            .await
-        }
+    let model = page_model!(load_tab(ehr_id.clone()));
+    let body = drawn(model, move |model| {
+        ehr_view(&ehr_id, EhrTab::Contributions, model, |listed| {
+            contributions_panel(&ehr_id, listed)
+        })
     });
     view! {
         <Title text=title />
@@ -239,7 +269,7 @@ pub fn ContributionsTab() -> impl IntoView {
 }
 
 /// One version a contribution made, as its `OBJECT_REF` names it.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct Made {
     /// The `OBJECT_VERSION_ID`.
     id: String,
@@ -250,7 +280,7 @@ struct Made {
 }
 
 /// The audit and the versions of a `CONTRIBUTION` document.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 struct Read {
     /// When it was committed.
     committed: String,
@@ -266,8 +296,14 @@ struct Read {
     made: Vec<Made>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the viewer reads the CDR's CONTRIBUTION JSON wire for its audit and versions"
+)]
 /// Reads the facts of a `CONTRIBUTION` document.
 fn read(body: &str) -> Result<Read, serde_json::Error> {
+    use serde_json::Value;
     let doc: Value = serde_json::from_str(body)?;
     let text = |pointer: &str| {
         doc.pointer(pointer)
@@ -335,6 +371,75 @@ fn made_table(ehr_id: &str, made: &[Made]) -> AnyView {
     .into_any()
 }
 
+/// One contribution's model.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum ContributionModel {
+    /// Its audit and versions, and its record pretty-printed.
+    Read(Box<Read>, String),
+    /// The CDR's refusal, or a record that is not JSON.
+    Refused(Refused),
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads the contribution `uid` of the EHR `ehr_id`; one the CDR does not
+/// hold answers `404`.
+async fn load_contribution(ehr_id: String, uid: String) -> ContributionModel {
+    let body = match fetch_contribution(ehr_id, uid).await {
+        Ok(body) => body,
+        Err(error) => {
+            if crate::pages::common::is_status(&error, http::StatusCode::NOT_FOUND) {
+                crate::request::set_status(http::StatusCode::NOT_FOUND);
+            }
+            return ContributionModel::Refused(Refused::new(tr(Msg::ContributionRefused), error));
+        }
+    };
+    match read(&body) {
+        Ok(facts) => ContributionModel::Read(
+            Box::new(facts),
+            crate::bff::pretty_body(&body, crate::format::ReprFormat::CanonicalJson),
+        ),
+        Err(error) => ContributionModel::Refused(Refused::new(
+            tr(Msg::ContributionRefused),
+            ViewerError::Internal(tr_with(
+                Msg::ContributionsJson,
+                &[("e", error.to_string().into())],
+            )),
+        )),
+    }
+}
+
+/// One contribution's audit, the versions it made and its record.
+fn contribution_view(ehr_id: &str, facts: &Read, record: String) -> AnyView {
+    let mut rows = vec![
+        (tr(Msg::FactCommitted), when(&facts.committed)),
+        (tr(Msg::FactCommitter), facts.committer.clone().into_any()),
+        (tr(Msg::FactChange), change_words(&facts.change).into_any()),
+    ];
+    if let Some(description) = facts.description.clone() {
+        rows.push((tr(Msg::FactDescription), description.into_any()));
+    }
+    rows.push((
+        tr(Msg::FactSystem),
+        view! { <code>{facts.system.clone()}</code> }.into_any(),
+    ));
+    let made = u64::try_from(facts.made.len()).unwrap_or(u64::MAX);
+    card_panel(view! {
+        {section(Some(tr(Msg::ContributionAudit)), None, None, definitions(rows))}
+        {section(
+            Some(tr(Msg::ContributionVersions)),
+            Some(made),
+            None,
+            made_table(ehr_id, &facts.made),
+        )}
+        {document_section(
+            tr(Msg::ContributionRecord),
+            Language::Json,
+            record,
+            "contribution-record",
+        )}
+    })
+}
+
 /// One contribution: its audit, the versions it made and its record.
 #[expect(
     clippy::must_use_candidate,
@@ -363,57 +468,10 @@ pub fn ContributionPage() -> impl IntoView {
         },
         ActionGroup::none(),
     );
-    let body = awaited({
-        let ehr_id = ehr_id.clone();
-        async move {
-            let body = match fetch_contribution(ehr_id.clone(), uid.clone()).await {
-                Ok(body) => body,
-                Err(error) => {
-                    if crate::pages::common::is_status(&error, http::StatusCode::NOT_FOUND) {
-                        crate::request::set_status(http::StatusCode::NOT_FOUND);
-                    }
-                    return refused(tr(Msg::ContributionRefused), &error, None);
-                }
-            };
-            let facts = match read(&body) {
-                Ok(facts) => facts,
-                Err(error) => {
-                    let error = ViewerError::Internal(tr_with(
-                        Msg::ContributionsJson,
-                        &[("e", error.to_string().into())],
-                    ));
-                    return refused(tr(Msg::ContributionRefused), &error, None);
-                }
-            };
-            let mut rows = vec![
-                (tr(Msg::FactCommitted), when(&facts.committed)),
-                (tr(Msg::FactCommitter), facts.committer.clone().into_any()),
-                (tr(Msg::FactChange), change_words(&facts.change).into_any()),
-            ];
-            if let Some(description) = facts.description.clone() {
-                rows.push((tr(Msg::FactDescription), description.into_any()));
-            }
-            rows.push((
-                tr(Msg::FactSystem),
-                view! { <code>{facts.system.clone()}</code> }.into_any(),
-            ));
-            let made = u64::try_from(facts.made.len()).unwrap_or(u64::MAX);
-            card_panel(view! {
-                {section(Some(tr(Msg::ContributionAudit)), None, None, definitions(rows))}
-                {section(
-                    Some(tr(Msg::ContributionVersions)),
-                    Some(made),
-                    None,
-                    made_table(&ehr_id, &facts.made),
-                )}
-                {document_section(
-                    tr(Msg::ContributionRecord),
-                    Language::Json,
-                    crate::bff::pretty_body(&body, crate::format::ReprFormat::CanonicalJson),
-                    "contribution-record",
-                )}
-            })
-        }
+    let model = page_model!(load_contribution(ehr_id.clone(), uid));
+    let body = drawn(model, move |model| match model {
+        ContributionModel::Read(facts, record) => contribution_view(&ehr_id, &facts, record),
+        ContributionModel::Refused(refusal) => refusal.view(),
     });
     view! {
         <Title text=title />
@@ -426,7 +484,7 @@ pub fn ContributionPage() -> impl IntoView {
 const NEW_FORM: &str = "contribution-new";
 
 /// One change as the form holds it.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct Draft {
     /// Its number in the form, from 1.
     number: u16,
@@ -443,6 +501,7 @@ struct Draft {
 }
 
 impl Draft {
+    #[cfg(not(target_arch = "wasm32"))]
     /// A new change numbered `number`: a new composition.
     fn new(number: u16) -> Self {
         Self {
@@ -455,6 +514,7 @@ impl Draft {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     /// The change numbered `number` as `posted` holds it.
     fn posted(posted: &crate::posted::Posted, number: u16) -> Self {
         let field = |name: &str| posted.text(&format!("{name}-{number}"));
@@ -506,6 +566,7 @@ impl Draft {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The changes the form holds after the post's own step: staged, removed or
 /// drawn again.
 fn drafts(posted: Option<&crate::posted::Posted>) -> Vec<Draft> {
@@ -541,10 +602,11 @@ fn drafts(posted: Option<&crate::posted::Posted>) -> Vec<Draft> {
     drafts
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Fills what a change of its kind starts from, when the form has none yet:
 /// the current status for a status change, the composition for an
 /// amendment. `Some` holds the refusal that kept it empty.
-async fn fill(ehr_id: &str, draft: &mut Draft) -> Option<AnyView> {
+async fn fill(ehr_id: &str, draft: &mut Draft) -> Option<Refused> {
     match draft.kind {
         StagedKind::StatusModify if draft.body.trim().is_empty() || draft.preceding.is_empty() => {
             match crate::bff::ehr_detail::status::fetch_ehr_status(ehr_id.to_owned()).await {
@@ -556,7 +618,7 @@ async fn fill(ehr_id: &str, draft: &mut Draft) -> Option<AnyView> {
                     );
                     None
                 }
-                Err(error) => Some(refused(tr(Msg::StatusRefused), &error, None)),
+                Err(error) => Some(Refused::new(tr(Msg::StatusRefused), error)),
             }
         }
         StagedKind::CompositionAmend if !draft.target.is_empty() => {
@@ -578,11 +640,7 @@ async fn fill(ehr_id: &str, draft: &mut Draft) -> Option<AnyView> {
                     None
                 }
                 Ok(None) => None,
-                Err(error) => Some(refused(
-                    tr(Msg::ContributionCompositionRefused),
-                    &error,
-                    None,
-                )),
+                Err(error) => Some(Refused::new(tr(Msg::ContributionCompositionRefused), error)),
             }
         }
         _ => None,
@@ -610,7 +668,7 @@ fn kind_options(kind: StagedKind) -> AnyView {
 
 /// What the form offers to pick from: the templates and the EHR's
 /// compositions.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 struct Choices {
     /// The operational templates' ids.
     templates: Vec<String>,
@@ -681,7 +739,7 @@ fn change_section(
     draft: &Draft,
     choices: &Choices,
     removable: bool,
-    trouble: Option<AnyView>,
+    trouble: Option<Refused>,
 ) -> AnyView {
     let number = draft.number;
     let id = |name: &str| format!("{name}-{number}");
@@ -753,7 +811,7 @@ fn change_section(
             <input type="hidden" name="seq" value=number.to_string() />
             <input type="hidden" name=id("was") value=draft.kind.as_value() />
             <input type="hidden" name=id("preceding") value=draft.preceding.clone() />
-            {trouble}
+            {trouble.map(|trouble| trouble.view())}
             <div class="fui-form-grid">
                 <div class="fui-span-2">{kind}</div>
                 <div class="fui-span-2">{own_field(draft, choices)}</div>
@@ -763,6 +821,7 @@ fn change_section(
     )
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// What the picks offer, read once for the form. `Err` is the refusal of a
 /// pick the form needs.
 async fn choices(ehr_id: &str, drafts: &[Draft]) -> Result<Choices, ViewerError> {
@@ -805,171 +864,221 @@ async fn choices(ehr_id: &str, drafts: &[Draft]) -> Result<Choices, ViewerError>
     Ok(choices)
 }
 
+/// What New contribution's form holds.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct NewForm {
+    /// The changes, each with the refusal that kept it empty.
+    drafts: Vec<(Draft, Option<Refused>)>,
+    /// The audit's description.
+    description: String,
+    /// The audit's committer.
+    committer: String,
+    /// The commit the CDR refused, when the post was one.
+    refused: Option<Refused>,
+    /// What the picks offer.
+    choices: Choices,
+    /// The refusal of a pick the form needs.
+    pick_trouble: Option<Refused>,
+}
+
+/// New contribution's model.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum NewModel {
+    /// The form.
+    Form(Box<NewForm>),
+    /// The post redirected.
+    Left,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads New contribution: answers its post (Discard, a step of the form,
+/// Commit) and reads what its changes start from and what the picks offer.
+async fn load_new(ehr_id: String) -> NewModel {
+    let posted = crate::posted::posted();
+    if discarded(posted.as_ref()) {
+        leptos_axum::redirect(&tab_href(&ehr_id, EhrTab::Contributions));
+        return NewModel::Left;
+    }
+    let mut drafts = drafts(posted.as_ref());
+    let mut troubles = Vec::new();
+    for draft in &mut drafts {
+        troubles.push(fill(&ehr_id, draft).await);
+    }
+    let description = posted
+        .as_ref()
+        .map(|posted| posted.text("description"))
+        .unwrap_or_default();
+    let committer = posted
+        .as_ref()
+        .map(|posted| posted.text("committer"))
+        .unwrap_or_default();
+    let mut refused = None;
+    if posted
+        .as_ref()
+        .is_some_and(|posted| posted.intent() == "save")
+    {
+        let staged: Vec<StagedChange> = drafts.iter().map(Draft::staged).collect();
+        match commit_contribution(
+            ehr_id.clone(),
+            staged,
+            committer.clone(),
+            description.clone(),
+        )
+        .await
+        {
+            Ok(outcome) => {
+                let href = if outcome.contribution_uid.is_empty() {
+                    tab_href(&ehr_id, EhrTab::Contributions)
+                } else {
+                    contribution_href(&ehr_id, &outcome.contribution_uid)
+                };
+                redirect_with(
+                    &href,
+                    &Done::ok(tr(Msg::ContributionCommitted)).line(tr_with(
+                        Msg::ContributionMadeVersions,
+                        &[("count", count(outcome.version_uids.len()))],
+                    )),
+                );
+                return NewModel::Left;
+            }
+            Err(error) => {
+                refused = Some(Refused::new(tr(Msg::ContributionCommitRefused), error));
+            }
+        }
+    }
+    let (choices, pick_trouble) = match choices(&ehr_id, &drafts).await {
+        Ok(choices) => (choices, None),
+        Err(error) => (
+            Choices::default(),
+            Some(Refused::new(tr(Msg::ContributionChoicesRefused), error)),
+        ),
+    };
+    NewModel::Form(Box::new(NewForm {
+        drafts: drafts.into_iter().zip(troubles).collect(),
+        description,
+        committer,
+        refused,
+        choices,
+        pick_trouble,
+    }))
+}
+
+/// New contribution's form, its decision bar docked.
+fn new_form(ehr_id: &str, form: NewForm) -> AnyView {
+    let NewForm {
+        drafts,
+        description,
+        committer,
+        refused,
+        choices,
+        pick_trouble,
+    } = form;
+    let you = crate::request::signed()
+        .map(|session| session.identity)
+        .unwrap_or_default();
+    let line = if refused.is_some() {
+        (Glyph::CIRCLE_X, tr(Msg::ContributionNotCommitted))
+    } else {
+        (
+            Glyph::GIT_COMMIT,
+            tr_with(Msg::StagedCount, &[("count", count(drafts.len()))]),
+        )
+    };
+    let staged = drafts.len();
+    let removable = staged > 1;
+    let sections = drafts
+        .into_iter()
+        .map(|(draft, trouble)| change_section(&draft, &choices, removable, trouble))
+        .collect_view();
+    let stage = (staged < usize::from(u16::MAX)).then(|| {
+        view! {
+            <div class="fui-add-row">
+                <button
+                    type="submit"
+                    name="intent"
+                    value="stage"
+                    class="fui-button fui-button-ghost fui-button-small"
+                >
+                    {ferrohealth_ui::icon::icon(Glyph::PLUS, "14")}
+                    {tr(Msg::StagedStage)}
+                </button>
+            </div>
+        }
+    });
+    let audit = view! {
+        <div class="fui-form-grid">
+            <div class="fui-span-2">
+                {Field::new("au-d", tr(Msg::FactDescription))
+                    .view(
+                        view! {
+                            <input
+                                id="au-d"
+                                name="description"
+                                type="text"
+                                class="fui-input"
+                                value=description
+                            />
+                        },
+                    )}
+            </div>
+            <div class="fui-span-2">
+                {Field::new("au-c", tr(Msg::FactCommitter))
+                    .view(
+                        view! {
+                            <input
+                                id="au-c"
+                                name="committer"
+                                type="text"
+                                class="fui-input"
+                                value=committer
+                                placeholder=tr_with(
+                                    Msg::ContributionCommitterPlaceholder,
+                                    &[("name", you.clone().into())],
+                                )
+                            />
+                        },
+                    )}
+            </div>
+        </div>
+    };
+    dock_editor(EditorDock {
+        form: NEW_FORM.to_owned(),
+        line: line.1,
+        glyph: line.0,
+        save: tr_with(Msg::ContributionCommit, &[("count", count(staged))]),
+        blocked: None,
+    });
+    view! {
+        {refused.map(|refusal| refusal.view())}
+        {pick_trouble.map(|refusal| refusal.view())}
+        <form id=NEW_FORM method="post" action=format!("{}/contribution/new", ehr_href(ehr_id))>
+            {card_panel(
+                view! {
+                    {sections}
+                    {crate::pages::common::plain_section(stage)}
+                    {section(Some(tr(Msg::ContributionNewAudit)), None, None, audit)}
+                },
+            )}
+        </form>
+    }
+    .into_any()
+}
+
 /// New contribution: several changes staged and committed together.
 #[expect(
     clippy::must_use_candidate,
     reason = "#[component] rewrites the fn; the router always consumes the value"
 )]
-#[expect(
-    clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
-)]
 #[component]
 pub fn NewContributionPage() -> impl IntoView {
     let ehr_id = ehr_id_param();
-    let posted = crate::posted::posted();
-    if discarded(posted.as_ref()) {
-        leptos_axum::redirect(&tab_href(&ehr_id, EhrTab::Contributions));
-    }
     let dock_promise = crate::shell::promise_dock();
-    let body = awaited({
+    let model = page_model!(load_new(ehr_id.clone()));
+    let body = docked(model, dock_promise, {
         let ehr_id = ehr_id.clone();
-        async move {
-            let _dock_promise = dock_promise;
-            let mut drafts = drafts(posted.as_ref());
-            let mut troubles = Vec::new();
-            for draft in &mut drafts {
-                troubles.push(fill(&ehr_id, draft).await);
-            }
-            let description = posted
-                .as_ref()
-                .map(|posted| posted.text("description"))
-                .unwrap_or_default();
-            let committer = posted
-                .as_ref()
-                .map(|posted| posted.text("committer"))
-                .unwrap_or_default();
-            let you = crate::request::signed()
-                .map(|session| session.identity)
-                .unwrap_or_default();
-            let mut top = None;
-            let mut line = (
-                Glyph::GIT_COMMIT,
-                tr_with(Msg::StagedCount, &[("count", count(drafts.len()))]),
-            );
-            if posted
-                .as_ref()
-                .is_some_and(|posted| posted.intent() == "save")
-            {
-                let staged: Vec<StagedChange> = drafts.iter().map(Draft::staged).collect();
-                match commit_contribution(
-                    ehr_id.clone(),
-                    staged,
-                    committer.clone(),
-                    description.clone(),
-                )
-                .await
-                {
-                    Ok(outcome) => {
-                        let href = if outcome.contribution_uid.is_empty() {
-                            tab_href(&ehr_id, EhrTab::Contributions)
-                        } else {
-                            contribution_href(&ehr_id, &outcome.contribution_uid)
-                        };
-                        redirect_with(
-                            &href,
-                            &Done::ok(tr(Msg::ContributionCommitted)).line(tr_with(
-                                Msg::ContributionMadeVersions,
-                                &[("count", count(outcome.version_uids.len()))],
-                            )),
-                        );
-                        return ().into_any();
-                    }
-                    Err(error) => {
-                        line = (Glyph::CIRCLE_X, tr(Msg::ContributionNotCommitted));
-                        top = Some(refused(tr(Msg::ContributionCommitRefused), &error, None));
-                    }
-                }
-            }
-            let (choices, pick_trouble) = match choices(&ehr_id, &drafts).await {
-                Ok(choices) => (choices, None),
-                Err(error) => (
-                    Choices::default(),
-                    Some(refused(tr(Msg::ContributionChoicesRefused), &error, None)),
-                ),
-            };
-            let removable = drafts.len() > 1;
-            let sections = drafts
-                .iter()
-                .zip(troubles)
-                .map(|(draft, trouble)| change_section(draft, &choices, removable, trouble))
-                .collect_view();
-            let stage = (drafts.len() < usize::from(u16::MAX)).then(|| {
-                view! {
-                    <div class="fui-add-row">
-                        <button
-                            type="submit"
-                            name="intent"
-                            value="stage"
-                            class="fui-button fui-button-ghost fui-button-small"
-                        >
-                            {ferrohealth_ui::icon::icon(Glyph::PLUS, "14")}
-                            {tr(Msg::StagedStage)}
-                        </button>
-                    </div>
-                }
-            });
-            let audit = view! {
-                <div class="fui-form-grid">
-                    <div class="fui-span-2">
-                        {Field::new("au-d", tr(Msg::FactDescription))
-                            .view(
-                                view! {
-                                    <input
-                                        id="au-d"
-                                        name="description"
-                                        type="text"
-                                        class="fui-input"
-                                        value=description
-                                    />
-                                },
-                            )}
-                    </div>
-                    <div class="fui-span-2">
-                        {Field::new("au-c", tr(Msg::FactCommitter))
-                            .view(
-                                view! {
-                                    <input
-                                        id="au-c"
-                                        name="committer"
-                                        type="text"
-                                        class="fui-input"
-                                        value=committer
-                                        placeholder=tr_with(
-                                            Msg::ContributionCommitterPlaceholder,
-                                            &[("name", you.clone().into())],
-                                        )
-                                    />
-                                },
-                            )}
-                    </div>
-                </div>
-            };
-            dock_editor(EditorDock {
-                form: NEW_FORM.to_owned(),
-                line: line.1,
-                glyph: line.0,
-                save: tr_with(Msg::ContributionCommit, &[("count", count(drafts.len()))]),
-                blocked: None,
-            });
-            view! {
-                {top}
-                {pick_trouble}
-                <form
-                    id=NEW_FORM
-                    method="post"
-                    action=format!("{}/contribution/new", ehr_href(&ehr_id))
-                >
-                    {card_panel(
-                        view! {
-                            {sections}
-                            {crate::pages::common::plain_section(stage)}
-                            {section(Some(tr(Msg::ContributionNewAudit)), None, None, audit)}
-                        },
-                    )}
-                </form>
-            }
-            .into_any()
+        move |model| match model {
+            NewModel::Form(form) => new_form(&ehr_id, *form),
+            NewModel::Left => ().into_any(),
         }
     });
     let heading = editor_heading(

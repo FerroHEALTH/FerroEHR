@@ -14,12 +14,14 @@
 //! component-free [`composition_filter`](super::composition_filter): operator
 //! input is bound as AQL `query_parameters`, never concatenated into the query.
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::uid::uid_value_of;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::composition_filter::CompositionFilter;
 use crate::bff::ehrs::ResultPage;
 use crate::error::ViewerError;
@@ -29,6 +31,7 @@ use crate::format::ReprFormat;
 use crate::bff::ehr_detail::composition_filter::composition_query;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehrs::{aql_request_body, parse_result_set};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;

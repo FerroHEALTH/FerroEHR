@@ -11,6 +11,7 @@
               hydrate target"
 )]
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
@@ -19,6 +20,7 @@ use serde_json::Value;
 
 use crate::activity::ActivityPoint;
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_with;

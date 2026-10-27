@@ -38,16 +38,21 @@
               hydrate target"
 )]
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::demographics::PartyKind;
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr, tr_with};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::uid::container_uid_of;
 
 /// The viewer's view of one party version.
@@ -397,6 +402,7 @@ fn count_of(value: Option<&Value>) -> u32 {
         .map_or(0, |items| u32::try_from(items.len()).unwrap_or(u32::MAX))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Read an `identities` draft: a JSON array with at least one entry.
 ///
 /// `PARTY.identities` is `List<PARTY_IDENTITY>` `1..1` with the invariant
@@ -423,6 +429,7 @@ fn parse_identities(draft: &str) -> Result<Value, String> {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Read a `details` draft: `None` for a blank draft (the attribute is removed),
 /// `Some(value)` for a JSON object.
 ///

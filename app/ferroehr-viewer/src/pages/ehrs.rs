@@ -28,18 +28,25 @@ use ferrohealth_ui::view::template::list::{
     ActiveFilters, FilterChip, ListCard, active_filters, list_card, list_empty,
 };
 use ferrohealth_ui::widget::action_menu::{Act, Action};
+#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::widget::identifier::{Domain, Masked};
 use leptos::prelude::*;
 use leptos_meta::Title;
+use serde::{Deserialize, Serialize};
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehrs::{
-    ResultPage, cell_text, create_ehr, ehr_detail_href, find_ehr_by_subject, is_uuid, list_ehrs,
+    ResultPage, cell_text, create_ehr, find_ehr_by_subject, is_uuid, list_ehrs,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::{Msg, tr, tr_with};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::pages::common::is_status;
 use crate::pages::common::{
-    EditorDock, awaited, card_panel, dock_editor, is_status, refused, section, short,
+    EditorDock, Refused, card_panel, dock_editor, docked, drawn, page_model, section, short,
 };
+use crate::pages::ehr::ehr_href;
 use crate::paging::Listing;
 
 /// The EHRs list's heading, with New EHR.
@@ -76,7 +83,7 @@ fn table(rows: &[(String, String)]) -> AnyView {
     let body = rows
         .iter()
         .map(|(ehr_id, created)| {
-            let href = ehr_detail_href(ehr_id);
+            let href = ehr_href(ehr_id);
             let title = title_cell(Some(&href), short(ehr_id), None);
             let created = cell(&columns[1], crate::pages::common::ago(created));
             view! { <tr>{title} {created}</tr> }.into_any()
@@ -93,6 +100,7 @@ fn table(rows: &[(String, String)]) -> AnyView {
     .into_any()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The rows of a result page of the list's AQL.
 fn rows_of(page: &ResultPage) -> Vec<(String, String)> {
     page.rows
@@ -174,21 +182,41 @@ fn card(body: AnyView, count: Option<u64>, pager: Option<AnyView>) -> AnyView {
     })
 }
 
-/// The page a post finding an EHR draws: the EHR id's page, the one EHR the
-/// subject names, or the line that no EHR has it.
-async fn found(typed: String, namespace: String) -> AnyView {
+/// The EHRs list's model: the page of the list, or what a find found.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum EhrsModel {
+    /// The page of the list, each row `(ehr id, created)`, or the CDR's
+    /// refusal of it.
+    List(Result<Vec<(String, String)>, Refused>),
+    /// A subject id was typed with no namespace.
+    NeedsNamespace {
+        /// What was typed.
+        typed: String,
+    },
+    /// The EHR a subject names.
+    Found {
+        /// The subject's namespace.
+        namespace: String,
+        /// The chip naming the subject, its id masked.
+        chip: String,
+        /// The EHR, `None` when no EHR has the subject, or the CDR's refusal.
+        found: Result<Option<String>, Refused>,
+    },
+    /// The find named an EHR id, so the post redirected to it.
+    Left,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What a post finding an EHR found: the EHR id's page, the one EHR the
+/// subject names, or that no EHR has it.
+async fn found(typed: String, namespace: String) -> EhrsModel {
     let id = crate::uid::container_uid_of(&typed);
     if is_uuid(&id) {
-        leptos_axum::redirect(&ehr_detail_href(&id));
-        return ().into_any();
+        leptos_axum::redirect(&ehr_href(&id));
+        return EhrsModel::Left;
     }
     if namespace.is_empty() {
-        let line = list_empty(tr(Msg::EhrsSubjectNeedsNamespace), None);
-        return view! {
-            {toolbar(&typed, &namespace)}
-            {card(line, None, None)}
-        }
-        .into_any();
+        return EhrsModel::NeedsNamespace { typed };
     }
     let masked = Masked::new(
         Domain::new(namespace.clone()),
@@ -196,83 +224,113 @@ async fn found(typed: String, namespace: String) -> AnyView {
         ferrohealth_ui::widget::identifier::KEEP,
     );
     let chip = tr_with(Msg::EhrsSubjectChip, &[("subject", masked.drawn().into())]);
-    match find_ehr_by_subject(typed.clone(), namespace.clone()).await {
-        Ok(Some(ehr_id)) => view! {
-            {toolbar("", &namespace)}
-            {chips(chip)}
-            {card(table(&[(ehr_id, String::new())]), Some(1), None)}
+    let found = find_ehr_by_subject(typed, namespace.clone())
+        .await
+        .map_err(|error| Refused::new(tr(Msg::EhrsFindRefused), error));
+    EhrsModel::Found {
+        namespace,
+        chip,
+        found,
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads the EHRs list: the find a post asks, or the page of the list.
+async fn load_list() -> EhrsModel {
+    if let Some(posted) = crate::posted::posted_for("find") {
+        let typed = posted.text("find");
+        let namespace = posted.text("namespace");
+        if !typed.is_empty() {
+            return found(typed, namespace).await;
+        }
+    }
+    let window = OpenWindow::of(crate::paging::current(Listing::Ehrs), 0);
+    EhrsModel::List(
+        list_ehrs(window.start, window.size)
+            .await
+            .map(|page| rows_of(&page))
+            .map_err(|error| Refused::new(tr(Msg::EhrsRefused), error)),
+    )
+}
+
+/// The EHRs list's body.
+fn list_view(model: EhrsModel) -> AnyView {
+    match model {
+        EhrsModel::List(Ok(rows)) => {
+            let paging = crate::paging::current(Listing::Ehrs);
+            let fields = crate::paging::fields(Listing::Ehrs);
+            let held = u32::try_from(rows.len()).unwrap_or(u32::MAX);
+            let window = OpenWindow::of(paging, held);
+            let body = if rows.is_empty() && window.page == 1 {
+                list_empty(
+                    tr(Msg::EhrsEmpty),
+                    Some((tr(Msg::EhrsCreateFirst), "/ehrs/new".to_owned())),
+                )
+            } else {
+                table(&rows)
+            };
+            let pager = (window.page > 1 || window.has_next()).then(|| {
+                post_open_pager(
+                    PagerListing::new(tr(Msg::EhrsPages)),
+                    window,
+                    PostTo {
+                        id: "ehrs-pager",
+                        action: crate::paging::PAGING_ROUTE,
+                        fields: &fields,
+                    },
+                )
+            });
+            view! {
+                {toolbar("", "")}
+                {card(body, None, pager)}
+            }
+            .into_any()
+        }
+        EhrsModel::List(Err(refusal)) => view! {
+            {toolbar("", "")}
+            {refusal.view()}
         }
         .into_any(),
-        Ok(None) => view! {
-            {toolbar("", &namespace)}
-            {chips(chip)}
-            {card(list_empty(tr(Msg::EhrsNoMatch), None), Some(0), None)}
+        EhrsModel::NeedsNamespace { typed } => {
+            let line = list_empty(tr(Msg::EhrsSubjectNeedsNamespace), None);
+            view! {
+                {toolbar(&typed, "")}
+                {card(line, None, None)}
+            }
+            .into_any()
         }
-        .into_any(),
-        Err(error) => view! {
-            {toolbar("", &namespace)}
-            {refused(tr(Msg::EhrsFindRefused), &error, None)}
-        }
-        .into_any(),
+        EhrsModel::Found {
+            namespace,
+            chip,
+            found,
+        } => match found {
+            Ok(Some(ehr_id)) => view! {
+                {toolbar("", &namespace)}
+                {chips(chip)}
+                {card(table(&[(ehr_id, String::new())]), Some(1), None)}
+            }
+            .into_any(),
+            Ok(None) => view! {
+                {toolbar("", &namespace)}
+                {chips(chip)}
+                {card(list_empty(tr(Msg::EhrsNoMatch), None), Some(0), None)}
+            }
+            .into_any(),
+            Err(refusal) => view! {
+                {toolbar("", &namespace)}
+                {refusal.view()}
+            }
+            .into_any(),
+        },
+        EhrsModel::Left => ().into_any(),
     }
 }
 
 /// The EHRs list.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
 #[component]
 pub fn EhrsPage() -> impl IntoView {
-    let posted = crate::posted::posted_for("find");
-    let paging = crate::paging::current(Listing::Ehrs);
-    let fields = crate::paging::fields(Listing::Ehrs);
-    let body = awaited(async move {
-        if let Some(posted) = posted {
-            let typed = posted.text("find");
-            let namespace = posted.text("namespace");
-            if !typed.is_empty() {
-                return found(typed, namespace).await;
-            }
-        }
-        let window = OpenWindow::of(paging, 0);
-        match list_ehrs(window.start, window.size).await {
-            Ok(page) => {
-                let rows = rows_of(&page);
-                let held = u32::try_from(rows.len()).unwrap_or(u32::MAX);
-                let window = OpenWindow::of(paging, held);
-                let body = if rows.is_empty() && window.page == 1 {
-                    list_empty(
-                        tr(Msg::EhrsEmpty),
-                        Some((tr(Msg::EhrsCreateFirst), "/ehrs/new".to_owned())),
-                    )
-                } else {
-                    table(&rows)
-                };
-                let pager = (window.page > 1 || window.has_next()).then(|| {
-                    post_open_pager(
-                        PagerListing::new(tr(Msg::EhrsPages)),
-                        window,
-                        PostTo {
-                            id: "ehrs-pager",
-                            action: crate::paging::PAGING_ROUTE,
-                            fields: &fields,
-                        },
-                    )
-                });
-                view! {
-                    {toolbar("", "")}
-                    {card(body, None, pager)}
-                }
-                .into_any()
-            }
-            Err(error) => view! {
-                {toolbar("", "")}
-                {refused(tr(Msg::EhrsRefused), &error, None)}
-            }
-            .into_any(),
-        }
-    });
+    let model = page_model!(load_list());
+    let body = drawn(model, list_view);
     view! {
         <Title text=tr(Msg::NavEhrs) />
         {heading()}
@@ -284,7 +342,7 @@ pub fn EhrsPage() -> impl IntoView {
 const NEW_EHR_FORM: &str = "ehr-new";
 
 /// What New EHR's form holds, as it was posted.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 struct Draft {
     /// The subject id.
     subject_id: String,
@@ -365,92 +423,140 @@ fn new_form(draft: &Draft, ehr_id_error: Option<String>) -> AnyView {
     .into_any()
 }
 
-/// New EHR.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn NewEhrPage() -> impl IntoView {
+/// New EHR's model.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum NewModel {
+    /// The form.
+    Form {
+        /// What it holds.
+        draft: Draft,
+        /// Whether a create was asked for and did not happen.
+        failed: bool,
+        /// What is wrong with the EHR id asked for.
+        ehr_id_error: Option<String>,
+        /// The CDR's refusal of the create, with the id already in use when
+        /// that is why.
+        refused: Option<(Refused, Option<String>)>,
+    },
+    /// The post redirected.
+    Left,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads New EHR: answers its post (Discard, Create).
+async fn load_new() -> NewModel {
     let posted = crate::posted::posted();
     if crate::pages::common::discarded(posted.as_ref()) {
         leptos_axum::redirect("/ehrs");
+        return NewModel::Left;
     }
-    let dock_promise = crate::shell::promise_dock();
-    let body = awaited(async move {
-        let _dock_promise = dock_promise;
-        let draft = posted.as_ref().map_or_else(Draft::default, |posted| Draft {
-            subject_id: posted.text("subject_id"),
-            namespace: posted.text("namespace"),
-            ehr_id: posted.text("ehr_id"),
-        });
-        let mut top = None;
-        let mut ehr_id_error = None;
-        let mut line = (Glyph::FILE_PLUS, tr(Msg::EhrNewNotYet));
-        if posted
-            .as_ref()
-            .is_some_and(|posted| posted.intent() == "save")
-        {
-            let id = draft.ehr_id.trim().to_owned();
-            if !id.is_empty() && !is_uuid(&id) {
-                ehr_id_error = Some(tr(Msg::EhrNewNotUuid));
-                line = (Glyph::CIRCLE_X, tr(Msg::EhrNewNotCreated));
-            } else {
-                match create_ehr(
-                    id.clone(),
-                    draft.subject_id.clone(),
-                    draft.namespace.clone(),
-                )
-                .await
-                {
-                    Ok(created) => {
-                        redirect_with(
-                            &ehr_detail_href(&created),
-                            &Done::ok(tr(Msg::EhrCreated))
-                                .line(crate::pages::common::shortened(&created)),
-                        );
-                        return ().into_any();
+    let draft = posted.as_ref().map_or_else(Draft::default, |posted| Draft {
+        subject_id: posted.text("subject_id"),
+        namespace: posted.text("namespace"),
+        ehr_id: posted.text("ehr_id"),
+    });
+    let mut failed = false;
+    let mut ehr_id_error = None;
+    let mut refused = None;
+    if posted
+        .as_ref()
+        .is_some_and(|posted| posted.intent() == "save")
+    {
+        let id = draft.ehr_id.trim().to_owned();
+        failed = true;
+        if !id.is_empty() && !is_uuid(&id) {
+            ehr_id_error = Some(tr(Msg::EhrNewNotUuid));
+        } else {
+            match create_ehr(
+                id.clone(),
+                draft.subject_id.clone(),
+                draft.namespace.clone(),
+            )
+            .await
+            {
+                Ok(created) => {
+                    redirect_with(
+                        &ehr_href(&created),
+                        &Done::ok(tr(Msg::EhrCreated))
+                            .line(crate::pages::common::shortened(&created)),
+                    );
+                    return NewModel::Left;
+                }
+                Err(error) => {
+                    let conflict = is_status(&error, http::StatusCode::CONFLICT);
+                    if conflict {
+                        ehr_id_error = Some(tr(Msg::EhrNewInUse));
                     }
-                    Err(error) => {
-                        line = (Glyph::CIRCLE_X, tr(Msg::EhrNewNotCreated));
-                        if is_status(&error, http::StatusCode::CONFLICT) {
-                            ehr_id_error = Some(tr(Msg::EhrNewInUse));
-                        }
-                        let open = is_status(&error, http::StatusCode::CONFLICT).then(|| {
-                            ferrohealth_ui::view::button::link_button(
-                                ehr_detail_href(&id),
-                                ferrohealth_ui::view::button::Variant::Secondary,
-                                Some(Glyph::ARROW_RIGHT),
-                                tr_with(
-                                    Msg::EhrOpen,
-                                    &[("id", crate::pages::common::shortened(&id).into())],
-                                ),
-                            )
-                        });
-                        top = Some(
-                            view! {
-                                {refused(tr(Msg::EhrNewRefused), &error, None)}
-                                <div class="fui-cluster">{open}</div>
-                            }
-                            .into_any(),
-                        );
-                    }
+                    refused = Some((
+                        Refused::new(tr(Msg::EhrNewRefused), error),
+                        conflict.then_some(id),
+                    ));
                 }
             }
         }
-        dock_editor(EditorDock {
-            form: NEW_EHR_FORM.to_owned(),
-            line: line.1,
-            glyph: line.0,
-            save: tr(Msg::EhrNewCreate),
-            blocked: None,
+    }
+    NewModel::Form {
+        draft,
+        failed,
+        ehr_id_error,
+        refused,
+    }
+}
+
+/// New EHR's form, its decision bar docked.
+fn new_view(model: NewModel) -> AnyView {
+    let NewModel::Form {
+        draft,
+        failed,
+        ehr_id_error,
+        refused,
+    } = model
+    else {
+        return ().into_any();
+    };
+    let line = if failed {
+        (Glyph::CIRCLE_X, tr(Msg::EhrNewNotCreated))
+    } else {
+        (Glyph::FILE_PLUS, tr(Msg::EhrNewNotYet))
+    };
+    let top = refused.map(|(refusal, in_use)| {
+        let open = in_use.map(|id| {
+            ferrohealth_ui::view::button::link_button(
+                ehr_href(&id),
+                ferrohealth_ui::view::button::Variant::Secondary,
+                Some(Glyph::ARROW_RIGHT),
+                tr_with(
+                    Msg::EhrOpen,
+                    &[("id", crate::pages::common::shortened(&id).into())],
+                ),
+            )
         });
         view! {
-            {top}
-            {new_form(&draft, ehr_id_error)}
+            {refusal.view()}
+            <div class="fui-cluster">{open}</div>
         }
         .into_any()
     });
+    dock_editor(EditorDock {
+        form: NEW_EHR_FORM.to_owned(),
+        line: line.1,
+        glyph: line.0,
+        save: tr(Msg::EhrNewCreate),
+        blocked: None,
+    });
+    view! {
+        {top}
+        {new_form(&draft, ehr_id_error)}
+    }
+    .into_any()
+}
+
+/// New EHR.
+#[component]
+pub fn NewEhrPage() -> impl IntoView {
+    let dock_promise = crate::shell::promise_dock();
+    let model = page_model!(load_new());
+    let body = docked(model, dock_promise, new_view);
     let heading = page_heading(
         Header {
             title: tr(Msg::NewEhr).into(),

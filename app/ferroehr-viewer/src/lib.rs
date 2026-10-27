@@ -52,7 +52,6 @@ pub mod auth;
 pub mod builder;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod chart_model;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod clinical;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod deployment;
@@ -61,7 +60,6 @@ pub mod error;
 pub mod example_options;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod feedback;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod format;
 pub mod islands;
 pub mod locale;
@@ -90,7 +88,6 @@ pub mod subscriptions;
 pub mod system_api;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod terminology;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod uid;
 
 #[cfg(not(target_arch = "wasm32"))]

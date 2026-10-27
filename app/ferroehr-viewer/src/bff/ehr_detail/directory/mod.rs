@@ -24,23 +24,28 @@
 //! delete), `create` (the empty-directory create flow), and the pure
 //! [`edit`] helpers.
 
-#![expect(
+#![allow(
     clippy::disallowed_types,
     reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694)"
+              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
+              hydrate target"
 )]
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod edit;
 
+#[cfg(not(target_arch = "wasm32"))]
 use leptos::prelude::*;
 use leptos::server;
 use serde::{Deserialize, Serialize};
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::{Value, json};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::uid::uid_value_of;
 
 use crate::error::ViewerError;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
@@ -122,14 +127,17 @@ pub enum DirectorySubtree {
     Missing,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// The standard openEHR directory root archetype id (the FOLDER example in
 /// ITS-REST `specifications/schemas/ehr/Folder.yaml`).
 pub(crate) const DIRECTORY_ARCHETYPE: &str = "openEHR-EHR-FOLDER.directory.v1";
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Node id reused by child folders; siblings differ by `name` (RM common
 /// `master05-directory_package` §Paths — uniqueness modifiers).
 pub(crate) const FOLDER_NODE_ID: &str = "at0001";
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Build a canonical FOLDER JSON node from `archetype_node_id`, `name`, and
 /// child `folders`. `_type` + mandatory `archetype_node_id`/`name` (from
 /// LOCATABLE) + the FOLDER `folders`/`items` arrays per
@@ -145,6 +153,7 @@ pub(crate) fn folder_json(archetype_node_id: &str, name: &str, folders: &[Value]
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// An empty directory root FOLDER (the "empty root" create choice).
 pub(crate) fn empty_root_folder() -> Value {
     folder_json(DIRECTORY_ARCHETYPE, "root", &[])
