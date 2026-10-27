@@ -77,7 +77,7 @@ optional:
   `docker/` compose file / the `compose-version-guard` CI job (the hosted sandbox carries NO release-cut step: its compose defaults
   track the `:latest` release pointer and the release pipeline's `sandbox` +
   `sandbox-reseed` legs redeploy + reseed the Hetzner box automatically after
-  the tag's images apply — `deploy/hosted/README.md`, #2974), + the chart's `appVersion` and
+  the tag's images apply — `deploy/hosted/README.md`, #2974); the hosted DATABASE box pin in `deploy/hosted/cloud-init-postgres.yaml` moves AFTER the release publishes, since its index digest exists only then: a follow-up PR reads tag + digest from the registry, and step 6 of `deploy/hosted/sandbox-ferropix-rollout.sh` moves the box (#4252), + the chart's `appVersion` and
   `artifacthub.io/images` tags (#2890, the same sweep — details in the Helm
   chart bullet below), + the book's pinned versions — `website/book/src/installation/
   kubernetes.md` pins the chart `--version` and `image.tag`, and

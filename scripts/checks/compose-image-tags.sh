@@ -17,16 +17,20 @@
 # `:latest` release pointer instead (#2974), so its defaults are held to that
 # pointer. Every Keycloak `image:` in the same compose files names one
 # `quay.io/keycloak/keycloak:X.Y.Z@sha256:<digest>`, so the dev lanes and the
-# quickstart overlay run the same identity provider. Dependency-free: grep +
-# sed only.
+# quickstart overlay run the same identity provider. The hosted database box
+# (deploy/hosted/cloud-init-postgres.yaml) pins a published release by tag and
+# index digest, which deploy/hosted/README.md names too. Dependency-free: grep
+# + sed only.
 #
 # Usage: scripts/checks/compose-image-tags.sh [--self-test]
-#   --self-test mutates a COPY of the compose files six ways (a stale tag in
+#   --self-test mutates a COPY of the compose files ten ways (a stale tag in
 #   the terminology overlay, a stale tag on every postgres reference of
 #   docker-compose.yml after the first, a removed quickstart default, a
 #   versioned hosted default, a Keycloak tag moved in one file, a Keycloak
-#   reference without its digest) and asserts the guard rejects each, then that
-#   the unmutated copy passes.
+#   reference without its digest, a database box pin without its digest, on
+#   `:latest` or past the workspace version, and a hosted README naming
+#   another digest) and asserts the guard rejects each, then that the
+#   unmutated copy passes.
 set -Eeuo pipefail
 
 if [[ "$#" -eq 1 && "$1" == "--self-test" ]]; then
@@ -37,7 +41,7 @@ if [[ "$#" -eq 1 && "$1" == "--self-test" ]]; then
   cp -R scripts/checks scripts/lib "$self_root/scripts/"
   cp Cargo.toml docker-compose*.yml "$self_root/"
   cp docker/*.yml "$self_root/docker/"
-  cp deploy/hosted/docker-compose.yml "$self_root/deploy/hosted/"
+  cp deploy/hosted/docker-compose.yml deploy/hosted/cloud-init-postgres.yaml deploy/hosted/README.md "$self_root/deploy/hosted/"
   self_fail=0
   # <label>|<file>|<sed program>
   mutations=(
@@ -47,6 +51,10 @@ if [[ "$#" -eq 1 && "$1" == "--self-test" ]]; then
     "a versioned hosted default|${self_root}/deploy/hosted/docker-compose.yml|s|ferrohealth/ferroehr:latest|ferrohealth/ferroehr:1.2.3|"
     "a Keycloak tag the quickstart overlay alone moves|${self_root}/docker-compose.keycloak.yml|s|quay.io/keycloak/keycloak:[0-9][0-9.]*@|quay.io/keycloak/keycloak:1.0.0@|g"
     "a Keycloak reference without a digest|${self_root}/docker-compose.dev.yml|s|\(quay.io/keycloak/keycloak:[0-9][0-9.]*\)@sha256:[0-9a-f]*|\1|g"
+    "a hosted database pin without its digest|${self_root}/deploy/hosted/cloud-init-postgres.yaml|s|\(ferroehr-postgres:[0-9.]*\)@sha256:[0-9a-f]*|\1|"
+    "a hosted database pin on the latest tag|${self_root}/deploy/hosted/cloud-init-postgres.yaml|s|ferroehr-postgres:[0-9.]*@sha256:[0-9a-f]*|ferroehr-postgres:latest|"
+    "a hosted database pin past the workspace version|${self_root}/deploy/hosted/cloud-init-postgres.yaml|s|ferroehr-postgres:[0-9.]*@|ferroehr-postgres:999.0.0@|"
+    "a hosted README naming another database digest|${self_root}/deploy/hosted/README.md|s|\(ferroehr-postgres:[0-9.]*@sha256:\)[0-9a-f]\{8\}|\100000000|"
   )
   for mutation in "${mutations[@]}"; do
     label="${mutation%%|*}"
@@ -175,5 +183,26 @@ for pair in "FERROEHR_IMAGE ghcr.io/ferrohealth/ferroehr:latest" "FERROEHR_VIEWE
     echo "hosted sandbox $var tracks the :latest release pointer."
   fi
 done
+
+# The hosted database box runs a published release pinned by its index digest
+# (deploy/hosted/cloud-init-postgres.yaml, #4252). The pin moves after a
+# release publishes, since its digest exists only then, so its tag is at or
+# before the workspace version, and the hosted README names the same reference.
+DB_CLOUD_INIT="$ROOT_DIR/deploy/hosted/cloud-init-postgres.yaml"
+HOSTED_README="$ROOT_DIR/deploy/hosted/README.md"
+db_pin="$(grep -oE '\$\{FERROEHR_POSTGRES_IMAGE:-[^}]+\}' "$DB_CLOUD_INIT" | sed -E 's/^\$\{FERROEHR_POSTGRES_IMAGE:-//; s/\}$//' | sed -n 1p)" || true
+db_pin_re='^ghcr\.io/ferrohealth/ferroehr-postgres:([0-9]+\.[0-9]+\.[0-9]+)@sha256:[0-9a-f]{64}$'
+if [[ ! "$db_pin" =~ $db_pin_re ]]; then
+  echo "::error::$DB_CLOUD_INIT must default FERROEHR_POSTGRES_IMAGE to ghcr.io/ferrohealth/ferroehr-postgres:X.Y.Z@sha256:<index digest>; found '${db_pin}'." >&2
+  rc=1
+elif [[ "$(printf '%s\n%s\n' "${BASH_REMATCH[1]}" "$version" | sort -t. -k1,1n -k2,2n -k3,3n | sed -n 2p)" != "$version" ]]; then
+  echo "::error::$DB_CLOUD_INIT pins ferroehr-postgres ${BASH_REMATCH[1]}, past the workspace version $version: the pin names a published release." >&2
+  rc=1
+elif ! grep -qF "$db_pin" "$HOSTED_README"; then
+  echo "::error::$HOSTED_README does not name the database box's pin $db_pin from $DB_CLOUD_INIT." >&2
+  rc=1
+else
+  echo "hosted database box pins $db_pin, and the hosted README names it."
+fi
 
 exit "$rc"
