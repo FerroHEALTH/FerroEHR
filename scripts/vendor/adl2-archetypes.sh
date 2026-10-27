@@ -103,7 +103,7 @@ sync_tree "$WORK/src/Reference/CKM_2013_12_09" "$CKM_PAIRS_DEST/ckm-2013-12-09"
   root="$CKM_PAIRS_DEST/ckm-2013-12-09"
   # HRID = the name up to `.v<version>`, so an ADL 1.4 file and its ADL 2 twin
   # reduce to the same key.
-  hrids() { find "$root" -name "$1" -print | sed 's|.*/||; s|\.v[0-9].*$||' | sort -u; }
+  hrids() { local pattern="$1"; find "$root" -name "$pattern" -print | sed 's|.*/||; s|\.v[0-9].*$||' | sort -u; }
   adl_count=$(find "$root" -name '*.adl' -print | wc -l | tr -d ' ')
   adls_count=$(find "$root" -name '*.adls' -print | wc -l | tr -d ' ')
   paired_count=$(comm -12 <(hrids '*.adl') <(hrids '*.adls') | wc -l | tr -d ' ')

@@ -76,9 +76,9 @@ if ! [[ "$budget" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-raw() { wc -c < "$1" | tr -d '[:space:]'; }
-gz() { gzip -9 -c "$1" | wc -c | tr -d '[:space:]'; }
-br() { brotli -q 11 -c "$1" | wc -c | tr -d '[:space:]'; }
+raw() { local file="$1"; wc -c < "$file" | tr -d '[:space:]'; }
+gz() { local file="$1"; gzip -9 -c "$file" | wc -c | tr -d '[:space:]'; }
+br() { local file="$1"; brotli -q 11 -c "$file" | wc -c | tr -d '[:space:]'; }
 
 wasm_br="$(br "$wasm")"
 percent=$((wasm_br * 100 / budget))

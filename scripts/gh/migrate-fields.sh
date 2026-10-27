@@ -161,7 +161,7 @@ echo "ok: $*"
 STUB
   chmod 0755 "$stub/gh" "$stub/fields.sh"
 
-  local issues rc
+  local issues rc scenario
   # run NAME CODE ARGS…: this program through the stubs, landing on CODE.
   run() {
     local name=$1 code=$2
@@ -200,8 +200,9 @@ STUB
   # node NUMBER STATE TYPE PRIORITY EFFORT LABELS TITLE: one issue as GraphQL
   # answers it, with "" for an absent type, priority or effort.
   node() {
-    jq -cn --argjson n "$1" --arg s "$2" --arg t "$3" --arg p "$4" --arg e "$5" \
-      --arg l "$6" --arg title "$7" '{number:$n, state:$s, title:$title,
+    local number="$1" state="$2" type="$3" priority="$4" effort="$5" labels="$6" title="$7"
+    jq -cn --argjson n "$number" --arg s "$state" --arg t "$type" --arg p "$priority" --arg e "$effort" \
+      --arg l "$labels" --arg title "$title" '{number:$n, state:$s, title:$title,
         issueType: (if $t == "" then null else {name:$t} end),
         issueFieldValues:{nodes:(
           (if $p == "" then [] else [{field:{name:"Priority"}, value:$p}] end)
@@ -223,34 +224,36 @@ STUB
     "$(node 5 OPEN "" "" "" "spec-update,P3,blocked-upstream" "spec-update(AM): a grammar change")" \
     "$(node 6 OPEN "" "" "" "upstream-report" "upstream(RM): a gap")" \
     "$(node 10 OPEN "" "" "" "" "feat(viewer): a page")")"
-  run "a plan over labelled issues" 0 plan
-  said "a plan over labelled issues" "$work/out" "#1  type Bug"
-  said "a plan over labelled issues" "$work/out" "#1  priority Urgent"
-  said "a plan over labelled issues" "$work/out" "#1  effort Low"
-  said "a plan over labelled issues" "$work/out" "#2  type Feature (was Task)"
-  said "a plan over labelled issues" "$work/out" "#3  label +documentation"
-  said "a plan over labelled issues" "$work/out" "#5  label +chore"
-  said "a plan over labelled issues" "$work/out" "#6  type Bug"
-  said "a plan over labelled issues" "$work/out" "#6  priority Low"
-  said "a plan over labelled issues" "$work/out" "#10  type Feature"
-  said "a plan over labelled issues" "$work/out" "#10  priority Medium"
-  said "a plan over labelled issues" "$work/out" "types: Bug 2, Feature 2, Task 3"
-  said "a plan over labelled issues" "$work/out" "priorities: Urgent 1, High 1, Medium 2, Low 3, none 0"
-  never "a plan over labelled issues" "$work/out" "#4  "
-  never "a plan over labelled issues" "$work/out" "#6  label"
-  never "a plan over labelled issues" "$calls" "fields "
-  never "a plan over labelled issues" "$calls" "issue edit"
+  scenario="a plan over labelled issues"
+  run "$scenario" 0 plan
+  said "$scenario" "$work/out" "#1  type Bug"
+  said "$scenario" "$work/out" "#1  priority Urgent"
+  said "$scenario" "$work/out" "#1  effort Low"
+  said "$scenario" "$work/out" "#2  type Feature (was Task)"
+  said "$scenario" "$work/out" "#3  label +documentation"
+  said "$scenario" "$work/out" "#5  label +chore"
+  said "$scenario" "$work/out" "#6  type Bug"
+  said "$scenario" "$work/out" "#6  priority Low"
+  said "$scenario" "$work/out" "#10  type Feature"
+  said "$scenario" "$work/out" "#10  priority Medium"
+  said "$scenario" "$work/out" "types: Bug 2, Feature 2, Task 3"
+  said "$scenario" "$work/out" "priorities: Urgent 1, High 1, Medium 2, Low 3, none 0"
+  never "$scenario" "$work/out" "#4  "
+  never "$scenario" "$work/out" "#6  label"
+  never "$scenario" "$calls" "fields "
+  never "$scenario" "$calls" "issue edit"
 
-  run "an apply over labelled issues" 0 apply
-  said "an apply over labelled issues" "$calls" "fields type 1 bug"
-  said "an apply over labelled issues" "$calls" "fields priority 1 urgent"
-  said "an apply over labelled issues" "$calls" "fields effort 1 low"
-  said "an apply over labelled issues" "$calls" "fields type 2 feature"
-  said "an apply over labelled issues" "$calls" "fields priority 3 low"
-  said "an apply over labelled issues" "$calls" "gh issue edit 3 --add-label documentation"
-  said "an apply over labelled issues" "$calls" "gh issue edit 5 --add-label chore"
-  never "an apply over labelled issues" "$calls" "fields type 4"
-  never "an apply over labelled issues" "$calls" "fields effort 4"
+  scenario="an apply over labelled issues"
+  run "$scenario" 0 apply
+  said "$scenario" "$calls" "fields type 1 bug"
+  said "$scenario" "$calls" "fields priority 1 urgent"
+  said "$scenario" "$calls" "fields effort 1 low"
+  said "$scenario" "$calls" "fields type 2 feature"
+  said "$scenario" "$calls" "fields priority 3 low"
+  said "$scenario" "$calls" "gh issue edit 3 --add-label documentation"
+  said "$scenario" "$calls" "gh issue edit 5 --add-label chore"
+  never "$scenario" "$calls" "fields type 4"
+  never "$scenario" "$calls" "fields effort 4"
 
   run "a verify before the apply took" 1 verify
   said "a verify before the apply took" "$work/err" "changes still to make"
@@ -275,12 +278,13 @@ STUB
     "$(node 8 OPEN "" "" "" "P1" "No kind")" \
     "$(node 9 OPEN Task "" "" "test,P1,P2" "Two priorities")" \
     "$(node 11 OPEN Task "" "" "chore" "No priority")")"
-  run "issues the mapping cannot place" 1 plan
-  said "issues the mapping cannot place" "$work/err" "#7 carries both bug and enhancement"
-  said "issues the mapping cannot place" "$work/err" "#8 is open with no judged effort"
-  said "issues the mapping cannot place" "$work/err" "#8 is a Task with no work-kind label"
-  said "issues the mapping cannot place" "$work/err" "#9 carries more than one priority label"
-  said "issues the mapping cannot place" "$work/err" "#11 has no priority label and no judged priority"
+  scenario="issues the mapping cannot place"
+  run "$scenario" 1 plan
+  said "$scenario" "$work/err" "#7 carries both bug and enhancement"
+  said "$scenario" "$work/err" "#8 is open with no judged effort"
+  said "$scenario" "$work/err" "#8 is a Task with no work-kind label"
+  said "$scenario" "$work/err" "#9 carries more than one priority label"
+  said "$scenario" "$work/err" "#11 has no priority label and no judged priority"
   run "an apply over issues it cannot place" 1 apply
   never "an apply over issues it cannot place" "$calls" "fields "
 
@@ -323,16 +327,19 @@ ROWS="$(gh api graphql --paginate \
 
 # judged TABLE NUMBER: the value a table above holds for an issue, or nothing.
 judged() {
-  awk -v n="$2" '$1 == n { print $2 }' <<<"$1"
+  local table="$1" number="$2"
+  awk -v n="$number" '$1 == n { print $2 }' <<<"$table"
 }
 
 # has LABELS NAME: whether the comma-joined label list carries NAME.
 has() {
-  [[ ",$1," == *",$2,"* ]]
+  local labels="$1" name="$2"
+  [[ ",$labels," == *",$name,"* ]]
 }
 
 lower() {
-  printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+  local text="$1"
+  printf '%s' "$text" | tr '[:upper:]' '[:lower:]'
 }
 
 titled() {
@@ -347,14 +354,14 @@ efforts=0 kinds=0
 
 # change NUMBER WHAT: say a change, and make it when applying.
 change() {
-  local n="$1"
-  shift
+  local n="$1" what="$2" value="$3"
   changes=$((changes + 1))
   case "$mode" in
     apply)
-      case "$1" in
-        type | priority | effort) "$FIELDS" "$1" "$n" "$(lower "$2")" ;;
-        label) gh issue edit "$n" --add-label "$2" >/dev/null && echo "ok: #$n carries $2" ;;
+      case "$what" in
+        type | priority | effort) "$FIELDS" "$what" "$n" "$(lower "$value")" ;;
+        label) gh issue edit "$n" --add-label "$value" >/dev/null && echo "ok: #$n carries $value" ;;
+        *) die "no change of kind '$what' exists (#$n)" ;;
       esac
       ;;
     *) ;;
@@ -363,7 +370,8 @@ change() {
 
 # was VALUE: the "(was …)" suffix for a value that is replaced.
 was() {
-  if [[ "$1" == "-" ]]; then printf ''; else printf ' (was %s)' "$1"; fi
+  local value="$1"
+  if [[ "$value" == "-" ]]; then printf ''; else printf ' (was %s)' "$value"; fi
 }
 
 problem() {
@@ -502,6 +510,7 @@ while read -r line; do
       read -r at what value <<<"$line"
       change "${at#@}" "$what" "$value"
       ;;
+    *) die "an unreadable plan line: '$line'" ;;
   esac
 done <<<"$plan_lines"
 

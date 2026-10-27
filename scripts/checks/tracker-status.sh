@@ -68,7 +68,7 @@ closing="$(grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+
 for n in $closing; do
   states="$(jq --arg n "$n" '.[$n] = "CLOSED"' <<<"$states")"
 done
-state_of() { jq -r --arg n "$1" '.[$n] // "UNKNOWN"' <<<"$states"; }
+state_of() { local number="$1"; jq -r --arg n "$number" '.[$n] // "UNKNOWN"' <<<"$states"; }
 
 fail=0
 report() { echo "tracker-status: $1" >&2; fail=1; }

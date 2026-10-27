@@ -288,6 +288,7 @@ STUB
       printf '%6d: 0000000000123450    42 FUNC    GLOBAL DEFAULT   14 glob_defined_here\n' "$n"
     } > "$file"
   }
+  local amd64="Advanced Micro Devices X86-64" arm64="AArch64" holds="statement(s) hold"
   local amd64_ok=(libgcc_s.so.1 libm.so.6 libc.so.6 ld-linux-x86-64.so.2)
   local base_imports=(__libc_start_main@GLIBC_2.34 malloc@GLIBC_2.2.5 getaddrinfo@GLIBC_2.2.5
     dlsym@GLIBC_2.34 _Unwind_Resume@GCC_3.0 __gmon_start__ __cxa_finalize@GLIBC_2.2.5)
@@ -314,43 +315,43 @@ STUB
   }
 
   local f="$tmp/listing"
-  listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
-  run "the declared amd64 linkage holds" 0 "statement(s) hold" ferroehr "$f"
-  run "the viewer is judged by the same statements" 0 "statement(s) hold" ferroehr-viewer "$f"
-  listing "$f" "AArch64" libgcc_s.so.1 libm.so.6 libc.so.6 ld-linux-aarch64.so.1 -- -- "${base_imports[@]}"
-  run "the declared arm64 linkage holds" 0 "statement(s) hold" ferroehr "$f"
-  listing "$f" "AArch64" libgcc_s.so.1 libm.so.6 libc.so.6 -- -- "${base_imports[@]}"
-  run "the arm64 loader as the interpreter alone holds" 0 "statement(s) hold" ferroehr "$f"
-  LISTING_INTERP=/lib/ld-musl-aarch64.so.1 listing "$f" "AArch64" libgcc_s.so.1 libm.so.6 libc.so.6 -- -- "${base_imports[@]}"
+  listing "$f" "$amd64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
+  run "the declared amd64 linkage holds" 0 "$holds" ferroehr "$f"
+  run "the viewer is judged by the same statements" 0 "$holds" ferroehr-viewer "$f"
+  listing "$f" "$arm64" libgcc_s.so.1 libm.so.6 libc.so.6 ld-linux-aarch64.so.1 -- -- "${base_imports[@]}"
+  run "the declared arm64 linkage holds" 0 "$holds" ferroehr "$f"
+  listing "$f" "$arm64" libgcc_s.so.1 libm.so.6 libc.so.6 -- -- "${base_imports[@]}"
+  run "the arm64 loader as the interpreter alone holds" 0 "$holds" ferroehr "$f"
+  LISTING_INTERP=/lib/ld-musl-aarch64.so.1 listing "$f" "$arm64" libgcc_s.so.1 libm.so.6 libc.so.6 -- -- "${base_imports[@]}"
   run "another interpreter is refused" 1 "the program interpreter is ld-musl-aarch64.so.1, the statement declares ld-linux-aarch64.so.1" ferroehr "$f"
-  LISTING_INTERP='' listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
+  LISTING_INTERP='' listing "$f" "$amd64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
   run "a missing interpreter is refused" 1 "the program interpreter is absent" ferroehr "$f"
-  listing "$f" "AArch64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
+  listing "$f" "$arm64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
   run "the amd64 loader on arm64 is refused" 1 "DT_NEEDED carries ld-linux-x86-64.so.2" ferroehr "$f"
-  listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" libz.so.1 -- -- "${base_imports[@]}"
+  listing "$f" "$amd64" "${amd64_ok[@]}" libz.so.1 -- -- "${base_imports[@]}"
   run "an added library (zlib) is refused" 1 "VIOLATED CVE-2026-27171 ferroehr (amd64): DT_NEEDED carries libz.so.1" ferroehr "$f"
-  listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" libstdc++.so.6 -- -- "${base_imports[@]}"
+  listing "$f" "$amd64" "${amd64_ok[@]}" libstdc++.so.6 -- -- "${base_imports[@]}"
   run "an added library (libstdc++) is refused" 1 "VIOLATED CVE-2026-102010 ferroehr (amd64): DT_NEEDED carries libstdc++.so.6" ferroehr "$f"
-  listing "$f" "Advanced Micro Devices X86-64" libgcc_s.so.1 libc.so.6 ld-linux-x86-64.so.2 -- -- "${base_imports[@]}"
+  listing "$f" "$amd64" libgcc_s.so.1 libc.so.6 ld-linux-x86-64.so.2 -- -- "${base_imports[@]}"
   run "a dropped library is refused" 1 "DT_NEEDED lacks libm.so.6" ferroehr "$f"
   # shellcheck disable=SC2016 # $ORIGIN is the literal loader token a RUNPATH carries
-  listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" \
+  listing "$f" "$amd64" "${amd64_ok[@]}" \
     -- ' 0x000000000000001d (RUNPATH)            Library runpath: [$ORIGIN/../lib]' -- "${base_imports[@]}"
   run "a RUNPATH is refused" 1 "VIOLATED CVE-2026-95818 ferroehr (amd64): carries RPATH/RUNPATH \$ORIGIN/../lib" ferroehr "$f"
-  listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" -- -- "${base_imports[@]}" _ZdlPvm@GLIBCXX_3.4.21
+  listing "$f" "$amd64" "${amd64_ok[@]}" -- -- "${base_imports[@]}" _ZdlPvm@GLIBCXX_3.4.21
   run "a C++ import is refused by name" 1 "VIOLATED CVE-2026-95619 ferroehr (amd64): imports _ZdlPvm (prefix _Z)" ferroehr "$f"
   run "a C++ import is refused by version" 1 "imports a symbol at version GLIBCXX_3.4.21 (prefix GLIBCXX_)" ferroehr "$f"
-  listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" -- -- "${base_imports[@]}" glob64
+  listing "$f" "$amd64" "${amd64_ok[@]}" -- -- "${base_imports[@]}" glob64
   run "an unversioned forbidden import is refused" 1 "VIOLATED CVE-2010-4756 ferroehr (amd64): imports glob64" ferroehr "$f"
-  listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" -- -- "${base_imports[@]}" globfree@GLIBC_2.2.5
-  run "a name that only starts like a forbidden one is accepted" 0 "statement(s) hold" ferroehr "$f"
+  listing "$f" "$amd64" "${amd64_ok[@]}" -- -- "${base_imports[@]}" globfree@GLIBC_2.2.5
+  run "a name that only starts like a forbidden one is accepted" 0 "$holds" ferroehr "$f"
   listing "$f" "IBM S/390" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
   run "an unpublished machine is a usage error" 2 "is not one the images are published for" ferroehr "$f"
-  listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" -- --
+  listing "$f" "$amd64" "${amd64_ok[@]}" -- --
   run "a listing with no import is refused as unreadable" 2 "reports no imported symbol" ferroehr "$f"
-  listing "$f" "Advanced Micro Devices X86-64" -- -- "${base_imports[@]}"
+  listing "$f" "$amd64" -- -- "${base_imports[@]}"
   run "a static program is refused as unreadable" 2 "reports no DT_NEEDED entry" ferroehr "$f"
-  listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
+  listing "$f" "$amd64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
   run "a program no statement describes is a usage error" 2 "declares linkage facts for a program named ferroehr-postgres" ferroehr-postgres "$f"
   mkdir -p "$tmp/case"
   printf 'x deflate 1.3.1 Copyright 1995-2024 Jean-loup Gailly and Mark Adler x\n' > "$tmp/case/ferroehr"
@@ -363,7 +364,7 @@ STUB
   while IFS= read -r sym; do
     [[ -n "$sym" ]] || continue
     ids="$(jq -r --arg s "$sym" '[.statements[] | select((.["ferroehr:linkage"].forbidden_imports // []) | index($s)) | .vulnerability.name] | first' "$doc")"
-    listing "$f" "Advanced Micro Devices X86-64" "${amd64_ok[@]}" -- -- "${base_imports[@]}" "${sym}@GLIBC_2.2.5"
+    listing "$f" "$amd64" "${amd64_ok[@]}" -- -- "${base_imports[@]}" "${sym}@GLIBC_2.2.5"
     run "the declared forbidden import ${sym} is detected" 1 "VIOLATED ${ids} ferroehr (amd64): imports ${sym}" ferroehr "$f"
   done < <(jq -r '[.statements[]["ferroehr:linkage"].forbidden_imports // [] | .[]] | unique[]' "$doc")
 

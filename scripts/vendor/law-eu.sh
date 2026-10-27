@@ -139,10 +139,10 @@ for want in "${ONLY[@]+"${ONLY[@]}"}"; do
 done
 
 selected() {
-  local want
+  local name="$1" want
   [[ ${#ONLY[@]} -eq 0 ]] && return 0
   for want in "${ONLY[@]}"; do
-    [[ "$want" == "$1" ]] && return 0
+    [[ "$want" == "$name" ]] && return 0
   done
   return 1
 }
@@ -447,10 +447,11 @@ EOF
 }
 
 sha256_of() {
+  local file="$1"
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{print $1}'
+    sha256sum "$file" | awk '{print $1}'
   else
-    shasum -a 256 "$1" | awk '{print $1}'
+    shasum -a 256 "$file" | awk '{print $1}'
   fi
 }
 

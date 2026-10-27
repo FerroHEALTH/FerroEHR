@@ -152,7 +152,7 @@ exempted() {
 # The double-quoted substrings of a line, one per output line. Rust string
 # literals in the scanned code carry no escaped double quotes, so the naive
 # split is exact here.
-quoted() { printf '%s\n' "$1" | grep -o '"[^"]*"' || true; }
+quoted() { local text="$1"; printf '%s\n' "$text" | grep -o '"[^"]*"' || true; }
 
 files=$(collect "$@")
 [[ -n "$files" ]] || {

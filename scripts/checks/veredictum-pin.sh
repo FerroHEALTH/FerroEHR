@@ -167,21 +167,21 @@ STUB
       failed=1
     fi
   done
-  local mode
+  local mode no_record="commits nothing under docs/conformance/ferroehr/"
   for mode in artifacts specs schemas runner; do
     expect "a changed ${mode} tree fails without record or label" 1 "$mode" \
-      "commits nothing under docs/conformance/ferroehr/" "$base" "$bumped"
+      "$no_record" "$base" "$bumped"
   done
   expect "a changed artifacts tree passes with the label" 0 artifacts \
     "no-conformance-run" --no-conformance-run "$base" "$bumped"
   expect "a changed artifacts tree passes with a refreshed record" 0 artifacts \
     "refreshed docs/conformance/ferroehr/ record" "$base" "$recorded"
   expect "an API failure fails closed" 1 fail \
-    "commits nothing under docs/conformance/ferroehr/" "$base" "$bumped"
+    "$no_record" "$base" "$bumped"
   expect "a directory missing at one tag fails closed" 1 missing \
-    "commits nothing under docs/conformance/ferroehr/" "$base" "$bumped"
+    "$no_record" "$base" "$bumped"
   expect "a runner tree missing at one tag fails closed" 1 runner-missing \
-    "commits nothing under docs/conformance/ferroehr/" "$base" "$bumped"
+    "$no_record" "$base" "$bumped"
   expect "an unchanged pin passes" 0 fail "unchanged" "$base" "$same_pin"
   if [[ -s "$log" ]]; then
     echo "::error::--self-test: an unchanged pin still called gh:" >&2
@@ -225,8 +225,9 @@ base=$(change_fork "$1" "$head") || exit 1
 # pin_value REV NAME: the quoted value of NAME in scripts/lib/veredictum.sh at
 # REV, or nothing when the file or the assignment is absent.
 pin_value() {
-  { git show "$1:scripts/lib/veredictum.sh" 2>/dev/null || true; } |
-    sed -nE "s/^$2=\"([^\"]*)\"\$/\\1/p" | head -n 1
+  local rev="$1" name="$2"
+  { git show "$rev:scripts/lib/veredictum.sh" 2>/dev/null || true; } |
+    sed -nE "s/^$name=\"([^\"]*)\"\$/\\1/p" | head -n 1
 }
 
 old_version=$(pin_value "$base" VEREDICTUM_VERSION)

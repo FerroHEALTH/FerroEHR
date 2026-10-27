@@ -81,7 +81,8 @@ shipped_tag() {
 # Whether `$2` (a migration path) exists at `$1` (the release tag, or the merge
 # base when the repository carries no tag): that is what makes a file SHIPPED.
 shipped_at() {
-  git cat-file -e "$1:$2" 2>/dev/null
+  local rev="$1" path="$2"
+  git cat-file -e "$rev:$path" 2>/dev/null
 }
 
 # Whether every SHIPPED file under `$3` (a schema directory) is absent at `$2`

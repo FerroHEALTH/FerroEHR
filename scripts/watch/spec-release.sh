@@ -139,13 +139,11 @@ while IFS='|' read -r comp repo ref sha; do
   fi
   pin_ver=$(echo "$ref" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
 
-  if [[ -n "$pin_ver" ]]; then
-    # Comparable pin: only a strictly NEWER release is a missed event.
-    if [[ "$latest" = "$pin_ver" ]] ||
-      [[ "$(printf '%s\n%s\n' "$latest" "$pin_ver" | sort -V | tail -1)" = "$pin_ver" ]]; then
-      skipped=$((skipped + 1))
-      continue
-    fi
+  # A comparable pin: only a strictly NEWER release is a missed event.
+  if [[ -n "$pin_ver" ]] && { [[ "$latest" = "$pin_ver" ]] ||
+    [[ "$(printf '%s\n%s\n' "$latest" "$pin_ver" | sort -V | tail -1)" = "$pin_ver" ]]; }; then
+    skipped=$((skipped + 1))
+    continue
   fi
   # Board dedup — matches [spec-release] issues AND hand-made adoption
   # umbrellas that already carry the component + version in the title.

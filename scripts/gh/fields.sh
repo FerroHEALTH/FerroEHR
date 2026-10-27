@@ -48,7 +48,7 @@ die() {
 # that holds no token for this repository.
 self_test() {
   command -v jq >/dev/null 2>&1 || die "jq is not installed"
-  local work stub created types fields create
+  local work stub created types fields create scenario
   work="$(mktemp -d)"
   stub="$work/bin"
   created="$work/created"
@@ -144,11 +144,12 @@ STUB
   fields='{"data":{"organization":{"issueFields":{"nodes":[{"id":"IF_priority","name":"Priority","options":[{"id":"OPT_high","name":"High"}]},{"id":"IF_effort","name":"Effort","options":[{"id":"OPT_low","name":"Low"}]}]}}}}'
   create=ok
 
-  run "an organisation that answers" 0 new bug high low --title t --body b
-  said "an organisation that answers" "$work/out" "#4242 is a Bug"
-  said "an organisation that answers" "$work/out" "#4242 has priority High"
-  said "an organisation that answers" "$work/out" "#4242 has effort Low"
-  said "an organisation that answers" "$work/out" "https://github.com/Example-Org/Example/issues/4242"
+  scenario="an organisation that answers"
+  run "$scenario" 0 new bug high low --title t --body b
+  said "$scenario" "$work/out" "#4242 is a Bug"
+  said "$scenario" "$work/out" "#4242 has priority High"
+  said "$scenario" "$work/out" "#4242 has effort Low"
+  said "$scenario" "$work/out" "https://github.com/Example-Org/Example/issues/4242"
 
   run "a type the organisation does not carry" 1 new dragon high low --title t --body b
   said "a type the organisation does not carry" "$work/err" "no enabled issue type named 'Dragon'"
@@ -203,16 +204,17 @@ titled() {
 # An issue number is digits only: gh reads a -F value that starts with @ as a
 # file and would send its contents to GitHub.
 need_number() {
-  [[ "$1" =~ ^[0-9]+$ ]] || die "not an issue number: '$1'"
+  local number="$1"
+  [[ "$number" =~ ^[0-9]+$ ]] || die "not an issue number: '$number'"
 }
 
 issue_id() {
-  local id
-  need_number "$1"
+  local number="$1" id
+  need_number "$number"
   id="$(gh api graphql -f query='query($o:String!,$n:String!,$i:Int!){ repository(owner:$o,name:$n){ issue(number:$i){ id } } }' \
-    -f o="$OWNER" -f n="$NAME" -F i="$1" --jq '.data.repository.issue.id' 2>/dev/null)" ||
-    die "could not resolve issue #$1"
-  [[ -n "$id" && "$id" != "null" ]] || die "no issue #$1 in $REPO"
+    -f o="$OWNER" -f n="$NAME" -F i="$number" --jq '.data.repository.issue.id' 2>/dev/null)" ||
+    die "could not resolve issue #$number"
+  [[ -n "$id" && "$id" != "null" ]] || die "no issue #$number in $REPO"
   printf '%s' "$id"
 }
 

@@ -2545,29 +2545,8 @@ fn emit_client_method(b: &mut String, op: &Operation, ctx: &Ctx) {
             _ => {}
         }
     }
-    let content_type_expr = if op.parameters.iter().any(|p| p.name == "Content-Type") {
-        "params.content_type.as_deref()".to_string()
-    } else {
-        "None".to_string()
-    };
     if let Some(required) = body_ty {
-        let send = if json_request {
-            format!("request.json_body(body, {content_type_expr})?;")
-        } else {
-            let default_media = op
-                .request_media
-                .first()
-                .map_or("application/octet-stream", String::as_str);
-            format!("request.text_body(body, {content_type_expr}.unwrap_or(\"{default_media}\"))?;")
-        };
-        if required {
-            let _ = writeln!(b, "            {send}");
-        } else {
-            let _ = writeln!(
-                b,
-                "            if let Some(body) = body {{\n                {send}\n            }}"
-            );
-        }
+        emit_client_body(b, op, required, json_request);
     }
     let _ = write!(
         b,
@@ -2576,51 +2555,84 @@ fn emit_client_method(b: &mut String, op: &Operation, ctx: &Ctx) {
          match answer.status() {{\n"
     );
     for resp in &client_responses(op) {
-        let (variant, constant) = status_variant(resp.status);
-        let mut fields: Vec<String> = Vec::new();
-        match client_body(op, resp, ctx) {
-            ClientBody::None => {}
-            ClientBody::Error => fields.push("body: answer.error_body()".to_string()),
-            ClientBody::Json { optional, .. } => fields.push(if optional {
-                "body: answer.optional_json()?".to_string()
-            } else {
-                "body: answer.json()?".to_string()
-            }),
-            ClientBody::Raw => fields.push("body: answer.body().to_vec()".to_string()),
-        }
-        if !resp.headers.is_empty() {
-            let members: Vec<String> = resp
-                .headers
-                .iter()
-                .map(|h| {
-                    if LIST_HEADERS.contains(&h.as_str()) {
-                        format!("{}: answer.header_all(\"{h}\")", field_id(h))
-                    } else {
-                        format!("{}: answer.header(\"{h}\")", field_id(h))
-                    }
-                })
-                .collect();
-            fields.push(format!(
-                "headers: {} {{ {} }}",
-                headers_name(op, &variant),
-                members.join(", ")
-            ));
-        }
-        if fields.is_empty() {
-            let _ = writeln!(b, "                {constant} => Ok({outcome}::{variant}),");
-        } else {
-            let _ = writeln!(
-                b,
-                "                {constant} => Ok({outcome}::{variant} {{ {} }}),",
-                fields.join(", ")
-            );
-        }
+        emit_client_arm(b, op, resp, ctx, &outcome);
     }
     b.push_str(
         "                _ => Err(answer.into_undocumented()),\n            \
          }\n        \
          }\n\n",
     );
+}
+
+/// The request body onto the request: JSON through the typed body, any other
+/// media as text, and an optional body only when the caller passed one.
+fn emit_client_body(b: &mut String, op: &Operation, required: bool, json_request: bool) {
+    let content_type_expr = if op.parameters.iter().any(|p| p.name == "Content-Type") {
+        "params.content_type.as_deref()".to_string()
+    } else {
+        "None".to_string()
+    };
+    let send = if json_request {
+        format!("request.json_body(body, {content_type_expr})?;")
+    } else {
+        let default_media = op
+            .request_media
+            .first()
+            .map_or("application/octet-stream", String::as_str);
+        format!("request.text_body(body, {content_type_expr}.unwrap_or(\"{default_media}\"))?;")
+    };
+    if required {
+        let _ = writeln!(b, "            {send}");
+    } else {
+        let _ = writeln!(
+            b,
+            "            if let Some(body) = body {{\n                {send}\n            }}"
+        );
+    }
+}
+
+/// One match arm of a client method: the documented status onto its outcome
+/// variant, with the body and headers the response declares.
+fn emit_client_arm(b: &mut String, op: &Operation, resp: &Response, ctx: &Ctx, outcome: &str) {
+    let (variant, constant) = status_variant(resp.status);
+    let mut fields: Vec<String> = Vec::new();
+    match client_body(op, resp, ctx) {
+        ClientBody::None => {}
+        ClientBody::Error => fields.push("body: answer.error_body()".to_string()),
+        ClientBody::Json { optional, .. } => fields.push(if optional {
+            "body: answer.optional_json()?".to_string()
+        } else {
+            "body: answer.json()?".to_string()
+        }),
+        ClientBody::Raw => fields.push("body: answer.body().to_vec()".to_string()),
+    }
+    if !resp.headers.is_empty() {
+        let members: Vec<String> = resp
+            .headers
+            .iter()
+            .map(|h| {
+                if LIST_HEADERS.contains(&h.as_str()) {
+                    format!("{}: answer.header_all(\"{h}\")", field_id(h))
+                } else {
+                    format!("{}: answer.header(\"{h}\")", field_id(h))
+                }
+            })
+            .collect();
+        fields.push(format!(
+            "headers: {} {{ {} }}",
+            headers_name(op, &variant),
+            members.join(", ")
+        ));
+    }
+    if fields.is_empty() {
+        let _ = writeln!(b, "                {constant} => Ok({outcome}::{variant}),");
+    } else {
+        let _ = writeln!(
+            b,
+            "                {constant} => Ok({outcome}::{variant} {{ {} }}),",
+            fields.join(", ")
+        );
+    }
 }
 
 /// One query parameter onto the request: a scalar as one pair, an array as

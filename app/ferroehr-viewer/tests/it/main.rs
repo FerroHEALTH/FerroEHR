@@ -12,6 +12,7 @@
 //! process at all, so the page code is exercised by the ordinary test lane
 //! (and by the coverage lane over it).
 
+mod cdr_record;
 mod common;
 
 mod ssr_app;

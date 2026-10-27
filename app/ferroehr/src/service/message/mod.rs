@@ -65,10 +65,10 @@ impl FerroEhrService {
     /// Patient-Record `EventID` family (DICOM PS3.15 §A.5.1, code 110110) with
     /// `originalText="extract"` and an ehr-id-scoped patient participant
     /// (`crate::system_log::codes`); the export-vs-import direction is carried
-    /// by the [`EventActionCode`] (`Read` out / `Create` in). The native
-    /// service layer has no HTTP principal, so `user_id` stays empty and the
-    /// ATNA renderer supplies `UNKNOWN`; the purpose and the data permit the
-    /// caller declared (EHDS Art. 68) are the request's. `content` is what the
+    /// by the [`EventActionCode`] (`Read` out / `Create` in). The user is the
+    /// request's authenticated committer, which
+    /// [`FerroEhrService::record_access`] stamps; the purpose and the data
+    /// permit the caller declared (EHDS Art. 68) are the request's. `content` is what the
     /// Extract served or landed, which the record carries as its EHDS priority
     /// categories (Annex II 3.2(c), `docs/law/eu/ehds/text.html`).
     ///

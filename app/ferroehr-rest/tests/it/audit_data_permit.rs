@@ -23,18 +23,10 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
-use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
-use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, StoreConfig};
-use ferroehr::system_log::sender::{
-    AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
-};
-use ferroehr::system_log::store::AuditStore;
-use ferroehr_rest::extensions::management::Observability;
 use http::{Request, StatusCode, header};
 use serde_json::Value;
 use sqlx::PgPool;
@@ -50,66 +42,9 @@ const PERMIT_ID: &str = "hdab-nl/2026/0042";
 /// The synthetic patient subject every EHR of the test resolves to.
 const SUBJECT: &str = "patient-permit-1";
 
-fn basic(name: &str) -> String {
-    use base64::Engine;
-    format!(
-        "Basic {}",
-        base64::engine::general_purpose::STANDARD.encode(format!("{name}:pw").as_bytes())
-    )
-}
-
 /// An audited app with the local store on and one EHR; returns the EHR id.
 async fn app() -> (testkit::TestDb, PgPool, Router, String) {
-    let (db, pool) = common::migrated_pool().await;
-    let audit = AuditConfig {
-        enabled: true,
-        store: StoreConfig {
-            enabled: true,
-            retention_days: 0,
-            retention_years: None,
-            sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
-        },
-        ..AuditConfig::default()
-    };
-    let resolver: SubjectResolver = Arc::new(|_ehr_id| {
-        Box::pin(async {
-            SubjectLookup::Found(ResolvedSubject {
-                id: SUBJECT.to_owned(),
-                namespace: Some("urn:ferroehr:test-subjects".to_owned()),
-            })
-        })
-    });
-    let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), Some(pool.clone()))
-        .await
-        .expect("the audit sender");
-    let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-            .with_audit(sender)
-            .with_audit_store(AuditStore::new(pool.clone())),
-    );
-    let mut config = common::api_config(true);
-    common::with_basic_users(&mut config, &[("root", &["ADMIN"])]);
-    let app = ferroehr_rest::build_full(config, svc, None, Observability::default())
-        .await
-        .expect("build app");
-    let (status, body) = common::send_body(
-        &app,
-        Request::post(format!("{BASE}/ehr"))
-            .header(header::AUTHORIZATION, basic("root"))
-            .header("Prefer", "return=representation")
-            .body(Body::empty())
-            .unwrap(),
-    )
-    .await;
-    assert_eq!(status, StatusCode::CREATED, "EHR create: {body}");
-    let value: Value = serde_json::from_str(&body).expect("EHR json");
-    let ehr = value["ehr_id"]["value"]
-        .as_str()
-        .expect("ehr_id")
-        .to_owned();
-    (db, pool, app, ehr)
+    common::audited_app(SUBJECT, "root").await
 }
 
 /// The `(purpose, permit)` of every stored record of `operation`, polled until
@@ -149,7 +84,7 @@ async fn a_population_query_is_recorded_with_its_purpose_and_permit() {
     let (_db, pool, app, _ehr) = app().await;
     let query = |permit: Option<&str>| {
         let mut req = Request::post(format!("{BASE}/query/aql"))
-            .header(header::AUTHORIZATION, basic("root"))
+            .header(header::AUTHORIZATION, common::basic_credential("root"))
             .header(header::CONTENT_TYPE, "application/json")
             .header(PURPOSE, "RESEARCH");
         if let Some(permit) = permit {
@@ -181,7 +116,7 @@ async fn an_export_is_recorded_with_its_purpose_and_permit() {
     let (_db, pool, app, ehr) = app().await;
     for permit in [Some(PERMIT_ID), None] {
         let mut req = Request::get(format!("{BASE}/message/export/{ehr}"))
-            .header(header::AUTHORIZATION, basic("root"))
+            .header(header::AUTHORIZATION, common::basic_credential("root"))
             .header(PURPOSE, "RESEARCH");
         if let Some(permit) = permit {
             req = req.header(PERMIT, permit);
@@ -213,7 +148,7 @@ async fn exported_policies(app: &Router) -> Vec<Value> {
             Request::get(format!(
                 "{BASE}/fhir/r4/AuditEvent?date=ge2026-01-01&patient={SUBJECT}"
             ))
-            .header(header::AUTHORIZATION, basic("root"))
+            .header(header::AUTHORIZATION, common::basic_credential("root"))
             .body(Body::empty())
             .unwrap(),
         )

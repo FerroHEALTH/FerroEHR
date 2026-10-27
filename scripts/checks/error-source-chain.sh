@@ -258,7 +258,7 @@ for entry in "${BUDGETS[@]}"; do
   count="${count:-0}"
   printf '%-26s %3s flattened (budget %s)\n' "$tree" "$count" "$budget"
   if [[ "$count" -gt "$budget" ]]; then
-    echo "::error::$tree grew from $budget to $count flattened error sites — an error carries its cause (RFC 0201, #2034)"
+    echo "::error::$tree grew from $budget to $count flattened error sites — an error carries its cause (RFC 0201, #2034)" >&2
     fail=1
   fi
 done
@@ -266,7 +266,7 @@ done
 # No error variant anywhere prints its own source.
 found="$(double_prints app crates tools)"
 if [[ -n "$found" ]]; then
-  echo "::error::error variants print their source in their own message — keep the cause out of the message, or use #[error(transparent)] (RFC 0201)"
+  echo "::error::error variants print their source in their own message — keep the cause out of the message, or use #[error(transparent)] (RFC 0201)" >&2
   printf '%s\n' "$found" >&2
   fail=1
 else

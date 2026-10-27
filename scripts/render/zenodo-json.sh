@@ -52,7 +52,8 @@ cff_scalar() {
 
 # A folded block scalar (`key: >-`), rejoined onto one line.
 cff_block() {
-  awk -v key="$1" '
+  local key="$1"
+  awk -v key="$key" '
     $0 ~ "^" key ":[[:space:]]*>-[[:space:]]*$" { grab = 1; next }
     grab && /^[[:space:]]+/ { sub(/^[[:space:]]+/, ""); printf "%s%s", sep, $0; sep = " "; next }
     grab { exit }
@@ -61,7 +62,8 @@ cff_block() {
 
 # A plain list of scalars (`key:` then `  - value` lines), as a JSON array.
 cff_list() {
-  awk -v key="$1" '
+  local key="$1"
+  awk -v key="$key" '
     $0 ~ "^" key ":[[:space:]]*$" { grab = 1; next }
     grab && /^[[:space:]]+- / { sub(/^[[:space:]]+- /, ""); gsub(/^"|"$/, ""); print; next }
     grab { exit }

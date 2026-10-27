@@ -31,7 +31,7 @@ mkdir -p "$OUT" website/book/src/comparison-assets
 
 # Unified CNF schema on BOTH sides since the #232 re-base: `outcomes` records
 # keyed by case id + optional format.
-count() { jq "[(.cases // .outcomes)[] | select(.status == \"$2\")] | length" "$1/results.json"; }
+count() { local dir="$1" status="$2"; jq "[(.cases // .outcomes)[] | select(.status == \"$status\")] | length" "$dir/results.json"; }
 
 # ── conformance side ─────────────────────────────────────────────────────────
 # The CNF results artifacts are clock-free; date = the artifact's commit date
@@ -49,9 +49,9 @@ count() { jq "[(.cases // .outcomes)[] | select(.status == \"$2\")] | length" "$
 # while the run itself had not moved (the Docs build then failed its own
 # drift gate on every push). The author date survives both.
 run_date() {
-  local d
+  local dir="$1" d
   d=$(TZ=UTC git log --follow --diff-filter=AM -1 --date=format-local:%Y-%m-%d \
-    --format=%ad -- "$1/results.json" 2>/dev/null || true)
+    --format=%ad -- "$dir/results.json" 2>/dev/null || true)
   if [[ -z "$d" ]]; then
     # The mtime fallback exists ONLY for a local, not-yet-committed
     # regeneration. Under CI an empty git log means a SHALLOW checkout, and
@@ -79,7 +79,7 @@ shared=$(jq -n --slurpfile a "$RS/results.json" --slurpfile b "$EB/results.json"
   | [$b[0].outcomes[] | . as $o | ($rs["\(.case)|\(.format // "-")"]) as $mine
      | select($mine != null)
      | {key: "\(.case)|\(.format // "-")", theirs: .status, rs: $mine.status}]')
-srow() { echo "$shared" | jq "[.[] | select(.$1 == \"$2\")] | length"; }
+srow() { local side="$1" status="$2"; echo "$shared" | jq "[.[] | select(.$side == \"$status\")] | length"; }
 
 # EHRbase failures grouped by schedule chapter (the case-id prefix), and the
 # full per-case list with our outcome on the identical case.
@@ -96,10 +96,10 @@ fail_rows=$(jq -rn --slurpfile a "$RS/results.json" --slurpfile b "$EB/results.j
 # Profile verdict tokens from verdicts.json (pass/fail/not_claimed).
 # The verdict pipeline's own in-scope tallies (verdicts.json .coverage) —
 # the ONLY numbers the presentation rule lets the comparison headline.
-scope() { jq -r ".coverage.${2} // 0" "$1/verdicts.json"; }
+scope() { local dir="$1" key="$2"; jq -r ".coverage.${key} // 0" "$dir/verdicts.json"; }
 
-pverdict() { jq -r --arg t "$2" '.profiles[] | select(.[0]==$t) | .[1] // "—"' "$1/verdicts.json" | sed -e 's/^$/—/' -e 's/_/ /g'; }
-sverdict() { jq -r '.security // "not claimed"' "$1/verdicts.json"; }
+pverdict() { local dir="$1" profile="$2"; jq -r --arg t "$profile" '.profiles[] | select(.[0]==$t) | .[1] // "—"' "$dir/verdicts.json" | sed -e 's/^$/—/' -e 's/_/ /g'; }
+sverdict() { local dir="$1"; jq -r '.security // "not claimed"' "$dir/verdicts.json"; }
 
 {
   cat <<EOF
@@ -293,16 +293,17 @@ EB_STRESS="$EB/stress.json"
 # Derivations from a committed stress report. The knee step is the stable
 # step at the maximum sustainable rate; its worst per-operation p99 and its
 # sampled resource peaks summarize the knee honestly.
-mst() { jq -r '.max_sustainable_throughput_per_s | round' "$1"; }
+mst() { local file="$1"; jq -r '.max_sustainable_throughput_per_s | round' "$file"; }
 # Every knee-step derivation tolerates a ZERO knee (no stable step — the
 # measured "cannot sustain the workload" case renders as an em dash).
-knee_p99() { jq -r '.max_sustainable_throughput_per_s as $m | [.steps[] | select(.rate == $m and .stable) | .operations[].latency_ms_p99] | if length == 0 then "—" else (max | round | tostring) end' "$1"; }
-knee_res() { # $1 file, $2 role, $3 field-expression over samples
-  jq -r --arg role "$2" '.max_sustainable_throughput_per_s as $m
-    | [.steps[] | select(.rate == $m and .stable) | .resources.containers[]? | select(.role == $role) | .samples[]'"$3"'] 
-    | if length == 0 then "—" else (max | round | tostring) end' "$1"
+knee_p99() { local file="$1"; jq -r '.max_sustainable_throughput_per_s as $m | [.steps[] | select(.rate == $m and .stable) | .operations[].latency_ms_p99] | if length == 0 then "—" else (max | round | tostring) end' "$file"; }
+knee_res() {
+  local file="$1" role="$2" field="$3"
+  jq -r --arg role "$role" '.max_sustainable_throughput_per_s as $m
+    | [.steps[] | select(.rate == $m and .stable) | .resources.containers[]? | select(.role == $role) | .samples[]'"$field"'] 
+    | if length == 0 then "—" else (max | round | tostring) end' "$file"
 }
-corpus_of() { jq -r '.corpus' "$1"; }
+corpus_of() { local file="$1"; jq -r '.corpus' "$file"; }
 
 {
   if [[ -f "$RS_STRESS" ]] && [[ -f "$EB_STRESS" ]]; then

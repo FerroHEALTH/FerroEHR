@@ -40,8 +40,9 @@ obs_down() {
 # The datasource uid for a given type, discovered rather than assumed: the
 # bundled stack provisions its own and the names are not ours to pin.
 obs_datasource_uid() {
+  local ds_type="$1"
   curl -s -u "$GRAFANA_AUTH" "$GRAFANA/api/datasources" \
-    | jq -r --arg t "$1" 'map(select(.type == $t)) | .[0].uid // empty' 2>/dev/null
+    | jq -r --arg t "$ds_type" 'map(select(.type == $t)) | .[0].uid // empty' 2>/dev/null
 }
 
 # Instant-query Prometheus THROUGH Grafana, returning the number of series.

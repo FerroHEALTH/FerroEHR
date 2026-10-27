@@ -1,5 +1,66 @@
 [
  {
+  "method": "OPTIONS",
+  "path": "/ferroehr/rest/openehr/v1",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "allow": "GET, POST, PUT, DELETE, OPTIONS",
+   "content-type": "application/json"
+  },
+  "response": "{\"solution\":\"FerroEHR\",\"solution_version\":\"5.4.2\",\"vendor\":\"Cadasto B.V.\",\"restapi_specs_version\":\"1.1.0\",\"conformance_profile\":\"STANDARD\",\"endpoints\":[\"/ehr\",\"/definition\",\"/query\",\"/demographic\",\"/admin\"]}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/admin/config",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json"
+  },
+  "response": "{\"spec_profile\":\"development\",\"deployment_profile\":\"sandbox\",\"deployment_accepts\":[],\"server\":{\"listen\":\"127.0.0.1:18080\",\"base_path\":\"\",\"request_timeout_ms\":30000,\"header_read_timeout_ms\":30000,\"body_limit_bytes\":67108864,\"drain_delay_ms\":0,\"shutdown_timeout_ms\":10000,\"max_concurrent_requests\":null,\"retry_after_s\":1,\"tls\":null,\"trusted_proxies\":[],\"forwarded_header\":\"forwarded\",\"caller_rate\":null,\"compression\":true,\"compression_min_bytes\":1024},\"rest\":{\"base_path\":\"/ferroehr/rest/openehr/v1\",\"swagger_ui\":\"private\",\"cors_permissive\":true,\"system_id\":\"ferroehr.local\",\"identity\":{\"solution\":\"FerroEHR\",\"solution_version\":\"5.4.2\",\"vendor\":\"Cadasto B.V.\",\"restapi_specs_version\":\"1.1.0\",\"conformance_profile\":\"STANDARD\"},\"body_limit_bytes\":null},\"db\":{\"url\":\"postgres://***@127.0.0.1:55432/ferroehr\",\"url_file\":null,\"migrate_url\":null,\"migrate_url_file\":null,\"max_connections\":20,\"min_connections\":2,\"acquire_timeout_secs\":30,\"statement_timeout_ms\":60000,\"migrate\":\"apply\"},\"storage\":{\"clinical\":{\"url\":null,\"url_file\":null},\"party\":{\"url\":null,\"url_file\":null},\"linkage\":{\"url\":null,\"url_file\":null},\"audit\":{\"url\":null,\"url_file\":null},\"migrate\":{\"clinical\":{\"url\":null,\"url_file\":null},\"party\":{\"url\":null,\"url_file\":null},\"linkage\":{\"url\":null,\"url_file\":null},\"audit\":{\"url\":null,\"url_file\":null}}},\"telemetry\":{\"format\":\"json\",\"filter\":\"info,hyper=warn,tower=warn,h2=warn\",\"logged_query_parameters\":[],\"environment\":null,\"otlp\":null},\"auth\":{\"enabled\":true,\"issuer\":\"\",\"audience\":[],\"algorithms\":[\"RS256\",\"RS384\",\"PS256\",\"PS384\",\"ES256\",\"ES384\"],\"token_profile\":\"rfc9068\",\"clock_skew_seconds\":60,\"jwks_max_age_seconds\":600,\"jwks_refresh_interval_seconds\":60,\"jwks_file\":\"\",\"timeout_ms\":10000,\"realm\":\"\",\"scopeless_subjects\":[],\"role_claims\":[\"roles\",\"groups\",\"entitlements\"],\"capabilities\":[],\"scopes_supported\":[],\"product_scope\":\"\",\"basic\":{\"users\":[{\"user\":\"ferroehr\",\"password_hash\":\"***\",\"password_hash_file\":null,\"scopes\":[\"user/composition-*.cruds\",\"user/template-*.cruds\",\"user/aql-*.cruds\",\"__ferroehr.platform\"],\"roles\":[\"USER\"]},{\"user\":\"ferroehr-admin\",\"password_hash\":\"***\",\"password_hash_file\":null,\"scopes\":[\"user/composition-*.cruds\",\"user/template-*.cruds\",\"user/aql-*.cruds\",\"__ferroehr.platform\"],\"roles\":[\"ADMIN\",\"USER\"]},{\"user\":\"ferroehr-readonly\",\"password_hash\":\"***\",\"password_hash_file\":null,\"scopes\":[\"user/composition-*.cruds\",\"user/template-*.cruds\",\"user/aql-*.cruds\",\"__ferroehr.platform\"],\"roles\":[\"READONLY\"]}],\"cache_ttl_seconds\":300},\"mode\":\"jwt\",\"introspection\":null,\"ca_file\":null},\"authz\":{\"rbac\":{\"enabled\":false,\"admin_role\":\"ADMIN\",\"readonly_role\":\"READONLY\",\"subject_audit_role\":null,\"emergency_access_role\":null,\"identifier_reader_role\":null,\"ehr_access_default\":\"open\"},\"abac\":{\"enabled\":false,\"engine\":\"cedar\",\"organization_claim\":\"organization_id\",\"patient_claim\":\"patient_id\",\"patient_namespace\":null,\"cedar\":{\"policy_dir\":null,\"reload_secs\":null},\"remote\":{\"server\":null,\"connect_timeout_ms\":2000,\"request_timeout_ms\":5000,\"oauth\":null},\"check_directory\":false,\"policy\":{}},\"assurance\":{\"claim\":\"acr\",\"levels\":{},\"minimum\":null},\"professional\":null},\"admin\":{\"enabled\":true},\"smart\":{\"enabled\":false,\"issuer_metadata_file\":null,\"platform_base_url\":null,\"public_base_url\":null,\"episode\":{\"enabled\":false},\"launch_base64_json\":false,\"backend_clients\":[],\"patient_issuers\":[],\"demographic_clients\":[]},\"management\":{\"enabled\":true,\"base_path\":\"/management\",\"port\":null,\"endpoints\":{\"info\":\"private\",\"metrics\":\"private\",\"prometheus\":\"public\",\"env\":\"admin_only\",\"loggers\":\"admin_only\",\"flamegraph\":\"off\",\"health\":\"admin_only\",\"status\":\"admin_only\"},\"profiling\":{\"max_seconds\":30,\"max_frequency\":999},\"flame_file\":null},\"signing\":{\"enabled\":true,\"mode\":\"digest\",\"key_path\":null,\"key_passphrase\":null,\"key_passphrase_file\":null,\"retired_key_paths\":[],\"verify_on_read\":null},\"licence\":{\"file\":null},\"query\":{\"plan_cache_capacity\":256,\"timeout_ms\":30000,\"max_result_rows\":10000},\"events\":{\"enabled\":false,\"url\":\"amqp://***@localhost:5672/%2f\",\"url_file\":null,\"exchange\":\"ferroehr.events\",\"tls\":false,\"batch_size\":128,\"poll_interval_ms\":1000,\"retention_days\":7,\"prune_interval_secs\":3600,\"publish_max_retries\":3,\"admin_api\":false},\"terminology\":{\"api_enabled\":true,\"server\":{\"enabled\":false,\"url\":\"http://terminology:8080/r4b\",\"fail_on_error\":false,\"request_timeout_ms\":10000,\"oauth\":null}},\"multimedia\":{\"enabled\":false,\"threshold_bytes\":262144,\"endpoint\":null,\"bucket\":\"openehr-multimedia\",\"region\":\"us-east-1\",\"access_key_id\":null,\"secret_access_key\":null,\"secret_access_key_file\":null,\"allow_http\":false},\"audit\":{\"enabled\":true,\"enterprise_site_id\":null,\"source_id\":\"ferroehr\",\"value_if_missing\":\"UNKNOWN\",\"suppress_login_events\":true,\"fail_mode\":\"open\",\"resolve_subject\":true,\"queue_capacity\":8192,\"server_host\":null,\"purpose_header\":\"x-purpose-of-use\",\"permit_header\":\"x-data-permit\",\"purpose_codes\":[],\"emergency_purpose_codes\":[],\"legal_basis\":null,\"categories\":{\"national\":[],\"templates\":{},\"archetypes\":{}},\"store\":{\"enabled\":true,\"retention_days\":0,\"retention_years\":null,\"sgb_v_309_controller\":false,\"verify_interval_seconds\":3600,\"full_verify_interval_seconds\":604800},\"syslog\":{\"enabled\":false,\"host\":\"localhost\",\"port\":6514,\"tls_ca_file\":null,\"tls_identity_cert_file\":null,\"tls_identity_key_file\":null,\"spool_dir\":null,\"spool_max_messages\":100000,\"spool_max_bytes\":268435456,\"retry_max_ms\":60000},\"fhir_feed\":{\"enabled\":false,\"url\":\"http://localhost:8080/fhir\",\"poll_interval_ms\":2000,\"retry_max_ms\":60000,\"oauth\":null}},\"privacy\":{\"subject_namespaces\":[],\"allow_identified_parties_in_ehr\":false,\"identifier_scan\":{\"mode\":\"strict\",\"rules\":[\"ch-ahvn13\",\"ch-epd-pid\",\"de-kvnr\",\"fi-hetu\",\"gb-nhs-number\",\"nl-bsn\",\"no-fodselsnummer\",\"se-personnummer\"],\"patterns\":[]}},\"demographic\":{\"identifier_protection\":{\"enabled\":false,\"schemes\":[\"nl-bsn\"],\"key\":null,\"key_file\":null}},\"cohort\":{\"small_cell_threshold\":5,\"max_cohort_size\":100000,\"predicates\":{},\"subjects\":false},\"ehr_index\":{\"provider\":\"local\",\"pixm_url\":\"\",\"assigning_authority\":\"\",\"invocation\":\"post\",\"request_timeout_ms\":10000,\"tls\":{\"client_identity\":null,\"client_identity_file\":null,\"trust_roots_file\":null,\"min_version\":\"1.3\"},\"oauth\":null},\"usage_report\":{\"enabled\":false,\"endpoint\":\"https://report.ferropulse.eu/v1/report\",\"state_dir\":null,\"deployment\":\"unknown\"}}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
+  "body": "",
+  "status": 404,
+  "headers": {
+   "content-type": "application/json"
+  },
+  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/definition/query",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json"
+  },
+  "response": "[{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-01T09:00:08.000000Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}]"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/definition/query/org.example.cardio%3A%3Alatest/1.0.0",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json"
+  },
+  "response": "{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-01T09:00:08.000000Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/definition/template/adl1.4",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json"
+  },
+  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-01T09:00:00.000000Z\",\"version\":\"1\"}]"
+ },
+ {
   "method": "GET",
   "path": "/ferroehr/rest/openehr/v1/definition/template/adl1.4",
   "body": "",
@@ -12,66 +73,24 @@
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/template/adl1.4",
+  "path": "/ferroehr/rest/openehr/v1/definition/template/adl1.4/minimal_evaluation.en.v1",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/xml",
+   "etag": "W/\"minimal_evaluation.en.v1\""
+  },
+  "response": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!--Operational template XML automatically generated by Ocean Template Designer Version 2.8.94Beta-->\n<template xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns=\"http://schemas.openehr.org/v1\">\n  <language>\n    <terminology_id>\n      <value>ISO_639-1</value>\n    </terminology_id>\n    <code_string>en</code_string>\n  </language>\n  <description>\n    <original_author id=\"Original Author\">Not Specified</original_author>\n    <lifecycle_state>Initial</lifecycle_state>\n    <other_details id=\"MetaDataSet:Sample Set \">Template metadata sample set </other_details>\n    <other_details id=\"Acknowledgements\"></other_details>\n    <other_details id=\"Business Process Level\"></other_details>\n    <other_details id=\"Care setting\"></other_details>\n    <other_details id=\"Client group\"></other_details>\n    <other_details id=\"Clinical Record Element\"></other_details>\n    <other_details id=\"Copyright\"></other_details>\n    <other_details id=\"Issues\"></other_details>\n    <other_details id=\"Owner\"></other_details>\n    <other_details id=\"Sign off\"></other_details>\n    <other_details id=\"Speciality\"></other_details>\n    <other_details id=\"User roles\"></other_details>\n    <details>\n      <language>\n        <terminology_id>\n          <value>ISO_639-1</value>\n        </terminology_id>\n        <code_string>en</code_string>\n      </language>\n      <purpose>Not Specified</purpose>\n    </details>\n  </description>\n  <uid>\n    <value>00000000-0000-7000-8000-000000000001</value>\n  </uid>\n  <template_id>\n    <value>minimal_evaluation.en.v1</value>\n  </template_id>\n  <concept>Minimal evaluation</concept>\n  <definition>\n    <rm_type_name>COMPOSITION</rm_type_name>\n    <occurrences>\n      <lower_included>true</lower_included>\n      <upper_included>true</upper_included>\n      <lower_unbounded>false</lower_unbounded>\n      <upper_unbounded>false</upper_unbounded>\n      <lower>1</lower>\n      <upper>1</upper>\n    </occurrences>\n    <node_id>at0000</node_id>\n    <attributes xsi:type=\"C_SINGLE_ATTRIBUTE\">\n      <rm_attribute_name>category</rm_attribute_name>\n      <existence>\n        <lower_included>true</lower_included>\n        <upper_included>true</upper_included>\n        <lower_unbounded>false</lower_unbounded>\n        <upper_unbounded>false</upper_unbounded>\n        <lower>1</lower>\n        <upper>1</upper>\n      </existence>\n      <children xsi:type=\"C_COMPLEX_OBJECT\">\n        <rm_type_name>DV_CODED_TEXT</rm_type_name>\n        <occurrences>\n          <lower_included>true</lower_included>\n          <upper_included>true</upper_included>\n          <lower_unbounded>false</lower_unbounded>\n          <upper_unbounded>false</upper_unbounded>\n          <lower>1</lower>\n          <upper>1</upper>\n        </occurrences>\n        <node_id />\n        <attributes xsi:type=\"C_SINGLE_ATTRIBUTE\">\n          <rm_attribute_name>defining_code</rm_attribute_name>\n          <existence>\n            <lower_included>true</lower_included>\n            <upper_included>true</upper_included>\n            <lower_unbounded>false</lower_unbounded>\n            <upper_unbounded>false</upper_unbounded>\n            <lower>1</lower>\n            <upper>1</upper>\n          </existence>\n          <children xsi:type=\"C_CODE_PHRASE\">\n            <rm_type_name>CODE_PHRASE</rm_type_name>\n            <occurrences>\n              <lower_included>true</lower_included>\n              <upper_included>true</upper_included>\n              <lower_unbounded>false</lower_unbounded>\n              <upper_unbounded>false</upper_unbounded>\n              <lower>1</lower>\n              <upper>1</upper>\n            </occurrences>\n            <node_id />\n            <terminology_id>\n              <value>openehr</value>\n            </terminology_id>\n            <code_list>433</code_list>\n          </children>\n        </attributes>\n      </children>\n    </attributes>\n    <attributes xsi:type=\"C_MULTIPLE_ATTRIBUTE\">\n      <rm_attribute_name>content</rm_attribute_name>\n      <existence>\n        <lower_included>true</lower_included>\n        <upper_included>true</upper_included>\n        <lower_unbounded>false</lower_unbounded>\n        <upper_unbounded>false</upper_unbounded>\n        <lower>0</lower>\n        <upper>1</upper>\n      </existence>\n      <children xsi:type=\"C_ARCHETYPE_ROOT\">\n        <rm_type_name>EVALUATION</rm_type_name>\n        <occurrences>\n          <lower_included>true</lower_included>\n          <lower_unbounded>false</lower_unbounded>\n          <upper_unbounded>true</upper_unbounded>\n          <lower>0</lower>\n        </occurrences>\n        <node_id>at0000</node_id>\n        <attributes xsi:type=\"C_SINGLE_ATTRIBUTE\">\n          <rm_attribute_name>data</rm_attribute_name>\n          <existence>\n            <lower_included>true</lower_included>\n            <upper_included>true</upper_included>\n            <lower_unbounded>false</lower_unbounded>\n            <upper_unbounded>false</upper_unbounded>\n            <lower>1</lower>\n            <upper>1</upper>\n          </existence>\n          <children xsi:type=\"C_COMPLEX_OBJECT\">\n            <rm_type_name>ITEM_TREE</rm_type_name>\n            <occurrences>\n              <lower_included>true</lower_included>\n              <upper_included>true</upper_included>\n              <lower_unbounded>false</lower_unbounded>\n              <upper_unbounded>false</upper_unbounded>\n              <lower>1</lower>\n              <upper>1</upper>\n            </occurrences>\n            <node_id>at0001</node_id>\n            <attributes xsi:type=\"C_MULTIPLE_ATTRIBUTE\">\n              <rm_attribute_name>items</rm_attribute_name>\n              <existence>\n                <lower_included>true</lower_included>\n                <upper_included>true</upper_included>\n                <lower_unbounded>false</lower_unbounded>\n                <upper_unbounded>false</upper_unbounded>\n                <lower>0</lower>\n                <upper>1</upper>\n              </existence>\n              <children xsi:type=\"C_COMPLEX_OBJECT\">\n                <rm_type_name>ELEMENT</rm_type_name>\n                <occurrences>\n                  <lower_included>true</lower_included>\n                  <upper_included>true</upper_included>\n                  <lower_unbounded>false</lower_unbounded>\n                  <upper_unbounded>false</upper_unbounded>\n                  <lower>0</lower>\n                  <upper>1</upper>\n                </occurrences>\n                <node_id>at0002</node_id>\n                <attributes xsi:type=\"C_SINGLE_ATTRIBUTE\">\n                  <rm_attribute_name>value</rm_attribute_name>\n                  <existence>\n                    <lower_included>true</lower_included>\n                    <upper_included>true</upper_included>\n                    <lower_unbounded>false</lower_unbounded>\n                    <upper_unbounded>false</upper_unbounded>\n                    <lower>0</lower>\n                    <upper>1</upper>\n                  </existence>\n                  <children xsi:type=\"C_DV_QUANTITY\">\n                    <rm_type_name>DV_QUANTITY</rm_type_name>\n                    <occurrences>\n                      <lower_included>true</lower_included>\n                      <upper_included>true</upper_included>\n                      <lower_unbounded>false</lower_unbounded>\n                      <upper_unbounded>false</upper_unbounded>\n                      <lower>1</lower>\n                      <upper>1</upper>\n                    </occurrences>\n                    <node_id />\n                    <property>\n                      <terminology_id>\n                        <value>openehr</value>\n                      </terminology_id>\n                      <code_string>124</code_string>\n                    </property>\n                    <list>\n                      <units>kg</units>\n                    </list>\n                    <list>\n                      <units>mg</units>\n                    </list>\n                    <list>\n                      <units>gm</units>\n                    </list>\n                  </children>\n                </attributes>\n              </children>\n              <cardinality>\n                <is_ordered>false</is_ordered>\n                <is_unique>false</is_unique>\n                <interval>\n                  <lower_included>true</lower_included>\n                  <lower_unbounded>false</lower_unbounded>\n                  <upper_unbounded>true</upper_unbounded>\n                  <lower>0</lower>\n                </interval>\n              </cardinality>\n            </attributes>\n          </children>\n        </attributes>\n        <archetype_id>\n          <value>openEHR-EHR-EVALUATION.minimal.v1</value>\n        </archetype_id>\n        <term_definitions code=\"at0000\">\n          <items id=\"description\">unknown</items>\n          <items id=\"text\">Minimal</items>\n        </term_definitions>\n        <term_definitions code=\"at0001\">\n          <items id=\"description\">@ internal @</items>\n          <items id=\"text\">Arbol</items>\n        </term_definitions>\n        <term_definitions code=\"at0002\">\n          <items id=\"description\">*</items>\n          <items id=\"text\">quantity</items>\n        </term_definitions>\n      </children>\n      <cardinality>\n        <is_ordered>false</is_ordered>\n        <is_unique>false</is_unique>\n        <interval>\n          <lower_included>true</lower_included>\n          <lower_unbounded>false</lower_unbounded>\n          <upper_unbounded>true</upper_unbounded>\n          <lower>0</lower>\n        </interval>\n      </cardinality>\n    </attributes>\n    <archetype_id>\n      <value>openEHR-EHR-COMPOSITION.minimal.v1</value>\n    </archetype_id>\n    <template_id>\n      <value>minimal_evaluation.en.v1</value>\n    </template_id>\n    <term_definitions code=\"at0000\">\n      <items id=\"description\">unknown</items>\n      <items id=\"text\">Minimal</items>\n    </term_definitions>\n  </definition>\n</template>"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/definition/template/adl1.4/minimal_evaluation.en.v1/example?detail_level=required&type=input",
   "body": "",
   "status": 200,
   "headers": {
    "content-type": "application/json"
   },
-  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-23T08:47:11.618861Z\",\"version\":\"1\"}]"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/template/adl1.4",
-  "body": "",
-  "status": 401,
-  "headers": {
-   "content-type": "application/json",
-   "www-authenticate": "Basic realm=\"ferroehr\", charset=\"UTF-8\""
-  },
-  "response": "{\"message\":\"unauthorized: authentication failed\",\"validationErrors\":[],\"error\":\"Unauthorized\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:26.99547165Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "POST",
-  "path": "/ferroehr/rest/openehr/v1/query/aql",
-  "body": "{\"q\":\"SELECT COUNT(*) FROM EHR e\",\"query_parameters\":{}}",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"3f99af81-0e8a-4344-efb1-69b45376bd68\""
-  },
-  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-23T08:47:27.053846467Z\",\"_executed_aql\":\"SELECT COUNT(*) FROM EHR e\"},\"q\":\"SELECT COUNT(*) FROM EHR e\",\"columns\":[{\"name\":\"#0\"}],\"rows\":[[1]]}"
- },
- {
-  "method": "POST",
-  "path": "/ferroehr/rest/openehr/v1/query/aql",
-  "body": "{\"q\":\"SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c\",\"query_parameters\":{}}",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"ea651a3d-9ff2-54f1-972c-6f2c8420a662\""
-  },
-  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-23T08:47:27.08076936Z\",\"_executed_aql\":\"SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c\"},\"q\":\"SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c\",\"columns\":[{\"name\":\"#0\"}],\"rows\":[[2]]}"
+  "response": "{\"_type\":\"COMPOSITION\",\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"rm_version\":\"1.2.0\",\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"}},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}}}"
  },
  {
   "method": "GET",
@@ -81,952 +100,7 @@
   "headers": {
    "content-type": "application/json"
   },
-  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-23T08:47:11.618861Z\",\"version\":\"1\"}]"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/query",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "[{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-23T08:47:11.8835Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}]"
- },
- {
-  "method": "POST",
-  "path": "/ferroehr/rest/openehr/v1/query/aql",
-  "body": "{\"q\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\",\"query_parameters\":{},\"fetch\":500}",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"dee77065-d561-580f-8be9-1bbe4111ff2b\""
-  },
-  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-23T08:47:27.164352558Z\",\"_executed_aql\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\"},\"q\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/commit_audit/time_committed/value\"}],\"rows\":[[\"2026-10-20T08:00:00Z\"],[\"2022-02-03T04:05:06Z\"]]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/query",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "[{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-23T08:47:11.8835Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}]"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/query/org.example.cardio%3A%3Alatest/1.0.0",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"2a4fd90b-de8b-a219-9771-43bb5ccd2c12\""
-  },
-  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-23T08:47:27.217262462Z\",\"_executed_aql\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"},\"name\":\"org.example.cardio::latest\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\",\"columns\":[{\"name\":\"ehr\",\"path\":\"/ehr_id/value\"},{\"name\":\"name\",\"path\":\"/name/value\"}],\"rows\":[[\"01a167f1-5519-716e-bb9d-46d75874d260\",\"Minimal\"],[\"01a167f1-5519-716e-bb9d-46d75874d260\",\"Minimal\"]]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:27.245987118Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "POST",
-  "path": "/ferroehr/rest/openehr/v1/query/aql",
-  "body": "{\"q\":\"SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC\",\"query_parameters\":{},\"fetch\":25,\"offset\":0}",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"8b695422-53ef-8982-b512-6ad199aa9c7d\""
-  },
-  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-23T08:47:27.294389866Z\",\"_executed_aql\":\"SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC\"},\"q\":\"SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/ehr_id/value\"},{\"name\":\"#1\",\"path\":\"/time_created/value\"}],\"rows\":[[\"01a167f1-5519-716e-bb9d-46d75874d260\",\"2026-10-23T08:47:11.642396+00:00\"]]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:27.310475851Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5519-716e-bb9d-46d75874d260\""
-  },
-  "response": "{\"_type\":\"EHR\",\"system_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"},\"ehr_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5519-716e-bb9d-46d75874d260\"},\"ehr_status\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_STATUS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6\"}},\"ehr_access\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_ACCESS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5521-7418-8d84-6056ea6751da\"}},\"directory\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.642396Z\"},\"folders\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/ehr_status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"EHR_STATUS\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR Status\"},\"archetype_node_id\":\"openEHR-EHR-EHR_STATUS.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-EHR_STATUS.generic.v1\"},\"rm_version\":\"1.2.0\"},\"subject\":{\"_type\":\"PARTY_SELF\",\"external_ref\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demo.hospital.mrn\",\"type\":\"PERSON\",\"id\":{\"_type\":\"GENERIC_ID\",\"value\":\"p-0417\",\"scheme\":\"mrn\"}}},\"is_queryable\":true,\"is_modifiable\":true}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/directory",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"}}]}]}"
- },
- {
-  "method": "OPTIONS",
-  "path": "/ferroehr/rest/openehr/v1",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "allow": "GET, POST, PUT, DELETE, OPTIONS"
-  },
-  "response": "{\"solution\":\"FerroEHR\",\"solution_version\":\"5.3.2\",\"vendor\":\"Cadasto B.V.\",\"restapi_specs_version\":\"1.1.0\",\"conformance_profile\":\"STANDARD\",\"endpoints\":[\"/ehr\",\"/definition\",\"/query\",\"/demographic\",\"/admin\"]}"
- },
- {
-  "method": "POST",
-  "path": "/ferroehr/rest/openehr/v1/query/aql",
-  "body": "{\"q\":\"SELECT c/uid/value, c/name/value, c/archetype_details/template_id/value, c/context/start_time/value, c/composer/name FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = $ehr_id ORDER BY c/context/start_time/value DESC\",\"query_parameters\":{\"ehr_id\":\"01a167f1-5519-716e-bb9d-46d75874d260\"},\"fetch\":25,\"offset\":0}",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"c55c2eef-e64b-dfc2-1bda-854dc77b8a5d\""
-  },
-  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-23T08:47:27.456288684Z\",\"_executed_aql\":\"SELECT c/uid/value, c/name/value, c/archetype_details/template_id/value, c/context/start_time/value, c/composer/name FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = '01a167f1-5519-716e-bb9d-46d75874d260' ORDER BY c/context/start_time/value DESC\"},\"q\":\"SELECT c/uid/value, c/name/value, c/archetype_details/template_id/value, c/context/start_time/value, c/composer/name FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = $ehr_id ORDER BY c/context/start_time/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/uid/value\"},{\"name\":\"#1\",\"path\":\"/name/value\"},{\"name\":\"#2\",\"path\":\"/archetype_details/template_id/value\"},{\"name\":\"#3\",\"path\":\"/context/start_time/value\"},{\"name\":\"#4\",\"path\":\"/composer/name\"}],\"rows\":[[\"01a167f1-557e-701f-a55b-c94f2fd9dbf1::ferroehr.local::1\",\"Minimal\",\"minimal_evaluation.en.v1\",\"2026-10-20T08:00:00Z\",\"Demo Nurse\"],[\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\",\"Minimal\",\"minimal_evaluation.en.v1\",\"2022-02-03T04:05:06Z\",\"Example composer\"]]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:27.476612657Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5519-716e-bb9d-46d75874d260\""
-  },
-  "response": "{\"_type\":\"EHR\",\"system_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"},\"ehr_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5519-716e-bb9d-46d75874d260\"},\"ehr_status\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_STATUS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6\"}},\"ehr_access\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_ACCESS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5521-7418-8d84-6056ea6751da\"}},\"directory\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.642396Z\"},\"folders\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/ehr_status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"EHR_STATUS\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR Status\"},\"archetype_node_id\":\"openEHR-EHR-EHR_STATUS.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-EHR_STATUS.generic.v1\"},\"rm_version\":\"1.2.0\"},\"subject\":{\"_type\":\"PARTY_SELF\",\"external_ref\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demo.hospital.mrn\",\"type\":\"PERSON\",\"id\":{\"_type\":\"GENERIC_ID\",\"value\":\"p-0417\",\"scheme\":\"mrn\"}}},\"is_queryable\":true,\"is_modifiable\":true}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/directory",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"}}]}]}"
- },
- {
-  "method": "OPTIONS",
-  "path": "/ferroehr/rest/openehr/v1",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "allow": "GET, POST, PUT, DELETE, OPTIONS"
-  },
-  "response": "{\"solution\":\"FerroEHR\",\"solution_version\":\"5.3.2\",\"vendor\":\"Cadasto B.V.\",\"restapi_specs_version\":\"1.1.0\",\"conformance_profile\":\"STANDARD\",\"endpoints\":[\"/ehr\",\"/definition\",\"/query\",\"/demographic\",\"/admin\"]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/versioned_ehr_status/revision_history",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-551e-76e4-a006-e04527a396e6\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.642396Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/versioned_ehr_status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-551e-76e4-a006-e04527a396e6\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"VERSIONED_EHR_STATUS\",\"uid\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5519-716e-bb9d-46d75874d260\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.642396Z\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/versioned_ehr_status/version/01a167f1-551e-76e4-a006-e04527a396e6%3A%3Aferroehr.local%3A%3A1",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"ORIGINAL_VERSION\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"},\"contribution\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"CONTRIBUTION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-551c-71c5-a1c5-c606cfd2ae5b\"}},\"commit_audit\":{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.642396Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}},\"lifecycle_state\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"complete\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"532\"}},\"data\":{\"_type\":\"EHR_STATUS\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR Status\"},\"archetype_node_id\":\"openEHR-EHR-EHR_STATUS.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-EHR_STATUS.generic.v1\"},\"rm_version\":\"1.2.0\"},\"subject\":{\"_type\":\"PARTY_SELF\",\"external_ref\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demo.hospital.mrn\",\"type\":\"PERSON\",\"id\":{\"_type\":\"GENERIC_ID\",\"value\":\"p-0417\",\"scheme\":\"mrn\"}}},\"is_queryable\":true,\"is_modifiable\":true},\"signature\":\"sha256:h53oMSKKlby1DfTgf1uv4+uaDqCGaKhhTOjIl8TfN7s=\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:27.696999209Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5519-716e-bb9d-46d75874d260\""
-  },
-  "response": "{\"_type\":\"EHR\",\"system_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"},\"ehr_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5519-716e-bb9d-46d75874d260\"},\"ehr_status\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_STATUS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6\"}},\"ehr_access\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_ACCESS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5521-7418-8d84-6056ea6751da\"}},\"directory\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.642396Z\"},\"folders\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/ehr_status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"EHR_STATUS\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR Status\"},\"archetype_node_id\":\"openEHR-EHR-EHR_STATUS.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-EHR_STATUS.generic.v1\"},\"rm_version\":\"1.2.0\"},\"subject\":{\"_type\":\"PARTY_SELF\",\"external_ref\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demo.hospital.mrn\",\"type\":\"PERSON\",\"id\":{\"_type\":\"GENERIC_ID\",\"value\":\"p-0417\",\"scheme\":\"mrn\"}}},\"is_queryable\":true,\"is_modifiable\":true}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/directory",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"}}]}]}"
- },
- {
-  "method": "OPTIONS",
-  "path": "/ferroehr/rest/openehr/v1",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "allow": "GET, POST, PUT, DELETE, OPTIONS"
-  },
-  "response": "{\"solution\":\"FerroEHR\",\"solution_version\":\"5.3.2\",\"vendor\":\"Cadasto B.V.\",\"restapi_specs_version\":\"1.1.0\",\"conformance_profile\":\"STANDARD\",\"endpoints\":[\"/ehr\",\"/definition\",\"/query\",\"/demographic\",\"/admin\"]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/directory",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/directory",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/directory/01a167f1-5596-7124-8b85-d04de506d5ac%3A%3Aferroehr.local%3A%3A1",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:27.932640408Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5519-716e-bb9d-46d75874d260\""
-  },
-  "response": "{\"_type\":\"EHR\",\"system_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"},\"ehr_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5519-716e-bb9d-46d75874d260\"},\"ehr_status\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_STATUS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6\"}},\"ehr_access\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_ACCESS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5521-7418-8d84-6056ea6751da\"}},\"directory\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.642396Z\"},\"folders\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/ehr_status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"EHR_STATUS\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR Status\"},\"archetype_node_id\":\"openEHR-EHR-EHR_STATUS.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-EHR_STATUS.generic.v1\"},\"rm_version\":\"1.2.0\"},\"subject\":{\"_type\":\"PARTY_SELF\",\"external_ref\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demo.hospital.mrn\",\"type\":\"PERSON\",\"id\":{\"_type\":\"GENERIC_ID\",\"value\":\"p-0417\",\"scheme\":\"mrn\"}}},\"is_queryable\":true,\"is_modifiable\":true}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/directory",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"}}]}]}"
- },
- {
-  "method": "OPTIONS",
-  "path": "/ferroehr/rest/openehr/v1",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "allow": "GET, POST, PUT, DELETE, OPTIONS"
-  },
-  "response": "{\"solution\":\"FerroEHR\",\"solution_version\":\"5.3.2\",\"vendor\":\"Cadasto B.V.\",\"restapi_specs_version\":\"1.1.0\",\"conformance_profile\":\"STANDARD\",\"endpoints\":[\"/ehr\",\"/definition\",\"/query\",\"/demographic\",\"/admin\"]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/contribution?offset=0&fetch=200",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"rows\":[{\"uid\":\"01a167f1-5597-74a4-8179-b6af24d2df56\",\"time_committed\":\"2026-10-23T08:47:11.766527Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"01a167f1-557e-701f-a55b-c950c27ddbf1\",\"time_committed\":\"2026-10-23T08:47:11.741914Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"01a167f1-5569-70c2-b3e9-fcac218f2d3f\",\"time_committed\":\"2026-10-23T08:47:11.718639Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"modification\",\"change_type\":\"251\"},{\"uid\":\"01a167f1-554d-7040-a6ee-6a2572831b61\",\"time_committed\":\"2026-10-23T08:47:11.691945Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"01a167f1-551c-71c5-a1c5-c606cfd2ae5b\",\"time_committed\":\"2026-10-23T08:47:11.642396Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"}],\"total\":5}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/contribution?offset=0&fetch=25",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"rows\":[{\"uid\":\"01a167f1-5597-74a4-8179-b6af24d2df56\",\"time_committed\":\"2026-10-23T08:47:11.766527Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"01a167f1-557e-701f-a55b-c950c27ddbf1\",\"time_committed\":\"2026-10-23T08:47:11.741914Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"01a167f1-5569-70c2-b3e9-fcac218f2d3f\",\"time_committed\":\"2026-10-23T08:47:11.718639Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"modification\",\"change_type\":\"251\"},{\"uid\":\"01a167f1-554d-7040-a6ee-6a2572831b61\",\"time_committed\":\"2026-10-23T08:47:11.691945Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"01a167f1-551c-71c5-a1c5-c606cfd2ae5b\",\"time_committed\":\"2026-10-23T08:47:11.642396Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"}],\"total\":5}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:28.117967828Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5519-716e-bb9d-46d75874d260\""
-  },
-  "response": "{\"_type\":\"EHR\",\"system_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"},\"ehr_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5519-716e-bb9d-46d75874d260\"},\"ehr_status\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_STATUS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6\"}},\"ehr_access\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_ACCESS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5521-7418-8d84-6056ea6751da\"}},\"directory\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.642396Z\"},\"folders\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/ehr_status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"EHR_STATUS\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR Status\"},\"archetype_node_id\":\"openEHR-EHR-EHR_STATUS.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-EHR_STATUS.generic.v1\"},\"rm_version\":\"1.2.0\"},\"subject\":{\"_type\":\"PARTY_SELF\",\"external_ref\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demo.hospital.mrn\",\"type\":\"PERSON\",\"id\":{\"_type\":\"GENERIC_ID\",\"value\":\"p-0417\",\"scheme\":\"mrn\"}}},\"is_queryable\":true,\"is_modifiable\":true}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/directory",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"}}]}]}"
- },
- {
-  "method": "OPTIONS",
-  "path": "/ferroehr/rest/openehr/v1",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "allow": "GET, POST, PUT, DELETE, OPTIONS"
-  },
-  "response": "{\"solution\":\"FerroEHR\",\"solution_version\":\"5.3.2\",\"vendor\":\"Cadasto B.V.\",\"restapi_specs_version\":\"1.1.0\",\"conformance_profile\":\"STANDARD\",\"endpoints\":[\"/ehr\",\"/definition\",\"/query\",\"/demographic\",\"/admin\"]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/tags",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "[{\"_type\":\"ITEM_TAG\",\"key\":\"reviewed\",\"value\":\"yes\",\"target\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5519-716e-bb9d-46d75874d260\"}}}]"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5519-716e-bb9d-46d75874d260\""
-  },
-  "response": "{\"_type\":\"EHR\",\"system_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"},\"ehr_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5519-716e-bb9d-46d75874d260\"},\"ehr_status\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_STATUS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6\"}},\"ehr_access\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_ACCESS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5521-7418-8d84-6056ea6751da\"}},\"directory\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.642396Z\"},\"folders\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/directory",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/composition/01a167f1-554d-7040-a6ee-6a2486121b61",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:28.377421414Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/versioned_composition/01a167f1-554d-7040-a6ee-6a2486121b61/revision_history",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.691945Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]},{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.718639Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"modification\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"251\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION update\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/composition/01a167f1-554d-7040-a6ee-6a2486121b61",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:28.489337338Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/versioned_composition/01a167f1-554d-7040-a6ee-6a2486121b61/revision_history",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.691945Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]},{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.718639Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"modification\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"251\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION update\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/composition/01a167f1-554d-7040-a6ee-6a2486121b61",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/composition/01a167f1-554d-7040-a6ee-6a2486121b61%3A%3Aferroehr.local%3A%3A2",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:28.617045909Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/versioned_composition/01a167f1-554d-7040-a6ee-6a2486121b61/revision_history",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.691945Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]},{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.718639Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"modification\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"251\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION update\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/composition/01a167f1-554d-7040-a6ee-6a2486121b61",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/versioned_composition/01a167f1-554d-7040-a6ee-6a2486121b61",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"VERSIONED_COMPOSITION\",\"uid\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5519-716e-bb9d-46d75874d260\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.691945Z\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/versioned_composition/01a167f1-554d-7040-a6ee-6a2486121b61/version/01a167f1-554d-7040-a6ee-6a2486121b61%3A%3Aferroehr.local%3A%3A2",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"ORIGINAL_VERSION\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"contribution\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"CONTRIBUTION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5569-70c2-b3e9-fcac218f2d3f\"}},\"commit_audit\":{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.718639Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"modification\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"251\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION update\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}},\"lifecycle_state\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"complete\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"532\"}},\"preceding_version_uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::1\"},\"data\":{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}},\"signature\":\"sha256:vjS17xFkZikDf8CrbIX1hZR2PG95IdKCPic1FQiNeW8=\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:28.789127822Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/versioned_composition/01a167f1-554d-7040-a6ee-6a2486121b61/revision_history",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.691945Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]},{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.718639Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"modification\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"251\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION update\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/composition/01a167f1-554d-7040-a6ee-6a2486121b61",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/composition/01a167f1-554d-7040-a6ee-6a2486121b61/tags",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "[{\"_type\":\"ITEM_TAG\",\"key\":\"reviewed\",\"value\":\"yes\",\"target\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5519-716e-bb9d-46d75874d260\"}}}]"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:28.920947505Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/tags",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "[{\"_type\":\"ITEM_TAG\",\"key\":\"follow-up\",\"value\":\"2026-11-04\",\"target\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-55bb-73ea-bd68-0cab8b84170d\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"SYSTEM\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"}}}]"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/person/01a167f1-55bb-73ea-bd68-0cab8b84170d",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-55bb-73ea-bd68-0cab8b84170d::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"PERSON\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"PERSON\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PERSON.person.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-55bb-73ea-bd68-0cab8b84170d::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-DEMOGRAPHIC-PERSON.person.v1\"},\"rm_version\":\"1.1.0\"},\"identities\":[{\"_type\":\"PARTY_IDENTITY\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"legal name\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1\",\"details\":{\"_type\":\"ITEM_TREE\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Details\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"ELEMENT\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Given name\"},\"archetype_node_id\":\"at0002\",\"value\":{\"_type\":\"DV_TEXT\",\"value\":\"Demo\"}},{\"_type\":\"ELEMENT\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Family name\"},\"archetype_node_id\":\"at0003\",\"value\":{\"_type\":\"DV_TEXT\",\"value\":\"Person 0417\"}}]}}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/person/01a167f1-55bb-73ea-bd68-0cab8b84170d",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-55bb-73ea-bd68-0cab8b84170d::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"PERSON\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"PERSON\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PERSON.person.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-55bb-73ea-bd68-0cab8b84170d::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-DEMOGRAPHIC-PERSON.person.v1\"},\"rm_version\":\"1.1.0\"},\"identities\":[{\"_type\":\"PARTY_IDENTITY\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"legal name\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1\",\"details\":{\"_type\":\"ITEM_TREE\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Details\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"ELEMENT\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Given name\"},\"archetype_node_id\":\"at0002\",\"value\":{\"_type\":\"DV_TEXT\",\"value\":\"Demo\"}},{\"_type\":\"ELEMENT\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Family name\"},\"archetype_node_id\":\"at0003\",\"value\":{\"_type\":\"DV_TEXT\",\"value\":\"Person 0417\"}}]}}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.04644052Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/person/01a167f1-55bb-73ea-bd68-0cab8b84170d",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-55bb-73ea-bd68-0cab8b84170d::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"PERSON\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"PERSON\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PERSON.person.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-55bb-73ea-bd68-0cab8b84170d::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-DEMOGRAPHIC-PERSON.person.v1\"},\"rm_version\":\"1.1.0\"},\"identities\":[{\"_type\":\"PARTY_IDENTITY\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"legal name\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1\",\"details\":{\"_type\":\"ITEM_TREE\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Details\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"ELEMENT\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Given name\"},\"archetype_node_id\":\"at0002\",\"value\":{\"_type\":\"DV_TEXT\",\"value\":\"Demo\"}},{\"_type\":\"ELEMENT\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Family name\"},\"archetype_node_id\":\"at0003\",\"value\":{\"_type\":\"DV_TEXT\",\"value\":\"Person 0417\"}}]}}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/versioned_party/01a167f1-55bb-73ea-bd68-0cab8b84170d/revision_history",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-55bb-73ea-bd68-0cab8b84170d\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-55bb-73ea-bd68-0cab8b84170d::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.802956Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"PARTY creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.137973638Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/party_relationship/01a167f1-55f8-705c-9082-0b6e7a6923e5",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-55f8-705c-9082-0b6e7a6923e5::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"PARTY_RELATIONSHIP\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"employment\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.employment.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-55f8-705c-9082-0b6e7a6923e5::ferroehr.local::1\"},\"target\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demographic\",\"type\":\"ORGANISATION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-55d0-73be-800a-ba4b64434b0a\"}},\"source\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demographic\",\"type\":\"PERSON\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-55bb-73ea-bd68-0cab8b84170d\"}}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/versioned_party_relationship/01a167f1-55f8-705c-9082-0b6e7a6923e5/revision_history",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-55f8-705c-9082-0b6e7a6923e5\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-55f8-705c-9082-0b6e7a6923e5::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.864506Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"PARTY_RELATIONSHIP creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.237106642Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/template/adl1.4?version=*",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-23T08:47:11.618861Z\",\"version\":\"1\"}]"
+  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-01T09:00:00.000000Z\",\"version\":\"1\"}]"
  },
  {
   "method": "GET",
@@ -1040,255 +114,315 @@
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.335867976Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
+  "path": "/ferroehr/rest/openehr/v1/demographic/agent/00000000-0000-7000-8000-000000000002",
   "body": "",
   "status": 404,
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
+  "response": "{\"message\":\"not found: AGENT 00000000-0000-7000-8000-000000000002\",\"validationErrors\":[],\"error\":\"Not Found\"}"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/template/adl1.4/minimal_evaluation.en.v1",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/xml",
-   "etag": "W/\"minimal_evaluation.en.v1\""
-  },
-  "response": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!--Operational template XML automatically generated by Ocean Template Designer Version 2.8.94Beta-->\n<template xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns=\"http://schemas.openehr.org/v1\">\n  <language>\n    <terminology_id>\n      <value>ISO_639-1</value>\n    </terminology_id>\n    <code_string>en</code_string>\n  </language>\n  <description>\n    <original_author id=\"Original Author\">Not Specified</original_author>\n    <lifecycle_state>Initial</lifecycle_state>\n    <other_details id=\"MetaDataSet:Sample Set \">Template metadata sample set </other_details>\n    <other_details id=\"Acknowledgements\"></other_details>\n    <other_details id=\"Business Process Level\"></other_details>\n    <other_details id=\"Care setting\"></other_details>\n    <other_details id=\"Client group\"></other_details>\n    <other_details id=\"Clinical Record Element\"></other_details>\n    <other_details id=\"Copyright\"></other_details>\n    <other_details id=\"Issues\"></other_details>\n    <other_details id=\"Owner\"></other_details>\n    <other_details id=\"Sign off\"></other_details>\n    <other_details id=\"Speciality\"></other_details>\n    <other_details id=\"User roles\"></other_details>\n    <details>\n      <language>\n        <terminology_id>\n          <value>ISO_639-1</value>\n        </terminology_id>\n        <code_string>en</code_string>\n      </language>\n      <purpose>Not Specified</purpose>\n    </details>\n  </description>\n  <uid>\n    <value>711d7d49-b3c6-4a6a-a6b4-a4bd02fc353d</value>\n  </uid>\n  <template_id>\n    <value>minimal_evaluation.en.v1</value>\n  </template_id>\n  <concept>Minimal evaluation</concept>\n  <definition>\n    <rm_type_name>COMPOSITION</rm_type_name>\n    <occurrences>\n      <lower_included>true</lower_included>\n      <upper_included>true</upper_included>\n      <lower_unbounded>false</lower_unbounded>\n      <upper_unbounded>false</upper_unbounded>\n      <lower>1</lower>\n      <upper>1</upper>\n    </occurrences>\n    <node_id>at0000</node_id>\n    <attributes xsi:type=\"C_SINGLE_ATTRIBUTE\">\n      <rm_attribute_name>category</rm_attribute_name>\n      <existence>\n        <lower_included>true</lower_included>\n        <upper_included>true</upper_included>\n        <lower_unbounded>false</lower_unbounded>\n        <upper_unbounded>false</upper_unbounded>\n        <lower>1</lower>\n        <upper>1</upper>\n      </existence>\n      <children xsi:type=\"C_COMPLEX_OBJECT\">\n        <rm_type_name>DV_CODED_TEXT</rm_type_name>\n        <occurrences>\n          <lower_included>true</lower_included>\n          <upper_included>true</upper_included>\n          <lower_unbounded>false</lower_unbounded>\n          <upper_unbounded>false</upper_unbounded>\n          <lower>1</lower>\n          <upper>1</upper>\n        </occurrences>\n        <node_id />\n        <attributes xsi:type=\"C_SINGLE_ATTRIBUTE\">\n          <rm_attribute_name>defining_code</rm_attribute_name>\n          <existence>\n            <lower_included>true</lower_included>\n            <upper_included>true</upper_included>\n            <lower_unbounded>false</lower_unbounded>\n            <upper_unbounded>false</upper_unbounded>\n            <lower>1</lower>\n            <upper>1</upper>\n          </existence>\n          <children xsi:type=\"C_CODE_PHRASE\">\n            <rm_type_name>CODE_PHRASE</rm_type_name>\n            <occurrences>\n              <lower_included>true</lower_included>\n              <upper_included>true</upper_included>\n              <lower_unbounded>false</lower_unbounded>\n              <upper_unbounded>false</upper_unbounded>\n              <lower>1</lower>\n              <upper>1</upper>\n            </occurrences>\n            <node_id />\n            <terminology_id>\n              <value>openehr</value>\n            </terminology_id>\n            <code_list>433</code_list>\n          </children>\n        </attributes>\n      </children>\n    </attributes>\n    <attributes xsi:type=\"C_MULTIPLE_ATTRIBUTE\">\n      <rm_attribute_name>content</rm_attribute_name>\n      <existence>\n        <lower_included>true</lower_included>\n        <upper_included>true</upper_included>\n        <lower_unbounded>false</lower_unbounded>\n        <upper_unbounded>false</upper_unbounded>\n        <lower>0</lower>\n        <upper>1</upper>\n      </existence>\n      <children xsi:type=\"C_ARCHETYPE_ROOT\">\n        <rm_type_name>EVALUATION</rm_type_name>\n        <occurrences>\n          <lower_included>true</lower_included>\n          <lower_unbounded>false</lower_unbounded>\n          <upper_unbounded>true</upper_unbounded>\n          <lower>0</lower>\n        </occurrences>\n        <node_id>at0000</node_id>\n        <attributes xsi:type=\"C_SINGLE_ATTRIBUTE\">\n          <rm_attribute_name>data</rm_attribute_name>\n          <existence>\n            <lower_included>true</lower_included>\n            <upper_included>true</upper_included>\n            <lower_unbounded>false</lower_unbounded>\n            <upper_unbounded>false</upper_unbounded>\n            <lower>1</lower>\n            <upper>1</upper>\n          </existence>\n          <children xsi:type=\"C_COMPLEX_OBJECT\">\n            <rm_type_name>ITEM_TREE</rm_type_name>\n            <occurrences>\n              <lower_included>true</lower_included>\n              <upper_included>true</upper_included>\n              <lower_unbounded>false</lower_unbounded>\n              <upper_unbounded>false</upper_unbounded>\n              <lower>1</lower>\n              <upper>1</upper>\n            </occurrences>\n            <node_id>at0001</node_id>\n            <attributes xsi:type=\"C_MULTIPLE_ATTRIBUTE\">\n              <rm_attribute_name>items</rm_attribute_name>\n              <existence>\n                <lower_included>true</lower_included>\n                <upper_included>true</upper_included>\n                <lower_unbounded>false</lower_unbounded>\n                <upper_unbounded>false</upper_unbounded>\n                <lower>0</lower>\n                <upper>1</upper>\n              </existence>\n              <children xsi:type=\"C_COMPLEX_OBJECT\">\n                <rm_type_name>ELEMENT</rm_type_name>\n                <occurrences>\n                  <lower_included>true</lower_included>\n                  <upper_included>true</upper_included>\n                  <lower_unbounded>false</lower_unbounded>\n                  <upper_unbounded>false</upper_unbounded>\n                  <lower>0</lower>\n                  <upper>1</upper>\n                </occurrences>\n                <node_id>at0002</node_id>\n                <attributes xsi:type=\"C_SINGLE_ATTRIBUTE\">\n                  <rm_attribute_name>value</rm_attribute_name>\n                  <existence>\n                    <lower_included>true</lower_included>\n                    <upper_included>true</upper_included>\n                    <lower_unbounded>false</lower_unbounded>\n                    <upper_unbounded>false</upper_unbounded>\n                    <lower>0</lower>\n                    <upper>1</upper>\n                  </existence>\n                  <children xsi:type=\"C_DV_QUANTITY\">\n                    <rm_type_name>DV_QUANTITY</rm_type_name>\n                    <occurrences>\n                      <lower_included>true</lower_included>\n                      <upper_included>true</upper_included>\n                      <lower_unbounded>false</lower_unbounded>\n                      <upper_unbounded>false</upper_unbounded>\n                      <lower>1</lower>\n                      <upper>1</upper>\n                    </occurrences>\n                    <node_id />\n                    <property>\n                      <terminology_id>\n                        <value>openehr</value>\n                      </terminology_id>\n                      <code_string>124</code_string>\n                    </property>\n                    <list>\n                      <units>kg</units>\n                    </list>\n                    <list>\n                      <units>mg</units>\n                    </list>\n                    <list>\n                      <units>gm</units>\n                    </list>\n                  </children>\n                </attributes>\n              </children>\n              <cardinality>\n                <is_ordered>false</is_ordered>\n                <is_unique>false</is_unique>\n                <interval>\n                  <lower_included>true</lower_included>\n                  <lower_unbounded>false</lower_unbounded>\n                  <upper_unbounded>true</upper_unbounded>\n                  <lower>0</lower>\n                </interval>\n              </cardinality>\n            </attributes>\n          </children>\n        </attributes>\n        <archetype_id>\n          <value>openEHR-EHR-EVALUATION.minimal.v1</value>\n        </archetype_id>\n        <term_definitions code=\"at0000\">\n          <items id=\"description\">unknown</items>\n          <items id=\"text\">Minimal</items>\n        </term_definitions>\n        <term_definitions code=\"at0001\">\n          <items id=\"description\">@ internal @</items>\n          <items id=\"text\">Arbol</items>\n        </term_definitions>\n        <term_definitions code=\"at0002\">\n          <items id=\"description\">*</items>\n          <items id=\"text\">quantity</items>\n        </term_definitions>\n      </children>\n      <cardinality>\n        <is_ordered>false</is_ordered>\n        <is_unique>false</is_unique>\n        <interval>\n          <lower_included>true</lower_included>\n          <lower_unbounded>false</lower_unbounded>\n          <upper_unbounded>true</upper_unbounded>\n          <lower>0</lower>\n        </interval>\n      </cardinality>\n    </attributes>\n    <archetype_id>\n      <value>openEHR-EHR-COMPOSITION.minimal.v1</value>\n    </archetype_id>\n    <template_id>\n      <value>minimal_evaluation.en.v1</value>\n    </template_id>\n    <term_definitions code=\"at0000\">\n      <items id=\"description\">unknown</items>\n      <items id=\"text\">Minimal</items>\n    </term_definitions>\n  </definition>\n</template>"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/template/adl1.4?version=*",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-23T08:47:11.618861Z\",\"version\":\"1\"}]"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.439170591Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
+  "path": "/ferroehr/rest/openehr/v1/demographic/group/00000000-0000-7000-8000-000000000002",
   "body": "",
   "status": 404,
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
+  "response": "{\"message\":\"not found: GROUP 00000000-0000-7000-8000-000000000002\",\"validationErrors\":[],\"error\":\"Not Found\"}"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/query",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "[{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-23T08:47:11.8835Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}]"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.513858762Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
+  "path": "/ferroehr/rest/openehr/v1/demographic/organisation/00000000-0000-7000-8000-000000000002",
   "body": "",
   "status": 404,
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
+  "response": "{\"message\":\"not found: ORGANISATION 00000000-0000-7000-8000-000000000002\",\"validationErrors\":[],\"error\":\"Not Found\"}"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/query",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "[{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-23T08:47:11.8835Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}]"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/query/org.example.cardio%3A%3Alatest/1.0.0",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-23T08:47:11.8835Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.607881064Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.649379512Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "OPTIONS",
-  "path": "/ferroehr/rest/openehr/v1",
+  "path": "/ferroehr/rest/openehr/v1/demographic/party_relationship/00000000-0000-7000-8000-000000000003",
   "body": "",
   "status": 200,
   "headers": {
    "content-type": "application/json",
-   "allow": "GET, POST, PUT, DELETE, OPTIONS"
+   "etag": "W/\"00000000-0000-7000-8000-000000000003::ferroehr.local::1\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
-  "response": "{\"solution\":\"FerroEHR\",\"solution_version\":\"5.3.2\",\"vendor\":\"Cadasto B.V.\",\"restapi_specs_version\":\"1.1.0\",\"conformance_profile\":\"STANDARD\",\"endpoints\":[\"/ehr\",\"/definition\",\"/query\",\"/demographic\",\"/admin\"]}"
+  "response": "{\"_type\":\"PARTY_RELATIONSHIP\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"employment\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.employment.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000003::ferroehr.local::1\"},\"target\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demographic\",\"type\":\"ORGANISATION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000004\"}},\"source\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demographic\",\"type\":\"PERSON\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000005\"}}}"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.699615893Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
+  "path": "/ferroehr/rest/openehr/v1/demographic/person/00000000-0000-7000-8000-000000000002",
   "body": "",
   "status": 404,
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
+  "response": "{\"message\":\"not found: PERSON 00000000-0000-7000-8000-000000000002\",\"validationErrors\":[],\"error\":\"Not Found\"}"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/status",
+  "path": "/ferroehr/rest/openehr/v1/demographic/person/00000000-0000-7000-8000-000000000005",
   "body": "",
   "status": 200,
   "headers": {
-   "content-type": "application/json"
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000005::ferroehr.local::1\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.741933179Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
+  "response": "{\"_type\":\"PERSON\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"PERSON\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PERSON.person.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000005::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-DEMOGRAPHIC-PERSON.person.v1\"},\"rm_version\":\"1.1.0\"},\"identities\":[{\"_type\":\"PARTY_IDENTITY\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"legal name\"},\"archetype_node_id\":\"openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1\",\"details\":{\"_type\":\"ITEM_TREE\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Details\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"ELEMENT\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Given name\"},\"archetype_node_id\":\"at0002\",\"value\":{\"_type\":\"DV_TEXT\",\"value\":\"Demo\"}},{\"_type\":\"ELEMENT\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Family name\"},\"archetype_node_id\":\"at0003\",\"value\":{\"_type\":\"DV_TEXT\",\"value\":\"Person 0417\"}}]}}]}"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
+  "path": "/ferroehr/rest/openehr/v1/demographic/role/00000000-0000-7000-8000-000000000002",
   "body": "",
   "status": 404,
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
+  "response": "{\"message\":\"not found: ROLE 00000000-0000-7000-8000-000000000002\",\"validationErrors\":[],\"error\":\"Not Found\"}"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/status",
+  "path": "/ferroehr/rest/openehr/v1/demographic/tags",
   "body": "",
   "status": 200,
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.78235766Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
+  "response": "[{\"_type\":\"ITEM_TAG\",\"key\":\"follow-up\",\"value\":\"2026-11-04\",\"target\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000005\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"SYSTEM\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"}}}]"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
+  "path": "/ferroehr/rest/openehr/v1/demographic/versioned_party/00000000-0000-7000-8000-000000000005/revision_history",
   "body": "",
-  "status": 404,
+  "status": 200,
   "headers": {
-   "content-type": "application/json"
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000005\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
   },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
+  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000005::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:06.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"PARTY creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/config",
+  "path": "/ferroehr/rest/openehr/v1/demographic/versioned_party_relationship/00000000-0000-7000-8000-000000000003/revision_history",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000003\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
+  },
+  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000003::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:07.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"PARTY_RELATIONSHIP creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000002\""
+  },
+  "response": "{\"_type\":\"EHR\",\"system_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"},\"ehr_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000002\"},\"ehr_status\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_STATUS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000006\"}},\"ehr_access\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_ACCESS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000007\"}},\"directory\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000008\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:01.000000Z\"},\"folders\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000008\"}}]}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/composition/00000000-0000-7000-8000-000000000009",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
+  },
+  "response": "{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/composition/00000000-0000-7000-8000-000000000009/tags",
   "body": "",
   "status": 200,
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"spec_profile\":\"development\",\"deployment_profile\":\"sandbox\",\"deployment_accepts\":[],\"server\":{\"bind\":\"0.0.0.0:8080\",\"base_path\":\"/ferroehr/rest/openehr/v1\",\"max_in_flight\":256,\"swagger_ui\":\"private\",\"cors_permissive\":true,\"system_id\":\"ferroehr.local\",\"identity\":{\"solution\":\"FerroEHR\",\"solution_version\":\"5.3.2\",\"vendor\":\"Cadasto B.V.\",\"restapi_specs_version\":\"1.1.0\",\"conformance_profile\":\"STANDARD\"},\"tls\":{\"enabled\":false,\"cert_file\":null,\"key_file\":null,\"client_auth\":\"off\",\"client_ca_file\":null,\"min_version\":\"1.3\",\"reload_interval_secs\":60},\"limits\":{\"body_bytes\":16777216,\"bulk_body_bytes\":67108864},\"rate_limit\":{\"enabled\":true,\"principal_per_second\":1024,\"principal_burst\":2048,\"address_per_second\":2048,\"address_burst\":4096},\"connection\":{\"header_read_timeout_secs\":10,\"max_concurrent_streams\":256,\"http2_keep_alive_interval_secs\":30,\"http2_keep_alive_timeout_secs\":10}},\"db\":{\"url\":\"postgres://***@ehr-pg:5432/ferroehr\",\"url_file\":null,\"migrate_url\":null,\"migrate_url_file\":null,\"max_connections\":20,\"min_connections\":2,\"acquire_timeout_secs\":30,\"statement_timeout_ms\":60000,\"migrate\":\"apply\"},\"storage\":{\"clinical\":{\"url\":null,\"url_file\":null},\"party\":{\"url\":null,\"url_file\":null},\"linkage\":{\"url\":null,\"url_file\":null},\"audit\":{\"url\":null,\"url_file\":null},\"migrate\":{\"clinical\":{\"url\":null,\"url_file\":null},\"party\":{\"url\":null,\"url_file\":null},\"linkage\":{\"url\":null,\"url_file\":null},\"audit\":{\"url\":null,\"url_file\":null}}},\"telemetry\":{\"format\":\"auto\",\"filter\":\"info,hyper=warn,tower=warn,h2=warn\",\"logged_query_parameters\":[],\"environment\":null,\"otlp\":null},\"auth\":{\"enabled\":true,\"issuer\":\"\",\"audience\":[],\"algorithms\":[\"RS256\",\"RS384\",\"PS256\",\"PS384\",\"ES256\",\"ES384\"],\"token_profile\":\"rfc9068\",\"clock_skew_seconds\":60,\"jwks_max_age_seconds\":600,\"jwks_refresh_interval_seconds\":60,\"jwks_file\":\"\",\"timeout_ms\":10000,\"realm\":\"\",\"scopeless_subjects\":[],\"capabilities\":[],\"scopes_supported\":[],\"product_scope\":\"\",\"basic\":{\"users\":[{\"user\":\"ferroehr\",\"password_hash\":\"[redacted]\",\"password_hash_file\":null,\"scopes\":[\"user/composition-*.cruds\",\"user/template-*.cruds\",\"user/aql-*.cruds\",\"__ferroehr.platform\"]}],\"cache_ttl_seconds\":0}},\"authz\":{\"rbac\":{\"enabled\":false,\"admin_role\":\"ADMIN\",\"user_role\":\"USER\",\"readonly_role\":\"READONLY\",\"subject_audit_role\":null,\"emergency_access_role\":null,\"identifier_reader_role\":null,\"role_claims\":[\"roles\",\"groups\",\"entitlements\",\"realm_access.roles\"],\"ehr_access_default\":\"open\",\"basic_roles\":{\"ferroehr\":[\"ADMIN\",\"USER\"]}},\"abac\":{\"enabled\":false,\"engine\":\"cedar\",\"organization_claim\":\"organization_id\",\"patient_claim\":\"patient_id\",\"patient_namespace\":null,\"cedar\":{\"policy_dir\":null,\"reload_secs\":null},\"remote\":{\"server\":null,\"connect_timeout_ms\":2000,\"request_timeout_ms\":5000,\"oauth\":null},\"check_directory\":false,\"policy\":{}},\"assurance\":{\"claim\":\"acr\",\"levels\":{},\"minimum\":null},\"professional\":null},\"admin\":{\"enabled\":true},\"smart\":{\"enabled\":false,\"issuer_metadata_file\":null,\"platform_base_url\":null,\"public_base_url\":null,\"episode\":{\"enabled\":false},\"launch_base64_json\":false,\"backend_clients\":[],\"patient_issuers\":[],\"demographic_clients\":[]},\"management\":{\"enabled\":true,\"base_path\":\"/management\",\"port\":null,\"endpoints\":{\"info\":\"private\",\"metrics\":\"private\",\"prometheus\":\"public\",\"env\":\"admin_only\",\"loggers\":\"admin_only\",\"flamegraph\":\"off\",\"health\":\"admin_only\",\"status\":\"admin_only\"},\"profiling\":{\"max_seconds\":30,\"max_frequency\":999},\"flame_file\":null},\"signing\":{\"enabled\":true,\"mode\":\"digest\",\"key_path\":null,\"key_passphrase\":null,\"key_passphrase_file\":null,\"retired_key_paths\":[],\"verify_on_read\":null},\"licence\":{\"file\":null},\"query\":{\"plan_cache_capacity\":256,\"timeout_ms\":30000,\"max_result_rows\":10000},\"events\":{\"enabled\":false,\"url\":\"amqp://***@localhost:5672/%2f\",\"url_file\":null,\"exchange\":\"ferroehr.events\",\"tls\":false,\"batch_size\":128,\"poll_interval_ms\":1000,\"retention_days\":7,\"prune_interval_secs\":3600,\"publish_max_retries\":3,\"admin_api\":false},\"terminology\":{\"api_enabled\":false,\"external\":{\"enabled\":false,\"fail_on_error\":false,\"providers\":{\"default\":{\"type\":\"fhir\",\"url\":\"http://ferroterm:8080/r4b\",\"operation\":\"validate_code\",\"connect_timeout_ms\":2000,\"request_timeout_ms\":10000,\"oauth2_client\":null,\"client_cert_path\":null,\"client_key_path\":null,\"ca_bundle_path\":null,\"cache_ttl_secs\":300,\"cache_capacity\":10000}},\"routes\":{},\"oauth2_clients\":{}}},\"multimedia\":{\"enabled\":false,\"threshold_bytes\":262144,\"endpoint\":null,\"bucket\":\"openehr-multimedia\",\"region\":\"us-east-1\",\"access_key_id\":null,\"secret_access_key\":null,\"secret_access_key_file\":null,\"allow_http\":false},\"audit\":{\"enabled\":true,\"enterprise_site_id\":null,\"source_id\":\"ferroehr\",\"value_if_missing\":\"UNKNOWN\",\"suppress_login_events\":true,\"fail_mode\":\"open\",\"resolve_subject\":true,\"queue_capacity\":8192,\"server_host\":null,\"purpose_header\":\"x-purpose-of-use\",\"purpose_codes\":[],\"emergency_purpose_codes\":[],\"legal_basis\":null,\"categories\":{\"national\":[],\"templates\":{},\"archetypes\":{}},\"store\":{\"enabled\":true,\"retention_days\":0,\"retention_years\":null,\"sgb_v_309_controller\":false,\"verify_interval_seconds\":3600,\"full_verify_interval_seconds\":604800},\"syslog\":{\"enabled\":false,\"host\":\"localhost\",\"port\":6514,\"tls_ca_file\":null,\"tls_identity_cert_file\":null,\"tls_identity_key_file\":null},\"fhir_feed\":{\"enabled\":false,\"url\":\"http://localhost:8080/fhir\",\"batch_size\":64,\"poll_interval_ms\":2000,\"max_retries\":3,\"oauth\":null}},\"privacy\":{\"subject_namespaces\":[],\"allow_identified_parties_in_ehr\":false,\"identifier_scan\":{\"mode\":\"strict\",\"rules\":[\"ch-ahvn13\",\"ch-epd-pid\",\"de-kvnr\",\"fi-hetu\",\"gb-nhs-number\",\"nl-bsn\",\"no-fodselsnummer\",\"se-personnummer\"],\"patterns\":[]}},\"demographic\":{\"identifier_protection\":{\"enabled\":false,\"schemes\":[\"nl-bsn\"],\"key\":null,\"key_file\":null}},\"cohort\":{\"small_cell_threshold\":5,\"max_cohort_size\":100000,\"predicates\":{}},\"usage_report\":{\"enabled\":false,\"endpoint\":\"https://report.ferropulse.eu/v1/report\",\"deployment\":\"unknown\"}}"
+  "response": "[{\"_type\":\"ITEM_TAG\",\"key\":\"reviewed\",\"value\":\"yes\",\"target\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000009\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000002\"}}}]"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/status",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/contribution?offset=0&fetch=200",
   "body": "",
   "status": 200,
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:29.849994993Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
+  "response": "{\"rows\":[{\"uid\":\"00000000-0000-7000-8000-00000000000a\",\"time_committed\":\"2026-10-01T09:00:05.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000b\",\"time_committed\":\"2026-10-01T09:00:04.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000c\",\"time_committed\":\"2026-10-01T09:00:03.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"modification\",\"change_type\":\"251\"},{\"uid\":\"00000000-0000-7000-8000-00000000000d\",\"time_committed\":\"2026-10-01T09:00:02.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000e\",\"time_committed\":\"2026-10-01T09:00:01.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"}],\"total\":5}"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/contribution?offset=0&fetch=25",
   "body": "",
-  "status": 404,
+  "status": 200,
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
+  "response": "{\"rows\":[{\"uid\":\"00000000-0000-7000-8000-00000000000a\",\"time_committed\":\"2026-10-01T09:00:05.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000b\",\"time_committed\":\"2026-10-01T09:00:04.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000c\",\"time_committed\":\"2026-10-01T09:00:03.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"modification\",\"change_type\":\"251\"},{\"uid\":\"00000000-0000-7000-8000-00000000000d\",\"time_committed\":\"2026-10-01T09:00:02.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"},{\"uid\":\"00000000-0000-7000-8000-00000000000e\",\"time_committed\":\"2026-10-01T09:00:01.000000Z\",\"committer\":\"ferroehr\",\"change_type_rubric\":\"creation\",\"change_type\":\"249\"}],\"total\":5}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/directory",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000008::ferroehr.local::1\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
+  },
+  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000008::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000009\"}}]}]}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/directory/00000000-0000-7000-8000-000000000008%3A%3Aferroehr.local%3A%3A1",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000008::ferroehr.local::1\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
+  },
+  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000008::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000009\"}}]}]}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/ehr_status",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
+  },
+  "response": "{\"_type\":\"EHR_STATUS\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR Status\"},\"archetype_node_id\":\"openEHR-EHR-EHR_STATUS.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-EHR_STATUS.generic.v1\"},\"rm_version\":\"1.2.0\"},\"subject\":{\"_type\":\"PARTY_SELF\",\"external_ref\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demo.hospital.mrn\",\"type\":\"PERSON\",\"id\":{\"_type\":\"GENERIC_ID\",\"value\":\"p-0417\",\"scheme\":\"mrn\"}}},\"is_queryable\":true,\"is_modifiable\":true}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/tags",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json"
+  },
+  "response": "[{\"_type\":\"ITEM_TAG\",\"key\":\"reviewed\",\"value\":\"yes\",\"target\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000009\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000002\"}}}]"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/versioned_composition/00000000-0000-7000-8000-000000000009",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000009\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
+  },
+  "response": "{\"_type\":\"VERSIONED_COMPOSITION\",\"uid\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000009\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000002\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:02.000000Z\"}}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/versioned_composition/00000000-0000-7000-8000-000000000009/revision_history",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000009\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
+  },
+  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:02.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]},{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:03.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"modification\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"251\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION update\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/versioned_composition/00000000-0000-7000-8000-000000000009/version/00000000-0000-7000-8000-000000000009%3A%3Aferroehr.local%3A%3A2",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
+  },
+  "response": "{\"_type\":\"ORIGINAL_VERSION\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"},\"contribution\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"CONTRIBUTION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-00000000000c\"}},\"commit_audit\":{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:03.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"modification\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"251\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"COMPOSITION update\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}},\"lifecycle_state\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"complete\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"532\"}},\"preceding_version_uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::1\"},\"data\":{\"_type\":\"COMPOSITION\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Minimal\"},\"archetype_node_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-COMPOSITION.minimal.v1\"},\"template_id\":{\"_type\":\"TEMPLATE_ID\",\"value\":\"minimal_evaluation.en.v1\"},\"rm_version\":\"1.2.0\"},\"language\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_639-1\"},\"code_string\":\"en\"},\"territory\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"ISO_3166-1\"},\"code_string\":\"US\"},\"category\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"event\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"433\"}},\"context\":{\"_type\":\"EVENT_CONTEXT\",\"start_time\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2022-02-03T04:05:06Z\"},\"setting\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"other care\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"238\"}}},\"composer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"Example composer\"}},\"signature\":\"sha256:0000000000000000000000000000000000000000001=\"}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/versioned_ehr_status",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000006\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
+  },
+  "response": "{\"_type\":\"VERSIONED_EHR_STATUS\",\"uid\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000006\"},\"owner_id\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"EHR\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-000000000002\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:01.000000Z\"}}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/versioned_ehr_status/revision_history",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000006\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
+  },
+  "response": "{\"_type\":\"REVISION_HISTORY\",\"items\":[{\"_type\":\"REVISION_HISTORY_ITEM\",\"version_id\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"},\"audits\":[{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:01.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}}]}]}"
+ },
+ {
+  "method": "GET",
+  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/versioned_ehr_status/version/00000000-0000-7000-8000-000000000006%3A%3Aferroehr.local%3A%3A1",
+  "body": "",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"",
+   "last-modified": "Thu, 01 Oct 2026 10:00:00 GMT"
+  },
+  "response": "{\"_type\":\"ORIGINAL_VERSION\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"},\"contribution\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"CONTRIBUTION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"00000000-0000-7000-8000-00000000000e\"}},\"commit_audit\":{\"_type\":\"AUDIT_DETAILS\",\"system_id\":\"ferroehr.local\",\"time_committed\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-01T09:00:01.000000Z\"},\"change_type\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"creation\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"249\"}},\"description\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR creation\"},\"committer\":{\"_type\":\"PARTY_IDENTIFIED\",\"name\":\"ferroehr\",\"identifiers\":[{\"_type\":\"DV_IDENTIFIER\",\"issuer\":\"ferroehr\",\"id\":\"ferroehr\",\"type\":\"basic\"}]}},\"lifecycle_state\":{\"_type\":\"DV_CODED_TEXT\",\"value\":\"complete\",\"defining_code\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"532\"}},\"data\":{\"_type\":\"EHR_STATUS\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"EHR Status\"},\"archetype_node_id\":\"openEHR-EHR-EHR_STATUS.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"00000000-0000-7000-8000-000000000006::ferroehr.local::1\"},\"archetype_details\":{\"_type\":\"ARCHETYPED\",\"archetype_id\":{\"_type\":\"ARCHETYPE_ID\",\"value\":\"openEHR-EHR-EHR_STATUS.generic.v1\"},\"rm_version\":\"1.2.0\"},\"subject\":{\"_type\":\"PARTY_SELF\",\"external_ref\":{\"_type\":\"PARTY_REF\",\"namespace\":\"demo.hospital.mrn\",\"type\":\"PERSON\",\"id\":{\"_type\":\"GENERIC_ID\",\"value\":\"p-0417\",\"scheme\":\"mrn\"}}},\"is_queryable\":true,\"is_modifiable\":true},\"signature\":\"sha256:0000000000000000000000000000000000000000002=\"}"
+ },
+ {
+  "method": "POST",
+  "path": "/ferroehr/rest/openehr/v1/query/aql",
+  "body": "{\"q\":\"SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c\",\"query_parameters\":{}}",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-00000000000f\""
+  },
+  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c\"},\"q\":\"SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c\",\"columns\":[{\"name\":\"#0\"}],\"rows\":[[2]]}"
+ },
+ {
+  "method": "POST",
+  "path": "/ferroehr/rest/openehr/v1/query/aql",
+  "body": "{\"q\":\"SELECT COUNT(*) FROM EHR e\",\"query_parameters\":{}}",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000010\""
+  },
+  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT COUNT(*) FROM EHR e\"},\"q\":\"SELECT COUNT(*) FROM EHR e\",\"columns\":[{\"name\":\"#0\"}],\"rows\":[[1]]}"
+ },
+ {
+  "method": "POST",
+  "path": "/ferroehr/rest/openehr/v1/query/aql",
+  "body": "{\"q\":\"SELECT c/uid/value, c/name/value, c/archetype_details/template_id/value, c/context/start_time/value, c/composer/name FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = $ehr_id ORDER BY c/context/start_time/value DESC\",\"query_parameters\":{\"ehr_id\":\"00000000-0000-7000-8000-000000000002\"},\"fetch\":25,\"offset\":0}",
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000011\""
+  },
+  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT c/uid/value, c/name/value, c/archetype_details/template_id/value, c/context/start_time/value, c/composer/name FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = '00000000-0000-7000-8000-000000000002' ORDER BY c/context/start_time/value DESC\"},\"q\":\"SELECT c/uid/value, c/name/value, c/archetype_details/template_id/value, c/context/start_time/value, c/composer/name FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = $ehr_id ORDER BY c/context/start_time/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/uid/value\"},{\"name\":\"#1\",\"path\":\"/name/value\"},{\"name\":\"#2\",\"path\":\"/archetype_details/template_id/value\"},{\"name\":\"#3\",\"path\":\"/context/start_time/value\"},{\"name\":\"#4\",\"path\":\"/composer/name\"}],\"rows\":[[\"00000000-0000-7000-8000-000000000012::ferroehr.local::1\",\"Minimal\",\"minimal_evaluation.en.v1\",\"2026-07-14T08:00:00Z\",\"Seed composer\"],[\"00000000-0000-7000-8000-000000000009::ferroehr.local::2\",\"Minimal\",\"minimal_evaluation.en.v1\",\"2022-02-03T04:05:06Z\",\"Example composer\"]]}"
  },
  {
   "method": "POST",
@@ -1297,121 +431,53 @@
   "status": 200,
   "headers": {
    "content-type": "application/json",
-   "etag": "W/\"d8aefc3f-81dd-23fd-2e81-4c2dc9a68a66\""
+   "etag": "W/\"00000000-0000-7000-8000-000000000013\""
   },
-  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-23T08:47:29.901925969Z\",\"_executed_aql\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"},\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\",\"columns\":[{\"name\":\"ehr\",\"path\":\"/ehr_id/value\"},{\"name\":\"name\",\"path\":\"/name/value\"}],\"rows\":[[\"01a167f1-5519-716e-bb9d-46d75874d260\",\"Minimal\"],[\"01a167f1-5519-716e-bb9d-46d75874d260\",\"Minimal\"]]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:54.998254719Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5519-716e-bb9d-46d75874d260\""
-  },
-  "response": "{\"_type\":\"EHR\",\"system_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"ferroehr.local\"},\"ehr_id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5519-716e-bb9d-46d75874d260\"},\"ehr_status\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_STATUS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-551e-76e4-a006-e04527a396e6\"}},\"ehr_access\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_EHR_ACCESS\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5521-7418-8d84-6056ea6751da\"}},\"directory\":{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}},\"time_created\":{\"_type\":\"DV_DATE_TIME\",\"value\":\"2026-10-23T08:47:11.642396Z\"},\"folders\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_FOLDER\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac\"}}]}"
+  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"},\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\",\"columns\":[{\"name\":\"ehr\",\"path\":\"/ehr_id/value\"},{\"name\":\"name\",\"path\":\"/name/value\"}],\"rows\":[[\"00000000-0000-7000-8000-000000000002\",\"Minimal\"],[\"00000000-0000-7000-8000-000000000002\",\"Minimal\"]]}"
  },
  {
   "method": "POST",
   "path": "/ferroehr/rest/openehr/v1/query/aql",
-  "body": "{\"q\":\"SELECT e/ehr_id/value, c/uid/value, c/name/value FROM EHR e CONTAINS COMPOSITION c WHERE c/uid/value LIKE $uid\",\"query_parameters\":{\"uid\":\"01a167f1-5519-716e-bb9d-46d75874d260::*\"},\"fetch\":25,\"offset\":0}",
+  "body": "{\"q\":\"SELECT e/ehr_id/value, c/uid/value, c/name/value FROM EHR e CONTAINS COMPOSITION c WHERE c/uid/value LIKE $uid\",\"query_parameters\":{\"uid\":\"00000000-0000-7000-8000-000000000002::*\"},\"fetch\":25,\"offset\":0}",
   "status": 200,
   "headers": {
    "content-type": "application/json",
-   "etag": "W/\"76f808c6-aade-46a9-095a-3a689a346758\""
+   "etag": "W/\"00000000-0000-7000-8000-000000000014\""
   },
-  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-23T08:47:55.252364437Z\",\"_executed_aql\":\"SELECT e/ehr_id/value, c/uid/value, c/name/value FROM EHR e CONTAINS COMPOSITION c WHERE c/uid/value LIKE '01a167f1-5519-716e-bb9d-46d75874d260::*'\"},\"q\":\"SELECT e/ehr_id/value, c/uid/value, c/name/value FROM EHR e CONTAINS COMPOSITION c WHERE c/uid/value LIKE $uid\",\"columns\":[{\"name\":\"#0\",\"path\":\"/ehr_id/value\"},{\"name\":\"#1\",\"path\":\"/uid/value\"},{\"name\":\"#2\",\"path\":\"/name/value\"}],\"rows\":[]}"
+  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT e/ehr_id/value, c/uid/value, c/name/value FROM EHR e CONTAINS COMPOSITION c WHERE c/uid/value LIKE '00000000-0000-7000-8000-000000000002::*'\"},\"q\":\"SELECT e/ehr_id/value, c/uid/value, c/name/value FROM EHR e CONTAINS COMPOSITION c WHERE c/uid/value LIKE $uid\",\"columns\":[{\"name\":\"#0\",\"path\":\"/ehr_id/value\"},{\"name\":\"#1\",\"path\":\"/uid/value\"},{\"name\":\"#2\",\"path\":\"/name/value\"}],\"rows\":[]}"
  },
  {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/person/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 404,
+  "method": "POST",
+  "path": "/ferroehr/rest/openehr/v1/query/aql",
+  "body": "{\"q\":\"SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC\",\"query_parameters\":{},\"fetch\":25,\"offset\":0}",
+  "status": 200,
   "headers": {
-   "content-type": "application/json"
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000015\""
   },
-  "response": "{\"message\":\"not found: PERSON 01a167f1-5519-716e-bb9d-46d75874d260\",\"validationErrors\":[],\"error\":\"Not Found\"}"
+  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC\"},\"q\":\"SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/ehr_id/value\"},{\"name\":\"#1\",\"path\":\"/time_created/value\"}],\"rows\":[[\"00000000-0000-7000-8000-000000000002\",\"2026-10-01T09:00:01.000000+00:00\"]]}"
  },
  {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/organisation/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 404,
+  "method": "POST",
+  "path": "/ferroehr/rest/openehr/v1/query/aql",
+  "body": "{\"q\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\",\"query_parameters\":{},\"fetch\":500}",
+  "status": 200,
   "headers": {
-   "content-type": "application/json"
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000016\""
   },
-  "response": "{\"message\":\"not found: ORGANISATION 01a167f1-5519-716e-bb9d-46d75874d260\",\"validationErrors\":[],\"error\":\"Not Found\"}"
+  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\"},\"q\":\"SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC\",\"columns\":[{\"name\":\"#0\",\"path\":\"/commit_audit/time_committed/value\"}],\"rows\":[[\"2026-10-01T09:00:04.000000+00:00\"],[\"2026-10-01T09:00:03.000000+00:00\"]]}"
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/group/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: GROUP 01a167f1-5519-716e-bb9d-46d75874d260\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/agent/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: AGENT 01a167f1-5519-716e-bb9d-46d75874d260\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/role/01a167f1-5519-716e-bb9d-46d75874d260",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: ROLE 01a167f1-5519-716e-bb9d-46d75874d260\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/template/adl1.4?version=*",
+  "path": "/ferroehr/rest/openehr/v1/query/org.example.cardio%3A%3Alatest/1.0.0",
   "body": "",
   "status": 200,
   "headers": {
-   "content-type": "application/json"
+   "content-type": "application/json",
+   "etag": "W/\"00000000-0000-7000-8000-000000000017\""
   },
-  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-23T08:47:11.618861Z\",\"version\":\"1\"}]"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/query",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "[{\"name\":\"org.example.cardio::latest\",\"type\":\"AQL\",\"version\":\"1.0.0\",\"saved\":\"2026-10-23T08:47:11.8835Z\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"}]"
+  "response": "{\"meta\":{\"_type\":\"RESULTSET\",\"_schema_version\":\"1.1.0\",\"_created\":\"2026-10-01T10:00:00.000000Z\",\"_executed_aql\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\"},\"name\":\"org.example.cardio::latest\",\"q\":\"SELECT e/ehr_id/value AS ehr, c/name/value AS name FROM EHR e CONTAINS COMPOSITION c\",\"columns\":[{\"name\":\"ehr\",\"path\":\"/ehr_id/value\"},{\"name\":\"name\",\"path\":\"/name/value\"}],\"rows\":[[\"00000000-0000-7000-8000-000000000002\",\"Minimal\"],[\"00000000-0000-7000-8000-000000000002\",\"Minimal\"]]}"
  },
  {
   "method": "GET",
@@ -1421,17 +487,7 @@
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:56.009424179Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
+  "response": "{\"status\":\"UP\",\"server_version\":\"5.4.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-01T10:00:00.000000Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
  },
  {
   "method": "GET",
@@ -1441,78 +497,6 @@
   "headers": {
    "content-type": "application/json"
   },
-  "response": "{\"name\":\"ferroehr\",\"version\":\"5.3.2\",\"git_sha\":\"96f4964f5b9bc7f255fdcbc6ce10323a88969b92\",\"build_date\":\"2026-10-22T15:54:13Z\",\"rustc\":\"rustc 1.99.1 (58cf8f9c3 2026-10-13)\",\"spec_profile\":\"development\",\"spec\":{\"its_rest\":\"1.1.0\",\"aql\":\"1.1.0\",\"rm\":\"1.2.0\",\"base\":\"1.3.0\",\"am\":\"1.4.0 + 2.4.0\",\"term\":\"3.1.0\"},\"postgres_target\":\"18.6+\",\"manufacturer\":{\"name\":\"Cadasto B.V.\",\"postal_address\":\"Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands\",\"email\":\"info@cadasto.com\",\"website\":\"https://www.cadasto.com/contact/\"},\"support\":{\"release_date\":\"2026-10-22\",\"support_ends\":\"2031-10\",\"status\":\"supported\"},\"audit\":{\"enabled\":true,\"fail_mode\":\"open\",\"local_store\":true,\"retention_days\":0,\"retention_years\":null,\"category_map\":\"sha256:1132e548840144251cfff2071c1f468cc55ebcdb98fe35b88cf2b99788bdf006\"}}"
- },
- {
-  "method": "GET",
-  "path": "/management/info",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"name\":\"ferroehr\",\"version\":\"5.3.2\",\"git_sha\":\"96f4964f5b9bc7f255fdcbc6ce10323a88969b92\",\"build_date\":\"2026-10-22T15:54:13Z\",\"rustc\":\"rustc 1.99.1 (58cf8f9c3 2026-10-13)\",\"spec_profile\":\"development\",\"spec\":{\"its_rest\":\"1.1.0\",\"aql\":\"1.1.0\",\"rm\":\"1.2.0\",\"base\":\"1.3.0\",\"am\":\"1.4.0 + 2.4.0\",\"term\":\"3.1.0\"},\"postgres_target\":\"18.6+\",\"manufacturer\":{\"name\":\"Cadasto B.V.\",\"postal_address\":\"Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands\",\"email\":\"info@cadasto.com\",\"website\":\"https://www.cadasto.com/contact/\"},\"support\":{\"release_date\":\"2026-10-22\",\"support_ends\":\"2031-10\",\"status\":\"supported\"},\"audit\":{\"enabled\":true,\"fail_mode\":\"open\",\"local_store\":true,\"retention_days\":0,\"retention_years\":null,\"category_map\":\"sha256:1132e548840144251cfff2071c1f468cc55ebcdb98fe35b88cf2b99788bdf006\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:56.637844009Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/01a167f1-5519-716e-bb9d-46d75874d260/directory",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json",
-   "etag": "W/\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"",
-   "last-modified": "Fri, 23 Oct 2026 08:47:11 GMT"
-  },
-  "response": "{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"root\"},\"archetype_node_id\":\"openEHR-EHR-FOLDER.generic.v1\",\"uid\":{\"_type\":\"OBJECT_VERSION_ID\",\"value\":\"01a167f1-5596-7124-8b85-d04de506d5ac::ferroehr.local::1\"},\"folders\":[{\"_type\":\"FOLDER\",\"name\":{\"_type\":\"DV_TEXT\",\"value\":\"Episodes\"},\"archetype_node_id\":\"at0001\",\"items\":[{\"_type\":\"OBJECT_REF\",\"namespace\":\"local\",\"type\":\"VERSIONED_COMPOSITION\",\"id\":{\"_type\":\"HIER_OBJECT_ID\",\"value\":\"01a167f1-554d-7040-a6ee-6a2486121b61\"}}]}]}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/status",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"status\":\"UP\",\"server_version\":\"5.3.2\",\"openehr_rest_api_version\":\"1.1.0\",\"timestamp\":\"2026-10-23T08:47:56.931144658Z\",\"deployment\":{\"profile\":\"sandbox\"}}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
-  "body": "",
-  "status": 404,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "{\"message\":\"not found: event subscription API is disabled\",\"validationErrors\":[],\"error\":\"Not Found\"}"
- },
- {
-  "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/definition/template/adl1.4?version=*",
-  "body": "",
-  "status": 200,
-  "headers": {
-   "content-type": "application/json"
-  },
-  "response": "[{\"template_id\":\"minimal_evaluation.en.v1\",\"concept\":\"Minimal evaluation\",\"archetype_id\":\"openEHR-EHR-COMPOSITION.minimal.v1\",\"created_timestamp\":\"2026-10-23T08:47:11.618861Z\",\"version\":\"1\"}]"
+  "response": "{\"name\":\"ferroehr\",\"version\":\"5.4.2\",\"git_sha\":\"7fa86201b779\",\"build_date\":\"2026-10-27T08:01:28Z\",\"rustc\":\"rustc 1.99.1 (58cf8f9c3 2026-10-13)\",\"spec_profile\":\"development\",\"spec\":{\"its_rest\":\"1.1.0\",\"aql\":\"1.1.0\",\"rm\":\"1.2.0\",\"base\":\"1.3.0\",\"am\":\"1.4.0 + 2.4.0\",\"term\":\"3.1.0\"},\"postgres_target\":\"18.6+\",\"manufacturer\":{\"name\":\"Cadasto B.V.\",\"postal_address\":\"Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands\",\"email\":\"info@cadasto.com\",\"website\":\"https://www.cadasto.com/contact/\"},\"support\":{\"release_date\":\"2026-10-25\",\"support_ends\":\"2031-10\",\"status\":\"supported\"},\"audit\":{\"enabled\":true,\"fail_mode\":\"open\",\"local_store\":true,\"retention_days\":0,\"retention_years\":null,\"category_map\":\"sha256:1132e548840144251cfff2071c1f468cc55ebcdb98fe35b88cf2b99788bdf006\"}}"
  }
 ]

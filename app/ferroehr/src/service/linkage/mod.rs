@@ -138,9 +138,7 @@ impl FerroEhrService {
         &self,
         party_id: VoId,
     ) -> Result<Option<EhrId>, LinkageError> {
-        let resolved = store::open_mapping(&self.linkage_pool, party_id)
-            .await
-            .map_err(LinkageError::from)?;
+        let resolved = store::open_mapping(&self.linkage_pool, party_id).await?;
         self.emit_linkage_access(
             EventActionCode::Read,
             format!("party-ehr:{party_id}"),

@@ -94,8 +94,9 @@ status_option_id() {
 
 # Resolve the board item id for issue #n ("" when the issue is not on the board).
 item_id_for_issue() {
+  local number="$1"
   resolve_project
-  need_int "$1"
+  need_int "$number"
   # Looked up from the ISSUE side (one cheap node query), never by listing the
   # whole project: the board keeps every closed item, so `gh project
   # item-list --limit 1000` costs enough GraphQL points that GitHub's
@@ -103,7 +104,7 @@ item_id_for_issue() {
   # 2026-08-25 at ~2.6k items).
   # shellcheck disable=SC2016 # $owner/$name/$number are GraphQL variables, bound by the -f flags
   gh api graphql \
-    -f owner="${REPO%%/*}" -f name="${REPO##*/}" -F number="$1" \
+    -f owner="${REPO%%/*}" -f name="${REPO##*/}" -F number="$number" \
     -f query='query($owner:String!,$name:String!,$number:Int!){
       repository(owner:$owner,name:$name){issue(number:$number){
         projectItems(first:20){nodes{id project{id}}}}}}' \
@@ -111,11 +112,12 @@ item_id_for_issue() {
 }
 
 canonical_status() {
-  case "$1" in
+  local status="$1"
+  case "$status" in
     todo | Todo) echo "Todo" ;;
     in-progress | in_progress | 'In Progress') echo "In Progress" ;;
     done | Done) echo "Done" ;;
-    *) die "unknown status '$1' (use todo | in-progress | done)" ;;
+    *) die "unknown status '$status' (use todo | in-progress | done)" ;;
   esac
 }
 

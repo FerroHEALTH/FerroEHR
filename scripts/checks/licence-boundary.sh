@@ -129,15 +129,15 @@ self_test() {
       cp "$manifest" "$tmp/crates/$crate/Cargo.toml"
     done
   }
-  # $1 = case label, $2 = expected (clean | refused), $3 = expected text.
+  # expect LABEL clean|refused [TEXT]: the verdict on the tree as it stands.
   expect() {
-    local found
+    local label="$1" want="$2" text="${3:-}" found
     found="$(findings "$tmp")"
-    if [[ "$2" == clean && -n "$found" ]]; then
-      echo "self-test: $1 was wrongly refused: $found" >&2
+    if [[ "$want" == clean && -n "$found" ]]; then
+      echo "self-test: $label was wrongly refused: $found" >&2
       failures=1
-    elif [[ "$2" == refused ]] && ! grep -qF "$3" <<<"$found"; then
-      echo "self-test: $1 was not refused (wanted: $3; got: ${found:-nothing})" >&2
+    elif [[ "$want" == refused ]] && ! grep -qF "$text" <<<"$found"; then
+      echo "self-test: $label was not refused (wanted: $text; got: ${found:-nothing})" >&2
       failures=1
     fi
   }

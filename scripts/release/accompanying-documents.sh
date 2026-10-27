@@ -62,9 +62,9 @@ render() {
 
 # check_sheet FILE: the information sheet carries every point of Art. 38(2).
 check_sheet() {
-  local point
+  local file="$1" point
   for point in a b c d e; do
-    grep -qE "^## \(${point}\) " "$1" || die "the information sheet has no section for Art. 38(2)(${point})"
+    grep -qE "^## \(${point}\) " "$file" || die "the information sheet has no section for Art. 38(2)(${point})"
   done
 }
 

@@ -118,8 +118,9 @@ probes_oidc() {
 
 # A token for one of the demo identities, or empty if the grant is refused.
 oidc_token_for() {
+  local username="$1" password="$2"
   curl -s -d client_id=ferroehr -d client_secret=ferroehr-quickstart-secret \
-    -d "username=$1" -d "password=$2" -d grant_type=password \
+    -d "username=$username" -d "password=$password" -d grant_type=password \
     "$KC_REALM/protocol/openid-connect/token" \
     | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
 }
