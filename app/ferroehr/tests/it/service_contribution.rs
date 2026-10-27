@@ -864,14 +864,21 @@ async fn ehr_contribution_list_page_extension() {
             .is_ok(),
         "time_committed is ISO 8601"
     );
-    // Rows are strictly newest-first by time_committed.
-    let times: Vec<&str> = rows
+    // Rows are newest-first by time_committed, compared as instants: the
+    // RFC 3339 text drops trailing fractional zeros, so its string order
+    // disagrees with time order within one second.
+    let times: Vec<jiff::Timestamp> = rows
         .iter()
-        .map(|r| r["time_committed"].as_str().expect("time"))
+        .map(|r| {
+            r["time_committed"]
+                .as_str()
+                .expect("time")
+                .parse::<jiff::Timestamp>()
+                .expect("time_committed is RFC 3339")
+        })
         .collect();
     let mut desc = times.clone();
-    desc.sort_unstable();
-    desc.reverse();
+    desc.sort_unstable_by(|a, b| b.cmp(a));
     assert_eq!(times, desc, "rows are newest-first");
 
     // Pagination: offset 1 / fetch 1 → exactly the second row; total unchanged.
