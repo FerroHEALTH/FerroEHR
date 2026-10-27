@@ -65,8 +65,20 @@ book (leptos-rs/book `main`, Leptos 0.8; `/leptos-lookup`), never memory.
   cdylib on `wasm32-unknown-unknown`. They are chosen by compilation target
   (`cfg(target_arch = "wasm32")`), never by a Cargo feature pair. Server-only
   dependencies sit under `[target.'cfg(not(target_arch = "wasm32"))'.dependencies]`,
-  and every module but the islands, the errors, the locale and the session
-  client is server-only (`src/lib.rs`).
+  and every module but the islands, the errors, the locale, the session
+  client and the request state is server-only (`src/lib.rs`).
+- **The request state reaches both halves through shared values.** The
+  server reads the path, the query, the display cookies, who is signed in
+  and the viewer's settings once per page into `crate::request::Visit`; the
+  app provides it, the posted form (`crate::posted::provide_posted`) and the
+  flash toast (`crate::flash::shared`) through `SharedValue`, and the status
+  document through an `ArcOnceResource` (`crate::shell::Status`). A view reads
+  them through the same functions on both halves (`request::path`,
+  `request::query`, `request::signed`, `request::settings`, `prefs::current`,
+  `paging::current`, `posted::posted`); `request::session`,
+  `request::state`, `set_status` and `set_cookie` stay on the server. The
+  visit carries no session cookie and no credential. The posted form lets go
+  at the first navigation within the page.
 - WASM is 32-bit: never `usize`/`isize` in an island prop, a server-fn
   argument or any serialized shared type.
 - **Views are built in `.into_any()`-erased sections**: plain `cargo` builds

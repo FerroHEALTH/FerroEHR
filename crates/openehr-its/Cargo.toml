@@ -1,6 +1,6 @@
 [package]
 name = "openehr-its"
-version = "0.0.104"
+version = "0.0.105"
 description = "openEHR ITS (Implementation Technology Specifications): canonical JSON + canonical XML serialization of the RM, the generated ITS-REST 1.1.0 API contract, and the OPT 1.4 and AOM2 archetype XML codecs"
 edition.workspace = true
 rust-version.workspace = true
@@ -27,6 +27,9 @@ uuid = { workspace = true, optional = true }
 # The generated `opt14` model keeps `StringDictionaryItem` groups in
 # document order (XSD ordered sequence) — order-preserving map.
 indexmap = { workspace = true, optional = true }
+# The OPT 1.4 writer matches slot fillers against the slot's archetype-id
+# regular expressions.
+regex = { workspace = true, optional = true }
 # The generated ITS-REST contract: an async_trait server trait + axum-typed DTOs.
 async-trait = { workspace = true, optional = true }
 axum = { workspace = true, optional = true }
@@ -43,14 +46,14 @@ backon = { workspace = true, optional = true }
 secrecy = { workspace = true, optional = true }
 # The generated XML (de)serializers impl the crate's ToXml/FromXml traits for the
 # RM/BASE spec types, so these are real (non-dev) deps.
-openehr-base = { path = "../openehr-base", version = "0.0.104", optional = true }
-openehr-rm = { path = "../openehr-rm", version = "0.0.104", optional = true }
+openehr-base = { path = "../openehr-base", version = "0.0.105", optional = true }
+openehr-rm = { path = "../openehr-rm", version = "0.0.105", optional = true }
 # The native canonical-JSON codec (`json_codec/generated`, emit-json) implements
 # `ToJson` for EVERY generated spec type the `OpenEhrType` derive covers, so it
 # spans all five spec crates (not just the RM/BASE the XML codec needs).
-openehr-lang = { path = "../openehr-lang", version = "0.0.104", optional = true }
-openehr-am = { path = "../openehr-am", version = "0.0.104", optional = true }
-openehr-term = { path = "../openehr-term", version = "0.0.104", optional = true }
+openehr-lang = { path = "../openehr-lang", version = "0.0.105", optional = true }
+openehr-am = { path = "../openehr-am", version = "0.0.105", optional = true }
+openehr-term = { path = "../openehr-term", version = "0.0.105", optional = true }
 
 # The graph is layered so a consumer takes only the surfaces it reads, and so
 # the openEHR content layers stay free of anything that needs a native platform.
@@ -96,8 +99,9 @@ json = [
 ]
 # Canonical XML plus the AOM2 archetype XML codecs (`xml`, `aom2`, `aom2_model`).
 xml = ["json", "dep:quick-xml"]
-# The OPT 1.4 operational-template reader (`opt14`), an XML codec consumer.
-opt14 = ["xml"]
+# The OPT 1.4 operational-template reader (`opt14`), an XML codec consumer,
+# and the OPT 1.4 writer (`opt14_writer`) over the same model.
+opt14 = ["xml", "dep:regex"]
 # Validation against the compiled-in vendored ITS-JSON RM schema
 # (`json::validate_canonical`) — the crate's only `jsonschema` user.
 schema-validation = ["json", "dep:jsonschema"]

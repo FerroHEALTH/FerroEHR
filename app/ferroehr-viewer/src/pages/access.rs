@@ -125,13 +125,13 @@ pub fn grants_of(claim: &str) -> Vec<ScopeGrant> {
 )]
 #[component]
 pub fn AccessPage() -> impl IntoView {
-    let session = crate::request::session();
-    let idle = crate::request::state().map_or(0, |state| state.config.session.idle_minutes);
+    let session = crate::request::signed();
+    let idle = crate::request::settings().idle_minutes;
     let (who, how, method, scopes) = match &session {
         Some(session) => {
-            let (how, method) = match session.credential {
-                crate::session::Credential::Basic { .. } => (tr(Msg::AccessHowBasic), "basic"),
-                crate::session::Credential::Bearer { .. } => (tr(Msg::AccessHowOidc), "oidc"),
+            let (how, method) = match session.method {
+                crate::request::Method::Basic => (tr(Msg::AccessHowBasic), "basic"),
+                crate::request::Method::Oidc => (tr(Msg::AccessHowOidc), "oidc"),
             };
             (
                 session.identity.clone(),
