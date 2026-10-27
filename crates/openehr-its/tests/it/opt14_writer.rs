@@ -37,11 +37,11 @@ use openehr_base::v1_3::base_types::identification::template_id::TemplateId;
 use openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId;
 use openehr_base::v1_3::base_types::terminology::code_phrase::CodePhrase;
 use openehr_its::opt14::types::{
-    Archetype, ArchetypeInternalRef, Assertion, CArchetypeRoot, CAttribute, CObject, ExprItem,
-    Intervalofinteger, OperationalTemplate,
+    Archetype, ArchetypeInternalRef, ArchetypeSlot, Assertion, CArchetypeRoot, CAttribute, CObject,
+    ExprItem, Intervalofinteger, OperationalTemplate,
 };
 use openehr_its::opt14_writer::{
-    ArchetypeLibrary, ArchetypeUse, Narrowing, SlotFill, TemplateDefinition, WriteError,
+    ArchetypeLibrary, ArchetypeUse, Narrowing, NodeClone, SlotFill, TemplateDefinition, WriteError,
 };
 use openehr_its::xml::runtime::XmlAny;
 
@@ -260,9 +260,9 @@ fn walk_attributes(
     for attribute in attributes {
         let (name, existence, children) = attribute_parts(attribute);
         let attribute_path = format!("{path}/{name}");
-        tree.entry(attribute_path.clone())
-            .or_default()
-            .push(format!("existence {}", interval_text(existence)));
+        let facts = tree.entry(attribute_path.clone()).or_default();
+        facts.push(format!("existence {}", interval_text(existence)));
+        facts.sort();
         for child in children {
             let (rm_type, occurrences, node_id) = head(child);
             let child_path = match child {
@@ -437,10 +437,23 @@ enum Drift {
     /// The archetype was revised: a node or attribute the template uses is
     /// gone, or a mandatory one was added.
     ArchetypeRevised,
+    /// The template repeats a node in a way no clone admits: a node that
+    /// occurs at most once, a copy without a `name` constraint, or two copies
+    /// with the same one.
+    InvalidClone,
+    /// The OPT names a primitive object's type as the AOM primitive
+    /// (`DURATION`) where the CKM archetype XML names the data value type
+    /// (`DV_DURATION`), so neither conforms to the other.
+    PrimitiveTypeName,
+    /// The OPT gives a node a type that does not conform to the archetype's
+    /// (`DV_DATE` where the archetype has `DV_DATE_TIME`): a revised
+    /// archetype, or a redefinition the specification does not admit.
+    NonConformingType,
+    /// The archetype has several slots that admit a filler, and the OPT does
+    /// not say which one it fills.
+    AmbiguousSlot,
     /// The template constrains something a template definition does not
-    /// express: a node with no path of its own, a node cloned under its own
-    /// node id, a node's type narrowed, or an open attribute holding both
-    /// archetypes and other constraints.
+    /// express.
     Inexpressible,
 }
 
@@ -482,6 +495,16 @@ fn is_mandatory(i: &Intervalofinteger) -> bool {
     !i.lower_unbounded && i.lower.is_some_and(|l| l >= 1)
 }
 
+/// Whether every value of `inner` lies in `outer` (closed bounds, as the CKM
+/// OPTs write them).
+fn within(inner: &Intervalofinteger, outer: &Intervalofinteger) -> bool {
+    let lower = outer.lower_unbounded
+        || (!inner.lower_unbounded && inner.lower.unwrap_or(0) >= outer.lower.unwrap_or(0));
+    let upper = outer.upper_unbounded
+        || (!inner.upper_unbounded && inner.upper.unwrap_or(0) <= outer.upper.unwrap_or(0));
+    lower && upper
+}
+
 fn same_interval(a: &Intervalofinteger, b: &Intervalofinteger) -> bool {
     interval_text(a) == interval_text(b)
 }
@@ -493,6 +516,7 @@ fn derive_attributes(
     library: &ArchetypeLibrary,
     out: &mut ArchetypeUse,
 ) -> Result<(), Drift> {
+    let owner = if path.is_empty() { "/" } else { path };
     for opt_attribute in opt {
         let (name, existence, children) = attribute_parts(opt_attribute);
         if archetype.iter().any(|a| attribute_parts(a).0 == name) {
@@ -505,21 +529,20 @@ fn derive_attributes(
                 _ => None,
             })
             .collect();
-        if roots.is_empty() {
-            out.narrowings.push(Narrowing::Constrain {
-                path: if path.is_empty() {
-                    "/".to_owned()
-                } else {
-                    path.to_owned()
-                },
-                attribute: opt_attribute.clone(),
-            });
-            continue;
-        }
-        if roots.len() != children.len() {
-            return Err(Drift::Inexpressible);
-        }
         let attribute_path = format!("{path}/{name}");
+        if roots.len() == children.len() && !roots.is_empty() {
+            out.narrowings.push(Narrowing::Existence {
+                path: attribute_path.clone(),
+                existence: existence.clone(),
+            });
+        } else {
+            let mut constraint = opt_attribute.clone();
+            children_mut(&mut constraint).retain(|c| !matches!(c, CObject::CArchetypeRoot(_)));
+            out.narrowings.push(Narrowing::Constrain {
+                path: owner.to_owned(),
+                attribute: constraint,
+            });
+        }
         for root in roots {
             out.fills.push(SlotFill {
                 path: attribute_path.clone(),
@@ -527,10 +550,6 @@ fn derive_attributes(
                 filler: derive_use(root, library)?,
             });
         }
-        out.narrowings.push(Narrowing::Existence {
-            path: attribute_path,
-            existence: existence.clone(),
-        });
     }
     for arch_attribute in archetype {
         let (name, arch_existence, arch_children) = attribute_parts(arch_attribute);
@@ -552,78 +571,363 @@ fn derive_attributes(
                 existence: opt_existence.clone(),
             });
         }
-        derive_children(opt_children, arch_children, &attribute_path, library, out)?;
+        let multiple = matches!(arch_attribute, CAttribute::CMultipleAttribute(_));
+        derive_children(
+            opt_children,
+            arch_children,
+            &attribute_path,
+            multiple,
+            library,
+            out,
+        )?;
     }
     Ok(())
+}
+
+fn children_mut(attribute: &mut CAttribute) -> &mut Vec<CObject> {
+    match attribute {
+        CAttribute::CMultipleAttribute(a) => &mut a.children,
+        CAttribute::CSingleAttribute(a) => &mut a.children,
+    }
+}
+
+fn is_root(object: &CObject) -> bool {
+    matches!(object, CObject::CArchetypeRoot(_))
+}
+
+/// The subtree facts of one object, the node-tree comparison key below it.
+fn subtree(object: &CObject) -> BTreeMap<String, Vec<String>> {
+    let mut tree = BTreeMap::new();
+    let (rm_type, occurrences, _) = head(object);
+    tree.insert(
+        String::new(),
+        vec![format!(
+            "{} {rm_type} {}",
+            kind(object),
+            interval_text(occurrences)
+        )],
+    );
+    walk_attributes(own_attributes(object), "", &mut tree);
+    tree
+}
+
+/// The archetype alternative (a child without node id) an OPT object without
+/// node id redefines: the one of its exact type, else the only one its type
+/// conforms to.
+fn matched_alternative<'a>(object: &CObject, alternatives: &[&'a CObject]) -> Option<&'a CObject> {
+    let rm_type = head(object).0;
+    let exact: Vec<&&CObject> = alternatives
+        .iter()
+        .filter(|a| head(a).0 == rm_type && kind(a) == kind(object))
+        .collect();
+    if let [only] = exact.as_slice() {
+        return Some(only);
+    }
+    let class = |t: &str| t.split('<').next().unwrap_or(t).to_owned();
+    let conforming: Vec<&&CObject> = alternatives
+        .iter()
+        .filter(|a| {
+            let archetype_type = head(a).0;
+            rm_type == archetype_type
+                || (openehr_rm::v1_2::model::is_a(&class(rm_type), &class(archetype_type))
+                    && (!archetype_type.contains('<')
+                        || rm_type.split_once('<').map(|p| p.1)
+                            == archetype_type.split_once('<').map(|p| p.1)))
+        })
+        .collect();
+    match conforming.as_slice() {
+        [only] => Some(only),
+        _ => None,
+    }
+}
+
+/// Why an OPT object without node id redefines none of the archetype's
+/// alternatives.
+fn unmatched(object: &CObject, alternatives: &[&CObject]) -> Drift {
+    let primitive = |o: &CObject| matches!(o, CObject::CPrimitiveObject(_));
+    if primitive(object) && alternatives.iter().any(|a| primitive(a)) {
+        Drift::PrimitiveTypeName
+    } else if alternatives.is_empty() {
+        Drift::Inexpressible
+    } else {
+        Drift::NonConformingType
+    }
+}
+
+/// An OPT object as a redefinition of the archetype object `archetype`: the
+/// attributes the archetype constrains and the OPT drops at existence `{0}`,
+/// the archetype's named children the OPT drops at occurrences `{0}`.
+fn differential(opt: &CObject, archetype: &CObject) -> Result<CObject, Drift> {
+    let arch_attributes = own_attributes(archetype);
+    let mut out = opt.clone();
+    let opt_attributes = own_attributes(opt).to_vec();
+    let Some(attributes) = (match &mut out {
+        CObject::CComplexObject(o) => Some(&mut o.attributes),
+        _ => None,
+    }) else {
+        return Ok(out);
+    };
+    if !matches!(archetype, CObject::CComplexObject(_)) {
+        return Ok(out);
+    }
+    attributes.clear();
+    for opt_attribute in &opt_attributes {
+        let name = attribute_parts(opt_attribute).0;
+        match arch_attributes
+            .iter()
+            .find(|a| attribute_parts(a).0 == name)
+        {
+            None => attributes.push(opt_attribute.clone()),
+            Some(arch_attribute) => {
+                attributes.push(differential_attribute(opt_attribute, arch_attribute)?);
+            }
+        }
+    }
+    for arch_attribute in arch_attributes {
+        let name = attribute_parts(arch_attribute).0;
+        if opt_attributes.iter().all(|a| attribute_parts(a).0 != name) {
+            if is_mandatory(attribute_parts(arch_attribute).1) {
+                return Err(Drift::ArchetypeRevised);
+            }
+            let mut removed = arch_attribute.clone();
+            children_mut(&mut removed).clear();
+            match &mut removed {
+                CAttribute::CMultipleAttribute(a) => a.existence = closed(0, 0),
+                CAttribute::CSingleAttribute(a) => a.existence = closed(0, 0),
+            }
+            attributes.push(removed);
+        }
+    }
+    Ok(out)
+}
+
+fn differential_attribute(opt: &CAttribute, archetype: &CAttribute) -> Result<CAttribute, Drift> {
+    let (_, _, opt_children) = attribute_parts(opt);
+    let (_, _, arch_children) = attribute_parts(archetype);
+    let mut out = opt.clone();
+    let children = children_mut(&mut out);
+    children.clear();
+    let alternatives: Vec<&CObject> = arch_children
+        .iter()
+        .filter(|c| !is_root(c) && head(c).2.is_empty())
+        .collect();
+    for opt_child in opt_children {
+        if is_root(opt_child) {
+            return Err(Drift::Inexpressible);
+        }
+        let node_id = head(opt_child).2;
+        let arch_child = if node_id.is_empty() {
+            matched_alternative(opt_child, &alternatives)
+                .ok_or_else(|| unmatched(opt_child, &alternatives))?
+        } else {
+            if opt_children.iter().filter(|c| head(c).2 == node_id).count() > 1 {
+                return Err(Drift::Inexpressible);
+            }
+            arch_children
+                .iter()
+                .find(|c| !is_root(c) && head(c).2 == node_id)
+                .ok_or(Drift::ArchetypeRevised)?
+        };
+        children.push(differential(opt_child, arch_child)?);
+    }
+    let restated = opt_children.iter().any(|c| head(c).2.is_empty());
+    if !alternatives.is_empty() && !restated && !opt_children.is_empty() {
+        return Err(Drift::Inexpressible);
+    }
+    for arch_child in arch_children.iter().filter(|c| !is_root(c)) {
+        let node_id = head(arch_child).2;
+        if node_id.is_empty() || opt_children.iter().any(|c| head(c).2 == node_id) {
+            continue;
+        }
+        if is_mandatory(head(arch_child).1) {
+            return Err(Drift::ArchetypeRevised);
+        }
+        let mut excluded = arch_child.clone();
+        match &mut excluded {
+            CObject::CComplexObject(o) => o.occurrences = closed(0, 0),
+            _ => return Err(Drift::Inexpressible),
+        }
+        children.push(excluded);
+    }
+    Ok(out)
+}
+
+/// The `name` attribute of a complex object, if it constrains one.
+fn name_attribute(object: &CObject) -> Option<&CAttribute> {
+    own_attributes(object)
+        .iter()
+        .find(|a| attribute_parts(a).0 == "name")
+}
+
+/// A repeated archetype node as clones: the first OPT copy is the node
+/// itself, every later one a [`NodeClone`] with its narrowings relative to
+/// the copy.
+fn derive_clones(
+    copies: &[&CObject],
+    archetype: &CObject,
+    path: &str,
+    single_valued: bool,
+    library: &ArchetypeLibrary,
+    out: &mut ArchetypeUse,
+) -> Result<(), Drift> {
+    let (_, arch_occurrences, _) = head(archetype);
+    let at_most_once = !arch_occurrences.upper_unbounded && arch_occurrences.upper <= Some(1);
+    if single_valued || at_most_once {
+        return Err(Drift::InvalidClone);
+    }
+    if name_attribute(archetype).is_some() {
+        return Err(Drift::Inexpressible);
+    }
+    let names: Vec<&CAttribute> = copies.iter().filter_map(|c| name_attribute(c)).collect();
+    let named_later = copies.iter().skip(1).all(|c| name_attribute(c).is_some());
+    let distinct = names
+        .iter()
+        .enumerate()
+        .all(|(i, n)| names.iter().skip(i + 1).all(|m| m != n));
+    if !named_later || !distinct {
+        return Err(Drift::InvalidClone);
+    }
+    for copy in copies.iter().skip(1) {
+        let name = name_attribute(copy).ok_or(Drift::InvalidClone)?.clone();
+        let mut inner = archetype_use("unused");
+        let attributes: Vec<CAttribute> = own_attributes(copy)
+            .iter()
+            .filter(|a| attribute_parts(a).0 != "name")
+            .cloned()
+            .collect();
+        derive_attributes(
+            &attributes,
+            own_attributes(archetype),
+            "",
+            library,
+            &mut inner,
+        )?;
+        let (_, occurrences, _) = head(copy);
+        let mut clone = NodeClone::new(path, name);
+        clone.occurrences =
+            (!same_interval(occurrences, arch_occurrences)).then(|| occurrences.clone());
+        clone.fills = inner.fills;
+        clone.narrowings = inner.narrowings;
+        out.narrowings.push(Narrowing::Clone(clone));
+    }
+    Ok(())
+}
+
+/// The archetype's children without node id against the OPT's, as one
+/// [`Narrowing::Redefine`] when the template retypes, drops or (where no
+/// path addresses them) changes them; `None` when the path-wise derivation
+/// below expresses them.
+fn derive_alternatives(
+    opt: &[&CObject],
+    alternatives: &[&CObject],
+    attribute_path: &str,
+) -> Result<Option<Narrowing>, Drift> {
+    let mut objects = Vec::new();
+    let mut changed = false;
+    let mut matched = vec![false; alternatives.len()];
+    for opt_child in opt {
+        let Some(arch_child) = matched_alternative(opt_child, alternatives) else {
+            return Err(unmatched(opt_child, alternatives));
+        };
+        let index = alternatives
+            .iter()
+            .position(|a| std::ptr::eq(*a, arch_child));
+        if let Some(seen) = index.and_then(|i| matched.get_mut(i)) {
+            changed |= *seen;
+            *seen = true;
+        }
+        changed |= head(opt_child).0 != head(arch_child).0
+            || (alternatives.len() > 1 && subtree(opt_child) != subtree(arch_child));
+        objects.push(differential(opt_child, arch_child)?);
+    }
+    changed |= matched.iter().any(|m| !m);
+    Ok(changed.then(|| Narrowing::Redefine {
+        path: attribute_path.to_owned(),
+        objects,
+    }))
 }
 
 fn derive_children(
     opt: &[CObject],
     sources: &[CObject],
     attribute_path: &str,
+    multiple: bool,
     library: &ArchetypeLibrary,
     out: &mut ArchetypeUse,
 ) -> Result<(), Drift> {
-    let own: Vec<&CObject> = opt
+    let own: Vec<&CObject> = opt.iter().filter(|c| !is_root(c)).collect();
+    let alternatives: Vec<&CObject> = sources
         .iter()
-        .filter(|c| !matches!(c, CObject::CArchetypeRoot(_)))
+        .filter(|c| !is_root(c) && head(c).2.is_empty())
+        .collect();
+    let opt_alternatives: Vec<&CObject> = own
+        .iter()
+        .copied()
+        .filter(|c| head(c).2.is_empty())
         .collect();
     for opt_child in &own {
         let (_, _, node_id) = head(opt_child);
-        if !node_id.is_empty() && own.iter().filter(|o| head(o).2 == node_id).count() > 1 {
-            return Err(Drift::Inexpressible);
+        if node_id.is_empty() {
+            continue;
         }
-        let known = sources.iter().any(|a| {
-            let (_, _, arch_id) = head(a);
-            if node_id.is_empty() {
-                arch_id.is_empty() && kind(a) == kind(opt_child)
-            } else {
-                arch_id == node_id
-            }
-        });
-        if !known {
+        if !sources.iter().any(|a| head(a).2 == node_id) {
             return Err(Drift::ArchetypeRevised);
         }
     }
-    for arch_child in sources {
-        let (arch_type, arch_occurrences, arch_id) = head(arch_child);
-        let child_path = format!("{attribute_path}[{arch_id}]");
-        let addressable = !arch_id.is_empty() || sources.len() == 1;
+    let redefined = if alternatives.is_empty() {
+        if !opt_alternatives.is_empty() {
+            return Err(Drift::ArchetypeRevised);
+        }
+        false
+    } else if opt_alternatives.is_empty() {
+        if alternatives.iter().any(|a| is_mandatory(head(a).1)) && alternatives.len() == 1 {
+            return Err(Drift::ArchetypeRevised);
+        }
+        if alternatives.len() > 1 {
+            return Err(Drift::Inexpressible);
+        }
+        false
+    } else if let Some(narrowing) =
+        derive_alternatives(&opt_alternatives, &alternatives, attribute_path)?
+    {
+        out.narrowings.push(narrowing);
+        true
+    } else {
+        false
+    };
+    for arch_child in sources.iter().filter(|c| !is_root(c)) {
+        let (_, arch_occurrences, arch_id) = head(arch_child);
+        if arch_id.is_empty() && (redefined || alternatives.len() > 1) {
+            continue;
+        }
         let path = if arch_id.is_empty() {
             attribute_path.to_owned()
         } else {
-            child_path.clone()
+            format!("{attribute_path}[{arch_id}]")
         };
-        let counterpart = own.iter().find(|o| {
-            let (opt_type, _, opt_id) = head(o);
-            if arch_id.is_empty() {
-                opt_id.is_empty() && opt_type == arch_type && kind(o) == kind(arch_child)
-            } else {
-                opt_id == arch_id
-            }
-        });
-        let Some(counterpart) = counterpart else {
-            let retyped = arch_id.is_empty()
-                && own
-                    .iter()
-                    .any(|o| head(o).2.is_empty() && head(o).0 != arch_type);
-            if retyped {
-                return Err(Drift::Inexpressible);
-            }
+        let copies: Vec<&CObject> = own
+            .iter()
+            .copied()
+            .filter(|o| {
+                if arch_id.is_empty() {
+                    head(o).2.is_empty() && head(o).0 == head(arch_child).0
+                } else {
+                    head(o).2 == arch_id
+                }
+            })
+            .collect();
+        let Some(counterpart) = copies.first() else {
             if is_mandatory(arch_occurrences) {
                 return Err(Drift::ArchetypeRevised);
-            }
-            if !addressable {
-                return Err(Drift::Inexpressible);
             }
             out.narrowings.push(Narrowing::Exclude { path });
             continue;
         };
+        if copies.len() > 1 {
+            derive_clones(&copies, arch_child, &path, !multiple, library, out)?;
+        }
         let (_, opt_occurrences, _) = head(counterpart);
         if !same_interval(opt_occurrences, arch_occurrences) {
-            if !addressable {
-                return Err(Drift::Inexpressible);
-            }
             out.narrowings.push(Narrowing::Occurrences {
                 path: path.clone(),
                 occurrences: opt_occurrences.clone(),
@@ -632,9 +936,6 @@ fn derive_children(
         let opt_inner = own_attributes(counterpart);
         let arch_inner = own_attributes(arch_child);
         if !arch_inner.is_empty() || !opt_inner.is_empty() {
-            if !addressable {
-                return Err(Drift::Inexpressible);
-            }
             derive_attributes(opt_inner, arch_inner, &path, library, out)?;
         }
     }
@@ -642,8 +943,7 @@ fn derive_children(
         CObject::CArchetypeRoot(r) => Some(r),
         _ => None,
     }) {
-        let slot_path = choose_slot(sources, attribute_path, &filler.archetype_id.value)
-            .ok_or(Drift::ArchetypeRevised)?;
+        let slot_path = choose_slot(sources, opt, attribute_path, filler)?;
         out.fills.push(SlotFill {
             path: slot_path,
             occurrences: Some(filler.occurrences.clone()),
@@ -653,30 +953,61 @@ fn derive_children(
     Ok(())
 }
 
-/// The slot a filler sits in: the first slot whose include pattern names it,
-/// else the attribute's only slot.
-fn choose_slot(archetype: &[CObject], attribute_path: &str, filler: &str) -> Option<String> {
-    let slots: Vec<_> = archetype
+/// The slot a filler sits in: the slot whose include pattern names it, else
+/// the only slot that admits it, else the slot the OPT places it after, else
+/// the first slot whose occurrences admit the filler's. An OPT 1.4 does not
+/// record a filler's slot, so the last choice changes only sibling order.
+fn choose_slot(
+    archetype: &[CObject],
+    opt: &[CObject],
+    attribute_path: &str,
+    filler: &CArchetypeRoot,
+) -> Result<String, Drift> {
+    let id = filler.archetype_id.value.as_str();
+    let admits = |slot: &&ArchetypeSlot, specific: bool| {
+        slot.includes.iter().any(|assertion| {
+            pattern_of(assertion).is_some_and(|p| {
+                regex::Regex::new(&format!("^(?:{p})$")).is_ok_and(|r| r.is_match(id))
+                    && (!specific || !matches!(p.as_str(), ".*" | ".+"))
+            })
+        })
+    };
+    let slots: Vec<&ArchetypeSlot> = archetype
         .iter()
         .filter_map(|c| match c {
             CObject::ArchetypeSlot(s) => Some(s),
             _ => None,
         })
         .collect();
-    let named = slots.iter().find(|slot| {
-        slot.includes.iter().any(|assertion| {
-            pattern_of(assertion).is_some_and(|p| {
-                regex::Regex::new(&format!("^(?:{p})$")).is_ok_and(|r| r.is_match(filler))
-                    && !matches!(p.as_str(), ".*" | ".+")
-            })
+    let named: Vec<&&ArchetypeSlot> = slots.iter().filter(|s| admits(s, true)).collect();
+    let open: Vec<&&ArchetypeSlot> = slots
+        .iter()
+        .filter(|s| admits(s, false) || s.includes.is_empty())
+        .collect();
+    let preceding = || {
+        let at = opt
+            .iter()
+            .position(|c| matches!(c, CObject::CArchetypeRoot(r) if std::ptr::eq(r, filler)))?;
+        opt.iter().take(at).rev().find_map(|c| match c {
+            CObject::ArchetypeSlot(s) if open.iter().any(|o| o.node_id == s.node_id) => {
+                Some(s.node_id.clone())
+            }
+            _ => None,
         })
-    });
-    let slot = named.or(if slots.len() == 1 {
-        slots.first()
-    } else {
-        None
-    })?;
-    Some(format!("{attribute_path}[{}]", slot.node_id))
+    };
+    let node_id = match (named.as_slice(), open.as_slice()) {
+        ([only], _) => only.node_id.clone(),
+        (_, [only]) if slots.len() == 1 || named.is_empty() => only.node_id.clone(),
+        _ if slots.is_empty() => return Err(Drift::ArchetypeRevised),
+        _ => preceding()
+            .or_else(|| {
+                open.iter()
+                    .find(|s| within(&filler.occurrences, &s.occurrences))
+                    .map(|s| s.node_id.clone())
+            })
+            .ok_or(Drift::AmbiguousSlot)?,
+    };
+    Ok(format!("{attribute_path}[{node_id}]"))
 }
 
 /// The `<pattern>` of an `archetype_id/value matches {/pattern/}` assertion.
@@ -780,7 +1111,7 @@ fn ckm_templates_rebuild_to_their_upstream_node_tree() {
         failures.join("\n")
     );
     assert!(
-        documents.len() >= 60,
+        documents.len() >= 140,
         "only {} CKM templates rebuilt; the gate is near vacuous",
         documents.len()
     );
@@ -899,9 +1230,8 @@ fn a_lone_include_admits_any_filler_of_the_slot_type() {
 fn a_binding_slot_refuses_a_filler_it_does_not_name() {
     let mut library = library();
     let mut birth_summary = archetype(&library, BIRTH_SUMMARY).clone();
-    let open_exclude: openehr_its::opt14::types::ArchetypeSlot =
-        openehr_its::xml::runtime::from_xml(
-            "<children xmlns=\"http://schemas.openehr.org/v1\" \
+    let open_exclude: ArchetypeSlot = openehr_its::xml::runtime::from_xml(
+        "<children xmlns=\"http://schemas.openehr.org/v1\" \
          xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"ARCHETYPE_SLOT\">\
          <rm_type_name>CLUSTER</rm_type_name><occurrences><lower_included>true</lower_included>\
          <lower_unbounded>false</lower_unbounded><upper_unbounded>true</upper_unbounded>\
@@ -923,8 +1253,8 @@ fn a_binding_slot_refuses_a_filler_it_does_not_name() {
          <item xsi:type=\"C_STRING\"><pattern>.*</pattern></item>\
          <reference_type>constraint</reference_type></right_operand></expression></excludes>\
          </children>",
-        )
-        .expect("a well-formed slot");
+    )
+    .expect("a well-formed slot");
     replace_slot(
         &mut birth_summary.definition.attributes,
         "at0005",
@@ -941,11 +1271,7 @@ fn a_binding_slot_refuses_a_filler_it_does_not_name() {
     ));
 }
 
-fn replace_slot(
-    attributes: &mut [CAttribute],
-    node_id: &str,
-    slot: &openehr_its::opt14::types::ArchetypeSlot,
-) {
+fn replace_slot(attributes: &mut [CAttribute], node_id: &str, slot: &ArchetypeSlot) {
     for attribute in attributes {
         let children = match attribute {
             CAttribute::CMultipleAttribute(a) => &mut a.children,
@@ -1266,4 +1592,343 @@ fn a_template_constrains_an_open_attribute() {
         openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::AttributeNotInModel { .. })
     ));
+}
+
+// ---------------------------------------------------------------------------
+// Clones, redefinitions and mixed open attributes
+// ---------------------------------------------------------------------------
+
+const STREET: &str = "/items[at0001]";
+
+fn interval_xml(tag: &str, lower: i32, upper: Option<i32>) -> String {
+    match upper {
+        Some(upper) => format!(
+            "<{tag}><lower_included>true</lower_included><upper_included>true</upper_included>\
+             <lower_unbounded>false</lower_unbounded><upper_unbounded>false</upper_unbounded>\
+             <lower>{lower}</lower><upper>{upper}</upper></{tag}>"
+        ),
+        None => format!(
+            "<{tag}><lower_included>true</lower_included><lower_unbounded>false</lower_unbounded>\
+             <upper_unbounded>true</upper_unbounded><lower>{lower}</lower></{tag}>"
+        ),
+    }
+}
+
+/// A complex object constraint on `rm_type` with no attributes.
+fn complex(rm_type: &str, node_id: &str) -> CObject {
+    let occurrences = interval_xml("occurrences", 1, Some(1));
+    openehr_its::xml::runtime::from_xml(&format!(
+        "<children xmlns=\"http://schemas.openehr.org/v1\" \
+         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"C_COMPLEX_OBJECT\">\
+         <rm_type_name>{rm_type}</rm_type_name>{occurrences}<node_id>{node_id}</node_id>\
+         </children>"
+    ))
+    .expect("a well-formed object")
+}
+
+/// The `name` constraint a template gives a node: a `DV_TEXT` whose value is
+/// `text`.
+fn name_constraint(text: &str) -> CAttribute {
+    let existence = interval_xml("existence", 1, Some(1));
+    let occurrences = interval_xml("occurrences", 1, Some(1));
+    openehr_its::xml::runtime::from_xml(&format!(
+        "<attributes xmlns=\"http://schemas.openehr.org/v1\" \
+         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"C_SINGLE_ATTRIBUTE\">\
+         <rm_attribute_name>name</rm_attribute_name>{existence}\
+         <children xsi:type=\"C_COMPLEX_OBJECT\"><rm_type_name>DV_TEXT</rm_type_name>{occurrences}\
+         <node_id/><attributes xsi:type=\"C_SINGLE_ATTRIBUTE\"><rm_attribute_name>value</rm_attribute_name>\
+         {existence}<children xsi:type=\"C_PRIMITIVE_OBJECT\"><rm_type_name>STRING</rm_type_name>\
+         {occurrences}<node_id/><item xsi:type=\"C_STRING\"><list>{text}</list></item></children>\
+         </attributes></children></attributes>"
+    ))
+    .expect("a well-formed attribute")
+}
+
+/// Builds `definition`, checks its OPT against `Template.xsd`, reads it back
+/// to the same model and writes the same bytes twice.
+fn written(definition: &TemplateDefinition, library: &ArchetypeLibrary) -> OperationalTemplate {
+    let built = openehr_its::opt14_writer::build(definition, library).expect("builds");
+    let xml = openehr_its::opt14_writer::write(definition, library).expect("writes");
+    assert_eq!(
+        openehr_its::opt14_writer::write(definition, library).expect("writes"),
+        xml,
+        "the same definition writes the same bytes"
+    );
+    assert_eq!(
+        openehr_its::opt14::from_xml(&xml).expect("reads back"),
+        built,
+        "the OPT reads back to the model the writer built"
+    );
+    let dir = scratch(&definition.template_id.value.replace(' ', "-"));
+    let document = dir.join("template.opt");
+    std::fs::write(&document, xml).expect("write OPT");
+    let failures = xsd_failures(&template_xsd(), std::slice::from_ref(&document));
+    std::fs::remove_dir_all(&dir).expect("remove scratch dir");
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+    built
+}
+
+fn root_items(template: &OperationalTemplate) -> &[CObject] {
+    let items = template
+        .definition
+        .attributes
+        .iter()
+        .find(|a| attribute_parts(a).0 == "items")
+        .expect("items");
+    attribute_parts(items).2
+}
+
+fn name_of(object: &CObject) -> Option<&CAttribute> {
+    own_attributes(object)
+        .iter()
+        .find(|a| attribute_parts(a).0 == "name")
+}
+
+fn value_types<'a>(items: &'a [CObject], node_id: &str) -> Vec<&'a str> {
+    items
+        .iter()
+        .filter(|c| head(c).2 == node_id)
+        .flat_map(|c| {
+            own_attributes(c)
+                .iter()
+                .filter(|a| attribute_parts(a).0 == "value")
+                .flat_map(|a| attribute_parts(a).2.iter().map(|v| head(v).0))
+        })
+        .collect()
+}
+
+#[test]
+fn a_clone_repeats_a_node_under_its_node_id_after_it() {
+    let library = library();
+    let mut root = archetype_use(ADDRESS);
+    root.narrowings.push(Narrowing::Constrain {
+        path: STREET.to_owned(),
+        attribute: name_constraint("Street"),
+    });
+    let mut second = NodeClone::new(STREET, name_constraint("Second street"));
+    second.occurrences = Some(closed(0, 1));
+    second.narrowings.push(Narrowing::Existence {
+        path: "/value".to_owned(),
+        existence: closed(1, 1),
+    });
+    root.narrowings.push(Narrowing::Clone(second));
+    root.narrowings.push(Narrowing::Clone(NodeClone::new(
+        STREET,
+        name_constraint("Third street"),
+    )));
+    let built = written(&template("Address clones", root), &library);
+    let items = root_items(&built);
+    let at = items
+        .iter()
+        .position(|c| head(c).2 == "at0001")
+        .expect("the node stays");
+    let streets: Vec<&CObject> = items.iter().skip(at).take(3).collect();
+    assert!(streets.iter().all(|c| head(c).2 == "at0001"));
+    assert_eq!(items.iter().filter(|c| head(c).2 == "at0001").count(), 3);
+    let names: Vec<Option<&CAttribute>> = streets.iter().map(|c| name_of(c)).collect();
+    assert_eq!(
+        names,
+        [
+            Some(&name_constraint("Street")),
+            Some(&name_constraint("Second street")),
+            Some(&name_constraint("Third street"))
+        ]
+    );
+    assert_eq!(head(streets[1]).1, &closed(0, 1));
+    let unbounded = head(streets[2]).1;
+    assert!(
+        unbounded.upper_unbounded,
+        "a clone keeps the node's occurrences"
+    );
+    let value_existence = |c: &CObject| {
+        own_attributes(c)
+            .iter()
+            .find(|a| attribute_parts(a).0 == "value")
+            .map(|a| interval_text(attribute_parts(a).1))
+    };
+    assert_eq!(value_existence(streets[1]).as_deref(), Some("1..1"));
+    assert_eq!(value_existence(streets[0]).as_deref(), Some("0..1"));
+}
+
+#[test]
+fn a_clone_takes_the_place_of_an_excluded_node() {
+    let library = library();
+    let mut root = archetype_use(ADDRESS);
+    root.narrowings.push(Narrowing::Clone(NodeClone::new(
+        STREET,
+        name_constraint("Street"),
+    )));
+    root.narrowings.push(Narrowing::Clone(NodeClone::new(
+        STREET,
+        name_constraint("Second street"),
+    )));
+    root.narrowings.push(Narrowing::Exclude {
+        path: STREET.to_owned(),
+    });
+    let built = written(&template("Address renamed", root), &library);
+    let streets: Vec<&CObject> = root_items(&built)
+        .iter()
+        .filter(|c| head(c).2 == "at0001")
+        .collect();
+    assert_eq!(streets.len(), 2);
+    assert!(streets.iter().all(|c| name_of(c).is_some()));
+}
+
+#[test]
+fn a_clone_the_archetype_does_not_admit_is_refused() {
+    let library = library();
+    let refusal = |library: &ArchetypeLibrary, clones: Vec<NodeClone>| {
+        let mut root = archetype_use(ADDRESS);
+        root.narrowings
+            .extend(clones.into_iter().map(Narrowing::Clone));
+        openehr_its::opt14_writer::build(&template("Address", root), library)
+    };
+    // `/items[at0004]` occurs at most once.
+    assert!(matches!(
+        refusal(
+            &library,
+            vec![NodeClone::new("/items[at0004]", name_constraint("x"))]
+        ),
+        Err(WriteError::CloneNotAdmitted { .. })
+    ));
+    assert!(matches!(
+        refusal(
+            &library,
+            vec![
+                NodeClone::new(STREET, name_constraint("Street")),
+                NodeClone::new(STREET, name_constraint("Street")),
+            ]
+        ),
+        Err(WriteError::CloneNameNotDistinct { .. })
+    ));
+    let mut not_a_name = name_constraint("Street");
+    if let CAttribute::CSingleAttribute(a) = &mut not_a_name {
+        "value".clone_into(&mut a.rm_attribute_name);
+    }
+    assert!(matches!(
+        refusal(&library, vec![NodeClone::new(STREET, not_a_name)]),
+        Err(WriteError::CloneNotAdmitted { .. })
+    ));
+    assert!(matches!(
+        refusal(
+            &library,
+            vec![NodeClone::new("/items", name_constraint("x"))]
+        ),
+        Err(WriteError::MalformedPath { .. })
+    ));
+
+    // The items cardinality narrowed to {0..2}: no copy may occur three
+    // times, and three mandatory members do not fit.
+    let mut narrow = library.clone();
+    let mut address = archetype(&library, ADDRESS).clone();
+    for attribute in &mut address.definition.attributes {
+        if let CAttribute::CMultipleAttribute(items) = attribute {
+            items.cardinality.interval = closed(0, 2);
+        }
+    }
+    narrow.insert(address);
+    let mut too_many = NodeClone::new(STREET, name_constraint("Street"));
+    too_many.occurrences = Some(closed(0, 3));
+    assert!(matches!(
+        refusal(&narrow, vec![too_many]),
+        Err(WriteError::CloneNotAdmitted { .. })
+    ));
+    let mandatory = |text| {
+        let mut clone = NodeClone::new(STREET, name_constraint(text));
+        clone.occurrences = Some(closed(1, 1));
+        clone
+    };
+    assert!(matches!(
+        refusal(
+            &narrow,
+            vec![mandatory("a"), mandatory("b"), mandatory("c")]
+        ),
+        Err(WriteError::CloneNotAdmitted { .. })
+    ));
+    assert!(refusal(&narrow, vec![mandatory("a")]).is_ok());
+}
+
+#[test]
+fn a_redefinition_narrows_a_type_and_drops_alternatives() {
+    let library = library();
+    let mut root = archetype_use(ADDRESS);
+    root.narrowings.push(Narrowing::Redefine {
+        path: format!("{STREET}/value"),
+        objects: vec![complex("DV_CODED_TEXT", "")],
+    });
+    root.narrowings.push(Narrowing::Redefine {
+        path: "/items[at0010]/value".to_owned(),
+        objects: vec![complex("DV_TEXT", "")],
+    });
+    let built = written(&template("Address redefined", root), &library);
+    let items = root_items(&built);
+    assert_eq!(value_types(items, "at0001"), ["DV_CODED_TEXT"]);
+    assert_eq!(value_types(items, "at0010"), ["DV_TEXT"]);
+    assert_eq!(value_types(items, "at0014"), ["DV_CODED_TEXT", "DV_TEXT"]);
+}
+
+#[test]
+fn a_redefinition_that_does_not_narrow_is_refused() {
+    let library = library();
+    let refusal = |path: &str, object: CObject| {
+        let mut root = archetype_use(ADDRESS);
+        root.narrowings.push(Narrowing::Redefine {
+            path: path.to_owned(),
+            objects: vec![object],
+        });
+        openehr_its::opt14_writer::build(&template("Address", root), &library)
+    };
+    let value = format!("{STREET}/value");
+    assert!(matches!(
+        refusal(&value, complex("DV_COUNT", "")),
+        Err(WriteError::TypeNotConforming { given, archetype, .. })
+            if given == "DV_COUNT" && archetype == "DV_TEXT"
+    ));
+    assert!(matches!(
+        refusal("/items", complex("ELEMENT", "at9999")),
+        Err(WriteError::RedefinitionUnmatched { .. })
+    ));
+    assert!(matches!(
+        refusal("/items", complex("CLUSTER", "at0001")),
+        Err(WriteError::TypeNotConforming { .. })
+    ));
+    let mut widened = complex("DV_TEXT", "");
+    if let CObject::CComplexObject(o) = &mut widened {
+        o.occurrences = closed(0, 2);
+    }
+    assert!(matches!(
+        refusal(&value, widened),
+        Err(WriteError::Widening { .. })
+    ));
+}
+
+#[test]
+fn an_open_attribute_holds_archetypes_beside_a_constraint() {
+    let library = library();
+    let mut definition = imaging_report();
+    let existence = interval_xml("existence", 0, Some(1));
+    let cardinality = interval_xml("interval", 0, None);
+    let occurrences = interval_xml("occurrences", 0, None);
+    let content: CAttribute = openehr_its::xml::runtime::from_xml(&format!(
+        "<attributes xmlns=\"http://schemas.openehr.org/v1\" \
+         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"C_MULTIPLE_ATTRIBUTE\">\
+         <rm_attribute_name>content</rm_attribute_name>{existence}\
+         <children xsi:type=\"C_COMPLEX_OBJECT\"><rm_type_name>SECTION</rm_type_name>{occurrences}\
+         <node_id/></children><cardinality><is_ordered>true</is_ordered>\
+         <is_unique>false</is_unique>{cardinality}</cardinality></attributes>"
+    ))
+    .expect("a well-formed attribute");
+    definition.root.narrowings.push(Narrowing::Constrain {
+        path: "/".to_owned(),
+        attribute: content,
+    });
+    let built = written(&definition, &library);
+    let content = built
+        .definition
+        .attributes
+        .iter()
+        .find(|a| attribute_parts(a).0 == "content")
+        .expect("content");
+    let kinds: Vec<&str> = attribute_parts(content).2.iter().map(kind).collect();
+    assert_eq!(kinds, ["C_COMPLEX_OBJECT", "C_ARCHETYPE_ROOT"]);
 }

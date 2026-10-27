@@ -150,9 +150,28 @@ pub(super) fn occurrences_mut(object: &mut CObject) -> &mut Intervalofinteger {
     }
 }
 
+/// The occurrences of a `C_OBJECT`.
+pub(super) fn occurrences(object: &CObject) -> &Intervalofinteger {
+    match object {
+        CObject::ArchetypeInternalRef(o) => &o.occurrences,
+        CObject::ArchetypeSlot(o) => &o.occurrences,
+        CObject::ConstraintRef(o) => &o.occurrences,
+        CObject::CArchetypeRoot(o) => &o.occurrences,
+        CObject::CCodePhrase(o) => &o.occurrences,
+        CObject::CCodeReference(o) => &o.occurrences,
+        CObject::CComplexObject(o) => &o.occurrences,
+        CObject::CDefinedObject(o) => &o.occurrences,
+        CObject::CDvOrdinal(o) => &o.occurrences,
+        CObject::CDvQuantity(o) => &o.occurrences,
+        CObject::CDvState(o) => &o.occurrences,
+        CObject::CPrimitiveObject(o) => &o.occurrences,
+        CObject::TComplexObject(o) => &o.occurrences,
+    }
+}
+
 /// The attributes a path descends through: those of a complex object of
 /// this archetype. A `C_ARCHETYPE_ROOT` is another archetype's.
-fn attributes(object: &CObject) -> Option<&Vec<CAttribute>> {
+pub(super) fn attributes(object: &CObject) -> Option<&Vec<CAttribute>> {
     match object {
         CObject::CComplexObject(o) => Some(&o.attributes),
         CObject::TComplexObject(o) => Some(&o.attributes),
@@ -190,6 +209,14 @@ pub(super) fn children_mut(attribute: &mut CAttribute) -> &mut Vec<CObject> {
     match attribute {
         CAttribute::CMultipleAttribute(a) => &mut a.children,
         CAttribute::CSingleAttribute(a) => &mut a.children,
+    }
+}
+
+/// The existence of a `C_ATTRIBUTE`.
+pub(super) fn existence(attribute: &CAttribute) -> &Intervalofinteger {
+    match attribute {
+        CAttribute::CMultipleAttribute(a) => &a.existence,
+        CAttribute::CSingleAttribute(a) => &a.existence,
     }
 }
 

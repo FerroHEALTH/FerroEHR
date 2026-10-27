@@ -3,12 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //! The template flattener: one `C_ARCHETYPE_ROOT` per archetype use.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use openehr_base::v1_3::base_types::terminology::code_phrase::CodePhrase;
 
 use super::path::{self, Step, Unresolved};
-use super::{ArchetypeLibrary, ArchetypeUse, Narrowing, SlotFill, TemplateDefinition, WriteError};
+use super::redefine::{self, Site};
+use super::{
+    ArchetypeLibrary, ArchetypeUse, Narrowing, NodeClone, SlotFill, TemplateDefinition, WriteError,
+};
 use super::{interval, slot};
 use crate::opt14::types::{
     Archetype, CArchetypeRoot, CAttribute, CComplexObject, CMultipleAttribute, CObject,
@@ -86,12 +89,8 @@ fn lookup<'a>(
 }
 
 impl Flattener<'_> {
-    /// Flattens one archetype use into its `C_ARCHETYPE_ROOT`.
-    ///
-    /// The steps run in a fixed order: internal references inline, then the
-    /// attribute constraints the template adds, then the placements, then the
-    /// occurrence and existence narrowings, then every removal, so a slot can
-    /// be filled and closed in one use.
+    /// Flattens one archetype use into its `C_ARCHETYPE_ROOT`: internal
+    /// references inline, then [`Self::apply`].
     fn archetype_root(
         &mut self,
         archetype_use: &ArchetypeUse,
@@ -124,21 +123,13 @@ impl Flattener<'_> {
             &[],
             &mut Vec::new(),
         )?;
-        for narrowing in &archetype_use.narrowings {
-            if let Narrowing::Constrain { path, attribute } = narrowing {
-                constrain(&mut attributes, id, root_type, path, attribute)?;
-            }
-        }
-        let mut placed: BTreeMap<String, usize> = BTreeMap::new();
-        for fill in &archetype_use.fills {
-            self.place(&mut attributes, id, root_type, fill, &mut placed)?;
-        }
-        for narrowing in &archetype_use.narrowings {
-            narrow(&mut attributes, id, narrowing)?;
-        }
-        for narrowing in &archetype_use.narrowings {
-            remove(&mut attributes, id, narrowing)?;
-        }
+        self.apply(
+            &mut attributes,
+            id,
+            root_type,
+            &archetype_use.fills,
+            &archetype_use.narrowings,
+        )?;
 
         Ok(CArchetypeRoot {
             rm_type_name: root_type.to_owned(),
@@ -154,6 +145,206 @@ impl Flattener<'_> {
         })
     }
 
+    /// Applies a template's fills and narrowings to the attributes of a
+    /// complex object of `archetype_id` whose type is `root_type`.
+    ///
+    /// The steps run in a fixed order: clones copied from the archetype's
+    /// node, then the attribute constraints the template adds, then the
+    /// redefinitions, then the placements, then the occurrence and existence
+    /// narrowings, then every removal, then the clones placed after their
+    /// node, so a slot can be filled and closed in one use and a clone never
+    /// makes a path of the node's own narrowings ambiguous.
+    fn apply(
+        &mut self,
+        attributes: &mut Vec<CAttribute>,
+        archetype_id: &str,
+        root_type: &str,
+        fills: &[SlotFill],
+        narrowings: &[Narrowing],
+    ) -> Result<(), WriteError> {
+        let mut clones: Vec<CloneSet> = Vec::new();
+        for narrowing in narrowings {
+            if let Narrowing::Clone(clone) = narrowing {
+                let (steps, copy, origin) = self.clone_node(attributes, archetype_id, clone)?;
+                match clones.iter_mut().find(|set| set.steps == steps) {
+                    Some(set) => set.copies.push(copy),
+                    None => clones.push(CloneSet {
+                        path: clone.path.clone(),
+                        steps,
+                        origin,
+                        copies: vec![copy],
+                    }),
+                }
+            }
+        }
+        let mut added = BTreeSet::new();
+        for narrowing in narrowings {
+            if let Narrowing::Constrain { path, attribute } = narrowing {
+                constrain(attributes, archetype_id, root_type, path, attribute)?;
+                let mut at = steps(archetype_id, path)?;
+                at.push(Step {
+                    attribute: path::attribute_name(attribute).to_owned(),
+                    node_id: None,
+                });
+                added.insert(path::render(&at));
+            }
+        }
+        for narrowing in narrowings {
+            if let Narrowing::Redefine { path, objects } = narrowing {
+                let at = steps(archetype_id, path)?;
+                let (owner, index) = path::attribute_slot(attributes, &at)
+                    .map_err(|e| not_found(archetype_id, path, e))?;
+                let attribute = owner
+                    .get_mut(index)
+                    .ok_or_else(|| not_found(archetype_id, path, Unresolved { found: 0 }))?;
+                redefine::overlay_children(attribute, objects, &Site { archetype_id, path })?;
+            }
+        }
+        let mut placed: BTreeMap<String, usize> = BTreeMap::new();
+        for fill in fills {
+            self.place(
+                attributes,
+                archetype_id,
+                root_type,
+                fill,
+                &mut placed,
+                &added,
+            )?;
+        }
+        for narrowing in narrowings {
+            narrow(attributes, archetype_id, narrowing)?;
+        }
+        let mut replaced = BTreeSet::new();
+        for narrowing in narrowings {
+            match removed_node(archetype_id, narrowing)? {
+                Some(at) if clones.iter().any(|set| set.steps == at) => {
+                    replaced.insert(path::render(&at));
+                }
+                _ => remove(attributes, archetype_id, narrowing)?,
+            }
+        }
+        // A deeper set first, so a node is placed before its ancestor gains copies.
+        clones.sort_by_key(|set| std::cmp::Reverse(set.steps.len()));
+        for set in &clones {
+            let doomed = clones.iter().any(|outer| {
+                outer.steps.len() < set.steps.len()
+                    && path::is_prefix(&outer.steps, &set.steps)
+                    && replaced.contains(&path::render(&outer.steps))
+            });
+            if doomed {
+                return Err(not_found(archetype_id, &set.path, Unresolved { found: 0 }));
+            }
+            let replace = replaced.contains(&path::render(&set.steps));
+            place_clones(attributes, archetype_id, set, replace)?;
+        }
+        Ok(())
+    }
+
+    /// Copies the node a clone names, as the archetype states it, with the
+    /// clone's name, occurrences and own narrowings applied.
+    fn clone_node(
+        &mut self,
+        attributes: &mut Vec<CAttribute>,
+        archetype_id: &str,
+        clone: &NodeClone,
+    ) -> Result<(Vec<Step>, CObject, CloneOrigin), WriteError> {
+        let refuse = |reason| WriteError::CloneNotAdmitted {
+            archetype_id: archetype_id.to_owned(),
+            path: clone.path.clone(),
+            reason,
+        };
+        let at = steps(archetype_id, &clone.path)?;
+        let Some(last) = at.last().filter(|last| last.node_id.is_some()) else {
+            return Err(WriteError::MalformedPath {
+                archetype_id: archetype_id.to_owned(),
+                path: clone.path.clone(),
+                reason: "a clone names an object node by its node id",
+            });
+        };
+        let owner_steps: Vec<Step> = at
+            .iter()
+            .take(at.len().saturating_sub(1))
+            .cloned()
+            .chain(std::iter::once(Step {
+                attribute: last.attribute.clone(),
+                node_id: None,
+            }))
+            .collect();
+        let cardinality = {
+            let (owner, index) = path::attribute_slot(attributes, &owner_steps)
+                .map_err(|e| not_found(archetype_id, &clone.path, e))?;
+            match owner.get(index) {
+                Some(CAttribute::CMultipleAttribute(container)) => {
+                    container.cardinality.interval.clone()
+                }
+                // NOTE: AOM2 master04.5 VACSO: a child of a single-valued attribute occurs at most
+                // once, so it has no second copy.
+                _ => return Err(refuse("its attribute is single-valued")),
+            }
+        };
+        let mut copy = {
+            let (siblings, index) = resolve_object(attributes, archetype_id, &clone.path, &at)?;
+            siblings
+                .get(index)
+                .cloned()
+                .ok_or_else(|| not_found(archetype_id, &clone.path, Unresolved { found: 0 }))?
+        };
+        let occurrences = path::occurrences(&copy).clone();
+        // NOTE: ADL2 master09.05 §When does Cloning Occur?: no clone is needed where "max
+        // effective_occurrences of object node in parent archetype = 1".
+        if matches!(interval::inclusive_bounds(&occurrences).1, Some(upper) if upper <= 1) {
+            return Err(refuse("the archetype node occurs at most once"));
+        }
+        let rm_type = path::rm_type_name(&copy).to_owned();
+        let name = path::attribute_name(&clone.name);
+        if name != "name" {
+            return Err(refuse(
+                "a clone's name constraint is on the `name` attribute",
+            ));
+        }
+        let class = rm_type.split('<').next().unwrap_or(&rm_type);
+        if openehr_rm::v1_2::model::attribute(class, name).is_none() {
+            return Err(WriteError::AttributeNotInModel {
+                archetype_id: archetype_id.to_owned(),
+                path: clone.path.clone(),
+                rm_type,
+                attribute: name.to_owned(),
+            });
+        }
+        if let Some(given) = &clone.occurrences {
+            given.clone_into(path::occurrences_mut(&mut copy));
+        }
+        let Some(inner) = path::attributes_mut(&mut copy) else {
+            return Err(WriteError::NotAComplexObject {
+                archetype_id: archetype_id.to_owned(),
+                path: clone.path.clone(),
+            });
+        };
+        if inner.iter().any(|a| path::attribute_name(a) == name) {
+            return Err(WriteError::AttributeConstrained {
+                archetype_id: archetype_id.to_owned(),
+                path: clone.path.clone(),
+                attribute: name.to_owned(),
+            });
+        }
+        inner.push(clone.name.clone());
+        self.apply(
+            inner,
+            archetype_id,
+            &rm_type,
+            &clone.fills,
+            &clone.narrowings,
+        )?;
+        Ok((
+            at,
+            copy,
+            CloneOrigin {
+                occurrences,
+                cardinality,
+            },
+        ))
+    }
+
     /// Places one archetype: after its slot when the path ends in a node id,
     /// in the open attribute when it ends in an attribute name.
     fn place(
@@ -163,13 +354,17 @@ impl Flattener<'_> {
         root_type: &str,
         fill: &SlotFill,
         placed: &mut BTreeMap<String, usize>,
+        added: &BTreeSet<String>,
     ) -> Result<(), WriteError> {
         let steps = steps(archetype_id, &fill.path)?;
         match steps.last() {
             Some(last) if last.node_id.is_some() => {
                 self.place_in_slot(attributes, archetype_id, fill, &steps, placed)
             }
-            Some(_) => self.place_in_attribute(attributes, archetype_id, root_type, fill, &steps),
+            Some(_) => {
+                let added = added.contains(&path::render(&steps));
+                self.place_in_attribute(attributes, archetype_id, root_type, fill, &steps, added)
+            }
             None => Err(WriteError::MalformedPath {
                 archetype_id: archetype_id.to_owned(),
                 path: fill.path.clone(),
@@ -254,7 +449,8 @@ impl Flattener<'_> {
     }
 
     /// Places one archetype in an attribute the archetype leaves open,
-    /// constraining the attribute as the reference model declares it.
+    /// constraining the attribute as the reference model declares it unless
+    /// the template constrained it already (`added`).
     fn place_in_attribute(
         &mut self,
         attributes: &mut Vec<CAttribute>,
@@ -262,6 +458,7 @@ impl Flattener<'_> {
         root_type: &str,
         fill: &SlotFill,
         steps: &[Step],
+        added: bool,
     ) -> Result<(), WriteError> {
         let (owner_steps, name) = match steps.split_last() {
             Some((last, parents)) => (parents, last.attribute.as_str()),
@@ -286,7 +483,9 @@ impl Flattener<'_> {
                     .iter()
                     .any(|c| !matches!(c, CObject::CArchetypeRoot(_)))
             });
-        if constrained {
+        // NOTE: ADL2 master09.05 §Unconstrained Attributes: `use_archetype` fills an attribute "so
+        // far unconstrained by the flat parent"; the template's own constraint there is no parent.
+        if constrained && !added {
             return Err(WriteError::AttributeConstrained {
                 archetype_id: archetype_id.to_owned(),
                 path: fill.path.clone(),
@@ -323,6 +522,148 @@ impl Flattener<'_> {
         }
         Ok(())
     }
+}
+
+/// Where a clone's node comes from: its archetype occurrences and the
+/// cardinality of its attribute.
+struct CloneOrigin {
+    occurrences: Intervalofinteger,
+    cardinality: Intervalofinteger,
+}
+
+/// The copies of one node, waiting to be placed after it.
+struct CloneSet {
+    /// The node's path as the definition gives it.
+    path: String,
+    steps: Vec<Step>,
+    origin: CloneOrigin,
+    copies: Vec<CObject>,
+}
+
+/// The node a narrowing removes, if it removes one.
+fn removed_node(
+    archetype_id: &str,
+    narrowing: &Narrowing,
+) -> Result<Option<Vec<Step>>, WriteError> {
+    match narrowing {
+        Narrowing::Exclude { path } => Ok(Some(steps(archetype_id, path)?)),
+        Narrowing::Occurrences { path, occurrences } if interval::is_zero(occurrences) => {
+            Ok(Some(steps(archetype_id, path)?))
+        }
+        _ => Ok(None),
+    }
+}
+
+/// Places a node's copies after it and its earlier copies, or in its place
+/// when the template removes it, and checks the set they form.
+fn place_clones(
+    attributes: &mut Vec<CAttribute>,
+    archetype_id: &str,
+    set: &CloneSet,
+    replace: bool,
+) -> Result<(), WriteError> {
+    let (siblings, index) = resolve_object(attributes, archetype_id, &set.path, &set.steps)?;
+    let node = siblings
+        .get(index)
+        .ok_or_else(|| not_found(archetype_id, &set.path, Unresolved { found: 0 }))?;
+    if replace && interval::is_mandatory(path::occurrences(node)) {
+        return Err(WriteError::Widening {
+            archetype_id: archetype_id.to_owned(),
+            path: set.path.clone(),
+            what: "occurrences",
+            given: "{0..0}".to_owned(),
+            archetype: interval::display(path::occurrences(node)),
+        });
+    }
+    let mut members: Vec<&CObject> = set.copies.iter().collect();
+    if !replace {
+        members.push(node);
+    }
+    check_clone_set(archetype_id, set, &members)?;
+    let at = index.saturating_add(1).min(siblings.len());
+    siblings.splice(at..at, set.copies.iter().cloned());
+    if replace {
+        siblings.remove(index);
+    }
+    Ok(())
+}
+
+/// Checks the specialised node set a node and its copies form: told apart by
+/// name, collectively within the node's occurrences and the attribute's
+/// cardinality.
+fn check_clone_set(
+    archetype_id: &str,
+    set: &CloneSet,
+    members: &[&CObject],
+) -> Result<(), WriteError> {
+    let refuse = |reason| WriteError::CloneNotAdmitted {
+        archetype_id: archetype_id.to_owned(),
+        path: set.path.clone(),
+        reason,
+    };
+    // NOTE: no openEHR spec gives an OPT 1.4 clone an id of its own (ADL2 master09.05 §Node
+    // Identifiers specialises it); sharing the node id, only the name tells copies apart (our design).
+    let names: Vec<&CAttribute> = members.iter().filter_map(|m| name_of(m)).collect();
+    for (i, name) in names.iter().enumerate() {
+        if names
+            .iter()
+            .skip(i.saturating_add(1))
+            .any(|other| other == name)
+        {
+            return Err(WriteError::CloneNameNotDistinct {
+                archetype_id: archetype_id.to_owned(),
+                path: set.path.clone(),
+            });
+        }
+    }
+    let (_, cardinality_upper) = interval::inclusive_bounds(&set.origin.cardinality);
+    let mut lower: i64 = 0;
+    let mut upper: Option<i64> = Some(0);
+    for member in members {
+        let (member_lower, member_upper) = interval::inclusive_bounds(path::occurrences(member));
+        // NOTE: AOM2 master04.5 VACMCU: a child's finite occurrences upper bound is no more than
+        // the cardinality's.
+        if let (Some(member_upper), Some(cardinality_upper)) = (member_upper, cardinality_upper)
+            && member_upper > cardinality_upper
+        {
+            return Err(refuse(
+                "a copy occurs more often than its attribute's cardinality admits",
+            ));
+        }
+        lower = lower.saturating_add(member_lower.unwrap_or(0));
+        upper = upper.zip(member_upper).map(|(a, b)| a.saturating_add(b));
+    }
+    // NOTE: AOM2 master04.5 VACMCO: one instance of every mandatory child must fit within the
+    // attribute's cardinality.
+    if cardinality_upper.is_some_and(|cap| lower > cap) {
+        return Err(refuse(
+            "the copies' mandatory occurrences exceed the attribute's cardinality",
+        ));
+    }
+    let upper = match (upper, cardinality_upper) {
+        (Some(sum), Some(cap)) => Some(sum.min(cap)),
+        (None, cap) => cap,
+        (sum, None) => sum,
+    };
+    // NOTE: AOM2 master04.5 VSONCO: the collective occurrences of a specialised node set must
+    // intersect the occurrences of the node it redefines.
+    let (node_lower, node_upper) = interval::inclusive_bounds(&set.origin.occurrences);
+    let intersects = node_upper.is_none_or(|node_upper| lower <= node_upper)
+        && upper.is_none_or(|upper| node_lower.unwrap_or(0) <= upper);
+    if intersects {
+        Ok(())
+    } else {
+        Err(refuse(
+            "the node and its copies together fall outside the node's occurrences",
+        ))
+    }
+}
+
+/// The `name` constraint of a complex object, if it has one.
+fn name_of(object: &CObject) -> Option<&CAttribute> {
+    path::attributes(object)?
+        .iter()
+        .find(|a| path::attribute_name(a) == "name")
 }
 
 /// The attribute constraint the reference model itself states: its existence,
@@ -533,7 +874,10 @@ fn narrow(
             check_within(archetype_id, path, "existence", existence, current)?;
             existence.clone_into(current);
         }
-        Narrowing::Constrain { .. } | Narrowing::Exclude { .. } => {}
+        Narrowing::Constrain { .. }
+        | Narrowing::Exclude { .. }
+        | Narrowing::Redefine { .. }
+        | Narrowing::Clone(_) => {}
     }
     Ok(())
 }
@@ -608,7 +952,9 @@ fn remove(
         }
         Narrowing::Occurrences { .. }
         | Narrowing::Existence { .. }
-        | Narrowing::Constrain { .. } => {}
+        | Narrowing::Constrain { .. }
+        | Narrowing::Redefine { .. }
+        | Narrowing::Clone(_) => {}
     }
     Ok(())
 }

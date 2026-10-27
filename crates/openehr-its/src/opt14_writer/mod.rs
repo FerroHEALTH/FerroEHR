@@ -65,6 +65,7 @@
 mod assemble;
 mod interval;
 mod path;
+mod redefine;
 mod slot;
 
 use std::collections::BTreeMap;
@@ -75,7 +76,7 @@ use openehr_base::v1_3::base_types::identification::template_id::TemplateId;
 use openehr_base::v1_3::base_types::terminology::code_phrase::CodePhrase;
 
 use crate::opt14::types::{
-    Archetype, CAttribute, Intervalofinteger, OperationalTemplate, ResourceDescription,
+    Archetype, CAttribute, CObject, Intervalofinteger, OperationalTemplate, ResourceDescription,
 };
 use crate::xml::runtime::XmlError;
 
@@ -221,13 +222,76 @@ pub enum Narrowing {
     },
     /// Constrains an attribute the archetype leaves open on the complex
     /// object at `path` (`/` for the archetype root), such as the `name` of a
-    /// node the template renames.
+    /// node the template renames. A [`SlotFill`] may then place archetypes in
+    /// the same attribute beside the constraint's own objects.
     Constrain {
         /// The complex object's path.
         path: String,
         /// The attribute constraint, written as given.
         attribute: CAttribute,
     },
+    /// Redefines child objects of the attribute at `path` (ending in the
+    /// attribute name), such as a `DV_TEXT` value narrowed to a
+    /// `DV_CODED_TEXT` with a value set.
+    ///
+    /// Each object redefines the archetype child with its node id, or, when
+    /// it has none, the child without a node id of its exact reference-model
+    /// type, else the only such child its type conforms to. Its type must
+    /// conform to the redefined child's and its occurrences lie within. Over
+    /// a complex child its attributes overlay the child's: an attribute the
+    /// child constrains is narrowed the same way (existence, cardinality,
+    /// children), an attribute at existence `{0}` is removed, and the child's
+    /// other attributes are kept. An object at occurrences `{0}` removes the
+    /// child. When any object has no node id, the objects without one are the
+    /// attribute's whole set of alternatives, and the archetype's other
+    /// alternatives are removed.
+    Redefine {
+        /// The attribute's path.
+        path: String,
+        /// The redefining objects, in the order they replace the archetype's.
+        objects: Vec<CObject>,
+    },
+    /// Clones an object node under its own node id, distinguished by a
+    /// `name` constraint.
+    Clone(NodeClone),
+}
+
+/// One copy of an archetype node that may occur more than once, placed after
+/// the node and the copies before it.
+///
+/// The copy starts from the archetype's node as it stands before the
+/// template's other narrowings and keeps its node id; the node itself stays
+/// unless a narrowing excludes it, in which case the copies take its place.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NodeClone {
+    /// The path of the object node cloned, ending in its node id.
+    pub path: String,
+    /// The copy's constraint on the `name` attribute, which must differ from
+    /// the node's own and from every other copy's.
+    pub name: CAttribute,
+    /// The copy's occurrences; the node's own when absent.
+    pub occurrences: Option<Intervalofinteger>,
+    /// The slot fillers in the copy, by paths relative to the copy (`/` is
+    /// the copy itself).
+    pub fills: Vec<SlotFill>,
+    /// The constraints the template narrows on the copy, by paths relative to
+    /// the copy.
+    pub narrowings: Vec<Narrowing>,
+}
+
+impl NodeClone {
+    /// Creates a copy of the node at `path` named by `name`, narrowing
+    /// nothing else.
+    #[must_use]
+    pub fn new(path: impl Into<String>, name: CAttribute) -> Self {
+        Self {
+            path: path.into(),
+            name,
+            occurrences: None,
+            fills: Vec::new(),
+            narrowings: Vec::new(),
+        }
+    }
 }
 
 /// A refusal of the OPT 1.4 writer.
@@ -372,6 +436,50 @@ pub enum WriteError {
         /// The attribute name.
         attribute: String,
     },
+    /// A redefined object's reference-model type does not conform to the
+    /// type of the archetype node it redefines.
+    #[error("{given} does not conform to {archetype} at {path:?} in {archetype_id}")]
+    TypeNotConforming {
+        /// The archetype.
+        archetype_id: String,
+        /// The redefined attribute's path.
+        path: String,
+        /// The archetype node's reference-model type, or the types of its
+        /// alternatives.
+        archetype: String,
+        /// The redefining object's reference-model type.
+        given: String,
+    },
+    /// A redefining object matches no archetype node, or more than one, or a
+    /// redefined attribute changes its kind.
+    #[error("{node} at {path:?} in {archetype_id} redefines no single archetype node")]
+    RedefinitionUnmatched {
+        /// The archetype.
+        archetype_id: String,
+        /// The redefined attribute's path.
+        path: String,
+        /// The redefining object or attribute.
+        node: String,
+    },
+    /// The archetype does not admit a clone of the node.
+    #[error("{path:?} in {archetype_id} admits no clone: {reason}")]
+    CloneNotAdmitted {
+        /// The archetype.
+        archetype_id: String,
+        /// The cloned node's path.
+        path: String,
+        /// Why the clone is refused.
+        reason: &'static str,
+    },
+    /// Two copies of a node, or a copy and the node, carry the same `name`
+    /// constraint, so data cannot tell them apart.
+    #[error("the clones of {path:?} in {archetype_id} share a name constraint")]
+    CloneNameNotDistinct {
+        /// The archetype.
+        archetype_id: String,
+        /// The cloned node's path.
+        path: String,
+    },
     /// An internal reference points at its own ancestor, which an inline
     /// copy cannot terminate.
     #[error(
@@ -404,8 +512,9 @@ pub enum WriteError {
 /// Returns a [`WriteError`] when an archetype is missing from the library or
 /// lacks the template language, a path does not resolve, a slot refuses its
 /// filler, a constraint widens the archetype's or constrains an attribute
-/// that is taken or absent from the reference model, or an internal
-/// reference is recursive.
+/// that is taken or absent from the reference model, a redefinition names a
+/// type that does not conform or no single node, a clone is not admitted or
+/// not told apart by its name, or an internal reference is recursive.
 pub fn build(
     definition: &TemplateDefinition,
     library: &ArchetypeLibrary,
