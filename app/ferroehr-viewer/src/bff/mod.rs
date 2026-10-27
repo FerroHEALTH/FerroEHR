@@ -10,18 +10,30 @@
 //! public endpoint), and the CDR credential never leaves the server. The wire
 //! is ITS-REST (`docs/specs/openehr/ITS-REST/`); the pages are our own design.
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod audit;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod composition;
 pub mod dashboard;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod demographics;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ehr_detail;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ehr_tags;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ehrs;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod item_tags;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod system;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod template_adl2;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod template_detail;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod templates;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod wire;
 
 /// The rows one page of a listing holds: FerroUI's default page size.
@@ -29,6 +41,7 @@ pub const PAGE_SIZE: u32 = ferrohealth_ui::table::model::DEFAULT_SIZE;
 
 /// A body pretty-printed for reading in `format`: JSON indented, canonical
 /// XML as the CDR sent it, and a body that is no JSON passed through whole.
+#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 #[expect(
     clippy::disallowed_types,
