@@ -43,12 +43,11 @@ while IFS= read -r file; do
   # repository contains several such comments. pipx/pip are Python by another
   # door — `pipx run cffconvert` ran a Python tool for months with no `python`
   # token for this guard to see (#2791).
-  if matches="$(grep -nE '(^|[^[:alnum:]_./-])(python3?|pipx|pip3?)([[:space:]]|$)' "$file" \
-                | grep -vE '#.*(python|pipx|pip)' || true)"; then
-    if [[ -n "$matches" ]]; then
-      printf '%s:\n%s\n' "$file" "$matches"
-      hits=$((hits + 1))
-    fi
+  matches="$(grep -nE '(^|[^[:alnum:]_./-])(python3?|pipx|pip3?)([[:space:]]|$)' "$file" \
+              | grep -vE '#.*(python|pipx|pip)' || true)"
+  if [[ -n "$matches" ]]; then
+    printf '%s:\n%s\n' "$file" "$matches"
+    hits=$((hits + 1))
   fi
 done < <(find "${ROOTS[@]}" -type f \( -name '*.sh' -o -name '*.yml' -o -name '*.yaml' -o -name '*.py' \) 2>/dev/null | sort)
 
@@ -59,10 +58,12 @@ while IFS= read -r py; do
 done < <(find "${ROOTS[@]}" -type f -name '*.py' 2>/dev/null | sort)
 
 if [[ "$hits" -gt 0 ]]; then
-  echo
-  echo "::error::Python is banned in this repository (see .claude/rules/rust-style.md)."
-  echo "  Use bash + jq/awk/sed, or Rust. The two Helm gates are the only"
-  echo "  exemptions and are tracked by #2220."
+  {
+    echo
+    echo "::error::Python is banned in this repository (see .claude/rules/rust-style.md)."
+    echo "  Use bash + jq/awk/sed, or Rust. The two Helm gates are the only"
+    echo "  exemptions and are tracked by #2220."
+  } >&2
   exit 1
 fi
 echo "no-python: clean"

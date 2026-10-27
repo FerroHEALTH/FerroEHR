@@ -135,16 +135,14 @@ command -v jq >/dev/null 2>&1 || die "jq is required (brew install jq / preinsta
 #               <generator changed: 0|1>
 # Prints one line per violation and returns 1 when there is any. Pure: no
 # tracker, no git, so --self-test runs it on fixtures.
-rows_of() { grep -E '^\| \[' "$1" || true; }
+rows_of() { local page="$1"; grep -E '^\| \[' "$page" || true; }
 delta_verdict() {
   local base="$1" head="$2" want="$3" closing="$4" generator="$5" bad=0 n
   local d
   d="$(mktemp -d)"
-  if [[ "$generator" == "1" ]]; then
-    if ! diff -q "$head" "$want" >/dev/null; then
-      echo "the generator changed, so the page must be re-rendered whole"
-      bad=1
-    fi
+  if [[ "$generator" == "1" ]] && ! diff -q "$head" "$want" >/dev/null; then
+    echo "the generator changed, so the page must be re-rendered whole"
+    bad=1
   fi
   for n in $closing; do
     grep -F "/issues/$n) |" "$head" | sort > "$d/have" || true
@@ -180,14 +178,14 @@ delta_verdict() {
 }
 
 self_test() {
-  local d fails=0
+  local d fails=0 title="# Control matrix"
   d="$(mktemp -d)"
   local u="https://github.com/o/r"
   row() { echo "| [GDPR](x) | EU | Art. $1 | c$2 | [#$2]($u/issues/$2) | $3 | $4 |"; }
-  { echo "# Control matrix"; row 5 10 Planned "—"; row 6 11 Planned "—"; row 7 12 Planned "—"; } > "$d/main"
+  { echo "$title"; row 5 10 Planned "—"; row 6 11 Planned "—"; row 7 12 Planned "—"; } > "$d/main"
   # The tracker since main: #11 shipped by #90 without a re-render (drift),
   # and this pull request, #99, closes #12.
-  { echo "# Control matrix"; row 5 10 Planned "—"; row 6 11 Shipped "[#90]($u/pull/90)"
+  { echo "$title"; row 5 10 Planned "—"; row 6 11 Shipped "[#90]($u/pull/90)"
     row 7 12 Shipped "[#99]($u/pull/99)"; } > "$d/want"
   expect() {
     local name="$1" verdict="$2" got=0
@@ -205,18 +203,18 @@ self_test() {
   # a drifted main.
   expect "untouched page on a drifted main" 0 "$d/main" "$d/main" "$d/want" "" 0
   # Its own row, re-rendered; the drifted #11 row left as main has it.
-  { echo "# Control matrix"; row 5 10 Planned "—"; row 6 11 Planned "—"
+  { echo "$title"; row 5 10 Planned "—"; row 6 11 Planned "—"
     row 7 12 Shipped "[#99]($u/pull/99)"; } > "$d/own"
   expect "own row re-rendered, drift left alone" 0 "$d/main" "$d/own" "$d/want" "12" 0
   expect "own row missing" 1 "$d/main" "$d/main" "$d/want" "12" 0
   # A full refresh is allowed.
   expect "full re-render" 0 "$d/main" "$d/want" "$d/want" "12" 0
-  { echo "# Control matrix"; row 5 10 Shipped "[#91]($u/pull/91)"; row 6 11 Planned "—"
+  { echo "$title"; row 5 10 Shipped "[#91]($u/pull/91)"; row 6 11 Planned "—"
     row 7 12 Shipped "[#99]($u/pull/99)"; } > "$d/invent"
   expect "invented row" 1 "$d/main" "$d/invent" "$d/want" "12" 0
-  { echo "# Control matrix"; row 6 11 Planned "—"; row 7 12 Shipped "[#99]($u/pull/99)"; } > "$d/drop"
+  { echo "$title"; row 6 11 Planned "—"; row 7 12 Shipped "[#99]($u/pull/99)"; } > "$d/drop"
   expect "dropped current row" 1 "$d/main" "$d/drop" "$d/want" "12" 0
-  { echo "# Control matrix"; row 7 12 Shipped "[#99]($u/pull/99)"; row 5 10 Planned "—"
+  { echo "$title"; row 7 12 Shipped "[#99]($u/pull/99)"; row 5 10 Planned "—"
     row 6 11 Planned "—"; } > "$d/order"
   expect "rows out of order" 1 "$d/main" "$d/order" "$d/want" "12" 0
   expect "generator changed without a full render" 1 "$d/main" "$d/own" "$d/want" "12" 1
@@ -320,6 +318,9 @@ jq --slurpfile sources "$WORK/sources.json" '
   | sort_by(.rank, .clause, .number)
 ' "$WORK/issues.json" > "$WORK/controls.json"
 
+# control_count: how many controls the render holds.
+control_count() { jq 'length' "$WORK/controls.json"; }
+
 # A control naming an undeclared legal source stops the render, listing every
 # offender so one run fixes them all.
 if [[ "$(jq '[.[] | select(.error)] | length' "$WORK/controls.json")" -gt 0 ]]; then
@@ -334,7 +335,7 @@ fi
 # truthfully empty, the diff guard would stay green, and the accountability
 # trail (GDPR Art. 5(2), Art. 24(1)) would land on a page saying the product
 # ships no controls.
-if [[ "$(jq 'length' "$WORK/controls.json")" -eq 0 ]] &&
+if [[ "$(control_count)" -eq 0 ]] &&
    grep -rlq 'control-matrix.md' website/book/src/compliance/ --include='*.md' --exclude='control-matrix.md'; then
   die "no issue declares a Control: line while the compliance pages link to the matrix — declare the shipped controls on their issues (#3236)"
 fi
@@ -388,9 +389,9 @@ fi
 # render <closing.json> <out>: the page as it reads with that closing pull
 # request merged. The delta check renders twice from the one tracker read above.
 render() {
-local closing_json="$1" OUT="$2"
+local closing_json="$1" out="$2"
 
-cat > "$OUT" <<'HEADER'
+cat > "$out" <<'HEADER'
 # Control matrix
 
 FerroEHR is software. It is not a controller, not a processor and not a
@@ -465,13 +466,13 @@ rows="$(jq -r --slurpfile prs "$WORK/prs.json" --slurpfile closing "$closing_jso
 ' "$WORK/controls.json")"
 
 if [[ -n "$rows" ]]; then
-  cat >> "$OUT" <<'TABLE'
+  cat >> "$out" <<'TABLE'
 | Legal source | Applies to | Article or clause | Control | Issue | Status | Closing PR |
 |---|---|---|---|---|---|---|
 TABLE
-  printf '%s\n' "$rows" >> "$OUT"
+  printf '%s\n' "$rows" >> "$out"
 else
-  cat >> "$OUT" <<'EMPTY'
+  cat >> "$out" <<'EMPTY'
 No issue in the tracker declares a control yet, so this table is empty. It
 fills itself as the compliance program lands: the first issue to carry a
 `Control:` line appears here on the next regeneration.
@@ -500,7 +501,7 @@ country: FerroEHR is an openEHR CDR, openEHR is not a Dutch standard, and a
 deployment elsewhere answers to its own equivalents rather than to these.
 Adding a jurisdiction is a registry entry plus the controls that cite it.
 SCOPE
-} >> "$OUT"
+} >> "$out"
 }
 
 OUT="$WORK/control-matrix.md"
@@ -521,16 +522,16 @@ if [[ -n "$BASE" ]]; then
   fi
   render "$WORK/none.json" "$WORK/plain.md"
   drift="$(diff "$WORK/base.md" "$WORK/plain.md" | grep -c '^[<>] | \[' || true)"
-  echo "control-matrix: $PAGE carries this pull request's own change ($(jq 'length' "$WORK/controls.json") controls; main's page differs from the tracker on $drift row lines, which the docs deploy renders and this check leaves alone)"
+  echo "control-matrix: $PAGE carries this pull request's own change ($(control_count) controls; main's page differs from the tracker on $drift row lines, which the docs deploy renders and this check leaves alone)"
 elif [[ "$CHECK" -eq 1 ]]; then
   [[ -f "$PAGE" ]] || die "$PAGE does not exist — run $SCRIPT"
   if ! diff -u "$PAGE" "$OUT" > "$WORK/diff"; then
     cat "$WORK/diff" >&2
     die "$PAGE is stale against the tracker — run $SCRIPT and commit the result"
   fi
-  echo "control-matrix: $PAGE matches the tracker ($(jq 'length' "$WORK/controls.json") controls)"
+  echo "control-matrix: $PAGE matches the tracker ($(control_count) controls)"
 else
   mkdir -p "$(dirname "$PAGE")"
   cp "$OUT" "$PAGE"
-  echo "control-matrix: wrote $PAGE ($(jq 'length' "$WORK/controls.json") controls from $fetched issues)"
+  echo "control-matrix: wrote $PAGE ($(control_count) controls from $fetched issues)"
 fi

@@ -44,6 +44,7 @@ readonly SCRIPT_PATH=/opt/ferroehr-sandbox/deploy.sh
 # — Write Files), so awk over it beats a YAML dependency this repository does
 # not otherwise need in shell.
 extract() {
+  local file="$1"
   awk -v want="  - path: $SCRIPT_PATH" '
     $0 == want { entry = 1; next }
     entry && /^[[:space:]]*content: \|/ { body = 1; next }
@@ -58,7 +59,7 @@ extract() {
       next
     }
     entry && /^  - / { entry = 0 }
-  ' "$1"
+  ' "$file"
 }
 
 # One extracted script: non-empty, a bash shebang, syntactically valid, and

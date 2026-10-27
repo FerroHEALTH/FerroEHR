@@ -115,13 +115,20 @@ $b[0] as $base | $m[0] as $meas |
 '
 
 # One line naming a record: what it measured, where, and when.
+# measured_at <record.json>: when the record was measured.
+measured_at() {
+  local record="$1"
+  jq -r '.measured_at' "$record"
+}
+
 describe_record() {
+  local record="$1"
   jq -r '
     def b: if . == null then "?" else ((. / 1073741824 * 10 | round) / 10 | tostring) + " GiB" end;
     "class `\(.bench_class)`, \(.seed.ehrs) EHRs and \(.seed.compositions) compositions, " +
     "commit `\(.measured_at_commit[0:12])`, \(.cpu_count) cores, \(.memory_bytes | b), " +
     "\(.postgres_version | split(" ") | .[0:2] | join(" ")), measured \(.measured_at[0:10])"
-  ' "$1"
+  ' "$record"
 }
 
 # The record the harness just wrote: the newest `measured_at` of the records on
@@ -131,7 +138,7 @@ discover_measured() {
   shopt -s nullglob
   for path in docs/benchmarks/storage/*/record.json; do
     if [[ -z "$newest" ]] \
-      || [[ "$(jq -r '.measured_at' "$path")" > "$(jq -r '.measured_at' "$newest")" ]]; then
+      || [[ "$(measured_at "$path")" > "$(measured_at "$newest")" ]]; then
       newest="$path"
     fi
   done
@@ -161,7 +168,7 @@ compare() {
 
   # A run that measured nothing leaves the committed record where it was, and
   # comparing that file with itself reads as a perfectly unchanged system.
-  if [[ "$(jq -r '.measured_at' "$measured")" == "$(jq -r '.measured_at' "$baseline")" ]]; then
+  if [[ "$(measured_at "$measured")" == "$(measured_at "$baseline")" ]]; then
     echo "error: $measured is the committed record itself — the bench wrote none" >&2
     return 2
   fi
@@ -254,7 +261,7 @@ EOF
 }
 
 self_test() {
-  local tmp failures=0 out status
+  local tmp failures=0 out status runner="self-test"
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' RETURN
 
@@ -264,7 +271,7 @@ self_test() {
   # 1. An improvement: both percentiles fall.
   record_fixture "$tmp/faster.json" generation-1 poc 20 800000 1600000
   status=0
-  compare "$tmp/faster.json" "$tmp/baseline.json" 15 "self-test" \
+  compare "$tmp/faster.json" "$tmp/baseline.json" 15 "$runner" \
     > "$tmp/faster.out" 2>&1 || status=$?
   out="$(cat "$tmp/faster.out")"
   [[ "$status" -eq 0 ]] || { echo "self-test: an improvement failed the run" >&2; failures=1; }
@@ -274,7 +281,7 @@ self_test() {
   # 2. A rise inside the tolerance: reported, green.
   record_fixture "$tmp/mild.json" generation-1 poc 20 1100000 2200000
   status=0
-  compare "$tmp/mild.json" "$tmp/baseline.json" 15 "self-test" \
+  compare "$tmp/mild.json" "$tmp/baseline.json" 15 "$runner" \
     > "$tmp/mild.out" 2>&1 || status=$?
   out="$(cat "$tmp/mild.out")"
   [[ "$status" -eq 0 ]] || { echo "self-test: a rise inside the tolerance failed the run" >&2; failures=1; }
@@ -284,7 +291,7 @@ self_test() {
   # 3. A rise beyond the tolerance: red, and the failing percentile is named.
   record_fixture "$tmp/hot.json" generation-1 poc 20 1050000 3000000
   status=0
-  compare "$tmp/hot.json" "$tmp/baseline.json" 15 "self-test" \
+  compare "$tmp/hot.json" "$tmp/baseline.json" 15 "$runner" \
     > "$tmp/hot.out" 2>&1 || status=$?
   out="$(cat "$tmp/hot.out")"
   [[ "$status" -eq 1 ]] || { echo "self-test: a rise beyond the tolerance did not fail the run" >&2; failures=1; }
@@ -296,7 +303,7 @@ self_test() {
   # 4. A different corpus: reported, judged by nothing.
   record_fixture "$tmp/other-class.json" generation-1 s 100 3000000 6000000
   status=0
-  compare "$tmp/other-class.json" "$tmp/baseline.json" 15 "self-test" \
+  compare "$tmp/other-class.json" "$tmp/baseline.json" 15 "$runner" \
     > "$tmp/other-class.out" 2>&1 || status=$?
   out="$(cat "$tmp/other-class.out")"
   [[ "$status" -eq 0 ]] || { echo "self-test: a class mismatch failed the run" >&2; failures=1; }
@@ -307,7 +314,7 @@ self_test() {
   record_fixture "$tmp/narrow.json" generation-1 poc 20 1000000 2000000
   jq '.groups[0].operations[1].name = "prune_retained"' "$tmp/narrow.json" > "$tmp/new-op.json"
   status=0
-  compare "$tmp/new-op.json" "$tmp/baseline.json" 15 "self-test" \
+  compare "$tmp/new-op.json" "$tmp/baseline.json" 15 "$runner" \
     > "$tmp/new-op.out" 2>&1 || status=$?
   out="$(cat "$tmp/new-op.out")"
   [[ "$status" -eq 0 ]] || { echo "self-test: a new operation failed the run" >&2; failures=1; }
@@ -319,7 +326,7 @@ self_test() {
   # 6. The bench wrote nothing and the committed record is still on disk: a
   # comparison of one file with itself is refused rather than reported green.
   status=0
-  compare "$tmp/baseline.json" "$tmp/baseline.json" 15 "self-test" \
+  compare "$tmp/baseline.json" "$tmp/baseline.json" 15 "$runner" \
     > "$tmp/unwritten.out" 2>&1 || status=$?
   [[ "$status" -eq 2 ]] \
     || { echo "self-test: a record compared with itself was not refused" >&2; failures=1; }
@@ -340,7 +347,7 @@ fi
 
 # Paths named on the command line are the CALLER's, and the working directory
 # moves to the repository root next.
-absolute() { case "$1" in /*) printf '%s\n' "$1" ;; *) printf '%s\n' "$PWD/$1" ;; esac; }
+absolute() { local path="$1"; case "$path" in /*) printf '%s\n' "$path" ;; *) printf '%s\n' "$PWD/$path" ;; esac; }
 [[ -z "$MEASURED" ]] || MEASURED="$(absolute "$MEASURED")"
 [[ -z "$BASELINE" ]] || BASELINE="$(absolute "$BASELINE")"
 [[ -z "$SUMMARY" ]] || SUMMARY="$(absolute "$SUMMARY")"

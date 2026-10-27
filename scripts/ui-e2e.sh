@@ -89,6 +89,8 @@ fi
 VIEWER_URL="http://${VIEWER_ADDR}"
 CDR_URL="http://localhost:8080"
 KEYCLOAK_URL="http://localhost:8081"
+ACCEPT_JSON="Accept: application/json"
+CT_JSON="Content-Type: application/json"
 DRIVER_PORT=9515
 SHOTS_DIR="$ROOT/target/ui-e2e/screenshots"
 mkdir -p "$SHOTS_DIR"
@@ -174,17 +176,19 @@ VIEWER_TLS_ENV=(SSL_CERT_DIR="$DEV_CA_DIR")
 # ── 2. Deterministic Keycloak test passwords (the shipped realm export holds
 #      only hashes; reset via the bootstrap admin API — never edit the realm) ─
 echo "── resetting Keycloak test-user passwords"
+# The admin API of the realm the stack ships.
+KC_REALM_ADMIN="$KEYCLOAK_URL/auth/admin/realms/ferroehr"
 KC_TOKEN=$(curl -sf -X POST \
   -d "client_id=admin-cli" -d "username=admin" -d "password=admin" -d "grant_type=password" \
   "$KEYCLOAK_URL/auth/realms/master/protocol/openid-connect/token" | jq -r '.access_token')
 for pair in "ferroehr-admin:E2ePass-admin1!" "ferroehr-user:E2ePass-user1!"; do
   user="${pair%%:*}"; pass="${pair#*:}"
   uid=$(curl -sf -H "Authorization: Bearer $KC_TOKEN" \
-    "$KEYCLOAK_URL/auth/admin/realms/ferroehr/users?username=$user&exact=true" \
+    "$KC_REALM_ADMIN/users?username=$user&exact=true" \
     | jq -r '.[0].id')
-  curl -sf -X PUT -H "Authorization: Bearer $KC_TOKEN" -H "Content-Type: application/json" \
+  curl -sf -X PUT -H "Authorization: Bearer $KC_TOKEN" -H "$CT_JSON" \
     -d "{\"type\":\"password\",\"value\":\"$pass\",\"temporary\":false}" \
-    "$KEYCLOAK_URL/auth/admin/realms/ferroehr/users/$uid/reset-password"
+    "$KC_REALM_ADMIN/users/$uid/reset-password"
 done
 
 # Register the viewer's redirect URI on the realm client (the shipped
@@ -192,10 +196,10 @@ done
 # the admin API, never by editing the realm file.
 echo "── registering the viewer redirect URI on the ferroehr client"
 CLIENT_ID=$(curl -sf -H "Authorization: Bearer $KC_TOKEN" \
-  "$KEYCLOAK_URL/auth/admin/realms/ferroehr/clients?clientId=ferroehr" \
+  "$KC_REALM_ADMIN/clients?clientId=ferroehr" \
   | jq -r '.[0].id')
 curl -sf -H "Authorization: Bearer $KC_TOKEN" \
-  "$KEYCLOAK_URL/auth/admin/realms/ferroehr/clients/$CLIENT_ID" \
+  "$KC_REALM_ADMIN/clients/$CLIENT_ID" \
   | jq --arg origin "$VIEWER_URL" '
       # Union-then-sort, as the previous version did: `unique` in jq both
       # de-duplicates and sorts, so re-running this script is idempotent rather
@@ -203,9 +207,9 @@ curl -sf -H "Authorization: Bearer $KC_TOKEN" \
       .redirectUris = ((.redirectUris // []) + [$origin + "/*"] | unique)
       | .webOrigins = ((.webOrigins // []) + [$origin] | unique)
     ' > /tmp/kc-client.json
-curl -sf -X PUT -H "Authorization: Bearer $KC_TOKEN" -H "Content-Type: application/json" \
+curl -sf -X PUT -H "Authorization: Bearer $KC_TOKEN" -H "$CT_JSON" \
   -d @/tmp/kc-client.json \
-  "$KEYCLOAK_URL/auth/admin/realms/ferroehr/clients/$CLIENT_ID"
+  "$KC_REALM_ADMIN/clients/$CLIENT_ID"
 
 # ── 2b. Seed clinical data over REST (never the database): one template, one
 #        EHR, one composition committed then updated (two versions) — powers
@@ -222,19 +226,19 @@ opt_status=$(curl -s -o /dev/null -w "%{http_code}" -u ferroehr:ferroehr -X POST
   --data-binary @"$SEED_OPT")
 case "$opt_status" in 201|409) ;; *) echo "FATAL: template upload -> $opt_status" >&2; exit 1;; esac
 SEEDED_EHR_ID=$(curl -sf -u ferroehr:ferroehr -X POST "$CDR_V1/ehr" \
-  -H "Prefer: return=representation" -H "Accept: application/json" \
+  -H "Prefer: return=representation" -H "$ACCEPT_JSON" \
   | jq -r '.ehr_id.value')
 curl -sf -u ferroehr:ferroehr "$CDR_V1/definition/template/adl1.4/$SEED_TEMPLATE/example" \
-  -H "Accept: application/json" > /tmp/ui-e2e-example.json
+  -H "$ACCEPT_JSON" > /tmp/ui-e2e-example.json
 SEED_VUID=$(curl -sf -D - -o /dev/null -u ferroehr:ferroehr -X POST \
   "$CDR_V1/ehr/$SEEDED_EHR_ID/composition" \
-  -H "Content-Type: application/json" -H "Accept: application/json" -H "Prefer: return=minimal" \
+  -H "$CT_JSON" -H "$ACCEPT_JSON" -H "Prefer: return=minimal" \
   --data-binary @/tmp/ui-e2e-example.json \
   | tr -d '\r' | sed -n 's/^[Ee][Tt]ag: W\/"\(.*\)"$/\1/p')
 SEEDED_VO_ID="${SEED_VUID%%::*}"
 curl -sf -o /dev/null -u ferroehr:ferroehr -X PUT \
   "$CDR_V1/ehr/$SEEDED_EHR_ID/composition/$SEEDED_VO_ID" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "$CT_JSON" -H "$ACCEPT_JSON" \
   -H "If-Match: \"$SEED_VUID\"" --data-binary @/tmp/ui-e2e-example.json
 echo "   seeded EHR $SEEDED_EHR_ID / composition $SEEDED_VO_ID (2 versions)"
 # Three more single-composition EHRs committed as FLAT with real quantity
@@ -243,11 +247,11 @@ echo "   seeded EHR $SEEDED_EHR_ID / composition $SEEDED_VO_ID (2 versions)"
 day=14
 for magnitude in 36.5 37.8 39.1; do
   extra_ehr=$(curl -sf -u ferroehr:ferroehr -X POST "$CDR_V1/ehr" \
-    -H "Prefer: return=representation" -H "Accept: application/json" \
+    -H "Prefer: return=representation" -H "$ACCEPT_JSON" \
     | jq -r '.ehr_id.value')
   curl -sf -o /dev/null -u ferroehr:ferroehr -X POST \
     "$CDR_V1/ehr/$extra_ehr/composition" \
-    -H "Content-Type: application/openehr.wt.flat+json" -H "Accept: application/json" \
+    -H "Content-Type: application/openehr.wt.flat+json" -H "$ACCEPT_JSON" \
     -H "openehr-template-id: $SEED_TEMPLATE" -H "Prefer: return=minimal" \
     -d "{
       \"ctx/language\": \"en\", \"ctx/territory\": \"US\",
@@ -372,6 +376,21 @@ NEXTEST_TARGET=(-p ferroehr-viewer)
 if [[ -n "${UI_E2E_NEXTEST_ARCHIVE:-}" ]]; then
   NEXTEST_TARGET=(--archive-file "$UI_E2E_NEXTEST_ARCHIVE" --workspace-remap "$ROOT")
 fi
+# The environment the journey run and the docs-shots pass share, so the two
+# cannot diverge on it either: the viewer, the driver, the synthetic logins
+# and the seeded records.
+E2E_ENV=(
+  UI_E2E_BASE_URL="$VIEWER_URL"
+  UI_E2E_WEBDRIVER_URL="http://127.0.0.1:$DRIVER_PORT"
+  UI_E2E_SHOTS_DIR="$SHOTS_DIR"
+  UI_E2E_BASIC_USER="ferroehr"
+  UI_E2E_BASIC_PASS="ferroehr"
+  UI_E2E_ADMIN_USER="ferroehr-admin"
+  UI_E2E_ADMIN_PASS="ferroehr"
+  UI_E2E_CDR_URL="$CDR_URL"
+  UI_E2E_SEEDED_EHR_ID="$SEEDED_EHR_ID"
+  UI_E2E_SEEDED_VO_ID="$SEEDED_VO_ID"
+)
 if [[ -n "${UI_E2E_SHOTS_ONLY:-}" ]]; then
   echo "── journeys skipped (UI_E2E_SHOTS_ONLY)"
 else
@@ -393,18 +412,9 @@ NEXTEST_FILTER=(-E 'binary(it) - test(/^e2e_docs_shots::/)')
 # local run and a single-job CI lane both do.
 NEXTEST_PARTITION=()
 [[ -n "${UI_E2E_PARTITION:-}" ]] && NEXTEST_PARTITION=(--partition "$UI_E2E_PARTITION")
-UI_E2E_BASE_URL="$VIEWER_URL" \
-UI_E2E_WEBDRIVER_URL="http://127.0.0.1:$DRIVER_PORT" \
-UI_E2E_SHOTS_DIR="$SHOTS_DIR" \
-UI_E2E_BASIC_USER="ferroehr" \
-UI_E2E_BASIC_PASS="ferroehr" \
-UI_E2E_ADMIN_USER="ferroehr-admin" \
-UI_E2E_ADMIN_PASS="ferroehr" \
-UI_E2E_CDR_URL="$CDR_URL" \
-UI_E2E_OIDC_USER="ferroehr-admin" \
-UI_E2E_OIDC_PASS="E2ePass-admin1!" \
-UI_E2E_SEEDED_EHR_ID="$SEEDED_EHR_ID" \
-UI_E2E_SEEDED_VO_ID="$SEEDED_VO_ID" \
+env "${E2E_ENV[@]}" \
+  UI_E2E_OIDC_USER="ferroehr-admin" \
+  UI_E2E_OIDC_PASS="E2ePass-admin1!" \
   cargo nextest run "${NEXTEST_TARGET[@]}" -j 1 "${NEXTEST_FILTER[@]}" ${NEXTEST_PARTITION[@]+"${NEXTEST_PARTITION[@]}"}
 fi
 
@@ -414,17 +424,7 @@ fi
 # journeys so the browse journeys have seeded the fixture template.
 if [[ -n "${UI_E2E_DOCS_SHOTS:-}" ]]; then
   echo "── capturing documentation screenshots"
-  UI_E2E_BASE_URL="$VIEWER_URL" \
-  UI_E2E_WEBDRIVER_URL="http://127.0.0.1:$DRIVER_PORT" \
-  UI_E2E_SHOTS_DIR="$SHOTS_DIR" \
-  UI_E2E_BASIC_USER="ferroehr" \
-  UI_E2E_BASIC_PASS="ferroehr" \
-  UI_E2E_ADMIN_USER="ferroehr-admin" \
-  UI_E2E_ADMIN_PASS="ferroehr" \
-  UI_E2E_CDR_URL="$CDR_URL" \
-  UI_E2E_SEEDED_EHR_ID="$SEEDED_EHR_ID" \
-  UI_E2E_SEEDED_VO_ID="$SEEDED_VO_ID" \
-  UI_E2E_DOCS_SHOTS=1 \
+  env "${E2E_ENV[@]}" UI_E2E_DOCS_SHOTS=1 \
     cargo nextest run "${NEXTEST_TARGET[@]}" -j 1 -E 'test(/^e2e_docs_shots::/)'
 fi
 

@@ -107,7 +107,8 @@ expected_header() {
 }
 
 is_generated() {
-  head -n 1 "$1" | grep -q '@generated'
+  local file="$1"
+  head -n 1 "$file" | grep -q '@generated'
 }
 
 fail=0

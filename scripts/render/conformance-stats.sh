@@ -46,7 +46,8 @@ run_date=$(git log -1 --format=%as -- "$ART/results.json" 2>/dev/null || true)
 
 # ── profile verdicts, straight from the computed verdict report ──────────────
 pverdict() {
-  jq -r --arg t "$1" '.profiles[] | select(.[0]==$t) | .[1]' "$ART/verdicts.json" \
+  local profile="$1"
+  jq -r --arg t "$profile" '.profiles[] | select(.[0]==$t) | .[1]' "$ART/verdicts.json" \
     | sed -e 's/_/ /g' -e 's/^$/—/'
 }
 core=$(pverdict CORE)
@@ -66,7 +67,7 @@ for v in "$core" "$standard" "$options" "$sec"; do
   [[ -n "$v" ]] && [[ "$v" != "—" ]] || { echo "render-conformance-stats: empty profile verdict in verdicts.json" >&2; exit 1; }
 done
 
-upper() { printf '%s' "$1" | tr '[:lower:]' '[:upper:]'; }
+upper() { local text="$1"; printf '%s' "$text" | tr '[:lower:]' '[:upper:]'; }
 
 case "${1:-includes}" in
   includes)
