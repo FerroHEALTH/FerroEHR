@@ -37,7 +37,6 @@
 
 ARG RUST_VERSION=1.99.1
 ARG CARGO_LEPTOS_VERSION=0.3.7
-ARG WASM_BINDGEN_VERSION=0.2.128
 
 # ── builder: toolchain + prebuilt tools, then cargo-leptos under the cache ─────
 # Digest-pinned rust:1.99.1-slim-trixie (Debian 13, glibc 2.41), resolved
@@ -46,18 +45,28 @@ ARG WASM_BINDGEN_VERSION=0.2.128
 FROM rust:${RUST_VERSION}-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d AS builder
 WORKDIR /app
 ARG CARGO_LEPTOS_VERSION
-ARG WASM_BINDGEN_VERSION
 # amd64 | arm64 — provided by buildx/compose.
 ARG TARGETARCH
 RUN apt-get update && apt-get install -y --no-install-recommends \
       pkg-config curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 RUN rustup target add wasm32-unknown-unknown
+# cargo-auditable embeds the compressed dependency list in the binary's own
+# `.dep-v0` section, so a scan of this image sees the viewer's Rust
+# dependencies (#3675; https://github.com/rust-secure-code/cargo-auditable).
+# Same pin and install as docker/Dockerfile. It runs before the tool fetch
+# below, whose layer is re-run whenever Cargo.lock changes.
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    cargo install cargo-auditable --version 0.7.5 --locked
 # Prebuilt tool binaries fetched behind a cache mount (F13): the downloaded
 # artifacts persist across builds keyed by version, so a rebuild that did not
 # bump a tool version re-uses them instead of re-downloading
 # (docs.docker.com/build/cache/optimize — RUN --mount=type=cache). cargo-leptos
 # resolves wasm-bindgen from PATH before its own downloader.
+# The wasm-bindgen CLI must be the exact version of the wasm-bindgen library
+# the viewer links, so its version is read from the bind-mounted Cargo.lock
+# rather than pinned here (#4222); a lock with no single wasm-bindgen fails
+# the build. scripts/checks/viewer-tool-pins.sh holds every other pin to it.
 # `sh` on Debian is dash, which has no `pipefail`, so the tool downloads below
 # need bash: each is `curl … | tar … > file`, and without pipefail a failed
 # curl leaves tar's exit status to decide. The redirect creates the file
@@ -65,7 +74,12 @@ RUN rustup target add wasm32-unknown-unknown
 # truncated binary — a silent bad build rather than a failed one.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN --mount=type=cache,target=/opt/tool-cache,sharing=locked \
+    --mount=type=bind,source=Cargo.lock,target=/tmp/Cargo.lock \
     set -eu; \
+    WASM_BINDGEN_VERSION="$(sed -n '/^name = "wasm-bindgen"$/{n;s/^version = "\(.*\)"$/\1/p;}' /tmp/Cargo.lock)"; \
+    if [[ ! "${WASM_BINDGEN_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then \
+      echo "Cargo.lock resolves no single wasm-bindgen version: '${WASM_BINDGEN_VERSION}'" >&2; exit 1; \
+    fi; \
     case "${TARGETARCH}" in \
       amd64) triple=x86_64-unknown-linux-gnu ;; \
       arm64) triple=aarch64-unknown-linux-gnu ;; \
@@ -82,12 +96,6 @@ RUN --mount=type=cache,target=/opt/tool-cache,sharing=locked \
     fi; \
     install -m0755 "$cache/cargo-leptos-${CARGO_LEPTOS_VERSION}" /usr/local/bin/cargo-leptos; \
     install -m0755 "$cache/wasm-bindgen-${WASM_BINDGEN_VERSION}" /usr/local/bin/wasm-bindgen
-# cargo-auditable embeds the compressed dependency list in the binary's own
-# `.dep-v0` section, so a scan of this image sees the viewer's Rust
-# dependencies (#3675; https://github.com/rust-secure-code/cargo-auditable).
-# Same pin and install as docker/Dockerfile.
-RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
-    cargo install cargo-auditable --version 0.7.5 --locked
 COPY . .
 # The viewer has no provenance build.rs, so it carries no compile-time SHA env;
 # its image provenance is the OCI-standard REVISION LABEL on the shared runtime
