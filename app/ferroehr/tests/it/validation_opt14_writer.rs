@@ -19,8 +19,10 @@ use std::path::{Path, PathBuf};
 
 use openehr_base::v1_3::base_types::identification::archetype_id::ArchetypeId;
 use openehr_base::v1_3::base_types::identification::template_id::TemplateId;
-use openehr_its::opt14::types::{Archetype, Intervalofinteger};
-use openehr_its::opt14_writer::{ArchetypeLibrary, ArchetypeUse, SlotFill, TemplateDefinition};
+use openehr_its::opt14::types::{Archetype, CAttribute, CObject, Intervalofinteger};
+use openehr_its::opt14_writer::{
+    ArchetypeLibrary, ArchetypeUse, Narrowing, NodeClone, SlotFill, TemplateDefinition,
+};
 
 use ferroehr::service::error::ServiceError;
 use ferroehr::validation::validate_opt_artefact;
@@ -167,4 +169,64 @@ fn an_imaging_report_template_passes_the_upload_validation() {
         openehr_its::opt14_writer::build(&definition("Imaging report", root, &library), &library)
             .expect("the imaging report builds");
     validate_opt_artefact(&built).expect("the upload accepts the imaging report");
+}
+
+const CLOSED_ONE: &str = "<lower_included>true</lower_included><upper_included>true</upper_included>\
+     <lower_unbounded>false</lower_unbounded><upper_unbounded>false</upper_unbounded>\
+     <lower>1</lower><upper>1</upper>";
+
+/// The `name` constraint a template gives a node: a `DV_TEXT` whose value is
+/// `text`.
+fn name_constraint(text: &str) -> CAttribute {
+    openehr_its::xml::runtime::from_xml(&format!(
+        "<attributes xmlns=\"http://schemas.openehr.org/v1\" \
+         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"C_SINGLE_ATTRIBUTE\">\
+         <rm_attribute_name>name</rm_attribute_name><existence>{CLOSED_ONE}</existence>\
+         <children xsi:type=\"C_COMPLEX_OBJECT\"><rm_type_name>DV_TEXT</rm_type_name>\
+         <occurrences>{CLOSED_ONE}</occurrences><node_id/>\
+         <attributes xsi:type=\"C_SINGLE_ATTRIBUTE\"><rm_attribute_name>value</rm_attribute_name>\
+         <existence>{CLOSED_ONE}</existence><children xsi:type=\"C_PRIMITIVE_OBJECT\">\
+         <rm_type_name>STRING</rm_type_name><occurrences>{CLOSED_ONE}</occurrences><node_id/>\
+         <item xsi:type=\"C_STRING\"><list>{text}</list></item></children></attributes>\
+         </children></attributes>"
+    ))
+    .expect("a well-formed attribute")
+}
+
+fn complex(rm_type: &str) -> CObject {
+    openehr_its::xml::runtime::from_xml(&format!(
+        "<children xmlns=\"http://schemas.openehr.org/v1\" \
+         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"C_COMPLEX_OBJECT\">\
+         <rm_type_name>{rm_type}</rm_type_name><occurrences>{CLOSED_ONE}</occurrences>\
+         <node_id/></children>"
+    ))
+    .expect("a well-formed object")
+}
+
+/// A template that renames and clones a repeatable node and narrows value
+/// types: the address cluster with two named streets.
+#[test]
+fn a_template_with_clones_and_redefinitions_passes_the_upload_validation() {
+    let library = library();
+    let mut root = archetype_use("openEHR-EHR-CLUSTER.address.v1");
+    root.narrowings.push(Narrowing::Constrain {
+        path: "/items[at0001]".to_owned(),
+        attribute: name_constraint("Street"),
+    });
+    root.narrowings.push(Narrowing::Clone(NodeClone::new(
+        "/items[at0001]",
+        name_constraint("Second street"),
+    )));
+    root.narrowings.push(Narrowing::Redefine {
+        path: "/items[at0001]/value".to_owned(),
+        objects: vec![complex("DV_CODED_TEXT")],
+    });
+    root.narrowings.push(Narrowing::Redefine {
+        path: "/items[at0010]/value".to_owned(),
+        objects: vec![complex("DV_TEXT")],
+    });
+    let built =
+        openehr_its::opt14_writer::build(&definition("Two streets", root, &library), &library)
+            .expect("the template builds");
+    validate_opt_artefact(&built).expect("the upload accepts clones and redefinitions");
 }

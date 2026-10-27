@@ -33,7 +33,8 @@ this one.
   its invariant checks in `openehr_rm::validate`.
 - **OPT 1.4** (`opt14`) and both AOM2 archetype XML codecs, with an OPT 1.4
   writer (`opt14_writer`) that builds an operational template from a
-  template definition and the AM 1.4 archetypes it names, deterministically
+  template definition and the AM 1.4 archetypes it names (slot fills, node
+  clones, type redefinitions and occurrence narrowings), deterministically
   and valid against ITS-XML `Template.xsd`.
 
 ### Reading and writing canonical JSON

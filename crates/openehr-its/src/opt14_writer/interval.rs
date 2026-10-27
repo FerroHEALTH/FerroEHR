@@ -9,7 +9,7 @@ use crate::opt14::types::Intervalofinteger;
 ///
 /// An exclusive bound moves one step inward; an absent `*_included` reads as
 /// included, the form `Template.xsd` writes for a closed bound.
-fn inclusive_bounds(interval: &Intervalofinteger) -> (Option<i64>, Option<i64>) {
+pub(super) fn inclusive_bounds(interval: &Intervalofinteger) -> (Option<i64>, Option<i64>) {
     let lower = if interval.lower_unbounded {
         None
     } else {
