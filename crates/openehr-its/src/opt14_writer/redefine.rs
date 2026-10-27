@@ -7,6 +7,7 @@
 
 use super::WriteError;
 use super::interval;
+use super::leaf;
 use super::path;
 use crate::opt14::types::{CAttribute, CObject, Intervalofinteger};
 
@@ -227,7 +228,7 @@ fn overlay_object(
     let (Some(archetype_attributes), Some(given_attributes)) =
         (path::attributes(archetype), path::attributes(given))
     else {
-        // TODO(#4163): check that a redefining leaf constraint narrows the archetype's leaf.
+        leaf::narrows(archetype, given, site)?;
         return Ok(result);
     };
     // NOTE: ADL2 master09.05 §Reference Model Type Refinement: on a subtype, "any existing

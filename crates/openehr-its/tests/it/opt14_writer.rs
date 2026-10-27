@@ -2060,3 +2060,57 @@ fn a_redefinition_overlays_the_attributes_it_names() {
         "an object at occurrences {{0}} removes the node"
     );
 }
+
+const BLOOD_PRESSURE: &str = "openEHR-EHR-OBSERVATION.blood_pressure.v2";
+const SYSTOLIC_VALUE: &str = "/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value";
+
+/// A `C_DV_QUANTITY` in mm[Hg] whose magnitude runs from `lower` to `upper`.
+fn millimetres_of_mercury(lower: &str, upper: &str) -> CObject {
+    let occurrences = interval_xml("occurrences", 1, Some(1));
+    let precision = interval_xml("precision", 0, Some(0));
+    openehr_its::xml::runtime::from_xml(&format!(
+        "<children xmlns=\"http://schemas.openehr.org/v1\" \
+         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"C_DV_QUANTITY\">\
+         <rm_type_name>DV_QUANTITY</rm_type_name>{occurrences}<node_id/>\
+         <property><terminology_id><value>openehr</value></terminology_id>\
+         <code_string>125</code_string></property><list><magnitude>\
+         <lower_included>true</lower_included><upper_included>true</upper_included>\
+         <lower_unbounded>false</lower_unbounded><upper_unbounded>false</upper_unbounded>\
+         <lower>{lower}</lower><upper>{upper}</upper></magnitude>{precision}\
+         <units>mm[Hg]</units></list></children>"
+    ))
+    .expect("a well-formed quantity")
+}
+
+#[test]
+fn a_redefined_leaf_narrows_the_archetype_leaf() {
+    let library = library();
+    let redefined = |object: CObject| {
+        let mut root = archetype_use(BLOOD_PRESSURE);
+        root.narrowings.push(Narrowing::Redefine {
+            path: SYSTOLIC_VALUE.to_owned(),
+            objects: vec![object],
+        });
+        template("Blood pressure", root)
+    };
+    let built = written(
+        &redefined(millimetres_of_mercury("40.0", "300.0")),
+        &library,
+    );
+    assert!(
+        format!("{built:?}").contains("upper: Some(300.0)"),
+        "the narrower magnitude is written"
+    );
+    let refusal = openehr_its::opt14_writer::build(
+        &redefined(millimetres_of_mercury("0.0", "1500.0")),
+        &library,
+    );
+    assert!(
+        matches!(
+            &refusal,
+            Err(WriteError::Widening { archetype_id, path, what: "magnitude", .. })
+                if archetype_id == BLOOD_PRESSURE && path == SYSTOLIC_VALUE
+        ),
+        "a wider magnitude is refused: {refusal:?}"
+    );
+}

@@ -64,6 +64,7 @@
 
 mod assemble;
 mod interval;
+mod leaf;
 mod path;
 mod redefine;
 mod slot;
@@ -397,11 +398,12 @@ pub enum WriteError {
         archetype_id: String,
         /// The node's path.
         path: String,
-        /// Which constraint: `occurrences` or `existence`.
+        /// Which constraint: `occurrences`, `existence`, `cardinality`, or the
+        /// leaf value constraint a redefinition narrows (`code list`, `magnitude`).
         what: &'static str,
-        /// The template's interval.
+        /// The template's constraint.
         given: String,
-        /// The archetype's interval.
+        /// The archetype's constraint.
         archetype: String,
     },
     /// A `Constrain` narrowing names a node that is not a complex object.
