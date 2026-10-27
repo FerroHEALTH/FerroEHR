@@ -24,18 +24,10 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
-use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
-use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, StoreConfig};
-use ferroehr::system_log::sender::{
-    AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
-};
-use ferroehr::system_log::store::AuditStore;
-use ferroehr_rest::extensions::management::Observability;
 use http::{Request, StatusCode, header};
 use serde_json::Value;
 use sqlx::PgPool;
@@ -48,73 +40,17 @@ const SUBJECT: &str = "patient-subject-1";
 /// The synthetic user every request of the test authenticates as.
 const USER: &str = "archivist";
 
-fn basic(name: &str) -> String {
-    use base64::Engine;
-    format!(
-        "Basic {}",
-        base64::engine::general_purpose::STANDARD.encode(format!("{name}:pw").as_bytes())
-    )
-}
-
+/// A `GET` of `path` under the base path, as the test's user.
 fn get(path: &str) -> Request<Body> {
     Request::get(format!("{BASE}{path}"))
-        .header(header::AUTHORIZATION, basic(USER))
+        .header(header::AUTHORIZATION, common::basic_credential(USER))
         .body(Body::empty())
         .unwrap()
 }
 
 /// An audited app with the local store on and one EHR; returns the EHR id.
 async fn app() -> (testkit::TestDb, PgPool, Router, String) {
-    let (db, pool) = common::migrated_pool().await;
-    let audit = AuditConfig {
-        enabled: true,
-        store: StoreConfig {
-            enabled: true,
-            retention_days: 0,
-            retention_years: None,
-            sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
-        },
-        ..AuditConfig::default()
-    };
-    let resolver: SubjectResolver = Arc::new(|_ehr_id| {
-        Box::pin(async {
-            SubjectLookup::Found(ResolvedSubject {
-                id: SUBJECT.to_owned(),
-                namespace: Some("urn:ferroehr:test-subjects".to_owned()),
-            })
-        })
-    });
-    let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), Some(pool.clone()))
-        .await
-        .expect("the audit sender");
-    let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-            .with_audit(sender)
-            .with_audit_store(AuditStore::new(pool.clone())),
-    );
-    let mut config = common::api_config(true);
-    common::with_basic_users(&mut config, &[(USER, &["ADMIN"])]);
-    let app = ferroehr_rest::build_full(config, svc, None, Observability::default())
-        .await
-        .expect("build app");
-    let (status, body) = common::send_body(
-        &app,
-        Request::post(format!("{BASE}/ehr"))
-            .header(header::AUTHORIZATION, basic(USER))
-            .header("Prefer", "return=representation")
-            .body(Body::empty())
-            .unwrap(),
-    )
-    .await;
-    assert_eq!(status, StatusCode::CREATED, "EHR create: {body}");
-    let value: Value = serde_json::from_str(&body).expect("EHR json");
-    let ehr = value["ehr_id"]["value"]
-        .as_str()
-        .expect("ehr_id")
-        .to_owned();
-    (db, pool, app, ehr)
+    common::audited_app(SUBJECT, USER).await
 }
 
 /// One stored record: its operation, resource class, resource id, principal
