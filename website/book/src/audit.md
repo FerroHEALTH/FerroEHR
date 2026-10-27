@@ -141,7 +141,7 @@ lives in the record:
 | Whether it succeeded | `outcome`, the DICOM outcome indicator (0 success, 4 minor, 8 serious, 12 major) |
 | Under which role or authority | `roles` — the roles the caller held at access time (the RFC 9068 §2.2.3.1 claim carriers for a bearer, the user definition for Basic), rendered as FHIR `agent.role` on the requestor and as a `RoleIDCode` per role on the DICOM requesting participant |
 | On whose authority, and why | `purpose` and `legal_basis`, and `permit`, the identifier of the data permit a secondary-use caller declares it acts under ([Secondary use](compliance/secondary-use.md#the-access-record)) |
-| Which system, and from where | `AuditSourceID` and the source participant's network address (`client_ip`) |
+| Which system, and from where | `AuditSourceID` and the source participant's network address (`client_ip`): the connection's peer, or the client a peer in `[server] trusted_proxies` names in its `forwarded_header` ([Server](installation/config-server.md)) |
 
 Two of these are the deployment's to supply. `purpose` is only as meaningful as
 the vocabulary you agree with your callers: set `[audit] purpose_codes` to that

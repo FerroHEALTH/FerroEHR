@@ -261,7 +261,11 @@ async fn party_create_read_update_and_history() {
     let label = format!("viewer-person-{}", jitter());
     let body = serde_json::to_string(&party_body("PERSON", "person", &label))
         .expect("serialize the party");
-    fill(&h, "#document", &body).await;
+    // The kind post is a full navigation: edit once the page has hydrated,
+    // and paste, as typing a whole document key by key is quadratic in its
+    // length in the editor.
+    h.wait_hydrated().await;
+    h.wait_css("#document").await.paste(&body).await;
     common::submit(&h, "#editor-dock button[value='save']").await;
     h.wait_url_contains("/parties/person/").await;
     h.wait_css(".fui-toast-text").await;
@@ -280,7 +284,8 @@ async fn party_create_read_update_and_history() {
     let document = h.wait_css("#document").await.prop("value").await;
     let edited = document.replacen(&label, &format!("{label} edited"), 1);
     assert_ne!(edited, document, "the opened document carries the identity");
-    fill(&h, "#document", &edited).await;
+    h.wait_hydrated().await;
+    h.wait_css("#document").await.paste(&edited).await;
     common::submit(&h, "#editor-dock button[value='save']").await;
     h.wait_url_not_contains("/edit").await;
     wait_main_contains(&h, "version 2").await;

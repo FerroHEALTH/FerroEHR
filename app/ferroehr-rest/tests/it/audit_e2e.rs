@@ -36,16 +36,19 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
+use axum::extract::ConnectInfo;
 use ferroehr::config::rest::RestConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, SubjectLookup, SubjectResolver, start};
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_server::client_address::ForwardedHeader;
 use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode};
 use http_body_util::BodyExt;
@@ -59,6 +62,9 @@ const BASE: &str = "/ferroehr/rest/openehr/v1";
 // base64("alice:pw")
 const BASIC_ALICE: &str = "Basic YWxpY2U6cHc=";
 const CLIENT_IP: &str = "203.0.113.9";
+/// The reverse proxy every request arrives through, the one `[server]
+/// trusted_proxies` entry.
+const PROXY: &str = "10.0.0.1";
 const EHR: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
 // ── fixtures ───────────────────────────────────────────────────────────────────
@@ -101,7 +107,11 @@ fn composition() -> Value {
 
 fn rest_config() -> AppConfig {
     let mut config = AppConfig {
-        server: common::server(),
+        server: ferrohealth_server::section::ServerSection {
+            trusted_proxies: vec![PROXY.parse().expect("a proxy address")],
+            forwarded_header: ForwardedHeader::XForwardedFor,
+            ..common::server()
+        },
         rest: RestConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
@@ -346,11 +356,21 @@ async fn audit_app_with_composition(sender: AuditSender) -> (testkit::TestDb, Ro
 }
 
 fn req(method: &str, path: &str, auth: bool) -> Request<Body> {
+    from_peer(PROXY, method, path, auth)
+}
+
+/// A request over a connection from `peer` that names [`CLIENT_IP`] in
+/// `X-Forwarded-For`.
+fn from_peer(peer: &str, method: &str, path: &str, auth: bool) -> Request<Body> {
     let mut b = Request::builder()
         .method(method)
         .uri(format!("{BASE}{path}"))
         .header("x-forwarded-for", CLIENT_IP)
-        .header("content-type", "application/json");
+        .header("content-type", "application/json")
+        .extension(ConnectInfo(SocketAddr::new(
+            peer.parse().expect("a peer address"),
+            443,
+        )));
     if auth {
         b = b.header("authorization", BASIC_ALICE);
     }
@@ -380,6 +400,26 @@ async fn ehr_create_emits_create_record() {
         xml.contains(r#"originalText="Patient Record""#),
         "EHR object: {xml}"
     );
+}
+
+/// A forwarded hop is believed only from a `[server] trusted_proxies` peer
+/// (RFC 7239 §8.1): a peer that is no trusted proxy is the client itself,
+/// whatever `X-Forwarded-For` it sends.
+#[tokio::test]
+async fn an_untrusted_peer_is_recorded_as_itself() {
+    let (mut socket, sender) = audit_capture(true).await;
+    let (_pg, app) = audit_app(sender).await;
+    let resp = app
+        .oneshot(from_peer("198.51.100.7", "POST", "/ehr", true))
+        .await
+        .expect("resp");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let xml = recv_one(&mut socket).await.expect("audit record");
+    assert!(
+        xml.contains(r#"NetworkAccessPointID="198.51.100.7""#),
+        "the peer: {xml}"
+    );
+    assert!(!xml.contains(CLIENT_IP), "no forwarded hop: {xml}");
 }
 
 #[tokio::test]

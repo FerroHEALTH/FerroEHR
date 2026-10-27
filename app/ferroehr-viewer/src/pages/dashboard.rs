@@ -234,9 +234,7 @@ fn heading(subtitle: String, actions: ActionGroup) -> AnyView {
 #[component]
 pub fn DashboardPage() -> impl IntoView {
     let body = awaited(async move {
-        let host = crate::request::state()
-            .map(|state| state.config.cdr.base_url.clone())
-            .unwrap_or_default();
+        let host = crate::request::settings().cdr_address;
         let (ehrs, compositions, templates) = match dashboard_counts().await {
             Ok(counts) => counts,
             Err(error) => {

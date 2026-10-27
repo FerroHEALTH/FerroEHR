@@ -41,11 +41,11 @@
 )]
 
 use std::collections::BTreeMap;
-use std::net::SocketAddr;
 
-use axum::extract::{ConnectInfo, Request, State};
+use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
+use ferrohealth_server::client_address::ClientAddress;
 use http::{HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
 
@@ -486,23 +486,14 @@ fn claim(principal: &Principal, name: &str) -> Option<String> {
         .map(str::to_owned)
 }
 
-/// Returns the client network address for the DICOM `NetworkAccessPointID`: the
-/// `X-Forwarded-For` first hop, else the TCP peer address, else `None`.
+/// Returns the client network address for the DICOM `NetworkAccessPointID`:
+/// the address the family stack named (`ferrohealth_server::client_address`),
+/// which believes a forwarded hop only from a `[server] trusted_proxies` peer
+/// (RFC 7239 §8.1), and `None` for a request served over no connection.
 fn client_ip(req: &Request) -> Option<String> {
-    if let Some(xff) = req
-        .headers()
-        .get("x-forwarded-for")
-        .and_then(|v| v.to_str().ok())
-        && let Some(first) = xff.split(',').next()
-    {
-        let trimmed = first.trim();
-        if !trimmed.is_empty() {
-            return Some(trimmed.to_owned());
-        }
-    }
     req.extensions()
-        .get::<ConnectInfo<SocketAddr>>()
-        .map(|ci| ci.0.ip().to_string())
+        .get::<ClientAddress>()
+        .map(|ClientAddress(address)| address.to_string())
 }
 
 /// Extracts the `ehr_id` path parameter, the segment after the first exact `ehr`

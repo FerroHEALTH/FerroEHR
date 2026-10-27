@@ -11,9 +11,12 @@
 //! position. The cookie names the listing and holds two numbers, never patient
 //! data. No openEHR spec governs this: our own design.
 
+#[cfg(not(target_arch = "wasm32"))]
 use axum::extract::Form;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::response::{IntoResponse, Redirect, Response};
 use ferrohealth_ui::table::model::Paging;
+#[cfg(not(target_arch = "wasm32"))]
 use http::StatusCode;
 
 /// The route a session listing's pager posts its page and size to.
@@ -65,7 +68,7 @@ impl Listing {
 /// The position the request keeps for `listing`, the first page for none.
 #[must_use]
 pub fn current(listing: Listing) -> Paging {
-    let cookies = crate::request::cookies();
+    let cookies = crate::request::kept_cookies();
     let kept =
         ferrohealth_ui::theme::cookie(&cookies, &format!("{PAGING_COOKIE}{}", listing.key()))
             .and_then(|value| value.split_once('.'));
@@ -81,6 +84,7 @@ pub fn fields(listing: Listing) -> Vec<(String, String)> {
     ]
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// What a session listing's pager posts.
 #[derive(Debug, serde::Deserialize)]
 pub struct PagingChoice {
@@ -94,6 +98,7 @@ pub struct PagingChoice {
     back: String,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Keeps the position a listing's pager posted in a cookie for the browser's
 /// session and sends the browser back to the listing.
 pub async fn choose_paging(Form(choice): Form<PagingChoice>) -> Response {
