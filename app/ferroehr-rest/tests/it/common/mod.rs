@@ -263,6 +263,82 @@ pub(crate) fn with_basic_users(config: &mut AppConfig, users: &[(&str, &[&str])]
     }
 }
 
+/// A Basic `Authorization` field value for `user`, with the password
+/// [`with_basic_users`] gives every user.
+pub(crate) fn basic_credential(user: &str) -> String {
+    use base64::Engine;
+    format!(
+        "Basic {}",
+        base64::engine::general_purpose::STANDARD.encode(format!("{user}:pw").as_bytes())
+    )
+}
+
+/// An audited app over the local Audit Record Repository, with `user` an
+/// ADMIN, every EHR resolving to the synthetic `subject`, and one EHR that
+/// `user` created; returns the EHR id with the store's pool.
+pub(crate) async fn audited_app(
+    subject: &'static str,
+    user: &str,
+) -> (testkit::TestDb, PgPool, Router, String) {
+    use ferroehr::system_log::config::{AuditConfig, StoreConfig};
+    use ferroehr::system_log::sender::{
+        AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
+    };
+    let (db, pool) = migrated_pool().await;
+    let audit = AuditConfig {
+        enabled: true,
+        store: StoreConfig {
+            enabled: true,
+            retention_days: 0,
+            retention_years: None,
+            sgb_v_309_controller: false,
+            verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
+        },
+        ..AuditConfig::default()
+    };
+    let resolver: SubjectResolver = Arc::new(move |_ehr_id| {
+        Box::pin(async move {
+            SubjectLookup::Found(ResolvedSubject {
+                id: subject.to_owned(),
+                namespace: Some("urn:ferroehr:test-subjects".to_owned()),
+            })
+        })
+    });
+    let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), Some(pool.clone()))
+        .await
+        .expect("the audit sender");
+    let svc = Arc::new(
+        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+            .with_audit(sender)
+            .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
+    );
+    let mut config = api_config(true);
+    with_basic_users(&mut config, &[(user, &["ADMIN"])]);
+    let app = ferroehr_rest::build_full(
+        config,
+        svc,
+        None,
+        ferroehr_rest::extensions::management::Observability::default(),
+    )
+    .await
+    .expect("build app");
+    let req = Request::post(format!("{BASE}/ehr"))
+        .header(header::AUTHORIZATION, basic_credential(user))
+        .header("Prefer", "return=representation")
+        .body(Body::empty())
+        .expect("the EHR create request");
+    let (status, body) = send_body(&app, req).await;
+    assert_eq!(status, StatusCode::CREATED, "EHR create: {body}");
+    let value: Value = serde_json::from_str(&body).expect("EHR json");
+    let ehr = value
+        .pointer("/ehr_id/value")
+        .and_then(Value::as_str)
+        .expect("ehr_id")
+        .to_owned();
+    (db, pool, app, ehr)
+}
+
 /// An `Authorization` field value carrying `claims` as an RFC 9068 access
 /// token (`typ` `at+jwt`) signed with the committed test key.
 ///
