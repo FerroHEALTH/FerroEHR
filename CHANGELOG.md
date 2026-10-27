@@ -1000,7 +1000,7 @@ has no matching section here.
 
 ### Security
 
-Shipped with functional changes because: the patched `ferrohealth-smart` arrives in the same dependency move as the family mask and the lockstep releases built on it.
+Shipped with functional changes because: the patched `ferrohealth-smart` arrives in the same dependency move as the family mask and the lockstep releases built on it. The zstd move is a lock-only update that a security-only 5.4.3 could have carried; the maintainer chose to ship it in 5.5.0, released the day after the fix landed, instead of cutting a separate patch.
 
 - `ferrohealth-smart` 0.7.1 masks the userinfo of every URL in its grant
   tables, a URL no parser accepts included. With 0.7.0 a configured
