@@ -142,9 +142,7 @@ where
     F: FnOnce() -> Fut,
     Fut: Future<Output = T>,
 {
-    let managed = probe_management_api().await.is_ok_and(|availability| {
-        availability == crate::management::ManagementAvailability::Available
-    });
+    let managed = crate::management::renders_management_ops(&probe_management_api().await);
     let body = if tab.managed() && !managed {
         None
     } else {

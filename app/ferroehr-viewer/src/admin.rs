@@ -109,43 +109,6 @@ pub async fn probe_admin_api() -> Result<AdminAvailability, ViewerError> {
     Ok(availability_of(&manifest))
 }
 
-/// The per-screen admin gate: one probe [`Resource`].
-///
-/// Created in component setup — never inside a `Suspend` closure, which
-/// re-runs and would re-create the resource.
-#[must_use]
-pub fn admin_gate() -> Resource<Result<AdminAvailability, ViewerError>> {
-    Resource::new(|| (), |()| async move { probe_admin_api().await })
-}
-
-/// Render `affordance` only when the gate found the Admin API mounted;
-/// otherwise render nothing at all (discover-and-hide).
-///
-/// The probe is resolved INSIDE the `<Suspense>`: an SSR'd `ErrorBoundary`
-/// fallback mismatches at hydration in leptos 0.8, and a render-time resource
-/// read is itself a hydration mismatch. `affordance` creates no resources, so
-/// re-runs are safe, and it is shared through an `Arc` because the `Suspend`
-/// closure must not consume its environment.
-#[must_use]
-pub fn when_admin_usable(
-    gate: Resource<Result<AdminAvailability, ViewerError>>,
-    affordance: impl Fn() -> AnyView + Send + Sync + 'static,
-) -> AnyView {
-    let affordance: std::sync::Arc<dyn Fn() -> AnyView + Send + Sync> =
-        std::sync::Arc::new(affordance);
-    view! {
-        <Suspense fallback=|| ()>
-            {move || {
-                let affordance = std::sync::Arc::clone(&affordance);
-                Suspend::new(async move {
-                    if renders_admin_ops(&gate.await) { affordance() } else { ().into_any() }
-                })
-            }}
-        </Suspense>
-    }
-    .into_any()
-}
-
 /// Actionable copy for a refused admin delete.
 ///
 /// It names the exact object, the reason, and the next action, and carries the
