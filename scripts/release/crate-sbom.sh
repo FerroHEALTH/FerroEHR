@@ -45,17 +45,18 @@ crate_list() {
 }
 
 known_crate() {
-  crate_list | grep -Fxq "$1" || die "'$1' is not one of the published crates ($(crate_list | tr '\n' ' '))"
+  local crate="$1"
+  crate_list | grep -Fxq "$crate" || die "'$crate' is not one of the published crates ($(crate_list | tr '\n' ' '))"
 }
 
 # The crates.io checksum of <crate> <version>, or nothing when the version is
 # not published. A failed request is fatal: an unknown answer must not be read
 # as "not published".
 published_checksum() {
-  local body
-  body="$(retry_read "https://crates.io/api/v1/crates/$1/versions" \
-    -H 'User-Agent: ferroehr-release-sbom')" || die "crates.io did not answer for $1"
-  jq -r --arg v "$2" '.versions[]? | select(.num == $v) | .checksum' <<<"$body"
+  local crate="$1" version="$2" body
+  body="$(retry_read "https://crates.io/api/v1/crates/$crate/versions" \
+    -H 'User-Agent: ferroehr-release-sbom')" || die "crates.io did not answer for $crate"
+  jq -r --arg v "$version" '.versions[]? | select(.num == $v) | .checksum' <<<"$body"
 }
 
 do_archive() {

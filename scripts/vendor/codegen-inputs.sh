@@ -174,6 +174,7 @@ for entry in "${OVERLAYS[@]}"; do
       fi
       rm "$stale"
       ;;
+    *) ;;
   esac
 done
 

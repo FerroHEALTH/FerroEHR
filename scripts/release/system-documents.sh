@@ -38,18 +38,19 @@ die() { echo "system-documents: $*" >&2; exit 1; }
 
 # pin KEY: the value of KEY in the pin file.
 pin() {
-  local value
-  value="$(sed -n "s/^$1=//p" "$PIN" | head -n 1)"
-  [[ -n "$value" ]] || die "$PIN has no $1"
+  local key="$1" value
+  value="$(sed -n "s/^$key=//p" "$PIN" | head -n 1)"
+  [[ -n "$value" ]] || die "$PIN has no $key"
   printf '%s\n' "$value"
 }
 
 # The pin key of a page's revision date.
 revised_key() {
-  case "$1" in
+  local page="$1"
+  case "$page" in
     information-sheet) echo INFORMATION_SHEET_REVISED ;;
     instructions-for-use) echo INSTRUCTIONS_FOR_USE_REVISED ;;
-    *) die "unknown page '$1' (information-sheet or instructions-for-use)" ;;
+    *) die "unknown page '$page' (information-sheet or instructions-for-use)" ;;
   esac
 }
 
@@ -77,14 +78,14 @@ fetch() {
 # that starts with ROW, read from the cell's bold text, else from its
 # `Release-X.Y.Z` tags, else its first version, joined with "and".
 spec_versions() {
-  local row cell found
-  row="$(grep -m 1 -F "| $1 |" "$VERSIONS" || true)"
-  [[ -n "$row" ]] || die "$VERSIONS has no row '$1'"
+  local name="$1" row cell found
+  row="$(grep -m 1 -F "| $name |" "$VERSIONS" || true)"
+  [[ -n "$row" ]] || die "$VERSIONS has no row '$name'"
   cell="$(awk -F'|' '{ print $3 }' <<<"$row")"
   found="$(grep -oE '\*\*[^*]+\*\*' <<<"$cell" | grep -oE '[0-9]+(\.[0-9]+)+' || true)"
   [[ -n "$found" ]] || found="$(grep -oE 'Release-[0-9]+\.[0-9]+\.[0-9]+' <<<"$cell" | sed 's/^Release-//' || true)"
   [[ -n "$found" ]] || found="$(grep -oE '[0-9]+(\.[0-9]+)+' <<<"$cell" | head -n 1 || true)"
-  [[ -n "$found" ]] || die "the '$1' row of $VERSIONS names no version"
+  [[ -n "$found" ]] || die "the '$name' row of $VERSIONS names no version"
   awk '!seen[$0]++' <<<"$found" | paste -sd '|' - | sed 's/|/ and /g'
 }
 
@@ -116,10 +117,10 @@ bridge_version() {
 
 # The release date of a version, from its changelog heading.
 release_date() {
-  local date
-  date="$(grep -E "^## \[${1//./\\.}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md \
+  local version="$1" date
+  date="$(grep -E "^## \[${version//./\\.}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md \
     | sed -E 's/.* - ([0-9-]+)$/\1/' | head -n 1)"
-  [[ -n "$date" ]] || die "CHANGELOG.md has no '## [$1] - YYYY-MM-DD' heading"
+  [[ -n "$date" ]] || die "CHANGELOG.md has no '## [$version] - YYYY-MM-DD' heading"
   printf '%s\n' "$date"
 }
 

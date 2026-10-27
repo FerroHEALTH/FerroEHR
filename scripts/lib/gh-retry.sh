@@ -60,23 +60,24 @@ _gh_retry_self_test() {
   # N times, then prints "ok". The count lives in a file: gh_retry runs it in
   # a command substitution.
   fake_api() {
-    local calls
+    local failures="$1" message="$2" calls
     calls=$(($(cat "$tmp/calls" 2>/dev/null || echo 0) + 1))
     echo "$calls" >"$tmp/calls"
-    if ((calls > $1)); then
+    if ((calls > failures)); then
       echo ok
     else
-      echo "$2" >&2
+      echo "$message" >&2
       return 1
     fi
   }
   # check NAME WANT_STATUS WANT_TEXT WANT_CALLS FAILURES MESSAGE
   check() {
+    local name="$1" want_status="$2" want_text="$3" want_calls="$4" failures="$5" message="$6"
     rm -f "$tmp/calls"
     status=0
-    out="$(GH_RETRY_SLEEP=true GH_RETRY_WINDOW=60 gh_retry fake_api "$5" "$6" 2>&1)" || status=$?
-    if [[ "$status" != "$2" ]] || ! grep -qF -- "$3" <<<"$out" || [[ "$(cat "$tmp/calls")" != "$4" ]]; then
-      echo "self-test: $1: exit $status after $(cat "$tmp/calls") calls, wanted exit $2 after $4 calls and '$3' in:" >&2
+    out="$(GH_RETRY_SLEEP=true GH_RETRY_WINDOW=60 gh_retry fake_api "$failures" "$message" 2>&1)" || status=$?
+    if [[ "$status" != "$want_status" ]] || ! grep -qF -- "$want_text" <<<"$out" || [[ "$(cat "$tmp/calls")" != "$want_calls" ]]; then
+      echo "self-test: $name: exit $status after $(cat "$tmp/calls") calls, wanted exit $want_status after $want_calls calls and '$want_text' in:" >&2
       echo "$out" >&2
       rm -rf "$tmp"
       return 1
