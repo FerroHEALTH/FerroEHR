@@ -4,8 +4,8 @@ This chapter says what FerroEHR defends against, how, and (more usefully)
 **what remains true after the control has done its job**. It exists because the
 parts of this system that actually protect patient data are the parts no
 external specification governs: openEHR's REST specification makes
-authentication a `SHOULD` and mandates no scheme, and the Service Model places
-authorization out of band, so only the 401-versus-403 split is
+authentication a `SHOULD` and mandates no scheme, and no openEHR specification
+governs authorization, so only the 401-versus-403 split is
 specification-grounded. Everything finer is this project's own design, and a
 design nobody has written down asks every deployer to reconstruct it privately.
 
@@ -505,7 +505,7 @@ are configuration rather than arithmetic.
 ### The map that rejoins the two domains
 
 **Control.** `linkage.subject_ehr` holds a party id, an EHR id, the subject
-identifier the clinical side carries, the SM's own association metadata and a
+identifier the clinical side carries, the association metadata and a
 validity period. No name, no address and no plaintext attribute, because a
 row here is already the additional information that re-attributes a record.
 Its role is barred from both domains it joins and both of them from it. It

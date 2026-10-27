@@ -3,9 +3,10 @@
 
 //! The application service layer.
 //!
-//! The SM Platform Service Model realized as concrete [`FerroEhrService`]
-//! methods, one folder per SM chapter (vendored SM spec
-//! `docs/specs/openehr/SM/docs/openehr_platform/`).
+//! Our own design: concrete [`FerroEhrService`] methods, one folder per domain
+//! area. No openEHR specification governs how a CDR is built inside; the
+//! oracles are the wire and content specifications each method serves. Operation
+//! and status names borrow from the openEHR SM text, kept as reference and never an oracle.
 //!
 //! Each chapter folder owns its domain logic as inherent `FerroEhrService`
 //! methods; the protocol adapter (`ferroehr-rest`) calls them directly.
@@ -13,22 +14,21 @@
 //! in [`crate::storage`] (no openEHR spec governs the SQL — our own design);
 //! this layer orchestrates.
 //!
-//! One module has no SM chapter: [`linkage`] is our own extension, the map
+//! [`linkage`] is our own extension, the map
 //! from a demographic party to the EHR whose subject it is (GDPR Art. 4(5)).
 //!
 //! The root modules beside the chapters carry the cross-chapter service
-//! vocabulary: the SM call-status model ([`status`]), the service error and
+//! vocabulary: the call-status model ([`status`]), the service error and
 //! its status-mapping tables ([`error`]), the version-commit envelope
-//! ([`version_update`]), the SM list cursor ([`list`]), the
+//! ([`version_update`]), the list cursor ([`list`]), the
 //! `PLATFORM_SERVICE` enumeration ([`platform_service`]), the
 //! protocol-adapter response envelope ([`response`]), the
 //! authenticated-committer context ([`committer`]), the crate-internal
-//! ITS-REST datetime-request-parameter decoder (`datetime`), and the SM
+//! ITS-REST datetime-request-parameter decoder (`datetime`), and the
 //! validity checker ([`validity`]).
 //!
-//! NOTE: no openEHR spec governs the internal layering, so the SM-chapter module
-//! map is our design; the one-expression `Ok(self.inner(...).await?)` methods
-//! are each an SM-named operation and the boundary where a `ServiceError`
+//! NOTE: no openEHR spec governs the internal layering: our own design; each
+//! one-expression `Ok(self.inner(...).await?)` method is where a `ServiceError`
 //! becomes the `SmError` callers consume.
 
 #![expect(

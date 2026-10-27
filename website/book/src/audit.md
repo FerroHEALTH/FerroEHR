@@ -3,8 +3,8 @@
 FerroEHR keeps a full security audit trail of API access (_who_ did _what_
 to _which_ resource, with _what outcome_, from _where_, and _when_) following
 the IHE **ATNA** (Audit Trail and Node Authentication) profile, the standard
-openEHR itself points at (the platform Service Model names the System Log
-component "IHE ATNA-compliant system log"). It is **on by default**: every
+the openEHR reference text points at (its platform service description names a
+system log "IHE ATNA-compliant"). It is **on by default**: every
 deployment records a queryable audit trail with zero external dependencies.
 
 > [!WARNING]

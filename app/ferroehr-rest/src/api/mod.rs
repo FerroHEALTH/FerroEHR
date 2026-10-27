@@ -20,7 +20,7 @@
 //! ## The per-group modules
 //!
 //! Each group owns a dispatcher — an operation-id `match` that rebuilds the
-//! exact `*Params` from the raw request parts, calls the SM native-API method on
+//! exact `*Params` from the raw request parts, calls the service method on
 //! [`AppState`], and renders a negotiated response:
 //!
 //! - [`ehr`] — the EHR API (EHR, `EHR_STATUS`, `VERSIONED_EHR_STATUS`, COMPOSITION,
@@ -37,8 +37,8 @@
 //!   as `admin::dispatch::dispatch` (the group publishes no re-export), plus the
 //!   own-design `archive` + activity-`report` + `dump_load` extension routes
 //!   under the same `/admin/` gates.
-//! - [`message`] — the own-design MESSAGE group (`I_EHR_EXTRACT_SERVICE` +
-//!   `I_TDD_SERVICE`); the release publishes no message API at all, so the whole
+//! - [`message`] — the own-design MESSAGE group (EHR Extract export/import +
+//!   TDD import); the release publishes no message API at all, so the whole
 //!   group is an extension under its own `/message/` resource root.
 //! - [`system`] — the System API manifest ([`system::options::SystemManifest`],
 //!   `ferroehr::config::rest::SystemOptionsConfig`), assembled and mounted by [`crate::router::router`].

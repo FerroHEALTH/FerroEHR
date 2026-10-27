@@ -407,9 +407,9 @@ impl FhirTerminologyProvider {
     /// Always [`CallStatusType::NotImplemented`].
     #[expect(
         clippy::unused_self,
-        reason = "the SM interface declares this call on the service; the \
-                  protocol adapter invokes every SM call uniformly, so the \
-                  receiver stays even where this realization ignores it"
+        reason = "every service call is a method on the service, which the protocol \
+                  adapter invokes uniformly, so the receiver stays even where this \
+                  implementation ignores it"
     )]
     pub fn get_terminology_description(
         &self,

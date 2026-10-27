@@ -1,5 +1,7 @@
 # CNF triage memory index
 
+- **Read first:** the openEHR Service Model (SM) is not an authority (owner ruling 2026-10-27, `.claude/memory/sm-not-an-authority.md`). Entries below that call SM an oracle or ground a verdict on it predate the ruling: re-ground such a verdict on BASE, RM, AM, TERM, QUERY or the ITS docs text, or record it as our own design.
+
 - [Results/wire evidence locations](results-evidence-locations.md) — where the observation, catalogue, and spec live
 - [SUT reproduction setup](sut-reproduction-setup.md) — composed SUT curl access + credentials
 - [cnf.opt.vitals RESOLVED](cnf-opt-vitals-alias-mismatch.md) — was a catalogue defect; now a real body_temperature OBSERVATION (template_id cnf.vitals) — old attribution dead

@@ -1302,9 +1302,9 @@ fn parse_audit(
     attestable: bool,
     owner: &str,
 ) -> Result<AuditInput, ServiceError> {
-    // NOTE: SM `update_version.adoc` `audit` 1..1 + `update_audit.adoc` `committer`
-    // 1..1; no openEHR spec governs a member committer that differs from the
-    // CONTRIBUTION's, so the one each audit states is stored as stated.
+    // NOTE: ITS-REST `schemas/common/UpdateAudit.yaml` requires `committer`; no
+    // openEHR spec governs a member committer that differs from the CONTRIBUTION's,
+    // so the one each audit states is stored as stated.
     let committer = required_committer(audit, owner)?;
     // Both released spellings of `description` are accepted: the ITS-REST
     // `UDvText` object (`schemas/data_types/UDvText.yaml`) and the SM

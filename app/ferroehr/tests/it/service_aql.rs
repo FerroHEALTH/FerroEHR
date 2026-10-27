@@ -127,14 +127,14 @@ fn composition(name: &str, magnitude: f64) -> Value {
 }
 
 async fn create_ehr(svc: &FerroEhrService) -> String {
-    // NOTE: the SM `create_ehr` returns the new EHR's `UUID`; `ehr_id.value`
+    // NOTE: `create_ehr` returns the new EHR's `UUID`; `ehr_id.value`
     // IS that uuid, so its string form is the id every assertion here uses.
     svc.create_ehr(None).await.expect("create_ehr").to_string()
 }
 
 /// Create a composition in `ehr_id`, returning its `OBJECT_VERSION_ID`.
 async fn create_comp(svc: &FerroEhrService, ehr_id: &str, name: &str, magnitude: f64) -> String {
-    // NOTE: the SM `create_composition` returns the new `version_uid`
+    // NOTE: `create_composition` returns the new `version_uid`
     // directly — the same value the composition's `uid` carries.
     svc.create_composition(
         ehr_id.parse().expect("ehr_id uuid"),
@@ -848,7 +848,7 @@ async fn latest_versus_all_versions() {
     let vo_uuid: ferroehr::ids::VoId = vo_id.parse().expect("vo_id uuid");
     let mut current = ovid.clone();
     for magnitude in [20.0, 30.0] {
-        // NOTE: the SM `update_composition` returns the new
+        // NOTE: `update_composition` returns the new
         // `version_uid` directly (the old `.meta.uid`).
         current = svc
             .update_composition(

@@ -3,13 +3,11 @@
 
 //! The Message service.
 //!
-//! The platform crate's realization of SM `I_MESSAGE_SERVICE` /
-//! `I_EHR_EXTRACT_SERVICE` / `I_TDD_SERVICE`
-//! (`docs/specs/openehr/SM/docs/openehr_platform/master09-message_service.adoc`
-//! and the UML classes `i_message_service.adoc`, `i_ehr_extract_service.adoc`,
-//! `i_tdd_service.adoc`).
+//! EHR Extract export and import over the RM EHR Extract model, and TDD import,
+//! behind the `/message` extension. Our own design; the operation names borrow
+//! from the openEHR SM text, kept as reference and never an oracle.
 //!
-//! The layout mirrors the spec's own export / import / TDD decomposition, each
+//! The layout follows the export / import / TDD split, each
 //! file carrying its public `FerroEhrService` methods and the machinery behind
 //! them:
 //!
@@ -22,9 +20,6 @@
 //!   §Copying).
 //! - `tdd` — `I_TDD_SERVICE.import_tdd` / `import_tdds`: TDD XML to COMPOSITION
 //!   to validated commit.
-//!
-//! `I_MESSAGE_SERVICE` declares no functions (`i_message_service.adoc`), so it
-//! gets no code.
 //!
 //! # Cross-module wiring
 //!

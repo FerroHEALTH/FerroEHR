@@ -146,9 +146,8 @@ impl FerroEhrService {
         )
         .await?;
         if exists {
-            // NOTE: SM ehr_call_status_type.adoc declares
-            // composition_already_exists; this refusal is precisely a
-            // COMPOSITION-exists conflict.
+            // NOTE: no specification names this refusal's status token: our own
+            // design for a COMPOSITION-exists conflict.
             return Err(ServiceError::sm(
                 CallStatusType::CompositionAlreadyExists,
                 format!(

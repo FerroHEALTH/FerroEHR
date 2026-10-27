@@ -34,10 +34,8 @@
 //!    master06 §Contributions), returning its `OBJECT_VERSION_ID`. A validation
 //!    failure is `content_invalid` — never a silent partial COMPOSITION.
 //!
-//! NOTE: `i_tdd_service.adoc` declares no `import_tdds` signature, so it is a
-//! design-filled `(UUID, Vec<String>) -> Vec<String>` and all-or-nothing: every
-//! TDD is parsed and converted before any is committed, so one unconvertible TDD
-//! rejects the whole batch. A flagged extension of the SM interface.
+//! NOTE: no specification governs batch TDD import: our own design; every TDD
+//! converts before any commits, so one unconvertible TDD rejects the batch.
 //!
 //! This module reaches the templates layer through
 //! [`FerroEhrService::web_template_for`] / [`FerroEhrService::get_template_xml`]

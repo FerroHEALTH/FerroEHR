@@ -573,9 +573,9 @@ fn file_not_writable(path: &Path, err: &std::io::Error) -> SmError {
 /// but is not parseable as part of this archive format (a mangled manifest, a
 /// truncated or hand-edited segment).
 ///
-/// NOTE: `i_admin_dump_load.adoc` declares `file_not_writable` as the one error
-/// of both operations, and a corrupt entry says the same thing an unreadable
-/// one does, that `file_sys_loc` holds no readable archive.
+/// NOTE: no specification governs dump/load: our own design; a corrupt entry
+/// says the same thing an unreadable one does, that `file_sys_loc` holds no
+/// readable archive, so both are `file_not_writable`.
 ///
 /// The body names the entry, the caller-actionable fact about the caller's own
 /// archive, and carries neither the server path nor the serde diagnostic; both
@@ -2254,8 +2254,8 @@ async fn insert_ehr_row(tx: &mut PgConnection, ehr: &EhrRow) -> Result<(), Servi
         if let sqlx::Error::Database(db) = &e
             && db.constraint() == Some("uq_ehr_subject")
         {
-            // NOTE: SM ehr_call_status_type.adoc declares
-            // ehr_for_subject_already_exists for the one-EHR-per-subject rule.
+            // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
+            // id and namespace pair; the status token is our own.
             return ServiceError::sm(
                 CallStatusType::EhrForSubjectAlreadyExists,
                 format!(

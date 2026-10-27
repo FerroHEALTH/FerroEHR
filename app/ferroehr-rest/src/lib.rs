@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! openEHR **ITS-REST 1.1.0** server surface (`axum`) — the protocol adapter
-//! over the SM native API (`ferroehr-sm`).
+//! over the service layer (`ferroehr::service`).
 //!
 //! The crate is organised **per ITS-REST specification**, one folder per spec area:
 //!
@@ -17,7 +17,7 @@
 //! - [`formats`] — the Simplified Formats wire (FLAT / STRUCTURED media types).
 //! - [`smart`] — SMART App Launch (service discovery + scope enforcement),
 //!   config-gated, off by default.
-//! - [`system_log`] — the SM System Log component at the wire (the IHE ATNA
+//! - [`system_log`] — the audit log at the wire (the IHE ATNA
 //!   audit middleware + operation classification).
 //! - [`extensions`] — everything the specs do **not** govern, quarantined and
 //!   flagged: authentication + authorization ([`extensions::access`]),

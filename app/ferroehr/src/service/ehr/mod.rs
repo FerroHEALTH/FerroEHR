@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The EHR service (`service/ehr/`) — the openEHR **EHR component** of the
-//! platform crate, implementing the SM `I_EHR_*` interfaces as concrete
-//! `FerroEhrService` methods.
+//! The EHR service (`service/ehr/`), behind the ITS-REST EHR API.
 //!
-//! Layout mirrors the SM interface set one-file-per-interface (arch-overview
-//! `master06-design_of_the_ehr.adoc` × the SM EHR component,
-//! `docs/specs/openehr/SM/docs/openehr_platform/master05-ehr_service.adoc`):
+//! Concrete `FerroEhrService` methods, our own design; the interface names
+//! below borrow from the openEHR SM text, kept as reference and never an oracle.
+//!
+//! Layout, one file per concern (arch-overview
+//! `master06-design_of_the_ehr.adoc`):
 //!
 //! - `service`      — `I_EHR_SERVICE` (`i_ehr_service.adoc`): EHR create/get,
 //!   `EHR_SUMMARY`, subject lookup, folder-hierarchy reads.

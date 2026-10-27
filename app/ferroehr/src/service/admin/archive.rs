@@ -8,8 +8,8 @@
 //! `archive_ehrs` "Move selected EHRs to archival storage", `archive_parties`
 //! "Move selected Parties and relationships to archival storage".
 //!
-//! NOTE: `i_admin_archive.adoc` defines no storage form, so the tier and this
-//! movement are our own design — no openEHR spec governs storage tiering.
+//! NOTE: no openEHR spec governs archiving or storage tiering: the tier and
+//! this movement are our own design.
 //!
 //! Each call moves the named objects' `version` rows to the cold partition —
 //! one `UPDATE` of the partition key, with the `node` and `vo_attestation`
@@ -56,8 +56,8 @@ impl FerroEhrService {
     /// SM `archive_parties`: move each party's versioned object to the cold
     /// archival tier (idempotent).
     ///
-    /// NOTE: under `i_admin_archive.adoc` "Move selected Parties and
-    /// relationships", only the party VO is moved; the related
+    /// NOTE: no specification governs archiving: our own design; only the
+    /// party VO is moved, and the related
     /// `PARTY_RELATIONSHIP`s stay independently addressable versioned objects a
     /// caller archives in their own right.
     ///
@@ -78,9 +78,8 @@ impl FerroEhrService {
     /// reverse of [`Self::archive_ehrs`], and idempotent in the same way (an
     /// EHR with nothing archived restores nothing and succeeds).
     ///
-    /// NOTE: `i_admin_archive.adoc` declares only the two archive operations, so
-    /// this operation and its admin route (`POST /admin/archive/ehrs/restore`)
-    /// are our own extension.
+    /// NOTE: no specification governs archiving: this operation and its admin
+    /// route (`POST /admin/archive/ehrs/restore`) are our own extension.
     ///
     /// # Errors
     /// - `precondition_violation` (`400`) — any id is not a well-formed UUID.

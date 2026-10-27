@@ -298,9 +298,8 @@ async fn run(
             let tid = path_get(&parts, "terminology_id")?;
             let code = path_get(&parts, "code")?;
             let at_date = params::query_param(q, "at_date");
-            // NOTE: the SM `get_term.attributes` allow-list is not surfaced on
-            // the wire — its `Hash<String, String>` shape is ambiguous against
-            // the SM's `List<String>`, and the bundle provider ignores it.
+            // NOTE: no specification governs this extension: our own design; no
+            // attribute allow-list is surfaced on the wire.
             let extract = state.backend().get_term(&tid, &code, None, at_date).await?;
             Ok(negotiate::respond(h, ok, &extract))
         }

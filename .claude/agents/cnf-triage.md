@@ -28,14 +28,14 @@ You never edit files — findings only.
 ## The authority hierarchy (absolute, never re-litigate)
 
 1. **The RELEASED openEHR spec components are the oracle and are ALWAYS
-   right** — RM, BASE, AM/ADL, QUERY (AQL), TERM, ITS-XML, the **SM** (Service
-   Model — the operation semantics + the naming the case cores use), and the
+   right** — RM, BASE, AM/ADL, QUERY (AQL), TERM, ITS-XML, and the
    ITS-REST **docs text** (Release 1.1.0), all under `docs/specs/openehr/`.
    These have real releases; derive the correct behaviour from them first-hand.
-   SM and the ITS-REST docs text are BOTH oracles: SM anchors the operation,
-   ITS-REST binds it to the wire — an SM operation the released ITS-REST does
-   not yet realize is a genuine SM↔ITS realization gap (N/A-with-citation on
-   this ITS + an upstream alignment candidate), not a REFUTE. They are
+   The Service Model (SM) is NOT an oracle (owner ruling 2026-10-27,
+   superseding 2026-07-24): the case cores keep SM operation names as
+   identifiers only, and an SM operation the released ITS-REST does not
+   realize has no wire contract (N/A-with-citation on this ITS), never a
+   REFUTE and never a gap FerroEHR owes. The released components are
    never a suspect and never edited to make a run green.
    **STALLED — guides/reference only, NEVER the authority for a verdict (owner
    ruling 2026-07-24):** the CNF Platform Conformance Test Schedule
@@ -76,7 +76,7 @@ You never edit files — findings only.
    the run's `results.json` / transcript artifacts (`docs/conformance/
    <sut>/` for committed runs, or the run dir you are handed). What was
    sent, what came back, how it was classified.
-2. **Read the encoding.** The case core YAML (SM operation + outcome kinds
+2. **Read the encoding.** The case core YAML (operation identifier + outcome kinds
    only) and the operation binding it realized through (wire expectations +
    their cited sources — docs text first; a released-OAS citation is valid
    only for behaviour the docs text is silent on, and loses on conflict —
@@ -84,7 +84,7 @@ You never edit files — findings only.
    expects and WHY it claims to expect it.
 3. **Read the spec first-hand.** Open the governing sections under
    `docs/specs/openehr/` (the CNF case family text, the ITS-REST endpoint +
-   overview `Requests_and_responses`, the SM interface, the RM/QUERY
+   overview `Requests_and_responses`, the RM/QUERY
    semantics). Quote the normative sentence(s). Never adjudicate from
    memory, from EHRbase behaviour, or from what the catalogue asserts about
    itself.

@@ -22,8 +22,9 @@ Answer spec questions from the vendored normative text at
    - RM classes / invariants / versioning semantics → `RM/docs/`
      (`ehr`, `common`, `data_types`, `data_structures`, `demographic`, `support`)
    - Primitives, ISO 8601, intervals, identifiers (`OBJECT_VERSION_ID`, …) → `BASE/docs/`
-   - REST endpoints, status codes, headers, representations → `ITS-REST/` **and**
-     `SM/docs/openehr_platform/` (the abstract service model behind the REST API)
+   - REST endpoints, status codes, headers, representations → `ITS-REST/`
+     (the SM text under `SM/docs/openehr_platform/` is reference only, never
+     an oracle: owner ruling 2026-10-27)
    - AQL grammar/semantics/functions/result set → `QUERY/docs/AQL/`
    - Archetypes, templates, OPT 1.4, ADL, AOM constraints → `AM/docs/`
    - FLAT / STRUCTURED / SDT / web template → `SM/docs/serial_data_formats/`,

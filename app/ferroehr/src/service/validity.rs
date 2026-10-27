@@ -1,24 +1,20 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The **Validity Checking** component of the platform crate: the SM
-//! `I_VALIDITY_CHECKER` interface realized on [`FerroEhrService`]'s existing
-//! validation choke points.
+//! The **Validity Checking** component of the platform crate.
 //!
-//! Spec: `docs/specs/openehr/SM/docs/openehr_platform/
-//! master03-common_package.adoc` §Class Definitions and
-//! `UML/classes/i_validity_checker.adoc` (the two calls `definitions_valid` and
-//! `content_valid`, both over a `LOCATABLE`). The SM keeps `I_VALIDITY_CHECKER`
-//! in its `common` package rather than among the platform services, so its impl
-//! sits as the peer file `service/validity.rs`.
+//! The two calls `definitions_valid` and `content_valid`, both over a
+//! `LOCATABLE`, on [`FerroEhrService`]'s existing validation choke points. Our
+//! own design; the call names borrow from the openEHR SM text, kept as reference
+//! and never an oracle.
 //!
 //! Validation itself is owned by the validation register (`src/validation/`);
-//! this file is only the SM interface adapter over the shared choke points
+//! this file is only the adapter over the shared choke points
 //! `FerroEhrService::web_template_for` and
 //! `FerroEhrService::validate_for_commit`.
 //!
-//! NOTE: `i_validity_checker.adoc` §`definitions_valid` covers "archetype and
-//! template identifiers", so the check collects every `ARCHETYPED` declaration
+//! NOTE: no specification governs this: our own design; `definitions_valid`
+//! covers archetype and template identifiers, so the check collects every `ARCHETYPED` declaration
 //! in the content and resolves archetype ids against both stored repositories
 //! (ADL 1.4 + ADL 2) and template ids against both template stores.
 //! `content_valid` runs the same per-`Kind` structural validation every commit

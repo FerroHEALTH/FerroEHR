@@ -12,16 +12,15 @@
 //!   `base_types/master05-identification_package`; digital signature per RM
 //!   common master06 §Digital Signature lives inside it as
 //!   `versioning::signature`).
-//! - [`service`] — the SM Platform Service Model realization, one folder per
-//!   SM chapter (`SM/docs/openehr_platform/`).
+//! - [`service`] — the service layer, our own design: one folder per domain
+//!   area, judged by the wire specifications it serves.
 //! - [`aql`] — the AQL 1.1 execution engine (QUERY `master03-syntax`; the
 //!   lowering internals are our own design).
 //! - [`validation`] — archetype/template artefact validity along the AOM
 //!   constraint model (AM AOM 1.4 + AOM 2).
 //! - [`templates`] — OPT ingestion, the template store, and derived runtime
 //!   artefacts (BASE `resource/master02-resource_package`; AM OPT).
-//! - [`system_log`] — the SM System Log component ("IHE ATNA-compliant
-//!   system log", SM `master02-overview`; rendered per DICOM PS3.15 §A.5 over
+//! - [`system_log`] — the IHE ATNA audit log (rendered per DICOM PS3.15 §A.5 over
 //!   RFC 5424/5425 syslog).
 //!
 //! **Spec-silent internals and extensions** (no openEHR spec governs these —

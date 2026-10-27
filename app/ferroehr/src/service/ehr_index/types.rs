@@ -10,9 +10,8 @@
 /// The realization of the `OBJECT_REF` the EHR Index keys its associations
 /// by: `id` = `OBJECT_ID.value`, `namespace`, `type`.
 ///
-/// NOTE: the SM types the subject as a full `OBJECT_REF`; we carry the
-/// three fields the index actually keys on (`(id, namespace)` is the
-/// association key, `type` defaults to `PERSON` — the common MPI case).
+/// The three fields the index keys on: `(id, namespace)` is the association
+/// key, `type` defaults to `PERSON` (the common MPI case).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SubjectRef {
     /// The subject identifier value (`OBJECT_REF.id.value`).
@@ -100,8 +99,7 @@ pub struct ResourceStatus {
 /// `LOCATION_DESC` — "A descriptor containing location information for the
 /// EHR with which this descriptor is associated" (`location_desc.adoc`).
 ///
-/// NOTE: the SM class is an **empty stub** (no attributes defined) — a
-/// recorded spec defect; the designed contract `{system_id, uri?,
+/// NOTE: no specification governs this: our own design; `{system_id, uri?,
 /// description?}` makes the optional location descriptor carry usable data.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct LocationDesc {

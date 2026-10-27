@@ -119,10 +119,9 @@ impl FerroEhrService {
     #[expect(
         clippy::unused_self,
         clippy::unnecessary_wraps,
-        reason = "the SM interface declares this call on the service and in the \
-                  SM call-status `Result` shape; the protocol adapter invokes \
-                  every SM call uniformly, so neither is dropped because this \
-                  particular realization happens to be stateless and infallible"
+        reason = "every service call shares one method-on-the-service, `Result`-returning \
+                  shape the protocol adapter invokes uniformly, so neither is dropped because \
+                  this implementation happens to be stateless and infallible"
     )]
     pub fn valid_artefact(&self, adl2: &str) -> Result<bool, SmError> {
         Ok(matches!(
