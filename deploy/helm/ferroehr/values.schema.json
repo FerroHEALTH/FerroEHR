@@ -745,6 +745,22 @@
         }
       }
     },
+    "auth": {
+      "description": "The server's trust in its [auth] issuer.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "caExistingSecret": {
+          "description": "An existing Secret holding a PEM bundle of extra certificate authorities the server trusts for its [auth] issuer.",
+          "type": "string"
+        },
+        "caExistingSecretKey": {
+          "description": "Key within caExistingSecret carrying the PEM bundle.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "extraEnv": {
       "type": "array",
       "items": {

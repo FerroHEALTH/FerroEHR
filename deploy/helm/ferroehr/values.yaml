@@ -882,6 +882,18 @@ config:
   #   -----BEGIN PGP SIGNED MESSAGE-----
   #   ...
 
+# The server's trust in its `[auth]` issuer, beside the image's own roots.
+auth:
+  # -- Name of an existing Secret holding a PEM bundle of the certificate
+  # authorities the server trusts for its `[auth]` issuer (the metadata, the
+  # key set and, under introspection, the introspection and token calls),
+  # beside the image's own roots: for an issuer behind a private PKI. The chart
+  # mounts the key as a file and points `[auth] ca_file` at it. Empty trusts the
+  # image's roots alone.
+  caExistingSecret: ""
+  # -- Key within `caExistingSecret` carrying the PEM bundle.
+  caExistingSecretKey: ca.crt
+
 # -- Extra raw env vars (list of {name,value} or {name,valueFrom}). Escape hatch
 # for anything not surfaced above (array-valued keys via comma-separated values,
 # one-off FERROEHR_* overrides).
