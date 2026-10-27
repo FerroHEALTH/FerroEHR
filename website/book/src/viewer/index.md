@@ -85,9 +85,11 @@ brings you back to the sign-in card with the refusal under the password.
 ![Sign in](img/login/login.png)
 
 The viewer verifies the CDR and the OIDC issuer against the platform trust
-store, so an identity provider whose certificate comes from a private CA is
-trusted once that CA is in the image's system store or in a directory or file
-named by `SSL_CERT_DIR` or `SSL_CERT_FILE`.
+store and the extra certificate authorities its configuration names: a CDR or
+an identity provider whose certificate comes from a private CA is trusted once
+`cdr.tls.trust_roots_file` or `auth.oidc.tls.trust_roots_file` names a PEM
+bundle holding that CA, on Linux and macOS alike. A file that cannot be read,
+or holds no certificate, refuses the start.
 
 The viewer manages no accounts of its own: it authenticates you against the
 CDR (Basic) or your identity provider (OIDC), and there are no user, role, or
@@ -155,22 +157,31 @@ the server configuration.
 
 ## Configuration
 
-One TOML file (`ferroehr-viewer.toml`, read from the path
+One TOML file (`ferroehr-viewer.toml`, read from the path `--config` or
 `FERROEHR_VIEWER_CONFIG` names; with none named, no file is read), with
-`FERROEHR_VIEWER__<SECTION>__<KEY>` environment overrides. Unknown keys and
-unknown `FERROEHR_VIEWER_` variables are refused at startup. The CDR refuses
-only an unknown `FERROEHR__` override, because the viewer's variables share
-its prefix:
+`FERROEHR_VIEWER__<SECTION>__<KEY>` environment overrides and `--set
+key=value` pairs over both. Unknown keys and unknown `FERROEHR_VIEWER_`
+variables are refused at startup. The CDR refuses only an unknown `FERROEHR__`
+override, because the viewer's variables share its prefix:
 
 | Key | Default | Meaning |
 |---|---|---|
+| `server.listen` | `127.0.0.1:3000` (`0.0.0.0:3000` in the image) | The socket address the viewer listens on. `LEPTOS_SITE_ADDR` no longer sets it: a value other than `server.listen` refuses the start. |
+| `server.tls` | unset | The listener's certificate and key, as the CDR's [`[server.tls]`](../installation/config-server.md) table; unset, the viewer speaks plain HTTP behind a terminating proxy. |
+| `server.request_timeout_ms` / `body_limit_bytes` | `60000` / `16777216` | How long one request may take, and the largest body it may post (a template or composition posts whole). |
+| `server.drain_delay_ms` / `shutdown_timeout_ms` | `0` / `10000` | On `SIGTERM` the viewer withdraws readiness, waits the drain delay, then gives the requests in flight the shutdown bound. |
+| `server.*` | as the CDR's | The other keys of the CDR's [`[server]`](../installation/config-server.md) table (`header_read_timeout_ms`, `max_concurrent_requests`, `retry_after_s`, `trusted_proxies`, `forwarded_header`, `compression`, `compression_min_bytes`) apply as they do there. `base_path` and `caller_rate` are refused: the viewer's pages are served at `/`, and it mounts no per-caller limit. |
 | `cdr.base_url` | `http://localhost:8080` | The CDR origin (`cdr.base_path` is appended). |
 | `cdr.base_path` | `/ferroehr/rest/openehr/v1` | The CDR's ITS-REST base path. Mirror of the CDR's own `rest.base_path`: set the same value here when a deployment [shortens it](../installation/config-server.md#base_path-shortening-the-rest-base-path), or the viewer calls paths the CDR does not serve. The status document, the OpenAPI documents and the SMART discovery document are derived from it by the same rule the CDR uses. |
 | `cdr.request_timeout_secs` | `30` | Per-request timeout toward the CDR. |
+| `cdr.tls.trust_roots_file` | unset | A PEM bundle of certificate authorities trusted for the CDR beside the platform's roots, for a CDR behind a private PKI. |
+| `cdr.tls.client_identity` (`_file`) | unset | The client certificate chain and its private key, in one PEM, presented to a CDR that asks for mutual TLS. |
+| `cdr.tls.min_version` | `"1.3"` | The oldest TLS version the CDR client speaks; `"1.2"` lowers it. |
 | `cdr.management_base_url` | derived from `cdr.base_url` | The CDR's management surface, base path included; set it when the CDR serves management on its own internal listener (`management.port`) or under a renamed base path. Drives Server's [management tabs](server.md#health-metrics-and-logging). |
 | `auth.basic_enabled` | `true` | Offer the username/password form (validated against the CDR; held server-side). |
 | `auth.oidc.enabled` | `false` | Offer OIDC login (authorization code + PKCE). |
 | `auth.oidc.issuer` / `client_id` / `client_secret` (`_file`) / `public_base_url` / `scopes` | — | The OIDC client registration; `public_base_url` is the viewer's externally visible origin for the redirect URI. Enabling OIDC without issuer, client id and public base URL is a startup error. |
+| `auth.oidc.tls.trust_roots_file` / `client_identity` (`_file`) / `min_version` | unset / unset / `"1.3"` | The issuer client's TLS, as `cdr.tls`: extra certificate authorities for an issuer behind a private PKI, a client identity, and the oldest TLS version. |
 | `auth.oidc.resolve` | — | A `host=ip:port` override for the issuer host, for split-horizon DNS: the viewer reaches an issuer whose canonical name only resolves inside the container network, while browsers and tokens keep the canonical URL. |
 | `login.notice` | empty | Informational text on the sign-in card, line breaks preserved. A demo or evaluation deployment states its public credentials and usage expectations here. |
 | `login.links` | empty | Links under the sign-in card, each `{ label, href }` — an API reference, a documentation page. |
@@ -179,6 +190,29 @@ its prefix:
 | `session.secret` | empty | The session-cookie sealing key: base64 of at least 64 bytes (`openssl rand -base64 64`). Every replica of a scaled deployment must hold the same value. Empty = an ephemeral per-instance key, fine for exactly one replica. |
 | `session.secret_file` | — | Path to a file holding the sealing key; wins over `session.secret`. |
 | `ui.locale` | `en` | The language a page renders in when the browser's `Accept-Language` names none the viewer ships. English is the one language that ships today. A language is added as a catalog file under `app/ferroehr-viewer/locales/<tag>/` (the viewer's words) beside FerroUI's (the components' words) with no code change; the catalogs are embedded when the viewer is built, so a new one reaches a deployment in a rebuilt image, never at run time. A value that is no BCP 47 language tag is a startup error. |
+
+### Commands
+
+`ferroehr-viewer` (or `ferroehr-viewer serve`) serves until `SIGTERM` or
+`SIGINT`. `ferroehr-viewer config check` reads the configuration and builds
+the CDR and issuer clients, reading every TLS file, without reaching either.
+`ferroehr-viewer healthcheck`, the image's `HEALTHCHECK`, asks the viewer
+beside it for `GET /health/readiness` over the loopback (over TLS when
+`server.tls` is set) and exits `0` only on `200`. The viewer serves the
+family's health routes: `/health/liveness`, `/health/readiness` and `/health`.
+
+### Browser security headers
+
+Every response carries a Content-Security-Policy whose script source is a
+nonce minted for that response alone, with `'wasm-unsafe-eval'` for the
+WebAssembly and neither `'unsafe-inline'` nor `'unsafe-eval'`, beside
+`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+`Referrer-Policy: no-referrer` and `Cross-Origin-Opener-Policy: same-origin`.
+Every document is `Cache-Control: no-store`; the content-hashed bundle under
+`/pkg/` is `no-cache`, so a browser revalidates it. A request that is not a
+safe method (a form post, a server function call) is refused `403` unless the
+browser's `Sec-Fetch-Site` says it came from the viewer's own pages; without
+that header its `Origin` or `Referer` must name `auth.oidc.public_base_url`.
 
 The viewer is **stateless**: it has no database and keeps no local files of
 its own. Everything it shows, including how stored queries are grouped,

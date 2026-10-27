@@ -43,7 +43,7 @@ for row in "${ROWS[@]}"; do
     [[ -f "$required" ]] || { note "missing $required"; continue 2; }
   done
 
-  revision=$(grep -oE '[0-9a-f]{40}' "$crate/$provenance" | head -1 || true)
+  revision=$(grep -oE '[0-9a-f]{40}' "$crate/$provenance" | sed -n 1p || true)
   if [[ -z "$revision" ]]; then
     note "$crate/$provenance records no 40-hex upstream commit — the packaged attribution has nothing to pin to"
     continue
@@ -55,7 +55,7 @@ for row in "${ROWS[@]}"; do
   # The `include` list is a TOML array that may span lines; the attribution
   # file is matched by its exact path, so a glob covering it (never the case
   # today) would have to be spelled out here deliberately.
-  if ! sed -n '/^include *= *\[/,/\]/p' "$manifest" | grep -qF -- "\"$attribution\""; then
+  if ! grep -qF -- "\"$attribution\"" <<<"$(sed -n '/^include *= *\[/,/\]/p' "$manifest")"; then
     note "$manifest does not \`include\` $attribution — the attribution would not travel in the published package"
   fi
 done

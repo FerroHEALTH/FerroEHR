@@ -17,7 +17,7 @@ vendored specification text.
 | [`openehr-lang`](https://crates.io/crates/openehr-lang) | LANG 1.0.0 + 1.1.0 | The BMM meta-model and its P_BMM schema form, plus hand-written ODIN, BEL and Expression-Language readers |
 | [`openehr-query`](https://crates.io/crates/openehr-query) | QUERY 1.1.0 | AQL lexer, parser, typed AST with source spans, visitors, parameter binding, and canonical printer; the `federation` feature for the `FROM ENDPOINT` directive |
 | [`openehr-its`](https://crates.io/crates/openehr-its) | ITS-JSON, ITS-XML, ITS-REST 1.1.0 | Canonical JSON + XML codecs, the generated ITS-REST contract (axum server router, client, and an operation matcher for intermediaries), OPT 1.4 and AOM2 archetype XML |
-| [`openehr-sdt`](https://crates.io/crates/openehr-sdt) | ITS-REST 1.1.0 Simplified Formats + SMART App Launch | Simplified Formats (FLAT/STRUCTURED/Web Template, TDD import), a canonical PARTY built from a party Web Template, template-independent RM-instance validation, the SMART on openEHR scope grammar |
+| [`openehr-sdt`](https://crates.io/crates/openehr-sdt) | ITS-REST 1.1.0 Simplified Formats + SMART App Launch | Simplified Formats (FLAT/STRUCTURED/Web Template), a canonical PARTY built from a party Web Template, template-independent RM-instance validation, the SMART on openEHR scope grammar |
 
 ```toml
 [dependencies]

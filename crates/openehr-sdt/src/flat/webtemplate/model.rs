@@ -309,7 +309,7 @@ pub struct WebTemplateNode {
     /// template **does** constrain with a node-identified structural child
     /// (`ITEM_TREE[at0017]`, a `HISTORY`, …) which does not survive as a
     /// web-template tree child because it carries no leaf content and the
-    /// compactor drops it. Recorded so the FLAT/TDD composition builder and the
+    /// compactor drops it. Recorded so the FLAT composition builder and the
     /// example generator can synthesise the empty attribute with the
     /// *constrained* node id/type/name rather than a blind `at0001` placeholder —
     /// the constrained attribute must be filled by a conforming value (AOM 1.4

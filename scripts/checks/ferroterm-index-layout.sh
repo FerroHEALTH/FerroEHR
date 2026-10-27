@@ -59,7 +59,7 @@ if [[ "${1:-}" == "--self-test" ]]; then
   exit 0
 fi
 
-version="$(sed -nE 's#.*ghcr\.io/ferrohealth/ferroterm:([0-9]+\.[0-9]+\.[0-9]+)@sha256:.*#\1#p' "$compose" | head -n 1)"
+version="$(sed -nE 's#.*ghcr\.io/ferrohealth/ferroterm:([0-9]+\.[0-9]+\.[0-9]+)@sha256:.*#\1#p' "$compose" | sed -n 1p)"
 if [[ -z "$version" ]]; then
   echo "::error file=${compose#"$root"/}::no ghcr.io/ferrohealth/ferroterm:X.Y.Z@sha256 pin found" >&2
   exit 1

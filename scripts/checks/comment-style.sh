@@ -96,7 +96,7 @@ for f in "${files[@]}"; do
   # never saw (#2266). Narrowing that to `head -n 3` shrank the window without
   # closing it, and after #2318 it was closed only by accident: SPDX headers
   # happened to occupy those lines. An accident is not an enforcement (#2323).
-  head -n 1 "$f" 2>/dev/null | grep -q '^// @generated' && continue
+  grep -q '^// @generated' <<<"$(head -n 1 "$f" 2>/dev/null)" && continue
   out="$(awk -v NOTE_MAX="$NOTE_MAX" -v RUN_MAX="$RUN_MAX" '
     function flush_note() {
       if (note_len > NOTE_MAX)

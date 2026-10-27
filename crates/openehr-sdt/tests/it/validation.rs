@@ -973,7 +973,7 @@ fn problem_list_with_content(archetype_id: &str) -> Value {
 /// that slot").
 ///
 /// The commit seam is [`validate_composition`], which every write path (canonical
-/// JSON, FLAT, STRUCTURED, TDD) converges on after conversion to RM.
+/// JSON, FLAT, STRUCTURED) converges on after conversion to RM.
 #[test]
 fn slot_filler_outside_the_includes_regex_is_refused() {
     let wt = match idcr_problem_list() {

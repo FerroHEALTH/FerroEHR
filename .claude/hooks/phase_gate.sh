@@ -18,7 +18,7 @@ set -uo pipefail
 payload="$(cat)" || true
 
 # Do not loop: if we already blocked once this stop, let the session end.
-if printf '%s' "$payload" | grep -q '"stop_hook_active"[[:space:]]*:[[:space:]]*true'; then
+if grep -q '"stop_hook_active"[[:space:]]*:[[:space:]]*true' <<<"$payload"; then
   exit 0
 fi
 

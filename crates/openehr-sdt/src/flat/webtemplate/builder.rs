@@ -21,7 +21,7 @@
 //! boundaries follow from that:
 //!
 //! * RM-mandatory attributes the OPT leaves unconstrained are not injected as
-//!   nodes. The FLAT/TDD composition builders fill them on `RM ← FLAT/TDD` and
+//!   nodes. The FLAT composition builder fills them on `RM ← FLAT` and
 //!   [`crate::flat::validation`] enforces existence and occurrences, so the
 //!   produced COMPOSITION is RM-valid without the builder duplicating the
 //!   structure (cardinalities: openEHR RM `common` / `composition` /
@@ -1132,7 +1132,7 @@ fn admissible_children(
 
 // ── structural stubs (constrained-but-content-less structural attrs) ─────────
 
-/// The structural attributes whose value the FLAT/TDD composition builder and the
+/// The structural attributes whose value the FLAT composition builder and the
 /// example generator synthesise when the simplified form carries no content under
 /// them: the ENTRY `data`/`state`/`protocol`, `ACTION.description` (existence
 /// `1..1`, `RM/docs/UML/classes/org.openehr.rm.composition.action.adoc`), the

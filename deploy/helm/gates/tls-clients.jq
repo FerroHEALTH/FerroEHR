@@ -8,6 +8,7 @@ def container_of($name): deployment($name) | .spec.template.spec.containers[0];
 
 (container_of($release + "-viewer") | .env[]? | select(.name == "FERROEHR_VIEWER__CDR__BASE_URL") | "viewer-url " + .value),
 (container_of($release + "-viewer") | .env[]? | select(.name == "FERROEHR_VIEWER__CDR__MANAGEMENT_BASE_URL") | "viewer-management-url " + .value),
+(container_of($release + "-viewer") | .env[]? | select(.name == "FERROEHR_VIEWER__CDR__TLS__TRUST_ROOTS_FILE") | "viewer-trust-roots " + .value),
 (.[] | select(.kind == "ConfigMap" and .metadata.name == ($release + "-bridge")) | .data["config.toml"]
   | capture("\\[cdr\\]\\n(?:[ \\t]+[a-z_]+ = [^\\n]*\\n)*?[ \\t]+base_url = \"(?<url>[^\"]+)\"") | "bridge-url " + .url),
 (("viewer", "bridge") as $w

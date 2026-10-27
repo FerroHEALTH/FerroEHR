@@ -71,9 +71,9 @@ pub struct RestConfig {
     /// the listener's `server.body_limit_bytes`.
     ///
     /// The payloads differ by more than an order of magnitude: the routes that
-    /// accept bulk by design (operational-template upload, EHR-Extract import,
-    /// TDD import) take up to `server.body_limit_bytes`, and every other route
-    /// takes up to this value. Unset, every route takes the listener's limit.
+    /// accept bulk by design (operational-template upload and EHR-Extract import)
+    /// take up to `server.body_limit_bytes`, and every other route takes up to
+    /// this value. Unset, every route takes the listener's limit.
     /// A request over its limit is refused `413 Payload Too Large`, which the
     /// ITS-REST status table does not list but admits as an additional
     /// non-conflicting code (overview `Requests_and_responses.md` §HTTP status

@@ -98,7 +98,10 @@ spec:
             - name: FERROEHR_VIEWER__CDR__BASE_URL
               value: {{ include "ferroehr.cdrOrigin" . | quote }}
             {{- if eq (include "ferroehr.serverTls" .) "true" }}
-            {{- include "ferroehr.cdrTrustEnv" . | nindent 12 }}
+            # The CA that signed the server's certificate, beside the image's
+            # own roots (`[cdr.tls] trust_roots_file`).
+            - name: FERROEHR_VIEWER__CDR__TLS__TRUST_ROOTS_FILE
+              value: {{ printf "%s/ca.crt" (include "ferroehr.cdrCaDir" .) | quote }}
             {{- end }}
             {{- if .Values.config.management.enabled }}
             # The management surface as the CDR serves it: on its own port when
@@ -129,32 +132,37 @@ spec:
             - name: FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET_FILE
               value: /etc/ferroehr-viewer-secrets/client_secret
             {{- end }}
+            {{- if .Values.viewer.auth.oidc.caExistingSecret }}
+            # The issuer's CA, beside the image's own roots
+            # (`[auth.oidc.tls] trust_roots_file`).
+            - name: FERROEHR_VIEWER__AUTH__OIDC__TLS__TRUST_ROOTS_FILE
+              value: /etc/ferroehr-viewer-oidc-ca/ca.crt
+            {{- end }}
             {{- end }}
             {{- with .Values.viewer.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+          {{- /* The family's health routes, one per probe role
+                 (https://kubernetes.io/docs/concepts/workloads/pods/probes/):
+                 liveness answers while the process serves, readiness is
+                 withdrawn on SIGTERM so the drain takes the pod out of the
+                 Service before the listener closes, and the startup probe
+                 keeps a slow first boot from reading as a wedged process. */}}
           livenessProbe:
             httpGet:
-              path: /
+              path: /health/liveness
               port: http
             initialDelaySeconds: 10
             periodSeconds: 20
           readinessProbe:
             httpGet:
-              path: /
+              path: /health/readiness
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
-          {{- /* The viewer serves one page tree from one process, so `/` is
-                 both "the process answers" and "the process can serve" — the
-                 two probe roles genuinely coincide here, unlike the server's,
-                 where readiness owns the database. What it still needs is the
-                 third role: a startup probe, so a slow first render is not
-                 read as a wedged process and restarted mid-boot
-                 (https://kubernetes.io/docs/concepts/workloads/pods/probes/). */}}
           startupProbe:
             httpGet:
-              path: /
+              path: /health/readiness
               port: http
             periodSeconds: 5
             failureThreshold: 24
@@ -179,6 +187,11 @@ spec:
             {{- if eq (include "ferroehr.serverTls" .) "true" }}
             {{- include "ferroehr.cdrTrustVolumeMount" . | nindent 12 }}
             {{- end }}
+            {{- if and .Values.viewer.auth.oidc.enabled .Values.viewer.auth.oidc.caExistingSecret }}
+            - name: oidc-ca
+              mountPath: /etc/ferroehr-viewer-oidc-ca
+              readOnly: true
+            {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
@@ -192,6 +205,14 @@ spec:
         {{- end }}
         {{- if eq (include "ferroehr.serverTls" .) "true" }}
         {{- include "ferroehr.cdrTrustVolume" . | nindent 8 }}
+        {{- end }}
+        {{- if and .Values.viewer.auth.oidc.enabled .Values.viewer.auth.oidc.caExistingSecret }}
+        - name: oidc-ca
+          secret:
+            secretName: {{ .Values.viewer.auth.oidc.caExistingSecret }}
+            items:
+              - key: {{ .Values.viewer.auth.oidc.caExistingSecretKey }}
+                path: ca.crt
         {{- end }}
       {{- with .Values.viewer.nodeSelector }}
       nodeSelector:

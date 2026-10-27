@@ -73,6 +73,8 @@ jobs:
           set -euo pipefail
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "list=[$(seq 1 "$COUNT" | paste -sd, -)]" >> "$GITHUB_OUTPUT"
+      - name: The path classifier finds a match first and last in a 2000-path list
+        run: bash scripts/lib/change-lanes.sh --self-test
       - id: filter
         shell: bash
         # Context reaches the shell through env, never `${{ }}`-inline.
@@ -101,11 +103,12 @@ jobs:
           # properties file that decides the scan SCOPE, and this workflow
           # itself — a change to the lane's own recipe exercises the lane it
           # changes.
-          if echo "$changed" | grep -qE '^(app/|crates/|tools/|Cargo\.(toml|lock)$|rust-toolchain\.toml$|clippy\.toml$|sonar-project\.properties$|\.github/workflows/sonar\.yml$)'; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-          else
+          # The list is in scripts/lib/change-lanes.sh, matched from a
+          # here-string so a long change list cannot read as a miss (#4208).
+          result=$(bash scripts/lib/change-lanes.sh sonar <<<"$changed")
+          echo "$result" | tee -a "$GITHUB_OUTPUT"
+          if [ "$result" = "code=false" ]; then
             echo "No scanned code touched — the analysis will be skipped."
-            echo "code=false" >> "$GITHUB_OUTPUT"
           fi
 
   # ── Coverage, sharded (#3131) ──────────────────────────────────────────────

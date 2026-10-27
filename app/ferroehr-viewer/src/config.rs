@@ -15,13 +15,18 @@ use std::path::Path;
 
 use ferrohealth_config::loader::Loader;
 use ferrohealth_secret::file::read_secret_file;
+use ferrohealth_server::section::ServerSection;
+use ferrohealth_server::tls_client::TlsClientSection;
 use secrecy::ExposeSecret;
 use serde::Deserialize;
 
 /// The single configuration root for the viewer.
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ViewerConfig {
+    /// The listener, its TLS, the request bounds and the drain: the family's
+    /// `[server]` section.
+    pub server: ServerSection,
     /// The CDR connection.
     pub cdr: CdrConfig,
     /// Viewer login modes.
@@ -32,6 +37,26 @@ pub struct ViewerConfig {
     pub session: SessionConfig,
     /// The language the viewer renders in.
     pub ui: UiConfig,
+}
+
+impl Default for ViewerConfig {
+    fn default() -> Self {
+        Self {
+            // NOTE: no specification governs this: our own design; a page form posts
+            // whole templates and compositions, and a page may wait on several CDR calls.
+            server: ServerSection {
+                listen: std::net::SocketAddr::from(([127, 0, 0, 1], 3000)),
+                request_timeout_ms: 60_000,
+                body_limit_bytes: 16 * 1024 * 1024,
+                ..ServerSection::default()
+            },
+            cdr: CdrConfig::default(),
+            auth: AuthConfig::default(),
+            login: LoginConfig::default(),
+            session: SessionConfig::default(),
+            ui: UiConfig::default(),
+        }
+    }
 }
 
 /// `[ui]`: the language the viewer renders in.
@@ -80,6 +105,9 @@ pub struct CdrConfig {
     pub management_base_url: String,
     /// Per-request timeout in seconds.
     pub request_timeout_secs: u64,
+    /// The trust roots beside the platform's and the client identity the CDR
+    /// client presents (`[cdr.tls]`).
+    pub tls: TlsClientSection,
 }
 
 impl Default for CdrConfig {
@@ -89,6 +117,7 @@ impl Default for CdrConfig {
             base_path: "/ferroehr/rest/openehr/v1".to_owned(),
             management_base_url: String::new(),
             request_timeout_secs: 30,
+            tls: TlsClientSection::default(),
         }
     }
 }
@@ -191,6 +220,9 @@ pub struct OidcConfig {
     pub resolve: String,
     /// Additional scopes requested beyond `openid`.
     pub scopes: Vec<String>,
+    /// The trust roots beside the platform's and the client identity the
+    /// issuer client presents (`[auth.oidc.tls]`).
+    pub tls: TlsClientSection,
 }
 
 /// Session behaviour (a sealed cookie — no server-side store).
@@ -238,7 +270,12 @@ pub enum ConfigError {
     Invalid(String),
 }
 
-/// The loader of the `FERROEHR_VIEWER` namespace.
+/// The variable cargo-leptos names the listen address with, which
+/// `server.listen` replaced.
+const LEPTOS_SITE_ADDR: &str = "LEPTOS_SITE_ADDR";
+
+/// The loader of the `FERROEHR_VIEWER` namespace, with the viewer's own
+/// defaults for `[server]` under the operator's values.
 ///
 /// The Compose parameters `FERROEHR_VIEWER_PORT` and `FERROEHR_VIEWER_IMAGE`
 /// can reach the container environment, so the sweep passes them.
@@ -247,21 +284,24 @@ pub enum ConfigError {
 /// [`ConfigError::Load`] if the prefix is refused, which it never is.
 pub fn loader() -> Result<Loader, ConfigError> {
     Ok(Loader::new("FERROEHR_VIEWER")?
+        .defaults("server", &ViewerConfig::default().server)?
         .reserve("FERROEHR_VIEWER_PORT")
         .reserve("FERROEHR_VIEWER_IMAGE"))
 }
 
-/// Load the viewer configuration: defaults < file < environment.
+/// Load the viewer configuration: defaults < file < environment < `sets`.
 ///
-/// The file is the one `FERROEHR_VIEWER_CONFIG` names; with none named, no
-/// file is read. Env overrides use the uniform grammar
-/// `FERROEHR_VIEWER__<SECTION>__<KEY>` (e.g. `FERROEHR_VIEWER__CDR__BASE_URL`).
+/// The file is `path`, or the one `FERROEHR_VIEWER_CONFIG` names; with none
+/// named, no file is read. Env overrides use the uniform grammar
+/// `FERROEHR_VIEWER__<SECTION>__<KEY>` (e.g. `FERROEHR_VIEWER__CDR__BASE_URL`),
+/// and `sets` are the `--set key=value` pairs.
 ///
 /// # Errors
 /// Returns a [`ConfigError`] on an unreadable/invalid file, an unknown key
-/// or variable (strict deserialization), a type mismatch, or an unreadable
-/// `*_file` secret.
-pub fn load() -> Result<ViewerConfig, ConfigError> {
+/// or variable (strict deserialization), a type mismatch, an unreadable
+/// `*_file` secret, or a value the types cannot refuse (a `LEPTOS_SITE_ADDR`
+/// other than `server.listen`, `server.base_path`, `server.caller_rate`).
+pub fn load(path: Option<&Path>, sets: &[(String, String)]) -> Result<ViewerConfig, ConfigError> {
     // NOTE: a variable that is not UTF-8 cannot spell a `FERROEHR_VIEWER_` name, so the
     // sweep may leave it out; the loader reads the environment itself.
     let environment: BTreeMap<String, String> = std::env::vars_os()
@@ -269,8 +309,8 @@ pub fn load() -> Result<ViewerConfig, ConfigError> {
         .collect();
     let viewer_loader = loader()?;
     sweep(&viewer_loader, &environment)?;
-    let loaded = viewer_loader.load::<ViewerConfig>(None)?;
-    finish(loaded.settings().clone())
+    let loaded = viewer_loader.load_with::<ViewerConfig>(path, sets)?;
+    finish(loaded.settings().clone(), &environment)
 }
 
 /// Refuses every variable under `FERROEHR_VIEWER_` that is neither an
@@ -301,11 +341,42 @@ pub fn load_sources(
     let viewer_loader = loader()?;
     sweep(&viewer_loader, env)?;
     let loaded = viewer_loader.load_sources::<ViewerConfig>(file, None, env)?;
-    finish(loaded.settings().clone())
+    finish(loaded.settings().clone(), env)
 }
 
 /// Resolves the `*_file` secrets and checks the values the types cannot.
-fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
+///
+/// `environment` is read for [`LEPTOS_SITE_ADDR`] alone: a value that names
+/// another address than `server.listen` refuses the start, so a deployment
+/// that still sets it learns where the address moved.
+fn finish(
+    mut cfg: ViewerConfig,
+    environment: &BTreeMap<String, String>,
+) -> Result<ViewerConfig, ConfigError> {
+    if let Some(site_addr) = environment.get(LEPTOS_SITE_ADDR)
+        && site_addr.parse::<std::net::SocketAddr>().ok() != Some(cfg.server.listen)
+    {
+        return Err(ConfigError::Invalid(format!(
+            "{LEPTOS_SITE_ADDR} `{site_addr}` no longer sets the listen address: set server.listen \
+             (FERROEHR_VIEWER__SERVER__LISTEN), now `{}`, and unset {LEPTOS_SITE_ADDR}",
+            cfg.server.listen
+        )));
+    }
+    // NOTE: no specification governs this: our own design; the viewer's pages and links
+    // are rooted at `/`, and it mounts no per-caller limit, so neither key would apply.
+    if !cfg.server.base_path.as_str().is_empty() {
+        return Err(ConfigError::Invalid(
+            "server.base_path is not supported by the viewer, whose pages are served at `/`"
+                .to_owned(),
+        ));
+    }
+    if cfg.server.caller_rate.is_some() {
+        return Err(ConfigError::Invalid(
+            "server.caller_rate is not supported by the viewer, which mounts no per-caller limit"
+                .to_owned(),
+        ));
+    }
+
     if !cfg.auth.oidc.client_secret_file.is_empty() {
         let secret = read_secret_file(
             "auth.oidc.client_secret",
@@ -347,7 +418,31 @@ fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
         }
     }
 
+    if !cfg.auth.oidc.public_base_url.is_empty() {
+        public_origin(&cfg.auth.oidc.public_base_url)?;
+    }
+
     Ok(cfg)
+}
+
+/// The viewer's public URL as the same-origin check reads it.
+///
+/// # Errors
+/// [`ConfigError::Invalid`] when `public_base_url` is no URL or has no
+/// origin of its own (RFC 6454 §4).
+pub fn public_origin(public_base_url: &str) -> Result<url::Url, ConfigError> {
+    let parsed = url::Url::parse(public_base_url).map_err(|_unparsed| {
+        ConfigError::Invalid(format!(
+            "auth.oidc.public_base_url `{public_base_url}` is no URL"
+        ))
+    })?;
+    if parsed.origin().is_tuple() {
+        Ok(parsed)
+    } else {
+        Err(ConfigError::Invalid(format!(
+            "auth.oidc.public_base_url `{public_base_url}` has no origin of its own"
+        )))
+    }
 }
 
 #[cfg(test)]
@@ -447,6 +542,96 @@ mod tests {
         let stray = BTreeMap::from([("FERROEHR_VIEWER_CDR_BASE_URL".to_owned(), "x".to_owned())]);
         let err = load_sources(None, &stray).unwrap_err().to_string();
         assert!(err.contains("FERROEHR_VIEWER_CDR_BASE_URL"), "{err}");
+    }
+
+    /// `[server]` starts from the viewer's own defaults, and a partial table
+    /// keeps them for every key it does not name.
+    #[test]
+    fn the_server_section_layers_over_the_viewers_defaults() {
+        let defaults = load_sources(None, &BTreeMap::new()).unwrap();
+        assert_eq!("127.0.0.1:3000", defaults.server.listen.to_string());
+        assert_eq!(16 * 1024 * 1024, defaults.server.body_limit_bytes);
+        assert_eq!(60_000, defaults.server.request_timeout_ms);
+
+        let env = BTreeMap::from([(
+            "FERROEHR_VIEWER__SERVER__LISTEN".to_owned(),
+            "0.0.0.0:3000".to_owned(),
+        )]);
+        let partial = load_sources(Some("[server]\ndrain_delay_ms = 5000\n"), &env).unwrap();
+        assert_eq!("0.0.0.0:3000", partial.server.listen.to_string());
+        assert_eq!(5_000, partial.server.drain_delay_ms);
+        assert_eq!(16 * 1024 * 1024, partial.server.body_limit_bytes);
+    }
+
+    /// `LEPTOS_SITE_ADDR` no longer binds: one naming another address than
+    /// `server.listen` refuses the start, naming the key that replaced it.
+    #[test]
+    fn a_leptos_site_addr_other_than_the_listen_address_is_refused() {
+        let other = BTreeMap::from([("LEPTOS_SITE_ADDR".to_owned(), "0.0.0.0:8081".to_owned())]);
+        let refused = load_sources(None, &other).unwrap_err().to_string();
+        assert!(refused.contains("server.listen"), "{refused}");
+        assert!(refused.contains("LEPTOS_SITE_ADDR"), "{refused}");
+
+        let same = BTreeMap::from([("LEPTOS_SITE_ADDR".to_owned(), "127.0.0.1:3000".to_owned())]);
+        assert!(
+            load_sources(None, &same).is_ok(),
+            "cargo-leptos's own value"
+        );
+    }
+
+    /// The keys of `[server]` the viewer cannot apply refuse the start.
+    #[test]
+    fn a_base_path_or_a_caller_rate_is_refused() {
+        for (file, key) in [
+            ("[server]\nbase_path = \"/viewer\"\n", "server.base_path"),
+            (
+                "[server.caller_rate]\nrequests_per_second = 5\nburst = 10\n",
+                "server.caller_rate",
+            ),
+        ] {
+            let refused = load_sources(Some(file), &BTreeMap::new())
+                .unwrap_err()
+                .to_string();
+            assert!(refused.contains(key), "{refused}");
+        }
+    }
+
+    /// The outbound TLS tables of the CDR and the issuer are the family's.
+    #[test]
+    fn the_cdr_and_issuer_tls_tables_parse() {
+        let parsed = load_sources(
+            Some(
+                "[cdr.tls]\ntrust_roots_file = \"/run/cdr-ca.pem\"\nmin_version = \"1.2\"\n\n[auth.oidc.tls]\ntrust_roots_file = \"/run/issuer-ca.pem\"\n",
+            ),
+            &BTreeMap::new(),
+        )
+        .unwrap();
+        assert_eq!(
+            Some(std::path::PathBuf::from("/run/cdr-ca.pem")),
+            parsed.cdr.tls.trust_roots_file
+        );
+        assert_eq!(
+            Some(std::path::PathBuf::from("/run/issuer-ca.pem")),
+            parsed.auth.oidc.tls.trust_roots_file
+        );
+        assert!(
+            load_sources(Some("[cdr.tls]\nca_file = \"x\"\n"), &BTreeMap::new()).is_err(),
+            "an unknown key of the table is refused"
+        );
+    }
+
+    /// A public URL with no origin of its own cannot anchor the same-origin
+    /// check.
+    #[test]
+    fn a_public_url_without_an_origin_is_refused() {
+        for url in ["not a url", "data:text/plain,viewer"] {
+            let env = BTreeMap::from([(
+                "FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL".to_owned(),
+                url.to_owned(),
+            )]);
+            let refused = load_sources(None, &env).unwrap_err().to_string();
+            assert!(refused.contains("auth.oidc.public_base_url"), "{refused}");
+        }
     }
 
     #[test]

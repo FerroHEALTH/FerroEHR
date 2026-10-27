@@ -1388,7 +1388,7 @@ fn delimited_regex_body(entry: &str) -> Option<&str> {
     })
 }
 
-/// The structural attributes whose value the FLAT/TDD composition builder and the
+/// The structural attributes whose value the FLAT composition builder and the
 /// example generator synthesise when the simplified form carries no content under
 /// them (the ENTRY `data`/`state`/`protocol`, `ACTION.description`, the EVENT
 /// `data`/`state` and `ACTIVITY.description`; RM `composition`, RM

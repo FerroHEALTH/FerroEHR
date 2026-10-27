@@ -1219,6 +1219,15 @@
                 "publicBaseUrl": {
                   "description": "The viewer's externally-reachable base URL, used to build the OIDC redirect.",
                   "type": "string"
+                },
+                "caExistingSecret": {
+                  "description": "An existing Secret holding a PEM bundle of extra certificate authorities the viewer trusts for the issuer.",
+                  "type": "string"
+                },
+                "caExistingSecretKey": {
+                  "description": "Key within caExistingSecret carrying the PEM bundle.",
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }

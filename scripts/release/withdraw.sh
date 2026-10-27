@@ -125,7 +125,7 @@ chart_from_notes() {
   local version="$1"
   # shellcheck disable=SC2016 # the backticks are Markdown in the notes, never expanded
   look gh release view "v$version" --repo "$REPO" --json body --jq .body 2> /dev/null \
-    | sed -n 's/^| chart | `oci:[^`]*` version `\([^`]*\)` |.*/\1/p' | head -n 1 || true
+    | sed -n 's/^| chart | `oci:[^`]*` version `\([^`]*\)` |.*/\1/p' | sed -n 1p || true
 }
 
 run() {

@@ -49,6 +49,8 @@ pub mod auth;
 pub mod builder;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod chart_model;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod cli;
 pub mod clinical;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod deployment;

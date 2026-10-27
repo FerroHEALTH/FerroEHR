@@ -181,6 +181,8 @@ jobs:
             echo "ui_count=$UI_COUNT"
             echo "ui_list=[$(seq 1 "$UI_COUNT" | paste -sd, -)]"
           } >> "$GITHUB_OUTPUT"
+      - name: The path classifier finds a match first and last in a 2000-path list
+        run: bash scripts/lib/change-lanes.sh --self-test
       - id: filter
         shell: bash
         env:
@@ -228,146 +230,11 @@ jobs:
             exit 0
           fi
           echo "Changed files:"; echo "$changed"
-          # Every output is written here for the reason the fallback above
-          # states: an unset output reads as `false` downstream and a skipped
-          # job counts as satisfied, so writing only `code` would leave the
-          # other gates unset rather than deliberately false.
-          if [ -z "$changed" ]; then
-            {
-              echo "code=false"
-              echo "viewer=false"
-              echo "server_dockerfile=false"
-              echo "helm=false"
-              echo "chart_boot=false"
-              echo "deploy=false"
-              echo "workflows=false"
-              echo "vex=false"
-              echo "msrv=false"
-            } >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # scripts/ is NOT build-relevant by default: the cargo jobs never
-          # execute repo scripts, so a new watcher/site/release script must
-          # not cost a Rust run. Allowlist the ONLY scripts a code-gated CI
-          # job actually executes (the drift check, the e2e harness, and the
-          # frozen-lockfile cargo-leptos wrapper the viewer build runs).
-          # The deployment harness drives the composed stack, so it is relevant
-          # to its own scripts, the compose files, and the server image — and to
-          # the code, since what it probes IS the server.
-          if echo "$changed" | grep -qE '^(scripts/deploy-probe|docker-compose|docker/)'; then
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-          fi
-          code_relevant=$(echo "$changed" | grep -vE '^scripts/' || true)
-          if echo "$changed" | grep -qE '^scripts/(checks/codegen-drift|ui-e2e|cargo-leptos)\.sh$'; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-          # `corpus/` is the shared vendored breadth corpus the crate and
-          # application suites read (it moved out of `tools/` with the
-          # conformance instrument, #2811) — a corpus change is a change to what
-          # the test job exercises, so it must not skip the cargo jobs.
-          elif echo "$code_relevant" | grep -qE '^(app/|crates/|tools/|corpus/|\.cargo/|\.config/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|rustfmt\.toml$|clippy\.toml$|deny\.toml$)' ; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No build-relevant paths touched — cargo jobs will be skipped."
-            echo "code=false" >> "$GITHUB_OUTPUT"
-          fi
-          # MSRV trigger: `cargo hack check --rust-version` compiles the whole
-          # workspace under every feature permutation to verify one manifest
-          # field, and it cost 556 s on every pull request (#3120). The property
-          # it checks — that no crate needs more than the declared
-          # `rust-version` — can only change when a manifest declares a
-          # different floor, a dependency arrives or moves, or the toolchain
-          # itself does. Source edits cannot change it: the compiler that
-          # accepts them is the same one either way, and a source-level MSRV
-          # violation is `clippy::incompatible_msrv`, which is deny-tier on
-          # every cargo lane.
-          if echo "$changed" | grep -qE '(^|/)Cargo\.toml$|^Cargo\.lock$|^rust-toolchain\.toml$|^clippy\.toml$|^\.github/workflows/ci\.yml$'; then
-            echo "msrv=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "msrv=false" >> "$GITHUB_OUTPUT"
-          fi
-          # Viewer E2E trigger: the viewer crate, its harness, the
-          # composed stack it drives — AND the inputs to the CDR artifact the
-          # battery runs against. `Cargo.lock`, `docker/Dockerfile` and this
-          # workflow itself were missing (issue #335): a dependency bump, a
-          # Dockerfile change, or a change to the job's own build recipe each
-          # alter what is under test, and without them a build/caching-only PR
-          # could not even run the job it changes.
-          # The boot-installed POLICY inputs are here for the same reason
-          # (issue #3190): the battery is the only lane that runs the real
-          # binary on the real shipped configuration, and the unit suites
-          # cannot see a default posture at all — they build the service with
-          # `FerroEhrService::new()`, which installs no policy. A privacy
-          # default that refused the server's own example composition reached
-          # main because both PRs that produced it missed this filter.
-          # Authentication and authorization are in it for the same reason: the
-          # battery signs in through Keycloak and seeds as the dev stack's Basic
-          # users, so the access layer of the REST adapter, its config view and
-          # the dev configuration those users live in decide whether it can run.
-          if echo "$changed" | grep -qE '^(app/ferroehr-viewer/|app/ferroehr-server/src/|app/ferroehr/src/privacy/|app/ferroehr/src/config/|app/ferroehr-rest/src/extensions/access/|app/ferroehr-rest/src/smart/|app/ferroehr-rest/src/config\.rs$|app/ferroehr-rest/src/router\.rs$|docker/ferroehr\.dev\.toml$|app/ferroehr/assets/ferroehr\.default\.toml$|scripts/ui-e2e\.sh$|scripts/cargo-leptos\.sh$|docker-compose\.yml$|docker-compose\.override\.yml$|docker-compose\.dev\.yml$|docker-compose\.keycloak\.yml$|docker/Dockerfile$|docker/viewer/|docker/keycloak/|docker/postgres/|Cargo\.lock$|\.github/workflows/ci\.yml$)' ; then
-            echo "viewer=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "viewer=false" >> "$GITHUB_OUTPUT"
-          fi
-          # The compose/local image target (docker/Dockerfile
-          # `runtime-from-source`) is not built by ui-e2e, which packages
-          # the shipped `runtime-prebuilt` target instead — so that target gets
-          # its own job, gated on the files whose change can break it: the
-          # Dockerfile and the build-context ignore list, which decides what the
-          # builder stage can even see.
-          if echo "$changed" | grep -qE '^(docker/Dockerfile|\.dockerignore)$' ; then
-            echo "server_dockerfile=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "server_dockerfile=false" >> "$GITHUB_OUTPUT"
-          fi
-          # Helm chart gate (#2110): the chart, its CI value overlays, the golden
-          # renders, the validator, the helm pin — and this workflow itself, so a
-          # change to the job's own recipe exercises the job it changes.
-          if echo "$changed" | grep -qE '^(deploy/helm/|\.github/workflows/ci\.yml$)' ; then
-            echo "helm=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "helm=false" >> "$GITHUB_OUTPUT"
-          fi
-          # Chart BOOT gate (#2159), a strict superset of the helm filter: the
-          # overlays are only half of the pair under test, the other half being
-          # the configuration vocabulary they are written against. Both sides
-          # can break it — the overlays went un-bootable because the SERVER
-          # tightened validation (an auth mechanism became mandatory, the HMAC
-          # floor arrived, a password hash started being parsed at boot) while
-          # the values files stood still and every render stayed green. So a
-          # change to the config tree, its validators or the annotated template
-          # that is the schema of record re-boots the overlays too. The
-          # Dockerfile is in because it decides what the binary is packaged into,
-          # and report.rs because a production overlay's posture is read from
-          # `ferroehr report`.
-          if echo "$changed" | grep -qE '^(deploy/helm/|\.github/workflows/ci\.yml$|docker/Dockerfile$|app/ferroehr/src/config/|app/ferroehr/assets/ferroehr\.default\.toml$|app/ferroehr-rest/src/config\.rs$|app/ferroehr/src/report\.rs$)' ; then
-            echo "chart_boot=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "chart_boot=false" >> "$GITHUB_OUTPUT"
-          fi
-          # Recipe gate (#2373): this workflow itself. Consumed by the four
-          # cargo lanes whose recipe decides WHAT is verified — clippy,
-          # feature-combos, deny and test — each of which ORs it into its
-          # `if:` beside `code`. Deliberately narrower than adding this file to
-          # the `code` allowlist, which would re-run every cargo job on a
-          # comment fix; deliberately wider than nothing, which is what let a
-          # workflow-only PR edit a lane's recipe without ever running it.
-          if echo "$changed" | grep -qE '^\.github/workflows/ci\.yml$' ; then
-            echo "workflows=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "workflows=false" >> "$GITHUB_OUTPUT"
-          fi
-          # VEX gate (#2370): the published OpenVEX documents and the two
-          # checks that read them, all enforced INSIDE the `deny` job. Only
-          # `deny.toml` is in the code allowlist, so without this a PR editing
-          # a VEX justification or its check script skipped the job that would
-          # have refused it.
-          if echo "$changed" | grep -qE '^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions|vex-linkage)\.sh$)' ; then
-            echo "vex=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "vex=false" >> "$GITHUB_OUTPUT"
-          fi
+          # One line per lane, false included: an unset output reads as
+          # `false` downstream and a skipped job counts as satisfied, so every
+          # gate is written deliberately. The lanes and their reasons are in
+          # the script, which matches from a here-string (#4208).
+          bash scripts/lib/change-lanes.sh ci <<<"$changed" | tee -a "$GITHUB_OUTPUT"
 
   # ── Required for code changes: formatting ───────────────────────────────────
   fmt:
@@ -578,6 +445,10 @@ jobs:
         run: bash scripts/checks/shellcheck-lane.sh
       - name: The guards' changed-path helper reads a branch's own change from the merge base
         run: bash scripts/lib/changed-paths.sh --self-test
+      - name: The early-reader check refuses head and grep -q, -m or -l on a pipe, and allows the here-string forms
+        run: bash scripts/checks/pipe-early-exit.sh --self-test
+      - name: No workflow or shell program feeds a reader that stops early from a pipe
+        run: bash scripts/checks/pipe-early-exit.sh
       - name: The GitHub API retry rides out a 5xx burst, blames the API when it gives up and refuses a 4xx at once
         run: bash scripts/lib/gh-retry.sh --self-test
       - name: The dangerous-command hook refuses and allows the shapes it documents
@@ -1518,6 +1389,8 @@ jobs:
         with:
           components: rustfmt
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: The drift check reads exactly the generated files, hand-written siblings excluded
+        run: bash scripts/checks/codegen-drift.sh --self-test
       - name: Regenerate and diff
         run: bash scripts/checks/codegen-drift.sh
       # The committed codegen inputs reproduce byte-identically from their
@@ -1941,7 +1814,7 @@ jobs:
           set -euo pipefail
           channel=$(grep -E '^channel' rust-toolchain.toml | sed -E 's/.*"(.*)".*/\1/')
           have=$(rustc --version | awk '{print $2}')
-          arg=$(grep -E '^ARG RUST_VERSION=' docker/Dockerfile | head -1 | cut -d= -f2)
+          arg=$(grep -E '^ARG RUST_VERSION=' docker/Dockerfile | sed -n 1p | cut -d= -f2)
           echo "rust-toolchain=$channel  container-rustc=$have  Dockerfile ARG=$arg"
           if [ "$channel" != "$have" ]; then
             echo "::error::Job container rustc ($have) != rust-toolchain.toml ($channel). Bump the container: tag."
@@ -2441,7 +2314,8 @@ jobs:
   # PACKAGED content of the published crates/* members must bump the lockstep
   # 0.0.x crate version in the same PR — published versions are immutable
   # (.claude/rules/crates-publishing.md; local twin:
-  # .claude/hooks/crate_version_bump_guard.sh). Escape hatch: the
+  # .claude/hooks/crate_version_bump_guard.sh). The check is
+  # scripts/checks/crate-version-guard.sh, which runs locally too. Escape hatch: the
   # `no-crate-bump` label for diffs that provably do not alter packaged bytes.
   #
   # PULL-REQUEST ONLY, deliberately (#2777): it compares the pull request's
@@ -2475,78 +2349,10 @@ jobs:
             echo "no-crate-bump label set — guard skipped."; exit 0
           fi
           bash scripts/checks/crate-packaged-paths.sh --self-test
-          # The pull request's own change, from its merge base with main
-          # (#4129): a branch behind main is not judged on main's paths or
-          # credited with main's bump.
-          . scripts/lib/changed-paths.sh
-          FORK=$(change_fork "$BASE" "$HEAD")
-          changed=$(change_paths "$BASE" "$HEAD")
-          packaged=0
-          # The packaged-path scope is the script the local hook also calls,
-          # so the two guards cannot drift (#3573: the bare LICENSE of the
-          # BUSL crates passed both inline copies).
-          verdict=0
-          echo "$changed" | bash scripts/checks/crate-packaged-paths.sh || verdict=$?
-          case "$verdict" in
-            0) packaged=1 ;;
-            1) ;;
-            *) echo "::error::scripts/checks/crate-packaged-paths.sh failed (exit $verdict)." >&2; exit 1 ;;
-          esac
-          # A ROOT [workspace.dependencies] version change alters the PACKAGED
-          # manifest of every crates/* member consuming the entry with
-          # `workspace = true` (cargo package renders the concrete
-          # requirement) without touching any crates/* file — the path scope
-          # alone let PR #3021 through (#3036).
-          if [ "$packaged" -eq 0 ] && echo "$changed" | grep -qx 'Cargo.toml'; then
-            table=$(git show "$HEAD:Cargo.toml" | awk '/^\[workspace\.dependencies\]/{f=1;next} /^\[/{f=0} f && /^[A-Za-z0-9_-]+[. =]/{print $1}' | sed 's/\.workspace$//' | sort -u)
-            # `|| true`: a Cargo.toml diff touching no entry (a comment) matches
-            # nothing, and grep's exit 1 would end the job silently under pipefail.
-            names=$(git diff "$FORK" "$HEAD" -- Cargo.toml | { grep -E '^[+-][A-Za-z0-9_-]+(\.workspace)?[[:space:]]*=' || true; } | sed -E 's/^[+-]//; s/[[:space:]]*=.*//; s/\.workspace$//' | sort -u)
-            for name in $names; do
-              echo "$table" | grep -qx "$name" || continue
-              if git grep -lE "^${name}(\.workspace)?[[:space:]]*=" "$HEAD" -- 'crates/openehr-*/Cargo.toml' >/dev/null 2>&1; then
-                echo "workspace dependency '$name' changed and crates/* members consume it — packaged requirements move."
-                packaged=1
-                break
-              fi
-            done
-          fi
-          if [ "$packaged" -eq 0 ]; then
-            echo "No packaged crate content touched — guard not required."; exit 0
-          fi
-          old=$(git show "$FORK:crates/openehr-base/Cargo.toml" | grep -m1 '^version = ')
-          new=$(git show "$HEAD:crates/openehr-base/Cargo.toml" | grep -m1 '^version = ')
-          if [ "$old" = "$new" ]; then
-            echo "::error::This PR changes packaged content of the published crates/* members but does not bump the lockstep 0.0.x crate version (bump all nine 'version' fields + the internal version requirements — .claude/rules/crates-publishing.md), and does not carry the 'no-crate-bump' label." >&2
-            exit 1
-          fi
-          # Lockstep: all nine crates carry ONE version, and every internal
-          # dependency requirement names exactly that version.
-          #
-          # fuzz/ is its OWN workspace (never a root member), so its lock records
-          # the nine by path dependency and goes stale silently when the bump
-          # lands — the fuzz lane then builds against manifests the lock
-          # contradicts, and `--locked` there means nothing (issue #2762).
-          ver=$(echo "$new" | sed -E 's/version = "([^"]+)".*/\1/')
-          fuzz_lock=$(git show "$HEAD:fuzz/Cargo.lock")
-          for c in base rm am adl term lang query its sdt; do
-            v=$(git show "$HEAD:crates/openehr-$c/Cargo.toml" | grep -m1 '^version = ' | sed -E 's/version = "([^"]+)".*/\1/')
-            if [ "$v" != "$ver" ]; then
-              echo "::error::crates/openehr-$c is at $v but the lockstep version is $ver — bump all nine together." >&2
-              exit 1
-            fi
-            locked=$(awk -v n="\"openehr-$c\"" '$1 == "name" && $3 == n { hit = 1; next } hit && $1 == "version" { gsub(/"/, "", $3); print $3; exit }' <<< "$fuzz_lock")
-            if [ "$locked" != "$ver" ]; then
-              echo "::error::fuzz/Cargo.lock records openehr-$c ${locked:-nothing} but the lockstep version is $ver — refresh it with 'cargo update --manifest-path fuzz/Cargo.toml --workspace' and commit the lock in this PR." >&2
-              exit 1
-            fi
-          done
-          reqs=$(git grep -hoE 'path = "\.\./openehr-[a-z]+", version = "[0-9.]+"' "$HEAD" -- 'crates/*/Cargo.toml' | grep -oE 'version = "[0-9.]+"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sort -u)
-          if [ "$reqs" != "$ver" ]; then
-            echo "::error::internal openehr-* version requirements ($reqs) do not all match the lockstep version $ver — update every 'version =' on the path dependencies too." >&2
-            exit 1
-          fi
-          echo "Lockstep crate version bumped to $ver — OK."
+          bash scripts/checks/crate-version-guard.sh --self-test
+          # The guard reads the pull request's own change, from its merge base
+          # with main (#4129).
+          bash scripts/checks/crate-version-guard.sh "$BASE" "$HEAD"
 
   # Chart-version guard (the crate-version-guard pattern, issue #2108): a PR that
   # changes PACKAGED chart content must bump `Chart.yaml` version in the same PR.
@@ -2599,7 +2405,7 @@ jobs:
           . scripts/lib/changed-paths.sh
           FORK=$(change_fork "$BASE" "$HEAD")
           changed=$(change_paths "$BASE" "$HEAD")
-          if ! echo "$changed" | grep -qE '^deploy/helm/ferroehr/'; then
+          if ! grep -qE '^deploy/helm/ferroehr/' <<<"$changed"; then
             echo "No packaged chart content touched — guard not required."; exit 0
           fi
           old=$(git show "$FORK:deploy/helm/ferroehr/Chart.yaml" | sed -nE 's/^version: *(.+)$/\1/p')
@@ -2933,7 +2739,7 @@ jobs:
         run: |
           set -euo pipefail
           cff_ver=$(sed -nE 's/^version:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/p' CITATION.cff)
-          ws_ver=$(sed -nE 's/^version = "(.*)"$/\1/p' Cargo.toml | head -1)
+          ws_ver=$(sed -nE 's/^version = "(.*)"$/\1/p' Cargo.toml | sed -n 1p)
           if [ -z "$cff_ver" ] || [ -z "$ws_ver" ]; then
             echo "::error::could not extract versions (CITATION.cff: '$cff_ver', Cargo.toml: '$ws_ver')." >&2
             exit 1

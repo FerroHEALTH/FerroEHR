@@ -512,16 +512,17 @@ requires a browser to *ignore* it over plain HTTP, which is how this server is
 commonly reached behind a terminating proxy. Set it at the proxy or ingress that
 owns TLS; sending it from here would be inert at best and misleading at worst.
 
-**The viewer** additionally carries the browser set with a real CSP, because
-it serves HTML and hydrates WebAssembly. Its `Cache-Control` has one scoped
-exception to `no-store`: the hydration bundle under `/pkg/` is served
-`public, max-age=31536000, immutable`. Those filenames carry a content hash, so
-a rebuilt asset is a different URL and a cached copy can never be stale, and the
-bundle holds nothing clinical — the viewer reaches the CDR through its own
-server functions, never from the browser. Every document still carries
-`no-store`, because documents carry patient data and a per-request CSP nonce.
-A `/pkg/` response that is not a served body (a `404`, a redirect) is never
-cached either.
+**The viewer** carries the FerroHEALTH console set instead, because it serves
+HTML and hydrates WebAssembly: a CSP whose script source is a per-response
+nonce, `Referrer-Policy: no-referrer` and `Cross-Origin-Opener-Policy:
+same-origin` (the [viewer chapter](viewer/index.md#browser-security-headers)
+lists them). Its `Cache-Control` has one scoped exception to `no-store`: the
+content-hashed hydration bundle under `/pkg/` is served `no-cache`, so the
+browser keeps it and revalidates it, and the bundle holds nothing clinical
+(the viewer reaches the CDR through its own server functions, never from the
+browser). Every document carries `no-store`, because documents carry patient
+data and a per-request CSP nonce. A `/pkg/` response that is not a served body
+(a `404`, a redirect) is never kept either.
 
 **The published documentation site cannot carry response headers at all:** it is
 static files on GitHub Pages, so its policy travels as a `<meta http-equiv>`
@@ -540,10 +541,10 @@ headers reaches none of the others: a client that has not sent its request head
 in time is disconnected, on the plain and the TLS listener alike.
 
 **Body size:** `[server] body_limit_bytes` and `[rest] body_limit_bytes`. Two
-tiers: the routes that accept bulk by design (template upload,
-`/message/import`, `/message/tdd`) take the listener's limit, and the clinical
-surface the narrower `[rest]` one when it is set. Over-limit is `413`. The
-listener's default is the family's 1 MiB; a deployment that uploads operational
+tiers: the routes that accept bulk by design (template upload and
+`/message/import`) take the listener's limit, and the clinical surface the
+narrower `[rest]` one when it is set. Over-limit is `413`. The listener's
+default is the family's 1 MiB; a deployment that uploads operational
 templates raises it (the chart and the Compose files set 64 MiB), and one whose
 compositions embed large `DV_MULTIMEDIA` data raises the clinical tier
 deliberately.

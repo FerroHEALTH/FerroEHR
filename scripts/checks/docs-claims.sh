@@ -307,7 +307,7 @@ done
 # newest release — which is the workspace version.
 CHART_YAML=deploy/helm/ferroehr/Chart.yaml
 chart_version=$(awk '$1=="version:"{print $2; exit}' "$CHART_YAML")
-app_version=$(sed -nE 's/^version = "(.*)"$/\1/p' Cargo.toml | head -1)
+app_version=$(sed -nE 's/^version = "(.*)"$/\1/p' Cargo.toml | sed -n 1p)
 [[ -n "$chart_version" && -n "$app_version" ]] \
   || { echo "docs-claims: could not read the chart version ($CHART_YAML) or the workspace version (Cargo.toml)" >&2; exit 1; }
 for f in $files; do
@@ -400,9 +400,8 @@ fi
 # a line wrap is still recognised.
 while read -r f; do
   [[ -f "$f" ]] || continue
-  tr '\n' ' ' < "$f" \
-    | sed -E 's/(not|never) a static(ally linked)? binary//Ig' \
-    | grep -qiE 'static(ally linked)? binary' \
+  grep -qiE 'static(ally linked)? binary' \
+    <<<"$(tr '\n' ' ' < "$f" | sed -E 's/(not|never) a static(ally linked)? binary//Ig')" \
     && report "$f" "claims a static binary — the binary is dynamically linked (distroless/cc); say 'self-contained'"
 done < <(grep -rilE 'static(ally linked)? binary' --include='*.md' "$BOOK" website/landing README.md 2>/dev/null; \
          grep -lFi 'static binary' website/landing/index.html 2>/dev/null)

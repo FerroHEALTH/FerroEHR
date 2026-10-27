@@ -3,11 +3,11 @@
 
 //! The Message service.
 //!
-//! EHR Extract export and import over the RM EHR Extract model, and TDD import,
-//! behind the `/message` extension. Our own design; the operation names borrow
-//! from the openEHR SM text, kept as reference and never an oracle.
+//! EHR Extract export and import over the RM EHR Extract model, behind the
+//! `/message` extension. Our own design; the operation names borrow from the
+//! openEHR SM text, kept as reference and never an oracle.
 //!
-//! The layout follows the export / import / TDD split, each
+//! The layout follows the export / import split, each
 //! file carrying its public `FerroEhrService` methods and the machinery behind
 //! them:
 //!
@@ -18,18 +18,14 @@
 //!   parse a received `EXTRACT` and dispatch clone against append; the
 //!   `IMPORTED_VERSION` replay is [`crate::versioning`] (RM common master06
 //!   §Copying).
-//! - `tdd` — `I_TDD_SERVICE.import_tdd` / `import_tdds`: TDD XML to COMPOSITION
-//!   to validated commit.
 //!
 //! # Cross-module wiring
 //!
 //! `import` reaches [`crate::versioning`]'s `commit_import` /
 //! `commit_demographic_import`, and `export` reaches its `original_version` /
-//! `versioned_object` / `revision_history` and the version reads. `tdd` resolves
-//! the OPT and commits through the validated COMPOSITION path
-//! (`FerroEhrService::web_template_for` / `get_template_xml` /
-//! `create_composition`). A completed export or import emits one EHR-Extract
-//! audit event (`FerroEhrService::emit_extract_audit`) for non-repudiation (BASE
+//! `versioned_object` / `revision_history` and the version reads. A completed
+//! export or import emits one EHR-Extract audit event
+//! (`FerroEhrService::emit_extract_audit`) for non-repudiation (BASE
 //! `architecture_overview/master07-security.adoc` §Non-repudiation).
 //! `EXTRACT_SPEC.criteria` and `commit_time_interval` remain typed rejects (the
 //! NOTEs in `export`). The extension REST wire lives in `ferroehr-rest`, ITS-REST
@@ -37,7 +33,6 @@
 
 mod export;
 mod import;
-mod tdd;
 
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;

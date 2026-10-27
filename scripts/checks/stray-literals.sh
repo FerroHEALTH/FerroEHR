@@ -123,7 +123,7 @@ found="$(
     /^#\[cfg\(test\)\]/ { off = 1; next }
     /^[ \t]*\/\// { next }
     /^[ \t]*#!?\[/ { next }
-    /reason = "|expect\(|logging::|warn!\(|error!\(|debug!\(|log!\(|write!\(f|write_str\(|debug_struct\(|\.field\(|assert|panic!\(|unreachable!\(|include_str!\(/ { next }
+    /reason = "|expect\(|logging::|info!\(|warn!\(|error!\(|debug!\(|trace!\(|log!\(|write!\(f|write_str\(|debug_struct\(|\.field\(|assert|panic!\(|unreachable!\(|include_str!\(/ { next }
     {
       code = $0
       while ((s = index(code, "r#\"")) > 0) {

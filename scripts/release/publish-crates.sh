@@ -81,7 +81,7 @@ do_publish() {
       echo "$crate: already published at this version — nothing to do"
       ;;
     *)
-      if printf '%s' "$plain" | grep -q "Uploaded $crate"; then
+      if grep -q "Uploaded $crate" <<<"$plain"; then
         echo "$crate: uploaded"
       else
         failed="$failed $crate"

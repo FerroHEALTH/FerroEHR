@@ -90,7 +90,7 @@ END
 SQL
 
 # 2) Database owned by the app role (CREATE DATABASE cannot run in a DO block).
-if ! psql_super -tAc "SELECT 1 FROM pg_database WHERE datname = '${APP_DB}'" | grep -q 1; then
+if ! grep -q 1 <<<"$(psql_super -tAc "SELECT 1 FROM pg_database WHERE datname = '${APP_DB}'")"; then
   psql_super -c "CREATE DATABASE \"${APP_DB}\" OWNER \"${APP_USER}\";"
 fi
 

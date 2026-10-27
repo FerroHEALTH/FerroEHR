@@ -156,13 +156,15 @@ USER 65532:65532
 # makes the renderer name the content-hashed /pkg files this image ships
 # instead of the unhashed names it would otherwise 404 on. It must stay in
 # step with the manifest key and with hash.txt below — all three or none.
+# The listen address is the viewer's own `server.listen`, on every interface
+# inside the container.
 ENV LEPTOS_SITE_ROOT=/site \
-    LEPTOS_SITE_ADDR=0.0.0.0:3000 \
     LEPTOS_OUTPUT_NAME=ferroehr-viewer \
-    LEPTOS_HASH_FILES=true
+    LEPTOS_HASH_FILES=true \
+    FERROEHR_VIEWER__SERVER__LISTEN=0.0.0.0:3000
 EXPOSE 3000
-# Shell-less image: the healthcheck is the binary's own subcommand, which probes
-# its own /login and exits 0 (2xx/3xx) / 1 otherwise.
+# Shell-less image: the healthcheck is the binary's own subcommand, which asks
+# its own /health/readiness and exits 0 on 200, 1 otherwise.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD ["/usr/local/bin/ferroehr-viewer", "healthcheck"]
 ENTRYPOINT ["/usr/local/bin/ferroehr-viewer"]

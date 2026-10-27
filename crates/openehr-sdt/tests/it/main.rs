@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Integration tests for `openehr-sdt`: the Simplified Formats (Web Template /
-//! FLAT / STRUCTURED / TDD) against the spec example vectors, the `master05`
+//! FLAT / STRUCTURED) against the spec example vectors, the `master05`
 //! mapping tables and the OPT corpus, and the RM-instance / template
 //! validation passes.
 //!
@@ -37,7 +37,6 @@ mod raw_attributes;
 mod shape_tolerance;
 mod spec_vectors;
 mod structured;
-mod tdd;
 mod untagged_nodes;
 mod validation;
 mod validation_checklist;

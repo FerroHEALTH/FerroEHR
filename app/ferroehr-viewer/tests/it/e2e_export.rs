@@ -165,7 +165,11 @@ async fn post_export(base: &str, cookie: Option<&str>, form: &PostedForm) -> req
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .expect("an HTTP client that does not follow redirects");
-    let mut request = http.post(format!("{base}{}", form.action));
+    // What the browser sends with the page's own form (W3C Fetch Metadata
+    // Request Headers §2.4), which the viewer's same-origin check reads.
+    let mut request = http
+        .post(format!("{base}{}", form.action))
+        .header("Sec-Fetch-Site", "same-origin");
     if let Some(cookie) = cookie {
         request = request.header("Cookie", cookie);
     }

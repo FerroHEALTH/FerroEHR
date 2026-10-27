@@ -31,7 +31,7 @@ inline=$(awk '
 if ! diff <(printf '%s\n' "$inline") "$CANONICAL" >/dev/null; then
   echo "dashboard-drift: the overlay's inline dashboard differs from $CANONICAL" >&2
   echo "regenerate the inline copy from the canonical file (escape \$ as \$\$)" >&2
-  diff <(printf '%s\n' "$inline") "$CANONICAL" | head -20 >&2
+  diff <(printf '%s\n' "$inline") "$CANONICAL" | sed -n 1,20p >&2
   exit 1
 fi
 echo "dashboard-drift: OK."

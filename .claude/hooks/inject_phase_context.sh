@@ -55,7 +55,7 @@ gh api graphql \
       + (if ($k | length) > 0 then "  blocks \($k | join(","))" else "" end)' 2>&1 || true
 echo
 echo "=== git status ==="
-git status --short --branch 2>/dev/null | head -40
+git status --short --branch 2>/dev/null | sed -n 1,40p
 echo
 echo "=== last 10 commits ==="
 git log --oneline -10 2>/dev/null

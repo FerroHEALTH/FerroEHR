@@ -60,15 +60,15 @@ for f in $(mapfile_compat); do
   body=$(grep -vE '^\s*#' "$f")
 
   # (3) never privileged
-  if printf '%s\n' "$body" | grep -qE '^\s*privileged:\s*true'; then
+  if grep -qE '^\s*privileged:\s*true' <<<"$body"; then
     report "$f publishes a privileged service — it hands the host to the container"
   fi
   # (4) the default seccomp/apparmor profiles stay
-  if printf '%s\n' "$body" | grep -qE 'seccomp[:=]unconfined|apparmor[:=]unconfined'; then
+  if grep -qE 'seccomp[:=]unconfined|apparmor[:=]unconfined' <<<"$body"; then
     report "$f disables seccomp or AppArmor — the default profile blocks ~44 syscalls"
   fi
   # (5) the daemon socket is never handed over
-  if printf '%s\n' "$body" | grep -q '/var/run/docker.sock'; then
+  if grep -q '/var/run/docker.sock' <<<"$body"; then
     report "$f mounts the Docker daemon socket — that is root on the host"
   fi
   # (6) a published port names its host interface

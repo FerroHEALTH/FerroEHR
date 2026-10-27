@@ -96,7 +96,7 @@ rolling_rows() {
     while IFS='|' read -r comp repo ref sha; do
       printf '%s|%s|%s|%s|%s\n' "$comp" "$repo" "$ref" "$sha" "$spec_docs"
     done
-  line=$(grep -E "^Pinned commit: ${tick}[0-9a-f]{40}${tick} \\([^)]+\\)" "$bmm_record" | head -1) || return 1
+  line=$(grep -E "^Pinned commit: ${tick}[0-9a-f]{40}${tick} \\([^)]+\\)" "$bmm_record" | sed -n 1p) || return 1
   [[ -n "$line" ]] || return 1
   sha=$(sed -E "s/^Pinned commit: ${tick}([0-9a-f]{40})${tick}.*/\\1/" <<<"$line")
   ref=$(sed -E "s/^Pinned commit: ${tick}[0-9a-f]{40}${tick} \\(([^)]+)\\).*/\\1/" <<<"$line")
@@ -206,11 +206,11 @@ ITS-BMM|specifications-ITS-BMM|master|3333333333333333333333333333333333333333|$
   check "branch count" \
     "$(rolling_count_line branch 6 master 3333333333333333333333333333333333333333 master 4444444444444444444444444444444444444444)" \
     "**Commits ahead of the pin:** 6 (pin \`333333333\`, upstream master @ \`444444444\`)"
-  if ! rolling_body release ITS-REST specifications-ITS-REST 2222 master "$dir/spec-docs.sh" "COUNT" | grep -qxF "COUNT"; then
+  if ! grep -qxF "COUNT" <<<"$(rolling_body release ITS-REST specifications-ITS-REST 2222 master "$dir/spec-docs.sh" "COUNT")"; then
     echo "self-test: the release body lacks its count line" >&2
     fail=1
   fi
-  if ! rolling_body branch ITS-BMM specifications-ITS-BMM 3333 master "$dir/PROVENANCE.md" "COUNT" | grep -qF "\`$dir/PROVENANCE.md\`"; then
+  if ! grep -qF "\`$dir/PROVENANCE.md\`" <<<"$(rolling_body branch ITS-BMM specifications-ITS-BMM 3333 master "$dir/PROVENANCE.md" "COUNT")"; then
     echo "self-test: the branch body does not name its pin record" >&2
     fail=1
   fi
@@ -267,18 +267,18 @@ label_for_component() { # vendored component dir -> label
 # newer version still get an issue.
 pin_for_component() {
   local comp="$1" line ref sha ver
-  line=$(grep -E "^  \"${comp}\|" scripts/vendor/spec-docs.sh | head -1 | tr -d '"') || true
+  line=$(grep -E "^  \"${comp}\|" scripts/vendor/spec-docs.sh | sed -n 1p | tr -d '"') || true
   [[ -n "$line" ]] || { echo "unpinned"; return 0; }
   ref=$(echo "$line" | awk -F'|' '{print $3}')
   sha=$(echo "$line" | awk -F'|' '{printf "%.9s", $4}')
   # "master (BASE 1.3.0)" -> 1.3.0 · "Release-1.1.0" -> 1.1.0 · else the ref word
-  ver=$(echo "$ref" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+  ver=$(echo "$ref" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sed -n 1p)
   [[ -n "$ver" ]] || ver=$(echo "$ref" | awk '{print $1}')
   echo "$ver @ $sha"
 }
 repo_for_component() {
   local comp="$1" line
-  line=$(grep -E "^  \"${comp}\|" scripts/vendor/spec-docs.sh | head -1 | tr -d '"') || true
+  line=$(grep -E "^  \"${comp}\|" scripts/vendor/spec-docs.sh | sed -n 1p | tr -d '"') || true
   [[ -n "$line" ]] || return 1
   echo "$line" | awk -F'|' '{print $2}'
 }
@@ -315,7 +315,7 @@ all_fixversions_inside_pin() {
     any=0
     comp=$(component_for_fixversion "$name" "$fallback_comp")
     [[ -n "$comp" ]] || return 1
-    fv_ver=$(echo "$name" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    fv_ver=$(echo "$name" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sed -n 1p)
     [[ -n "$fv_ver" ]] || return 1
     pin_ver=$(pin_version_for_component "$comp")
     [[ -n "$pin_ver" ]] || return 1
@@ -479,7 +479,7 @@ while IFS='|' read -r comp repo ref sha record; do
   if [[ "$ahead" -gt 0 ]]; then
     count_line=$(rolling_count_line "$kind" "$ahead" "$ref" "$sha" "$default" "$head_sha")
     rolling_body "$kind" "$comp" "$repo" "$sha" "$default" "$record" "$count_line" > "$tmp/ahead-body.md"
-    if [[ -n "$num" ]] && gh issue view "$num" --json body --jq '.body' | grep -qF "$count_line"; then
+    if [[ -n "$num" ]] && grep -qF "$count_line" <<<"$(gh issue view "$num" --json body --jq '.body')"; then
       continue # unchanged since the last run
     fi
     labels="spec-update,chore"
@@ -533,7 +533,7 @@ while IFS="$US" read -r key component summary source resolved fixv comps status 
     # existing-issue hit keeps the silent dedup skip. The state and labels are
     # read only on that path — the dedup itself needs the number alone.
     match=""
-    if echo "$amendment_keys" | grep -qxF "$key"; then
+    if grep -qxF "$key" <<<"$amendment_keys"; then
       match=$(gh issue view "$num" --json state,labels)
     fi
     if [[ -n "$match" ]] &&
