@@ -132,6 +132,7 @@ fn ctx() -> SqlCtx {
     SqlCtx {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: Vec::new(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: None,

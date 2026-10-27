@@ -227,3 +227,27 @@ pub(crate) fn shared_pools(pool: &sqlx::PgPool) -> ferroehr::db::domain::DomainP
 pub(crate) fn shared_layout() -> ferroehr::db::domain::DomainLayout {
     ferroehr::db::domain::StorageConfig::default().layout(&ferroehr::db::DbConfig::default())
 }
+
+/// Sets `EHR_STATUS.is_queryable` of `ehr` to `false` through the canonical
+/// status update, so the EHR leaves every population query (RM
+/// `org.openehr.rm.ehr.ehr_status.adoc`: "True if this EHR should be included
+/// in population queries").
+pub(crate) async fn set_not_queryable(
+    svc: &ferroehr::service::FerroEhrService,
+    ehr: ferroehr::ids::EhrId,
+) {
+    let mut body = svc
+        .get_ehr_status_at_time(ehr, None)
+        .await
+        .expect("the current EHR_STATUS reads");
+    let if_match = body["uid"]["value"]
+        .as_str()
+        .expect("the EHR_STATUS carries its uid")
+        .to_owned();
+    let status = body.as_object_mut().expect("an EHR_STATUS object");
+    status.remove("uid");
+    status.insert("is_queryable".to_owned(), json!(false));
+    svc.replace_ehr_status(ehr, uv(&body, "251", Some(&if_match)))
+        .await
+        .expect("the EHR_STATUS update to is_queryable = false commits");
+}

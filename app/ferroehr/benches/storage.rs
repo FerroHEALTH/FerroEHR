@@ -572,6 +572,7 @@ async fn explain_population(pool: &PgPool, corpus: &Corpus) -> Value {
     let ctx = SqlCtx {
         system_id: "bench.ferroehr.org".to_owned(),
         ehr_ids: Vec::new(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: None,
@@ -939,6 +940,7 @@ fn from_shape(aql: &str) -> &'static str {
     let ctx = SqlCtx {
         system_id: "bench.ferroehr.org".to_owned(),
         ehr_ids: Vec::new(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: Some(50),

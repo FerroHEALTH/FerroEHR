@@ -360,9 +360,12 @@ impl FerroEhrService {
     ///   `OBJECT_VERSION_ID` or UID string or an object carrying `uid.value`,
     ///   and the union across rows and criteria in first-seen order is the
     ///   primary set, possibly empty;
-    /// - the engine's SM population gate applies, so a non-queryable EHR yields
-    ///   no rows (SM `i_query_service.adoc`); no openEHR spec relates EXTRACT
-    ///   criteria to that gate.
+    /// - the criteria run scoped to this one EHR as a named target
+    ///   ([`crate::aql::sql::EhrScopeKind::Named`]), so the population gate does
+    ///   not apply: an EXTRACT is built from the EHR its request names, which is
+    ///   no population query (RM `org.openehr.rm.ehr.ehr_status.adoc`,
+    ///   `is_queryable`: "True if this EHR should be included in population
+    ///   queries").
     ///
     /// # Errors
     /// `precondition_violation` — a non-AQL formalism, or a criterion that

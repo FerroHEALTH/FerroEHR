@@ -366,6 +366,7 @@ async fn explain_clinical(pool: &sqlx::PgPool, ehr_ids: &[EhrId]) -> Value {
     let ctx = SqlCtx {
         system_id: "bench.example.com".to_owned(),
         ehr_ids: ehr_ids.to_vec(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: None,

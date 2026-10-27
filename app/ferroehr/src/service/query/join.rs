@@ -35,7 +35,7 @@ use crate::aql;
 use crate::aql::exec::{ColumnMeta, QueryResult};
 use crate::aql::ir::{Params, QueryDomain, QueryIr};
 use crate::aql::join::{JoinPlan, Side};
-use crate::aql::sql::{EhrAccessScope, SqlCtx};
+use crate::aql::sql::{EhrAccessScope, EhrScopeKind, SqlCtx};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::{internal_fault, internal_fault_caused};
@@ -137,6 +137,7 @@ impl FerroEhrService {
         let party_ctx = SqlCtx {
             system_id: self.effective_system_id(),
             ehr_ids: Vec::new(),
+            ehr_scope_kind: EhrScopeKind::Named,
             subject_scope: None,
             ehr_access: EhrAccessScope::Unrestricted,
             limit: ceiling.map(|c| c.saturating_add(1)),
@@ -187,8 +188,11 @@ impl FerroEhrService {
         if ehrs.is_empty() {
             return Ok((empty_result(), None));
         }
+        // NOTE: RM `ehr_status.adoc` `is_queryable` ("included in population queries"):
+        // the caller named no EHR, so the linked EHRs are a population subset.
         let ctx = SqlCtx {
             ehr_ids: ehrs,
+            ehr_scope_kind: EhrScopeKind::PopulationSubset,
             subject_scope: job.request.subject_scope.clone().map(|id| {
                 aql::sql::subject::SubjectScope {
                     id,

@@ -32,6 +32,7 @@ use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding, PredicateKind};
 use ferroehr::service::linkage::cohort::{CohortError, CohortPredicate, CohortQueryRequest};
+use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::service::status::{CallStatusType, SmError};
 
 use crate::ehr_index_ihe::{
@@ -70,7 +71,7 @@ fn request(subjects: Vec<SubjectRef>) -> CohortQueryRequest {
         predicates: Vec::new(),
         subjects,
         purpose: Some("secondary-use".to_owned()),
-        query: ferroehr::service::query::request::AqlQueryRequest::default(),
+        query: AqlQueryRequest::default(),
     }
 }
 
@@ -274,5 +275,113 @@ fn subject_cohorts_turn_the_surface_on() {
             ..CohortConfig::default()
         }
         .is_enabled()
+    );
+}
+
+/// A cohort is a population query, so it leaves out every EHR the population
+/// gate leaves out (#4247): one whose `EHR_STATUS.is_queryable` is false (RM
+/// `org.openehr.rm.ehr.ehr_status.adoc`: "True if this EHR should be included
+/// in population queries"), one restricted as a whole, and one under a
+/// research objection, under each FROM shape the gate covers. The ad-hoc
+/// population query answers the same EHR, and a query aimed at the
+/// non-queryable EHR by its `ehr_id` still answers it.
+#[tokio::test]
+async fn a_cohort_leaves_out_every_ehr_the_population_gate_leaves_out() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
+        .with_ehr_index(EhrIndexProvider::Local)
+        .with_cohort(cohort_config());
+    let mut subjects = Vec::new();
+    let mut ehrs = Vec::new();
+    for value in [
+        "4247-open",
+        "4247-hidden",
+        "4247-restricted",
+        "4247-objecting",
+    ] {
+        let subject = SubjectRef::person(value, LOCAL_DOMAIN);
+        let ehr = svc
+            .create_ehr_for_subject(subject.clone(), None)
+            .await
+            .expect("an EHR for the subject");
+        commit(&svc, ehr, value).await;
+        subjects.push(subject);
+        ehrs.push(ehr);
+    }
+    let [open, hidden, restricted, objecting] = ehrs[..] else {
+        panic!("four EHRs were seeded");
+    };
+    crate::fixtures::set_not_queryable(&svc, hidden).await;
+    svc.restrict_processing(&restricted.to_string(), None, "gdpr-18-1-d", None)
+        .await
+        .expect("restrict the whole EHR");
+    svc.set_research_objection(&objecting.to_string(), true, None)
+        .await
+        .expect("record the research objection");
+
+    // The served-EHR breakdown covers the shapes with a versioned-object root;
+    // a bare `EHR` source is read back from its projected `ehr_id` cells.
+    let answered = |query: &ferroehr::service::query::request::QueryOutcome, by_rows: bool| {
+        let mut ehrs: Vec<String> = if by_rows {
+            query.result_set["rows"]
+                .as_array()
+                .expect("rows")
+                .iter()
+                .map(|row| row[0].as_str().expect("ehr_id cell").to_owned())
+                .collect()
+        } else {
+            query
+                .served_ehrs
+                .iter()
+                .map(|(ehr, _rows)| ehr.clone())
+                .collect()
+        };
+        ehrs.sort();
+        ehrs
+    };
+    for (aql, by_rows) in [
+        (COHORT_AQL, false),
+        ("SELECT c/uid/value FROM COMPOSITION c", false),
+        ("SELECT e/ehr_id/value FROM EHR e", true),
+    ] {
+        let outcome = svc
+            .execute_cohort_query(CohortQueryRequest {
+                aql: aql.to_owned(),
+                ..request(subjects.clone())
+            })
+            .await
+            .expect("the cohort query runs");
+        assert_eq!(outcome.cohort_size, 4, "{aql}: all four subjects resolve");
+        assert_eq!(
+            answered(&outcome.query, by_rows),
+            vec![open.to_string()],
+            "{aql}: only the queryable, unrestricted, unobjecting EHR is served"
+        );
+
+        let population = svc
+            .execute_ad_hoc_query(aql.to_owned(), AqlQueryRequest::default())
+            .await
+            .expect("the population query runs");
+        assert_eq!(
+            answered(&population, by_rows),
+            vec![open.to_string()],
+            "{aql}: the ad-hoc population query answers the same EHR"
+        );
+    }
+
+    let named = svc
+        .execute_ad_hoc_query(
+            COHORT_AQL.to_owned(),
+            AqlQueryRequest {
+                ehr_ids: vec![hidden.to_string()],
+                ..AqlQueryRequest::default()
+            },
+        )
+        .await
+        .expect("the ehr_id-scoped query runs");
+    assert_eq!(
+        named.result_set["rows"].as_array().map(Vec::len),
+        Some(1),
+        "a query aimed at the non-queryable EHR by its ehr_id still answers it"
     );
 }

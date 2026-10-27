@@ -57,6 +57,7 @@ fn build_sql(q: &str) -> String {
     let ctx = SqlCtx {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: Vec::new(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: None,
@@ -1482,6 +1483,7 @@ fn build_sql_limited(q: &str) -> String {
     let ctx = SqlCtx {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: Vec::new(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: Some(50),
@@ -1604,6 +1606,7 @@ fn ehr_scoped_execution_keeps_the_flat_shape() {
     let ctx = SqlCtx {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: vec![ferroehr::ids::EhrId(uuid::Uuid::nil())],
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: Some(50),
@@ -1910,6 +1913,7 @@ fn build_err(q: &str) -> AqlError {
     let ctx = SqlCtx {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: Vec::new(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: None,
@@ -2184,6 +2188,7 @@ fn prepare(
     let ctx = SqlCtx {
         system_id: "sys.example.com".to_owned(),
         ehr_ids,
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: subject_scope.map(|id| SubjectScope {
             id: id.to_owned(),
             namespace: None,
@@ -2440,6 +2445,7 @@ fn scope_ctx() -> SqlCtx {
     SqlCtx {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: Vec::new(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: None,

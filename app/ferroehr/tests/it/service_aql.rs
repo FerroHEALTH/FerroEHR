@@ -1027,6 +1027,58 @@ async fn scoped_query_bypasses_the_population_gate() {
     );
 }
 
+/// The scope kind decides the gate over one and the same `ehr_ids` set
+/// (#4247): a population subset (a cohort, a demographic join) leaves out the
+/// non-queryable EHR, a named scope (the ITS-REST `ehr_id`) answers it. RM
+/// `org.openehr.rm.ehr.ehr_status.adoc`, `is_queryable`: "True if this EHR
+/// should be included in population queries".
+#[tokio::test]
+async fn a_population_subset_is_gated_and_a_named_scope_is_not() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    let queryable = create_ehr(&svc).await;
+    create_comp(&svc, &queryable, "BP", 80.0).await;
+    let hidden = create_ehr(&svc).await;
+    create_comp(&svc, &hidden, "BP", 90.0).await;
+    set_not_queryable(&svc, &hidden).await;
+
+    let aql = "SELECT e/ehr_id/value FROM EHR e CONTAINS COMPOSITION c";
+    let answered = |r: &Value| -> Vec<String> {
+        let mut ids: Vec<String> = rows(r)
+            .iter()
+            .map(|row| row[0].as_str().expect("ehr_id cell").to_owned())
+            .collect();
+        ids.sort();
+        ids
+    };
+    let mut both = vec![queryable.clone(), hidden.clone()];
+    both.sort();
+
+    let subset = run_aql(
+        &svc,
+        aql,
+        AqlQueryRequest {
+            ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::PopulationSubset,
+            ..ehr_scope_multi(&[&queryable, &hidden])
+        },
+    )
+    .await;
+    assert_eq!(
+        answered(&subset),
+        vec![queryable.clone()],
+        "a population subset leaves out the non-queryable EHR"
+    );
+
+    let named = run_aql(&svc, aql, ehr_scope_multi(&[&queryable, &hidden])).await;
+    assert_eq!(
+        answered(&named),
+        both,
+        "a named scope answers every EHR it names"
+    );
+}
+
 /// Multi-EHR scoping (`ehr_ids: List<UUID>`,
 /// `docs/specs/openehr/SM/docs/UML/classes/i_query_service.adoc`): a query
 /// scoped to a *set* of EHRs must span exactly that set — no more, no fewer.

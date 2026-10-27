@@ -23,9 +23,13 @@
 //!    those party ids in, the EHR ids they are the subject of out. One
 //!    statement, one round trip, no attribute.
 //! 3. **The query** runs on the clinical pool, scoped to those EHR ids through
-//!    the ordinary [`AqlQueryRequest::ehr_ids`] path, so the whole AQL engine —
-//!    the population gate, the profile gate, paging, the access columns —
-//!    applies unchanged.
+//!    [`AqlQueryRequest::ehr_ids`] as a [`EhrScopeKind::PopulationSubset`].
+//!    A cohort is a population query, so the population gate applies to it as
+//!    to an unscoped query: an EHR whose `EHR_STATUS.is_queryable` is false,
+//!    an EHR restricted as a whole and an EHR under a research objection
+//!    answer no rows (RM `org.openehr.rm.ehr.ehr_status.adoc`: "True if this
+//!    EHR should be included in population queries"). The profile gate,
+//!    paging and the access columns apply unchanged.
 //!
 //! The three statements never meet: under `[db].demographic_url` +
 //! `[db].linkage_url` each pool authenticates as its own role, and
@@ -74,6 +78,7 @@ use std::collections::BTreeSet;
 
 use sha2::Digest;
 
+use crate::aql::sql::EhrScopeKind;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::ehr_index::IndexError;
@@ -334,6 +339,7 @@ impl FerroEhrService {
         }
         let inner = AqlQueryRequest {
             ehr_ids: ehr_ids.iter().map(EhrId::to_string).collect(),
+            ehr_scope_kind: EhrScopeKind::PopulationSubset,
             ..request.query.clone()
         };
         let query = self

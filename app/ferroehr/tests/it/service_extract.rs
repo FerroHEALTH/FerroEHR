@@ -516,3 +516,33 @@ async fn criteria_that_do_not_parse_as_aql_are_refused() {
         err.message
     );
 }
+
+/// An EXTRACT's criteria run aimed at the one EHR the request names, which is
+/// no population query, so an EHR whose `EHR_STATUS.is_queryable` is false
+/// still yields its primary set (#4247; RM `org.openehr.rm.ehr.ehr_status.adoc`:
+/// "True if this EHR should be included in population queries").
+#[tokio::test]
+async fn criteria_select_from_a_non_queryable_ehr() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (ehr, _status_vo) = seed_ehr(&svc).await;
+    crate::fixtures::set_not_queryable(&svc, ehr).await;
+
+    let spec = criteria_spec(
+        &ehr.to_string(),
+        &json!([{
+            "_type": "DV_PARSABLE",
+            "value": "SELECT s/uid/value FROM EHR e CONTAINS EHR_STATUS s",
+            "formalism": "AQL"
+        }]),
+    );
+    let extracts = svc
+        .export_ehr_extracts(spec)
+        .await
+        .expect("criteria-driven export");
+    assert_eq!(extracts.len(), 1, "one entity, one EXTRACT");
+    assert!(
+        find_by_xtype(&extracts[0], "X_VERSIONED_EHR_STATUS").is_some(),
+        "the criterion still selects the EHR_STATUS container"
+    );
+}
