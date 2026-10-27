@@ -44,8 +44,9 @@ repo() {
 }
 
 valid_tag() {
-  if [[ ! "$1" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-    echo "::error::milestone: '$1' is not a vX.Y.Z tag" >&2
+  local tag="$1"
+  if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+    echo "::error::milestone: '$tag' is not a vX.Y.Z tag" >&2
     exit 2
   fi
 }
@@ -53,25 +54,27 @@ valid_tag() {
 # find_milestone REPO TAG: prints "<number> <state>" of the milestone titled
 # exactly TAG, or nothing when there is none.
 find_milestone() {
-  gh api --paginate "repos/$1/milestones?state=all&per_page=100" |
-    jq -rs --arg t "$2" 'add // [] | map(select(.title == $t)) | first // empty | "\(.number) \(.state)"'
+  local repo="$1" tag="$2"
+  gh api --paginate "repos/$repo/milestones?state=all&per_page=100" |
+    jq -rs --arg t "$tag" 'add // [] | map(select(.title == $t)) | first // empty | "\(.number) \(.state)"'
 }
 
 # open_items REPO NUMBER: one line per open issue or pull request in the
 # milestone, both of which the milestone's open count includes.
 open_items() {
-  gh api --paginate "repos/$1/issues?milestone=$2&state=open&per_page=100" |
+  local repo="$1" number="$2"
+  gh api --paginate "repos/$repo/issues?milestone=$number&state=open&per_page=100" |
     jq -rs 'add // [] | .[] | "#\(.number) \(if .pull_request then "(pull request) " else "" end)\(.title)"'
 }
 
 # refuse_open TAG ITEMS: fails naming every open item, when there is one.
 refuse_open() {
-  local item
-  [[ -n "$2" ]] || return 0
+  local tag="$1" items="$2" item
+  [[ -n "$items" ]] || return 0
   while IFS= read -r item; do
-    echo "::error::milestone: $1 still holds $item" >&2
-  done <<<"$2"
-  die "milestone $1 has $(wc -l <<<"$2" | tr -d ' ') open item(s). Close or move them to the next milestone before the release is cut"
+    echo "::error::milestone: $tag still holds $item" >&2
+  done <<<"$items"
+  die "milestone $tag has $(wc -l <<<"$items" | tr -d ' ') open item(s). Close or move them to the next milestone before the release is cut"
 }
 
 check() {

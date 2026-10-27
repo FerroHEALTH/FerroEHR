@@ -95,7 +95,7 @@ esac
 STUB
   chmod 0755 "$stub/gh"
 
-  local labels create rc out
+  local labels create rc out scenario
   # run NAME CODE: this program through the stub, landing on CODE.
   run() {
     local name=$1 code=$2
@@ -134,35 +134,38 @@ STUB
   # and every label of the taxonomy is created in place with --force.
   labels='[{"name":"documentation"}]'
   create=ok
-  run "a repository without the retired labels" 0
-  said "a repository without the retired labels" "$out" "ok: documentation"
-  said "a repository without the retired labels" "$out" "ok: spec:RM"
-  said "a repository without the retired labels" "$out" "ok: upstream-report"
-  said "a repository without the retired labels" "$out" "ok: no-crate-bump"
-  said "a repository without the retired labels" "$calls" "label create spec:ITS-REST --color 0e8a16"
-  said "a repository without the retired labels" "$calls" "label create documentation --color 0075ca"
-  said "a repository without the retired labels" "$calls" "--force"
-  never "a repository without the retired labels" "$out" "retired:"
-  never "a repository without the retired labels" "$calls" "label delete"
-  never "a repository without the retired labels" "$calls" "label create bug"
-  never "a repository without the retired labels" "$calls" "label create P1"
+  scenario="a repository without the retired labels"
+  run "$scenario" 0
+  said "$scenario" "$out" "ok: documentation"
+  said "$scenario" "$out" "ok: spec:RM"
+  said "$scenario" "$out" "ok: upstream-report"
+  said "$scenario" "$out" "ok: no-crate-bump"
+  said "$scenario" "$calls" "label create spec:ITS-REST --color 0e8a16"
+  said "$scenario" "$calls" "label create documentation --color 0075ca"
+  said "$scenario" "$calls" "--force"
+  never "$scenario" "$out" "retired:"
+  never "$scenario" "$calls" "label delete"
+  never "$scenario" "$calls" "label create bug"
+  never "$scenario" "$calls" "label create P1"
 
   # The same repository with two of the six the native issue type and the
   # Priority field replaced on 2026-10-02: both go, and no other name does.
   labels='[{"name":"enhancement"},{"name":"P1"},{"name":"documentation"}]'
-  run "a repository that still carries two retired labels" 0
-  said "a repository that still carries two retired labels" "$out" "retired: enhancement"
-  said "a repository that still carries two retired labels" "$out" "retired: P1"
-  said "a repository that still carries two retired labels" "$calls" "label delete enhancement --yes"
-  said "a repository that still carries two retired labels" "$calls" "label delete P1 --yes"
-  never "a repository that still carries two retired labels" "$out" "retired: P0"
-  never "a repository that still carries two retired labels" "$calls" "label delete documentation"
+  scenario="a repository that still carries two retired labels"
+  run "$scenario" 0
+  said "$scenario" "$out" "retired: enhancement"
+  said "$scenario" "$out" "retired: P1"
+  said "$scenario" "$calls" "label delete enhancement --yes"
+  said "$scenario" "$calls" "label delete P1 --yes"
+  never "$scenario" "$out" "retired: P0"
+  never "$scenario" "$calls" "label delete documentation"
 
   # A gh that refuses the first create stops the run rather than reporting a
   # taxonomy it did not write.
   create=fail
-  run "a refused gh label create" 1
-  never "a refused gh label create" "$out" "done."
+  scenario="a refused gh label create"
+  run "$scenario" 1
+  never "$scenario" "$out" "done."
 
   rm -r "$work"
   echo "gh-labels: self-test OK."
@@ -184,15 +187,17 @@ EXISTING="$(gh label list --limit 200 --json name --jq '.[].name')"
 
 # label <name> <hex-color> <description>
 label() {
-  gh label create "$1" --color "$2" --description "$3" --force >/dev/null
-  echo "ok: $1"
+  local name="$1" color="$2" description="$3"
+  gh label create "$name" --color "$color" --description "$description" --force >/dev/null
+  echo "ok: $name"
 }
 
 # retire <name>: delete a label the taxonomy no longer carries, if it exists.
 retire() {
-  if grep -qx -- "$1" <<<"$EXISTING"; then
-    gh label delete "$1" --yes >/dev/null
-    echo "retired: $1"
+  local name="$1"
+  if grep -qx -- "$name" <<<"$EXISTING"; then
+    gh label delete "$name" --yes >/dev/null
+    echo "retired: $name"
   fi
 }
 

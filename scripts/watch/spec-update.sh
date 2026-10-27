@@ -106,9 +106,10 @@ rolling_rows() {
 # The stable title of a component's rolling issue. The branch-pin title is the
 # one this watcher has always used, so existing issues keep deduping.
 rolling_title() {
-  case "$1" in
-    branch) echo "[spec-update] $2 spec repo is ahead of the vendored pin" ;;
-    release) echo "[spec-update] $2 has unreleased commits past the vendored release" ;;
+  local kind="$1" component="$2"
+  case "$kind" in
+    branch) echo "[spec-update] $component spec repo is ahead of the vendored pin" ;;
+    release) echo "[spec-update] $component has unreleased commits past the vendored release" ;;
     *) return 1 ;;
   esac
 }
@@ -176,9 +177,10 @@ PINS=(
 FIXTURE
   printf 'Source: x\nPinned commit: \x60%s\x60 (master)\n' 3333333333333333333333333333333333333333 > "$dir/PROVENANCE.md"
   printf 'Source: x\nPinned commit: 3333 (master)\n' > "$dir/BROKEN.md"
-  check() { # $1 = what, $2 = actual, $3 = expected
-    if [[ "$2" != "$3" ]]; then
-      echo "self-test: $1: got '$2', want '$3'" >&2
+  check() {
+    local what="$1" actual="$2" expected="$3"
+    if [[ "$actual" != "$expected" ]]; then
+      echo "self-test: $what: got '$actual', want '$expected'" >&2
       fail=1
     fi
   }
@@ -283,7 +285,8 @@ repo_for_component() {
 # The numeric version of our pin for a component, empty when the pin has no
 # version number (development/master pins are not comparable).
 pin_version_for_component() {
-  pin_for_component "$1" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true
+  local component="$1"
+  pin_for_component "$component" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true
 }
 # Map a Jira fixVersion NAME to the pinned component it belongs to:
 # "RM Release 1.1.0" -> RM · "TERM Release 2.3.0" -> TERM · "AM version

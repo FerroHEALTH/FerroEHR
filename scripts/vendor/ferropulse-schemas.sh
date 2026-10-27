@@ -33,7 +33,8 @@ fetch() {
 
 # The files of one directory at the pin, by name.
 list() {
-  gh api "repos/${REPO}/contents/$1?ref=${COMMIT}" --jq '.[] | select(.type == "file") | .name'
+  local dir="$1"
+  gh api "repos/${REPO}/contents/$dir?ref=${COMMIT}" --jq '.[] | select(.type == "file") | .name'
 }
 
 rm -rf "$DEST"

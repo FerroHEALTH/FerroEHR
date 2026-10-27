@@ -84,22 +84,23 @@ change() {
 
 # digest IMAGE TAG: the digest IMAGE:TAG names, or nothing when there is none.
 digest() {
-  look docker buildx imagetools inspect "$1:$2" 2> /dev/null \
+  local image="$1" tag="$2"
+  look docker buildx imagetools inspect "$image:$tag" 2> /dev/null \
     | awk '$1 == "Digest:" { print $2; exit }' || true
 }
 
 # published TAG: whether TAG is a published GitHub release, not a draft.
 published() {
-  local draft
-  draft="$(look gh release view "$1" --repo "$REPO" --json isDraft --jq .isDraft 2> /dev/null)" || return 1
+  local tag="$1" draft
+  draft="$(look gh release view "$tag" --repo "$REPO" --json isDraft --jq .isDraft 2> /dev/null)" || return 1
   [[ "$draft" = false ]]
 }
 
 # newer A B: whether version A is later than version B.
 newer() {
-  local a1 a2 a3 b1 b2 b3
-  IFS=. read -r a1 a2 a3 <<< "$1"
-  IFS=. read -r b1 b2 b3 <<< "$2"
+  local a="$1" b="$2" a1 a2 a3 b1 b2 b3
+  IFS=. read -r a1 a2 a3 <<< "$a"
+  IFS=. read -r b1 b2 b3 <<< "$b"
   [[ "$a1" -ne "$b1" ]] && { [[ "$a1" -gt "$b1" ]]; return; }
   [[ "$a2" -ne "$b2" ]] && { [[ "$a2" -gt "$b2" ]]; return; }
   [[ "$a3" -gt "$b3" ]]
@@ -107,7 +108,8 @@ newer() {
 
 # rows VERSION: the register rows whose `versions` column names VERSION.
 rows() {
-  awk -F '\t' -v version="$1" '
+  local version="$1"
+  awk -F '\t' -v version="$version" '
     /^#/ || $1 == "id" || NF < 3 { next }
     {
       n = split($3, listed, /[ ,;]+/)
@@ -120,8 +122,9 @@ rows() {
 
 # chart_from_notes VERSION: the chart version the release notes of VERSION name.
 chart_from_notes() {
+  local version="$1"
   # shellcheck disable=SC2016 # the backticks are Markdown in the notes, never expanded
-  look gh release view "v$1" --repo "$REPO" --json body --jq .body 2> /dev/null \
+  look gh release view "v$version" --repo "$REPO" --json body --jq .body 2> /dev/null \
     | sed -n 's/^| chart | `oci:[^`]*` version `\([^`]*\)` |.*/\1/p' | head -n 1 || true
 }
 
@@ -376,7 +379,8 @@ SHIM
   }
   # tag IMAGE TAG: the digest the stub registry holds for IMAGE:TAG.
   tag() {
-    cat "$stub/registry/$1/$2"
+    local image="$1" name="$2"
+    cat "$stub/registry/$image/$name"
   }
   local snapshot
 

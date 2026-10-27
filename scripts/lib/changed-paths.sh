@@ -49,15 +49,16 @@ change_paths() {
 # One commit in the scratch repository: write, or with an empty content
 # delete, the file.
 _changed_paths_commit() {
-  if [[ -z "$2" ]]; then
-    git rm -q "$1"
+  local path="$1" content="$2"
+  if [[ -z "$content" ]]; then
+    git rm -q "$path"
   else
-    mkdir -p "$(dirname "$1")"
-    printf '%s\n' "$2" >"$1"
-    git add "$1"
+    mkdir -p "$(dirname "$path")"
+    printf '%s\n' "$content" >"$path"
+    git add "$path"
   fi
   git -c user.name=self-test -c user.email=self-test@invalid -c commit.gpgsign=false \
-    commit -qm "$1"
+    commit -qm "$path"
 }
 
 _changed_paths_self_test() {

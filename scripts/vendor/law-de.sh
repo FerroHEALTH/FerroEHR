@@ -86,10 +86,11 @@ act_reason() {
 }
 
 sha256_of() {
+  local file="$1"
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{print $1}'
+    sha256sum "$file" | awk '{print $1}'
   else
-    shasum -a 256 "$1" | awk '{print $1}'
+    shasum -a 256 "$file" | awk '{print $1}'
   fi
 }
 
@@ -131,7 +132,8 @@ fetch() {
 # consolidation last folded in, and any notice that a later amendment is not
 # yet fully worked in. Printed one per line as "type: comment".
 stand_lines() {
-  grep -o '<standangabe[^>]*><standtyp>[^<]*</standtyp><standkommentar>[^<]*' "$1" |
+  local file="$1"
+  grep -o '<standangabe[^>]*><standtyp>[^<]*</standtyp><standkommentar>[^<]*' "$file" |
     sed -e 's/<standangabe[^>]*><standtyp>//' -e 's|</standtyp><standkommentar>|: |' || true
 }
 
