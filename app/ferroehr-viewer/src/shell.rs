@@ -180,9 +180,13 @@ pub fn undock() {
 
 /// The CDR's status document, read once per page the server draws: the
 /// shell's reading and a page that shows the deployment read the same answer.
+///
+/// It is a cell of the server alone, never a resource: a resource the browser
+/// does not create would shift the ids of the resources it does, and the
+/// shell's reading would wait for an answer serialized under another id.
 #[cfg(not(target_arch = "wasm32"))]
-#[derive(Clone)]
-pub struct Status(ArcOnceResource<Result<String, crate::error::ViewerError>>);
+#[derive(Clone, Default)]
+pub struct Status(std::sync::Arc<tokio::sync::OnceCell<Result<String, crate::error::ViewerError>>>);
 
 #[cfg(not(target_arch = "wasm32"))]
 impl std::fmt::Debug for Status {
@@ -196,7 +200,7 @@ impl Status {
     /// The status document of the page being drawn, read once.
     #[must_use]
     pub fn read_once() -> Self {
-        Self(ArcOnceResource::new(crate::auth::fetch_status()))
+        Self::default()
     }
 
     /// The status document as the CDR answered it for this page.
@@ -205,7 +209,7 @@ impl Status {
     ///
     /// The CDR's refusal of the status read, or its being out of reach.
     pub async fn read(&self) -> Result<String, crate::error::ViewerError> {
-        self.0.clone().await
+        self.0.get_or_init(crate::auth::fetch_status).await.clone()
     }
 }
 
