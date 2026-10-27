@@ -139,9 +139,10 @@ daily report:
   `1-100` means 1 to 99.
 - **`groups`:** one entry per group of endpoints that served at least one
   request. A request is placed in a group by the part of the route template
-  it matched below `server.base_path`, never by the path the client sent, so
-  a base path such as `/ferroehr/ehr/v1` does not move a query into `ehr`.
-  Routes outside the base path count in no group. The groups are `ehr` (EHR and
+  it matched below the openEHR API mount (`server.base_path` followed by
+  `rest.base_path`), never by the path the client sent, so a `rest.base_path`
+  such as `/ferroehr/ehr/v1` does not move a query into `ehr`. Routes outside
+  the mount count in no group. The groups are `ehr` (EHR and
   `EHR_STATUS`), `composition` (compositions and their version history),
   `contribution`, `query` (query execution), `definition` (templates and
   stored queries), `directory`, `admin`, and `other` for the demographic,

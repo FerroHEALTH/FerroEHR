@@ -399,7 +399,7 @@ async fn run_usage_report(
         &config.usage_report,
         identity,
         &pools.clinical,
-        &usage_product::window(&config.server.base_path),
+        &usage_product::window(&usage_product::api_mount(&config)),
         kind,
     )
     .await
@@ -1185,7 +1185,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
 
     // Outbound only and detached: neither boot, health nor readiness waits on
     // it, and a slow or unreachable collector reaches none of them.
-    let usage_window = usage_product::window(&config.server.base_path);
+    let usage_window = usage_product::window(&usage_product::api_mount(&config));
     let usage_report = ferrohealth_usage_report::reporter::start_with_store(
         &config.usage_report,
         &usage_product::NOTICE,

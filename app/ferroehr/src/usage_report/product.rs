@@ -22,6 +22,7 @@ use serde::Serialize;
 use sqlx::Connection as _;
 use sqlx::PgPool;
 
+use crate::config::FerroEhrConfig;
 use crate::db::acquire::acquire;
 use crate::licence::document::Use;
 use crate::licence::state::LicenceState;
@@ -113,7 +114,7 @@ pub enum RouteGroup {
 }
 
 impl RouteGroup {
-    /// Returns the group of a route template below `server.base_path`, or
+    /// Returns the group of a route template below the API mount, or
     /// `None` for a route outside the API families.
     ///
     /// The first literal segment naming an API family decides (`admin`,
@@ -166,7 +167,7 @@ impl RouteGroup {
 }
 
 /// The window's grouping: the [`RouteGroup`] of the part of a matched route
-/// template below `base_path` (`server.base_path`), and nothing for a request
+/// template below `base_path` ([`api_mount`]), and nothing for a request
 /// no route matched or a route outside that mount.
 ///
 /// Reading only the part below the mount keeps a family word in a configured
@@ -178,6 +179,17 @@ pub fn grouping(base_path: &str, route: Option<&str>) -> Option<Key> {
         return None;
     }
     RouteGroup::of_template(below).and_then(|group| Key::new(group.as_str()))
+}
+
+/// The mount the openEHR API's route templates sit under: `server.base_path`,
+/// where every route is served, followed by `rest.base_path`.
+#[must_use]
+pub fn api_mount(config: &FerroEhrConfig) -> String {
+    format!(
+        "{}{}",
+        config.server.base_path.as_str(),
+        config.rest.base_path
+    )
 }
 
 /// A latency window over FerroEHR's grouping below `base_path`, for the
@@ -399,6 +411,16 @@ mod tests {
         ] {
             assert_eq!(group_of(base, outside), None, "{outside}");
         }
+    }
+
+    #[test]
+    fn the_api_mount_is_the_server_mount_then_the_rest_root() {
+        let mut config = FerroEhrConfig::default();
+        assert_eq!(api_mount(&config), BASE);
+        config.server.base_path =
+            ferrohealth_server::section::BasePath::new("/edge").expect("a base path");
+        config.rest.base_path = "/ferroehr/ehr/v1".to_owned();
+        assert_eq!(api_mount(&config), "/edge/ferroehr/ehr/v1");
     }
 
     #[test]
