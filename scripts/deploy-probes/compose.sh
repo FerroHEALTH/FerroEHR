@@ -436,35 +436,42 @@ probes_management_separate_listener() {
   bold "management surface — its own listener"
 
   local overlay="$PROBE_TMP/mgmt-port.yml"
-  local mport="${PROBE_MGMT_PORT:-19090}"
-  # The server runs in the identity issuer's network namespace, so the issuer
-  # publishes the port, and the namespace's three members are recreated together.
+  # The server runs in the identity issuer's network namespace, whose owner
+  # publishes its ports; recreating the owner strands FerroPIX and the server on
+  # the old namespace. So the port is not published: a one-shot curl joins the
+  # same namespace and asks the management listener on its loopback.
   cat > "$overlay" <<YAML
 services:
-  identity-issuer:
-    ports:
-      - "127.0.0.1:${mport}:9090"
   ferroehr:
     environment:
       FERROEHR__MANAGEMENT__PORT: "9090"
+  mgmt-probe:
+    image: curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+    network_mode: service:identity-issuer
+    profiles: [probe]
 YAML
 
   probe "P-MGMT-PORT" "working" "server" "#2162" \
     "with management.port set, the surface is served from its own listener"
-  dc -f docker-compose.yml -f "$overlay" up -d --no-deps --force-recreate identity-issuer ferropix ferroehr >/dev/null 2>&1
+  dc -f docker-compose.yml -f "$overlay" up -d ferroehr >/dev/null 2>&1
   if ! wait_http "$CDR/health/readiness" 120; then
     probe_fail "a serving CDR with a separate management listener" \
       "$(dc logs --tail 5 ferroehr 2>&1 | tail -3)" \
       "a second listener that fails to bind takes the whole process down at boot"
     probe_done
-    dc -f docker-compose.yml up -d --no-deps --force-recreate identity-issuer ferropix ferroehr >/dev/null 2>&1
+    dc -f docker-compose.yml up -d ferroehr >/dev/null 2>&1
     wait_http "$CDR/health/readiness" 120 || true
     return 0
   fi
-  local mgmt="http://localhost:${mport}"
-  if ! wait_http "$mgmt/management/prometheus" 30; then
-    probe_fail "the management surface answering on its own port" \
-      "$(http_code "$mgmt/management/prometheus")" \
+  local code="000" _try
+  for _try in $(seq 1 15); do
+    code="$(dc -f docker-compose.yml -f "$overlay" run --rm --no-deps mgmt-probe \
+      -s -o /dev/null -w '%{http_code}' http://127.0.0.1:9090/management/prometheus 2>/dev/null)" || true
+    [[ "$code" == "200" ]] && break
+    sleep 2
+  done
+  if [[ "$code" != "200" ]]; then
+    probe_fail "the management surface answering on its own port" "$code" \
       "management.port is documented to move the surface to a separate listener"
   fi
   probe_done
@@ -484,7 +491,7 @@ YAML
   probe_done
 
   # Back to the shipped posture for anything that follows.
-  dc -f docker-compose.yml up -d --no-deps --force-recreate identity-issuer ferropix ferroehr >/dev/null 2>&1
+  dc -f docker-compose.yml up -d ferroehr >/dev/null 2>&1
   wait_http "$CDR/health/readiness" 120 || true
 }
 
