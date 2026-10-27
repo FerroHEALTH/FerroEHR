@@ -87,6 +87,9 @@ console_error_panic_hook.workspace = true
 # A lazy route group's loading future crosses `Suspend`, which asks for
 # `Send`, on the browser's one thread (`crate::routes::lazy`).
 send_wrapper.workspace = true
+# The browser entry loads the page's lazy group before it hydrates
+# (`crate::hydrate`).
+wasm-bindgen-futures.workspace = true
 
 # The server half.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

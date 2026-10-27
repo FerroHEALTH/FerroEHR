@@ -313,6 +313,24 @@ fn group_of(page: Option<Page>) -> u8 {
     .unwrap_or(0)
 }
 
+/// Loads the code of the group that holds the page at the address path
+/// `path`, which the browser does before it hydrates the page the server drew.
+///
+/// A `Suspend` hydrates from a future it polls once, so the group's view must
+/// be ready on that poll: its chunks are loaded first, as `leptos_router`
+/// awaits a lazy route before it hydrates one.
+#[cfg(target_arch = "wasm32")]
+pub async fn preload(path: &str) {
+    match group_of(Page::of(path)) {
+        1 => LRecords::preload().await,
+        2 => LDefinitions::preload().await,
+        3 => LQueries::preload().await,
+        4 => LConsole::preload().await,
+        5 => LSignIn::preload().await,
+        _ => LOverview::preload().await,
+    }
+}
+
 /// The one route: the group that holds the page the address names.
 #[expect(
     clippy::must_use_candidate,

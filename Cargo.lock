@@ -2807,6 +2807,7 @@ dependencies = [
  "tracing-subscriber",
  "urlencoding",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]

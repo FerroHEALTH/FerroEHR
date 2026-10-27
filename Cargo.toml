@@ -408,6 +408,10 @@ console_error_panic_hook = "0.1"
 # future `LazyRoute::view` returns is not `Send`), as leptos_router's own
 # nested router does with the same crate (verified on crates.io 2026-10-27).
 send_wrapper = { version = "0.6.0", features = ["futures"] }
+# The viewer's browser entry loads the page's lazy group before it hydrates,
+# on the browser's own executor (verified on crates.io 2026-10-27, the
+# release wasm-bindgen 0.2.129 pairs with).
+wasm-bindgen-futures = "0.4.79"
 # E2E WebDriver client (dev-dep of the viewer). Default features off: the
 # `manager` feature downloads and unpacks a WebDriver binary through zip 8
 # (RUSTSEC-2026-0367/0368/0369, #3806); the journeys reach a chromedriver

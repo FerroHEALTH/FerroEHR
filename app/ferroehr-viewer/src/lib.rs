@@ -120,5 +120,12 @@ pub mod state;
 pub fn hydrate() {
     console_error_panic_hook::set_once();
     ferrohealth_ui::widget::hydration::explain();
-    leptos::mount::hydrate_lazy(app::App);
+    wasm_bindgen_futures::spawn_local(async {
+        let path = leptos::prelude::window()
+            .location()
+            .pathname()
+            .unwrap_or_default();
+        routes::preload(&path).await;
+        leptos::mount::hydrate_lazy(app::App);
+    });
 }
