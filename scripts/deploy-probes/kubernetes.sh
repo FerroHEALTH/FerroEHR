@@ -43,6 +43,10 @@ K8S_API="$K8S_CDR/ferroehr/rest/openehr/v1"
 K8S_BASIC="clinician:ferroehr"
 K8S_AUTH_VALUES="deploy/helm/ci/basic-auth-values.yaml"
 K8S_PF_PID=""
+K8S_HTTP_CODE='%{http_code}'
+K8S_PHASE_PATH='{.status.phase}'
+K8S_HELM_REFUSED="helm refused the release"
+K8S_NO_CONTAINER="crictl listed none"
 
 # The viewer workload the chart renders behind `viewer.enabled` — a second
 # Deployment, Service, ServiceAccount and NetworkPolicy from a second image.
@@ -154,7 +158,7 @@ k8s_try_db_hosts() {
         nc -w3 -z "$h" '"$K8S_DB_PORT"' && { echo "HOST=$h"; break; }
       done' >/dev/null 2>&1
   for _i in $(seq 1 15); do
-    phase="$(kubectl get pod "$name" -o jsonpath='{.status.phase}' 2>/dev/null)"
+    phase="$(kubectl get pod "$name" -o jsonpath="$K8S_PHASE_PATH" 2>/dev/null)"
     case "$phase" in Succeeded | Failed) break ;; *) ;; esac
     sleep 2
   done
@@ -262,7 +266,7 @@ k8s_ui_get() {
     --labels="$K8S_UI_CLIENT_LABEL" \
     --command -- wget -q -O - "http://$K8S_UI:3000${1:-/login}" >/dev/null 2>&1
   for _i in $(seq 1 30); do
-    phase="$(kc get pod "$name" -o jsonpath='{.status.phase}' 2>/dev/null)"
+    phase="$(kc get pod "$name" -o jsonpath="$K8S_PHASE_PATH" 2>/dev/null)"
     case "$phase" in Succeeded | Failed) break ;; *) ;; esac
     sleep 2
   done
@@ -303,6 +307,12 @@ k8s_pf_start() {
   wait_http "$K8S_CDR/health/liveness" 45
 }
 
+# k8s_runtime_spec <node> <container-id>: the OCI runtime spec the node applied.
+k8s_runtime_spec() {
+  local node="$1" cid="$2"
+  docker exec "$node" crictl inspect "$cid" 2>/dev/null | jq -c '.info.runtimeSpec'
+}
+
 # A forward bound to ONE POD rather than the Service.
 #
 # Needed for exactly one probe, for a reason worth stating: `port-forward
@@ -312,8 +322,9 @@ k8s_pf_start() {
 # through a Service forward reports a connection failure and calls it a finding
 # about the server.
 k8s_pf_pod_start() {
+  local pod="$1"
   k8s_pf_stop
-  kc port-forward "pod/$1" "${K8S_PORT}:8080" >/dev/null 2>&1 &
+  kc port-forward "pod/$pod" "${K8S_PORT}:8080" >/dev/null 2>&1 &
   K8S_PF_PID=$!
   wait_http "$K8S_CDR/health/liveness" 30
 }
@@ -369,7 +380,7 @@ probes_k8s_boot() {
   probe "P-K8S-BOOT" "working" "chart" "#2159" \
     "the chart's default values install and the Deployment rolls out"
   if ! k8s_install; then
-    probe_fail "a successful helm upgrade --install" "helm refused the release" \
+    probe_fail "a successful helm upgrade --install" "$K8S_HELM_REFUSED" \
       "the render itself failed; re-run the helm command without -q to see it"
     probe_done
     return 1
@@ -445,11 +456,11 @@ probes_k8s_runtime_posture() {
   local cid spec
   cid="$(docker exec "$node" crictl ps --name ferroehr -q 2>/dev/null | head -1)"
   if [[ -z "$cid" ]]; then
-    probe_fail "a running ferroehr container on the node" "crictl listed none"
+    probe_fail "a running ferroehr container on the node" "$K8S_NO_CONTAINER"
     probe_done
     return 0
   fi
-  spec="$(docker exec "$node" crictl inspect "$cid" 2>/dev/null | jq -c '.info.runtimeSpec')"
+  spec="$(k8s_runtime_spec "$node" "$cid")"
 
   k8s_assert_hardened "$spec"
   probe_done
@@ -595,7 +606,7 @@ probes_k8s_readiness() {
   k8s_db_stop
   if ! wait_status "$K8S_CDR/health/readiness" "503" 40; then
     probe_fail "readiness answering 503 once the database is unreachable" \
-      "$(curl -s -o /dev/null -w '%{http_code}' "$K8S_CDR/health/readiness")" \
+      "$(curl -s -o /dev/null -w "$K8S_HTTP_CODE" "$K8S_CDR/health/readiness")" \
       "a readiness probe that stays UP through a dead database gates nothing"
     k8s_db_start
     probe_done
@@ -681,7 +692,7 @@ probes_k8s_viewer() {
     "viewer.enabled installs the viewer workload and it rolls out"
   if ! k8s_ui_install; then
     probe_fail "a successful helm upgrade --install with the viewer on" \
-      "helm refused the release" \
+      "$K8S_HELM_REFUSED" \
       "re-run k8s_ui_install without the output redirect to see the render error"
     probe_done
     uncovered "every viewer probe after P-K8S-UI-BOOT" \
@@ -721,9 +732,9 @@ probes_k8s_ui_runtime() {
     "the viewer container runs under the same hardened posture as the server"
   cid="$(docker exec "$node" crictl ps --name viewer -q 2>/dev/null | head -1)"
   if [[ -z "$cid" ]]; then
-    probe_fail "a running viewer container on the node" "crictl listed none"
+    probe_fail "a running viewer container on the node" "$K8S_NO_CONTAINER"
   else
-    spec="$(docker exec "$node" crictl inspect "$cid" 2>/dev/null | jq -c '.info.runtimeSpec')"
+    spec="$(k8s_runtime_spec "$node" "$cid")"
     k8s_assert_hardened "$spec"
   fi
   probe_done
@@ -787,7 +798,7 @@ YAML
     "the narrowed viewer ingress installs, is stored as written, and still admits the peer it names"
   if ! k8s_ui_install -f "$PROBE_TMP/viewer-narrow.yaml"; then
     probe_fail "an install with ingressAllowAll=false and a non-empty ingressFrom" \
-      "helm refused the release" \
+      "$K8S_HELM_REFUSED" \
       "the guard above must fire only on an EMPTY ingressFrom; refusing this one makes the narrowing path unusable"
     probe_done
     return 0
@@ -855,7 +866,7 @@ k8s_term_nc() {
     --env="TERM_IP=$ip" --command -- sh -c 'nc -w4 -z "$TERM_IP" 8080; echo exit=$?' \
     >/dev/null 2>&1
   for _i in $(seq 1 25); do
-    phase="$(kubectl -n "$ns" get pod "$name" -o jsonpath='{.status.phase}' 2>/dev/null)"
+    phase="$(kubectl -n "$ns" get pod "$name" -o jsonpath="$K8S_PHASE_PATH" 2>/dev/null)"
     case "$phase" in Succeeded | Failed) break ;; *) ;; esac
     sleep 2
   done
@@ -866,7 +877,7 @@ k8s_term_nc() {
 
 k8s_term_template() {
   local code
-  code="$(curl -s -u "$K8S_BASIC" -o /dev/null -w '%{http_code}' -X POST \
+  code="$(curl -s -u "$K8S_BASIC" -o /dev/null -w "$K8S_HTTP_CODE" -X POST \
     -H 'Content-Type: application/xml' --data-binary "@$K8S_TERM_TEMPLATE" \
     "$K8S_API/definition/template/adl1.4")"
   case "$code" in 201 | 204 | 409) return 0 ;; *) return 1 ;; esac
@@ -874,13 +885,13 @@ k8s_term_template() {
 
 # The status code a commit of the given fixture into a fresh EHR answers.
 k8s_term_commit_code() {
-  local hdr="$PROBE_TMP/k8s-term-ehr.txt" ehr
+  local hdr="$PROBE_TMP/k8s-term-ehr.txt" ehr fixture="$1"
   curl -s -u "$K8S_BASIC" -X POST -D "$hdr" -o /dev/null "$K8S_API/ehr" || { printf '000'; return 0; }
   ehr="$(grep -i '^location' "$hdr" 2>/dev/null | tr -d '\r' | awk -F/ '{print $NF}')"
   [[ -n "$ehr" ]] || { printf '000'; return 0; }
-  curl -s -u "$K8S_BASIC" -o /dev/null -w '%{http_code}' -X POST \
+  curl -s -u "$K8S_BASIC" -o /dev/null -w "$K8S_HTTP_CODE" -X POST \
     -H 'Content-Type: application/json' -H 'Prefer: return=minimal' \
-    --data-binary "@$1" "$K8S_API/ehr/$ehr/composition"
+    --data-binary "@$fixture" "$K8S_API/ehr/$ehr/composition"
 }
 
 probes_k8s_terminology() {
@@ -902,7 +913,7 @@ probes_k8s_terminology() {
     "terminology.enabled installs the FerroTERM workload and it rolls out"
   if ! k8s_term_install; then
     probe_fail "a successful helm upgrade --install with terminology on" \
-      "helm refused the release" \
+      "$K8S_HELM_REFUSED" \
       "re-run k8s_term_install without the output redirect to see the render error"
     probe_done
     uncovered "every terminology probe after P-K8S-TERM-BOOT" \
@@ -955,9 +966,9 @@ probes_k8s_term_runtime() {
     "the terminology container runs under the same hardened posture as the server"
   cid="$(docker exec "$node" crictl ps --name terminology -q 2>/dev/null | head -1)"
   if [[ -z "$cid" ]]; then
-    probe_fail "a running terminology container on the node" "crictl listed none"
+    probe_fail "a running terminology container on the node" "$K8S_NO_CONTAINER"
   else
-    spec="$(docker exec "$node" crictl inspect "$cid" 2>/dev/null | jq -c '.info.runtimeSpec')"
+    spec="$(k8s_runtime_spec "$node" "$cid")"
     k8s_assert_hardened "$spec"
   fi
   probe_done
@@ -1065,7 +1076,7 @@ probes_k8s_term_index() {
   probe "P-K8S-TERM-INDEX-STRATEGY" "working" "chart" "#3328" \
     "a named index claim makes the Deployment Recreate, so a ReadWriteOnce volume cannot wedge the rollout"
   if ! k8s_term_install --set "terminology.index.persistentVolumeClaim=$K8S_TERM_INDEX_CLAIM"; then
-    probe_fail "an install with an index claim named" "helm refused the release"
+    probe_fail "an install with an index claim named" "$K8S_HELM_REFUSED"
     probe_done
     uncovered "every index probe after P-K8S-TERM-INDEX-STRATEGY" \
       "the install with the claim was refused, so the mounted index was never observed"
@@ -1097,7 +1108,7 @@ probes_k8s_term_index() {
   node="$(k8s_node_container)"
   if [[ -n "$node" ]]; then
     cid="$(docker exec "$node" crictl ps --name terminology -q 2>/dev/null | head -1)"
-    spec="$(docker exec "$node" crictl inspect "$cid" 2>/dev/null | jq -c '.info.runtimeSpec')"
+    spec="$(k8s_runtime_spec "$node" "$cid")"
     mount="$(printf '%s' "$spec" | jq -r '.mounts[] | select(.destination == "/data/index")')"
     assert_contains "$mount" '"ro"' \
       "an index a compromised container can rewrite is a terminology answer an attacker chooses"
@@ -1218,7 +1229,7 @@ YAML
 # FerroBRIDGE fetches it from the CDR at boot, so its absence is a crash loop.
 k8s_bridge_template() {
   local code
-  code="$(curl -s -u "$K8S_BASIC" -o /dev/null -w '%{http_code}' -X POST \
+  code="$(curl -s -u "$K8S_BASIC" -o /dev/null -w "$K8S_HTTP_CODE" -X POST \
     -H 'Content-Type: application/xml' --data-binary "@$K8S_BRIDGE_TEMPLATE" \
     "$K8S_API/definition/template/adl1.4")"
   case "$code" in 201 | 204 | 409) return 0 ;; *) return 1 ;; esac
@@ -1236,13 +1247,13 @@ k8s_bridge_rollout() { kc rollout status "deploy/$K8S_BRIDGE" --timeout="${1:-30
 # policy admits. Read from the finished pod's logs, for the attach race the
 # viewer's client documents; the trailing exit= line is busybox wget's status.
 k8s_bridge_get() {
-  local name="probe-bridge-$$-$RANDOM" out phase _i
+  local path="$1" name="probe-bridge-$$-$RANDOM" out phase _i
   # shellcheck disable=SC2016 # $? belongs to the busybox shell, not this one
   kubectl -n "$K8S_NS" run "$name" --image=busybox:1.37 --restart=Never \
-    --labels="$K8S_BRIDGE_CLIENT_LABEL" --env="BRIDGE_URL=http://$K8S_BRIDGE:8080$1" \
+    --labels="$K8S_BRIDGE_CLIENT_LABEL" --env="BRIDGE_URL=http://$K8S_BRIDGE:8080$path" \
     --command -- sh -c 'wget -q -O - "$BRIDGE_URL"; echo; echo exit=$?' >/dev/null 2>&1
   for _i in $(seq 1 30); do
-    phase="$(kc get pod "$name" -o jsonpath='{.status.phase}' 2>/dev/null)"
+    phase="$(kc get pod "$name" -o jsonpath="$K8S_PHASE_PATH" 2>/dev/null)"
     case "$phase" in Succeeded | Failed) break ;; *) ;; esac
     sleep 2
   done
@@ -1301,7 +1312,7 @@ probes_k8s_bridge() {
   fi
   if ! k8s_bridge_install; then
     probe_fail "a successful helm upgrade --install with the bridge on" \
-      "helm refused the release" \
+      "$K8S_HELM_REFUSED" \
       "re-run k8s_bridge_install without the output redirect to see the render error"
     probe_done
     uncovered "every bridge probe after P-K8S-BRIDGE-BOOT" \
@@ -1350,9 +1361,9 @@ probes_k8s_bridge_runtime() {
     "the bridge container runs under the same hardened posture as the server"
   cid="$(docker exec "$node" crictl ps --name bridge -q 2>/dev/null | head -1)"
   if [[ -z "$cid" ]]; then
-    probe_fail "a running bridge container on the node" "crictl listed none"
+    probe_fail "a running bridge container on the node" "$K8S_NO_CONTAINER"
   else
-    spec="$(docker exec "$node" crictl inspect "$cid" 2>/dev/null | jq -c '.info.runtimeSpec')"
+    spec="$(k8s_runtime_spec "$node" "$cid")"
     k8s_assert_hardened "$spec"
   fi
   probe_done
@@ -1478,9 +1489,9 @@ probes_k8s_original_state() {
   probe "P-K8S-RESET-REINSTALL" "working" "chart" "#3677" \
     "a reinstall with the minimal values migrates the empty database and serves none of the old data"
   if k8s_install && k8s_rollout 240s && k8s_pf_start; then
-    assert_eq "404" "$(curl -s -u "$K8S_BASIC" -o /dev/null -w '%{http_code}' "$K8S_API/ehr/$ehr")" \
+    assert_eq "404" "$(curl -s -u "$K8S_BASIC" -o /dev/null -w "$K8S_HTTP_CODE" "$K8S_API/ehr/$ehr")" \
       "GET /ehr/$ehr must find nothing after the reset"
-    assert_eq "200" "$(curl -s -o /dev/null -w '%{http_code}' "$K8S_CDR/health/readiness")" \
+    assert_eq "200" "$(curl -s -o /dev/null -w "$K8S_HTTP_CODE" "$K8S_CDR/health/readiness")" \
       "the reinstalled release is ready on the recreated database"
   else
     probe_fail "a ready release after the reinstall" "rollout or port-forward failed" \

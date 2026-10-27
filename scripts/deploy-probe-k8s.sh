@@ -116,30 +116,33 @@ kp() { kubectl -n "$K8S_PROD_NS" "$@"; }
 # role joins that group.
 k8s_prod_project() { printf '%s-prod-%s' "$COMPOSE_PROJECT" "$1"; }
 k8s_prod_port() {
-  local i
+  local domain="$1" i
   for i in "${!K8S_PROD_DOMAINS[@]}"; do
-    [[ "${K8S_PROD_DOMAINS[$i]}" == "$1" ]] && { printf '%s' "$((K8S_PROD_PORT_BASE + i))"; return 0; }
+    [[ "${K8S_PROD_DOMAINS[$i]}" == "$domain" ]] && { printf '%s' "$((K8S_PROD_PORT_BASE + i))"; return 0; }
   done
   return 1
 }
 k8s_prod_login() { printf 'probe_%s' "$1"; }
 k8s_prod_group() {
-  case "$1" in
+  local domain="$1"
+  case "$domain" in
     audit) printf 'ferroehr_clinical' ;;
-    *) printf 'ferroehr_%s' "$1" ;;
+    *) printf 'ferroehr_%s' "$domain" ;;
   esac
 }
 
 # k8s_prod_psql <cluster> <sql>: run SQL as the bootstrap superuser.
 k8s_prod_psql() {
-  docker compose -p "$(k8s_prod_project "$1")" exec -T ferroehr-postgres \
-    psql -v ON_ERROR_STOP=1 -U postgres -d "${PG_INIT_DB:-ferroehr}" -tAc "$2"
+  local cluster="$1" sql="$2"
+  docker compose -p "$(k8s_prod_project "$cluster")" exec -T ferroehr-postgres \
+    psql -v ON_ERROR_STOP=1 -U postgres -d "${PG_INIT_DB:-ferroehr}" -tAc "$sql"
 }
 
 # k8s_prod_dsn <login> <password> <cluster>: TLS with the server's certificate
 # checked against the probe CA and the host name pods reach it at.
 k8s_prod_dsn() {
-  printf 'postgres://%s:%s@%s:%s/%s?%s' "$1" "$2" "$K8S_DB_HOST" "$(k8s_prod_port "$3")" \
+  local login="$1" password="$2" cluster="$3"
+  printf 'postgres://%s:%s@%s:%s/%s?%s' "$login" "$password" "$K8S_DB_HOST" "$(k8s_prod_port "$cluster")" \
     "${PG_INIT_DB:-ferroehr}" "$K8S_PROD_TLS_QUERY"
 }
 
@@ -199,9 +202,9 @@ k8s_prod_tls() {
 # k8s_prod_plaintext_refused <cluster>: a TCP connection without encryption,
 # on a valid login, is refused by the cluster itself.
 k8s_prod_plaintext_refused() {
-  local out
-  out="$(docker compose -p "$(k8s_prod_project "$1")" exec -T ferroehr-postgres \
-    psql "host=127.0.0.1 sslmode=disable user=$(k8s_prod_login "$1") password=${K8S_PROD_PASSWORD} dbname=${PG_INIT_DB:-ferroehr}" \
+  local cluster="$1" out
+  out="$(docker compose -p "$(k8s_prod_project "$cluster")" exec -T ferroehr-postgres \
+    psql "host=127.0.0.1 sslmode=disable user=$(k8s_prod_login "$cluster") password=${K8S_PROD_PASSWORD} dbname=${PG_INIT_DB:-ferroehr}" \
     -tAc 'SELECT 1' 2>&1)" && return 1
   case "$out" in *"no encryption"*) return 0 ;; *) return 1 ;; esac
 }
@@ -210,17 +213,18 @@ k8s_prod_plaintext_refused() {
 # node's user namespace leaves `hostUsers: false` unexercised, and the record
 # says so by name rather than by silence.
 k8s_record_host_users() {
-  local host_users
-  host_users="$(kubectl -n "$1" get deploy "$2" -o jsonpath='{.spec.template.spec.hostUsers}' 2>/dev/null)"
+  local namespace="$1" deployment="$2" host_users
+  host_users="$(kubectl -n "$namespace" get deploy "$deployment" -o jsonpath='{.spec.template.spec.hostUsers}' 2>/dev/null)"
   [[ "$host_users" == false ]] && return 0
-  uncovered "hostUsers: false, the pod's own user namespace (deployment $1/$2)" \
+  uncovered "hostUsers: false, the pod's own user namespace (deployment $namespace/$deployment)" \
     "this run's pods do not set hostUsers: false (they carry '${host_users:-unset}', overrides: ${PROBE_K8S_VALUES:-none}), so they share the node's user namespace and the separation the chart default makes was not observed"
 }
 
 # The owner role the image's init script creates holds ferroehr_migrator and
 # owns the database, so it is the credential that prepares a cluster.
 k8s_prod_owner_dsn() {
-  k8s_prod_dsn "${PG_INIT_USER:-ferroehr}" "${PG_INIT_PASSWORD:-ferroehr}" "$1"
+  local cluster="$1"
+  k8s_prod_dsn "${PG_INIT_USER:-ferroehr}" "${PG_INIT_PASSWORD:-ferroehr}" "$cluster"
 }
 
 # Four clusters, each initialised on its own, so four system identifiers.
@@ -262,7 +266,8 @@ k8s_prod_roles() {
 
 # k8s_prod_secret <name> <dsn>: one DSN under the key `dsn`, replaced in place.
 k8s_prod_secret() {
-  kp create secret generic "$1" --from-literal=dsn="$2" --dry-run=client -o yaml \
+  local name="$1" dsn="$2"
+  kp create secret generic "$name" --from-literal=dsn="$dsn" --dry-run=client -o yaml \
     | kp apply -f - >/dev/null
 }
 
@@ -272,10 +277,10 @@ k8s_prod_secret() {
 # cluster; `shared` puts all four on the clinical cluster, each still on its
 # own login role.
 k8s_prod_secrets() {
-  local domain cluster
+  local layout="$1" domain cluster
   for domain in "${K8S_PROD_DOMAINS[@]}"; do
     cluster="$domain"
-    [[ "$1" == shared ]] && cluster=clinical
+    [[ "$layout" == shared ]] && cluster=clinical
     k8s_prod_secret "probe-db-${domain}" \
       "$(k8s_prod_dsn "$(k8s_prod_login "$domain")" "$K8S_PROD_PASSWORD" "$cluster")" || return 1
     [[ "$domain" == clinical ]] && continue
@@ -544,7 +549,8 @@ trap cleanup EXIT
 # and nothing changes where a real docker CLI exists.
 if ! command -v docker >/dev/null 2>&1 && command -v podman >/dev/null 2>&1; then
   docker() {
-    if [[ "$1" == compose ]]; then
+    local subcommand="$1"
+    if [[ "$subcommand" == compose ]]; then
       shift
       docker-compose "$@"
     else

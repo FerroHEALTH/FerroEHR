@@ -211,9 +211,10 @@ FAIL=0
 # malformed by construction, and this check refuses any `key=value` word whose
 # value parses as a version, which keeps the class from coming back.
 release_shaped_probe() {
+  local probe="$1"
   local -a words
   local word hit=0
-  read -r -a words <<<"$1"
+  read -r -a words <<<"$probe"
   for word in "${words[@]}"; do
     [[ "$word" == *=* ]] || continue
     if [[ "${word#*=}" =~ ^v?[0-9]+(\.[0-9]+)+([-+].*)?$ ]]; then
@@ -952,7 +953,8 @@ fixture_gate
 # map whose keys need TOML quoting (spaces, dots). The values are read from the
 # ConfigMap's ferroehr.toml, the file the server actually loads.
 rendered_toml() {
-  helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$1" \
+  local values="$1"
+  helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values" \
     --show-only templates/configmap.yaml | yq '.data."ferroehr.toml"'
 }
 config_keys_gate() {
@@ -1010,11 +1012,12 @@ unknown_config_key_gate
 # than at the operator's first boot. Whether the server ACCEPTS the posture is
 # boot-check.sh's question, which evaluates it with the image itself.
 toml_value() { # <toml> <section> <key>: the raw right-hand side, or nothing
-  awk -v want="$2" -v key="$3" '
+  local toml="$1" section="$2" key="$3"
+  awk -v want="$section" -v key="$key" '
     { line = $0; sub(/^[[:space:]]+/, "", line) }
     line ~ /^\[/ { section = line; gsub(/^\[|\]$/, "", section); next }
     section == want && index(line, key " = ") == 1 { print substr(line, length(key) + 4); exit }
-  ' <<<"$1"
+  ' <<<"$toml"
 }
 production_overlay_gate() {
   bold "── production overlay: the separations it claims ────────"
@@ -1113,7 +1116,8 @@ migration_job_gate
 # same clients with TLS off, so a scheme hard-wired to either value fails one
 # half. Each fact is read from the parsed object (gates/tls-clients.jq).
 tls_client_facts() { # <rendered>: one "<fact> <value>" line per client fact
-  yq -o=json -I0 '.' "$1" | jq -s -r --arg release "$RELEASE_NAME" -f "$(dirname "$0")/gates/tls-clients.jq"
+  local rendered="$1"
+  yq -o=json -I0 '.' "$rendered" | jq -s -r --arg release "$RELEASE_NAME" -f "$(dirname "$0")/gates/tls-clients.jq"
 }
 server_tls_gate() {
   bold "── server TLS: the in-chart clients follow the listener ─"

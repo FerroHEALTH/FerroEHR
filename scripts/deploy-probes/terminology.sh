@@ -124,11 +124,11 @@ term_ft_new_ehr() {
 
 # The status code a commit of the given fixture into a fresh EHR answers.
 term_ft_commit_code() {
-  local ehr; ehr="$(term_ft_new_ehr)"
+  local fixture="$1" ehr; ehr="$(term_ft_new_ehr)"
   [[ -n "$ehr" ]] || { printf '000'; return 0; }
   curl -s -u "$BASIC" -o /dev/null -w '%{http_code}' -X POST \
     -H 'Content-Type: application/json' -H 'Prefer: return=minimal' \
-    --data-binary "@$1" "$API/ehr/$ehr/composition"
+    --data-binary "@$fixture" "$API/ehr/$ehr/composition"
 }
 
 term_ft_template() {
@@ -143,11 +143,11 @@ term_ft_template() {
 # "<status> <body>". Both canonical URLs travel as single path segments, so
 # their slashes are percent-encoded.
 term_ft_api_validate() {
-  local system value_set
+  local code="$1" system value_set
   system="$(jq -rn --arg s "$TERM_FT_SYSTEM" '$s | @uri')"
   value_set="$(jq -rn --arg s "$TERM_FT_VALUE_SET" '$s | @uri')"
   curl -s -u "$BASIC" -w ' %{http_code}' \
-    "$API/terminology/${system}/value_set/${value_set}/validate?candidate_code=$1" \
+    "$API/terminology/${system}/value_set/${value_set}/validate?candidate_code=$code" \
     | awk '{ status = $NF; $NF = ""; sub(/ $/, ""); print status " " $0 }'
 }
 

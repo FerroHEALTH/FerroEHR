@@ -80,23 +80,26 @@ probe_fail() {
 
 # assert_eq <expected> <actual> [note]
 assert_eq() {
-  [[ "$1" = "$2" ]] && return 0
-  probe_fail "$1" "$2" "${3:-}"
+  local expected="$1" actual="$2" note="${3:-}"
+  [[ "$expected" = "$actual" ]] && return 0
+  probe_fail "$expected" "$actual" "$note"
 }
 
 # assert_contains <haystack> <needle> [note]
 assert_contains() {
-  case "$1" in
-    *"$2"*) return 0 ;;
+  local haystack="$1" needle="$2" note="${3:-}"
+  case "$haystack" in
+    *"$needle"*) return 0 ;;
     *) ;;
   esac
-  probe_fail "output containing '$2'" "${1:0:300}" "${3:-}"
+  probe_fail "output containing '$needle'" "${haystack:0:300}" "$note"
 }
 
 # assert_not_contains <haystack> <needle> [note]
 assert_not_contains() {
-  case "$1" in
-    *"$2"*) probe_fail "output WITHOUT '$2'" "${1:0:300}" "${3:-}" ;;
+  local haystack="$1" needle="$2" note="${3:-}"
+  case "$haystack" in
+    *"$needle"*) probe_fail "output WITHOUT '$needle'" "${haystack:0:300}" "$note" ;;
     *) return 0 ;;
   esac
 }
@@ -112,7 +115,8 @@ assert_not_contains() {
 # indentation after them collapse to one space; quotes, backslashes and tabs
 # are escaped (RFC 8259 §7).
 json_string() {
-  printf '%s' "$1" | tr -d '\r' | awk '
+  local text="$1"
+  printf '%s' "$text" | tr -d '\r' | awk '
     { gsub(/\\/, "\\\\"); gsub(/"/, "\\\""); gsub(/\t/, " ");
       sub(/^[[:space:]]+/, ""); printf "%s%s", (NR > 1 ? " " : ""), $0 }
   '
@@ -120,8 +124,9 @@ json_string() {
 
 # uncovered <what> <why> — the honest half of the report.
 uncovered() {
+  local what="$1" why="$2"
   PROBE_UNCOVERED+=("$(printf '{"what":"%s","why":"%s"}' \
-    "$(json_string "$1")" "$(json_string "$2")")")
+    "$(json_string "$what")" "$(json_string "$why")")")
   PROBE_SKIP=$((PROBE_SKIP + 1))
 }
 
