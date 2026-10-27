@@ -22,7 +22,7 @@ flowchart TB
 
     subgraph app ["Application layer (the server)"]
         rest["REST adapter (axum)<br/>authentication · authorization · wire mapping"]
-        sm["Native service API<br/>(SM Platform Service Model)"]
+        sm["Service layer<br/>(our own design)"]
         core["Platform: PG18 storage · versioning ·<br/>AQL→SQL engine · validation · signing"]
         ext["Optional integrations<br/>(FHIR audit and terminology · events · multimedia — compiled in by cargo feature)"]
     end

@@ -14,8 +14,8 @@ governs maintenance and extension, not initial build.
 
 ## Spec authority
 
-- ITS-REST §Authentication + SM `master02` place authorization largely **out
-  of band** — fine-grained authz is our own extension where the spec is
+- ITS-REST §Authentication makes authentication a `SHOULD` and no openEHR
+  specification governs authorization — fine-grained authz is our own extension where the spec is
   silent; flag it as such in comments ("no openEHR spec governs this"),
   never cite an internal doc (spec-adherence.md).
 - **401 vs 403 discipline:** unauthenticated → 401, authenticated-but-

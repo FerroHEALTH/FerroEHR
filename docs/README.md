@@ -26,7 +26,7 @@ official external documentation.** (The current design in brief: the spec +
 ITS layer is generated from the vendored machine-readable specs by
 `openehr-codegen`; the application is idiomatic Rust of our own design on
 those crates, with its own PG18-native storage and typed AQL engine, four
-app crates with zero re-exports, an SM-aligned service layer, and enterprise
+app crates with zero re-exports, a service layer of our own design, and enterprise
 capabilities — eventing, multi-tenancy, multimedia
 externalization; acceptance is the openEHR conformance suite. See
 `architecture.md`.)
@@ -48,8 +48,8 @@ externalization; acceptance is the openEHR conformance suite. See
 
 ## Platform + verification
 
-- `architecture.md` — how the system is built and why, including the SM
-  Platform Service Model component map.
+- `architecture.md` — how the system is built and why, including the
+  service-layer map.
 - `VERSIONS.md` — the single source of truth for every version pin (language,
   PG, openEHR spec components) except third-party Rust crates (root `Cargo.toml`
   wins for those).

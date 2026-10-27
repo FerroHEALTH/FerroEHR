@@ -117,10 +117,9 @@ impl FerroEhrService {
     #[expect(
         clippy::unused_self,
         clippy::unnecessary_wraps,
-        reason = "the SM interface declares this call on the service and in the \
-                  SM call-status `Result` shape; the protocol adapter invokes \
-                  every SM call uniformly, so neither is dropped because this \
-                  particular realization happens to be stateless and infallible"
+        reason = "every service call shares one method-on-the-service, `Result`-returning \
+                  shape the protocol adapter invokes uniformly, so neither is dropped because \
+                  this implementation happens to be stateless and infallible"
     )]
     pub fn valid_query(&self, a_query_text: &str, a_type: &str) -> Result<bool, SmError> {
         Ok(valid_query_text(a_query_text, a_type))
@@ -160,9 +159,9 @@ impl FerroEhrService {
     /// Always — `not_implemented` (`501`), unconditionally.
     #[expect(
         clippy::unused_self,
-        reason = "the SM interface declares this call on the service; the \
-                  protocol adapter invokes every SM call uniformly, so the \
-                  receiver stays even where this realization ignores it"
+        reason = "every service call is a method on the service, which the protocol \
+                  adapter invokes uniformly, so the receiver stays even where this \
+                  implementation ignores it"
     )]
     pub fn store_query_set(&self, _a_query_set_name: Option<String>) -> Result<String, SmError> {
         Err(SmError::new(

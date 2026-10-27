@@ -4,12 +4,8 @@
 //! The transport-agnostic audit **event model** for the SM System Log
 //! component (`I_SYSTEM_LOG`).
 //!
-//! NOTE: the vendored SM `I_SYSTEM_LOG` interface is an empty stub
-//! (`docs/specs/openehr/SM/docs/UML/classes/i_system_log.adoc` names it with no
-//! methods and no description), the only normative statement being the platform
-//! overview's "System Log | IHE ATNA-compliant system log"
-//! (`docs/specs/openehr/SM/docs/openehr_platform/master02-overview.adoc`
-//! §Overview), so this event model is entirely our own design.
+//! NOTE: no openEHR specification governs this: our own design, shaped
+//! for the IHE ATNA record the platform emits.
 //!
 //! It is the minimal shape the ITS-REST audit middleware needs to hand a
 //! resolved operation record to the platform's ATNA emitter. Nothing here

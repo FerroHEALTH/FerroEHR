@@ -217,7 +217,7 @@ probes_multimedia() {
     probe_fail "an EHR carrying a 400 KiB DV_MULTIMEDIA" "the commit did not return an id"
   else
     uri="$(curl -s -u "$BASIC" "$API/ehr/$ehr/ehr_status" \
-      | tr ',' '\n' | grep -o 's3://openehr-multimedia/[0-9a-f]*' | head -1)"
+      | tr ',' '\n' | grep -o 's3://openehr-multimedia/[0-9a-f]*' | sed -n 1p)"
     assert_contains "$uri" "s3://openehr-multimedia/" "the stored record must reference the blob"
     key="${uri##*/}"
     PROBE_MEDIA_KEY="$key"

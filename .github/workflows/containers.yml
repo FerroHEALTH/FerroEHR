@@ -221,7 +221,7 @@ jobs:
           set -euo pipefail
           channel=$(grep -E '^channel' rust-toolchain.toml | sed -E 's/.*"(.*)".*/\1/')
           have=$(rustc --version | awk '{print $2}')
-          arg=$(grep -E '^ARG RUST_VERSION=' docker/Dockerfile | head -1 | cut -d= -f2)
+          arg=$(grep -E '^ARG RUST_VERSION=' docker/Dockerfile | sed -n 1p | cut -d= -f2)
           echo "rust-toolchain=$channel  container-rustc=$have  Dockerfile ARG=$arg"
           if [ "$channel" != "$have" ]; then
             echo "::error::Job container rustc ($have) != rust-toolchain.toml ($channel). Bump the container: tag in containers.yml."

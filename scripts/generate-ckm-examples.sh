@@ -27,7 +27,7 @@ for opt in "$PACK"/*.opt; do
   # regex had.
   tid=$(tr '\n' ' ' < "$opt" \
     | sed -n 's|.*<template_id>[[:space:]]*<value>\([^<]*\)</value>.*|\1|p' \
-    | head -1)
+    | sed -n 1p)
   [[ -n "$tid" ]] || { echo "::error::no <template_id><value> in $opt" >&2; exit 1; }
   echo "==> $slug ($tid)"
   status=$(curl -sS -o /dev/null -w '%{http_code}' -u "$AUTH" \

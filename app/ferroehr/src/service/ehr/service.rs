@@ -117,16 +117,16 @@ impl FerroEhrService {
         {
             Ok(Some(t)) => t,
             Ok(None) => {
-                // NOTE: SM ehr_call_status_type.adoc declares
-                // ehr_create_fail_duplicate_id for this exact refusal.
+                // NOTE: ITS-REST EHR API `PUT /ehr/{ehr_id}` answers `409` for a
+                // taken id (`409_EHR_with_id`); the status token is our own.
                 return Err(ServiceError::sm(
                     CallStatusType::EhrCreateFailDuplicateId,
                     format!("EHR {ehr_id} already exists"),
                 ));
             }
             Err(crate::storage::error::StorageError::SubjectInUse(id, ns)) => {
-                // NOTE: SM ehr_call_status_type.adoc declares
-                // ehr_for_subject_already_exists for the one-EHR-per-subject rule.
+                // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
+                // id and namespace pair; the status token is our own.
                 return Err(ServiceError::sm(
                     CallStatusType::EhrForSubjectAlreadyExists,
                     format!("an EHR already exists for subject {id}@{ns}"),
@@ -240,8 +240,7 @@ impl FerroEhrService {
     /// because "who resolved a subject to an EHR" is the question that domain
     /// exists to answer and it is worth an answer wherever it is asked.
     ///
-    /// NOTE: the DB constraint narrows the SM `List<EHR_SUMMARY>` of
-    /// `i_ehr_service.adoc` §`get_ehrs_for_subject` to at most one, per the
+    /// NOTE: the DB constraint narrows the list to at most one, per the
     /// one-EHR-per-subject rule (RM ehr master04 §EHR Status; CNF
     /// `create_ehr-two_ehrs_same_patient` expects `409` on a second EHR).
     ///
@@ -595,9 +594,8 @@ impl FerroEhrService {
     pub async fn create_ehr(&self, an_ehr_status: Option<EhrStatus>) -> Result<EhrId, SmError> {
         // Boxed: the typed EHR_STATUS argument makes the bootstrap-commit
         // future wide (clippy `large_futures`).
-        // NOTE: the SM precondition `an_ehr_status.subject = Void`
-        // (`i_ehr_service.adoc` §create_ehr `Pre_no_subject`) is NOT enforced —
-        // `POST /ehr` accepts a subject-bearing status, an accepted divergence.
+        // NOTE: ITS-REST EHR API `POST /ehr` accepts an optional EHR_STATUS
+        // body, so a subject-bearing status is accepted here.
         Ok(Box::pin(self.create_ehr_meta(an_ehr_status, None)).await?.0)
     }
 

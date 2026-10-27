@@ -322,7 +322,7 @@ async fn strict_verify_on_read_rejects_a_tampered_row() {
     let tampered = svc
         .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
         .await;
-    // NOTE: a signing/integrity failure surfaces at the SM boundary
+    // NOTE: a signing/integrity failure surfaces at the service boundary
     // as `SmError { status: Exception }` (the adapter maps it to the same wire 5xx
     // the old `ApiError::Internal` produced).
     assert!(

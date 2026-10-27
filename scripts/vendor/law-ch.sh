@@ -142,7 +142,7 @@ filestore_url() {
 # title with the abbreviation, and the "vom … (Stand am …)" line.
 heading_field() {
   local file="$1" class="$2" tag="$3"
-  grep -o "<$tag class=\"${class}[^\"]*\">[^<]*\(<br>[^<]*\)*" "$file" | head -n 1 |
+  grep -o "<$tag class=\"${class}[^\"]*\">[^<]*\(<br>[^<]*\)*" "$file" | sed -n 1p |
     sed -e 's/<[^>]*>/ /g' -e 's/  */ /g' -e 's/^ //' -e 's/ $//'
 }
 

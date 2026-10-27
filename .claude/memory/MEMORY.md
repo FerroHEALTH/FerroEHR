@@ -13,6 +13,7 @@
 - [Session workflow gotchas](session-workflow-gotchas.md) — CI/PR/background-task/release-leg traps; read before pushing or running long jobs
 - [En-route findings always filed](en-route-findings-always-filed.md) — file out-of-scope findings and fix tractable ones in the same branch
 - [Foundation-first sequencing](foundation-first-sequencing.md) — a systemic defect class gets a full-repo sweep before the next audit unit
+- [SM is not an authority](sm-not-an-authority.md): owner 2026-10-27, the Service Model is reference only; the oracles are what goes in and comes out, the service layer is our own design
 - [Spec-chapter audit programs](spec-chapter-audit-programs.md) — milestone=component, issue=chapter, sub-issue per section, fix-first
 - [Component fixes ride the current patch](component-fixes-ride-current-patch.md) — closed program → the fix joins the current patch milestone
 - [Console wire spec-check](console-wire-spec-check.md) — verify each endpoint the viewer consumes against the docs text; fix the CDR, not the UI

@@ -1,44 +1,38 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The EHR Index service (`service/ehr_index/`) — SM `I_EHR_INDEX`.
+//! The EHR Index service (`service/ehr_index/`), our own design.
 //!
-//! Holds N:M subject↔EHR associations with duplicate-management metadata
-//! (`docs/specs/openehr/SM/docs/openehr_platform/master07-ehr_index_service.adoc`
-//! and the UML class `i_ehr_index.adoc`).
+//! Holds N:M subject↔EHR associations with duplicate-management metadata. The
+//! operation and structure names borrow from the openEHR SM text, kept as
+//! reference and never an oracle.
 //!
-//! Layout: `index` = the SM write operations (I1–I5) + the design-filled
-//! reads, each public method parsing its `ehr_id` at the boundary;
-//! `conflicts` = the design-filled advisory duplicate-detection read;
-//! [`types`] = the SM information structures (`RESOURCE_STATUS`,
+//! Layout: `index` = the write operations (I1–I5) + the reads, each public
+//! method parsing its `ehr_id` at the boundary;
+//! `conflicts` = the advisory duplicate-detection read;
+//! [`types`] = the information structures (`RESOURCE_STATUS`,
 //! `RESOURCE_INSTANCE_TYPE`, `LOCATION_DESC`, the `OBJECT_REF` subject key).
 //!
-//! NOTE: the SM defines no versioning for the index, so entries are plain
-//! writes emitting no CONTRIBUTION or version; no openEHR spec governs the
-//! storage mechanism (our own design) while master07 governs the operation
-//! semantics and error names.
+//! NOTE: no openEHR spec governs the index: our own design; entries are plain
+//! writes emitting no CONTRIBUTION or version.
 //!
 //! The associations live in `linkage.subject_ehr`, reached through the linkage
-//! pool by the store the [`crate::service::linkage`] module owns, because
-//! master07 §Overview says
-//! what the index is for: "In a privacy-supporting environment, this enables
-//! EHRs to be persisted with only an EHR id; the EHR Index has to be used to
-//! obtain the subject identifier". Only the EHR-existence probe runs on the
+//! pool by the store the [`crate::service::linkage`] module owns, so EHRs can
+//! be persisted with only an EHR id and the subject identifier is read from
+//! the index (GDPR Art. 4(5)). Only the EHR-existence probe runs on the
 //! clinical pool, so each operation crosses at the APPLICATION layer over two
 //! pools and no statement names both domains.
 //!
 //! The index and the `ehr.subject_id` promotion are decoupled: an EHR created
 //! over `POST /ehr` or `PUT /ehr/{ehr_id}` is not auto-indexed here, and the
-//! index models the full N:M state master07 §Overview requires ("There is no
-//! limit on the number of subject identifiers associated with a given EHR id,
-//! and vice versa"). No wire is mounted, EHR Index having no ITS-REST contract.
+//! index models a full N:M state, with no limit on the subject identifiers of
+//! one EHR id or the reverse. No wire is mounted, EHR Index having no ITS-REST
+//! contract.
 //!
-//! The one exception is SM `create_ehr_for_subject` under the local provider:
+//! The one exception is `create_ehr_for_subject` under the local provider:
 //! the subject reads consult only the map there, so the EHR enters it as a
 //! `Primary` association with its creation, staged in a linkage transaction
-//! before the EHR commits and committed after it. The SM leaves the relation
-//! between that create and `I_EHR_INDEX` open (`i_ehr_index.adoc`): our own
-//! design.
+//! before the EHR commits and committed after it: our own design.
 
 pub mod config;
 pub mod conflicts;

@@ -120,8 +120,7 @@ fn render_param(value: &ParamValue) -> String {
 /// the contract's shape by construction — a contract change breaks this
 /// function rather than silently diverging from a hand-written literal.
 ///
-/// NOTE: no `id` is emitted. The SM `RESULT_SET` makes `id` mandatory
-/// (`SM/docs/UML/classes/result_set.adoc`), but the released ITS-REST
+/// NOTE: no `id` is emitted. The released ITS-REST
 /// `ResultSet` schema (`crates/openehr-its/vendor/rest-oas/query-*.openapi.yaml`
 /// §`components.schemas.ResultSet`) declares exactly
 /// `meta`/`name`/`q`/`columns`/`rows` with `required: [rows]` and **no**

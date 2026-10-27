@@ -1,22 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The SM call-status model (`master03-common_package.adoc` §Representing
-//! Call Status; `i_status.adoc`, `call_status.adoc`, `call_status_type.adoc`
-//! + the service-specific descendants `ehr_call_status_type.adoc`,
-//!   `definition_call_status_type.adoc`).
+//! The service call-status model, our own design.
 //!
-//! The SM's stateful `I_STATUS.last_call_failed()`/`last_call_status()` protocol
-//! maps onto a stateless typed-error style the spec sanctions
-//! (`master02-overview.adoc` §Functional Style: "Either style can be used, and
-//! can be trivially mapped from one to the other"), so every chapter method
-//! returns `Result<T, SmError>` and a failed call's [`CallStatus`] object is
-//! built on demand via [`SmError::into_call_status`].
+//! Every method returns `Result<T, SmError>` and a failed call's [`CallStatus`]
+//! object is built on demand via [`SmError::into_call_status`]. The status names
+//! borrow from the openEHR SM text, kept as reference and never an oracle.
 //!
-//! The single SM to HTTP table lives with the protocol adapter
-//! (`ferroehr-rest::overview::error`), so this module is protocol-free. Where
-//! the SM name and the wire disagree, the wire's status code wins in that
-//! table.
+//! The single status-to-HTTP table lives with the protocol adapter
+//! (`ferroehr-rest::overview::error`), so this module is protocol-free. The
+//! ITS-REST status code is the authority in that table.
 
 use std::sync::Arc;
 

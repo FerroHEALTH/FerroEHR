@@ -48,8 +48,8 @@ its maximum to the implementation. A bulk consumer pages with `offset` and a
 
 ## `[ehr_index]`
 
-Who holds the cross-reference from a patient to the EHR that records them, the
-openEHR SM `I_EHR_INDEX`. No openEHR specification governs where it lives: the
+Who holds the cross-reference from a patient to the EHR that records them (the
+EHR index). No openEHR specification governs where it lives: the
 RM's `PARTY_SELF` section says the association "may be done elsewhere for
 security reasons", and FerroEHR's design puts it in an IHE patient identity
 source.

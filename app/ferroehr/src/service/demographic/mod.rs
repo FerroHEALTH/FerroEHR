@@ -3,7 +3,7 @@
 
 //! The DEMOGRAPHIC (PARTY + `PARTY_RELATIONSHIP`) service module.
 //!
-//! The platform-crate realization of the SM DEMOGRAPHIC group over the shared
+//! The platform crate's DEMOGRAPHIC group, behind the ITS-REST Demographic API, over the shared
 //! [`crate::versioning`] change-control machinery, with no EHR scope
 //! (`ehr_id = None`; a party has no owning EHR — our own design). Parties
 //! (PERSON / ORGANISATION / GROUP / AGENT / ROLE) and `PARTY_RELATIONSHIP`s are
@@ -19,8 +19,8 @@
 //! or database roles — our own design/extension; the wire contract and the
 //! change-control semantics are unchanged.
 //!
-//! One file per concern, the domain files mirroring the SM interface boundaries
-//! (SM `master06`):
+//! One file per concern (the interface names borrow from
+//! the openEHR SM text, kept as reference and never an oracle):
 //! - `types` — the public [`types::PartyKind`] resource-family key,
 //! - `validate` — the inbound-body RM/BASE invariant checks and the
 //!   CONTRIBUTION-path validator entry points,

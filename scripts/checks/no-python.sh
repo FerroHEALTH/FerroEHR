@@ -38,7 +38,7 @@ while IFS= read -r file; do
     */node_modules/*|*/vendor/*|*/target/*) continue ;;
     *) ;;
   esac
-  printf '%s' "$file" | grep -qE "$EXEMPT" && continue
+  grep -qE "$EXEMPT" <<<"$file" && continue
   # An invocation, not the word: prose about not using Python is fine and this
   # repository contains several such comments. pipx/pip are Python by another
   # door — `pipx run cffconvert` ran a Python tool for months with no `python`

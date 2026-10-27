@@ -46,7 +46,7 @@ crate_list() {
 
 known_crate() {
   local crate="$1"
-  crate_list | grep -Fxq "$crate" || die "'$crate' is not one of the published crates ($(crate_list | tr '\n' ' '))"
+  grep -Fxq "$crate" <<<"$(crate_list)" || die "'$crate' is not one of the published crates ($(crate_list | tr '\n' ' '))"
 }
 
 # The crates.io checksum of <crate> <version>, or nothing when the version is

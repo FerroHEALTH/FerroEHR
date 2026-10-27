@@ -25,11 +25,11 @@ readonly ACCEPTED='^[[:space:]]*[-*] \[[xX]\] I accept the terms in \[CONTRIBUTI
 readonly UNTICKED='^[[:space:]]*[-*] \[ \] I accept the terms in \[CONTRIBUTING\.md § Licensing of contributions\]'
 
 body="${PR_BODY:-}"
-if printf '%s\n' "$body" | grep -qE "$ACCEPTED"; then
+if grep -qE "$ACCEPTED" <<<"$body"; then
   echo "ok: the contribution licensing terms are accepted in the pull request body"
   exit 0
 fi
-if printf '%s\n' "$body" | grep -qE "$UNTICKED"; then
+if grep -qE "$UNTICKED" <<<"$body"; then
   echo "error: the licensing checkbox in the pull request body is not ticked" >&2
 else
   echo "error: the pull request body carries no licensing acceptance line" >&2

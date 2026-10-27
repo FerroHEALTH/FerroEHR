@@ -69,7 +69,7 @@ esac
 # Anchored to a real generated-file marker line (`// @generated` / `-- @generated`
 # at line start) — prose that merely MENTIONS @generated must not trip this
 # (a hand-written file describing the convention hit the substring form).
-if [ -f "$path" ] && head -n 10 "$path" 2>/dev/null | grep -qE '^(//|--) @generated'; then
+if [ -f "$path" ] && grep -qE '^(//|--) @generated' <<<"$(head -n 10 "$path" 2>/dev/null)"; then
   block "'$path' carries an @generated marker — it is produced by openehr-codegen. Change the emitter (tools/openehr-codegen/src/render/emit.rs or the *_impl.rs sibling) and run /regen-codegen; never hand-edit generated output."
 fi
 

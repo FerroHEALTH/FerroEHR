@@ -43,7 +43,7 @@ while IFS= read -r name; do
   [[ -f "${CHART_COPY}/${name}" ]] || continue
   if ! diff -u "${CANONICAL}/${name}" "${CHART_COPY}/${name}" >/dev/null; then
     echo "terminology-seed-drift: ${CHART_COPY}/${name} differs from ${CANONICAL}/${name}" >&2
-    diff -u "${CANONICAL}/${name}" "${CHART_COPY}/${name}" | head -20 >&2
+    diff -u "${CANONICAL}/${name}" "${CHART_COPY}/${name}" | sed -n 1,20p >&2
     status=1
   fi
 done <<<"$canonical_files"

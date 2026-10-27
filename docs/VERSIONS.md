@@ -105,11 +105,11 @@ pin accepts every valid older-minor instance.
 | ITS-REST (REST API) | **Release-1.1.0** @ `24058992d` | 1.1.0 (19-Jul-2026) | 1.2.0 | policy: single version, always the latest released; spec text at `docs/specs/openehr/ITS-REST/` and the OAS at `crates/openehr-its/vendor/rest-oas/` are the **same commit** (tag Release-1.1.0). Per-API lifecycle within the release: Overview/System/EHR/Query/Definition/Formats **STABLE**; Demographic/Admin/SMART **DEVELOPMENT** (the OAS bundle artifacts are marked TRIAL) — all 7 API groups vendored |
 | ITS-JSON (JSON Schemas) | development: schemas and docs text @ `14387ce9` (2026-10-14; the schemas are byte-identical to the earlier `5acae056` pin, and `scripts/vendor/codegen-inputs.sh` refuses the two pins drifting apart) | (1.0.0 itself still WIP) | dev | validation oracle for the fidelity gate; `openehr_rm_1.1.0_all.json` vendored at `crates/openehr-its/schemas/json/` |
 | ITS-BMM (BMM meta-model, JSON) | `37b31739` + three component-repo overlays | per-schema | — | **the codegen input**; vendored `*.bmm.json` at `tools/openehr-codegen/vendor/bmm/` with provenance, fetched by `scripts/vendor/codegen-inputs.sh`. Overlays pending ITS-BMM republication: BASE 1.3.0 json from `specifications-BASE` @ `707b8ac2`, RM 1.2.0 json from `specifications-RM` @ `654296bb`, TERM 3.1.0 json from `specifications-TERM` @ `d2b05afd` — see that PROVENANCE.md |
-| SM (Service Model) | master snapshot | 1.1.0 | dev | vendored spec text only (the service layer's design authority) |
+| SM (Service Model) | master snapshot | 1.1.0 | dev | vendored spec text only, kept as reference: not an oracle (owner ruling 2026-10-27; SM describes internal service interfaces openEHR holds no implementation to) |
 | CNF (Conformance) | master snapshot @ `239dfb4e` (2026-10-14) | 1.0.0 | dev | vendored spec text + CNF test schedule (the conformance oracle) |
 
 **Spec text vendored in-repo:** the normative documentation for every
-component above — plus SM (platform service model / SDT) and **CNF (the
+component above — plus SM (platform service model / SDT, reference only, not an oracle) and **CNF (the
 conformance guide + Platform Conformance Test Schedule + Robot suite)** — is
 vendored at `docs/specs/openehr/` by `scripts/vendor/spec-docs.sh`, pinned to
 these same versions (exact commits in each component's `PROVENANCE.md` and in

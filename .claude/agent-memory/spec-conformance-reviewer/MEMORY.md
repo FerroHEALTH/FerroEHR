@@ -1,5 +1,7 @@
 # Spec-conformance-reviewer memory index
 
+- **Read first:** the openEHR Service Model (SM) is not an authority (owner ruling 2026-10-27, `.claude/memory/sm-not-an-authority.md`). Entries below that call SM an oracle or ground a verdict on it predate the ruling: re-ground such a verdict on BASE, RM, AM, TERM, QUERY or the ITS docs text, or record it as our own design.
+
 - [CDR extension surfaces — recurring checks](cdr-extension-surfaces.md) — what to verify on "our own extension" REST surfaces (flag discipline, error mapping, ABAC mode, call chains re-derived from code)
 - [Error status mapping chain](error-status-mapping-chain.md) — ServiceError→SmError→HTTP table location + FK-violation classification path
 - [CNF schedule → catalogue conversion review](cnf-schedule-conversion-review.md) — case-model completeness pitfalls: master08 multi-version-per-commit (unrepresentable), master09 directory temporal/tree, master06 1.a/1.b, verified_by ids, SF MIME reject-list; OAS status sets that check out

@@ -293,7 +293,7 @@ added_records() { # <file>...
   local f
   for f in "$@"; do
     [[ -f "$f" ]] || continue
-    printf '%s\n' "$f" | grep -qE "$SKIP_PATTERN" && continue
+    grep -qE "$SKIP_PATTERN" <<<"$f" && continue
     if [[ -n "$base" ]]; then
       git diff --unified=0 "$base...$tip" -- "$f" 2>/dev/null |
         LC_ALL=C awk -v path="$f" '

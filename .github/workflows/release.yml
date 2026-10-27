@@ -134,7 +134,7 @@ jobs:
           else
             tag="${GITHUB_REF_NAME}"
           fi
-          if ! printf '%s\n' "$tag" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+          if ! grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' <<<"$tag"; then
             echo "::error::'$tag' is not a vX.Y.Z tag" >&2
             exit 1
           fi
@@ -588,8 +588,7 @@ jobs:
               ".tar.gz.sbom.sigstore.json" \
               ".tar.gz.intoto.jsonl" \
               ".cdx.json"; do
-              printf '%s\n' "$assets" \
-                | grep -Fxq "ferroehr-${TAG}-${arch}-unknown-linux-gnu${suffix}" \
+              grep -Fxq "ferroehr-${TAG}-${arch}-unknown-linux-gnu${suffix}" <<<"$assets" \
                 || missing="$missing ferroehr-${TAG}-${arch}-unknown-linux-gnu${suffix}"
             done
           done
@@ -604,19 +603,19 @@ jobs:
             "docker-compose.db-publish.yml" \
             "ferroehr-${TAG}-information-sheet.md" \
             "ferroehr-${TAG}-instructions-for-use.md"; do
-            printf '%s\n' "$assets" | grep -Fxq "$asset" || missing="$missing $asset"
+            grep -Fxq "$asset" <<<"$assets" || missing="$missing $asset"
           done
           # The exploitability record (CRA Annex I Part I(2)(a)), and one SBOM
           # with its attestation bundle per published crate (Part II(1)).
           for asset in \
             "ferroehr-${TAG}-vulnerability-record.json" \
             "ferroehr-${TAG}-trivy-reports.tar.gz"; do
-            printf '%s\n' "$assets" | grep -Fxq "$asset" || missing="$missing $asset"
+            grep -Fxq "$asset" <<<"$assets" || missing="$missing $asset"
           done
           for crate in $(jq -r '.[]' <<<"$CRATES"); do
             for suffix in ".cdx.json" ".crate.sbom.sigstore.json"; do
               asset="${crate}-${CRATE_VERSION}${suffix}"
-              printf '%s\n' "$assets" | grep -Fxq "$asset" || missing="$missing $asset"
+              grep -Fxq "$asset" <<<"$assets" || missing="$missing $asset"
             done
           done
           [ -z "$missing" ] || {
@@ -666,7 +665,7 @@ jobs:
           set -euo pipefail
           channel=$(grep -E '^channel' rust-toolchain.toml | sed -E 's/.*"(.*)".*/\1/')
           have=$(rustc --version | awk '{print $2}')
-          arg=$(grep -E '^ARG RUST_VERSION=' docker/Dockerfile | head -1 | cut -d= -f2)
+          arg=$(grep -E '^ARG RUST_VERSION=' docker/Dockerfile | sed -n 1p | cut -d= -f2)
           echo "rust-toolchain=$channel  container-rustc=$have  Dockerfile ARG=$arg"
           if [ "$channel" != "$have" ]; then
             echo "::error::Job container rustc ($have) != rust-toolchain.toml ($channel). Bump the container: tag in release.yml and containers.yml."
@@ -1585,7 +1584,7 @@ jobs:
           check "crates.io" "$R_CRATES" prerelease
           check "milestone closed" "$R_MILESTONE"
 
-          chart_version="$(sed -nE 's/^version: *"?([^"]+)"?$/\1/p' deploy/helm/ferroehr/Chart.yaml | head -1)"
+          chart_version="$(sed -nE 's/^version: *"?([^"]+)"?$/\1/p' deploy/helm/ferroehr/Chart.yaml | sed -n 1p)"
           crates_version="$(bash scripts/release/publish-crates.sh version || echo unknown)"
           repo_url="https://github.com/${GITHUB_REPOSITORY}"
           {

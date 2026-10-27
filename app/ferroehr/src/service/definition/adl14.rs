@@ -71,10 +71,9 @@ impl FerroEhrService {
     #[expect(
         clippy::unused_self,
         clippy::unnecessary_wraps,
-        reason = "the SM interface declares this call on the service and in the \
-                  SM call-status `Result` shape; the protocol adapter invokes \
-                  every SM call uniformly, so neither is dropped because this \
-                  particular realization happens to be stateless and infallible"
+        reason = "every service call shares one method-on-the-service, `Result`-returning \
+                  shape the protocol adapter invokes uniformly, so neither is dropped because \
+                  this implementation happens to be stateless and infallible"
     )]
     pub fn valid_archetype(&self, adl: &str) -> Result<bool, SmError> {
         Ok(matches!(
@@ -97,8 +96,7 @@ impl FerroEhrService {
     /// Returns the stored `ARCHETYPE_ID`, the identity read out of the submitted
     /// source.
     ///
-    /// NOTE: `i_definition_adl14.adoc` types the operation's return as void and
-    /// no openEHR spec governs what a transport does with the stored identity —
+    /// NOTE: no openEHR spec governs what a transport does with the stored identity —
     /// our own design/extension, so a caller can address the artefact without
     /// re-parsing what it sent.
     ///
@@ -109,8 +107,8 @@ impl FerroEhrService {
     ///   rule-code mnemonics carried as the validation detail.
     /// - A database failure (`exception` → `500`).
     pub async fn upload_archetype(&self, adl: String) -> Result<String, SmError> {
-        // NOTE: i_definition_adl14.adoc §upload_archetype .Errors declares
-        // invalid_archetype for a semantically invalid archetype.
+        // NOTE: no specification names this status token: our own design for a
+        // semantically invalid archetype.
         archetype_validate(&adl)
             .map_err(|e| invalid_artefact_status(e, CallStatusType::InvalidArchetype))?;
         Ok(self.archetype_upload(&adl).await?)
@@ -274,10 +272,9 @@ impl FerroEhrService {
     #[expect(
         clippy::unused_self,
         clippy::unnecessary_wraps,
-        reason = "the SM interface declares this call on the service and in the \
-                  SM call-status `Result` shape; the protocol adapter invokes \
-                  every SM call uniformly, so neither is dropped because this \
-                  particular realization happens to be stateless and infallible"
+        reason = "every service call shares one method-on-the-service, `Result`-returning \
+                  shape the protocol adapter invokes uniformly, so neither is dropped because \
+                  this implementation happens to be stateless and infallible"
     )]
     pub fn valid_opt(&self, opt_xml: &str) -> Result<bool, SmError> {
         Ok(valid_opt_xml(opt_xml))
@@ -298,8 +295,8 @@ impl FerroEhrService {
     ///   (`409`).
     /// - A database failure (`exception` → `500`).
     pub async fn upload_opt(&self, opt_xml: String) -> Result<(), SmError> {
-        // NOTE: i_definition_adl14.adoc §upload_opt .Errors declares
-        // invalid_template for a semantically invalid operational template.
+        // NOTE: no specification names this status token: our own design for a
+        // semantically invalid operational template.
         self.store_template(&opt_xml)
             .await
             .map_err(|e| invalid_artefact_status(e, CallStatusType::InvalidTemplate))?;
@@ -352,8 +349,8 @@ impl FerroEhrService {
     /// `an_opt_id` (a `UUID`), evicting its derived-runtime (`WebTemplate`)
     /// cache entry.
     ///
-    /// NOTE: `i_definition_adl14.adoc` §`delete_opt` is silent on committed data
-    /// referencing the template, so the in-use refusal is our own integrity
+    /// NOTE: no specification governs deleting a template that committed data
+    /// references, so the in-use refusal is our own integrity
     /// design, matching the admin wire delete
     /// ([`Self::admin_template_delete`]).
     ///

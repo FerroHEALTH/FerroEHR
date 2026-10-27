@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The DEFINITION component of the platform crate — the openEHR **Definition**
-//! service seam (SM `master04-definition_package.adoc`).
+//! The DEFINITION component of the platform crate, behind the ITS-REST
+//! Definition API.
 //!
-//! One file per SM interface, each carrying its domain logic **and** its
+//! Our own design; the interface names borrow from the openEHR SM text, kept as
+//! reference and never an oracle.
+//!
+//! One file per interface, each carrying its domain logic **and** its
 //! concrete `FerroEhrService` catalog methods:
 //!
 //! - `adl14` — `I_DEFINITION_ADL14` (`i_definition_adl14.adoc`): ADL 1.4
@@ -22,16 +25,15 @@
 //!   registration (`master04` §Registered Queries); the Query service only
 //!   resolves + executes it, so the stored-query store folds in here.
 //! - `wire`  — the ITS-REST wire-shaped extension methods (rich
-//!   template/query shapes the SM interfaces do not express). Their route
-//!   wiring is the ITS-REST layer's concern; behaviour rides on the SM logic
+//!   template/query shapes). Their route
+//!   wiring is the ITS-REST layer's concern; behaviour rides on the logic
 //!   in the sibling files.
 //! - [`types`] — the shared data shapes ([`types::TemplateListFilter`],
 //!   [`types::QueryDescriptor`]) the REST adapter consumes.
 //!
-//! NOTE: the SM `I_DEFINITION_*` signatures take and return AOM object types,
-//! but openEHR publishes no BMM meta-model for AOM instances, so the interchange
-//! form is the artefact's serialization — ADL 1.4 / ADL2 source text and OPT 1.4
-//! canonical XML — which is what these calls carry.
+//! NOTE: ITS-REST Definition API exchanges the artefact's serialization (ADL
+//! 1.4 / ADL2 source text and OPT 1.4 canonical XML), which is what these calls
+//! carry.
 //!
 //! Identity is matched case-insensitively while storage is case-preserving (BASE
 //! `master05-identification_package.adoc` §Composite Identifiers and Case: "two
@@ -82,11 +84,9 @@ pub(super) fn page_bounds(page: Page) -> (i64, Option<i64>) {
 /// Compile an id-pattern regex; an uncompilable pattern is `invalid_id_pattern`
 /// (`400`).
 ///
-/// NOTE: the SM spells these "PERL regular expression"; the
-/// `regex` crate is RE2-class, so PERL backreferences / lookaround are
-/// unsupported — a pattern using them fails to compile and surfaces as
-/// `invalid_id_pattern`, the correct SM outcome for an unusable pattern (a
-/// narrower accept envelope, never a wrong status).
+/// NOTE: no specification governs this: our own design; the `regex` crate is
+/// RE2-class, so a pattern with backreferences or lookaround is refused as
+/// `invalid_id_pattern`.
 pub(super) fn compile_pattern(pattern: &str) -> Result<Regex, ServiceError> {
     Regex::new(pattern).map_err(|e| {
         let message = format!("invalid id pattern: {e}");
