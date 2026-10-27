@@ -1464,11 +1464,11 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      # --document-private-items: stale intra-doc links can hide behind
+      # --document-private-items on both runs: stale intra-doc links can hide behind
       # non-pub items the public build never evaluates (#1838; measured
       # cost ~10s incremental over the public-only run).
       - run: cargo doc --locked --workspace --exclude ferroehr-viewer --all-features --no-deps --document-private-items
-      - run: cargo doc --locked -p ferroehr-viewer --no-deps
+      - run: cargo doc --locked -p ferroehr-viewer --no-deps --document-private-items
       # Doc tests live HERE, not in the pg18 test job: nextest cannot run
       # doctests, so `cargo test --doc` is its own compile (default features —
       # doctests document what a default consumer gets), and this job is ~1/10
