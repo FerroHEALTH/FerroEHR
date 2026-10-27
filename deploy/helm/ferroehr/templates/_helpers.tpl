@@ -963,16 +963,14 @@ issues, so the image's system roots cannot vouch for it.
 {{/*
 The trust an in-chart client places in the server's own TLS listener, as an
 env entry, a volume mount and a volume, each included only while that listener
-speaks TLS. The viewer and FerroBRIDGE verify through
+speaks TLS. The viewer mounts the volume and names the CA file in its own
+`[cdr.tls] trust_roots_file`. FerroBRIDGE verifies through
 rustls-platform-verifier, which on Linux loads its roots with
 rustls-native-certs, and that crate reads ONLY the named directories once
 SSL_CERT_DIR is set
 (https://docs.rs/rustls-native-certs/0.8.4/rustls_native_certs/fn.load_native_certs.html).
-So the image's system directory stays listed beside the mounted CA, for the
-clients' other HTTPS peers that verify through the same platform verifier.
-The viewer's OIDC client (openidconnect over reqwest with
-the webpki-roots bundle) does not read SSL_CERT_DIR at all, so a private-CA
-OIDC issuer is not trusted by the viewer whatever this sets.
+So the image's system directory stays listed beside the mounted CA, for its
+other HTTPS peers that verify through the same platform verifier.
 */}}
 {{- define "ferroehr.cdrTrustEnv" -}}
 - name: SSL_CERT_DIR
