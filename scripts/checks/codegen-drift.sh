@@ -9,51 +9,148 @@
 # hand-editing a `// @generated` file, or changing the emitter without
 # regenerating. Run in CI and locally before committing generator changes.
 #
-# Usage: scripts/checks/codegen-drift.sh   (no arguments)
+# The files checked are exactly the generator's: every file under crates/
+# whose first line contains `@generated`, the test openehr-codegen itself
+# applies (`is_generated_file`) when it wipes and rewrites a crate. The set is
+# read before the run (a file the generator stops writing is deleted, #4203)
+# and after it (a file it starts writing is new), so a hand-written file
+# beside generated ones, such as openehr-term's codes.rs, is never in it.
+#
+# Usage: scripts/checks/codegen-drift.sh [--self-test]
+#   no args     → regenerate and diff the generated files
+#   --self-test → prove the file set and the diff on a scratch repository
 set -euo pipefail
 
 # shellcheck source=scripts/lib/guard-args.sh
 . "$(dirname "$0")/../lib/guard-args.sh"
-guard_no_args "$@"
-cd "$(dirname "$0")/../.."
 
-# Paths the emit targets own (and only those).
-GENERATED=(
-  crates/openehr-base/src
-  crates/openehr-rm/src
-  crates/openehr-am/src
-  crates/openehr-term/src
-  crates/openehr-lang/src
-  crates/openehr-its/src/xml/generated
-  crates/openehr-its/src/json_codec/generated
-  crates/openehr-its/src/rest/generated
-  crates/openehr-its/src/opt14
-  crates/openehr-its/src/aom2
-  crates/openehr-its/src/aom2_model
-)
+# The generator writes only under the workspace crates/ directory.
+readonly ROOT=crates
 
-echo "regenerating spec crates (BMM → RM/BASE/AM/TERM/LANG)…"
-cargo run -q -p openehr-codegen -- emit
-echo "regenerating ITS-XML (ToXml/FromXml impls)…"
-cargo run -q -p openehr-codegen -- emit-xml
-echo "regenerating ITS-JSON (the emitted serde impls + the _type dispatch)…"
-cargo run -q -p openehr-codegen -- emit-json
-echo "regenerating ITS-REST (DTOs + traits + routes)…"
-cargo run -q -p openehr-codegen -- emit-rest
-echo "regenerating OPT 1.4 model (opt14 types + XML codec)…"
-cargo run -q -p openehr-codegen -- emit-opt
-echo "regenerating the AOM2 archetype models (aom2 + aom2_model types + XML codecs)…"
-cargo run -q -p openehr-codegen -- emit-aom2
-echo "regenerating the RM attribute/type model (openehr-rm/src/model)…"
-cargo run -q -p openehr-codegen -- emit-rm-model
-echo "regenerating the RM invariant cores (openehr-rm/src/validate/generated.rs)…"
-cargo run -q -p openehr-codegen -- emit-validate
+# Print, sorted, every file under $ROOT (tracked or not, ignored excluded)
+# whose first line names it generated.
+generated_files() {
+  local path first
+  while IFS= read -r -d '' path; do
+    [[ -f "$path" ]] || continue
+    first=""
+    IFS= read -r first <"$path" || true
+    [[ "$first" == *@generated* ]] && printf '%s\n' "$path"
+  done < <(git ls-files -z --cached --others --exclude-standard -- "$ROOT")
+  return 0
+}
 
-if ! git diff --quiet -- "${GENERATED[@]}"; then
-  echo "::error::Generated code is out of sync with the vendored specs." >&2
-  echo "Run: cargo run -p openehr-codegen -- emit && … emit-xml && … emit-json && … emit-rest && … emit-opt && … emit-aom2 && … emit-rm-model && … emit-validate, then commit." >&2
-  git diff --stat -- "${GENERATED[@]}" >&2
-  exit 1
-fi
+regenerate() {
+  echo "regenerating spec crates (BMM → RM/BASE/AM/TERM/LANG)…"
+  cargo run -q -p openehr-codegen -- emit
+  echo "regenerating ITS-XML (ToXml/FromXml impls)…"
+  cargo run -q -p openehr-codegen -- emit-xml
+  echo "regenerating ITS-JSON (the emitted serde impls + the _type dispatch)…"
+  cargo run -q -p openehr-codegen -- emit-json
+  echo "regenerating ITS-REST (DTOs + traits + routes)…"
+  cargo run -q -p openehr-codegen -- emit-rest
+  echo "regenerating OPT 1.4 model (opt14 types + XML codec)…"
+  cargo run -q -p openehr-codegen -- emit-opt
+  echo "regenerating the AOM2 archetype models (aom2 + aom2_model types + XML codecs)…"
+  cargo run -q -p openehr-codegen -- emit-aom2
+  echo "regenerating the RM attribute/type model (openehr-rm/src/model)…"
+  cargo run -q -p openehr-codegen -- emit-rm-model
+  echo "regenerating the RM invariant cores (openehr-rm/src/validate/generated.rs)…"
+  cargo run -q -p openehr-codegen -- emit-validate
+}
 
-echo "✓ Generated code is in sync with the vendored specs."
+# drift <regenerate command>: run it between two reads of the generated set
+# and fail when any file of the union differs from the index or is new.
+drift() {
+  local before after untracked path
+  local -a files=()
+  before="$(generated_files)"
+  "$@"
+  after="$(generated_files)"
+  while IFS= read -r path; do
+    files+=("$path")
+  done < <(printf '%s\n%s\n' "$before" "$after" | sed '/^$/d' | sort -u)
+  if [[ "${#files[@]}" -eq 0 ]]; then
+    echo "::error::No file under $ROOT/ carries a first-line @generated banner: nothing to check." >&2
+    return 1
+  fi
+  untracked="$(git ls-files --others --exclude-standard -- "${files[@]}")"
+  if ! git diff --quiet -- "${files[@]}" || [[ -n "$untracked" ]]; then
+    echo "::error::Generated code is out of sync with the vendored specs." >&2
+    echo "Run: cargo run -p openehr-codegen -- emit && … emit-xml && … emit-json && … emit-rest && … emit-opt && … emit-aom2 && … emit-rm-model && … emit-validate, then commit." >&2
+    git diff --stat -- "${files[@]}" >&2
+    [[ -z "$untracked" ]] || echo "new, not committed: ${untracked//$'\n'/ }" >&2
+    return 1
+  fi
+  echo "✓ Generated code is in sync with the vendored specs (${#files[@]} generated files)."
+}
+
+# --- self-test -------------------------------------------------------------
+
+readonly BANNER='// @generated by openehr-codegen (emit) — DO NOT EDIT.'
+
+# The scratch generator's faithful output: two generated files.
+_emit_same() {
+  printf '%s\npub mod gen;\n' "$BANNER" >crates/openehr-x/src/lib.rs
+  printf '%s\npub struct Gen;\n' "$BANNER" >crates/openehr-x/src/gen.rs
+}
+_emit_changed() { _emit_same; echo "pub struct Drift;" >>crates/openehr-x/src/gen.rs; }
+_emit_dropped() { _emit_same; rm crates/openehr-x/src/gen.rs; }
+_emit_new() { _emit_same; printf '%s\npub struct New;\n' "$BANNER" >crates/openehr-x/src/new.rs; }
+# A local edit to the hand-written sibling, which the generator never touches.
+_hand_edit() { _emit_same; echo "pub const LOCAL: u8 = 1;" >>crates/openehr-x/src/codes.rs; }
+
+# <label> <want exit> <emit function>
+_case() {
+  local label="$1" want="$2" emit="$3" got=0
+  drift "$emit" >/dev/null 2>&1 || got=$?
+  git checkout -q -- . && git clean -qfd
+  if [[ "$got" -ne "$want" ]]; then
+    echo "self-test: $label: expected exit $want, got $got" >&2
+    return 1
+  fi
+  echo "  self-test: $label: exit $got"
+}
+
+self_test() {
+  local tmp failures=0 listed
+  tmp="$(mktemp -d)"
+  # shellcheck disable=SC2064 # expand $tmp now, while it is still in scope
+  trap "rm -rf '$tmp'" EXIT
+  cd "$tmp"
+  git init -q -b main
+  mkdir -p crates/openehr-x/src
+  _emit_same
+  printf '// SPDX-License-Identifier: Apache-2.0\n// Mentions @generated past the first line.\npub const CODE: u8 = 0;\n' >crates/openehr-x/src/codes.rs
+  git add -A
+  git -c user.name=self-test -c user.email=self-test@invalid -c commit.gpgsign=false \
+    commit -qm fixture
+  listed="$(generated_files)"
+  if [[ "$listed" != $'crates/openehr-x/src/gen.rs\ncrates/openehr-x/src/lib.rs' ]]; then
+    echo "self-test: the generated set is wrong: ${listed//$'\n'/ }" >&2
+    failures=1
+  else
+    echo "  self-test: the generated set holds the two banner files and not codes.rs"
+  fi
+  _case "an unchanged regeneration passes" 0 _emit_same || failures=1
+  _case "a hand-written sibling edited beside generated files passes" 0 _hand_edit || failures=1
+  _case "a generated file that drifted is refused" 1 _emit_changed || failures=1
+  _case "a generated file the generator stopped writing is refused" 1 _emit_dropped || failures=1
+  _case "a generated file the generator started writing is refused" 1 _emit_new || failures=1
+  [[ "$failures" -eq 0 ]] || return 1
+  echo "codegen-drift: self-test OK."
+}
+
+case "${1:-}" in
+--self-test)
+  [[ "$#" -eq 1 ]] || guard_usage "[--self-test]"
+  self_test
+  ;;
+"")
+  cd "$(dirname "$0")/../.."
+  drift regenerate
+  ;;
+*)
+  guard_usage "[--self-test]"
+  ;;
+esac
