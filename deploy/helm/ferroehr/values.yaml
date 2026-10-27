@@ -1729,7 +1729,10 @@ ferropix:
   # -- Deploy FerroPIX beside the CDR and point config.ehr_index at it.
   enabled: true
   image:
-    # -- FerroPIX image digest, the one release 0.0.7 names. Pinned here so
+    # -- The FerroPIX release the pinned `digest` belongs to. The dependency
+    # chart deploys the digest, and the Artifact Hub entry names this tag.
+    tag: "0.0.7"
+    # -- FerroPIX image digest of release `tag`. Pinned here so
     # the image this chart deploys is stated by this chart.
     digest: "sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825"
   config:
