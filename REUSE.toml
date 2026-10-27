@@ -156,7 +156,7 @@ SPDX-License-Identifier = "Apache-2.0"
 # that licence and both copyright holders. Each PROVENANCE.md records the
 # upstream commit and every edit.
 [[annotations]]
-path = ["crates/openehr-sdt/tests/fixtures/named_event/**", "crates/openehr-sdt/tests/fixtures/slot_fill_twice/**", "crates/openehr-sdt/tests/fixtures/any_element_value/**"]
+path = ["crates/openehr-sdt/tests/fixtures/named_event/**", "crates/openehr-sdt/tests/fixtures/slot_fill_twice/**", "crates/openehr-sdt/tests/fixtures/any_element_value/**", "crates/openehr-sdt/tests/fixtures/value_alternatives/**"]
 precedence = "override"
 SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
 SPDX-License-Identifier = "CC-BY-SA-3.0"
