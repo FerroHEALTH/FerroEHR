@@ -1237,7 +1237,7 @@ viewer_oidc_ca_gate() {
     if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$viewer" \
                    "${extra[@]}" -s templates/viewer.yaml 2>&1)"; then
       red "  viewer: the OIDC overlay no longer renders${secret:+ with caExistingSecret=$secret}:"
-      sed -n 1,4p <<<"$render"
+      printf '%s\n' "$render" | sed -n 1,4p
       FAIL=1
       return
     fi
