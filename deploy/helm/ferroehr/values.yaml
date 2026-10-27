@@ -1568,6 +1568,12 @@ terminology:
   affinity: {}
   # -- Extra environment for FerroTERM (escape hatch).
   extraEnv: []
+  usageReport:
+    # -- FerroTERM's usage report. Empty follows the top-level
+    # `usageReport.enabled`; true or false decides for FerroTERM alone. The
+    # chart passes it as `FERROTERM__USAGE_REPORT__ENABLED`, with the
+    # deployment `helm`; the pinned 0.1.6 sends no report and ignores both.
+    enabled: null
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FerroBRIDGE: the FHIR and openEHR bridge, beside the CDR.
@@ -1722,6 +1728,13 @@ bridge:
   affinity: {}
   # -- Extra environment for FerroBRIDGE (escape hatch).
   extraEnv: []
+  usageReport:
+    # -- FerroBRIDGE's usage report. Empty follows the top-level
+    # `usageReport.enabled`; true or false decides for FerroBRIDGE alone. The
+    # chart writes it into `[usage_report]` of config.toml, with the deployment
+    # `helm`, for a FerroBRIDGE release from 0.0.7 on; the pinned 0.0.5 sends
+    # no report and refuses the section, so it gets none.
+    enabled: null
   # -- Extra volumes for the FerroBRIDGE pod, such as a Secret holding a
   # `_file` credential named in `config`.
   extraVolumes: []
@@ -1768,4 +1781,10 @@ ferropix:
     # -- FerroPIX's Service port, read here to build the FHIR base the CDR is
     # pointed at.
     port: 8080
+  usageReport:
+    # -- FerroPIX's own usage report switch, read by the dependency chart. A
+    # dependency chart cannot read this chart's `usageReport.enabled`, so with
+    # that set to false, set this false too: the render refuses the pair
+    # `usageReport.enabled=false` and `ferropix.usageReport.enabled=true`.
+    enabled: true
 

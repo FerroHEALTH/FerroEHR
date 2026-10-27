@@ -1515,6 +1515,17 @@
         "extraEnv": {
           "type": "array"
         },
+        "usageReport": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "FerroTERM's usage report, passed as FERROTERM__USAGE_REPORT__ENABLED with the deployment helm.",
+          "properties": {
+            "enabled": {
+              "type": ["boolean", "null"],
+              "description": "Empty follows the top-level usageReport.enabled; true or false decides for FerroTERM alone."
+            }
+          }
+        },
         "terminationGracePeriodSeconds": {
           "type": "integer",
           "minimum": 0
@@ -1714,6 +1725,17 @@
         },
         "extraEnv": {
           "type": "array"
+        },
+        "usageReport": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "FerroBRIDGE's usage report, written into [usage_report] of config.toml with the deployment helm for a release from 0.0.7 on.",
+          "properties": {
+            "enabled": {
+              "type": ["boolean", "null"],
+              "description": "Empty follows the top-level usageReport.enabled; true or false decides for FerroBRIDGE alone."
+            }
+          }
         },
         "extraVolumes": {
           "type": "array"
