@@ -27,22 +27,28 @@ in Nuremberg (`eu-central`), joined by a private network
 physical hosts, so one host failure never takes both):
 
 - **The app box** (`ferroehr`, 167.233.172.220 / 2a01:4f8:1c16:5d4::/64,
-  private 10.0.0.3): the CDR, the viewer and Caddy, and FerroTERM (the
+  private 10.0.0.3): the CDR, the viewer and Caddy, FerroTERM (the
   terminology server, on the compose network only: no port, no Caddy route,
-  the CDR its only caller, #3304) — provisioned once from
+  the CDR its only caller, #3304), and FerroPIX (the IHE patient identity
+  source the CDR resolves patients through, on loopback only, #4242) with the
+  development token issuer both of them trust — provisioned once from
   `cloud-init.yaml`, resized in place from the original CPX22 on 2026-09-01.
-  The compose memory limits are sized for this box; on a resize they move
-  with it, and neither is a code change.
+  The compose memory limits are sized for this box (the budget below); on a
+  resize they move with it, and neither is a code change.
 - **The database box** (`ferroehr-sandbox-postgres`, 2.28.64.110 /
   2a01:4f8:1c16:c964::/64, private 10.0.0.2): the published
   `ferroehr-postgres` image (PostgreSQL 18), provisioned once from
-  `cloud-init-postgres.yaml` on 2026-09-01 (#3015). PostgreSQL binds to the
+  `cloud-init-postgres.yaml` on 2026-09-01 (#3015). It holds two databases:
+  `ferroehr` for the CDR and `ferropix` for FerroPIX, each with its own
+  role. PostgreSQL binds to the
   private address alone; the public side carries key-only SSH and nothing
   else. `postgres.ferroehr.eu` names the PUBLIC address for SSH and
   operations — its 5432 never answers, by design.
 
-The connection string lives in the app box's `.env` and nowhere else; CI
-never holds it. The release deploy lane touches the APP box only — the
+The connection strings (`DATABASE_URL` for the CDR, `FERROPIX_DATABASE_URL`
+for FerroPIX) and FerroPIX's sealing key (`FERROPIX_DATA_KEY`) live in the
+app box's `.env` and nowhere else; CI never holds them. The release deploy
+lane touches the APP box only — the
 database box has no deploy lane, and its image moves by hand
 (`docker compose pull && docker compose up -d` in `/opt/ferroehr-postgres`).
 
@@ -52,10 +58,32 @@ Two operational lessons, learned live at the cutover and load-bearing:
   `docker compose restart`** — restart reuses the container's original
   environment, so the CDR keeps talking to the old database while readiness
   honestly reports UP about the wrong server.
-- **The app box's `.env` is fed into the CDR container wholesale**, and the
+- **The app box's `.env` was fed into the CDR container wholesale**, and the
   CDR's strict boot sweep refuses any `FERROEHR_*` name its release does not
-  know — an `.env` line staged for a FUTURE release keeps the CURRENT one
-  from booting. Stage such lines commented out.
+  know — an `.env` line staged for a FUTURE release kept the CURRENT one
+  from booting. The compose file now hands the CDR `DATABASE_URL` alone; the
+  rest of `.env` is compose substitution, read by no container's sweep. A
+  line a container of the running posture does receive is still staged
+  commented out until the release that knows it.
+
+## The memory budget (app box)
+
+A CX33 has 8 GB, of which the kernel reports about 7.6 GiB. The compose
+limits, with what each used on 2026-10-27 in the local rehearsal of #4242
+(idle after a full seed, without the SNOMED CT and LOINC indexes):
+
+| Service | Limit | Measured |
+|---|---|---|
+| CDR | 3072m | 34 to 213 MB |
+| FerroTERM | 1536m | 26 MB with the seed alone; the SNOMED CT International index adds about 702 MB resident (#3304) |
+| viewer | 1024m (was 1536m) | 6 MB |
+| FerroPIX | 512m (FerroPIX's chart default) | 4 MB |
+| development issuer (JVM) | 256m | 136 to 144 MB |
+| Caddy | 128m | 13 MB |
+| **Total** | **6528m** | |
+
+That leaves about 1.1 GiB for the OS, Docker and the page cache. The one-shots
+(`identity-issuer-ready`, `ferropix-seed`) live for seconds and carry no limit.
 
 ## What is in this directory
 
@@ -66,7 +94,10 @@ Two operational lessons, learned live at the cutover and load-bearing:
 | `Caddyfile` | Automatic TLS, and the routing table (the CDR owns `/ferroehr/*`, `/health*`, `/management*`, `/.well-known/*`; the viewer is everything else) | the same way; a change to it restarts Caddy |
 | `ferroehr.sandbox.toml` | The CDR's sandbox posture (demo user, admin API on per #2965, management off) | the same way |
 | `ferroehr-viewer.sandbox.toml` | The viewer's sandbox posture | the same way |
-| `env.example` | A copy-to-`.env` template: the DB box's private-network DSN and the image references | never. `.env` is the operator's file, written by hand on the box |
+| `ferropix.sandbox.toml` | FerroPIX's sandbox posture: the loopback base, the development issuer, the synthetic identifier domain `urn:oid:2.999.1.1` fed by `sandbox-source`, and the pseudonymisation domain `urn:oid:2.999.7.1` whose consumer is the CDR (`ferroehr`) | the same way |
+| `ferropix-seed.sh` | The one-shot that registers the demo patients with FerroPIX (ITI-104) and answers their pseudonyms (ITI-83); the deploy script's `identities` verb runs it | baked into the image; the compose file mounts the image into the one-shot, so `deploy.sh` never handles it |
+| `sandbox-ferropix-rollout.sh` | The operator's script for the FerroPIX rollout on both boxes (below) | never. The operator runs it from a checkout |
+| `env.example` | A copy-to-`.env` template: the DB box's private-network DSNs, FerroPIX's sealing key, the image references and the FerroTERM index list | never. `.env` is the operator's file, written by hand on the box (the rollout script writes the FerroPIX lines) |
 | `cloud-init-postgres.yaml` | The DATABASE box, fresh to serving state: the `deploy` user, key-only SSH, both firewalls, Docker, and the `ferroehr-postgres` compose posture bound to the private address | the DB server's user data at creation, once |
 | `ferroterm-index.env` | The record of the terminology index the box carries: its artifact layout, the `ferroterm-build` version and the editions. `scripts/checks/ferroterm-index-layout.sh` refuses a FerroTERM pin in `docker-compose.yml` whose layout differs | never. The index is built off-box and copied by the operator (below), and this file changes in the same pull request as the pin |
 | `docker/terminology/seed/` (in the repository) | The licence-free shaped code systems FerroTERM serves on the box | baked into the ferroehr image at `/opt/sandbox-posture/terminology/`; the compose file mounts it into FerroTERM straight from the image, so `deploy.sh` never handles it |
@@ -76,7 +107,7 @@ over the network: the posture travels inside the published ferroehr image, so
 a posture change arrives at a release, with that artifact's provenance. The
 `hosted-deploy-script` CI job extracts `deploy.sh` out of `cloud-init.yaml`
 and shellchecks it, and checks that `docker/Dockerfile` bakes every posture
-path the script reads.
+path the script reads and every path the compose file reads out of the image.
 
 ## How a deploy happens
 
@@ -96,12 +127,12 @@ every step. Three callers:
    seed-only) — verbs `wipe` (drop the CDR's five schemas on the private
    database box, plus the four superseded first-generation ones a box seeded
    before the storage rewrite still carries, with the DSN this box already
-   holds) and `restart` (recreate the CDR so a fresh boot re-runs the
-   migrations against the wiped database).
+   holds), `restart` (recreate the CDR so a fresh boot re-runs the
+   migrations against the wiped database) and `identities` (below).
 
 The deploy key is restricted on the box to `deploy.sh` (`command=` in
 `cloud-init.yaml`), which reads `SSH_ORIGINAL_COMMAND` and accepts exactly
-`deploy`, `restart` and `wipe`. The lane builds nothing; it asserts by digest that
+`deploy`, `restart`, `wipe` and `identities`. The lane builds nothing; it asserts by digest that
 `:latest` is the tagged image, refuses an image that does not declare
 `eu.ferroehr.image.carries-sandbox-posture=true`, deploys through
 [`rubentalstra/hetzner-deploy-action`](https://github.com/rubentalstra/hetzner-deploy-action),
@@ -122,6 +153,34 @@ itself evidence that the deployment serves what it claims. The script is a
 walker over `scripts/sandbox/seed/manifest.json`, and the bodies live as files
 beside it, so **adding content is editing data**: a template slug, an EHR
 subject, an AQL file, a party. The walker itself never changes.
+
+### The patients and FerroPIX
+
+The CDR resolves patients through FerroPIX (`[ehr_index] provider = "ihe"`),
+so every `EHR_STATUS` names its patient by a pseudonym in the clinical domain
+`urn:oid:2.999.7.1` (`[privacy] subject_namespaces`). The manifest's subjects
+(`sandbox-patient-01` and on, and the marker) are the patients' identifiers in
+the synthetic hospital domain `urn:oid:2.999.1.1`. Before the seed, the
+reseed's `identities` job pipes them over SSH into the deploy script's
+`identities` verb, which runs the compose file's `ferropix-seed` one-shot:
+each subject is fed to FerroPIX as the Patient Identity Source
+`sandbox-source` (ITI-104, an idempotent conditional update), and asked for
+as the CDR's client `ferroehr` (ITI-83), which mints its pseudonym on the
+first ask and answers the same one after. The answer is the file
+`reseed.sh` reads as `SANDBOX_IDENTITIES`. FerroPIX's database is never wiped,
+so every night answers the same pseudonyms, and after a reset the CDR's EHRs
+and FerroPIX's identities agree. A visitor sees the resolution through
+`POST /ferroehr/rest/openehr/v1/query/cohort` with `subjects` named in
+`urn:oid:2.999.1.1` (`[cohort] subjects = true`; the small-cell floor of 5
+applies).
+
+FerroPIX and the CDR accept a plain-`http` token issuer only on loopback
+(RFC 8414 §2), so the development issuer (NAV's `mock-oauth2-server`, which
+signs any client credentials request) owns one network namespace that the
+CDR, FerroPIX and the seed join, as in the compose quickstart. The issuer
+publishes no port and FerroPIX binds `127.0.0.1:8090`, so nothing outside the
+box reaches either. A namespace owner with members cannot be replaced, so
+`deploy.sh` removes the CDR and FerroPIX containers before its `up -d`.
 
 One run loads, in about 590 requests:
 
@@ -172,7 +231,9 @@ own in-process terminology bundle.
 ## Bootstrap and recovery
 
 The first posture on a fresh box (or recovery from a broken one) is manual by
-design: copy this directory's four posture files plus a filled-in `.env` to
+design: copy this directory's five posture files (`docker-compose.yml`,
+`Caddyfile`, `ferroehr.sandbox.toml`, `ferroehr-viewer.sandbox.toml`,
+`ferropix.sandbox.toml`) plus a filled-in `.env` to
 `/opt/ferroehr-sandbox/` and run `docker compose up -d` as the `deploy` user.
 From the next release on, `deploy.sh` keeps them current from the image, and
 each replaced file leaves a `.prev` copy beside it for rollback.
@@ -202,7 +263,62 @@ Copy `<out>` to `/opt/ferroehr-sandbox/ferroterm-index.new/`, check that both
 `ferroterm-index` (keeping the old one until the new one serves), set
 `FERROTERM_IMAGE` in `.env` when the box must run ahead of the image's
 posture, and run `docker compose up -d ferroterm`. The release archives never
-reach the box.
+reach the box. Step 4 of the rollout script below checks the layout and, given
+`SNOMED_RF2_ZIP` and `LOINC_ZIP` on the operator's machine, runs exactly these
+steps.
+
+FerroTERM 0.3 reads its configuration tree only: the compose file sets
+`FERROTERM__TERMINOLOGY__CODE_SYSTEMS` and `FERROTERM__TERMINOLOGY__INDEX`,
+and the index list in `.env` is `FERROTERM_INDEXES`, comma-separated, where
+FerroTERM 0.1 read `FERROTERM_INDEX`, colon-separated. FerroTERM 0.3.1 reads
+artifact layout 7, the layout of the index the box carries (built with
+`ferroterm-build` 0.1.6, `ferroterm-index.env`), so the move from 0.1.6 needs
+no rebuild.
+
+## Rolling out FerroPIX (#4242)
+
+`sandbox-ferropix-rollout.sh` carries every hand step on both boxes. Run it
+from a checkout on your own machine; it reaches the boxes over SSH as
+`deploy` (`APP_HOST`, default `167.233.172.220`; `DB_HOST`, default
+`postgres.ferroehr.eu`; `SSH_USER`). Every step prints `==> step N:` and then
+`OK:`, `SKIP:` or `FAIL:` with its evidence, a re-run is safe, and `--check`
+verifies without changing anything. No secret is printed: the log shows a
+12-digit SHA-256 fingerprint.
+
+1. **Preflight.** Both boxes answer over SSH, and the log lists what runs on
+   each (image, version, health).
+2. **DB box.** Creates the `ferropix` role (no superuser) and database,
+   revokes `PUBLIC`'s grants on it, and grants the role `CONNECT`, `CREATE`
+   and `TEMPORARY`. The password is generated on the box (or read from
+   `FERROPIX_DB_PASSWORD`) and kept in `/opt/ferroehr-postgres/.env` as
+   `FERROPIX_DB_PASSWORD`. It checks that PostgreSQL is published on the
+   private address alone, then logs in as `ferropix` from the app box over
+   the private network.
+3. **App box.** Writes `FERROPIX_DATABASE_URL`, `FERROPIX_DATA_KEY`
+   (generated on the box) and `FERROTERM_INDEXES` (the old `FERROTERM_INDEX`
+   with commas) into `.env`, keeping `.env.prev`. Per the lesson above, a line
+   stays commented out until the running release knows it, unless no
+   container of the installed posture receives the name. These three are
+   compose substitution names that no container receives, so they are written
+   active: the v5.5.0 deploy refuses a posture whose FerroPIX names are unset,
+   and would otherwise never install. It also installs this checkout's
+   `deploy.sh`, which carries the `identities` verb the nightly reseed calls
+   from the moment this change merges.
+4. **The FerroTERM index.** Compares each index's `storeLayout` on the box
+   with `ferroterm-index.env`; layout 7 on both means no rebuild.
+5. **After the v5.5.0 deploy** (a `SKIP:` before it). Recreates the stack
+   (`docker compose pull`, then the CDR and FerroPIX removed and `up -d`,
+   never `restart`), or installs the posture with the `deploy` verb if the
+   release's deploy did not. It waits for every container to report healthy,
+   registers the demo patients through the `identities` verb, wipes and
+   reseeds if the database still holds the demo data seeded before FerroPIX,
+   and verifies end to end: a cohort named by the hospital identifiers
+   resolves through FerroPIX to the EHRs carrying FerroPIX's pseudonyms,
+   FerroTERM answers through the CDR's `/terminology` route, and the public
+   URL serves the CDR and the viewer.
+
+Run steps 1 to 4 when this change merges, before the v5.5.0 release, and the
+whole script again after the release's `sandbox` job.
 
 ## How it is watched
 
@@ -219,4 +335,7 @@ Nothing durable and nothing secret beyond the one `.env`: the containers are
 rebuilt from published images, the data is wiped nightly by design
 (`sandbox-reseed.yml` — the wipe runs ON this box through the deploy
 script's `wipe` verb, over the private network), and no signing key, token
-or credential beyond the database DSN exists on the host. **No backups**, deliberately.
+or credential beyond the two database DSNs and FerroPIX's sealing key exists
+on the host. FerroPIX's database is the one store the nightly wipe leaves
+alone: its patients and their pseudonyms are what the reseed writes into the
+CDR, so they stay. **No backups**, deliberately.

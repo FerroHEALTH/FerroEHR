@@ -20,7 +20,12 @@
 # completion, and a second run sees it and exits without touching anything.
 #
 # Environment: SANDBOX_BASE (default https://sandbox.ferroehr.eu),
-# SANDBOX_USER / SANDBOX_PASS (default the public demo credentials).
+# SANDBOX_USER / SANDBOX_PASS (default the public demo credentials), and
+# SANDBOX_IDENTITIES: the file the box's `identities` verb answered
+# (deploy/hosted/ferropix-seed.sh). Under an IHE patient identity source it maps
+# each manifest subject to the pseudonym FerroPIX minted for it, and every
+# EHR_STATUS names that pseudonym in the clinical domain (#4242). Unset, or
+# answering `provider local`, the subjects name themselves.
 set -Eeuo pipefail
 
 BASE="${SANDBOX_BASE:-https://sandbox.ferroehr.eu}/ferroehr/rest/openehr/v1"
@@ -57,6 +62,48 @@ mf() { local filter="$1"; jq -r "$filter" "$MANIFEST"; }
 manifest_ehrs() { jq -c '.ehrs[]' "$MANIFEST"; }
 
 SUBJECT_NS="$(mf '.subject_namespace')"
+
+# The identity source the deployment resolves subjects through: `local` (the
+# subject names itself) or `ihe` (the pseudonym FerroPIX minted names it).
+IDENTITIES="${SANDBOX_IDENTITIES:-}"
+PROVIDER=local
+if [[ -n "$IDENTITIES" ]]; then
+  [[ -s "$IDENTITIES" ]] || {
+    echo "::error::SANDBOX_IDENTITIES names $IDENTITIES, which is missing or empty" >&2
+    exit 1
+  }
+  PROVIDER="$(awk '$1 == "provider" { print $2 }' "$IDENTITIES")"
+  case "$PROVIDER" in
+    local) ;;
+    ihe)
+      SUBJECT_NS="$(awk '$1 == "pseudonym_namespace" { print $2 }' "$IDENTITIES")"
+      [[ -n "$SUBJECT_NS" ]] || {
+        echo "::error::$IDENTITIES names no pseudonym_namespace" >&2
+        exit 1
+      }
+      ;;
+    *)
+      echo "::error::$IDENTITIES names provider '$PROVIDER'; want local or ihe" >&2
+      exit 1
+      ;;
+  esac
+fi
+
+# The identifier EHR_STATUS carries for a manifest subject: the subject itself,
+# or under `ihe` its pseudonym, which must be in the identities file.
+subject_id() {
+  local subject="$1" id
+  if [[ "$PROVIDER" == local ]]; then
+    printf '%s' "$subject"
+    return
+  fi
+  id="$(awk -v s="$subject" '$1 == "subject" && $2 == s { print $3 }' "$IDENTITIES")"
+  [[ -n "$id" ]] || {
+    echo "::error::$IDENTITIES carries no pseudonym for $subject" >&2
+    exit 1
+  }
+  printf '%s' "$id"
+}
 
 # ── the wire ─────────────────────────────────────────────────────────────────
 
@@ -131,8 +178,9 @@ render() {
 
 echo "==> seeding $BASE"
 MARKER_SUBJECT="$(mf '.marker.subject')"
+MARKER_ID="$(subject_id "$MARKER_SUBJECT")"
 code=$(request "marker lookup" GET \
-  "$BASE/ehr?subject_id=$MARKER_SUBJECT&subject_namespace=$SUBJECT_NS")
+  "$BASE/ehr?subject_id=$MARKER_ID&subject_namespace=$SUBJECT_NS")
 case "$code" in
   200)
     echo "==> already seeded (marker EHR $MARKER_SUBJECT present); nothing to do"
@@ -252,9 +300,10 @@ reused=0
 index=0
 while read -r entry; do
   subject=$(printf '%s' "$entry" | jq -r '.subject')
+  subject_ref="$(subject_id "$subject")"
   status_file="$SEED_DIR/$(printf '%s' "$entry" | jq -r '.status')"
   code=$(request "ehr lookup $subject" GET \
-    "$BASE/ehr?subject_id=$subject&subject_namespace=$SUBJECT_NS")
+    "$BASE/ehr?subject_id=$subject_ref&subject_namespace=$SUBJECT_NS")
   case "$code" in
     200)
       ehrs[index]=$(jq -r '.ehr_id.value' "$BODY")
@@ -262,7 +311,8 @@ while read -r entry; do
       reused=$((reused + 1))
       ;;
     404)
-      render "$status_file" "$WORK/status.json" "__SUBJECT_ID__=$subject"
+      render "$status_file" "$WORK/status.json" "__SUBJECT_ID__=$subject_ref" \
+        "__SUBJECT_NS__=$SUBJECT_NS"
       code=$(request "ehr create $subject" POST "$BASE/ehr" \
         -H "$CT_JSON" --data-binary @"$WORK/status.json")
       expect "ehr create $subject" "$code" 201
@@ -383,11 +433,13 @@ while read -r entry; do
   final=$(printf '%s' "$entry" | jq -r '.final_status // empty')
   [[ -n "$final" ]] || continue
   subject=$(printf '%s' "$entry" | jq -r '.subject')
+  subject_ref="$(subject_id "$subject")"
   ehr="${ehrs[$slot]}"
   code=$(request "ehr_status read $ehr" GET "$BASE/ehr/$ehr/ehr_status")
   expect "ehr_status read $ehr" "$code" 200
   current=$(etag_uid)
-  render "$SEED_DIR/$final" "$WORK/status.json" "__SUBJECT_ID__=$subject"
+  render "$SEED_DIR/$final" "$WORK/status.json" "__SUBJECT_ID__=$subject_ref" \
+    "__SUBJECT_NS__=$SUBJECT_NS"
   code=$(request "ehr_status update $ehr" PUT "$BASE/ehr/$ehr/ehr_status" \
     -H "$CT_JSON" -H "If-Match: \"$current\"" \
     --data-binary @"$WORK/status.json")
@@ -480,7 +532,7 @@ echo "==> $queries stored AQL queries, each answering rows"
 # ── 11. the completion marker ────────────────────────────────────────────────
 
 render "$SEED_DIR/$(mf '.marker.status')" "$WORK/marker.json" \
-  "__SUBJECT_ID__=$MARKER_SUBJECT"
+  "__SUBJECT_ID__=$MARKER_ID" "__SUBJECT_NS__=$SUBJECT_NS"
 code=$(request "marker create" POST "$BASE/ehr" \
   -H "$CT_JSON" --data-binary @"$WORK/marker.json")
 expect "marker create" "$code" 201 409

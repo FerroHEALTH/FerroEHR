@@ -3,8 +3,9 @@
 #
 # The sandbox reset (#2710; Hetzner posture #2974; dedicated database box
 # #3015): wipe the sandbox database's schemas, restart the CDR container so a
-# fresh boot re-runs the migrations, then seed demo data through the PUBLIC
-# API (scripts/sandbox/reseed.sh). Visitors can create, change and delete
+# fresh boot re-runs the migrations, register the demo patients with FerroPIX
+# on the box (#4242), then seed demo data through the PUBLIC API
+# (scripts/sandbox/reseed.sh). Visitors can create, change and delete
 # anything; every night the demo returns to a known state.
 #
 # Both the wipe and the restart run through the SAME restricted deploy key
@@ -145,12 +146,72 @@ jobs:
           done
           echo "sandbox ready"
 
+  # The demo patients are registered with FerroPIX ON the box (the deploy
+  # script's `identities` verb, #4242): FerroPIX answers on the loopback of
+  # the box's identity namespace alone. The verb takes the manifest subjects on
+  # stdin and answers each pseudonym, which the seed below writes into
+  # EHR_STATUS. FerroPIX keeps its identities across the CDR's wipe, so every
+  # night answers the same pseudonyms and the CDR's EHRs and FerroPIX agree.
+  # Under the in-instance map the verb answers `provider local` and the seed
+  # names the subjects themselves. Plain ssh, not the deploy action: the verb
+  # reads stdin and its answer is the job's output. The pseudonyms are
+  # synthetic and every visitor reads them on EHR_STATUS, so they are no secret.
+  identities:
+    name: register the demo patients with FerroPIX (on the box)
+    needs: restart
+    if: ${{ !cancelled() && github.repository == 'FerroHEALTH/FerroEHR' && (inputs.seed-only || needs.restart.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: hosted
+    permissions:
+      contents: read
+    outputs:
+      identities: ${{ steps.register.outputs.identities }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Register the demo patients and read their pseudonyms
+        id: register
+        env:
+          KEY: ${{ secrets.HOSTED_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.HOSTED_KNOWN_HOSTS }}
+          # The box's IPv4 address, as the hosted-deploy action's `host`
+          # default: runners have no IPv6 route.
+          HOST: "167.233.172.220"
+        run: |
+          set -euo pipefail
+          if [ -z "$KEY" ] || [ -z "$KNOWN_HOSTS" ]; then
+            echo "::error::HOSTED_SSH_KEY or HOSTED_KNOWN_HOSTS is empty in the hosted environment; the reseed needs both to register the demo patients on the box." >&2
+            exit 1
+          fi
+          dir="$(mktemp -d)"
+          trap 'rm -rf "$dir"' EXIT
+          umask 077
+          printf '%s\n' "$KEY" > "$dir/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$dir/known_hosts"
+          jq -r '.ehrs[].subject, .marker.subject' scripts/sandbox/seed/manifest.json \
+            | ssh -i "$dir/key" -o IdentitiesOnly=yes -o BatchMode=yes \
+                -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$dir/known_hosts" \
+                "deploy@$HOST" identities > "$dir/identities"
+          provider="$(sed -n 's/^provider //p' "$dir/identities")"
+          case "$provider" in
+            local | ihe) ;;
+            *)
+              echo "::error::the box's identities verb answered no provider line; read the deploy script's output on the box." >&2
+              exit 1
+              ;;
+          esac
+          echo "the box resolves subjects through: $provider ($(grep -c '^subject ' "$dir/identities" || true) pseudonyms)"
+          echo "identities=$(base64 -w0 < "$dir/identities")" >> "$GITHUB_OUTPUT"
+
   seed:
     name: seed the demo data
-    needs: restart
-    # Seed-only skips the two jobs above; a skipped `needs` would otherwise
-    # skip this one too.
-    if: ${{ !cancelled() && (inputs.seed-only || needs.restart.result == 'success') }}
+    needs: [restart, identities]
+    # Seed-only skips the wipe and the restart; a skipped `needs` would
+    # otherwise skip this one too.
+    if: ${{ !cancelled() && needs.identities.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -160,4 +221,9 @@ jobs:
         with:
           persist-credentials: false
       - name: Seed the demo data
-        run: bash scripts/sandbox/reseed.sh
+        env:
+          IDENTITIES: ${{ needs.identities.outputs.identities }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$IDENTITIES" | base64 -d > "$RUNNER_TEMP/identities"
+          SANDBOX_IDENTITIES="$RUNNER_TEMP/identities" bash scripts/sandbox/reseed.sh

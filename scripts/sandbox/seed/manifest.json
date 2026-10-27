@@ -29,7 +29,8 @@
     "database (17 373 node rows, 227 versions).",
     "",
     "Placeholders in the body files are substituted by the walker: __SUBJECT_ID__",
-    "(an EHR subject), __PERFORMER__ / __SOURCE__ / __TARGET__ (a seeded party's",
+    "(an EHR subject, or under an IHE identity source the pseudonym FerroPIX minted",
+    "for it), __SUBJECT_NS__ (subject_namespace, or the pseudonym domain), __PERFORMER__ / __SOURCE__ / __TARGET__ (a seeded party's",
     "VERSIONED_OBJECT uid), __COMPOSITION_n__ (the n-th composition committed into",
     "the EHR the folder is written to), and __EHR_n__ (the n-th seeded EHR id) in",
     "stored-query verification parameters."

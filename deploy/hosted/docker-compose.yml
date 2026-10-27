@@ -16,6 +16,18 @@
 # alias layer maps to db.url (app/ferroehr/src/config/alias.rs). The database
 # has no public port; the app reaches it over the Hetzner private network
 # (10.0.0.0/24) alone.
+#
+# FerroPIX (#4242) is the CDR's IHE patient identity source, with its own
+# database on the same DB box (FERROPIX_DATABASE_URL in `.env`). The CDR and
+# FerroPIX both accept a plain-http token issuer only on loopback (RFC 8414
+# §2), so the development issuer owns one network namespace that the CDR and
+# FerroPIX join, the way the quickstart runs them: all three see each other on
+# localhost (CDR 8080, FerroPIX 8090, issuer 8180), and the issuer answers to
+# the name `ferroehr` on the compose network for Caddy and the viewer.
+#
+# Memory on the 8 GB box (limits, not use): CDR 3072m, FerroTERM 1536m,
+# viewer 1024m, FerroPIX 512m, issuer 256m, Caddy 128m: 6528m, which leaves
+# about 1.1 GiB of the ~7.6 GiB the kernel reports for the OS and Docker.
 
 services:
   ferroehr:
@@ -55,11 +67,148 @@ services:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
     volumes:
       - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
-    expose:
-      - "8080"
+    # The issuer's namespace (the header says why); Caddy and the viewer reach
+    # the CDR as ferroehr:8080, the name the issuer answers to.
+    network_mode: service:identity-issuer
     depends_on:
+      identity-issuer:
+        condition: service_started
       ferroterm:
         condition: service_healthy
+      # The CDR reads FerroPIX's CapabilityStatement at boot and refuses to
+      # start while it does not answer.
+      ferropix:
+        condition: service_healthy
+
+  # The development OpenID Provider (NAV's mock-oauth2-server), and the owner
+  # of the network namespace the CDR and FerroPIX join. It signs any client
+  # credentials request: the client as `sub` and `client_id`, FerroPIX's FHIR
+  # base as the audience, and the scope asked for. It publishes no port, so
+  # only the containers on this box can ask it, and FerroPIX, the one server
+  # that trusts its tokens, answers on loopback alone.
+  identity-issuer:
+    image: ${FERROEHR_ISSUER_IMAGE:-ghcr.io/navikt/mock-oauth2-server:6.1.3@sha256:2a813381bf282da46ff36ff386059e7903e25865056af8149f4fb3f1441916b8}
+    container_name: ferroehr-sandbox-issuer
+    restart: unless-stopped
+    networks:
+      default:
+        aliases: [ferroehr]
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    environment:
+      # The CDR listens on 8080 in this namespace, so the provider moves.
+      SERVER_PORT: "8180"
+      # `$$` is a literal `$` to compose.
+      JSON_CONFIG: >-
+        {"tokenCallbacks":[{"issuerId":"sandbox",
+        "requestMappings":[{"requestParam":"grant_type","match":"client_credentials",
+        "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
+        "aud":["http://localhost:8090/fhir"],"scope":"$${scope}"}}]}]}
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  # Waits until the issuer serves its metadata, at most two minutes. The
+  # issuer's distroless image carries no probe of its own to run as a
+  # healthcheck, so this one-shot in its namespace is the gate.
+  identity-issuer-ready:
+    image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
+    network_mode: service:identity-issuer
+    depends_on:
+      identity-issuer:
+        condition: service_started
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        for i in $$(seq 1 120); do
+        curl -fsS -o /dev/null http://localhost:8180/sandbox/.well-known/openid-configuration && exit 0;
+        sleep 1; done; echo 'the issuer did not answer in 120 s' >&2; exit 1
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  # FerroPIX, the IHE patient identity source (#4242): a PIXm Manager that
+  # mints the pseudonym EHR_STATUS names each demo patient by. Loopback only
+  # in the issuer's namespace: no port, no Caddy route, the CDR and the seed
+  # below its only callers. Its database is on the DB box; the URL and the
+  # sealing key are compose secrets read from `.env`.
+  ferropix:
+    image: ${FERROPIX_IMAGE:-ghcr.io/ferrohealth/ferropix:0.0.10@sha256:f44b2b12f0f12a6f0b1c7e2afc9611c649d501606b96d48e4471e0952826a504}
+    container_name: ferroehr-sandbox-ferropix
+    restart: unless-stopped
+    network_mode: service:identity-issuer
+    depends_on:
+      # FerroPIX reads the issuer's metadata once at start and exits when it
+      # cannot, so it starts only after the issuer answers.
+      identity-issuer-ready:
+        condition: service_completed_successfully
+    # The image's own probe (`ferropix healthcheck`, readiness on the listen
+    # address), stated here because an OCI-format image carries none to
+    # Podman.
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/ferropix", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    environment:
+      FERROPIX_CONFIG: /etc/ferropix/ferropix.toml
+      # The image sets 0.0.0.0:8080, which the CDR binds in this namespace,
+      # and the environment wins over the file.
+      FERROPIX__SERVER__LISTEN: 127.0.0.1:8090
+    configs:
+      - source: ferropix-db-url
+        target: /etc/ferropix/db-url
+      - source: ferropix-data-key
+        target: /etc/ferropix/data-key
+    volumes:
+      - ./ferropix.sandbox.toml:/etc/ferropix/ferropix.toml:ro
+      # The audit spool and the usage report's instance id.
+      - ferropix_state:/var/lib/ferropix
+    # NOT `read_only: true`: Compose copies a secret read from the environment
+    # into the container, which a read-only root filesystem refuses.
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 20s
+
+  # The one-shot that registers the demo patients with FerroPIX and answers
+  # their pseudonyms, started by the deploy script's `identities` verb with
+  # the manifest subjects on stdin. Its script travels in the ferroehr image
+  # (/opt/sandbox-posture/ferropix-seed.sh), mounted the way FerroTERM's seed
+  # is; the `seed` profile keeps `up -d` from starting it.
+  ferropix-seed:
+    image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
+    profiles: [seed]
+    network_mode: service:identity-issuer
+    depends_on:
+      ferropix:
+        condition: service_healthy
+    entrypoint: ["sh", "/image/opt/sandbox-posture/ferropix-seed.sh"]
+    volumes:
+      - type: image
+        source: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:latest}
+        target: /image
+        read_only: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
 
   # FerroTERM, the terminology server, beside the CDR on the same box (#3304):
   # no ports, no Caddy route, viewer off. It is reachable as ferroterm:8080 on
@@ -73,17 +222,18 @@ services:
   # Content: the licence-free shaped seed, mounted straight out of the ferroehr
   # image (the posture directory /opt/sandbox-posture/terminology). A real
   # edition is the operator's: build its index off-box with ferroterm-build,
-  # place the directory at ./ferroterm-index, and set FERROTERM_INDEX=/data/index
-  # in .env (env.example). The sandbox loads the SNOMED CT International Edition
-  # (owner decision on #3304: one licence step through MLDS, English displays,
-  # 702 MB resident); the 1536m cap also fits the Netherlands edition (889 MB).
+  # place the directories under ./ferroterm-index, and list them in .env as
+  # FERROTERM_INDEXES=/data/index/int,/data/index/loinc (env.example). The
+  # sandbox loads the SNOMED CT International Edition (owner decision on #3304:
+  # one licence step through MLDS, English displays, 702 MB resident); the
+  # 1536m cap also fits the Netherlands edition (889 MB).
   # The CDR's cap moved from 4096m to 3072m to make room on the 8 GB box.
   ferroterm:
-    image: ${FERROTERM_IMAGE:-ghcr.io/ferrohealth/ferroterm:0.1.6@sha256:7ec4c9622e88e3028faf7c74a2384fb02e57dc3163c282b21274121a26aa3d5b}
+    image: ${FERROTERM_IMAGE:-ghcr.io/ferrohealth/ferroterm:0.3.1@sha256:ca034ec8488697fe7ebe357ac67f2a3e10028f3e288514125a3156208bb1e67f}
     container_name: ferroehr-sandbox-ferroterm
     restart: unless-stopped
-    # The image is its own health probe (`ferroterm healthcheck`, 0.1.6): no
-    # shell, no curl in the distroless base. Same cadence as the CDR's above;
+    # The image is its own health probe (`ferroterm healthcheck`, readiness
+    # since 0.3.1): no shell, no curl in the distroless base. Same cadence as the CDR's above;
     # the start period covers loading a SNOMED CT edition.
     healthcheck:
       test: ["CMD", "/usr/local/bin/ferroterm", "healthcheck"]
@@ -95,11 +245,13 @@ services:
       resources:
         limits:
           memory: 1536m
+    # FerroTERM 0.3 reads its configuration tree only (`FERROTERM__…`): a
+    # list is comma-separated, so FERROTERM_INDEXES in `.env` names the
+    # index directories with commas.
     environment:
-      FERROTERM_CODESYSTEMS: /image/opt/sandbox-posture/terminology
-      FERROTERM_INDEX:
-      FERROTERM_UI: "off"
-      FERROTERM_LOG_FORMAT: json
+      FERROTERM__TERMINOLOGY__CODE_SYSTEMS: /image/opt/sandbox-posture/terminology
+      FERROTERM__TERMINOLOGY__INDEX: ${FERROTERM_INDEXES:-}
+      FERROTERM__TELEMETRY__FORMAT: json
       RUST_LOG: info
     volumes:
       # The whole ferroehr image, read-only, for the seed directory it carries
@@ -132,7 +284,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1536m
+          memory: 1024m
     environment:
       FERROEHR_VIEWER_CONFIG: /etc/ferroehr/viewer.toml
     volumes:
@@ -157,10 +309,21 @@ services:
       # deploy loop meets a rate limit.
       - caddy_data:/data
       - caddy_config:/config
+    deploy:
+      resources:
+        limits:
+          memory: 128m
     depends_on:
       - ferroehr
       - viewer
 
+configs:
+  ferropix-db-url:
+    content: ${FERROPIX_DATABASE_URL:?FERROPIX_DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
+  ferropix-data-key:
+    content: ${FERROPIX_DATA_KEY:?FERROPIX_DATA_KEY must be set in /opt/ferroehr-sandbox/.env}
+
 volumes:
   caddy_data:
   caddy_config:
+  ferropix_state:

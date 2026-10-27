@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+#
+# FerroPIX on the sandbox box (#4242): the IHE patient identity source the CDR
+# asks over PIXm (ITI-83) for the pseudonym of each demo patient. It travels
+# inside the ferroehr image (/opt/sandbox-posture) and the deploy script
+# installs it beside the compose file, like the CDR's posture. Every key is on
+# FerroPIX's configuration page (https://ferropix.eu/docs/operate/configuration.html).
+#
+# FerroPIX shares the development issuer's network namespace with the CDR and
+# binds loopback alone, so nothing but that namespace reaches it: no port, no
+# Caddy route, the CDR and the on-box seed its only callers. Its database is
+# the `ferropix` database on the DB box over the private network; the URL and
+# the sealing key come from the box's `.env` as compose secrets, never from
+# this file.
+
+profile = "production"
+# The loopback base the CDR and the seed reach it at.
+public_base_url = "http://localhost:8090"
+
+# The listen address is the compose file's FERROPIX__SERVER__LISTEN, because
+# the image's own variable would win over a value here.
+
+[db]
+url_file = "/etc/ferropix/db-url"
+data_key_file = "/etc/ferropix/data-key"
+
+[auth]
+audience = ["http://localhost:8090/fhir"]
+
+# The development issuer on the same loopback (the compose file's
+# identity-issuer). It signs plain JWTs (`typ` JWT), hence `jwt`.
+[[auth.issuer]]
+issuer = "http://localhost:8180/sandbox"
+token_profile = "jwt"
+
+# The one client that may feed patients, the on-box seed (PIXm ITI-104).
+[[trust.issuer]]
+issuer = "http://localhost:8180/sandbox"
+clients = ["sandbox-source"]
+
+# The synthetic identifier domain the demo patients are registered in. The
+# OID arc 2.999 is reserved for examples (ITU-T X.660), so no real assigning
+# authority is named.
+[[domain]]
+system = "urn:oid:2.999.1.1"
+name = "Sandbox demo hospital"
+kind = "local"
+source_client_id = "sandbox-source"
+
+# The clinical domain: FerroPIX mints each patient's pseudonym here on the
+# CDR's first ask, and EHR_STATUS names the patient by it.
+[[pseudonym_domain]]
+namespace = "urn:oid:2.999.7.1"
+name = "FerroEHR sandbox clinical domain"
+consumer_client_id = "ferroehr"
+
+[usage_report]
+deployment = "compose"
+state_dir = "/var/lib/ferropix"
