@@ -79,7 +79,7 @@ COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 HOSTED_COMPOSE="$ROOT_DIR/deploy/hosted/docker-compose.yml"
 MANIFEST="$ROOT_DIR/Cargo.toml"
 
-version="$(sed -nE 's/^version = "(.*)"$/\1/p' "$MANIFEST" | head -1)"
+version="$(sed -nE 's/^version = "(.*)"$/\1/p' "$MANIFEST" | sed -n 1p)"
 if [[ -z "$version" ]]; then
   echo "::error::could not read the workspace version from $MANIFEST" >&2
   exit 1

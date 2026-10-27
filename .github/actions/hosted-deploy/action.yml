@@ -200,7 +200,7 @@ runs:
       run: |
         set -euo pipefail
         deadline=$(( $(date +%s) + 300 ))
-        until body=$(curl -fsSL -m 30 "$BASE/" 2>/dev/null) && printf '%s' "$body" | grep -q "FerroEHR"; do
+        until body=$(curl -fsSL -m 30 "$BASE/" 2>/dev/null) && grep -q "FerroEHR" <<<"$body"; do
           if [ "$(date +%s)" -ge "$deadline" ]; then
             echo "::error::the viewer did not serve its sign-in surface within 5 minutes of the deploy." >&2
             exit 1

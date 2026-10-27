@@ -76,7 +76,7 @@ bold "helm: $(helm version --short)"
 # .tool-versions). A skewed helm produces a whitespace-only diff that reads as
 # chart drift, so the skew is reported as itself instead.
 PIN_FILE="${SCRIPT_DIR}/.tool-versions"
-PINNED_HELM="$(sed -nE 's/^helm[[:space:]]+v?([0-9][^[:space:]]*)[[:space:]]*$/\1/p' "$PIN_FILE" | head -1)"
+PINNED_HELM="$(sed -nE 's/^helm[[:space:]]+v?([0-9][^[:space:]]*)[[:space:]]*$/\1/p' "$PIN_FILE" | sed -n 1p)"
 [[ -n "$PINNED_HELM" ]] || { red "no helm version declared in ${PIN_FILE}"; exit 1; }
 ACTUAL_HELM="$(helm version --short | sed -E 's/^v?([0-9][^+]*).*$/\1/')"
 GOLDEN_SKEW=0
@@ -285,7 +285,7 @@ secret_leak_gate() {
       refused=1
     elif ! grep -qF -- "config.${path}" <<<"$out"; then
       red "  config.${path} was refused, but the message does not name it:"
-      echo "$out" | head -3
+      echo "$out" | sed -n 1,3p
       refused=1
     fi
   done
@@ -312,7 +312,7 @@ secret_leak_gate() {
                    -f "${CI_DIR}/default-values.yaml" \
                    --set-string "config.${path}=SENTINEL_PROBE" 2>&1)"; then
       red "  config.${path} failed to render; it should move the config into the Secret:"
-      echo "$render" | head -3
+      echo "$render" | sed -n 1,3p
       moved=1
       continue
     fi
@@ -375,7 +375,7 @@ network_policy_gate() {
     if ! out="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values" \
                 -s "$template" 2>&1)"; then
       red "  ${label}: the shipped values no longer render at all:"
-      printf '%s\n' "$out" | head -4
+      printf '%s\n' "$out" | sed -n 1,4p
       posture=1
       continue
     fi
@@ -400,7 +400,7 @@ network_policy_gate() {
                 --set "${prefix}.ingressFrom[0].namespaceSelector.matchLabels.kubernetes\\.io/metadata\\.name=ingress-nginx" \
                 -s "$template" 2>&1)"; then
       red "  ${label}: a narrowed ingressFrom must render (it is the hardened path):"
-      printf '%s\n' "$out" | head -4
+      printf '%s\n' "$out" | sed -n 1,4p
       posture=1
       continue
     fi
@@ -428,7 +428,7 @@ network_policy_gate() {
   if ! out="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$terminology" \
               -s templates/terminology.yaml 2>&1)"; then
     red "  terminology: the shipped values no longer render at all:"
-    printf '%s\n' "$out" | head -4
+    printf '%s\n' "$out" | sed -n 1,4p
     narrowed=1
   else
     policy="$(printf '%s' "$out" | yq -r 'select(.kind == "NetworkPolicy" and .metadata.name == "ferroehr-terminology")')"
@@ -471,7 +471,7 @@ network_policy_gate() {
     fi
   else
     red "  terminology: an extraIngressFrom peer must render:"
-    printf '%s\n' "$out" | head -4
+    printf '%s\n' "$out" | sed -n 1,4p
     narrowed=1
   fi
   if [[ "$narrowed" -eq 0 ]]; then
@@ -491,7 +491,7 @@ network_policy_gate() {
   local bridge="${CI_DIR}/bridge-values.yaml" fenced=0 render
   if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$bridge" 2>&1)"; then
     red "  bridge: the bridge overlay no longer renders at all:"
-    printf '%s\n' "$render" | head -4
+    printf '%s\n' "$render" | sed -n 1,4p
     fenced=1
   else
     policy="$(printf '%s' "$render" | yq -r 'select(.kind == "NetworkPolicy" and .metadata.name == "ferroehr-bridge")')"
@@ -531,7 +531,7 @@ network_policy_gate() {
     fi
   else
     red "  bridge: the all-features CDR policy no longer renders:"
-    printf '%s\n' "$render" | head -4
+    printf '%s\n' "$render" | sed -n 1,4p
     fenced=1
   fi
   if [[ "$fenced" -eq 0 ]]; then
@@ -646,7 +646,7 @@ refusal_registry_gate() {
       [[ -n "$want" ]] || continue
       grep -qF -- "$want" <<<"$out" && continue
       red "  ${probe} was refused, but the message does not name '${want}':"
-      printf '%s\n' "$out" | head -4
+      printf '%s\n' "$out" | sed -n 1,4p
       refused=1
     done < <(tr ';' '\n' <<<"$wants")
   done
@@ -787,7 +787,7 @@ schema_gate() {
       refused=1
     elif ! grep -qF -- "$want" <<<"$out"; then
       red "  --set ${probe} was refused, but the message does not mention '${want}':"
-      printf '%s\n' "$out" | head -4
+      printf '%s\n' "$out" | sed -n 1,4p
       refused=1
     fi
   done
@@ -823,7 +823,7 @@ schema_gate() {
       json_refused=1
     elif ! grep -qF -- "$want" <<<"$out"; then
       red "  --set-json ${probe} was refused, but the message does not mention '${want}':"
-      printf '%s\n' "$out" | head -4
+      printf '%s\n' "$out" | sed -n 1,4p
       json_refused=1
     fi
   done
@@ -833,7 +833,7 @@ schema_gate() {
               -f "${CI_DIR}/terminology-values.yaml" \
               --set-json 'terminology.networkPolicy.extraIngressFrom=[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"ferrockm"}}}]' 2>&1)"; then
     red "  WRONGLY REFUSED: a peer naming a namespace must still render:"
-    printf '%s\n' "$out" | head -4
+    printf '%s\n' "$out" | sed -n 1,4p
     json_refused=1
   fi
   # FerroBRIDGE's ingressFrom carries the same peer constraint, and it is the
@@ -853,7 +853,7 @@ schema_gate() {
       json_refused=1
     elif ! grep -qF -- "$want" <<<"$out"; then
       red "  --set-json ${probe} was refused, but the message does not mention '${want}':"
-      printf '%s\n' "$out" | head -4
+      printf '%s\n' "$out" | sed -n 1,4p
       json_refused=1
     fi
   done
@@ -875,7 +875,7 @@ schema_gate() {
     if ! out="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" \
                 -f "${CI_DIR}/default-values.yaml" --set "$probe" 2>&1)"; then
       red "  WRONGLY REFUSED: --set ${probe} must be accepted (see the note above this gate):"
-      printf '%s\n' "$out" | head -4
+      printf '%s\n' "$out" | sed -n 1,4p
       accepted=1
     fi
   done
@@ -915,7 +915,7 @@ fixture_gate() {
     red "  This is the FIXTURE being stale, not your chart change being wrong:"
     red "  .claude/skills/k8s-test/test-values.yaml needs the same edit your values change implies."
     printf '%s
-' "$out" | head -6
+' "$out" | sed -n 1,6p
     FAIL=1
     rm -f "$rendered"
     return
@@ -933,7 +933,7 @@ fixture_gate() {
   # yq document selection, not a fixed grep window: the ConfigMap grows with
   # the config tree, and a `grep -A<n>` ceiling silently stops covering the
   # tail the day the document passes n lines (#2391).
-  if yq eval 'select(.kind == "ConfigMap")' "$rendered" | grep -q 'argon2id'; then
+  if grep -q 'argon2id' <<<"$(yq eval 'select(.kind == "ConfigMap")' "$rendered")"; then
     red "  fixture puts an Argon2id hash in the ConfigMap"
     missing=1
   fi
@@ -1194,7 +1194,7 @@ viewer_management_gate() {
     if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$viewer" \
                    ${extra[@]+"${extra[@]}"} -s templates/viewer.yaml 2>&1)"; then
       red "  viewer: the viewer overlay no longer renders${port:+ with config.management.port=$port}:"
-      printf '%s\n' "$render" | head -4
+      printf '%s\n' "$render" | sed -n 1,4p
       FAIL=1
       return
     fi

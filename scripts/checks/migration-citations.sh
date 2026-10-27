@@ -127,7 +127,7 @@ for f in $files; do
     # bare file name matches on the file alone; a wrong schema directory still
     # fails.
     suffix=$(printf '%s\n' "$cited" | awk -F/ '{ if (NF >= 2) print $(NF-1) "/" $NF; else print $NF }')
-    if ! find "$MIGRATIONS" -type f -path "*/$suffix" -print -quit | grep -q .; then
+    if [[ -z "$(find "$MIGRATIONS" -type f -path "*/$suffix" -print -quit)" ]]; then
       printf '%s\n' "$f:$line: cites the migration \`$cited\`, which no file under \
 $MIGRATIONS matches — name the file that defines the relation now \
 (scripts/checks/migration-citations.sh)" >&2

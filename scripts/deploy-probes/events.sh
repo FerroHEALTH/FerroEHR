@@ -70,8 +70,8 @@ YAML
 events_bind_queue() {
   local tries=40
   while [[ "$tries" -gt 0 ]]; do
-    curl -s -u "$EVT_AUTH" "$EVT_MGMT/api/exchanges/%2f/$EVT_EXCHANGE" \
-      | grep -q '"name"' && break
+    grep -q '"name"' <<<"$(curl -s -u "$EVT_AUTH" "$EVT_MGMT/api/exchanges/%2f/$EVT_EXCHANGE")" \
+      && break
     tries=$((tries - 1))
     sleep 3
   done

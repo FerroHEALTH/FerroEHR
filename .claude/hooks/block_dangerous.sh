@@ -103,7 +103,7 @@ done < <(printf '%s\n' "$norm" | grep -oE '(^|[;|&(`[:space:]])rm[[:space:]][^;|
 # searches `.`, the project.
 while IFS= read -r seg; do
   [ -n "$seg" ] || continue
-  printf '%s' "$seg" | grep -qE '[[:space:]](-delete|-exec(dir)?[[:space:]]+rm)([[:space:]]|$)' || continue
+  grep -qE '[[:space:]](-delete|-exec(dir)?[[:space:]]+rm)([[:space:]]|$)' <<<"$seg" || continue
   read -ra words <<<"$seg"
   starts=0 outside=0
   for w in "${words[@]:1}"; do
@@ -138,16 +138,16 @@ delete_re='(--delete([[:space:]]|$)|[[:space:]]-d([[:space:]]|$)|[[:space:]]:[[:
 protected_re='(^|[[:space:]:/+])(main|master)([[:space:]]|$|["'"'"';&|])'
 while IFS= read -r seg; do
   [ -n "$seg" ] || continue
-  if printf '%s' "$seg" | grep -qE "$delete_re" && printf '%s' "$seg" | grep -qE "$protected_re"; then
+  if grep -qE "$delete_re" <<<"$seg" && grep -qE "$protected_re" <<<"$seg"; then
     echo "BLOCKED: deleting main/master on a remote is forbidden (CLAUDE.md hard rule)." >&2
     exit 2
   fi
-  printf '%s' "$seg" | grep -qE "$force_re" || continue
-  if printf '%s' "$seg" | grep -qE "$protected_re"; then
+  grep -qE "$force_re" <<<"$seg" || continue
+  if grep -qE "$protected_re" <<<"$seg"; then
     echo "BLOCKED: force-push touching main/master is forbidden (CLAUDE.md hard rule)." >&2
     exit 2
   fi
-  if printf '%s' "$seg" | grep -qE '(feat|fix|chore|docs|refactor|perf|test|ci|build|release|claude)/'; then
+  if grep -qE '(feat|fix|chore|docs|refactor|perf|test|ci|build|release|claude)/' <<<"$seg"; then
     continue
   fi
   current="$(git -C "${CLAUDE_PROJECT_DIR:-.}" branch --show-current 2>/dev/null || true)"
@@ -167,13 +167,13 @@ done < <(printf '%s\n' "$norm" | grep -oE "$START"'[[:space:]]*([A-Za-z_][A-Za-z
 # Never delete the tracker pointer or the plans guide (the tracker itself is
 # GitHub Issues; these files are the pointer + lifecycle guide). Completed
 # plan files may be pruned once their close is recorded in the PR description.
-if printf '%s' "$norm" | grep -qE '(^|[;&|[:space:]])(git[[:space:]]+rm|rm)[^;|&]*docs/plans/(WORKLIST\.md|README\.md)'; then
+if grep -qE '(^|[;&|[:space:]])(git[[:space:]]+rm|rm)[^;|&]*docs/plans/(WORKLIST\.md|README\.md)' <<<"$norm"; then
   echo "BLOCKED: docs/plans/WORKLIST.md (the tracker pointer) and docs/plans/README.md (the lifecycle guide) must not be deleted. The tracker is GitHub Issues; implemented plan files are deleted in the PR that lands them." >&2
   exit 2
 fi
 
 # Never delete the read-only v1 reference ref.
-if printf '%s' "$norm" | grep -qE 'git[[:space:]]+(branch[[:space:]]+(-D|-d|--delete)[^;|&]*reference/v1|update-ref[[:space:]]+-d[[:space:]]+refs/heads/reference/v1|push[^;|&]*:[[:space:]]*reference/v1)'; then
+if grep -qE 'git[[:space:]]+(branch[[:space:]]+(-D|-d|--delete)[^;|&]*reference/v1|update-ref[[:space:]]+-d[[:space:]]+refs/heads/reference/v1|push[^;|&]*:[[:space:]]*reference/v1)' <<<"$norm"; then
   echo "BLOCKED: reference/v1 is the read-only pre-v2 reference (consulted only in Stage 2). It must not be deleted or overwritten." >&2
   exit 2
 fi

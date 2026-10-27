@@ -50,17 +50,17 @@ check() {
 # line, taken to end of line: a holder whose own name ends in a period closes
 # the sentence with it rather than doubling it.
 check "LICENSE" \
-  "$(sed -n 's/^.*The Licensed Work is (c) [0-9]\{4\} \(.*\)$/\1/p' LICENSE | head -1)"
+  "$(sed -n 's/^.*The Licensed Work is (c) [0-9]\{4\} \(.*\)$/\1/p' LICENSE | sed -n 1p)"
 
 # `REUSE.toml` — the first-party annotation (the openEHR Foundation appears as a
 # SECOND holder on vendored-derived files, which is a different statement).
 check "REUSE.toml" \
-  "$(sed -n 's/^SPDX-FileCopyrightText = "\(.*\)"$/\1/p' REUSE.toml | head -1)"
+  "$(sed -n 's/^SPDX-FileCopyrightText = "\(.*\)"$/\1/p' REUSE.toml | sed -n 1p)"
 
 # The emitter constant every generated header is stamped from.
 check "tools/openehr-codegen/src/render/spdx.rs" \
   "$(sed -n 's/^pub(crate) const PROJECT_COPYRIGHT: &str = "\(.*\)";$/\1/p' \
-       tools/openehr-codegen/src/render/spdx.rs | head -1)"
+       tools/openehr-codegen/src/render/spdx.rs | sed -n 1p)"
 
 # The prose sources: a file states the holder by name, a fixed number of times.
 # Prose carries no field to parse, so the assertion is the COUNT — rewrite one

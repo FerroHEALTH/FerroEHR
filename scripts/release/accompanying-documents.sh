@@ -44,7 +44,7 @@ render() {
   else
     base="https://ferroehr.eu/docs/${tag}"
   fi
-  date="$(bash "$DOCS" facts "$tag" "$page" | sed -n 's/.*, released \([0-9-]*\)\..*/\1/p' | head -n 1)"
+  date="$(bash "$DOCS" facts "$tag" "$page" | sed -n 's/.*, released \([0-9-]*\)\..*/\1/p' | sed -n 1p)"
   revised="$(sed -n '3s/^Revised \([0-9-]*\)\.$/\1/p' "$source")"
   # Everything above the page's "This copy" heading, without mdBook's toc
   # marker. Relative links resolve from website/book/src/ehds/ of the family

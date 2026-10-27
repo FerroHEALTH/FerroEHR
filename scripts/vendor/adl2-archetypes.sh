@@ -180,4 +180,4 @@ PROSE
 
 echo "==> ADL 2 regression library → $ADL2_REFERENCE_DEST"
 echo "    (its provenance record: crates/openehr-adl/tests/corpus/PROVENANCE.md)"
-git status --short "$ADL2_REFERENCE_DEST" "$CKM_PAIRS_DEST" | head -20
+git status --short "$ADL2_REFERENCE_DEST" "$CKM_PAIRS_DEST" | sed -n 1,20p

@@ -44,7 +44,7 @@ MODE="${1:-write}"
 # No YAML parser, and no second language embedded in this script.
 cff_scalar() {
   local v
-  v="$(sed -nE "s/^$1:[[:space:]]*(.*)$/\1/p" "$CFF" | head -1)"
+  v="$(sed -nE "s/^$1:[[:space:]]*(.*)$/\1/p" "$CFF" | sed -n 1p)"
   v="${v%\"}"; v="${v#\"}"
   [[ -n "$v" ]] || { echo "$CFF has no \`$1\`" >&2; exit 1; }
   printf '%s' "$v"

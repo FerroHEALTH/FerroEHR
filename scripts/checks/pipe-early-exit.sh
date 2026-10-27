@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# No reader that stops early sits on a pipe (#4208).
+#
+# `producer | grep -q pattern` under `set -o pipefail` reads a match as a
+# miss once the producer's output tops the pipe buffer (64 KiB on Linux):
+# grep exits at the first match, the producer dies of SIGPIPE, and the
+# pipeline returns 141, which an `if` takes as "no match". The CI path
+# classifiers had that shape, so a large pull request could skip the lanes it
+# needed. `head`, `grep -m` and `grep -l` stop reading the same way.
+#
+# The safe forms read the whole input first: a here-string
+# (`grep -q pattern <<<"$list"`), a variable, or a reader that never stops
+# early (`sed -n 1p` in place of `head -1`).
+#
+# The check refuses, in every workflow and composite action and in every shell
+# program this repository wrote (the scope of shellcheck-lane.sh), a line
+# where a pipe feeds `head` or a `grep` carrying -q, -m, -l, --quiet, --silent
+# or --max-count. Comment lines are skipped. `sed q` and `awk exit` stop early
+# too and are not matched: review carries them.
+#
+# Usage:
+#   scripts/checks/pipe-early-exit.sh              every file in scope
+#   scripts/checks/pipe-early-exit.sh <file>...    just those files
+#   scripts/checks/pipe-early-exit.sh --self-test  prove the pattern
+#
+# Exit 0 = clean, 1 = findings (file:line: text), 2 = usage.
+set -euo pipefail
+
+# A pipe (never `||`), then `head` or a grep with an early-exit flag.
+readonly PIPE='(^|[^|])[|][[:space:]]*'
+readonly GREP_EARLY='e?f?grep([[:space:]]+[^|;&]*)?[[:space:]](-[A-Za-z]*[qml][A-Za-z0-9]*|--quiet|--silent|--max-count)([[:space:]=]|$)'
+readonly HEAD='head([[:space:]]|$)'
+readonly PATTERN="${PIPE}(${GREP_EARLY}|${HEAD})"
+# A line whose first non-blank character is `#` is a comment in shell and YAML.
+readonly COMMENT='^[[:space:]]*#'
+
+readonly VENDORED='^(docs/specs/|corpus/|website/book/theme/|(crates|tools)/[^/]+/vendor/)'
+
+# Print `file:line: text` for every finding in the named files.
+scan() {
+  local f out
+  for f in "$@"; do
+    [[ -f "$f" ]] || continue
+    out=$(grep -nE -- "$PATTERN" "$f" || true)
+    [[ -n "$out" ]] || continue
+    while IFS= read -r line; do
+      [[ "${line#*:}" =~ $COMMENT ]] && continue
+      printf '%s:%s\n' "$f" "$line"
+    done <<<"$out"
+  done
+}
+
+# The workflows, the composite actions and every tracked shell program.
+collect() {
+  local f all
+  all=$(git ls-files)
+  grep -E '^\.github/(workflows|actions)/.*\.ya?ml$' <<<"$all" || true
+  grep -E '\.sh$' <<<"$all" | grep -Ev "$VENDORED" || true
+  while IFS= read -r f; do
+    [[ -f "$f" ]] || continue
+    if grep -Eq '^#!.*[/ ](bash|sh|dash|ksh|zsh)([[:space:]]|$)' <<<"$(sed -n 1p "$f")"; then
+      printf '%s\n' "$f"
+    fi
+  done < <(grep -Ev "$VENDORED" <<<"$all" | grep -Ev '\.[^/]+$' || true)
+}
+
+self_test() {
+  local failures=0 want text got
+  while IFS='|' read -r want text; do
+    if grep -qE -- "$PATTERN" <<<"$text" && ! [[ "$text" =~ $COMMENT ]]; then
+      got=refused
+    else
+      got=allowed
+    fi
+    if [[ "$got" != "$want" ]]; then
+      echo "self-test: '$text': got $got, want $want" >&2
+      failures=1
+    fi
+  done <<'CASES'
+refused|if echo "$changed" | grep -qE '^app/'; then
+refused|printf '%s\n' "$assets" | grep -Fxq "$asset"
+refused|  | grep -qiE 'static binary' \
+refused|list | grep --quiet x
+refused|list | grep -m 1 x
+refused|git show "$base:Cargo.toml" | grep -m1 '^version = '
+refused|list | grep --max-count=1 x
+refused|list | grep -l x
+refused|sed -nE 's/^v=(.*)/\1/p' Cargo.toml | head -1
+refused|out | head
+refused|x |head -n 1
+allowed|if grep -qE '^app/' <<<"$changed"; then
+allowed|grep -q x file || echo missing
+allowed|true || head -1 file
+allowed|sed -nE 's/^v=(.*)/\1/p' Cargo.toml | sed -n 1p
+allowed|list | grep -vE '^scripts/'
+allowed|list | grep -c x
+allowed|head -n 1 "$f"
+allowed|# never `printf | grep -q` here
+allowed|  # list | head -1
+allowed|run: |
+CASES
+  [[ "$failures" -eq 0 ]] || return 1
+  echo "pipe-early-exit: self-test OK (11 early readers on a pipe refused, 10 safe forms allowed)."
+}
+
+case "${1-}" in
+--self-test)
+  [[ "$#" -eq 1 ]] || { echo "usage: $0 [<file>... | --self-test]" >&2; exit 2; }
+  self_test
+  exit
+  ;;
+-*)
+  echo "error: $0: unknown flag $1" >&2
+  echo "usage: $0 [<file>... | --self-test]" >&2
+  exit 2
+  ;;
+esac
+
+cd "$(dirname "$0")/../.."
+if [[ "$#" -gt 0 ]]; then
+  files=("$@")
+else
+  files=()
+  while IFS= read -r f; do files+=("$f"); done < <(collect | sort -u)
+fi
+
+findings=$(scan "${files[@]}")
+if [[ -n "$findings" ]]; then
+  printf '%s\n' "$findings" >&2
+  echo >&2
+  echo "pipe-early-exit: a pipe feeds a reader that stops early (head, grep -q/-m/-l)." >&2
+  echo "Under pipefail a large input makes the producer die of SIGPIPE and the" >&2
+  echo "pipeline return 141. Read the whole input first: grep -q pattern <<<\"\$list\"," >&2
+  echo "or sed -n 1p in place of head -1." >&2
+  exit 1
+fi
+echo "pipe-early-exit: OK (${#files[@]} files, no early reader on a pipe)."

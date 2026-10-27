@@ -39,7 +39,7 @@ die() { echo "system-documents: $*" >&2; exit 1; }
 # pin KEY: the value of KEY in the pin file.
 pin() {
   local key="$1" value
-  value="$(sed -n "s/^$key=//p" "$PIN" | head -n 1)"
+  value="$(sed -n "s/^$key=//p" "$PIN" | sed -n 1p)"
   [[ -n "$value" ]] || die "$PIN has no $key"
   printf '%s\n' "$value"
 }
@@ -84,7 +84,7 @@ spec_versions() {
   cell="$(awk -F'|' '{ print $3 }' <<<"$row")"
   found="$(grep -oE '\*\*[^*]+\*\*' <<<"$cell" | grep -oE '[0-9]+(\.[0-9]+)+' || true)"
   [[ -n "$found" ]] || found="$(grep -oE 'Release-[0-9]+\.[0-9]+\.[0-9]+' <<<"$cell" | sed 's/^Release-//' || true)"
-  [[ -n "$found" ]] || found="$(grep -oE '[0-9]+(\.[0-9]+)+' <<<"$cell" | head -n 1 || true)"
+  [[ -n "$found" ]] || found="$(grep -oE '[0-9]+(\.[0-9]+)+' <<<"$cell" | sed -n 1p || true)"
   [[ -n "$found" ]] || die "the '$name' row of $VERSIONS names no version"
   awk '!seen[$0]++' <<<"$found" | paste -sd '|' - | sed 's/|/ and /g'
 }
@@ -102,7 +102,7 @@ database_version() {
 # The oldest Kubernetes release the chart accepts, from its kubeVersion.
 kubernetes_version() {
   local v
-  v="$(sed -n 's/^kubeVersion: *"*>=\([0-9.]*\).*/\1/p' "$CHART" | head -n 1)"
+  v="$(sed -n 's/^kubeVersion: *"*>=\([0-9.]*\).*/\1/p' "$CHART" | sed -n 1p)"
   [[ -n "$v" ]] || die "$CHART names no kubeVersion floor"
   printf '%s or newer\n' "$v"
 }
@@ -119,7 +119,7 @@ bridge_version() {
 release_date() {
   local version="$1" date
   date="$(grep -E "^## \[${version//./\\.}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md \
-    | sed -E 's/.* - ([0-9-]+)$/\1/' | head -n 1)"
+    | sed -E 's/.* - ([0-9-]+)$/\1/' | sed -n 1p)"
   [[ -n "$date" ]] || die "CHANGELOG.md has no '## [$version] - YYYY-MM-DD' heading"
   printf '%s\n' "$date"
 }

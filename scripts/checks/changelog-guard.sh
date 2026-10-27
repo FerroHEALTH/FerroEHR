@@ -216,7 +216,8 @@ if [[ "$waived" -eq 1 ]]; then
   exit 0
 fi
 
-if ! git diff --no-renames --name-only "$fork" "$head" | grep -qE "$SURFACES"; then
+touched=$(git diff --no-renames --name-only "$fork" "$head")
+if ! grep -qE "$SURFACES" <<<"$touched"; then
   echo "changelog-guard: the change touches no user-visible surface; no entry is required."
   exit 0
 fi

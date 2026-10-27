@@ -75,7 +75,7 @@ refused_schemas_at() {
 # the release tags sit on the old lineage, and `git describe` would find none.
 shipped_tag() {
   git tag --list --sort=-version:refname 'v[0-9]*.[0-9]*.[0-9]*' 2>/dev/null \
-    | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true
+    | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n 1p || true
 }
 
 # Whether `$2` (a migration path) exists at `$1` (the release tag, or the merge
@@ -107,7 +107,9 @@ whole_set_turned_over() {
 retired_with_the_refusal() {
   local shipped="$1" head="$2" schema="$3"
   whole_set_turned_over "$shipped" "$head" "$schema" || return 1
-  refused_schemas_at "$head" | grep -qx "$schema"
+  local refused
+  refused=$(refused_schemas_at "$head") || return 1
+  grep -qx "$schema" <<<"$refused"
 }
 
 # The status letters git reports for a change that is not a pure addition.

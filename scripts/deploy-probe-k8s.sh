@@ -490,7 +490,7 @@ render_check() {
   local rendered failed=0 want
   if ! rendered="$(helm template "${helm_args[@]}" 2>&1)"; then
     red "the production install does not render:"
-    printf '%s\n' "$rendered" | head -8
+    printf '%s\n' "$rendered" | sed -n 1,8p
     exit 1
   fi
   for want in \
