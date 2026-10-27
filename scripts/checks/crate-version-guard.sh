@@ -153,9 +153,10 @@ _write_root_manifest() {
 }
 
 _commit() {
+  local message="$1"
   git add -A
   git -c user.name=self-test -c user.email=self-test@invalid -c commit.gpgsign=false \
-    commit -qm "$1"
+    commit -qm "$message"
 }
 
 # <label> <want exit> <setup function>: branch from main, apply the setup,

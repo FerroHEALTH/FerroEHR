@@ -118,7 +118,7 @@ do_verify() {
         "https://crates.io/api/v1/crates/$crate/versions" 2>/dev/null)"; then
         got="$(printf '%s' "$body" |
           jq -r --arg v "$want" '.versions[]? | select(.num == $v) | .num' |
-          head -1)" || got=""
+          sed -n 1p)" || got=""
       fi
       [[ -n "$got" ]] && break
       sleep 10

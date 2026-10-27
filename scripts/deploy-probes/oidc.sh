@@ -15,6 +15,8 @@
 export KEYCLOAK_PORT="${PROBE_KC_PORT:-18081}"
 KC="http://localhost:${KEYCLOAK_PORT}"
 KC_REALM="$KC/auth/realms/ferroehr"
+# The layer every probe here blames when it fails: the compose overlay.
+OIDC_LAYER="compose"
 
 # The stack for this family: the quickstart PLUS the Keycloak overlay, which is
 # how the book tells an operator to get an issuer.
@@ -40,7 +42,7 @@ probes_oidc() {
 
   oidc_up
   if ! wait_http "$KC_REALM/.well-known/openid-configuration" 150; then
-    probe "P-OIDC-UP" "working" "compose" "-" "the quickstart overlay starts an issuer"
+    probe "P-OIDC-UP" "working" "$OIDC_LAYER" "-" "the quickstart overlay starts an issuer"
     probe_fail "a Keycloak realm answering discovery" "no response after 300s" \
       "the overlay's own healthcheck gates the CDR, so this is the overlay, not the realm"
     probe_done
@@ -58,7 +60,7 @@ probes_oidc() {
   # this server in the audience — a token that omits it is refused by every
   # correct resource server (RFC 7519 §4.1.3), which is what made the shipped
   # quickstart impossible rather than merely misconfigured.
-  probe "P-OIDC-AUD" "working" "compose" "#2176" \
+  probe "P-OIDC-AUD" "working" "$OIDC_LAYER" "#2176" \
     "the demo realm mints a token carrying aud=ferroehr"
   if [[ -z "$token" ]]; then
     probe_fail "an access token from the password grant" "the token endpoint returned none" \
@@ -93,7 +95,7 @@ probes_oidc() {
 
   # A service with no user behind it: the client-credentials grant (RFC 6749
   # §4.4) of the realm's service client, whose service account holds USER.
-  probe "P-OIDC-SERVICE" "working" "compose" "#4240" \
+  probe "P-OIDC-SERVICE" "working" "$OIDC_LAYER" "#4240" \
     "a client-credentials token reaches the clinical API and AQL"
   local service
   service="$(curl -s -d client_id=ferroehr-service -d client_secret=ferroehr-service-quickstart-secret \
@@ -163,7 +165,7 @@ probes_oidc_roles() {
   auditor="$(oidc_token_for auditor auditor)"
   nobody="$(oidc_token_for nobody nobody)"
 
-  probe "P-OIDC-IDENTITIES" "working" "compose" "#2160" \
+  probe "P-OIDC-IDENTITIES" "working" "$OIDC_LAYER" "#2160" \
     "the demo realm mints a token for each of the four identities"
   local missing=""
   [[ -n "$admin" ]]     || missing="$missing ferroehr"

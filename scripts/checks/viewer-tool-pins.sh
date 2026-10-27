@@ -103,11 +103,11 @@ done < <(
 # Prints `<file>:<line>:<version>` for each pin that the extended regex $1
 # matches, the version being the last X.Y.Z in the match.
 pins() {
-  local file match
+  local regex="$1" file match
   for file in "${files[@]}"; do
     while IFS=: read -r line match; do
       echo "${file#"$ROOT_DIR"/}:$line:$(grep -oE "$SEMVER" <<<"$match" | tail -n 1)"
-    done < <(grep -noE "$1" "$file" || true)
+    done < <(grep -noE "$regex" "$file" || true)
   done
 }
 

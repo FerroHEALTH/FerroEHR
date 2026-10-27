@@ -70,8 +70,8 @@ classify() {
 
 # filler <n>: n long paths no lane matches, so the list tops the pipe buffer.
 filler() {
-  local i
-  for ((i = 1; i <= $1; i++)); do
+  local count="$1" i
+  for ((i = 1; i <= count; i++)); do
     printf 'zz-filler/a/directory/deep/enough/that/two/thousand/paths/top/the/pipe/buffer/file-%04d.txt\n' "$i"
   done
 }
