@@ -527,7 +527,7 @@ PROBE_DOMAINS=(
 )
 
 # Field <n> of a domain record.
-domain_field() { printf '%s' "$1" | cut -d'|' -f"$2"; }
+domain_field() { local record="$1" field="$2"; printf '%s' "$record" | cut -d'|' -f"$field"; }
 
 # Every runtime role in the table, one per line.
 domain_all_roles() {
@@ -544,8 +544,8 @@ domain_all_roles() {
 # deployment could inject through.
 sql_in_list() {
   local -a items
-  local item out=""
-  read -ra items <<< "$1"
+  local item out="" list="$1"
+  read -ra items <<< "$list"
   for item in "${items[@]}"; do out="${out:+$out,}'$item'"; done
   printf '%s' "$out"
 }
@@ -696,11 +696,11 @@ probes_domain_roles() {
 # `run` per domain writes where this harness can find it and no directory name
 # is spelled twice.
 export_backup_dirs() {
-  local record name
+  local record name dir="$1"
   for record in "${PROBE_DOMAINS[@]}"; do
     name="$(domain_field "$record" 1)"
-    mkdir -p "$1/$name"
-    export "FERROEHR_BACKUP_$(printf '%s' "$name" | tr '[:lower:]' '[:upper:]')_DIR=$1/$name"
+    mkdir -p "$dir/$name"
+    export "FERROEHR_BACKUP_$(printf '%s' "$name" | tr '[:lower:]' '[:upper:]')_DIR=$dir/$name"
   done
 }
 

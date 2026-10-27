@@ -20,8 +20,9 @@
 
 # Run SQL against the composed database as the quickstart's role.
 probe_psql() {
+  local sql="$1"
   dc exec -T ferroehr-postgres psql -U "${PG_INIT_USER:-ferroehr}" \
-    -d "${PG_INIT_DB:-ferroehr}" -tAc "$1" 2>/dev/null
+    -d "${PG_INIT_DB:-ferroehr}" -tAc "$sql" 2>/dev/null
 }
 
 probes_signing() {

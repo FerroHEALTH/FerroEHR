@@ -112,7 +112,8 @@ compose_up ferroehr seaweedfs seaweedfs-init
 # and ~8 GB, so its CI lane runs it alone rather than paying for every other
 # family to prove something already proven on every pull request.
 run_family() {
-  [[ -z "${PROBE_ONLY:-}" ]] || [[ "${PROBE_ONLY}" = "$1" ]]
+  local family="$1"
+  [[ -z "${PROBE_ONLY:-}" ]] || [[ "${PROBE_ONLY}" = "$family" ]]
 }
 
 run_family shipped_config && probes_shipped_config_boots

@@ -82,6 +82,7 @@ fi
 red()   { printf '\033[31m%s\033[0m\n' "$*"; }
 green() { printf '\033[32m%s\033[0m\n' "$*"; }
 bold()  { printf '\033[1m%s\033[0m\n' "$*"; }
+indented() { local file="$1"; sed 's/^/    /' "$file"; }
 
 command -v helm   >/dev/null 2>&1 || { red "helm not found on PATH";   exit 1; }
 command -v docker >/dev/null 2>&1 || { red "docker not found on PATH"; exit 1; }
@@ -152,7 +153,7 @@ boot_one() {
   if ! helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values" \
        ${SKEW_ARGS[@]+"${SKEW_ARGS[@]}"} > "$all" 2>"${work}/render.err"; then
     red "  render FAILED — this is a chart/values error, not a boot failure:"
-    sed 's/^/    /' "${work}/render.err"
+    indented "${work}/render.err"
     return 1
   fi
 
@@ -285,7 +286,7 @@ boot_one() {
        ${docker_env[@]+"${docker_env[@]}"} \
        --entrypoint /usr/local/bin/ferroehr "$IMAGE" config check > "$log" 2>&1; then
     green "  ${IMAGE} accepts ${label}"
-    sed 's/^/    /' "$log"
+    indented "$log"
     if grep -qx 'deployment_profile = "production"' "${cfgdir}/ferroehr.toml"; then
       production_posture "$work" "$cfgdir" "$secdir" ${docker_env[@]+"${docker_env[@]}"} || return 1
     fi
@@ -293,7 +294,7 @@ boot_one() {
     return 0
   fi
   red "  ${IMAGE} REFUSES ${label} — a deployment with these values crash-loops:"
-  sed 's/^/    /' "$log"
+  indented "$log"
   if grep -q 'unknown configuration key' "$log"; then
     red "  'unknown configuration key' is usually SKEW, not a bad overlay: the chart"
     red "  carries a key this image predates. Re-run against an image built from this"
@@ -324,7 +325,7 @@ production_posture() {
        --entrypoint /usr/local/bin/ferroehr "$IMAGE" report --output - \
        > "$report" 2> "${work}/report.err"; then
     red "  ${IMAGE} could not write the deployment report:"
-    sed 's/^/    /' "${work}/report.err"
+    indented "${work}/report.err"
     return 1
   fi
   if [[ "$(jq -r '.deployment.profile' "$report")" != "production" ]]; then
