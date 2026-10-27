@@ -90,12 +90,19 @@ fail() {
   printf 'FAIL: %s\n' "$*"
   exit 1
 }
-fingerprint() { printf '%s' "$1" | shasum -a 256 | cut -c1-12; }
+fingerprint() {
+  local secret="$1"
+  printf '%s' "$secret" | shasum -a 256 | cut -c1-12
+}
 want_step() {
-  local s
-  for s in "${STEPS[@]}"; do [[ "$s" == "$1" ]] && return 0; done
+  local want="$1" s
+  for s in "${STEPS[@]}"; do [[ "$s" == "$want" ]] && return 0; done
   return 1
 }
+# Indents a box's output under its name in the log.
+indent_app() { sed 's/^/  app: /'; }
+# The curl --write-out format that prints only the HTTP status.
+readonly HTTP_STATUS='%{http_code}'
 
 # Runs the script on stdin on a box. The script travels on stdin into a file
 # only its user reads, so a secret embedded in it never appears on a command
@@ -111,8 +118,9 @@ db() { remote "$DB_HOST"; }
 
 # 0 when version $1 is a release at or past $2.
 version_at_least() {
-  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
-  [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -t. -k1,1n -k2,2n -k3,3n | sed -n 1p)" == "$2" ]]
+  local version="$1" floor="$2"
+  [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
+  [[ "$(printf '%s\n%s\n' "$floor" "$version" | sort -t. -k1,1n -k2,2n -k3,3n | sed -n 1p)" == "$floor" ]]
 }
 
 running_cdr_version() {
@@ -122,8 +130,9 @@ EOF
 }
 
 release_knows_ferropix() {
+  local version="$1"
   [[ "$ASSUME_RELEASE" -eq 1 ]] && return 0
-  version_at_least "$1" "$RELEASE_FLOOR"
+  version_at_least "$version" "$RELEASE_FLOOR"
 }
 
 # What ferropix_login prints when --check finds no psql client image to run.
@@ -216,7 +225,7 @@ done
 docker compose version --short | sed 's/^/compose /'
 EOF
   out="$(cat "$WORK/out")"
-  printf '%s\n' "$out" | sed 's/^/  app: /'
+  printf '%s\n' "$out" | indent_app
   ok "app box $APP_HOST answers"
   db > "$WORK/out" <<EOF || fail "cannot reach the DB box $SSH_USER@$DB_HOST, or $DB_CONTAINER is not running"
 echo "host \$(hostname)"
@@ -401,7 +410,7 @@ echo "env_mode=\$(stat -c %a .env)"
 EOF
   out="$(cat "$WORK/out")"
   # Only names, states and fingerprints come back; no value does.
-  printf '%s\n' "$out" | sed 's/^/  app: /'
+  printf '%s\n' "$out" | indent_app
   local r
   r="$(sed -n 's/^reason=//p' <<<"$out")"
   ok "${r:-$reason}"
@@ -476,7 +485,7 @@ done
 [ "\$found" -eq 1 ] || echo "none"
 EOF
   out="$(cat "$WORK/out")"
-  printf '%s\n' "$out" | sed 's/^/  app: /'
+  printf '%s\n' "$out" | indent_app
   if [[ "$out" == none ]]; then
     skip "the box carries no index; FerroTERM serves the shaped seed alone"
     return
@@ -551,11 +560,11 @@ seed_identities() {
   local base="$PUBLIC_URL/ferroehr/rest/openehr/v1" ns marker code
   ns="$(sed -n 's/^pseudonym_namespace //p' "$WORK/identities")"
   marker="$(awk -v m="$(jq -r '.marker.subject' "$MANIFEST")" '$2 == m { print $3 }' "$WORK/identities")"
-  code="$(curl -sS -o /dev/null -w '%{http_code}' -u "$DEMO_AUTH" "$base/ehr?subject_id=$marker&subject_namespace=$ns")"
+  code="$(curl -sS -o /dev/null -w "$HTTP_STATUS" -u "$DEMO_AUTH" "$base/ehr?subject_id=$marker&subject_namespace=$ns")"
   if [[ "$code" == 200 ]]; then
     ok "the demo data is seeded under the pseudonyms (marker EHR present)"
   else
-    code="$(curl -sS -o /dev/null -w '%{http_code}' -u "$DEMO_AUTH" \
+    code="$(curl -sS -o /dev/null -w "$HTTP_STATUS" -u "$DEMO_AUTH" \
       "$base/ehr?subject_id=$(jq -r '.marker.subject' "$MANIFEST")&subject_namespace=$(jq -r '.subject_namespace' "$MANIFEST")")"
     if [[ "$code" == 200 ]]; then
       # Data seeded before FerroPIX names its subjects outside the clinical
@@ -563,17 +572,17 @@ seed_identities() {
       printf 'SSH_ORIGINAL_COMMAND=wipe %q/deploy.sh 2>&1\n' "$APP_DIR" | remote "$APP_HOST" > "$WORK/wipe" \
         || fail "the wipe verb failed: $(tail -n 5 "$WORK/wipe")"
       echo "  app: wipe dropped $(grep -c '^DROP SCHEMA' "$WORK/wipe" || true) schemas"
-      printf 'SSH_ORIGINAL_COMMAND=restart %q/deploy.sh 2>&1\n' "$APP_DIR" | remote "$APP_HOST" | tail -n 2 | sed 's/^/  app: /'
+      printf 'SSH_ORIGINAL_COMMAND=restart %q/deploy.sh 2>&1\n' "$APP_DIR" | remote "$APP_HOST" | tail -n 2 | indent_app
       ok "wiped the pre-FerroPIX demo data and restarted the CDR"
       local deadline=$(($(date +%s) + 600))
-      until [[ "$(curl -sS -m 30 -o /dev/null -w '%{http_code}' "$PUBLIC_URL/health/readiness" || true)" == 200 ]]; do
+      until [[ "$(curl -sS -m 30 -o /dev/null -w "$HTTP_STATUS" "$PUBLIC_URL/health/readiness" || true)" == 200 ]]; do
         [[ "$(date +%s)" -lt "$deadline" ]] || fail "the CDR was not ready 10 minutes after the restart"
         sleep 15
       done
     fi
     SANDBOX_BASE="$PUBLIC_URL" SANDBOX_IDENTITIES="$WORK/identities" bash "$ROOT/scripts/sandbox/reseed.sh" \
       | grep -E '^==>|::error' | sed 's/^/  seed: /' || true
-    code="$(curl -sS -o /dev/null -w '%{http_code}' -u "$DEMO_AUTH" "$base/ehr?subject_id=$marker&subject_namespace=$ns")"
+    code="$(curl -sS -o /dev/null -w "$HTTP_STATUS" -u "$DEMO_AUTH" "$base/ehr?subject_id=$marker&subject_namespace=$ns")"
     [[ "$code" == 200 ]] || fail "the seed did not finish (marker lookup answered $code); the seed lines above say where it stopped"
     ok "seeded the demo data under the pseudonyms"
   fi
@@ -609,7 +618,7 @@ else
   echo "recreated the stack"
 fi
 EOF
-    tail -n 8 "$WORK/out" | sed 's/^/  app: /'
+    tail -n 8 "$WORK/out" | indent_app
   fi
   out="$(wait_healthy)" || fail "$out"
   ok "$out"
@@ -620,7 +629,7 @@ done
 docker stats --no-stream --format '{{.Name}} {{.MemUsage}}' | grep ferroehr-sandbox
 EOF
   out="$(cat "$WORK/out")"
-  printf '%s\n' "$out" | sed 's/^/  app: /'
+  printf '%s\n' "$out" | indent_app
 
   jq -r '.ehrs[].subject, .marker.subject' "$MANIFEST" > "$WORK/subjects"
   if [[ "$CHECK" -eq 1 ]]; then
@@ -637,7 +646,7 @@ EOF
       q: "SELECT e/ehr_id/value, e/ehr_status/subject/external_ref/id/value FROM EHR e",
       subjects: [$s | split("\n")[] | select(startswith("sandbox-patient")) | {id: ., namespace: $ns}]
     }' > "$WORK/cohort.json"
-  code="$(curl -sS -o "$WORK/cohort.out" -w '%{http_code}' -u "$DEMO_AUTH" \
+  code="$(curl -sS -o "$WORK/cohort.out" -w "$HTTP_STATUS" -u "$DEMO_AUTH" \
     -H 'Content-Type: application/json' -X POST "$base/query/cohort" --data-binary @"$WORK/cohort.json")"
   [[ "$code" == 200 ]] || fail "POST /query/cohort answered $code: $(head -c 300 "$WORK/cohort.out")"
   local rows matched pattern=' [0-9a-f-]{36}$'
@@ -652,7 +661,7 @@ EOF
     || fail "the cohort answered $rows rows, $matched of them on FerroPIX's pseudonyms"
   ok "the CDR resolved the hospital identifiers through FerroPIX: $rows EHRs, each on its pseudonym in the clinical domain"
 
-  code="$(curl -sS -o "$WORK/term.out" -w '%{http_code}' -u "$DEMO_AUTH" "$base/terminology/urn:iso:std:iso:3166/term/NL")"
+  code="$(curl -sS -o "$WORK/term.out" -w "$HTTP_STATUS" -u "$DEMO_AUTH" "$base/terminology/urn:iso:std:iso:3166/term/NL")"
   { [[ "$code" == 200 ]] && grep -q Netherlands "$WORK/term.out"; } \
     || fail "FerroTERM did not answer through the CDR ($code): $(head -c 300 "$WORK/term.out")"
   ok "FerroTERM answers through the CDR: urn:iso:std:iso:3166 NL is $(jq -r '.terms.NL.text' "$WORK/term.out")"
@@ -816,7 +825,7 @@ step6() {
   # and FerroPIX's role logs in over the private network.
   local deadline=$(($(date +%s) + 300)) code started
   started="$(date +%s)"
-  until code="$(curl -sS -m 10 -o /dev/null -w '%{http_code}' "$PUBLIC_URL/health/readiness" 2> /dev/null)" && [[ "$code" == 200 ]]; do
+  until code="$(curl -sS -m 10 -o /dev/null -w "$HTTP_STATUS" "$PUBLIC_URL/health/readiness" 2> /dev/null)" && [[ "$code" == 200 ]]; do
     [[ "$(date +%s)" -lt "$deadline" ]] || fail "$PUBLIC_URL/health/readiness answered ${code:-nothing} for 5 minutes"
     sleep 5
   done
