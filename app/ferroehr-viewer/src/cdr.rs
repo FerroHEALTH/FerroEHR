@@ -125,6 +125,17 @@ fn strip_etag(raw: &str) -> &str {
     unweak.trim().trim_matches('"')
 }
 
+/// The CDR client could not be built from its configuration.
+#[derive(Debug, thiserror::Error)]
+pub enum CdrClientError {
+    /// `[cdr.tls]` names material that does not read.
+    #[error("the CDR client's TLS material could not be read")]
+    Tls(#[from] ferrohealth_server::tls_client::TlsClientError),
+    /// The HTTP client refused its settings.
+    #[error("the CDR HTTP client could not be built")]
+    Build(#[from] reqwest::Error),
+}
+
 /// The one outbound HTTP client to the CDR.
 #[derive(Debug, Clone)]
 pub struct CdrClient {
@@ -146,17 +157,19 @@ pub struct CdrClient {
 }
 
 impl CdrClient {
-    /// Build the client from configuration.
+    /// Build the client from configuration: the platform's trust roots, the
+    /// extra roots and the client identity `[cdr.tls]` names, no redirect.
     ///
     /// # Errors
-    /// [`ViewerError::Internal`] when the underlying client cannot be
-    /// constructed.
-    pub fn new(cfg: &crate::config::CdrConfig) -> Result<Self, ViewerError> {
-        let http = reqwest::Client::builder()
+    /// [`CdrClientError::Tls`] when a `[cdr.tls]` file does not read or holds
+    /// no PEM of its kind, and [`CdrClientError::Build`] when the HTTP client
+    /// refuses its settings.
+    pub fn new(cfg: &crate::config::CdrConfig) -> Result<Self, CdrClientError> {
+        let tls = ferrohealth_server::tls_client::TlsClient::read("cdr.tls", &cfg.tls)?;
+        let builder = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(cfg.request_timeout_secs))
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .map_err(|e| ViewerError::Internal(format!("CDR HTTP client: {e}")))?;
+            .redirect(reqwest::redirect::Policy::none());
+        let http = tls.apply(builder)?.build()?;
         Ok(Self {
             http,
             origin: cfg.base_url.trim_end_matches('/').to_owned(),

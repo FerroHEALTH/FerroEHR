@@ -20,9 +20,21 @@ consumes is spec-bound (`docs/specs/openehr/ITS-REST/` and the served
    (`crate::served_vocabulary`, the deployment gap codes and the OpenAPI family
    slugs).
 3. **Every route is a public HTTP endpoint.** A page checks the session
-   itself (the login guard in `src/server.rs`); a post is checked for its
-   `Origin`; a `#[server]` fn left for an island checks the session too and
-   is declared with `crate::session_client::SessionAwareClient`.
+   itself (the login guard in `src/server.rs`); a request that is not a safe
+   method passes `ferrohealth_server::same_origin` first; a `#[server]` fn
+   left for an island checks the session too and is declared with
+   `crate::session_client::SessionAwareClient`.
+
+## The server half is the family's
+
+`ferrohealth-server` (`console`, `reqwest`) carries the process plumbing: the
+console headers and the nonce CSP (`console::headers`, the nonce re-provided
+into the render as `leptos::nonce::Nonce`), `same_origin`, the stack with the
+health routes (`server::app`), `cli::Common` and the healthcheck
+(`src/cli.rs`), the bounded drain (`serve::run` over `[server]`), and the
+outbound TLS of the CDR and issuer clients (`tls_client`, `[cdr.tls]` and
+`[auth.oidc.tls]`). A habit the crate lacks is a FerroSYS issue, never a local
+copy.
 
 ## How a page works (FerroUI's interaction contract)
 

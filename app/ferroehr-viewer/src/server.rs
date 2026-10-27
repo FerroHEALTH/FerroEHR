@@ -1,8 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The viewer's axum service: the router assembly, the pre-render session
-//! guard, and the browser security headers.
+//! The viewer's axum service: the router assembly and the pre-render session
+//! guard.
+//!
+//! The family's console headers and same-origin check
+//! (`ferrohealth_server::console`, `ferrohealth_server::same_origin`) wrap
+//! the routes, and the family stack wraps them with its health routes.
 //!
 //! Lives in the lib (ssr-gated) rather than the binary so the integration
 //! tests drive the REAL request path — guard, session layer, Leptos render —
@@ -10,27 +14,41 @@
 //! keeps a testable lib run path.
 
 use axum::Extension;
+use ferrohealth_server::console::{self, ConsoleHeaders, CspNonce};
+use ferrohealth_server::health::Health;
+use ferrohealth_server::same_origin::{self, SameOrigin};
+use ferrohealth_server::stack::{self, StackPolicy};
 use leptos::prelude::LeptosOptions;
 use leptos_axum::LeptosRoutes;
 
 use crate::session::{SESSION_KEY, ViewerSession};
 use crate::state::AppState;
 
-/// The most bytes a page's form post may carry: an operational template or a
-/// composition document of a few megabytes posts whole.
-const FORM_LIMIT: usize = 16 * 1024 * 1024;
+/// The viewer as it serves: [`router`] and the health routes inside the
+/// family stack (`ferrohealth_server::stack::app`), which applies the
+/// request timeout, the body limit and the overload bound of `[server]`.
+pub fn app(app_state: AppState, leptos_options: LeptosOptions, health: Health) -> axum::Router {
+    let section = app_state.config.server.clone();
+    stack::app(
+        router(app_state, leptos_options),
+        health,
+        &section,
+        StackPolicy::default(),
+    )
+}
 
-/// Assembles the viewer's full axum service.
+/// Assembles the viewer's own routes.
 ///
 /// The OIDC routes, the export post, the preference, sidebar and sign-out
 /// posts, FerroUI's stylesheet and the FerroEHR theme, the Leptos routes with
 /// the per-request context, each route's form post drawn by the same page
 /// (`post_page`), the static-file fallback, and the layer stack (state →
-/// session guard → security headers). Sessions are a sealed cookie
-/// ([`crate::session`]) — no session-store layer exists, so no state is
-/// bound to any one instance.
+/// session guard → same-origin check → console headers). Sessions are a
+/// sealed cookie ([`crate::session`]) — no session-store layer exists, so no
+/// state is bound to any one instance.
 pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Router {
     let routes = leptos_axum::generate_route_list(crate::app::App);
+    let origin = same_origin_check(&app_state);
 
     let context_state = app_state.clone();
     // One context closure for both render entry points (the routed app and the
@@ -40,6 +58,7 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
         provide_request_nonce();
     };
     let pkg_route = format!("/{}", leptos_options.site_pkg_dir);
+    let headers = ConsoleHeaders::new("'self'").with_bundle(pkg_route.clone());
     let pkg_dir = format!(
         "{}/{}",
         leptos_options.site_root, leptos_options.site_pkg_dir
@@ -130,18 +149,49 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
         // reaches Leptos, and an authenticated response leaves with a
         // refreshed sliding-expiry cookie.
         .layer(axum::middleware::from_fn(login_guard))
-        .layer(Extension(app_state));
-    with_security_headers(service).with_state(leptos_options)
+        .layer(Extension(app_state))
+        .layer(axum::middleware::from_fn(move |request, next| {
+            same_origin::only(origin.clone(), request, next)
+        }))
+        .layer(axum::middleware::from_fn(move |request, next| {
+            console::headers(headers.clone(), request, next)
+        }));
+    service.with_state(leptos_options)
+}
+
+/// The same-origin check of the viewer's unsafe requests: `Sec-Fetch-Site`
+/// decides, and without it `Origin` or `Referer` must name the public URL
+/// `auth.oidc.public_base_url` gives, when one is set.
+///
+/// A public URL that does not parse was refused when the configuration was
+/// read; one built by hand that does not is logged and left out, so only
+/// `Sec-Fetch-Site` passes.
+fn same_origin_check(state: &AppState) -> SameOrigin {
+    let public = state.config.auth.oidc.public_base_url.as_str();
+    if public.is_empty() {
+        return SameOrigin::new();
+    }
+    let checked = crate::config::public_origin(public)
+        .map_err(|error| error.to_string())
+        .and_then(|url| {
+            SameOrigin::new()
+                .with_origin(&url)
+                .map_err(|error| error.to_string())
+        });
+    checked.unwrap_or_else(|error| {
+        tracing::error!(%error, "the same-origin check knows no public origin");
+        SameOrigin::new()
+    })
 }
 
 /// Draws the page a form posted to, with the posted fields in context.
 ///
 /// The fields are read as `application/x-www-form-urlencoded`, at most
-/// [`FORM_LIMIT`] bytes; the page reads them through [`crate::posted::posted`]
-/// and answers with a redirect when its work succeeded or with itself, the
-/// fields as posted and the refusal beside them, when it did not. A post from
-/// another origin is refused, and a post without a session (but to the
-/// sign-in page) goes to the sign-in page, the place it came from kept.
+/// `server.body_limit_bytes`; the page reads them through
+/// [`crate::posted::posted`] and answers with a redirect when its work
+/// succeeded or with itself, the fields as posted and the refusal beside
+/// them, when it did not. A post without a session (but to the sign-in page)
+/// goes to the sign-in page, which returns to the page posted to.
 async fn post_page(
     axum::extract::State(options): axum::extract::State<LeptosOptions>,
     Extension(state): Extension<AppState>,
@@ -149,9 +199,6 @@ async fn post_page(
 ) -> axum::response::Response {
     use axum::response::IntoResponse as _;
     let (parts, body) = request.into_parts();
-    if !same_origin(&parts.headers) {
-        return (http::StatusCode::FORBIDDEN, "a form of another origin").into_response();
-    }
     let path = parts.uri.path().to_owned();
     let signed_in = crate::session::unseal(
         &state.session_keys,
@@ -161,21 +208,10 @@ async fn post_page(
     .get::<ViewerSession>(SESSION_KEY)
     .is_some();
     if !signed_in && path != "/login" {
-        let back = crate::request::return_path(
-            parts
-                .headers
-                .get(http::header::REFERER)
-                .and_then(|value| value.to_str().ok())
-                .and_then(|value| value.parse::<http::Uri>().ok())
-                .map(|uri| uri.path().to_owned())
-                .as_deref()
-                .unwrap_or("/"),
-        )
-        .to_owned();
-        let to = crate::session_client::signed_out_url(&back, "");
+        let to = crate::session_client::signed_out_url(crate::request::return_path(&path), "");
         return axum::response::Redirect::to(&to).into_response();
     }
-    let Ok(bytes) = axum::body::to_bytes(body, FORM_LIMIT).await else {
+    let Ok(bytes) = axum::body::to_bytes(body, state.config.server.body_limit_bytes).await else {
         return (http::StatusCode::PAYLOAD_TOO_LARGE, "the form is too large").into_response();
     };
     let form = axum::extract::Request::from_parts(parts.clone(), axum::body::Body::from(bytes));
@@ -198,27 +234,6 @@ async fn post_page(
         move || crate::app::document(options.clone()),
     );
     handler(request).await
-}
-
-/// Whether a form post comes from this origin: its `Origin`, when sent,
-/// names the host the request was sent to. The session cookie is
-/// `SameSite=Lax`, so another site's post carries no session either.
-fn same_origin(headers: &http::HeaderMap) -> bool {
-    let Some(origin) = headers.get(http::header::ORIGIN) else {
-        return true;
-    };
-    let host = headers
-        .get(http::header::HOST)
-        .and_then(|value| value.to_str().ok());
-    let origin_host = origin
-        .to_str()
-        .ok()
-        .and_then(|value| value.parse::<http::Uri>().ok())
-        .and_then(|uri| {
-            uri.authority()
-                .map(|authority| authority.as_str().to_owned())
-        });
-    matches!((host, origin_host), (Some(host), Some(origin)) if host == origin)
 }
 
 /// Answers About's Download: the CDR's conformance manifest as it sent it,
@@ -455,173 +470,21 @@ fn is_public_path(path: &str) -> bool {
         || path.starts_with("/api/")
 }
 
-/// The browser security-header set for the viewer, per the OWASP HTTP Headers
-/// Cheat Sheet.
-///
-/// This is a stricter problem than the API's: the viewer serves HTML, hydrates
-/// WebAssembly, and holds a session cookie, so a policy here has to survive
-/// contact with a real hydrating application.
-///
-/// - `Content-Security-Policy` — `'wasm-unsafe-eval'` is required, and is the
-///   narrow modern replacement for `'unsafe-eval'`: it permits WebAssembly
-///   compilation without permitting `eval` of JavaScript. `connect-src 'self'`
-///   is correct because the viewer reaches the CDR through its own server
-///   functions, never the browser calling the CDR directly (the BFF boundary in
-///   `.claude/rules/leptos-ui.md`), so a policy that forbids cross-origin
-///   connections costs nothing and forecloses exfiltration.
-/// - `script-src` carries no inline allowance: the one inline script the
-///   viewer emits is Leptos's hydration bootstrap, and it is authorized by a
-///   per-request nonce ([`csp_nonce_layer`]) instead.
-/// - `style-src 'self'`: every style the viewer uses is a stylesheet of its
-///   own origin (FerroUI's stylesheet and its FerroEHR theme),
-///   and no component writes a `style` attribute or a `<style>` element, so no
-///   inline allowance and no style nonce are needed.
-/// - `X-Frame-Options: DENY` plus `frame-ancestors 'none'` — belt and braces
-///   against clickjacking a viewer that performs administrative writes.
-/// - `Cache-Control` — `no-store` on every document, because the viewer
-///   renders patient data into HTML and because a nonced document must never
-///   sit in a shared cache; the hashed `/pkg/*` bundle is the one exception
-///   ([`cache_control_for`]).
-///
-/// `Strict-Transport-Security` is left to the TLS edge, for the same reason as
-/// on the API: RFC 6797 §7.2 makes it inert over plain HTTP.
-fn with_security_headers(router: axum::Router<LeptosOptions>) -> axum::Router<LeptosOptions> {
-    use tower_http::set_header::SetResponseHeaderLayer;
-    router
-        .layer(axum::middleware::from_fn(csp_nonce_layer))
-        .layer(SetResponseHeaderLayer::overriding(
-            http::header::X_CONTENT_TYPE_OPTIONS,
-            http::HeaderValue::from_static("nosniff"),
-        ))
-        .layer(SetResponseHeaderLayer::overriding(
-            http::header::REFERRER_POLICY,
-            http::HeaderValue::from_static("strict-origin-when-cross-origin"),
-        ))
-        .layer(SetResponseHeaderLayer::overriding(
-            http::header::X_FRAME_OPTIONS,
-            http::HeaderValue::from_static("DENY"),
-        ))
-        .layer(axum::middleware::from_fn(cache_control_layer))
-}
-
-/// The hydration bundle's caching directive: RFC 9111 §5.2.2.9 `public` +
-/// §5.2.2.1 `max-age`, and RFC 8246 `immutable`.
-///
-/// One year is the conventional ceiling for a content-addressed asset
-/// (<https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cache-Control#caching_static_assets_with_hashed_filenames>),
-/// and `immutable` is what stops the browser revalidating on a reload it would
-/// otherwise treat as a reason to ask again (RFC 8246 §2).
-const IMMUTABLE_ASSET_CACHE_CONTROL: &str = "public, max-age=31536000, immutable";
-
-/// The viewer default: never store the response anywhere (RFC 9111 §5.2.2.5).
-const NO_STORE_CACHE_CONTROL: &str = "no-store";
-
-/// Stamps each response with the caching directive its path and status earn.
-async fn cache_control_layer(
-    request: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
-    let path = request.uri().path().to_owned();
-    let mut response = next.run(request).await;
-    let value = cache_control_for(&path, response.status());
-    response
-        .headers_mut()
-        .insert(http::header::CACHE_CONTROL, value);
-    response
-}
-
-/// Which `Cache-Control` value one response carries.
-///
-/// `/pkg/` is the cargo-leptos hydration bundle and NOTHING else: the WASM,
-/// its JS glue, and the stylesheet. Their filenames carry a content hash
-/// (`hash-files` in the crate manifest), so a changed asset is a changed URL
-/// and a cached copy can never go stale — which is what makes `immutable` an
-/// honest claim rather than a bet on the deploy cadence. The bundle holds no
-/// patient data either: the viewer reaches the CDR through its own server
-/// functions, so nothing clinical is ever compiled into it.
-///
-/// `/pkg/snippets/` is carved back out because cargo-leptos deliberately does
-/// NOT hash those files — the WebAssembly looks for them by their unhashed
-/// names — so their URLs are stable across builds and caching one for a year
-/// would pin a stale copy. This build emits none; the carve-out keeps that from
-/// becoming a silent defect if a dependency ever adds one.
-///
-/// Everything else keeps `no-store`: the viewer renders patient data into HTML,
-/// and each document carries a per-request CSP nonce that must not be replayed
-/// out of a cache.
-///
-/// A refused or missing asset is never cached: only a served body (2xx) and
-/// the `304` a revalidation answers with take the immutable directive, so a
-/// deploy racing a request cannot freeze a 404 into a browser for a year.
-fn cache_control_for(path: &str, status: http::StatusCode) -> http::HeaderValue {
-    let cacheable = status.is_success() || status == http::StatusCode::NOT_MODIFIED;
-    let hashed_asset = path.starts_with("/pkg/") && !path.starts_with("/pkg/snippets/");
-    if hashed_asset && cacheable {
-        http::HeaderValue::from_static(IMMUTABLE_ASSET_CACHE_CONTROL)
-    } else {
-        http::HeaderValue::from_static(NO_STORE_CACHE_CONTROL)
-    }
-}
-
-/// Mints this response's script nonce and answers with the policy that names
-/// it.
-///
-/// The nonce is minted here and nowhere else: the layer puts it in the request
-/// extensions on the way in, so the renderer stamps the same value on the
-/// bootstrap script ([`provide_request_nonce`]), and writes the header on the
-/// way out. A fresh value per request is the whole point — a nonce reused
-/// across responses is guessable, and therefore worth no more than
-/// `'unsafe-inline'`.
-async fn csp_nonce_layer(
-    mut request: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
-    let nonce = leptos::nonce::Nonce::new();
-    #[expect(
-        clippy::expect_used,
-        reason = "viewer_csp interpolates a base64url nonce into an ASCII template, so every byte is a legal header-value character; falling back to no policy would silently ship the viewer unprotected"
-    )]
-    let policy = http::HeaderValue::from_str(&viewer_csp(&nonce))
-        .expect("an ASCII policy string should be a valid header value");
-    request.extensions_mut().insert(nonce);
-    let mut response = next.run(request).await;
-    response
-        .headers_mut()
-        .insert(http::header::CONTENT_SECURITY_POLICY, policy);
-    response
-}
-
 /// Re-provides this request's nonce into the Leptos render context.
 ///
 /// `leptos_axum` provides a nonce of its own before the per-request context
 /// closure runs, and that one is not the value the response header authorizes.
-/// Overriding it here is what makes the two the same string; without it the
-/// bootstrap script carries a nonce the browser has never been told to trust,
-/// and the viewer renders but never hydrates.
+/// Overriding it with the one `ferrohealth_server::console` minted is what
+/// makes the two the same string; without it the bootstrap script carries a
+/// nonce the browser has never been told to trust, and the viewer renders but
+/// never hydrates.
 fn provide_request_nonce() {
     let Some(parts) = leptos::context::use_context::<http::request::Parts>() else {
         return;
     };
-    if let Some(nonce) = parts.extensions.get::<leptos::nonce::Nonce>() {
-        leptos::context::provide_context(nonce.clone());
+    if let Some(nonce) = parts.extensions.get::<CspNonce>() {
+        leptos::context::provide_context(leptos::nonce::Nonce::from_value(nonce.as_str()));
     }
-}
-
-/// The viewer's Content-Security-Policy for one request, naming that
-/// request's script nonce.
-fn viewer_csp(nonce: &str) -> String {
-    format!(
-        "default-src 'self'; \
-         script-src 'self' 'wasm-unsafe-eval' 'nonce-{nonce}'; \
-         style-src 'self'; \
-         img-src 'self' data:; \
-         font-src 'self'; \
-         connect-src 'self'; \
-         object-src 'none'; \
-         base-uri 'self'; \
-         form-action 'self'; \
-         frame-ancestors 'none'"
-    )
 }
 
 #[cfg(test)]
@@ -632,19 +495,19 @@ mod tests {
         reason = "the exchange helpers panic to report a broken fixture, which is how a test fails (Book ch11); clippy's allow-*-in-tests scoping covers only the #[test] fns themselves"
     )]
 
-    use super::{
-        IMMUTABLE_ASSET_CACHE_CONTROL, NO_STORE_CACHE_CONTROL, cache_control_for, csp_nonce_layer,
-        is_public_path, provide_request_nonce, viewer_csp,
-    };
+    use ferrohealth_server::console::{self, ConsoleHeaders, CspNonce};
     use tower::util::ServiceExt;
 
-    /// A sample policy for the directive assertions; the value stands in for a
-    /// minted nonce and is deliberately unlike any other token in the string.
-    const SAMPLE_NONCE: &str = "SAMPLENONCEVALUE";
+    use super::{is_public_path, provide_request_nonce};
 
     /// The response header the stub handler reports the render-context nonce
     /// through, so a test can compare it with the policy.
     const RENDERED_NONCE: &str = "x-test-rendered-nonce";
+
+    /// The console headers as the viewer mounts them.
+    fn viewer_headers() -> ConsoleHeaders {
+        ConsoleHeaders::new("'self'").with_bundle("/pkg")
+    }
 
     /// The sign-in surface, the OIDC handshake, the hydration assets and the
     /// server-fn endpoints stay reachable without a session; every screen
@@ -665,65 +528,6 @@ mod tests {
         for guarded in ["/", "/templates", "/queries/builder", "/ehrs", "/nonsense"] {
             assert!(!is_public_path(guarded), "{guarded} must be guarded");
         }
-    }
-
-    /// The hydration bundle is the ONLY thing that may be cached, and every
-    /// document — the sign-in screen included — keeps `no-store`: the viewer
-    /// renders patient data into HTML and stamps a per-request CSP nonce on
-    /// it.
-    #[test]
-    fn only_the_hashed_bundle_is_cacheable() {
-        let ok = http::StatusCode::OK;
-        for asset in [
-            "/pkg/ferroehr-viewer.RUlUrl0ZR7DGPjuVWkKtwA.wasm",
-            "/pkg/ferroehr-viewer.RUlUrl0ZR7DGPjuVWkKtwA.js",
-            "/pkg/ferroehr-viewer.RUlUrl0ZR7DGPjuVWkKtwA.css",
-        ] {
-            assert_eq!(
-                cache_control_for(asset, ok),
-                IMMUTABLE_ASSET_CACHE_CONTROL,
-                "{asset} is content-hashed and must be cacheable"
-            );
-        }
-        for document in [
-            "/",
-            "/login",
-            "/ehrs",
-            "/favicon.ico",
-            "/api/current_session",
-        ] {
-            assert_eq!(
-                cache_control_for(document, ok),
-                NO_STORE_CACHE_CONTROL,
-                "{document} may carry patient data or a nonce and must not be stored"
-            );
-        }
-        assert_eq!(
-            cache_control_for("/pkg/snippets/some-dep/inline0.js", ok),
-            NO_STORE_CACHE_CONTROL,
-            "cargo-leptos leaves snippet filenames unhashed, so their URLs repeat across builds"
-        );
-    }
-
-    /// A missing or refused asset must never be frozen into a browser for a
-    /// year; a revalidation's `304` must keep the directive it revalidated.
-    #[test]
-    fn a_refused_asset_is_never_cached() {
-        for refused in [
-            http::StatusCode::NOT_FOUND,
-            http::StatusCode::FOUND,
-            http::StatusCode::INTERNAL_SERVER_ERROR,
-        ] {
-            assert_eq!(
-                cache_control_for("/pkg/ferroehr-viewer.js", refused),
-                NO_STORE_CACHE_CONTROL,
-                "a {refused} for a /pkg path must not be cached"
-            );
-        }
-        assert_eq!(
-            cache_control_for("/pkg/ferroehr-viewer.js", http::StatusCode::NOT_MODIFIED),
-            IMMUTABLE_ASSET_CACHE_CONTROL
-        );
     }
 
     /// Returns the named directive of `policy`, panicking if it is absent.
@@ -756,32 +560,47 @@ mod tests {
         response
     }
 
-    /// Drives one request through the nonce layer, returning the policy the
-    /// response carries and the nonce the render context saw.
-    async fn one_exchange() -> (String, String) {
-        let response = axum::Router::new()
+    /// One response of a stub router at `uri` under the viewer's console
+    /// headers.
+    async fn exchange(uri: &str) -> axum::response::Response {
+        let headers = viewer_headers();
+        axum::Router::new()
             .route("/", axum::routing::get(render_nonce))
-            .layer(axum::middleware::from_fn(csp_nonce_layer))
+            .route(
+                "/pkg/ferroehr-viewer.RUlUrl0ZR7DGPjuVWkKtwA.wasm",
+                axum::routing::get(|| async { "wasm" }),
+            )
+            .layer(axum::middleware::from_fn(move |request, next| {
+                console::headers(headers.clone(), request, next)
+            }))
             .oneshot(
                 http::Request::builder()
-                    .uri("/")
+                    .uri(uri)
                     .body(axum::body::Body::empty())
                     .unwrap(),
             )
             .await
-            .unwrap();
-        let header = |name: http::HeaderName| {
-            response
-                .headers()
-                .get(&name)
-                .unwrap_or_else(|| panic!("the response must carry {name}"))
-                .to_str()
-                .unwrap()
-                .to_owned()
-        };
+            .unwrap()
+    }
+
+    /// The named response header as text.
+    fn header(response: &axum::response::Response, name: &str) -> String {
+        response
+            .headers()
+            .get(name)
+            .unwrap_or_else(|| panic!("the response must carry {name}"))
+            .to_str()
+            .unwrap()
+            .to_owned()
+    }
+
+    /// Drives one request through the console headers, returning the policy
+    /// the response carries and the nonce the render context saw.
+    async fn one_exchange() -> (String, String) {
+        let response = exchange("/").await;
         (
-            header(http::header::CONTENT_SECURITY_POLICY),
-            header(http::HeaderName::from_static(RENDERED_NONCE)),
+            header(&response, "content-security-policy"),
+            header(&response, RENDERED_NONCE),
         )
     }
 
@@ -805,11 +624,11 @@ mod tests {
     /// of in a browser.
     #[test]
     fn the_bootstrap_script_carries_the_authorized_nonce() {
-        let nonce = leptos::nonce::Nonce::new();
-        let policy = viewer_csp(&nonce);
+        let nonce = CspNonce::mint();
+        let policy = viewer_headers().policy(&nonce);
         let owner = leptos::prelude::Owner::new();
         let html = owner.with(|| {
-            leptos::context::provide_context(nonce);
+            leptos::context::provide_context(leptos::nonce::Nonce::from_value(nonce.as_str()));
             let options = leptos::config::LeptosOptions::builder()
                 .output_name("ferroehr-viewer")
                 .build();
@@ -840,10 +659,11 @@ mod tests {
         assert_ne!(first_policy, second_policy);
     }
 
-    /// The directives the policy must carry, each for a stated reason.
-    #[test]
-    fn the_policy_carries_the_audited_directives() {
-        let policy = viewer_csp(SAMPLE_NONCE);
+    /// The directives the policy the viewer serves must carry, each for a
+    /// stated reason, and the ones it must never carry.
+    #[tokio::test]
+    async fn the_policy_carries_the_audited_directives() {
+        let (policy, rendered) = one_exchange().await;
         for expected in [
             "default-src 'self'",
             // WebAssembly compilation, without permitting eval of JavaScript.
@@ -853,6 +673,7 @@ mod tests {
             "connect-src 'self'",
             "object-src 'none'",
             "base-uri 'self'",
+            "form-action 'self'",
             "frame-ancestors 'none'",
         ] {
             assert!(
@@ -860,39 +681,37 @@ mod tests {
                 "the policy must carry {expected}"
             );
         }
-    }
-
-    /// `'unsafe-eval'` is what `'wasm-unsafe-eval'` exists to avoid, so the
-    /// broad form must never appear — including by someone "fixing" a WASM
-    /// error with the bigger hammer.
-    #[test]
-    fn the_policy_never_permits_eval() {
-        assert!(!viewer_csp(SAMPLE_NONCE).contains("'unsafe-eval'"));
-    }
-
-    /// The script half is strict: a nonce and no inline allowance. Re-adding
-    /// `'unsafe-inline'` here would not merely widen the policy, it would be
-    /// ignored outright — CSP Level 3 drops it from any directive that also
-    /// carries a nonce — so the regression would look like a working policy.
-    #[test]
-    fn script_src_is_nonce_only() {
-        let policy = viewer_csp(SAMPLE_NONCE);
+        assert!(!policy.contains("'unsafe-eval'"), "{policy}");
         let script_src = directive(&policy, "script-src");
-        assert!(script_src.contains(&format!("'nonce-{SAMPLE_NONCE}'")));
+        assert!(script_src.contains(&format!("'nonce-{rendered}'")));
         assert!(
             !script_src.contains("'unsafe-inline'"),
             "the nonce replaces the inline allowance: {script_src}"
         );
+        // Every style is a stylesheet of the viewer's own origin.
+        assert_eq!(directive(&policy, "style-src"), "style-src 'self'");
     }
 
-    /// Styles come from the viewer's own origin alone: no inline allowance and
-    /// no nonce, since no component writes a `style` attribute or element.
-    #[test]
-    fn style_src_is_the_viewers_own_origin_alone() {
-        let policy = viewer_csp(SAMPLE_NONCE);
-        let style_src = directive(&policy, "style-src");
-        assert_eq!(style_src, "style-src 'self'");
-        assert!(!style_src.contains("'unsafe-inline'"), "{style_src}");
-        assert!(!style_src.contains("'nonce-"), "{style_src}");
+    /// Every document keeps `no-store`, since the viewer renders patient data
+    /// into HTML and stamps a per-request nonce on it; the hashed bundle is
+    /// revalidated (`no-cache`), and a refused bundle answer is never kept.
+    #[tokio::test]
+    async fn only_the_bundle_is_kept_and_then_revalidated() {
+        assert_eq!("no-store", header(&exchange("/").await, "cache-control"));
+        assert_eq!(
+            "no-cache",
+            header(
+                &exchange("/pkg/ferroehr-viewer.RUlUrl0ZR7DGPjuVWkKtwA.wasm").await,
+                "cache-control"
+            )
+        );
+        assert_eq!(
+            "no-store",
+            header(
+                &exchange("/pkg/ferroehr-viewer.NoSuchHash0000000000.wasm").await,
+                "cache-control"
+            ),
+            "a missing bundle file must not be kept"
+        );
     }
 }

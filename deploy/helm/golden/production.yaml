@@ -50,7 +50,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), and only from the networkPolicy.ingressFrom peers.
   labels:
-    helm.sh/chart: ferroehr-19.0.1
+    helm.sh/chart: ferroehr-19.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -103,7 +103,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-19.0.1
+    helm.sh/chart: ferroehr-19.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -138,7 +138,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-19.0.1
+    helm.sh/chart: ferroehr-19.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -206,7 +206,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-19.0.1
+    helm.sh/chart: ferroehr-19.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -353,7 +353,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-19.0.1
+    helm.sh/chart: ferroehr-19.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -501,7 +501,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-19.0.1
+    helm.sh/chart: ferroehr-19.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -769,7 +769,7 @@ kind: Ingress
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-19.0.1
+    helm.sh/chart: ferroehr-19.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -828,7 +828,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr-migrate
   labels:
-    helm.sh/chart: ferroehr-19.0.1
+    helm.sh/chart: ferroehr-19.1.0
     app.kubernetes.io/name: ferroehr-migration
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -847,7 +847,7 @@ kind: Job
 metadata:
   name: ferroehr-migrate
   labels:
-    helm.sh/chart: ferroehr-19.0.1
+    helm.sh/chart: ferroehr-19.1.0
     app.kubernetes.io/name: ferroehr-migration
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -872,7 +872,7 @@ spec:
   template:
     metadata:
       labels:
-        helm.sh/chart: ferroehr-19.0.1
+        helm.sh/chart: ferroehr-19.1.0
         app.kubernetes.io/name: ferroehr-migration
         app.kubernetes.io/instance: ferroehr
         app.kubernetes.io/version: "5.4.2"

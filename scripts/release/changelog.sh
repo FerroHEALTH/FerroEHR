@@ -220,7 +220,7 @@ assemble() {
   for section in "${SECTIONS[@]}"; do
     {
       if [[ "$section" == security && -n "$reason" ]]; then
-        if [[ -f "$work/old.security" ]] && trim "$work/old.security" | head -n1 | grep -qF "$REASON_PREFIX"; then
+        if [[ -f "$work/old.security" ]] && grep -qF "$REASON_PREFIX" <<<"$(trim "$work/old.security" | sed -n 1p)"; then
           die "[Unreleased] already opens its Security section with a reason, and $reason gives another; keep one"
         fi
         tracked "$reason" "$mode"

@@ -163,15 +163,12 @@ wait_http "$CDR_URL/ferroehr/rest/status" 150
 wait_http "$KEYCLOAK_URL/auth/realms/ferroehr/.well-known/openid-configuration" 90
 
 # The development CA Keycloak's TLS certificate chains to (docker-compose.dev.yml
-# `keycloak-tls`), for the host-mode viewer: rustls reads SSL_CERT_DIR beside
-# SSL_CERT_FILE on Linux, so the viewer trusts the dev issuer and every public
-# CA. The composed CDR and viewer mount the same CA (docker/viewer/e2e-env.yml).
+# `keycloak-tls`), for the host-mode viewer: `[auth.oidc.tls] trust_roots_file`
+# adds it beside the platform's roots, on Linux and macOS alike. The composed
+# CDR and viewer mount the same CA (docker/viewer/e2e-env.yml).
 DEV_CA_DIR="$ROOT/target/ui-e2e/dev-ca"
 mkdir -p "$DEV_CA_DIR"
 docker compose exec -T keycloak cat /opt/keycloak/conf/tls/ca/ca.crt > "$DEV_CA_DIR/ca.crt"
-VIEWER_TLS_ENV=(SSL_CERT_DIR="$DEV_CA_DIR")
-[[ -f /etc/ssl/certs/ca-certificates.crt ]] \
-  && VIEWER_TLS_ENV+=(SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt)
 
 # ── 2. Deterministic Keycloak test passwords (the shipped realm export holds
 #      only hashes; reset via the bootstrap admin API — never edit the realm) ─
@@ -317,9 +314,9 @@ else
   # fallback): it is what makes the served page name the content-hashed /pkg
   # files this build produced.
   LEPTOS_SITE_ROOT="$ROOT/target/site" \
-  LEPTOS_SITE_ADDR="$VIEWER_ADDR" \
   LEPTOS_OUTPUT_NAME="ferroehr-viewer" \
   LEPTOS_HASH_FILES="true" \
+  FERROEHR_VIEWER__SERVER__LISTEN="$VIEWER_ADDR" \
   FERROEHR_VIEWER__CDR__BASE_URL="$CDR_URL" \
   FERROEHR_VIEWER__SESSION__COOKIE_SECURE="false" \
   FERROEHR_VIEWER__AUTH__OIDC__ENABLED="true" \
@@ -328,7 +325,8 @@ else
   FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID="ferroehr" \
   FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET="bT5T4oWn3xNdBytQsl2cfpBDi1pp15Va" \
   FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL="$VIEWER_URL" \
-    env "${VIEWER_TLS_ENV[@]}" "$ROOT/target/debug/ferroehr-viewer" &
+  FERROEHR_VIEWER__AUTH__OIDC__TLS__TRUST_ROOTS_FILE="$DEV_CA_DIR/ca.crt" \
+    "$ROOT/target/debug/ferroehr-viewer" &
   VIEWER_PID=$!
 fi
 wait_http "$VIEWER_URL/login"

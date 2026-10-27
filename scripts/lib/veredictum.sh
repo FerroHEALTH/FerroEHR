@@ -63,7 +63,7 @@ veredictum_bin() {
   local root bin
   root="$(veredictum_cache_root)/install"
   bin="$root/bin/veredictum"
-  if [[ ! -x "$bin" ]] || ! "$bin" --version 2>/dev/null | grep -qF "$VEREDICTUM_VERSION"; then
+  if [[ ! -x "$bin" ]] || ! grep -qF "$VEREDICTUM_VERSION" <<<"$("$bin" --version 2>/dev/null)"; then
     echo "==> Installing veredictum $VEREDICTUM_VERSION (cargo install, cached in $root)" >&2
     cargo install veredictum --version "$VEREDICTUM_VERSION" --locked --root "$root" >&2
   fi

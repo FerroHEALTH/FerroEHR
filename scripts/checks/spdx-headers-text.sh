@@ -75,7 +75,7 @@ while IFS= read -r f; do
   prefix=$(comment_prefix "$f")
 
   # Read a window, not line 1: a shebang legitimately precedes the header.
-  if head -n 8 "$f" | grep -qF "$LICENSE"; then
+  if grep -qF "$LICENSE" <<<"$(head -n 8 "$f")"; then
     continue
   fi
 
@@ -87,7 +87,7 @@ while IFS= read -r f; do
 
   # A shebang must stay on line 1, or the file stops being executable by the
   # interpreter it names.
-  if head -n 1 "$f" | grep -q '^#!'; then
+  if grep -q '^#!' <<<"$(head -n 1 "$f")"; then
     {
       head -n 1 "$f"
       printf '%s %s\n%s %s\n' "$prefix" "$COPYRIGHT" "$prefix" "$LICENSE"

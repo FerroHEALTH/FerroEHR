@@ -137,7 +137,7 @@ while IFS='|' read -r comp repo ref sha; do
     echo "  $comp (openEHR/$repo): no Release-* tags — skipped"
     continue
   fi
-  pin_ver=$(echo "$ref" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+  pin_ver=$(echo "$ref" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sed -n 1p || true)
 
   # A comparable pin: only a strictly NEWER release is a missed event.
   if [[ -n "$pin_ver" ]] && { [[ "$latest" = "$pin_ver" ]] ||

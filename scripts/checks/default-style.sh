@@ -74,7 +74,7 @@ for f in $files; do
   # (1) the per-field serde path form
   while IFS=: read -r line body; do
     [[ -n "${line:-}" ]] || continue
-    printf '%s' "$body" | grep -qE "$STD_PATHS" && continue
+    grep -qE "$STD_PATHS" <<<"$body" && continue
     report "$f:$line: \`#[serde(default = \"…\")]\` — put the value in the struct's \
 \`impl Default\` and use container-level \`#[serde(default)]\` instead \
 (scripts/checks/default-style.sh)"
@@ -114,7 +114,7 @@ for f in $files; do
     [[ -n "${line:-}" ]] || continue
     name=$(printf '%s' "$decl" | sed -nE 's/.*const[[:space:]]+(DEFAULT_[A-Z0-9_]+).*/\1/p')
     [[ -n "$name" ]] || continue
-    if printf '%s' "$decl" | grep -q 'pub[[:space:]]\|pub(' ; then
+    if grep -q 'pub[[:space:]]\|pub(' <<<"$decl" ; then
       # Visible beyond the file: count tree-wide, discounting every declaration.
       hits=$(git grep --untracked -how "$name" -- '*.rs' | wc -l | tr -d ' ')
       decls=$(git grep --untracked -hcE "const[[:space:]]+$name\b" -- '*.rs' | paste -sd+ - | bc 2>/dev/null || echo 1)

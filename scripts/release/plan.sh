@@ -122,7 +122,7 @@ notes() {
   fi
   # CRA Art 13(19) and Annex II point 7: the end of the support commitment, at
   # least month and year, five years from the release date.
-  released="$(sed -n "s/^## \[$version\] - \([0-9-]*\).*/\1/p" CHANGELOG.md | head -n1)"
+  released="$(sed -n "s/^## \[$version\] - \([0-9-]*\).*/\1/p" CHANGELOG.md | sed -n 1p)"
   if ! end="$(support_end "$released")"; then
     echo "::error::The [$version] heading carries no release date to count the support period from." >&2
     return 1

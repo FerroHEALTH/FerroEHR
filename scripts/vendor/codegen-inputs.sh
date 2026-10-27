@@ -103,7 +103,7 @@ for pair in "${TWIN_PINS[@]}"; do
     IFS='|' read -r name _repo sha _sub _filter _dest _record <<<"$entry"
     [[ "$name" = "$set_name" ]] && set_sha=$sha
   done
-  docs_sha=$(grep -E "^  \"${component}\|" scripts/vendor/spec-docs.sh | head -1 | tr -d '"' | awk -F'|' '{print $4}')
+  docs_sha=$(grep -E "^  \"${component}\|" scripts/vendor/spec-docs.sh | sed -n 1p | tr -d '"' | awk -F'|' '{print $4}')
   if [[ -z "$set_sha" || -z "$docs_sha" ]]; then
     echo "ERROR: no pin for $set_name here or for $component in scripts/vendor/spec-docs.sh" >&2
     pin_drift=1

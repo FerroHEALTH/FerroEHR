@@ -319,8 +319,8 @@ probes_terminology() {
   # content would not contain them, and reporting that as a subsumption defect
   # would be a lie about the server — so their presence is established first,
   # and their absence is a declared gap.
-  if ! curl -s --get --data-urlencode 'system=http://snomed.info/sct' --data-urlencode 'code=73211009' \
-       "http://localhost:${TERM_FT_PORT}/r4b/CodeSystem/\$lookup" | grep -q '"Parameters"'; then
+  if ! grep -q '"Parameters"' <<<"$(curl -s --get --data-urlencode 'system=http://snomed.info/sct' --data-urlencode 'code=73211009' \
+       "http://localhost:${TERM_FT_PORT}/r4b/CodeSystem/\$lookup")"; then
     dim "    SKIP  73211009 is not in the loaded content — declared as not exercised"
     uncovered "SNOMED subsumption over a published hierarchy" \
       "the loaded package does not contain the International concepts this probe names"

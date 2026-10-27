@@ -303,11 +303,11 @@ STUB
     rm -rf "$tmp/case"
     if [[ "$rc" -ne "$status" ]]; then
       echo "self-test FAILED: ${label}: exit ${rc}, expected ${status}" >&2
-      printf '%s\n' "$out" | head -8 | sed 's/^/    /' >&2
+      printf '%s\n' "$out" | sed -n 1,8p | sed 's/^/    /' >&2
       failed=1
     elif [[ "$want" != "-" && "$out" != *"$want"* ]]; then
       echo "self-test FAILED: ${label}: output does not name '${want}'" >&2
-      printf '%s\n' "$out" | head -8 | sed 's/^/    /' >&2
+      printf '%s\n' "$out" | sed -n 1,8p | sed 's/^/    /' >&2
       failed=1
     else
       echo "  self-test: ${label}"
