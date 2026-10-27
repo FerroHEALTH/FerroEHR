@@ -39,7 +39,7 @@ use crate::locale::{Msg, tr, tr_with};
 
 #[cfg(not(target_arch = "wasm32"))]
 /// The fixed AQL that lists EHRs newest-first for the recent-EHRs table.
-/// Validated by [`tests::fixed_aql_parses`]; never concatenated with user
+/// Validated by the `fixed_aql_parses` test; never concatenated with user
 /// input.
 const LIST_EHRS_AQL: &str =
     "SELECT e/ehr_id/value, e/time_created/value FROM EHR e ORDER BY e/time_created/value DESC";

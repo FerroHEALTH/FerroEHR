@@ -48,11 +48,11 @@ one() {
   found=("$pkg/$name".*."$1" "$pkg/$name.$1")
   shopt -u nullglob
   for file in "${found[@]}"; do
-    if [ -z "$newest" ] || [ "$file" -nt "$newest" ]; then
+    if [[ -z "$newest" ]] || [[ "$file" -nt "$newest" ]]; then
       newest="$file"
     fi
   done
-  if [ -z "$newest" ] || [ ! -s "$newest" ]; then
+  if [[ -z "$newest" ]] || [[ ! -s "$newest" ]]; then
     echo "viewer-bundle: no $name .$1 in $pkg; run scripts/cargo-leptos.sh build --release first." >&2
     exit 1
   fi
@@ -94,11 +94,11 @@ table="$(
   echo "Budget: $budget brotli bytes of WebAssembly; this build uses $wasm_br ($percent%)."
 )"
 echo "$table"
-if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   echo "$table" >> "$GITHUB_STEP_SUMMARY"
 fi
 
-if [ "$wasm_br" -gt "$budget" ]; then
+if [[ "$wasm_br" -gt "$budget" ]]; then
   echo "viewer-bundle: the WebAssembly is $wasm_br brotli bytes, over the $budget-byte budget in $rule." >&2
   exit 1
 fi

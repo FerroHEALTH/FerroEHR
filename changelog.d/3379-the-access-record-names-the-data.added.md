@@ -5,8 +5,8 @@
   which permit a population query, an export or a cohort query ran (EHDS
   Art. 68). A value that is not 1 to 128 characters of letters, digits and
   `.` `_` `:` `/` `#` `-` is recorded as absent. The column joins the tamper
-  chain as digest version 4 (audit migration 0016). The FHIR and DICOM
-  renderings do not carry the permit yet.
+  chain as digest version 4 (audit migration 0016). The FHIR rendering
+  carries it too (#4120).
 - **AQL takes `VERSIONED_OBJECT` as a FROM class** (#3379), the shape of
   FerroBRIDGE's OMOP batch query (`EHR e CONTAINS VERSIONED_OBJECT vo CONTAINS
   VERSION v CONTAINS COMPOSITION c`). The QUERY specification lets `FROM` name

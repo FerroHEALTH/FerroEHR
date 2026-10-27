@@ -49,8 +49,9 @@ deployment_profile = "sandbox"   # sandbox | production
 # The FerroHEALTH family's listener section, the same keys in every product.
 [server]
 # The address and port the listener binds: an IP address, never a host name.
-# The container images set 0.0.0.0:8080; PORT alone sets 0.0.0.0:<PORT>.
-listen = "127.0.0.1:8080"
+# Every interface by default, the port the container image exposes; PORT alone
+# sets 0.0.0.0:<PORT>.
+listen = "0.0.0.0:8080"
 # The path every route is served under, the health routes included. Empty
 # serves them at the process root; the openEHR API path is [rest] base_path.
 base_path = ""
@@ -60,10 +61,9 @@ request_timeout_ms = 30000     # a request still running then is answered 408
 header_read_timeout_ms = 30000
 # The largest request body any route reads, refused 413 above it. The bulk
 # routes (template upload, /message/import, /message/tdd) take up to this;
-# [rest] body_limit_bytes narrows the clinical surface below it. The largest
-# operational template in the vendored CKM corpus is 5.4 MB, so a deployment
-# that uploads templates raises this (67108864 is 64 MiB).
-body_limit_bytes = 1048576
+# [rest] body_limit_bytes narrows the clinical surface below it. 64 MiB; the
+# largest operational template in the vendored CKM corpus is 5.4 MB.
+body_limit_bytes = 67108864
 drain_delay_ms = 0             # on SIGTERM, readiness is 503 this long before the listener closes
 shutdown_timeout_ms = 10000    # then the requests in flight get this long to finish
 # The requests served at once; past it a request is answered 503 with

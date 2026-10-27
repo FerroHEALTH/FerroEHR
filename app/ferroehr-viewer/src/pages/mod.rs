@@ -21,7 +21,6 @@ pub mod ehrs;
 pub mod errors;
 pub mod find;
 pub mod item_tags;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod login;
 pub mod parties;
 pub mod preferences;

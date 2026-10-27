@@ -12,7 +12,11 @@
 //! the viewer's own `/auth/oidc/login` route. The page shows the session
 //! ended (`?expired=1`), signed out (`?signed-out=1`) or refused
 //! (`?refused=1`, the OIDC callback's) from its address. Which methods it
-//! offers comes from [`crate::auth::fetch_login_screen`]. No openEHR spec
+//! offers comes from [`crate::auth::fetch_login_screen`].
+//!
+//! The page's loader signs in, reads the screen and redirects on the server;
+//! the view draws the model it leaves on either half. The model carries the
+//! username as typed and never the password or a session. No openEHR spec
 //! governs the viewer: our own design.
 
 use ferrohealth_ui::icon::Glyph;
@@ -20,9 +24,14 @@ use ferrohealth_ui::view::shell::{brand_mark, centred, lockup_plain};
 use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, SignIn, State, sign_in};
 use leptos::prelude::*;
 use leptos_meta::Title;
+use serde::{Deserialize, Serialize};
 
+use crate::auth::LoginScreen;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::auth::{SignedIn, fetch_login_screen, sign_in_basic};
+use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
+use crate::pages::common::{drawn, page_model};
 
 /// The BFF's OIDC sign-in URL, carrying the post-login destination.
 ///
@@ -56,7 +65,7 @@ fn arrival() -> (String, State) {
 /// The sign-in card for the methods of `screen`, in `state`, the basic form
 /// holding `username` and saying `error` under the password.
 fn card(
-    screen: Result<crate::auth::LoginScreen, crate::error::ViewerError>,
+    screen: Result<LoginScreen, ViewerError>,
     state: State,
     next: &str,
     username: String,
@@ -128,6 +137,61 @@ fn card(
     .into_any()
 }
 
+/// The sign-in page's model.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+enum LoginModel {
+    /// The card: the methods on offer, the username as typed and the
+    /// sentence under the password.
+    Card {
+        /// What the screen offers, or why it could not be read.
+        screen: Result<LoginScreen, ViewerError>,
+        /// The username the refused post carried.
+        username: String,
+        /// Why the post did not sign the reader in.
+        error: Option<String>,
+    },
+    /// The CDR accepted the credentials and the post redirected.
+    Left,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Loads the sign-in page: answers its Basic post and reads the screen.
+async fn load_login() -> LoginModel {
+    let attempt = match crate::posted::posted() {
+        Some(posted) => {
+            let username = posted.text("username");
+            let outcome = sign_in_basic(
+                username.clone(),
+                posted.get("password").unwrap_or_default(),
+                posted.get("next"),
+            )
+            .await;
+            Some((username, outcome))
+        }
+        None => None,
+    };
+    let (username, error) = match attempt {
+        Some((_, Ok(SignedIn::Accepted(to)))) => {
+            leptos_axum::redirect(&to);
+            return LoginModel::Left;
+        }
+        Some((username, Ok(SignedIn::Refused))) => (username, Some(tr(Msg::SignInRefused))),
+        Some((username, Err(error))) => (
+            username,
+            Some(tr_with(
+                Msg::SignInFailed,
+                &[("error", error.to_string().into())],
+            )),
+        ),
+        None => (String::new(), None),
+    };
+    LoginModel::Card {
+        screen: fetch_login_screen().await,
+        username,
+        error,
+    }
+}
+
 /// The sign-in page.
 #[expect(
     clippy::must_use_candidate,
@@ -136,38 +200,14 @@ fn card(
 #[component]
 pub fn LoginPage() -> impl IntoView {
     let (next, state) = arrival();
-    let posted = crate::posted::posted();
-    let body = crate::pages::common::awaited(async move {
-        let attempt = match posted {
-            Some(posted) => {
-                let username = posted.text("username");
-                let outcome = sign_in_basic(
-                    username.clone(),
-                    posted.get("password").unwrap_or_default(),
-                    posted.get("next"),
-                )
-                .await;
-                Some((username, outcome))
-            }
-            None => None,
-        };
-        let screen = fetch_login_screen().await;
-        let (username, error) = match attempt {
-            Some((_, Ok(SignedIn::Accepted(to)))) => {
-                leptos_axum::redirect(&to);
-                return ().into_any();
-            }
-            Some((username, Ok(SignedIn::Refused))) => (username, Some(tr(Msg::SignInRefused))),
-            Some((username, Err(error))) => (
-                username,
-                Some(tr_with(
-                    Msg::SignInFailed,
-                    &[("error", error.to_string().into())],
-                )),
-            ),
-            None => (String::new(), None),
-        };
-        card(screen, state, &next, username, error)
+    let model = page_model!(load_login());
+    let body = drawn(model, move |model| match model {
+        LoginModel::Card {
+            screen,
+            username,
+            error,
+        } => card(screen, state, &next, username, error),
+        LoginModel::Left => ().into_any(),
     });
     view! {
         <Title text=tr(Msg::SignInTitle) />

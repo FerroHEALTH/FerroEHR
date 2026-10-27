@@ -109,12 +109,9 @@ FROM gcr.io/distroless/cc-debian13:nonroot@sha256:83b9b50586253821cf63ffcec87d3d
 # the distroless `:nonroot` tag sets, so this states the base uid rather than
 # choosing one.
 USER 65532:65532
+# The binary listens on every interface at this port by default; a platform's
+# `PORT` moves it to 0.0.0.0:<PORT>, and FERROEHR__SERVER__LISTEN wins over both.
 EXPOSE 8080
-# The listener on every interface at the exposed port: the binary's own default
-# is the loopback. `PORT` is the platform convention the loader maps to
-# `server.listen` = 0.0.0.0:<PORT>, below the canonical FERROEHR__SERVER__LISTEN,
-# so a platform that injects its own PORT still wins.
-ENV PORT=8080
 # Shell-less image: the healthcheck is the binary's own subcommand, which asks
 # GET /health/readiness on the configured listener over loopback and exits 0 on
 # 200, 1 otherwise, so a draining server is unhealthy.

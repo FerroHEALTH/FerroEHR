@@ -33,8 +33,9 @@ use ferrohealth_ui::view::dock::DecisionBar;
 use ferrohealth_ui::view::dock::decision_bar;
 #[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::view::search::{SearchBox, search_box};
+use ferrohealth_ui::view::shell::Footer;
 #[cfg(not(target_arch = "wasm32"))]
-use ferrohealth_ui::view::shell::{Footer, Shell, TopBar, brand_mark, lockup, shell, topbar};
+use ferrohealth_ui::view::shell::{Shell, TopBar, brand_mark, lockup, shell, topbar};
 #[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::view::status::{BannerLink, Reach, StatusPill, banner, status_pill};
 #[cfg(not(target_arch = "wasm32"))]
@@ -46,7 +47,8 @@ use leptos::prelude::*;
 use leptos_router::components::Outlet;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::tr_with;
+use crate::locale::{Msg, tr};
 
 #[cfg(not(target_arch = "wasm32"))]
 /// The id of the navigation, which the top bar's Menu button opens.
@@ -235,12 +237,11 @@ fn lockup_view() -> AnyView {
     .into_any()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The footer of every page: the product, its version and About.
 #[must_use]
 pub fn footer() -> Footer {
     Footer {
-        product: crate::app::product().into(),
+        product: tr(Msg::ProductName).into(),
         version: env!("CARGO_PKG_VERSION").into(),
         about: "/about".into(),
     }

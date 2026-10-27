@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! What a page reads from the request it answers: the path, the query, the
-//! display cookies, who is signed in and the viewer's own settings.
+//! display cookies, who is signed in, the viewer's own settings and the
+//! instant the page is drawn at.
 //!
 //! The server reads them once per page into a [`Visit`], which the app
 //! provides through a `SharedValue`, so the browser takes the same values
@@ -61,6 +62,9 @@ pub struct Visit {
     pub signed: Option<Signed>,
     /// The viewer's own settings.
     pub settings: Settings,
+    /// The instant the server read its clock for the page: every relative
+    /// time and every today the page draws counts from it, on both halves.
+    pub now: jiff::Timestamp,
 }
 
 impl Default for Visit {
@@ -70,6 +74,7 @@ impl Default for Visit {
             kept: String::new(),
             signed: None,
             settings: Settings::default(),
+            now: jiff::Timestamp::UNIX_EPOCH,
         }
     }
 }
@@ -98,6 +103,7 @@ impl Visit {
                     oidc_issuer: state.config.auth.oidc.issuer.clone(),
                 })
                 .unwrap_or_default(),
+            now: jiff::Timestamp::now(),
         }
     }
 
@@ -282,6 +288,25 @@ pub fn settings() -> Settings {
     Visit::current().settings
 }
 
+/// The instant the page is drawn at, read once by the server for the whole
+/// page, so the browser draws the same relative times and the same today.
+#[must_use]
+pub fn now() -> jiff::Timestamp {
+    match use_context::<Visit>() {
+        Some(visit) => visit.now,
+        None => {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                jiff::Timestamp::now()
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                Visit::default().now
+            }
+        }
+    }
+}
+
 /// The viewer session the request's sealed cookie carries, when it carries
 /// one that is still inside its idle window.
 #[cfg(not(target_arch = "wasm32"))]
@@ -347,7 +372,7 @@ pub fn return_path(back: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use super::{Visit, kept_of, path, path_and_query, query, query_pairs, return_path};
+    use super::{Visit, kept_of, now, path, path_and_query, query, query_pairs, return_path};
 
     #[test]
     fn a_page_reads_only_the_display_cookies_in_the_browser() {
@@ -373,6 +398,24 @@ mod tests {
             assert_eq!(Some("a b".to_owned()), query("q"));
             assert_eq!(None, query("empty"));
             assert_eq!(3, query_pairs().len());
+        });
+    }
+
+    #[test]
+    fn the_page_counts_from_the_instant_the_shared_visit_carries() {
+        let owner = leptos::prelude::Owner::new();
+        owner.with(|| {
+            let read: jiff::Timestamp = "2026-10-21T09:42:11Z".parse().expect("an instant");
+            leptos::prelude::provide_context(Visit {
+                now: read,
+                ..Visit::default()
+            });
+            assert_eq!(read, now());
+            assert_eq!(
+                read,
+                now(),
+                "every read of the page answers the same instant"
+            );
         });
     }
 

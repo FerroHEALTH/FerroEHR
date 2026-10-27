@@ -768,12 +768,6 @@ configs:
       # on the boot banner, and reports its profile on GET /ferroehr/rest/status.
       deployment_profile = "sandbox"
 
-      [server]
-      listen = "0.0.0.0:8080"
-      # Template uploads and the /message imports take up to 64 MiB; the largest
-      # operational template in the CKM corpus is 5.4 MB.
-      body_limit_bytes = 67108864
-
       # Per authenticated caller, refused 429 + Retry-After past it.
       [server.caller_rate]
       requests_per_second = 1024
