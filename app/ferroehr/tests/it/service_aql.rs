@@ -185,8 +185,8 @@ fn rows(result: &Value) -> &Vec<Value> {
 }
 
 fn ehr_scope(ehr_id: &str) -> AqlQueryRequest {
-    // `i_query_service.adoc`: `ehr_ids: List<UUID>`; the single-EHR REST scope is
-    // the one-element case.
+    // ITS-REST `docs/query/Request.md`: `ehr_id` is "used to execute the query
+    // within a single EHR context"; it is the one-element `ehr_ids` scope.
     AqlQueryRequest {
         ehr_ids: vec![ehr_id.to_owned()],
         ..AqlQueryRequest::default()
@@ -1067,9 +1067,10 @@ async fn a_population_subset_is_gated_and_a_named_scope_is_not() {
     );
 }
 
-/// Multi-EHR scoping (`ehr_ids: List<UUID>`,
-/// `docs/specs/openehr/SM/docs/UML/classes/i_query_service.adoc`): a query
-/// scoped to a *set* of EHRs must span exactly that set — no more, no fewer.
+/// Multi-EHR scoping (`ehr_ids`): a query scoped to a *set* of EHRs must span
+/// exactly that set — no more, no fewer. ITS-REST `docs/query/Request.md`
+/// defines only the single-EHR `ehr_id`; no openEHR spec governs a set scope:
+/// our own design.
 /// Three EHRs each hold one composition; scoping to two of them counts two.
 #[tokio::test]
 async fn multi_ehr_ids_scopes_to_the_set() {
@@ -1099,8 +1100,10 @@ async fn multi_ehr_ids_scopes_to_the_set() {
 }
 
 /// A well-formed but non-existent `ehr_id` in the scope set raises
-/// `ehr_id_does_not_exist` (`i_query_service.adoc` declares the error); a
-/// malformed id is a `precondition_violation` (`400`).
+/// `ehr_id_does_not_exist` (no openEHR spec names this error: our own design);
+/// a malformed id is a `precondition_violation` (`400`), per ITS-REST
+/// `responses/400_Query.yaml`: "at least one of the parameters has an invalid
+/// syntax".
 #[tokio::test]
 async fn absent_ehr_id_raises_ehr_id_does_not_exist() {
     let db = testkit::db().await.expect("testkit database");
