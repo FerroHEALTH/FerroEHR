@@ -5,8 +5,8 @@
 //!
 //! The family stack's `server.body_limit_bytes` is a single ceiling for the
 //! whole tree. This module adds the tier the ceiling cannot express: the
-//! routes that accept bulk by design — operational-template upload, EHR-Extract
-//! import, TDD import — accept the ceiling, while the ordinary clinical surface
+//! routes that accept bulk by design (operational-template upload and EHR-Extract
+//! import) accept the ceiling, while the ordinary clinical surface
 //! accepts the narrower
 //! [`RestConfig::body_limit_bytes`](ferroehr::config::rest::RestConfig::body_limit_bytes)
 //! when one is set. Nesting cannot do this: an outer layer's tighter limit
@@ -42,9 +42,8 @@ use crate::state::AppState;
 ///
 /// Template upload is included because an operational template is authored
 /// per deployment and the published corpus is only evidence of typical size,
-/// not a bound; the two `/message` families import a whole EHR or a batch of
-/// documents.
-const BULK_PATH_FRAGMENTS: [&str; 3] = ["/definition/template", "/message/import", "/message/tdd"];
+/// not a bound; `/message/import` imports a whole EHR.
+const BULK_PATH_FRAGMENTS: [&str; 2] = ["/definition/template", "/message/import"];
 
 /// Returns the body limit that applies to `path`: the `ceiling` on a bulk
 /// route or when no clinical tier is set, the clinical tier otherwise.
@@ -133,7 +132,6 @@ mod tests {
             "/ferroehr/rest/openehr/v1/definition/template/adl1.4",
             "/ferroehr/rest/openehr/v1/message/import",
             "/ferroehr/rest/openehr/v1/message/import/abc",
-            "/ferroehr/rest/openehr/v1/message/tdd/abc/batch",
         ] {
             assert_eq!(
                 limit_for(path, Some(CLINICAL), CEILING),

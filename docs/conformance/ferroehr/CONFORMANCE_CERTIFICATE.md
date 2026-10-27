@@ -52,7 +52,7 @@ The Realization column says what the row's cases were verified against: `release
 | Platform | EhrArchive | OPT | extension | pass |
 | Platform | DemographicArchive | OPT | extension | pass |
 | Platform | EhrExtract | OPT | extension | pass |
-| Platform | Tds | OPT | extension | pass |
+| Platform | Tds | OPT | extension | not claimed |
 | Platform | DefinitionApi | Y | released-wire | pass |
 | Platform | EhrApi | Y | released-wire | pass |
 | Platform | DemographicApi | OPT | released-wire | pass |
@@ -102,7 +102,6 @@ The exercised-capability set of the measured hospital-simulation workload agains
 | EhrArchive | yes | no — adjudicated exclusion (AMB-170): destructive mid-measurement: archiving is a lifecycle transition applied to a named set of EHRs, so every arrival would move part of the population-anchored corpus the measured window is bound to into the archival tier - the earned class would no longer describe the declared volumetric class. The same one-shot/destructive family as physical deletion, and unlike the read-only extension routes the simulation now polls |
 | DemographicArchive | yes | no — adjudicated exclusion (AMB-170): destructive mid-measurement: archiving is a lifecycle transition applied to a named set of parties, so every arrival would move part of the demographic population the measured window is bound to into the archival tier - the same one-shot/destructive family as physical deletion and the EHR archive half |
 | EhrExtract | yes | yes |
-| Tds | yes | yes |
 | DefinitionApi | yes | yes |
 | EhrApi | yes | yes |
 | DemographicApi | yes | yes |

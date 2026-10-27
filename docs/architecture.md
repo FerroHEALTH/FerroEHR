@@ -250,7 +250,7 @@ Base path `/ferroehr/rest/openehr/v1`, implementing the generated ITS-REST
 content negotiation (canonical JSON/XML via `openehr-its`). Extensions: admin
 API (plus the own-design activity-report, archive/restore and dump/load routes under
 the same gate), the `/message` group realizing the SM Message component
-(EHR-Extract export/import + TDD import — the release publishes no such API),
+(EHR-Extract export/import — the release publishes no such API),
 the always-on public health family (`/health`, `/health/liveness`,
 `/health/readiness`), `/rest/status`, the ops-introspection `/management/*`
 surface, item tags (there is no EhrScape surface). **Auth:** Basic +
@@ -431,7 +431,8 @@ The service layer realizes the openEHR **SM Platform Service Model**
 | Admin | `I_ADMIN_SERVICE` (+archive/dump-load) | `service::admin` | implemented |
 | EHR Index | `I_EHR_INDEX` | `service::ehr_index` over `linkage.subject_ehr` | implemented |
 | Terminology | `I_TERMINOLOGY_SERVICE` | `service::terminology` (in-process `openehr-term` bundle + one FHIR R4B terminology server, FerroTERM in every shipped deployment, reached through the published `ferrobridge-term` client with an optional OAuth2 client-credentials grant; commit-time ac-code constraint-binding resolution) | implemented |
-| Message | `I_MESSAGE_SERVICE`, `I_EHR_EXTRACT_SERVICE`, `I_TDD_SERVICE` | `service::message` | implemented |
+| Message | `I_MESSAGE_SERVICE`, `I_EHR_EXTRACT_SERVICE` | `service::message` | implemented |
+| Message (TDD) | `I_TDD_SERVICE` | not realised: Template Data Documents removed ([#4199](https://github.com/FerroHEALTH/FerroEHR/issues/4199)) | not realised |
 | Subject Proxy | `I_SUBJECT_PROXY_SERVICE`, `I_DATA_BINDING` | not realised ([#3431](https://github.com/FerroHEALTH/FerroEHR/issues/3431)) | not realised |
 
 | Crate | Role | Kind |
@@ -442,7 +443,7 @@ The service layer realizes the openEHR **SM Platform Service Model**
 | `openehr-term` | TERM classes + terminology bundle | generated + hand-written |
 | `openehr-lang` | BMM/P_BMM object model | generated |
 | `openehr-its` | Canonical JSON/XML + ITS-REST contract + OPT 1.4/AOM2 archetype XML + runtimes + wire validation + gates | generated + hand-written |
-| `openehr-sdt` | Simplified Formats (`flat`: FLAT / STRUCTURED / Web Template / TDD) + RM-instance validation (`rm_instance`) + the SMART scope grammar (`smart_scopes`), over `openehr-its` | hand-written |
+| `openehr-sdt` | Simplified Formats (`flat`: FLAT / STRUCTURED / Web Template) + RM-instance validation (`rm_instance`) + the SMART scope grammar (`smart_scopes`), over `openehr-its` | hand-written |
 | `openehr-query` | AQL 1.1 lexer + parser + AST | hand-written |
 | `openehr-adl` | ADL 2.4 engine: ADL2/cADL/ODIN parser, AOM2 validation, flattener, OPT2, ADL 1.4→2 conversion | hand-written |
 | `openehr-codegen` | BMM/XSD/OAS → Rust generator (+ `emit-rm-model`) | tooling |

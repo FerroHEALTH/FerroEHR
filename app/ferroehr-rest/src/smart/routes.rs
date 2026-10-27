@@ -206,7 +206,7 @@ impl SmartRoutes {
         if under("/message/export") {
             return ehr_data(Permission::Read);
         }
-        if under("/message/import") || under("/message/tdd") {
+        if under("/message/import") {
             return ehr_data(Permission::Create);
         }
         if under("/query/cohort") {

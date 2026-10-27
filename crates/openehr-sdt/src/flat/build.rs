@@ -27,6 +27,9 @@
               (#1694)"
 )]
 
+use std::collections::HashSet;
+use std::sync::LazyLock;
+
 use openehr_rm::v1_2::paths::PathSegment;
 use serde_json::{Map, Value, json};
 
@@ -1470,12 +1473,69 @@ fn apply_element_attrs(
     Ok(())
 }
 
-/// RM attributes that are arrays — needed to re-materialise collapsed
-/// structure. Driven from the generated BMM RM attribute model (the same
-/// static model the AQL path analysis uses), via the shared derivation in
-/// [`crate::flat::tdd::is_multiple_attr`].
+/// The set of RM attribute names whose value is a multi-valued *structural*
+/// container reachable from a versioned-object root, computed once from the
+/// generated BMM RM attribute model ([`openehr_rm::v1_2::model`]) instead of a
+/// hard-coded list.
+///
+/// "Structural" means the attribute's container is a `List`/`Set`/`Hash` **and**
+/// its declared element type is not a primitive — so leaf byte
+/// arrays such as `DV_MULTIMEDIA.data : Array<Octet>` are excluded (they are
+/// values, not wrapper nodes the FLAT builder re-materialises), which keeps
+/// single-valued structural attributes such as `OBSERVATION.data : HISTORY`
+/// correctly single. The reachability walk starts at the versioned-object roots
+/// (`COMPOSITION`, `EHR_STATUS`, `FOLDER`, the concrete parties and
+/// `PARTY_RELATIONSHIP`) and follows every class-typed attribute through the RM
+/// abstract→concrete descendant sets. Correctness reference: the attribute
+/// cardinalities in openEHR RM `common`, `composition`, `ehr`,
+/// `data_structures` and `demographic`.
+static MULTIVALUED_ATTRS: LazyLock<HashSet<&str>> = LazyLock::new(|| {
+    let mut set: HashSet<&'static str> = HashSet::new();
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    // The versioned-object roots: the three of the EHR (RM ehr §Overview) and
+    // the demographic ones (RM demographic `master02-demographic_package.adoc`
+    // §Versioning Semantics), so a party build reaches `identities`, `contacts`,
+    // `addresses`, `capabilities`, `roles`, `languages` and `relationships`.
+    let mut queue: Vec<&'static str> = vec![
+        "COMPOSITION",
+        "EHR_STATUS",
+        "FOLDER",
+        "PERSON",
+        "ORGANISATION",
+        "GROUP",
+        "AGENT",
+        "ROLE",
+        "PARTY_RELATIONSHIP",
+    ];
+    while let Some(cls) = queue.pop() {
+        if !seen.insert(cls) {
+            continue;
+        }
+        for attr in openehr_rm::v1_2::model::attributes(cls) {
+            // Only follow (and count) attributes whose value is itself an RM
+            // object; a primitive (e.g. `Octet`) is a JSON scalar, never a
+            // structural wrapper.
+            if openehr_rm::v1_2::model::is_primitive(attr.declared_type) {
+                continue;
+            }
+            if attr.container != openehr_rm::v1_2::model::Container::None {
+                set.insert(attr.name);
+            }
+            queue.push(attr.declared_type);
+            queue.extend(
+                openehr_rm::v1_2::model::descendants(attr.declared_type)
+                    .iter()
+                    .copied(),
+            );
+        }
+    }
+    set
+});
+
+/// Whether `attr` is a multi-valued structural RM attribute — the model-driven
+/// membership test of the FLAT composition builder.
 fn is_multiple(attr: &str) -> bool {
-    crate::flat::tdd::is_multiple_attr(attr)
+    MULTIVALUED_ATTRS.contains(attr)
 }
 
 /// Map a (possibly abstract/generic) web-template rm type to the concrete
@@ -2462,5 +2522,50 @@ mod tests {
         assert_eq!(infer_type("items", None), "ELEMENT");
         assert_eq!(infer_type("activities", None), "ACTIVITY");
         assert_eq!(infer_type("state", Some("items")), "ITEM_TREE");
+    }
+}
+
+#[cfg(test)]
+mod multiplicity_tests {
+    use super::is_multiple;
+
+    /// Completeness guard: the model-driven set must cover every member of the
+    /// former hard-coded COMPOSITION/HISTORY/ITEM/ENTRY envelope, so replacing
+    /// the list with the RM-model lookup does not lose coverage.
+    #[test]
+    fn covers_legacy_hardcoded_set() {
+        for attr in ["content", "items", "events", "activities"] {
+            assert!(
+                is_multiple(attr),
+                "model-driven multiplicity set must include the legacy member `{attr}`",
+            );
+        }
+    }
+
+    /// Behaviour guard: `data` must stay single. Its only container use in the RM
+    /// is `DV_MULTIMEDIA.data : Array<Octet>` (a byte array, not a structural
+    /// wrapper); the structural `data` attributes (`OBSERVATION.data : HISTORY`,
+    /// `ADMIN_ENTRY.data : ITEM_STRUCTURE`) are single-valued and must not be
+    /// re-materialised as arrays.
+    #[test]
+    fn data_stays_single() {
+        assert!(
+            !is_multiple("data"),
+            "`data` must not be treated as multi-valued (OBSERVATION.data is a single HISTORY)",
+        );
+    }
+
+    /// The derivation now reaches genuinely multi-valued structural attributes
+    /// beyond the legacy four.
+    #[test]
+    fn covers_reachable_multi_valued_attributes() {
+        assert!(is_multiple("other_participations"));
+    }
+
+    /// An unknown / non-container attribute is not multi-valued.
+    #[test]
+    fn rejects_single_and_unknown() {
+        assert!(!is_multiple("value"));
+        assert!(!is_multiple("not_a_real_attribute"));
     }
 }

@@ -9,13 +9,13 @@ reverse, zero re-exports.
 
 | Part | Status | To change it |
 |---|---|---|
-| `src/flat/` — Simplified Formats (FLAT / STRUCTURED / Web Template / TDD) | hand-written | edit normally, with spec citations |
+| `src/flat/` — Simplified Formats (FLAT / STRUCTURED / Web Template) | hand-written | edit normally, with spec citations |
 | `src/rm_instance/` — template-independent RM-instance validation (`ValidationMessage`, `validate_rm_and_terminology{,_as}`, the composed `validate_composition`) | hand-written | edit normally, with spec citations |
 | `src/smart_scopes.rs` — the SMART on openEHR scope grammar (master08 resource scopes + master07/09 launch contexts) | hand-written (std-only, always compiled) | edit normally, with spec citations. It is the ONE grammar the CDR's scope gate and scope-previewing REST clients (the viewer) parse with |
 
 **Features (`default = ["full"]`, `full = ["flat", "cache"]`).** `flat` pulls
 `openehr-its` with `opt14` (canonical JSON, canonical XML, the OPT 1.4
-reader) plus the five generated spec crates and the regex/serde/quick-xml
+reader) plus the five generated spec crates and the regex/serde
 stack; `cache` adds `moka` for `flat::cache`. `smart_scopes` sits under no
 feature: `default-features = false` alone must compile it to std only, so
 nothing under it may reach for serde, a spec crate, or any other dependency.
@@ -32,9 +32,7 @@ shape back. The wire-boundary class-invariant dispatcher is NOT here: it is
 
 ## The `flat` module — Simplified Formats (`openehr_sdt::flat`)
 
-FLAT + STRUCTURED data instances, the Web Template model, and the
-TDD → COMPOSITION converter (`flat::tdd::from_tdd`, corpus-verified). This is
-the ITS-REST **Formats** sub-specification (STABLE).
+FLAT + STRUCTURED data instances and the Web Template model. This is the ITS-REST **Formats** sub-specification (STABLE).
 
 - **The wire oracle is the ITS-REST Simplified Formats specification**
   (`docs/specs/openehr/ITS-REST/docs/simplified_formats/`, STABLE):
