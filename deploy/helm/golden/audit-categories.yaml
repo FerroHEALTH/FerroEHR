@@ -23,7 +23,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), but from EVERY source — this policy narrows ports, NOT sources (networkPolicy.ingressAllowAll=true). Set networkPolicy.ingressFrom for a PHI workload.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -51,7 +51,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -72,7 +72,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -87,7 +87,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -173,25 +173,19 @@ data:
       [privacy.identifier_scan]
         rules = ["de-kvnr"]
     
-    [server]
+    [rest]
       base_path = "/ferroehr/rest/openehr/v1"
-      bind = "0.0.0.0:8080"
+      body_limit_bytes = 16777216
       cors_permissive = false
       swagger_ui = "private"
-      [server.connection]
-        header_read_timeout_secs = 10
-        http2_keep_alive_interval_secs = 30
-        http2_keep_alive_timeout_secs = 10
-        max_concurrent_streams = 256
-      [server.limits]
-        body_bytes = 16777216
-        bulk_body_bytes = 67108864
-      [server.rate_limit]
-        address_burst = 4096
-        address_per_second = 2048
-        enabled = true
-        principal_burst = 2048
-        principal_per_second = 1024
+    
+    [server]
+      body_limit_bytes = 67108864
+      listen = "0.0.0.0:8080"
+      max_concurrent_requests = 256
+      [server.caller_rate]
+        burst = 2048
+        requests_per_second = 1024
     
     [signing]
       enabled = true
@@ -216,7 +210,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -246,7 +240,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -271,7 +265,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: d71e88a75056e246e137f5b52ea62a993200682c04ee8f58b8a6d26e674c1b9f
+        checksum/config: 417b05970f51eb3b67d7a1d48bad5915716ea26292e06344c170fc529871c08e
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

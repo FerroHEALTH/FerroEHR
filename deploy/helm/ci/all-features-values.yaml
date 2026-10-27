@@ -60,7 +60,8 @@ config:
       client_id: ferroehr
       scope: system/Patient.rs
   server:
-    bind: "0.0.0.0:8080"
+    listen: "0.0.0.0:8080"
+  rest:
     base_path: /ferroehr/rest/openehr/v1
     swagger_ui: public
     cors_permissive: false

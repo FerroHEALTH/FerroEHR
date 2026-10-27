@@ -12,7 +12,7 @@ every path, what gates it, what it accepts, and every status code it answers.
 ## Where these routes live, and what gates them
 
 Both groups are mounted under the API base path, so every path below is
-relative to it. With the default `server.base_path`, `{base}` reads
+relative to it. With the default `rest.base_path`, `{base}` reads
 `/ferroehr/rest/openehr/v1`, and `{base}/admin/dump` is
 `/ferroehr/rest/openehr/v1/admin/dump`.
 

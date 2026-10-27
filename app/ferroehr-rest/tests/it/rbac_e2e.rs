@@ -29,8 +29,8 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::config::server::AdminConfig;
-use ferroehr::config::server::ServerConfig;
+use ferroehr::config::rest::AdminConfig;
+use ferroehr::config::rest::RestConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
@@ -55,7 +55,8 @@ const EHR_ID: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
 fn rest_config() -> AppConfig {
     let mut config = AppConfig {
-        server: ServerConfig {
+        server: common::server(),
+        rest: RestConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
@@ -85,7 +86,7 @@ fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
         subject: Arc::new(|_| Box::pin(async { Ok::<_, ResolveError>(None) })),
         template_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
     };
-    AuthzHandle::build(&cfg, &rest_config().server.base_path, None, resolvers).map(Arc::new)
+    AuthzHandle::build(&cfg, &rest_config().rest.base_path, None, resolvers).map(Arc::new)
 }
 
 /// A real service over a fresh DB, optionally wired with an ATNA audit sender.

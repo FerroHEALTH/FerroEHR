@@ -3,17 +3,16 @@
 
 //! Per-route-family request-body limits.
 //!
-//! The `tower-http` `RequestBodyLimitLayer` on the outer stack is a single
-//! ceiling for the whole tree. This module adds the tier the ceiling cannot
-//! express: the ordinary clinical surface accepts
-//! [`BodyLimits::body_bytes`](ferroehr::config::server::BodyLimits::body_bytes),
-//! while the routes that accept bulk by design — operational-template upload,
-//! EHR-Extract import, TDD import — accept
-//! [`BodyLimits::bulk_body_bytes`](ferroehr::config::server::BodyLimits::bulk_body_bytes).
-//! Nesting cannot do this: an outer layer's tighter limit would already have
-//! refused the request before an inner, more permissive one saw it. So the
-//! ceiling stays outermost at the widest tier, and this middleware applies the
-//! narrower tier per matched path.
+//! The family stack's `server.body_limit_bytes` is a single ceiling for the
+//! whole tree. This module adds the tier the ceiling cannot express: the
+//! routes that accept bulk by design — operational-template upload, EHR-Extract
+//! import, TDD import — accept the ceiling, while the ordinary clinical surface
+//! accepts the narrower
+//! [`RestConfig::body_limit_bytes`](ferroehr::config::rest::RestConfig::body_limit_bytes)
+//! when one is set. Nesting cannot do this: an outer layer's tighter limit
+//! would already have refused the request before an inner, more permissive one
+//! saw it. So the ceiling stays outermost at the widest tier, and this
+//! middleware applies the narrower tier per matched path.
 //!
 //! It also buffers. Buffering here rather than at the extractor is what makes
 //! the refusal a real `413`: an over-limit body without a `Content-Length` (a
@@ -32,7 +31,6 @@ use axum::extract::Request;
 use axum::extract::State;
 use axum::middleware::Next;
 use axum::response::Response;
-use ferroehr::config::server::BodyLimits;
 use http::StatusCode;
 use http::header::CONTENT_LENGTH;
 
@@ -48,15 +46,15 @@ use crate::state::AppState;
 /// documents.
 const BULK_PATH_FRAGMENTS: [&str; 3] = ["/definition/template", "/message/import", "/message/tdd"];
 
-/// Returns the body limit that applies to `path`.
-fn limit_for(path: &str, limits: &BodyLimits) -> usize {
-    if BULK_PATH_FRAGMENTS
+/// Returns the body limit that applies to `path`: the `ceiling` on a bulk
+/// route or when no clinical tier is set, the clinical tier otherwise.
+fn limit_for(path: &str, clinical: Option<usize>, ceiling: usize) -> usize {
+    let bulk = BULK_PATH_FRAGMENTS
         .iter()
-        .any(|fragment| path.contains(fragment))
-    {
-        limits.bulk_body_bytes
-    } else {
-        limits.body_bytes
+        .any(|fragment| path.contains(fragment));
+    match clinical {
+        Some(tier) if !bulk => tier.min(ceiling),
+        _ => ceiling,
     }
 }
 
@@ -71,8 +69,12 @@ pub(crate) async fn middleware(
     request: Request,
     next: Next,
 ) -> Response {
-    let limits = state.config().server.limits;
-    let limit = limit_for(request.uri().path(), &limits);
+    let config = state.config();
+    let limit = limit_for(
+        request.uri().path(),
+        config.rest.body_limit_bytes,
+        config.server.body_limit_bytes,
+    );
 
     let declared = request
         .headers()
@@ -103,7 +105,7 @@ fn too_large(limit: usize) -> Response {
         StatusCode::PAYLOAD_TOO_LARGE,
         &format!(
             "request body exceeds the {limit}-byte limit for this route \
-             (raise `server.limits.body_bytes` or `server.limits.bulk_body_bytes`)"
+             (raise `rest.body_limit_bytes` or `server.body_limit_bytes`)"
         ),
     )
 }
@@ -112,22 +114,21 @@ fn too_large(limit: usize) -> Response {
 mod tests {
     use super::*;
 
+    const CLINICAL: usize = 16;
+    const CEILING: usize = 64;
+
     #[test]
-    fn clinical_paths_take_the_standard_tier() {
-        let limits = BodyLimits::default();
-        assert_eq!(
-            limit_for("/ferroehr/rest/openehr/v1/ehr/x/composition", &limits),
-            limits.body_bytes
-        );
-        assert_eq!(
-            limit_for("/ferroehr/rest/openehr/v1/query/aql", &limits),
-            limits.body_bytes
-        );
+    fn clinical_paths_take_the_clinical_tier() {
+        for path in [
+            "/ferroehr/rest/openehr/v1/ehr/x/composition",
+            "/ferroehr/rest/openehr/v1/query/aql",
+        ] {
+            assert_eq!(limit_for(path, Some(CLINICAL), CEILING), CLINICAL, "{path}");
+        }
     }
 
     #[test]
-    fn bulk_paths_take_the_bulk_tier() {
-        let limits = BodyLimits::default();
+    fn bulk_paths_take_the_ceiling() {
         for path in [
             "/ferroehr/rest/openehr/v1/definition/template/adl1.4",
             "/ferroehr/rest/openehr/v1/message/import",
@@ -135,25 +136,19 @@ mod tests {
             "/ferroehr/rest/openehr/v1/message/tdd/abc/batch",
         ] {
             assert_eq!(
-                limit_for(path, &limits),
-                limits.bulk_body_bytes,
-                "{path} must take the bulk tier"
+                limit_for(path, Some(CLINICAL), CEILING),
+                CEILING,
+                "{path} must take the ceiling"
             );
         }
     }
 
-    /// The outer ceiling must never be tighter than any tier it fronts, or a
-    /// bulk request would be refused before the bulk tier applied.
+    /// Without a clinical tier every route takes the ceiling, and a tier above
+    /// the ceiling never widens it.
     #[test]
     fn the_ceiling_covers_every_tier() {
-        let limits = BodyLimits::default();
-        assert!(limits.ceiling() >= limits.body_bytes);
-        assert!(limits.ceiling() >= limits.bulk_body_bytes);
-
-        let inverted = BodyLimits {
-            body_bytes: 99,
-            bulk_body_bytes: 1,
-        };
-        assert_eq!(inverted.ceiling(), 99);
+        let clinical = "/ferroehr/rest/openehr/v1/ehr";
+        assert_eq!(limit_for(clinical, None, CEILING), CEILING);
+        assert_eq!(limit_for(clinical, Some(99), CEILING), CEILING);
     }
 }

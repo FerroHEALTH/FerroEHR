@@ -140,7 +140,7 @@ reset.
 1. Stop the server.
 2. Drop and recreate the database as in step 2 of the Kubernetes procedure.
 3. Restore the configuration: replace your `ferroehr.toml` with
-   `ferroehr config default > ferroehr.toml` (or delete it, which leaves the
+   a fresh copy of `app/ferroehr/assets/ferroehr.default.toml` (or delete it, which leaves the
    built-in defaults), and unset every `FERROEHR__…`, `DATABASE_URL` and
    `RUST_LOG` variable except the database DSN.
 4. Prepare the schema with `ferroehr db migrate`, or start the server with the

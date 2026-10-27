@@ -41,7 +41,7 @@
 //!   `I_TDD_SERVICE`); the release publishes no message API at all, so the whole
 //!   group is an extension under its own `/message/` resource root.
 //! - [`system`] — the System API manifest ([`system::options::SystemManifest`],
-//!   `ferroehr::config::server::SystemOptionsConfig`), assembled and mounted by [`crate::router::router`].
+//!   `ferroehr::config::rest::SystemOptionsConfig`), assembled and mounted by [`crate::router::router`].
 //!
 //! `item_tags` is not a group: it is the one `ITEM_TAG` write-wrapper
 //! implementation (`item_tags::pending` / `item_tags::persist` /

@@ -8,7 +8,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for FerroBRIDGE: only its HTTP port, and only from the bridge.networkPolicy.ingressFrom peers. Egress admits this release's CDR and DNS.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -76,7 +76,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), but from EVERY source — this policy narrows ports, NOT sources (networkPolicy.ingressAllowAll=true). Set networkPolicy.ingressFrom for a PHI workload.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -114,7 +114,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the viewer: only its HTTP port, but from EVERY source — this policy narrows ports, NOT sources (viewer.networkPolicy.ingressAllowAll=true). Set viewer.networkPolicy.ingressFrom for a PHI workload. Egress admits the CDR (its API port, and its management port when that is its own) and DNS only.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr-viewer
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -171,7 +171,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -192,7 +192,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr-bridge
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -207,7 +207,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -222,7 +222,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr-viewer
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr-viewer
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -251,7 +251,7 @@ kind: Secret
 metadata:
   name: ferroehr-env
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -271,7 +271,7 @@ metadata:
     kubernetes.io/description: >-
       FerroBRIDGE's config.toml. It names the CDR credential by the path of a file mounted from bridge.cdr.existingSecret and carries no secret value itself.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -291,7 +291,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -372,28 +372,21 @@ data:
       enabled = false
       region = "us-east-1"
     
-    [server]
+    [rest]
       base_path = "/ferroehr/rest/openehr/v1"
-      bind = "0.0.0.0:8080"
+      body_limit_bytes = 16777216
       cors_permissive = false
       swagger_ui = "private"
-      [server.connection]
-        header_read_timeout_secs = 10
-        http2_keep_alive_interval_secs = 30
-        http2_keep_alive_timeout_secs = 10
-        max_concurrent_streams = 256
-      [server.limits]
-        body_bytes = 16777216
-        bulk_body_bytes = 67108864
-      [server.rate_limit]
-        address_burst = 4096
-        address_per_second = 2048
-        enabled = true
-        principal_burst = 2048
-        principal_per_second = 1024
+    
+    [server]
+      body_limit_bytes = 67108864
+      listen = "0.0.0.0:8080"
+      max_concurrent_requests = 256
+      [server.caller_rate]
+        burst = 2048
+        requests_per_second = 1024
       [server.tls]
-        cert_file = "/etc/ferroehr-tls/tls.crt"
-        enabled = true
+        certificate_file = "/etc/ferroehr-tls/tls.crt"
         key_file = "/etc/ferroehr-tls/tls.key"
     
     [signing]
@@ -422,7 +415,7 @@ metadata:
     kubernetes.io/description: >-
       In-cluster address for FerroBRIDGE. ClusterIP only, with no Ingress: FerroBRIDGE authenticates no caller yet, so its NetworkPolicy is what decides who reaches it.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -445,7 +438,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -475,7 +468,7 @@ metadata:
     kubernetes.io/description: >-
       In-cluster address for the FerroEHR Viewer. The viewer is a REST client of the CDR and holds no data of its own; it is the human-facing surface, so this is the Service an Ingress normally publishes.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr-viewer
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -501,7 +494,7 @@ metadata:
     kubernetes.io/description: >-
       FerroBRIDGE, the FHIR and openEHR bridge. It reaches this release's CDR over ITS-REST with the credential from bridge.cdr.existingSecret, and FerroTERM when that runs.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -643,7 +636,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -668,7 +661,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: c3f8e4cc71e5463d069231fd59c078b29fb93dcc85e3871fce8196176e890d9a
+        checksum/config: f6e5dfade030999c188b1b45208bc81fcafc07e8706427603aba11cf2acd9ef6
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/management/prometheus"
@@ -862,7 +855,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR Viewer: a Leptos SSR web UI that consumes the CDR strictly over ITS-REST. It never reaches the database, which the viewer NetworkPolicy enforces rather than assumes.
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr-viewer
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -921,7 +914,7 @@ spec:
           env:
             # The CDR is addressed by its in-cluster Service — the viewer never
             # talks to the database, and the egress policy below enforces that.
-            # The scheme follows config.server.tls.enabled.
+            # The scheme follows config.server.tls.
             - name: FERROEHR_VIEWER__CDR__BASE_URL
               value: "https://ferroehr:8080"
             - name: SSL_CERT_DIR
@@ -932,7 +925,7 @@ spec:
             - name: FERROEHR_VIEWER__CDR__MANAGEMENT_BASE_URL
               value: "https://ferroehr:8080/management"
             # The viewer's base path mirrors the CDR's own, so shortening
-            # config.server.base_path cannot leave the two disagreeing.
+            # config.rest.base_path cannot leave the two disagreeing.
             - name: FERROEHR_VIEWER__CDR__BASE_PATH
               value: "/ferroehr/rest/openehr/v1"
           livenessProbe:
@@ -987,7 +980,7 @@ kind: Ingress
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"
@@ -1022,7 +1015,7 @@ kind: ServiceMonitor
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-18.0.1
+    helm.sh/chart: ferroehr-19.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.4.2"

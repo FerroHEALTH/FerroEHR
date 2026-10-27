@@ -102,7 +102,10 @@ fn development_only_composition() -> Value {
 
 /// A router over the given profile, on an existing pool.
 async fn router_for(profile: SpecProfile, pool: &sqlx::PgPool) -> Router {
-    let mut config = AppConfig::default();
+    let mut config = AppConfig {
+        server: common::server(),
+        ..AppConfig::default()
+    };
     config.auth.enabled = false;
     config.spec_profile = profile;
     common::router_with(

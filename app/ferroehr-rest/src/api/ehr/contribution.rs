@@ -53,7 +53,7 @@ pub(super) async fn run(
     let q = parts.query.as_deref();
     let ok = StatusCode::OK;
     let created = StatusCode::CREATED;
-    let base = state.config().server.base_path.clone();
+    let base = state.config().rest.base_path.clone();
 
     match op {
         "contribution_create" => {

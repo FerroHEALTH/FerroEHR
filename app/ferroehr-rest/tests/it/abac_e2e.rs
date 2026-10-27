@@ -36,7 +36,7 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::aql::subject::EhrSubject;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::config::server::ServerConfig;
+use ferroehr::config::rest::RestConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::status::SmError;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
@@ -138,7 +138,8 @@ impl PolicyEngine for PermitAll {
 
 fn rest_config() -> AppConfig {
     AppConfig {
-        server: ServerConfig {
+        server: common::server(),
+        rest: RestConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
@@ -215,7 +216,7 @@ fn authz(abac_enabled: bool) -> Option<Arc<AuthzHandle>> {
     cfg.abac.enabled = abac_enabled;
     let engine: Option<Arc<dyn PolicyEngine>> =
         abac_enabled.then(|| -> Arc<dyn PolicyEngine> { Arc::new(PermitAll) });
-    AuthzHandle::build(&cfg, &rest_config().server.base_path, engine, resolvers()).map(Arc::new)
+    AuthzHandle::build(&cfg, &rest_config().rest.base_path, engine, resolvers()).map(Arc::new)
 }
 
 /// An ABAC handle with a caller-chosen PDP engine and resolvers.
@@ -225,13 +226,7 @@ fn authz_with(
 ) -> Option<Arc<AuthzHandle>> {
     let mut cfg = AuthzConfig::default();
     cfg.abac.enabled = true;
-    AuthzHandle::build(
-        &cfg,
-        &rest_config().server.base_path,
-        Some(engine),
-        resolvers,
-    )
-    .map(Arc::new)
+    AuthzHandle::build(&cfg, &rest_config().rest.base_path, Some(engine), resolvers).map(Arc::new)
 }
 
 /// A real service over a fresh DB, optionally wired with an ATNA audit sender.
@@ -1029,7 +1024,7 @@ async fn db_resolved_apps(patient_namespace: Option<&str>) -> (testkit::TestDb, 
     cfg.abac.patient_namespace = patient_namespace.map(str::to_owned);
     let handle = AuthzHandle::build(
         &cfg,
-        &rest_config().server.base_path,
+        &rest_config().rest.base_path,
         Some(Arc::new(PermitAll)),
         resolvers,
     )
@@ -1117,7 +1112,7 @@ async fn a_patient_keyed_rule_applies_to_the_touched_subjects_without_a_claim() 
     cfg.abac.patient_claim = String::new();
     let handle = AuthzHandle::build(
         &cfg,
-        &rest_config().server.base_path,
+        &rest_config().rest.base_path,
         Some(Arc::new(DenyOwnPatientQueries)),
         resolvers(),
     )
