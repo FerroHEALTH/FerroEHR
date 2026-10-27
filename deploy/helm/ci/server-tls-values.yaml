@@ -32,8 +32,7 @@ config:
           roles: [ADMIN]
   server:
     tls:
-      enabled: true
-      cert_file: /etc/ferroehr-tls/tls.crt
+      certificate_file: /etc/ferroehr-tls/tls.crt
       key_file: /etc/ferroehr-tls/tls.key
 
 extraVolumes:

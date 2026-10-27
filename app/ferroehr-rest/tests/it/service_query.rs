@@ -37,7 +37,10 @@ const AQL: &str = "SELECT c FROM EHR e CONTAINS COMPOSITION c";
 
 /// The router backed by the DB service, with authentication disabled.
 async fn app(pool: &PgPool) -> Router {
-    let mut config = AppConfig::default();
+    let mut config = AppConfig {
+        server: crate::common::server(),
+        ..AppConfig::default()
+    };
     config.auth.enabled = false;
     ferroehr_rest::build_with(
         config,

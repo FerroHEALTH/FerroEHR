@@ -28,16 +28,16 @@ from a Secret, as a mounted file where the config key has a *_file sibling.
   ferroehr.toml source: ConfigMap "{{ include "ferroehr.fullname" . }}"
 {{ end -}}
 
-API base path: {{ .Values.config.server.base_path }}
+API base path: {{ .Values.config.rest.base_path }}
 Service:       {{ include "ferroehr.fullname" . }}:{{ .Values.service.port }} ({{ .Values.service.type }})
 
 Reach it locally:
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "ferroehr.fullname" . }} 8080:{{ .Values.service.port }}
 {{- if eq (include "ferroehr.serverTls" .) "true" }}
-  curl -i --cacert ca.crt --resolve {{ include "ferroehr.fullname" . }}:8080:127.0.0.1 https://{{ include "ferroehr.fullname" . }}:8080{{ .Values.config.server.base_path | trimSuffix "/openehr/v1" }}/status
+  curl -i --cacert ca.crt --resolve {{ include "ferroehr.fullname" . }}:8080:127.0.0.1 https://{{ include "ferroehr.fullname" . }}:8080{{ .Values.config.rest.base_path | trimSuffix "/openehr/v1" }}/status
      (ca.crt: the CA from Secret "{{ .Values.service.tls.caExistingSecret }}"; the certificate names the Service)
 {{- else }}
-  curl -i http://127.0.0.1:8080{{ .Values.config.server.base_path | trimSuffix "/openehr/v1" }}/status
+  curl -i http://127.0.0.1:8080{{ .Values.config.rest.base_path | trimSuffix "/openehr/v1" }}/status
 {{- end }}
 
 Health probes (public, always on):  /health | /health/liveness | /health/readiness

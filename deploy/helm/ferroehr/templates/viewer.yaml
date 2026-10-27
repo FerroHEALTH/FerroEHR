@@ -94,7 +94,7 @@ spec:
           env:
             # The CDR is addressed by its in-cluster Service — the viewer never
             # talks to the database, and the egress policy below enforces that.
-            # The scheme follows config.server.tls.enabled.
+            # The scheme follows config.server.tls.
             - name: FERROEHR_VIEWER__CDR__BASE_URL
               value: {{ include "ferroehr.cdrOrigin" . | quote }}
             {{- if eq (include "ferroehr.serverTls" .) "true" }}
@@ -107,9 +107,9 @@ spec:
             - name: FERROEHR_VIEWER__CDR__MANAGEMENT_BASE_URL
               value: {{ include "ferroehr.cdrManagementUrl" . | quote }}
             {{- end }}
-            {{- with (dig "server" "base_path" "" (.Values.config | default dict)) }}
+            {{- with (dig "rest" "base_path" "" (.Values.config | default dict)) }}
             # The viewer's base path mirrors the CDR's own, so shortening
-            # config.server.base_path cannot leave the two disagreeing.
+            # config.rest.base_path cannot leave the two disagreeing.
             - name: FERROEHR_VIEWER__CDR__BASE_PATH
               value: {{ . | quote }}
             {{- end }}

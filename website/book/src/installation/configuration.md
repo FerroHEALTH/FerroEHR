@@ -11,11 +11,12 @@ map of which page documents which section.
 
 ## Quickstart
 
-Generate an annotated template, edit it, and run:
+Copy the annotated template, edit it, and run:
 
 ```bash
-# Write a fully-commented ferroehr.toml with every key at its default.
-ferroehr config default > ferroehr.toml
+# A fully-commented ferroehr.toml with every key at its default.
+curl -fsSLo ferroehr.toml \
+  https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/main/app/ferroehr/assets/ferroehr.default.toml
 
 # Edit it — at minimum set db.url and an auth mechanism.
 $EDITOR ferroehr.toml
@@ -43,7 +44,7 @@ highest:
 Some conventional names sit *below* their `FERROEHR_` forms within layer 3:
 
 - `DATABASE_URL` → `db.url`, and `RUST_LOG` → `telemetry.filter`.
-- `PORT` → a `0.0.0.0:<PORT>` value for `server.bind` (the port container
+- `PORT` → a `0.0.0.0:<PORT>` value for `server.listen` (the port container
   platforms such as Vercel, Cloud Run and Heroku inject and route traffic
   to).
 - The [libpq environment set](https://www.postgresql.org/docs/current/libpq-envars.html)
@@ -257,7 +258,7 @@ ticked by being present:
 | `migrate_on_runtime_credential` | `[db] migrate_url` set, or `migrate = "verify"`, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on `[storage.migrate.<domain>] url` when that is set, and on that domain's runtime DSN, which opens the gap, when it is not |
 | `auth_off` | `[auth] enabled = true`, so no request is served unauthenticated (CRA Annex I Part I(2)(d)) |
 | `rbac_off` | `[authz.rbac] enabled = true` whenever authentication is on, so a caller reaches only the operations its roles allow (CRA Annex I Part I(2)(d)). Not reported while `auth_off` is |
-| `plaintext_listener` | `[server.tls]` enabled, or `[server] bind` on a loopback address, so data does not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment behind a TLS-terminating ingress accepts `plaintext_listener` by name, which records that the ingress carries the encryption. A bind whose host is a DNS name or empty counts as routable. The gap also opens when `[management] port` is set on an enabled management surface: that listener binds every interface and never speaks TLS, so unset the port (the surface then shares the main listener) or accept the gap by name where the port is unreachable off the host |
+| `plaintext_listener` | `[server.tls]` set, or `[server] listen` on a loopback address, so data does not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment behind a TLS-terminating ingress accepts `plaintext_listener` by name, which records that the ingress carries the encryption. The gap also opens when `[management] port` is set on an enabled management surface: that listener binds every interface and never speaks TLS, so unset the port (the surface then shares the main listener) or accept the gap by name where the port is unreachable off the host |
 | `plaintext_broker` | An `amqps://` broker URL, or `tls = true`, on the enabled change-event outbox (`[events]`), so change events do not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment whose broker path stays on a segment it trusts accepts `plaintext_broker` by name |
 | `plaintext_audit_feed` | An `https://` URL for an enabled audit FHIR feed (`[audit.fhir_feed] url`), so the access records, which name the patient and the professional, do not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment whose repository is reached on a segment it trusts accepts `plaintext_audit_feed` by name |
 | `plaintext_object_store` | `[multimedia] allow_http = false` on an enabled multimedia store, so the externalised clinical blobs travel over an `https://` endpoint (CRA Annex I Part I(2)(e)). A deployment whose object store is reached on a segment it trusts accepts `plaintext_object_store` by name |
@@ -283,7 +284,8 @@ rather than inherit from a quickstart. See
 
 | Section | What it covers | Page |
 |---|---|---|
-| `[server]`, `[server.limits]`, `[server.rate_limit]`, `[server.connection]`, `[server.tls]`, `[server.identity]` | The HTTP listener, request limits, rate limiting, connection bounds, TLS, the deployment's own identity | [Server, database & telemetry](config-server.md) |
+| `[server]`, `[server.caller_rate]`, `[server.tls]` | The HTTP listener (the family section): timeouts, the body limit, the concurrency bound, the drain, the caller rate, TLS | [Server, database & telemetry](config-server.md) |
+| `[rest]`, `[rest.identity]` | The openEHR REST surface: the API base path, the system identifier, Swagger UI, CORS, the clinical body tier, the deployment's own identity | [Server, database & telemetry](config-server.md#rest) |
 | `[db]` | PostgreSQL connection, pool, migrations | [Server, database & telemetry](config-server.md) |
 | `[telemetry]` | The console, the request log and the OpenTelemetry export | [Server, database & telemetry](config-server.md) |
 | `[usage_report]` | The daily installation report to FerroPULSE, on by default; what it sends is on the [Usage report](../usage-report.md) page | [Server, database & telemetry](config-server.md#usage_report) |

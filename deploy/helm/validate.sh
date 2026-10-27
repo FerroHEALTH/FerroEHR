@@ -605,9 +605,9 @@ refusal_registry_gate() {
     "bridge.yaml|with an empty bridge.cdr.existingSecret|${bridge}|--set bridge.cdr.existingSecret=|bridge.cdr.existingSecret;password"
     "bridge.yaml|with an empty bridge.mappings.files|${bridge}|--set bridge.mappings.files=null|bridge.mappings.files;..data"
     "bridge.yaml|with an empty bridge.mappings.existingConfigMap|${bridge}|--set bridge.mappings.existingConfigMap=|bridge.mappings.existingConfigMap"
-    "_helpers.tpl|service.tls.caExistingSecret is empty|${bridge}|--set config.server.tls.enabled=true|FerroBRIDGE (bridge.enabled);service.tls.caExistingSecret;DNS SAN"
-    "_helpers.tpl|service.tls.caExistingSecret is empty|${viewer}|--set config.server.tls.enabled=true|the viewer (viewer.enabled);service.tls.caExistingSecret"
-    "_helpers.tpl|service.tls.caExistingSecret is empty|${base}|--set config.server.tls.enabled=true --set metrics.serviceMonitor.enabled=true|the ServiceMonitor scrape;service.tls.caExistingSecret"
+    "_helpers.tpl|service.tls.caExistingSecret is empty|${bridge}|--set config.server.tls.certificate_file=/tls.crt --set config.server.tls.key_file=/tls.key|FerroBRIDGE (bridge.enabled);service.tls.caExistingSecret;DNS SAN"
+    "_helpers.tpl|service.tls.caExistingSecret is empty|${viewer}|--set config.server.tls.certificate_file=/tls.crt --set config.server.tls.key_file=/tls.key|the viewer (viewer.enabled);service.tls.caExistingSecret"
+    "_helpers.tpl|service.tls.caExistingSecret is empty|${base}|--set config.server.tls.certificate_file=/tls.crt --set config.server.tls.key_file=/tls.key --set metrics.serviceMonitor.enabled=true|the ServiceMonitor scrape;service.tls.caExistingSecret"
     "_helpers.tpl|the chart injects both|${base}|--set-string config.usage_report.deployment=compose|config.usage_report.deployment;usageReport.enabled"
     "networkpolicy.yaml|networkPolicy.ingressAllowAll=false with an empty|${base}|--set networkPolicy.ingressAllowAll=false|networkPolicy.ingressFrom;hardening-network-policy.md"
     "networkpolicy.yaml|with no destination for the database|${base}|--set networkPolicy.egress.enabled=true|networkPolicy.egress.database.to;hardening-network-policy.md"
@@ -1037,7 +1037,7 @@ audit.store|enabled|true
 authz.rbac|ehr_access_default|"restricted"
 authz.rbac|enabled|true
 auth|enabled|true
-server.tls|enabled|
+server.tls|certificate_file|
 management|port|
 events|enabled|false
 CLAIMS
@@ -1106,7 +1106,7 @@ migration_job_gate() {
 migration_job_gate
 
 # ── The server's own TLS: every in-chart client follows the listener ─────────
-# With config.server.tls.enabled the CDR listener speaks TLS, so each client the
+# With config.server.tls set the CDR listener speaks TLS, so each client the
 # chart wires to it (the viewer, FerroBRIDGE, the ServiceMonitor scrape, the
 # kubelet's probes) must speak it too, and the first three must trust the CA
 # named by service.tls.caExistingSecret. Judged on the TLS overlay AND on the
@@ -1121,7 +1121,7 @@ server_tls_gate() {
   on="$(mktemp)"; off="$(mktemp)"
   helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "${CI_DIR}/server-tls-values.yaml" > "$on"
   helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "${CI_DIR}/server-tls-values.yaml" \
-    --set config.server.tls.enabled=false > "$off"
+    --set config.server.tls=null > "$off"
   facts="$(tls_client_facts "$on")"
   # <fact>|<expected value>, one line per object the fact is read from.
   while IFS='|' read -r want got; do

@@ -3,14 +3,14 @@
 
 #![expect(
     clippy::expect_used,
-    clippy::panic,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
               module's helpers and async bodies; panicking assertions and direct \
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 //! `[server.tls]` — native TLS + the client-certificate gate (the IHE ATNA
-//! ITI-19 node-authentication posture) on a real listener: an HTTPS client
+//! ITI-19 node-authentication posture) on a real listener served by the family
+//! listener (`ferrohealth_server::serve::run`) as FerroEHR runs it: an HTTPS client
 //! trusting the test CA reaches `/rest/status` over TLS; with
 //! `client_auth = "required"` a client presenting no certificate is rejected
 //! at the handshake; with `"optional"` it is served. The accept-path for a
@@ -21,13 +21,15 @@
 //! Every certificate and key is minted at run time with `rcgen` (`Pki`): an
 //! RSA CA and leaf (CN=localhost, SAN localhost/127.0.0.1), plus an EC P-256
 //! CA and leaf for the key-format cases and the certificate reload: a pair
-//! replaced on disk is presented by the next handshake, and a broken
+//! replaced on disk is presented once `reload_interval_s` passes, and a broken
 //! replacement leaves the pair in service untouched.
 
+use std::future::Future;
 use std::io::Write;
 use std::time::Duration;
 
-use ferroehr::config::server::{ClientAuth, TlsConfig, TlsVersion};
+use ferrohealth_health::lifecycle::Lifecycle;
+use ferrohealth_server::section::{ClientAuth, ServerSection, TlsSection, TlsVersion};
 
 /// How many days past today the minted certificates stay valid: short, so a
 /// platform verifier (macOS caps a TLS server certificate at 825 days) never
@@ -312,7 +314,7 @@ fn explicit_spki(field: &[u8]) -> Option<Vec<u8>> {
 
 /// Write the PEMs to temp files and build the `[server.tls]` section at the
 /// DEFAULT protocol floor.
-fn tls_files(dir: &assert_fs::TempDir, client_auth: ClientAuth) -> TlsConfig {
+fn tls_files(dir: &assert_fs::TempDir, client_auth: ClientAuth) -> TlsSection {
     tls_files_at(dir, client_auth, TlsVersion::default())
 }
 
@@ -321,82 +323,65 @@ fn tls_files_at(
     dir: &assert_fs::TempDir,
     client_auth: ClientAuth,
     min_version: TlsVersion,
-) -> TlsConfig {
+) -> TlsSection {
     let write = |name: &str, bytes: &[u8]| {
         let path = dir.path().join(name);
         let mut f = std::fs::File::create(&path).expect("create pem");
         f.write_all(bytes).expect("write pem");
-        path.to_string_lossy().into_owned()
+        path
     };
-    TlsConfig {
-        enabled: true,
-        cert_file: Some(write("server.pem", PKI.leaf.as_bytes())),
-        key_file: Some(write("server.key", PKI.leaf_key.as_bytes())),
+    TlsSection {
         client_auth,
         client_ca_file: match client_auth {
-            ClientAuth::Off => None,
+            ClientAuth::None => None,
             _ => Some(write("client-ca.pem", PKI.ca.as_bytes())),
         },
         min_version,
-        reload_interval_secs: 0,
+        ..TlsSection::new(
+            write("server.pem", PKI.leaf.as_bytes()),
+            write("server.key", PKI.leaf_key.as_bytes()),
+        )
     }
 }
 
 /// Write `cert` and `key` as the server pair under `dir` (replacing any pair
 /// already there) and build the `[server.tls]` section naming them.
-fn pair_files(dir: &assert_fs::TempDir, cert: &[u8], key: &[u8]) -> TlsConfig {
+fn pair_files(dir: &assert_fs::TempDir, cert: &[u8], key: &[u8]) -> TlsSection {
     let write = |name: &str, bytes: &[u8]| {
         let path = dir.path().join(name);
         std::fs::write(&path, bytes).expect("write pem");
-        path.to_string_lossy().into_owned()
+        path
     };
-    TlsConfig {
-        enabled: true,
-        cert_file: Some(write("server.pem", cert)),
-        key_file: Some(write("server.key", key)),
-        ..TlsConfig::default()
-    }
+    TlsSection::new(write("server.pem", cert), write("server.key", key))
 }
 
-/// Serve a minimal router over `[server.tls]` on an ephemeral port via the
-/// crate's real TLS path; return the bound port.
-async fn serve_tls(tls: TlsConfig) -> u16 {
-    serve_tls_reloadable(tls).await.0
-}
-
-/// [`serve_tls`], also returning the reloader the listener resolves its
-/// certificate through.
-async fn serve_tls_reloadable(
-    tls: TlsConfig,
-) -> (u16, std::sync::Arc<ferroehr_rest::tls::CertificateReloader>) {
+/// Serve a minimal router over `[server.tls]` on an ephemeral port through the
+/// family listener FerroEHR serves on; return the bound port.
+async fn serve_tls(tls: TlsSection) -> u16 {
     let app = axum::Router::new().route("/rest/status", axum::routing::get(|| async { "OK" }));
-    // Bind an ephemeral port first so the test knows where to connect.
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
     let port = listener.local_addr().expect("addr").port();
-    drop(listener);
-    let server_tls = ferroehr_rest::tls::server_tls(&tls).expect("tls config");
-    let config = server_tls.config;
+    // Fail on the test's own thread when the files do not load, rather than in
+    // the listener task.
+    ferrohealth_server::tls::server_config(&tls).expect("tls config");
+    let section = ServerSection {
+        tls: Some(tls),
+        ..ServerSection::default()
+    };
     tokio::spawn(async move {
-        let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
-        axum_server::bind_rustls(
-            addr,
-            axum_server::tls_rustls::RustlsConfig::from_config(config),
+        ferrohealth_server::serve::run(
+            listener,
+            app,
+            &section,
+            Lifecycle::default(),
+            std::future::pending(),
         )
-        .serve(app.into_make_service())
         .await
         .expect("tls server task");
     });
-    // Wait for the listener to come up.
-    for _ in 0..50 {
-        if tokio::net::TcpStream::connect(("127.0.0.1", port))
-            .await
-            .is_ok()
-        {
-            return (port, server_tls.certificate);
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
-    panic!("TLS listener did not come up");
+    port
 }
 
 /// A trust store holding ONLY the test CA, which no platform store holds.
@@ -444,7 +429,7 @@ fn https_client_pinned(versions: &[&'static rustls::SupportedProtocolVersion]) -
 #[tokio::test]
 async fn serves_https_with_the_configured_certificate() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let port = serve_tls(tls_files(&dir, ClientAuth::Off)).await;
+    let port = serve_tls(tls_files(&dir, ClientAuth::None)).await;
     let resp = https_client()
         .get(format!("https://localhost:{port}/rest/status"))
         .send()
@@ -537,7 +522,7 @@ fn tls11_client_hello() -> Vec<u8> {
 /// negotiate is recognized but not supported".
 #[tokio::test]
 async fn a_pre_tls_1_2_client_is_refused_at_the_handshake() {
-    for min_version in [TlsVersion::V1_3, TlsVersion::V1_2] {
+    for min_version in [TlsVersion::Tls13, TlsVersion::Tls12] {
         refuses_a_tls_1_1_hello(min_version).await;
     }
 }
@@ -546,7 +531,7 @@ async fn refuses_a_tls_1_1_hello(min_version: TlsVersion) {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let port = serve_tls(tls_files_at(&dir, ClientAuth::Off, min_version)).await;
+    let port = serve_tls(tls_files_at(&dir, ClientAuth::None, min_version)).await;
 
     let mut socket = tokio::net::TcpStream::connect(("127.0.0.1", port))
         .await
@@ -591,7 +576,7 @@ async fn refuses_a_tls_1_1_hello(min_version: TlsVersion) {
 #[tokio::test]
 async fn the_default_floor_serves_tls_1_3_only() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let port = serve_tls(tls_files(&dir, ClientAuth::Off)).await;
+    let port = serve_tls(tls_files(&dir, ClientAuth::None)).await;
 
     let refused = https_client_pinned(&[&rustls::version::TLS12])
         .get(format!("https://localhost:{port}/rest/status"))
@@ -618,7 +603,7 @@ async fn the_default_floor_serves_tls_1_3_only() {
 #[tokio::test]
 async fn the_compatibility_floor_also_serves_tls_1_2() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let port = serve_tls(tls_files_at(&dir, ClientAuth::Off, TlsVersion::V1_2)).await;
+    let port = serve_tls(tls_files_at(&dir, ClientAuth::None, TlsVersion::Tls12)).await;
 
     for versions in [
         &[&rustls::version::TLS12][..],
@@ -648,9 +633,8 @@ fn the_configured_suites_are_aead_only_over_ephemeral_key_agreement() {
     use rustls::CipherSuite;
 
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let config = ferroehr_rest::tls::server_tls(&tls_files(&dir, ClientAuth::Off))
-        .expect("tls config")
-        .config;
+    let config = ferrohealth_server::tls::server_config(&tls_files(&dir, ClientAuth::None))
+        .expect("tls config");
     let suites = &config.crypto_provider().cipher_suites;
     assert!(!suites.is_empty(), "the provider must offer suites");
 
@@ -685,12 +669,17 @@ fn the_configured_suites_are_aead_only_over_ephemeral_key_agreement() {
 
 #[tokio::test]
 async fn missing_key_material_is_a_typed_boot_error() {
-    let tls = TlsConfig {
-        enabled: true,
-        ..TlsConfig::default()
-    };
-    let err = ferroehr_rest::tls::server_tls(&tls).expect_err("must fail");
-    assert!(err.to_string().contains("server.tls.cert_file"));
+    let dir = assert_fs::TempDir::new().expect("tempdir");
+    let tls = TlsSection::new(dir.path().join("absent.pem"), dir.path().join("absent.key"));
+    let err = ferrohealth_server::tls::server_config(&tls).expect_err("must fail");
+    assert!(
+        matches!(err, ferrohealth_server::tls::TlsError::Read { .. }),
+        "{err:?}"
+    );
+    assert!(
+        err.to_string().contains("server.tls.certificate_file"),
+        "{err}"
+    );
 }
 
 // ------------------------------------------------------- EC keys and reload
@@ -761,123 +750,102 @@ async fn an_ec_p256_key_loads_as_pkcs8_and_as_sec1() {
 }
 
 /// An EC certificate whose public key carries explicit curve parameters never
-/// matches its key byte for byte, and the refusal says so and names the fix,
-/// rather than a bare mismatch (RFC 5480 §2.1.1: `namedCurve` only).
+/// matches its key byte for byte, so the pair is refused at load (RFC 5480
+/// §2.1.1: `namedCurve` only).
 #[test]
-fn an_explicit_curve_certificate_is_refused_with_the_named_curve_remedy() {
+fn an_explicit_curve_certificate_is_refused() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
     let tls = pair_files(
         &dir,
         PKI.explicit_curve.as_bytes(),
         PKI.explicit_curve_key.as_bytes(),
     );
-    let err = ferroehr_rest::tls::server_tls(&tls).expect_err("must refuse");
+    let err = ferrohealth_server::tls::server_config(&tls).expect_err("must refuse");
     assert!(
-        matches!(err, ferroehr_rest::tls::TlsError::EcKeyMismatch { .. }),
+        matches!(err, ferrohealth_server::tls::TlsError::Config(_)),
         "{err:?}"
     );
-    let text = err.to_string();
-    assert!(text.contains("RFC 5480"), "{text}");
-    assert!(text.contains("ec_param_enc:named_curve"), "{text}");
 }
 
-/// A key that belongs to a different certificate is a typed mismatch.
+/// A key that belongs to a different certificate is refused at load.
 #[test]
-fn a_key_of_another_certificate_is_a_key_mismatch() {
+fn a_key_of_another_certificate_is_refused() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
     let tls = pair_files(&dir, PKI.ec_leaf.as_bytes(), PKI.leaf_key.as_bytes());
-    let err = ferroehr_rest::tls::server_tls(&tls).expect_err("must refuse");
+    let err = ferrohealth_server::tls::server_config(&tls).expect_err("must refuse");
     assert!(
-        matches!(err, ferroehr_rest::tls::TlsError::KeyMismatch { .. }),
+        matches!(err, ferrohealth_server::tls::TlsError::Config(_)),
         "{err:?}"
     );
 }
 
-/// A renewed pair on disk is presented by the next handshake without a
-/// restart; a broken replacement is refused, reported once, and the pair in
-/// service stays in service.
+/// Polls `check` every 100 ms for up to ten seconds, the bound a one-second
+/// reload interval comfortably meets; `true` once it held.
+async fn eventually<F, Fut>(mut check: F) -> bool
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = bool>,
+{
+    for _ in 0..100 {
+        if check().await {
+            return true;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    false
+}
+
+/// A renewed pair on disk is presented once the reload interval passes, with
+/// no restart; a broken replacement is refused and the pair in service stays
+/// in service.
 #[tokio::test]
 async fn a_renewed_certificate_is_served_without_a_restart_and_a_broken_one_is_not() {
-    use ferroehr_rest::tls::Reloaded;
-
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let (port, reloader) = serve_tls_reloadable(pair_files(
-        &dir,
-        PKI.leaf.as_bytes(),
-        PKI.leaf_key.as_bytes(),
-    ))
-    .await;
+    let tls = TlsSection {
+        reload_interval_s: std::num::NonZeroU64::new(1),
+        ..pair_files(&dir, PKI.leaf.as_bytes(), PKI.leaf_key.as_bytes())
+    };
+    let port = serve_tls(tls).await;
     assert_eq!(
         presented_certificate(port).await,
         der_of(PKI.leaf.as_bytes())
     );
-    assert_eq!(
-        reloader.reload().await.expect("unchanged files"),
-        Reloaded::Unchanged
-    );
 
     pair_files(&dir, PKI.ec_leaf.as_bytes(), PKI.ec_leaf_pkcs8.as_bytes());
-    assert_eq!(
-        reloader.reload().await.expect("the renewed pair loads"),
-        Reloaded::Replaced
-    );
-    assert_eq!(
-        presented_certificate(port).await,
-        der_of(PKI.ec_leaf.as_bytes())
-    );
-
-    // A replacement certificate without its matching key.
-    pair_files(&dir, PKI.leaf.as_bytes(), PKI.ec_leaf_pkcs8.as_bytes());
-    let refused = reloader.reload().await.expect_err("a mismatched pair");
+    let renewed = der_of(PKI.ec_leaf.as_bytes());
     assert!(
-        matches!(refused, ferroehr_rest::tls::TlsError::EcKeyMismatch { .. }),
-        "{refused:?}"
-    );
-    assert_eq!(
-        presented_certificate(port).await,
-        der_of(PKI.ec_leaf.as_bytes())
-    );
-    assert_eq!(
-        reloader
-            .reload()
-            .await
-            .expect("the refused pair is not re-reported"),
-        Reloaded::Unchanged
+        eventually(|| async { presented_certificate(port).await == renewed }).await,
+        "the renewed pair was never served"
     );
 
-    // A key file that is not PEM at all.
-    pair_files(&dir, PKI.leaf.as_bytes(), b"not a key");
-    reloader.reload().await.expect_err("an unreadable key");
-    assert_eq!(
-        presented_certificate(port).await,
-        der_of(PKI.ec_leaf.as_bytes())
-    );
+    // A replacement certificate without its matching key, then a key file that
+    // is not PEM at all: each read is refused and the renewed pair stays.
+    for (cert, key) in [
+        (PKI.leaf.as_bytes(), PKI.ec_leaf_pkcs8.as_bytes()),
+        (PKI.leaf.as_bytes(), &b"not a key"[..]),
+    ] {
+        pair_files(&dir, cert, key);
+        tokio::time::sleep(Duration::from_millis(2_500)).await;
+        assert_eq!(presented_certificate(port).await, renewed);
+    }
 }
 
-/// The watcher the listener runs picks a renewal up on its own interval.
-#[tokio::test]
-async fn the_watcher_serves_a_renewal_on_its_interval() {
+/// A broken replacement read on demand is refused and the running
+/// configuration stays the one the listener hands out.
+#[test]
+fn a_reload_that_does_not_read_keeps_the_running_configuration() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let (port, reloader) = serve_tls_reloadable(pair_files(
-        &dir,
-        PKI.leaf.as_bytes(),
-        PKI.leaf_key.as_bytes(),
-    ))
-    .await;
-    let watcher = tokio::spawn(reloader.watch(Duration::from_millis(50)));
-
+    let tls = pair_files(&dir, PKI.leaf.as_bytes(), PKI.leaf_key.as_bytes());
+    let reloadable = ferrohealth_server::tls::ReloadableTls::new(&tls).expect("the pair loads");
+    let running = reloadable.current();
+    pair_files(&dir, PKI.leaf.as_bytes(), PKI.ec_leaf_pkcs8.as_bytes());
+    reloadable
+        .reload()
+        .expect_err("a mismatched pair is refused");
+    assert!(std::sync::Arc::ptr_eq(&running, &reloadable.current()));
     pair_files(&dir, PKI.ec_leaf.as_bytes(), PKI.ec_leaf_sec1.as_bytes());
-    let renewed = der_of(PKI.ec_leaf.as_bytes());
-    let mut presented = presented_certificate(port).await;
-    for _ in 0..100 {
-        if presented == renewed {
-            break;
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        presented = presented_certificate(port).await;
-    }
-    watcher.abort();
-    assert_eq!(presented, renewed, "the watcher never served the renewal");
+    reloadable.reload().expect("the renewed pair loads");
+    assert!(!std::sync::Arc::ptr_eq(&running, &reloadable.current()));
 }
 
 // ── the client CA reload (#3769) ─────────────────────────────────────────────
@@ -908,74 +876,32 @@ async fn served_with_client_certificate(port: u16) -> bool {
         .is_ok_and(|r| r.status() == reqwest::StatusCode::OK)
 }
 
-/// Serve a minimal router through `config` on an ephemeral port, keeping the
-/// caller's handle on the configuration so it can swap one in.
-async fn serve_config(config: axum_server::tls_rustls::RustlsConfig) -> u16 {
-    let app = axum::Router::new().route("/rest/status", axum::routing::get(|| async { "OK" }));
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
-    let port = listener.local_addr().expect("addr").port();
-    drop(listener);
-    tokio::spawn(async move {
-        let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
-        axum_server::bind_rustls(addr, config)
-            .serve(app.into_make_service())
-            .await
-            .expect("tls server task");
-    });
-    for _ in 0..50 {
-        if tokio::net::TcpStream::connect(("127.0.0.1", port))
-            .await
-            .is_ok()
-        {
-            return port;
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
-    panic!("TLS listener did not come up");
-}
-
-/// A client CA rotated on disk verifies the next handshake once the reloader
-/// has read it and the listener has swapped the configuration in; a broken
-/// replacement is refused and the rotated CA stays in force.
+/// A client CA rotated on disk verifies the handshakes after the reload
+/// interval, with no restart; a broken replacement is refused and the rotated
+/// CA stays in force.
 #[tokio::test]
 async fn a_rotated_client_ca_verifies_without_a_restart() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let tls = tls_files(&dir, ClientAuth::Required);
-    let server_tls = ferroehr_rest::tls::server_tls(&tls).expect("tls config");
-    let listener_config = axum_server::tls_rustls::RustlsConfig::from_config(server_tls.config);
-    let port = serve_config(listener_config.clone()).await;
-    let reloader = server_tls
-        .client_ca
-        .expect("a client CA reloader under client_auth");
+    let tls = TlsSection {
+        reload_interval_s: std::num::NonZeroU64::new(1),
+        ..tls_files(&dir, ClientAuth::Required)
+    };
+    let ca_path = tls.client_ca_file.clone().expect("client_ca_file");
+    let port = serve_tls(tls).await;
 
     assert!(
         !served_with_client_certificate(port).await,
         "a certificate of another CA is refused"
     );
 
-    let ca_path = tls.client_ca_file.clone().expect("client_ca_file");
     std::fs::write(&ca_path, PKI.rotated_ca.as_bytes()).expect("rotate the client CA");
-    let config = reloader
-        .reload()
-        .await
-        .expect("the rotated CA loads")
-        .expect("a changed CA builds a configuration");
-    listener_config.reload_from_config(config);
     assert!(
-        served_with_client_certificate(port).await,
-        "the rotated CA verifies the next handshake"
-    );
-    assert!(
-        reloader.reload().await.expect("unchanged").is_none(),
-        "an unchanged file builds nothing"
+        eventually(|| served_with_client_certificate(port)).await,
+        "the rotated CA verifies a handshake once the files are read again"
     );
 
     std::fs::write(&ca_path, b"not a certificate").expect("break the client CA");
-    reloader.reload().await.expect_err("a broken CA is refused");
-    assert!(
-        reloader.reload().await.expect("reported once").is_none(),
-        "the refused file is not re-reported"
-    );
+    tokio::time::sleep(Duration::from_millis(2_500)).await;
     assert!(
         served_with_client_certificate(port).await,
         "the rotated CA stays in force"

@@ -1,7 +1,7 @@
 # The facts that decide how the chart's own clients reach the CDR listener, one
 # "<fact> <value>" line each, over a rendered manifest slurped into an array.
 # Read by validate.sh `server_tls_gate`, which compares them with what the
-# server's own TLS setting (config.server.tls.enabled) requires. $release is
+# server's own TLS setting (config.server.tls) requires. $release is
 # the CDR's fullname; the viewer and FerroBRIDGE workloads are named after it.
 def deployment($name): .[] | select(.kind == "Deployment" and .metadata.name == $name);
 def container_of($name): deployment($name) | .spec.template.spec.containers[0];

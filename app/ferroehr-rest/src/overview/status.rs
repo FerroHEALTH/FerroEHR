@@ -10,7 +10,8 @@
 //! NOTE: no openEHR spec governs an operational status or health endpoint —
 //! our own operational surface. Health is a separate contract with its own
 //! clients and lives entirely in the process-root family (`/health`,
-//! `/health/liveness`, `/health/readiness` — [`crate::extensions::health`]);
+//! `/health/liveness`, `/health/readiness` — the family stack's
+//! `ferrohealth_server::health` routes);
 //! this module serves only the status document.
 //!
 //! The public form says what a client needs before it holds a credential and

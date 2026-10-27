@@ -25,7 +25,7 @@
 use assert_fs::prelude::{FileWriteStr as _, PathChild as _};
 use clap::Parser as _;
 
-use ferroehr_server::{Cli, run, write_report};
+use ferroehr_server::{Cli, write_report};
 
 /// A `--set key=value` pair parses into the override list.
 #[test]
@@ -47,11 +47,11 @@ fn set_override_is_repeatable_and_ordered() -> Result<(), clap::Error> {
         "--set",
         "db.max_connections=40",
         "--set",
-        "server.bind=0.0.0.0:9000",
+        "server.listen=0.0.0.0:9000",
     ])?;
     let rendered = format!("{cli:?}");
     let first = rendered.find(r#"("db.max_connections", "40")"#);
-    let second = rendered.find(r#"("server.bind", "0.0.0.0:9000")"#);
+    let second = rendered.find(r#"("server.listen", "0.0.0.0:9000")"#);
     assert!(
         matches!((first, second), (Some(a), Some(b)) if a < b),
         "overrides lost or reordered: {rendered}"
@@ -83,13 +83,19 @@ fn set_override_rejects_a_pair_without_an_equals() {
     );
 }
 
-/// `ferroehr` with no subcommand is the serve path (`command: None`).
+/// `ferroehr` with no subcommand is the serve path (`command: None`), and the
+/// family's `serve` names it.
 #[test]
 fn no_subcommand_selects_the_serve_path() -> Result<(), clap::Error> {
     let cli = Cli::try_parse_from(["ferroehr"])?;
     assert!(
         format!("{cli:?}").contains("command: None"),
         "expected no subcommand: {cli:?}"
+    );
+    let serve = Cli::try_parse_from(["ferroehr", "serve"])?;
+    assert!(
+        format!("{serve:?}").contains("Common(Serve)"),
+        "expected the serve subcommand: {serve:?}"
     );
     Ok(())
 }
@@ -111,13 +117,13 @@ fn config_path_is_global() -> Result<(), clap::Error> {
     Ok(())
 }
 
-/// Both `config` utilities parse to their own variant.
+/// `config check` is the one `config` utility; the template it used to print
+/// beside it is the shipped `app/ferroehr/assets/ferroehr.default.toml`.
 #[test]
 fn config_subcommands_parse() -> Result<(), clap::Error> {
-    let default = Cli::try_parse_from(["ferroehr", "config", "default"])?;
     assert!(
-        format!("{default:?}").contains("Default"),
-        "not the Default utility: {default:?}"
+        Cli::try_parse_from(["ferroehr", "config", "default"]).is_err(),
+        "`config default` is not a utility"
     );
     let check = Cli::try_parse_from(["ferroehr", "config", "check"])?;
     assert!(
@@ -136,35 +142,36 @@ fn config_without_a_utility_is_rejected() {
     );
 }
 
-/// `healthcheck` takes an explicit URL and otherwise derives the local status
-/// endpoint from the effective configuration, so the probe follows a
-/// shortened `server.base_path` and a moved `server.bind` port.
-#[test]
-fn healthcheck_url_is_optional_with_a_derived_default() -> Result<(), clap::Error> {
-    let explicit = Cli::try_parse_from(["ferroehr", "healthcheck", "--url", "http://h:8080/x"])?;
+/// `healthcheck` takes no URL: it asks the readiness route of the listener
+/// `[server]` configures, on the loopback when the listener binds every
+/// interface, so a moved `server.listen` moves the probe with it.
+#[tokio::test]
+async fn healthcheck_follows_the_listen_address() -> Result<(), clap::Error> {
+    let probe = Cli::try_parse_from(["ferroehr", "healthcheck"])?;
     assert!(
-        format!("{explicit:?}").contains("http://h:8080/x"),
-        "explicit URL lost: {explicit:?}"
+        format!("{probe:?}").contains("Common(Healthcheck)"),
+        "{probe:?}"
     );
-    let defaulted = Cli::try_parse_from(["ferroehr", "healthcheck"])?;
     assert!(
-        format!("{defaulted:?}").contains("url: None"),
-        "an absent URL must stay absent at parse time: {defaulted:?}"
+        Cli::try_parse_from(["ferroehr", "healthcheck", "--url", "http://h:8080/x"]).is_err(),
+        "the probe takes no URL"
     );
-    // Built directly rather than loaded: the loader snapshots the process
-    // environment, and a test runner's own `FERROEHR_*` variables are not
-    // this test's subject.
-    let mut config = ferroehr::config::FerroEhrConfig::default();
-    let default_url = ferroehr_server::healthcheck_url(&config).expect("a port is configured");
-    assert_eq!(default_url, "http://127.0.0.1:8080/ferroehr/rest/status");
-    config.server.base_path = "/ferroehr/v1".to_owned();
-    config.server.bind = "0.0.0.0:9090".to_owned();
-    let shortened = ferroehr_server::healthcheck_url(&config).expect("a port is configured");
-    assert_eq!(shortened, "http://127.0.0.1:9090/ferroehr/status");
-    config.server.bind = "no-port".to_owned();
+    // A port nothing listens on: bound and released, so the refusal is the
+    // connection's, named at the loopback address the unspecified one maps to.
+    let closed = std::net::TcpListener::bind("127.0.0.1:0")
+        .and_then(|listener| listener.local_addr())
+        .expect("a free port");
+    let section = ferrohealth_server::section::ServerSection {
+        listen: std::net::SocketAddr::from(([0, 0, 0, 0], closed.port())),
+        ..ferrohealth_server::section::ServerSection::default()
+    };
+    let outcome = ferroehr_server::healthcheck(&section).await;
+    assert_eq!(outcome.exit_code(), 1, "{outcome}");
     assert!(
-        ferroehr_server::healthcheck_url(&config).is_err(),
-        "a bind address without a port must be refused, not probed"
+        outcome
+            .to_string()
+            .contains(&format!("127.0.0.1:{}", closed.port())),
+        "{outcome}"
     );
     Ok(())
 }
@@ -312,15 +319,6 @@ async fn run_report_writes_a_redacted_file_naming_an_unreachable_database() -> a
     );
     assert!(written.contains("\"name\": \"Cadasto B.V.\""), "{written}");
     Ok(())
-}
-
-/// `ferroehr config default` runs end to end through the real dispatch: it only
-/// writes the annotated template to stdout, so it needs no database, listener,
-/// or network.
-#[tokio::test]
-async fn run_config_default_is_a_pure_stdout_path() -> anyhow::Result<()> {
-    let cli = Cli::try_parse_from(["ferroehr", "config", "default"])?;
-    run(cli).await
 }
 
 /// Runs the built `ferroehr config check` against `toml` with an empty

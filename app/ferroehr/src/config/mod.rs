@@ -32,7 +32,7 @@ pub mod authz;
 pub mod deployment;
 pub mod management;
 pub mod profile;
-pub mod server;
+pub mod rest;
 pub mod smart;
 
 use std::collections::HashMap;
@@ -62,8 +62,14 @@ pub struct FerroEhrConfig {
     /// deployment runs without, each stated on every boot and on
     /// `/management/status`. Ignored under `sandbox`, which accepts everything.
     pub deployment_accepts: Vec<deployment::DeploymentGap>,
-    /// `[server]` — HTTP listener + REST surface + System-Options identity.
-    pub server: server::ServerConfig,
+    /// `[server]` — the HTTP listener: the family's section (the listen
+    /// address, the timeouts, the body limit, the overload bound, the drain,
+    /// TLS, the trusted proxies, the caller rate and compression).
+    pub server: ferrohealth_server::section::ServerSection,
+    /// `[rest]` — the openEHR REST surface: the API base path, the system
+    /// identifier, the System-Options identity, the Swagger UI, CORS and the
+    /// clinical body tier.
+    pub rest: rest::RestConfig,
     /// `[db]` — the shared `PostgreSQL` DSN, pool tuning and migration mode.
     pub db: crate::db::DbConfig,
     /// `[storage]` — one DSN per storage domain (`clinical`, `party`,
@@ -78,7 +84,7 @@ pub struct FerroEhrConfig {
     /// `[authz]` — RBAC + ABAC.
     pub authz: authz::AuthzConfig,
     /// `[admin]` — the ADMIN API group.
-    pub admin: server::AdminConfig,
+    pub admin: rest::AdminConfig,
     /// `[smart]` — SMART App Launch.
     pub smart: smart::SmartConfig,
     /// `[management]` — the management/observability surface.
@@ -113,8 +119,9 @@ pub struct FerroEhrConfig {
     pub usage_report: ferrohealth_usage_report::section::UsageReportSection,
 }
 
-/// The annotated default template `ferroehr config default` prints — a
-/// hand-maintained asset kept in sync with the schema by the template tests.
+/// The annotated default template, shipped as
+/// `app/ferroehr/assets/ferroehr.default.toml` — a hand-maintained asset kept in
+/// sync with the schema by the template tests.
 pub const DEFAULT_TEMPLATE: &str = include_str!("../../assets/ferroehr.default.toml");
 
 impl FerroEhrConfig {
@@ -154,14 +161,15 @@ impl FerroEhrConfig {
             ));
         }
         errors.extend(multimedia_endpoint_errors(&self.multimedia));
-        // management.port must differ from the server.bind port.
+        // management.port must differ from the server.listen port.
         if let Some(port) = self.management.port
-            && server_bind_port(&self.server.bind) == Some(port)
+            && self.server.listen.port() == port
         {
             errors.push(ConfigError::semantic(format!(
-                "management.port ({port}) must differ from the server.bind port"
+                "management.port ({port}) must differ from the server.listen port"
             )));
         }
+        self.validate_body_tier(&mut errors);
         validate_terminology(&self.terminology.server, &mut errors);
 
         if errors.is_empty() {
@@ -478,7 +486,25 @@ impl FerroEhrConfig {
         }
     }
 
-    /// `server.system_id` is judged by the SAME validating `UID` constructor
+    /// The clinical body tier sits inside the listener's limit.
+    ///
+    /// The listener refuses every body above `server.body_limit_bytes` before
+    /// a route is matched, so a clinical tier at or above it would never be
+    /// the limit that applies. No openEHR spec bounds a request body — our own
+    /// design.
+    fn validate_body_tier(&self, errors: &mut Vec<ConfigError>) {
+        if let Some(tier) = self.rest.body_limit_bytes
+            && tier >= self.server.body_limit_bytes
+        {
+            errors.push(ConfigError::semantic(format!(
+                "rest.body_limit_bytes ({tier}) must be below server.body_limit_bytes ({}), \
+                 the limit of the bulk routes and the ceiling of every route",
+                self.server.body_limit_bytes
+            )));
+        }
+    }
+
+    /// `rest.system_id` is judged by the SAME validating `UID` constructor
     /// the reader uses.
     ///
     /// It is stamped into every `AUDIT_DETAILS` (`System_id_valid`: "not
@@ -489,20 +515,20 @@ impl FerroEhrConfig {
     /// `base_types/master05-identification_package.adoc` §Syntaxes).
     fn validate_system_id(&self, errors: &mut Vec<ConfigError>) {
         if let Err(source) =
-            openehr_base::v1_3::base_types::identification::uid::Uid::new(&self.server.system_id)
+            openehr_base::v1_3::base_types::identification::uid::Uid::new(&self.rest.system_id)
         {
             errors.push(ConfigError::semantic(format!(
-                "server.system_id {:?} is not a legal openEHR `uid` \
+                "rest.system_id {:?} is not a legal openEHR `uid` \
                  (iso_oid | uuid | internet_id — BASE master05 §Syntaxes): \
                  {source}. It is stamped into EHR.system_id, \
                  AUDIT_DETAILS.system_id, and the creating_system_id of every \
                  OBJECT_VERSION_ID",
-                self.server.system_id
+                self.rest.system_id
             )));
         }
     }
 
-    /// `server.base_path` names this deployment's API root, and every rule it
+    /// `rest.base_path` names this deployment's API root, and every rule it
     /// breaks is reported at once.
     ///
     /// The last segment is the ITS-REST API version `v1`: the overview locates
@@ -515,10 +541,10 @@ impl FerroEhrConfig {
     /// unreserved characters is free, with no trailing slash and no empty
     /// segment.
     fn validate_base_path(&self, errors: &mut Vec<ConfigError>) {
-        let path = self.server.base_path.as_str();
+        let path = self.rest.base_path.as_str();
         let mut refuse = |rule: &str| {
             errors.push(ConfigError::semantic(format!(
-                "server.base_path {path:?} {rule}"
+                "rest.base_path {path:?} {rule}"
             )));
         };
 
@@ -730,11 +756,6 @@ fn without_nulls(tree: serde_json::Value) -> serde_json::Value {
 /// segment may carry without percent-encoding.
 const fn is_unreserved(c: char) -> bool {
     c.is_ascii_alphanumeric() || matches!(c, '-' | '.' | '_' | '~')
-}
-
-/// The port component of a `host:port` bind string, if parseable.
-fn server_bind_port(bind: &str) -> Option<u16> {
-    bind.rsplit_once(':').and_then(|(_, p)| p.parse().ok())
 }
 
 /// Semantic check on `[terminology.server]`: enabling it needs the server's
@@ -1238,20 +1259,20 @@ mod tests {
     }
 
     #[test]
-    fn port_convention_expands_to_an_all_interfaces_bind() {
-        // PORT alone binds server.bind on all interfaces (the container-
+    fn port_convention_expands_to_an_all_interfaces_listen_address() {
+        // PORT alone sets server.listen on all interfaces (the container-
         // platform convention: Vercel/Cloud Run/Heroku inject only the port).
         let c = assemble_ok(None, &env(&[("PORT", "3123")]), &[]);
-        assert_eq!(c.server.bind, "0.0.0.0:3123");
+        assert_eq!(c.server.listen.to_string(), "0.0.0.0:3123");
         let c = assemble_ok(
             None,
             &env(&[
                 ("PORT", "3123"),
-                ("FERROEHR__SERVER__BIND", "127.0.0.1:9000"),
+                ("FERROEHR__SERVER__LISTEN", "127.0.0.1:9000"),
             ]),
             &[],
         );
-        assert_eq!(c.server.bind, "127.0.0.1:9000");
+        assert_eq!(c.server.listen.to_string(), "127.0.0.1:9000");
     }
 
     // ── 2. Mapping ────────────────────────────────────────────────────────────
@@ -1293,7 +1314,7 @@ mod tests {
         let c = assemble_ok(
             None,
             &env(&[
-                ("FERROEHR__SERVER__MAX_IN_FLIGHT", "64"),
+                ("FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS", "64"),
                 ("FERROEHR__AUTH__ISSUER", "https://idp"),
                 ("FERROEHR__AUTH__AUDIENCE", "ferroehr,other"),
                 ("FERROEHR__AUTH__TIMEOUT_MS", "1500"),
@@ -1301,7 +1322,10 @@ mod tests {
             ]),
             &[],
         );
-        assert_eq!(c.server.max_in_flight, 64);
+        assert_eq!(
+            c.server.max_concurrent_requests,
+            std::num::NonZeroUsize::new(64)
+        );
         assert!(
             matches!(&c.auth.issuer, ferrohealth_smart::config::IssuerKey::Flat(issuer) if issuer == "https://idp")
         );
@@ -1476,30 +1500,30 @@ mod tests {
         );
     }
 
-    /// `[server] system_id` — the CDR's own openEHR system identifier (stamped
+    /// `[rest] system_id` — the CDR's own openEHR system identifier (stamped
     /// into `EHR.system_id`, the `AUDIT_DETAILS.system_id` server default, and
     /// every `OBJECT_VERSION_ID.creating_system_id`). Pins all three layers:
     /// the compatibility default, the file value, and the `FERROEHR__` env form.
     #[test]
-    fn server_system_id_default_file_and_env() {
+    fn rest_system_id_default_file_and_env() {
         // Unset, the default is the service-layer constant.
         let c = assemble_ok(None, &env(&[]), &[]);
-        assert_eq!(c.server.system_id, crate::service::DEFAULT_SYSTEM_ID);
+        assert_eq!(c.rest.system_id, crate::service::DEFAULT_SYSTEM_ID);
 
-        let file = toml_file("[server]\nsystem_id = \"cdr.hospital.example\"\n");
+        let file = toml_file("[rest]\nsystem_id = \"cdr.hospital.example\"\n");
         let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        assert_eq!(c.server.system_id, "cdr.hospital.example");
+        assert_eq!(c.rest.system_id, "cdr.hospital.example");
 
         let c = assemble_ok(
             Some(file.path()),
-            &env(&[("FERROEHR__SERVER__SYSTEM_ID", "cdr.env.example")]),
+            &env(&[("FERROEHR__REST__SYSTEM_ID", "cdr.env.example")]),
             &[],
         );
-        assert_eq!(c.server.system_id, "cdr.env.example");
+        assert_eq!(c.rest.system_id, "cdr.env.example");
 
-        // `system_id` and the `[server.identity]` display identity are
+        // `system_id` and the `[rest.identity]` display identity are
         // independent knobs — setting one must not disturb the other.
-        assert_eq!(c.server.identity.solution, "FerroEHR");
+        assert_eq!(c.rest.identity.solution, "FerroEHR");
     }
 
     // ── 3. Strictness ─────────────────────────────────────────────────────────
@@ -1547,6 +1571,46 @@ mod tests {
         let file = toml_file("[db]\nmax_conections = 5\n");
         let err = assemble(Some(file.path()), &env(&[]), &[]).expect_err("unknown key");
         assert!(err.to_string().contains("max_conections"), "{err}");
+    }
+
+    /// The `[server]` keys FerroEHR read before the family section took the
+    /// table are refused by name, so a configuration written for them fails
+    /// to boot instead of running on defaults.
+    #[test]
+    fn the_retired_server_keys_are_refused() {
+        for (text, key) in [
+            ("[server]\nbind = \"0.0.0.0:8080\"\n", "bind"),
+            ("[server]\nmax_in_flight = 64\n", "max_in_flight"),
+            ("[server]\nsystem_id = \"cdr.example\"\n", "system_id"),
+            ("[server.limits]\nbody_bytes = 1\n", "limits"),
+            ("[server.rate_limit]\nenabled = false\n", "rate_limit"),
+            (
+                "[server.connection]\nmax_concurrent_streams = 1\n",
+                "connection",
+            ),
+            (
+                "[server.tls]\nenabled = true\ncertificate_file = \"a\"\nkey_file = \"b\"\n",
+                "enabled",
+            ),
+        ] {
+            let file = toml_file(text);
+            let err = assemble(Some(file.path()), &env(&[]), &[]).expect_err(text);
+            assert!(err.to_string().contains(key), "{text}: {err}");
+        }
+    }
+
+    /// The listener's bounds refuse what cannot be served: a zero header-read
+    /// bound (it would disconnect every client) and a TLS minimum below 1.2
+    /// (RFC 8996).
+    #[test]
+    fn the_listener_refuses_a_zero_head_bound_and_a_deprecated_tls_minimum() {
+        let zero = toml_file("[server]\nheader_read_timeout_ms = 0\n");
+        assert!(assemble(Some(zero.path()), &env(&[]), &[]).is_err());
+        let old_tls = toml_file(
+            "[server.tls]\ncertificate_file = \"a\"\nkey_file = \"b\"\nmin_version = \"1.1\"\n",
+        );
+        let err = assemble(Some(old_tls.path()), &env(&[]), &[]).expect_err("TLS 1.1");
+        assert!(err.to_string().contains("RFC 8996"), "{err}");
     }
 
     /// A URL loses its userinfo and query; text without `://` keeps its text.
@@ -2358,7 +2422,7 @@ mod tests {
     /// Whether the template declares `key` as a key line — live (`key = …`) or
     /// as a `#?` reference line for an optional/secret/derived one. A mention
     /// inside another key's trailing comment does not count: a key mentioned
-    /// only that way stays invisible to `ferroehr config default`.
+    /// only that way stays invisible to an operator reading the template.
     fn template_declares(key: &str) -> bool {
         DEFAULT_TEMPLATE.lines().any(|line| {
             let line = line.trim_start();
@@ -2400,7 +2464,7 @@ mod tests {
             missing.is_empty(),
             "the shipped ferroehr.toml template declares no key line for: {}. \
              Every field belongs in it — the file's own header calls itself the \
-             complete configuration, and `ferroehr config default` is how an \
+             complete configuration, and the shipped template is how an \
              operator discovers a key.",
             missing.join(", ")
         );
@@ -2613,12 +2677,25 @@ mod tests {
     }
 
     #[test]
-    fn validate_management_port_must_differ_from_bind() {
+    fn validate_management_port_must_differ_from_the_listen_port() {
         let mut c = standalone();
-        c.server.bind = "0.0.0.0:8080".to_owned();
+        c.server.listen = "0.0.0.0:8080".parse().expect("an address");
         c.management.port = Some(8080);
         assert!(c.validate().is_err());
         c.management.port = Some(9100);
+        assert!(c.validate().is_ok());
+    }
+
+    /// The clinical body tier is refused at or above the listener's limit, the
+    /// ceiling the bulk routes take, and accepted below it.
+    #[test]
+    fn validate_keeps_the_clinical_body_tier_below_the_listener_limit() {
+        let mut c = standalone();
+        c.server.body_limit_bytes = 64;
+        c.rest.body_limit_bytes = Some(64);
+        let err = c.validate().expect_err("a tier at the ceiling").to_string();
+        assert!(err.contains("rest.body_limit_bytes"), "{err}");
+        c.rest.body_limit_bytes = Some(16);
         assert!(c.validate().is_ok());
     }
 
@@ -2634,7 +2711,7 @@ mod tests {
             "/ferroehr/rest-api/openehr-1.2.0/v1",
         ] {
             let mut c = standalone();
-            c.server.base_path = base_path.to_owned();
+            c.rest.base_path = base_path.to_owned();
             assert!(c.validate().is_ok(), "{base_path} must be accepted");
         }
     }
@@ -2659,12 +2736,12 @@ mod tests {
             ("/ferroehr/re st/v1", "RFC 3986 unreserved characters"),
         ] {
             let mut c = standalone();
-            c.server.base_path = base_path.to_owned();
+            c.rest.base_path = base_path.to_owned();
             let err = c
                 .validate()
                 .expect_err("a malformed base path must be refused")
                 .to_string();
-            assert!(err.contains("server.base_path"), "{base_path}: {err}");
+            assert!(err.contains("rest.base_path"), "{base_path}: {err}");
             assert!(err.contains(expected), "{base_path}: {err}");
         }
     }
@@ -2674,7 +2751,7 @@ mod tests {
     #[test]
     fn validate_reports_every_broken_base_path_rule_at_once() {
         let mut c = standalone();
-        c.server.base_path = "cdr//api/".to_owned();
+        c.rest.base_path = "cdr//api/".to_owned();
         let err = c
             .validate()
             .expect_err("a multiply-malformed base path must be refused")
@@ -2690,7 +2767,7 @@ mod tests {
         }
     }
 
-    /// `server.system_id` is judged by the openEHR `uid` grammar itself.
+    /// `rest.system_id` is judged by the openEHR `uid` grammar itself.
     ///
     /// It occupies the `creating_system_id` position of every
     /// `OBJECT_VERSION_ID` this CDR mints — "`creating_system_id` = `uid`" with
@@ -2715,7 +2792,7 @@ mod tests {
             "trailing-hyphen-", // and ends with a letter or digit
             "1.2.840.",         // an iso_oid group may not be empty
         ] {
-            c.server.system_id = refused.to_owned();
+            c.rest.system_id = refused.to_owned();
             assert!(
                 c.validate().is_err(),
                 "system_id {refused:?} is not a legal openEHR uid and must be refused at boot"
@@ -2728,7 +2805,7 @@ mod tests {
             "1.2.840.113554",                       // iso_oid
             "8849182c-82ad-4088-a07f-48ead4180515", // uuid
         ] {
-            c.server.system_id = accepted.to_owned();
+            c.rest.system_id = accepted.to_owned();
             assert!(
                 c.validate().is_ok(),
                 "system_id {accepted:?} is a legal openEHR uid and must boot"

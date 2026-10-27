@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 18.0.0 -n ferroehr \
+  --version 19.0.0 -n ferroehr \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.4.2 \
   --set ferropix.enabled=false --set config.ehr_index.provider=local
@@ -63,7 +63,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.0.0
 ```
 
 ### Pin two versions, not one
@@ -76,7 +76,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 18.0.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 19.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.4.2` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -176,7 +176,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -205,7 +205,7 @@ caller: a Basic user's `scopes`, a token's `scope` claim.
 The chart carries the server's whole configuration under one key, **`config`**,
 rendered into a `ferroehr.toml` ConfigMap mounted at
 `/etc/ferroehr/ferroehr.toml`. Its keys are therefore exactly the TOML keys of
-the [configuration reference](configuration.md) (`config.server.bind`,
+the [configuration reference](configuration.md) (`config.server.listen`,
 `config.authz.rbac.enabled`, `config.spec_profile`, and so on) so anything
 that reference documents can be set without waiting for a bespoke chart key.
 
@@ -324,7 +324,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -620,9 +620,9 @@ config:
   deployment_accepts: []          # nothing left to accept for the listener
   server:
     tls:
-      enabled: true
-      cert_file: /etc/ferroehr-tls/tls.crt
+      certificate_file: /etc/ferroehr-tls/tls.crt
       key_file: /etc/ferroehr-tls/tls.key
+      reload_interval_s: 60
 extraVolumes:
   - name: server-tls
     secret:
@@ -643,8 +643,8 @@ ingress:
 
 When cert-manager renews the certificate, the kubelet updates the mounted
 files and the server serves the new pair within
-`config.server.tls.reload_interval_secs` (60 seconds by default), with no
-restart; a renewed pair that fails to load is logged and the old one stays in
+`config.server.tls.reload_interval_s` (60 seconds above; unset, only `SIGHUP`
+reads the files again), with no restart; a renewed pair that fails to load is logged and the old one stays in
 service. A rotated client CA (`client_ca_file`, for `client_auth`) is picked up
 on the same interval, and the connections already open keep the trust anchor
 they were verified against.
@@ -658,7 +658,7 @@ under `SSL_CERT_DIR`. The ServiceMonitor reads the Secret from its own namespace
 the `prometheus.io/scheme: https` pod annotation follows the listener when
 `metrics.enabled` is set. With `config.server.tls.client_auth: required` the
 kubelet probes cannot present a client certificate, so the chart refuses to
-render it; keep it at `off` or `optional`.
+render it; keep it at `none` or `optional`.
 `config.management.port` stays plain HTTP on its own listener.
 
 ## Health probes
@@ -679,11 +679,11 @@ loop).
 
 > [!NOTE]
 > There is no `exec` probe option. One existed and was removed: it ran the
-> binary's `healthcheck` subcommand, which defaults to the openEHR status
+> binary's `healthcheck` subcommand, which then asked the openEHR status
 > document rather than a health route, so **readiness never touched the
 > database** and a pod with a dead database reported Ready and took clinical
-> traffic. `ferroehr healthcheck --url …` is still useful by hand; it is not what
-> a readiness probe should run.
+> traffic. The subcommand now asks `/health/readiness`, and the `httpGet`
+> probes above remain what the chart runs.
 
 > [!WARNING]
 > **Migrations run only at boot, so a replaced or wiped database leaves the pods
@@ -795,7 +795,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 18.0.0 -n ferroehr --reuse-values \
+  --version 19.0.0 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -949,7 +949,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 18.0.0 -n ferroehr --reuse-values \
+  --version 19.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1080,7 +1080,7 @@ holding its configuration file, and a NetworkPolicy.
 The chart writes three sections of that file for you:
 
 - **`[cdr]`:** `base_url` is this release's CDR Service with its REST base path
-  (`http://<release>:<service.port><config.server.base_path>`), and
+  (`http://<release>:<service.port><config.rest.base_path>`), and
   `[cdr.credentials]` names a file mounted from your Secret.
 - **`[terminology]`:** with `terminology.enabled` on, `base_url` is the chart's
   FerroTERM Service at `/r4` and `wire_version` is `r4`. With it off the
@@ -1277,7 +1277,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 18.0.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 19.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

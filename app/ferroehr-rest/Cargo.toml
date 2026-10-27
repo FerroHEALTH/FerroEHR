@@ -16,6 +16,9 @@ publish = false
 ferrohealth-secret = { workspace = true }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferrohealth-telemetry.workspace = true
+# The family's HTTP stack, listener, drain and caller rate limit, around the
+# routes this crate builds.
+ferrohealth-server.workspace = true
 urlencoding.workspace = true
 # openEHR generated foundation: the domain model + the ITS-REST contract.
 openehr-base = { path = "../../crates/openehr-base" }
@@ -29,20 +32,8 @@ ferroehr = { path = "../ferroehr", default-features = false }
 
 # Web framework & HTTP core.
 axum = { workspace = true }
-axum-server = { workspace = true }
-rustls = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true }
-# Per-caller request-rate limiting (GCRA via `governor`) — the OWASP REST
-# Security control; never hand-rolled.
-tower_governor = { workspace = true }
-# hyper's connection builder, reached through `axum_server::http_builder()` to
-# set the HTTP/1 and HTTP/2 connection-level bounds.
-hyper-util = { workspace = true }
-# `tower_governor` does not re-export the `governor` middleware marker its own
-# builder returns (`StateInformationMiddleware`, the `x-ratelimit-*` variant), so
-# the underlying crate is named directly to spell the layer type.
-governor = { workspace = true }
 http = { workspace = true }
 bytes = { workspace = true }
 async-trait = { workspace = true }
@@ -89,7 +80,6 @@ ferrohealth-authz = { workspace = true, features = ["cedar", "remote"] }
 # The remote decision point takes its server as a parsed URL.
 url = { workspace = true }
 reqwest = { workspace = true }
-arc-swap = { workspace = true }
 
 # OpenAPI / Swagger UI. This server serves ONLY the document it generates from
 # its own handlers; the vendored ITS-REST OAS is `emit-rest` codegen input and
@@ -129,6 +119,7 @@ argon2 = { workspace = true }
 secrecy = { workspace = true }
 assert_fs = { workspace = true }
 rcgen = { workspace = true }       # the server TLS tests mint their certificates (#3963)
+rustls = { workspace = true }      # the server TLS tests build their own clients
 pem = { workspace = true }
 yasna = { workspace = true }
 reqwest = { workspace = true }

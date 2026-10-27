@@ -28,8 +28,9 @@ use http_body_util::BodyExt;
 use serde_json::json;
 use tower::ServiceExt;
 
-use ferroehr::config::server::{AdminConfig, BodyLimits, RateLimitConfig, ServerConfig};
+use ferroehr::config::rest::{AdminConfig, RestConfig};
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_server::section::CallerRate;
 
 use crate::common;
 
@@ -47,10 +48,9 @@ const EHR: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
 fn config(enabled: bool) -> AppConfig {
     let mut config = AppConfig {
-        server: ServerConfig {
-            bind: "127.0.0.1:0".to_owned(),
+        server: common::server(),
+        rest: RestConfig {
             base_path: BASE.to_owned(),
-            max_in_flight: 1024,
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             cors_permissive: false,
             ..Default::default()
@@ -202,14 +202,15 @@ async fn health_endpoint_is_public() {
     let (_pg, app) = app(true).await;
     let (status, _h, body) = send(app, get("/health")).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body, "OK");
+    assert_eq!(body, r#"{"state":"up"}"#);
 }
 
 /// The whole health family is mounted unconditionally and ungated: these apps
 /// run with authentication ENABLED and the management surface at its default
 /// (disabled), and all three probes still answer without credentials.
-/// `/health/liveness` is a byte-identical alias of `/health`; `/health/readiness`
-/// renders the family readiness document (empty registry in a test build → `up`).
+/// `/health` and `/health/liveness` answer the family summary `{"state":"up"}`;
+/// `/health/readiness` renders the family readiness document (empty registry in
+/// a test build → `up`).
 /// This family is also the ONLY health surface — the retired REST-root
 /// `/ferroehr/rest/status/health` name answers `404`.
 #[tokio::test]
@@ -218,7 +219,7 @@ async fn health_family_is_public_without_the_management_surface() {
     for path in ["/health", "/health/liveness"] {
         let (status, _h, body) = send(app.clone(), get(path)).await;
         assert_eq!(status, StatusCode::OK, "{path}");
-        assert_eq!(body, "OK", "{path}");
+        assert_eq!(body, r#"{"state":"up"}"#, "{path}");
     }
 
     let (status, headers, body) = send(app.clone(), get("/health/readiness")).await;
@@ -903,7 +904,7 @@ async fn every_response_carries_the_security_headers() {
 async fn app_with_swagger() -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.swagger_ui = ferroehr::config::management::AccessLevel::Public;
+    cfg.rest.swagger_ui = ferroehr::config::management::AccessLevel::Public;
     (pg, common::router_with(cfg, service).await)
 }
 
@@ -1061,10 +1062,7 @@ async fn hsts_is_deliberately_absent() {
 async fn an_over_limit_chunked_body_is_413_not_400() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.limits = BodyLimits {
-        body_bytes: 1024,
-        bulk_body_bytes: 1024,
-    };
+    cfg.server.body_limit_bytes = 1024;
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1091,6 +1089,35 @@ async fn an_over_limit_chunked_body_is_413_not_400() {
     );
 }
 
+/// A declared body over the listener's `server.body_limit_bytes` is refused
+/// `413` by the family stack before any route reads it, in the openEHR
+/// `{ error, message }` body every other refusal carries.
+#[tokio::test]
+async fn a_declared_body_over_the_ceiling_is_413_in_the_openehr_body() {
+    let (pg, service) = common::test_service().await;
+    let mut cfg = config(false);
+    cfg.server.body_limit_bytes = 1024;
+    let app = common::router_with(cfg, service).await;
+    let _keep = pg;
+
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr/{EHR}/composition"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::CONTENT_LENGTH, "4096")
+        .body(Body::from(vec![b'x'; 4096]))
+        .unwrap();
+    let (status, headers, body) = send(app, req).await;
+    assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE, "{body}");
+    assert_eq!(
+        headers.get(header::CONTENT_TYPE).unwrap(),
+        "application/json"
+    );
+    let v: serde_json::Value = serde_json::from_str(&body).expect("openEHR error body");
+    assert_eq!(v["error"], "Payload Too Large");
+    assert!(v["message"].as_str().is_some(), "{body}");
+}
+
 /// The bulk tier really is more permissive than the clinical tier: the same
 /// payload that a clinical route refuses is accepted for reading on a bulk
 /// route (it then fails on its own merits, not on size).
@@ -1098,10 +1125,8 @@ async fn an_over_limit_chunked_body_is_413_not_400() {
 async fn the_bulk_tier_accepts_what_the_clinical_tier_refuses() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.limits = BodyLimits {
-        body_bytes: 512,
-        bulk_body_bytes: 65536,
-    };
+    cfg.server.body_limit_bytes = 65536;
+    cfg.rest.body_limit_bytes = Some(512);
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1132,19 +1157,16 @@ async fn the_bulk_tier_accepts_what_the_clinical_tier_refuses() {
 // ── Rate limiting (issue #2020) ─────────────────────────────────────────────
 
 /// Past its rate, a caller is refused `429` with `Retry-After` and the openEHR
-/// error body. Driven with a rate of one per second and a burst of one, so the
-/// second request is already over.
+/// error body by the family stack's `[server.caller_rate]`. Driven with a rate
+/// of one per second and a burst of one, so the second request is already over.
 #[tokio::test]
 async fn past_the_rate_a_caller_is_429_with_retry_after() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.rate_limit = RateLimitConfig {
-        enabled: true,
-        principal_per_second: 1,
-        principal_burst: 1,
-        address_per_second: 1,
-        address_burst: 1,
-    };
+    cfg.server.caller_rate = Some(CallerRate {
+        requests_per_second: std::num::NonZeroU32::MIN,
+        burst: std::num::NonZeroU32::MIN,
+    });
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1168,10 +1190,8 @@ async fn past_the_rate_a_caller_is_429_with_retry_after() {
     let v: serde_json::Value = serde_json::from_str(&body).expect("openEHR error body");
     assert_eq!(v["error"], "Too Many Requests");
     assert!(
-        v["message"]
-            .as_str()
-            .is_some_and(|m| m.contains("retry in")),
-        "the message states the delay: {body}"
+        v["message"].as_str().is_some_and(|m| m.contains("retry")),
+        "the message says the caller may retry: {body}"
     );
 }
 
@@ -1181,13 +1201,7 @@ async fn past_the_rate_a_caller_is_429_with_retry_after() {
 async fn a_disabled_limiter_leaves_no_trace_on_the_wire() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.rate_limit = RateLimitConfig {
-        enabled: false,
-        principal_per_second: 1,
-        principal_burst: 1,
-        address_per_second: 1,
-        address_burst: 1,
-    };
+    cfg.server.caller_rate = None;
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1242,7 +1256,7 @@ async fn subject_lookup_by_query_parameter_still_answers() {
 async fn the_served_document_omits_paths_whose_features_are_off() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.swagger_ui = ferroehr::config::management::AccessLevel::Off;
+    cfg.rest.swagger_ui = ferroehr::config::management::AccessLevel::Off;
     cfg.smart.enabled = false;
     let app = common::router_with(cfg, service).await;
     let _keep = pg;

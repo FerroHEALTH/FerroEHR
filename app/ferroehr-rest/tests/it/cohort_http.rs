@@ -291,16 +291,10 @@ async fn a_cohort_names_its_subjects_by_identifier() {
             }),
     );
     for name in ["wire-a", "wire-b"] {
-        let ehr = service.create_ehr(None).await.expect("create_ehr");
-        service
-            .add_ehr_subject(
-                ehr.to_string(),
-                SubjectRef::person(name, DOMAIN),
-                None,
-                None,
-            )
+        let ehr = service
+            .create_ehr_for_subject(SubjectRef::person(name, DOMAIN), None)
             .await
-            .expect("add_ehr_subject");
+            .expect("create_ehr_for_subject");
         service
             .create_composition(ehr, uv(&composition(name)))
             .await
