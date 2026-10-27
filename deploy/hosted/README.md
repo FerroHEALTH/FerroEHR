@@ -49,8 +49,13 @@ The connection strings (`DATABASE_URL` for the CDR, `FERROPIX_DATABASE_URL`
 for FerroPIX) and FerroPIX's sealing key (`FERROPIX_DATA_KEY`) live in the
 app box's `.env` and nowhere else; CI never holds them. The release deploy
 lane touches the APP box only — the
-database box has no deploy lane, and its image moves by hand
-(`docker compose pull && docker compose up -d` in `/opt/ferroehr-postgres`).
+database box has no deploy lane, and its image moves by hand. It runs
+`ghcr.io/ferrohealth/ferroehr-postgres:5.4.2@sha256:e0dbac9d2d825ad02b45899560d913e0a74673d835b82711031459cb5d68aff9`,
+the release tag and index digest `cloud-init-postgres.yaml` pins as the
+`FERROEHR_POSTGRES_IMAGE` default (`scripts/checks/compose-image-tags.sh`
+holds the two to the same reference). The pin moves after a release
+publishes, since the digest exists only then, and step 6 of the rollout
+script below moves the box onto it.
 
 Two operational lessons, learned live at the cutover and load-bearing:
 
@@ -282,8 +287,8 @@ from a checkout on your own machine; it reaches the boxes over SSH as
 `deploy` (`APP_HOST`, default `167.233.172.220`; `DB_HOST`, default
 `postgres.ferroehr.eu`; `SSH_USER`). Every step prints `==> step N:` and then
 `OK:`, `SKIP:` or `FAIL:` with its evidence, a re-run is safe, and `--check`
-verifies without changing anything. No secret is printed: the log shows a
-12-digit SHA-256 fingerprint.
+verifies without changing anything; with no `--step` it runs steps 1 to 6.
+No secret is printed: the log shows a 12-digit SHA-256 fingerprint.
 
 1. **Preflight.** Both boxes answer over SSH, and the log lists what runs on
    each (image, version, health).
@@ -316,9 +321,24 @@ verifies without changing anything. No secret is printed: the log shows a
    resolves through FerroPIX to the EHRs carrying FerroPIX's pseudonyms,
    FerroTERM answers through the CDR's `/terminology` route, and the public
    URL serves the CDR and the viewer.
+6. **The database box onto the pinned image** (#4252). Reads the running
+   image, `server_version` and the data volume, and stops when the box
+   already runs the pin. Otherwise it pulls the pin and refuses when its
+   `PG_MAJOR` differs from the running major (a major upgrade needs
+   `pg_upgrade`, which this step never runs). It then sets
+   `FERROEHR_POSTGRES_IMAGE` in `/opt/ferroehr-postgres/.env` and points the
+   compose image line at it, keeping `.env.prev` and
+   `docker-compose.yml.prev`, and recreates PostgreSQL with
+   `docker compose pull` and `docker compose up -d`, never `restart`. The
+   sandbox is unavailable for about a minute. It waits for PostgreSQL to
+   report healthy, checks that the container kept its data volume and its
+   major, that the CDR answers `/health/readiness`, and that `ferropix` logs
+   in from the app box over the private network.
 
 Run steps 1 to 4 when this change merges, before the v5.5.0 release, and the
 whole script again after the release's `sandbox` job.
+Step 6 runs whenever the pin moves, and it is the one step that interrupts
+the sandbox.
 
 ## How it is watched
 

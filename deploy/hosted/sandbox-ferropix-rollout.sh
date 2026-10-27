@@ -9,13 +9,14 @@
 # shows where a run stopped. Every step checks before it changes anything, so a
 # re-run is safe, and `--check` changes nothing at all.
 #
-#   deploy/hosted/sandbox-ferropix-rollout.sh            # steps 1 to 5
+#   deploy/hosted/sandbox-ferropix-rollout.sh            # steps 1 to 6
 #   deploy/hosted/sandbox-ferropix-rollout.sh --check    # verify only
 #   deploy/hosted/sandbox-ferropix-rollout.sh --step 2   # one step (repeatable)
 #
 # Steps: 1 preflight; 2 the FerroPIX database and role on the DB box; 3 the
 # app box's `.env` lines and its deploy script; 4 the FerroTERM index layout;
-# 5 after the v5.5.0 deploy: recreate, seed FerroPIX and verify end to end.
+# 5 after the v5.5.0 deploy: recreate, seed FerroPIX and verify end to end;
+# 6 the DB box onto the pinned ferroehr-postgres image (#4252).
 #
 # A secret is generated on the box it belongs to, or read from the
 # environment (FERROPIX_DB_PASSWORD, FERROPIX_DATA_KEY), and is never printed:
@@ -47,8 +48,11 @@ DEMO_AUTH="${SANDBOX_USER:-ferroehr}:${SANDBOX_PASS:-ferroehr}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MANIFEST="$ROOT/scripts/sandbox/seed/manifest.json"
 CLOUD_INIT="$ROOT/deploy/hosted/cloud-init.yaml"
+CLOUD_INIT_DB="$ROOT/deploy/hosted/cloud-init-postgres.yaml"
 INDEX_RECORD="$ROOT/deploy/hosted/ferroterm-index.env"
 SOURCE_DOMAIN="urn:oid:2.999.1.1"
+# The image the DB box runs: the default cloud-init-postgres.yaml pins.
+DB_IMAGE="$(sed -nE 's/.*\$\{FERROEHR_POSTGRES_IMAGE:-([^}]+)\}.*/\1/p' "$CLOUD_INIT_DB" | sed -n 1p)"
 
 CHECK=0
 ASSUME_RELEASE=0
@@ -61,7 +65,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --check) CHECK=1 ;;
     --step)
-      [[ "${2:-}" =~ ^[1-5]$ ]] || { usage; exit 2; }
+      [[ "${2:-}" =~ ^[1-6]$ ]] || { usage; exit 2; }
       STEPS+=("$2")
       shift
       ;;
@@ -71,7 +75,7 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
-[[ ${#STEPS[@]} -gt 0 ]] || STEPS=(1 2 3 4 5)
+[[ ${#STEPS[@]} -gt 0 ]] || STEPS=(1 2 3 4 5 6)
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -119,6 +123,16 @@ release_knows_ferropix() {
   version_at_least "$1" "$RELEASE_FLOOR"
 }
 
+# Logs in as ferropix from the app box over the private network ($1 the
+# password, $2 the DB box's private address) and prints the server's answer.
+ferropix_login() {
+  app > "$WORK/login" <<EOF || true
+printf '%s' $(printf '%q' "$1") | docker run -i --rm --entrypoint sh $(printf '%q' "$DB_IMAGE") -c \
+  'PGPASSWORD="\$(cat)" psql -h ${DB_DIAL_HOST:-$2} -p $DB_PORT -U ferropix -d ferropix -At -F " " -c "SELECT current_user, current_database(), rolsuper FROM pg_roles WHERE rolname = current_user"'
+EOF
+  cat "$WORK/login"
+}
+
 # ── step 1: preflight ─────────────────────────────────────────────────────────
 step1() {
   step 1 "preflight: both boxes answer, and what they run now"
@@ -128,8 +142,9 @@ cd "$APP_DIR"
 echo "host \$(hostname)"
 for c in ferroehr-sandbox ferroehr-sandbox-viewer ferroehr-sandbox-ferroterm \\
   ferroehr-sandbox-ferropix ferroehr-sandbox-issuer ferroehr-sandbox-caddy; do
-  docker inspect --format "\$c {{.Config.Image}} version={{index .Config.Labels \"org.opencontainers.image.version\"}} {{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}" "\$c" 2>/dev/null \\
-    || echo "\$c absent"
+  # A missing container still makes docker inspect print an empty line.
+  s="\$(docker inspect --format "\$c {{.Config.Image}} version={{index .Config.Labels \"org.opencontainers.image.version\"}} {{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}" "\$c" 2>/dev/null | sed '/^\$/d')" || true
+  echo "\${s:-\$c absent}"
 done
 docker compose version --short | sed 's/^/compose /'
 EOF
@@ -227,12 +242,9 @@ sed -n 's/^FERROPIX_DB_PASSWORD=//p' "$DB_DIR/.env" | tail -n 1
 EOF
   pw="$(cat "$WORK/out")"
   [[ -n "$pw" ]] || fail "no FERROPIX_DB_PASSWORD on the DB box"
-  app > "$WORK/out" <<EOF || fail "the app box cannot log in as ferropix at ${DB_DIAL_HOST:-$bind}:$DB_PORT: $(cat "$WORK/out")"
-printf '%s' $(printf '%q' "$pw") | docker run -i --rm --entrypoint sh ghcr.io/ferrohealth/ferroehr-postgres:latest -c \
-  'PGPASSWORD="\$(cat)" psql -h ${DB_DIAL_HOST:-$bind} -p $DB_PORT -U ferropix -d ferropix -At -F " " -c "SELECT current_user, current_database(), rolsuper FROM pg_roles WHERE rolname = current_user"'
-EOF
-  out="$(cat "$WORK/out")"
-  [[ "$out" == "ferropix ferropix f" ]] || fail "the login from the app box answered: $out"
+  out="$(ferropix_login "$pw" "$bind")"
+  [[ "$out" == "ferropix ferropix f" ]] \
+    || fail "the app box cannot log in as ferropix at ${DB_DIAL_HOST:-$bind}:$DB_PORT: $out"
   ok "from the app box over the private network: $out (password fingerprint $(fingerprint "$pw"))"
   printf '%s' "$pw" > "$WORK/db-password"
 }
@@ -442,7 +454,8 @@ deadline=\$(( \$(date +%s) + 600 ))
 while :; do
   bad=""
   for c in ferroehr-sandbox ferroehr-sandbox-ferropix ferroehr-sandbox-ferroterm ferroehr-sandbox-viewer; do
-    s="\$(docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' "\$c" 2>/dev/null || echo absent)"
+    s="\$(docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' "\$c" 2>/dev/null | sed '/^\$/d')" || true
+    s="\${s:-absent}"
     [ "\$s" = "running healthy" ] || bad="\$bad \$c=\$s"
   done
   if [ -z "\$bad" ]; then echo "all healthy"; exit 0; fi
@@ -588,6 +601,175 @@ EOF
   ok "$PUBLIC_URL serves FerroEHR $status and the viewer"
 }
 
+# ── step 6: the DB box onto the pinned image ──────────────────────────────────
+# The values a quoted box script reads, as the assignments it starts with.
+db_vars() {
+  printf 'WANT=%q DIR=%q CONTAINER=%q CHECK=%q\n' "$DB_IMAGE" "$DB_DIR" "$DB_CONTAINER" "$CHECK"
+}
+
+# What the DB box runs, and under a run whether the pin keeps its major.
+db_image_state() {
+  { db_vars; cat <<'EOF'; } | db
+set -euo pipefail
+cd "$DIR"
+psql() { docker exec "$CONTAINER" psql -U postgres -Atc "$1"; }
+running="$(docker inspect --format '{{.Config.Image}}' "$CONTAINER")"
+num="$(psql 'SHOW server_version_num')"
+echo "running=$running"
+echo "server=$(psql 'SHOW server_version')"
+echo "server_major=$((num / 10000))"
+echo "volume=$(docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}} {{end}}{{end}}' "$CONTAINER" | sed 's/ $//')"
+echo "env_image=$(sed -n 's/^FERROEHR_POSTGRES_IMAGE=//p' .env | tail -n 1)"
+echo "compose_image=$(sed -nE 's/^[[:space:]]*image:[[:space:]]*//p' docker-compose.yml | tr '\n' ' ')"
+# A runtime may record the pin without its tag, as the repository and digest.
+if [ "$running" = "$WANT" ] || [ "$running" = "${WANT%%:*}@${WANT#*@}" ]; then
+  echo "verdict=current"
+  exit 0
+fi
+# A run pulls the pin to read its major; --check reads it only when present.
+[ "$CHECK" -eq 1 ] || docker pull -q "$WANT" > /dev/null
+major="$(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$WANT" 2>/dev/null \
+  | sed -n 's/^PG_MAJOR=//p')" || true
+echo "image_major=${major:-unknown}"
+if [ -z "$major" ]; then
+  echo "verdict=$([ "$CHECK" -eq 1 ] && echo behind || echo no-major)"
+elif [ "$major" != "$((num / 10000))" ]; then
+  echo "verdict=major"
+else
+  echo "verdict=behind"
+fi
+EOF
+}
+
+# Points the DB box's compose project at the pin and recreates PostgreSQL.
+db_image_swap() {
+  { db_vars; cat <<'EOF'; } | db
+set -euo pipefail
+cd "$DIR"
+[ "$(grep -cE '^[[:space:]]*image:' docker-compose.yml)" -eq 1 ] || { echo "verdict=layout"; exit 0; }
+cp -p .env .env.prev
+cp -p docker-compose.yml docker-compose.yml.prev
+# The compose file names the image through FERROEHR_POSTGRES_IMAGE, as
+# cloud-init-postgres.yaml writes it, with the pin as its default.
+awk -v want="$WANT" '/^[[:space:]]*image:/ {
+  match($0, /^[[:space:]]*/)
+  print substr($0, 1, RLENGTH) "image: ${FERROEHR_POSTGRES_IMAGE:-" want "}"
+  next
+} { print }' docker-compose.yml.prev > docker-compose.yml.next
+cat docker-compose.yml.next > docker-compose.yml
+rm -f docker-compose.yml.next
+umask 077
+{ grep -v '^FERROEHR_POSTGRES_IMAGE=' .env.prev || true; echo "FERROEHR_POSTGRES_IMAGE=$WANT"; } > .env.next
+mv .env.next .env
+chmod 600 .env
+configured="$(docker compose config --images 2>/dev/null | sed -n 1p)" || true
+if [ "$configured" != "$WANT" ]; then
+  cp -p .env.prev .env
+  cp -p docker-compose.yml.prev docker-compose.yml
+  echo "configured=${configured:-nothing}"
+  echo "verdict=config"
+  exit 0
+fi
+log="$(mktemp)"
+# A recreate, never a restart: the container takes the new image and keeps
+# its named volume.
+if ! { docker compose pull -q && docker compose up -d; } > "$log" 2>&1; then
+  sed 's/^/compose: /' "$log"
+  echo "verdict=compose"
+  exit 0
+fi
+rm -f "$log"
+deadline=$(($(date +%s) + 300))
+until [ "$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$CONTAINER" 2>/dev/null)" = healthy ]; do
+  if [ "$(date +%s)" -ge "$deadline" ]; then
+    echo "verdict=unhealthy"
+    exit 0
+  fi
+  sleep 5
+done
+psql() { docker exec "$CONTAINER" psql -U postgres -Atc "$1"; }
+echo "running=$(docker inspect --format '{{.Config.Image}}' "$CONTAINER")"
+echo "server=$(psql 'SHOW server_version')"
+echo "server_major=$(($(psql 'SHOW server_version_num') / 10000))"
+echo "volume=$(docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}} {{end}}{{end}}' "$CONTAINER" | sed 's/ $//')"
+echo "databases=$(psql "SELECT string_agg(datname, ',' ORDER BY datname) FROM pg_database WHERE NOT datistemplate")"
+echo "verdict=swapped"
+EOF
+}
+
+# 0 when the image reference $1 a container records names the pin.
+runs_pin() { [[ "$1" == "$DB_IMAGE" || "$1" == "${DB_IMAGE%%:*}@${DB_IMAGE#*@}" ]]; }
+
+# The value of `$1=` in the box output $2.
+field() { sed -n "s/^$1=//p" <<<"$2" | tail -n 1; }
+
+step6() {
+  step 6 "DB box: PostgreSQL onto the pinned ferroehr-postgres image"
+  [[ "$DB_IMAGE" =~ ^ghcr\.io/ferrohealth/ferroehr-postgres:[0-9]+\.[0-9]+\.[0-9]+@sha256:[0-9a-f]{64}$ ]] \
+    || fail "$CLOUD_INIT_DB pins no release image by digest (found '$DB_IMAGE')"
+  local out before verdict
+  db_image_state > "$WORK/out" || fail "the DB box refused the step: $(cat "$WORK/out")"
+  before="$(cat "$WORK/out")"
+  grep -v '^verdict=' <<<"$before" | sed 's/^/  db: /'
+  verdict="$(field verdict "$before")"
+  case "$verdict" in
+    current) ok "the DB box runs the pin $DB_IMAGE" ;;
+    major)
+      fail "the pin carries PostgreSQL $(field image_major "$before") and the box runs $(field server_major "$before"): a major upgrade needs pg_upgrade, so nothing was changed"
+      ;;
+    no-major) fail "the pin declares no PG_MAJOR, so the step cannot prove the major stays; nothing was changed" ;;
+    behind)
+      [[ "$CHECK" -eq 0 ]] \
+        || fail "the DB box runs $(field running "$before"), not the pin $DB_IMAGE (the pin carries PostgreSQL $(field image_major "$before"), the box runs $(field server_major "$before")); run step 6 without --check"
+      [[ -n "$(field volume "$before")" ]] \
+        || fail "the container keeps its data in no volume, which a recreate would lose; nothing was changed"
+      ok "the pin keeps PostgreSQL $(field server_major "$before")"
+      echo "  note: the sandbox is unavailable for about a minute while PostgreSQL restarts on the new image"
+      db_image_swap > "$WORK/out" || fail "the swap failed on the DB box: $(cat "$WORK/out")"
+      out="$(cat "$WORK/out")"
+      grep -v '^verdict=' <<<"$out" | sed 's/^/  db: /'
+      local back="cd $DB_DIR && cp -p .env.prev .env && cp -p docker-compose.yml.prev docker-compose.yml && docker compose up -d"
+      case "$(field verdict "$out")" in
+        swapped) ;;
+        layout) fail "$DB_DIR/docker-compose.yml names more or fewer than one image; nothing was changed" ;;
+        config) fail "compose resolves '$(field configured "$out")', not the pin; the previous files are restored" ;;
+        compose) fail "docker compose could not pull or recreate (its output is above); to go back: $back" ;;
+        unhealthy) fail "PostgreSQL was not healthy 5 minutes after the recreate; to go back: $back" ;;
+        *) fail "the swap gave no verdict; to go back: $back" ;;
+      esac
+      runs_pin "$(field running "$out")" || fail "the container runs $(field running "$out") after the recreate"
+      [[ "$(field volume "$out")" == "$(field volume "$before")" ]] \
+        || fail "the data volume changed from $(field volume "$before") to $(field volume "$out")"
+      [[ "$(field server_major "$out")" == "$(field server_major "$before")" ]] \
+        || fail "PostgreSQL moved from major $(field server_major "$before") to $(field server_major "$out")"
+      ok "recreated on $DB_IMAGE: PostgreSQL $(field server "$out"), volume $(field volume "$out") kept, databases $(field databases "$out") (previous: $DB_DIR/.env.prev, $DB_DIR/docker-compose.yml.prev)"
+      ;;
+    *) fail "the DB box gave no verdict" ;;
+  esac
+
+  # The proof from the side that matters: the CDR is ready on the database,
+  # and FerroPIX's role logs in over the private network.
+  local deadline=$(($(date +%s) + 300)) code started
+  started="$(date +%s)"
+  until code="$(curl -sS -m 10 -o /dev/null -w '%{http_code}' "$PUBLIC_URL/health/readiness" 2> /dev/null)" && [[ "$code" == 200 ]]; do
+    [[ "$(date +%s)" -lt "$deadline" ]] || fail "$PUBLIC_URL/health/readiness answered ${code:-nothing} for 5 minutes"
+    sleep 5
+  done
+  ok "the CDR is ready: $PUBLIC_URL/health/readiness answered 200 after $(($(date +%s) - started))s"
+  local pw bind
+  db > "$WORK/out" <<EOF
+sed -n 's/^FERROPIX_DB_PASSWORD=//p' "$DB_DIR/.env" | tail -n 1
+sed -n 's/^PG_BIND_IP=//p' "$DB_DIR/.env" | tail -n 1
+EOF
+  pw="$(sed -n 1p "$WORK/out")"
+  bind="$(sed -n 2p "$WORK/out")"
+  [[ -n "$pw" ]] || fail "no FERROPIX_DB_PASSWORD on the DB box; run step 2 first"
+  out="$(ferropix_login "$pw" "$bind")"
+  [[ "$out" == "ferropix ferropix f" ]] \
+    || fail "the app box cannot log in as ferropix at ${DB_DIAL_HOST:-$bind}:$DB_PORT: $out"
+  ok "from the app box over the private network: $out"
+}
+
 command -v jq > /dev/null || fail "jq is required on this machine"
 [[ -f "$MANIFEST" ]] || fail "run this from a checkout: $MANIFEST is missing"
 echo "sandbox-ferropix-rollout: app box $SSH_USER@$APP_HOST, DB box $SSH_USER@$DB_HOST, $([[ "$CHECK" -eq 1 ]] && echo 'check only' || echo 'changing what is missing'), steps ${STEPS[*]}"
@@ -596,4 +778,5 @@ want_step 2 && step2
 want_step 3 && step3
 want_step 4 && step4
 want_step 5 && step5
+want_step 6 && step6
 printf '\nsandbox-ferropix-rollout: done\n'
