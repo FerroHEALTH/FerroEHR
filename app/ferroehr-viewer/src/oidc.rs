@@ -152,7 +152,7 @@ impl OidcState {
 }
 
 fn error_page(status: StatusCode, message: &str) -> Response {
-    tracing::warn!(%status, message, "OIDC flow failed");
+    tracing::warn!(%status, reason = message, "OIDC flow failed");
     (status, format!("OIDC login failed: {message}")).into_response()
 }
 
