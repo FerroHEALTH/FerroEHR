@@ -12,7 +12,7 @@
   `urn:oid:2.999.7.1` on FerroEHR's first ask. The server now runs in the
   issuer's network namespace, which publishes ports 8080, 8090
   (`FERROEHR_PIX_PORT`) and 8180 (`FERROEHR_ISSUER_PORT`).
-- **Helm chart 18.0.0 takes FerroPIX as the chart dependency `ferropix`**
+- **Helm chart 19.0.0 takes FerroPIX as the chart dependency `ferropix`**
   (#3380), on by default: the chart points `config.ehr_index` at its Service,
   adds the egress rule to its pods, and routes the grant's client secret
   through `secrets.ehrIndexClientSecret`. A values file that names no identity

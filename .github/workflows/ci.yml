@@ -578,6 +578,8 @@ jobs:
         run: bash scripts/checks/shellcheck-lane.sh
       - name: The guards' changed-path helper reads a branch's own change from the merge base
         run: bash scripts/lib/changed-paths.sh --self-test
+      - name: The GitHub API retry rides out a 5xx burst, blames the API when it gives up and refuses a 4xx at once
+        run: bash scripts/lib/gh-retry.sh --self-test
       - name: The dangerous-command hook refuses and allows the shapes it documents
         run: bash .claude/hooks/block_dangerous_test.sh
       - name: The crate-version hook refuses a packaged change without a bump
