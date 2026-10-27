@@ -22,7 +22,8 @@ use std::borrow::Cow;
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::view::diagnostics::{DiagnosticsWords, FileFindings, Position};
 use ferrohealth_ui::widget::editor::{
-    Editor, EditorWords, LineMark, Opened, Panel, editor_diagnostics, editor_panel, editor_split,
+    Editor, EditorWords, LineMark, Opened, Panel, editor_diagnostics, editor_panel_by_edit,
+    editor_split,
 };
 use ferrohealth_ui::widget::identifier::{
     Identifier, IdentifierWords, Masked, Reveal, Revealed, identifier,
@@ -215,17 +216,18 @@ pub fn CodeEditor(
         facts,
         findings,
     } = setup;
-    let text = RwSignal::new(text);
+    // The form posts the text area, so the viewer keeps no copy of the text.
+    let text = Signal::stored(text);
     let caret = RwSignal::new(Position { line: 1, column: 1 });
     let marks = Signal::stored(marks);
     let editor = || Editor {
         id: field.name(),
         language: language.language(),
-        text: text.into(),
+        text,
         marks,
         editable: Signal::stored(true),
     };
-    let panel = editor_panel(
+    let panel = editor_panel_by_edit(
         Panel {
             editor: editor(),
             label: label.clone(),
@@ -237,7 +239,7 @@ pub fn CodeEditor(
             end: None,
             words,
         },
-        move |typed| text.set(typed),
+        |_| (),
     );
     match findings {
         Some((heading, file)) => {

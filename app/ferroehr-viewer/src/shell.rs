@@ -569,15 +569,6 @@ pub fn AppShell() -> impl IntoView {
     // NOTE: FerroUI `docs/consoles.md`, "How a console builds", step 10: the shell
     // is drawn once, and the navigation and the `back` of its forms follow the router.
     ferrohealth_ui::widget::nav::follow_path();
-    // TODO(#4227): drop once FerroUI's skip link keeps the browser's fragment navigation.
-    #[cfg(target_arch = "wasm32")]
-    Effect::new(|_| {
-        if let Ok(Some(link)) = document().query_selector("a.fui-skip")
-            && link.set_attribute("target", "_self").is_err()
-        {
-            leptos::logging::warn!("the browser refused the skip link's target");
-        }
-    });
     let location = leptos_router::hooks::use_location();
     let current = crate::request::path();
     let dock = Dock::default();
