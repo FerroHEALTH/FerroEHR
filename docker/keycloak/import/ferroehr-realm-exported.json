@@ -107,16 +107,6 @@
       }
     ],
     "client": {
-      "ferroehr": [
-        {
-          "id": "8cc84b69-f611-4a3d-bfc9-4f5aaccc06f5",
-          "name": "uma_protection",
-          "composite": false,
-          "clientRole": true,
-          "containerId": "6bf4fbb5-e031-49e1-b2b3-de38dd7938b7",
-          "attributes": {}
-        }
-      ],
       "realm-management": [
         {
           "id": "32bfca88-d2de-45e9-b6fa-f186dddae22e",
@@ -543,31 +533,13 @@
       "groups": []
     },
     {
-      "id": "48f25621-f66f-4299-b12c-79282e599b05",
-      "username": "service-account-ferroehr",
-      "emailVerified": false,
-      "createdTimestamp": 1688738365099,
+      "username": "service-account-ferroehr-service",
       "enabled": true,
-      "totp": false,
-      "serviceAccountClientId": "ferroehr",
-      "credentials": [],
-      "disableableCredentialTypes": [],
-      "requiredActions": [
-        "TERMS_AND_CONDITIONS",
-        "VERIFY_EMAIL",
-        "UPDATE_PASSWORD",
-        "UPDATE_PROFILE"
-      ],
+      "serviceAccountClientId": "ferroehr-service",
       "realmRoles": [
-        "default-roles-ferroehr"
-      ],
-      "clientRoles": {
-        "ferroehr": [
-          "uma_protection"
-        ]
-      },
-      "notBefore": 0,
-      "groups": []
+        "default-roles-ferroehr",
+        "USER"
+      ]
     }
   ],
   "scopeMappings": [
@@ -726,100 +698,48 @@
       "optionalClientScopes": []
     },
     {
-      "id": "6bf4fbb5-e031-49e1-b2b3-de38dd7938b7",
-      "clientId": "ferroehr",
-      "name": "FerroEHR",
-      "description": "",
-      "rootUrl": "",
-      "adminUrl": "",
-      "baseUrl": "",
-      "surrogateAuthRequired": false,
+      "clientId": "ferroehr-viewer",
+      "name": "FerroEHR viewer",
+      "description": "The viewer: authorization-code flow with PKCE",
       "enabled": true,
-      "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "bT5T4oWn3xNdBytQsl2cfpBDi1pp15Va",
+      "secret": "dev-viewer-Qm7xT2vK9pLw4sNc",
       "redirectUris": [
-        "/*"
+        "http://127.0.0.1:3000/*",
+        "http://localhost:3000/*"
       ],
-      "webOrigins": [],
-      "notBefore": 0,
+      "webOrigins": [
+        "http://127.0.0.1:3000",
+        "http://localhost:3000"
+      ],
       "bearerOnly": false,
       "consentRequired": false,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": true,
-      "authorizationServicesEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
       "publicClient": false,
       "frontchannelLogout": false,
       "protocol": "openid-connect",
       "attributes": {
-        "oidc.ciba.grant.enabled": "false",
-        "client.secret.creation.time": "1696233968",
-        "backchannel.logout.session.required": "true",
+        "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "+",
-        "display.on.consent.screen": "false",
-        "oauth2.device.authorization.grant.enabled": "false",
-        "backchannel.logout.revoke.offline.tokens": "false"
+        "backchannel.logout.session.required": "true",
+        "display.on.consent.screen": "false"
       },
-      "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": true,
-      "nodeReRegistrationTimeout": -1,
       "protocolMappers": [
-        {
-          "id": "5298cf35-97a6-4965-bf64-07e639898524",
-          "name": "Client Host",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usersessionmodel-note-mapper",
-          "consentRequired": false,
-          "config": {
-            "user.session.note": "clientHost",
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "clientHost",
-            "jsonType.label": "String"
-          }
-        },
-        {
-          "id": "992a2bac-5c38-4ae4-8938-a83ecbc914e8",
-          "name": "Client IP Address",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usersessionmodel-note-mapper",
-          "consentRequired": false,
-          "config": {
-            "user.session.note": "clientAddress",
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "clientAddress",
-            "jsonType.label": "String"
-          }
-        },
-        {
-          "id": "df7d4ce9-5b37-4ca1-80ad-30ad38f0c310",
-          "name": "Client ID",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usersessionmodel-note-mapper",
-          "consentRequired": false,
-          "config": {
-            "user.session.note": "clientId",
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "clientId",
-            "jsonType.label": "String"
-          }
-        },
         {
           "name": "ferroehr-audience",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
           "config": {
-            "included.client.audience": "ferroehr",
+            "included.custom.audience": "ferroehr",
             "access.token.claim": "true",
-            "id.token.claim": "false"
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
           }
         }
       ],
@@ -839,15 +759,66 @@
         "phone",
         "offline_access",
         "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "ferroehr-service",
+      "name": "FerroEHR service",
+      "description": "A backend service: client-credentials grant only",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-service-Hd3rZ8wF6yBq1jVe",
+      "redirectUris": [],
+      "webOrigins": [],
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false"
+      },
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "ferroehr-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "ferroehr",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "client_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.session.note": "client_id",
+            "claim.name": "client_id",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
       ],
-      "authorizationSettings": {
-        "allowRemoteResourceManagement": true,
-        "policyEnforcementMode": "ENFORCING",
-        "resources": [],
-        "policies": [],
-        "scopes": [],
-        "decisionStrategy": "UNANIMOUS"
-      }
+      "defaultClientScopes": [
+        "roles",
+        "system/composition-*.cruds",
+        "system/template-*.cruds",
+        "system/aql-*.cruds",
+        "__ferroehr.platform"
+      ],
+      "optionalClientScopes": []
     },
     {
       "id": "42198dc6-1c53-4135-bf8e-958f4aee8858",
@@ -1471,6 +1442,33 @@
     {
       "name": "__ferroehr.platform",
       "description": "FerroEHR product scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "system/composition-*.cruds",
+      "description": "SMART on openEHR scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "system/template-*.cruds",
+      "description": "SMART on openEHR scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "system/aql-*.cruds",
+      "description": "SMART on openEHR scope",
       "protocol": "openid-connect",
       "attributes": {
         "include.in.token.scope": "true",

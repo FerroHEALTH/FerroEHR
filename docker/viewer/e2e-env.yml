@@ -13,11 +13,11 @@
 # The CDR trusts the dev realm here, in both modes: Keycloak serves the issuer
 # over TLS with the development CA `keycloak-tls` generates
 # (docker-compose.dev.yml), and the CDR and the viewer add that CA beside
-# their own trust store (the CDR through SSL_CERT_FILE and SSL_CERT_DIR, which
-# rustls reads together on Linux; the viewer through `[auth.oidc.tls]
-# trust_roots_file`). The CDR reads the issuer's metadata at boot, so it waits for
-# Keycloak. Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068
-# profile the CDR expects by default, hence `token_profile = "jwt"`.
+# their own trust store (the CDR through `[auth] ca_file`, the viewer through
+# `[auth.oidc.tls] trust_roots_file`). The CDR reads the issuer's metadata at
+# boot, so it waits for Keycloak. Keycloak's access tokens carry `typ: JWT`,
+# outside the RFC 9068 profile the CDR expects by default, hence
+# `token_profile = "jwt"`.
 #
 # The CDR block turns two opt-in extensions on for the run, both of which
 # answer `404` as if unmounted while they are off — so the viewer's journeys
@@ -42,8 +42,10 @@ services:
       FERROEHR__AUTH__AUDIENCE: ferroehr
       FERROEHR__AUTH__TOKEN_PROFILE: jwt
       FERROEHR__AUTH__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
-      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
-      SSL_CERT_DIR: /run/ferroehr-dev-tls/ca
+      FERROEHR__AUTH__CA_FILE: /run/ferroehr-dev-tls/ca/ca.crt
+      # The realm's service client, whose system/aql-* grant counts only when
+      # it is named here (SMART on openEHR §Resource Scopes).
+      FERROEHR__SMART__BACKEND_CLIENTS: ferroehr-service
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 
@@ -55,8 +57,8 @@ services:
       FERROEHR_VIEWER__SESSION__COOKIE_SECURE: "false"
       FERROEHR_VIEWER__AUTH__OIDC__ENABLED: "true"
       FERROEHR_VIEWER__AUTH__OIDC__ISSUER: https://keycloak:8443/auth/realms/ferroehr
-      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID: ferroehr
-      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET: bT5T4oWn3xNdBytQsl2cfpBDi1pp15Va
+      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID: ferroehr-viewer
+      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET: dev-viewer-Qm7xT2vK9pLw4sNc
       FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL: http://127.0.0.1:3000
       FERROEHR_VIEWER__AUTH__OIDC__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
     volumes:
