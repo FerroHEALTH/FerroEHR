@@ -2871,6 +2871,8 @@ messages! {
     StatusEditTitle = "status-edit-title",
     /// `The status history could not be read.`
     StatusHistoryRefused = "status-history-refused",
+    /// `This version's envelope could not be read.`
+    StatusFactsRefused = "status-facts-refused",
     /// `Clients may commit to this EHR.`
     StatusModifiableHelp = "status-modifiable-help",
     /// `Not queryable: AQL over the population leaves this EHR out.`
@@ -2943,6 +2945,8 @@ messages! {
     DirectoryEdit = "directory-edit",
     /// `The directory's versions could not be read.`
     DirectoryHistoryRefused = "directory-history-refused",
+    /// `The EHR's compositions could not be listed.`
+    DirectoryCompositionsRefused = "directory-compositions-refused",
     /// `More directory actions`
     DirectoryMore = "directory-more",
     /// `Copy the directory id`

@@ -1508,6 +1508,7 @@ status-saved-version = Saved as version { $version }.
 status-save-refused = The CDR refused the status.
 status-refused = The EHR status could not be read.
 status-history-refused = The status history could not be read.
+status-facts-refused = This version's envelope could not be read.
 status-version-refused = This version could not be read.
 
 ## Directory
@@ -1559,6 +1560,7 @@ directory-version-holds = { $folders ->
    *[other] { $items } references
 }
 directory-history-refused = The directory's versions could not be read.
+directory-compositions-refused = The EHR's compositions could not be listed.
 directory-show-path = Show one folder by path
 directory-path-placeholder = episodes/2026
 directory-show = Show
