@@ -2953,9 +2953,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-ui"
-version = "0.5.3"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "552edb33036d73627d27c8b20118f6bc930947810dadc18d58ffbdf3efb34d56"
+checksum = "6243a76ad1714441c93b65f511777a08f4e811b83e533400d3fdb8853de62d1a"
 dependencies = [
  "fluent-templates",
  "intl-memoizer",
