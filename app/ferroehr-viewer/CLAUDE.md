@@ -127,7 +127,8 @@ do not silence `linker_messages`.
 
 `/ui-gates`: clippy on the host (the server half, `--all-targets`) and wasm32
 (the browser half, `--lib`), `cargo nextest run -p ferroehr-viewer` (the
-in-process `ssr_app` suite replays a recorded CDR, `tests/fixtures/cdr/`),
+in-process `ssr_app` suite replays a recorded CDR, `tests/fixtures/cdr/`,
+which `scripts/viewer-record.sh` records again and nothing edits by hand),
 leptosfmt (src and tests) then cargo fmt, `bash scripts/cargo-leptos.sh build`
 (the wrapper: it freezes `Cargo.lock` and builds with `--split`, which
 FerroUI's lazy islands need, FerroUI #331). The E2E journeys (the `e2e_*`
