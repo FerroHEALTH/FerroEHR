@@ -629,6 +629,7 @@ impl FerroEhrService {
             let ctx = SqlCtx {
                 system_id: self.effective_system_id(),
                 ehr_ids: Vec::new(),
+                ehr_scope_kind: crate::aql::sql::EhrScopeKind::Named,
                 subject_scope: None,
                 ehr_access: EhrAccessScope::Unrestricted,
                 limit,

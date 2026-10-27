@@ -590,6 +590,7 @@ fn aql_sql_limited(
     let ctx = SqlCtx {
         system_id: "plan.shapes.test".to_owned(),
         ehr_ids,
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit,

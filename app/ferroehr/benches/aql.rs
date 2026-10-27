@@ -58,6 +58,7 @@ fn bench_ctx() -> SqlCtx {
     SqlCtx {
         system_id: "bench.ferroehr.org".to_owned(),
         ehr_ids: Vec::new(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: None,

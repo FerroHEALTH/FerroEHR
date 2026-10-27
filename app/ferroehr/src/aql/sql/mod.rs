@@ -83,6 +83,9 @@ pub struct SqlCtx {
     /// ITS-REST single `ehr_id` parameter is the one-element case. Empty = no
     /// explicit scope (the population gate over `is_queryable` EHRs applies).
     pub ehr_ids: Vec<EhrId>,
+    /// Whether a non-empty [`Self::ehr_ids`] is a named target or a subset of
+    /// the population, which the population gate still applies to.
+    pub ehr_scope_kind: EhrScopeKind,
     /// The ABAC patient scope (no openEHR spec governs this, our own
     /// extension): when set, every VO root and every EHR source is restricted
     /// to EHRs whose subject it names ([`subject::SubjectScope`]), so rows the
@@ -126,6 +129,35 @@ pub enum EhrAccessScope {
     Excluding(Vec<EhrId>),
     /// Only these EHRs are readable; an empty list reads none.
     Only(Vec<EhrId>),
+}
+
+impl SqlCtx {
+    /// Whether the population gate over `is_queryable` EHRs applies: on an
+    /// unscoped query and on a [`EhrScopeKind::PopulationSubset`] scope.
+    #[must_use]
+    pub fn population_gated(&self) -> bool {
+        self.ehr_ids.is_empty() || self.ehr_scope_kind == EhrScopeKind::PopulationSubset
+    }
+}
+
+/// What an explicit [`SqlCtx::ehr_ids`] scope stands for, which decides
+/// whether the population gate still applies to it.
+///
+/// RM `EHR_STATUS.is_queryable` (`org.openehr.rm.ehr.ehr_status.adoc`): "True
+/// if this EHR should be included in population queries". A query aimed at
+/// EHRs its caller named is not a population query; a query over a set of
+/// EHRs the service selected out of the population is one. An empty
+/// `ehr_ids` is the whole population whatever the kind.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum EhrScopeKind {
+    /// The caller named the EHRs (the ITS-REST `ehr_id` parameter, the one
+    /// EHR an EXTRACT is built from): the query targets them, gate or not.
+    #[default]
+    Named,
+    /// The service selected the EHRs out of the population (a cohort's
+    /// subjects, the EHRs a demographic join links to): the population gate
+    /// applies to them as to an unscoped query.
+    PopulationSubset,
 }
 
 /// How one `RESULT_SET` cell is read back from the query rows.

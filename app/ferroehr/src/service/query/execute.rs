@@ -178,6 +178,7 @@ impl FerroEhrService {
         let ctx = SqlCtx {
             system_id: self.effective_system_id(),
             ehr_ids,
+            ehr_scope_kind: request.ehr_scope_kind,
             subject_scope: request.subject_scope.clone().map(|id| {
                 aql::sql::subject::SubjectScope {
                     id,
@@ -717,6 +718,7 @@ mod tests {
         let ctx = crate::aql::sql::SqlCtx {
             system_id: "sys.example.com".to_owned(),
             ehr_ids: Vec::new(),
+            ehr_scope_kind: crate::aql::sql::EhrScopeKind::Named,
             subject_scope: None,
             ehr_access: crate::aql::sql::EhrAccessScope::Unrestricted,
             limit: None,

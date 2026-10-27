@@ -40,6 +40,9 @@ pub struct AqlQueryRequest {
     /// single `ehr_id` parameter is the one-element case. Error
     /// `ehr_id_does_not_exist` when a listed EHR does not exist.
     pub ehr_ids: Vec<String>,
+    /// Whether a non-empty [`Self::ehr_ids`] names the EHRs the caller targets
+    /// or a subset of the population the population gate still applies to.
+    pub ehr_scope_kind: crate::aql::sql::EhrScopeKind,
     /// `row_offset [0..1]` — "offset in query response rows to return …
     /// A zero or negative value means offset of zero."
     pub offset: Option<i64>,

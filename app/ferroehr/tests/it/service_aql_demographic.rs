@@ -541,3 +541,46 @@ async fn a_party_joins_to_the_content_of_its_ehr() {
         assert!(err.message.contains(names), "{aql}: {}", err.message);
     }
 }
+
+/// A query rooted at a demographic class joins over the population, so its
+/// clinical half runs over the linked EHRs as a population subset (#4247): an
+/// EHR whose `EHR_STATUS.is_queryable` is false answers no row (RM
+/// `org.openehr.rm.ehr.ehr_status.adoc`: "True if this EHR should be included
+/// in population queries").
+#[tokio::test]
+async fn a_join_leaves_out_a_non_queryable_ehr() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = new_service(&db);
+
+    let ada = linked(&svc, "Ada", "P-1", &["visit a"]).await;
+    let bram = create(&svc, PartyKind::Person, &person("Bram", "P-2", "urn:bsn")).await;
+    let bram_party = ferroehr::ids::VoId(
+        bram.split("::")
+            .next()
+            .and_then(|s| s.parse().ok())
+            .expect("party id"),
+    );
+    let hidden = svc.create_ehr(None).await.expect("create_ehr");
+    svc.link(bram_party, hidden)
+        .await
+        .expect("link the party to its EHR");
+    svc.create_composition(
+        hidden,
+        crate::fixtures::uv(&crate::fixtures::composition("visit b"), "249", None),
+    )
+    .await
+    .expect("create_composition");
+    crate::fixtures::set_not_queryable(&svc, hidden).await;
+
+    let rows = run(
+        &svc,
+        "SELECT p/uid/value, c/name/value FROM PERSON p CONTAINS EHR e CONTAINS COMPOSITION c",
+        AqlQueryRequest::default(),
+    )
+    .await;
+    assert_eq!(
+        rows,
+        vec![json!([ada, "visit a"])],
+        "the non-queryable EHR of {bram} answers no joined row"
+    );
+}

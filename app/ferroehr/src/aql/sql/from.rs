@@ -1527,9 +1527,10 @@ impl Builder<'_> {
     }
 
     /// The population gate of [`Self::gate_vo_root`] for the node `root`, as
-    /// one `EXISTS` a left binding can carry; `None` on a scoped query.
+    /// one `EXISTS` a left binding can carry; `None` on a query aimed at
+    /// named EHRs ([`super::SqlCtx::population_gated`]).
     fn population_cond(&mut self, root: &str) -> Option<Expr> {
-        if !self.ctx.ehr_ids.is_empty() {
+        if !self.ctx.population_gated() {
             return None;
         }
         let alias = format!("qg{}", self.next_ctr());
@@ -1543,16 +1544,15 @@ impl Builder<'_> {
         Some(Expr::exists(sub))
     }
 
-    /// The query-population gate (SM `I_QUERY_SERVICE.execute_ad_hoc_query` /
-    /// `execute_stored_query`). When no explicit `ehr_ids` are supplied, the
-    /// `ehr_ids` parameter doc mandates a "full population query [...] on all
-    /// EHRs whose status has the `is_queryable` flag set to `True`"
-    /// (`docs/specs/openehr/SM/docs/UML/classes/i_query_service.adoc`). We
-    /// therefore restrict every EHR root — bare `EHR` sources (`ehr.id`) and VO
-    /// roots (`node.ehr_id`) alike — to that set. A scoped query (a non-empty
-    /// `ehr_ids` set) targets specific EHRs and is not gated.
+    /// The query-population gate. RM `EHR_STATUS.is_queryable`
+    /// (`org.openehr.rm.ehr.ehr_status.adoc`): "True if this EHR should be
+    /// included in population queries". Every EHR root of a population query,
+    /// bare `EHR` sources (`ehr.id`) and VO roots (`node.ehr_id`) alike, is
+    /// restricted to that set: an unscoped query and a population subset
+    /// ([`super::EhrScopeKind::PopulationSubset`]). A query aimed at EHRs its caller
+    /// named ([`super::EhrScopeKind::Named`]) is not gated.
     pub(super) fn apply_population_gate(&mut self) {
-        if !self.ctx.ehr_ids.is_empty() {
+        if !self.ctx.population_gated() {
             return;
         }
         // One gate per join-connected component: a VO root linked to

@@ -625,6 +625,7 @@ fn the_two_statements_never_cross_the_boundary() {
     let ctx = SqlCtx {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: ehr_ids.clone(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: None,
@@ -768,4 +769,43 @@ async fn the_result_carries_no_party_identifier() {
             "a party id must never reach the caller: {rendered}"
         );
     }
+}
+
+/// The predicate form leaves out what the population gate leaves out (#4247):
+/// of the three Groningen EHRs, the one whose `EHR_STATUS.is_queryable` is
+/// false (RM `org.openehr.rm.ehr.ehr_status.adoc`: "True if this EHR should
+/// be included in population queries") and the one under a research
+/// objection answer no rows, though the predicate selects their parties.
+#[tokio::test]
+async fn a_predicate_cohort_leaves_out_a_non_queryable_and_an_objecting_ehr() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
+        .with_cohort(cohort_config(0));
+    let corpus = seed_corpus(&svc).await;
+    let [ada, bram, cato, ..] = corpus.as_slice() else {
+        panic!("the corpus seeds six subjects");
+    };
+    crate::fixtures::set_not_queryable(&svc, ada.ehr).await;
+    svc.set_research_objection(&bram.ehr.to_string(), true, None)
+        .await
+        .expect("record the research objection");
+
+    let outcome = svc
+        .execute_cohort_query(request(&[("city", "Groningen")]))
+        .await
+        .expect("the cohort query runs");
+
+    assert_eq!(
+        outcome.cohort_size, 3,
+        "the predicate selects three parties"
+    );
+    assert_eq!(
+        outcome.served_ehrs, 1,
+        "one of their EHRs is in the population"
+    );
+    assert_eq!(
+        served_uids(&outcome.query.result_set),
+        vec![cato.composition_uid.clone()],
+        "only the queryable, unobjecting EHR's composition is served"
+    );
 }
