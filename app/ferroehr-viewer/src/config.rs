@@ -17,6 +17,7 @@ use ferrohealth_config::loader::Loader;
 use ferrohealth_secret::file::read_secret_file;
 use ferrohealth_server::section::ServerSection;
 use ferrohealth_server::tls_client::TlsClientSection;
+use ferrohealth_telemetry::section::TelemetrySection;
 use secrecy::ExposeSecret;
 use serde::Deserialize;
 
@@ -37,6 +38,9 @@ pub struct ViewerConfig {
     pub session: SessionConfig,
     /// The language the viewer renders in.
     pub ui: UiConfig,
+    /// The console, the request log and the OpenTelemetry export: the
+    /// family's `[telemetry]` section.
+    pub telemetry: TelemetrySection,
 }
 
 impl Default for ViewerConfig {
@@ -55,6 +59,7 @@ impl Default for ViewerConfig {
             login: LoginConfig::default(),
             session: SessionConfig::default(),
             ui: UiConfig::default(),
+            telemetry: TelemetrySection::default(),
         }
     }
 }
@@ -275,7 +280,8 @@ pub enum ConfigError {
 const LEPTOS_SITE_ADDR: &str = "LEPTOS_SITE_ADDR";
 
 /// The loader of the `FERROEHR_VIEWER` namespace, with the viewer's own
-/// defaults for `[server]` under the operator's values.
+/// defaults for `[server]` under the operator's values and `RUST_LOG` as the
+/// fallback of `telemetry.filter`, as the CDR reads it.
 ///
 /// The Compose parameters `FERROEHR_VIEWER_PORT` and `FERROEHR_VIEWER_IMAGE`
 /// can reach the container environment, so the sweep passes them.
@@ -285,6 +291,7 @@ const LEPTOS_SITE_ADDR: &str = "LEPTOS_SITE_ADDR";
 pub fn loader() -> Result<Loader, ConfigError> {
     Ok(Loader::new("FERROEHR_VIEWER")?
         .defaults("server", &ViewerConfig::default().server)?
+        .fallback("RUST_LOG", "telemetry.filter", None)
         .reserve("FERROEHR_VIEWER_PORT")
         .reserve("FERROEHR_VIEWER_IMAGE"))
 }
@@ -493,6 +500,49 @@ mod tests {
             ..CdrConfig::default()
         };
         assert_eq!(cfg.management_base(), "http://cdr.internal:9464/ops");
+    }
+
+    /// `[telemetry]` is the family's section, and `RUST_LOG` sets its filter
+    /// below the canonical override, as on the CDR.
+    #[test]
+    fn the_telemetry_section_parses_and_rust_log_is_the_filter_fallback() {
+        let parsed = load_sources(
+            Some("[telemetry]\nformat = \"json\"\nfilter = \"warn\"\nlogged_query_parameters = [\"limit\"]\n"),
+            &BTreeMap::new(),
+        )
+        .unwrap();
+        assert_eq!(
+            parsed.telemetry.format,
+            ferrohealth_telemetry::section::Format::Json
+        );
+        assert_eq!(parsed.telemetry.filter.as_str(), "warn");
+        assert_eq!(parsed.telemetry.logged_query_parameters, ["limit"]);
+        assert_eq!(
+            ViewerConfig::default().telemetry.filter,
+            ferrohealth_telemetry::section::Filter::default()
+        );
+
+        let rust_log = BTreeMap::from([("RUST_LOG".to_owned(), "debug".to_owned())]);
+        let parsed = load_sources(Some("[telemetry]\nfilter = \"warn\"\n"), &rust_log).unwrap();
+        assert_eq!(parsed.telemetry.filter.as_str(), "debug");
+
+        let both = BTreeMap::from([
+            ("RUST_LOG".to_owned(), "debug".to_owned()),
+            (
+                "FERROEHR_VIEWER__TELEMETRY__FILTER".to_owned(),
+                "error".to_owned(),
+            ),
+        ]);
+        assert_eq!(
+            load_sources(None, &both).unwrap().telemetry.filter.as_str(),
+            "error"
+        );
+    }
+
+    #[test]
+    fn a_log_filter_that_does_not_parse_refuses_the_start() {
+        let refused = BTreeMap::from([("RUST_LOG".to_owned(), "info,=,,".to_owned())]);
+        assert!(load_sources(None, &refused).is_err());
     }
 
     #[test]

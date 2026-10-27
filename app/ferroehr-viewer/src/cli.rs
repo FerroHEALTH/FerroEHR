@@ -18,6 +18,7 @@ use ferrohealth_server::health::Health;
 use ferrohealth_server::healthcheck::{Outcome, check, check_tls, target};
 use ferrohealth_server::section::ServerSection;
 use ferrohealth_server::tls::HealthcheckTls;
+use ferrohealth_telemetry::telemetry::Telemetry;
 
 use crate::config::ViewerConfig;
 
@@ -47,6 +48,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
     match cli.command.unwrap_or(Common::Serve) {
         Common::Healthcheck => {
             let config = crate::config::load(path, sets)?;
+            crate::telemetry::init_console(&config.telemetry)?;
             let outcome = healthcheck(&config.server).await;
             anyhow::ensure!(outcome.exit_code() == 0, "healthcheck: {outcome}");
             Ok(())
@@ -55,11 +57,21 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             command: ConfigCommand::Check,
         } => {
             let config = crate::config::load(path, sets)?;
-            check_clients(&config)?;
-            tracing::info!("the configuration is valid");
-            Ok(())
+            let telemetry = crate::telemetry::init(&config.telemetry)?;
+            let outcome = check_clients(&config);
+            if outcome.is_ok() {
+                tracing::info!("the configuration is valid");
+            }
+            crate::telemetry::shutdown(&telemetry);
+            outcome
         }
-        Common::Serve => serve(crate::config::load(path, sets)?).await,
+        Common::Serve => {
+            let config = crate::config::load(path, sets)?;
+            let telemetry = crate::telemetry::init(&config.telemetry)?;
+            let outcome = serve(config, &telemetry).await;
+            crate::telemetry::shutdown(&telemetry);
+            outcome
+        }
     }
 }
 
@@ -90,8 +102,9 @@ fn check_clients(config: &ViewerConfig) -> anyhow::Result<()> {
 }
 
 /// Serves the viewer until `SIGTERM` or `SIGINT`, then drains within
-/// `server.shutdown_timeout_ms`.
-async fn serve(config: ViewerConfig) -> anyhow::Result<()> {
+/// `server.shutdown_timeout_ms`, with the request log on `telemetry`.
+async fn serve(config: ViewerConfig, telemetry: &Telemetry) -> anyhow::Result<()> {
+    let request_log = crate::telemetry::request_log(&config, telemetry);
     let config = Arc::new(config);
     let cdr = crate::cdr::CdrClient::new(&config.cdr)?;
     let oidc = if config.auth.oidc.enabled {
@@ -111,7 +124,7 @@ async fn serve(config: ViewerConfig) -> anyhow::Result<()> {
     let leptos_options = leptos::config::get_configuration(None)?.leptos_options;
     let lifecycle = Lifecycle::default();
     let health = Health::new(Registry::default(), lifecycle.clone());
-    let service = crate::server::app(app_state, leptos_options, health);
+    let service = crate::server::app(app_state, leptos_options, health, request_log);
 
     let section = &config.server;
     let listener = tokio::net::TcpListener::bind(section.listen).await?;
