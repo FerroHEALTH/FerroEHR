@@ -43,6 +43,9 @@ services:
       FERROEHR__AUTH__TOKEN_PROFILE: jwt
       FERROEHR__AUTH__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
       FERROEHR__AUTH__CA_FILE: /run/ferroehr-dev-tls/ca/ca.crt
+      # The realm's service client, whose system/aql-* grant counts only when
+      # it is named here (SMART on openEHR §Resource Scopes).
+      FERROEHR__SMART__BACKEND_CLIENTS: ferroehr-service
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 
@@ -54,8 +57,8 @@ services:
       FERROEHR_VIEWER__SESSION__COOKIE_SECURE: "false"
       FERROEHR_VIEWER__AUTH__OIDC__ENABLED: "true"
       FERROEHR_VIEWER__AUTH__OIDC__ISSUER: https://keycloak:8443/auth/realms/ferroehr
-      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID: ferroehr
-      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET: bT5T4oWn3xNdBytQsl2cfpBDi1pp15Va
+      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_ID: ferroehr-viewer
+      FERROEHR_VIEWER__AUTH__OIDC__CLIENT_SECRET: dev-viewer-Qm7xT2vK9pLw4sNc
       FERROEHR_VIEWER__AUTH__OIDC__PUBLIC_BASE_URL: http://127.0.0.1:3000
       FERROEHR_VIEWER__AUTH__OIDC__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
     volumes:
