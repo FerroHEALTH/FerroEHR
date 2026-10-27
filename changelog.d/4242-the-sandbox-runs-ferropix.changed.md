@@ -1,5 +1,5 @@
 - The hosted sandbox (sandbox.ferroehr.eu) resolves patients through FerroPIX
-  0.0.9, the FerroHEALTH patient identity source, as the compose quickstart
+  0.0.10, the FerroHEALTH patient identity source, as the compose quickstart
   does: FerroPIX runs beside the CDR on loopback with its database on the
   database box, each `EHR_STATUS` names its patient by the pseudonym FerroPIX
   minted in the clinical domain `urn:oid:2.999.7.1`, and `POST /query/cohort`

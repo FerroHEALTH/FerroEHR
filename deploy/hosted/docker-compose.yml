@@ -140,7 +140,7 @@ services:
   # below its only callers. Its database is on the DB box; the URL and the
   # sealing key are compose secrets read from `.env`.
   ferropix:
-    image: ${FERROPIX_IMAGE:-ghcr.io/ferrohealth/ferropix:0.0.9@sha256:a9709715504a964d6a65197b52344dccd916b9a1126af9445d0214172f630b6f}
+    image: ${FERROPIX_IMAGE:-ghcr.io/ferrohealth/ferropix:0.0.10@sha256:f44b2b12f0f12a6f0b1c7e2afc9611c649d501606b96d48e4471e0952826a504}
     container_name: ferroehr-sandbox-ferropix
     restart: unless-stopped
     network_mode: service:identity-issuer
