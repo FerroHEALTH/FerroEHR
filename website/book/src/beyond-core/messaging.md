@@ -4,18 +4,17 @@ Moving a patient's record between openEHR systems (migrating to another CDR,
 replicating an EHR to a downstream repository, or importing an externally
 produced document) is what openEHR's EHR Extract and messaging services are
 for. FerroEHR implements whole-EHR export, import into a new or an existing EHR
-(including cross-system cloning that preserves version identity), and Template
-Data Document (TDD) import.
+(including cross-system cloning that preserves version identity).
 
 > [!NOTE]
 > The openEHR **service model** defines a Message component, but the released
-> REST API publishes no extract, message, or TDD endpoint at all. FerroEHR
+> REST API publishes no extract or message endpoint at all. FerroEHR
 > therefore serves these operations under a `/message` group of its own design;
 > the routes are ours, not the standard's, and they gate no openEHR conformance
 > claim. Unlike the admin extensions, they are **not** admin-gated: they carry
-> the same ordinary authentication as the clinical API. The six routes, with
+> the same ordinary authentication as the clinical API. The four routes, with
 > their bodies, parameters, and status codes, are in
-> [Admin & messaging APIs](../operations-admin-apis.md#ehr-extract-and-tdd-import).
+> [Admin & messaging APIs](../operations-admin-apis.md#ehr-extract-export-and-import).
 
 <!-- toc -->
 
@@ -126,23 +125,6 @@ When ATNA auditing is enabled (it is on by default, see
 export and import emits a security-audit event under the ATNA `Extract` object
 class, so records moving between systems are captured in the audit trail with
 their direction.
-
-## Importing TDDs
-
-A Template Data Document (TDD) is a template-shaped XML document carrying the
-data for one composition. TDD import converts a TDD into a composition against
-the operational template its root names and commits it, returning the new
-version's object version id.
-
-The template must already be provisioned through the definition API, and the
-commit goes through the same validated write path as any other composition (see
-[Templates & validation](../templates-validation.md)) so a malformed document,
-an unknown EHR, or an unknown template is rejected rather than partially stored.
-
-A batch variant imports several TDDs in one call and is **all-or-nothing**:
-every document is converted before any is committed, so one unconvertible
-document rejects the whole batch and commits nothing. An empty array is a
-fulfilled no-op: the target EHR is still checked, and nothing is created.
 
 ## Divergent copies and version branches
 

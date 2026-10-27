@@ -27,7 +27,6 @@ use openehr_sdt::flat::convert::{composition_from_flat, composition_to_flat, par
 use openehr_sdt::flat::error::FlatError;
 use openehr_sdt::flat::example::{DetailLevel, example_instance, example_party};
 use openehr_sdt::flat::sim::flat::parse_flat;
-use openehr_sdt::flat::tdd::{from_tdd, from_tdd_with};
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
 use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 use serde_json::{Map, Value, json};
@@ -418,28 +417,6 @@ fn without_the_option_the_builders_stamp_the_pinned_release() {
     let versions = rm_versions(&built);
     assert_ne!(versions, Vec::<String>::new());
     assert!(versions.iter().all(|v| v == RM_VERSION), "{versions:?}");
-
-    let tdd = std::fs::read_to_string(format!(
-        "{CORPUS}/compositions/TDD/persistent_minimal.en.v1__full.xml"
-    ))
-    .expect("read the CNF TDD");
-    let versions = rm_versions(&from_tdd(&tdd, &wt).expect("TDD build"));
-    assert_ne!(versions, Vec::<String>::new());
-    assert!(versions.iter().all(|v| v == RM_VERSION), "{versions:?}");
-}
-
-#[test]
-fn the_tdd_builder_stamps_the_chosen_rm_version() {
-    let wt = minimal_composition_template();
-    let tdd = std::fs::read_to_string(format!(
-        "{CORPUS}/compositions/TDD/persistent_minimal.en.v1__full.xml"
-    ))
-    .expect("read the CNF TDD");
-    let options = BuildOptions::default().with_rm_version("1.1.0");
-    let built = from_tdd_with(&tdd, &wt, &options).expect("TDD build");
-    let versions = rm_versions(&built);
-    assert_ne!(versions, Vec::<String>::new());
-    assert!(versions.iter().all(|v| v == "1.1.0"), "{versions:?}");
 }
 
 #[test]

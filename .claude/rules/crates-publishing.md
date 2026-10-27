@@ -8,7 +8,9 @@ The nine `crates/*` spec crates are **published on crates.io** (issue #1886;
 policy in `docs/VERSIONS.md` §Product and crate versioning, procedure in
 `.claude/rules/changelog.md` §Publishing the openehr-* crates). Published
 versions are immutable, so version hygiene is a hard rule, machine-enforced
-by the `crate-version-guard` CI job.
+by `scripts/checks/crate-version-guard.sh <base> <head>`, which the
+`crate-version-guard` CI job runs on every pull request and you can run
+before you push (`--self-test` proves it).
 
 ## The bump rule
 

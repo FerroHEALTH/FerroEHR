@@ -541,10 +541,10 @@ headers reaches none of the others: a client that has not sent its request head
 in time is disconnected, on the plain and the TLS listener alike.
 
 **Body size:** `[server] body_limit_bytes` and `[rest] body_limit_bytes`. Two
-tiers: the routes that accept bulk by design (template upload,
-`/message/import`, `/message/tdd`) take the listener's limit, and the clinical
-surface the narrower `[rest]` one when it is set. Over-limit is `413`. The
-listener's default is the family's 1 MiB; a deployment that uploads operational
+tiers: the routes that accept bulk by design (template upload and
+`/message/import`) take the listener's limit, and the clinical surface the
+narrower `[rest]` one when it is set. Over-limit is `413`. The listener's
+default is the family's 1 MiB; a deployment that uploads operational
 templates raises it (the chart and the Compose files set 64 MiB), and one whose
 compositions embed large `DV_MULTIMEDIA` data raises the clinical tier
 deliberately.

@@ -55,7 +55,7 @@
 
 #![expect(
     clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 3): EHR-Extract/TDD/dump-load compose over \
+    reason = "owner-approved 2026-08-03 (#1694 family 3): EHR-Extract/dump-load compose over \
               verbatim stored content (RM common master06 §Copying)"
 )]
 

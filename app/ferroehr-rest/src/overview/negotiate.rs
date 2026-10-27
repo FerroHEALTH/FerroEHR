@@ -517,17 +517,6 @@ pub(crate) fn json_value(headers: &HeaderMap, body: &Bytes) -> Result<serde_json
     parse_json(body)
 }
 
-/// Decode a required JSON array body into untyped values (the TDD item list,
-/// which the release binds to no component schema).
-pub(crate) fn json_vec(
-    headers: &HeaderMap,
-    body: &Bytes,
-) -> Result<Vec<serde_json::Value>, ApiError> {
-    require_json(headers)?;
-    serde_json::from_slice(body)
-        .map_err(|e| ApiError::BadRequest(format!("invalid JSON array body: {e}")))
-}
-
 /// Decode a required JSON **array** body against the generated DTO of the
 /// component schema the release binds to it — strictly.
 ///

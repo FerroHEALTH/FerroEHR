@@ -579,7 +579,7 @@ mod tests {
             "the imports are the mutating half of the same interface"
         );
         assert!(
-            g.is_write_for(&Method::POST, Some(&format!("{BASE}/message/tdd"))),
+            g.is_write_for(&Method::POST, Some(&format!("{BASE}/message/unlisted"))),
             "an unlisted extension POST stays a write (fail-safe)"
         );
         assert!(

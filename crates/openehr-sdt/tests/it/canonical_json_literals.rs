@@ -24,11 +24,6 @@ const ALLOWLIST: &[(&str, &str)] = &[
          pinned by the simplified-formats corpus + round-trip gates",
     ),
     (
-        "flat/tdd.rs",
-        "the TDD lowering synthesizes partial canonical fragments the same \
-         compositional way as flat/build.rs",
-    ),
-    (
         "flat/map/data_values.rs",
         "leaf DV_* fragments grown attribute-by-attribute from flat suffixes \
          (a suffix set is an OPEN partial shape until the merge completes)",

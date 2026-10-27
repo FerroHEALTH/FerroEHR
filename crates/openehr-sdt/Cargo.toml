@@ -1,7 +1,7 @@
 [package]
 name = "openehr-sdt"
-version = "0.0.108"
-description = "openEHR Simplified Data Template formats (FLAT / STRUCTURED / Web Template / TDD), template-independent RM-instance validation, and the SMART on openEHR scope grammar, hand-written over the openehr-its wire layer"
+version = "0.0.109"
+description = "openEHR Simplified Data Template formats (FLAT / STRUCTURED / Web Template), template-independent RM-instance validation, and the SMART on openEHR scope grammar, hand-written over the openehr-its wire layer"
 edition.workspace = true
 rust-version.workspace = true
 license = "BUSL-1.1"
@@ -20,7 +20,6 @@ include = ["src/**", "README.md", "LICENSE"]
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
-quick-xml = { workspace = true, optional = true }
 # Web Template node groups keep document order (the OPT's ordered sequences).
 indexmap = { workspace = true, optional = true }
 # The field-identifier / node-id regex machinery (`regex` + `fancy-regex` for
@@ -31,12 +30,12 @@ fancy-regex = { workspace = true, optional = true }
 moka = { workspace = true, optional = true }
 # The wire layer this crate builds on: canonical JSON, the XML runtime and the
 # OPT 1.4 reader (`opt14` pulls `xml` and `json` in).
-openehr-its = { path = "../openehr-its", version = "0.0.108", default-features = false, optional = true }
-openehr-base = { path = "../openehr-base", version = "0.0.108", optional = true }
-openehr-rm = { path = "../openehr-rm", version = "0.0.108", optional = true }
-openehr-am = { path = "../openehr-am", version = "0.0.108", optional = true }
-openehr-lang = { path = "../openehr-lang", version = "0.0.108", optional = true }
-openehr-term = { path = "../openehr-term", version = "0.0.108", optional = true }
+openehr-its = { path = "../openehr-its", version = "0.0.109", default-features = false, optional = true }
+openehr-base = { path = "../openehr-base", version = "0.0.109", optional = true }
+openehr-rm = { path = "../openehr-rm", version = "0.0.109", optional = true }
+openehr-am = { path = "../openehr-am", version = "0.0.109", optional = true }
+openehr-lang = { path = "../openehr-lang", version = "0.0.109", optional = true }
+openehr-term = { path = "../openehr-term", version = "0.0.109", optional = true }
 
 [features]
 default = ["full"]
@@ -48,7 +47,6 @@ flat = [
     "dep:serde",
     "dep:serde_json",
     "dep:thiserror",
-    "dep:quick-xml",
     "dep:indexmap",
     "dep:regex",
     "dep:fancy-regex",

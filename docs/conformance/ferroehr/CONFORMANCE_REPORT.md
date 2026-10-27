@@ -102,7 +102,6 @@ Selected gating cases per claimed capability. `inconclusive` counts cases whose 
 | EhrArchive | pass | 7 | 0 | 0 | 0 |
 | DemographicArchive | pass | 8 | 0 | 0 | 0 |
 | EhrExtract | pass | 34 | 0 | 0 | 0 |
-| Tds | pass | 16 | 0 | 0 | 0 |
 | DefinitionApi | pass | 1 | 0 | 0 | 0 |
 | EhrApi | pass | 2 | 0 | 0 | 0 |
 | DemographicApi | pass | 64 | 0 | 0 | 1 |
@@ -175,7 +174,7 @@ Percentiles re-derive from the embedded HDR V2 histograms; the class verdict is 
 
 ## Honesty
 
-Coverage: 1103 of 1145 selected cases driven.
+Coverage: 1087 of 1129 selected cases driven.
 
 Not-executed verdicts (each cited):
 

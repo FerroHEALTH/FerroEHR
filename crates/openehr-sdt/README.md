@@ -1,7 +1,7 @@
 # openehr-sdt
 
 **The openEHR Simplified Formats for Rust**: FLAT and STRUCTURED composition
-reading and writing, Web Template building, TDD import, template-independent
+reading and writing, Web Template building, template-independent
 RM-instance validation, and the SMART on openEHR scope grammar. Hand-written
 over the [`openehr-its`](https://docs.rs/openehr-its) wire layer (Apache-2.0).
 
@@ -14,8 +14,7 @@ and Simplified Formats is what this crate implements.
 ## What it provides
 
 - **`openehr_sdt::flat`**: the Simplified Formats. FLAT and STRUCTURED data
-  instances, the Web Template model and builder, and the TDD to COMPOSITION
-  converter. The authority is the STABLE ITS-REST 1.1.0 Simplified Formats
+  instances and the Web Template model and builder. The authority is the STABLE ITS-REST 1.1.0 Simplified Formats
   specification (`docs/specs/openehr/ITS-REST/docs/simplified_formats/`):
   `master04` for field identifiers, the node-id algorithm and the
   FLAT/STRUCTURED algorithms, `master05` for the per-RM-type mapping tables,
@@ -59,7 +58,7 @@ for scope in &scopes {
 | Feature | Adds | Pulls in |
 |---|---|---|
 | (none) | `smart_scopes` | nothing: std only |
-| `flat` | `flat`, `rm_instance` | `openehr-its` with `opt14`, the five generated spec crates, serde, `serde_json`, `thiserror`, `quick-xml`, `indexmap`, `regex`, `fancy-regex` |
+| `flat` | `flat`, `rm_instance` | `openehr-its` with `opt14`, the five generated spec crates, serde, `serde_json`, `thiserror`, `indexmap`, `regex`, `fancy-regex` |
 | `cache` | `flat::cache` (the async Web Template cache) | `flat` + `moka` |
 | `full` (default) | everything above | `flat` + `cache` |
 

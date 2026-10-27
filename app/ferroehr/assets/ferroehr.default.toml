@@ -60,7 +60,7 @@ request_timeout_ms = 30000     # a request still running then is answered 408
 # its last response; a client still sending then is disconnected.
 header_read_timeout_ms = 30000
 # The largest request body any route reads, refused 413 above it. The bulk
-# routes (template upload, /message/import, /message/tdd) take up to this;
+# routes (template upload, /message/import) take up to this;
 # [rest] body_limit_bytes narrows the clinical surface below it. 64 MiB; the
 # largest operational template in the vendored CKM corpus is 5.4 MB.
 body_limit_bytes = 67108864

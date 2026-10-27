@@ -289,10 +289,10 @@ const CLINICAL_READ: &[(&str, &str)] = &[
     ("POST", "/message/export"),
 ];
 
-/// Clinical writes (base-relative). The `/message` imports and the TDD
-/// intake sit here deliberately: the group carries the ordinary clinical
-/// authentication class rather than the admin gate (`api::message` module
-/// docs), like every other route that commits clinical content.
+/// Clinical writes (base-relative). The `/message` imports sit here
+/// deliberately: the group carries the ordinary clinical authentication class
+/// rather than the admin gate (`api::message` module docs), like every other
+/// route that commits clinical content.
 const CLINICAL_WRITE: &[(&str, &str)] = &[
     ("POST", "/ehr"),
     ("PUT", "/ehr/{ehr_id}"),
@@ -353,8 +353,6 @@ const CLINICAL_WRITE: &[(&str, &str)] = &[
     ("DELETE", "/demographic/party_relationship/{uid_based_id}"),
     ("POST", "/message/import"),
     ("POST", "/message/import/{ehr_id}"),
-    ("POST", "/message/tdd/{ehr_id}"),
-    ("POST", "/message/tdd/{ehr_id}/batch"),
 ];
 
 /// Admin-class reads (base-relative) — every one under the `/admin/` prefix

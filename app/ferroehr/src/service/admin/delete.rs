@@ -17,7 +17,7 @@
     feature = "multimedia",
     expect(
         clippy::disallowed_types,
-        reason = "owner-approved 2026-08-03 (#1694 family 3): EHR-Extract/TDD/dump-load compose \
+        reason = "owner-approved 2026-08-03 (#1694 family 3): EHR-Extract/dump-load compose \
                   over verbatim stored content (RM common master06 §Copying); the Value sites \
                   are multimedia-gated, so the expectation exists only where it is fulfilled"
     )
