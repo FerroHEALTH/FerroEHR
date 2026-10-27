@@ -656,7 +656,9 @@ peers that verify through the platform verifier stay trusted. For an OIDC
 issuer whose certificate comes from a private CA, name a Secret holding that
 CA in `viewer.auth.oidc.caExistingSecret` (key `viewer.auth.oidc.caExistingSecretKey`,
 `ca.crt` by default): the chart mounts it and points the viewer's
-`auth.oidc.tls.trust_roots_file` at it. The ServiceMonitor reads the Secret from its own namespace, and
+`auth.oidc.tls.trust_roots_file` at it. The server trusts a private issuer CA
+through `config.auth.ca_file`: mount the Secret holding it with `extraVolumes`
+and `extraVolumeMounts` and name the mounted file there. The ServiceMonitor reads the Secret from its own namespace, and
 the `prometheus.io/scheme: https` pod annotation follows the listener when
 `metrics.enabled` is set. With `config.server.tls.client_auth: required` the
 kubelet probes cannot present a client certificate, so the chart refuses to

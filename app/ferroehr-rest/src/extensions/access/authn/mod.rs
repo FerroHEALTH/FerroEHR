@@ -1029,6 +1029,83 @@ mod tests {
             .await;
     }
 
+    /// The configuration of an issuer at `issuer` checked by introspection,
+    /// authenticating with a client grant or, with `bearer`, a bearer grant,
+    /// and trusting `ca_file` beside the platform roots when given.
+    fn introspecting_through(
+        issuer: &str,
+        bearer: bool,
+        ca_file: Option<std::path::PathBuf>,
+    ) -> AppConfig {
+        let grant = ferrohealth_smart::config::OauthSection {
+            token_endpoint: format!("{issuer}/token"),
+            client_id: "ferroehr".to_owned(),
+            client_secret: Some(SecretString::from("synthetic-secret")),
+            ..ferrohealth_smart::config::OauthSection::default()
+        };
+        let (client, bearer) = if bearer {
+            (None, Some(grant))
+        } else {
+            (Some(grant), None)
+        };
+        AppConfig {
+            auth: AuthSection {
+                issuer: ferrohealth_smart::config::IssuerKey::Flat(issuer.to_owned()),
+                audience: vec![AUDIENCE.to_owned()],
+                mode: ferrohealth_smart::config::AuthMode::Introspection,
+                introspection: Some(ferrohealth_smart::config::IntrospectionSection {
+                    endpoint: format!("{issuer}/introspect"),
+                    client,
+                    bearer,
+                    ..ferrohealth_smart::config::IntrospectionSection::default()
+                }),
+                ca_file,
+                ..ferroehr::config::FerroEhrConfig::default().auth
+            },
+            ..AppConfig::default()
+        }
+    }
+
+    /// `[auth] ca_file`: an issuer whose TLS certificate a private
+    /// certificate authority signed is read at boot trusting that authority
+    /// beside the platform roots, under either introspection credential, and
+    /// refused without it; a file that holds no certificate refuses the start.
+    /// No openEHR spec governs trust configuration: our own design.
+    #[tokio::test]
+    async fn an_issuer_behind_a_private_authority_is_read_with_auth_ca_file() {
+        let issuer = testkit::https::HttpsServer::answering_with("application/json", |base| {
+            json!({ "issuer": base }).to_string()
+        })
+        .await
+        .expect("the private issuer starts");
+        let empty = issuer.ca_file.with_extension("empty.pem");
+        std::fs::write(&empty, b"").expect("the empty file is written");
+        for bearer in [false, true] {
+            let config =
+                introspecting_through(&issuer.base_url, bearer, Some(issuer.ca_file.clone()));
+            Authenticator::new(&config)
+                .await
+                .unwrap_or_else(|e| panic!("bearer={bearer}: read trusting ca_file: {e}"));
+            let untrusted = introspecting_through(&issuer.base_url, bearer, None);
+            let refused = Authenticator::new(&untrusted)
+                .await
+                .expect_err("the platform roots alone do not trust the private authority");
+            assert!(
+                refused.contains("could not be read"),
+                "bearer={bearer}: {refused}"
+            );
+            let no_certificate =
+                introspecting_through(&issuer.base_url, bearer, Some(empty.clone()));
+            let refused = Authenticator::new(&no_certificate)
+                .await
+                .expect_err("a ca_file without a certificate refuses the start");
+            assert!(
+                refused.contains("auth.ca_file"),
+                "bearer={bearer}: {refused}"
+            );
+        }
+    }
+
     /// RFC 7662 §2.2: an active token admits its caller with its scopes and
     /// roles, an inactive one is a `401`, and an endpoint that cannot answer
     /// is a `503`, never a refusal of a token that may be valid.

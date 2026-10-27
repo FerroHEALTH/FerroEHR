@@ -13,9 +13,8 @@
 # The CDR trusts the dev realm here, in both modes: Keycloak serves the issuer
 # over TLS with the development CA `keycloak-tls` generates
 # (docker-compose.dev.yml), and the CDR and the viewer add that CA beside
-# their own trust store (the CDR through SSL_CERT_FILE and SSL_CERT_DIR, which
-# rustls reads together on Linux; the viewer through `[auth.oidc.tls]
-# trust_roots_file`). The CDR reads the issuer's metadata at boot, so it waits for
+# their own trust store (the CDR through `[auth] ca_file`, the viewer through
+# `[auth.oidc.tls] trust_roots_file`). The CDR reads the issuer's metadata at boot, so it waits for
 # Keycloak. Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068
 # profile the CDR expects by default, hence `token_profile = "jwt"`.
 #
@@ -42,8 +41,7 @@ services:
       FERROEHR__AUTH__AUDIENCE: ferroehr
       FERROEHR__AUTH__TOKEN_PROFILE: jwt
       FERROEHR__AUTH__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
-      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
-      SSL_CERT_DIR: /run/ferroehr-dev-tls/ca
+      FERROEHR__AUTH__CA_FILE: /run/ferroehr-dev-tls/ca/ca.crt
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 
