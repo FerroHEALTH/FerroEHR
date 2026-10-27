@@ -105,7 +105,7 @@ pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Resp
         .await?;
     let location = format!(
         "{}/definition/query/{name}/{version}",
-        state.config().server.base_path
+        state.config().rest.base_path
     );
     Ok(negotiate::empty_with_location(StatusCode::OK, &location))
 }
@@ -167,7 +167,7 @@ pub(super) async fn version_store(
         .await?;
     let location = format!(
         "{}/definition/query/{name}/{stored}",
-        state.config().server.base_path
+        state.config().rest.base_path
     );
     Ok(negotiate::empty_with_location(StatusCode::OK, &location))
 }

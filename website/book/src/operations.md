@@ -936,10 +936,10 @@ its own probes.
 
 | Endpoint | Contract | Use it for |
 |---|---|---|
-| `GET /health` | constant `200 OK` (plain text `OK`), touches nothing | load balancers, `docker` `HEALTHCHECK`, anything that must never be auth-gated |
-| `GET /health/liveness` | identical to `/health`, the same constant answer under the orchestrator-conventional path | Kubernetes `livenessProbe` and `startupProbe` |
+| `GET /health` | the readiness status (`200` or `503`) with the state alone, `{"state": …}` | load balancers, anything that must never be auth-gated |
+| `GET /health/liveness` | constant `200` with `{"state":"up"}`, touches nothing | Kubernetes `livenessProbe` and `startupProbe` |
 | `GET /health/readiness` | `200` while ready, `503` while the process boots or drains or an indicator is `down`; the FerroHEALTH readiness document (`state`, `phase` and each indicator's `name` and `state`), each check bounded to one second. Only `db` and `migrations` read `down`; every other indicator reads at worst `degraded` | Kubernetes `readinessProbe`, ops dashboards |
-| `GET /ferroehr/rest/status` | public status document: `status`, `server_version`, `openehr_rest_api_version`, `timestamp` and `deployment.profile`. The full document, which adds `licence` (the grant in force: `state`, `use`, `licensee`, `not_after`, `configured_token`), the whole `deployment` posture (the declared profile, the separations still open and the ones accepted by name) and `support` (`release_date`, `support_ends`, `status`), is `GET /management/status` | version/identity checks; the URL the container's `ferroehr healthcheck` subcommand probes |
+| `GET /ferroehr/rest/status` | public status document: `status`, `server_version`, `openehr_rest_api_version`, `timestamp` and `deployment.profile`. The full document, which adds `licence` (the grant in force: `state`, `use`, `licensee`, `not_after`, `configured_token`), the whole `deployment` posture (the declared profile, the separations still open and the ones accepted by name) and `support` (`release_date`, `support_ends`, `status`), is `GET /management/status` | version/identity checks |
 | `GET /management/*` | ops introspection; see below | operators, off by default, enable deliberately |
 
 Every management request is itself recorded in the audit trail as a
@@ -947,11 +947,10 @@ system-domain access under its own operation id (`management_info`,
 `management_env`, `management_loggers_set`, …), so a runtime filter change or a
 configuration read is never an unrecorded administrative act.
 
-There is exactly one health surface: the `/health` family above. `/health` and
-`/health/liveness` are two conventional names for the same constant answer (a
-load balancer wants the bare path, an orchestrator wants the `liveness`/
-`readiness` pair); `/ferroehr/rest/status` is a different contract, and no health
-endpoint exists under the REST root.
+There is exactly one health surface: the `/health` family above, the one every
+FerroHEALTH product serves, and the route the container's `ferroehr
+healthcheck` subcommand asks is `/health/readiness`. `/ferroehr/rest/status` is
+a different contract, and no health endpoint exists under the REST root.
 
 Not every indicator blocks readiness, and the distinction is deliberate:
 
@@ -1068,7 +1067,7 @@ surface an operator or a user reads:
 | startup banner | `Manufactured by Cadasto B.V. · https://www.cadasto.com/contact/`, then the postal address and `info@cadasto.com` |
 | `ferroehr --version` | the version, then `Manufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com` and the website |
 | `GET /management/info` | a `manufacturer` object with `name`, `postal_address`, `email` and `website` |
-| `OPTIONS` on the API base path | `vendor` defaults to `Cadasto B.V.` ([`[server.identity]`](installation/config-server.md#serveridentity)) |
+| `OPTIONS` on the API base path | `vendor` defaults to `Cadasto B.V.` ([`[rest.identity]`](installation/config-server.md#restidentity)) |
 | viewer | the footer of every screen, and a Manufacturer card on `/system` |
 | container images | the `eu.ferroehr.image.manufacturer` label |
 

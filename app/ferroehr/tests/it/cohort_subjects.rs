@@ -106,10 +106,10 @@ async fn named_subjects_resolve_through_the_local_map() {
     let mut expected = Vec::new();
     for value in ["4114-a", "4114-b", "4114-c"] {
         let subject = SubjectRef::person(value, LOCAL_DOMAIN);
-        let ehr = svc.create_ehr(None).await.expect("an EHR");
-        svc.add_ehr_subject(ehr.to_string(), subject.clone(), None, None)
+        let ehr = svc
+            .create_ehr_for_subject(subject.clone(), None)
             .await
-            .expect("the subject is entered in the local map");
+            .expect("an EHR for the subject");
         commit(&svc, ehr, value).await;
         if value != "4114-c" {
             named.push(subject);

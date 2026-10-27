@@ -41,7 +41,7 @@ pub(super) async fn run(
     let h = &parts.headers;
     let ok = StatusCode::OK;
     // The configured base path, for building `Location` URLs.
-    let base = state.config().server.base_path.clone();
+    let base = state.config().rest.base_path.clone();
 
     // EHR / EHR_STATUS have no Simplified-Formats mapping (they are not
     // templated) — a simplified Content-Type/Accept is rejected uniformly.

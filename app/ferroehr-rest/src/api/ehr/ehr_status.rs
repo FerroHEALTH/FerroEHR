@@ -49,7 +49,7 @@ pub(super) async fn run(
     let q = parts.query.as_deref();
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
-    let base = state.config().server.base_path.clone();
+    let base = state.config().rest.base_path.clone();
 
     // EHR_STATUS is not templated → no Simplified-Formats mapping; reject a
     // simplified Content-Type/Accept uniformly (see `formats::dispatch`).

@@ -186,21 +186,21 @@ struct ExtensionsInfo;
 pub fn extensions_document(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
     let mut doc = ExtensionsInfo::openapi();
 
-    // Public (no lock). The health family is mounted at the process root and is
-    // base-path-independent, so it needs no re-homing.
-    doc.merge(health::openapi());
-    let rest_root = cfg.server.rest_root();
+    // Public (no lock). The health family is the family stack's route set,
+    // served under `server.base_path`.
+    doc.merge(health::openapi(&cfg.server.base_path));
+    let rest_root = cfg.rest.rest_root();
     doc.merge(status::openapi(&rest_root));
     doc.merge(crate::smart::discovery::openapi(cfg, &rest_root));
     // The System API's OPTIONS operation is a closure route mounted outside
     // `OpenApiRouter` (above CORS), documented via its twin.
-    doc.merge(crate::api::system::options::openapi(&cfg.server.base_path));
+    doc.merge(crate::api::system::options::openapi(&cfg.rest.base_path));
     doc.merge(meta_openapi(cfg));
 
     // Authenticated: the management surface plus the entire API surface, nested
     // under the configured base path so the paths read as full server paths.
     let mut protected = management::openapi();
-    protected.merge(crate::api::api_doc(&cfg.server.base_path));
+    protected.merge(crate::api::api_doc(&cfg.rest.base_path));
 
     let scheme = advertised_scheme(&cfg.auth);
     if scheme.is_some() {
@@ -336,7 +336,7 @@ async fn openapi_json(State(state): State<AppState>) -> Response {
         which is where the UI's relative asset URLs resolve."))
 )]
 async fn swagger_ui_index(State(state): State<AppState>) -> Response {
-    redirect_to_index(&state.config().server.swagger_ui_path())
+    redirect_to_index(&state.config().rest.swagger_ui_path())
 }
 
 /// Redirects to `index.html` under the mount.
@@ -396,7 +396,7 @@ fn meta_openapi(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
     // These paths exist only when the Swagger surface is mounted, and the
     // generator's documented property is that every path it lists is one the
     // live router mounts.
-    if !cfg.server.swagger_ui.is_mounted() {
+    if !cfg.rest.swagger_ui.is_mounted() {
         return utoipa::openapi::OpenApiBuilder::new().build();
     }
 
@@ -406,7 +406,7 @@ fn meta_openapi(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
         .into_openapi();
     doc.merge(FamilyDocs::openapi());
 
-    let json_path = cfg.server.openapi_json_path();
+    let json_path = cfg.rest.openapi_json_path();
     let docs_root = api_docs_root(&json_path);
     rehome_path(&mut doc, "/ferroehr/rest/api-docs/openapi.json", &json_path);
     rehome_path(
@@ -417,7 +417,7 @@ fn meta_openapi(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
     rehome_path(
         &mut doc,
         "/ferroehr/rest/swagger-ui",
-        &cfg.server.swagger_ui_path(),
+        &cfg.rest.swagger_ui_path(),
     );
     doc
 }
@@ -699,7 +699,7 @@ fn prebuild_docs(cfg: &AppConfig) -> PrebuiltDocs {
                     also_tagged,
                 } => filter_by_path(
                     &full_doc,
-                    &cfg.server.base_path,
+                    &cfg.rest.base_path,
                     include,
                     exclude,
                     also_tagged,
@@ -732,8 +732,8 @@ fn json_document_response(body: Bytes) -> Response {
 /// filtered JSON document per API family, all server-generated. Config paths come
 /// from [`AppConfig`].
 pub(crate) fn swagger_router(cfg: &AppConfig) -> Router<AppState> {
-    let ui_path = cfg.server.swagger_ui_path();
-    let json_path = cfg.server.openapi_json_path();
+    let ui_path = cfg.rest.swagger_ui_path();
+    let json_path = cfg.rest.openapi_json_path();
     let api_docs_root = api_docs_root(&json_path);
 
     // Built once — they are pure functions of static configuration — so a
@@ -818,7 +818,7 @@ fn api_docs_root(json_path: &str) -> String {
 /// URLs must outlive the server, so the derived paths are leaked once at
 /// construction (the UI config requires `'static`).
 fn swagger_config(cfg: &AppConfig) -> Arc<Config<'static>> {
-    let json_path = cfg.server.openapi_json_path();
+    let json_path = cfg.rest.openapi_json_path();
     let root = api_docs_root(&json_path);
 
     let mut urls: Vec<Url<'static>> = Vec::new();
@@ -866,7 +866,7 @@ mod tests {
     #[test]
     fn the_family_parameter_names_every_served_slug() {
         let mut cfg = AppConfig::default();
-        cfg.server.swagger_ui = ferroehr::config::management::AccessLevel::Public;
+        cfg.rest.swagger_ui = ferroehr::config::management::AccessLevel::Public;
         let doc = meta_openapi(&cfg);
         let description = doc
             .paths

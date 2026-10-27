@@ -11,15 +11,21 @@ message/extract/TDD API at all, so `message::{extract, tdd}` mount SM
 `I_EHR_EXTRACT_SERVICE` / `I_TDD_SERVICE` under a `/message` resource root of
 our own, on the ordinary clinical authentication class rather than the admin
 gate), `router`, `state`, `formats`
-(content negotiation), `overview`, `overload` (shed), `config`, `system_log`
+(content negotiation), `overview`, `limits` (the clinical body tier), `config`, `system_log`
 (ATNA audit middleware), `smart` (SMART App Launch resource-server role), and
 `extensions` (`access` = the RBAC/ABAC authn+authz PEP, plus health / fhir /
 terminology / management / event-subscription surfaces). Entry point:
-`serve_full`.
+`serve_full`. The HTTP stack (request id, panic catch, timeout, body limit,
+overload bound, caller rate, compression, request log, health routes), the
+listener with its TLS and the bounded drain are `ferrohealth-server`'s
+(`stack::app`, `serve::run_all`); `router` supplies the routes and the openEHR
+`{ error, message }` body for the stack's panics and refusals, and keeps no
+copy of any of it.
 
-- **The health family is always-on and ungated** (`extensions::health`:
-  `/health`, `/health/liveness`, `/health/readiness`), mounted outside the API
-  subtree — no auth, no audit, no overload shed, no config switch — and says
+- **The health family is always-on and ungated** (`ferrohealth_server::health`,
+  documented in the served OpenAPI by `extensions::health`: `/health`,
+  `/health/liveness`, `/health/readiness`), mounted by the family stack
+  outside these routes — no auth, no audit, no overload bound, no config switch — and says
   as little as possible: readiness serves the family document of
   `ferrohealth-health` without detail (the phase and each indicator's name and
   state). **Everything reachable without a credential says only what

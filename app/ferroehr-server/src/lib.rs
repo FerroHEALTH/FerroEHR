@@ -52,6 +52,10 @@ use ferroehr_rest::extensions::access::authz::{
 use ferroehr_rest::extensions::management::{LogFilter, Observability};
 use ferrohealth_health::lifecycle::Lifecycle;
 use ferrohealth_health::registry::{HealthIndicator, Registry};
+use ferrohealth_server::cli::{Common, ConfigArgs, ConfigCommand};
+use ferrohealth_server::healthcheck::{Outcome, check, check_tls, target};
+use ferrohealth_server::section::ServerSection;
+use ferrohealth_server::tls::HealthcheckTls;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -59,7 +63,6 @@ use ferroehr::db;
 use ferroehr::service::FerroEhrService;
 use ferroehr::telemetry::{self, indicators};
 use ferrohealth_telemetry::request_log::RequestLog;
-use ferrohealth_telemetry::section::{Format, Rendering};
 
 /// How long to wait for the audit queue to flush on shutdown.
 const AUDIT_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
@@ -77,7 +80,9 @@ static VERSION_TEXT: LazyLock<String> = LazyLock::new(|| {
     )
 });
 
-/// `FerroEHR` server command-line interface.
+/// `FerroEHR` server command-line interface: `--config` and the repeatable
+/// `--set key=value` every FerroHEALTH binary shares, and the subcommands. No
+/// subcommand serves, as `serve` does.
 #[derive(Debug, Parser)]
 #[command(
     name = "ferroehr",
@@ -85,14 +90,10 @@ static VERSION_TEXT: LazyLock<String> = LazyLock::new(|| {
     about = "openEHR-conformant CDR server"
 )]
 pub struct Cli {
-    /// Path to the config file (overrides `FERROEHR_CONFIG`; with neither, no
-    /// file is read).
-    #[arg(long, global = true)]
-    config: Option<PathBuf>,
-    /// Repeatable dotted-path override, highest precedence (e.g.
-    /// `--set db.max_connections=40`).
-    #[arg(long = "set", global = true, value_parser = parse_override)]
-    set: Vec<(String, String)>,
+    /// `--config` (overrides `FERROEHR_CONFIG`; with neither, no file is read)
+    /// and the `--set` overrides, applied last.
+    #[command(flatten)]
+    config: ConfigArgs,
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -100,20 +101,9 @@ pub struct Cli {
 /// Top-level subcommands of the `ferroehr` binary.
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Probe the running server's status endpoint; exit 0 on 2xx, 1 otherwise.
-    Healthcheck {
-        /// The status URL to probe. Unset, it is derived from the effective
-        /// configuration: `http://127.0.0.1:<server.bind port><REST root>/status`,
-        /// so a shortened `server.base_path` moves the probe with it.
-        #[arg(long, env = "FERROEHR_HEALTHCHECK_URL")]
-        url: Option<String>,
-    },
-    /// Configuration utilities (validate / print the annotated default).
-    Config {
-        /// Which configuration utility to run.
-        #[command(subcommand)]
-        cmd: ConfigCmd,
-    },
+    /// `serve`, `config check` and `healthcheck`, the family's commands.
+    #[command(flatten)]
+    Common(Common),
     /// Database schema utilities (apply or verify the migrations, or erase the
     /// instance), then exit.
     Db {
@@ -180,22 +170,10 @@ pub enum ReportEvent {
     Daily,
 }
 
-/// `ferroehr config …` subcommands.
-#[derive(Debug, Subcommand)]
-pub enum ConfigCmd {
-    /// Validate the effective configuration (3-pass strict + semantic) and print
-    /// it, redacted; exit 0 when valid, 1 otherwise.
-    Check,
-    /// Emit the annotated default configuration template to stdout.
-    Default,
-}
-
-/// Parse a `--set key=value` pair.
-fn parse_override(raw: &str) -> Result<(String, String), String> {
-    raw.split_once('=')
-        .map(|(k, v)| (k.trim().to_owned(), v.to_owned()))
-        .ok_or_else(|| format!("expected key=value, got `{raw}`"))
-}
+/// How long `ferroehr healthcheck` waits for the readiness answer: shorter than
+/// the image's `HEALTHCHECK --timeout=5s`, so the probe reports the reason
+/// itself instead of being killed.
+pub const HEALTHCHECK_TIMEOUT: Duration = Duration::from_secs(3);
 
 /// Dispatch a parsed [`Cli`] — the whole binary behind one testable seam.
 ///
@@ -204,25 +182,24 @@ fn parse_override(raw: &str) -> Result<(String, String), String> {
 /// Returns any boot, configuration, probe, or serve failure of the selected
 /// subcommand; the process exit code follows from `main` returning it.
 pub async fn run(cli: Cli) -> anyhow::Result<()> {
+    let config = cli.config.config.as_deref();
+    let set = cli.config.sets.as_slice();
     match cli.command {
-        Some(Command::Healthcheck { url }) => {
-            let url = if let Some(url) = url {
-                url
-            } else {
-                let config = ferroehr::config::load(cli.config.as_deref(), &cli.set)?;
-                healthcheck_url(&config)?
-            };
-            healthcheck(&url).await
+        Some(Command::Common(Common::Healthcheck)) => {
+            let loaded = ferroehr::config::load(config, set)?;
+            let outcome = healthcheck(&loaded.server).await;
+            anyhow::ensure!(outcome.exit_code() == 0, "healthcheck: {outcome}");
+            Ok(())
         }
-        Some(Command::Config { cmd }) => run_config(&cmd, cli.config.as_deref(), &cli.set),
-        Some(Command::Db { cmd }) => run_db(&cmd, cli.config.as_deref(), &cli.set).await,
+        Some(Command::Common(Common::Config {
+            command: ConfigCommand::Check,
+        })) => run_config_check(config, set),
+        Some(Command::Db { cmd }) => run_db(&cmd, config, set).await,
         Some(Command::UsageReport { print: _, event }) => {
-            run_usage_report(event, cli.config.as_deref(), &cli.set).await
+            run_usage_report(event, config, set).await
         }
-        Some(Command::Report { output }) => {
-            run_report(output.as_deref(), cli.config.as_deref(), &cli.set).await
-        }
-        None => Box::pin(serve(cli.config.as_deref(), &cli.set)).await,
+        Some(Command::Report { output }) => run_report(output.as_deref(), config, set).await,
+        Some(Command::Common(Common::Serve)) | None => Box::pin(serve(config, set)).await,
     }
 }
 
@@ -498,93 +475,47 @@ async fn verify_schema_and_isolation(
     outcome
 }
 
-/// `ferroehr config check` / `ferroehr config default`.
+/// `ferroehr config check`: loads and validates the configuration, then prints
+/// it with every secret redacted and where each key came from.
 #[expect(
     clippy::print_stdout,
     clippy::print_stderr,
-    reason = "the config default|check subcommands' PURPOSE is console output \
+    reason = "the config check subcommand's PURPOSE is console output \
               (.claude/rules/reliability.md §tools)"
 )]
-fn run_config(
-    cmd: &ConfigCmd,
-    config: Option<&Path>,
-    set: &[(String, String)],
-) -> anyhow::Result<()> {
-    match cmd {
-        ConfigCmd::Default => {
-            print!("{}", ferroehr::config::DEFAULT_TEMPLATE);
-            Ok(())
-        }
-        ConfigCmd::Check => {
-            let (loaded, cfg) = ferroehr::config::load_with_provenance(config, set)?;
-            cfg.validate()?;
-            ferroehr::config::auth::require_mechanism(&cfg.auth)?;
-            let rendered = ferrohealth_config::report::check_report(&loaded)?;
-            print!("{rendered}");
-            // The resolved placement of the four storage domains, so an
-            // operator can see whether the deployment they configured is the
-            // one the server would run. It names no DSN.
-            println!("{}", cfg.storage.layout(&cfg.db).describe());
-            if cfg.db.is_dev_default() {
-                eprintln!(
-                    "note: [db].url is the built-in DEVELOPMENT DEFAULT; set it for any \
-                     non-dev deployment."
-                );
-            }
-            eprintln!("configuration OK");
-            Ok(())
-        }
+fn run_config_check(config: Option<&Path>, set: &[(String, String)]) -> anyhow::Result<()> {
+    let (loaded, cfg) = ferroehr::config::load_with_provenance(config, set)?;
+    cfg.validate()?;
+    ferroehr::config::auth::require_mechanism(&cfg.auth)?;
+    let rendered = ferrohealth_config::report::check_report(&loaded)?;
+    print!("{rendered}");
+    // The resolved placement of the four storage domains, so an
+    // operator can see whether the deployment they configured is the
+    // one the server would run. It names no DSN.
+    println!("{}", cfg.storage.layout(&cfg.db).describe());
+    if cfg.db.is_dev_default() {
+        eprintln!(
+            "note: [db].url is the built-in DEVELOPMENT DEFAULT; set it for any \
+             non-dev deployment."
+        );
     }
-}
-
-/// The default healthcheck URL, derived from the effective configuration.
-///
-/// The probe runs inside the container beside the server, so the caller hands
-/// it the configuration the server booted with: the port of `server.bind` and
-/// the REST root `server.base_path` derives. Loopback is fixed; the bind
-/// address is whatever the listener accepts from, which is not necessarily
-/// dialable.
-///
-/// # Errors
-/// `server.bind` carries no port.
-pub fn healthcheck_url(config: &ferroehr::config::FerroEhrConfig) -> anyhow::Result<String> {
-    let port = config
-        .server
-        .bind
-        .rsplit_once(':')
-        .map(|(_, port)| port)
-        .with_context(|| format!("server.bind `{}` carries no port", config.server.bind))?;
-    Ok(format!(
-        "http://127.0.0.1:{port}{}/status",
-        config.server.rest_root()
-    ))
-}
-
-/// Probe `url`; `Ok(())` iff the response status is 2xx.
-async fn healthcheck(url: &str) -> anyhow::Result<()> {
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(5))
-        .build()
-        .context("building healthcheck HTTP client")?;
-    let status = client
-        .get(url)
-        .send()
-        .await
-        .with_context(|| format!("probing {url}"))?
-        .status();
-    anyhow::ensure!(status.is_success(), "healthcheck: {url} returned {status}");
+    eprintln!("configuration OK");
     Ok(())
 }
 
-/// Whether the ASCII boot banner prints, given the configured `[telemetry] format`
-/// and whether stdout is a terminal.
-///
-/// Keyed on the RESOLVED rendering rather than the configured value: `format =
-/// "auto"` renders JSON whenever stdout is not a terminal, and a banner ahead of
-/// it would leave a log collector with unparseable first bytes. No openEHR spec
-/// governs logging — our own design.
-fn prints_banner(format: Format, stdout_is_terminal: bool) -> bool {
-    format.resolve(stdout_is_terminal) == Rendering::Pretty
+/// Asks the server `section` configures for its readiness, over the TLS it
+/// configures, on the loopback when it listens on every interface: the
+/// container's `HEALTHCHECK`.
+pub async fn healthcheck(section: &ServerSection) -> Outcome {
+    let address = target(section.listen);
+    let base = section.base_path.as_str();
+    match &section.tls {
+        None => check(address, base, HEALTHCHECK_TIMEOUT).await,
+        Some(tls) => match HealthcheckTls::read(tls) {
+            Ok(pinned) => check_tls(address, base, HEALTHCHECK_TIMEOUT, &pinned).await,
+            Err(error) => Outcome::Failed(format!("the TLS files do not read: {error}")),
+        },
+    }
 }
 
 /// Summarizes which management endpoints are mounted, and at which access
@@ -671,7 +602,7 @@ fn assemble_service(
 
     let mut service = FerroEhrService::new(pools)
         .with_spec_profile(config.spec_profile)
-        .with_system_id(config.server.system_id.clone())
+        .with_system_id(config.rest.system_id.clone())
         .with_signer(signer)
         .with_licence(licence)
         .with_deployment(deployment)
@@ -715,7 +646,7 @@ fn wire_authz(
     }
     let authz = build_authz(
         &config.authz,
-        &config.server.base_path,
+        &config.rest.base_path,
         authz_resolvers(pool.clone(), Arc::clone(service)),
     )?;
     if let Some(handle) = &authz {
@@ -791,15 +722,15 @@ fn log_resolved_posture(
         );
     }
     tracing::info!(
-        enabled = app_config.server.rate_limit.enabled,
-        principal_per_second = app_config.server.rate_limit.principal_per_second,
-        address_per_second = app_config.server.rate_limit.address_per_second,
-        "request-rate limiting configured"
+        enabled = app_config.server.caller_rate.is_some(),
+        requests_per_second = ?app_config.server.caller_rate.map(|rate| rate.requests_per_second),
+        burst = ?app_config.server.caller_rate.map(|rate| rate.burst),
+        "caller rate limiting configured"
     );
     tracing::info!(
-        bind = %app_config.server.bind,
-        base_path = %app_config.server.base_path,
-        tls = app_config.server.tls.enabled,
+        listen = %app_config.server.listen,
+        base_path = %app_config.rest.base_path,
+        tls = app_config.server.tls.is_some(),
         "starting ferroehr"
     );
 }
@@ -895,9 +826,9 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
             db::DEFAULT_URL,
         );
     }
-    if config.server.cors_permissive {
+    if config.rest.cors_permissive {
         tracing::warn!(
-            "[server].cors_permissive is ON: any origin may read API responses. This is a \
+            "[rest].cors_permissive is ON: any origin may read API responses. This is a \
              DEVELOPMENT setting — configure explicit origins for any deployment reachable by \
              a browser."
         );
@@ -1095,13 +1026,19 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     config.validate()?;
 
     // ASCII banner before telemetry/log init, on the same resolved rendering the
-    // log layer installs (so JSON output stays pure from the first byte).
-    if prints_banner(config.telemetry.format, std::io::stdout().is_terminal()) {
-        // The posture the configuration alone shows; the cluster check needs
-        // the pools and follows in the boot log.
-        let declared = DeploymentPosture::evaluate(&config, &DatabaseFacts::default());
-        ferroehr::banner::print(config.spec_profile, &declared, true);
-    }
+    // log layer installs (so JSON output stays pure from the first byte). The
+    // posture is the one the configuration alone shows; the cluster check needs
+    // the pools and follows in the boot log.
+    let declared = DeploymentPosture::evaluate(&config, &DatabaseFacts::default());
+    ferroehr::banner::print(
+        &telemetry::build_info::build(),
+        config.spec_profile,
+        &declared,
+        config
+            .telemetry
+            .format
+            .resolve(std::io::stdout().is_terminal()),
+    );
 
     let build_info =
         BuildInfo::for_profile(config.spec_profile).with_audit(AuditPosture::of(&config.audit));
@@ -1200,7 +1137,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // `[server] system_id` is stamped into `EHR.system_id`,
     // `AUDIT_DETAILS.system_id` and `OBJECT_VERSION_ID.creating_system_id`;
     // logged so an operator can see the key took.
-    tracing::info!(system_id = %config.server.system_id, "openEHR system identifier");
+    tracing::info!(system_id = %config.rest.system_id, "openEHR system identifier");
 
     // An IHE patient identity source answers its capabilities read here, so an
     // unreachable one refuses boot rather than the first request (#3380).
@@ -1273,7 +1210,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         request_log: RequestLog::new(&config.telemetry.logged_query_parameters)
             .with_metrics(&telemetry.telemetry().meter(telemetry::metrics::SCOPE))
             .with_recorder(usage_window)
-            .serving_tls(config.server.tls.enabled),
+            .serving_tls(config.server.tls.is_some()),
         // NOTE: no specification governs this: our own design; each check keeps
         // the one-second bound the probes have always had.
         health: Registry::new(indicators).with_timeout(Duration::from_secs(1)),
@@ -1287,6 +1224,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // Assemble the REST adapter's runtime config view from the tree.
     let app_config = AppConfig {
         server: config.server.clone(),
+        rest: config.rest.clone(),
         auth: config.auth.clone(),
         admin: config.admin.clone(),
         smart: config.smart.clone(),
@@ -1308,9 +1246,10 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         &config.audit,
         &observability.management,
     );
-    ferroehr_rest::serve_full(app_config, service, authz, observability)
+    let drained = ferroehr_rest::serve_full(app_config, service, authz, observability)
         .await
         .context("serving ferroehr-rest")?;
+    tracing::info!(?drained, "the listeners drained");
 
     if let Some(handle) = audit_handle {
         handle.shutdown(AUDIT_DRAIN_TIMEOUT).await;
@@ -1436,7 +1375,7 @@ fn subject_resolver(pool: PgPool) -> SubjectResolver {
 
 #[cfg(test)]
 mod tests {
-    use super::{Format, prints_banner, run_report};
+    use super::run_report;
 
     /// A configuration that cannot be read keeps its cause: the chain of the
     /// error a subcommand returns ends at the file system's own error.
@@ -1451,25 +1390,5 @@ mod tests {
             .downcast_ref::<std::io::Error>()
             .unwrap_or_else(|| panic!("the root cause is the I/O error, not {root}: {err:#}"));
         assert_eq!(io.kind(), std::io::ErrorKind::NotFound);
-    }
-
-    /// The banner follows the RESOLVED rendering: `auto` with stdout piped into
-    /// a log collector renders JSON, so no banner may precede it. The terminal
-    /// state is injected — never probed from the process — so both directions
-    /// are pinned deterministically.
-    #[test]
-    fn the_banner_is_keyed_on_the_resolved_log_format() {
-        assert!(!prints_banner(Format::Auto, false));
-        assert!(prints_banner(Format::Auto, true));
-        for is_terminal in [false, true] {
-            assert!(
-                !prints_banner(Format::Json, is_terminal),
-                "explicit json never prints the banner"
-            );
-            assert!(
-                prints_banner(Format::Pretty, is_terminal),
-                "explicit pretty always prints the banner"
-            );
-        }
     }
 }

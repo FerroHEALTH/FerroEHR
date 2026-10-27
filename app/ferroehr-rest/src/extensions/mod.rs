@@ -16,9 +16,10 @@
 //!   (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Requests_and_responses.md`
 //!   §Authentication and authorization); the `401`/`403`/`WWW-Authenticate`
 //!   discipline there IS normative and is cited at the authn layer.
-//! - [`health`] — the always-on public `/health`, `/health/liveness`,
-//!   `/health/readiness` family, statuses only (no openEHR spec governs health
-//!   probes; the ITS-REST System API defines only `OPTIONS /`).
+//! - [`health`] — the served documentation of the family's always-on public
+//!   `/health`, `/health/liveness`, `/health/readiness` routes, statuses only
+//!   (no openEHR spec governs health probes; the ITS-REST System API defines
+//!   only `OPTIONS /`).
 //! - [`management`] — metrics/info/env/loggers/flamegraph, the health detail
 //!   and the full status document, an ops-introspection surface behind
 //!   per-endpoint access levels (no openEHR spec governs it). Hosts the single spec-version

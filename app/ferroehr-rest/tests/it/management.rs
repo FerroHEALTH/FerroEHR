@@ -22,7 +22,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
-use ferroehr::config::server::ServerConfig;
+use ferroehr::config::rest::RestConfig;
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
@@ -51,7 +51,8 @@ fn admin_config(roles: &[&str]) -> AppConfig {
 /// authentication from `auth`.
 fn base_config(auth: AuthSection) -> AppConfig {
     AppConfig {
-        server: ServerConfig {
+        server: common::server(),
+        rest: RestConfig {
             swagger_ui: AccessLevel::Off,
             ..Default::default()
         },
@@ -67,7 +68,7 @@ fn authz_for(config: &AppConfig, rbac_enabled: bool) -> Option<Arc<AuthzHandle>>
     authz_cfg.rbac.enabled = rbac_enabled;
     AuthzHandle::build(
         &authz_cfg,
-        &config.server.base_path,
+        &config.rest.base_path,
         None,
         common::null_resolvers(),
     )

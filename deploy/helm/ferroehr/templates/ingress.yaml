@@ -7,7 +7,7 @@
        so the operator names it; without it every external request fails while
        the install and the probes succeed. */}}
 {{- if and $backendTls (empty .Values.ingress.backendTlsAnnotations) }}
-{{- fail "ingress.enabled with config.server.tls.enabled, but ingress.backendTlsAnnotations is empty: the Ingress controller would send plain HTTP to a TLS listener, so every external request fails while the install reports success.\n\nName how your controller reaches an HTTPS backend in ingress.backendTlsAnnotations, for example for ingress-nginx:\n  ingress.backendTlsAnnotations:\n    nginx.ingress.kubernetes.io/backend-protocol: HTTPS\n\nOr terminate TLS at the Ingress only and leave config.server.tls.enabled false." }}
+{{- fail "ingress.enabled with config.server.tls set, but ingress.backendTlsAnnotations is empty: the Ingress controller would send plain HTTP to a TLS listener, so every external request fails while the install reports success.\n\nName how your controller reaches an HTTPS backend in ingress.backendTlsAnnotations, for example for ingress-nginx:\n  ingress.backendTlsAnnotations:\n    nginx.ingress.kubernetes.io/backend-protocol: HTTPS\n\nOr terminate TLS at the Ingress only and leave config.server.tls unset." }}
 {{- end }}
 {{- $annotations := .Values.ingress.annotations | default dict }}
 {{- if $backendTls }}

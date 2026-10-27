@@ -21,6 +21,7 @@ use crate::db::acquire::acquire;
 use crate::ids::EhrId;
 use crate::service::ehr::handle::EhrSummary;
 use crate::service::ehr_index::IndexError;
+use crate::service::ehr_index::provider::EhrIndexProvider;
 use crate::service::ehr_index::types::SubjectRef;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::status::{CallStatusType, SmError};
@@ -665,7 +666,29 @@ impl FerroEhrService {
             .await?
             .ok_or_else(|| IndexError::SubjectDoesNotExist(a_subject_id.clone()))?;
         let status = status_for_subject(an_ehr_status.unwrap_or_else(initial_ehr_status), &subject);
+        // Under the local provider the map is what the subject reads consult
+        // (`subject_ehrs`, a subject cohort), so the EHR enters it with its
+        // creation; an IHE source resolves the subject through `EHR_STATUS`.
+        let mut linkage = match self.ehr_index {
+            EhrIndexProvider::Local => Some(
+                acquire(&self.linkage_pool)
+                    .await
+                    .map_err(IndexError::from)?,
+            ),
+            EhrIndexProvider::Unconfigured | EhrIndexProvider::Ihe(_) => None,
+        };
+        let staged = match linkage.as_mut() {
+            Some(conn) => Some(
+                self.stage_created_association(conn, an_ehr_id, &subject)
+                    .await?,
+            ),
+            None => None,
+        };
         self.commit_new_ehr(an_ehr_id, status, None).await?;
+        if let Some(tx) = staged {
+            self.finish_created_association(tx, an_ehr_id, &subject)
+                .await?;
+        }
         Ok(an_ehr_id)
     }
 

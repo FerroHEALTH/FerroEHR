@@ -198,14 +198,12 @@ missing_crate_level_docs = "warn"       # every crate opens with //! docs (C-CRA
 
 # ── Web framework & HTTP core ────────────────────────────────────────────────
 axum = "0.8"                        # 0.8.8 current (MSRV 1.78)
-axum-server = { version = "0.8.0", features = ["tls-rustls"] }   # graceful shutdown + TLS
 tower = { version = "0.5", features = ["util", "timeout", "limit", "load-shed"] }
 tower-http = { version = "0.7.0", features = [
   "trace", "cors", "compression-full", "decompression-full", "timeout",
   "limit", "request-id", "sensitive-headers", "catch-panic", "normalize-path", "set-header",
   "fs",
 ] }
-hyper-util = { version = "0.1", features = ["tokio", "server-auto"] }
 http = "1"                          # StatusCode, HeaderMap, Method
 http-body-util = "0.1"
 bytes = "1"
@@ -245,16 +243,19 @@ ferrohealth-config = "=0.2.5"
 # document alone; a server takes `registry`. Verified on crates.io 2026-10-26
 # (0.1.1).
 ferrohealth-health = { version = "=0.1.1", default-features = false }
-# The family's server plumbing (FerroSYS): `tls_client` reads the TLS
-# material of an outbound HTTPS client, the trust roots beside the platform's
-# and a client identity, and sets it on a `reqwest::ClientBuilder` (feature
-# `reqwest`). Verified on crates.io 2026-10-26 (0.3.2).
-ferrohealth-server = { version = "=0.3.2", default-features = false }
+# The family's server plumbing (FerroSYS): the `[server]` section, the stack
+# around the routes (request id, panic catch, timeout, body limit, overload
+# bound, caller rate, compression, the health routes), the listener with its
+# TLS, the bounded drain, the healthcheck, the CLI skeleton and the build
+# banner; `tls_client` reads the TLS material of an outbound HTTPS client and
+# sets it on a `reqwest::ClientBuilder` (feature `reqwest`). Verified on
+# crates.io 2026-10-27 (0.3.4).
+ferrohealth-server = { version = "=0.3.4", default-features = false }
 # The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
 # the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
 # request log with its `http.server.request.duration` histogram, and the panic
-# line. Verified on crates.io 2026-10-26 (0.2.1).
-ferrohealth-telemetry = { version = "=0.2.1", features = ["axum", "otlp", "prometheus"] }
+# line. Verified on crates.io 2026-10-27 (0.2.2).
+ferrohealth-telemetry = { version = "=0.2.2", features = ["axum", "otlp", "prometheus"] }
 # The family's installation report to FerroPULSE (FerroSYS): envelope v2, the
 # latency window the request log fills (`telemetry`, its `Recorder`), and the
 # start and daily reporter over FerroEHR's PostgreSQL state store. Verified on
@@ -429,12 +430,6 @@ inferno = { version = "0.12", features = ["nameattr"] }
 
 # ── Caching, rate limiting, resilience ───────────────────────────────────────
 moka = { version = "0.12", features = ["future"] }   # Caffeine equivalent (template/WebTemplate cache)
-# Rate limiting for axum (GCRA via `governor`). `tonic` is in its default
-# feature set and we serve no gRPC, so only `axum` is enabled; `tracing` stays
-# off deliberately — its hooks would put a bucket key (a subject id or client
-# address) into telemetry.
-tower_governor = { version = "0.8.0", default-features = false, features = ["axum"] }
-governor = "0.10.4"                  # underlying limiter (verify latest)
 backon = "1"                      # retry/backoff (backoff crate is deprecated)
 lapin = "4"                       # AMQP 0.9.1 client (RabbitMQ) — contribution-outbox eventing
 
@@ -443,7 +438,6 @@ thiserror = "2"                    # v2 current
 anyhow = "1"                       # binaries only
 toml = "1"                         # standalone TOML parser + `config check`/`/management/env` render
 clap = { version = "4", features = ["derive", "env"] }
-arc-swap = "1"
 indexmap = { version = "2", features = ["serde"] }
 # once_cell no longer needed for statics on edition 2024: use std::sync::LazyLock.
 

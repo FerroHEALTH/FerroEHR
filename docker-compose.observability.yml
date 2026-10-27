@@ -61,10 +61,10 @@ services:
         condition: service_started
 
   # The server runs in the identity issuer's network namespace
-  # (docker-compose.yml), so the namespace's owner exposes its management port.
-  identity-issuer:
-    expose:
-      - "9464"
+  # (docker-compose.yml), so its management port answers on the issuer's
+  # address on the compose network (`ferroehr:9464`, the issuer's alias). It is
+  # declared on no service: changing the issuer would recreate the namespace and
+  # strand FerroPIX and the server on the old one.
 
   otel-lgtm:
     cap_drop: [ALL]

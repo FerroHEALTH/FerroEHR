@@ -206,7 +206,8 @@ pub struct AuditEvent {
     /// How the accessing person authenticated, and who that person is when
     /// the token says so (EHDS Annex II 3.1 and 3.2(b), #3622).
     pub actor: ActorAuthentication,
-    /// The request correlation id, matching the response's `x-request-id`.
+    /// The server's request id, which the request log names and the
+    /// response's `x-request-id` carries unless the client sent its own.
     pub request_id: Option<String>,
     /// The event time.
     pub timestamp: Timestamp,

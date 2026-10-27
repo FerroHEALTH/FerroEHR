@@ -133,18 +133,20 @@ services:
       # The openEHR generation set (development | stable) — see the
       # configuration book page for the profile-change contract.
       FERROEHR__SPEC_PROFILE: ${FERROEHR__SPEC_PROFILE:-development}
-      # In-flight admission cap (503 load shed past it; 0 disables). The
+      # Concurrent-request bound (503 load shed past it). The
       # comparison runs raise it so overload manifests as queueing latency —
       # the same failure mode as upstream's Tomcat admission window — instead
       # of shed errors tripping the stress envelope's error-rate arm.
-      FERROEHR__SERVER__MAX_IN_FLIGHT: ${FERROEHR__SERVER__MAX_IN_FLIGHT:-256}
-      # Per-caller request-rate limiting. On by default, exactly as a
+      FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS: ${FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS:-256}
+      # The conformance catalogue uploads operational templates up to 5.4 MB.
+      FERROEHR__SERVER__BODY_LIMIT_BYTES: "67108864"
+      # Per-caller request-rate limiting ([server.caller_rate]). On, exactly as a
       # production deployment runs it, so the functional catalogue exercises the
-      # real posture. The MEASUREMENT lanes turn it off (scripts/conformance.sh
-      # exports it when CONF_PERF_CLASS/CONF_STRESS is set): those instruments
-      # offer load past the knee on purpose, and a 429 there would measure the
-      # limiter instead of the server.
-      FERROEHR__SERVER__RATE_LIMIT__ENABLED: ${FERROEHR__SERVER__RATE_LIMIT__ENABLED:-true}
+      # real posture. The MEASUREMENT overlay (docker/sut-measurement.yml) lifts
+      # it past any offered load: those instruments offer load past the knee on
+      # purpose, and a 429 there would measure the limiter instead of the server.
+      FERROEHR__SERVER__CALLER_RATE__REQUESTS_PER_SECOND: ${FERROEHR__SERVER__CALLER_RATE__REQUESTS_PER_SECOND:-1024}
+      FERROEHR__SERVER__CALLER_RATE__BURST: ${FERROEHR__SERVER__CALLER_RATE__BURST:-2048}
       # Version-signing toggle pass-through (measured comparison runs disable
       # it for throughput parity — upstream has no signing.)
       FERROEHR__SIGNING__ENABLED: ${FERROEHR__SIGNING__ENABLED:-true}

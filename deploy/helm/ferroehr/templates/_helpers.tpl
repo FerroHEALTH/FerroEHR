@@ -898,11 +898,11 @@ point inside it.
 {{- end }}
 
 {{/*
-"true" when the server's own listener speaks TLS (`config.server.tls.enabled`,
-the `[server.tls]` section of ferroehr.toml), else empty.
+"true" when the server's own listener speaks TLS (`config.server.tls` set, the
+`[server.tls]` section of ferroehr.toml), else empty.
 */}}
 {{- define "ferroehr.serverTls" -}}
-{{- if dig "server" "tls" "enabled" false (.Values.config | default dict) }}true{{ end }}
+{{- if not (empty (dig "server" "tls" dict (.Values.config | default dict))) }}true{{ end }}
 {{- end }}
 
 {{/*
@@ -934,10 +934,10 @@ config.server.tls says, so the scheme there is always http.
 {{/*
 The in-cluster ITS-REST root of the release's own CDR, as FerroBRIDGE's `[cdr]
 base_url` names it: the origin plus the REST base path, which is the server's
-own default when config.server.base_path is unset.
+own default when config.rest.base_path is unset.
 */}}
 {{- define "ferroehr.cdrRestUrl" -}}
-{{- printf "%s%s" (include "ferroehr.cdrOrigin" .) (dig "server" "base_path" "/ferroehr/rest/openehr/v1" (.Values.config | default dict)) }}
+{{- printf "%s%s" (include "ferroehr.cdrOrigin" .) (dig "rest" "base_path" "/ferroehr/rest/openehr/v1" (.Values.config | default dict)) }}
 {{- end }}
 
 {{/*
@@ -956,7 +956,7 @@ issues, so the image's system roots cannot vouch for it.
 */}}
 {{- define "ferroehr.cdrTrustRequired" -}}
 {{- if and (eq (include "ferroehr.serverTls" .root) "true") (not .root.Values.service.tls.caExistingSecret) -}}
-{{- fail (printf "config.server.tls.enabled=true while %s calls the CDR in-cluster, and service.tls.caExistingSecret is empty: name the Secret holding the CA that signed the server's certificate (a cert-manager Certificate's Secret carries it under `ca.crt`, the default service.tls.caExistingSecretKey). The in-chart clients call https://%s:%v, so the certificate carries that Service name as a DNS SAN, which no public CA issues." .client (include "ferroehr.fullname" .root) .root.Values.service.port) -}}
+{{- fail (printf "config.server.tls is set while %s calls the CDR in-cluster, and service.tls.caExistingSecret is empty: name the Secret holding the CA that signed the server's certificate (a cert-manager Certificate's Secret carries it under `ca.crt`, the default service.tls.caExistingSecretKey). The in-chart clients call https://%s:%v, so the certificate carries that Service name as a DNS SAN, which no public CA issues." .client (include "ferroehr.fullname" .root) .root.Values.service.port) -}}
 {{- end -}}
 {{- end }}
 

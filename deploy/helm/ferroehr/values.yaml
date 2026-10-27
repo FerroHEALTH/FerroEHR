@@ -21,7 +21,7 @@
 #
 # The env-mapping grammar for overrides is FERROEHR_ + the TOML path upper-cased
 # with `__` between segments (e.g. config.db.max_connections ⇔
-# FERROEHR__DB__MAX_CONNECTIONS). Run `ferroehr config default` to print the
+# FERROEHR__DB__MAX_CONNECTIONS). app/ferroehr/assets/ferroehr.default.toml is the
 # complete TOML schema with every key and its default.
 #
 # The database role architecture, the pgaudit/TLS/PITR posture, and the
@@ -616,8 +616,8 @@ metrics:
 
 # ═════════════════════════════════════════════════════════════════════════════
 # ferroehr.toml — rendered VERBATIM into the ConfigMap as /etc/ferroehr/ferroehr.toml
-# (keys map 1:1 onto the server config schema — `ferroehr config default` prints
-# it in full). Secrets are NOT here — see `secrets:` above.
+# (keys map 1:1 onto the server config schema — app/ferroehr/assets/
+# ferroehr.default.toml lists it in full). Secrets are NOT here — see `secrets:` above.
 # The `files:` key is NOT part of the TOML (see below); it is mounted separately.
 # ═════════════════════════════════════════════════════════════════════════════
 config:
@@ -646,9 +646,31 @@ config:
   # assessment, Annex I Part I(2)(b).
   deployment_profile: sandbox
 
-  # [server] — HTTP listener + REST surface.
+  # [server] — the HTTP listener: the FerroHEALTH family's section, the same
+  # keys in every product (the configuration reference lists them all).
   server:
-    bind: "0.0.0.0:8080"
+    # An IP address and a port; the Service, the probes and the NetworkPolicy
+    # name port 8080.
+    listen: "0.0.0.0:8080"
+    # The largest request body any route reads, refused 413 above it. The bulk
+    # routes (template upload, the /message imports) take up to this; the
+    # largest operational template in the vendored CKM corpus is 5.4 MB.
+    body_limit_bytes: 67108864
+    # The requests served at once; past it a request is answered 503 with
+    # Retry-After, and the health probes are never refused.
+    max_concurrent_requests: 256
+    # [server.caller_rate] — per authenticated caller, refused 429 +
+    # Retry-After. Not the same control as max_concurrent_requests (503): this
+    # one is per caller over time. The defaults sit above the reference SUT's
+    # measured whole-server ceiling (512 req/s); raise them in proportion on
+    # server-class hardware. Remove the table before benchmarking, or the
+    # benchmark measures the limiter.
+    caller_rate:
+      requests_per_second: 1024
+      burst: 2048
+
+  # [rest] — the openEHR REST surface.
+  rest:
     base_path: /ferroehr/rest/openehr/v1
     # Who may read the Swagger UI + the OpenAPI JSON: off, admin_only, private
     # (any authenticated principal) or public. The documents list the whole
@@ -656,33 +678,10 @@ config:
     swagger_ui: private
     # Permissive CORS — DEV ONLY. Production configures explicit origins.
     cors_permissive: false
-    # [server.limits] — the largest accepted request body per route family.
-    # Raise body_bytes if compositions embed large DV_MULTIMEDIA data; the bulk
-    # tier covers template upload and the /message imports. Over-limit is 413.
-    limits:
-      body_bytes: 16777216
-      bulk_body_bytes: 67108864
-    # [server.rate_limit] — per-caller rates, refused 429 + Retry-After. Not the
-    # same control as the in-flight shed (503): this one is per caller over time.
-    # The defaults sit above the reference SUT's measured whole-server ceiling
-    # (512 req/s) — raise them in proportion on server-class hardware. Turn the
-    # limiter off before benchmarking, or the benchmark measures the limiter.
-    rate_limit:
-      enabled: true
-      principal_per_second: 1024
-      principal_burst: 2048
-      address_per_second: 2048
-      address_burst: 4096
-    # [server.connection] — the bounds that apply BEFORE a request exists. Every
-    # other limit engages after a request head is parsed, so a client that opens a
-    # socket and trickles headers reaches none of them. h1 and h2 differ: h1
-    # streams a request head (trickle-able), h2 multiplexes streams (so the
-    # exposure is concurrency — the rapid-reset class).
-    connection:
-      header_read_timeout_secs: 10
-      max_concurrent_streams: 256
-      http2_keep_alive_interval_secs: 30
-      http2_keep_alive_timeout_secs: 10
+    # The largest body the clinical surface accepts, below
+    # server.body_limit_bytes, which the bulk routes keep. Raise it if
+    # compositions embed large DV_MULTIMEDIA data. Over-limit is 413.
+    body_limit_bytes: 16777216
 
   # [db] — pool bounds (the DSN itself is the FERROEHR__DB__URL secret, above).
   db:
@@ -913,10 +912,10 @@ service:
   # (https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution).
   trafficDistribution: ""
   # The trust the chart's own clients of this Service place in the server's own
-  # TLS listener. Read only while `config.server.tls.enabled` is true: the
+  # TLS listener. Read only while `config.server.tls` is set: the
   # viewer, FerroBRIDGE and the ServiceMonitor scrape then call
   # `https://<release fullname>:<service.port>`, so the server's certificate
-  # (config.server.tls.cert_file) carries that Service name as a DNS SAN and is
+  # (config.server.tls.certificate_file) carries that Service name as a DNS SAN and is
   # checked against the CA named here. The render is refused when one of those
   # clients is enabled and the Secret is not named. The ServiceMonitor reads
   # the Secret from its own namespace (metrics.serviceMonitor.namespace).
@@ -939,8 +938,8 @@ ingress:
   className: ""
   # -- Ingress annotations (TLS issuer, body size, timeouts — controller-specific).
   annotations: {}
-  # -- Annotations added to the Ingress only while config.server.tls.enabled is
-  # true: how your controller is told the backend speaks HTTPS, which is
+  # -- Annotations added to the Ingress only while config.server.tls is set:
+  # how your controller is told the backend speaks HTTPS, which is
   # controller-specific (ingress-nginx:
   # `nginx.ingress.kubernetes.io/backend-protocol: HTTPS`). The render is
   # refused while server TLS and the Ingress are both on and this is empty,
@@ -1729,7 +1728,10 @@ ferropix:
   # -- Deploy FerroPIX beside the CDR and point config.ehr_index at it.
   enabled: true
   image:
-    # -- FerroPIX image digest, the one release 0.0.7 names. Pinned here so
+    # -- The FerroPIX release the pinned `digest` belongs to. The dependency
+    # chart deploys the digest, and the Artifact Hub entry names this tag.
+    tag: "0.0.7"
+    # -- FerroPIX image digest of release `tag`. Pinned here so
     # the image this chart deploys is stated by this chart.
     digest: "sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825"
   config:

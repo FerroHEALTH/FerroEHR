@@ -113,7 +113,7 @@ and the server below, and the patient identity source described in
 
 The API is then at `http://localhost:8080/ferroehr/rest/openehr/v1`, with
 Swagger UI at `http://localhost:8080/ferroehr/rest/swagger-ui` (the browser asks
-for the API credential; `server.swagger_ui` chooses who may read it).
+for the API credential; `rest.swagger_ui` chooses who may read it).
 
 > [!IMPORTANT]
 > **Every published port binds the loopback interface by default**
@@ -573,7 +573,7 @@ Set these in your shell (or an `.env` file) to retune without editing anything:
 | `FERROEHR__TELEMETRY__FORMAT` | `pretty` | Log rendering for `docker compose logs`. Set `json` for log collectors. |
 | `FERROEHR__TELEMETRY__FILTER` | `info` | Log level filter. |
 | `FERROEHR__DB__MAX_CONNECTIONS` | `10` | Server connection-pool ceiling. |
-| `FERROEHR__SERVER__MAX_IN_FLIGHT` | `256` | In-flight request admission cap (`503` past it; `0` disables). |
+| `FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS` | `256` | Concurrent-request bound (`503` with `Retry-After` past it). |
 | `FERROEHR__SIGNING__ENABLED` | `true` | Version signing. |
 
 A commercial licence token is not a passthrough variable: mount the signed

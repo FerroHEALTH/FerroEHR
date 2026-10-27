@@ -1,7 +1,7 @@
 # ferroehr.toml — the complete FerroEHR server configuration.
 #
-# No openEHR spec governs configuration — this is our own design. Emit a fresh
-# copy with `ferroehr config default > ferroehr.toml`, then edit. Every key below
+# No openEHR spec governs configuration — this is our own design. Copy this
+# file to ferroehr.toml, then edit. Every key below
 # shows its built-in default; delete anything you do not override. Keys marked
 # `#?` are optional/derived/secret and are shown commented for reference.
 # Lines marked `# PROD:` MUST be reviewed before a production deployment.
@@ -45,13 +45,70 @@ spec_profile = "development"
 deployment_profile = "sandbox"   # sandbox | production
 #? deployment_accepts = ["shared_cluster"]
 
-# ── [server] — HTTP listener + REST surface ──────────────────────────────────
+# ── [server] — the HTTP listener ─────────────────────────────────────────────
+# The FerroHEALTH family's listener section, the same keys in every product.
 [server]
-bind = "0.0.0.0:8080"
+# The address and port the listener binds: an IP address, never a host name.
+# The container images set 0.0.0.0:8080; PORT alone sets 0.0.0.0:<PORT>.
+listen = "127.0.0.1:8080"
+# The path every route is served under, the health routes included. Empty
+# serves them at the process root; the openEHR API path is [rest] base_path.
+base_path = ""
+request_timeout_ms = 30000     # a request still running then is answered 408
+# How long a client may take to send its request head once connected or after
+# its last response; a client still sending then is disconnected.
+header_read_timeout_ms = 30000
+# The largest request body any route reads, refused 413 above it. The bulk
+# routes (template upload, /message/import, /message/tdd) take up to this;
+# [rest] body_limit_bytes narrows the clinical surface below it. The largest
+# operational template in the vendored CKM corpus is 5.4 MB, so a deployment
+# that uploads templates raises this (67108864 is 64 MiB).
+body_limit_bytes = 1048576
+drain_delay_ms = 0             # on SIGTERM, readiness is 503 this long before the listener closes
+shutdown_timeout_ms = 10000    # then the requests in flight get this long to finish
+# The requests served at once; past it a request is answered 503 with
+# Retry-After, and the health routes are never refused. Unset, no bound.
+#? max_concurrent_requests = 256
+retry_after_s = 1              # the Retry-After of a 503 or 429 the listener writes
+# The reverse proxies whose forwarded client address is believed (addresses or
+# CIDR blocks), and the header they name the client in.
+trusted_proxies = []
+forwarded_header = "forwarded" # forwarded | x-forwarded-for
+compression = true             # gzip or Brotli when the client accepts one
+compression_min_bytes = 1024
+
+# [server.caller_rate] — the requests one authenticated caller may send,
+# refused 429 + Retry-After past it, keyed on the authenticated subject.
+# Distinct from max_concurrent_requests above: that refuses 503 when too many
+# requests are in flight AT ONCE (capacity); this refuses one caller asking too
+# often OVER TIME (fairness). Unset, no caller is limited.
+#? [server.caller_rate]
+#? requests_per_second = 1024
+#? burst = 2048
+
+# [server.tls] — native TLS + client-certificate (mutual-TLS) authentication
+# on the main listener (the IHE ATNA ITI-19 node-authentication posture). Unset
+# by default: deployments commonly terminate TLS at an ingress. The
+# separate-port management listener stays plain HTTP (internal surface). The
+# files are read again on SIGHUP and every reload_interval_s.
+#? [server.tls]
+#? certificate_file = "/etc/ferroehr/server.pem"
+#? key_file = "/etc/ferroehr/server.key"
+#? client_auth = "none"            # none | optional | required (required = IHE mTLS)
+#? client_ca_file = "/etc/ferroehr/client-ca.pem"
+# TLS 1.3 by default; "1.2" admits 1.2 alongside it, and 1.0 and 1.1 are
+# refused at load (RFC 8996).
+#? min_version = "1.3"             # 1.3 | 1.2
+#? reload_interval_s = 60
+# The client chain and key, in one PEM, `ferroehr healthcheck` presents to a
+# listener that requires a client certificate.
+#? healthcheck_identity_file = "/etc/ferroehr/healthcheck.pem"
+
+# ── [rest] — the openEHR REST surface ────────────────────────────────────────
+[rest]
 # Shortening is supported (e.g. "/ferroehr/v1" behind a path-prefixed proxy);
 # the first segment must be /ferroehr and the last must be v1.
 base_path = "/ferroehr/rest/openehr/v1"
-max_in_flight = 256          # concurrent-request admission cap; 0 disables shedding
 swagger_ui = "private"       # off | admin_only | private | public — "public" discloses the whole operation surface anonymously
 cors_permissive = false      # PROD: keep false; configure explicit origins
 # This CDR's own openEHR system identifier: stamped into EHR.system_id, the
@@ -60,81 +117,18 @@ cors_permissive = false      # PROD: keep false; configure explicit origins
 # an internet id (a DNS-style host name, the common convention), an ISO OID or
 # a UUID — and the server refuses to boot otherwise. PROD: set a stable,
 # deployment-unique name. Changing it never rewrites identifiers already
-# committed. Distinct from [server.identity], which is only the OPTIONS
+# committed. Distinct from [rest.identity], which is only the OPTIONS
 # manifest's display identity.
 system_id = "ferroehr.local"
+# The largest body the clinical surface accepts, below [server]
+# body_limit_bytes, which the bulk routes keep. Unset, every route takes the
+# listener's limit. The largest example composition in the vendored corpus is
+# 526 KB; raise it if your compositions embed large DV_MULTIMEDIA data.
+#? body_limit_bytes = 16777216
 
-# [server.tls] — native TLS + client-certificate (mutual-TLS) authentication
-# on the main listener (the IHE ATNA ITI-19 node-authentication posture;
-# protocol floor: TLS 1.3 only by default — min_version = "1.2" admits 1.2
-# alongside). Off by
-# default: deployments commonly terminate TLS at an ingress. The separate-port
-# management listener stays plain HTTP (internal surface).
-[server.tls]
-enabled = false
-#? cert_file = "/etc/ferroehr/server.pem"
-#? key_file = "/etc/ferroehr/server.key"
-client_auth = "off"          # off | optional | required (required = IHE mTLS)
-# The protocol floor. Defaults to 1.3 ONLY: the OWASP Transport Layer Security
-# Cheat Sheet §Only Support Strong Protocols — "web applications must default to
-# TLS 1.3 and may support TLS 1.2 for compatibility". Set "1.2" only for a client
-# that genuinely cannot do 1.3 (an older integration engine, a pinned Java
-# runtime); it enables 1.2 ALONGSIDE 1.3, never instead of it. 1.1 and 1.0 are
-# not selectable at all — RFC 8996 deprecates them and neither this key nor
-# rustls offers them.
-min_version = "1.3"          # 1.3 | 1.2
-#? client_ca_file = "/etc/ferroehr/client-ca.pem"
-# How often cert_file and key_file are re-read, so a renewed pair (cert-manager,
-# a mounted Secret) is served without a restart. A pair that fails to load is
-# logged and the previous one stays in service. 0 reads them once, at boot.
-reload_interval_secs = 60
-
-# [server.limits] — the largest request body each route family accepts. Two
-# tiers: the clinical surface, and the routes that accept bulk by design
-# (operational-template upload, /message/import, /message/tdd). Over-limit is
-# refused 413. The defaults are sized against measured payloads — the largest
-# operational template in the vendored CKM corpus is 5.4 MB and the largest
-# example composition 526 KB — not round numbers. Raise body_bytes if your
-# compositions embed large DV_MULTIMEDIA data.
-[server.limits]
-body_bytes = 16777216        # 16 MiB — the ordinary clinical surface
-bulk_body_bytes = 67108864   # 64 MiB — template upload + the /message imports
-
-# [server.rate_limit] — per-caller request rates, refused 429 + Retry-After.
-# Distinct from max_in_flight above: that sheds 503 when too many requests are
-# in flight AT ONCE (capacity); this refuses 429 when one caller asks too often
-# OVER TIME (fairness). Two tiers: the address tier sits outside authentication
-# so a flood is refused before the server verifies a signature per request, and
-# the principal tier sits inside it, keyed on the authenticated subject —
-# address-keying a clinical API would throttle a whole hospital behind one NAT.
-# The defaults sit above this implementation's own measured whole-server ceiling
-# (512 req/s on the reference SUT), so the limiter cannot refuse a caller the
-# server could still have served; raise them in proportion for a larger
-# deployment class. Our own measurement lanes compose with this disabled
-# (docker/sut-measurement.yml) because they push past the knee deliberately.
-[server.rate_limit]
-enabled = true
-principal_per_second = 1024  # per authenticated subject, on the clinical API
-principal_burst = 2048
-address_per_second = 2048    # per client address, across the whole tree
-address_burst = 4096
-
-# [server.connection] — the bounds that apply BEFORE a request exists. Every
-# other limit here engages once a request is parsed and dispatched (body size,
-# request timeout, rate limit, in-flight shed); a client that opens a socket and
-# trickles headers reaches none of them. HTTP/1 and HTTP/2 need different bounds
-# because the exposure differs: h1 streams a request head (so it can be
-# trickled), h2 multiplexes streams (so the exposure is concurrency — the
-# rapid-reset amplification class).
-[server.connection]
-header_read_timeout_secs = 10   # HTTP/1: time to deliver a complete request head; 0 disables
-max_concurrent_streams = 256    # HTTP/2 streams per connection; 0 leaves hyper's default
-http2_keep_alive_interval_secs = 30  # PING interval; 0 disables (a vanished peer is then held)
-http2_keep_alive_timeout_secs = 10   # PING response deadline before the connection closes
-
-# [server.identity] — the OPTIONS / System-Options manifest. Defaults are the
+# [rest.identity] — the OPTIONS / System-Options manifest. Defaults are the
 # measured build/provenance identity; override only to rebrand.
-#? [server.identity]
+#? [rest.identity]
 #? solution = "FerroEHR"
 #? solution_version = "<build version>"
 #? vendor = "Cadasto B.V."

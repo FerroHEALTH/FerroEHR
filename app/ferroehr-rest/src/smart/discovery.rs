@@ -94,7 +94,7 @@ pub fn options(cfg: &AppConfig) -> SmartOptions {
     services.insert(
         OPENEHR_REST_SERVICE.to_owned(),
         serde_json::json!({
-            "baseUrl": absolute_base(smart, &cfg.server.base_path),
+            "baseUrl": absolute_base(smart, &cfg.rest.base_path),
             "description": "The openEHR REST API baseUrl",
         }),
     );

@@ -133,7 +133,7 @@ pub(super) async fn run(
 async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let created = StatusCode::CREATED;
-    let base = state.config().server.base_path.clone();
+    let base = state.config().rest.base_path.clone();
     let p = parts.decode(
         CompositionCreateParams::from_request,
         CompositionCreateParams::PARAMS,
@@ -184,7 +184,7 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
     let q = parts.query.as_deref();
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
-    let base = state.config().server.base_path.clone();
+    let base = state.config().rest.base_path.clone();
     let p = parts.decode(
         CompositionGetParams::from_request,
         CompositionGetParams::PARAMS,
@@ -280,7 +280,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     let h = &parts.headers;
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
-    let base = state.config().server.base_path.clone();
+    let base = state.config().rest.base_path.clone();
     let p = parts.decode(
         CompositionUpdateParams::from_request,
         CompositionUpdateParams::PARAMS,
@@ -367,7 +367,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
 /// The parameter, precondition and commit rejections the operation declares.
 async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let base = state.config().server.base_path.clone();
+    let base = state.config().rest.base_path.clone();
     let p = parts.decode(
         CompositionDeleteParams::from_request,
         CompositionDeleteParams::PARAMS,

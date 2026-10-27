@@ -28,10 +28,17 @@
 //! pools and no statement names both domains.
 //!
 //! The index and the `ehr.subject_id` promotion are decoupled: an EHR created
-//! through the normal API is not auto-indexed here, and the index models the
-//! full N:M state master07 §Overview requires ("There is no limit on the number
-//! of subject identifiers associated with a given EHR id, and vice versa"). No
-//! wire is mounted, EHR Index having no ITS-REST contract.
+//! over `POST /ehr` or `PUT /ehr/{ehr_id}` is not auto-indexed here, and the
+//! index models the full N:M state master07 §Overview requires ("There is no
+//! limit on the number of subject identifiers associated with a given EHR id,
+//! and vice versa"). No wire is mounted, EHR Index having no ITS-REST contract.
+//!
+//! The one exception is SM `create_ehr_for_subject` under the local provider:
+//! the subject reads consult only the map there, so the EHR enters it as a
+//! `Primary` association with its creation, staged in a linkage transaction
+//! before the EHR commits and committed after it. The SM leaves the relation
+//! between that create and `I_EHR_INDEX` open (`i_ehr_index.adoc`): our own
+//! design.
 
 pub mod config;
 pub mod conflicts;
