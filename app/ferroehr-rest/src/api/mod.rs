@@ -37,9 +37,9 @@
 //!   as `admin::dispatch::dispatch` (the group publishes no re-export), plus the
 //!   own-design `archive` + activity-`report` + `dump_load` extension routes
 //!   under the same `/admin/` gates.
-//! - [`message`] — the own-design MESSAGE group (`I_EHR_EXTRACT_SERVICE` +
-//!   `I_TDD_SERVICE`); the release publishes no message API at all, so the whole
-//!   group is an extension under its own `/message/` resource root.
+//! - [`message`] — the own-design MESSAGE group (`I_EHR_EXTRACT_SERVICE`);
+//!   the release publishes no message API at all, so the whole group is an
+//!   extension under its own `/message/` resource root.
 //! - [`system`] — the System API manifest ([`system::options::SystemManifest`],
 //!   `ferroehr::config::rest::SystemOptionsConfig`), assembled and mounted by [`crate::router::router`].
 //!
@@ -238,7 +238,6 @@ pub(crate) fn api_openapi_router() -> OpenApiRouter<AppState> {
         .merge(admin::marks::marks_routes())
         .merge(admin::identifiers::identifier_routes())
         .merge(message::extract::extract_routes())
-        .merge(message::tdd::tdd_routes())
         .merge(terminology::routes())
         .merge({
             #[cfg(feature = "events")]

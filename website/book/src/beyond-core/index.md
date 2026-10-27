@@ -27,7 +27,7 @@ you have to turn it on, and how to consume it.
 Two different things are collected here, and they behave differently:
 
 - **Always mounted, part of the API surface.** The demographic API and the
-  `/message` group (EHR Extract and TDD import) are ordinary routes. They have
+  `/message` group (EHR Extract export and import) are ordinary routes. They have
   no feature switch: they are served on every deployment and gated only by the
   same authentication and authorization as the clinical API
   ([Security](../security.md)). The bundled openEHR terminology
@@ -77,9 +77,8 @@ for the exact list of settings a slim binary rejects.
 ## The capability set
 
 - **[EHR Extract & messaging](messaging.md):** export a whole EHR, clone it
-  into another system with its distributed version identity intact, import an
-  extract into an existing record, and import Template Data Documents (TDDs) as
-  compositions.
+  into another system with its distributed version identity intact, and import an
+  extract into an existing record.
 - **[Demographics](demographics.md):** a versioned party store (persons,
   organisations, groups, agents, roles) with relationships, over a REST surface
   that mirrors the EHR APIs.

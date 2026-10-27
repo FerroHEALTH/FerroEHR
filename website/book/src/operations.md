@@ -913,7 +913,7 @@ carries its own switch, authorization class and status-code contract:
   activity report, archiving to the cold tier, and whole-repository dump and
   load.
 - **The messaging API** (`{base}/message/…`, always mounted): EHR Extract
-  export and import, and Template Data Document import.
+  export and import.
 
 The full reference is [Admin & messaging APIs](operations-admin-apis.md).
 

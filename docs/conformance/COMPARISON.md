@@ -68,7 +68,7 @@ them.
 
 | | verdict scope (selected) | driven | in-scope passed | in-scope failed | in-scope inconclusive |
 |---|---|---|---|---|---|
-| **ferroehr** | 1145 | 1103 | 1103 | 0 | 0 |
+| **ferroehr** | 1129 | 1087 | 1087 | 0 | 0 |
 | **EHRbase** | 692 | 571 | 148 | 148 | 275 |
 
 An **inconclusive** row's wire answered outside the operation's bound outcome
@@ -134,7 +134,7 @@ columns, because the matrix is the profiles book as data, not a claim list.
 | SimplifiedFormats | passed | not_claimed |
 | SmartAppLaunch | passed | not_claimed |
 | SystemApi | passed | not_claimed |
-| Tds | passed | not_claimed |
+| Tds | not_claimed | not_claimed |
 | TemplateExamples | passed | not_evidenced |
 | Versioning | passed | failed |
 

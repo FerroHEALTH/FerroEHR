@@ -88,7 +88,6 @@ mod service_signing;
 mod service_sm3;
 mod service_spec_profile;
 mod service_system_id;
-mod service_tdd;
 mod service_template;
 mod service_validation;
 mod signing_pgp;

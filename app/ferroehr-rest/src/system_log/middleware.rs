@@ -506,10 +506,10 @@ const EHR_PARAMETER: &str = "ehr_id";
 ///
 /// The ITS-REST routes under `/ehr/{ehr_id}` and the extension routes that
 /// address one EHR (`/admin/ehr/{ehr_id}`, `/message/export/{ehr_id}`,
-/// `/message/import/{ehr_id}`, `/message/tdd/{ehr_id}`) all name it by that
-/// parameter, so the router's own match decides and a literal segment such as
-/// `/admin/ehr/all` is never taken for an id. `POST /ehr` has none; its EHR id
-/// comes from the response `AuditObject`.
+/// `/message/import/{ehr_id}`) all name it by that parameter, so the router's
+/// own match decides and a literal segment such as `/admin/ehr/all` is never
+/// taken for an id. `POST /ehr` has none; its EHR id comes from the response
+/// `AuditObject`.
 ///
 /// The request is handed back whole, for the layers inside to serve.
 async fn route_ehr_id(req: Request) -> (Request, Option<String>) {
@@ -648,8 +648,6 @@ mod tests {
             "/admin/ehr/{ehr_id}",
             "/message/export/{ehr_id}",
             "/message/import/{ehr_id}",
-            "/message/tdd/{ehr_id}",
-            "/message/tdd/{ehr_id}/batch",
             "/definition/template/adl1.4/{template_id}",
         ];
         let some = |id: &str| Some(id.to_owned());
@@ -671,12 +669,7 @@ mod tests {
         assert_eq!(routed_ehr_id(&routes, "/admin/ehr/zzz").await, some("zzz"));
         assert_eq!(routed_ehr_id(&routes, "/admin/ehr/all").await, None);
         // The extension routes name the EHR after a segment other than `ehr`.
-        for path in [
-            "/message/export/e-1",
-            "/message/import/e-1",
-            "/message/tdd/e-1",
-            "/message/tdd/e-1/batch",
-        ] {
+        for path in ["/message/export/e-1", "/message/import/e-1"] {
             assert_eq!(routed_ehr_id(&routes, path).await, some("e-1"), "{path}");
         }
         assert_eq!(

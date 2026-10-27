@@ -3,9 +3,9 @@
 Two groups of routes sit beside the clinical API for operators rather than for
 clinical clients: the **admin API**, which physically deletes, reports on, and
 moves repository content, and the **messaging API**, which exports and imports
-whole records as openEHR EHR Extracts and accepts documents in the
-template-data (TDD) form. This page is the operator's reference for both:
-every path, what gates it, what it accepts, and every status code it answers.
+whole records as openEHR EHR Extracts. This page is the operator's reference
+for both: every path, what gates it, what it accepts, and every status code it
+answers.
 
 <!-- toc -->
 
@@ -627,14 +627,11 @@ while the rest of the archive loads.
 > URL are ours. They gate no openEHR conformance claim; see
 > [Conformance](conformance.md).
 
-## EHR Extract and TDD import
+## EHR Extract export and import
 
-Six routes under `{base}/message` that move whole records between systems and
-accept documents in the template-data form. Unlike the admin extensions above,
-these are **not** admin-gated; see
+Four routes under `{base}/message` that move whole records between systems.
+Unlike the admin extensions above, these are **not** admin-gated; see
 [the gate table](#where-these-routes-live-and-what-gates-them).
-
-### EHR Extract
 
 - `GET {base}/message/export/{ehr_id}`: export one whole EHR. **200** with a
   JSON array holding one `EXTRACT` that carries every versioned object of the
@@ -671,32 +668,10 @@ these are **not** admin-gated; see
 All four accept either `application/json` or `application/xml` bodies; any
 other `Content-Type` is **415**.
 
-### TDD import
-
-- `POST {base}/message/tdd/{ehr_id}` with an `application/xml` body — import
-  one Template Data Document. It is converted against the operational template
-  its root names and committed through the ordinary validated composition
-  path, so **201** with `{"uid": "<version_uid>"}`. The template must already
-  be uploaded through the definition API (**404** otherwise, as for an unknown
-  EHR); a root that is not in the template-data namespace, carries no template
-  id, or does not conform to the template is **400**; a document that is not
-  well-formed XML (or a produced composition that fails validation at
-  commit) is **422**. A body sent as anything but `application/xml` is
-  **415**.
-- `POST {base}/message/tdd/{ehr_id}/batch` with a JSON array of TDD documents
-  — import several at once. **201** with the created version ids in input
-  order. The batch is **all-or-nothing**: every document is converted before
-  any is committed, so one bad document rejects the whole batch and commits
-  nothing. An **empty** array is a fulfilled no-op (**200** with `[]`, since
-  nothing was created) but the target EHR is checked for every batch, the
-  empty one included, so an unknown one is **404** whatever the batch holds.
-  The batch has no limit on how many documents it may carry; the only bound is
-  the server-wide request-body limit, which answers **413** when exceeded.
-
 > [!NOTE]
 > The whole `{base}/message` group is a FerroEHR extension: the openEHR service
 > model defines a Message component, but the released REST API publishes no
-> message, extract, or TDD endpoint at all. These URLs are our own and gate no
+> message or extract endpoint at all. These URLs are our own and gate no
 > openEHR conformance claim; see [Conformance](conformance.md). For the
 > workflow-level view (what an extract is good for and how to drive an
 > import) see [EHR Extract & messaging](beyond-core/messaging.md).

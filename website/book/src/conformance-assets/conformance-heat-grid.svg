@@ -76,7 +76,7 @@ text { fill: #c3c2b7; }
 <rect x="416" y="322" width="190" height="26" rx="5" class="ev-passed cell-optional"/><text x="429" y="339" class="cell-label" text-anchor="middle">✓</text><text x="442" y="339" class="cell-label">EhrArchive</text>
 <rect x="612" y="322" width="190" height="26" rx="5" class="ev-passed cell-optional"/><text x="625" y="339" class="cell-label" text-anchor="middle">✓</text><text x="638" y="339" class="cell-label">DemographicArchive</text>
 <rect x="808" y="322" width="190" height="26" rx="5" class="ev-passed cell-optional"/><text x="821" y="339" class="cell-label" text-anchor="middle">✓</text><text x="834" y="339" class="cell-label">EhrExtract</text>
-<rect x="24" y="354" width="190" height="26" rx="5" class="ev-passed cell-optional"/><text x="37" y="371" class="cell-label" text-anchor="middle">✓</text><text x="50" y="371" class="cell-label">Tds</text>
+<rect x="24" y="354" width="190" height="26" rx="5" class="ev-not-claimed cell-optional"/><text x="37" y="371" class="cell-label-dim" text-anchor="middle">–</text><text x="50" y="371" class="cell-label-dim">Tds</text>
 <rect x="220" y="354" width="190" height="26" rx="5" class="ev-passed cell-optional"/><text x="233" y="371" class="cell-label" text-anchor="middle">✓</text><text x="246" y="371" class="cell-label">DemographicApi</text>
 <rect x="416" y="354" width="190" height="26" rx="5" class="ev-passed cell-optional"/><text x="429" y="371" class="cell-label" text-anchor="middle">✓</text><text x="442" y="371" class="cell-label">AdminApi</text>
 <rect x="612" y="354" width="190" height="26" rx="5" class="ev-passed cell-optional"/><text x="625" y="371" class="cell-label" text-anchor="middle">✓</text><text x="638" y="371" class="cell-label">MessageApi</text>

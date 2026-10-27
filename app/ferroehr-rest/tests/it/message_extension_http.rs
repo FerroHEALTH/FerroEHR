@@ -3,18 +3,16 @@
 
 //! End-to-end HTTP tests for the **MESSAGE** extension group — the SM
 //! EHR-Extract service (`/message/export*`, `/message/import*`,
-//! `i_ehr_extract_service.adoc`) and the SM TDD service (`/message/tdd/*`,
-//! `i_tdd_service.adoc`) — driven through the assembled router over a real
+//! `i_ehr_extract_service.adoc`) — driven through the assembled router over a real
 //! `FerroEhrService` on a real `PostgreSQL`.
 //!
 //! **No openEHR spec governs these routes**: ITS-REST 1.1.0 publishes seven API
-//! groups and no message/extract/TDD API at all, so the operation SEMANTICS
+//! groups and no message/extract API at all, so the operation SEMANTICS
 //! come from the vendored SM chapter
 //! (`docs/specs/openehr/SM/docs/openehr_platform/master09-message_service.adoc`)
 //! and the RM EHR-Extract IM (`docs/specs/openehr/RM/docs/ehr_extract/`), while
 //! the wire shape is our own design/extension. What is asserted here is exactly
-//! what the CNF extension bindings drive: the `message-extract` and
-//! `message-tdd` families in
+//! what the CNF extension bindings drive: the `message-extract` family in
 //! Veredictum's `artifacts/vocab/wire_surface.yaml`, over the same corpus
 //! fixtures the CNF cases carry.
 #![expect(
@@ -49,27 +47,6 @@ fn corpus(name: &str) -> String {
         .join("../../corpus/fixtures/messaging")
         .join(name);
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
-}
-
-/// An operational template the TDD instances name, by its corpus-relative
-/// `source` path — the same corpus entries the CNF cases provision through
-/// `requires.templates`.
-fn corpus_template(source: &str) -> String {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../corpus")
-        .join(source);
-    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
-}
-
-/// `persistent_minimal.en.v1` — `cnf.opt.minimal_persistent`.
-fn persistent_minimal_opt() -> String {
-    corpus_template("templates/minimal_persistent.opt")
-}
-
-/// `nested.en.v1` — `cnf.opt.nested`, the EVENT-category template the batch
-/// case pairs with the persistent one.
-fn nested_opt() -> String {
-    corpus_template("fixtures/opt/valid/nested.opt")
 }
 
 async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
@@ -349,201 +326,21 @@ async fn import_ehr_extract_of_a_malformed_extract_is_bad_request() {
     assert_eq!(status, StatusCode::BAD_REQUEST, "malformed EXTRACT: {body}");
 }
 
-// ── I_TDD_SERVICE ────────────────────────────────────────────────────────────
+// ── Removed routes ───────────────────────────────────────────────────────────
 
-/// A fresh router with an EHR and both operational templates the TDD
-/// instances name (`persistent_minimal.en.v1` + `nested.en.v1`).
-async fn app_with_tdd_template() -> (testkit::TestDb, Router, String) {
-    let (pg, app) = common::test_router().await;
-    let ehr_id = create_ehr(&app).await;
-    for opt in [persistent_minimal_opt(), nested_opt()] {
-        let (status, body) = send(
-            &app,
-            post("/definition/template/adl1.4", "application/xml", opt),
-        )
-        .await;
-        assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
-    }
-    (pg, app, ehr_id)
-}
-
-/// `import_tdd` converts the document against its operational template and
-/// commits it through the validated COMPOSITION path, answering `201` with the
-/// created `OBJECT_VERSION_ID`.
+/// The Template Data Document import routes were removed (#4199), so each
+/// former path is no route at all: `404`, even for an EHR that exists and a
+/// body the old route would have read.
 #[tokio::test]
-async fn import_tdd_commits_the_converted_composition() {
-    let (_pg, app, ehr_id) = app_with_tdd_template().await;
-
-    let (status, body) = send(
-        &app,
-        post(
-            &format!("/message/tdd/{ehr_id}"),
-            "application/xml",
-            corpus("tdd.v1.xml"),
-        ),
-    )
-    .await;
-    assert_eq!(status, StatusCode::CREATED, "import_tdd: {body}");
-    let created: Value = serde_json::from_str(&body).expect("identifier json");
-    let uid = created["uid"].as_str().expect("uid");
-    assert!(
-        uid.contains("::"),
-        "the body names an OBJECT_VERSION_ID, got {uid}"
-    );
-
-    // The committed COMPOSITION is readable on the released wire.
-    let (status, body) = send(&app, get(&format!("/ehr/{ehr_id}/composition/{uid}"))).await;
-    assert_eq!(status, StatusCode::OK, "committed COMPOSITION: {body}");
-}
-
-/// A TDD naming a template this server does not hold is
-/// `template_does_not_exist` → `404`.
-#[tokio::test]
-async fn import_tdd_for_an_unprovisioned_template_is_not_found() {
+async fn the_former_tdd_routes_are_not_found() {
     let (_pg, app) = common::test_router().await;
     let ehr_id = create_ehr(&app).await;
-
-    let (status, body) = send(
-        &app,
-        post(
-            &format!("/message/tdd/{ehr_id}"),
-            "application/xml",
-            corpus("tdd.v1.xml"),
-        ),
-    )
-    .await;
-    assert_eq!(status, StatusCode::NOT_FOUND, "unprovisioned OPT: {body}");
-}
-
-/// A payload that is not well-formed XML is invalid content → `422`.
-#[tokio::test]
-async fn import_tdd_of_a_malformed_document_is_unprocessable() {
-    let (_pg, app, ehr_id) = app_with_tdd_template().await;
-
-    let (status, body) = send(
-        &app,
-        post(
-            &format!("/message/tdd/{ehr_id}"),
-            "application/xml",
-            corpus("tdd.invalid.xml"),
-        ),
-    )
-    .await;
-    assert_eq!(
-        status,
-        StatusCode::UNPROCESSABLE_ENTITY,
-        "malformed TDD: {body}"
-    );
-}
-
-/// The batch form commits every document and answers `201` with the created
-/// `OBJECT_VERSION_ID`s in input order.
-#[tokio::test]
-async fn import_tdds_commits_the_whole_batch() {
-    let (_pg, app, ehr_id) = app_with_tdd_template().await;
-
-    let batch = serde_json::json!([corpus("tdd.v1.xml"), corpus("tdd.nested.xml")]);
-    let (status, body) = send(
-        &app,
-        post(
-            &format!("/message/tdd/{ehr_id}/batch"),
-            "application/json",
-            batch.to_string(),
-        ),
-    )
-    .await;
-    assert_eq!(status, StatusCode::CREATED, "import_tdds: {body}");
-    let uids: Value = serde_json::from_str(&body).expect("uid list json");
-    assert_eq!(uids.as_array().expect("array").len(), 2);
-}
-
-/// The batch is all-or-nothing: one unconvertible document rejects it whole and
-/// commits nothing.
-#[tokio::test]
-async fn import_tdds_is_all_or_nothing() {
-    let (_pg, app, ehr_id) = app_with_tdd_template().await;
-
-    let batch = serde_json::json!([corpus("tdd.v1.xml"), corpus("tdd.invalid.xml")]);
-    let (status, body) = send(
-        &app,
-        post(
-            &format!("/message/tdd/{ehr_id}/batch"),
-            "application/json",
-            batch.to_string(),
-        ),
-    )
-    .await;
-    assert_eq!(
-        status,
-        StatusCode::UNPROCESSABLE_ENTITY,
-        "batch with an invalid TDD: {body}"
-    );
-
-    // Nothing was committed — the EHR still holds no COMPOSITION.
-    let (status, body) = send(
-        &app,
-        post(
-            "/query/aql",
-            "application/json",
-            serde_json::json!({
-                "q": format!("SELECT c/uid/value FROM EHR e[ehr_id/value='{ehr_id}'] \
-                              CONTAINS COMPOSITION c")
-            })
-            .to_string(),
-        ),
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "aql: {body}");
-    let result: Value = serde_json::from_str(&body).expect("result set json");
-    assert_eq!(
-        result["rows"].as_array().map_or(0, Vec::len),
-        0,
-        "a rejected batch commits nothing"
-    );
-}
-
-/// An EMPTY batch is a fulfilled no-op: nothing is created, so the answer is
-/// `200` with `[]` rather than the `201` a creation reports (RFC 9110 §15.3.2:
-/// `201` is for a request that "resulted in one or more new resources being
-/// created").
-#[tokio::test]
-async fn import_tdds_of_an_empty_batch_creates_nothing() {
-    let (_pg, app, ehr_id) = app_with_tdd_template().await;
-
-    let (status, body) = send(
-        &app,
-        post(
-            &format!("/message/tdd/{ehr_id}/batch"),
-            "application/json",
-            "[]".to_owned(),
-        ),
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "empty batch: {body}");
-    let uids: Value = serde_json::from_str(&body).expect("uid list json");
-    assert_eq!(uids, serde_json::json!([]), "empty batch: {body}");
-}
-
-/// The operation's target-EHR precondition holds for EVERY batch, the empty one
-/// included: `an_ehr_id` is a parameter of the operation, not of its members
-/// (SM `i_tdd_service.adoc`), so an unknown EHR is `404` even when no member
-/// carries the check.
-#[tokio::test]
-async fn import_tdds_of_an_empty_batch_still_checks_the_ehr() {
-    let (_pg, app, _ehr_id) = app_with_tdd_template().await;
-
-    let (status, body) = send(
-        &app,
-        post(
-            "/message/tdd/00000000-0000-0000-0000-000000000000/batch",
-            "application/json",
-            "[]".to_owned(),
-        ),
-    )
-    .await;
-    assert_eq!(
-        status,
-        StatusCode::NOT_FOUND,
-        "empty batch into an unknown EHR: {body}"
-    );
+    for path in [
+        format!("/message/tdd/{ehr_id}"),
+        format!("/message/tdd/{ehr_id}/batch"),
+        "/message/tdd".to_owned(),
+    ] {
+        let (status, body) = send(&app, post(&path, "application/xml", "<x/>".to_owned())).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "POST {path}: {body}");
+    }
 }
