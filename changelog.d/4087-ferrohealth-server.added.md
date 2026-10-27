@@ -1,4 +1,4 @@
-- The server runs the FerroHEALTH HTTP stack of `ferrohealth-server` 0.3.3,
+- The server runs the FerroHEALTH HTTP stack of `ferrohealth-server` 0.3.4,
   and `[server]` is its section, the same keys in every FerroHEALTH product:
   `listen`, `base_path` (a path every route is served under, the health routes
   included; empty by default), `request_timeout_ms` (a request still running

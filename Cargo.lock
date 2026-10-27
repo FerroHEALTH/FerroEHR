@@ -2865,9 +2865,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-server"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "579155702d578a0a3f61b5cee40fa0ba3d5c95424362e938d0a6c210939d2582"
+checksum = "e737126f295e5a5327550ec3d86979841a6d5176505ecde95e77e5e92161d7e0"
 dependencies = [
  "axum",
  "clap",
@@ -2877,6 +2877,7 @@ dependencies = [
  "http",
  "hyper-util",
  "ipnet",
+ "pin-project-lite",
  "reqwest",
  "rustls",
  "secrecy",
@@ -2919,9 +2920,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-telemetry"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a2f28c60ec0d7f865d0e5af7acea704c0107204e8adcd77d87dc4d807735780"
+checksum = "b2520fcd3daaf7053226ae5fc5107471d277f4dac94907eea9536c7583805a2c"
 dependencies = [
  "axum",
  "ferrohealth-secret",
@@ -2930,11 +2931,13 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry-prometheus",
  "opentelemetry_sdk",
+ "pin-project-lite",
  "prometheus",
  "rustls",
  "secrecy",
  "serde",
  "thiserror 2.0.21",
+ "tower",
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
