@@ -49,6 +49,8 @@ use serde_json::Value;
 use crate::bff::demographics::PartyKind;
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
+use crate::locale::records::RecordsMsg;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr, tr_with};
@@ -115,7 +117,7 @@ pub async fn fetch_party(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let uid = container_uid_of(&uid);
     if uid.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::PartyIdRequired)));
@@ -164,7 +166,7 @@ pub async fn create_party(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let body = checked_party_body(&body, kind)?;
     let url = state
         .cdr
@@ -184,7 +186,7 @@ pub async fn create_party(
     let uid = crate::uid::uid_value_of(&response.body);
     if uid.is_empty() {
         return Err(ViewerError::Internal(tr_served(
-            Msg::CdrCreatedPartyButReturnedNo,
+            RecordsMsg::CdrCreatedPartyButReturnedNo,
         )));
     }
     Ok(uid)
@@ -232,11 +234,11 @@ pub async fn update_party(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let current = current_version_uid.trim();
     if current.is_empty() {
         return Err(ViewerError::Invalid(
-            { tr_served(Msg::CurrentVersionUidRequiredUpdateParty) }.clone(),
+            { tr_served(RecordsMsg::CurrentVersionUidRequiredUpdateParty) }.clone(),
         ));
     }
     let body = apply_party_edits(&base_body, &identities, &details)?;
@@ -294,11 +296,11 @@ pub async fn delete_party(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let version_uid = version_uid.trim();
     if !version_uid.contains("::") {
         return Err(ViewerError::Invalid(tr_served(
-            Msg::DeletingPartyNeedsLatestVersionS,
+            RecordsMsg::DeletingPartyNeedsLatestVersionS,
         )));
     }
     let url = state.cdr.rest_v1(&format!(
@@ -325,13 +327,13 @@ pub async fn delete_party(
 fn checked_party_body(body: &str, kind: PartyKind) -> Result<String, ViewerError> {
     let doc: Value = serde_json::from_str(body.trim()).map_err(|e| {
         ViewerError::Invalid(tr_with(
-            Msg::PartyBodyNotValidJson,
+            RecordsMsg::PartyBodyNotValidJson,
             &[("e", (e).to_string().into())],
         ))
     })?;
     let object = doc
         .as_object()
-        .ok_or_else(|| ViewerError::Invalid(tr(Msg::PartyBodyMustJsonObject)))?;
+        .ok_or_else(|| ViewerError::Invalid(tr(RecordsMsg::PartyBodyMustJsonObject)))?;
     let declared = object
         .get("_type")
         .and_then(Value::as_str)
@@ -360,7 +362,10 @@ fn checked_party_body(body: &str, kind: PartyKind) -> Result<String, ViewerError
 /// [`ViewerError::Internal`] when the body is not valid JSON.
 fn parse_party_state(body: &str, served_etag: Option<&str>) -> Result<PartyState, ViewerError> {
     let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(Msg::PartyJson, &[("e", (e).to_string().into())]))
+        ViewerError::Internal(tr_with(
+            RecordsMsg::PartyJson,
+            &[("e", (e).to_string().into())],
+        ))
     })?;
     let version_uid =
         served_etag.map_or_else(|| crate::uid::uid_value_of_document(&doc), str::to_owned);
@@ -418,14 +423,14 @@ fn parse_identities(draft: &str) -> Result<Value, String> {
     let trimmed = draft.trim();
     let value: Value = serde_json::from_str(trimmed).map_err(|e| {
         tr_with(
-            Msg::IdentitiesNotValidJson,
+            RecordsMsg::IdentitiesNotValidJson,
             &[("e", (e).to_string().into())],
         )
     })?;
     match value.as_array() {
         Some(items) if !items.is_empty() => Ok(value),
-        Some(_) => Err(tr(Msg::IdentitiesMustHoldLeastOneParty)),
-        None => Err(tr(Msg::IdentitiesMustJsonArrayPartyIdentity)),
+        Some(_) => Err(tr(RecordsMsg::IdentitiesMustHoldLeastOneParty)),
+        None => Err(tr(RecordsMsg::IdentitiesMustJsonArrayPartyIdentity)),
     }
 }
 
@@ -445,8 +450,12 @@ fn parse_details(draft: &str) -> Result<Option<Value>, String> {
     if trimmed.is_empty() {
         return Ok(None);
     }
-    let value: Value = serde_json::from_str(trimmed)
-        .map_err(|e| tr_with(Msg::DetailsNotValidJson, &[("e", (e).to_string().into())]))?;
+    let value: Value = serde_json::from_str(trimmed).map_err(|e| {
+        tr_with(
+            RecordsMsg::DetailsNotValidJson,
+            &[("e", (e).to_string().into())],
+        )
+    })?;
     if value.is_object() {
         Ok(Some(value))
     } else {
@@ -478,7 +487,7 @@ pub(super) fn apply_party_edits(
 ) -> Result<String, ViewerError> {
     let mut doc: Value = serde_json::from_str(base).map_err(|e| {
         ViewerError::Invalid(tr_with(
-            Msg::LoadedPartyDocumentNotValidJson,
+            RecordsMsg::LoadedPartyDocumentNotValidJson,
             &[("e", (e).to_string().into())],
         ))
     })?;
@@ -486,7 +495,7 @@ pub(super) fn apply_party_edits(
     let details = parse_details(details).map_err(ViewerError::Invalid)?;
     let object = doc
         .as_object_mut()
-        .ok_or_else(|| ViewerError::Invalid(tr(Msg::LoadedPartyDocumentNotJsonObject)))?;
+        .ok_or_else(|| ViewerError::Invalid(tr(RecordsMsg::LoadedPartyDocumentNotJsonObject)))?;
     drop(object.insert("identities".to_owned(), identities));
     match details {
         Some(details) => drop(object.insert("details".to_owned(), details)),
@@ -494,7 +503,7 @@ pub(super) fn apply_party_edits(
     }
     serde_json::to_string(&doc).map_err(|e| {
         ViewerError::Invalid(tr_with(
-            Msg::EditedPartyCouldNotSerialized,
+            RecordsMsg::EditedPartyCouldNotSerialized,
             &[("e", (e).to_string().into())],
         ))
     })

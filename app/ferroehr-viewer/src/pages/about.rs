@@ -19,6 +19,8 @@ use leptos::prelude::*;
 use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
 
+use crate::error::ViewerError;
+use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{Refused, drawn, page_model};
 
@@ -44,13 +46,26 @@ struct Model {
     manifest: Result<String, Refused>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads About: the status the shell read and the conformance manifest.
-async fn load() -> Model {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Model, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_page().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load`] reads, on the server.
+async fn read_page() -> Model {
     let status = crate::shell::status().await;
     let document = match crate::request::state() {
         Some(state) => crate::system_api::fetch_conformance_document(&state).await,
-        None => Err(crate::error::ViewerError::Internal(tr(Msg::AboutNoState))),
+        None => Err(ViewerError::Internal(tr(ConsoleMsg::AboutNoState))),
     };
     // NOTE: no openEHR spec governs this: our own design; a manifest that does
     // not parse leaves its versions unknown, and the card shows it as sent.
@@ -75,7 +90,7 @@ async fn load() -> Model {
         support: crate::manufacturer::MANUFACTURER.email.to_owned(),
         manifest: document
             .map(|text| crate::bff::pretty_body(&text, crate::format::ReprFormat::CanonicalJson))
-            .map_err(|error| Refused::new(tr(Msg::AboutManifestRefused), error)),
+            .map_err(|error| Refused::new(tr(ConsoleMsg::AboutManifestRefused), error)),
     }
 }
 
@@ -90,17 +105,21 @@ fn about(model: Model) -> AnyView {
     } = model;
     let versions = vec![
         (
-            tr(Msg::AboutCdr),
-            tr_with(Msg::AboutCdrVersion, &[("version", cdr_version.into())]).into_any(),
-        ),
-        (
-            tr(Msg::AboutOpenEhrRest),
-            tr_with(Msg::AboutRestVersion, &[("version", rest.into())]).into_any(),
-        ),
-        (
-            tr(Msg::AboutFerroUi),
+            tr(ConsoleMsg::AboutCdr),
             tr_with(
-                Msg::AboutFerroUiVersion,
+                ConsoleMsg::AboutCdrVersion,
+                &[("version", cdr_version.into())],
+            )
+            .into_any(),
+        ),
+        (
+            tr(ConsoleMsg::AboutOpenEhrRest),
+            tr_with(ConsoleMsg::AboutRestVersion, &[("version", rest.into())]).into_any(),
+        ),
+        (
+            tr(ConsoleMsg::AboutFerroUi),
+            tr_with(
+                ConsoleMsg::AboutFerroUiVersion,
                 &[("version", ferrohealth_ui_version().into())],
             )
             .into_any(),
@@ -111,8 +130,8 @@ fn about(model: Model) -> AnyView {
         Err(refusal) => (None, vec![refusal.view()]),
     };
     let self_description = document.map(|text| SelfDescription {
-        title: tr(Msg::AboutManifest),
-        line: tr(Msg::AboutManifestLine),
+        title: tr(ConsoleMsg::AboutManifest),
+        line: tr(ConsoleMsg::AboutManifestLine),
         language: Language::Json,
         text,
         copy_id: "manifest-copy".to_owned(),
@@ -121,7 +140,7 @@ fn about(model: Model) -> AnyView {
     about_page(Page {
         header: Header {
             title: tr(Msg::NavAbout).into(),
-            subtitle: Some(tr(Msg::AboutSubtitle).into()),
+            subtitle: Some(tr(ConsoleMsg::AboutSubtitle).into()),
             crumbs: Vec::new(),
             mono: false,
             badge: None,
@@ -130,13 +149,13 @@ fn about(model: Model) -> AnyView {
         release,
         versions,
         manufacturer: Manufacturer {
-            licence: tr(Msg::AboutLicence),
+            licence: tr(ConsoleMsg::AboutLicence),
             support: Link {
                 label: support.clone(),
                 href: format!("mailto:{support}"),
             },
             documentation: Some(Link {
-                label: tr(Msg::AboutBook),
+                label: tr(ConsoleMsg::AboutBook),
                 href: BOOK.to_owned(),
             }),
         },
@@ -159,7 +178,7 @@ pub fn AboutPage() -> impl IntoView {
 
 /// The FerroUI release the viewer draws with: the exact pin of the
 /// workspace manifest, held to it by a test.
-const FERROHEALTH_UI: &str = "0.4.0";
+const FERROHEALTH_UI: &str = "0.5.2";
 
 /// The FerroUI release the viewer draws with.
 fn ferrohealth_ui_version() -> String {

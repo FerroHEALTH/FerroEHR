@@ -41,9 +41,10 @@ use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
+use crate::locale::server::ServerMsg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
-use crate::locale::{Msg, tr_with};
+use crate::locale::tr_with;
 use crate::system_api::ConformanceManifest;
 
 /// The API group name the conformance manifest advertises for the Admin API
@@ -155,19 +156,19 @@ pub fn delete_failure_copy(object: &str, error: &ViewerError) -> String {
     match error {
         ViewerError::Cdr { message, .. } => match error.status_code() {
             Some(http::StatusCode::CONFLICT) => tr_with(
-                Msg::StillReferencedCommittedDataSoCdr,
+                ServerMsg::StillReferencedCommittedDataSoCdr,
                 &[
                     ("object", (object).to_string().into()),
                     ("message", message.clone().into()),
                 ],
             ),
             Some(http::StatusCode::NOT_FOUND) => tr_with(
-                Msg::NotCdrAnyMoreWasAlready,
+                ServerMsg::NotCdrAnyMoreWasAlready,
                 &[("object", (object).to_string().into())],
             ),
             Some(http::StatusCode::BAD_REQUEST | http::StatusCode::UNPROCESSABLE_ENTITY) => {
                 tr_with(
-                    Msg::CdrRejectedDelete,
+                    ServerMsg::CdrRejectedDelete,
                     &[
                         ("object", (object).to_string().into()),
                         ("message", message.clone().into()),
@@ -175,7 +176,7 @@ pub fn delete_failure_copy(object: &str, error: &ViewerError) -> String {
                 )
             }
             _ => tr_with(
-                Msg::DeletingFailed,
+                ServerMsg::DeletingFailed,
                 &[
                     ("object", (object).to_string().into()),
                     ("error", (error).to_string().into()),
@@ -183,25 +184,25 @@ pub fn delete_failure_copy(object: &str, error: &ViewerError) -> String {
             ),
         },
         ViewerError::Forbidden(message) => tr_with(
-            Msg::SessionMayNotDeleteSignAdmin,
+            ServerMsg::SessionMayNotDeleteSignAdmin,
             &[
                 ("object", (object).to_string().into()),
                 ("message", message.clone().into()),
             ],
         ),
         ViewerError::CdrUnauthorized(message) => tr_with(
-            Msg::CdrNoLongerAcceptsSessionSo,
+            ServerMsg::CdrNoLongerAcceptsSessionSo,
             &[
                 ("object", (object).to_string().into()),
                 ("message", message.clone().into()),
             ],
         ),
         ViewerError::Unauthenticated => tr_with(
-            Msg::ViewerSessionExpiredBeforeWasDeleted,
+            ServerMsg::ViewerSessionExpiredBeforeWasDeleted,
             &[("object", (object).to_string().into())],
         ),
         other => tr_with(
-            Msg::DeletingFailed2,
+            ServerMsg::DeletingFailed2,
             &[
                 ("object", (object).to_string().into()),
                 ("other", (other).to_string().into()),
@@ -231,7 +232,9 @@ pub async fn admin_delete_template(
 ) -> Result<(), ViewerError> {
     let session = crate::session::require_session().await?;
     if template_id.trim().is_empty() {
-        return Err(ViewerError::Invalid(tr_served(Msg::NoTemplateIdDelete)));
+        return Err(ViewerError::Invalid(tr_served(
+            ServerMsg::NoTemplateIdDelete,
+        )));
     }
     let state: crate::state::AppState = expect_context();
     let url = state.cdr.rest_v1(&format!(
@@ -264,7 +267,7 @@ pub async fn admin_delete_stored_query(
     let session = crate::session::require_session().await?;
     if name.trim().is_empty() || version.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
-            Msg::StoredQueryDeleteNeedsBothQualified,
+            ServerMsg::StoredQueryDeleteNeedsBothQualified,
         )));
     }
     let state: crate::state::AppState = expect_context();
@@ -297,7 +300,7 @@ pub async fn admin_delete_ehr(
 ) -> Result<(), ViewerError> {
     let session = crate::session::require_session().await?;
     if ehr_id.trim().is_empty() {
-        return Err(ViewerError::Invalid(tr_served(Msg::NoEhrIdDelete)));
+        return Err(ViewerError::Invalid(tr_served(ServerMsg::NoEhrIdDelete)));
     }
     let state: crate::state::AppState = expect_context();
     let url = state

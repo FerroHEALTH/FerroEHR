@@ -24,8 +24,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::bff::ehrs::ResultPage;
 use crate::error::ViewerError;
+use crate::locale::server::ServerMsg;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::locale::{Msg, tr_served, tr_served_with};
+use crate::locale::{tr_served, tr_served_with};
 
 /// A stored-query listing row (ITS-REST Definition API).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -85,14 +86,14 @@ pub async fn run_aql(
     } else {
         serde_json::from_str(&parameters_json).map_err(|e| {
             ViewerError::Invalid(tr_served_with(
-                Msg::ParametersMustJsonObject3,
+                ServerMsg::ParametersMustJsonObject3,
                 &[("e", (e).to_string().into())],
             ))
         })?
     };
     if !parameters.is_object() {
         return Err(ViewerError::Invalid(tr_served(
-            Msg::ParametersMustJsonObject,
+            ServerMsg::ParametersMustJsonObject,
         )));
     }
     let url = state.cdr.rest_v1("query/aql");
@@ -147,7 +148,7 @@ pub async fn list_stored_queries() -> Result<Vec<StoredQueryRow>, ViewerError> {
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
     let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
-            Msg::StoredQueryListJson,
+            ServerMsg::StoredQueryListJson,
             &[("e", (e).to_string().into())],
         ))
     })?;
@@ -203,7 +204,7 @@ pub async fn fetch_stored_query(
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
     let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
-            Msg::StoredQueryJson,
+            ServerMsg::StoredQueryJson,
             &[("e", (e).to_string().into())],
         ))
     })?;
@@ -255,7 +256,9 @@ pub async fn store_query(
 ) -> Result<(), ViewerError> {
     let session = crate::session::require_session().await?;
     if name.trim().is_empty() {
-        return Err(ViewerError::Invalid(tr_served(Msg::StoredQueryNeedsName)));
+        return Err(ViewerError::Invalid(tr_served(
+            ServerMsg::StoredQueryNeedsName,
+        )));
     }
     // An empty field means "no version" — the unversioned store — so the
     // screens can bind a plain text input without an Option dance.
@@ -266,7 +269,7 @@ pub async fn store_query(
         && !crate::query_namespace::is_full_semver(version)
     {
         return Err(ViewerError::Invalid(tr_served_with(
-            Msg::NotVersionStoreStoredQueryVersion,
+            ServerMsg::NotVersionStoreStoredQueryVersion,
             &[("version", (version).to_string().into())],
         )));
     }
@@ -349,7 +352,7 @@ pub async fn run_stored_query(
     let state: crate::state::AppState = leptos::prelude::expect_context();
     if name.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
-            Msg::NoStoredQueryRunOpenOne,
+            ServerMsg::NoStoredQueryRunOpenOne,
         )));
     }
     let parameters: serde_json::Value = if parameters_json.trim().is_empty() {
@@ -357,14 +360,14 @@ pub async fn run_stored_query(
     } else {
         serde_json::from_str(&parameters_json).map_err(|e| {
             ViewerError::Invalid(tr_served_with(
-                Msg::ParametersMustJsonObject4,
+                ServerMsg::ParametersMustJsonObject4,
                 &[("e", (e).to_string().into())],
             ))
         })?
     };
     if !parameters.is_object() {
         return Err(ViewerError::Invalid(tr_served(
-            Msg::ParametersMustJsonObject,
+            ServerMsg::ParametersMustJsonObject,
         )));
     }
     // Name and version are separate path segments, each percent-encoded via
@@ -440,7 +443,7 @@ pub async fn run_stored_count(
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
     let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
-            Msg::StoredQueryResultJson,
+            ServerMsg::StoredQueryResultJson,
             &[("e", (e).to_string().into())],
         ))
     })?;

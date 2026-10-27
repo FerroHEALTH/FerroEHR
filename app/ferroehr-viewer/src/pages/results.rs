@@ -28,7 +28,8 @@ use crate::bff::ehrs::{ResultPage, cell_text};
 use crate::chart_model::AxisScale;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::queries::QueriesMsg;
+use crate::locale::{tr, tr_with};
 use crate::pages::common::{Refused, count, quiet, section};
 
 /// The name the view the results show rides as, so the next Run keeps it;
@@ -81,8 +82,9 @@ fn cell_words(value: &serde_json::Value) -> String {
 struct Line {
     /// The column's name.
     name: String,
-    /// Its points over the axis.
-    points: Vec<(f64, f64)>,
+    /// Its points over the axis, `None` where the row's cell is absent, null
+    /// or no number, which JSON cannot carry as a number to the browser.
+    points: Vec<(f64, Option<f64>)>,
 }
 
 /// A result set as a line chart over its first time column, or the row
@@ -114,7 +116,11 @@ fn plot(page: &ResultPage) -> Option<Plot> {
             points: axis
                 .rows
                 .iter()
-                .filter_map(|row| row.values.get(index).map(|value| (row.x, *value)))
+                .filter_map(|row| {
+                    row.values
+                        .get(index)
+                        .map(|value| (row.x, value.is_finite().then_some(*value)))
+                })
                 .collect(),
         })
         .collect();
@@ -177,7 +183,7 @@ fn table(columns: &[String], rows: &[Vec<String>]) -> AnyView {
         })
         .collect_view()
         .into_any();
-    let caption = tr(Msg::ResultsTitle);
+    let caption = tr(QueriesMsg::ResultsTitle);
     data_table(DataTable {
         caption: &caption,
         columns: &columns,
@@ -196,7 +202,11 @@ fn chart(plot: Plot) -> AnyView {
         .enumerate()
         .map(|(index, line)| Series {
             name: line.name,
-            points: line.points,
+            points: line
+                .points
+                .into_iter()
+                .map(|(x, value)| (x, value.unwrap_or(f64::NAN)))
+                .collect(),
             palette: u8::try_from(index % usize::from(ferrohealth_ui::view::chart::PALETTE))
                 .unwrap_or(0),
         })
@@ -208,9 +218,9 @@ fn chart(plot: Plot) -> AnyView {
         .collect();
     let chart = LineChart {
         id: "results-chart",
-        label: tr(Msg::ResultsChartLabel),
+        label: tr(QueriesMsg::ResultsChartLabel),
         summary: tr_with(
-            Msg::ResultsChartSummary,
+            QueriesMsg::ResultsChartSummary,
             &[
                 ("series", names.join(", ").into()),
                 ("axis", plot.axis.clone().into()),
@@ -224,7 +234,7 @@ fn chart(plot: Plot) -> AnyView {
     view! {
         {line_chart(&chart, ChartWords::of_page())}
         <p class="fui-small fui-muted">
-            {tr_with(Msg::ResultsAxis, &[("axis", plot.axis.into())])}
+            {tr_with(QueriesMsg::ResultsAxis, &[("axis", plot.axis.into())])}
         </p>
     }
     .into_any()
@@ -295,7 +305,7 @@ impl Answer {
     pub fn of(outcome: Result<ResultPage, ViewerError>, aql: &str, parameters: &str) -> Self {
         match outcome {
             Ok(page) => Self::Ran(Box::new(Ran::of(&page, aql, parameters))),
-            Err(error) => Self::Refused(Refused::new(tr(Msg::QueryRunRefused), error)),
+            Err(error) => Self::Refused(Refused::new(tr(QueriesMsg::QueryRunRefused), error)),
         }
     }
 
@@ -303,12 +313,15 @@ impl Answer {
     #[must_use]
     pub fn view(answer: Option<Self>) -> AnyView {
         match answer {
-            None => not_run(tr(Msg::ResultsNotRun)),
+            None => not_run(tr(QueriesMsg::ResultsNotRun)),
             Some(Self::NotRun(line)) => not_run(line),
             Some(Self::Ran(ran)) => results(*ran),
-            Some(Self::Refused(refusal)) => {
-                section(Some(tr(Msg::ResultsTitle)), None, None, refusal.view())
-            }
+            Some(Self::Refused(refusal)) => section(
+                Some(tr(QueriesMsg::ResultsTitle)),
+                None,
+                None,
+                refusal.view(),
+            ),
         }
     }
 }
@@ -327,9 +340,9 @@ fn export(route: &str, format: &str) -> Export {
 fn results(ran: Ran) -> AnyView {
     let total = ran.rows.len();
     let window = if ran.own_window {
-        tr_with(Msg::ResultsWindowOwn, &[("count", count(total))])
+        tr_with(QueriesMsg::ResultsWindowOwn, &[("count", count(total))])
     } else {
-        tr_with(Msg::ResultsWindow, &[("count", count(total))])
+        tr_with(QueriesMsg::ResultsWindow, &[("count", count(total))])
     };
     let asked = if ran.chart {
         Shown::Chart
@@ -350,7 +363,7 @@ fn results(ran: Ran) -> AnyView {
     }
     .into_any();
     results_pane(ResultsPane {
-        title: tr(Msg::ResultsTitle),
+        title: tr(QueriesMsg::ResultsTitle),
         count: u64::try_from(total).unwrap_or(u64::MAX),
         numeric,
         shown,
@@ -364,7 +377,7 @@ fn results(ran: Ran) -> AnyView {
 
 /// The Results section before a run.
 fn not_run(line: String) -> AnyView {
-    section(Some(tr(Msg::ResultsTitle)), None, None, quiet(line))
+    section(Some(tr(QueriesMsg::ResultsTitle)), None, None, quiet(line))
 }
 
 #[cfg(test)]
@@ -373,7 +386,34 @@ fn not_run(line: String) -> AnyView {
     reason = "a RESULT_SET cell is the CDR's untyped JSON"
 )]
 mod tests {
-    use super::cell_words;
+    use super::{Plot, cell_words, plot};
+    use crate::bff::ehrs::ResultPage;
+
+    #[test]
+    fn a_plot_with_an_absent_value_reaches_the_browser_whole() {
+        let page = ResultPage {
+            columns: vec!["observed".to_owned(), "magnitude".to_owned()],
+            rows: vec![
+                vec![
+                    serde_json::json!("2026-10-01T09:00:00Z"),
+                    serde_json::json!(71.5),
+                ],
+                vec![
+                    serde_json::json!("2026-10-02T09:00:00Z"),
+                    serde_json::Value::Null,
+                ],
+                vec![
+                    serde_json::json!("2026-10-03T09:00:00Z"),
+                    serde_json::json!(70),
+                ],
+            ],
+            offset: 0,
+        };
+        let drawn = plot(&page).expect("two numbers draw a line");
+        let wire = serde_json::to_string(&drawn).expect("a plot serializes");
+        let read: Plot = serde_json::from_str(&wire).expect("the browser reads the plot back");
+        assert_eq!(read, drawn, "{wire}");
+    }
 
     #[test]
     fn a_data_value_reads_as_a_person_reads_it() {

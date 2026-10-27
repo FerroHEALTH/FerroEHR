@@ -22,9 +22,9 @@
 #   2. `--locked` passed through to both compile legs (`--lib-cargo-args` /
 #      `--bin-cargo-args`), so neither can re-resolve either.
 #
-# FerroUI's lazy islands (#[island(lazy)]) import their code from a
+# The viewer's lazy route groups (#[lazy_route]) import their code from a
 # placeholder module that only `--split` rewrites into chunks, so a bundle
-# built without it fails to load and no island hydrates. Every `build`
+# built without it fails to load and nothing hydrates. Every `build`
 # therefore splits.
 #
 # Usage: scripts/cargo-leptos.sh build [--release] [...]

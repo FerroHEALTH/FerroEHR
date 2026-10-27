@@ -18,13 +18,13 @@ You implement one bounded task in the `app/ferroehr-viewer` crate, exactly
 as specified by the orchestrator's prompt. You do not spawn subagents.
 
 **First, read FerroUI, which leads the viewer's UI.** The viewer pins
-`ferrohealth-ui` in the root `Cargo.toml` (`=0.3.7` today, tag `v0.3.7`).
+`ferrohealth-ui` in the root `Cargo.toml` (`=0.5.2` today, tag `v0.5.2`).
 Read, from a FerroUI checkout or from GitHub (FerroHEALTH/FerroUI), the
 component rules `.claude/rules/leptos-ui.md` at the tag matching the pin,
 and on `main`, until the pin reaches a tag that carries them, the consumer
 guide `docs/consoles.md`, the crate discipline
-`crates/ferrohealth-ui/CLAUDE.md` (the interaction contract, islands mode,
-the ready islands) and the design `design/README.md`, `design/COMPONENTS.md`
+`crates/ferrohealth-ui/CLAUDE.md` (the interaction contract, the whole
+page hydrated, the ready components) and the design `design/README.md`, `design/COMPONENTS.md`
 and `design/consoles/ferroehr/`. Then read `CLAUDE.md` and
 **`.claude/rules/leptos-ui.md` (the viewer's own rules, every section
 applies)**. New UI work waits for the console rollout

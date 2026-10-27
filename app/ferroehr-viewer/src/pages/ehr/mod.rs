@@ -35,7 +35,6 @@ use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::widget::identifier::{Domain, KEEP};
 use ferrohealth_ui::widget::identifier::{IdentifierWords, Masked};
 use leptos::prelude::*;
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -45,6 +44,7 @@ use crate::bff::ehr_detail::status::EhrStatusState;
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
+use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{Refused, is_status, refused, shortened};
 
@@ -82,8 +82,8 @@ impl EhrTab {
 /// The EHR id the route names.
 #[must_use]
 pub fn ehr_id_param() -> String {
-    use_params_map()
-        .with_untracked(|params| params.get("ehr_id"))
+    crate::routes::params()
+        .with(|params| params.get("ehr_id"))
         .unwrap_or_default()
 }
 
@@ -115,7 +115,7 @@ pub fn crumbs(ehr_id: &str) -> Vec<Crumb> {
     vec![
         Crumb::new(tr(Msg::NavEhrs), "/ehrs"),
         Crumb::new(
-            tr_with(Msg::EhrTitle, &[("id", shortened(ehr_id).into())]),
+            tr_with(RecordsMsg::EhrTitle, &[("id", shortened(ehr_id).into())]),
             ehr_href(ehr_id),
         ),
     ]
@@ -234,7 +234,7 @@ fn subject_facts(ehr_id: &str, status: &EhrStatusState) -> SubjectFacts {
     } else {
         Who::Masked(Masked::new(
             Domain::new(if status.subject_namespace.is_empty() {
-                tr(Msg::SubjectId)
+                tr(RecordsMsg::SubjectId)
             } else {
                 status.subject_namespace.clone()
             }),
@@ -295,13 +295,13 @@ where
 fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
     let mut items = vec![Item::new(Action::new(
         Some(Glyph::GIT_COMMIT),
-        tr(Msg::EhrCommitSeveral),
+        tr(RecordsMsg::EhrCommitSeveral),
         Act::Link(format!("{}/contribution/new", ehr_href(ehr_id))),
     ))];
     if !facts.has_directory {
         items.push(Item::new(Action::new(
             Some(Glyph::FOLDER_PLUS),
-            tr(Msg::EhrCreateDirectory),
+            tr(RecordsMsg::EhrCreateDirectory),
             Act::Post {
                 action: ehr_href(ehr_id),
                 fields: vec![("intent".to_owned(), "create-directory".to_owned())],
@@ -310,19 +310,19 @@ fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
     }
     items.push(Item::new(Action::new(
         Some(Glyph::COPY),
-        tr(Msg::EhrCopyId),
+        tr(RecordsMsg::EhrCopyId),
         Act::Copy(ehr_id.to_owned()),
     )));
     let destructive = if facts.admin {
         vec![Item::new(Action::new(
             Some(Glyph::TRASH),
-            tr(Msg::EhrDelete),
+            tr(RecordsMsg::EhrDelete),
             Act::Dialog(DELETE_DIALOG.to_owned()),
         ))]
     } else {
         Vec::new()
     };
-    Menu::new("ehr-more", tr(Msg::EhrMore), items).destructive(destructive)
+    Menu::new("ehr-more", tr(RecordsMsg::EhrMore), items).destructive(destructive)
 }
 
 /// Delete EHR's confirmation: what a physical delete removes, and the field
@@ -333,7 +333,7 @@ fn delete_dialog(ehr_id: &str) -> AnyView {
             <input type="hidden" name="intent" value="delete-ehr" />
             <div class="fui-field">
                 <label for="delete-confirm" class="fui-label">
-                    {tr(Msg::EhrDeleteConfirmLabel)}
+                    {tr(RecordsMsg::EhrDeleteConfirmLabel)}
                 </label>
                 <input
                     id="delete-confirm"
@@ -347,15 +347,19 @@ fn delete_dialog(ehr_id: &str) -> AnyView {
             </div>
             <button type="submit" class="fui-button fui-button-danger">
                 {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                {tr(Msg::EhrDeleteConfirm)}
+                {tr(RecordsMsg::EhrDeleteConfirm)}
             </button>
         </form>
     };
     danger_dialog(
         Confirmation {
             id: DELETE_DIALOG.into(),
-            title: tr_with(Msg::EhrDeleteTitle, &[("id", shortened(ehr_id).into())]).into(),
-            message: tr(Msg::EhrDeleteMessage).into(),
+            title: tr_with(
+                RecordsMsg::EhrDeleteTitle,
+                &[("id", shortened(ehr_id).into())],
+            )
+            .into(),
+            message: tr(RecordsMsg::EhrDeleteMessage).into(),
         },
         confirm,
     )
@@ -379,7 +383,7 @@ fn subject(ehr_id: &str, subject: Option<&SubjectFacts>) -> AnyView {
         ),
         Who::Masked(masked) => Subject::External(
             view! {
-                <crate::islands::SubjectReveal
+                <crate::components::SubjectReveal
                     id="subject".to_owned()
                     ehr_id=ehr_id.to_owned()
                     masked=masked.clone()
@@ -403,16 +407,16 @@ fn subject(ehr_id: &str, subject: Option<&SubjectFacts>) -> AnyView {
 fn header(ehr_id: &str, facts: &EhrHead) -> AnyView {
     let actions = ActionGroup::primary(Action::new(
         Some(Glyph::PLUS),
-        tr(Msg::NewComposition),
+        tr(RecordsMsg::NewComposition),
         Act::Link(format!("{}/compositions/new", ehr_href(ehr_id))),
     ))
     .more(more(ehr_id, facts));
     let heading = page_heading(
         Header {
-            title: tr_with(Msg::EhrTitle, &[("id", shortened(ehr_id).into())]).into(),
+            title: tr_with(RecordsMsg::EhrTitle, &[("id", shortened(ehr_id).into())]).into(),
             subtitle: Some(
                 tr_with(
-                    Msg::EhrSubtitle,
+                    RecordsMsg::EhrSubtitle,
                     &[
                         (
                             "created",
@@ -443,30 +447,30 @@ fn tabs(ehr_id: &str, facts: &EhrHead) -> Vec<Tab> {
     let mut tabs = vec![Tab::new(
         EhrTab::Compositions.key(),
         tab_href(ehr_id, EhrTab::Compositions),
-        tr(Msg::EhrTabCompositions),
+        tr(RecordsMsg::EhrTabCompositions),
     )];
     if facts.has_directory {
         tabs.push(Tab::new(
             EhrTab::Directory.key(),
             tab_href(ehr_id, EhrTab::Directory),
-            tr(Msg::EhrTabDirectory),
+            tr(RecordsMsg::EhrTabDirectory),
         ));
     }
     tabs.extend([
         Tab::new(
             EhrTab::Status.key(),
             tab_href(ehr_id, EhrTab::Status),
-            tr(Msg::EhrTabStatus),
+            tr(RecordsMsg::EhrTabStatus),
         ),
         Tab::new(
             EhrTab::Contributions.key(),
             tab_href(ehr_id, EhrTab::Contributions),
-            tr(Msg::EhrTabContributions),
+            tr(RecordsMsg::EhrTabContributions),
         ),
         Tab::new(
             EhrTab::Tags.key(),
             tab_href(ehr_id, EhrTab::Tags),
-            tr(Msg::EhrTabTags),
+            tr(RecordsMsg::EhrTabTags),
         ),
     ]);
     tabs
@@ -485,12 +489,12 @@ async fn act(ehr_id: &str) -> Option<Acted> {
                 Ok(_) => {
                     redirect_with(
                         &tab_href(ehr_id, EhrTab::Directory),
-                        &Done::ok(tr(Msg::DirectoryCreated)),
+                        &Done::ok(tr(RecordsMsg::DirectoryCreated)),
                     );
                     None
                 }
                 Err(error) => Some(Acted::Refused(Refused::new(
-                    tr(Msg::DirectoryCreateRefused),
+                    tr(RecordsMsg::DirectoryCreateRefused),
                     error,
                 ))),
             }
@@ -505,12 +509,12 @@ async fn act(ehr_id: &str) -> Option<Acted> {
                 Ok(()) => {
                     redirect_with(
                         "/ehrs",
-                        &Done::ok(tr(Msg::EhrDeleted)).line(shortened(ehr_id)),
+                        &Done::ok(tr(RecordsMsg::EhrDeleted)).line(shortened(ehr_id)),
                     );
                     None
                 }
                 Err(error) => Some(Acted::Refused(Refused::new(
-                    tr(Msg::EhrDeleteRefused),
+                    tr(RecordsMsg::EhrDeleteRefused),
                     error,
                 ))),
             }
@@ -528,7 +532,7 @@ where
     let EhrModel { acted, head, panel } = model;
     let acted = acted.map(|acted| match acted {
         Acted::Refused(refusal) => refusal.view(),
-        Acted::Mismatch => crate::pages::common::warn_note(tr(Msg::EhrDeleteMismatch)),
+        Acted::Mismatch => crate::pages::common::warn_note(tr(RecordsMsg::EhrDeleteMismatch)),
     });
     let head = match head {
         Ok(head) => head,
@@ -539,7 +543,9 @@ where
     let body = panel.map(draw).into_any();
     view! {
         {header}
-        <div class="fui-stack">{acted} {binder(tr(Msg::EhrViews), tabs, tab.key(), body)}</div>
+        <div class="fui-stack">
+            {acted} {binder(tr(RecordsMsg::EhrViews), tabs, tab.key(), body)}
+        </div>
     }
     .into_any()
 }
@@ -548,9 +554,12 @@ where
 /// once at the top with no tabs, or the CDR's other refusal.
 fn missing(ehr_id: &str, error: &ViewerError) -> AnyView {
     let title = if is_status(error, http::StatusCode::NOT_FOUND) {
-        tr_with(Msg::EhrNotFoundTitle, &[("id", shortened(ehr_id).into())])
+        tr_with(
+            RecordsMsg::EhrNotFoundTitle,
+            &[("id", shortened(ehr_id).into())],
+        )
     } else {
-        tr_with(Msg::EhrTitle, &[("id", shortened(ehr_id).into())])
+        tr_with(RecordsMsg::EhrTitle, &[("id", shortened(ehr_id).into())])
     };
     let heading = page_heading(
         Header {
@@ -567,12 +576,12 @@ fn missing(ehr_id: &str, error: &ViewerError) -> AnyView {
         "/ehrs".to_owned(),
         ferrohealth_ui::view::button::Variant::Primary,
         Some(Glyph::ARROW_LEFT),
-        tr(Msg::EhrBack),
+        tr(RecordsMsg::EhrBack),
     );
     view! {
         {heading}
         <div class="fui-stack">
-            {refused(tr(Msg::EhrRefused), error, None)} <div class="fui-cluster">{back}</div>
+            {refused(tr(RecordsMsg::EhrRefused), error, None)} <div class="fui-cluster">{back}</div>
         </div>
     }
     .into_any()

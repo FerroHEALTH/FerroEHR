@@ -38,7 +38,6 @@ use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::widget::editor::EditorWords;
 use leptos::prelude::*;
 use leptos_meta::Title;
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
 use crate::bff::demographics::contribution::ContributionState;
@@ -64,11 +63,11 @@ use crate::bff::demographics::{
 };
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
 use crate::clinical::RenderedSection;
-#[cfg(not(target_arch = "wasm32"))]
+use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
-use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
+use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, message, tr, tr_with};
 use crate::pages::common::{
     EditorDock, Refused, ago, at_time_row, card_panel, count, dock_editor, docked,
@@ -93,11 +92,11 @@ const EDIT_FORM: &str = "party-edit";
 /// The reader's word for a kind.
 fn kind_words(kind: PartyKind) -> String {
     tr(match kind {
-        PartyKind::Agent => Msg::KindAgent,
-        PartyKind::Group => Msg::KindGroup,
-        PartyKind::Organisation => Msg::KindOrganisation,
-        PartyKind::Person => Msg::KindPerson,
-        PartyKind::Role => Msg::KindRole,
+        PartyKind::Agent => RecordsMsg::KindAgent,
+        PartyKind::Group => RecordsMsg::KindGroup,
+        PartyKind::Organisation => RecordsMsg::KindOrganisation,
+        PartyKind::Person => RecordsMsg::KindPerson,
+        PartyKind::Role => RecordsMsg::KindRole,
     })
 }
 
@@ -169,15 +168,11 @@ fn collect_text(node: &serde_json::Value, words: &mut Vec<String>) {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// The kind and the id the route names.
-fn party_params() -> (Option<PartyKind>, String) {
-    use_params_map().with_untracked(|params| {
+/// The kind's segment and the id the route names.
+fn party_route() -> (String, String) {
+    crate::routes::params().with(|params| {
         (
-            params
-                .get("kind")
-                .as_deref()
-                .and_then(PartyKind::from_segment),
+            params.get("kind").unwrap_or_default(),
             params.get("uid").unwrap_or_default(),
         )
     })
@@ -185,8 +180,8 @@ fn party_params() -> (Option<PartyKind>, String) {
 
 /// The id the route names.
 fn uid_param() -> String {
-    use_params_map()
-        .with_untracked(|params| params.get("uid"))
+    crate::routes::params()
+        .with(|params| params.get("uid"))
         .unwrap_or_default()
 }
 
@@ -250,9 +245,9 @@ async fn tag_index() -> Result<Vec<Indexed>, ViewerError> {
 /// The tag index as a table.
 fn index_table(rows: &[Indexed]) -> AnyView {
     let columns = [
-        Column::text("key", tr(Msg::TagsKey)).role(Role::Title),
+        Column::text("key", tr(RecordsMsg::TagsKey)).role(Role::Title),
         Column::text("value", tr(Msg::TagsValue)).role(Role::Sub),
-        Column::text("on", tr(Msg::PartiesTagOn)).role(Role::Meta),
+        Column::text("on", tr(RecordsMsg::PartiesTagOn)).role(Role::Meta),
         Column::text("kind", tr(Msg::ColumnKind)).role(Role::Meta),
     ];
     let body = rows
@@ -281,7 +276,7 @@ fn index_table(rows: &[Indexed]) -> AnyView {
         })
         .collect_view()
         .into_any();
-    let caption = tr(Msg::PartiesTagIndex);
+    let caption = tr(RecordsMsg::PartiesTagIndex);
     data_table(DataTable {
         caption: &caption,
         columns: &columns,
@@ -303,10 +298,10 @@ async fn open(kind: PartyKind, uid: &str) -> Result<String, Result<String, Viewe
     match resolve_party_kind(uid.to_owned()).await {
         Ok(Some(segment)) => match PartyKind::from_segment(&segment) {
             Some(other) => Ok(party_href(other, uid)),
-            None => Err(Ok(tr(Msg::PartiesNoneHolds))),
+            None => Err(Ok(tr(RecordsMsg::PartiesNoneHolds))),
         },
         Ok(None) => Err(Ok(tr_with(
-            Msg::PartiesNoKindHolds,
+            RecordsMsg::PartiesNoKindHolds,
             &[("kind", kind_words(kind).into())],
         ))),
         Err(error) => Err(Err(error)),
@@ -333,10 +328,23 @@ enum PartiesModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Parties: opens the party the address asks for, or reads the tag
 /// index.
-async fn load_parties() -> PartiesModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_parties(
+    /// The path and query of the page.
+    href: String,
+) -> Result<PartiesModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_parties().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_parties`] reads, on the server.
+async fn read_parties() -> PartiesModel {
     let kind = crate::request::query("kind")
         .as_deref()
         .and_then(PartyKind::from_segment)
@@ -351,13 +359,16 @@ async fn load_parties() -> PartiesModel {
                 return PartiesModel::Left;
             }
             Err(Ok(message)) => (Some(message), None),
-            Err(Err(error)) => (None, Some(Refused::new(tr(Msg::PartiesOpenRefused), error))),
+            Err(Err(error)) => (
+                None,
+                Some(Refused::new(tr(RecordsMsg::PartiesOpenRefused), error)),
+            ),
         },
         None => (None, None),
     };
     let index = tag_index()
         .await
-        .map_err(|error| Refused::new(tr(Msg::PartiesTagsRefused), error));
+        .map_err(|error| Refused::new(tr(RecordsMsg::PartiesTagsRefused), error));
     PartiesModel::Shown {
         kind,
         uid,
@@ -397,7 +408,7 @@ fn parties_view(model: PartiesModel) -> AnyView {
                             </select>
                         },
                     )}
-                {Field::new("p-id", tr(Msg::PartiesUid))
+                {Field::new("p-id", tr(RecordsMsg::PartiesUid))
                     .holds_id()
                     .after(error)
                     .view(
@@ -424,12 +435,12 @@ fn parties_view(model: PartiesModel) -> AnyView {
         </form>
     };
     let (index, total) = match index {
-        Ok(rows) if rows.is_empty() => (list_empty(tr(Msg::PartiesNoTags), None), Some(0)),
+        Ok(rows) if rows.is_empty() => (list_empty(tr(RecordsMsg::PartiesNoTags), None), Some(0)),
         Ok(rows) => (index_table(&rows), u64::try_from(rows.len()).ok()),
         Err(refusal) => (refusal.view(), None),
     };
     let card = list_card(ListCard {
-        title: tr(Msg::PartiesTagsTitle),
+        title: tr(RecordsMsg::PartiesTagsTitle),
         count: total.map(ferrohealth_ui::view::template::list::HeadingCount::All),
         order: None,
         tabs: None,
@@ -438,8 +449,12 @@ fn parties_view(model: PartiesModel) -> AnyView {
         pager: None,
     });
     let top = refused.map(|refusal| refusal.view());
-    view! { <div class="fui-list-page">{info_note(tr(Msg::PartiesNote))} {form} {top} {card}</div> }
-        .into_any()
+    view! {
+        <div class="fui-list-page">
+            {info_note(tr(RecordsMsg::PartiesNote))} {form} {top} {card}
+        </div>
+    }
+    .into_any()
 }
 
 /// Parties: open a party by its id, and the tags on parties.
@@ -448,7 +463,7 @@ pub fn PartiesPage() -> impl IntoView {
     let heading = page_heading(
         Header {
             title: tr(Msg::NavParties).into(),
-            subtitle: Some(tr(Msg::PartiesSubtitle).into()),
+            subtitle: Some(tr(RecordsMsg::PartiesSubtitle).into()),
             crumbs: Vec::new(),
             mono: false,
             badge: None,
@@ -456,7 +471,7 @@ pub fn PartiesPage() -> impl IntoView {
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::PLUS),
-            tr(Msg::PartiesNew),
+            tr(RecordsMsg::PartiesNew),
             Act::Link("/parties/new".to_owned()),
         )),
     );
@@ -523,7 +538,7 @@ fn party_editor(
                 opened,
                 marks: marks_of(findings.as_ref()),
                 label,
-                lead: tr(Msg::EditorJson),
+                lead: tr(RecordsMsg::EditorJson),
                 facts: vec![tr(Msg::EditorUtf8)],
                 findings,
             }
@@ -554,9 +569,22 @@ enum Creating<T> {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads New party: answers its post (Discard, Start over, Create).
-async fn load_new_party() -> Creating<NewParty> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_new_party(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Creating<NewParty>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_new_party().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_new_party`] reads, on the server.
+async fn read_new_party() -> Creating<NewParty> {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect("/parties");
@@ -583,11 +611,11 @@ async fn load_new_party() -> Creating<NewParty> {
             Ok(uid) => {
                 redirect_with(
                     &party_href(kind, &uid),
-                    &Done::ok(tr(Msg::PartyCreated)).line(shortened(&uid)),
+                    &Done::ok(tr(RecordsMsg::PartyCreated)).line(shortened(&uid)),
                 );
                 return Creating::Left;
             }
-            Err(error) => refused = Some(Refused::new(tr(Msg::PartyCreateRefused), error)),
+            Err(error) => refused = Some(Refused::new(tr(RecordsMsg::PartyCreateRefused), error)),
         }
     }
     Creating::Form(Box::new(NewParty {
@@ -612,24 +640,28 @@ fn new_party_view(model: Creating<NewParty>) -> AnyView {
         .as_ref()
         .and_then(|refusal| findings_of(&refusal.error, &text, &field));
     let line = if refused.is_some() {
-        (Glyph::CIRCLE_X, tr(Msg::PartyNotCreated))
+        (Glyph::CIRCLE_X, tr(RecordsMsg::PartyNotCreated))
     } else {
-        (Glyph::FILE_PLUS, tr(Msg::PartyNotYet))
+        (Glyph::FILE_PLUS, tr(RecordsMsg::PartyNotYet))
     };
     dock_editor(EditorDock {
         form: EDIT_FORM.to_owned(),
         line: line.1,
         glyph: line.0,
-        save: tr(Msg::PartyCreate),
+        save: tr(RecordsMsg::PartyCreate),
         blocked: None,
     });
     let heading = editor_heading(
-        message(Msg::PartyNewTitle),
+        message(RecordsMsg::PartyNewTitle),
         &Mode::Creating,
         Header {
             title: String::new().into(),
             subtitle: Some(
-                tr_with(Msg::PartyNewSubtitle, &[("kind", kind_words(kind).into())]).into(),
+                tr_with(
+                    RecordsMsg::PartyNewSubtitle,
+                    &[("kind", kind_words(kind).into())],
+                )
+                .into(),
             ),
             crumbs: party_crumbs(),
             mono: false,
@@ -639,7 +671,7 @@ fn new_party_view(model: Creating<NewParty>) -> AnyView {
         ActionGroup::none(),
     );
     view! {
-        <Title text=tr(Msg::PartiesNew) />
+        <Title text=tr(RecordsMsg::PartiesNew) />
         {heading}
         <div class="fui-stack">
             {refused.map(|refusal| refusal.view())}
@@ -653,7 +685,7 @@ fn new_party_view(model: Creating<NewParty>) -> AnyView {
                             <div class="fui-form-grid">
                                 <div class="fui-span-2">
                                     {Field::new("pk", tr(Msg::ColumnKind))
-                                        .help(tr(Msg::PartyKindHelp))
+                                        .help(tr(RecordsMsg::PartyKindHelp))
                                         .view(
                                             view! {
                                                 <div class="fui-cluster">
@@ -666,7 +698,7 @@ fn new_party_view(model: Creating<NewParty>) -> AnyView {
                                                         value="kind"
                                                         class="fui-button fui-button-secondary fui-button-small"
                                                     >
-                                                        {tr(Msg::PartyStartOver)}
+                                                        {tr(RecordsMsg::PartyStartOver)}
                                                     </button>
                                                 </div>
                                             },
@@ -676,7 +708,7 @@ fn new_party_view(model: Creating<NewParty>) -> AnyView {
                         },
                     ),
                 )}
-                {party_editor(text, None, findings, tr(Msg::PartyNewEditorLabel))}
+                {party_editor(text, None, findings, tr(RecordsMsg::PartyNewEditorLabel))}
             </form>
         </div>
     }
@@ -740,13 +772,13 @@ impl PartyTab {
 
     /// The tab's label.
     fn label(self) -> String {
-        tr(match self {
-            Self::Overview => Msg::PartyOverview,
-            Self::Document => Msg::CompositionDocument,
-            Self::Versions => Msg::CompositionVersions,
-            Self::Relationships => Msg::PartyRelationships,
-            Self::Tags => Msg::EhrTabTags,
-        })
+        match self {
+            Self::Overview => tr(Msg::PartyOverview),
+            Self::Document => tr(RecordsMsg::CompositionDocument),
+            Self::Versions => tr(Msg::CompositionVersions),
+            Self::Relationships => tr(RecordsMsg::PartyRelationships),
+            Self::Tags => tr(RecordsMsg::EhrTabTags),
+        }
     }
 }
 
@@ -791,7 +823,7 @@ fn identities(rendered: &[RenderedSection]) -> AnyView {
         .map(crate::pages::composition::reading_section)
         .collect();
     if sections.is_empty() {
-        return info_note(tr(Msg::PartyNoIdentities));
+        return info_note(tr(RecordsMsg::PartyNoIdentities));
     }
     reading(Reading {
         sections,
@@ -810,11 +842,11 @@ fn overview(
     let relationships = state.relationships.len();
     let facts = definitions(vec![
         (tr(Msg::ColumnKind), kind_words(kind).into_any()),
-        (tr(Msg::PartyArchetype), view! { <code>{state.archetype_node_id.clone()}</code> }.into_any()),
-        (tr(Msg::PartyCurrentVersion), version_number(&state.version_uid).into_any()),
-        (tr(Msg::PartyIdentities), state.identity_count.to_string().into_any()),
+        (tr(RecordsMsg::PartyArchetype), view! { <code>{state.archetype_node_id.clone()}</code> }.into_any()),
+        (tr(RecordsMsg::PartyCurrentVersion), version_number(&state.version_uid).into_any()),
+        (tr(RecordsMsg::PartyIdentities), state.identity_count.to_string().into_any()),
         (
-            tr(Msg::PartyRelationshipsFrom),
+            tr(RecordsMsg::PartyRelationshipsFrom),
             view! {
                 <a href=party_tab_href(kind, uid, PartyTab::Relationships, None)>{relationships.to_string()}</a>
             }
@@ -823,7 +855,7 @@ fn overview(
     ]);
     panel(view! {
         {section(Some(tr(Msg::PartyFacts)), None, None, facts)}
-        {section(Some(tr(Msg::PartyIdentities)), None, None, identities(rendered))}
+        {section(Some(tr(RecordsMsg::PartyIdentities)), None, None, identities(rendered))}
     })
 }
 
@@ -842,15 +874,15 @@ fn relationships(kind: PartyKind, uid: &str, state: &PartyState) -> AnyView {
         ),
         ferrohealth_ui::view::button::Variant::Secondary,
         Some(Glyph::LINK),
-        tr(Msg::PartyRelate),
+        tr(RecordsMsg::PartyRelate),
     );
     let columns = [
-        Column::text("type", tr(Msg::RelationshipType)).role(Role::Title),
-        Column::text("target", tr(Msg::RelationshipTarget)).role(Role::Sub),
-        Column::text("kind", tr(Msg::RelationshipTargetKind)).role(Role::Meta),
+        Column::text("type", tr(RecordsMsg::RelationshipType)).role(Role::Title),
+        Column::text("target", tr(RecordsMsg::RelationshipTarget)).role(Role::Sub),
+        Column::text("kind", tr(RecordsMsg::RelationshipTargetKind)).role(Role::Meta),
     ];
     let body = if state.relationships.is_empty() {
-        list_empty(tr(Msg::PartyNoRelationships), None)
+        list_empty(tr(RecordsMsg::PartyNoRelationships), None)
     } else {
         let rows = state
             .relationships
@@ -876,7 +908,7 @@ fn relationships(kind: PartyKind, uid: &str, state: &PartyState) -> AnyView {
             })
             .collect_view()
             .into_any();
-        let caption = tr(Msg::PartyRelationships);
+        let caption = tr(RecordsMsg::PartyRelationships);
         data_table(DataTable {
             caption: &caption,
             columns: &columns,
@@ -886,11 +918,11 @@ fn relationships(kind: PartyKind, uid: &str, state: &PartyState) -> AnyView {
         .into_any()
     };
     panel(section(
-        Some(tr(Msg::PartyRelationships)),
+        Some(tr(RecordsMsg::PartyRelationships)),
         u64::try_from(state.relationships.len()).ok(),
         Some(relate),
         view! {
-            {ferrohealth_ui::view::surface::section_intro(tr(Msg::PartyRelationshipsIntro))}
+            {ferrohealth_ui::view::surface::section_intro(tr(RecordsMsg::PartyRelationshipsIntro))}
             {body}
         },
     ))
@@ -932,7 +964,7 @@ fn demographic_history(
         at_time: Some(at_time_row(
             at_action,
             &crate::request::query("at").unwrap_or_default(),
-            tr(Msg::PartyAtTimeOpens),
+            tr(RecordsMsg::PartyAtTimeOpens),
         )),
     })
 }
@@ -957,24 +989,24 @@ async fn history_of(family: VersionedFamily, uid: &str) -> Result<Vec<VersionEnt
 fn envelope(facts: Result<VersionedObjectFacts, Refused>) -> AnyView {
     match facts {
         Ok(facts) => section(
-            Some(tr_with(Msg::CompositionVersionN, &[("version", version_number(&facts.version_id).into())])),
+            Some(tr_with(RecordsMsg::CompositionVersionN, &[("version", version_number(&facts.version_id).into())])),
             None,
             None,
             definitions(vec![
-                (tr(Msg::FactLifecycle), facts.lifecycle_state.clone().into_any()),
+                (tr(RecordsMsg::FactLifecycle), facts.lifecycle_state.clone().into_any()),
                 (
-                    tr(Msg::CompositionPreceding),
+                    tr(RecordsMsg::CompositionPreceding),
                     if facts.preceding_version_uid.is_empty() {
-                        tr(Msg::CompositionFirstVersion).into_any()
+                        tr(RecordsMsg::CompositionFirstVersion).into_any()
                     } else {
                         short(&facts.preceding_version_uid)
                     },
                 ),
                 (
-                    tr(Msg::FactContribution),
+                    tr(RecordsMsg::FactContribution),
                     view! { <a href=contribution_href(&facts.contribution_uid)>{short(&facts.contribution_uid)}</a> }.into_any(),
                 ),
-                (tr(Msg::FactSigned), tr(if facts.signed { Msg::Yes } else { Msg::No }).into_any()),
+                (tr(RecordsMsg::FactSigned), tr(if facts.signed { Msg::Yes } else { Msg::No }).into_any()),
             ]),
         ),
         Err(refusal) => plain_section(refusal.view()),
@@ -996,11 +1028,14 @@ async fn party_act(
             Ok(()) => {
                 redirect_with(
                     &party_href(kind, uid),
-                    &Done::ok(tr(Msg::PartyDeleted)).line(name.to_owned()),
+                    &Done::ok(tr(RecordsMsg::PartyDeleted)).line(name.to_owned()),
                 );
                 (None, None)
             }
-            Err(error) => (Some(Refused::new(tr(Msg::PartyDeleteRefused), error)), None),
+            Err(error) => (
+                Some(Refused::new(tr(RecordsMsg::PartyDeleteRefused), error)),
+                None,
+            ),
         };
     }
     let Some(act) = tag_act() else {
@@ -1093,16 +1128,33 @@ enum PartyModel {
     NoKind,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the party `uid` of `kind`: answers its post, reads its versions,
 /// the version asked for and what the tab shows; a party the CDR does not
 /// hold, or a kind it has not, answers `404`.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_party(
+    /// The path and query of the page.
+    href: String,
+    /// The kind of party the route names, as its segment.
+    kind: String,
+    /// The party the route names.
+    uid: String,
+) -> Result<PartyModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_party(&kind, uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_party`] reads, on the server.
 #[expect(
     clippy::too_many_lines,
     reason = "one loader: the versions, the version in view, the post and the tab's read"
 )]
-async fn load_party() -> PartyModel {
-    let (kind, uid) = party_params();
+async fn read_party(kind: &str, uid: String) -> PartyModel {
+    let kind = PartyKind::from_segment(kind);
     let Some(kind) = kind else {
         crate::request::set_status(http::StatusCode::NOT_FOUND);
         return PartyModel::NoKind;
@@ -1115,7 +1167,7 @@ async fn load_party() -> PartyModel {
             if is_status(&error, http::StatusCode::NOT_FOUND) {
                 crate::request::set_status(http::StatusCode::NOT_FOUND);
             }
-            return PartyModel::Missing(Refused::new(tr(Msg::PartyRefused), error));
+            return PartyModel::Missing(Refused::new(tr(RecordsMsg::PartyRefused), error));
         }
     };
     let versions = history_of(VersionedFamily::Party, &uid).await;
@@ -1175,7 +1227,7 @@ async fn load_party() -> PartyModel {
         )),
         (PartyTab::Relationships, Some(_)) => PartyBody::Relationships,
         (PartyTab::Tags, Some(_)) => PartyBody::Tags(TagPanel {
-            collection: tr(Msg::TagCollectionParty),
+            collection: tr(RecordsMsg::TagCollectionParty),
             tags: fetch_party_tags(kind.segment().to_owned(), uid.clone()).await,
             action: party_tab_href(kind, &uid, PartyTab::Tags, None),
             refused: tag_refusal,
@@ -1193,12 +1245,12 @@ async fn load_party() -> PartyModel {
                 in_view.clone(),
             )
             .await
-            .map_err(|error| Refused::new(tr(Msg::CompositionVersionRefused), error));
+            .map_err(|error| Refused::new(tr(RecordsMsg::CompositionVersionRefused), error));
             let document = shown_body.map(|body| {
                 body.map(|body| {
                     crate::bff::pretty_body(&body, crate::format::ReprFormat::CanonicalJson)
                 })
-                .map_err(|error| Refused::new(tr(Msg::CompositionVersionRefused), error))
+                .map_err(|error| Refused::new(tr(RecordsMsg::CompositionVersionRefused), error))
             });
             PartyBody::Versions {
                 in_view,
@@ -1211,7 +1263,8 @@ async fn load_party() -> PartyModel {
         kind,
         name,
         current,
-        versions: versions.map_err(|error| Refused::new(tr(Msg::CompositionHistoryRefused), error)),
+        versions: versions
+            .map_err(|error| Refused::new(tr(RecordsMsg::CompositionHistoryRefused), error)),
         latest,
         deleted,
         before_deletion,
@@ -1226,7 +1279,7 @@ async fn load_party() -> PartyModel {
 fn party_missing(uid: &str, refusal: &Refused) -> AnyView {
     let heading = page_heading(
         Header {
-            title: tr_with(Msg::PartyTitle, &[("id", shortened(uid).into())]).into(),
+            title: tr_with(RecordsMsg::PartyTitle, &[("id", shortened(uid).into())]).into(),
             subtitle: None,
             crumbs: party_crumbs(),
             mono: false,
@@ -1236,7 +1289,7 @@ fn party_missing(uid: &str, refusal: &Refused) -> AnyView {
         ActionGroup::none(),
     );
     view! {
-        <Title text=tr(Msg::PartyRefused) />
+        <Title text=tr(RecordsMsg::PartyRefused) />
         {heading}
         {refusal.view()}
     }
@@ -1245,15 +1298,7 @@ fn party_missing(uid: &str, refusal: &Refused) -> AnyView {
 
 /// The page of an address that names no kind of party.
 fn no_kind() -> AnyView {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        crate::pages::errors::not_found_page()
-    }
-    // TODO(#4147): the not-found page draws on the browser half too.
-    #[cfg(target_arch = "wasm32")]
-    {
-        ().into_any()
-    }
+    crate::pages::errors::not_found_page()
 }
 
 /// The tabs of a party: its versions alone when it is deleted.
@@ -1324,7 +1369,7 @@ fn party_view(uid: &str, party: Party) -> AnyView {
         (PartyBody::Overview(rendered), Some(state)) => overview(kind, uid, state, &rendered),
         (PartyBody::Document(pretty), Some(state)) => panel(document_section(
             tr_with(
-                Msg::PartyDocumentTitle,
+                RecordsMsg::PartyDocumentTitle,
                 &[
                     ("type", state.rm_type.clone().into()),
                     ("version", version_number(&state.version_uid).into()),
@@ -1357,7 +1402,7 @@ fn party_view(uid: &str, party: Party) -> AnyView {
             let document = match document {
                 Some(Ok(body)) => document_section(
                     tr_with(
-                        Msg::PartyVersionDocument,
+                        RecordsMsg::PartyVersionDocument,
                         &[("version", version_number(&in_view).into())],
                     ),
                     Language::Json,
@@ -1367,9 +1412,9 @@ fn party_view(uid: &str, party: Party) -> AnyView {
                 Some(Err(refusal)) => plain_section(refusal.view()),
                 None => ().into_any(),
             };
-            let intro = deleted
-                .is_some()
-                .then(|| ferrohealth_ui::view::surface::section_intro(tr(Msg::PartyDeletedIntro)));
+            let intro = deleted.is_some().then(|| {
+                ferrohealth_ui::view::surface::section_intro(tr(RecordsMsg::PartyDeletedIntro))
+            });
             panel(view! {
                 {older}
                 {section(
@@ -1399,9 +1444,13 @@ fn party_view(uid: &str, party: Party) -> AnyView {
         danger_dialog(
             Confirmation {
                 id: DELETE_DIALOG.into(),
-                title: tr_with(Msg::PartyDeleteTitle, &[("name", name.clone().into())]).into(),
+                title: tr_with(
+                    RecordsMsg::PartyDeleteTitle,
+                    &[("name", name.clone().into())],
+                )
+                .into(),
                 message: tr_with(
-                    Msg::PartyDeleteMessage,
+                    RecordsMsg::PartyDeleteMessage,
                     &[
                         ("count", count(total)),
                         ("relationships", count(state.relationships.len())),
@@ -1415,7 +1464,7 @@ fn party_view(uid: &str, party: Party) -> AnyView {
                     <input type="hidden" name="version" value=state.version_uid.clone() />
                     <button type="submit" class="fui-button fui-button-danger">
                         {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                        {tr(Msg::PartyDeleteConfirm)}
+                        {tr(RecordsMsg::PartyDeleteConfirm)}
                     </button>
                 </form>
             },
@@ -1427,7 +1476,7 @@ fn party_view(uid: &str, party: Party) -> AnyView {
         {header}
         <div class="fui-stack">
             {acted.map(|refusal| refusal.view())}
-            {binder(tr(Msg::PartyViews), tabs, tab.key(), body)}
+            {binder(tr(RecordsMsg::PartyViews), tabs, tab.key(), body)}
         </div>
         {dialog}
     }
@@ -1442,7 +1491,8 @@ fn party_view(uid: &str, party: Party) -> AnyView {
 #[component]
 pub fn PartyPage() -> impl IntoView {
     let uid = uid_param();
-    let model = page_model!(load_party());
+    let (kind_segment, uid_segment) = party_route();
+    let model = page_model!(load_party(kind_segment, uid_segment));
     let page = drawn(model, move |model| match model {
         PartyModel::Shown(party) => party_view(&uid, *party),
         PartyModel::Missing(refusal) => party_missing(&uid, &refusal),
@@ -1455,7 +1505,7 @@ pub fn PartyPage() -> impl IntoView {
 fn copy_party_id(uid: &str) -> Item {
     Item::new(Action::new(
         Some(Glyph::COPY),
-        tr(Msg::PartyCopyId),
+        tr(RecordsMsg::PartyCopyId),
         Act::Copy(uid.to_owned()),
     ))
 }
@@ -1475,18 +1525,18 @@ fn party_header(
             ActionGroup::primary(Action::new(
                 Some(Glyph::ROTATE_CCW_CLOCK),
                 tr_with(
-                    Msg::CompositionReadVersion,
+                    RecordsMsg::CompositionReadVersion,
                     &[("version", last.unwrap_or_default().to_owned().into())],
                 ),
                 Act::Link(party_tab_href(kind, uid, PartyTab::Versions, last)),
             ))
             .more(Menu::new(
                 "party-more",
-                tr(Msg::PartyMore),
+                tr(RecordsMsg::PartyMore),
                 vec![copy_party_id(uid)],
             )),
             tr_with(
-                Msg::PartyDeletedLine,
+                RecordsMsg::PartyDeletedLine,
                 &[
                     ("kind", kind_words(kind).into()),
                     (
@@ -1497,16 +1547,19 @@ fn party_header(
                     ("version", version_number(&deletion.version_id).into()),
                 ],
             ),
-            Some(state_mark(FlowState::Off, &tr(Msg::CompositionDeletedMark))),
+            Some(state_mark(
+                FlowState::Off,
+                &tr(RecordsMsg::CompositionDeletedMark),
+            )),
         )
     } else {
         let more = Menu::new(
             "party-more",
-            tr(Msg::PartyMore),
+            tr(RecordsMsg::PartyMore),
             vec![
                 Item::new(Action::new(
                     Some(Glyph::LINK),
-                    tr(Msg::PartyRelate),
+                    tr(RecordsMsg::PartyRelate),
                     Act::Link(format!(
                         "/parties/relationships/new?source_kind={}&source={}",
                         kind.segment(),
@@ -1518,7 +1571,7 @@ fn party_header(
         )
         .destructive(vec![Item::new(Action::new(
             Some(Glyph::TRASH),
-            tr(Msg::PartyDelete),
+            tr(RecordsMsg::PartyDelete),
             Act::Dialog(DELETE_DIALOG.to_owned()),
         ))]);
         (
@@ -1529,7 +1582,7 @@ fn party_header(
             ))
             .more(more),
             tr_with(
-                Msg::PartyLine,
+                RecordsMsg::PartyLine,
                 &[
                     ("kind", kind_words(kind).into()),
                     ("version", version_number(latest).into()),
@@ -1630,11 +1683,28 @@ enum Editing<T> {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Edit a party: answers its post (Discard, Save) over the current
 /// version.
-async fn load_edit_party() -> Editing<PartyEditor> {
-    let (kind, uid) = party_params();
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_edit_party(
+    /// The path and query of the page.
+    href: String,
+    /// The kind of party the route names, as its segment.
+    kind: String,
+    /// The party the route names.
+    uid: String,
+) -> Result<Editing<PartyEditor>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_edit_party(&kind, uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_edit_party`] reads, on the server.
+async fn read_edit_party(kind: &str, uid: String) -> Editing<PartyEditor> {
+    let kind = PartyKind::from_segment(kind);
     let posted = crate::posted::posted();
     let Some(kind) = kind else {
         crate::request::set_status(http::StatusCode::NOT_FOUND);
@@ -1646,8 +1716,8 @@ async fn load_edit_party() -> Editing<PartyEditor> {
     }
     let state = match fetch_party(kind.segment().to_owned(), uid.clone()).await {
         Ok(Some(state)) => state,
-        Ok(None) => return Editing::Deleted(tr(Msg::PartyDeletedNoEdit)),
-        Err(error) => return Editing::Refused(Refused::new(tr(Msg::PartyRefused), error)),
+        Ok(None) => return Editing::Deleted(tr(RecordsMsg::PartyDeletedNoEdit)),
+        Err(error) => return Editing::Refused(Refused::new(tr(RecordsMsg::PartyRefused), error)),
     };
     let current = crate::bff::pretty_body(&state.body, crate::format::ReprFormat::CanonicalJson);
     let opened = posted
@@ -1679,14 +1749,14 @@ async fn load_edit_party() -> Editing<PartyEditor> {
             Ok(saved) => {
                 redirect_with(
                     &party_href(kind, &uid),
-                    &Done::ok(tr(Msg::PartySaved)).line(tr_with(
-                        Msg::CompositionSavedVersion,
+                    &Done::ok(tr(RecordsMsg::PartySaved)).line(tr_with(
+                        RecordsMsg::CompositionSavedVersion,
                         &[("version", version_number(&saved).into())],
                     )),
                 );
                 return Editing::Left;
             }
-            Err(error) => unsaved = Some(Unsaved::new(tr(Msg::PartySaveRefused), error)),
+            Err(error) => unsaved = Some(Unsaved::new(tr(RecordsMsg::PartySaveRefused), error)),
         }
     }
     Editing::Editor(Box::new(PartyEditor {
@@ -1698,6 +1768,20 @@ async fn load_edit_party() -> Editing<PartyEditor> {
         name,
         unsaved,
     }))
+}
+
+/// The words of Save for an editor opened at the version `opened`: the
+/// version the save makes.
+fn save_words(opened: &str) -> String {
+    version_number(opened).parse::<u32>().map_or_else(
+        |_| tr(Msg::EditorSave),
+        |number| {
+            tr_with(
+                RecordsMsg::EditorSaveAsVersion,
+                &[("version", number.saturating_add(1).into())],
+            )
+        },
+    )
 }
 
 /// Edit a party's page, its decision bar docked.
@@ -1717,9 +1801,9 @@ fn edit_party_view(uid: &str, editor: PartyEditor) -> AnyView {
         .and_then(|unsaved| findings_of(&unsaved.refusal.error, &text, &field));
     let conflict = unsaved.as_ref().is_some_and(|unsaved| unsaved.conflict);
     let line = if unsaved.is_some() {
-        (Glyph::CIRCLE_X, tr(Msg::EditorNotSaved))
+        (Glyph::CIRCLE_X, tr(RecordsMsg::EditorNotSaved))
     } else {
-        (Glyph::PENCIL, tr(Msg::EditorOpened))
+        (Glyph::PENCIL, tr(RecordsMsg::EditorOpened))
     };
     let top = unsaved.map(|unsaved| {
         let reload = unsaved.conflict.then(|| {
@@ -1730,10 +1814,11 @@ fn edit_party_view(uid: &str, editor: PartyEditor) -> AnyView {
                         ferrohealth_ui::view::button::Variant::Secondary,
                         Some(Glyph::REFRESH_CW),
                         tr_with(
-                            Msg::EditorReloadVersion,
+                            RecordsMsg::EditorReloadVersion,
                             &[("version", version_number(&current_uid).into())],
                         ),
-                    )} <span class="fui-small fui-muted">{tr(Msg::EditorReloadReplaces)}</span>
+                    )}
+                    <span class="fui-small fui-muted">{tr(RecordsMsg::EditorReloadReplaces)}</span>
                 </div>
             }
         });
@@ -1743,32 +1828,24 @@ fn edit_party_view(uid: &str, editor: PartyEditor) -> AnyView {
         }
         .into_any()
     });
-    let save = version_number(&opened).parse::<u32>().map_or_else(
-        |_| tr(Msg::EditorSave),
-        |number| {
-            tr_with(
-                Msg::EditorSaveAsVersion,
-                &[("version", number.saturating_add(1).into())],
-            )
-        },
-    );
+    let save = save_words(&opened);
     dock_editor(EditorDock {
         form: EDIT_FORM.to_owned(),
         line: line.1,
         glyph: line.0,
         save,
-        blocked: conflict.then(|| tr(Msg::EditorReloadFirst)),
+        blocked: conflict.then(|| tr(RecordsMsg::EditorReloadFirst)),
     });
     let mut trail = party_crumbs();
     trail.push(Crumb::new(name.clone(), party_href(kind, uid)));
     let heading = editor_heading(
-        message(Msg::EditorTitle),
+        message(RecordsMsg::EditorTitle),
         &Mode::Editing(name.clone()),
         Header {
             title: String::new().into(),
             subtitle: Some(
                 tr_with(
-                    Msg::CompositionEditSubtitle,
+                    RecordsMsg::CompositionEditSubtitle,
                     &[("version", version_number(&opened).into())],
                 )
                 .into(),
@@ -1788,12 +1865,19 @@ fn edit_party_view(uid: &str, editor: PartyEditor) -> AnyView {
                 <input type="hidden" name="version" value=opened />
                 {card_panel(
                     section(
-                        Some(tr(Msg::CompositionDocument)),
+                        Some(tr(RecordsMsg::CompositionDocument)),
                         None,
                         None,
                         view! {
-                            {ferrohealth_ui::view::surface::section_intro(tr(Msg::PartyEditIntro))}
-                            {party_editor(text, Some(current), findings, tr(Msg::PartyEditorLabel))}
+                            {ferrohealth_ui::view::surface::section_intro(
+                                tr(RecordsMsg::PartyEditIntro),
+                            )}
+                            {party_editor(
+                                text,
+                                Some(current),
+                                findings,
+                                tr(RecordsMsg::PartyEditorLabel),
+                            )}
                         },
                     ),
                 )}
@@ -1823,7 +1907,8 @@ fn not_editing<T>(model: Editing<T>, draw: impl FnOnce(T) -> AnyView) -> AnyView
 pub fn EditPartyPage() -> impl IntoView {
     let uid = uid_param();
     let dock_promise = crate::shell::promise_dock();
-    let model = page_model!(load_edit_party());
+    let (kind_segment, uid_segment) = party_route();
+    let model = page_model!(load_edit_party(kind_segment, uid_segment));
     let page = docked(model, dock_promise, move |model| {
         not_editing(model, |editor| edit_party_view(&uid, editor))
     });
@@ -1850,8 +1935,14 @@ fn ends(relationship: &RelationshipState) -> Vec<(String, AnyView)> {
         }
     };
     vec![
-        (tr(Msg::RelationshipSource), end(&relationship.source)),
-        (tr(Msg::RelationshipTarget), end(&relationship.target)),
+        (
+            tr(RecordsMsg::RelationshipSource),
+            end(&relationship.source),
+        ),
+        (
+            tr(RecordsMsg::RelationshipTarget),
+            end(&relationship.target),
+        ),
     ]
 }
 
@@ -1868,10 +1959,25 @@ enum RelationshipModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the relationship `uid`: answers its delete and reads its versions;
 /// one the CDR does not hold answers `404`.
-async fn load_relationship(uid: String) -> RelationshipModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_relationship(
+    /// The path and query of the page.
+    href: String,
+    /// The id the route names.
+    uid: String,
+) -> Result<RelationshipModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_relationship(uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_relationship`] reads, on the server.
+async fn read_relationship(uid: String) -> RelationshipModel {
     let state = match fetch_relationship(uid.clone()).await {
         Ok(Some(state)) => state,
         Ok(None) => return RelationshipModel::Deleted,
@@ -1879,7 +1985,10 @@ async fn load_relationship(uid: String) -> RelationshipModel {
             if is_status(&error, http::StatusCode::NOT_FOUND) {
                 crate::request::set_status(http::StatusCode::NOT_FOUND);
             }
-            return RelationshipModel::Refused(Refused::new(tr(Msg::RelationshipRefused), error));
+            return RelationshipModel::Refused(Refused::new(
+                tr(RecordsMsg::RelationshipRefused),
+                error,
+            ));
         }
     };
     if let Some(posted) = crate::posted::posted_for("delete-relationship") {
@@ -1887,18 +1996,19 @@ async fn load_relationship(uid: String) -> RelationshipModel {
             Ok(()) => {
                 redirect_with(
                     ref_href(&state.source).as_deref().unwrap_or("/parties"),
-                    &Done::ok(tr(Msg::RelationshipDeletedToast)).line(state.name.clone()),
+                    &Done::ok(tr(RecordsMsg::RelationshipDeletedToast)).line(state.name.clone()),
                 );
                 RelationshipModel::Left
             }
-            Err(error) => {
-                RelationshipModel::Refused(Refused::new(tr(Msg::RelationshipDeleteRefused), error))
-            }
+            Err(error) => RelationshipModel::Refused(Refused::new(
+                tr(RecordsMsg::RelationshipDeleteRefused),
+                error,
+            )),
         };
     }
     let versions = history_of(VersionedFamily::PartyRelationship, &uid)
         .await
-        .map_err(|error| Refused::new(tr(Msg::CompositionHistoryRefused), error));
+        .map_err(|error| Refused::new(tr(RecordsMsg::CompositionHistoryRefused), error));
     RelationshipModel::Shown(Box::new(state), versions)
 }
 
@@ -1926,7 +2036,7 @@ fn relationship_view(
     };
     let mut facts = ends(state);
     facts.push((
-        tr(Msg::RelationshipType),
+        tr(RecordsMsg::RelationshipType),
         view! {
             {state.name.clone()}
             " "
@@ -1935,7 +2045,7 @@ fn relationship_view(
         .into_any(),
     ));
     facts.push((
-        tr(Msg::RelationshipDetails),
+        tr(RecordsMsg::RelationshipDetails),
         if state.details.is_empty() {
             tr(Msg::RelationshipNone).into_any()
         } else {
@@ -1943,7 +2053,7 @@ fn relationship_view(
         },
     ));
     facts.push((
-        tr(Msg::RelationshipValidity),
+        tr(RecordsMsg::RelationshipValidity),
         if state.time_validity.is_empty() {
             tr(Msg::RelationshipNone).into_any()
         } else {
@@ -1956,16 +2066,16 @@ fn relationship_view(
     }
     let more = Menu::new(
         "relationship-more",
-        tr(Msg::RelationshipMore),
+        tr(RecordsMsg::RelationshipMore),
         vec![Item::new(Action::new(
             Some(Glyph::COPY),
-            tr(Msg::RelationshipCopyId),
+            tr(RecordsMsg::RelationshipCopyId),
             Act::Copy(uid.to_owned()),
         ))],
     )
     .destructive(vec![Item::new(Action::new(
         Some(Glyph::TRASH),
-        tr(Msg::RelationshipDelete),
+        tr(RecordsMsg::RelationshipDelete),
         Act::Dialog(DELETE_RELATIONSHIP.to_owned()),
     ))]);
     let heading = page_heading(
@@ -1973,7 +2083,7 @@ fn relationship_view(
             title: state.name.clone().into(),
             subtitle: Some(
                 tr_with(
-                    Msg::RelationshipLine,
+                    RecordsMsg::RelationshipLine,
                     &[
                         ("version", version_number(&state.version_uid).into()),
                         ("id", shortened(uid).into()),
@@ -1997,11 +2107,11 @@ fn relationship_view(
         Confirmation {
             id: DELETE_RELATIONSHIP.into(),
             title: tr_with(
-                Msg::RelationshipDeleteTitle,
+                RecordsMsg::RelationshipDeleteTitle,
                 &[("name", state.name.clone().into())],
             )
             .into(),
-            message: tr(Msg::RelationshipDeleteMessage).into(),
+            message: tr(RecordsMsg::RelationshipDeleteMessage).into(),
         },
         view! {
             <form method="post" action=relationship_href(uid)>
@@ -2009,7 +2119,7 @@ fn relationship_view(
                 <input type="hidden" name="version" value=state.version_uid.clone() />
                 <button type="submit" class="fui-button fui-button-danger">
                     {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                    {tr(Msg::RelationshipDeleteConfirm)}
+                    {tr(RecordsMsg::RelationshipDeleteConfirm)}
                 </button>
             </form>
         },
@@ -2046,7 +2156,7 @@ pub fn RelationshipPage() -> impl IntoView {
     let model = page_model!(load_relationship(uid.clone()));
     let page = drawn(model, move |model| match model {
         RelationshipModel::Shown(state, versions) => relationship_view(&uid, &state, &versions),
-        RelationshipModel::Deleted => info_note(tr(Msg::RelationshipDeleted)),
+        RelationshipModel::Deleted => info_note(tr(RecordsMsg::RelationshipDeleted)),
         RelationshipModel::Refused(refusal) => refusal.view(),
         RelationshipModel::Left => ().into_any(),
     });
@@ -2063,8 +2173,8 @@ fn details_editor(text: String, opened: Option<String>) -> AnyView {
                 text,
                 opened,
                 marks: Vec::new(),
-                label: tr(Msg::RelationshipDetails),
-                lead: tr(Msg::EditorJson),
+                label: tr(RecordsMsg::RelationshipDetails),
+                lead: tr(RecordsMsg::EditorJson),
                 facts: vec![tr(Msg::EditorUtf8)],
                 findings: None,
             }
@@ -2121,10 +2231,23 @@ struct NewRelationship {
     unwritten: Option<Unwritten>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads New relationship: answers its post (Discard, Create) and names the
 /// source party.
-async fn load_new_relationship() -> Creating<NewRelationship> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_new_relationship(
+    /// The path and query of the page.
+    href: String,
+) -> Result<Creating<NewRelationship>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_new_relationship().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_new_relationship`] reads, on the server.
+async fn read_new_relationship() -> Creating<NewRelationship> {
     let posted = crate::posted::posted();
     let field = |name: &str| {
         posted
@@ -2160,7 +2283,9 @@ async fn load_new_relationship() -> Creating<NewRelationship> {
     // browser would refuse it too; an empty type or target is answered here instead.
     let missing = kind_type.trim().is_empty() || target.trim().is_empty();
     if saving && missing {
-        unwritten = Some(Unwritten::Missing(tr(Msg::RelationshipNeedsTypeAndTarget)));
+        unwritten = Some(Unwritten::Missing(tr(
+            RecordsMsg::RelationshipNeedsTypeAndTarget,
+        )));
     } else if saving {
         let node = format!(
             "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.{}.v1",
@@ -2180,13 +2305,13 @@ async fn load_new_relationship() -> Creating<NewRelationship> {
             Ok(uid) => {
                 redirect_with(
                     &relationship_href(&uid),
-                    &Done::ok(tr(Msg::RelationshipCreated)).line(kind_type.clone()),
+                    &Done::ok(tr(RecordsMsg::RelationshipCreated)).line(kind_type.clone()),
                 );
                 return Creating::Left;
             }
             Err(error) => {
                 unwritten = Some(Unwritten::Refused(Unsaved {
-                    refusal: Refused::new(tr(Msg::RelationshipCreateRefused), error),
+                    refusal: Refused::new(tr(RecordsMsg::RelationshipCreateRefused), error),
                     conflict: false,
                 }));
             }
@@ -2229,26 +2354,26 @@ fn new_relationship_view(model: Creating<NewRelationship>) -> AnyView {
     } = *form;
     let back = party_tab_href(source_kind, &source, PartyTab::Relationships, None);
     let line = if unwritten.is_some() {
-        (Glyph::CIRCLE_X, tr(Msg::PartyNotCreated))
+        (Glyph::CIRCLE_X, tr(RecordsMsg::PartyNotCreated))
     } else {
-        (Glyph::FILE_PLUS, tr(Msg::PartyNotYet))
+        (Glyph::FILE_PLUS, tr(RecordsMsg::PartyNotYet))
     };
     let top = unwritten.map(|unwritten| unwritten.view());
     dock_editor(EditorDock {
         form: EDIT_FORM.to_owned(),
         line: line.1,
         glyph: line.0,
-        save: tr(Msg::RelationshipCreate),
+        save: tr(RecordsMsg::RelationshipCreate),
         blocked: None,
     });
     let mut trail = party_crumbs();
     trail.push(Crumb::new(source_name.clone(), back));
     let heading = editor_heading(
-        message(Msg::RelationshipNewTitle),
+        message(RecordsMsg::RelationshipNewTitle),
         &Mode::Creating,
         Header {
             title: String::new().into(),
-            subtitle: Some(tr(Msg::RelationshipNewSubtitle).into()),
+            subtitle: Some(tr(RecordsMsg::RelationshipNewSubtitle).into()),
             crumbs: trail,
             mono: false,
             badge: None,
@@ -2257,7 +2382,7 @@ fn new_relationship_view(model: Creating<NewRelationship>) -> AnyView {
         ActionGroup::none(),
     );
     let from = definitions(vec![(
-        tr(Msg::RelationshipSource),
+        tr(RecordsMsg::RelationshipSource),
         view! {
             <a href=party_href(source_kind, &source)>{source_name}</a>
             {format!(" · {}", kind_words(source_kind))}
@@ -2269,8 +2394,8 @@ fn new_relationship_view(model: Creating<NewRelationship>) -> AnyView {
         <input type="hidden" name="source_kind" value=source_kind.segment() />
         <div class="fui-form-grid">
             <div class="fui-span-2">
-                {Field::new("r-type", tr(Msg::RelationshipType))
-                    .help(tr(Msg::RelationshipTypeHelp))
+                {Field::new("r-type", tr(RecordsMsg::RelationshipType))
+                    .help(tr(RecordsMsg::RelationshipTypeHelp))
                     .view(
                         view! {
                             <input
@@ -2285,7 +2410,7 @@ fn new_relationship_view(model: Creating<NewRelationship>) -> AnyView {
                     )}
             </div>
             <div class="fui-span-2">
-                {Field::new("r-tk", tr(Msg::RelationshipTargetKind))
+                {Field::new("r-tk", tr(RecordsMsg::RelationshipTargetKind))
                     .view(
                         view! {
                             <select id="r-tk" name="target_kind" class="fui-select">
@@ -2295,7 +2420,7 @@ fn new_relationship_view(model: Creating<NewRelationship>) -> AnyView {
                     )}
             </div>
             <div class="fui-span-2">
-                {Field::new("r-tid", tr(Msg::RelationshipTargetUid))
+                {Field::new("r-tid", tr(RecordsMsg::RelationshipTargetUid))
                     .holds_id()
                     .view(
                         view! {
@@ -2314,21 +2439,21 @@ fn new_relationship_view(model: Creating<NewRelationship>) -> AnyView {
         </div>
     };
     view! {
-        <Title text=tr(Msg::RelationshipNewPageTitle) />
+        <Title text=tr(RecordsMsg::RelationshipNewPageTitle) />
         {heading}
         <div class="fui-stack">
             {top} <form id=EDIT_FORM method="post" action="/parties/relationships/new">
                 {card_panel(
                     view! {
-                        {section(Some(tr(Msg::RelationshipFrom)), None, None, from)}
-                        {section(Some(tr(Msg::RelationshipTitle)), None, None, grid)}
+                        {section(Some(tr(RecordsMsg::RelationshipFrom)), None, None, from)}
+                        {section(Some(tr(RecordsMsg::RelationshipTitle)), None, None, grid)}
                         {section(
-                            Some(tr(Msg::RelationshipDetails)),
+                            Some(tr(RecordsMsg::RelationshipDetails)),
                             None,
                             None,
                             view! {
                                 {ferrohealth_ui::view::surface::section_intro(
-                                    tr(Msg::RelationshipDetailsIntro),
+                                    tr(RecordsMsg::RelationshipDetailsIntro),
                                 )}
                                 {details_editor(details, None)}
                             },
@@ -2365,10 +2490,25 @@ struct RelationshipEditor {
     unwritten: Option<Unwritten>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Edit a relationship: answers its post (Discard, Save) over the
 /// current version.
-async fn load_edit_relationship(uid: String) -> Editing<RelationshipEditor> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_edit_relationship(
+    /// The path and query of the page.
+    href: String,
+    /// The id the route names.
+    uid: String,
+) -> Result<Editing<RelationshipEditor>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_edit_relationship(uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_edit_relationship`] reads, on the server.
+async fn read_edit_relationship(uid: String) -> Editing<RelationshipEditor> {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&relationship_href(&uid));
@@ -2376,8 +2516,10 @@ async fn load_edit_relationship(uid: String) -> Editing<RelationshipEditor> {
     }
     let state = match fetch_relationship(uid.clone()).await {
         Ok(Some(state)) => state,
-        Ok(None) => return Editing::Deleted(tr(Msg::RelationshipDeleted)),
-        Err(error) => return Editing::Refused(Refused::new(tr(Msg::RelationshipRefused), error)),
+        Ok(None) => return Editing::Deleted(tr(RecordsMsg::RelationshipDeleted)),
+        Err(error) => {
+            return Editing::Refused(Refused::new(tr(RecordsMsg::RelationshipRefused), error));
+        }
     };
     let opened = posted
         .as_ref()
@@ -2396,7 +2538,7 @@ async fn load_edit_relationship(uid: String) -> Editing<RelationshipEditor> {
         .is_some_and(|posted| posted.intent() == "save");
     let mut unwritten = None;
     if saving && name.trim().is_empty() {
-        unwritten = Some(Unwritten::Missing(tr(Msg::RelationshipNeedsType)));
+        unwritten = Some(Unwritten::Missing(tr(RecordsMsg::RelationshipNeedsType)));
     } else if saving {
         match update_relationship(
             uid.clone(),
@@ -2410,8 +2552,8 @@ async fn load_edit_relationship(uid: String) -> Editing<RelationshipEditor> {
             Ok(saved) => {
                 redirect_with(
                     &relationship_href(&uid),
-                    &Done::ok(tr(Msg::RelationshipSaved)).line(tr_with(
-                        Msg::CompositionSavedVersion,
+                    &Done::ok(tr(RecordsMsg::RelationshipSaved)).line(tr_with(
+                        RecordsMsg::CompositionSavedVersion,
                         &[("version", version_number(&saved).into())],
                     )),
                 );
@@ -2419,7 +2561,7 @@ async fn load_edit_relationship(uid: String) -> Editing<RelationshipEditor> {
             }
             Err(error) => {
                 unwritten = Some(Unwritten::Refused(Unsaved::new(
-                    tr(Msg::RelationshipSaveRefused),
+                    tr(RecordsMsg::RelationshipSaveRefused),
                     error,
                 )));
             }
@@ -2449,22 +2591,22 @@ fn edit_relationship_view(uid: &str, editor: RelationshipEditor) -> AnyView {
     } = editor;
     let changed = name != state.name || details.trim() != state.details.trim();
     let line = if unwritten.is_some() {
-        (Glyph::CIRCLE_X, tr(Msg::EditorNotSaved))
+        (Glyph::CIRCLE_X, tr(RecordsMsg::EditorNotSaved))
     } else if changed {
-        (Glyph::PENCIL, tr(Msg::DirectoryChanged))
+        (Glyph::PENCIL, tr(RecordsMsg::DirectoryChanged))
     } else {
-        (Glyph::PENCIL, tr(Msg::EditorOpened))
+        (Glyph::PENCIL, tr(RecordsMsg::EditorOpened))
     };
     let blocked = unwritten
         .as_ref()
         .is_some_and(Unwritten::conflict)
-        .then(|| tr(Msg::EditorReloadFirst));
+        .then(|| tr(RecordsMsg::EditorReloadFirst));
     let top = unwritten.map(|unwritten| unwritten.view());
     let save = version_number(&opened).parse::<u32>().map_or_else(
         |_| tr(Msg::EditorSave),
         |number| {
             tr_with(
-                Msg::EditorSaveAsVersion,
+                RecordsMsg::EditorSaveAsVersion,
                 &[("version", number.saturating_add(1).into())],
             )
         },
@@ -2479,13 +2621,13 @@ fn edit_relationship_view(uid: &str, editor: RelationshipEditor) -> AnyView {
     let mut trail = party_crumbs();
     trail.push(Crumb::new(state.name.clone(), relationship_href(uid)));
     let heading = editor_heading(
-        message(Msg::EditorTitle),
+        message(RecordsMsg::EditorTitle),
         &Mode::Editing(state.name.clone()),
         Header {
             title: String::new().into(),
             subtitle: Some(
                 tr_with(
-                    Msg::CompositionEditSubtitle,
+                    RecordsMsg::CompositionEditSubtitle,
                     &[("version", version_number(&opened).into())],
                 )
                 .into(),
@@ -2507,24 +2649,24 @@ fn edit_relationship_view(uid: &str, editor: RelationshipEditor) -> AnyView {
                 {card_panel(
                     view! {
                         {section(
-                            Some(tr(Msg::RelationshipEnds)),
+                            Some(tr(RecordsMsg::RelationshipEnds)),
                             None,
                             None,
                             view! {
                                 {ferrohealth_ui::view::surface::section_intro(
-                                    tr(Msg::RelationshipEndsIntro),
+                                    tr(RecordsMsg::RelationshipEndsIntro),
                                 )}
                                 {definitions(ends(&state))}
                             },
                         )}
                         {section(
-                            Some(tr(Msg::RelationshipTitle)),
+                            Some(tr(RecordsMsg::RelationshipTitle)),
                             None,
                             None,
                             view! {
                                 <div class="fui-form-grid">
                                     <div class="fui-span-2">
-                                        {Field::new("re-ty", tr(Msg::RelationshipType))
+                                        {Field::new("re-ty", tr(RecordsMsg::RelationshipType))
                                             .view(
                                                 view! {
                                                     <input
@@ -2542,12 +2684,12 @@ fn edit_relationship_view(uid: &str, editor: RelationshipEditor) -> AnyView {
                             },
                         )}
                         {section(
-                            Some(tr(Msg::RelationshipDetails)),
+                            Some(tr(RecordsMsg::RelationshipDetails)),
                             None,
                             None,
                             view! {
                                 {ferrohealth_ui::view::surface::section_intro(
-                                    tr(Msg::RelationshipDetailsIntro),
+                                    tr(RecordsMsg::RelationshipDetailsIntro),
                                 )}
                                 {details_editor(details, Some(state.details.clone()))}
                             },
@@ -2576,10 +2718,25 @@ pub fn EditRelationshipPage() -> impl IntoView {
     view! { {page} }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the demographic contribution `uid`; one the CDR does not hold
 /// answers `404`.
-async fn load_party_contribution(uid: String) -> Result<ContributionState, Refused> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_party_contribution(
+    /// The path and query of the page.
+    href: String,
+    /// The id the route names.
+    uid: String,
+) -> Result<Result<ContributionState, Refused>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_party_contribution(uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_party_contribution`] reads, on the server.
+async fn read_party_contribution(uid: String) -> Result<ContributionState, Refused> {
     match fetch_demographic_contribution(uid).await {
         Ok(mut state) => {
             state.body =
@@ -2590,7 +2747,7 @@ async fn load_party_contribution(uid: String) -> Result<ContributionState, Refus
             if is_status(&error, http::StatusCode::NOT_FOUND) {
                 crate::request::set_status(http::StatusCode::NOT_FOUND);
             }
-            Err(Refused::new(tr(Msg::ContributionRefused), error))
+            Err(Refused::new(tr(RecordsMsg::ContributionRefused), error))
         }
     }
 }
@@ -2598,18 +2755,24 @@ async fn load_party_contribution(uid: String) -> Result<ContributionState, Refus
 /// A demographic contribution's audit, the versions it made and its record.
 fn party_contribution_view(state: &ContributionState) -> AnyView {
     let mut rows = vec![
-        (tr(Msg::FactCommitted), when(&state.time_committed)),
-        (tr(Msg::FactCommitter), state.committer.clone().into_any()),
-        (tr(Msg::FactChange), state.change_type.clone().into_any()),
+        (tr(RecordsMsg::FactCommitted), when(&state.time_committed)),
+        (
+            tr(RecordsMsg::FactCommitter),
+            state.committer.clone().into_any(),
+        ),
+        (
+            tr(RecordsMsg::FactChange),
+            state.change_type.clone().into_any(),
+        ),
     ];
     if !state.description.is_empty() {
         rows.push((
-            tr(Msg::FactDescription),
+            tr(RecordsMsg::FactDescription),
             state.description.clone().into_any(),
         ));
     }
     let columns = [
-        Column::text("object", tr(Msg::ColumnObject)).role(Role::Title),
+        Column::text("object", tr(RecordsMsg::ColumnObject)).role(Role::Title),
         Column::text("kind", tr(Msg::ColumnKind)).role(Role::Sub),
         Column::text("version", tr(Msg::ColumnVersion)).role(Role::Meta),
     ];
@@ -2634,7 +2797,7 @@ fn party_contribution_view(state: &ContributionState) -> AnyView {
         })
         .collect_view()
         .into_any();
-    let caption = tr(Msg::ContributionVersions);
+    let caption = tr(RecordsMsg::ContributionVersions);
     let table = data_table(DataTable {
         caption: &caption,
         columns: &columns,
@@ -2642,15 +2805,15 @@ fn party_contribution_view(state: &ContributionState) -> AnyView {
         body: Body::Rows(made),
     });
     card_panel(view! {
-        {section(Some(tr(Msg::ContributionAudit)), None, None, definitions(rows))}
+        {section(Some(tr(RecordsMsg::ContributionAudit)), None, None, definitions(rows))}
         {section(
-            Some(tr(Msg::ContributionVersions)),
+            Some(tr(RecordsMsg::ContributionVersions)),
             u64::try_from(state.versions.len()).ok(),
             None,
             table,
         )}
         {document_section(
-            tr(Msg::ContributionRecord),
+            tr(RecordsMsg::ContributionRecord),
             Language::Json,
             state.body.clone(),
             "contribution-record",
@@ -2666,11 +2829,14 @@ fn party_contribution_view(state: &ContributionState) -> AnyView {
 #[component]
 pub fn PartyContributionPage() -> impl IntoView {
     let uid = uid_param();
-    let title = tr_with(Msg::ContributionTitle, &[("id", shortened(&uid).into())]);
+    let title = tr_with(
+        RecordsMsg::ContributionTitle,
+        &[("id", shortened(&uid).into())],
+    );
     let heading = page_heading(
         Header {
             title: title.clone().into(),
-            subtitle: Some(tr(Msg::ContributionSubtitle).into()),
+            subtitle: Some(tr(RecordsMsg::ContributionSubtitle).into()),
             crumbs: party_crumbs(),
             mono: false,
             badge: None,

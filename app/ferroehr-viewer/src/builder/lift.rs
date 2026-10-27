@@ -32,7 +32,8 @@ use crate::builder::model::{
     BoolOp, BuilderQuery, Criterion, CriterionKind, CriterionNode, OrderRule, QueryShape,
     SelectedColumn,
 };
-use crate::locale::{Msg, tr};
+use crate::locale::queries::QueriesMsg;
+use crate::locale::tr;
 
 /// The variable the builder binds the EHR to (mirrors `lower`).
 const EHR_VAR: &str = "e";
@@ -877,8 +878,8 @@ fn fragment_text(expr: &WhereExpr) -> String {
 /// Render one `ORDER BY` term as AQL text for a refusal message.
 fn order_text(term: &OrderByExpr) -> String {
     let direction = match term.order {
-        Some(SortOrder::Ascending) => tr(Msg::Asc),
-        Some(SortOrder::Descending) => tr(Msg::Desc),
+        Some(SortOrder::Ascending) => tr(QueriesMsg::Asc),
+        Some(SortOrder::Descending) => tr(QueriesMsg::Desc),
         None => String::new(),
     };
     format!(

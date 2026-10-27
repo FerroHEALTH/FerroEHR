@@ -36,6 +36,8 @@ mod e2e_event_subscriptions;
 mod e2e_export;
 mod e2e_keyboard;
 mod e2e_login;
+mod e2e_navigation;
+mod e2e_no_wasm;
 mod e2e_operations;
 mod e2e_paging;
 mod e2e_scopes;

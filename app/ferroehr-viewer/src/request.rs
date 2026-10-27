@@ -8,20 +8,35 @@
 //! The server reads them once per page into a [`Visit`], which the app
 //! provides through a `SharedValue`, so the browser takes the same values
 //! serialized with the page and both halves draw the same page (the Leptos
-//! book, "Life Cycle of a Page Load"). The visit carries no session cookie
-//! and no credential, so neither reaches a script. A read outside the app,
-//! such as a server function's, falls back to the request itself. No openEHR
-//! spec governs the viewer's pages: our own design.
+//! book, "Life Cycle of a Page Load"). The browser draws every page after the
+//! first itself: the route group sets the visit's address as the router
+//! moves and asks the server for the rest again ([`visited`]) before it
+//! draws the page after each navigation and each post drawn in the page. The
+//! visit carries no session cookie and no credential, so
+//! neither reaches a script. A read outside the app falls back to the
+//! request itself, and a page's model read as a server function reads the
+//! visit of the page that asked ([`visiting`]). No openEHR spec governs the
+//! viewer's pages: our own design.
+#![cfg_attr(
+    target_arch = "wasm32",
+    allow(
+        clippy::unused_async_trait_impl,
+        reason = "the server function macro writes the browser half's call as an async trait method; only that target has it"
+    )
+)]
 
-use leptos::prelude::{SharedValue, provide_context, use_context};
+use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::error::ViewerError;
 
 /// The prefix every cookie a page may read in the browser carries: the
 /// preferences, the sidebar and the listings' positions.
 const KEPT_PREFIX: &str = "ferroehr-viewer-";
 
 /// How the signed-in reader's session reaches the CDR.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
     /// Basic authentication, checked against the CDR at sign-in.
     Basic,
@@ -34,14 +49,27 @@ pub enum Method {
 pub struct Signed {
     /// The display identity.
     pub identity: String,
-    /// How the session reaches the CDR.
-    pub method: Method,
+    /// Whether the session reaches the CDR with a bearer token from the
+    /// viewer's OpenID Connect sign-in ([`Signed::method`]).
+    pub oidc: bool,
     /// The scopes granted to the session's token, empty for Basic.
     pub scopes: Vec<String>,
 }
 
+impl Signed {
+    /// How the session reaches the CDR.
+    #[must_use]
+    pub const fn method(&self) -> Method {
+        if self.oidc {
+            Method::Oidc
+        } else {
+            Method::Basic
+        }
+    }
+}
+
 /// The viewer's own settings a page shows.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Settings {
     /// The CDR's base address.
     pub cdr_address: String,
@@ -60,11 +88,17 @@ pub struct Visit {
     pub kept: String,
     /// Who is signed in, when the request carries a session.
     pub signed: Option<Signed>,
-    /// The viewer's own settings.
-    pub settings: Settings,
-    /// The instant the server read its clock for the page: every relative
-    /// time and every today the page draws counts from it, on both halves.
-    pub now: jiff::Timestamp,
+    /// The CDR's base address ([`Settings::cdr_address`]).
+    pub cdr_address: String,
+    /// The minutes a session stays open while the reader does nothing
+    /// ([`Settings::idle_minutes`]).
+    pub idle_minutes: u64,
+    /// The OpenID Provider's issuer ([`Settings::oidc_issuer`]).
+    pub oidc_issuer: String,
+    /// The instant the server read its clock for the page, in milliseconds
+    /// since the Unix epoch: every relative time and every today the page
+    /// draws counts from it, on both halves ([`now`]).
+    pub now: i64,
 }
 
 impl Default for Visit {
@@ -73,8 +107,10 @@ impl Default for Visit {
             path_and_query: "/".to_owned(),
             kept: String::new(),
             signed: None,
-            settings: Settings::default(),
-            now: jiff::Timestamp::UNIX_EPOCH,
+            cdr_address: String::new(),
+            idle_minutes: 0,
+            oidc_issuer: String::new(),
+            now: 0,
         }
     }
 }
@@ -84,42 +120,96 @@ impl Visit {
     #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn requested() -> Self {
-        let state = state();
+        let settings = state()
+            .map(|state| Settings {
+                cdr_address: state.config.cdr.base_url.clone(),
+                idle_minutes: state.config.session.idle_minutes,
+                oidc_issuer: state.config.auth.oidc.issuer.clone(),
+            })
+            .unwrap_or_default();
         Self {
             path_and_query: requested_path_and_query(),
             kept: kept_of(&cookies()),
             signed: session().map(|session| Signed {
                 identity: session.identity,
-                method: match session.credential {
-                    crate::session::Credential::Basic { .. } => Method::Basic,
-                    crate::session::Credential::Bearer { .. } => Method::Oidc,
-                },
+                oidc: matches!(
+                    session.credential,
+                    crate::session::Credential::Bearer { .. }
+                ),
                 scopes: session.scopes,
             }),
-            settings: state
-                .map(|state| Settings {
-                    cdr_address: state.config.cdr.base_url.clone(),
-                    idle_minutes: state.config.session.idle_minutes,
-                    oidc_issuer: state.config.auth.oidc.issuer.clone(),
-                })
-                .unwrap_or_default(),
-            now: jiff::Timestamp::now(),
+            cdr_address: settings.cdr_address,
+            idle_minutes: settings.idle_minutes,
+            oidc_issuer: settings.oidc_issuer,
+            now: jiff::Timestamp::now().as_millisecond(),
+        }
+    }
+
+    /// What the server reads of the request being served, for the page at
+    /// `href`, which a page's model read as a server function names: the
+    /// viewer's own path, else `/`.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[must_use]
+    pub fn of_page(href: &str) -> Self {
+        Self {
+            path_and_query: return_path(href).to_owned(),
+            ..Self::requested()
         }
     }
 
     /// The visit the page answers: the shared one, else the request's own.
     fn current() -> Self {
-        use_context::<Self>().unwrap_or_else(|| {
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                Self::requested()
-            }
-            #[cfg(target_arch = "wasm32")]
-            {
-                Self::default()
-            }
-        })
+        use_context::<Visits>().map_or_else(
+            || {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    Self::requested()
+                }
+                #[cfg(target_arch = "wasm32")]
+                {
+                    Self::default()
+                }
+            },
+            |visits| visits.0.get_untracked(),
+        )
     }
+}
+
+/// The visit the page answers, which the browser updates as it draws the
+/// pages after the first.
+#[derive(Debug, Clone, Copy)]
+pub struct Visits(pub RwSignal<Visit>);
+
+/// The visit the page answers, tracked, so a part of the shell that draws it
+/// draws again when the server's answer after a navigation changes it.
+#[must_use]
+pub fn tracked() -> Visit {
+    use_context::<Visits>().map_or_else(Visit::current, |visits| visits.0.get())
+}
+
+/// The display cookies of the visit, as a memo a route group draws its page
+/// again on when the server's answer after a post changes them.
+#[must_use]
+pub fn kept_memo() -> Memo<String> {
+    let visits = use_context::<Visits>();
+    Memo::new(move |_| {
+        visits.map_or_else(String::new, |Visits(visits)| {
+            visits.with(|visit| visit.kept.clone())
+        })
+    })
+}
+
+/// Tracks the visit the page answers, so the part of the shell that calls it
+/// draws again when the server's answer after a navigation changes it.
+pub fn track() {
+    if let Some(Visits(visits)) = use_context::<Visits>() {
+        visits.track();
+    }
+}
+
+/// Provides `visit` as the visit the page answers.
+pub fn provide(visit: Visit) {
+    provide_context(Visits(RwSignal::new(visit)));
 }
 
 /// Provides the visit to the page: read from the request on the server and
@@ -136,7 +226,193 @@ pub fn provide_visit() {
         }
     })
     .into_inner();
-    provide_context(visit);
+    provide(visit);
+}
+
+/// Sets the address of the visit to `href`, the page the router draws.
+///
+/// `true` when the browser draws that page after the first, so the route
+/// group asks the server for the rest of the visit ([`visited`]) before it
+/// draws it. The route group calls it before the page reads the visit; `posts` counts
+/// the posts the router has drawn in the page. The form the first page
+/// answered lets go once the page is another one or a post drawn in the page
+/// followed it. The server's visit is the request's, and a hydrating page
+/// keeps the one the server drew.
+#[must_use]
+pub fn follow_address(href: &str, posts: u32) -> bool {
+    if cfg!(not(target_arch = "wasm32")) || !ferrohealth_ui::widget::hydration::hydrated() {
+        return false;
+    }
+    if let Some(Visits(visits)) = use_context::<Visits>()
+        && visits.with_untracked(|visit| visit.path_and_query != href)
+    {
+        visits.update_untracked(|visit| href.clone_into(&mut visit.path_and_query));
+        crate::posted::let_go();
+    }
+    if posts > 0 {
+        crate::posted::let_go();
+    }
+    true
+}
+
+/// Asks the server for the visit of the page at `href` the browser is about
+/// to draw, so a preference or a position a post just kept reaches it.
+///
+/// `false` when the page must not be drawn: the session it was signed in
+/// with has ended, and the browser loads the sign-in page instead, or the
+/// language changed, and the browser loads the page again in it.
+/// A page drawn over an ended session would ask its model of the server and
+/// be refused; the visit says so first, with no refusal.
+pub async fn visited(href: String) -> bool {
+    let Some(Visits(visits)) = use_context::<Visits>() else {
+        return true;
+    };
+    let now = match asked::visit_now(href).await {
+        Ok(now) => now,
+        Err(error) => {
+            leptos::logging::warn!("the visit did not come: {error}");
+            return true;
+        }
+    };
+    let (before, signed) =
+        visits.with_untracked(|visit| (visit.kept.clone(), visit.signed.is_some()));
+    if signed && now.signed.is_none() {
+        crate::session_client::note_session_ended();
+        return false;
+    }
+    if follow_root(&before, &now) {
+        return false;
+    }
+    // NOTE: no openEHR spec governs this: our own design; the address is the
+    // router's, so an answer to an earlier navigation never moves the page.
+    let kept = visits.with_untracked(|visit| visit.path_and_query.clone());
+    let now = Visit {
+        path_and_query: kept,
+        ..now
+    };
+    if visits.with_untracked(|visit| visit.kept != now.kept || visit.signed != now.signed) {
+        visits.set(now);
+    } else {
+        visits.update_untracked(|visit| *visit = now);
+    }
+    true
+}
+
+/// Marks a page's model read as a server function: the response is the
+/// server function's own, so a page's status stays the page's.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Clone, Copy)]
+struct Fetched;
+
+/// Opens the read of a page's model for the page at `href`.
+///
+/// Drawn by the server, the page's own visit stands. Asked by the browser
+/// for a page it draws after a navigation, the read is a server function:
+/// the visit is the request's, at the address of the page that asked, and
+/// [`set_status`] leaves the server function's answer alone.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn visiting(href: &str) -> Result<crate::session::ViewerSession, ViewerError> {
+    let session = crate::session::require_session().await?;
+    visiting_public(href);
+    Ok(session)
+}
+
+/// Opens the read of the model of a page anyone may read, the sign-in, for
+/// the page at `href`, as [`visiting`] does with no session.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn visiting_public(href: &str) {
+    if use_context::<Visits>().is_none() {
+        provide(Visit::of_page(href));
+        provide_context(Fetched);
+    }
+}
+
+/// The server function the browser asks the visit of a page with.
+pub mod asked {
+    #![cfg_attr(
+        not(target_arch = "wasm32"),
+        expect(
+            clippy::unused_async,
+            reason = "the server function reads the request alone, with nothing to await"
+        )
+    )]
+
+    use leptos::server;
+
+    use super::Visit;
+    use crate::error::ViewerError;
+
+    /// The visit of the request that asks, for the page at `href` the
+    /// browser draws after a navigation or a post.
+    ///
+    /// # Errors
+    /// When the server function cannot be reached or answered.
+    #[server(client = crate::session_client::SessionAwareClient)]
+    pub async fn visit_now(
+        /// The path and query of the page the browser draws.
+        href: String,
+    ) -> Result<Visit, ViewerError> {
+        Ok(Visit::of_page(&href))
+    }
+}
+
+/// The path and query of the router's location `path` and raw query
+/// `search`.
+#[must_use]
+pub fn address(path: &str, search: &str) -> String {
+    if search.is_empty() {
+        path.to_owned()
+    } else {
+        format!("{path}?{search}")
+    }
+}
+
+/// Sets the root element's theme, density, motion and hints from the visit
+/// `now`, as the server writes them on a document it draws, so a preference
+/// a post just kept takes effect in the page; `true` when the language the
+/// display cookies `before` kept changed, and the browser loads the page
+/// again in its new language.
+fn follow_root(before: &str, now: &Visit) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        use ferrohealth_ui::theme::{Language, Preference as _, cookie};
+        let language = format!("{}{}", crate::prefs::COOKIE_PREFIX, Language::COOKIE);
+        // NOTE: no openEHR spec governs this: our own design; the words of a page are
+        // drawn in its locale, so a new language loads the page as a document.
+        if cookie(before, &language) != cookie(&now.kept, &language) {
+            if window().location().reload().is_err() {
+                leptos::logging::warn!("the browser refused to load the page in its language");
+            }
+            return true;
+        }
+        let Some(root) = document().document_element() else {
+            return false;
+        };
+        let chosen =
+            ferrohealth_ui::theme::Preferences::read(&now.kept, crate::prefs::COOKIE_PREFIX);
+        let attributes = [
+            ("data-theme", chosen.theme.key()),
+            ("data-density", chosen.density.key()),
+            ("data-motion", chosen.motion.key()),
+            ("data-hints", chosen.hints.key()),
+        ];
+        for (name, value) in attributes {
+            if root.get_attribute(name).as_deref() != Some(value)
+                && root.set_attribute(name, value).is_err()
+            {
+                leptos::logging::warn!("the browser refused the root's {name}");
+            }
+        }
+        false
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _: (&str, &Visit) = (before, now);
+        false
+    }
 }
 
 /// The cookies of the `Cookie` header value `header` a page may read in the
@@ -181,8 +457,10 @@ pub fn path() -> String {
 /// The path and query of the request, as a page names the place to return to.
 #[must_use]
 pub fn path_and_query() -> String {
-    match use_context::<Visit>() {
-        Some(visit) => visit.path_and_query,
+    match use_context::<Visits>() {
+        Some(visits) => visits
+            .0
+            .with_untracked(|visit| visit.path_and_query.clone()),
         None => {
             #[cfg(not(target_arch = "wasm32"))]
             {
@@ -261,8 +539,8 @@ pub fn cookies() -> String {
 /// listings' positions, as one `Cookie` header value.
 #[must_use]
 pub fn kept_cookies() -> String {
-    match use_context::<Visit>() {
-        Some(visit) => visit.kept,
+    match use_context::<Visits>() {
+        Some(visits) => visits.0.with_untracked(|visit| visit.kept.clone()),
         None => {
             #[cfg(not(target_arch = "wasm32"))]
             {
@@ -285,15 +563,20 @@ pub fn signed() -> Option<Signed> {
 /// The viewer's own settings a page shows.
 #[must_use]
 pub fn settings() -> Settings {
-    Visit::current().settings
+    let visit = Visit::current();
+    Settings {
+        cdr_address: visit.cdr_address,
+        idle_minutes: visit.idle_minutes,
+        oidc_issuer: visit.oidc_issuer,
+    }
 }
 
 /// The instant the page is drawn at, read once by the server for the whole
 /// page, so the browser draws the same relative times and the same today.
 #[must_use]
 pub fn now() -> jiff::Timestamp {
-    match use_context::<Visit>() {
-        Some(visit) => visit.now,
+    match use_context::<Visits>() {
+        Some(visits) => instant(visits.0.with_untracked(|visit| visit.now)),
         None => {
             #[cfg(not(target_arch = "wasm32"))]
             {
@@ -301,10 +584,26 @@ pub fn now() -> jiff::Timestamp {
             }
             #[cfg(target_arch = "wasm32")]
             {
-                Visit::default().now
+                instant(Visit::default().now)
             }
         }
     }
+}
+
+/// The instant `milliseconds` after the Unix epoch.
+///
+/// # Panics
+/// When `milliseconds` lies outside jiff's range, which an instant the
+/// server's clock read never does.
+#[expect(
+    clippy::panic,
+    reason = "the server writes the milliseconds of an instant its own clock read, which lie inside jiff's range; a panic that formats jiff's error would link jiff's whole error text into the entry WebAssembly"
+)]
+fn instant(milliseconds: i64) -> jiff::Timestamp {
+    let Ok(instant) = jiff::Timestamp::from_millisecond(milliseconds) else {
+        panic!("the visit's instant should lie inside jiff's range");
+    };
+    instant
 }
 
 /// The viewer session the request's sealed cookie carries, when it carries
@@ -335,6 +634,9 @@ pub fn state() -> Option<crate::state::AppState> {
 /// keeps its `302` even when its page can no longer read its object.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn set_status(status: http::StatusCode) {
+    if use_context::<Fetched>().is_some() {
+        return;
+    }
     if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
         let Ok(mut parts) = response.0.write() else {
             return;
@@ -389,7 +691,7 @@ mod tests {
     fn the_shared_visit_answers_the_path_and_the_query() {
         let owner = leptos::prelude::Owner::new();
         owner.with(|| {
-            leptos::prelude::provide_context(Visit {
+            super::provide(Visit {
                 path_and_query: "/ehrs?q=a+b&empty=&q=c".to_owned(),
                 ..Visit::default()
             });
@@ -406,8 +708,8 @@ mod tests {
         let owner = leptos::prelude::Owner::new();
         owner.with(|| {
             let read: jiff::Timestamp = "2026-10-21T09:42:11Z".parse().expect("an instant");
-            leptos::prelude::provide_context(Visit {
-                now: read,
+            super::provide(Visit {
+                now: read.as_millisecond(),
                 ..Visit::default()
             });
             assert_eq!(read, now());

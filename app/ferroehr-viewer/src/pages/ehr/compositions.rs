@@ -24,9 +24,10 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehrs::cell_text;
+use crate::error::ViewerError;
+use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{Refused, ago, drawn, page_model, shortened};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, ehr_href, ehr_id_param, ehr_view};
 use crate::paging::Listing;
@@ -112,7 +113,7 @@ fn toolbar(ehr_id: &str, filters: &Filters) -> AnyView {
         </div>
         {crate::pages::common::date_range(
             "f-start",
-            tr(Msg::FilterStartTime),
+            tr(RecordsMsg::FilterStartTime),
             &filters.from,
             &filters.to,
         )}
@@ -121,7 +122,7 @@ fn toolbar(ehr_id: &str, filters: &Filters) -> AnyView {
             {tr(Msg::FilterApply)}
         </button>
     };
-    let label = tr(Msg::FilterComposer);
+    let label = tr(RecordsMsg::FilterComposer);
     find_form(
         Find {
             id: "f-composer",
@@ -190,9 +191,24 @@ struct Panel {
     rows: Result<Vec<Row>, Refused>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the tab: the page of compositions the request's filters find.
-async fn load(ehr_id: String) -> EhrModel<Panel> {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+) -> Result<EhrModel<Panel>, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_page(ehr_id).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load`] reads, on the server.
+async fn read_page(ehr_id: String) -> EhrModel<Panel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let filters = Filters::read();
         let window = OpenWindow::of(crate::paging::current(Listing::Compositions), 0);
@@ -222,7 +238,7 @@ async fn load(ehr_id: String) -> EhrModel<Panel> {
                     })
                     .collect()
             })
-            .map_err(|error| Refused::new(tr(Msg::CompositionsRefused), error));
+            .map_err(|error| Refused::new(tr(RecordsMsg::CompositionsRefused), error));
         Panel { filters, rows }
     })
     .await
@@ -248,9 +264,9 @@ fn panel(ehr_id: &str, panel: Panel) -> AnyView {
     let held = u32::try_from(rows.len()).unwrap_or(u32::MAX);
     let window = OpenWindow::of(paging, held);
     let columns = [
-        Column::text("composition", tr(Msg::ColumnComposition)).role(Role::Title),
-        Column::text("start", tr(Msg::ColumnStartTime)).role(Role::Sub),
-        Column::text("composer", tr(Msg::ColumnComposer)).role(Role::Meta),
+        Column::text("composition", tr(RecordsMsg::ColumnComposition)).role(Role::Title),
+        Column::text("start", tr(RecordsMsg::ColumnStartTime)).role(Role::Sub),
+        Column::text("composer", tr(RecordsMsg::ColumnComposer)).role(Role::Meta),
         Column::text("version", tr(Msg::ColumnVersion)).role(Role::Meta),
     ];
     let empty = rows.is_empty();
@@ -270,13 +286,13 @@ fn panel(ehr_id: &str, panel: Panel) -> AnyView {
         .into_any();
     let table = if empty && window.page == 1 {
         let sentence = if filters.any() {
-            tr(Msg::CompositionsNoMatch)
+            tr(RecordsMsg::CompositionsNoMatch)
         } else {
-            tr(Msg::CompositionsEmpty)
+            tr(RecordsMsg::CompositionsEmpty)
         };
         list_empty(sentence, None)
     } else {
-        let caption = tr(Msg::EhrTabCompositions);
+        let caption = tr(RecordsMsg::EhrTabCompositions);
         data_table(DataTable {
             caption: &caption,
             columns: &columns,
@@ -287,7 +303,7 @@ fn panel(ehr_id: &str, panel: Panel) -> AnyView {
     };
     let pager = (window.page > 1 || window.has_next()).then(|| {
         post_open_pager(
-            PagerListing::new(tr(Msg::CompositionsPages)),
+            PagerListing::new(tr(RecordsMsg::CompositionsPages)),
             window,
             PostTo {
                 id: "compositions-pager",
@@ -316,7 +332,7 @@ fn panel(ehr_id: &str, panel: Panel) -> AnyView {
 #[component]
 pub fn CompositionsTab() -> impl IntoView {
     let ehr_id = ehr_id_param();
-    let title = tr_with(Msg::EhrTitle, &[("id", shortened(&ehr_id).into())]);
+    let title = tr_with(RecordsMsg::EhrTitle, &[("id", shortened(&ehr_id).into())]);
     let model = page_model!(load(ehr_id.clone()));
     let body = drawn(model, move |model| {
         ehr_view(&ehr_id, EhrTab::Compositions, model, |found| {

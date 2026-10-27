@@ -36,7 +36,7 @@
 # prebuilt path the CI workflows use.
 
 ARG RUST_VERSION=1.99.1
-ARG CARGO_LEPTOS_VERSION=0.3.7
+ARG CARGO_LEPTOS_VERSION=0.3.11
 
 # ── builder: toolchain + prebuilt tools, then cargo-leptos under the cache ─────
 # Digest-pinned rust:1.99.1-slim-trixie (Debian 13, glibc 2.41), resolved
@@ -106,7 +106,7 @@ COPY . .
 # its image provenance is the OCI-standard REVISION LABEL on the shared runtime
 # stage below (docs.docker.com/build/building/best-practices).
 # cargo-leptos builds the server binary with the command this variable names
-# instead of `cargo` (cargo-leptos 0.3.7, `bin-cargo-command`, read from the
+# instead of `cargo` (cargo-leptos 0.3.11, `bin-cargo-command`, read from the
 # environment in src/config/dotenvs.rs), so the server leg runs
 # `cargo auditable build`; the wasm leg stays plain cargo and ships no binary.
 ENV LEPTOS_BIN_CARGO_COMMAND="cargo auditable"

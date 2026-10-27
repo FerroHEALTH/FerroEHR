@@ -19,7 +19,8 @@ use openehr_query::lexer::CompOp;
 use crate::builder::model::{
     BoolOp, BuilderQuery, Criterion, CriterionKind, CriterionNode, QueryShape,
 };
-use crate::locale::{Msg, tr};
+use crate::locale::queries::QueriesMsg;
+use crate::locale::tr;
 
 /// Everything that can be wrong with a builder state.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, serde::Serialize, serde::Deserialize)]
@@ -409,7 +410,7 @@ fn parse_path_rooted(rooted: &str) -> Result<IdentifiedPath, BuilderError> {
         }) => Ok(path),
         _ => Err(BuilderError::InvalidPath {
             path: rooted.to_owned(),
-            detail: tr(Msg::DidNotParseDataPath),
+            detail: tr(QueriesMsg::DidNotParseDataPath),
         }),
     }
 }

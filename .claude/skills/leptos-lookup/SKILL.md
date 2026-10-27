@@ -40,7 +40,7 @@ not settle. The viewer's own rules live in `.claude/rules/leptos-ui.md`.
    how it moves to a release → `docs/consoles.md`; a component rule
    (reactivity, views, forms, tables, accessibility, tokens, bundle,
    catalogs) → `.claude/rules/leptos-ui.md`; the interaction contract,
-   islands mode and the ready islands → `crates/ferrohealth-ui/CLAUDE.md`;
+   the hydration mode and the ready components → `crates/ferrohealth-ui/CLAUDE.md`;
    what a page looks like, a component ID (R9, F13, E1) or a family rule →
    `design/COMPONENTS.md`, `design/README.md` and
    `design/consoles/ferroehr/`. A document missing at `$TAG` is read on

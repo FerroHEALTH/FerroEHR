@@ -43,9 +43,10 @@ ferrohealth-smart = { workspace = true, features = ["openehr-scopes"] }
 openehr-its = { path = "../../crates/openehr-its", default-features = false }
 openehr-sdt = { path = "../../crates/openehr-sdt", default-features = false }
 
-# Islands mode (FerroUI `crates/ferrohealth-ui/CLAUDE.md`): the server draws
-# every page whole and the browser hydrates only the islands.
-leptos = { workspace = true, features = ["islands"] }
+# The whole page hydrates (FerroUI `docs/consoles.md`, "How a console
+# builds"): `hydrate` in the browser half and `ssr` in the server half, below,
+# and never the `islands` feature.
+leptos.workspace = true
 leptos_meta.workspace = true
 leptos_router.workspace = true
 # The shared FerroHEALTH console components, tokens, stylesheet, highlighters
@@ -84,6 +85,12 @@ http = { workspace = true }
 leptos = { workspace = true, features = ["hydrate"] }
 wasm-bindgen.workspace = true
 console_error_panic_hook.workspace = true
+# A lazy route group's loading future crosses `Suspend`, which asks for
+# `Send`, on the browser's one thread (`crate::routes::lazy`).
+send_wrapper.workspace = true
+# The browser entry loads the page's lazy group before it hydrates
+# (`crate::hydrate`).
+wasm-bindgen-futures.workspace = true
 
 # The server half.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

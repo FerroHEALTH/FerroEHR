@@ -17,9 +17,10 @@ use serde_json::Value;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
+use crate::locale::records::RecordsMsg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr;
-use crate::locale::{Msg, tr_with};
+use crate::locale::tr_with;
 
 /// Read an `other_details` draft: `None` for a blank draft (the attribute is
 /// removed), `Some(value)` for a JSON object.
@@ -39,7 +40,7 @@ pub fn parse_other_details(draft: &str) -> Result<Option<Value>, String> {
     }
     let value: Value = serde_json::from_str(trimmed).map_err(|e| {
         tr_with(
-            Msg::OtherDetailsNotValidJson,
+            RecordsMsg::OtherDetailsNotValidJson,
             &[("e", (e).to_string().into())],
         )
     })?;
@@ -78,14 +79,14 @@ pub fn apply_status_edits(
 ) -> Result<String, ViewerError> {
     let mut doc: Value = serde_json::from_str(base).map_err(|e| {
         ViewerError::Invalid(tr_with(
-            Msg::LoadedEhrStatusDocumentNotValid,
+            RecordsMsg::LoadedEhrStatusDocumentNotValid,
             &[("e", (e).to_string().into())],
         ))
     })?;
     let details = parse_other_details(other_details).map_err(ViewerError::Invalid)?;
-    let object = doc
-        .as_object_mut()
-        .ok_or_else(|| ViewerError::Invalid({ tr(Msg::LoadedEhrStatusDocumentNotJson) }.clone()))?;
+    let object = doc.as_object_mut().ok_or_else(|| {
+        ViewerError::Invalid({ tr(RecordsMsg::LoadedEhrStatusDocumentNotJson) }.clone())
+    })?;
     drop(object.insert("is_queryable".to_owned(), Value::Bool(is_queryable)));
     drop(object.insert("is_modifiable".to_owned(), Value::Bool(is_modifiable)));
     match details {
@@ -94,7 +95,7 @@ pub fn apply_status_edits(
     }
     serde_json::to_string(&doc).map_err(|e| {
         ViewerError::Invalid(tr_with(
-            Msg::EditedEhrStatusCouldNotSerialized,
+            RecordsMsg::EditedEhrStatusCouldNotSerialized,
             &[("e", (e).to_string().into())],
         ))
     })

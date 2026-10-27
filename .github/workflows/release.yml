@@ -866,13 +866,13 @@ jobs:
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         if: matrix.platform == 'amd64'
         with:
-          tool: cargo-leptos@0.3.7,wasm-bindgen@0.2.129
+          tool: cargo-leptos@0.3.11,wasm-bindgen@0.2.129
 
       - name: Build the site bundle (amd64 only)
         if: matrix.platform == 'amd64'
         shell: bash
         # cargo-leptos runs its server leg through LEPTOS_BIN_CARGO_COMMAND
-        # (cargo-leptos 0.3.7 src/config/dotenvs.rs), so that leg builds with
+        # (cargo-leptos 0.3.11 src/config/dotenvs.rs), so that leg builds with
         # `cargo auditable` like the step above and reuses its artifacts.
         env:
           LEPTOS_BIN_CARGO_COMMAND: cargo auditable

@@ -31,7 +31,8 @@
 use serde_json::{Map, Value};
 
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::records::RecordsMsg;
+use crate::locale::{tr, tr_with};
 
 /// The projection, source and EHR binding every compositions listing shares.
 ///
@@ -153,7 +154,7 @@ pub fn composition_query(
             Value::String(instant_bound(
                 &filter.from,
                 DAY_START,
-                &tr(Msg::TheFromDate),
+                &tr(RecordsMsg::TheFromDate),
             )?),
         ));
     }
@@ -161,7 +162,11 @@ pub fn composition_query(
         aql.push_str(TO_PREDICATE);
         drop(parameters.insert(
             "to".to_owned(),
-            Value::String(instant_bound(&filter.to, DAY_END, &tr(Msg::TheToDate))?),
+            Value::String(instant_bound(
+                &filter.to,
+                DAY_END,
+                &tr(RecordsMsg::TheToDate),
+            )?),
         ));
     }
     if !filter.composer.is_empty() {
@@ -226,7 +231,10 @@ fn instant_bound(value: &str, day_suffix: &str, label: &str) -> Result<String, V
     // A `datetime-local`-shaped value carries no offset; the filter's stated
     // vocabulary is UTC, so that is the offset it gains.
     let civil: jiff::civil::DateTime = value.parse().map_err(|_ignored| refuse())?;
-    Ok(tr_with(Msg::Z2, &[("civil", (civil).to_string().into())]))
+    Ok(tr_with(
+        RecordsMsg::Z2,
+        &[("civil", (civil).to_string().into())],
+    ))
 }
 
 #[cfg(test)]

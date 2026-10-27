@@ -36,9 +36,10 @@ use leptos::prelude::*;
 use leptos::server;
 
 use crate::error::ViewerError;
+use crate::locale::console::ConsoleMsg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr;
-use crate::locale::{Msg, tr_with};
+use crate::locale::tr_with;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::served_vocabulary::OPENAPI_FAMILIES;
 
@@ -86,7 +87,7 @@ pub async fn fetch_smart_config() -> Result<Option<String>, ViewerError> {
 /// on the card.
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn openapi_families() -> impl Iterator<Item = (&'static str, String)> {
-    std::iter::once(("", tr(Msg::CompleteSurface))).chain(
+    std::iter::once(("", tr(ConsoleMsg::CompleteSurface))).chain(
         OPENAPI_FAMILIES
             .into_iter()
             .map(|(slug, label)| (slug, label.to_owned())),
@@ -287,15 +288,15 @@ pub fn smart_probe_failure_copy(error: &ViewerError) -> String {
     let endpoint = format!("/{SMART_DISCOVERY_PATH}");
     match error {
         ViewerError::CdrUnreachable(detail) => tr_with(
-            Msg::SmartDiscoveryCouldNotReadCdr,
+            ConsoleMsg::SmartDiscoveryCouldNotReadCdr,
             &[("detail", detail.clone().into())],
         ),
         ViewerError::CdrUnauthorized(_) | ViewerError::Unauthenticated => tr_with(
-            Msg::SmartDiscoveryCouldNotReadCdr2,
+            ConsoleMsg::SmartDiscoveryCouldNotReadCdr2,
             &[("endpoint", endpoint.clone().into())],
         ),
         ViewerError::Forbidden(_) => tr_with(
-            Msg::SmartDiscoveryCouldNotReadSession,
+            ConsoleMsg::SmartDiscoveryCouldNotReadSession,
             &[("endpoint", endpoint.clone().into())],
         ),
         _ => {
@@ -305,15 +306,15 @@ pub fn smart_probe_failure_copy(error: &ViewerError) -> String {
             let detail = match error {
                 ViewerError::Cdr { status, message } => {
                     let restatement =
-                        tr_with(Msg::Http, &[("status", (status).to_string().into())]);
+                        tr_with(ConsoleMsg::Http, &[("status", (status).to_string().into())]);
                     if message.trim().is_empty() || message.trim() == restatement {
                         tr_with(
-                            Msg::TheCdrAnsweredThere,
+                            ConsoleMsg::TheCdrAnsweredThere,
                             &[("status", (status).to_string().into())],
                         )
                     } else {
                         tr_with(
-                            Msg::TheCdrAnsweredThere2,
+                            ConsoleMsg::TheCdrAnsweredThere2,
                             &[
                                 ("status", (status).to_string().into()),
                                 ("message", message.clone().into()),
@@ -324,7 +325,7 @@ pub fn smart_probe_failure_copy(error: &ViewerError) -> String {
                 other => other.to_string(),
             };
             tr_with(
-                Msg::SmartDiscoveryCouldNotReadFrom,
+                ConsoleMsg::SmartDiscoveryCouldNotReadFrom,
                 &[
                     ("endpoint", endpoint.clone().into()),
                     ("detail", detail.clone().into()),

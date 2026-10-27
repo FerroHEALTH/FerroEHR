@@ -14,7 +14,8 @@
 //! the status document's shape beyond `status` and the versions — our own
 //! design/extension.
 
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::server::ServerMsg;
+use crate::locale::{tr, tr_with};
 use serde::Deserialize;
 
 /// The CDR status document, typed over the fields the shell reads.
@@ -88,7 +89,7 @@ impl SandboxNotice {
     /// hold real patient data.
     #[must_use]
     pub fn rule() -> String {
-        tr(Msg::SandboxDeploymentDeploymentHasNotMade)
+        tr(ServerMsg::SandboxDeploymentDeploymentHasNotMade)
     }
 
     /// The gap list as one sentence, or an empty string when the server
@@ -99,7 +100,7 @@ impl SandboxNotice {
             return String::new();
         }
         tr_with(
-            Msg::Open2,
+            ServerMsg::Open2,
             &[("gaps", (self.gaps.join("; ")).clone().into())],
         )
     }
@@ -110,19 +111,21 @@ impl SandboxNotice {
 #[must_use]
 pub fn gap_text(code: &str) -> String {
     match code {
-        "shared_credential" => tr(Msg::ClinicalDemographicLinkageDomainsShareOne),
-        "shared_cluster" => tr(Msg::TwoDomainsReachSamePostgresqlCluster),
-        "open_subject_namespace" => tr(Msg::NoSubjectPseudonymNamespaceDeclaredSo),
-        "audit_off" => tr(Msg::AccessNotRecordedDurableAuditTrail),
-        "audit_fails_open" => tr(Msg::AccessRecordAuditQueueCannotTake),
-        "open_ehr_access_default" => tr(Msg::EhrWithoutOwnAccessSettingsAdmits),
-        "migrate_on_runtime_credential" => tr(Msg::SchemaPreparationRunsClinicalRuntimeCredential),
-        "auth_off" => tr(Msg::RequestsServedWithoutAuthentication),
-        "rbac_off" => tr(Msg::RoleChecksOffSoEverySigned),
-        "plaintext_listener" => tr(Msg::ListenerServesPlainHttpAddressReachable),
-        "plaintext_broker" => tr(Msg::ChangeEventsPublishedMessageBrokerWithout),
-        "plaintext_audit_feed" => tr(Msg::AccessRecordsSentAuditRepositoryWithout),
-        "plaintext_object_store" => tr(Msg::MultimediaFilesStoredOverConnectionWithout),
+        "shared_credential" => tr(ServerMsg::ClinicalDemographicLinkageDomainsShareOne),
+        "shared_cluster" => tr(ServerMsg::TwoDomainsReachSamePostgresqlCluster),
+        "open_subject_namespace" => tr(ServerMsg::NoSubjectPseudonymNamespaceDeclaredSo),
+        "audit_off" => tr(ServerMsg::AccessNotRecordedDurableAuditTrail),
+        "audit_fails_open" => tr(ServerMsg::AccessRecordAuditQueueCannotTake),
+        "open_ehr_access_default" => tr(ServerMsg::EhrWithoutOwnAccessSettingsAdmits),
+        "migrate_on_runtime_credential" => {
+            tr(ServerMsg::SchemaPreparationRunsClinicalRuntimeCredential)
+        }
+        "auth_off" => tr(ServerMsg::RequestsServedWithoutAuthentication),
+        "rbac_off" => tr(ServerMsg::RoleChecksOffSoEverySigned),
+        "plaintext_listener" => tr(ServerMsg::ListenerServesPlainHttpAddressReachable),
+        "plaintext_broker" => tr(ServerMsg::ChangeEventsPublishedMessageBrokerWithout),
+        "plaintext_audit_feed" => tr(ServerMsg::AccessRecordsSentAuditRepositoryWithout),
+        "plaintext_object_store" => tr(ServerMsg::MultimediaFilesStoredOverConnectionWithout),
         other => return other.to_owned(),
     }
     .clone()

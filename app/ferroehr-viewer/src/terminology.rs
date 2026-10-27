@@ -34,7 +34,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::locale::{Msg, tr_served, tr_with};
+use crate::locale::definitions::DefinitionsMsg;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::{tr_served, tr_with};
 
 /// One terminology's descriptor, flattened for the descriptor card.
 ///
@@ -251,7 +253,7 @@ async fn terminology_get(path: &str) -> Result<Option<serde_json::Value>, Viewer
         .map(Some)
         .map_err(|e| {
             ViewerError::Internal(tr_with(
-                Msg::TerminologyJson,
+                DefinitionsMsg::TerminologyJson,
                 &[("e", (e).to_string().into())],
             ))
         })
@@ -276,7 +278,7 @@ fn require_value(value: &str, what: &str) -> Result<String, ViewerError> {
     let value = value.trim();
     if value.is_empty() {
         return Err(ViewerError::Invalid(tr_with(
-            Msg::AIsRequired,
+            DefinitionsMsg::AIsRequired,
             &[("what", (what).to_string().into())],
         )));
     }
@@ -315,7 +317,7 @@ pub async fn fetch_terminology_description(
     /// The terminology to describe.
     terminology_id: String,
 ) -> Result<Option<TerminologyDescriptor>, ViewerError> {
-    let terminology_id = require_value(&terminology_id, &tr_served(Msg::TerminologyId))?;
+    let terminology_id = require_value(&terminology_id, &tr_served(DefinitionsMsg::TerminologyId))?;
     let path = format!("terminology/{}", urlencoding::encode(&terminology_id));
     Ok(terminology_get(&path)
         .await?
@@ -342,8 +344,8 @@ pub async fn fetch_term(
     /// definition.
     at_date: String,
 ) -> Result<Option<TerminologyExtractView>, ViewerError> {
-    let terminology_id = require_value(&terminology_id, &tr_served(Msg::TerminologyId))?;
-    let code = require_value(&code, &tr_served(Msg::TermCode2))?;
+    let terminology_id = require_value(&terminology_id, &tr_served(DefinitionsMsg::TerminologyId))?;
+    let code = require_value(&code, &tr_served(DefinitionsMsg::TermCode2))?;
     let path = format!(
         "terminology/{}/term/{}{}",
         urlencoding::encode(&terminology_id),
@@ -373,9 +375,9 @@ pub async fn check_subsumption(
     /// The candidate (descendant) code.
     candidate: String,
 ) -> Result<Option<bool>, ViewerError> {
-    let terminology_id = require_value(&terminology_id, &tr_served(Msg::TerminologyId))?;
-    let ref_code = require_value(&ref_code, &tr_served(Msg::ReferenceCode2))?;
-    let candidate = require_value(&candidate, &tr_served(Msg::CandidateCode2))?;
+    let terminology_id = require_value(&terminology_id, &tr_served(DefinitionsMsg::TerminologyId))?;
+    let ref_code = require_value(&ref_code, &tr_served(DefinitionsMsg::ReferenceCode2))?;
+    let candidate = require_value(&candidate, &tr_served(DefinitionsMsg::CandidateCode2))?;
     let path = format!(
         "terminology/{}/subsumes?ref_code={}&candidate={}",
         urlencoding::encode(&terminology_id),
@@ -402,8 +404,8 @@ pub async fn fetch_value_set(
     /// The value set to expand.
     value_set_id: String,
 ) -> Result<Option<TerminologyExtractView>, ViewerError> {
-    let terminology_id = require_value(&terminology_id, &tr_served(Msg::TerminologyId))?;
-    let value_set_id = require_value(&value_set_id, &tr_served(Msg::ValueSetId2))?;
+    let terminology_id = require_value(&terminology_id, &tr_served(DefinitionsMsg::TerminologyId))?;
+    let value_set_id = require_value(&value_set_id, &tr_served(DefinitionsMsg::ValueSetId2))?;
     let path = format!(
         "terminology/{}/value_set/{}",
         urlencoding::encode(&terminology_id),
@@ -435,9 +437,10 @@ pub async fn validate_value_set_code(
     /// set.
     at_date: String,
 ) -> Result<Option<bool>, ViewerError> {
-    let terminology_id = require_value(&terminology_id, &tr_served(Msg::TerminologyId))?;
-    let value_set_id = require_value(&value_set_id, &tr_served(Msg::ValueSetId2))?;
-    let candidate_code = require_value(&candidate_code, &tr_served(Msg::CandidateCode2))?;
+    let terminology_id = require_value(&terminology_id, &tr_served(DefinitionsMsg::TerminologyId))?;
+    let value_set_id = require_value(&value_set_id, &tr_served(DefinitionsMsg::ValueSetId2))?;
+    let candidate_code =
+        require_value(&candidate_code, &tr_served(DefinitionsMsg::CandidateCode2))?;
     let path = format!(
         "terminology/{}/value_set/{}/validate?candidate_code={}{}",
         urlencoding::encode(&terminology_id),

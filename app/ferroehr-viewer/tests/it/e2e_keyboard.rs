@@ -36,9 +36,11 @@ use thirtyfour::prelude::*;
 /// unreachable.
 const TAB_BUDGET: usize = 80;
 
-/// After a route change the page starts from the top: the first Tab reaches
-/// the skip link, and following it puts the focus in the main area, past the
-/// top bar and the sidebar.
+/// After a route change the focus starts at the new page: a page the router
+/// draws takes the focus at its heading, as FerroUI's page announcer moves it
+/// (WCAG 2.2 SC 2.4.3), and the next Tab stays in the main area; on a page
+/// the browser loads, the first Tab reaches the skip link, and following it
+/// puts the focus in the main area, past the top bar and the sidebar.
 #[tokio::test]
 async fn a_route_change_starts_the_focus_at_the_skip_link() {
     let Some(h) = Harness::start("keyboard-route-change").await else {
@@ -53,7 +55,18 @@ async fn a_route_change_starts_the_focus_at_the_skip_link() {
     h.press(Key::Enter).await;
     h.wait_url_contains("/ehrs").await;
     h.wait_css("main table").await;
+    assert!(
+        poll_until(async || h.focus_matches("main h1").await).await,
+        "a page the router draws takes the focus at its heading"
+    );
+    h.press(Key::Tab).await;
+    assert!(
+        h.focus_matches("main *").await,
+        "the first Tab after the heading stays in the main area"
+    );
 
+    h.goto("/ehrs").await;
+    h.wait_css("main table").await;
     h.press(Key::Tab).await;
     assert!(
         h.focus_matches("a.fui-skip").await,

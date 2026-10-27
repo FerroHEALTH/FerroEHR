@@ -29,6 +29,7 @@ use serde::{Deserialize, Serialize};
 use crate::activity::ActivityPoint;
 use crate::bff::dashboard::NamespaceTile;
 use crate::error::ViewerError;
+use crate::locale::overview::OverviewMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{awaited, refused, state_mark};
 use crate::session_client::SessionAwareClient;
@@ -117,28 +118,28 @@ fn stats(ehrs: i64, compositions: i64, templates: u32, stored: Option<u32>) -> A
         Stat {
             glyph: Glyph::DATABASE,
             value: grouped(ehrs),
-            label: tr(Msg::StatEhrs).into(),
+            label: tr(OverviewMsg::StatEhrs).into(),
             href: Some("/ehrs".to_owned()),
         },
         Stat {
             glyph: Glyph::FILE_TEXT,
             value: grouped(compositions),
-            label: tr(Msg::StatCompositions).into(),
+            label: tr(OverviewMsg::StatCompositions).into(),
             href: Some("/query".to_owned()),
         },
         Stat {
             glyph: Glyph::FILE_CODE,
             value: grouped(i64::from(templates)),
-            label: tr(Msg::StatTemplates).into(),
+            label: tr(OverviewMsg::StatTemplates).into(),
             href: Some("/templates".to_owned()),
         },
         Stat {
             glyph: crate::shell::STORED_QUERIES_GLYPH,
             value: stored.map_or_else(
-                || tr(Msg::UnknownCount),
+                || tr(OverviewMsg::UnknownCount),
                 |stored| grouped(i64::from(stored)),
             ),
-            label: tr(Msg::StatStoredQueries).into(),
+            label: tr(OverviewMsg::StatStoredQueries).into(),
             href: Some("/queries".to_owned()),
         },
     ]
@@ -155,8 +156,11 @@ const ACTIVITY_DAYS: u16 = 30;
 fn activity_card(points: Result<Vec<ActivityPoint>, ViewerError>) -> AnyView {
     let body = match points {
         Ok(points) if points.is_empty() => list_empty(
-            tr(Msg::DashboardNoCompositions),
-            Some((tr(Msg::DashboardCreateFirstEhr), "/ehrs/new".to_owned())),
+            tr(OverviewMsg::DashboardNoCompositions),
+            Some((
+                tr(OverviewMsg::DashboardCreateFirstEhr),
+                "/ehrs/new".to_owned(),
+            )),
         ),
         Ok(points) => {
             let days = crate::pages::common::last_days(&points, ACTIVITY_DAYS);
@@ -169,9 +173,9 @@ fn activity_card(points: Result<Vec<ActivityPoint>, ViewerError>) -> AnyView {
                 .unwrap_or(0);
             let chart = ActivityChart {
                 name: "compositions-per-day",
-                label: tr(Msg::DashboardPerDay),
+                label: tr(OverviewMsg::DashboardPerDay),
                 summary: tr_with(
-                    Msg::DashboardPerDaySummary,
+                    OverviewMsg::DashboardPerDaySummary,
                     &[
                         ("total", u64::from(total).into()),
                         ("most", u64::from(most).into()),
@@ -185,15 +189,15 @@ fn activity_card(points: Result<Vec<ActivityPoint>, ViewerError>) -> AnyView {
             view! {
                 <div class="fui-panel-body">
                     {activity_chart(&chart)}
-                    <p class="fui-small fui-muted">{tr(Msg::DashboardPerDayNote)}</p>
+                    <p class="fui-small fui-muted">{tr(OverviewMsg::DashboardPerDayNote)}</p>
                 </div>
             }
             .into_any()
         }
-        Err(error) => refused(tr(Msg::DashboardPerDayRefused), &error, None),
+        Err(error) => refused(tr(OverviewMsg::DashboardPerDayRefused), &error, None),
     };
     list_card(ListCard {
-        title: tr(Msg::DashboardPerDay),
+        title: tr(OverviewMsg::DashboardPerDay),
         count: None,
         order: None,
         tabs: None,
@@ -215,8 +219,8 @@ fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> AnyView {
         ),
         Ok(tiles) => {
             let columns = [
-                Column::text("namespace", tr(Msg::ColumnNamespace)).role(Role::Title),
-                Column::text("matches", tr(Msg::ColumnMatches))
+                Column::text("namespace", tr(OverviewMsg::ColumnNamespace)).role(Role::Title),
+                Column::text("matches", tr(OverviewMsg::ColumnMatches))
                     .numeric()
                     .role(Role::Meta),
             ];
@@ -224,18 +228,18 @@ fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> AnyView {
                 .iter()
                 .map(|NamespaceLink { tile, href }| {
                     let sub = tr_with(
-                        Msg::DashboardQueries,
+                        OverviewMsg::DashboardQueries,
                         &[("count", u64::from(tile.members).into())],
                     );
                     let matches = match tile.matches {
                         Some(matches) => tr_with(
-                            Msg::DashboardMatches,
+                            OverviewMsg::DashboardMatches,
                             &[("count", u64::try_from(matches).unwrap_or(0).into())],
                         )
                         .into_any(),
                         None => state_mark(
                             ferrohealth_ui::view::flow::FlowState::Degraded,
-                            &tr(Msg::DashboardNoTotal),
+                            &tr(OverviewMsg::DashboardNoTotal),
                         ),
                     };
                     let label = tile.label.clone();
@@ -247,7 +251,7 @@ fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> AnyView {
                 .collect_view()
                 .into_any();
             let total = u64::try_from(tiles.len()).unwrap_or_default();
-            let caption = tr(Msg::DashboardByNamespace);
+            let caption = tr(OverviewMsg::DashboardByNamespace);
             (
                 Some(total),
                 data_table(DataTable {
@@ -261,11 +265,11 @@ fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> AnyView {
         }
         Err(error) => (
             None,
-            refused(tr(Msg::DashboardNamespacesRefused), &error, None),
+            refused(tr(OverviewMsg::DashboardNamespacesRefused), &error, None),
         ),
     };
     list_card(ListCard {
-        title: tr(Msg::DashboardByNamespace),
+        title: tr(OverviewMsg::DashboardByNamespace),
         count: count.map(ferrohealth_ui::view::template::list::HeadingCount::All),
         order: None,
         tabs: None,
@@ -307,12 +311,12 @@ pub fn DashboardPage() -> impl IntoView {
                     "/".to_owned(),
                     ferrohealth_ui::view::button::Variant::Primary,
                     Some(Glyph::REFRESH_CW),
-                    tr(Msg::TryAgain),
+                    tr(OverviewMsg::TryAgain),
                 );
                 return view! {
-                    {heading(tr(Msg::DashboardNoAnswer), ActionGroup::none())}
+                    {heading(tr(OverviewMsg::DashboardNoAnswer), ActionGroup::none())}
                     <div class="fui-stack">
-                        {refused(tr(Msg::DashboardRefused), &error, None)}
+                        {refused(tr(OverviewMsg::DashboardRefused), &error, None)}
                         <div class="fui-cluster">{retry}</div>
                     </div>
                 }
@@ -330,14 +334,14 @@ pub fn DashboardPage() -> impl IntoView {
         let actions = if ehrs == 0 && compositions == 0 && templates == 0 {
             ActionGroup::primary(Action::new(
                 Some(Glyph::UPLOAD),
-                tr(Msg::UploadATemplate),
+                tr(OverviewMsg::UploadATemplate),
                 Act::Link("/templates/upload".to_owned()),
             ))
         } else {
             ActionGroup::none()
         };
         let host = crate::request::settings().cdr_address;
-        let subtitle = tr_with(Msg::DashboardSubtitle, &[("host", host.into())]);
+        let subtitle = tr_with(OverviewMsg::DashboardSubtitle, &[("host", host.into())]);
         view! {
             {heading(subtitle, actions)}
             <div class="fui-stack fui-gap-section">

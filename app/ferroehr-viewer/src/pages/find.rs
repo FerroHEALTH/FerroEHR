@@ -24,6 +24,7 @@ use leptos::server_fn::codec::Json;
 use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
 
+use crate::locale::overview::OverviewMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{awaited, info_note, shortened};
 use crate::session_client::SessionAwareClient;
@@ -46,13 +47,13 @@ enum Kind {
 impl Kind {
     /// The kind's heading in the answer.
     fn words(self) -> String {
-        tr(match self {
-            Self::Ehr => Msg::NavEhrs,
-            Self::Composition => Msg::FindCompositions,
-            Self::Party => Msg::NavParties,
-            Self::Template => Msg::NavTemplates,
-            Self::StoredQuery => Msg::NavStoredQueries,
-        })
+        match self {
+            Self::Ehr => tr(Msg::NavEhrs),
+            Self::Composition => tr(OverviewMsg::FindCompositions),
+            Self::Party => tr(Msg::NavParties),
+            Self::Template => tr(Msg::NavTemplates),
+            Self::StoredQuery => tr(Msg::NavStoredQueries),
+        }
     }
 
     /// The glyph of a hit of this kind.
@@ -104,9 +105,15 @@ impl Found {
         let unfinished = (!self.failed.is_empty()).then(|| failed_line(&self.failed));
         if self.hits.is_empty() {
             let none = if self.failed.is_empty() {
-                (tr(Msg::FindNothingTitle), tr(Msg::FindNothingLine))
+                (
+                    tr(OverviewMsg::FindNothingTitle),
+                    tr(OverviewMsg::FindNothingLine),
+                )
             } else {
-                (tr(Msg::FindUnfinishedTitle), failed_line(&self.failed))
+                (
+                    tr(OverviewMsg::FindUnfinishedTitle),
+                    failed_line(&self.failed),
+                )
             };
             return SearchAnswer {
                 query: self.typed,
@@ -147,7 +154,7 @@ impl Found {
         }
         SearchAnswer {
             head: Some(tr_with(
-                Msg::FindMatches,
+                OverviewMsg::FindMatches,
                 &[
                     ("count", total.into()),
                     ("typed", self.typed.clone().into()),
@@ -198,7 +205,7 @@ fn failed_line(failed: &[Kind]) -> String {
         .map(|kind| kind.words())
         .collect::<Vec<_>>()
         .join(", ");
-    tr_with(Msg::FindUnfinishedLine, &[("kinds", kinds.into())])
+    tr_with(OverviewMsg::FindUnfinishedLine, &[("kinds", kinds.into())])
 }
 
 /// Whether `error` means the thing looked for is not there (`404`), which a
@@ -226,9 +233,12 @@ pub async fn find(typed: &str) -> Found {
         match crate::bff::ehr_detail::fetch_ehr_summary(id.clone()).await {
             Ok(summary) => hits.push(Found1 {
                 kind: Kind::Ehr,
-                name: tr_with(Msg::FindEhr, &[("id", shortened(&summary.ehr_id).into())]),
+                name: tr_with(
+                    OverviewMsg::FindEhr,
+                    &[("id", shortened(&summary.ehr_id).into())],
+                ),
                 line: tr_with(
-                    Msg::FindEhrLine,
+                    OverviewMsg::FindEhrLine,
                     &[("created", summary.time_created.clone().into())],
                 ),
                 href: crate::bff::ehrs::ehr_detail_href(&summary.ehr_id),
@@ -244,7 +254,7 @@ pub async fn find(typed: &str) -> Found {
             Ok(Some(kind)) => hits.push(Found1 {
                 kind: Kind::Party,
                 name: shortened(&id),
-                line: tr_with(Msg::FindPartyLine, &[("kind", kind.clone().into())]),
+                line: tr_with(OverviewMsg::FindPartyLine, &[("kind", kind.clone().into())]),
                 href: format!("/parties/{kind}/{}", urlencoding::encode(&id)),
             }),
             Ok(None) => {}
@@ -263,7 +273,10 @@ pub async fn find(typed: &str) -> Found {
                     })
                     .map(|row| Found1 {
                         kind: Kind::Template,
-                        line: tr_with(Msg::FindTemplateLine, &[("concept", row.concept.into())]),
+                        line: tr_with(
+                            OverviewMsg::FindTemplateLine,
+                            &[("concept", row.concept.into())],
+                        ),
                         href: format!("/templates/{}", urlencoding::encode(&row.template_id)),
                         name: row.template_id,
                     }),
@@ -278,7 +291,7 @@ pub async fn find(typed: &str) -> Found {
                     .map(|row| Found1 {
                         kind: Kind::StoredQuery,
                         line: tr_with(
-                            Msg::FindQueryLine,
+                            OverviewMsg::FindQueryLine,
                             &[("version", row.version.clone().into())],
                         ),
                         href: crate::pages::queries::stored_query_href(&row.name, &row.version),
@@ -322,7 +335,10 @@ async fn composition_hits(uid: &str) -> Result<Vec<Found1>, crate::error::Viewer
             Some(Found1 {
                 kind: Kind::Composition,
                 name,
-                line: tr_with(Msg::FindCompositionLine, &[("ehr", shortened(&ehr).into())]),
+                line: tr_with(
+                    OverviewMsg::FindCompositionLine,
+                    &[("ehr", shortened(&ehr).into())],
+                ),
                 href: crate::pages::composition::composition_href(
                     &ehr,
                     &crate::uid::container_uid_of(&version),
@@ -336,16 +352,20 @@ async fn composition_hits(uid: &str) -> Result<Vec<Found1>, crate::error::Viewer
 fn ways(found: &Found) -> AnyView {
     let rows = [
         (
-            Msg::FindWaySubject,
-            Msg::FindWaySubjectLine,
+            OverviewMsg::FindWaySubject,
+            OverviewMsg::FindWaySubjectLine,
             "/ehrs".to_owned(),
         ),
         (
-            Msg::FindWayParty,
-            Msg::FindWayPartyLine,
+            OverviewMsg::FindWayParty,
+            OverviewMsg::FindWayPartyLine,
             "/parties".to_owned(),
         ),
-        (Msg::FindWayEhr, Msg::FindWayEhrLine, found.ehr_href.clone()),
+        (
+            OverviewMsg::FindWayEhr,
+            OverviewMsg::FindWayEhrLine,
+            found.ehr_href.clone(),
+        ),
     ];
     let items = rows
         .into_iter()
@@ -382,8 +402,8 @@ pub fn FindPage() -> impl IntoView {
     let body = awaited(async move {
         let heading = page_heading(
             Header {
-                title: tr(Msg::FindTitle).into(),
-                subtitle: Some(tr(Msg::FindSubtitle).into()),
+                title: tr(OverviewMsg::FindTitle).into(),
+                subtitle: Some(tr(OverviewMsg::FindSubtitle).into()),
                 crumbs: Vec::new(),
                 mono: false,
                 badge: None,
@@ -397,14 +417,18 @@ pub fn FindPage() -> impl IntoView {
             Ok(None) => {
                 return view! {
                     {heading}
-                    {info_note(tr(Msg::FindEmpty))}
+                    {info_note(tr(OverviewMsg::FindEmpty))}
                 }
                 .into_any();
             }
             Err(error) => {
                 return view! {
                     {heading}
-                    {crate::pages::common::refused(tr(Msg::FindUnfinishedTitle), &error, None)}
+                    {crate::pages::common::refused(
+                        tr(OverviewMsg::FindUnfinishedTitle),
+                        &error,
+                        None,
+                    )}
                 }
                 .into_any();
             }
@@ -412,12 +436,12 @@ pub fn FindPage() -> impl IntoView {
         let read = if found.hits.is_empty() {
             let line = if found.id_shaped {
                 tr_with(
-                    Msg::FindNoIdHolds,
+                    OverviewMsg::FindNoIdHolds,
                     &[("id", shortened(&found.typed).into())],
                 )
             } else {
                 tr_with(
-                    Msg::FindNothingFor,
+                    OverviewMsg::FindNothingFor,
                     &[("typed", found.typed.clone().into())],
                 )
             };
@@ -431,7 +455,7 @@ pub fn FindPage() -> impl IntoView {
             find_results(found.clone().answer())
         };
         let card = list_card(ListCard {
-            title: tr(Msg::FindOtherWays),
+            title: tr(OverviewMsg::FindOtherWays),
             count: Some(ferrohealth_ui::view::template::list::HeadingCount::All(3)),
             order: None,
             tabs: None,
@@ -446,7 +470,7 @@ pub fn FindPage() -> impl IntoView {
         .into_any()
     });
     view! {
-        <Title text=tr(Msg::FindTitle) />
+        <Title text=tr(OverviewMsg::FindTitle) />
         {body}
     }
 }

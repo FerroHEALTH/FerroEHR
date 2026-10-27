@@ -26,7 +26,8 @@
               (#1694)"
 )]
 
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::server::ServerMsg;
+use crate::locale::{tr, tr_with};
 use serde_json::Value;
 
 /// How many usable points a column needs before it is worth drawing: one point
@@ -161,7 +162,7 @@ fn cell_value(row: &[Value], column: u16) -> f64 {
 fn column_label(header: &str, column: u16) -> String {
     if header.trim().is_empty() {
         tr_with(
-            Msg::Column2,
+            ServerMsg::Column2,
             &[(
                 "value0",
                 (u32::from(column).saturating_add(1)).to_string().into(),
@@ -260,7 +261,7 @@ fn row_order_axis(series: &[SeriesSpec], rows: &[Vec<Value>]) -> AxisSpec {
         })
         .collect();
     AxisSpec {
-        label: tr(Msg::RowOrder),
+        label: tr(ServerMsg::RowOrder),
         scale: AxisScale::RowOrder,
         rows: points,
     }

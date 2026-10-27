@@ -52,6 +52,7 @@ pub mod chart_model;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cli;
 pub mod clinical;
+pub mod components;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod deployment;
 pub mod error;
@@ -59,7 +60,6 @@ pub mod example_options;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod feedback;
 pub mod format;
-pub mod islands;
 pub mod locale;
 pub mod management;
 // NOTE: no openEHR spec governs this — our own design; the viewer links no
@@ -83,7 +83,6 @@ pub mod system_api;
 pub mod terminology;
 pub mod uid;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub mod app;
 pub mod bff;
 #[cfg(not(target_arch = "wasm32"))]
@@ -102,6 +101,7 @@ pub mod paging;
 pub mod posted;
 pub mod prefs;
 pub mod request;
+pub mod routes;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 #[cfg(not(target_arch = "wasm32"))]
@@ -110,20 +110,40 @@ pub mod shell;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod state;
 
-/// The WebAssembly entry: hydrates the islands of the page the server drew.
+/// Room in the browser half's read-only data that nothing reads.
 ///
-/// Every page renders whole on the server; only the islands ship code to the
-/// browser, and each takes its words as props, so the browser builds no locale
-/// (FerroUI `crates/ferrohealth-ui/CLAUDE.md`, the Leptos book "Guide:
-/// Islands"). The library is named so its own islands link into this bundle.
+/// The code splitter (`cargo leptos build --split`, `wasm_split_cli_support`)
+/// lays the read-only data out again for the entry and each chunk, aligned,
+/// and when that layout outgrows the input's data segment it leaves the whole
+/// segment in the entry WebAssembly, about 63000 brotli bytes against the
+/// viewer's budget. These bytes give the layout room; no module reads them,
+/// so the splitter writes them into none.
+// NOTE: wasm-split defect #4225; without these bytes the entry measured 474943 of 450000.
+// TODO(#4225): drop the room once the splitter splits an overlong segment.
+#[cfg(target_arch = "wasm32")]
+#[used]
+static SPLIT_ROOM: [u8; 4096] = [0xA5; 4096];
+
+/// The WebAssembly entry: loads the code of the page's lazy group
+/// ([`routes::preload`]), then hydrates the page the server drew, whole,
+/// with FerroUI's `widget::hydration::hydrate`.
+///
+/// The browser then draws every page after the first itself (FerroUI
+/// `docs/consoles.md`, "How a console builds"). Until the page has hydrated
+/// a click or a submit is the browser's own, and the root element then
+/// carries `data-ferroui-hydrated`, which the browser journeys wait for
+/// before they act.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
-    use ferrohealth_ui as _;
     console_error_panic_hook::set_once();
-    leptos::mount::hydrate_islands();
-    // NOTE: the browser journeys wait for this mark before their first interaction (tests/it/common).
-    if let Some(body) = leptos::prelude::document().body() {
-        drop(body.set_attribute("data-hydrated", ""));
-    }
+    ferrohealth_ui::widget::hydration::explain();
+    wasm_bindgen_futures::spawn_local(async {
+        let path = leptos::prelude::window()
+            .location()
+            .pathname()
+            .unwrap_or_default();
+        routes::preload(&path).await;
+        ferrohealth_ui::widget::hydration::hydrate(app::App);
+    });
 }

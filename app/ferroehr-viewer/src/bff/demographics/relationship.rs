@@ -50,9 +50,11 @@ use serde_json::Value;
 use crate::bff::demographics::PartyKind;
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
+use crate::locale::records::RecordsMsg;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{tr, tr_with};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::uid::container_uid_of;
 
@@ -149,7 +151,9 @@ pub async fn fetch_relationship(
     let state: crate::state::AppState = expect_context();
     let uid = container_uid_of(&uid);
     if uid.is_empty() {
-        return Err(ViewerError::Invalid(tr_served(Msg::RelationshipIdRequired)));
+        return Err(ViewerError::Invalid(tr_served(
+            RecordsMsg::RelationshipIdRequired,
+        )));
     }
     let url = state.cdr.rest_v1(&format!(
         "demographic/party_relationship/{}",
@@ -235,7 +239,7 @@ pub async fn create_relationship(
     let uid = crate::uid::uid_value_of(&response.body);
     if uid.is_empty() {
         return Err(ViewerError::Internal(tr_served(
-            Msg::CdrCreatedRelationshipButReturnedNo,
+            RecordsMsg::CdrCreatedRelationshipButReturnedNo,
         )));
     }
     Ok(uid)
@@ -275,7 +279,7 @@ pub async fn update_relationship(
     let current = current_version_uid.trim();
     if current.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
-            Msg::CurrentVersionUidRequiredUpdateRelationship,
+            RecordsMsg::CurrentVersionUidRequiredUpdateRelationship,
         )));
     }
     let body = apply_relationship_edits(&base_body, &name, &details)?;
@@ -323,7 +327,7 @@ pub async fn delete_relationship(
     let version_uid = version_uid.trim();
     if !version_uid.contains("::") {
         return Err(ViewerError::Invalid(tr_served(
-            Msg::DeletingRelationshipNeedsLatestVersionS,
+            RecordsMsg::DeletingRelationshipNeedsLatestVersionS,
         )));
     }
     let url = state.cdr.rest_v1(&format!(
@@ -350,10 +354,10 @@ fn relationship_body(draft: &RelationshipDraft) -> Result<String, String> {
     let archetype_node_id = draft.archetype_node_id.trim();
     let name = draft.name.trim();
     if archetype_node_id.is_empty() {
-        return Err(tr(Msg::ArchetypeNodeIdRequiredLocatableArchetype));
+        return Err(tr(RecordsMsg::ArchetypeNodeIdRequiredLocatableArchetype));
     }
     if name.is_empty() {
-        return Err(tr(Msg::RelationshipTypeRequiredStoredRelationshipS));
+        return Err(tr(RecordsMsg::RelationshipTypeRequiredStoredRelationshipS));
     }
     let source = party_ref(&draft.source_uid, &draft.source_kind, "source")?;
     let target = party_ref(&draft.target_uid, &draft.target_kind, "target")?;
@@ -408,19 +412,19 @@ fn party_ref(uid: &str, kind: &str, end: &str) -> Result<Value, String> {
     let uid = uid.trim();
     if uid.is_empty() {
         return Err(tr_with(
-            Msg::PartySIdRequired,
+            RecordsMsg::PartySIdRequired,
             &[("end", (end).to_string().into())],
         ));
     }
     if uid.contains("::") {
         return Err(tr_with(
-            Msg::PartyMustNamedVersionedObjectUid,
+            RecordsMsg::PartyMustNamedVersionedObjectUid,
             &[("end", (end).to_string().into())],
         ));
     }
     let kind = PartyKind::from_segment(kind).ok_or_else(|| {
         tr_with(
-            Msg::PartySKindMustOneFive,
+            RecordsMsg::PartySKindMustOneFive,
             &[("end", (end).to_string().into())],
         )
     })?;
@@ -464,8 +468,12 @@ fn parse_details_draft(draft: &str) -> Result<Option<Value>, String> {
     if trimmed.is_empty() {
         return Ok(None);
     }
-    let value: Value = serde_json::from_str(trimmed)
-        .map_err(|e| tr_with(Msg::DetailsNotValidJson2, &[("e", (e).to_string().into())]))?;
+    let value: Value = serde_json::from_str(trimmed).map_err(|e| {
+        tr_with(
+            RecordsMsg::DetailsNotValidJson2,
+            &[("e", (e).to_string().into())],
+        )
+    })?;
     if value.is_object() {
         Ok(Some(value))
     } else {
@@ -490,18 +498,18 @@ fn apply_relationship_edits(base: &str, name: &str, details: &str) -> Result<Str
     let name = name.trim();
     if name.is_empty() {
         return Err(ViewerError::Invalid(
-            { tr(Msg::RelationshipTypeRequiredPartyRelationshipInvariant) }.clone(),
+            { tr(RecordsMsg::RelationshipTypeRequiredPartyRelationshipInvariant) }.clone(),
         ));
     }
     let mut doc: Value = serde_json::from_str(base).map_err(|e| {
         ViewerError::Invalid(tr_with(
-            Msg::LoadedRelationshipDocumentNotValidJson,
+            RecordsMsg::LoadedRelationshipDocumentNotValidJson,
             &[("e", (e).to_string().into())],
         ))
     })?;
     let details = parse_details_draft(details).map_err(ViewerError::Invalid)?;
     let object = doc.as_object_mut().ok_or_else(|| {
-        ViewerError::Invalid({ tr(Msg::LoadedRelationshipDocumentNotJsonObject) }.clone())
+        ViewerError::Invalid({ tr(RecordsMsg::LoadedRelationshipDocumentNotJsonObject) }.clone())
     })?;
     drop(object.insert("name".to_owned(), dv_text(name)));
     match details {
@@ -510,7 +518,7 @@ fn apply_relationship_edits(base: &str, name: &str, details: &str) -> Result<Str
     }
     serde_json::to_string(&doc).map_err(|e| {
         ViewerError::Invalid(tr_with(
-            Msg::EditedRelationshipCouldNotSerialized,
+            RecordsMsg::EditedRelationshipCouldNotSerialized,
             &[("e", (e).to_string().into())],
         ))
     })
@@ -533,7 +541,7 @@ fn parse_relationship_state(
 ) -> Result<RelationshipState, ViewerError> {
     let doc: Value = serde_json::from_str(body).map_err(|e| {
         ViewerError::Internal(tr_with(
-            Msg::PartyRelationshipJson,
+            RecordsMsg::PartyRelationshipJson,
             &[("e", (e).to_string().into())],
         ))
     })?;

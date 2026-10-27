@@ -21,7 +21,7 @@ use serde_json::Value;
 use crate::activity::ActivityPoint;
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::locale::Msg;
+use crate::locale::records::RecordsMsg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_with;
 
@@ -110,7 +110,7 @@ pub async fn list_contributions(
 fn parse_contributions(body: &str) -> Result<ContributionPage, ViewerError> {
     let doc: Value = serde_json::from_str(body).map_err(|e| {
         ViewerError::Internal(tr_with(
-            Msg::ContributionsJson,
+            RecordsMsg::ContributionsJson,
             &[("e", (e).to_string().into())],
         ))
     })?;

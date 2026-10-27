@@ -46,7 +46,7 @@ use crate::uid::uid_value_of;
 
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::locale::Msg;
+use crate::locale::records::RecordsMsg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
 
@@ -237,7 +237,9 @@ pub async fn create_directory(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     if body.trim().is_empty() {
-        return Err(ViewerError::Invalid(tr_served(Msg::DirectoryBodyEmpty)));
+        return Err(ViewerError::Invalid(tr_served(
+            RecordsMsg::DirectoryBodyEmpty,
+        )));
     }
     let url = state
         .cdr
@@ -282,12 +284,14 @@ pub async fn update_directory(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     if body.trim().is_empty() {
-        return Err(ViewerError::Invalid(tr_served(Msg::DirectoryBodyEmpty)));
+        return Err(ViewerError::Invalid(tr_served(
+            RecordsMsg::DirectoryBodyEmpty,
+        )));
     }
     let current = current_version_uid.trim();
     if current.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
-            Msg::CurrentDirectoryVersionUidRequiredUpdate,
+            RecordsMsg::CurrentDirectoryVersionUidRequiredUpdate,
         )));
     }
     let if_match = format!("\"{current}\"");
@@ -335,7 +339,7 @@ pub async fn delete_directory(
     let current = current_version_uid.trim();
     if current.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
-            Msg::CurrentDirectoryVersionUidRequiredDelete,
+            RecordsMsg::CurrentDirectoryVersionUidRequiredDelete,
         )));
     }
     let if_match = format!("\"{current}\"");
@@ -483,7 +487,9 @@ pub async fn fetch_directory_at_time(
     let state: crate::state::AppState = expect_context();
     let time = time.trim();
     if time.is_empty() {
-        return Err(ViewerError::Invalid(tr_served(Msg::DateTimeRequired)));
+        return Err(ViewerError::Invalid(tr_served(
+            RecordsMsg::DateTimeRequired,
+        )));
     }
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/directory?version_at_time={}",
@@ -524,7 +530,7 @@ pub async fn fetch_directory_subtree(
     let state: crate::state::AppState = expect_context();
     let path = path.trim();
     if path.is_empty() {
-        return Err(ViewerError::Invalid(tr_served(Msg::APathIsRequired)));
+        return Err(ViewerError::Invalid(tr_served(RecordsMsg::APathIsRequired)));
     }
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/directory?path={}",

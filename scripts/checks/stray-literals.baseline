@@ -28,8 +28,8 @@
 1 app/ferroehr-viewer/src/builder/lower.rs
 10 app/ferroehr-viewer/src/cdr.rs
 1 app/ferroehr-viewer/src/clinical.rs
-5 app/ferroehr-viewer/src/config.rs
-1 app/ferroehr-viewer/src/islands.rs
+1 app/ferroehr-viewer/src/components.rs
+2 app/ferroehr-viewer/src/config.rs
 2 app/ferroehr-viewer/src/main.rs
 8 app/ferroehr-viewer/src/oidc.rs
 1 app/ferroehr-viewer/src/pages/ehr/mod.rs
@@ -40,5 +40,5 @@
 1 app/ferroehr-viewer/src/paging.rs
 5 app/ferroehr-viewer/src/prefs.rs
 2 app/ferroehr-viewer/src/query_namespace.rs
-6 app/ferroehr-viewer/src/server.rs
+5 app/ferroehr-viewer/src/server.rs
 10 app/ferroehr-viewer/src/session.rs

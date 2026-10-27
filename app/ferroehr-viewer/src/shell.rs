@@ -15,46 +15,39 @@
 //! The session is read from the sealed cookie with no CDR request; the
 //! pre-render guard ([`crate::server::login_guard`]) has already sent a
 //! request without one to the sign-in page. The status pill reads the CDR's
-//! status document once, as the page is drawn: the viewer polls nothing in
+//! status document once, as the shell is drawn: the viewer polls nothing in
 //! the background, so an open tab's idle window measures what the reader
 //! does (#3057).
 //!
-//! The dock and the status document reach both halves: a page sets its dock
-//! wherever it is drawn, and the browser takes the status answer the server
-//! serialized with the page. The shell itself is drawn on the server. No
-//! openEHR spec governs the viewer: our own design.
+//! The shell is drawn once and survives every navigation in the page
+//! (FerroUI `docs/consoles.md`, "How a console builds", step 10): the
+//! navigation and the `back` of its forms follow the router, the band's
+//! Details follow the page in view, and the menu and the rail draw again when
+//! the visit the server answers after a navigation changes them. A page sets
+//! its dock wherever it is drawn, and the browser takes the status answer the
+//! server serialized with the page. No openEHR spec governs the viewer: our
+//! own design.
 
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::theme::Theme;
-#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::tone::Tone;
-use ferrohealth_ui::view::dock::DecisionBar;
-#[cfg(not(target_arch = "wasm32"))]
-use ferrohealth_ui::view::dock::decision_bar;
-#[cfg(not(target_arch = "wasm32"))]
+use ferrohealth_ui::view::dock::{DecisionBar, decision_bar};
 use ferrohealth_ui::view::search::{SearchBox, search_box};
 use ferrohealth_ui::view::shell::Footer;
-#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::view::shell::{Shell, TopBar, brand_mark, lockup, shell, topbar};
-#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::view::status::{BannerLink, Reach, StatusPill, banner, status_pill};
-#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::widget::menu::{ThemeChoice, UserLink, UserMenu, user_menu};
-#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::widget::nav::{Entry, Group, Rail, Sidebar, sidebar};
 use leptos::prelude::*;
-#[cfg(not(target_arch = "wasm32"))]
 use leptos_router::components::Outlet;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_with;
 use crate::locale::{Msg, tr};
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The id of the navigation, which the top bar's Menu button opens.
 const SIDEBAR_ID: &str = "sidebar";
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The id of the user menu.
 const USER_MENU_ID: &str = "user-menu";
 
@@ -75,7 +68,6 @@ pub const FIND_ANSWER_ROUTE: &str = "/api/find_answer";
 /// the search's answers.
 pub const STORED_QUERIES_GLYPH: Glyph = Glyph::SCROLL_TEXT;
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Server › Overview, where the sandbox band's Details lead.
 const SERVER_ROUTE: &str = "/server";
 
@@ -108,6 +100,13 @@ impl Dock {
     #[must_use]
     pub fn docked(&self) -> Option<DecisionBar> {
         self.bar.get()
+    }
+
+    /// Takes the bar away, for the next page the browser draws.
+    fn clear(&self) {
+        if self.bar.with_untracked(Option::is_some) {
+            self.bar.set(None);
+        }
     }
 
     /// The bar, once no promise is open.
@@ -171,35 +170,37 @@ pub fn dock(bar: DecisionBar) {
     }
 }
 
-/// The CDR's status document, read once per page: the pill, the band and a
-/// page that shows the deployment read the same answer.
-///
-/// The server reads it and serializes the answer with the page, so the
-/// browser reads the same answer and never the CDR.
-#[derive(Clone)]
-pub struct Status(ArcOnceResource<Result<String, crate::error::ViewerError>>);
+/// Takes the docked bar away before the browser draws the next page, which
+/// docks its own.
+pub fn undock() {
+    if let Some(dock) = use_context::<Dock>() {
+        dock.clear();
+    }
+}
 
+/// The CDR's status document, read once per page the server draws: the
+/// shell's reading and a page that shows the deployment read the same answer.
+///
+/// It is a cell of the server alone, never a resource: a resource the browser
+/// does not create would shift the ids of the resources it does, and the
+/// shell's reading would wait for an answer serialized under another id.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, Default)]
+pub struct Status(std::sync::Arc<tokio::sync::OnceCell<Result<String, crate::error::ViewerError>>>);
+
+#[cfg(not(target_arch = "wasm32"))]
 impl std::fmt::Debug for Status {
     fn fmt(&self, out: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         out.debug_struct("Status").finish_non_exhaustive()
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Status {
     /// The status document of the page being drawn, read once.
     #[must_use]
     pub fn read_once() -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            Self(ArcOnceResource::new(crate::auth::fetch_status()))
-        }
-        // NOTE: Leptos `ArcOnceResource::new`: a hydrating page takes the answer the server
-        // serialized and never polls the future, and the browser reaches no CDR itself.
-        // TODO(#4147): a shell the browser draws fresh asks the server for the status answer.
-        #[cfg(target_arch = "wasm32")]
-        {
-            Self(ArcOnceResource::new(std::future::pending()))
-        }
+        Self::default()
     }
 
     /// The status document as the CDR answered it for this page.
@@ -208,7 +209,7 @@ impl Status {
     ///
     /// The CDR's refusal of the status read, or its being out of reach.
     pub async fn read(&self) -> Result<String, crate::error::ViewerError> {
-        self.0.clone().await
+        self.0.get_or_init(crate::auth::fetch_status).await.clone()
     }
 }
 
@@ -225,7 +226,6 @@ pub async fn status() -> Result<String, crate::error::ViewerError> {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The viewer's product name and the lockup's accented word.
 fn lockup_view() -> AnyView {
     lockup(
@@ -247,7 +247,6 @@ pub fn footer() -> Footer {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// One navigation entry.
 fn entry(href: &'static str, label: Msg, glyph: Glyph, exact: bool) -> Entry {
     Entry {
@@ -259,7 +258,6 @@ fn entry(href: &'static str, label: Msg, glyph: Glyph, exact: bool) -> Entry {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The navigation groups, Subscriptions among them when the CDR serves it.
 fn groups(subscriptions: bool) -> Vec<Group> {
     let mut console = vec![
@@ -324,7 +322,6 @@ fn groups(subscriptions: bool) -> Vec<Group> {
     ]
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The navigation, with the page at `current` marked.
 fn navigation(current: &str, subscriptions: bool) -> AnyView {
     sidebar(Sidebar {
@@ -341,84 +338,161 @@ fn navigation(current: &str, subscriptions: bool) -> AnyView {
     })
 }
 
+/// How the CDR answered the status read, as the pill says it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum PillReach {
+    /// The CDR answered.
+    Up,
+    /// The CDR refused the session's credential.
+    Refused,
+    /// The CDR is out of reach.
+    Unreachable,
+    /// The answer said nothing the pill can read.
+    Unknown,
+}
+
+/// What the shell draws of the CDR's status document and of its
+/// subscriptions surface, read by the server as it draws the shell.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ShellReading {
+    /// How the pill says the CDR answered.
+    pub reach: PillReach,
+    /// The pill's words.
+    pub words: String,
+    /// The pill's detail.
+    pub detail: Option<String>,
+    /// The sandbox band's line, when the CDR declares the sandbox profile.
+    pub sandbox: Option<String>,
+    /// Whether the CDR serves the subscriptions API.
+    pub subscriptions: bool,
+}
+
+impl ShellReading {
+    /// The shell's reading of the status read `status`, with `subscriptions`
+    /// saying whether the CDR serves that API.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn of(status: &Result<String, crate::error::ViewerError>, subscriptions: bool) -> Self {
+        let address = crate::request::settings().cdr_address;
+        let document = status
+            .as_ref()
+            .ok()
+            .and_then(|body| crate::deployment::StatusDocument::parse(body));
+        let (reach, words, detail) = match status {
+            Ok(_) => {
+                let version = document
+                    .as_ref()
+                    .and_then(|document| document.server_version.clone())
+                    .unwrap_or_else(|| tr(Msg::UnknownVersion));
+                let profile = document
+                    .as_ref()
+                    .and_then(|document| document.profile().map(str::to_owned));
+                let detail = match profile {
+                    Some(profile) => tr_with(
+                        Msg::PillDetailProfile,
+                        &[
+                            ("version", version.into()),
+                            ("address", address.into()),
+                            ("profile", profile.into()),
+                        ],
+                    ),
+                    None => tr_with(
+                        Msg::PillDetail,
+                        &[("version", version.into()), ("address", address.into())],
+                    ),
+                };
+                (PillReach::Up, tr(Msg::PillUp), Some(detail))
+            }
+            Err(crate::error::ViewerError::CdrUnauthorized(_)) => {
+                (PillReach::Refused, tr(Msg::PillRefused), None)
+            }
+            Err(crate::error::ViewerError::CdrUnreachable(_)) => (
+                PillReach::Unreachable,
+                tr(Msg::PillUnreachable),
+                Some(tr_with(
+                    Msg::PillUnreachableDetail,
+                    &[("address", address.into())],
+                )),
+            ),
+            Err(_) => (PillReach::Unknown, tr(Msg::PillUnknown), None),
+        };
+        let sandbox = document
+            .as_ref()
+            .and_then(crate::deployment::StatusDocument::sandbox_notice)
+            .map(|notice| {
+                if notice.gaps.is_empty() {
+                    tr(Msg::SandboxNoGaps)
+                } else {
+                    tr_with(
+                        Msg::SandboxGaps,
+                        &[(
+                            "count",
+                            u64::try_from(notice.gaps.len()).unwrap_or(u64::MAX).into(),
+                        )],
+                    )
+                }
+            });
+        Self {
+            reach,
+            words,
+            detail,
+            sandbox,
+            subscriptions,
+        }
+    }
+}
+
+/// What the shell draws of the CDR: the status read once for the page
+/// ([`status`]) and whether the CDR serves the subscriptions API.
 #[cfg(not(target_arch = "wasm32"))]
-/// The CDR's status as the top bar's pill says it, from the status document.
-fn pill(status: Result<String, crate::error::ViewerError>) -> AnyView {
-    let address = crate::request::settings().cdr_address;
-    let (reach, words, detail) = match status {
-        Ok(body) => {
-            let document = crate::deployment::StatusDocument::parse(&body);
-            let version = document
-                .as_ref()
-                .and_then(|document| document.server_version.clone())
-                .unwrap_or_else(|| tr(Msg::UnknownVersion));
-            let profile = document
-                .as_ref()
-                .and_then(|document| document.profile().map(str::to_owned));
-            let detail = match profile {
-                Some(profile) => tr_with(
-                    Msg::PillDetailProfile,
-                    &[
-                        ("version", version.into()),
-                        ("address", address.into()),
-                        ("profile", profile.into()),
-                    ],
-                ),
-                None => tr_with(
-                    Msg::PillDetail,
-                    &[("version", version.into()), ("address", address.into())],
-                ),
-            };
-            (Reach::Up, tr(Msg::PillUp), Some(detail))
-        }
-        Err(crate::error::ViewerError::CdrUnauthorized(_)) => {
-            (Reach::Refused, tr(Msg::PillRefused), None)
-        }
-        Err(crate::error::ViewerError::CdrUnreachable(_)) => (
-            Reach::Unreachable,
-            tr(Msg::PillUnreachable),
-            Some(tr_with(
-                Msg::PillUnreachableDetail,
-                &[("address", address.into())],
-            )),
-        ),
-        Err(_) => (Reach::Unknown, tr(Msg::PillUnknown), None),
+async fn shell_reading() -> ShellReading {
+    let status = status().await;
+    let subscriptions = crate::subscriptions::probe_event_subscriptions()
+        .await
+        .is_ok_and(|availability| {
+            availability == crate::subscriptions::SubscriptionAvailability::Available
+        });
+    ShellReading::of(&status, subscriptions)
+}
+
+/// The shell's reading for a shell the browser draws fresh, after a link from
+/// the sign-in page: the browser loads `href` as a document, so the server
+/// draws the shell with its reading.
+#[cfg(target_arch = "wasm32")]
+async fn drawn_fresh(href: String) -> ShellReading {
+    // NOTE: no openEHR spec governs this: our own design; a hydrating shell takes the
+    // reading the server serialized, so only a shell drawn after hydration loads.
+    if ferrohealth_ui::widget::hydration::hydrated() && window().location().assign(&href).is_err() {
+        leptos::logging::warn!("the browser refused to load the page as a document");
+    }
+    std::future::pending().await
+}
+
+/// The top bar's pill for the shell's reading `status`.
+fn pill(status: &ShellReading) -> AnyView {
+    let reach = match status.reach {
+        PillReach::Up => Reach::Up,
+        PillReach::Refused => Reach::Refused,
+        PillReach::Unreachable => Reach::Unreachable,
+        PillReach::Unknown => Reach::Unknown,
     };
     status_pill(StatusPill {
         reach,
-        words,
-        detail,
+        words: status.words.clone(),
+        detail: status.detail.clone(),
     })
     .into_any()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// The sandbox band under the top bar, when the CDR declares the sandbox
-/// deployment profile, its Details leading to Server › Overview unless the
-/// page is that one.
-fn sandbox_band(
-    status: Option<&Result<String, crate::error::ViewerError>>,
-    current: &str,
-) -> Option<AnyView> {
-    let body = status?.as_ref().ok()?;
-    let document = crate::deployment::StatusDocument::parse(body)?;
-    let notice = document.sandbox_notice()?;
-    let line = if notice.gaps.is_empty() {
-        tr(Msg::SandboxNoGaps)
-    } else {
-        tr_with(
-            Msg::SandboxGaps,
-            &[(
-                "count",
-                u64::try_from(notice.gaps.len()).unwrap_or(u64::MAX).into(),
-            )],
-        )
-    };
+/// The sandbox band under the top bar, saying `line` when the CDR declares
+/// the sandbox deployment profile, its Details leading to Server › Overview
+/// unless the page at `current` is that one.
+fn sandbox_band(line: Option<&String>, current: &str) -> Option<AnyView> {
+    let line = line?;
     Some(banner(
         Tone::Warn,
         Glyph::TRIANGLE_ALERT,
         tr(Msg::SandboxTitle),
-        &line,
+        line,
         (current != SERVER_ROUTE).then(|| BannerLink {
             words: tr(Msg::SandboxDetails),
             href: SERVER_ROUTE.to_owned(),
@@ -426,13 +500,12 @@ fn sandbox_band(
     ))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The user menu: who is signed in, Your preferences, Your access, the
 /// theme, Keyboard shortcuts and Sign out.
 fn menu(session: Option<&crate::request::Signed>) -> AnyView {
     let (who, line) = match session {
         Some(session) => {
-            let how = match session.method {
+            let how = match session.method() {
                 crate::request::Method::Basic => tr(Msg::SignedInBasic),
                 crate::request::Method::Oidc => tr(Msg::SignedInOidc),
             };
@@ -463,7 +536,6 @@ fn menu(session: Option<&crate::request::Signed>) -> AnyView {
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The top bar's search box, its answer open under it when the page answers
 /// a search.
 fn search(typed: String, disabled: Option<String>) -> AnyView {
@@ -481,11 +553,12 @@ fn search(typed: String, disabled: Option<String>) -> AnyView {
         post: true,
         suggest: Some(String::from(FIND_ANSWER_ROUTE)),
         suggest_from: 2,
+        all: None,
+        signed_out: Some(crate::session_client::signed_out_url("/", "")),
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// The shell of every signed-in page.
+/// The shell of every signed-in page, drawn once inside the router.
 ///
 /// The top bar's pill, the band and the navigation wait for the CDR in their
 /// own `Suspense`; the page itself is drawn once, outside them.
@@ -495,76 +568,95 @@ fn search(typed: String, disabled: Option<String>) -> AnyView {
 )]
 #[component]
 pub fn AppShell() -> impl IntoView {
-    let session = crate::request::signed();
+    // NOTE: FerroUI `docs/consoles.md`, "How a console builds", step 10: the shell
+    // is drawn once, and the navigation and the `back` of its forms follow the router.
+    ferrohealth_ui::widget::nav::follow_path();
+    // TODO(#4227): drop once FerroUI's skip link keeps the browser's fragment navigation.
+    #[cfg(target_arch = "wasm32")]
+    Effect::new(|_| {
+        if let Ok(Some(link)) = document().query_selector("a.fui-skip")
+            && link.set_attribute("target", "_self").is_err()
+        {
+            leptos::logging::warn!("the browser refused the skip link's target");
+        }
+    });
+    let location = leptos_router::hooks::use_location();
     let current = crate::request::path();
     let dock = Dock::default();
     provide_context(dock.clone());
-    let status = Status::read_once();
-    provide_context(status.clone());
+    #[cfg(not(target_arch = "wasm32"))]
+    provide_context(Status::read_once());
     let typed = crate::posted::posted()
         .filter(|_| current == FIND_ROUTE)
         .map(|posted| posted.text("q"))
         .filter(|typed| !typed.is_empty());
-    let end = {
-        let status = status.clone();
-        crate::pages::common::awaited(async move {
-            let answer = status.read().await;
+    #[cfg(not(target_arch = "wasm32"))]
+    let read = OnceResource::new(shell_reading());
+    #[cfg(target_arch = "wasm32")]
+    let read = OnceResource::new(drawn_fresh(crate::request::address(
+        &location.pathname.get_untracked(),
+        &location.search.get_untracked(),
+    )));
+    let docked = view! {
+        <Suspense fallback=|| ()>
+            {move || {
+                #[cfg(target_arch = "wasm32")]
+                let bar = dock.docked();
+                #[cfg(not(target_arch = "wasm32"))]
+                let dock = dock.clone();
+                Suspend::new(async move {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    let bar = dock.settled().await;
+                    bar.map(decision_bar).into_any()
+                })
+            }}
+        </Suspense>
+    }
+    .into_any();
+    let drawn = Suspend::new(async move {
+        let status = read.await;
+        let end = {
+            let status = status.clone();
             view! {
-                {pill(answer)}
-                {menu(session.as_ref())}
+                {pill(&status)}
+                {move || menu(crate::request::tracked().signed.as_ref())}
             }
             .into_any()
-        })
-    };
-    let search_part = {
-        let status = status.clone();
-        crate::pages::common::awaited(async move {
-            let down = matches!(
-                status.read().await,
-                Err(crate::error::ViewerError::CdrUnreachable(_))
-            );
-            let disabled = down.then(|| tr(Msg::SearchWaits));
-            search(typed.unwrap_or_default(), disabled)
-        })
-    };
-    let band = {
-        let status = status.clone();
-        let current = current.clone();
-        crate::pages::common::awaited(async move {
-            let answer = status.read().await;
-            sandbox_band(Some(&answer), &current).unwrap_or_else(|| ().into_any())
-        })
-    };
-    let nav = {
-        let current = current.clone();
-        crate::pages::common::awaited(async move {
-            let offered = crate::subscriptions::probe_event_subscriptions()
-                .await
-                .is_ok_and(|availability| {
-                    availability == crate::subscriptions::SubscriptionAvailability::Available
-                });
+        };
+        let disabled = (status.reach == PillReach::Unreachable).then(|| tr(Msg::SearchWaits));
+        let band = {
+            let line = status.sandbox.clone();
+            (move || {
+                sandbox_band(line.as_ref(), &location.pathname.get())
+                    .unwrap_or_else(|| ().into_any())
+            })
+            .into_any()
+        };
+        let offered = status.subscriptions;
+        let nav = (move || {
+            crate::request::track();
             navigation(&current, offered)
         })
-    };
-    let docked = {
-        let dock = dock.clone();
-        crate::pages::common::awaited(
-            async move { dock.settled().await.map(decision_bar).into_any() },
-        )
-    };
-    shell(Shell {
-        topbar: topbar(TopBar {
-            sidebar: SIDEBAR_ID,
-            lockup: lockup_view(),
-            search: Some(search_part),
-            end,
-        }),
-        banner: Some(band),
-        sidebar: nav,
-        content: view! { <Outlet /> }.into_any(),
-        dock: Some(docked),
-        footer: footer(),
-    })
+        .into_any();
+        shell(Shell {
+            topbar: topbar(TopBar {
+                sidebar: SIDEBAR_ID,
+                lockup: lockup_view(),
+                search: Some(search(typed.unwrap_or_default(), disabled)),
+                end,
+            }),
+            banner: Some(band),
+            sidebar: nav,
+            content: view! {
+                <crate::routes::Pages />
+                <Outlet />
+            }
+            .into_any(),
+            dock: Some(docked),
+            footer: footer(),
+        })
+    });
+    view! { <Suspense fallback=|| ()>{drawn}</Suspense> }.into_any()
 }
 
 /// The theme a page is drawn in, for a part that previews it.

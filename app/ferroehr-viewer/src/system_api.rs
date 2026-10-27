@@ -24,8 +24,9 @@ use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
+use crate::locale::server::ServerMsg;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::locale::{Msg, tr_served_with};
+use crate::locale::tr_served_with;
 
 /// The System API conformance manifest — the `Options` schema, field for field.
 ///
@@ -90,7 +91,7 @@ pub async fn fetch_conformance_manifest() -> Result<ConformanceManifest, ViewerE
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
     serde_json::from_str::<ConformanceManifest>(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
-            Msg::ConformanceManifestJson,
+            ServerMsg::ConformanceManifestJson,
             &[("e", (e).to_string().into())],
         ))
     })

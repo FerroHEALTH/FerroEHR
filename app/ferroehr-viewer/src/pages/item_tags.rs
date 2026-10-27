@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::bff::item_tags::ItemTagRow;
 use crate::error::ViewerError;
+use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{count, refused, section};
 
@@ -67,15 +68,15 @@ pub fn tag_act() -> Option<TagAct> {
 #[must_use]
 pub fn tag_done(act: &TagAct, object: &str) -> crate::flash::Done {
     match act {
-        TagAct::Set { key, .. } => crate::flash::Done::ok(tr(Msg::TagSet)).line(tr_with(
-            Msg::TagSetLine,
+        TagAct::Set { key, .. } => crate::flash::Done::ok(tr(RecordsMsg::TagSet)).line(tr_with(
+            RecordsMsg::TagSetLine,
             &[
                 ("key", key.clone().into()),
                 ("object", object.to_owned().into()),
             ],
         )),
-        TagAct::Remove(key) => crate::flash::Done::ok(tr(Msg::TagRemoved)).line(tr_with(
-            Msg::TagRemovedLine,
+        TagAct::Remove(key) => crate::flash::Done::ok(tr(RecordsMsg::TagRemoved)).line(tr_with(
+            RecordsMsg::TagRemovedLine,
             &[
                 ("key", key.clone().into()),
                 ("object", object.to_owned().into()),
@@ -111,15 +112,18 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
         refused: refusal,
     } = panel;
     let columns = [
-        Column::text("key", tr(Msg::TagsKey)).role(Role::Title),
+        Column::text("key", tr(RecordsMsg::TagsKey)).role(Role::Title),
         Column::text("value", tr(Msg::TagsValue)).role(Role::Sub),
-        Column::text("path", tr(Msg::TagsTargetPath)).role(Role::Meta),
-        Column::text("remove", tr(Msg::TagRemoveColumn)).role(Role::Menu),
+        Column::text("path", tr(RecordsMsg::TagsTargetPath)).role(Role::Meta),
+        Column::text("remove", tr(RecordsMsg::TagRemoveColumn)).role(Role::Menu),
     ];
     let (list, shown) = match tags {
         Ok(tags) if tags.is_empty() => (
             list_empty(
-                tr_with(Msg::TagNone, &[("object", collection.clone().into())]),
+                tr_with(
+                    RecordsMsg::TagNone,
+                    &[("object", collection.clone().into())],
+                ),
                 None,
             ),
             Some(0),
@@ -132,7 +136,10 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
                     let path = if tag.target_path.is_empty() {
                         view! {
                             <span class="fui-muted">
-                                {tr_with(Msg::TagWhole, &[("object", collection.clone().into())])}
+                                {tr_with(
+                                    RecordsMsg::TagWhole,
+                                    &[("object", collection.clone().into())],
+                                )}
                             </span>
                         }
                         .into_any()
@@ -146,7 +153,10 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
                             name="intent"
                             value=format!("{REMOVE}{}", tag.key)
                             class="fui-icon-button"
-                            aria-label=tr_with(Msg::TagRemove, &[("key", tag.key.clone().into())])
+                            aria-label=tr_with(
+                                RecordsMsg::TagRemove,
+                                &[("key", tag.key.clone().into())],
+                            )
                         >
                             {ferrohealth_ui::icon::icon(Glyph::X, "16")}
                         </button>
@@ -165,7 +175,7 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
                 })
                 .collect_view()
                 .into_any();
-            let caption = tr(Msg::EhrTabTags);
+            let caption = tr(RecordsMsg::EhrTabTags);
             let table = data_table(DataTable {
                 caption: &caption,
                 columns: &columns,
@@ -175,10 +185,13 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
             .into_any();
             (table, Some(total))
         }
-        Err(error) => (refused(tr(Msg::TagsRefused), &error, None), None),
+        Err(error) => (refused(tr(RecordsMsg::TagsRefused), &error, None), None),
     };
     let (top, draft) = match refusal {
-        Some((error, act)) => (Some(refused(tr(Msg::TagRefused), &error, None)), Some(act)),
+        Some((error, act)) => (
+            Some(refused(tr(RecordsMsg::TagRefused), &error, None)),
+            Some(act),
+        ),
         None => (None, None),
     };
     let (key, value, path) = match draft {
@@ -187,7 +200,7 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
     };
     let set = view! {
         <form method="post" action=action.clone() class="fui-clause-filter">
-            {Field::new("tk", tr(Msg::TagsKey))
+            {Field::new("tk", tr(RecordsMsg::TagsKey))
                 .view(
                     view! {
                         <input
@@ -200,13 +213,13 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
                         />
                     },
                 )}
-            {Field::new("tv", tr(Msg::TagValueOptional))
+            {Field::new("tv", tr(RecordsMsg::TagValueOptional))
                 .view(
                     view! {
                         <input id="tv" name="tag_value" type="text" class="fui-input" value=value />
                     },
                 )}
-            {Field::new("tp", tr(Msg::TagPathOptional))
+            {Field::new("tp", tr(RecordsMsg::TagPathOptional))
                 .view(
                     view! {
                         <input
@@ -225,25 +238,25 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
                 class="fui-button fui-button-secondary"
             >
                 {ferrohealth_ui::icon::icon(Glyph::TAGS, "16")}
-                {tr(Msg::TagSetAction)}
+                {tr(RecordsMsg::TagSetAction)}
             </button>
         </form>
     };
     view! {
         <form id="tag-remove" method="post" action=action hidden></form>
         {section(
-            Some(tr_with(Msg::TagsOf, &[("object", collection.clone().into())])),
+            Some(tr_with(RecordsMsg::TagsOf, &[("object", collection.clone().into())])),
             shown.map(|shown| u64::try_from(shown).unwrap_or(u64::MAX)),
             None,
             view! {
                 {ferrohealth_ui::view::surface::section_intro(
-                    tr_with(Msg::TagIntro, &[("object", collection.clone().into())]),
+                    tr_with(RecordsMsg::TagIntro, &[("object", collection.clone().into())]),
                 )}
                 {top}
                 {list}
             },
         )}
-        {section(Some(tr(Msg::TagSetTitle)), None, None, set)}
+        {section(Some(tr(RecordsMsg::TagSetTitle)), None, None, set)}
     }
     .into_any()
 }
@@ -251,5 +264,5 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
 /// The count words of a Tags tab.
 #[must_use]
 pub fn tag_count_words(total: usize) -> String {
-    tr_with(Msg::TagCount, &[("count", count(total))])
+    tr_with(RecordsMsg::TagCount, &[("count", count(total))])
 }

@@ -27,12 +27,12 @@ use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
 use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu, row_menu};
 use leptos::prelude::*;
 use leptos_meta::Title;
-#[cfg(not(target_arch = "wasm32"))]
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
+use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
+use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, message, tr, tr_with};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::pages::common::discarded;
@@ -84,14 +84,14 @@ fn words_of(choices: &[(&str, Msg)], value: &str) -> String {
 fn summary(kind: &str, change: &str, template: &str) -> String {
     let what = words_of(&KINDS, kind);
     let mut line = match (kind.is_empty(), change.is_empty()) {
-        (true, true) => tr(Msg::SubEveryVersion),
-        (false, true) => tr_with(Msg::SubEveryOfKind, &[("kind", what.into())]),
+        (true, true) => tr(ConsoleMsg::SubEveryVersion),
+        (false, true) => tr_with(ConsoleMsg::SubEveryOfKind, &[("kind", what.into())]),
         (true, false) => tr_with(
-            Msg::SubEveryChange,
+            ConsoleMsg::SubEveryChange,
             &[("change", words_of(&CHANGES, change).into())],
         ),
         (false, false) => tr_with(
-            Msg::SubEveryChangeOfKind,
+            ConsoleMsg::SubEveryChangeOfKind,
             &[
                 ("kind", what.into()),
                 ("change", words_of(&CHANGES, change).into()),
@@ -100,7 +100,7 @@ fn summary(kind: &str, change: &str, template: &str) -> String {
     };
     if !template.is_empty() {
         line = tr_with(
-            Msg::SubUnderTemplate,
+            ConsoleMsg::SubUnderTemplate,
             &[
                 ("line", line.into()),
                 ("template", template.to_owned().into()),
@@ -120,7 +120,7 @@ fn heading() -> AnyView {
     page_heading(
         Header {
             title: tr(Msg::NavSubscriptions).into(),
-            subtitle: Some(tr(Msg::SubSubtitle).into()),
+            subtitle: Some(tr(ConsoleMsg::SubSubtitle).into()),
             crumbs: Vec::new(),
             mono: false,
             badge: None,
@@ -128,7 +128,7 @@ fn heading() -> AnyView {
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::PLUS),
-            tr(Msg::SubNew),
+            tr(ConsoleMsg::SubNew),
             Act::Link("/subscriptions/new".to_owned()),
         )),
     )
@@ -139,8 +139,8 @@ fn heading() -> AnyView {
 fn off() -> AnyView {
     card_panel(view! {
         <div class="fui-panel-body fui-stack">
-            <p>{tr(Msg::SubOff)}</p>
-            <p class="fui-small fui-muted">{tr(Msg::SubOffLine)}</p>
+            <p>{tr(ConsoleMsg::SubOff)}</p>
+            <p class="fui-small fui-muted">{tr(ConsoleMsg::SubOffLine)}</p>
         </div>
     })
 }
@@ -174,13 +174,26 @@ enum ListModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Subscriptions: the list, and the toggle a post asks for.
-async fn load_list() -> ListModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_list(
+    /// The path and query of the page.
+    href: String,
+) -> Result<ListModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_list().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_list`] reads, on the server.
+async fn read_list() -> ListModel {
     let rows = match list_event_subscriptions().await {
         Ok(Some(rows)) => rows,
         Ok(None) => return ListModel::Off,
-        Err(error) => return ListModel::Refused(Refused::new(tr(Msg::SubRefused), error)),
+        Err(error) => return ListModel::Refused(Refused::new(tr(ConsoleMsg::SubRefused), error)),
     };
     let mut top = None;
     if let Some(posted) = crate::posted::posted_for("toggle") {
@@ -191,15 +204,15 @@ async fn load_list() -> ListModel {
                     redirect_with(
                         "/subscriptions",
                         &Done::ok(tr(if row.enabled {
-                            Msg::SubDisabled
+                            ConsoleMsg::SubDisabled
                         } else {
-                            Msg::SubEnabled
+                            ConsoleMsg::SubEnabled
                         }))
                         .line(row.name.clone()),
                     );
                     return ListModel::Left;
                 }
-                Err(error) => top = Some(Refused::new(tr(Msg::SubSaveRefused), error)),
+                Err(error) => top = Some(Refused::new(tr(ConsoleMsg::SubSaveRefused), error)),
             }
         }
     }
@@ -210,14 +223,14 @@ async fn load_list() -> ListModel {
 fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> AnyView {
     let columns = [
         Column::text("name", tr(Msg::NavSubscriptions)).role(Role::Title),
-        Column::text("state", tr(Msg::ServerState)).role(Role::Sub),
+        Column::text("state", tr(ConsoleMsg::ServerState)).role(Role::Sub),
         Column::text("created", tr(Msg::ColumnCreated)).role(Role::Meta),
         Column::text("menu", tr(Msg::ColumnActions)).role(Role::Menu),
     ];
     let list = if rows.is_empty() {
         list_empty(
-            tr(Msg::SubEmpty),
-            Some((tr(Msg::SubNew), "/subscriptions/new".to_owned())),
+            tr(ConsoleMsg::SubEmpty),
+            Some((tr(ConsoleMsg::SubNew), "/subscriptions/new".to_owned())),
         )
     } else {
         let body = rows
@@ -227,9 +240,9 @@ fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> AnyView {
                 let href = edit_href(&row.name);
                 let sub = view! { <span class="fui-row-sub">{summary(&row.kind, &row.change_type, &row.template_id)}</span> }.into_any();
                 let state = if row.enabled {
-                    state_mark(FlowState::Up, &tr(Msg::SubStateEnabled))
+                    state_mark(FlowState::Up, &tr(ConsoleMsg::SubStateEnabled))
                 } else {
-                    state_mark(FlowState::Off, &tr(Msg::SubStateDisabled))
+                    state_mark(FlowState::Off, &tr(ConsoleMsg::SubStateDisabled))
                 };
                 let menu = row_menu(
                     Menu::new(
@@ -239,7 +252,7 @@ fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> AnyView {
                             Item::new(Action::new(Some(Glyph::PENCIL), tr(Msg::PartyEdit), Act::Link(href.clone()))),
                             Item::new(Action::new(
                                 Some(if row.enabled { Glyph::BAN } else { Glyph::CHECK }),
-                                tr(if row.enabled { Msg::SubDisable } else { Msg::SubEnable }),
+                                tr(if row.enabled { ConsoleMsg::SubDisable } else { ConsoleMsg::SubEnable }),
                                 Act::Post {
                                     action: "/subscriptions".to_owned(),
                                     fields: vec![("intent".to_owned(), "toggle".to_owned()), ("id".to_owned(), row.id.clone())],
@@ -249,7 +262,7 @@ fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> AnyView {
                     )
                     .destructive(vec![Item::new(Action::new(
                         Some(Glyph::TRASH),
-                        tr(Msg::SubDeleteRow),
+                        tr(ConsoleMsg::SubDeleteRow),
                         Act::Link(format!("{href}?confirm=delete")),
                     ))]),
                 );
@@ -419,13 +432,13 @@ fn form_view(
                 {definitions(
                     vec![
                         (
-                            tr(Msg::SubQueue),
+                            tr(ConsoleMsg::SubQueue),
                             view! { <code>{format!("ferroehr.events.{}", form.name)}</code> }
                                 .into_any(),
                         ),
                     ],
                 )}
-                <p class="fui-help">{tr(Msg::SubNameFixed)}</p>
+                <p class="fui-help">{tr(ConsoleMsg::SubNameFixed)}</p>
             },
         )
     } else {
@@ -440,7 +453,7 @@ fn form_view(
                     <div class="fui-span-2">
                         {Field::new("sn", tr(Msg::QueryName))
                             .label_hidden()
-                            .help(tr(Msg::SubNameHelp))
+                            .help(tr(ConsoleMsg::SubNameHelp))
                             .after(error)
                             .view(
                                 view! {
@@ -468,14 +481,14 @@ fn form_view(
                 {select("sk", "kind", tr(Msg::ColumnKind), &KINDS, &form.kind)}
             </div>
             <div class="fui-span-2">
-                {select("sc", "change", tr(Msg::SubChangeType), &CHANGES, &form.change)}
+                {select("sc", "change", tr(ConsoleMsg::SubChangeType), &CHANGES, &form.change)}
             </div>
             <div class="fui-span-2">
                 {Field::new("st", tr(Msg::FilterTemplate))
                     .view(
                         view! {
                             <select id="st" name="template" class="fui-select">
-                                <option value="">{tr(Msg::SubAnyTemplate)}</option>
+                                <option value="">{tr(ConsoleMsg::SubAnyTemplate)}</option>
                                 {template_options}
                             </select>
                         },
@@ -485,8 +498,8 @@ fn form_view(
     };
     let deliver = ferrohealth_ui::view::form::keyed_check_field(
         "enabled".to_owned(),
-        tr(Msg::SubDeliver),
-        tr(Msg::SubDeliverHelp),
+        tr(ConsoleMsg::SubDeliver),
+        tr(ConsoleMsg::SubDeliverHelp),
         view! {
             <input type="hidden" name="enabled" value="off" />
             <input
@@ -500,8 +513,8 @@ fn form_view(
     );
     card_panel(view! {
         {name}
-        {section(Some(tr(Msg::SubSelects)), None, None, what)}
-        {section(Some(tr(Msg::SubDelivery)), None, None, deliver)}
+        {section(Some(tr(ConsoleMsg::SubSelects)), None, None, what)}
+        {section(Some(tr(ConsoleMsg::SubDelivery)), None, None, deliver)}
     })
 }
 
@@ -536,10 +549,23 @@ enum NewModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads New subscription: answers its post (Discard, Save) and reads the
 /// templates it offers.
-async fn load_new() -> NewModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_new(
+    /// The path and query of the page.
+    href: String,
+) -> Result<NewModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_new().await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_new`] reads, on the server.
+async fn read_new() -> NewModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect("/subscriptions");
@@ -557,9 +583,9 @@ async fn load_new() -> NewModel {
                 Ok(row) => {
                     redirect_with(
                         "/subscriptions",
-                        &Done::ok(tr(Msg::SubCreated))
+                        &Done::ok(tr(ConsoleMsg::SubCreated))
                             .line(tr_with(
-                                Msg::SubCreatedLine,
+                                ConsoleMsg::SubCreatedLine,
                                 &[("name", row.name.clone().into())],
                             ))
                             .link(tr(Msg::PartyEdit), edit_href(&row.name)),
@@ -569,16 +595,16 @@ async fn load_new() -> NewModel {
                 Err(error) => {
                     if crate::pages::common::is_status(&error, http::StatusCode::CONFLICT) {
                         name_error = Some(tr_with(
-                            Msg::SubNameTaken,
+                            ConsoleMsg::SubNameTaken,
                             &[("name", form.name.clone().into())],
                         ));
                     } else {
-                        top = Some(Refused::new(tr(Msg::SubSaveRefused), error));
+                        top = Some(Refused::new(tr(ConsoleMsg::SubSaveRefused), error));
                     }
                 }
             }
         } else {
-            name_error = Some(tr(Msg::SubNameInvalid));
+            name_error = Some(tr(ConsoleMsg::SubNameInvalid));
         }
     }
     NewModel::Editor(Box::new(Editor {
@@ -601,17 +627,17 @@ fn new_editor(editor: Editor) -> AnyView {
         form: EDIT_FORM.to_owned(),
         line: summary(&form.kind, &form.change, &form.template),
         glyph: Glyph::FUNNEL,
-        save: tr(Msg::SubCreate),
+        save: tr(ConsoleMsg::SubCreate),
         // NOTE: leptos-ui.md §15.8: a refused name stays editable and the save stays live, since
         // a page with no WebAssembly has no other way to send the corrected name.
         blocked: None,
     });
     let heading = editor_heading(
-        message(Msg::SubEditorTitle),
+        message(ConsoleMsg::SubEditorTitle),
         &Mode::Creating,
         Header {
             title: String::new().into(),
-            subtitle: Some(tr(Msg::SubSubtitle).into()),
+            subtitle: Some(tr(ConsoleMsg::SubSubtitle).into()),
             crumbs: vec![Crumb::new(tr(Msg::NavSubscriptions), "/subscriptions")],
             mono: false,
             badge: None,
@@ -621,7 +647,7 @@ fn new_editor(editor: Editor) -> AnyView {
     );
     let top = top.map(|refusal| refusal.view());
     view! {
-        <Title text=tr(Msg::SubNew) />
+        <Title text=tr(ConsoleMsg::SubNew) />
         {heading}
         <div class="fui-stack">
             {top} <form id=EDIT_FORM method="post" action="/subscriptions/new">
@@ -663,13 +689,25 @@ enum EditModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Edit a subscription: finds it, answers its post (Discard, Save,
 /// Delete) and reads the templates it offers.
-async fn load_edit() -> EditModel {
-    let name = use_params_map()
-        .with_untracked(|params| params.get("name"))
-        .unwrap_or_default();
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_edit(
+    /// The path and query of the page.
+    href: String,
+    /// The subscription the route names.
+    name: String,
+) -> Result<EditModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_edit(name).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_edit`] reads, on the server.
+async fn read_edit(name: String) -> EditModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect("/subscriptions");
@@ -678,7 +716,7 @@ async fn load_edit() -> EditModel {
     let rows = match list_event_subscriptions().await {
         Ok(Some(rows)) => rows,
         Ok(None) => return EditModel::Off,
-        Err(error) => return EditModel::Refused(Refused::new(tr(Msg::SubRefused), error)),
+        Err(error) => return EditModel::Refused(Refused::new(tr(ConsoleMsg::SubRefused), error)),
     };
     let Some(row) = rows.into_iter().find(|row| row.name == name) else {
         crate::request::set_status(http::StatusCode::NOT_FOUND);
@@ -695,21 +733,21 @@ async fn load_edit() -> EditModel {
             Ok(_) => {
                 redirect_with(
                     "/subscriptions",
-                    &Done::ok(tr(Msg::SubSaved)).line(row.name.clone()),
+                    &Done::ok(tr(ConsoleMsg::SubSaved)).line(row.name.clone()),
                 );
                 return EditModel::Left;
             }
-            Err(error) => top = Some(Refused::new(tr(Msg::SubSaveRefused), error)),
+            Err(error) => top = Some(Refused::new(tr(ConsoleMsg::SubSaveRefused), error)),
         },
         Some("delete-subscription") => match delete_event_subscription(row.id.clone()).await {
             Ok(()) => {
                 redirect_with(
                     "/subscriptions",
-                    &Done::ok(tr(Msg::SubDeleted)).line(row.name.clone()),
+                    &Done::ok(tr(ConsoleMsg::SubDeleted)).line(row.name.clone()),
                 );
                 return EditModel::Left;
             }
-            Err(error) => top = Some(Refused::new(tr(Msg::SubDeleteRefused), error)),
+            Err(error) => top = Some(Refused::new(tr(ConsoleMsg::SubDeleteRefused), error)),
         },
         _ => {}
     }
@@ -738,19 +776,19 @@ fn edit_editor(editor: Editor) -> AnyView {
         blocked: None,
     });
     let more =
-        Menu::new("subscription-more", tr(Msg::SubMore), Vec::new()).destructive(vec![Item::new(
-            Action::new(
+        Menu::new("subscription-more", tr(ConsoleMsg::SubMore), Vec::new()).destructive(vec![
+            Item::new(Action::new(
                 Some(Glyph::TRASH),
-                tr(Msg::SubDelete),
+                tr(ConsoleMsg::SubDelete),
                 Act::Dialog(DELETE_DIALOG.to_owned()),
-            ),
-        )]);
+            )),
+        ]);
     let heading = editor_heading(
-        message(Msg::SubEditorTitle),
+        message(ConsoleMsg::SubEditorTitle),
         &Mode::Editing(name.clone()),
         Header {
             title: String::new().into(),
-            subtitle: Some(tr(Msg::SubEditSubtitle).into()),
+            subtitle: Some(tr(ConsoleMsg::SubEditSubtitle).into()),
             crumbs: vec![Crumb::new(tr(Msg::NavSubscriptions), "/subscriptions")],
             mono: false,
             badge: None,
@@ -763,22 +801,24 @@ fn edit_editor(editor: Editor) -> AnyView {
             <input type="hidden" name="intent" value="delete-subscription" />
             <button type="submit" class="fui-button fui-button-danger">
                 {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                {tr(Msg::SubDeleteConfirm)}
+                {tr(ConsoleMsg::SubDeleteConfirm)}
             </button>
         </form>
     };
     let confirm = (crate::request::query("confirm").as_deref() == Some("delete")).then(|| {
         crate::pages::common::warn_note(view! {
             <p>
-                <strong>{tr_with(Msg::SubDeleteTitle, &[("name", name.clone().into())])}</strong>
+                <strong>
+                    {tr_with(ConsoleMsg::SubDeleteTitle, &[("name", name.clone().into())])}
+                </strong>
                 " "
-                {tr(Msg::SubDeleteMessage)}
+                {tr(ConsoleMsg::SubDeleteMessage)}
             </p>
             <div class="fui-cluster">
                 <form method="post" action=edit_href(&name)>
                     <input type="hidden" name="intent" value="delete-subscription" />
                     <button type="submit" class="fui-button fui-button-danger">
-                        {tr(Msg::SubDeleteConfirm)}
+                        {tr(ConsoleMsg::SubDeleteConfirm)}
                     </button>
                 </form>
                 <a class="fui-button fui-button-secondary" href=edit_href(&name)>
@@ -790,8 +830,8 @@ fn edit_editor(editor: Editor) -> AnyView {
     let dialog = danger_dialog(
         Confirmation {
             id: DELETE_DIALOG.into(),
-            title: tr_with(Msg::SubDeleteTitle, &[("name", name.clone().into())]).into(),
-            message: tr(Msg::SubDeleteMessage).into(),
+            title: tr_with(ConsoleMsg::SubDeleteTitle, &[("name", name.clone().into())]).into(),
+            message: tr(ConsoleMsg::SubDeleteMessage).into(),
         },
         delete,
     );
@@ -817,7 +857,10 @@ fn edit_editor(editor: Editor) -> AnyView {
 #[component]
 pub fn EditSubscriptionPage() -> impl IntoView {
     let dock_promise = crate::shell::promise_dock();
-    let model = page_model!(load_edit());
+    let name = crate::routes::params()
+        .with(|params| params.get("name"))
+        .unwrap_or_default();
+    let model = page_model!(load_edit(name));
     let page = docked(model, dock_promise, |model| match model {
         EditModel::Editor(editor) => edit_editor(*editor),
         EditModel::Off => view! {
@@ -828,7 +871,7 @@ pub fn EditSubscriptionPage() -> impl IntoView {
         EditModel::Refused(refusal) => refusal.view(),
         EditModel::Missing(name) => view! {
             {heading()}
-            {info_note(tr_with(Msg::SubNone, &[("name", name.into())]))}
+            {info_note(tr_with(ConsoleMsg::SubNone, &[("name", name.into())]))}
         }
         .into_any(),
         EditModel::Left => ().into_any(),

@@ -36,7 +36,6 @@ use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::widget::editor::EditorWords;
 use leptos::prelude::*;
 use leptos_meta::Title;
-use leptos_router::hooks::use_params_map;
 use serde::{Deserialize, Serialize};
 
 use crate::bff::composition::VersionedCompositionDetails;
@@ -49,12 +48,12 @@ use crate::bff::composition::{
 use crate::bff::ehr_tags::{delete_ehr_tag, fetch_ehr_tags, set_ehr_tag};
 use crate::bff::wire::VersionEntry;
 use crate::clinical::{RenderedNode, RenderedSection};
-#[cfg(not(target_arch = "wasm32"))]
+use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::format::ReprFormat;
-use crate::islands::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
+use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, message, tr, tr_with};
 use crate::pages::common::{
     EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, docked, document_section,
@@ -230,7 +229,7 @@ fn reading_panel(
                 sections.insert(
                     0,
                     Section {
-                        title: tr(Msg::CompositionContext),
+                        title: tr(RecordsMsg::CompositionContext),
                         node: None,
                         elements: section.elements,
                         sections: Vec::new(),
@@ -243,14 +242,14 @@ fn reading_panel(
                 folded: None,
             })
         }
-        None => plain_section(info_note(tr(Msg::CompositionNoReading))),
+        None => plain_section(info_note(tr(RecordsMsg::CompositionNoReading))),
     };
     let full = older.is_none().then(|| {
         plain_section(ferrohealth_ui::view::button::link_button(
             tab_href(ehr_id, uid, CompTab::Document, None),
             ferrohealth_ui::view::button::Variant::Ghost,
             Some(Glyph::FILE_CODE),
-            tr(Msg::CompositionShowDocument),
+            tr(RecordsMsg::CompositionShowDocument),
         ))
     });
     panel(view! {
@@ -300,7 +299,7 @@ async fn converted(ehr_id: &str, version_uid: &str) -> Converted {
     let shown = fetch_composition(ehr_id.to_owned(), version_uid.to_owned(), format)
         .await
         .map(|body| body.map(|body| crate::bff::pretty_body(&body, format)))
-        .map_err(|error| Refused::new(tr(Msg::CompositionDocumentRefused), error));
+        .map_err(|error| Refused::new(tr(RecordsMsg::CompositionDocumentRefused), error));
     Converted {
         current,
         format,
@@ -325,13 +324,13 @@ fn document_panel(ehr_id: &str, uid: &str, version: Option<&str>, converted: Con
     let switch = view! {
         <div class="fui-cluster">
             {segmented_links(tr(Msg::CompositionFormat), choices, current)}
-            <span class="fui-small fui-muted">{tr(Msg::CompositionConverts)}</span>
+            <span class="fui-small fui-muted">{tr(RecordsMsg::CompositionConverts)}</span>
         </div>
     };
     let shown = match shown {
         Ok(Some(body)) => document_section(
             tr_with(
-                Msg::CompositionDocumentTitle,
+                RecordsMsg::CompositionDocumentTitle,
                 &[("format", format.label().into())],
             ),
             if format == ReprFormat::CanonicalXml {
@@ -342,7 +341,7 @@ fn document_panel(ehr_id: &str, uid: &str, version: Option<&str>, converted: Con
             body,
             "composition-document",
         ),
-        Ok(None) => plain_section(info_note(tr(Msg::CompositionDeletedVersion))),
+        Ok(None) => plain_section(info_note(tr(RecordsMsg::CompositionDeletedVersion))),
         Err(refusal) => plain_section(refusal.view()),
     };
     panel(view! {
@@ -394,7 +393,7 @@ fn history(
         at_time: Some(at_time_row(
             composition_href(ehr_id, uid),
             &crate::request::query("at").unwrap_or_default(),
-            tr(Msg::CompositionAtTimeOpens),
+            tr(RecordsMsg::CompositionAtTimeOpens),
         )),
     })
 }
@@ -421,44 +420,50 @@ fn versions_panel(
             let yes_no = |yes: bool| tr(if yes { Msg::Yes } else { Msg::No }).into_any();
             let version = section(
                 Some(tr_with(
-                    Msg::CompositionVersionN,
+                    RecordsMsg::CompositionVersionN,
                     &[("version", version_number(&details.version_id).into())],
                 )),
                 None,
                 None,
                 definitions(vec![
                     (
-                        tr(Msg::FactLifecycle),
+                        tr(RecordsMsg::FactLifecycle),
                         details.lifecycle_state.clone().into_any(),
                     ),
                     (
-                        tr(Msg::CompositionPreceding),
+                        tr(RecordsMsg::CompositionPreceding),
                         if details.preceding_version_uid.is_empty() {
-                            tr(Msg::CompositionFirstVersion).into_any()
+                            tr(RecordsMsg::CompositionFirstVersion).into_any()
                         } else {
                             short(&details.preceding_version_uid)
                         },
                     ),
-                    (tr(Msg::FactContribution), short(&details.contribution_uid)),
-                    (tr(Msg::FactSigned), yes_no(details.signed)),
-                    (tr(Msg::CompositionHoldsContent), yes_no(details.has_data)),
+                    (
+                        tr(RecordsMsg::FactContribution),
+                        short(&details.contribution_uid),
+                    ),
+                    (tr(RecordsMsg::FactSigned), yes_no(details.signed)),
+                    (
+                        tr(RecordsMsg::CompositionHoldsContent),
+                        yes_no(details.has_data),
+                    ),
                 ]),
             );
             let object = section(
-                Some(tr(Msg::CompositionVersioned)),
+                Some(tr(RecordsMsg::CompositionVersioned)),
                 None,
                 None,
                 definitions(vec![
                     (
-                        tr(Msg::CompositionVersionedObject),
+                        tr(RecordsMsg::CompositionVersionedObject),
                         short(&details.object_uid),
                     ),
                     (
-                        tr(Msg::ColumnEhr),
+                        tr(RecordsMsg::ColumnEhr),
                         view! { <a href=ehr_href(ehr_id)>{short(ehr_id)}</a> }.into_any(),
                     ),
                     (
-                        tr(Msg::CompositionFirstCommitted),
+                        tr(RecordsMsg::CompositionFirstCommitted),
                         when(&details.time_created),
                     ),
                 ]),
@@ -493,12 +498,15 @@ async fn act(
             Ok(()) => {
                 redirect_with(
                     &ehr_href(ehr_id),
-                    &Done::ok(tr(Msg::CompositionDeleted)).line(name.to_owned()),
+                    &Done::ok(tr(RecordsMsg::CompositionDeleted)).line(name.to_owned()),
                 );
                 (None, None)
             }
             Err(error) => (
-                Some(Refused::new(tr(Msg::CompositionDeleteRefused), error)),
+                Some(Refused::new(
+                    tr(RecordsMsg::CompositionDeleteRefused),
+                    error,
+                )),
                 None,
             ),
         };
@@ -539,9 +547,39 @@ async fn act(
 fn copy_id(uid: &str) -> Item {
     Item::new(Action::new(
         Some(Glyph::COPY),
-        tr(Msg::CompositionCopyId),
+        tr(RecordsMsg::CompositionCopyId),
         Act::Copy(uid.to_owned()),
     ))
+}
+
+/// The context line of the composition's header: its template, the version
+/// read, when it started and who composed it.
+fn context_line(head: &Head, latest: &str, reading: Option<&str>) -> String {
+    match reading {
+        Some(_) => tr_with(
+            RecordsMsg::CompositionLineOlder,
+            &[
+                ("template", head.template.clone().into()),
+                (
+                    "started",
+                    ferrohealth_ui::view::time::reading(&head.started).into(),
+                ),
+                ("composer", head.composer.clone().into()),
+            ],
+        ),
+        None => tr_with(
+            RecordsMsg::CompositionLine,
+            &[
+                ("template", head.template.clone().into()),
+                ("version", version_number(latest).into()),
+                (
+                    "started",
+                    ferrohealth_ui::view::time::reading(&head.started).into(),
+                ),
+                ("composer", head.composer.clone().into()),
+            ],
+        ),
+    }
 }
 
 /// The composition's header: its name, its template and context line, and
@@ -556,7 +594,7 @@ fn header(
 ) -> AnyView {
     let more = Menu::new(
         "composition-more",
-        tr(Msg::CompositionMore),
+        tr(RecordsMsg::CompositionMore),
         vec![copy_id(uid)],
     );
     let (actions, subtitle, badge) = if let Some(deletion) = deleted {
@@ -569,14 +607,14 @@ fn header(
             ActionGroup::primary(Action::new(
                 Some(Glyph::ROTATE_CCW_CLOCK),
                 tr_with(
-                    Msg::CompositionReadVersion,
+                    RecordsMsg::CompositionReadVersion,
                     &[("version", last.clone().into())],
                 ),
                 Act::Link(tab_href(ehr_id, uid, CompTab::Reading, Some(&last))),
             ))
             .more(more),
             tr_with(
-                Msg::CompositionDeletedLine,
+                RecordsMsg::CompositionDeletedLine,
                 &[
                     ("template", head.template.clone().into()),
                     (
@@ -587,44 +625,23 @@ fn header(
                     ("version", version_number(&deletion.version_id).into()),
                 ],
             ),
-            Some(state_mark(FlowState::Off, &tr(Msg::CompositionDeletedMark))),
+            Some(state_mark(
+                FlowState::Off,
+                &tr(RecordsMsg::CompositionDeletedMark),
+            )),
         )
     } else {
         let primary = if reading.is_some() {
-            tr(Msg::CompositionEditLatest)
+            tr(RecordsMsg::CompositionEditLatest)
         } else {
-            tr(Msg::CompositionEdit)
+            tr(RecordsMsg::CompositionEdit)
         };
         let menu = more.destructive(vec![Item::new(Action::new(
             Some(Glyph::TRASH),
-            tr(Msg::CompositionDelete),
+            tr(RecordsMsg::CompositionDelete),
             Act::Dialog(DELETE_DIALOG.to_owned()),
         ))]);
-        let line = match reading {
-            Some(_) => tr_with(
-                Msg::CompositionLineOlder,
-                &[
-                    ("template", head.template.clone().into()),
-                    (
-                        "started",
-                        ferrohealth_ui::view::time::reading(&head.started).into(),
-                    ),
-                    ("composer", head.composer.clone().into()),
-                ],
-            ),
-            None => tr_with(
-                Msg::CompositionLine,
-                &[
-                    ("template", head.template.clone().into()),
-                    ("version", version_number(latest).into()),
-                    (
-                        "started",
-                        ferrohealth_ui::view::time::reading(&head.started).into(),
-                    ),
-                    ("composer", head.composer.clone().into()),
-                ],
-            ),
-        };
+        let line = context_line(head, latest, reading);
         (
             ActionGroup::primary(Action::new(
                 Some(Glyph::PENCIL),
@@ -665,12 +682,12 @@ fn delete_dialog(ehr_id: &str, uid: &str, name: &str, latest: &str, count: usize
         Confirmation {
             id: DELETE_DIALOG.into(),
             title: tr_with(
-                Msg::CompositionDeleteTitle,
+                RecordsMsg::CompositionDeleteTitle,
                 &[("name", name.to_owned().into())],
             )
             .into(),
             message: tr_with(
-                Msg::CompositionDeleteMessage,
+                RecordsMsg::CompositionDeleteMessage,
                 &[
                     ("next", next.into()),
                     ("count", crate::pages::common::count(count)),
@@ -684,7 +701,7 @@ fn delete_dialog(ehr_id: &str, uid: &str, name: &str, latest: &str, count: usize
                 <input type="hidden" name="version" value=latest.to_owned() />
                 <button type="submit" class="fui-button fui-button-danger">
                     {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                    {tr(Msg::CompositionDeleteConfirm)}
+                    {tr(RecordsMsg::CompositionDeleteConfirm)}
                 </button>
             </form>
         },
@@ -694,8 +711,8 @@ fn delete_dialog(ehr_id: &str, uid: &str, name: &str, latest: &str, count: usize
 
 /// The composition id the route names.
 fn uid_param() -> String {
-    use_params_map()
-        .with_untracked(|params| params.get("uid"))
+    crate::routes::params()
+        .with(|params| params.get("uid"))
         .unwrap_or_default()
 }
 
@@ -752,15 +769,32 @@ enum CompositionModel {
     Missing(Refused),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the composition `uid` of the EHR `ehr_id`: answers its post, reads
 /// its versions, the version in view and what the tab asked for shows; a
 /// composition the CDR does not hold answers `404`.
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+    /// The id the route names.
+    uid: String,
+) -> Result<CompositionModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_page(ehr_id, uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load`] reads, on the server.
 #[expect(
     clippy::too_many_lines,
     reason = "one loader: the versions, the version in view, the post and the tab's read"
 )]
-async fn load(ehr_id: String, uid: String) -> CompositionModel {
+async fn read_page(ehr_id: String, uid: String) -> CompositionModel {
     let asked = crate::request::query("version");
     let at = crate::request::query("at");
     let mut versions = fetch_versions(ehr_id.clone(), uid.clone()).await;
@@ -787,7 +821,10 @@ async fn load(ehr_id: String, uid: String) -> CompositionModel {
             if is_status(&error, http::StatusCode::NOT_FOUND) {
                 crate::request::set_status(http::StatusCode::NOT_FOUND);
             }
-            return CompositionModel::Missing(Refused::new(tr(Msg::CompositionRefused), error));
+            return CompositionModel::Missing(Refused::new(
+                tr(RecordsMsg::CompositionRefused),
+                error,
+            ));
         }
     };
     let deleted = current.is_none().then(|| latest_entry.clone()).flatten();
@@ -847,19 +884,19 @@ async fn load(ehr_id: String, uid: String) -> CompositionModel {
                         Read::Clinical(crate::clinical::render(&body))
                     })
                 })
-                .map_err(|error| Refused::new(tr(Msg::CompositionVersionRefused), error)),
+                .map_err(|error| Refused::new(tr(RecordsMsg::CompositionVersionRefused), error)),
         ),
         CompTab::Document => TabBody::Document(converted(&ehr_id, &version_uid).await),
         CompTab::Versions => TabBody::Versions(
             fetch_versioned_composition(ehr_id.clone(), uid.clone(), version_uid.clone())
                 .await
-                .map_err(|error| Refused::new(tr(Msg::CompositionVersionRefused), error)),
+                .map_err(|error| Refused::new(tr(RecordsMsg::CompositionVersionRefused), error)),
         ),
         CompTab::Tags => {
             let stored_tags =
                 fetch_ehr_tags(ehr_id.clone(), "composition".to_owned(), uid.clone()).await;
             TabBody::Tags(TagPanel {
-                collection: tr(Msg::TagCollectionComposition),
+                collection: tr(RecordsMsg::TagCollectionComposition),
                 tags: stored_tags,
                 action: tab_href(&ehr_id, &uid, CompTab::Tags, None),
                 refused: tag_refusal,
@@ -867,7 +904,8 @@ async fn load(ehr_id: String, uid: String) -> CompositionModel {
         }
     };
     CompositionModel::Shown(Box::new(Composition {
-        versions: versions.map_err(|error| Refused::new(tr(Msg::CompositionHistoryRefused), error)),
+        versions: versions
+            .map_err(|error| Refused::new(tr(RecordsMsg::CompositionHistoryRefused), error)),
         latest,
         deleted,
         reading_number,
@@ -882,7 +920,11 @@ async fn load(ehr_id: String, uid: String) -> CompositionModel {
 fn missing(ehr_id: &str, uid: &str, refusal: &Refused) -> AnyView {
     let heading = page_heading(
         Header {
-            title: tr_with(Msg::CompositionTitle, &[("id", shortened(uid).into())]).into(),
+            title: tr_with(
+                RecordsMsg::CompositionTitle,
+                &[("id", shortened(uid).into())],
+            )
+            .into(),
             subtitle: None,
             crumbs: crumbs(ehr_id),
             mono: false,
@@ -892,7 +934,7 @@ fn missing(ehr_id: &str, uid: &str, refusal: &Refused) -> AnyView {
         ActionGroup::none(),
     );
     view! {
-        <Title text=tr(Msg::CompositionRefused) />
+        <Title text=tr(RecordsMsg::CompositionRefused) />
         {heading}
         {refusal.view()}
     }
@@ -924,7 +966,7 @@ fn tabs(
                 CompTab::Reading.key(),
                 tab_href(ehr_id, uid, CompTab::Reading, reading_number),
                 tr_with(
-                    Msg::CompositionVersionN,
+                    RecordsMsg::CompositionVersionN,
                     &[(
                         "version",
                         reading_number.unwrap_or_default().to_owned().into(),
@@ -938,7 +980,7 @@ fn tabs(
             Tab::new(
                 CompTab::Reading.key(),
                 tab_href(ehr_id, uid, CompTab::Reading, reading_number),
-                tr(Msg::CompositionReading),
+                tr(RecordsMsg::CompositionReading),
             ),
             versions,
         ]
@@ -947,18 +989,18 @@ fn tabs(
             Tab::new(
                 CompTab::Reading.key(),
                 tab_href(ehr_id, uid, CompTab::Reading, None),
-                tr(Msg::CompositionReading),
+                tr(RecordsMsg::CompositionReading),
             ),
             Tab::new(
                 CompTab::Document.key(),
                 tab_href(ehr_id, uid, CompTab::Document, None),
-                tr(Msg::CompositionDocument),
+                tr(RecordsMsg::CompositionDocument),
             ),
             versions,
             Tab::new(
                 CompTab::Tags.key(),
                 tab_href(ehr_id, uid, CompTab::Tags, None),
-                tr(Msg::EhrTabTags),
+                tr(RecordsMsg::EhrTabTags),
             ),
         ]
     }
@@ -987,7 +1029,7 @@ fn composition_view(ehr_id: &str, uid: &str, composition: Composition) -> AnyVie
     let older = reading_number.as_deref().map(|number| {
         if deleted.is_some() {
             info_note(tr_with(
-                Msg::CompositionLastBeforeDeletion,
+                RecordsMsg::CompositionLastBeforeDeletion,
                 &[("version", number.to_owned().into())],
             ))
         } else {
@@ -1009,9 +1051,9 @@ fn composition_view(ehr_id: &str, uid: &str, composition: Composition) -> AnyVie
         TabBody::Reading(Ok(Read::Clinical(rendered))) => {
             reading_panel(ehr_id, uid, rendered, older)
         }
-        TabBody::Reading(Ok(Read::Deleted)) => {
-            panel(plain_section(info_note(tr(Msg::CompositionDeletedVersion))))
-        }
+        TabBody::Reading(Ok(Read::Deleted)) => panel(plain_section(info_note(tr(
+            RecordsMsg::CompositionDeletedVersion,
+        )))),
         TabBody::Reading(Err(refusal)) => panel(plain_section(refusal.view())),
         TabBody::Document(converted) => document_panel(ehr_id, uid, reading, converted),
         TabBody::Versions(details) => {
@@ -1027,7 +1069,7 @@ fn composition_view(ehr_id: &str, uid: &str, composition: Composition) -> AnyVie
         {header(ehr_id, uid, &head, &latest, reading, deleted.as_ref())}
         <div class="fui-stack">
             {acted.map(|refusal| refusal.view())}
-            {binder(tr(Msg::CompositionViews), tabs, tab.key(), body)}
+            {binder(tr(RecordsMsg::CompositionViews), tabs, tab.key(), body)}
         </div>
         {dialog}
     }
@@ -1068,8 +1110,8 @@ fn document_editor(
     label: String,
 ) -> AnyView {
     let lead = match language {
-        EditorLanguage::Xml => tr(Msg::EditorXml),
-        _ => tr(Msg::EditorJson),
+        EditorLanguage::Xml => tr(RecordsMsg::EditorXml),
+        _ => tr(RecordsMsg::EditorJson),
     };
     view! {
         <CodeEditor
@@ -1130,22 +1172,40 @@ enum EditModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads Edit as a new version: answers its post (Discard, Save) over the
 /// latest version.
-async fn load_edit(ehr_id: String, uid: String) -> EditModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_edit(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+    /// The id the route names.
+    uid: String,
+) -> Result<EditModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_edit(ehr_id, uid).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_edit`] reads, on the server.
+async fn read_edit(ehr_id: String, uid: String) -> EditModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&composition_href(&ehr_id, &uid));
         return EditModel::Left;
     }
-    let current = match fetch_composition(ehr_id.clone(), uid.clone(), ReprFormat::CanonicalJson)
-        .await
-    {
-        Ok(Some(body)) => crate::bff::pretty_body(&body, ReprFormat::CanonicalJson),
-        Ok(None) => return EditModel::Deleted,
-        Err(error) => return EditModel::Refused(Refused::new(tr(Msg::CompositionRefused), error)),
-    };
+    let current =
+        match fetch_composition(ehr_id.clone(), uid.clone(), ReprFormat::CanonicalJson).await {
+            Ok(Some(body)) => crate::bff::pretty_body(&body, ReprFormat::CanonicalJson),
+            Ok(None) => return EditModel::Deleted,
+            Err(error) => {
+                return EditModel::Refused(Refused::new(tr(RecordsMsg::CompositionRefused), error));
+            }
+        };
     let latest = match fetch_versions(ehr_id.clone(), uid.clone()).await {
         Ok(versions) => versions
             .into_iter()
@@ -1157,7 +1217,10 @@ async fn load_edit(ehr_id: String, uid: String) -> EditModel {
             .map(|version| version.version_id)
             .unwrap_or_default(),
         Err(error) => {
-            return EditModel::Refused(Refused::new(tr(Msg::CompositionHistoryRefused), error));
+            return EditModel::Refused(Refused::new(
+                tr(RecordsMsg::CompositionHistoryRefused),
+                error,
+            ));
         }
     };
     let opened = posted
@@ -1179,8 +1242,8 @@ async fn load_edit(ehr_id: String, uid: String) -> EditModel {
             Ok(saved) => {
                 redirect_with(
                     &composition_href(&ehr_id, &uid),
-                    &Done::ok(tr(Msg::CompositionSaved)).line(tr_with(
-                        Msg::CompositionSavedVersion,
+                    &Done::ok(tr(RecordsMsg::CompositionSaved)).line(tr_with(
+                        RecordsMsg::CompositionSavedVersion,
                         &[("version", version_number(&saved).into())],
                     )),
                 );
@@ -1189,7 +1252,7 @@ async fn load_edit(ehr_id: String, uid: String) -> EditModel {
             Err(error) => {
                 unsaved = Some(Unsaved {
                     conflict: is_status(&error, http::StatusCode::PRECONDITION_FAILED),
-                    refusal: Refused::new(tr(Msg::CompositionSaveRefused), error),
+                    refusal: Refused::new(tr(RecordsMsg::CompositionSaveRefused), error),
                 });
             }
         }
@@ -1224,9 +1287,9 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> AnyView {
         .and_then(|unsaved| findings_of(&unsaved.refusal.error, &text, &field));
     let conflict = unsaved.as_ref().is_some_and(|unsaved| unsaved.conflict);
     let line = if unsaved.is_some() {
-        (Glyph::CIRCLE_X, tr(Msg::EditorNotSaved))
+        (Glyph::CIRCLE_X, tr(RecordsMsg::EditorNotSaved))
     } else {
-        (Glyph::PENCIL, tr(Msg::EditorOpened))
+        (Glyph::PENCIL, tr(RecordsMsg::EditorOpened))
     };
     let top = unsaved.map(|unsaved| {
         let reload = unsaved.conflict.then(|| {
@@ -1237,10 +1300,11 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> AnyView {
                         ferrohealth_ui::view::button::Variant::Secondary,
                         Some(Glyph::REFRESH_CW),
                         tr_with(
-                            Msg::EditorReloadVersion,
+                            RecordsMsg::EditorReloadVersion,
                             &[("version", version_number(&latest).into())],
                         ),
-                    )} <span class="fui-small fui-muted">{tr(Msg::EditorReloadReplaces)}</span>
+                    )}
+                    <span class="fui-small fui-muted">{tr(RecordsMsg::EditorReloadReplaces)}</span>
                 </div>
             }
         });
@@ -1254,7 +1318,7 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> AnyView {
         |_| tr(Msg::EditorSave),
         |number| {
             tr_with(
-                Msg::EditorSaveAsVersion,
+                RecordsMsg::EditorSaveAsVersion,
                 &[("version", number.saturating_add(1).into())],
             )
         },
@@ -1264,7 +1328,7 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> AnyView {
         line: line.1,
         glyph: line.0,
         save,
-        blocked: conflict.then(|| tr(Msg::EditorReloadFirst)),
+        blocked: conflict.then(|| tr(RecordsMsg::EditorReloadFirst)),
     });
     let mut trail = crumbs(ehr_id);
     trail.push(Crumb::new(
@@ -1276,13 +1340,13 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> AnyView {
         composition_href(ehr_id, uid),
     ));
     let heading = editor_heading(
-        message(Msg::EditorTitle),
+        message(RecordsMsg::EditorTitle),
         &Mode::Editing(name.clone()),
         Header {
             title: String::new().into(),
             subtitle: Some(
                 tr_with(
-                    Msg::CompositionEditSubtitle,
+                    RecordsMsg::CompositionEditSubtitle,
                     &[("version", version_number(&opened).into())],
                 )
                 .into(),
@@ -1310,7 +1374,7 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> AnyView {
                     Some(current),
                     EditorLanguage::Json,
                     findings,
-                    tr(Msg::CompositionEditorLabel),
+                    tr(RecordsMsg::CompositionEditorLabel),
                 )}
             </form>
         </div>
@@ -1331,7 +1395,7 @@ pub fn EditCompositionPage() -> impl IntoView {
     let model = page_model!(load_edit(ehr_id.clone(), uid.clone()));
     let page = docked(model, dock_promise, move |model| match model {
         EditModel::Editor(editor) => edit_page(&ehr_id, &uid, *editor),
-        EditModel::Deleted => info_note(tr(Msg::CompositionDeletedNoEdit)),
+        EditModel::Deleted => info_note(tr(RecordsMsg::CompositionDeletedNoEdit)),
         EditModel::Refused(refusal) => refusal.view(),
         EditModel::Left => ().into_any(),
     });
@@ -1377,10 +1441,25 @@ fn new_format(format_key: &str) -> ReprFormat {
         .map_or(ReprFormat::CanonicalJson, |(_, format)| *format)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads New composition: answers its post (Discard, Commit) and reads the
 /// templates.
-async fn load_new(ehr_id: String) -> NewModel {
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session.
+#[server(client = crate::session_client::SessionAwareClient)]
+async fn load_new(
+    /// The path and query of the page.
+    href: String,
+    /// The EHR the route names.
+    ehr_id: String,
+) -> Result<NewModel, ViewerError> {
+    crate::request::visiting(&href).await?;
+    Ok(read_new(ehr_id).await)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// What [`load_new`] reads, on the server.
+async fn read_new(ehr_id: String) -> NewModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         leptos_axum::redirect(&ehr_href(&ehr_id));
@@ -1417,12 +1496,15 @@ async fn load_new(ehr_id: String) -> NewModel {
                 let object = crate::uid::container_uid_of(&uid);
                 redirect_with(
                     &composition_href(&ehr_id, &object),
-                    &Done::ok(tr(Msg::CompositionCommitted)).line(shortened(&object)),
+                    &Done::ok(tr(RecordsMsg::CompositionCommitted)).line(shortened(&object)),
                 );
                 return NewModel::Left;
             }
             Err(error) => {
-                refused = Some(Refused::new(tr(Msg::CompositionCommitRefused), error));
+                refused = Some(Refused::new(
+                    tr(RecordsMsg::CompositionCommitRefused),
+                    error,
+                ));
             }
         }
     }
@@ -1438,7 +1520,7 @@ async fn load_new(ehr_id: String) -> NewModel {
             ids.dedup();
             ids
         })
-        .map_err(|error| Refused::new(tr(Msg::CompositionTemplatesRefused), error));
+        .map_err(|error| Refused::new(tr(RecordsMsg::CompositionTemplatesRefused), error));
     NewModel::Form(Box::new(NewForm {
         format_key,
         template,
@@ -1467,9 +1549,9 @@ fn new_page(ehr_id: &str, form: NewForm) -> AnyView {
         .as_ref()
         .and_then(|refusal| findings_of(&refusal.error, &text, &field));
     let line = if refused.is_some() {
-        (Glyph::CIRCLE_X, tr(Msg::CompositionNotCommitted))
+        (Glyph::CIRCLE_X, tr(RecordsMsg::CompositionNotCommitted))
     } else {
-        (Glyph::FILE_PLUS, tr(Msg::CompositionNotYet))
+        (Glyph::FILE_PLUS, tr(RecordsMsg::CompositionNotYet))
     };
     let template_field = match templates {
         Ok(ids) => {
@@ -1486,10 +1568,10 @@ fn new_page(ehr_id: &str, form: NewForm) -> AnyView {
                 })
                 .collect_view();
             Field::new("nt", tr(Msg::FilterTemplate))
-                .help(tr(Msg::CompositionTemplateHelp))
+                .help(tr(RecordsMsg::CompositionTemplateHelp))
                 .view(view! {
                     <select id="nt" name="template" class="fui-select">
-                        <option value="">{tr(Msg::StagedFromDocument)}</option>
+                        <option value="">{tr(RecordsMsg::StagedFromDocument)}</option>
                         {options}
                     </select>
                 })
@@ -1504,15 +1586,15 @@ fn new_page(ehr_id: &str, form: NewForm) -> AnyView {
         form: EDIT_FORM.to_owned(),
         line: line.1,
         glyph: line.0,
-        save: tr(Msg::CompositionCommit),
+        save: tr(RecordsMsg::CompositionCommit),
         blocked: None,
     });
     let heading = editor_heading(
-        message(Msg::CompositionNewTitle),
+        message(RecordsMsg::CompositionNewTitle),
         &Mode::Creating,
         Header {
             title: String::new().into(),
-            subtitle: Some(tr(Msg::CompositionNewSubtitle).into()),
+            subtitle: Some(tr(RecordsMsg::CompositionNewSubtitle).into()),
             crumbs: crumbs(ehr_id),
             mono: false,
             badge: None,
@@ -1526,7 +1608,7 @@ fn new_page(ehr_id: &str, form: NewForm) -> AnyView {
         EditorLanguage::Json
     };
     view! {
-        <Title text=tr(Msg::CompositionNewPageTitle) />
+        <Title text=tr(RecordsMsg::CompositionNewPageTitle) />
         {heading}
         <div class="fui-stack">
             {refused.map(|refusal| refusal.view())}
@@ -1560,7 +1642,7 @@ fn new_page(ehr_id: &str, form: NewForm) -> AnyView {
                     None,
                     language,
                     findings,
-                    tr(Msg::CompositionNewEditorLabel),
+                    tr(RecordsMsg::CompositionNewEditorLabel),
                 )}
             </form>
         </div>

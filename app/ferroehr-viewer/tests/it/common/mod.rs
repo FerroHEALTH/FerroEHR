@@ -55,6 +55,17 @@ const POLL_STEP: Duration = Duration::from_millis(200);
 /// only observes a rendered page (module docs).
 const HYDRATION_WAIT: Duration = Duration::from_mins(1);
 
+/// The words [`Harness::mark_document`] leaves on the window.
+const DOCUMENT_MARK: &str = "drawn-in-this-document";
+
+/// The site bundle's files a browser without WebAssembly is refused: the
+/// entry's WebAssembly and glue and the lazy routes' chunks.
+const WITHHELD: [&str; 3] = [
+    "*/pkg/ferroehr-viewer*",
+    "*/pkg/__wasm_split*",
+    "*/pkg/*.wasm",
+];
+
 /// The width of a phone screen, in CSS pixels.
 pub(crate) const PHONE_WIDTH: u32 = 390;
 
@@ -72,6 +83,10 @@ pub(crate) struct Harness {
     /// only exist in that mode, so [`Harness::goto`] waits for the shell's
     /// hydration marker exactly when one will ever appear.
     js: bool,
+    /// Whether the browser is refused the site bundle
+    /// ([`Harness::start_without_webassembly`]), so a page logs the refused
+    /// bundle file as its one expected error.
+    withheld: bool,
 }
 
 /// Environment lookup for a journey credential/URL.
@@ -137,6 +152,7 @@ impl Harness {
             shots_dir,
             journey,
             js: true,
+            withheld: false,
         };
         // The phone lane runs every journey at 390 px (#3910).
         if env("UI_E2E_VIEWPORT").as_deref() == Some("phone") {
@@ -166,6 +182,7 @@ impl Harness {
             .filter(|e| e.level == "SEVERE")
             .map(|e| e.message)
             .filter(|m| !m.contains("Failed to load resource"))
+            .filter(|m| !(self.withheld && m.contains("/pkg/")))
             .collect();
         assert!(
             severe.is_empty(),
@@ -308,6 +325,7 @@ impl Harness {
             shots_dir,
             journey,
             js: false,
+            withheld: false,
         })
     }
 
@@ -416,8 +434,9 @@ impl Harness {
         panic!("a toast never cleared (it would intercept the next click)");
     }
 
-    /// Wait until client hydration has completed on the current page (the
-    /// shell stamps `data-hydrated` on `<body>` from a browser-only effect).
+    /// Wait until client hydration has completed on the current page
+    /// (FerroUI writes `data-ferroui-hydrated` on the root element once the
+    /// page and its lazy route have hydrated).
     /// Required before driving any control whose handler exists only
     /// hydrated — a click or file selection landing earlier is silently
     /// lost, and a same-value re-send fires no later event (#2285).
@@ -427,8 +446,90 @@ impl Harness {
     /// which differs by an order of magnitude between the two lanes (module
     /// docs).
     pub(crate) async fn wait_hydrated(&self) {
-        self.wait_css_for("body[data-hydrated]", HYDRATION_WAIT)
+        self.wait_css_for("html[data-ferroui-hydrated]", HYDRATION_WAIT)
             .await;
+    }
+
+    /// Start a journey whose browser is refused the site bundle's
+    /// WebAssembly, its glue and its chunks, so no page hydrates, as on a
+    /// page whose WebAssembly has not loaded or will not; the stylesheets
+    /// still load.
+    ///
+    /// # Panics
+    /// When the stack env is set but the browser session cannot start, or
+    /// the browser refuses the blocked addresses.
+    pub(crate) async fn start_without_webassembly(journey: &'static str) -> Option<Self> {
+        let mut h = Self::start(journey).await?;
+        let cdp = h.driver.cdp();
+        bounded(
+            "cdp(Network.enable)",
+            cdp.send_raw("Network.enable", serde_json::json!({})),
+        )
+        .await
+        .expect("enable the network domain");
+        bounded(
+            "cdp(Network.setBlockedURLs)",
+            cdp.send_raw(
+                "Network.setBlockedURLs",
+                serde_json::json!({ "urls": WITHHELD }),
+            ),
+        )
+        .await
+        .expect("block the bundle");
+        h.js = false;
+        h.withheld = true;
+        Some(h)
+    }
+
+    /// Marks the window, which a document the browser loads anew does not
+    /// carry, so [`Self::document_kept`] tells a page the router drew from a
+    /// page the browser loaded.
+    ///
+    /// # Panics
+    /// When the browser refuses the script.
+    pub(crate) async fn mark_document(&self) {
+        bounded(
+            "execute(mark)",
+            self.driver.execute(
+                &format!("window.ferroehrJourney = '{DOCUMENT_MARK}';"),
+                Vec::new(),
+            ),
+        )
+        .await
+        .expect("mark the window");
+    }
+
+    /// Whether the window still carries the mark of [`Self::mark_document`].
+    ///
+    /// # Panics
+    /// When the browser refuses the script.
+    pub(crate) async fn document_kept(&self) -> bool {
+        let answer = bounded(
+            "execute(read the mark)",
+            self.driver
+                .execute("return window.ferroehrJourney || null;", Vec::new()),
+        )
+        .await
+        .expect("read the window's mark");
+        answer.json().as_str() == Some(DOCUMENT_MARK)
+    }
+
+    /// Goes back one page in the browser's history.
+    ///
+    /// # Panics
+    /// When the browser does not answer.
+    pub(crate) async fn back(&self) {
+        bounded("back()", self.driver.back()).await.expect("back");
+    }
+
+    /// Goes forward one page in the browser's history.
+    ///
+    /// # Panics
+    /// When the browser does not answer.
+    pub(crate) async fn forward(&self) {
+        bounded("forward()", self.driver.forward())
+            .await
+            .expect("forward");
     }
 
     /// Numbered step screenshot: `{journey}-{step}-{slug}.png`.
@@ -1458,29 +1559,56 @@ pub(crate) async fn submit_by_key(h: &Harness, key: impl Into<TypingData>) {
     leave_page(h, "the key press", h.press(key)).await;
 }
 
-/// Mark the document, run `action`, and wait for the page that answers it: a
-/// new document without the mark, with its `main` drawn.
+/// The script that counts the page reads the browser has asked the server
+/// for in this document: a page the router draws asks for its visit and its
+/// model.
+const PAGE_READS: &str = "return performance.getEntriesByType('resource') \
+     .filter((e) => e.name.includes('/api/visit_now') || e.name.includes('/api/load_')) \
+     .length;";
+
+/// How many page reads the browser has asked for in this document
+/// ([`PAGE_READS`]), none while the browser swaps documents.
+async fn page_reads(h: &Harness) -> u64 {
+    // NOTE: a script sent while the browser swaps documents can be refused; that reads as
+    // no new page yet, and the root element's mark tells the new document apart.
+    bounded(
+        "execute(page reads)",
+        h.driver.execute(PAGE_READS, Vec::new()),
+    )
+    .await
+    .map(|answer| answer.json().as_u64().unwrap_or_default())
+    .unwrap_or_default()
+}
+
+/// Mark the page, run `action`, and wait for the page that answers it: a
+/// new document, or a page the router drew after it, with its `main` drawn.
 ///
-/// A probe that runs before the new document arrives can find an element in
-/// the old one and read it after the browser replaced it, which Chrome
-/// answers with "Node with given id does not belong to the document", an
-/// error [`is_absence`] rightly refuses.
+/// The mark sits on the root element, which only a new document replaces.
+/// A page the router draws in the same document asks the server for its
+/// visit and its model first ([`PAGE_READS`]), which the browser's resource
+/// timing counts, so a page drawn over the old one in place is seen too. A
+/// probe that runs before the new page arrives can find an element in the
+/// old one and read it after the browser replaced it, which Chrome answers
+/// with "Node with given id does not belong to the document", an error
+/// [`is_absence`] rightly refuses.
 ///
 /// # Panics
 /// When the mark cannot be set or no page answers within 15 s.
 async fn leave_page(h: &Harness, what: &str, action: impl Future<Output = ()>) {
     bounded(
-        "execute(mark the document)",
+        "execute(mark the page)",
         h.driver.execute(
-            "document.documentElement.dataset.e2eLeft = '1';",
+            "document.documentElement.dataset.e2eLeft = '1'; \
+             performance.setResourceTimingBufferSize(100000);",
             Vec::new(),
         ),
     )
     .await
-    .expect("mark the document before the post");
+    .expect("mark the page before the post");
+    let before = page_reads(h).await;
     action.await;
     let moved = poll_until_for(Duration::from_secs(15), async || {
-        !is_present(h, "html[data-e2e-left]").await
+        !is_present(h, "html[data-e2e-left]").await || page_reads(h).await > before
     })
     .await;
     assert!(moved, "{what} never brought a new page");

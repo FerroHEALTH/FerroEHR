@@ -24,6 +24,7 @@ use ferrohealth_ui::view::transform::{Density, Run, RunState, run_button, transf
 use leptos::prelude::*;
 use leptos_meta::Title;
 
+use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{card_panel, quiet, section};
 use crate::scopes::GrantDetail;
@@ -42,7 +43,7 @@ pub fn grant_of(raw: &str) -> ScopeGrant {
                 constraint: None,
             },
             resource: tr_with(
-                Msg::ScopeResource,
+                ConsoleMsg::ScopeResource,
                 &[
                     ("family", resource.family.into()),
                     ("pattern", resource.pattern.into()),
@@ -57,14 +58,14 @@ pub fn grant_of(raw: &str) -> ScopeGrant {
         }),
         (SmartScope::Identity(name), _) => match identity(&name) {
             Some(request) => Grant::Request(request),
-            None => Grant::Refused(tr(Msg::ScopeNotRecognised).into()),
+            None => Grant::Refused(tr(ConsoleMsg::ScopeNotRecognised).into()),
         },
         (_, GrantDetail::Unrecognized { expected }) => Grant::Refused(
             expected
-                .unwrap_or_else(|| tr(Msg::ScopeNotRecognised))
+                .unwrap_or_else(|| tr(ConsoleMsg::ScopeNotRecognised))
                 .into(),
         ),
-        (_, _) => Grant::Refused(tr(Msg::ScopeNotRecognised).into()),
+        (_, _) => Grant::Refused(tr(ConsoleMsg::ScopeNotRecognised).into()),
     };
     ScopeGrant {
         raw: raw.to_owned(),
@@ -129,9 +130,9 @@ pub fn AccessPage() -> impl IntoView {
     let idle = crate::request::settings().idle_minutes;
     let (who, how, method, scopes) = match &session {
         Some(session) => {
-            let (how, method) = match session.method {
-                crate::request::Method::Basic => (tr(Msg::AccessHowBasic), "basic"),
-                crate::request::Method::Oidc => (tr(Msg::AccessHowOidc), "oidc"),
+            let (how, method) = match session.method() {
+                crate::request::Method::Basic => (tr(ConsoleMsg::AccessHowBasic), "basic"),
+                crate::request::Method::Oidc => (tr(ConsoleMsg::AccessHowOidc), "oidc"),
             };
             (
                 session.identity.clone(),
@@ -145,41 +146,41 @@ pub fn AccessPage() -> impl IntoView {
     let policy = crate::scopes::policy_source(method);
     let facts = definitions(vec![
         (
-            tr(Msg::AccessSignedInAs),
+            tr(ConsoleMsg::AccessSignedInAs),
             view! { <strong>{who}</strong> }.into_any(),
         ),
-        (tr(Msg::AccessHow), how.into_any()),
-        (tr(Msg::AccessDecides), policy.note.into_any()),
+        (tr(ConsoleMsg::AccessHow), how.into_any()),
+        (tr(ConsoleMsg::AccessDecides), policy.note.into_any()),
         (
-            tr(Msg::AccessSession),
-            tr_with(Msg::AccessSessionEnds, &[("minutes", idle.into())]).into_any(),
+            tr(ConsoleMsg::AccessSession),
+            tr_with(ConsoleMsg::AccessSessionEnds, &[("minutes", idle.into())]).into_any(),
         ),
     ]);
     let claim = scopes.join(" ");
     let held = if method == "basic" || claim.trim().is_empty() {
         section(
-            Some(tr(Msg::AccessScopes)),
+            Some(tr(ConsoleMsg::AccessScopes)),
             None,
             None,
-            quiet(tr(Msg::AccessNoScopes)),
+            quiet(tr(ConsoleMsg::AccessNoScopes)),
         )
     } else {
         let grants = grants_of(&claim);
         let count = u64::try_from(grants.len()).unwrap_or_default();
         section(
-            Some(tr(Msg::AccessScopes)),
+            Some(tr(ConsoleMsg::AccessScopes)),
             Some(count),
             None,
-            scope_grants(tr(Msg::AccessScopes), grants),
+            scope_grants(tr(ConsoleMsg::AccessScopes), grants),
         )
     };
     let typed = crate::request::query("scope").unwrap_or_default();
     let previewed = if typed.is_empty() {
-        quiet(tr(Msg::AccessPreviewEmpty))
+        quiet(tr(ConsoleMsg::AccessPreviewEmpty))
     } else {
-        scope_grants(tr(Msg::AccessPreviewed), grants_of(&typed))
+        scope_grants(tr(ConsoleMsg::AccessPreviewed), grants_of(&typed))
     };
-    let field = Field::new("scope", tr(Msg::AccessScopeField))
+    let field = Field::new("scope", tr(ConsoleMsg::AccessScopeField))
         .holds_id()
         .view(view! {
             <input
@@ -190,13 +191,13 @@ pub fn AccessPage() -> impl IntoView {
                 spellcheck="false"
                 autocomplete="off"
                 value=typed
-                placeholder=tr(Msg::AccessScopePlaceholder)
+                placeholder=tr(ConsoleMsg::AccessScopePlaceholder)
             />
         });
     let run = run_button(Run {
         id: "scope-read".to_owned(),
-        label: tr(Msg::AccessReadIt),
-        busy: tr(Msg::AccessReadIt),
+        label: tr(ConsoleMsg::AccessReadIt),
+        busy: tr(ConsoleMsg::AccessReadIt),
         glyph: Glyph::SEARCH,
         shortcut: None,
         operation: None,
@@ -209,14 +210,14 @@ pub fn AccessPage() -> impl IntoView {
         {previewed}
     };
     let body = card_panel(view! {
-        {section(Some(tr(Msg::AccessWho)), None, None, facts)}
+        {section(Some(tr(ConsoleMsg::AccessWho)), None, None, facts)}
         {held}
         {section(
-            Some(tr(Msg::AccessPreview)),
+            Some(tr(ConsoleMsg::AccessPreview)),
             None,
             None,
             view! {
-                {ferrohealth_ui::view::surface::section_intro(tr(Msg::AccessPreviewIntro))}
+                {ferrohealth_ui::view::surface::section_intro(tr(ConsoleMsg::AccessPreviewIntro))}
                 {preview}
             },
         )}
@@ -224,7 +225,7 @@ pub fn AccessPage() -> impl IntoView {
     let heading = page_heading(
         Header {
             title: tr(Msg::YourAccess).into(),
-            subtitle: Some(tr(Msg::AccessSubtitle).into()),
+            subtitle: Some(tr(ConsoleMsg::AccessSubtitle).into()),
             crumbs: Vec::new(),
             mono: false,
             badge: None,

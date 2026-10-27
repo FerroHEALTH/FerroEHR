@@ -19,6 +19,7 @@ use crate::locale::{Msg, tr, tr_with};
 /// The 404 page's body: the address that is not a page, and where EHRs live.
 fn not_found_body() -> AnyView {
     let path = crate::request::path();
+    #[cfg(not(target_arch = "wasm32"))]
     crate::request::set_status(http::StatusCode::NOT_FOUND);
     error_page(ErrorPage {
         status: Status::NotFound,
@@ -69,6 +70,7 @@ pub fn NotFoundPage() -> impl IntoView {
 /// `title` names the page, `needs` says what the CDR asks for.
 #[must_use]
 pub fn forbidden(title: String, needs: String) -> AnyView {
+    #[cfg(not(target_arch = "wasm32"))]
     crate::request::set_status(http::StatusCode::FORBIDDEN);
     let who = crate::request::signed().map_or_else(String::new, |session| session.identity);
     error_page(ErrorPage {
