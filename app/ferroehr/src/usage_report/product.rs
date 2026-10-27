@@ -22,6 +22,7 @@ use serde::Serialize;
 use sqlx::Connection as _;
 use sqlx::PgPool;
 
+use crate::config::FerroEhrConfig;
 use crate::db::acquire::acquire;
 use crate::licence::document::Use;
 use crate::licence::state::LicenceState;
@@ -113,9 +114,8 @@ pub enum RouteGroup {
 }
 
 impl RouteGroup {
-    /// Returns the group a matched route template belongs to, or `None` for a
-    /// route outside the API families (the health family, the management
-    /// surface, the status and discovery documents).
+    /// Returns the group of a route template below the API mount, or
+    /// `None` for a route outside the API families.
     ///
     /// The first literal segment naming an API family decides (`admin`,
     /// `definition`, `query`, `ehr`, or a family the report folds into
@@ -166,19 +166,46 @@ impl RouteGroup {
     }
 }
 
-/// The window's grouping: the [`RouteGroup`] of a matched route template, and
-/// nothing for a request no route matched.
+/// The window's grouping: the [`RouteGroup`] of the part of a matched route
+/// template below `base_path` ([`api_mount`]), and nothing for a request
+/// no route matched or a route outside that mount.
+///
+/// Reading only the part below the mount keeps a family word in a configured
+/// base path, such as `/ferroehr/ehr/v1`, from deciding the group.
 #[must_use]
-pub fn grouping(_method: &Method, route: Option<&str>) -> Option<Key> {
-    route
-        .and_then(RouteGroup::of_template)
-        .and_then(|group| Key::new(group.as_str()))
+pub fn grouping(base_path: &str, route: Option<&str>) -> Option<Key> {
+    let below = route?.strip_prefix(base_path)?;
+    if !below.is_empty() && !below.starts_with('/') {
+        return None;
+    }
+    RouteGroup::of_template(below).and_then(|group| Key::new(group.as_str()))
 }
 
-/// A latency window over FerroEHR's grouping, for the request log to fill.
+/// The mount the openEHR API's route templates sit under: `server.base_path`,
+/// where every route is served, followed by `rest.base_path`.
 #[must_use]
-pub fn window() -> Arc<Window> {
-    Arc::new(Window::new(grouping))
+pub fn api_mount(config: &FerroEhrConfig) -> String {
+    format!(
+        "{}{}",
+        config.server.base_path.as_str(),
+        config.rest.base_path
+    )
+}
+
+/// A latency window over FerroEHR's grouping below `base_path`, for the
+/// request log to fill.
+#[must_use]
+pub fn window(base_path: &str) -> Arc<Window> {
+    let base_path = base_path.to_owned();
+    Arc::new(Window::new(move |_method: &Method, route: Option<&str>| {
+        grouping(&base_path, route)
+    }))
+}
+
+/// A window that only shows restored counts: [`preview`] records nothing
+/// into it, so it groups nothing.
+fn shown_window() -> Arc<Window> {
+    Arc::new(Window::new(|_method: &Method, _route: Option<&str>| None))
 }
 
 /// The licence grant type a licence state reports.
@@ -262,7 +289,7 @@ pub async fn preview(
         tx.rollback().await.map_err(StoreError::from)?;
         instance
     };
-    let shown = window();
+    let shown = shown_window();
     if kind == EventKind::Daily {
         let store = PgStore::new(pool.clone());
         shown.restore(&store.peek().await?);
@@ -292,9 +319,16 @@ pub async fn preview(
 mod tests {
     use super::*;
 
+    /// The default `server.base_path`.
+    const BASE: &str = "/ferroehr/rest/openehr/v1";
+
+    /// The group name [`grouping`] gives `route` under `base_path`.
+    fn group_of(base_path: &str, route: &str) -> Option<String> {
+        grouping(base_path, Some(route)).map(|key| key.as_str().to_owned())
+    }
+
     #[test]
     fn templates_map_to_their_group() {
-        let base = "/ferroehr/rest/openehr/v1";
         let cases = [
             ("/ehr", RouteGroup::Ehr),
             ("/ehr/{ehr_id}/ehr_status/{version_uid}", RouteGroup::Ehr),
@@ -331,9 +365,9 @@ mod tests {
         for (path, group) in cases {
             assert_eq!(RouteGroup::of_template(path), Some(group), "{path}");
             assert_eq!(
-                RouteGroup::of_template(&format!("{base}{path}")),
-                Some(group),
-                "{base}{path}"
+                group_of(BASE, &format!("{BASE}{path}")).as_deref(),
+                Some(group.as_str()),
+                "{BASE}{path}"
             );
         }
     }
@@ -349,9 +383,68 @@ mod tests {
             "unmatched",
             "",
         ] {
-            assert_eq!(RouteGroup::of_template(template), None, "{template}");
+            assert_eq!(group_of(BASE, template), None, "{template}");
         }
-        assert_eq!(grouping(&Method::GET, None), None);
+        assert_eq!(grouping(BASE, None), None);
+    }
+
+    #[test]
+    fn a_family_word_in_the_base_path_never_decides_the_group() {
+        let base = "/ferroehr/ehr/v1";
+        assert_eq!(
+            group_of(base, &format!("{base}/query/aql")).as_deref(),
+            Some("query")
+        );
+        assert_eq!(
+            group_of(base, &format!("{base}/definition/template/adl1.4")).as_deref(),
+            Some("definition")
+        );
+        assert_eq!(
+            group_of(base, &format!("{base}/ehr/{{ehr_id}}/composition")).as_deref(),
+            Some("composition")
+        );
+        for outside in [
+            "/ferroehr/ehr/status",
+            "/ferroehr/ehr/v1x/query/aql",
+            "/ferroehr/ehr",
+            base,
+        ] {
+            assert_eq!(group_of(base, outside), None, "{outside}");
+        }
+    }
+
+    #[test]
+    fn the_api_mount_is_the_server_mount_then_the_rest_root() {
+        let mut config = FerroEhrConfig::default();
+        assert_eq!(api_mount(&config), BASE);
+        config.server.base_path =
+            ferrohealth_server::section::BasePath::new("/edge").expect("a base path");
+        config.rest.base_path = "/ferroehr/ehr/v1".to_owned();
+        assert_eq!(api_mount(&config), "/edge/ferroehr/ehr/v1");
+    }
+
+    #[test]
+    fn the_window_groups_below_its_base_path() {
+        let window = window("/ferroehr/query/v1");
+        window.record(
+            &Method::GET,
+            Some("/ferroehr/query/v1/ehr/{ehr_id}"),
+            http::StatusCode::OK,
+            std::time::Duration::from_millis(3),
+        );
+        window.record(
+            &Method::GET,
+            Some("/ferroehr/query/status"),
+            http::StatusCode::OK,
+            std::time::Duration::from_millis(3),
+        );
+        let counts = window.take();
+        let groups: Vec<String> = counts
+            .groups
+            .keys()
+            .map(|key| key.as_str().to_owned())
+            .collect();
+        assert_eq!(groups, vec!["ehr".to_owned()]);
     }
 
     #[test]
