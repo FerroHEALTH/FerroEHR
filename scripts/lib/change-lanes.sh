@@ -33,6 +33,7 @@ set -euo pipefail
 # inputs to the server it runs against and the boot-installed policy and
 # access configuration.
 # ci server_dockerfile: the Dockerfile and the build-context ignore list.
+# ci viewer_dockerfile (#4222): the viewer Dockerfile and the same ignore list.
 # ci helm (#2110): the chart and the recipe. ci chart_boot (#2159) is a
 # superset: the overlays and the configuration they are written against.
 # ci workflows (#2373): the recipe of the cargo lanes.
@@ -44,6 +45,7 @@ ci|code|^scripts/(checks/codegen-drift|ui-e2e|cargo-leptos)\.sh$|^(app/|crates/|
 ci|msrv|(^|/)Cargo\.toml$|^Cargo\.lock$|^rust-toolchain\.toml$|^clippy\.toml$|^\.github/workflows/ci\.yml$
 ci|viewer|^(app/ferroehr-viewer/|app/ferroehr-server/src/|app/ferroehr/src/privacy/|app/ferroehr/src/config/|app/ferroehr-rest/src/extensions/access/|app/ferroehr-rest/src/smart/|app/ferroehr-rest/src/config\.rs$|app/ferroehr-rest/src/router\.rs$|docker/ferroehr\.dev\.toml$|app/ferroehr/assets/ferroehr\.default\.toml$|scripts/ui-e2e\.sh$|scripts/cargo-leptos\.sh$|docker-compose\.yml$|docker-compose\.override\.yml$|docker-compose\.dev\.yml$|docker-compose\.keycloak\.yml$|docker/Dockerfile$|docker/viewer/|docker/keycloak/|docker/postgres/|Cargo\.lock$|\.github/workflows/ci\.yml$)
 ci|server_dockerfile|^(docker/Dockerfile|\.dockerignore)$
+ci|viewer_dockerfile|^(docker/viewer/Dockerfile|\.dockerignore)$
 ci|helm|^(deploy/helm/|\.github/workflows/ci\.yml$)
 ci|chart_boot|^(deploy/helm/|\.github/workflows/ci\.yml$|docker/Dockerfile$|app/ferroehr/src/config/|app/ferroehr/assets/ferroehr\.default\.toml$|app/ferroehr-rest/src/config\.rs$|app/ferroehr/src/report\.rs$)
 ci|workflows|^\.github/workflows/ci\.yml$
@@ -109,6 +111,7 @@ the e2e harness runs the cargo lanes and the viewer|ci|scripts/ui-e2e.sh|code,vi
 any other script runs no lane|ci|scripts/watch/eu-acts.sh|
 the deploy probe runs the deploy lane|ci|scripts/deploy-probe.sh|deploy
 the server Dockerfile reaches five lanes|ci|docker/Dockerfile|deploy,viewer,server_dockerfile,chart_boot
+the viewer Dockerfile reaches its own image lane|ci|docker/viewer/Dockerfile|deploy,viewer,viewer_dockerfile
 the chart runs helm and chart boot|ci|deploy/helm/ferroehr/values.yaml|helm,chart_boot
 the configuration tree reboots the chart|ci|app/ferroehr/src/config/mod.rs|code,viewer,chart_boot
 the ci recipe reaches its recipe lanes|ci|.github/workflows/ci.yml|msrv,viewer,helm,chart_boot,workflows
@@ -130,7 +133,7 @@ CASES
     failures=1
   fi
   [[ "$failures" -eq 0 ]] || return 1
-  echo "change-lanes: self-test OK (15 paths classified first and last in a 2000-path list; the pipe form fails on it)."
+  echo "change-lanes: self-test OK (16 paths classified first and last in a 2000-path list; the pipe form fails on it)."
 }
 
 case "${1-}" in
