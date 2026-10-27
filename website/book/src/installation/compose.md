@@ -296,7 +296,7 @@ host, so Keycloak serves the issuer over TLS on the compose network at
 `https://keycloak:8443/auth/realms/ferroehr`. On the first `up`, a one-shot
 `keycloak-tls` service generates a development CA and a certificate for
 `keycloak` into the `keycloak-tls` volume and discards the CA's private key;
-the server trusts that CA (`SSL_CERT_DIR`) beside the public ones. `docker
+the server trusts that CA (`[auth] ca_file`) beside the public ones. `docker
 compose down --volumes` deletes the volume, and the next `up` generates a new
 CA. Keycloak also answers plain HTTP on port 8081 for the token call below, and
 the tokens it mints there name the HTTPS issuer. Keycloak's access tokens carry

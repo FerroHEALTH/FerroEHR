@@ -87,10 +87,10 @@ services:
       # Keycloak writes the realm roles under the nested `realm_access.roles`,
       # beside the RFC 9068 claims the shared default reads.
       FERROEHR__AUTH__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
-      # The development CA beside the image's own trust store: rustls reads
-      # both variables (rustls-native-certs), so public CAs stay trusted.
-      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
-      SSL_CERT_DIR: /run/ferroehr-dev-tls/ca
+      # The development CA, trusted for the issuer's metadata and key set
+      # beside the platform roots (`[auth] ca_file`) on every platform. It
+      # needs a 5.5.0 or later image: 5.4.2 refuses the key.
+      FERROEHR__AUTH__CA_FILE: /run/ferroehr-dev-tls/ca/ca.crt
       # RBAC ON, because an identity provider whose roles decide nothing is a
       # login screen, not authorization. The base quickstart leaves it off so a
       # first run needs no role setup; this overlay exists to show real
