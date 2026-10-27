@@ -31,7 +31,10 @@ this one.
 - **Wire validation**: `wire_validate`, the wire-boundary dispatcher for the
   RM class invariants, refusing undeclared keys and routing every class to
   its invariant checks in `openehr_rm::validate`.
-- **OPT 1.4** (`opt14`) and both AOM2 archetype XML codecs.
+- **OPT 1.4** (`opt14`) and both AOM2 archetype XML codecs, with an OPT 1.4
+  writer (`opt14_writer`) that builds an operational template from a
+  template definition and the AM 1.4 archetypes it names, deterministically
+  and valid against ITS-XML `Template.xsd`.
 
 ### Reading and writing canonical JSON
 
@@ -61,7 +64,7 @@ layered, so a consumer takes only what it reads:
 |---|---|---|
 | `json` | `json`, `json_codec`, `wire_validate` | serde, the five spec crates |
 | `xml` | `xml`, `aom2`, `aom2_model` | `json` + `quick-xml` |
-| `opt14` | `opt14` | `xml` |
+| `opt14` | `opt14`, `opt14_writer` | `xml` + `regex` |
 | `schema-validation` | `json::validate_canonical` | `json` + `jsonschema`, the embedded RM schema |
 | `rest` | `rest::generated` (DTOs, param structs, route tables), `rest::runtime::ApiError` | `json` + `http` |
 | `rest-server` | the per-group `#[async_trait]` server traits, the `axum` response mapping of `ApiError` | `rest` + `axum`, `async-trait` |

@@ -1433,6 +1433,21 @@ pub(crate) async fn submit(h: &Harness, css: &str) {
     .await;
 }
 
+/// [`submit`] for a control found some other way than by CSS, such as by
+/// an `XPath`: click `control` and wait for the page that answers the post
+/// ([`leave_page`]).
+///
+/// # Panics
+/// When the click fails or no page answers within 15 s.
+pub(crate) async fn submit_control(h: &Harness, control: Element) {
+    let what = format!("the click on `{}`", control.what);
+    leave_page(h, &what, async {
+        control.scroll_to_centre().await;
+        control.click().await;
+    })
+    .await;
+}
+
 /// Press `key` on the focused submit control and wait for the page that
 /// answers the post ([`leave_page`]): [`submit`] for a keyboard journey.
 ///

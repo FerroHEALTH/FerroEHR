@@ -39,10 +39,11 @@
 //! The default `full` feature is every surface above. The graph underneath it
 //! is layered so a consumer takes only what it reads: `json` is the canonical
 //! JSON base, `xml` adds the XML codecs and `opt14` the operational-template
-//! reader. A `wasm32-unknown-unknown` consumer takes
-//! `default-features = false, features = ["opt14"]`, which pulls that whole
-//! chain; `schema-validation` (`jsonschema` plus the compiled-in ITS-JSON RM
-//! schema) and the three ITS-REST features stay outside it. `rest` is the
+//! reader and its writer, [`opt14_writer`]. A `wasm32-unknown-unknown`
+//! consumer takes `default-features = false, features = ["opt14"]`, which
+//! pulls that whole chain; `schema-validation` (`jsonschema` plus the
+//! compiled-in ITS-JSON RM schema) and the three ITS-REST features stay
+//! outside it. `rest` is the
 //! contract both halves share (DTOs, param structs, route tables, `ApiError`)
 //! over serde and `http`; `rest-server` adds the server traits and `axum`;
 //! `rest-client` adds the generated clients and the client runtime over
@@ -69,6 +70,8 @@ pub mod json;
 pub mod json_codec;
 #[cfg(feature = "opt14")]
 pub mod opt14;
+#[cfg(feature = "opt14")]
+pub mod opt14_writer;
 pub mod rest;
 #[cfg(feature = "json")]
 pub mod wire_validate;

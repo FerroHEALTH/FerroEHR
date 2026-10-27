@@ -47,7 +47,7 @@ use openehr_its::opt14::types::Archetype;
 /// schema-invalid, so refusing it is correct: accepting an undeclared
 /// constrainer would silently fork the AM model. Recorded as a defect in the
 /// vendored data, NOT as a codec gap — nothing here asks for a codegen change.
-const ADJUDICATED: &[(&str, &str)] = &[
+pub(crate) const ADJUDICATED: &[(&str, &str)] = &[
     (
         "openEHR-EHR-CLUSTER.lab_microscopy_culture.v0.xml",
         "xsi:type=\"C_DV_SCALE\" is declared by no vendored openEHR schema",
@@ -66,11 +66,11 @@ const ADJUDICATED: &[(&str, &str)] = &[
     ),
 ];
 
-fn pack_dir() -> PathBuf {
+pub(crate) fn pack_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/archetypes/ckm/xml")
 }
 
-fn xml_files(dir: &Path) -> Vec<PathBuf> {
+pub(crate) fn xml_files(dir: &Path) -> Vec<PathBuf> {
     let entries = match std::fs::read_dir(dir) {
         Ok(entries) => entries,
         Err(e) => panic!("read pack dir {}: {e}", dir.display()),
