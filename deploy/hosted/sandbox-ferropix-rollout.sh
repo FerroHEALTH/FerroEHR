@@ -12,6 +12,7 @@
 #   deploy/hosted/sandbox-ferropix-rollout.sh            # steps 1 to 6
 #   deploy/hosted/sandbox-ferropix-rollout.sh --check    # verify only
 #   deploy/hosted/sandbox-ferropix-rollout.sh --step 2   # one step (repeatable)
+#   deploy/hosted/sandbox-ferropix-rollout.sh --self-test  # prove --check pulls no image
 #
 # Steps: 1 preflight; 2 the FerroPIX database and role on the DB box; 3 the
 # app box's `.env` lines and its deploy script; 4 the FerroTERM index layout;
@@ -55,10 +56,11 @@ SOURCE_DOMAIN="urn:oid:2.999.1.1"
 DB_IMAGE="$(sed -nE 's/.*\$\{FERROEHR_POSTGRES_IMAGE:-([^}]+)\}.*/\1/p' "$CLOUD_INIT_DB" | sed -n 1p)"
 
 CHECK=0
+SELF_TEST=0
 ASSUME_RELEASE=0
 STEPS=()
 usage() {
-  echo "usage: $0 [--check] [--step N]... [--assume-release]" >&2
+  echo "usage: $0 [--check] [--step N]... [--assume-release] | --self-test" >&2
   echo "  --assume-release  treat the running CDR as $RELEASE_FLOOR+ (a stand-in box on an unreleased image)" >&2
 }
 while [[ $# -gt 0 ]]; do
@@ -70,6 +72,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --assume-release) ASSUME_RELEASE=1 ;;
+    --self-test) SELF_TEST=1 ;;
     -h | --help) usage; exit 0 ;;
     *) usage; exit 2 ;;
   esac
@@ -123,14 +126,78 @@ release_knows_ferropix() {
   version_at_least "$1" "$RELEASE_FLOOR"
 }
 
+# What ferropix_login prints when --check finds no psql client image to run.
+readonly NO_CLIENT_IMAGE="no-psql-client-image"
+
 # Logs in as ferropix from the app box over the private network ($1 the
 # password, $2 the DB box's private address) and prints the server's answer.
+# The pinned image is the psql client, and `docker run` would pull it, so
+# under --check the login runs only when the image is already on the box.
 ferropix_login() {
   app > "$WORK/login" <<EOF || true
+if [ $CHECK -eq 1 ] && ! docker image inspect $(printf '%q' "$DB_IMAGE") > /dev/null 2>&1; then
+  echo $NO_CLIENT_IMAGE
+  exit 0
+fi
 printf '%s' $(printf '%q' "$1") | docker run -i --rm --entrypoint sh $(printf '%q' "$DB_IMAGE") -c \
   'PGPASSWORD="\$(cat)" psql -h ${DB_DIAL_HOST:-$2} -p $DB_PORT -U ferropix -d ferropix -At -F " " -c "SELECT current_user, current_database(), rolsuper FROM pg_roles WHERE rolname = current_user"'
 EOF
   cat "$WORK/login"
+}
+
+# Judges a ferropix_login answer $1: SKIP when --check had no client image,
+# FAIL unless the server answered as ferropix, else OK with the answer.
+judge_login() {
+  local out="$1" bind="$2" note="${3-}"
+  if [[ "$out" == "$NO_CLIENT_IMAGE" ]]; then
+    skip "the psql client image is not on the app box; the real run checks the login"
+    return
+  fi
+  [[ "$out" == "ferropix ferropix f" ]] \
+    || fail "the app box cannot log in as ferropix at ${DB_DIAL_HOST:-$bind}:$DB_PORT: $out"
+  ok "from the app box over the private network: $out$note"
+}
+
+# Runs ferropix_login against a stub box whose docker records each call:
+# --check with the image absent pulls nothing, and every other case logs in.
+self_test() {
+  local stub="$WORK/stub" failures=0 check present want out ran
+  mkdir -p "$stub"
+  cat > "$stub/ssh" <<'STUB'
+#!/usr/bin/env bash
+eval "${*: -1}"
+STUB
+  cat > "$stub/docker" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$DOCKER_LOG"
+case "$1" in
+  image) [ "$STUB_IMAGE_PRESENT" -eq 1 ] ;;
+  run) cat > /dev/null; echo "ferropix ferropix f" ;;
+  *) exit 1 ;;
+esac
+STUB
+  chmod +x "$stub/ssh" "$stub/docker"
+  SSH_CMD="$stub/ssh"
+  export PATH="$stub:$PATH" DOCKER_LOG="$WORK/docker.log"
+  while read -r check present want; do
+    : > "$DOCKER_LOG"
+    CHECK="$check"
+    out="$(STUB_IMAGE_PRESENT="$present" ferropix_login pw 10.0.0.2)"
+    ran=no
+    grep -q '^run ' "$DOCKER_LOG" && ran=yes
+    if [[ "$want" == skip && ( "$out" != "$NO_CLIENT_IMAGE" || "$ran" == yes ) ]] \
+      || [[ "$want" == login && ( "$out" != "ferropix ferropix f" || "$ran" == no ) ]]; then
+      echo "self-test: check=$check image=$present: got '$out' (docker run: $ran), want $want" >&2
+      failures=1
+    fi
+  done <<'CASES'
+1 0 skip
+1 1 login
+0 0 login
+0 1 login
+CASES
+  [[ "$failures" -eq 0 ]] || return 1
+  echo "sandbox-ferropix-rollout: self-test OK (--check runs no docker run without the client image; 3 login cases run it)."
 }
 
 # ── step 1: preflight ─────────────────────────────────────────────────────────
@@ -243,9 +310,7 @@ EOF
   pw="$(cat "$WORK/out")"
   [[ -n "$pw" ]] || fail "no FERROPIX_DB_PASSWORD on the DB box"
   out="$(ferropix_login "$pw" "$bind")"
-  [[ "$out" == "ferropix ferropix f" ]] \
-    || fail "the app box cannot log in as ferropix at ${DB_DIAL_HOST:-$bind}:$DB_PORT: $out"
-  ok "from the app box over the private network: $out (password fingerprint $(fingerprint "$pw"))"
+  judge_login "$out" "$bind" " (password fingerprint $(fingerprint "$pw"))"
   printf '%s' "$pw" > "$WORK/db-password"
 }
 
@@ -765,11 +830,13 @@ EOF
   bind="$(sed -n 2p "$WORK/out")"
   [[ -n "$pw" ]] || fail "no FERROPIX_DB_PASSWORD on the DB box; run step 2 first"
   out="$(ferropix_login "$pw" "$bind")"
-  [[ "$out" == "ferropix ferropix f" ]] \
-    || fail "the app box cannot log in as ferropix at ${DB_DIAL_HOST:-$bind}:$DB_PORT: $out"
-  ok "from the app box over the private network: $out"
+  judge_login "$out" "$bind"
 }
 
+if [[ "$SELF_TEST" -eq 1 ]]; then
+  self_test
+  exit
+fi
 command -v jq > /dev/null || fail "jq is required on this machine"
 [[ -f "$MANIFEST" ]] || fail "run this from a checkout: $MANIFEST is missing"
 echo "sandbox-ferropix-rollout: app box $SSH_USER@$APP_HOST, DB box $SSH_USER@$DB_HOST, $([[ "$CHECK" -eq 1 ]] && echo 'check only' || echo 'changing what is missing'), steps ${STEPS[*]}"

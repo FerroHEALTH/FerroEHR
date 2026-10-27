@@ -32,8 +32,10 @@ trap 'rm -rf "$work"' EXIT
 # A client credentials token from the development issuer, which signs any
 # request: the client id and the scope are what FerroPIX checks.
 token() {
-  curl -fsS -m 30 -d grant_type=client_credentials -d "client_id=$1" \
-    -d client_secret=sandbox -d "scope=$2" "$issuer/token" \
+  client_id="$1"
+  scope="$2"
+  curl -fsS -m 30 -d grant_type=client_credentials -d "client_id=$client_id" \
+    -d client_secret=sandbox -d "scope=$scope" "$issuer/token" \
     | sed -n 's/.*"access_token" *: *"\([^"]*\)".*/\1/p'
 }
 
@@ -54,6 +56,7 @@ while IFS= read -r subject; do
       echo "ferropix-seed: refusing subject '$subject'" >&2
       exit 1
       ;;
+    *) ;;
   esac
   code="$(curl -sS -m 30 -o "$work/feed" -w '%{http_code}' -X PUT \
     -H "Authorization: Bearer $src" -H 'Content-Type: application/fhir+json' \
