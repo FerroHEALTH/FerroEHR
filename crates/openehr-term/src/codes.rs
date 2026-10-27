@@ -37,7 +37,7 @@ pub enum AuditChangeType {
 
 impl AuditChangeType {
     /// The group id in the openEHR terminology.
-    pub const GROUP_ID: &'static str = "audit_change_type";
+    pub const GROUP_ID: &str = "audit_change_type";
 
     /// Every concept of the group, in the bundle's order.
     pub const ALL: [Self; 9] = [
@@ -111,7 +111,7 @@ pub enum VersionLifecycleState {
 
 impl VersionLifecycleState {
     /// The group id in the openEHR terminology.
-    pub const GROUP_ID: &'static str = "version_lifecycle_state";
+    pub const GROUP_ID: &str = "version_lifecycle_state";
 
     /// Every concept of the group, in the bundle's order.
     pub const ALL: [Self; 5] = [
