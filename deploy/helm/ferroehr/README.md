@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). A stock install runs the sandbox deployment profile, which must not hold real patient data; set config.deployment_profile for a production holder.
 
-![Version: 19.3.0](https://img.shields.io/badge/Version-19.3.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.5.0](https://img.shields.io/badge/AppVersion-5.5.0-informational?style=flat-square)
+![Version: 20.0.0](https://img.shields.io/badge/Version-20.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.5.0](https://img.shields.io/badge/AppVersion-5.5.0-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 19.3.0 \
+  --version 20.0.0 \
   --namespace ferroehr --create-namespace \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.5.0
@@ -58,7 +58,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `19.3.0` |
+| the **chart** (templates, defaults, this document) | `--version` | `20.0.0` |
 | the **server image** | `image.tag` | `5.5.0` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -70,7 +70,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:19.3.0 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:20.0.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -78,7 +78,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:19.3.0 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:19.3.0 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:20.0.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.5.0 \
   -R FerroHEALTH/FerroEHR
@@ -255,6 +255,7 @@ Kubernetes: `>=1.36.0-0`
 | bridge.terminationGracePeriodSeconds | int | `20` | Termination grace period. FerroBRIDGE drains in-flight requests on SIGTERM for up to its own `server.shutdown_timeout_ms` (10 s by default). |
 | bridge.tolerations | list | `[]` | Tolerations. |
 | bridge.topologySpreadConstraints | list | `[]` | Topology spread for FerroBRIDGE's pods. Empty uses the chart's default: one replica per node, `ScheduleAnyway`, scoped to the ReplicaSet being rolled. Set it to replace that wholesale. |
+| bridge.usageReport.enabled | string | `nil` | FerroBRIDGE's usage report. Empty follows the top-level `usageReport.enabled`; true or false decides for FerroBRIDGE alone. The chart writes it into `[usage_report]` of config.toml, with the deployment `helm`, for a FerroBRIDGE release from 0.0.7 on; the pinned 0.0.5 sends no report and refuses the section, so it gets none. |
 | config.admin.enabled | bool | `false` |  |
 | config.audit.categories.archetypes | object | `{}` |  |
 | config.audit.categories.templates | object | `{}` |  |
@@ -338,6 +339,7 @@ Kubernetes: `>=1.36.0-0`
 | ferropix.image.digest | string | `"sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
 | ferropix.image.tag | string | `"0.0.7"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
 | ferropix.service.port | int | `8080` | FerroPIX's Service port, read here to build the FHIR base the CDR is pointed at. |
+| ferropix.usageReport.enabled | bool | `true` | FerroPIX's own usage report switch, read by the dependency chart. A dependency chart cannot read this chart's `usageReport.enabled`, so with that set to false, set this false too: the render refuses the pair `usageReport.enabled=false` and `ferropix.usageReport.enabled=true`. |
 | fullnameOverride | string | `""` | Override the full resource name. |
 | hostUsers | bool | `false` | Run the pods in their own USER NAMESPACE, so container UIDs map to unprivileged host UIDs and a container escape lands as nobody rather than as the UID it ran under (KEP-127, stable v1.36 — the reason this chart's kubeVersion floor is 1.36). `false` here is the Kubernetes field spelling and means user namespaces are ON; set it to `true` to share the host's user namespace, which is the API default.  Set it to `true` if your nodes cannot support it. The requirement is a node-level one the chart cannot check: a Linux node whose container runtime implements it (containerd >= 2.0 or CRI-O >= 1.25) with idmap-mount support in the kernel. On a node without it the pod does not start — a loud failure, not a silent downgrade (https://kubernetes.io/docs/tasks/configure-pod-container/user-namespaces/). |
 | image.digest | string | `""` | Image digest (`sha256:…`). Set it and the pod runs `repository@digest`, ignoring `tag` entirely: a digest is what the provenance attestation is made over, so deploying by digest is what makes verification bind to the running image. A tag can be moved afterwards; a digest cannot. |
@@ -468,6 +470,7 @@ Kubernetes: `>=1.36.0-0`
 | terminology.tolerations | list | `[]` | Tolerations. |
 | terminology.topologySpreadConstraints | list | `[]` | Topology spread for FerroTERM's pods. Empty uses the chart's default — one replica per node, `ScheduleAnyway`, scoped to the ReplicaSet being rolled — which is the CDR's policy over this workload's own pods. Set it to replace that wholesale; a merge of two spreading policies is not one. |
 | terminology.ui | bool | `false` | Serve FerroTERM's own browsing UI. Off: the workload has no Ingress and the CDR does not use it. |
+| terminology.usageReport.enabled | string | `nil` | FerroTERM's usage report. Empty follows the top-level `usageReport.enabled`; true or false decides for FerroTERM alone. The chart passes it as `FERROTERM__USAGE_REPORT__ENABLED`, with the deployment `helm`; the pinned 0.1.6 sends no report and ignores both. |
 | terminology.wireCdr | bool | `true` | Point the CDR's `config.terminology.server` at the rendered Service. The chart injects `enabled`, `url` and `fail_on_error`, so the Service address and the workload answering it are one decision. Set it to false to run FerroTERM beside a CDR you wire yourself. While it is true the render refuses every values file that contradicts the injection: a `config.terminology.server.url` of your own, a `server.enabled: false`, and a `server.fail_on_error` disagreeing with `failOnError` below. |
 | tolerations | list | `[]` | Tolerations for tainted nodes. Empty = none. |
 | topologySpreadConstraints | list | `[]` | Spread replicas across nodes. Empty does NOT mean "no spreading": it means the chart's own default constraint applies — one soft `maxSkew: 1` over `kubernetes.io/hostname`, so two replicas prefer two nodes and a node failure does not take the whole CDR with it. It is `ScheduleAnyway`, not `DoNotSchedule`, so a single-node or capacity-constrained cluster still schedules rather than leaving a pod Pending forever.  A non-empty list REPLACES that default entirely — give the full constraint, including its own `labelSelector`. Add a `topology.kubernetes.io/zone` constraint here if your cluster spans zones; the chart does not assume one (https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/). |

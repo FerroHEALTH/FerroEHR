@@ -443,7 +443,7 @@ cut, after the texts in scope have been read.
 | 2026-10-24 | 5.4.0, after `de38ec433` | none | nothing |
 | 2026-10-24 | 5.4.1, after `9fdd36091` | 2 claims, in two book pages: the compliance index named `[terminology.external]` and a terminology route, and the crates page pinned `0.0.97` | nothing |
 | 2026-10-25 | 5.4.2, after `2333f98ba` | none; the changes of this release updated their own pages in the pull requests that made them | nothing |
-| 2026-10-27 | 5.5.0, after `0af3c232d` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4192 | the conformance chapter bars still count the CNF TDD cases, which only a new measured run removes (#4204) |
+| 2026-10-27 | 5.5.0, after `bed3543e3` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4192 | the conformance chapter bars still count the CNF TDD cases, which only a new measured run removes (#4204) |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -638,7 +638,7 @@ Nothing.
 
 ## The review of 2026-10-27, for 5.5.0
 
-Read on the tree after commit `0af3c232d`, for FerroEHR 5.5.0. The facts of
+Read on the tree after commit `bed3543e3`, for FerroEHR 5.5.0. The facts of
 this release checked in every text in scope: the server and the viewer run on
 the family's `ferrohealth-server`, `ferrohealth-config`, `ferrohealth-telemetry`,
 `ferrohealth-smart`, `ferrohealth-authz` and `ferrohealth-secret` crates, with
@@ -649,7 +649,7 @@ over PIXm by default (#3380); opaque access tokens are checked by introspection
 delivered and retrieved through `ihe-atna` and carries the data permit (#4029,
 #4030, #4120); Template Data Document import is removed (#4199); the quickstart
 Keycloak overlay trusts its CA through `ca_file` and signs the viewer in
-(#4236, #4243); chart 19.3.0 with `appVersion` 5.5.0.
+(#4236, #4243); the chart's `usageReport.enabled=false` reaches FerroTERM, FerroBRIDGE and FerroPIX (#4270); chart 20.0.0 with `appVersion` 5.5.0.
 
 ### Changed on 2026-10-27, for 5.5.0
 
@@ -668,7 +668,7 @@ Keycloak overlay trusts its CA through `ca_file` and signs the viewer in
   introspection flow and the patient identity source over PIXm, with revision 14.
 - **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
   the chart README and [verifying releases](../verifying-releases.md) name chart
-  19.3.0 and image 5.5.0, and the [compose page](../installation/compose.md)
+  20.0.0 and image 5.5.0, and the [compose page](../installation/compose.md)
   names `FERROEHR_CONFIG` and the Keycloak overlay's `ca_file`.
 - **The landing page, `SECURITY.md`, the crate READMEs, the
   [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the

@@ -150,7 +150,8 @@ readonly FAMILY_IMAGE="ghcr\\.io/ferrohealth/($FAMILY)[:@]"
 # binary of the image, or whose `command` names a subcommand other than
 # `serve`, starts no server.
 compose_findings() {
-  awk -v own="$OWN_KEY" -v img="$FAMILY_IMAGE" -v file="$1" -v sq="'" '
+  local file="$1"
+  awk -v own="$OWN_KEY" -v img="$FAMILY_IMAGE" -v file="$file" -v sq="'" '
     function close_block() {
       if (kind == "anchor" && product != "") anchor_image[name] = product
       if (kind == "service") { svc[++n] = name; svc_image[name] = product; svc_merge[name] = merge; svc_entry[name] = entry; svc_cmd[name] = cmd }
@@ -188,21 +189,21 @@ compose_findings() {
           printf "%s: %s (%s__USAGE_REPORT__ENABLED)\n", file, s, p
       }
     }
-  ' "$1"
+  ' "$file"
 }
 
 # Prints `file (KEY)` for each `docker run` in $1 that starts a sibling family
 # server without handing the container that server's switch on its own
 # command line. A one-shot job starts no server.
 sibling_run_findings() {
-  local line product key
+  local file="$1" line product key
   while IFS= read -r line; do
     product="$(grep -oE "$FAMILY_IMAGE" <<<"$line" | sed -nE '1{s|.*/||; s|[:@]$||; p;}' | tr '[:lower:]' '[:upper:]')"
     key="${product}__USAGE_REPORT__ENABLED"
     [[ -n "$product" && "$key" != "$OWN_KEY" ]] || continue
     grep -qE '[[:space:]](healthcheck|--version|--help|config[[:space:]]+check)([[:space:]]|$)' <<<"$line" && continue
-    grep -qE "(-e|--env)[[:space:]=]+[\"']?${key}=false" <<<"$line" || printf '%s (%s)\n' "$1" "$key"
-  done < <(logical_lines "$1" | grep -E "docker[[:space:]]+run[[:space:]].*$FAMILY_IMAGE" || true)
+    grep -qE "(-e|--env)[[:space:]=]+[\"']?${key}=false" <<<"$line" || printf '%s (%s)\n' "$file" "$key"
+  done < <(logical_lines "$file" | grep -E "docker[[:space:]]+run[[:space:]].*$FAMILY_IMAGE" || true)
 }
 
 # Prints `crate (KEY)` for each crate whose Rust source names a sibling

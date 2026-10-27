@@ -432,6 +432,12 @@ secret VALUE refused outright.
 {{- end -}}
 {{- $_ := set $usageReport "enabled" $.Values.usageReport.enabled -}}
 {{- $_ := set $usageReport "deployment" "helm" -}}
+{{- /* The FerroPIX dependency chart reads only its own ferropix.usageReport.enabled,
+       so a switched-off release with FerroPIX still reporting is refused rather
+       than rendered. */ -}}
+{{- if and (not $.Values.usageReport.enabled) $.Values.ferropix.enabled (dig "usageReport" "enabled" true $.Values.ferropix) -}}
+{{- fail "usageReport.enabled=false while the FerroPIX dependency (ferropix.enabled) keeps ferropix.usageReport.enabled=true: a dependency chart cannot read this chart's switch, so FerroPIX would still send its usage report. Set ferropix.usageReport.enabled=false as well, or ferropix.enabled=false." -}}
+{{- end -}}
 {{- include "ferroehr.integers" $rendered -}}
 {{- toToml $rendered -}}
 {{- end }}
@@ -842,6 +848,26 @@ entry in Chart.yaml to it. Bumping FerroBRIDGE is this line plus
 {{- end }}
 
 {{/*
+A sibling product's usage report switch, "true" or "false": its own
+usageReport.enabled when set, this chart's usageReport.enabled otherwise. Call
+with (dict "values" <the sibling's values> "root" $).
+*/}}
+{{- define "ferroehr.siblingUsageReport" -}}
+{{- $own := dig "usageReport" "enabled" "" .values -}}
+{{- if kindIs "bool" $own -}}{{- $own -}}{{- else -}}{{- .root.Values.usageReport.enabled -}}{{- end -}}
+{{- end }}
+
+{{/*
+Whether the FerroBRIDGE release this chart deploys reads `[usage_report]`: from
+0.0.7 on. A release before it sends no report and refuses the unknown section.
+A tag that is not a version (a branch build) is taken as current.
+*/}}
+{{- define "ferroehr.bridgeReadsUsageReport" -}}
+{{- $version := .Values.bridge.image.tag | default (include "ferroehr.bridgePinnedVersion" .) -}}
+{{- if or (not (regexMatch "^v?[0-9]+\\.[0-9]+\\.[0-9]+" $version)) (semverCompare ">=0.0.7-0" $version) -}}true{{- end -}}
+{{- end }}
+
+{{/*
 The FerroBRIDGE image reference: digest wins over tag, and a tag other than the
 pin is refused while the shipped digest is set, for the reason
 `ferroehr.terminologyImage` gives.
@@ -1030,6 +1056,12 @@ spec governs this; FerroBRIDGE's own configuration reference defines the keys.
 {{- if hasKey (dig "server" (dict) $config) "listen" -}}
 {{- $owned = append $owned "bridge.config.server.listen (the image listens on 0.0.0.0:8080, which the Service, the probes and the NetworkPolicy name)" -}}
 {{- end -}}
+{{- $readsReport := include "ferroehr.bridgeReadsUsageReport" $ -}}
+{{- if $readsReport -}}
+{{- range $key := list "enabled" "deployment" -}}
+{{- if hasKey (dig "usage_report" (dict) $config) $key -}}{{- $owned = append $owned (printf "bridge.config.usage_report.%s (the chart writes it from bridge.usageReport.enabled, or usageReport.enabled when that is empty, and the deployment helm)" $key) -}}{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- if $owned -}}
 {{- fail (printf "bridge.config sets a key the chart already writes into FerroBRIDGE's config.toml, and an injection that overwrites cannot be told apart from one that agrees: %s. Drop the key." (join "; " $owned)) -}}
 {{- end -}}
@@ -1039,6 +1071,11 @@ spec governs this; FerroBRIDGE's own configuration reference defines the keys.
 {{- $_ := set $cdr "credentials" (dict "password_file" (printf "%s/password" (include "ferroehr.bridgeSecretDir" $))) -}}
 {{- if $.Values.terminology.enabled -}}
 {{- $_ := set $config "terminology" (dict "base_url" (printf "http://%s:%v/r4" (include "ferroehr.terminologyFullname" $) $.Values.terminology.service.port) "wire_version" "r4") -}}
+{{- end -}}
+{{- if $readsReport -}}
+{{- if not (hasKey $config "usage_report") -}}{{- $_ := set $config "usage_report" (dict) -}}{{- end -}}
+{{- $_ := set (get $config "usage_report") "enabled" (eq (include "ferroehr.siblingUsageReport" (dict "values" $.Values.bridge "root" $)) "true") -}}
+{{- $_ := set (get $config "usage_report") "deployment" "helm" -}}
 {{- end -}}
 {{- if $.Values.bridge.mappings.existingConfigMap -}}
 {{- if not (hasKey $config "mappings") -}}{{- $_ := set $config "mappings" (dict) -}}{{- end -}}

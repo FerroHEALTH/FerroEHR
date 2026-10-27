@@ -53,6 +53,7 @@ use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
 
 use crate::adl2_fixture::adl2_source;
+use crate::fixtures::set_not_queryable;
 
 const OBS_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.minimal.v1";
 /// The magnitude leaf path used throughout (bp.v1-style descent to the ELEMENT).
@@ -179,36 +180,13 @@ async fn run_aql(svc: &FerroEhrService, aql: &str, request: AqlQueryRequest) -> 
         .result_set
 }
 
-/// Flip an EHR's `EHR_STATUS.is_queryable` to `false` through the service's
-/// canonical status-update path (`ehr_status_update`), supplying the current
-/// version `uid` as the `If-Match` precondition.
-async fn set_not_queryable(svc: &FerroEhrService, ehr_id: &str) {
-    // Read the current EHR_STATUS — its body carries the `uid` we need for the
-    // optimistic-concurrency precondition, plus the mandatory RM fields we keep.
-    let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse().expect("ehr_id uuid"));
-    let mut body = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
-        .await
-        .expect("get_ehr_status_at_time");
-    let if_match = body["uid"]["value"]
-        .as_str()
-        .expect("EHR_STATUS uid")
-        .to_owned();
-    let obj = body.as_object_mut().expect("EHR_STATUS object");
-    obj.remove("uid");
-    obj.insert("is_queryable".to_owned(), json!(false));
-    svc.replace_ehr_status(ehr_uuid, uv(&body, "251", Some(&if_match)))
-        .await
-        .expect("replace_ehr_status is_queryable=false");
-}
-
 fn rows(result: &Value) -> &Vec<Value> {
     result["rows"].as_array().expect("rows array")
 }
 
 fn ehr_scope(ehr_id: &str) -> AqlQueryRequest {
-    // `i_query_service.adoc`: `ehr_ids: List<UUID>`; the single-EHR REST scope is
-    // the one-element case.
+    // ITS-REST `docs/query/Request.md`: `ehr_id` is "used to execute the query
+    // within a single EHR context"; it is the one-element `ehr_ids` scope.
     AqlQueryRequest {
         ehr_ids: vec![ehr_id.to_owned()],
         ..AqlQueryRequest::default()
@@ -937,14 +915,12 @@ async fn latest_versus_all_versions() {
     );
 }
 
-/// The query-population gate, mandated by the SM `I_QUERY_SERVICE` interface for
-/// both `execute_stored_query` and `execute_ad_hoc_query`. The `ehr_ids`
-/// parameter doc reads (verbatim,
-/// `docs/specs/openehr/SM/docs/UML/classes/i_query_service.adoc`):
+/// The query-population gate, for both `execute_stored_query` and
+/// `execute_ad_hoc_query`. RM `org.openehr.rm.ehr.ehr_status.adoc`,
+/// `is_queryable`, reads (verbatim):
 ///
-/// > Specific set of EHRs on which to execute the query. If none supplied, a
-/// > full population query will be performed on all EHRs whose status has the
-/// > `is_queryable` flag set to `True`.
+/// > True if this EHR should be included in population queries, i.e. if this
+/// > EHR is considered active in the population.
 ///
 /// So an ad-hoc population query (no `ehr_id` scope) must include EHRs whose
 /// current `EHR_STATUS` is queryable and exclude those whose current `EHR_STATUS`
@@ -959,7 +935,11 @@ async fn population_query_excludes_not_queryable_ehrs() {
     // through the canonical EHR_STATUS update path.
     let queryable = create_ehr(&svc).await;
     let hidden = create_ehr(&svc).await;
-    set_not_queryable(&svc, &hidden).await;
+    set_not_queryable(
+        &svc,
+        ferroehr::ids::EhrId(hidden.parse().expect("ehr_id uuid")),
+    )
+    .await;
 
     // A full population query: NO ehr_id scope supplied (`ehr_ids` = none).
     let r = run_aql(
@@ -986,9 +966,9 @@ async fn population_query_excludes_not_queryable_ehrs() {
 
 /// A directly-scoped query (`ehr_ids` supplied) is NOT population-gated: a
 /// non-queryable EHR's data is still returned when the caller names it in the
-/// scope set. Per `i_query_service.adoc` the `is_queryable` gate governs only
-/// the full-population case (no `ehr_ids`); an explicit scope targets specific
-/// EHRs regardless of the flag. Pins that flipping `is_queryable` off changes
+/// scope set. Per RM `org.openehr.rm.ehr.ehr_status.adoc` the `is_queryable`
+/// flag governs population queries only (no `ehr_ids`); an explicit scope
+/// targets specific EHRs regardless of the flag. Pins that flipping `is_queryable` off changes
 /// only the full-population result, never a scoped read.
 #[tokio::test]
 async fn scoped_query_bypasses_the_population_gate() {
@@ -998,7 +978,11 @@ async fn scoped_query_bypasses_the_population_gate() {
 
     let hidden = create_ehr(&svc).await;
     create_comp(&svc, &hidden, "BP", 80.0).await;
-    set_not_queryable(&svc, &hidden).await;
+    set_not_queryable(
+        &svc,
+        ferroehr::ids::EhrId(hidden.parse().expect("ehr_id uuid")),
+    )
+    .await;
 
     // Full population (no ehr_id scope) excludes the non-queryable EHR …
     let full = run_aql(
@@ -1042,7 +1026,11 @@ async fn a_population_subset_is_gated_and_a_named_scope_is_not() {
     create_comp(&svc, &queryable, "BP", 80.0).await;
     let hidden = create_ehr(&svc).await;
     create_comp(&svc, &hidden, "BP", 90.0).await;
-    set_not_queryable(&svc, &hidden).await;
+    set_not_queryable(
+        &svc,
+        ferroehr::ids::EhrId(hidden.parse().expect("ehr_id uuid")),
+    )
+    .await;
 
     let aql = "SELECT e/ehr_id/value FROM EHR e CONTAINS COMPOSITION c";
     let answered = |r: &Value| -> Vec<String> {
@@ -1079,9 +1067,10 @@ async fn a_population_subset_is_gated_and_a_named_scope_is_not() {
     );
 }
 
-/// Multi-EHR scoping (`ehr_ids: List<UUID>`,
-/// `docs/specs/openehr/SM/docs/UML/classes/i_query_service.adoc`): a query
-/// scoped to a *set* of EHRs must span exactly that set — no more, no fewer.
+/// Multi-EHR scoping (`ehr_ids`): a query scoped to a *set* of EHRs must span
+/// exactly that set — no more, no fewer. ITS-REST `docs/query/Request.md`
+/// defines only the single-EHR `ehr_id`; no openEHR spec governs a set scope:
+/// our own design.
 /// Three EHRs each hold one composition; scoping to two of them counts two.
 #[tokio::test]
 async fn multi_ehr_ids_scopes_to_the_set() {
@@ -1111,8 +1100,10 @@ async fn multi_ehr_ids_scopes_to_the_set() {
 }
 
 /// A well-formed but non-existent `ehr_id` in the scope set raises
-/// `ehr_id_does_not_exist` (`i_query_service.adoc` declares the error); a
-/// malformed id is a `precondition_violation` (`400`).
+/// `ehr_id_does_not_exist` (no openEHR spec names this error: our own design);
+/// a malformed id is a `precondition_violation` (`400`), per ITS-REST
+/// `responses/400_Query.yaml`: "at least one of the parameters has an invalid
+/// syntax".
 #[tokio::test]
 async fn absent_ehr_id_raises_ehr_id_does_not_exist() {
     let db = testkit::db().await.expect("testkit database");

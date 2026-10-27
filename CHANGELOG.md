@@ -19,7 +19,7 @@ has no matching section here.
 
 ## [5.5.0] - 2026-10-27
 
-5.5.0 moves the server and the viewer onto the FerroHEALTH family's shared configuration, HTTP, telemetry, authorization and audit crates, and it carries breaking changes for every deployment, each with its upgrade step under Changed or Removed. Before you upgrade: name the configuration file with `FERROEHR_CONFIG` (or `--config`), since `./ferroehr.toml` and `/etc/ferroehr/ferroehr.toml` are no longer searched; move the REST keys from `[server]` to `[rest]` and rename `server.bind` to `server.listen`; move `[authz.rbac] role_claims` and `[authz.rbac.basic_roles]` to `[auth] role_claims` and each `[[auth.basic.users]] roles`, and remove `user_role`; rename `token_url` to `token_endpoint` in the outbound OAuth tables; remove `[audit.fhir_feed] batch_size`, `max_retries` and `[usage_report] slow_aql_ms`; list a reverse proxy in `[server] trusted_proxies`; and give the viewer `server.listen` in place of `LEPTOS_SITE_ADDR`. The server refuses to start without a patient identity source for its EHR index unless `[ehr_index] provider = "local"` is set, ITI-81 audit retrieval requires a `date` parameter, and Template Data Document import is gone. Helm chart 19.3.0 carries `appVersion` 5.5.0. Security carries two advisories, GHSA-vphj-3f8c-5hpx and GHSA-cwhv-87pq-3c3c.
+5.5.0 moves the server and the viewer onto the FerroHEALTH family's shared configuration, HTTP, telemetry, authorization and audit crates, and it carries breaking changes for every deployment, each with its upgrade step under Changed or Removed. Before you upgrade: name the configuration file with `FERROEHR_CONFIG` (or `--config`), since `./ferroehr.toml` and `/etc/ferroehr/ferroehr.toml` are no longer searched; move the REST keys from `[server]` to `[rest]` and rename `server.bind` to `server.listen`; move `[authz.rbac] role_claims` and `[authz.rbac.basic_roles]` to `[auth] role_claims` and each `[[auth.basic.users]] roles`, and remove `user_role`; rename `token_url` to `token_endpoint` in the outbound OAuth tables; remove `[audit.fhir_feed] batch_size`, `max_retries` and `[usage_report] slow_aql_ms`; list a reverse proxy in `[server] trusted_proxies`; and give the viewer `server.listen` in place of `LEPTOS_SITE_ADDR`. The server refuses to start without a patient identity source for its EHR index unless `[ehr_index] provider = "local"` is set, ITI-81 audit retrieval requires a `date` parameter, and Template Data Document import is gone. Helm chart 20.0.0 carries `appVersion` 5.5.0. Security carries two advisories, GHSA-vphj-3f8c-5hpx and GHSA-cwhv-87pq-3c3c.
 
 ### Added
 
@@ -818,6 +818,16 @@ has no matching section here.
   `[smart] backend_clients`, so its `system/aql-*` grant runs AQL. The dev realm
   makes the same split and drops the unused Keycloak Authorization Services, and
   `scripts/ui-e2e.sh` keeps its scratch files under `target/ui-e2e/` (#4245).
+
+- **The Helm chart's `usageReport.enabled` reaches the other products it
+  runs**: FerroTERM (`FERROTERM__USAGE_REPORT__ENABLED`) and a FerroBRIDGE
+  release from 0.0.7 on (`[usage_report]`) follow it, each overridable with
+  `terminology.usageReport.enabled` or `bridge.usageReport.enabled`. The
+  FerroPIX dependency chart reads only `ferropix.usageReport.enabled`, so the
+  chart now refuses to render `usageReport.enabled=false` while that stays
+  true: a release you switched off sent FerroPIX's report regardless. Upgrading
+  a release that sets `usageReport.enabled=false` with FerroPIX on takes
+  `--set ferropix.usageReport.enabled=false` as well. Chart 20.0.0 (#4270).
 
 ### Removed
 

@@ -225,6 +225,27 @@ configuration together with `deployment = "helm"`, and it refuses to render
 when `config.usage_report.enabled` or `config.usage_report.deployment` is also
 set.
 
+The other FerroHEALTH products the chart can run report under their own names,
+and the same switch reaches them:
+
+- **FerroTERM** (`terminology.enabled`) follows `usageReport.enabled` unless
+  `terminology.usageReport.enabled` is set, through
+  `FERROTERM__USAGE_REPORT__ENABLED`.
+- **FerroBRIDGE** (`bridge.enabled`) follows it unless
+  `bridge.usageReport.enabled` is set, through `[usage_report]` in its
+  `config.toml`. The chart writes that section for a FerroBRIDGE release from
+  0.0.7 on; the release it pins sends no report.
+- **FerroPIX** (`ferropix.enabled`, on by default) is a dependency chart, and a
+  dependency chart reads only its own values. Its switch is
+  `ferropix.usageReport.enabled`, and the chart refuses to render
+  `usageReport.enabled=false` while that stays `true`, so turning the report
+  off takes both:
+
+```shell
+helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
+  --set usageReport.enabled=false --set ferropix.usageReport.enabled=false
+```
+
 In a CI run the report is off whatever the switch says: when `GITHUB_ACTIONS` or
 `CI` is `true` or `1` (in any letter case) in the server's environment, it
 sends nothing, and the boot line reads `usage report OFF: CI detected

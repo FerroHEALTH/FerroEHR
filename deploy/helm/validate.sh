@@ -594,6 +594,8 @@ refusal_registry_gate() {
     "_helpers.tpl|contradicts terminology.failOnError|${base}|--set terminology.enabled=true --set config.terminology.server.fail_on_error=true|config.terminology.server.fail_on_error;terminology.failOnError"
     "_helpers.tpl|while terminology.image.digest is non-empty|${base}|--set terminology.enabled=true --set terminology.image.tag=never-a-release|terminology.image.tag;terminology.image.digest"
     "_helpers.tpl|the chart injects both|${base}|--set config.usage_report.enabled=false|config.usage_report.enabled;usageReport.enabled"
+    "_helpers.tpl|a dependency chart cannot read this chart's switch|${CI_DIR}/all-features-values.yaml|--set usageReport.enabled=false|ferropix.usageReport.enabled=false;ferropix.enabled=false"
+    "_helpers.tpl|sets a key the chart already writes|${bridge}|--set bridge.image.digest= --set bridge.image.tag=branch-build --set bridge.config.usage_report.enabled=true|bridge.config.usage_report.enabled;bridge.usageReport.enabled"
     "_helpers.tpl|while bridge.image.digest is non-empty|${bridge}|--set bridge.image.tag=never-a-release|bridge.image.tag;bridge.image.digest"
     "_helpers.tpl|refusing to render a secret into FerroBRIDGE's ConfigMap|${bridge}|--set-string bridge.config.cdm.url=SENTINEL_PROBE|bridge.config.cdm.url;_file"
     "_helpers.tpl|refusing to render a secret into FerroBRIDGE's ConfigMap|${bridge}|--set terminology.enabled=false --set-string bridge.config.terminology.credentials.bearer_token=SENTINEL_PROBE|bridge.config.terminology.credentials.bearer_token;bridge.extraVolumes"
@@ -1070,6 +1072,63 @@ CLAIMS
   fi
 }
 production_overlay_gate
+
+# ── One switch stops every family product's usage report ─────────────────────
+# usageReport.enabled=false reaches FerroTERM (FERROTERM__USAGE_REPORT__ENABLED)
+# and a FerroBRIDGE release that reads [usage_report]; each product's own
+# usageReport.enabled still decides for it alone. The FerroPIX dependency chart
+# reads only ferropix.usageReport.enabled, so the pair that would leave it on is
+# a probed refusal (refusal_registry_gate) and the pair that stops it renders
+# enabled = false in its ferropix.toml. No openEHR spec governs this: our own
+# design.
+usage_report_render() { # <values> <helm args...>: the whole render
+  local values="$1"
+  shift
+  helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values" "$@"
+}
+usage_report_facts() { # <render file>: "ferroehr ferroterm ferrobridge" switches
+  local file="$1" ehr term bridge
+  ehr="$(yq 'select(.kind == "ConfigMap" and .metadata.name == "ferroehr") | .data."ferroehr.toml"' "$file")"
+  term="$(yq 'select(.kind == "Deployment") | .spec.template.spec.containers[].env[]? | select(.name == "FERROTERM__USAGE_REPORT__ENABLED") | .value' "$file")"
+  bridge="$(yq 'select(.kind == "ConfigMap") | .data."config.toml" // ""' "$file")"
+  printf '%s %s %s\n' "$(toml_value "$ehr" usage_report enabled)" "${term:-none}" \
+    "$(toml_value "$bridge" usage_report enabled | grep . || echo none)"
+}
+usage_report_gate() {
+  bold "── one switch stops every family product's usage report ─"
+  local bridge="${CI_DIR}/bridge-values.yaml" current=(--set bridge.image.digest= --set bridge.image.tag=branch-build)
+  local rendered got want label failed=0
+  rendered="$(mktemp)"
+  while IFS='|' read -r label want args; do
+    # shellcheck disable=SC2086  # the case's --set list is deliberately multi-word
+    usage_report_render "$bridge" "${current[@]}" $args > "$rendered"
+    got="$(usage_report_facts "$rendered")"
+    if [[ "$got" != "$want" ]]; then
+      red "  ${label}: FerroEHR, FerroTERM, FerroBRIDGE render '${got}', want '${want}'"
+      failed=1
+    fi
+  done <<'CASES'
+defaults report|true true true|
+the one switch off|false false false|--set usageReport.enabled=false
+each own value wins|false true true|--set usageReport.enabled=false --set terminology.usageReport.enabled=true --set bridge.usageReport.enabled=true
+an own value off|true false false|--set terminology.usageReport.enabled=false --set bridge.usageReport.enabled=false
+CASES
+  usage_report_render "$bridge" --set usageReport.enabled=false > "$rendered"
+  got="$(usage_report_facts "$rendered")"
+  [[ "$got" == "false false none" ]] \
+    || { red "  the pinned FerroBRIDGE (no [usage_report]) renders '${got}', want 'false false none'"; failed=1; }
+  usage_report_render "${CI_DIR}/all-features-values.yaml" --set usageReport.enabled=false \
+    --set ferropix.usageReport.enabled=false --show-only charts/ferropix/templates/configmap.yaml > "$rendered"
+  got="$(toml_value "$(yq '.data."ferropix.toml"' "$rendered")" usage_report enabled)"
+  [[ "$got" == "false" ]] || { red "  FerroPIX renders usage_report.enabled '${got}', want false"; failed=1; }
+  rm -f "$rendered"
+  if [[ "$failed" -eq 0 ]]; then
+    echo "  usageReport.enabled=false stops FerroEHR, FerroTERM, FerroBRIDGE and (with its own key) FerroPIX; own values win"
+  else
+    FAIL=1
+  fi
+}
+usage_report_gate
 
 # ── The migration Job: its account, and every database it must prepare ───────
 # Two claims a golden cannot state. (1) The hook ServiceAccount survives a
