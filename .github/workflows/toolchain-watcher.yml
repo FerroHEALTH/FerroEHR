@@ -96,7 +96,7 @@ jobs:
           set -euo pipefail
 
           current=$(awk -F'"' '/^[[:space:]]*channel[[:space:]]*=/ { print $2; exit }' rust-toolchain.toml)
-          if ! printf '%s' "$current" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          if ! grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' <<<"$current"; then
             echo "::error::rust-toolchain.toml channel is '$current', not an exact x.y.z pin. This lane only moves exact pins."
             exit 1
           fi
@@ -118,7 +118,7 @@ jobs:
             ' "$manifest" | sed -E 's/^version[ ]*=[ ]*"([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
           fi
 
-          if ! printf '%s' "$latest" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          if ! grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' <<<"$latest"; then
             echo "::error::Could not read a x.y.z stable version from the release channel manifest (got '$latest'). The manifest shape may have changed."
             exit 1
           fi
@@ -147,7 +147,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          variant=$(sed -nE 's/^FROM rust:[^-]*-([A-Za-z0-9._-]+)@sha256:[0-9a-f]{64}.*/\1/p' docker/Dockerfile | head -1)
+          variant=$(sed -nE 's/^FROM rust:[^-]*-([A-Za-z0-9._-]+)@sha256:[0-9a-f]{64}.*/\1/p' docker/Dockerfile | sed -n 1p)
           if [ -z "$variant" ]; then
             echo "::error::No digest-pinned 'FROM rust:...-<variant>@sha256:...' line in docker/Dockerfile. The base-image shape changed; this lane needs updating."
             exit 1
@@ -161,7 +161,7 @@ jobs:
             exit 1
           fi
           digest=$(printf '%s\n' "$inspect" | awk '$1 == "Digest:" { print $2; exit }')
-          if ! printf '%s' "$digest" | grep -qE '^sha256:[0-9a-f]{64}$'; then
+          if ! grep -qE '^sha256:[0-9a-f]{64}$' <<<"$digest"; then
             echo "::error::Could not read an index digest for $image (got '$digest')."
             exit 1
           fi
@@ -185,7 +185,7 @@ jobs:
           # The MSRV, read before anything is written; the target is the new
           # toolchain minus one minor, and it only ever moves up.
           msrv_before=$(sed -nE 's/^rust-version[[:space:]]*=[[:space:]]*"([0-9]+\.[0-9]+)".*/\1/p' Cargo.toml)
-          if ! printf '%s' "$msrv_before" | grep -qE '^[0-9]+\.[0-9]+$'; then
+          if ! grep -qE '^[0-9]+\.[0-9]+$' <<<"$msrv_before"; then
             echo "::error::Cargo.toml rust-version is '$msrv_before', not a major.minor pin. This lane only moves that shape."
             exit 1
           fi
@@ -249,7 +249,7 @@ jobs:
               sed -i -E "s|^Rust ${m_re} \(edition 2024\)\.|Rust ${msrv_target} (edition 2024).|" "$f"
             done
 
-            if ! printf '%s' "$crate_before" | grep -qE '^0\.0\.[0-9]+$'; then
+            if ! grep -qE '^0\.0\.[0-9]+$' <<<"$crate_before"; then
               echo "::error::crates/openehr-base is at '$crate_before', not a 0.0.x lockstep version. This lane only bumps that shape."
               exit 1
             fi

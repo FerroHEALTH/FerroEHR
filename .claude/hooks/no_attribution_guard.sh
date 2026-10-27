@@ -17,12 +17,12 @@ set -euo pipefail
 payload="$(cat)"
 
 # Only concern ourselves with git commit / PR creation commands.
-if ! printf '%s' "$payload" | grep -qiE 'git[[:space:]]+commit|gh[[:space:]]+pr[[:space:]]+create|git[[:space:]]+push'; then
+if ! grep -qiE 'git[[:space:]]+commit|gh[[:space:]]+pr[[:space:]]+create|git[[:space:]]+push' <<<"$payload"; then
   exit 0
 fi
 
 # Attribution tokens we refuse to let through.
-if printf '%s' "$payload" | grep -qiE 'co-authored-by:.*(claude|anthropic|\[bot\])|generated[[:space:]]+with[[:space:]]+.*claude|generated[[:space:]]+by[[:space:]]+.*claude|claude[[:space:]]+code|🤖|assisted-by:.*claude|anthropic[[:space:]]+claude'; then
+if grep -qiE 'co-authored-by:.*(claude|anthropic|\[bot\])|generated[[:space:]]+with[[:space:]]+.*claude|generated[[:space:]]+by[[:space:]]+.*claude|claude[[:space:]]+code|🤖|assisted-by:.*claude|anthropic[[:space:]]+claude' <<<"$payload"; then
   echo "BLOCKED: this commit/PR command contains AI/Claude attribution (Co-authored-by, 'Generated with Claude', 🤖, etc.). Remove all such lines from the message/description and retry. Commit and PR text must describe only the change. This is a hard project rule." >&2
   exit 2
 fi

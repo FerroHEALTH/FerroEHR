@@ -227,7 +227,7 @@ base=$(change_fork "$1" "$head") || exit 1
 pin_value() {
   local rev="$1" name="$2"
   { git show "$rev:scripts/lib/veredictum.sh" 2>/dev/null || true; } |
-    sed -nE "s/^$name=\"([^\"]*)\"\$/\\1/p" | head -n 1
+    sed -nE "s/^$name=\"([^\"]*)\"\$/\\1/p" | sed -n 1p
 }
 
 old_version=$(pin_value "$base" VEREDICTUM_VERSION)
@@ -296,7 +296,8 @@ if [[ "$unchanged" == true ]]; then
   echo "the catalogue, specs, schemas and runner trees are identical at both tags — the committed baseline already covers this pin, no record or label needed — OK."
   exit 0
 fi
-if change_paths "$base" "$head" | grep -q '^docs/conformance/ferroehr/'; then
+pin_change=$(change_paths "$base" "$head")
+if grep -q '^docs/conformance/ferroehr/' <<<"$pin_change"; then
   echo "pin bump carries a refreshed docs/conformance/ferroehr/ record — OK."
   exit 0
 fi

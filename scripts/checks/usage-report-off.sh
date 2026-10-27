@@ -76,7 +76,7 @@ candidates() {
       deploy/hosted/* | scripts/checks/*) continue ;;
       .github/*.yml | .github/*.yaml | *.sh) printf '%s\n' "$f" ;;
       scripts/* | docker/* | deploy/*)
-        head -n 1 "$f" 2>/dev/null | grep -qE '^#!.*(ba)?sh' && printf '%s\n' "$f"
+        grep -qE '^#!.*(ba)?sh' <<<"$(head -n 1 "$f" 2>/dev/null)" && printf '%s\n' "$f"
         ;;
       *) ;;
     esac

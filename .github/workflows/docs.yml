@@ -75,6 +75,8 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: The path classifier finds a match first and last in a 2000-path list
+        run: bash scripts/lib/change-lanes.sh --self-test
       - id: filter
         shell: bash
         # Context reaches the shell through env, never `${{ }}`-inline (the
@@ -105,11 +107,12 @@ jobs:
           # render/assemble scripts, the stale-numbers gate's script, and the
           # job's own recipe — this workflow and the toolchain action — so a
           # change to what the job DOES exercises the job it changes.
-          if echo "$changed" | grep -qE '^(website/|docs/conformance/|scripts/(render|site)/|scripts/lib/veredictum\.sh$|scripts/checks/(docs-claims|conformance-numbers)\.sh$|\.github/workflows/docs\.yml$|\.github/actions/docs-toolchain/)'; then
-            echo "docs=true" >> "$GITHUB_OUTPUT"
-          else
+          # The list is in scripts/lib/change-lanes.sh, matched from a
+          # here-string so a long change list cannot read as a miss (#4208).
+          result=$(bash scripts/lib/change-lanes.sh docs <<<"$changed")
+          echo "$result" | tee -a "$GITHUB_OUTPUT"
+          if [ "$result" = "docs=false" ]; then
             echo "No site-relevant paths touched — the docs build will be skipped."
-            echo "docs=false" >> "$GITHUB_OUTPUT"
           fi
 
   # ── Build + verify (no deploy) ──────────────────────────────────────────────

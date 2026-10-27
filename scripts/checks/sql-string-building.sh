@@ -172,21 +172,21 @@ for f in $files; do
     exempted "$f" "$body" && continue
 
     # (1) an interpolated literal that carries a clause keyword
-    if printf '%s' "$body" | grep -qE '(format!|write!|writeln!)[[:space:]]*\('; then
+    if grep -qE '(format!|write!|writeln!)[[:space:]]*\(' <<<"$body"; then
       while IFS= read -r lit; do
         [[ -n "$lit" ]] || continue
-        printf '%s' "$lit" | grep -qE "$KEYWORDS" || continue
-        printf '%s' "$lit" | grep -q '{' || continue
+        grep -qE "$KEYWORDS" <<<"$lit" || continue
+        grep -q '{' <<<"$lit" || continue
         report "$f:$line: interpolated SQL literal $lit — build the clause with \
 \`sea-query\`'s typed API and bind every value (scripts/checks/sql-string-building.sh)"
       done < <(quoted "$body")
     fi
 
     # (2) a clause keyword pushed onto a String
-    if printf '%s' "$body" | grep -qE 'push_str[[:space:]]*\([[:space:]]*"'; then
+    if grep -qE 'push_str[[:space:]]*\([[:space:]]*"' <<<"$body"; then
       while IFS= read -r lit; do
         [[ -n "$lit" ]] || continue
-        printf '%s' "$lit" | grep -qE "$KEYWORDS" || continue
+        grep -qE "$KEYWORDS" <<<"$lit" || continue
         report "$f:$line: SQL fragment $lit pushed onto a String — assemble the \
 statement with \`sea-query\` instead (scripts/checks/sql-string-building.sh)"
       done < <(quoted "$body")
@@ -197,14 +197,14 @@ statement with \`sea-query\` instead (scripts/checks/sql-string-building.sh)"
     # literal cannot shield a value push.
     while IFS= read -r push; do
       [[ -n "$push" ]] || continue
-      printf '%s' "$push" | grep -qE 'push_str[[:space:]]*\([[:space:]]*r?#*"' && continue
+      grep -qE 'push_str[[:space:]]*\([[:space:]]*r?#*"' <<<"$push" && continue
       report "$f:$line: a runtime value is appended to a string ($push) — if that \
 string is SQL, bind the value; if it is not, add a named exemption with its \
 reason (scripts/checks/sql-string-building.sh)"
     done < <(printf '%s\n' "$body" | grep -oE 'push_str[[:space:]]*\([^)]*' || true)
 
     # (4) the sqlx injection guard waived over an interpolated string
-    if printf '%s' "$body" | grep -qE 'AssertSqlSafe[[:space:]]*\([[:space:]]*format!'; then
+    if grep -qE 'AssertSqlSafe[[:space:]]*\([[:space:]]*format!' <<<"$body"; then
       report "$f:$line: \`AssertSqlSafe\` over a \`format!\` — the assertion is \
 false for an interpolated statement (scripts/checks/sql-string-building.sh)"
     fi

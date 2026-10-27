@@ -169,7 +169,7 @@ if [[ -z "$app" ]]; then
   exit 1
 fi
 
-workspace=$(sed -nE 's/^version = "(.*)"$/\1/p' "$MANIFEST" | head -1)
+workspace=$(sed -nE 's/^version = "(.*)"$/\1/p' "$MANIFEST" | sed -n 1p)
 if [[ -z "$workspace" ]]; then
   report "could not read the workspace version from $MANIFEST."
   exit 1
@@ -229,7 +229,7 @@ for entry in "${third_party[@]}"; do
       inside && /^  image:$/ { image = 1; next }
       inside && image && /^  [^[:space:]]/ { image = 0 }
       inside && image && /^    tag: "?[0-9][0-9A-Za-z.+-]*"?$/ { gsub(/"/, "", $2); print $2 }
-    ' "$VALUES" | head -1)
+    ' "$VALUES" | sed -n 1p)
   fi
   digest=$(awk -v section="${section}:" '
     $0 == section { inside = 1; next }
@@ -237,8 +237,8 @@ for entry in "${third_party[@]}"; do
     inside && /^  image:$/ { image = 1; next }
     inside && image && /^  [^[:space:]]/ { image = 0 }
     inside && image && /^    digest: "?sha256:[0-9a-f]+"?$/ { gsub(/"/, "", $2); print $2 }
-  ' "$VALUES" | head -1)
-  have=$(grep -oE "image: ${repository//./\\.}[:@][^[:space:]]*" "$CHART" | head -1)
+  ' "$VALUES" | sed -n 1p)
+  have=$(grep -oE "image: ${repository//./\\.}[:@][^[:space:]]*" "$CHART" | sed -n 1p)
   have="${have#image: }"
   if [[ -n "$define" ]]; then
     tag_source="${define} in $HELPERS"

@@ -42,7 +42,7 @@ crates=0
 embeds=0
 for manifest in crates/*/Cargo.toml; do
   crate_dir="$(dirname "$manifest")"
-  crate_name="$(sed -nE 's/^name *= *"([^"]+)".*/\1/p' "$manifest" | head -1)"
+  crate_name="$(sed -nE 's/^name *= *"([^"]+)".*/\1/p' "$manifest" | sed -n 1p)"
   [[ -n "$crate_name" ]] || { note "$manifest declares no package name"; continue; }
   crates=$((crates + 1))
 

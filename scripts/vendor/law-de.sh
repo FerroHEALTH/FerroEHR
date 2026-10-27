@@ -159,7 +159,7 @@ for entry in "${ACTS[@]}"; do
   rm -rf "$unpack"
   mkdir -p "$unpack"
   unzip -q -o "$zip" -d "$unpack"
-  xml="$(find "$unpack" -maxdepth 1 -type f -name '*.xml' | head -n 1)"
+  xml="$(find "$unpack" -maxdepth 1 -type f -name '*.xml' | sed -n 1p)"
   if [[ -z "$xml" ]]; then
     echo "ERROR: $url carried no XML document" >&2
     exit 1
@@ -175,16 +175,16 @@ for entry in "${ACTS[@]}"; do
     exit 1
   fi
 
-  builddate="$(grep -o '<dokumente builddate="[0-9]*"' "$xml" | head -n 1 | sed 's/[^0-9]//g')"
+  builddate="$(grep -o '<dokumente builddate="[0-9]*"' "$xml" | sed -n 1p | sed 's/[^0-9]//g')"
   if [[ "$builddate" != "$pinned" ]]; then
     echo "ERROR: $slug is now built $builddate, the pin says $pinned. gesetze-im-internet.de has moved the act; update the pin in this script ON PURPOSE, then re-read the compliance pages against the new text" >&2
     exit 1
   fi
-  doknr="$(grep -o '<dokumente builddate="[0-9]*" doknr="[^"]*"' "$xml" | head -n 1 | sed 's/.*doknr="//; s/"//')"
-  jurabk="$(grep -o '<jurabk>[^<]*' "$xml" | head -n 1 | sed 's/<jurabk>//')"
-  langue="$(grep -o '<langue>[^<]*' "$xml" | head -n 1 | sed 's/<langue>//')"
-  ausfertigung="$(grep -o '<ausfertigung-datum[^>]*>[^<]*' "$xml" | head -n 1 | sed 's/<[^>]*>//')"
-  fundstelle="$(grep -o '<fundstelle typ="amtlich"><periodikum>[^<]*</periodikum><zitstelle>[^<]*' "$xml" | head -n 1 | sed -e 's/<fundstelle typ="amtlich"><periodikum>//' -e 's|</periodikum><zitstelle>| |')"
+  doknr="$(grep -o '<dokumente builddate="[0-9]*" doknr="[^"]*"' "$xml" | sed -n 1p | sed 's/.*doknr="//; s/"//')"
+  jurabk="$(grep -o '<jurabk>[^<]*' "$xml" | sed -n 1p | sed 's/<jurabk>//')"
+  langue="$(grep -o '<langue>[^<]*' "$xml" | sed -n 1p | sed 's/<langue>//')"
+  ausfertigung="$(grep -o '<ausfertigung-datum[^>]*>[^<]*' "$xml" | sed -n 1p | sed 's/<[^>]*>//')"
+  fundstelle="$(grep -o '<fundstelle typ="amtlich"><periodikum>[^<]*</periodikum><zitstelle>[^<]*' "$xml" | sed -n 1p | sed -e 's/<fundstelle typ="amtlich"><periodikum>//' -e 's|</periodikum><zitstelle>| |')"
   stand="$(stand_lines "$xml" | sed 's/^/| /; s/$/ |/; s/: / | /')"
   if [[ -z "$stand" ]]; then
     stand="| — | The publisher records no stand line: the act has not been amended since its promulgation |"

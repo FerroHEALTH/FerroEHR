@@ -53,7 +53,7 @@ if [[ "${1:-}" == "--fetch-one" ]]; then
   for attempt in 1 2 3; do
     if curl -fsS --max-time 240 \
         "$CKM/templates/$cid/opt" -H "Accept: application/xml" -o "$dest"; then
-      if head -c 2048 "$dest" | grep -q "<template"; then
+      if grep -q "<template" <<<"$(head -c 2048 "$dest")"; then
         echo "OK   $cid $dest"
         exit 0
       fi

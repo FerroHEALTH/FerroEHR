@@ -84,7 +84,7 @@ jobs:
           # Strict, because this value becomes a checkout `ref` and three image
           # tags: anything that is not a release tag is refused here rather
           # than resolved into something surprising later.
-          if ! printf '%s' "$tag" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+          if ! grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' <<<"$tag"; then
             echo "::error::'$tag' is not a vX.Y.Z release tag"
             exit 1
           fi

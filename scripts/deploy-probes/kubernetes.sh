@@ -164,7 +164,7 @@ k8s_try_db_hosts() {
   done
   out="$(kubectl logs "$name" 2>/dev/null)"
   kubectl delete pod "$name" --ignore-not-found --wait=false >/dev/null 2>&1
-  printf '%s' "$out" | sed -n 's/.*HOST=\([^ ]*\).*/\1/p' | tr -d '\r' | head -1
+  printf '%s' "$out" | sed -n 's/.*HOST=\([^ ]*\).*/\1/p' | tr -d '\r' | sed -n 1p
 }
 
 # k8s_pg_ready <compose project>: wait for the FINAL PostgreSQL server of that
@@ -286,7 +286,7 @@ k8s_pod() {
   local ready
   ready="$(kc get pod -l app.kubernetes.io/name=ferroehr \
     -o jsonpath='{range .items[?(@.status.containerStatuses[0].ready==true)]}{.metadata.name}{"\n"}{end}' \
-    2>/dev/null | head -1)"
+    2>/dev/null | sed -n 1p)"
   [[ -n "$ready" ]] && { printf '%s' "$ready"; return 0; }
   kc get pod -l app.kubernetes.io/name=ferroehr -o jsonpath='{.items[0].metadata.name}' 2>/dev/null
 }
@@ -407,7 +407,7 @@ probes_k8s_boot() {
   headers="$(curl -s -u "$K8S_BASIC" -X POST -D - -o /dev/null "$K8S_API/ehr")"
   ehr="$(printf '%s' "$headers" | grep -i '^location' | tr -d '\r' | awk -F/ '{print $NF}')"
   if [[ -z "$ehr" ]]; then
-    probe_fail "a Location header naming the new EHR" "$(printf '%s' "$headers" | head -3)"
+    probe_fail "a Location header naming the new EHR" "$(printf '%s' "$headers" | sed -n 1,3p)"
   else
     assert_contains "$(curl -s -u "$K8S_BASIC" "$K8S_API/ehr/$ehr")" "\"$ehr\"" \
       "the EHR just created must read back from the deployed server"
@@ -454,7 +454,7 @@ probes_k8s_runtime_posture() {
   probe "P-K8S-RUNTIME" "working" "chart" "-" \
     "the runtime applied non-root, no-new-privileges, no capabilities, read-only root, seccomp"
   local cid spec
-  cid="$(docker exec "$node" crictl ps --name ferroehr -q 2>/dev/null | head -1)"
+  cid="$(docker exec "$node" crictl ps --name ferroehr -q 2>/dev/null | sed -n 1p)"
   if [[ -z "$cid" ]]; then
     probe_fail "a running ferroehr container on the node" "$K8S_NO_CONTAINER"
     probe_done
@@ -730,7 +730,7 @@ probes_k8s_ui_runtime() {
   fi
   probe "P-K8S-UI-RUNTIME" "working" "chart" "-" \
     "the viewer container runs under the same hardened posture as the server"
-  cid="$(docker exec "$node" crictl ps --name viewer -q 2>/dev/null | head -1)"
+  cid="$(docker exec "$node" crictl ps --name viewer -q 2>/dev/null | sed -n 1p)"
   if [[ -z "$cid" ]]; then
     probe_fail "a running viewer container on the node" "$K8S_NO_CONTAINER"
   else
@@ -872,7 +872,7 @@ k8s_term_nc() {
   done
   out="$(kubectl -n "$ns" logs "$name" 2>/dev/null)"
   kubectl -n "$ns" delete pod "$name" --ignore-not-found --wait=false >/dev/null 2>&1
-  printf '%s' "$out" | tr -d '\r' | sed -n 's/.*exit=\([0-9]*\).*/\1/p' | head -1
+  printf '%s' "$out" | tr -d '\r' | sed -n 's/.*exit=\([0-9]*\).*/\1/p' | sed -n 1p
 }
 
 k8s_term_template() {
@@ -964,7 +964,7 @@ probes_k8s_term_runtime() {
   fi
   probe "P-K8S-TERM-RUNTIME" "working" "chart" "#3328" \
     "the terminology container runs under the same hardened posture as the server"
-  cid="$(docker exec "$node" crictl ps --name terminology -q 2>/dev/null | head -1)"
+  cid="$(docker exec "$node" crictl ps --name terminology -q 2>/dev/null | sed -n 1p)"
   if [[ -z "$cid" ]]; then
     probe_fail "a running terminology container on the node" "$K8S_NO_CONTAINER"
   else
@@ -1107,7 +1107,7 @@ probes_k8s_term_index() {
   local node cid spec mount
   node="$(k8s_node_container)"
   if [[ -n "$node" ]]; then
-    cid="$(docker exec "$node" crictl ps --name terminology -q 2>/dev/null | head -1)"
+    cid="$(docker exec "$node" crictl ps --name terminology -q 2>/dev/null | sed -n 1p)"
     spec="$(k8s_runtime_spec "$node" "$cid")"
     mount="$(printf '%s' "$spec" | jq -r '.mounts[] | select(.destination == "/data/index")')"
     assert_contains "$mount" '"ro"' \
@@ -1115,7 +1115,7 @@ probes_k8s_term_index() {
     # Ownership is OBSERVED, not asserted: no Kubernetes documentation states
     # what fsGroup does to a volume mounted readOnly, which is the open question
     # this probe exists to answer for whoever reads the record next.
-    dim "    observed: $(docker exec "$node" sh -c "ls -ldn $(printf '%s' "$mount" | jq -r '.source')" 2>&1 | head -1)"
+    dim "    observed: $(docker exec "$node" sh -c "ls -ldn $(printf '%s' "$mount" | jq -r '.source')" 2>&1 | sed -n 1p)"
   fi
   probe_done
 
@@ -1126,8 +1126,8 @@ probes_k8s_term_index() {
     "the health route starts answering only after the mounted index has finished opening"
   local logs idx_line listen_line
   logs="$(kc logs -l "$K8S_TERM_LABEL" --tail=200 --all-containers 2>/dev/null)"
-  idx_line="$(printf '%s\n' "$logs" | grep -n -i 'index' | head -1 | cut -d: -f1)"
-  listen_line="$(printf '%s\n' "$logs" | grep -n -i 'listening' | head -1 | cut -d: -f1)"
+  idx_line="$(printf '%s\n' "$logs" | grep -n -i 'index' | sed -n 1p | cut -d: -f1)"
+  listen_line="$(printf '%s\n' "$logs" | grep -n -i 'listening' | sed -n 1p | cut -d: -f1)"
   if [[ -z "$idx_line" ]] || [[ -z "$listen_line" ]]; then
     probe_fail "a boot log naming the index and the listener" \
       "$(printf '%s\n' "$logs" | tail -5)" \
@@ -1359,7 +1359,7 @@ probes_k8s_bridge_runtime() {
   fi
   probe "P-K8S-BRIDGE-RUNTIME" "working" "chart" "#3713" \
     "the bridge container runs under the same hardened posture as the server"
-  cid="$(docker exec "$node" crictl ps --name bridge -q 2>/dev/null | head -1)"
+  cid="$(docker exec "$node" crictl ps --name bridge -q 2>/dev/null | sed -n 1p)"
   if [[ -z "$cid" ]]; then
     probe_fail "a running bridge container on the node" "$K8S_NO_CONTAINER"
   else

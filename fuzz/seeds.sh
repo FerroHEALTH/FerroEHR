@@ -61,7 +61,7 @@ link_from() {
     linked=$((linked + 1))
   done < <(
     find "$repo_root/$source" -type f \( -false "${find_args[@]}" \) \
-      -size "-$max_size" | LC_ALL=C sort | head -n "$cap"
+      -size "-$max_size" | LC_ALL=C sort | sed -n "1,${cap}p"
   )
   echo "  $target <- $source ($linked files)"
 }
