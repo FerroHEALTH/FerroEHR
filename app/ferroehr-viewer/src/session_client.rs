@@ -17,10 +17,10 @@
 //!
 //! [`SessionAwareClient`] is the `client =` argument of every `#[server]` fn in
 //! the crate: it delegates to the browser `fetch` client and watches what comes
-//! back. A detection bumps [`session_ended_signal`], which the shell's browser
-//! Effect turns into the signed-out transition — so a revoked or expired
-//! session cannot leave an interactive shell over a dead credential, whatever
-//! the user was doing at the time.
+//! back. A detection bumps [`session_ended_signal`] and loads the sign-in
+//! page ([`signed_out_url`]), so a revoked or expired session cannot leave an
+//! interactive shell over a dead credential, whatever the user was doing at
+//! the time, a page the browser draws after a navigation included.
 //!
 //! NOTE: no openEHR spec governs the viewer session — our own design.
 
@@ -76,9 +76,21 @@ pub fn signed_out_url(path: &str, search: &str) -> String {
     format!("/login?expired=1&next={}", urlencoding::encode(&next))
 }
 
-/// Records that a server function answered "this session is over".
+/// Records that a server function answered "this session is over", and in
+/// the browser loads the sign-in page with the page in view as the place to
+/// return to, as the pre-render guard does for a document request.
 fn note_session_ended() {
     SESSION_ENDED.update(|epoch| *epoch = epoch.wrapping_add(1));
+    #[cfg(target_arch = "wasm32")]
+    {
+        let location = leptos::prelude::window().location();
+        let path = location.pathname().unwrap_or_default();
+        let search = location.search().unwrap_or_default();
+        let search = search.strip_prefix('?').unwrap_or(&search);
+        if location.assign(&signed_out_url(&path, search)).is_err() {
+            leptos::logging::warn!("the browser refused to load the sign-in page");
+        }
+    }
 }
 
 /// Inspects one server-fn answer and records a session end when it is one.
