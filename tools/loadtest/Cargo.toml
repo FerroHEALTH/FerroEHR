@@ -1,0 +1,27 @@
+[package]
+name = "loadtest"
+version.workspace = true
+description = "The release performance guard's load test: a fixed mixed ITS-REST and AQL workload against a running FerroEHR, reported as throughput and latency percentiles"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+# Speaks to the server over HTTP only, never through the platform library, so
+# the same binary measures the release candidate and the previous release.
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true }
+jiff = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+
+[lints]
+workspace = true

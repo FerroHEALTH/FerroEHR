@@ -1,0 +1,99 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# .github/workflows/perf-guard.yml
+#
+# The performance guard on main (#4081): the last image main built, against
+# the latest published release, in one job on one runner with the same
+# workload and data (scripts/perf/ab.sh over tools/loadtest). The run goes red
+# when main's median throughput falls below 90 % of the release's or its
+# median p95 latency rises above 110 %, so a regression shows before a release
+# cut refuses it: release.yml runs the same A/B on the release candidate
+# before any image is tagged.
+#
+# A relative A/B on one runner is what makes a hosted runner usable here: both
+# sides share its noise, where an absolute figure would not be comparable
+# between runs. It publishes no number and writes nothing back; the reports
+# and the summary leave as a run artifact.
+#
+# NOTE: GitHub disables scheduled workflows after 60 days without repository
+# activity; re-enable from the Actions tab if that happens.
+name: Performance guard
+
+on:
+  schedule:
+    # Wednesdays 03:31 UTC, in a slot of its own (read the estate's slots with
+    # `grep -rE '^ +- cron:' .github/workflows/`).
+    - cron: "31 3 * * 3"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: perf-guard
+  cancel-in-progress: false
+
+env:
+  # A FerroEHR started by any step of this workflow sends no usage report to
+  # FerroPULSE: compose interpolates this into every server it brings up, and
+  # scripts/checks/usage-report-off.sh holds each `docker run` and Helm install
+  # to its own explicit switch.
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
+  APP_IMAGE: ghcr.io/ferrohealth/ferroehr
+
+jobs:
+  ab:
+    name: main against the latest release
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    permissions:
+      contents: read # the checkout and the latest release's tag
+      packages: read # pull main's image and the release's images
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - name: Build the load test
+        run: cargo build --locked --release -p loadtest
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull main's image
+        id: candidate
+        run: |
+          set -euo pipefail
+          docker pull "${APP_IMAGE}:main"
+          echo "digest=$(docker inspect --format '{{index .RepoDigests 0}}' "${APP_IMAGE}:main")" >> "$GITHUB_OUTPUT"
+      - name: Build the postgres image (amd64; COPY-only, seconds)
+        run: docker build -t ferroehr-postgres:perf docker/postgres
+      - name: The latest published release
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::the latest release tag '$tag' is not vX.Y.Z" >&2; exit 1; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Main against the latest release
+        env:
+          PREVIOUS: ${{ steps.previous.outputs.tag }}
+          CANDIDATE: ${{ steps.candidate.outputs.digest }}
+          LOADTEST_BIN: target/release/loadtest
+        run: bash scripts/perf/ab.sh "$PREVIOUS" "$CANDIDATE" ferroehr-postgres:perf perf-out
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f perf-out/summary.md ]; then cat perf-out/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: perf-guard
+          path: perf-out/
+          if-no-files-found: ignore

@@ -23,7 +23,9 @@
 #         ├─ postgres-image ────────────────┘   (+ build-binaries)                  └─ sandbox
 #         ├─ docs-freeze
 #         └─ (smoke hangs off app-image; viewer-smoke off both images —
-#             it drives the viewer against this run's own CDR)
+#             it drives the viewer against this run's own CDR; performance
+#             hangs off app-image, and scan-and-tag and finalize-release
+#             need it)
 #   milestone ── needs every leg, if: always()
 #   announce ── needs everything, if: always()
 #
@@ -549,7 +551,7 @@ jobs:
   # release nobody can add to afterwards.
   finalize-release:
     name: github release (publish)
-    needs: [plan, build-binaries, crate-sboms, vulnerability-record]
+    needs: [plan, build-binaries, crate-sboms, vulnerability-record, performance]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -964,8 +966,9 @@ jobs:
   # image, the sandbox tracks `:latest`, and both exist by construction here.
   scan-and-tag:
     name: scan + tag
-    # vulnerability-record first: a release it refuses gets no image tags.
-    needs: [app-image, viewer-image, postgres-image, vulnerability-record]
+    # vulnerability-record and the performance guard first: a release either
+    # refuses gets no image tags.
+    needs: [app-image, viewer-image, postgres-image, vulnerability-record, performance]
     permissions:
       contents: read
       packages: write # pull the pushed digests, then tag them
@@ -1111,6 +1114,72 @@ jobs:
           FERROEHR_IMAGE: ferroehr:smoke
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:smoke
         run: bash docker/smoke-test.sh
+
+  # ── The performance guard (amd64): the candidate against the previous release ─
+  # The image this run pushed and the previous release's published image, each
+  # from its own quickstart file, in one job on one runner with the same
+  # workload and data (scripts/perf/ab.sh over tools/loadtest, #4081). The
+  # release is refused when the candidate's median throughput falls below 90 %
+  # of the previous release's or its median p95 latency rises above 110 %.
+  # scan-and-tag and finalize-release need it, so a refused release gets no
+  # image tags and its GitHub release stays a draft. The previous release is
+  # the tag below this one by version (plan.sh prev-tag); its images must be
+  # published, or the A/B cannot run and the leg fails.
+  performance:
+    name: performance guard (amd64)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: read # pull the image this run pushed and the previous release's
+    needs: [plan, app-image]
+    env:
+      APP_IMAGE: ghcr.io/ferrohealth/ferroehr
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
+      # No cache: this lane gates a publish, so it builds the load test cold.
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - name: Build the load test
+        run: cargo build --locked --release -p loadtest
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull pushed app image (by digest)
+        env:
+          DIGEST: ${{ needs.app-image.outputs.digest }}
+        run: |
+          docker pull "${APP_IMAGE}@${DIGEST}"
+          docker tag  "${APP_IMAGE}@${DIGEST}" ferroehr:perf
+      - name: Build the postgres image (amd64; COPY-only, seconds)
+        run: docker build -t ferroehr-postgres:perf docker/postgres
+      - name: The previous release
+        id: previous
+        env:
+          TAG: ${{ needs.plan.outputs.tag }}
+        run: echo "tag=$(bash scripts/release/plan.sh prev-tag "$TAG")" >> "$GITHUB_OUTPUT"
+      - name: The candidate against the previous release
+        env:
+          PREVIOUS: ${{ steps.previous.outputs.tag }}
+          LOADTEST_BIN: target/release/loadtest
+        run: bash scripts/perf/ab.sh "$PREVIOUS" ferroehr:perf ferroehr-postgres:perf perf-out
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f perf-out/summary.md ]; then cat perf-out/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: perf-guard
+          path: perf-out/
+          if-no-files-found: ignore
 
   # ── The Helm chart ──────────────────────────────────────────────────────────
   # `needs: scan-and-tag` is the whole fix for the defect class this pipeline
@@ -1378,6 +1447,7 @@ jobs:
       - postgres-image
       - scan-and-tag
       - smoke
+      - performance
       - viewer-smoke
       - chart
       - sandbox
@@ -1422,6 +1492,7 @@ jobs:
       - postgres-image
       - scan-and-tag
       - smoke
+      - performance
       - viewer-smoke
       - chart
       - sandbox
@@ -1460,6 +1531,7 @@ jobs:
           R_POSTGRES_IMAGE: ${{ needs.postgres-image.result }}
           R_SCAN_AND_TAG: ${{ needs.scan-and-tag.result }}
           R_SMOKE: ${{ needs.smoke.result }}
+          R_PERFORMANCE: ${{ needs.performance.result }}
           R_VIEWER_SMOKE: ${{ needs.viewer-smoke.result }}
           R_CHART: ${{ needs.chart.result }}
           R_SANDBOX: ${{ needs.sandbox.result }}
@@ -1504,6 +1576,7 @@ jobs:
           check "postgres image" "$R_POSTGRES_IMAGE"
           check "scan + tag" "$R_SCAN_AND_TAG"
           check "compose smoke" "$R_SMOKE"
+          check "performance guard" "$R_PERFORMANCE"
           check "viewer smoke" "$R_VIEWER_SMOKE"
           check "chart" "$R_CHART"
           check "sandbox" "$R_SANDBOX" prerelease
@@ -1554,6 +1627,11 @@ jobs:
                 '  was tagged and the GitHub release stayed a draft. The run artifact' \
                 '  `vulnerability-record` names each finding; fix it or add its statement under' \
                 '  `security/vex/` in a PR, then cut the next patch version.' \
+                '- **performance guard failed**: the candidate fell outside the budget against the' \
+                '  previous release, or the A/B could not run. No image was tagged and the GitHub' \
+                '  release stayed a draft. The run artifact `perf-guard` holds the reports of both sides;' \
+                '  fix the regression and cut the next patch version, or re-run a run that failed' \
+                '  before measuring.' \
                 '- **chart failed AFTER the push**: that chart version is public and immutable.' \
                 '  Do NOT re-run the leg — bump `Chart.yaml` version and publish the next one' \
                 '  from publish-chart.yml (dispatch with `publish: true`). That lane says the' \
