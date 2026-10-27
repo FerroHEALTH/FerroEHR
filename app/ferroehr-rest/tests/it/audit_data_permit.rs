@@ -8,8 +8,10 @@
 //! issued (Regulation (EU) 2025/327 Art. 68, `docs/law/eu/ehds/text.html`).
 //! A population query and an export declared under one are recorded with the
 //! declared purpose and the permit's identifier; a value outside the
-//! identifier form is recorded as absent. No openEHR spec governs access-log
-//! content: our own design/extension.
+//! identifier form is recorded as absent. The stored FHIR `AuditEvent` the
+//! subject-scoped ITI-81 retrieval answers carries the permit at
+//! `agent.policy` (FHIR R4 `AuditEvent.agent.policy`). No openEHR spec
+//! governs access-log content: our own design/extension.
 
 #![expect(
     clippy::expect_used,
@@ -28,7 +30,9 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
-use ferroehr::system_log::sender::{AuditHandle, start};
+use ferroehr::system_log::sender::{
+    AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
+};
 use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::extensions::management::Observability;
 use http::{Request, StatusCode, header};
@@ -43,6 +47,8 @@ const PURPOSE: &str = "x-purpose-of-use";
 const PERMIT: &str = "x-data-permit";
 /// A synthetic permit identifier.
 const PERMIT_ID: &str = "hdab-nl/2026/0042";
+/// The synthetic patient subject every EHR of the test resolves to.
+const SUBJECT: &str = "patient-permit-1";
 
 fn basic(name: &str) -> String {
     use base64::Engine;
@@ -67,7 +73,15 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
         },
         ..AuditConfig::default()
     };
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
+    let resolver: SubjectResolver = Arc::new(|_ehr_id| {
+        Box::pin(async {
+            SubjectLookup::Found(ResolvedSubject {
+                id: SUBJECT.to_owned(),
+                namespace: Some("urn:ferroehr:test-subjects".to_owned()),
+            })
+        })
+    });
+    let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), Some(pool.clone()))
         .await
         .expect("the audit sender");
     let svc = Arc::new(
@@ -159,23 +173,81 @@ async fn a_population_query_is_recorded_with_its_purpose_and_permit() {
 }
 
 /// An export declared under a permit is recorded with the purpose and the
-/// permit.
+/// permit, and one declared under none without it; the subject-scoped ITI-81
+/// retrieval answers the access record of the first with the permit at the
+/// requestor's `agent.policy` and that of the second with no policy.
 #[tokio::test]
 async fn an_export_is_recorded_with_its_purpose_and_permit() {
     let (_db, pool, app, ehr) = app().await;
-    let (status, body) = common::send_body(
-        &app,
-        Request::get(format!("{BASE}/message/export/{ehr}"))
+    for permit in [Some(PERMIT_ID), None] {
+        let mut req = Request::get(format!("{BASE}/message/export/{ehr}"))
             .header(header::AUTHORIZATION, basic("root"))
-            .header(PURPOSE, "RESEARCH")
-            .header(PERMIT, PERMIT_ID)
+            .header(PURPOSE, "RESEARCH");
+        if let Some(permit) = permit {
+            req = req.header(PERMIT, permit);
+        }
+        let (status, body) = common::send_body(&app, req.body(Body::empty()).unwrap()).await;
+        assert_eq!(status, StatusCode::OK, "export: {body}");
+    }
+    assert_eq!(
+        recorded(&pool, "message_export_ehrs", 2).await,
+        vec![
+            (Some("RESEARCH".to_owned()), Some(PERMIT_ID.to_owned())),
+            (Some("RESEARCH".to_owned()), None),
+        ]
+    );
+
+    let mut policies = exported_policies(&app).await;
+    policies.sort_by_key(Value::to_string);
+    assert_eq!(policies, vec![serde_json::json!([PERMIT_ID]), Value::Null]);
+}
+
+/// The requestor's `agent.policy` of every Export access record the
+/// subject-scoped ITI-81 retrieval answers, polled until both exports' records
+/// have landed.
+async fn exported_policies(app: &Router) -> Vec<Value> {
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    loop {
+        let (status, body) = common::send_body(
+            app,
+            Request::get(format!(
+                "{BASE}/fhir/r4/AuditEvent?date=ge2026-01-01&patient={SUBJECT}"
+            ))
+            .header(header::AUTHORIZATION, basic("root"))
             .body(Body::empty())
             .unwrap(),
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "export: {body}");
-    assert_eq!(
-        recorded(&pool, "message_export_ehrs", 1).await,
-        vec![(Some("RESEARCH".to_owned()), Some(PERMIT_ID.to_owned()))]
-    );
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "subject-scoped retrieval: {body}");
+        let bundle: Value = serde_json::from_str(&body).expect("bundle json");
+        let policies: Vec<Value> = bundle["entry"]
+            .as_array()
+            .expect("entries")
+            .iter()
+            .map(|entry| &entry["resource"])
+            .filter(|resource| {
+                resource["entity"]
+                    .as_array()
+                    .is_some_and(|e| e.iter().any(|entity| entity["name"] == "Export"))
+            })
+            .map(|resource| {
+                let requestor = resource["agent"]
+                    .as_array()
+                    .expect("agents")
+                    .iter()
+                    .find(|agent| agent["requestor"] == true)
+                    .expect("an access record names its requestor");
+                requestor["policy"].clone()
+            })
+            .collect();
+        if policies.len() >= 2 {
+            return policies;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "only {} of 2 Export records answered: {bundle}",
+            policies.len()
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
 }

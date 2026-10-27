@@ -26,11 +26,6 @@ spec_profile = "development"
 # reason): a sandbox must not hold real patient data.
 deployment_profile = "sandbox"
 
-[server]
-listen = "0.0.0.0:8080"
-# The conformance suite uploads operational templates up to 5.4 MB.
-body_limit_bytes = 67108864
-
 [rest]
 # Permissive CORS — dev only. Production configures explicit origins.
 cors_permissive = true

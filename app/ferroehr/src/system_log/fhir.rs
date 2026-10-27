@@ -305,6 +305,8 @@ fn accessor(event: &AuditEvent, missing: &str, purposes: Vec<Purpose>) -> Access
         },
         alt_id: None,
         purposes,
+        // NOTE: Regulation (EU) 2025/327 Art 68 names the data permit; FHIR R4 AuditEvent.agent.policy carries it.
+        policies: event.permit.iter().cloned().collect(),
         relayed: None,
     }
 }
@@ -338,6 +340,7 @@ fn exchange(
             .with_issuer(event.issuer.clone())
             .with_client_id(event.client_id.clone())
             .with_token_id(event.token_id.clone())
+            .with_policies(event.permit.iter().cloned().collect())
             .with_purposes(
                 event
                     .purpose
@@ -1031,6 +1034,49 @@ mod tests {
             agent(&classified, "john doe")["policy"][0],
             "jti-1",
             "{classified}"
+        );
+    }
+
+    /// The declared data permit (Regulation (EU) 2025/327 Art 68) follows the
+    /// token's `jti` at `agent[user].policy` (FHIR R4 `AuditEvent.agent.policy`)
+    /// on a classified access and on every other record, and is absent when
+    /// the caller declared none.
+    #[test]
+    fn the_declared_permit_follows_the_token_id_as_a_policy() {
+        let mut e = event(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        e.token_id = Some("jti-1".to_owned());
+        let without = json(&e, Some("patient-42"));
+        assert_eq!(
+            agent(&without, "john doe")["policy"],
+            serde_json::json!(["jti-1"]),
+            "{without}"
+        );
+        e.permit = Some("hdab-nl/2026/0042".to_owned());
+        let with = json(&e, Some("patient-42"));
+        assert_eq!(
+            agent(&with, "john doe")["policy"],
+            serde_json::json!(["jti-1", "hdab-nl/2026/0042"]),
+            "{with}"
+        );
+
+        e.category =
+            Some(Classifier::default().classify(&AccessedContent::Objects(Vec::new()), false));
+        let classified = json(&e, Some("patient-42"));
+        assert_eq!(
+            agent(&classified, "john doe")["policy"],
+            serde_json::json!(["jti-1", "hdab-nl/2026/0042"]),
+            "{classified}"
+        );
+        e.permit = None;
+        let classified_without = json(&e, Some("patient-42"));
+        assert_eq!(
+            agent(&classified_without, "john doe")["policy"],
+            serde_json::json!(["jti-1"]),
+            "{classified_without}"
         );
     }
 

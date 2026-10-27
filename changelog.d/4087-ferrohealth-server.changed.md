@@ -6,19 +6,13 @@
   refused at startup. Upgrade: rename the keys, and move a `[server.identity]`
   table to `[rest.identity]`.
 - Breaking: `server.bind` is `server.listen`, an IP address and a port; a host
-  name such as `localhost:8080` refuses the start. The binary listens on
-  `127.0.0.1:8080` by default, where it listened on every interface; the
-  container image sets `PORT=8080`, so it still listens on `0.0.0.0:8080`, and
-  the chart and the Compose files set `listen`. Upgrade: write
-  `listen = "0.0.0.0:8080"` (or set `PORT`) where the server must be reached off
-  the host.
-- Breaking: the request-body limit is `server.body_limit_bytes`, 1 MiB by
+  name such as `localhost:8080` refuses the start. It listens on
+  `0.0.0.0:8080` by default, as before. Upgrade: rename the key.
+- Breaking: the request-body limit is `server.body_limit_bytes`, 64 MiB by
   default, the ceiling of every route and the limit of the template-upload and
   `/message` routes, and `rest.body_limit_bytes` (unset by default) narrows the
-  other routes below it; they were 64 MiB and 16 MiB. The chart and the Compose
-  files set 64 MiB and 16 MiB. Upgrade: a deployment that uploads operational
-  templates sets `server.body_limit_bytes = 67108864`, since the IPS template
-  alone is larger than 1 MiB.
+  other routes below it, where it was 16 MiB. The chart sets 16 MiB. Upgrade:
+  set `rest.body_limit_bytes = 16777216` to keep the old clinical limit.
 - Breaking: `server.max_in_flight` is `server.max_concurrent_requests`, unset
   (no bound) by default where it was 256, and the bound now covers every
   FerroEHR route (the status document, SMART discovery and the management
@@ -55,6 +49,6 @@
 - The boot banner is the FerroHEALTH banner: the wordmark, the build line
   `ferroehr <version> (<commit>)`, and the facts (manufacturer, profile, pins,
   support period, deployment) as one list, with the sandbox notice below.
-- Chart 19.0.0: `config.server` carries `listen`, `body_limit_bytes`,
-  `max_concurrent_requests` and `caller_rate`, and `config.rest` the REST
-  surface; the rendered `ferroehr.toml` changes accordingly.
+- Chart 19.0.0: `config.server` carries `max_concurrent_requests` and
+  `caller_rate`, and `config.rest` the REST surface; the rendered
+  `ferroehr.toml` changes accordingly.

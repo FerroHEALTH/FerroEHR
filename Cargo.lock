@@ -2340,9 +2340,9 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.2.13"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6eca887ffc4142efe0bff5efa5254386ce32a4790694bc6a8fc014a5a5967e9"
+checksum = "d02c67e0e7301be816456bce4504079ed62cc1938563bd1dfb83b851795e90e2"
 dependencies = [
  "async-trait",
  "ihe-atna",
@@ -2561,9 +2561,9 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferrobridge-term"
-version = "0.1.139"
+version = "0.1.140"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa45eae65effc88ba1a6bd1c0b9e3e3be8f54a4700faedf420ca84b511508a87"
+checksum = "ded9cb74e83ad3bcedcf506f8a433dff481327e3434bce02bdb1cf030a672853"
 dependencies = [
  "async-trait",
  "backon",
@@ -2810,9 +2810,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-authz"
-version = "0.1.5"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b2194b6ff39a6427c230602bb8fc7444d1e3b24feefdd8dd932370398f7810f"
+checksum = "7af425b7fa742ab0a9d8f954e384b6a7536ab1abf4d5aec154c37674218896d8"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -2829,9 +2829,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-config"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55185416ca7b4e0c900c4b387ef25045d751fb6b36c54e6f7b668dad193edd03"
+checksum = "8fb490bb6126a8536e8ee377284d746cc14f7c42423c4d7ec58e6e3d16a3c4c2"
 dependencies = [
  "ferrohealth-secret",
  "percent-encoding",
@@ -2865,9 +2865,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-server"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e737126f295e5a5327550ec3d86979841a6d5176505ecde95e77e5e92161d7e0"
+checksum = "4b10d092aeb61ff58b62877a5c3bc8cb77a075aac0f29ba64a079264839ae8bd"
 dependencies = [
  "axum",
  "clap",
@@ -2875,6 +2875,7 @@ dependencies = [
  "ferrohealth-secret",
  "ferrohealth-telemetry",
  "http",
+ "hyper",
  "hyper-util",
  "ipnet",
  "pin-project-lite",
@@ -2894,9 +2895,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-smart"
-version = "0.7.5"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "153bc745cdbf6d0a9b8ec9570a52f7af455c69bb6f5ee6049f26a3893067c123"
+checksum = "38af43d03d8793618ee6dbf1cb2c7ad90ac723fe138a0196453556ac28e0136c"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
@@ -2906,7 +2907,7 @@ dependencies = [
  "http",
  "jiff",
  "jsonwebtoken",
- "openehr-sdt 0.0.98",
+ "openehr-sdt 0.0.102",
  "reqwest",
  "secrecy",
  "serde",
@@ -3793,9 +3794,9 @@ dependencies = [
 
 [[package]]
 name = "hyper"
-version = "1.11.0"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d22053281f852e11534f5198498373cbb59295120a20771d90f7ed1897490a72"
+checksum = "2c3e324da4c95177d6291d4c8730197c0d1822f8a9766814a4a44fa5ab797c9c"
 dependencies = [
  "atomic-waker",
  "bytes",
@@ -4054,9 +4055,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-atna"
-version = "0.2.13"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "779a7dae5c1e3f0d351e94b243c66ad144920f30f35881e2df8396897bcac957"
+checksum = "b1c95f2654cb583d1c2350a5ee18f2087b70e52b851c689f7c7e2bee430d27a9"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -4081,9 +4082,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.0.62"
+version = "0.0.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8fef633aa89ecf55dc0b7a27bbd09572bacbfe053c462b9cd388bac74b25eb6"
+checksum = "7ec3f7ab3b1be84537efc7a752e1b413c0b198295ae20f65ff34c01fdc59099c"
 dependencies = [
  "ferrohealth-smart",
  "fhir-types",
@@ -5338,7 +5339,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "chrono",
  "getrandom 0.2.17",
  "http",
@@ -5594,9 +5595,9 @@ dependencies = [
 
 [[package]]
 name = "openehr-sdt"
-version = "0.0.98"
+version = "0.0.102"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ea94a36d6f84491e59c51df4b6d0c4c06b524728e98abb93fcfd29c45e014f7"
+checksum = "47d9247a94ed4614574486139b98dc3379a6d59986dce1b3d5ecba415bd11db5"
 
 [[package]]
 name = "openehr-sdt"
@@ -6037,7 +6038,7 @@ dependencies = [
  "aes-gcm 0.10.3",
  "aes-kw",
  "argon2 0.5.3",
- "base64 0.21.7",
+ "base64 0.22.1",
  "bitfields",
  "block-padding",
  "blowfish",
@@ -6478,7 +6479,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -9391,9 +9392,9 @@ dependencies = [
 
 [[package]]
 name = "want"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfa7760aed19e106de2c7c0b581b509f2f25d3dacaf737cb82ac61bc6d760b0e"
+checksum = "ec4cdd0dd910afe868b7ef477227d8d538b46b3075031afee8a9f2acb0a2ed0b"
 dependencies = [
  "try-lock",
 ]

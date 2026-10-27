@@ -124,9 +124,8 @@ it `unavailable` with `unreachable: …` as the reason.
 ## Zero-config boot and the production checklist
 
 With no file and no environment, the effective configuration is: listener
-`127.0.0.1:8080` (the container image sets `PORT=8080`, which listens on every
-interface) at the ITS-REST base path with Swagger UI, reading bodies up to
-1 MiB; the database at the
+`0.0.0.0:8080` at the ITS-REST base path with Swagger UI, reading bodies up to
+64 MiB; the database at the
 built-in development DSN with migrations applied at boot; RBAC on; signing on in
 `digest` mode with read-time verification strict; the audit trail on with only
 the local store; no caller rate limit; logs in `auto` format at `info`; **and every
