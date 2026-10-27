@@ -26,6 +26,7 @@ use crate::bff::ehr_tags::{EhrTargetKind, list_ehr_tags, resolve_ehr_target};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::bff::item_tags::{TagGroup, group_by_target};
 use crate::error::ViewerError;
+use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{Refused, drawn, page_model, shortened};
 use crate::pages::ehr::EhrModel;
@@ -89,7 +90,7 @@ fn toolbar(ehr_id: &str, filters: &Filters) -> AnyView {
             {tr(Msg::FilterApply)}
         </button>
     };
-    let label = tr(Msg::TagsKey);
+    let label = tr(RecordsMsg::TagsKey);
     find_form(
         Find {
             id: "t-key",
@@ -107,8 +108,8 @@ fn toolbar(ehr_id: &str, filters: &Filters) -> AnyView {
 /// The active filters as chips.
 fn chips(ehr_id: &str, filters: &Filters) -> Option<AnyView> {
     let chips: Vec<FilterChip> = [
-        ("key", &filters.key, Msg::ChipKey),
-        ("value", &filters.value, Msg::ChipValue),
+        ("key", &filters.key, RecordsMsg::ChipKey),
+        ("value", &filters.value, RecordsMsg::ChipValue),
     ]
     .into_iter()
     .filter(|(_, value, _)| !value.is_empty())
@@ -194,19 +195,23 @@ async fn target(ehr_id: &str, group: &TagGroup) -> Result<Target, ViewerError> {
     let (name, versioned) = match kind {
         Some(EhrTargetKind::Composition) => (
             tr_with(
-                Msg::TagsComposition,
+                RecordsMsg::TagsComposition,
                 &[("id", shortened(&container).into())],
             ),
-            tr(Msg::TagsVersionedComposition),
+            tr(RecordsMsg::TagsVersionedComposition),
         ),
-        Some(EhrTargetKind::EhrStatus) => (tr(Msg::TagsEhrStatus), tr(Msg::TagsVersionedStatus)),
-        Some(EhrTargetKind::Directory) => {
-            (tr(Msg::EhrTabDirectory), tr(Msg::TagsVersionedDirectory))
-        }
-        None => (shortened(&container), tr(Msg::TagsUnknownObject)),
+        Some(EhrTargetKind::EhrStatus) => (
+            tr(RecordsMsg::TagsEhrStatus),
+            tr(RecordsMsg::TagsVersionedStatus),
+        ),
+        Some(EhrTargetKind::Directory) => (
+            tr(RecordsMsg::EhrTabDirectory),
+            tr(RecordsMsg::TagsVersionedDirectory),
+        ),
+        None => (shortened(&container), tr(RecordsMsg::TagsUnknownObject)),
     };
     let form = match version {
-        Some(number) => tr_with(Msg::TagsOneVersion, &[("version", number.into())]),
+        Some(number) => tr_with(RecordsMsg::TagsOneVersion, &[("version", number.into())]),
         None => versioned,
     };
     Ok(Target {
@@ -267,9 +272,9 @@ async fn read_page(ehr_id: String) -> EhrModel<Panel> {
             Ok(tags) if tags.is_empty() => List::Empty,
             Ok(tags) => match tagged(&ehr_id, group_by_target(tags)).await {
                 Ok(groups) => List::Groups(groups),
-                Err(error) => List::Refused(Refused::new(tr(Msg::TagsRefused), error)),
+                Err(error) => List::Refused(Refused::new(tr(RecordsMsg::TagsRefused), error)),
             },
-            Err(error) => List::Refused(Refused::new(tr(Msg::TagsRefused), error)),
+            Err(error) => List::Refused(Refused::new(tr(RecordsMsg::TagsRefused), error)),
         };
         Panel { filters, list }
     })
@@ -279,9 +284,9 @@ async fn read_page(ehr_id: String) -> EhrModel<Panel> {
 /// The tags, grouped by their object.
 fn table(groups: Vec<Tagged>) -> AnyView {
     let columns = [
-        Column::text("key", tr(Msg::TagsKey)).role(Role::Title),
+        Column::text("key", tr(RecordsMsg::TagsKey)).role(Role::Title),
         Column::text("value", tr(Msg::TagsValue)).role(Role::Sub),
-        Column::text("path", tr(Msg::TagsTargetPath)).role(Role::Meta),
+        Column::text("path", tr(RecordsMsg::TagsTargetPath)).role(Role::Meta),
     ];
     let mut rows = Vec::new();
     for group in groups {
@@ -299,7 +304,8 @@ fn table(groups: Vec<Tagged>) -> AnyView {
         ));
         for tag in group.tags {
             let path = if tag.target_path.is_empty() {
-                view! { <span class="fui-muted">{tr(Msg::TagsWholeObject)}</span> }.into_any()
+                view! { <span class="fui-muted">{tr(RecordsMsg::TagsWholeObject)}</span> }
+                    .into_any()
             } else {
                 view! { <code>{tag.target_path}</code> }.into_any()
             };
@@ -317,7 +323,7 @@ fn table(groups: Vec<Tagged>) -> AnyView {
             );
         }
     }
-    let caption = tr(Msg::TagsCaption);
+    let caption = tr(RecordsMsg::TagsCaption);
     data_table(DataTable {
         caption: &caption,
         columns: &columns,
@@ -333,9 +339,9 @@ fn panel(ehr_id: &str, panel: Panel) -> AnyView {
     let list = match list {
         List::Empty => list_empty(
             tr(if filters.key.is_empty() && filters.value.is_empty() {
-                Msg::TagsEmpty
+                RecordsMsg::TagsEmpty
             } else {
-                Msg::TagsNoMatch
+                RecordsMsg::TagsNoMatch
             }),
             None,
         ),
@@ -345,7 +351,7 @@ fn panel(ehr_id: &str, panel: Panel) -> AnyView {
     view! {
         <div class="fui-panel">
             <div class="fui-panel-body fui-stack">
-                <p class="fui-small fui-muted">{tr(Msg::TagsIntro)}</p>
+                <p class="fui-small fui-muted">{tr(RecordsMsg::TagsIntro)}</p>
                 {toolbar(ehr_id, &filters)}
                 {chips(ehr_id, &filters)}
             </div>
@@ -363,7 +369,7 @@ fn panel(ehr_id: &str, panel: Panel) -> AnyView {
 #[component]
 pub fn TagsTab() -> impl IntoView {
     let ehr_id = ehr_id_param();
-    let title = tr_with(Msg::TagsTitle, &[("id", shortened(&ehr_id).into())]);
+    let title = tr_with(RecordsMsg::TagsTitle, &[("id", shortened(&ehr_id).into())]);
     let model = page_model!(load(ehr_id.clone()));
     let body = drawn(model, move |model| {
         ehr_view(&ehr_id, EhrTab::Tags, model, |found| panel(&ehr_id, found))

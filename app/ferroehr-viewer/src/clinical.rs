@@ -26,6 +26,7 @@
               (#1694)"
 )]
 
+use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, tr, tr_with};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -502,7 +503,7 @@ fn format_multimedia(value: &Value) -> (String, Option<String>) {
     let bytes = if size.is_empty() {
         String::new()
     } else {
-        tr_with(Msg::Bytes, &[("size", size.clone().into())])
+        tr_with(RecordsMsg::Bytes, &[("size", size.clone().into())])
     };
     (
         join_with_space(&join_parenthesized(&media, &bytes), &uri),

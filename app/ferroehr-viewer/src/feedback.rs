@@ -17,7 +17,8 @@
 //! (carrying the CDR's own diagnostic verbatim), name the next action.
 
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr_with};
+use crate::locale::server::ServerMsg;
+use crate::locale::tr_with;
 
 /// Actionable copy for a failed write: names `object`, what went wrong, and
 /// the next action.
@@ -32,7 +33,7 @@ use crate::locale::{Msg, tr_with};
 pub fn write_failure_copy(object: &str, error: &ViewerError) -> String {
     match error {
         ViewerError::Invalid(message) => tr_with(
-            Msg::WasNotSentCorrectInputRetry,
+            ServerMsg::WasNotSentCorrectInputRetry,
             &[
                 ("object", (object).to_string().into()),
                 ("message", message.clone().into()),
@@ -48,7 +49,7 @@ pub fn write_failure_copy(object: &str, error: &ViewerError) -> String {
         ViewerError::Cdr { status, message } => match error.status_code() {
             Some(http::StatusCode::BAD_REQUEST | http::StatusCode::UNPROCESSABLE_ENTITY) => {
                 tr_with(
-                    Msg::CdrRejectedFixReportedProblemRetry,
+                    ServerMsg::CdrRejectedFixReportedProblemRetry,
                     &[
                         ("object", (object).to_string().into()),
                         ("message", message.clone().into()),
@@ -56,28 +57,28 @@ pub fn write_failure_copy(object: &str, error: &ViewerError) -> String {
                 )
             }
             Some(http::StatusCode::PRECONDITION_FAILED) => tr_with(
-                Msg::ChangedCdrSinceScreenLoadedReload,
+                ServerMsg::ChangedCdrSinceScreenLoadedReload,
                 &[
                     ("object", (object).to_string().into()),
                     ("message", message.clone().into()),
                 ],
             ),
             Some(http::StatusCode::CONFLICT) => tr_with(
-                Msg::CdrAlreadyHoldsConflictingObjectSo,
+                ServerMsg::CdrAlreadyHoldsConflictingObjectSo,
                 &[
                     ("object", (object).to_string().into()),
                     ("message", message.clone().into()),
                 ],
             ),
             Some(http::StatusCode::NOT_FOUND) => tr_with(
-                Msg::NotCdrMayHaveBeenDeleted,
+                ServerMsg::NotCdrMayHaveBeenDeleted,
                 &[
                     ("object", (object).to_string().into()),
                     ("message", message.clone().into()),
                 ],
             ),
             _ => tr_with(
-                Msg::CdrAnsweredNothingWasSaved,
+                ServerMsg::CdrAnsweredNothingWasSaved,
                 &[
                     ("status", (status).to_string().into()),
                     ("object", (object).to_string().into()),
@@ -91,32 +92,32 @@ pub fn write_failure_copy(object: &str, error: &ViewerError) -> String {
         // `specifications/docs/overview/Requests_and_responses.md`
         // §HTTP status codes).
         ViewerError::CdrUnauthorized(message) => tr_with(
-            Msg::CdrNoLongerAcceptsSessionSo2,
+            ServerMsg::CdrNoLongerAcceptsSessionSo2,
             &[
                 ("object", (object).to_string().into()),
                 ("message", message.clone().into()),
             ],
         ),
         ViewerError::Forbidden(message) => tr_with(
-            Msg::SessionMayNotWriteSignAccount,
+            ServerMsg::SessionMayNotWriteSignAccount,
             &[
                 ("object", (object).to_string().into()),
                 ("message", message.clone().into()),
             ],
         ),
         ViewerError::Unauthenticated => tr_with(
-            Msg::ViewerSessionExpiredBeforeWasSaved,
+            ServerMsg::ViewerSessionExpiredBeforeWasSaved,
             &[("object", (object).to_string().into())],
         ),
         ViewerError::CdrUnreachable(message) => tr_with(
-            Msg::CdrUnreachableSoWasNotSaved,
+            ServerMsg::CdrUnreachableSoWasNotSaved,
             &[
                 ("message", message.clone().into()),
                 ("object", (object).to_string().into()),
             ],
         ),
         ViewerError::Internal(message) => tr_with(
-            Msg::CouldNotSavedRetryIfPersists,
+            ServerMsg::CouldNotSavedRetryIfPersists,
             &[
                 ("object", (object).to_string().into()),
                 ("message", message.clone().into()),
@@ -145,7 +146,7 @@ pub fn logical_delete_failure_copy(object: &str, error: &ViewerError) -> String 
     match error {
         ViewerError::Cdr { message, .. } => match error.status_code() {
             Some(http::StatusCode::CONFLICT | http::StatusCode::PRECONDITION_FAILED) => tr_with(
-                Msg::MovedCdrSinceScreenLoadedSo,
+                ServerMsg::MovedCdrSinceScreenLoadedSo,
                 &[
                     ("object", (object).to_string().into()),
                     ("message", message.clone().into()),
@@ -154,14 +155,14 @@ pub fn logical_delete_failure_copy(object: &str, error: &ViewerError) -> String 
             // `400_already_deleted` on the COMPOSITION delete: the version is
             // already logically deleted, so there is nothing left to do.
             Some(http::StatusCode::BAD_REQUEST) => tr_with(
-                Msg::CdrRefusedDeleteMayAlreadyDeleted,
+                ServerMsg::CdrRefusedDeleteMayAlreadyDeleted,
                 &[
                     ("object", (object).to_string().into()),
                     ("message", message.clone().into()),
                 ],
             ),
             Some(http::StatusCode::NOT_FOUND) => tr_with(
-                Msg::NotCdrMayHaveBeenDeleted2,
+                ServerMsg::NotCdrMayHaveBeenDeleted2,
                 &[
                     ("object", (object).to_string().into()),
                     ("message", message.clone().into()),
@@ -170,14 +171,14 @@ pub fn logical_delete_failure_copy(object: &str, error: &ViewerError) -> String 
             _ => write_failure_copy(object, error),
         },
         ViewerError::Forbidden(message) => tr_with(
-            Msg::SessionMayNotDeleteSignAccount,
+            ServerMsg::SessionMayNotDeleteSignAccount,
             &[
                 ("object", (object).to_string().into()),
                 ("message", message.clone().into()),
             ],
         ),
         ViewerError::CdrUnauthorized(message) => tr_with(
-            Msg::CdrNoLongerAcceptsSessionSo3,
+            ServerMsg::CdrNoLongerAcceptsSessionSo3,
             &[("message", message.clone().into())],
         ),
         other => write_failure_copy(object, other),

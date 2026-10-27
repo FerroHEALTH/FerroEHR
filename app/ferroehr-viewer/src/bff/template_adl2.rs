@@ -35,7 +35,9 @@ use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
 use crate::format::ReprFormat;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::locale::{Msg, tr_with};
+use crate::locale::definitions::DefinitionsMsg;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::tr_with;
 
 /// Fetch the stored ADL2 operational-template SOURCE.
 ///
@@ -129,14 +131,14 @@ pub fn adl2_catalog_from_json(json: &str) -> Result<CatalogNode, ViewerError> {
     >(json)
     .map_err(|e| {
         ViewerError::Internal(tr_with(
-            Msg::Operationaltemplatev2Parse,
+            DefinitionsMsg::Operationaltemplatev2Parse,
             &[("e", (e).to_string().into())],
         ))
     })?;
     let web_template = openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4(&opt)
         .map_err(|e| {
             ViewerError::Internal(tr_with(
-                Msg::WebtemplateBuild,
+                DefinitionsMsg::WebtemplateBuild,
                 &[("value0", (crate::error::error_chain(&e)).clone().into())],
             ))
         })?;

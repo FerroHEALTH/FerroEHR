@@ -21,7 +21,8 @@ use leptos::prelude::*;
 use leptos_meta::Title;
 
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::console::ConsoleMsg;
+use crate::locale::{tr, tr_with};
 use crate::pages::common::{drawn, page_model};
 
 /// The tab the address names: Appearance for none.
@@ -56,18 +57,21 @@ fn reveal_row(back: &str, saved: bool) -> AnyView {
         .map(|seconds| {
             let words = if seconds >= 60 && seconds % 60 == 0 {
                 tr_with(
-                    Msg::RevealMinutes,
+                    ConsoleMsg::RevealMinutes,
                     &[("count", u64::from(seconds.div_euclid(60)).into())],
                 )
             } else {
-                tr_with(Msg::RevealSeconds, &[("count", u64::from(seconds).into())])
+                tr_with(
+                    ConsoleMsg::RevealSeconds,
+                    &[("count", u64::from(seconds).into())],
+                )
             };
             (seconds.to_string(), words.into())
         })
         .collect();
     preference_row(PreferenceRow {
-        label: tr(Msg::RevealLabel).into(),
-        description: tr(Msg::RevealDescription).into(),
+        label: tr(ConsoleMsg::RevealLabel).into(),
+        description: tr(ConsoleMsg::RevealDescription).into(),
         control_id: Some(crate::prefs::REVEAL.to_owned()),
         control: select_preference(SelectPreference {
             name: crate::prefs::REVEAL.to_owned(),
@@ -139,7 +143,7 @@ pub fn PreferencesPage() -> impl IntoView {
             preferences: crate::prefs::current(),
             action: crate::prefs::PREFERENCE_ROUTE.to_owned(),
             saved,
-            accent: tr(Msg::BrandAccent),
+            accent: tr(ConsoleMsg::BrandAccent),
             languages: crate::locale::shipped(),
             browser: Locale::negotiate_with(&accepted, crate::locale::catalog(), Locale::english()),
             week_from_language: Weekday::Monday,
@@ -149,7 +153,7 @@ pub fn PreferencesPage() -> impl IntoView {
         })
     });
     view! {
-        <Title text=tr(Msg::YourPreferences) />
+        <Title text=tr(ConsoleMsg::YourPreferences) />
         {page}
     }
 }

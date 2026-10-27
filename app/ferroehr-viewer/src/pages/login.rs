@@ -30,6 +30,7 @@ use crate::auth::LoginScreen;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::auth::{SignedIn, fetch_login_screen, sign_in_basic};
 use crate::error::ViewerError;
+use crate::locale::signin::SignInMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{drawn, page_model};
 
@@ -51,11 +52,11 @@ fn oidc_login_href(next: &str) -> String {
 fn arrival() -> (String, State) {
     let next = crate::request::query("next").unwrap_or_else(|| "/".to_owned());
     let state = if crate::request::query("expired").is_some() {
-        State::Expired(Notice::new(tr(Msg::SignInExpired)))
+        State::Expired(Notice::new(tr(SignInMsg::Expired)))
     } else if crate::request::query("signed-out").is_some() {
-        State::SignedOut(Notice::new(tr(Msg::SignInSignedOut)))
+        State::SignedOut(Notice::new(tr(SignInMsg::SignedOut)))
     } else if crate::request::query("refused").is_some() {
-        State::Refused(Notice::new(tr(Msg::SignInRefusedProvider)))
+        State::Refused(Notice::new(tr(SignInMsg::RefusedProvider)))
     } else {
         State::Ready
     };
@@ -80,7 +81,7 @@ fn card(
             state,
         ),
         Err(error) => {
-            let mut unreachable = Notice::new(tr(Msg::SignInCdrUnreachable));
+            let mut unreachable = Notice::new(tr(SignInMsg::CdrUnreachable));
             unreachable.detail = Some(error.to_string());
             (
                 true,
@@ -99,7 +100,7 @@ fn card(
         .parse::<http::Uri>()
         .ok()
         .and_then(|uri| uri.host().map(str::to_owned))
-        .unwrap_or_else(|| tr(Msg::SignInIdentityProvider));
+        .unwrap_or_else(|| tr(SignInMsg::IdentityProvider));
     let line = (!notice_text.is_empty()).then(|| {
         view! { <p class="fui-small fui-muted fui-sign-in-line">{notice_text}</p> }.into_any()
     });
@@ -110,19 +111,19 @@ fn card(
             tr(Msg::BrandWord),
         )
         .into_any(),
-        title: Some(tr(Msg::SignInTitle)),
+        title: Some(tr(SignInMsg::Title)),
         state,
         provider: oidc.then(|| Provider {
             href: oidc_login_href(next),
-            label: tr_with(Msg::SignInAt, &[("host", host.clone().into())]),
-            busy: tr_with(Msg::SignInRedirecting, &[("host", host.into())]),
+            label: tr_with(SignInMsg::At, &[("host", host.clone().into())]),
+            busy: tr_with(SignInMsg::Redirecting, &[("host", host.into())]),
             glyph: Glyph::LOG_IN,
         }),
         basic: basic.then(|| Basic {
             action: "/login".to_owned(),
             next: next.to_owned(),
             divider: None,
-            submit: Some(tr(Msg::SignInBasicSubmit)),
+            submit: Some(tr(SignInMsg::BasicSubmit)),
             username,
             error,
         }),
@@ -132,7 +133,7 @@ fn card(
             .into_iter()
             .map(|link| (link.label, link.href))
             .collect(),
-        caption: Some(tr(Msg::SignInCaption)),
+        caption: Some(tr(SignInMsg::Caption)),
     })
     .into_any()
 }
@@ -189,11 +190,11 @@ async fn read_login() -> LoginModel {
             leptos_axum::redirect(&to);
             return LoginModel::Left;
         }
-        Some((username, Ok(SignedIn::Refused))) => (username, Some(tr(Msg::SignInRefused))),
+        Some((username, Ok(SignedIn::Refused))) => (username, Some(tr(SignInMsg::Refused))),
         Some((username, Err(error))) => (
             username,
             Some(tr_with(
-                Msg::SignInFailed,
+                SignInMsg::Failed,
                 &[("error", error.to_string().into())],
             )),
         ),
@@ -224,7 +225,7 @@ pub fn LoginPage() -> impl IntoView {
         LoginModel::Left => ().into_any(),
     });
     view! {
-        <Title text=tr(Msg::SignInTitle) />
+        <Title text=tr(SignInMsg::Title) />
         {centred(body, crate::shell::footer())}
     }
 }

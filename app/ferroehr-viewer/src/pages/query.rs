@@ -56,6 +56,7 @@ use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
+use crate::locale::queries::QueriesMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{
     Refused, count, drawn, info_note, marks_of, page_model, panel, plain_section, section,
@@ -107,7 +108,7 @@ fn heading(save: PopoverForm) -> AnyView {
     page_heading(
         Header {
             title: tr(Msg::NavQuery).into(),
-            subtitle: Some(tr(Msg::QuerySubtitle).into()),
+            subtitle: Some(tr(QueriesMsg::QuerySubtitle).into()),
             crumbs: Vec::new(),
             mono: false,
             badge: None,
@@ -115,7 +116,7 @@ fn heading(save: PopoverForm) -> AnyView {
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::PLAY),
-            tr(Msg::QueryRun),
+            tr(QueriesMsg::QueryRun),
             Act::Submit(QUERY_FORM.to_owned()),
         ))
         .popover(save),
@@ -184,10 +185,10 @@ fn save_popover(fields: SaveFields) -> PopoverForm {
         id: SAVE_POPOVER.into(),
         variant: Variant::Secondary,
         glyph: Glyph::SAVE,
-        label: tr(Msg::QuerySave).into(),
-        title: tr(Msg::QuerySave).into(),
+        label: tr(QueriesMsg::QuerySave).into(),
+        title: tr(QueriesMsg::QuerySave).into(),
         body: view! {
-            {Field::new("sv-ns", tr(Msg::QueryNamespace))
+            {Field::new("sv-ns", tr(QueriesMsg::QueryNamespace))
                 .view(
                     view! {
                         <input
@@ -214,7 +215,7 @@ fn save_popover(fields: SaveFields) -> PopoverForm {
                     },
                 )}
             {Field::new("sv-v", tr(Msg::ColumnVersion))
-                .help(tr(Msg::QueryVersionHelp))
+                .help(tr(QueriesMsg::QueryVersionHelp))
                 .after(error)
                 .view(
                     view! {
@@ -238,7 +239,7 @@ fn save_popover(fields: SaveFields) -> PopoverForm {
                     class="fui-button fui-button-primary"
                 >
                     {ferrohealth_ui::icon::icon(Glyph::SAVE, "16")}
-                    {tr(Msg::QuerySaveAction)}
+                    {tr(QueriesMsg::QuerySaveAction)}
                 </button>
             </div>
         }
@@ -281,7 +282,7 @@ async fn save(
     // NOTE: the name is not `required` in the markup: the field belongs to the form every Run and
     // Add posts, so the browser would refuse those too; the save checks it here instead.
     if posted.text("save_name").trim().is_empty() {
-        return Err(Box::new((tr(Msg::QuerySaveNameMissing), None)));
+        return Err(Box::new((tr(QueriesMsg::QuerySaveNameMissing), None)));
     }
     let name =
         crate::query_namespace::qualify(&posted.text("save_namespace"), &posted.text("save_name"));
@@ -298,10 +299,10 @@ async fn save(
                     urlencoding::encode(&name),
                     urlencoding::encode(&shown)
                 ),
-                &Done::ok(tr(Msg::QuerySaved))
+                &Done::ok(tr(QueriesMsg::QuerySaved))
                     .line(format!("{name} {shown}"))
                     .link(
-                        tr(Msg::QueryOpenStored),
+                        tr(QueriesMsg::QueryOpenStored),
                         crate::pages::queries::stored_query_href(&name, &shown),
                     ),
             );
@@ -309,13 +310,13 @@ async fn save(
         }
         Err(error) => {
             let problem = if crate::pages::common::is_status(&error, http::StatusCode::CONFLICT) {
-                tr(Msg::QueryVersionTaken)
+                tr(QueriesMsg::QueryVersionTaken)
             } else {
-                tr(Msg::QuerySaveRefused)
+                tr(QueriesMsg::QuerySaveRefused)
             };
             Err(Box::new((
                 problem,
-                Some(Refused::new(tr(Msg::QuerySaveRefused), error)),
+                Some(Refused::new(tr(QueriesMsg::QuerySaveRefused), error)),
             )))
         }
     }
@@ -324,8 +325,8 @@ async fn save(
 /// The tabs of Query.
 fn tabs() -> Vec<Tab> {
     vec![
-        Tab::new("build", "/query", tr(Msg::QueryBuild)),
-        Tab::new("aql", "/query/aql", tr(Msg::QueryAql)),
+        Tab::new("build", "/query", tr(QueriesMsg::QueryBuild)),
+        Tab::new("aql", "/query/aql", tr(QueriesMsg::QueryAql)),
     ]
 }
 
@@ -581,11 +582,11 @@ fn draft_of_post(posted: &crate::posted::Posted, offered: &[String]) -> Draft {
 }
 
 /// The words of a shape key.
-const SHAPES: [(&str, Msg); 4] = [
-    ("data", Msg::QueryShapeData),
-    ("compositions", Msg::QueryShapeCompositions),
-    ("count", Msg::QueryShapeCount),
-    ("ehrs", Msg::QueryShapeEhrs),
+const SHAPES: [(&str, QueriesMsg); 4] = [
+    ("data", QueriesMsg::QueryShapeData),
+    ("compositions", QueriesMsg::QueryShapeCompositions),
+    ("count", QueriesMsg::QueryShapeCount),
+    ("ehrs", QueriesMsg::QueryShapeEhrs),
 ];
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -636,7 +637,7 @@ fn kind_of(
     let value = condition.value.trim();
     let not_number = || {
         DraftError::Value(tr_with(
-            Msg::QueryNotNumber,
+            QueriesMsg::QueryNotNumber,
             &[
                 ("path", label.to_owned().into()),
                 ("value", value.to_owned().into()),
@@ -720,7 +721,7 @@ fn node_of(group: &UiGroup, offered: &[Leaf]) -> Result<Option<CriterionNode>, D
             .find(|leaf| leaf.path == condition.path)
             .ok_or_else(|| {
                 DraftError::Path(tr_with(
-                    Msg::QueryUnknownPath,
+                    QueriesMsg::QueryUnknownPath,
                     &[("path", condition.path.clone().into())],
                 ))
             })?;
@@ -758,7 +759,7 @@ fn query_of(draft: &Draft, offered: &[Leaf]) -> Result<BuilderQuery, DraftError>
                 .limit
                 .parse::<u32>()
                 .ok()
-                .ok_or_else(|| DraftError::Limit(tr(Msg::QueryBadLimit)))?,
+                .ok_or_else(|| DraftError::Limit(tr(QueriesMsg::QueryBadLimit)))?,
         )
     };
     Ok(BuilderQuery {
@@ -1040,7 +1041,7 @@ fn columns_view(draft: &Draft, offered: &[Leaf]) -> AnyView {
                     <div class="fui-field">
                         <label class="fui-sr-only" for=path_id.clone()>
                             {tr_with(
-                                Msg::QueryDataPointN,
+                                QueriesMsg::QueryDataPointN,
                                 &[("number", count(place.saturating_add(1)))],
                             )}
                         </label>
@@ -1051,7 +1052,7 @@ fn columns_view(draft: &Draft, offered: &[Leaf]) -> AnyView {
                     <div class="fui-field">
                         <label class="fui-sr-only" for=alias_id.clone()>
                             {tr_with(
-                                Msg::QueryColumnNameN,
+                                QueriesMsg::QueryColumnNameN,
                                 &[("number", count(place.saturating_add(1)))],
                             )}
                         </label>
@@ -1067,7 +1068,7 @@ fn columns_view(draft: &Draft, offered: &[Leaf]) -> AnyView {
                 .into_any(),
                 end: RowEnd::Remove {
                     label: tr_with(
-                        Msg::QueryRemoveDataPoint,
+                        QueriesMsg::QueryRemoveDataPoint,
                         &[(
                             "name",
                             if alias.is_empty() {
@@ -1087,18 +1088,21 @@ fn columns_view(draft: &Draft, offered: &[Leaf]) -> AnyView {
         .collect();
     repeat(Repeat {
         id: "data-points".to_owned(),
-        label: tr(Msg::QueryDataPoints),
+        label: tr(QueriesMsg::QueryDataPoints),
         fields: Fields::Two,
-        head: vec![tr(Msg::QueryDataPoint), tr(Msg::QueryColumnName)],
+        head: vec![
+            tr(QueriesMsg::QueryDataPoint),
+            tr(QueriesMsg::QueryColumnName),
+        ],
         rows,
         token: ROW,
         blank: None,
         add: Some(RepeatAdd {
-            label: tr(Msg::QueryAddDataPoint),
+            label: tr(QueriesMsg::QueryAddDataPoint),
             name: "intent".to_owned(),
             value: "add-column".to_owned(),
         }),
-        empty: tr(Msg::QueryNoDataPoints),
+        empty: tr(QueriesMsg::QueryNoDataPoints),
         form: None,
     })
 }
@@ -1127,7 +1131,7 @@ async fn offered(template: &str) -> Result<Vec<Leaf>, ViewerError> {
 /// The built AQL, as a code section with Open in AQL.
 fn built_view(aql: &str) -> AnyView {
     let code = Code {
-        label: tr(Msg::QueryBuiltAql),
+        label: tr(QueriesMsg::QueryBuiltAql),
         language: Language::Aql,
         text: aql.to_owned(),
         ids: Some("built-L".to_owned()),
@@ -1136,7 +1140,7 @@ fn built_view(aql: &str) -> AnyView {
     };
     code_section(
         CodeHead {
-            title: tr(Msg::QueryBuiltAql),
+            title: tr(QueriesMsg::QueryBuiltAql),
             tags: Vec::new(),
             digest: None,
             copy: Some("built-aql".to_owned()),
@@ -1151,7 +1155,7 @@ fn built_view(aql: &str) -> AnyView {
                         class="fui-button fui-button-ghost fui-button-small"
                     >
                         {ferrohealth_ui::icon::icon(Glyph::ARROW_RIGHT, "14")}
-                        {tr(Msg::QueryOpenInAql)}
+                        {tr(QueriesMsg::QueryOpenInAql)}
                     </button>
                 }
                 .into_any(),
@@ -1263,7 +1267,7 @@ async fn read_build() -> Build {
         Ok(leaves) => (leaves, None),
         Err(error) => (
             Vec::new(),
-            Some(Refused::new(tr(Msg::QueryCatalogRefused), error)),
+            Some(Refused::new(tr(QueriesMsg::QueryCatalogRefused), error)),
         ),
     };
     if posted.is_none()
@@ -1327,12 +1331,17 @@ fn build(model: Build) -> AnyView {
         answer,
         save,
     } = model;
-    let lifted = lifted
-        .map(|reason| warn_note(tr_with(Msg::QueryCannotBuild, &[("reason", reason.into())])));
+    let lifted = lifted.map(|reason| {
+        warn_note(tr_with(
+            QueriesMsg::QueryCannotBuild,
+            &[("reason", reason.into())],
+        ))
+    });
     let top = top.map(|top| match top {
-        Top::NotBuilt(reason) => {
-            warn_note(tr_with(Msg::QueryNotBuilt, &[("reason", reason.into())]))
-        }
+        Top::NotBuilt(reason) => warn_note(tr_with(
+            QueriesMsg::QueryNotBuilt,
+            &[("reason", reason.into())],
+        )),
         Top::Refused(refusal) => refusal.view(),
     });
     let catalog = catalog.map(|refusal| refusal.view());
@@ -1366,7 +1375,7 @@ fn build(model: Build) -> AnyView {
                         </select>
                     },
                 )}
-            {Field::new("q-shape", tr(Msg::QueryReturns))
+            {Field::new("q-shape", tr(QueriesMsg::QueryReturns))
                 .view(
                     view! {
                         <select id="q-shape" name="shape" class="fui-select">
@@ -1387,7 +1396,7 @@ fn build(model: Build) -> AnyView {
     };
     let points = (draft.shape == "data").then(|| {
         section(
-            Some(tr(Msg::QueryDataPoints)),
+            Some(tr(QueriesMsg::QueryDataPoints)),
             u64::try_from(draft.columns.len()).ok(),
             None,
             columns_view(&draft, &leaves),
@@ -1406,29 +1415,29 @@ fn build(model: Build) -> AnyView {
         .collect_view();
     let order = view! {
         <div class="fui-transform-options">
-            {Field::new("q-o", tr(Msg::QueryOrderBy))
+            {Field::new("q-o", tr(QueriesMsg::QueryOrderBy))
                 .view(
                     view! {
                         <select id="q-o" name="order" class="fui-select">
-                            <option value="">{tr(Msg::QueryNoOrder)}</option>
+                            <option value="">{tr(QueriesMsg::QueryNoOrder)}</option>
                             {order_options}
                         </select>
                     },
                 )}
-            {Field::new("q-d", tr(Msg::QueryDirection))
+            {Field::new("q-d", tr(QueriesMsg::QueryDirection))
                 .view(
                     view! {
                         <select id="q-d" name="direction" class="fui-select">
                             <option value="desc" selected=draft.descending>
-                                {tr(Msg::QueryNewestFirst)}
+                                {tr(QueriesMsg::QueryNewestFirst)}
                             </option>
                             <option value="asc" selected=!draft.descending>
-                                {tr(Msg::QueryOldestFirst)}
+                                {tr(QueriesMsg::QueryOldestFirst)}
                             </option>
                         </select>
                     },
                 )}
-            {Field::new("q-l", tr(Msg::QueryLimit))
+            {Field::new("q-l", tr(QueriesMsg::QueryLimit))
                 .view(
                     view! {
                         <input
@@ -1444,13 +1453,18 @@ fn build(model: Build) -> AnyView {
         </div>
     };
     let built_section = match &built {
-        Ok(aql) => section(Some(tr(Msg::QueryItBuilds)), None, None, built_view(aql)),
+        Ok(aql) => section(
+            Some(tr(QueriesMsg::QueryItBuilds)),
+            None,
+            None,
+            built_view(aql),
+        ),
         Err(reason) => section(
-            Some(tr(Msg::QueryItBuilds)),
+            Some(tr(QueriesMsg::QueryItBuilds)),
             None,
             None,
             info_note(tr_with(
-                Msg::QueryNotBuilt,
+                QueriesMsg::QueryNotBuilt,
                 &[("reason", reason.clone().into())],
             )),
         ),
@@ -1464,20 +1478,20 @@ fn build(model: Build) -> AnyView {
             {lifted} {top} {catalog} <form id=QUERY_FORM method="post" action="/query">
                 <input type="hidden" name="default-intent" value="run" />
                 <button type="submit" class="fui-sr-only" tabindex="-1">
-                    {tr(Msg::QueryRun)}
+                    {tr(QueriesMsg::QueryRun)}
                 </button>
                 <input type="hidden" name="state" value=state />
                 <input type="hidden" name="aql" value=aql />
                 {binder(
-                    tr(Msg::QueryWays),
+                    tr(QueriesMsg::QueryWays),
                     tabs(),
                     "build",
                     panel(
                         view! {
                             {plain_section(options)}
                             {points}
-                            {section(Some(tr(Msg::QueryConditions)), None, None, conditions)}
-                            {section(Some(tr(Msg::QueryOrderLimit)), None, None, order)}
+                            {section(Some(tr(QueriesMsg::QueryConditions)), None, None, conditions)}
+                            {section(Some(tr(QueriesMsg::QueryOrderLimit)), None, None, order)}
                             {built_section}
                             {Answer::view(answer)}
                         },
@@ -1516,7 +1530,7 @@ fn grammar(aql: &str) -> Option<(String, FileFindings)> {
             code: "AQL-LEX".to_owned(),
             at: at(error.span.start),
             message: tr_with(
-                Msg::QueryUnexpected,
+                QueriesMsg::QueryUnexpected,
                 &[("token", error.slice.clone().into())],
             ),
             mapping: None,
@@ -1529,10 +1543,10 @@ fn grammar(aql: &str) -> Option<(String, FileFindings)> {
                 at: fault.bytes.as_ref().and_then(|bytes| at(bytes.start)),
                 message: match &fault.found {
                     Some(token) => tr_with(
-                        Msg::QueryUnexpected,
+                        QueriesMsg::QueryUnexpected,
                         &[("token", format!("{token:?}").into())],
                     ),
-                    None => tr(Msg::QueryEndedEarly),
+                    None => tr(QueriesMsg::QueryEndedEarly),
                 },
                 mapping: None,
             })
@@ -1540,7 +1554,7 @@ fn grammar(aql: &str) -> Option<(String, FileFindings)> {
     };
     let total = findings.len();
     Some((
-        tr_with(Msg::QueryGrammarHeading, &[("count", count(total))]),
+        tr_with(QueriesMsg::QueryGrammarHeading, &[("count", count(total))]),
         FileFindings {
             file: EditorField::Aql.name().into_owned(),
             href: None,
@@ -1601,7 +1615,7 @@ fn parameters_view(rows: &[(String, String)]) -> AnyView {
                     <div class="fui-field">
                         <label class="fui-sr-only" for=name_id.clone()>
                             {tr_with(
-                                Msg::QueryParamNameN,
+                                QueriesMsg::QueryParamNameN,
                                 &[("number", count(place.saturating_add(1)))],
                             )}
                         </label>
@@ -1616,7 +1630,7 @@ fn parameters_view(rows: &[(String, String)]) -> AnyView {
                     <div class="fui-field">
                         <label class="fui-sr-only" for=value_id.clone()>
                             {tr_with(
-                                Msg::QueryParamValueN,
+                                QueriesMsg::QueryParamValueN,
                                 &[("number", count(place.saturating_add(1)))],
                             )}
                         </label>
@@ -1632,7 +1646,10 @@ fn parameters_view(rows: &[(String, String)]) -> AnyView {
                 }
                 .into_any(),
                 end: RowEnd::Remove {
-                    label: tr_with(Msg::QueryRemoveParam, &[("name", name.clone().into())]),
+                    label: tr_with(
+                        QueriesMsg::QueryRemoveParam,
+                        &[("name", name.clone().into())],
+                    ),
                     name: "intent".to_owned(),
                     value: format!("remove-param:{place}"),
                 },
@@ -1642,18 +1659,18 @@ fn parameters_view(rows: &[(String, String)]) -> AnyView {
         .collect();
     repeat(Repeat {
         id: "parameters".to_owned(),
-        label: tr(Msg::QueryParameters),
+        label: tr(QueriesMsg::QueryParameters),
         fields: Fields::Two,
         head: vec![tr(Msg::QueryName), tr(Msg::TagsValue)],
         rows,
         token: ROW,
         blank: None,
         add: Some(RepeatAdd {
-            label: tr(Msg::QueryAddParam),
+            label: tr(QueriesMsg::QueryAddParam),
             name: "intent".to_owned(),
             value: "add-param".to_owned(),
         }),
-        empty: tr(Msg::QueryNoParams),
+        empty: tr(QueriesMsg::QueryNoParams),
         form: None,
     })
 }
@@ -1735,7 +1752,7 @@ async fn read_written() -> Written {
                         text
                     }
                     Err(error) => {
-                        top = Some(Refused::new(tr(Msg::QueryStoredRefused), error));
+                        top = Some(Refused::new(tr(QueriesMsg::QueryStoredRefused), error));
                         String::new()
                     }
                 }
@@ -1756,10 +1773,10 @@ async fn read_written() -> Written {
     let mut answer = None;
     match step(posted.as_ref()) {
         Step::Run if aql.trim().is_empty() => {
-            answer = Some(Answer::NotRun(tr(Msg::QueryNothingToRun)));
+            answer = Some(Answer::NotRun(tr(QueriesMsg::QueryNothingToRun)));
         }
         Step::Run if findings.is_some() => {
-            answer = Some(Answer::NotRun(tr(Msg::QueryGrammarStops)));
+            answer = Some(Answer::NotRun(tr(QueriesMsg::QueryGrammarStops)));
         }
         Step::Run => {
             answer = Some(Answer::of(
@@ -1768,7 +1785,7 @@ async fn read_written() -> Written {
                 &parameters,
             ));
         }
-        Step::Save if findings.is_some() => save_problem = Some(tr(Msg::QueryGrammarStops)),
+        Step::Save if findings.is_some() => save_problem = Some(tr(QueriesMsg::QueryGrammarStops)),
         Step::Save => {
             if let Err(refused_save) = save(posted.as_ref(), &aql).await {
                 let (problem, refusal) = *refused_save;
@@ -1814,10 +1831,10 @@ fn written(model: Written) -> AnyView {
     } = model;
     let note = note.map(|note| match note {
         Note::Opened(name, version) => info_note(tr_with(
-            Msg::QueryOpenedStored,
+            QueriesMsg::QueryOpenedStored,
             &[("name", name.into()), ("version", version.into())],
         )),
-        Note::BuildMade => info_note(tr(Msg::QueryBuildMade)),
+        Note::BuildMade => info_note(tr(QueriesMsg::QueryBuildMade)),
     });
     let top = top.map(|refusal| refusal.view());
     let to_build = buildable.then(|| {
@@ -1831,7 +1848,7 @@ fn written(model: Written) -> AnyView {
                 class="fui-button fui-button-ghost fui-button-small"
             >
                 {ferrohealth_ui::icon::icon(Glyph::LIST_CHECKS, "14")}
-                {tr(Msg::QueryOpenInBuild)}
+                {tr(QueriesMsg::QueryOpenInBuild)}
             </button>
         }
     });
@@ -1843,8 +1860,8 @@ fn written(model: Written) -> AnyView {
                 text: aql,
                 opened: None,
                 marks: marks_of(findings.as_ref()),
-                label: tr(Msg::QueryTheAql),
-                lead: tr(Msg::QueryAql),
+                label: tr(QueriesMsg::QueryTheAql),
+                lead: tr(QueriesMsg::QueryAql),
                 facts: vec![tr(Msg::EditorUtf8)],
                 findings,
             }
@@ -1853,16 +1870,16 @@ fn written(model: Written) -> AnyView {
         />
     };
     view! {
-        <Title text=tr(Msg::QueryAqlTitle) />
+        <Title text=tr(QueriesMsg::QueryAqlTitle) />
         {heading(save_popover(save))}
         <div class="fui-stack">
             {top} <form id=QUERY_FORM method="post" action="/query/aql">
                 <input type="hidden" name="default-intent" value="run" />
                 <button type="submit" class="fui-sr-only" tabindex="-1">
-                    {tr(Msg::QueryRun)}
+                    {tr(QueriesMsg::QueryRun)}
                 </button>
                 {binder(
-                    tr(Msg::QueryWays),
+                    tr(QueriesMsg::QueryWays),
                     tabs(),
                     "aql",
                     panel(
@@ -1875,7 +1892,7 @@ fn written(model: Written) -> AnyView {
                                 },
                             )}
                             {section(
-                                Some(tr(Msg::QueryParameters)),
+                                Some(tr(QueriesMsg::QueryParameters)),
                                 u64::try_from(rows.len()).ok(),
                                 None,
                                 parameters_view(&rows),

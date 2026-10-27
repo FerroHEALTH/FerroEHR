@@ -28,7 +28,8 @@ use crate::bff::ehrs::{ResultPage, cell_text};
 use crate::chart_model::AxisScale;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::queries::QueriesMsg;
+use crate::locale::{tr, tr_with};
 use crate::pages::common::{Refused, count, quiet, section};
 
 /// The name the view the results show rides as, so the next Run keeps it;
@@ -177,7 +178,7 @@ fn table(columns: &[String], rows: &[Vec<String>]) -> AnyView {
         })
         .collect_view()
         .into_any();
-    let caption = tr(Msg::ResultsTitle);
+    let caption = tr(QueriesMsg::ResultsTitle);
     data_table(DataTable {
         caption: &caption,
         columns: &columns,
@@ -208,9 +209,9 @@ fn chart(plot: Plot) -> AnyView {
         .collect();
     let chart = LineChart {
         id: "results-chart",
-        label: tr(Msg::ResultsChartLabel),
+        label: tr(QueriesMsg::ResultsChartLabel),
         summary: tr_with(
-            Msg::ResultsChartSummary,
+            QueriesMsg::ResultsChartSummary,
             &[
                 ("series", names.join(", ").into()),
                 ("axis", plot.axis.clone().into()),
@@ -224,7 +225,7 @@ fn chart(plot: Plot) -> AnyView {
     view! {
         {line_chart(&chart, ChartWords::of_page())}
         <p class="fui-small fui-muted">
-            {tr_with(Msg::ResultsAxis, &[("axis", plot.axis.into())])}
+            {tr_with(QueriesMsg::ResultsAxis, &[("axis", plot.axis.into())])}
         </p>
     }
     .into_any()
@@ -295,7 +296,7 @@ impl Answer {
     pub fn of(outcome: Result<ResultPage, ViewerError>, aql: &str, parameters: &str) -> Self {
         match outcome {
             Ok(page) => Self::Ran(Box::new(Ran::of(&page, aql, parameters))),
-            Err(error) => Self::Refused(Refused::new(tr(Msg::QueryRunRefused), error)),
+            Err(error) => Self::Refused(Refused::new(tr(QueriesMsg::QueryRunRefused), error)),
         }
     }
 
@@ -303,12 +304,15 @@ impl Answer {
     #[must_use]
     pub fn view(answer: Option<Self>) -> AnyView {
         match answer {
-            None => not_run(tr(Msg::ResultsNotRun)),
+            None => not_run(tr(QueriesMsg::ResultsNotRun)),
             Some(Self::NotRun(line)) => not_run(line),
             Some(Self::Ran(ran)) => results(*ran),
-            Some(Self::Refused(refusal)) => {
-                section(Some(tr(Msg::ResultsTitle)), None, None, refusal.view())
-            }
+            Some(Self::Refused(refusal)) => section(
+                Some(tr(QueriesMsg::ResultsTitle)),
+                None,
+                None,
+                refusal.view(),
+            ),
         }
     }
 }
@@ -327,9 +331,9 @@ fn export(route: &str, format: &str) -> Export {
 fn results(ran: Ran) -> AnyView {
     let total = ran.rows.len();
     let window = if ran.own_window {
-        tr_with(Msg::ResultsWindowOwn, &[("count", count(total))])
+        tr_with(QueriesMsg::ResultsWindowOwn, &[("count", count(total))])
     } else {
-        tr_with(Msg::ResultsWindow, &[("count", count(total))])
+        tr_with(QueriesMsg::ResultsWindow, &[("count", count(total))])
     };
     let asked = if ran.chart {
         Shown::Chart
@@ -350,7 +354,7 @@ fn results(ran: Ran) -> AnyView {
     }
     .into_any();
     results_pane(ResultsPane {
-        title: tr(Msg::ResultsTitle),
+        title: tr(QueriesMsg::ResultsTitle),
         count: u64::try_from(total).unwrap_or(u64::MAX),
         numeric,
         shown,
@@ -364,7 +368,7 @@ fn results(ran: Ran) -> AnyView {
 
 /// The Results section before a run.
 fn not_run(line: String) -> AnyView {
-    section(Some(tr(Msg::ResultsTitle)), None, None, quiet(line))
+    section(Some(tr(QueriesMsg::ResultsTitle)), None, None, quiet(line))
 }
 
 #[cfg(test)]

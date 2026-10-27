@@ -27,6 +27,7 @@ use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
+use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, tr};
 use crate::pages::common::{Refused, drawn, page_model};
 
@@ -39,27 +40,27 @@ fn how_dialog() -> AnyView {
     info_dialog(
         Explanation {
             id: HOW_DIALOG.into(),
-            title: tr(Msg::ConfigHowTitle).into(),
+            title: tr(ConsoleMsg::ConfigHowTitle).into(),
         },
         view! {
-            <p>{tr(Msg::ConfigHowReads)}</p>
+            <p>{tr(ConsoleMsg::ConfigHowReads)}</p>
             <div class="fui-ownership">
                 <div>
                     <h3>
                         {ferrohealth_ui::icon::icon(Glyph::FILE_TEXT, "16")}
-                        {tr(Msg::ConfigHowWhereTitle)}
+                        {tr(ConsoleMsg::ConfigHowWhereTitle)}
                     </h3>
-                    <p class="fui-small fui-muted">{tr(Msg::ConfigHowWhere)}</p>
+                    <p class="fui-small fui-muted">{tr(ConsoleMsg::ConfigHowWhere)}</p>
                 </div>
                 <div>
                     <h3>
                         {ferrohealth_ui::icon::icon(Glyph::REFRESH_CW, "16")}
-                        {tr(Msg::ConfigHowChangeTitle)}
+                        {tr(ConsoleMsg::ConfigHowChangeTitle)}
                     </h3>
-                    <p class="fui-small fui-muted">{tr(Msg::ConfigHowChange)}</p>
+                    <p class="fui-small fui-muted">{tr(ConsoleMsg::ConfigHowChange)}</p>
                 </div>
             </div>
-            <p class="fui-small fui-muted">{tr(Msg::ConfigHowNothing)}</p>
+            <p class="fui-small fui-muted">{tr(ConsoleMsg::ConfigHowNothing)}</p>
         },
     )
     .into_any()
@@ -67,10 +68,10 @@ fn how_dialog() -> AnyView {
 
 /// The sections of Configuration, each with the top-level keys of the CDR's
 /// configuration it holds; the viewer's own is last.
-const SECTIONS: [(&str, Msg, &[&str]); 7] = [
+const SECTIONS: [(&str, ConsoleMsg, &[&str]); 7] = [
     (
         "deployment",
-        Msg::ConfigDeployment,
+        ConsoleMsg::ConfigDeployment,
         &[
             "deployment_profile",
             "spec_profile",
@@ -78,28 +79,32 @@ const SECTIONS: [(&str, Msg, &[&str]); 7] = [
             "deployment",
         ],
     ),
-    ("server", Msg::ConfigServer, &["server", "db", "query"]),
+    (
+        "server",
+        ConsoleMsg::ConfigServer,
+        &["server", "db", "query"],
+    ),
     (
         "access",
-        Msg::ConfigAccess,
+        ConsoleMsg::ConfigAccess,
         &["auth", "authz", "admin", "smart"],
     ),
     (
         "records",
-        Msg::ConfigRecords,
+        ConsoleMsg::ConfigRecords,
         &["signing", "audit", "privacy"],
     ),
     (
         "integrations",
-        Msg::ConfigIntegrations,
+        ConsoleMsg::ConfigIntegrations,
         &["events", "terminology"],
     ),
     (
         "operations",
-        Msg::ConfigOperations,
+        ConsoleMsg::ConfigOperations,
         &["log", "telemetry", "management", "usage_report"],
     ),
-    ("viewer", Msg::ConfigViewer, &[]),
+    ("viewer", ConsoleMsg::ConfigViewer, &[]),
 ];
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -202,8 +207,8 @@ fn none() -> AnyView {
 /// The value of a setting as the row draws it.
 fn value_view(value: &Leaf) -> AnyView {
     match value {
-        Leaf::Flag(true) => badge(Tone::Ok, tr(Msg::ConfigOn)).into_any(),
-        Leaf::Flag(false) => badge(Tone::Neutral, tr(Msg::ConfigOff)).into_any(),
+        Leaf::Flag(true) => badge(Tone::Ok, tr(ConsoleMsg::ConfigOn)).into_any(),
+        Leaf::Flag(false) => badge(Tone::Neutral, tr(ConsoleMsg::ConfigOff)).into_any(),
         Leaf::Text(text) if is_redacted(text) => secret_state(&SecretState::Redacted),
         Leaf::Text(text) if text.is_empty() => none(),
         Leaf::Text(text) => view! { <code>{text.clone()}</code> }.into_any(),
@@ -237,7 +242,7 @@ fn setting(key: &str, value: &Leaf) -> Setting {
 }
 
 /// A setting of the viewer's own.
-fn own(label: Msg, description: Msg, key: &str, value: AnyView) -> Setting {
+fn own(label: ConsoleMsg, description: ConsoleMsg, key: &str, value: AnyView) -> Setting {
     Setting {
         label: tr(label),
         description: tr(description),
@@ -340,57 +345,60 @@ fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
     let on = |yes: bool| value_view(&Leaf::Flag(yes));
     vec![
         own(
-            Msg::ConfigCdrAddress,
-            Msg::ConfigCdrAddressLine,
+            ConsoleMsg::ConfigCdrAddress,
+            ConsoleMsg::ConfigCdrAddressLine,
             "cdr.base_url",
             code(&config.base_url),
         ),
         own(
-            Msg::ConfigCdrBasePath,
-            Msg::ConfigCdrBasePathLine,
+            ConsoleMsg::ConfigCdrBasePath,
+            ConsoleMsg::ConfigCdrBasePathLine,
             "cdr.base_path",
             code(&config.base_path),
         ),
         own(
-            Msg::ConfigManagementAddress,
-            Msg::ConfigManagementAddressLine,
+            ConsoleMsg::ConfigManagementAddress,
+            ConsoleMsg::ConfigManagementAddressLine,
             "cdr.management_base_url",
             code(&config.management_base_url),
         ),
         own(
-            Msg::ConfigBasicSignIn,
-            Msg::ConfigBasicSignInLine,
+            ConsoleMsg::ConfigBasicSignIn,
+            ConsoleMsg::ConfigBasicSignInLine,
             "auth.basic_enabled",
             on(config.basic),
         ),
         own(
-            Msg::ConfigOidcSignIn,
-            Msg::ConfigOidcSignInLine,
+            ConsoleMsg::ConfigOidcSignIn,
+            ConsoleMsg::ConfigOidcSignInLine,
             "auth.oidc.issuer",
             config.oidc.as_deref().map_or_else(|| on(false), code),
         ),
         own(
-            Msg::ConfigOidcSecret,
-            Msg::ConfigOidcSecretLine,
+            ConsoleMsg::ConfigOidcSecret,
+            ConsoleMsg::ConfigOidcSecretLine,
             "auth.oidc.client_secret_file",
             config.oidc_secret.view(),
         ),
         own(
-            Msg::ConfigIdle,
-            Msg::ConfigIdleLine,
+            ConsoleMsg::ConfigIdle,
+            ConsoleMsg::ConfigIdleLine,
             "session.idle_minutes",
-            crate::locale::tr_with(Msg::ConfigMinutes, &[("count", config.idle_minutes.into())])
-                .into_any(),
+            crate::locale::tr_with(
+                ConsoleMsg::ConfigMinutes,
+                &[("count", config.idle_minutes.into())],
+            )
+            .into_any(),
         ),
         own(
-            Msg::ConfigSessionKey,
-            Msg::ConfigSessionKeyLine,
+            ConsoleMsg::ConfigSessionKey,
+            ConsoleMsg::ConfigSessionKeyLine,
             "session.secret_file",
             config.session_secret.view(),
         ),
         own(
-            Msg::ConfigLanguage,
-            Msg::ConfigLanguageLine,
+            ConsoleMsg::ConfigLanguage,
+            ConsoleMsg::ConfigLanguageLine,
             "ui.locale",
             code(&config.locale),
         ),
@@ -448,11 +456,11 @@ async fn read_page(section: String) -> Shown {
                 )
             }
             Err(error) => Shown::Refused(Refused::new(
-                tr(Msg::ConfigRefused),
+                tr(ConsoleMsg::ConfigRefused),
                 ViewerError::Internal(error.to_string()),
             )),
         },
-        Err(error) => Shown::Refused(Refused::new(tr(Msg::ConfigRefused), error)),
+        Err(error) => Shown::Refused(Refused::new(tr(ConsoleMsg::ConfigRefused), error)),
     }
 }
 
@@ -494,7 +502,7 @@ pub fn ConfigurationPage() -> impl IntoView {
         let page = settings_page(SettingsPage {
             header: Header {
                 title: tr(Msg::NavConfiguration).into(),
-                subtitle: Some(tr(Msg::ConfigSubtitle).into()),
+                subtitle: Some(tr(ConsoleMsg::ConfigSubtitle).into()),
                 crumbs: Vec::new(),
                 mono: false,
                 badge: None,
@@ -510,7 +518,7 @@ pub fn ConfigurationPage() -> impl IntoView {
                 how: How::Dialog(HOW_DIALOG.into()),
             },
             tabs: Some(TabRow {
-                label: tr(Msg::ConfigSections),
+                label: tr(ConsoleMsg::ConfigSections),
                 tabs,
                 current: section.clone(),
             }),

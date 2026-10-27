@@ -26,7 +26,8 @@ use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::server::ServerMsg;
+use crate::locale::{tr, tr_with};
 
 /// The route an export posts to, followed by its format: `/export/aql/csv`
 /// or `/export/aql/json`.
@@ -71,7 +72,7 @@ pub async fn export_aql(
         Err(ViewerError::Unauthenticated) => axum::response::Redirect::to("/login").into_response(),
         Err(e) => plain(
             StatusCode::BAD_GATEWAY,
-            &tr_with(Msg::ExportFailed, &[("e", (e).to_string().into())]),
+            &tr_with(ServerMsg::ExportFailed, &[("e", (e).to_string().into())]),
         ),
     }
 }
@@ -87,13 +88,15 @@ async fn run(
     } else {
         serde_json::from_str(&form.parameters_json).map_err(|e| {
             ViewerError::Invalid(tr_with(
-                Msg::ParametersMustJsonObject2,
+                ServerMsg::ParametersMustJsonObject2,
                 &[("e", (e).to_string().into())],
             ))
         })?
     };
     if !parameters.is_object() {
-        return Err(ViewerError::Invalid(tr(Msg::ParametersMustJsonObject)));
+        return Err(ViewerError::Invalid(tr(
+            ServerMsg::ParametersMustJsonObject,
+        )));
     }
     let url = state.cdr.rest_v1("query/aql");
     let body = serde_json::json!({ "q": form.q, "query_parameters": parameters }).to_string();
@@ -119,13 +122,13 @@ async fn run(
         "csv" => {
             let csv = result_set_to_csv(&response.body)?;
             Ok(download(
-                &tr(Msg::TextCsvCharsetUtf8),
+                &tr(ServerMsg::TextCsvCharsetUtf8),
                 "aql-export.csv",
                 csv,
             ))
         }
         other => Err(ViewerError::Invalid(tr_with(
-            Msg::UnknownExportFormatCsvJson,
+            ServerMsg::UnknownExportFormatCsvJson,
             &[("other", (other).to_string().into())],
         ))),
     }
@@ -145,7 +148,7 @@ fn pretty_json(body: &str) -> Vec<u8> {
 fn result_set_to_csv(body: &str) -> Result<Vec<u8>, ViewerError> {
     let doc: serde_json::Value = serde_json::from_str(body).map_err(|e| {
         ViewerError::Internal(tr_with(
-            Msg::UnparseableResultSet,
+            ServerMsg::UnparseableResultSet,
             &[("e", (e).to_string().into())],
         ))
     })?;
@@ -163,7 +166,12 @@ fn result_set_to_csv(body: &str) -> Result<Vec<u8>, ViewerError> {
                 .filter(|s| !s.is_empty())
                 .or_else(|| c.get("path").and_then(serde_json::Value::as_str))
                 .map_or_else(
-                    || tr_with(Msg::Column3, &[("value0", (i + 1).to_string().into())]),
+                    || {
+                        tr_with(
+                            ServerMsg::Column3,
+                            &[("value0", (i + 1).to_string().into())],
+                        )
+                    },
                     str::to_owned,
                 )
         })
@@ -209,7 +217,7 @@ fn download(content_type: &str, filename: &str, body: Vec<u8>) -> Response {
         headers.insert(header::CONTENT_TYPE, value);
     }
     if let Ok(value) = HeaderValue::from_str(&tr_with(
-        Msg::AttachmentFilename,
+        ServerMsg::AttachmentFilename,
         &[("filename", (filename).to_string().into())],
     )) {
         headers.insert(header::CONTENT_DISPOSITION, value);

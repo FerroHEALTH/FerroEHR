@@ -36,6 +36,7 @@ use crate::bff::system::Endpoint;
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
+use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::management::{
     BuildInfoView, LoggerView, MetricDetailView, MetricTile, ReadinessView, format_metric,
@@ -107,12 +108,12 @@ impl ServerTab {
     /// The tab's label and the line under the tabs.
     fn words(self) -> (String, String) {
         let (label, line) = match self {
-            Self::Overview => (Msg::ServerOverview, Msg::ServerOverviewLine),
-            Self::Health => (Msg::ServerHealth, Msg::ServerHealthLine),
-            Self::Metrics => (Msg::ServerMetrics, Msg::ServerMetricsLine),
-            Self::Logging => (Msg::ServerLogging, Msg::ServerLoggingLine),
-            Self::Api => (Msg::ServerApi, Msg::ServerApiLine),
-            Self::Smart => (Msg::ServerSmart, Msg::ServerSmartLine),
+            Self::Overview => (ConsoleMsg::ServerOverview, ConsoleMsg::ServerOverviewLine),
+            Self::Health => (ConsoleMsg::ServerHealth, ConsoleMsg::ServerHealthLine),
+            Self::Metrics => (ConsoleMsg::ServerMetrics, ConsoleMsg::ServerMetricsLine),
+            Self::Logging => (ConsoleMsg::ServerLogging, ConsoleMsg::ServerLoggingLine),
+            Self::Api => (ConsoleMsg::ServerApi, ConsoleMsg::ServerApiLine),
+            Self::Smart => (ConsoleMsg::ServerSmart, ConsoleMsg::ServerSmartLine),
         };
         (tr(label), tr(line))
     }
@@ -161,11 +162,11 @@ fn server_page<T>(tab: ServerTab, tabbed: Tabbed<T>, draw: impl FnOnce(T) -> Any
         .filter(|each| managed || !each.managed())
         .map(|each| Tab::new(each.key(), each.href(), each.words().0))
         .collect();
-    let content = body.map_or_else(|| info_note(tr(Msg::ServerNoManagement)), draw);
+    let content = body.map_or_else(|| info_note(tr(ConsoleMsg::ServerNoManagement)), draw);
     let heading = page_heading(
         Header {
             title: tr(Msg::NavServer).into(),
-            subtitle: Some(tr(Msg::ServerSubtitle).into()),
+            subtitle: Some(tr(ConsoleMsg::ServerSubtitle).into()),
             crumbs: Vec::new(),
             mono: false,
             badge: None,
@@ -183,7 +184,7 @@ fn server_page<T>(tab: ServerTab, tabbed: Tabbed<T>, draw: impl FnOnce(T) -> Any
         {heading}
         <div class="fui-stack">
             {binder(
-                tr(Msg::ServerSections),
+                tr(ConsoleMsg::ServerSections),
                 tabs,
                 tab.key(),
                 panel(
@@ -202,7 +203,7 @@ fn server_page<T>(tab: ServerTab, tabbed: Tabbed<T>, draw: impl FnOnce(T) -> Any
 /// shows the scopes the session holds.
 fn smart_intro() -> AnyView {
     const MARK: &str = "\u{1}";
-    let line = tr_with(Msg::ServerSmartLine, &[("access", MARK.into())]);
+    let line = tr_with(ConsoleMsg::ServerSmartLine, &[("access", MARK.into())]);
     let (before, after) = line.split_once(MARK).unwrap_or((line.as_str(), ""));
     view! {
         <p class="fui-small fui-muted fui-section-intro">
@@ -294,7 +295,7 @@ async fn read_overview() -> Tabbed<Overview> {
             gaps,
             build: fetch_build_info()
                 .await
-                .map_err(|error| Refused::new(tr(Msg::ServerBuildRefused), error)),
+                .map_err(|error| Refused::new(tr(ConsoleMsg::ServerBuildRefused), error)),
         }
     })
     .await
@@ -314,33 +315,35 @@ fn overview(model: Overview) -> AnyView {
         build,
     } = model;
     let state = match running {
-        Running::Up => state_mark(FlowState::Up, &tr(Msg::ServerUp)),
+        Running::Up => state_mark(FlowState::Up, &tr(ConsoleMsg::ServerUp)),
         Running::Degraded(word) => state_mark(
             FlowState::Degraded,
-            &word.unwrap_or_else(|| tr(Msg::ServerUnknown)),
+            &word.unwrap_or_else(|| tr(ConsoleMsg::ServerUnknown)),
         ),
-        Running::Unknown => state_mark(FlowState::NotChecked, &tr(Msg::ServerUnknown)),
-        Running::Unreachable => state_mark(FlowState::Unreachable, &tr(Msg::ServerUnreachable)),
+        Running::Unknown => state_mark(FlowState::NotChecked, &tr(ConsoleMsg::ServerUnknown)),
+        Running::Unreachable => {
+            state_mark(FlowState::Unreachable, &tr(ConsoleMsg::ServerUnreachable))
+        }
     };
     let facts = definitions(vec![
-        (tr(Msg::ServerState), state),
+        (tr(ConsoleMsg::ServerState), state),
         (
-            tr(Msg::ServerDeployment),
+            tr(ConsoleMsg::ServerDeployment),
             tr(if sandbox {
-                Msg::ServerSandbox
+                ConsoleMsg::ServerSandbox
             } else {
-                Msg::ServerProduction
+                ConsoleMsg::ServerProduction
             })
             .into_any(),
         ),
-        (tr(Msg::ServerVersion), version.into_any()),
+        (tr(ConsoleMsg::ServerVersion), version.into_any()),
         (
-            tr(Msg::ServerConformance),
+            tr(ConsoleMsg::ServerConformance),
             view! { <a href="/about">{tr(Msg::NavAbout)}</a> }.into_any(),
         ),
     ]);
     let gaps = (!gaps.is_empty()).then(|| {
-        let columns = [Column::text("gap", tr(Msg::ServerSafeguard)).role(Role::Title)];
+        let columns = [Column::text("gap", tr(ConsoleMsg::ServerSafeguard)).role(Role::Title)];
         let total = u64::try_from(gaps.len()).ok();
         let rows = gaps
             .iter()
@@ -356,13 +359,13 @@ fn overview(model: Overview) -> AnyView {
             })
             .collect_view()
             .into_any();
-        let caption = tr(Msg::ServerSafeguardsOff);
+        let caption = tr(ConsoleMsg::ServerSafeguardsOff);
         section(
-            Some(tr(Msg::ServerSafeguardsOff)),
+            Some(tr(ConsoleMsg::ServerSafeguardsOff)),
             total,
             None,
             view! {
-                {ferrohealth_ui::view::surface::section_intro(tr(Msg::ServerSandboxIntro))}
+                {ferrohealth_ui::view::surface::section_intro(tr(ConsoleMsg::ServerSandboxIntro))}
                 {data_table(DataTable {
                     caption: &caption,
                     columns: &columns,
@@ -375,7 +378,7 @@ fn overview(model: Overview) -> AnyView {
     let build = match build {
         Ok(Some(info)) => {
             let mut parts = vec![section(
-                Some(tr(Msg::ServerBuild)),
+                Some(tr(ConsoleMsg::ServerBuild)),
                 None,
                 None,
                 definitions(
@@ -401,11 +404,11 @@ fn overview(model: Overview) -> AnyView {
             }
             parts.collect_view().into_any()
         }
-        Ok(None) => plain_section(info_note(tr(Msg::ServerNoBuildInfo))),
+        Ok(None) => plain_section(info_note(tr(ConsoleMsg::ServerNoBuildInfo))),
         Err(refusal) => plain_section(refusal.view()),
     };
     view! {
-        {section(Some(tr(Msg::ServerStatus)), None, None, facts)}
+        {section(Some(tr(ConsoleMsg::ServerStatus)), None, None, facts)}
         {gaps}
         {build}
     }
@@ -465,7 +468,7 @@ async fn read_health() -> Tabbed<Result<ReadinessView, Refused>> {
     load_tab(ServerTab::Health, || async {
         fetch_readiness()
             .await
-            .map_err(|error| Refused::new(tr(Msg::ServerHealthRefused), error))
+            .map_err(|error| Refused::new(tr(ConsoleMsg::ServerHealthRefused), error))
     })
     .await
 }
@@ -489,9 +492,9 @@ fn health(read: Result<ReadinessView, Refused>) -> AnyView {
     match read {
         Ok(readiness) => {
             let columns = [
-                Column::text("dependency", tr(Msg::ServerDependency)).role(Role::Title),
-                Column::text("state", tr(Msg::ServerState)).role(Role::Sub),
-                Column::text("detail", tr(Msg::ServerDetail)).role(Role::Meta),
+                Column::text("dependency", tr(ConsoleMsg::ServerDependency)).role(Role::Title),
+                Column::text("state", tr(ConsoleMsg::ServerState)).role(Role::Sub),
+                Column::text("detail", tr(ConsoleMsg::ServerDetail)).role(Role::Meta),
             ];
             let rows = readiness
                 .readiness
@@ -512,13 +515,14 @@ fn health(read: Result<ReadinessView, Refused>) -> AnyView {
                 })
                 .collect_view()
                 .into_any();
-            let caption = tr(Msg::ServerDependencies);
+            let caption = tr(ConsoleMsg::ServerDependencies);
             section(
-                Some(tr(Msg::ServerDependencies)),
+                Some(tr(ConsoleMsg::ServerDependencies)),
                 u64::try_from(readiness.readiness.indicators.len()).ok(),
                 None,
                 view! {
-                    {(!readiness.detailed).then(|| info_note(tr(Msg::ServerPublicReadiness)))}
+                    {(!readiness.detailed)
+                        .then(|| info_note(tr(ConsoleMsg::ServerPublicReadiness)))}
                     {data_table(DataTable {
                         caption: &caption,
                         columns: &columns,
@@ -560,7 +564,7 @@ async fn load_metrics(
 /// What [`load_metrics`] reads, on the server.
 async fn read_metrics() -> Tabbed<Metrics> {
     load_tab(ServerTab::Metrics, || async {
-        let refused = |error| Refused::new(tr(Msg::ServerMetricsRefused), error);
+        let refused = |error| Refused::new(tr(ConsoleMsg::ServerMetricsRefused), error);
         let headline = fetch_headline_metrics().await.map_err(refused);
         let names = fetch_metric_names()
             .await
@@ -597,7 +601,7 @@ fn metrics(model: Metrics) -> AnyView {
     } = model;
     let headline = match headline {
         Ok(Some(tiles)) => section(
-            Some(tr(Msg::ServerNow)),
+            Some(tr(ConsoleMsg::ServerNow)),
             None,
             None,
             stat_grid(
@@ -640,7 +644,7 @@ fn metrics(model: Metrics) -> AnyView {
         .collect_view();
     let pick = view! {
         <form method="get" action="/server/metrics" class="fui-transform-options">
-            {Field::new("m-pick", tr(Msg::ServerMetric))
+            {Field::new("m-pick", tr(ConsoleMsg::ServerMetric))
                 .holds_id()
                 .view(
                     view! {
@@ -652,7 +656,7 @@ fn metrics(model: Metrics) -> AnyView {
             <div class="fui-transform-run">
                 <button type="submit" class="fui-button fui-button-secondary">
                     {ferrohealth_ui::icon::icon(Glyph::CHART_LINE, "16")}
-                    {tr(Msg::ServerShow)}
+                    {tr(ConsoleMsg::ServerShow)}
                 </button>
             </div>
         </form>
@@ -660,7 +664,7 @@ fn metrics(model: Metrics) -> AnyView {
     let samples = match samples {
         Some(Ok(Some(detail))) => {
             let columns = [
-                Column::text("labels", tr(Msg::ServerLabels)).role(Role::Title),
+                Column::text("labels", tr(ConsoleMsg::ServerLabels)).role(Role::Title),
                 Column::text("value", tr(Msg::TagsValue))
                     .numeric()
                     .role(Role::Sub),
@@ -682,7 +686,7 @@ fn metrics(model: Metrics) -> AnyView {
                 .collect_view()
                 .into_any();
             let caption = tr_with(
-                Msg::ServerSamplesOf,
+                ConsoleMsg::ServerSamplesOf,
                 &[("metric", detail.name.clone().into())],
             );
             view! {
@@ -696,19 +700,19 @@ fn metrics(model: Metrics) -> AnyView {
             }
             .into_any()
         }
-        Some(Ok(None)) => info_note(tr(Msg::ServerNoMetric)),
+        Some(Ok(None)) => info_note(tr(ConsoleMsg::ServerNoMetric)),
         Some(Err(refusal)) => refusal.view(),
         None => ().into_any(),
     };
     view! {
         {headline}
         {section(
-            Some(tr(Msg::ServerRegistry)),
+            Some(tr(ConsoleMsg::ServerRegistry)),
             None,
             None,
             view! {
                 <p class="fui-small fui-muted">
-                    {tr_with(Msg::ServerMetricCount, &[("count", count(names.len()))])}
+                    {tr_with(ConsoleMsg::ServerMetricCount, &[("count", count(names.len()))])}
                 </p>
                 {pick}
                 {samples}
@@ -781,25 +785,30 @@ async fn read_logging() -> Tabbed<Logging> {
                     Ok(_) => {
                         redirect_with(
                             "/server/logging",
-                            &Done::ok(tr(Msg::ServerFilterApplied)).line(filter),
+                            &Done::ok(tr(ConsoleMsg::ServerFilterApplied)).line(filter),
                         );
                         return Logging::Left;
                     }
-                    Err(error) => top = Some(Refused::new(tr(Msg::ServerFilterRefused), error)),
+                    Err(error) => {
+                        top = Some(Refused::new(tr(ConsoleMsg::ServerFilterRefused), error));
+                    }
                 }
             }
             Some("reset-filter") => match reset_log_filter().await {
                 Ok(_) => {
-                    redirect_with("/server/logging", &Done::ok(tr(Msg::ServerFilterReset)));
+                    redirect_with(
+                        "/server/logging",
+                        &Done::ok(tr(ConsoleMsg::ServerFilterReset)),
+                    );
                     return Logging::Left;
                 }
-                Err(error) => top = Some(Refused::new(tr(Msg::ServerFilterRefused), error)),
+                Err(error) => top = Some(Refused::new(tr(ConsoleMsg::ServerFilterRefused), error)),
             },
             _ => {}
         }
         let loggers = fetch_loggers()
             .await
-            .map_err(|error| Refused::new(tr(Msg::ServerLoggingRefused), error));
+            .map_err(|error| Refused::new(tr(ConsoleMsg::ServerLoggingRefused), error));
         let typed = posted
             .as_ref()
             .map(|posted| posted.text("filter"))
@@ -833,23 +842,23 @@ fn logging(model: Logging) -> AnyView {
     };
     let loggers = match loggers {
         Ok(Some(loggers)) => loggers,
-        Ok(None) => return info_note(tr(Msg::ServerNoLogging)),
+        Ok(None) => return info_note(tr(ConsoleMsg::ServerNoLogging)),
         Err(refusal) => return refusal.view(),
     };
     let at_boot = loggers.filter == loggers.boot_filter;
     let facts = definitions(vec![
         (
-            tr(Msg::ServerInEffect),
+            tr(ConsoleMsg::ServerInEffect),
             view! { <code>{loggers.filter.clone()}</code> }.into_any(),
         ),
         (
-            tr(Msg::ServerAtBoot),
+            tr(ConsoleMsg::ServerAtBoot),
             view! { <code>{loggers.boot_filter.clone()}</code> }.into_any(),
         ),
     ]);
     let form = view! {
         <form id=LOG_FORM method="post" action="/server/logging" class="fui-transform-options">
-            {Field::new("lf", tr(Msg::ServerNewFilter))
+            {Field::new("lf", tr(ConsoleMsg::ServerNewFilter))
                 .holds_id()
                 .view(
                     view! {
@@ -871,7 +880,7 @@ fn logging(model: Logging) -> AnyView {
                     aria-haspopup="dialog"
                 >
                     {ferrohealth_ui::icon::icon(Glyph::CHECK, "16")}
-                    {tr(Msg::ServerApply)}
+                    {tr(ConsoleMsg::ServerApply)}
                 </button>
                 <button
                     type="submit"
@@ -879,10 +888,10 @@ fn logging(model: Logging) -> AnyView {
                     value="reset-filter"
                     class="fui-button fui-button-secondary"
                     disabled=at_boot
-                    title=at_boot.then(|| tr(Msg::ServerAtBootAlready))
+                    title=at_boot.then(|| tr(ConsoleMsg::ServerAtBootAlready))
                 >
                     {ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "16")}
-                    {tr(Msg::ServerReset)}
+                    {tr(ConsoleMsg::ServerReset)}
                 </button>
             </div>
         </form>
@@ -890,8 +899,8 @@ fn logging(model: Logging) -> AnyView {
     let dialog = confirm_dialog(
         Confirmation {
             id: APPLY_DIALOG.into(),
-            title: tr(Msg::ServerApplyTitle).into(),
-            message: tr(Msg::ServerApplyMessage).into(),
+            title: tr(ConsoleMsg::ServerApplyTitle).into(),
+            message: tr(ConsoleMsg::ServerApplyMessage).into(),
         },
         view! {
             <button
@@ -902,20 +911,22 @@ fn logging(model: Logging) -> AnyView {
                 class="fui-button fui-button-primary"
             >
                 {ferrohealth_ui::icon::icon(Glyph::CHECK, "16")}
-                {tr(Msg::ServerApplyConfirm)}
+                {tr(ConsoleMsg::ServerApplyConfirm)}
             </button>
         },
     );
     let top = top.map(|refusal| refusal.view());
     view! {
         {top}
-        {section(Some(tr(Msg::ServerFilter)), None, None, facts)}
+        {section(Some(tr(ConsoleMsg::ServerFilter)), None, None, facts)}
         {section(
-            Some(tr(Msg::ServerChangeFilter)),
+            Some(tr(ConsoleMsg::ServerChangeFilter)),
             None,
             None,
             view! {
-                {ferrohealth_ui::view::surface::section_intro(tr(Msg::ServerChangeFilterIntro))}
+                {ferrohealth_ui::view::surface::section_intro(
+                    tr(ConsoleMsg::ServerChangeFilterIntro),
+                )}
                 {form}
             },
         )}
@@ -985,7 +996,7 @@ async fn read_api() -> Tabbed<Api> {
         let families = crate::bff::system::openapi_families()
             .map(|(key, words)| (key.to_owned(), words))
             .collect();
-        let refused = |error| Refused::new(tr(Msg::ServerApiRefused), error);
+        let refused = |error| Refused::new(tr(ConsoleMsg::ServerApiRefused), error);
         let listed = match crate::bff::system::fetch_openapi(family.clone()).await {
             Ok(body) => match serde_json::from_str::<serde_json::Value>(&body) {
                 Ok(document) => Ok(Document {
@@ -1024,7 +1035,7 @@ fn api(model: Api) -> AnyView {
         .collect_view();
     let pick = view! {
         <form method="get" action="/server/api" class="fui-transform-options">
-            {Field::new("api-f", tr(Msg::ServerApiFamily))
+            {Field::new("api-f", tr(ConsoleMsg::ServerApiFamily))
                 .view(
                     view! {
                         <select id="api-f" name="family" class="fui-select">
@@ -1035,7 +1046,7 @@ fn api(model: Api) -> AnyView {
             <div class="fui-transform-run">
                 <button type="submit" class="fui-button fui-button-secondary">
                     {ferrohealth_ui::icon::icon(Glyph::SEARCH, "16")}
-                    {tr(Msg::ServerShow)}
+                    {tr(ConsoleMsg::ServerShow)}
                 </button>
             </div>
         </form>
@@ -1048,8 +1059,8 @@ fn api(model: Api) -> AnyView {
         Ok(Document { groups, text }) => {
             let total: usize = groups.iter().map(|(_, rows)| rows.len()).sum();
             let columns = [
-                Column::text("path", tr(Msg::ServerMethodPath)).role(Role::Title),
-                Column::text("summary", tr(Msg::ServerSummary)).role(Role::Sub),
+                Column::text("path", tr(ConsoleMsg::ServerMethodPath)).role(Role::Title),
+                Column::text("summary", tr(ConsoleMsg::ServerSummary)).role(Role::Sub),
             ];
             let mut rows = Vec::new();
             for (tag, items) in groups {
@@ -1060,7 +1071,10 @@ fn api(model: Api) -> AnyView {
                         <span class="fui-small fui-muted">
                             {format!(
                                 " · {}",
-                                tr_with(Msg::ServerEndpointCount, &[("count", count(items.len()))]),
+                                tr_with(
+                                    ConsoleMsg::ServerEndpointCount,
+                                    &[("count", count(items.len()))],
+                                ),
                             )}
                         </span>
                     },
@@ -1081,7 +1095,7 @@ fn api(model: Api) -> AnyView {
                     );
                 }
             }
-            let caption = tr_with(Msg::ServerEndpointsOf, &[("family", words.into())]);
+            let caption = tr_with(ConsoleMsg::ServerEndpointsOf, &[("family", words.into())]);
             view! {
                 {section(
                     Some(caption.clone()),
@@ -1094,7 +1108,7 @@ fn api(model: Api) -> AnyView {
                         body: Body::Rows(rows.collect_view().into_any()),
                     }),
                 )}
-                {document_section(tr(Msg::ServerOpenApi), Language::Json, text, "openapi")}
+                {document_section(tr(ConsoleMsg::ServerOpenApi), Language::Json, text, "openapi")}
             }
             .into_any()
         }
@@ -1156,7 +1170,7 @@ async fn load_smart(
 async fn read_smart() -> Tabbed<Result<Option<Smart>, Refused>> {
     use serde_json::Value;
     load_tab(ServerTab::Smart, || async {
-        let refused = |error| Refused::new(tr(Msg::ServerSmartRefused), error);
+        let refused = |error| Refused::new(tr(ConsoleMsg::ServerSmartRefused), error);
         let Some(body) = crate::bff::system::fetch_smart_config()
             .await
             .map_err(refused)?
@@ -1205,24 +1219,27 @@ fn smart(read: Result<Option<Smart>, Refused>) -> AnyView {
             let grants = crate::pages::access::grants_of(&resources.join(" "));
             let facts = definitions(vec![
                 (
-                    tr(Msg::ServerAlso),
+                    tr(ConsoleMsg::ServerAlso),
                     others
                         .iter()
                         .map(|scope| view! { <code>{scope.clone()}</code> " " })
                         .collect_view()
                         .into_any(),
                 ),
-                (tr(Msg::ServerGrantTypes), grant_types.join(", ").into_any()),
-                (tr(Msg::ServerPkce), pkce.join(", ").into_any()),
+                (
+                    tr(ConsoleMsg::ServerGrantTypes),
+                    grant_types.join(", ").into_any(),
+                ),
+                (tr(ConsoleMsg::ServerPkce), pkce.join(", ").into_any()),
             ]);
             view! {
                 {section(
-                    Some(tr(Msg::ServerScopes)),
+                    Some(tr(ConsoleMsg::ServerScopes)),
                     u64::try_from(resources.len()).ok(),
                     None,
-                    scope_grants(tr(Msg::ServerScopes), grants),
+                    scope_grants(tr(ConsoleMsg::ServerScopes), grants),
                 )}
-                {section(Some(tr(Msg::ServerSignIn)), None, None, facts)}
+                {section(Some(tr(ConsoleMsg::ServerSignIn)), None, None, facts)}
                 {document_section(
                     "/.well-known/smart-configuration".to_owned(),
                     Language::Json,
@@ -1232,7 +1249,7 @@ fn smart(read: Result<Option<Smart>, Refused>) -> AnyView {
             }
             .into_any()
         }
-        Ok(None) => plain_section(info_note(tr(Msg::ServerNoSmart))),
+        Ok(None) => plain_section(info_note(tr(ConsoleMsg::ServerNoSmart))),
         Err(refusal) => plain_section(refusal.view()),
     }
 }

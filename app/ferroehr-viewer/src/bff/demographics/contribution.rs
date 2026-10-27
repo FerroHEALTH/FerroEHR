@@ -35,9 +35,11 @@ use serde_json::Value;
 
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
+use crate::locale::records::RecordsMsg;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::locale::{Msg, tr_with};
+use crate::locale::tr_with;
 
 /// One version a CONTRIBUTION changed, as its `OBJECT_REF` carries it.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -86,7 +88,7 @@ pub async fn fetch_demographic_contribution(
     let contribution_uid = contribution_uid.trim();
     if contribution_uid.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
-            Msg::ContributionUidRequired,
+            RecordsMsg::ContributionUidRequired,
         )));
     }
     let url = state.cdr.rest_v1(&format!(
@@ -111,7 +113,7 @@ pub async fn fetch_demographic_contribution(
 fn parse_contribution(body: &str) -> Result<ContributionState, ViewerError> {
     let doc: Value = serde_json::from_str(body).map_err(|e| {
         ViewerError::Internal(tr_with(
-            Msg::ContributionJson,
+            RecordsMsg::ContributionJson,
             &[("e", (e).to_string().into())],
         ))
     })?;

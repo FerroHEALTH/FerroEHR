@@ -28,7 +28,7 @@ use leptos::server;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::bff::PAGE_SIZE;
 use crate::error::ViewerError;
-use crate::locale::Msg;
+use crate::locale::console::ConsoleMsg;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{tr, tr_with};
 
@@ -178,7 +178,7 @@ fn window_start() -> String {
 fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
     let bundle = serde_json::from_str::<serde_json::Value>(body).map_err(|e| {
         ViewerError::Internal(tr_with(
-            Msg::AuditeventBundleJson,
+            ConsoleMsg::AuditeventBundleJson,
             &[("e", (e).to_string().into())],
         ))
     })?;
@@ -219,9 +219,9 @@ fn audit_row(resource: &serde_json::Value) -> AuditRow {
     let type_code = text(resource.pointer("/type/code"));
     let family = match type_code.as_str() {
         "rest" => "REST".to_owned(),
-        "110114" => tr(Msg::Authentication),
-        "110106" => tr(Msg::Export),
-        "110107" => tr(Msg::Import),
+        "110114" => tr(ConsoleMsg::Authentication),
+        "110106" => tr(ConsoleMsg::Export),
+        "110107" => tr(ConsoleMsg::Import),
         other => other.to_owned(),
     };
     // The concrete operation: the last subtype coding (the ITS-REST
@@ -242,9 +242,9 @@ fn audit_row(resource: &serde_json::Value) -> AuditRow {
     let outcome_code = text(resource.get("outcome"));
     let (outcome, success) = match outcome_code.as_str() {
         "0" => ("success".to_owned(), true),
-        "4" => (tr(Msg::MinorFailure), false),
-        "8" => (tr(Msg::SeriousFailure), false),
-        "12" => (tr(Msg::MajorFailure), false),
+        "4" => (tr(ConsoleMsg::MinorFailure), false),
+        "8" => (tr(ConsoleMsg::SeriousFailure), false),
+        "12" => (tr(ConsoleMsg::MajorFailure), false),
         other => (other.to_owned(), false),
     };
     // The requesting principal: the requestor agent's who-identifier
@@ -289,23 +289,23 @@ fn audit_row(resource: &serde_json::Value) -> AuditRow {
 
 /// The outcome choices of the filter, as the value the query carries and
 /// the words shown.
-pub(crate) const OUTCOMES: [(&str, Msg); 5] = [
-    ("", Msg::ChoiceAny),
-    ("0", Msg::ChoiceSuccess),
-    ("4", Msg::MinorFailure),
-    ("8", Msg::SeriousFailure),
-    ("12", Msg::MajorFailure),
+pub(crate) const OUTCOMES: [(&str, ConsoleMsg); 5] = [
+    ("", ConsoleMsg::ChoiceAny),
+    ("0", ConsoleMsg::ChoiceSuccess),
+    ("4", ConsoleMsg::MinorFailure),
+    ("8", ConsoleMsg::SeriousFailure),
+    ("12", ConsoleMsg::MajorFailure),
 ];
 
 /// The action choices of the filter, as the value the query carries and the
 /// words shown.
-pub(crate) const ACTIONS: [(&str, Msg); 6] = [
-    ("", Msg::ChoiceAny),
-    ("C", Msg::ActionCreate),
-    ("R", Msg::ActionRead),
-    ("U", Msg::ActionUpdate),
-    ("D", Msg::ActionDelete),
-    ("E", Msg::ActionExecute),
+pub(crate) const ACTIONS: [(&str, ConsoleMsg); 6] = [
+    ("", ConsoleMsg::ChoiceAny),
+    ("C", ConsoleMsg::ActionCreate),
+    ("R", ConsoleMsg::ActionRead),
+    ("U", ConsoleMsg::ActionUpdate),
+    ("D", ConsoleMsg::ActionDelete),
+    ("E", ConsoleMsg::ActionExecute),
 ];
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

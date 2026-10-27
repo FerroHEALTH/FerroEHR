@@ -23,6 +23,7 @@
 //! access control policies, the authenticated user's permissions" — so the CDR
 //! remains the enforcer and a previewed grant is an upper bound, never a promise.
 
+use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, tr, tr_with};
 use openehr_sdt::smart_scopes::{
     Compartment, LaunchContext, Permissions, ResourceScope, ResourceSelector, SmartScope,
@@ -39,7 +40,7 @@ pub const RESOURCE_SCOPE_FORM: &str = "<compartment>/<resource>.<permission>";
 /// registration, the access-control policies and the user's own permissions).
 #[must_use]
 pub fn capability_note_text() -> String {
-    tr(Msg::ScopesNarrowAccessTheyNeverGrant)
+    tr(ConsoleMsg::ScopesNarrowAccessTheyNeverGrant)
 }
 
 /// One scope string and what the grammar made of it.
@@ -108,13 +109,13 @@ pub struct ResourceGrant {
 pub fn grant(raw: &str) -> Grant {
     let detail = match SmartScope::parse(raw) {
         SmartScope::Launch => GrantDetail::Context {
-            label: tr(Msg::LaunchMarker),
-            note: tr(Msg::MarksEmbeddedLaunchAdvisoryOnlyCdr),
+            label: tr(ConsoleMsg::LaunchMarker),
+            note: tr(ConsoleMsg::MarksEmbeddedLaunchAdvisoryOnlyCdr),
         },
         SmartScope::LaunchContext(context) => context_detail(&context),
         SmartScope::Identity(name) => GrantDetail::Identity {
-            label: tr_with(Msg::IdentityClaim, &[("name", name.clone().into())]),
-            note: tr(Msg::OpenidConnectScopeIdentifiesUserApplication),
+            label: tr_with(ConsoleMsg::IdentityClaim, &[("name", name.clone().into())]),
+            note: tr(ConsoleMsg::OpenidConnectScopeIdentifiesUserApplication),
         },
         SmartScope::Resource(scope) => GrantDetail::Resource(resource_grant(&scope)),
         SmartScope::Other(_) => GrantDetail::Unrecognized {
@@ -164,16 +165,16 @@ pub struct PolicySource {
 pub fn policy_source(method: &str) -> PolicySource {
     match method {
         "basic" => PolicySource {
-            label: tr(Msg::BasicAuthentication),
-            note: tr(Msg::ViewerReplaysAccountSCdrCredentials),
+            label: tr(ConsoleMsg::BasicAuthentication),
+            note: tr(ConsoleMsg::ViewerReplaysAccountSCdrCredentials),
         },
         "oidc" => PolicySource {
-            label: tr(Msg::OidcBearerToken),
-            note: tr(Msg::CdrResolvesSessionSRolesPermissions),
+            label: tr(ConsoleMsg::OidcBearerToken),
+            note: tr(ConsoleMsg::CdrResolvesSessionSRolesPermissions),
         },
         _ => PolicySource {
-            label: tr(Msg::ViewerSession),
-            note: tr(Msg::CdrDecidesEveryRequestFromCredential),
+            label: tr(ConsoleMsg::ViewerSession),
+            note: tr(ConsoleMsg::CdrDecidesEveryRequestFromCredential),
         },
     }
 }
@@ -183,16 +184,19 @@ pub fn policy_source(method: &str) -> PolicySource {
 fn context_detail(context: &LaunchContext) -> GrantDetail {
     match context {
         LaunchContext::Patient => GrantDetail::Context {
-            label: tr(Msg::LaunchContextPatient),
-            note: tr(Msg::AsksLaunchingPlatformPutOnePatient),
+            label: tr(ConsoleMsg::LaunchContextPatient),
+            note: tr(ConsoleMsg::AsksLaunchingPlatformPutOnePatient),
         },
         LaunchContext::Episode => GrantDetail::Context {
-            label: tr(Msg::LaunchContextEpisode),
-            note: tr(Msg::AsksEpisodeCareContextExperimentalSpecification),
+            label: tr(ConsoleMsg::LaunchContextEpisode),
+            note: tr(ConsoleMsg::AsksEpisodeCareContextExperimentalSpecification),
         },
         LaunchContext::Other(other) => GrantDetail::Context {
-            label: tr_with(Msg::LaunchContext, &[("other", other.clone().into())]),
-            note: tr(Msg::NotContextOpenehrDefinesCarriedAlongside),
+            label: tr_with(
+                ConsoleMsg::LaunchContext,
+                &[("other", other.clone().into())],
+            ),
+            note: tr(ConsoleMsg::NotContextOpenehrDefinesCarriedAlongside),
         },
     }
 }
@@ -201,13 +205,19 @@ fn context_detail(context: &LaunchContext) -> GrantDetail {
 fn resource_grant(scope: &ResourceScope) -> ResourceGrant {
     let (compartment, compartment_note) = match scope.compartment {
         // The three compartment bullets of master08 §Resource Scopes.
-        Compartment::Patient => ("patient", tr(Msg::RestrictedEhrPatientContext)),
-        Compartment::User => ("user", tr(Msg::SubjectAuthenticatedUserSSecurityProfile)),
-        Compartment::System => ("system", tr(Msg::BackendClientActingWithoutUserContext)),
+        Compartment::Patient => ("patient", tr(ConsoleMsg::RestrictedEhrPatientContext)),
+        Compartment::User => (
+            "user",
+            tr(ConsoleMsg::SubjectAuthenticatedUserSSecurityProfile),
+        ),
+        Compartment::System => (
+            "system",
+            tr(ConsoleMsg::BackendClientActingWithoutUserContext),
+        ),
     };
     let family = match &scope.resource {
-        ResourceSelector::Template(_) => tr(Msg::OperationalTemplates),
-        ResourceSelector::Composition(_) => tr(Msg::CompositionsMatchingTemplate),
+        ResourceSelector::Template(_) => tr(ConsoleMsg::OperationalTemplates),
+        ResourceSelector::Composition(_) => tr(ConsoleMsg::CompositionsMatchingTemplate),
         ResourceSelector::Aql(_) => tr(Msg::AqlQueries),
     };
     let pattern = scope.resource.pattern().as_str().to_owned();
@@ -229,11 +239,11 @@ fn resource_grant(scope: &ResourceScope) -> ResourceGrant {
 /// How a pattern matches, per the master08 §Resource Scopes pattern table.
 fn pattern_note(pattern: &str, broad: bool) -> String {
     if broad {
-        tr(Msg::AllAvailableTemplatesQueriesIncludingAd)
+        tr(ConsoleMsg::AllAvailableTemplatesQueriesIncludingAd)
     } else if pattern.contains('*') {
-        tr(Msg::WildcardPatternMatchesWithinOneNamespace)
+        tr(ConsoleMsg::WildcardPatternMatchesWithinOneNamespace)
     } else {
-        tr(Msg::ExactMatchOnly)
+        tr(ConsoleMsg::ExactMatchOnly)
     }
 }
 
@@ -271,7 +281,7 @@ fn resource_expectation(raw: &str) -> Option<String> {
     let (compartment, rest) = raw.split_once('/')?;
     if !matches!(compartment, "patient" | "user" | "system") {
         return Some(tr_with(
-            Msg::NotCompartmentResourceScopeMaster08Defines,
+            ConsoleMsg::NotCompartmentResourceScopeMaster08Defines,
             &[
                 ("compartment", (compartment).to_string().into()),
                 (
@@ -283,7 +293,7 @@ fn resource_expectation(raw: &str) -> Option<String> {
     }
     let Some((resource, tail)) = rest.rsplit_once('.') else {
         return Some(tr_with(
-            Msg::CarriesNoPermissionTailResourceScope,
+            ConsoleMsg::CarriesNoPermissionTailResourceScope,
             &[
                 ("rest", (rest).to_string().into()),
                 (
@@ -299,7 +309,7 @@ fn resource_expectation(raw: &str) -> Option<String> {
             .any(|c| !matches!(c, 'c' | 'r' | 'u' | 'd' | 's'))
     {
         return Some(tr_with(
-            Msg::NotPermissionTailMaster08AllowsOnly,
+            ConsoleMsg::NotPermissionTailMaster08AllowsOnly,
             &[("tail", (tail).to_string().into())],
         ));
     }
@@ -308,12 +318,12 @@ fn resource_expectation(raw: &str) -> Option<String> {
         || resource.starts_with("aql-"))
     {
         return Some(tr_with(
-            Msg::NotResourceMaster08DefinesTemplateTemplateid,
+            ConsoleMsg::NotResourceMaster08DefinesTemplateTemplateid,
             &[("resource", (resource).to_string().into())],
         ));
     }
     Some(tr_with(
-        Msg::NotResourceScopeMaster08FormExample,
+        ConsoleMsg::NotResourceScopeMaster08FormExample,
         &[(
             "resource_scope_form",
             (RESOURCE_SCOPE_FORM).to_string().into(),

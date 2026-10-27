@@ -202,18 +202,18 @@ brotli-compressed, is over the number below, which it reads from this table.
 | WebAssembly, brotli-compressed | 450000 bytes |
 
 The release build on 2026-10-27, on FerroUI 0.5.2 with the whole page
-hydrated, the pages in six lazy groups and `--split`, measured 449938 brotli
-bytes for the entry WebAssembly every page loads (399352 for the shell alone
-with stub pages, 425829 on FerroUI 0.3.6 in islands mode); a group's chunks
-load with its pages and are not counted. The entry carries the shell, the
-router and both catalogs whole. What keeps it in budget: one route for the
-router (`routes::Pages`, one erased `Suspend` for every group), the page
-models read as server functions from the groups alone, the shell reading its
-status on the server alone, and `SPLIT_ROOM` (`src/lib.rs`), without which
-the splitter leaves every page's read-only data in the entry (493008). The
-next room comes from the viewer's catalog, which the entry carries whole for
-the shell's few words. Raise the budget only in the change that needs the room,
-with the new measurement.
+hydrated, the pages in six lazy groups and `--split`, measured 411846
+brotli bytes for the entry WebAssembly every page loads (449938 before the
+catalog split, 399352 for the shell alone with stub pages, 425829 on FerroUI
+0.3.6 in islands mode); a group's chunks load with its pages and are not
+counted. The entry carries the shell, the router and the shell's catalog.
+What keeps it in budget: one route for the router (`routes::Pages`, one
+erased `Suspend` for every group), the page models read as server functions
+from the groups alone, the shell reading its status on the server alone, a
+catalog for each route group that loads with the group's chunks (§8), and
+`SPLIT_ROOM` (`src/lib.rs`, #4225), without which the splitter leaves every
+page's read-only data in the entry (474943). Raise the budget only in the
+change that needs the room, with the new measurement.
 
 ## 8. Strings and locales
 
@@ -221,12 +221,20 @@ The catalog rule is FerroUI's (its `.claude/rules/leptos-ui.md` §13): no
 string the viewer draws lives outside a catalog, and a language joins as a
 catalog file with no code change.
 
-- The viewer's catalog is
-  `app/ferroehr-viewer/locales/<tag>/ferroehr-viewer.ftl`, embedded by
-  `fluent_templates::static_loader!` in `crate::locale`, where each message
-  is one `Msg`. A test holds every catalog directory to the full message
-  set, and a throwaway catalog under `tests/locales/` shows the words change
-  with no code change.
+- The viewer's catalogs are
+  `app/ferroehr-viewer/locales/<part>/<tag>/<part>.ftl`, one for each part
+  that looks its words up, embedded by `fluent_templates::static_loader!`:
+  `shell` holds the words of the shell and of more than one group
+  (`crate::locale::Msg`), each route group has its own (`overview`,
+  `records`, `definitions`, `queries`, `console`, `signin`, each with its
+  message type in `crate::locale::<part>`), and `server` holds the words
+  only the server draws. A catalog is reached only through its message type,
+  so the browser loads a group's words with the group's chunks and the entry
+  carries the shell's catalog alone. A message goes in the catalog of the
+  one group that draws it, else the shell's; a message no code draws is
+  removed. A test holds every part's catalog directories to its full message
+  set in the shell's languages, and a throwaway catalog under
+  `tests/locales/` shows the words change with no code change.
 - The server chooses the locale once per request (`crate::locale::current`):
   the best language of `Accept-Language` the catalog holds, else `[ui]
   locale`. The document writes it as `<html lang>`, the browser reads it back

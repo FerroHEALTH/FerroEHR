@@ -31,6 +31,7 @@ use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
+use crate::locale::definitions::DefinitionsMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{awaited, card_panel, panel, plain_section, refused, section};
 use crate::session_client::SessionAwareClient;
@@ -101,10 +102,10 @@ impl TermTab {
     /// The tab's label.
     fn label(self) -> String {
         tr(match self {
-            Self::Terminologies => Msg::TermTerminologies,
-            Self::Lookup => Msg::TermLookup,
-            Self::ValueSets => Msg::TermValueSets,
-            Self::Subsumption => Msg::TermHierarchy,
+            Self::Terminologies => DefinitionsMsg::TermTerminologies,
+            Self::Lookup => DefinitionsMsg::TermLookup,
+            Self::ValueSets => DefinitionsMsg::TermValueSets,
+            Self::Subsumption => DefinitionsMsg::TermHierarchy,
         })
     }
 }
@@ -114,7 +115,7 @@ fn heading() -> AnyView {
     page_heading(
         Header {
             title: tr(Msg::NavTerminology).into(),
-            subtitle: Some(tr(Msg::TermSubtitle).into()),
+            subtitle: Some(tr(DefinitionsMsg::TermSubtitle).into()),
             crumbs: Vec::new(),
             mono: false,
             badge: None,
@@ -130,9 +131,9 @@ fn off() -> AnyView {
     card_panel(view! {
         <div class="fui-panel-body fui-stack">
             <p>
-                <strong>{tr(Msg::TermOff)}</strong>
+                <strong>{tr(DefinitionsMsg::TermOff)}</strong>
             </p>
-            <p class="fui-small fui-muted">{tr(Msg::TermOffLine)}</p>
+            <p class="fui-small fui-muted">{tr(DefinitionsMsg::TermOffLine)}</p>
         </div>
     })
 }
@@ -185,7 +186,7 @@ fn term_page<T>(
         Err(error) => {
             return view! {
                 {heading()}
-                {refused(tr(Msg::TermRefused), &error, None)}
+                {refused(tr(DefinitionsMsg::TermRefused), &error, None)}
             }
             .into_any();
         }
@@ -197,7 +198,9 @@ fn term_page<T>(
     let panel = body(&ids, read);
     view! {
         {heading()}
-        <div class="fui-stack">{binder(tr(Msg::TermOperations), tabs, tab.key(), panel)}</div>
+        <div class="fui-stack">
+            {binder(tr(DefinitionsMsg::TermOperations), tabs, tab.key(), panel)}
+        </div>
     }
     .into_any()
 }
@@ -214,7 +217,7 @@ fn terminology_field(id: &'static str, ids: &[String], chosen: &str) -> AnyView 
             }
         })
         .collect_view();
-    Field::new(id, tr(Msg::TermTerminology)).view(view! {
+    Field::new(id, tr(DefinitionsMsg::TermTerminology)).view(view! {
         <select id=id name="terminology" class="fui-select">
             {options}
         </select>
@@ -337,8 +340,8 @@ pub fn TerminologiesTab() -> impl IntoView {
     let page = awaited(async move {
         term_page(TermTab::Terminologies, model.await, |ids, served| {
             let columns = [
-                Column::text("terminology", tr(Msg::TermTerminology)).role(Role::Title),
-                Column::text("publisher", tr(Msg::TermPublisher)).role(Role::Sub),
+                Column::text("terminology", tr(DefinitionsMsg::TermTerminology)).role(Role::Title),
+                Column::text("publisher", tr(DefinitionsMsg::TermPublisher)).role(Role::Sub),
                 Column::text("version", tr(Msg::ColumnVersion)).role(Role::Meta),
             ];
             let rows = served
@@ -359,7 +362,7 @@ pub fn TerminologiesTab() -> impl IntoView {
                     .into_any()
                 })
                 .collect_view();
-            let caption = tr(Msg::TermTerminologies);
+            let caption = tr(DefinitionsMsg::TermTerminologies);
             let table = data_table(DataTable {
                 caption: &caption,
                 columns: &columns,
@@ -367,7 +370,7 @@ pub fn TerminologiesTab() -> impl IntoView {
                 body: Body::Rows(rows.into_any()),
             });
             panel(section(
-                Some(tr(Msg::TermServed)),
+                Some(tr(DefinitionsMsg::TermServed)),
                 u64::try_from(ids.len()).ok(),
                 None,
                 table,
@@ -433,15 +436,15 @@ pub fn TerminologyPage() -> impl IntoView {
             Ok(Some(descriptor)) => {
                 let facts = definitions(vec![
                     (
-                        tr(Msg::TermId),
+                        tr(DefinitionsMsg::TermId),
                         view! { <code>{descriptor.terminology_id.clone()}</code> }.into_any(),
                     ),
                     (
-                        tr(Msg::TermPublisher),
+                        tr(DefinitionsMsg::TermPublisher),
                         descriptor.publisher.clone().into_any(),
                     ),
                     (
-                        tr(Msg::TermUri),
+                        tr(DefinitionsMsg::TermUri),
                         view! { <code>{descriptor.uri.clone()}</code> }.into_any(),
                     ),
                     (
@@ -449,7 +452,7 @@ pub fn TerminologyPage() -> impl IntoView {
                         descriptor.available_versions.join(", ").into_any(),
                     ),
                     (
-                        tr(Msg::TermFields),
+                        tr(DefinitionsMsg::TermFields),
                         descriptor
                             .attributes
                             .iter()
@@ -470,11 +473,11 @@ pub fn TerminologyPage() -> impl IntoView {
                         ),
                         ferrohealth_ui::view::button::Variant::Secondary,
                         Some(Glyph::LIST_CHECKS),
-                        tr(Msg::TermExpandGroup),
+                        tr(DefinitionsMsg::TermExpandGroup),
                     )
                 });
                 card_panel(view! {
-                    {section(Some(tr(Msg::TermDescriptor)), None, None, facts)}
+                    {section(Some(tr(DefinitionsMsg::TermDescriptor)), None, None, facts)}
                     {plain_section(
                         view! {
                             <div class="fui-cluster">
@@ -482,7 +485,7 @@ pub fn TerminologyPage() -> impl IntoView {
                                     lookup,
                                     ferrohealth_ui::view::button::Variant::Secondary,
                                     Some(Glyph::SEARCH),
-                                    tr(Msg::TermLookupIn),
+                                    tr(DefinitionsMsg::TermLookupIn),
                                 )} {expand}
                             </div>
                         },
@@ -490,7 +493,7 @@ pub fn TerminologyPage() -> impl IntoView {
                 })
             }
             Ok(None) => off(),
-            Err(error) => refused(tr(Msg::TermRefused), &error, None),
+            Err(error) => refused(tr(DefinitionsMsg::TermRefused), &error, None),
         };
         view! {
             <Title text=name />
@@ -562,23 +565,26 @@ pub fn LookupTab() -> impl IntoView {
             let form = view! {
                 <form method="get" action="/terminology/lookup" class="fui-transform-options">
                     {terminology_field("l-t", ids, &terminology)}
-                    {code_field("l-c", "code", tr(Msg::TermCode), &code)}
+                    {code_field("l-c", "code", tr(DefinitionsMsg::TermCode), &code)}
                     {crate::pages::common::date_field(
                         "l-d",
                         "at",
-                        tr(Msg::TermEffectiveDate),
+                        tr(DefinitionsMsg::TermEffectiveDate),
                         &at,
                         false,
                     )}
-                    {run(Glyph::SEARCH, tr(Msg::TermLookUp))}
+                    {run(Glyph::SEARCH, tr(DefinitionsMsg::TermLookUp))}
                 </form>
             };
             let shown = term.map(|term| match term {
                 Ok(Some(term)) => {
                     let facts = definitions(vec![
-                        (tr(Msg::TermLanguage), term.language.clone().into_any()),
                         (
-                            tr(Msg::TermPreferred),
+                            tr(DefinitionsMsg::TermLanguage),
+                            term.language.clone().into_any(),
+                        ),
+                        (
+                            tr(DefinitionsMsg::TermPreferred),
                             tr(if term.preferred { Msg::Yes } else { Msg::No }).into_any(),
                         ),
                     ]);
@@ -586,7 +592,7 @@ pub fn LookupTab() -> impl IntoView {
                         {answer(
                             Outcome::Ok,
                             view! {
-                                {tr(Msg::TermDefined)}
+                                {tr(DefinitionsMsg::TermDefined)}
                                 " "
                                 {coding(
                                     Coding::new(term.code.clone(), term.text.clone())
@@ -603,7 +609,7 @@ pub fn LookupTab() -> impl IntoView {
                 Ok(None) => answer(
                     Outcome::Warn,
                     tr_with(
-                        Msg::TermUndefined,
+                        DefinitionsMsg::TermUndefined,
                         &[
                             ("terminology", terminology.clone().into()),
                             ("code", code.clone().into()),
@@ -611,7 +617,7 @@ pub fn LookupTab() -> impl IntoView {
                     )
                     .into_any(),
                 ),
-                Err(error) => refused(tr(Msg::TermLookupRefused), &error, None),
+                Err(error) => refused(tr(DefinitionsMsg::TermLookupRefused), &error, None),
             });
             panel(view! {
                 {plain_section(form)}
@@ -620,7 +626,7 @@ pub fn LookupTab() -> impl IntoView {
         })
     });
     view! {
-        <Title text=tr(Msg::TermLookup) />
+        <Title text=tr(DefinitionsMsg::TermLookup) />
         {page}
     }
 }
@@ -718,7 +724,7 @@ pub fn ValueSetsTab() -> impl IntoView {
             let form = view! {
                 <form method="get" action="/terminology/valuesets" class="fui-transform-options">
                     {terminology_field("v-t", ids, &terminology)}
-                    {Field::new("v-g", tr(Msg::TermValueSet))
+                    {Field::new("v-g", tr(DefinitionsMsg::TermValueSet))
                         .view(
                             view! {
                                 <input
@@ -732,7 +738,7 @@ pub fn ValueSetsTab() -> impl IntoView {
                             },
                         )}
                     {suggestions}
-                    {run(Glyph::LIST_CHECKS, tr(Msg::TermExpand))}
+                    {run(Glyph::LIST_CHECKS, tr(DefinitionsMsg::TermExpand))}
                 </form>
             };
             let Some(members) = members else {
@@ -759,7 +765,7 @@ pub fn ValueSetsTab() -> impl IntoView {
                         </ul>
                     };
                     section(
-                        Some(tr(Msg::TermMembers)),
+                        Some(tr(DefinitionsMsg::TermMembers)),
                         u64::try_from(total).ok(),
                         None,
                         list,
@@ -767,19 +773,27 @@ pub fn ValueSetsTab() -> impl IntoView {
                 }
                 Ok(None) => plain_section(answer(
                     Outcome::Warn,
-                    tr_with(Msg::TermNoValueSet, &[("set", set.clone().into())]).into_any(),
+                    tr_with(
+                        DefinitionsMsg::TermNoValueSet,
+                        &[("set", set.clone().into())],
+                    )
+                    .into_any(),
                 )),
-                Err(error) => plain_section(refused(tr(Msg::TermValueSetRefused), &error, None)),
+                Err(error) => plain_section(refused(
+                    tr(DefinitionsMsg::TermValueSetRefused),
+                    &error,
+                    None,
+                )),
             };
             let validate_form = view! {
                 <form method="get" action="/terminology/valuesets" class="fui-transform-options">
                     <input type="hidden" name="terminology" value=terminology.clone() />
                     <input type="hidden" name="set" value=set.clone() />
-                    {code_field("v-c", "candidate", tr(Msg::TermCode), &candidate)}
+                    {code_field("v-c", "candidate", tr(DefinitionsMsg::TermCode), &candidate)}
                     <div class="fui-transform-run">
                         <button type="submit" class="fui-button fui-button-secondary">
                             {ferrohealth_ui::icon::icon(Glyph::SHIELD_CHECK, "16")}
-                            {tr(Msg::TermValidate)}
+                            {tr(DefinitionsMsg::TermValidate)}
                         </button>
                     </div>
                 </form>
@@ -788,7 +802,7 @@ pub fn ValueSetsTab() -> impl IntoView {
                 Ok(Some(true)) => answer(
                     Outcome::Ok,
                     tr_with(
-                        Msg::TermMember,
+                        DefinitionsMsg::TermMember,
                         &[
                             ("code", candidate.clone().into()),
                             ("set", set.clone().into()),
@@ -799,7 +813,7 @@ pub fn ValueSetsTab() -> impl IntoView {
                 Ok(Some(false)) => answer(
                     Outcome::Warn,
                     tr_with(
-                        Msg::TermNotMember,
+                        DefinitionsMsg::TermNotMember,
                         &[
                             ("code", candidate.clone().into()),
                             ("set", set.clone().into()),
@@ -809,15 +823,19 @@ pub fn ValueSetsTab() -> impl IntoView {
                 ),
                 Ok(None) => answer(
                     Outcome::Warn,
-                    tr_with(Msg::TermNoValueSet, &[("set", set.clone().into())]).into_any(),
+                    tr_with(
+                        DefinitionsMsg::TermNoValueSet,
+                        &[("set", set.clone().into())],
+                    )
+                    .into_any(),
                 ),
-                Err(error) => refused(tr(Msg::TermValidateRefused), &error, None),
+                Err(error) => refused(tr(DefinitionsMsg::TermValidateRefused), &error, None),
             });
             panel(view! {
                 {plain_section(form)}
                 {members}
                 {section(
-                    Some(tr(Msg::TermValidateTitle)),
+                    Some(tr(DefinitionsMsg::TermValidateTitle)),
                     None,
                     None,
                     view! {
@@ -829,7 +847,7 @@ pub fn ValueSetsTab() -> impl IntoView {
         })
     });
     view! {
-        <Title text=tr(Msg::TermValueSets) />
+        <Title text=tr(DefinitionsMsg::TermValueSets) />
         {page}
     }
 }
@@ -897,9 +915,9 @@ pub fn SubsumptionTab() -> impl IntoView {
             let form = view! {
                 <form method="get" action="/terminology/subsumption" class="fui-transform-options">
                     {terminology_field("s-t", ids, &terminology)}
-                    {code_field("s-a", "broader", tr(Msg::TermBroader), &broader)}
-                    {code_field("s-b", "narrower", tr(Msg::TermNarrower), &narrower)}
-                    {run(Glyph::NETWORK, tr(Msg::TermTest))}
+                    {code_field("s-a", "broader", tr(DefinitionsMsg::TermBroader), &broader)}
+                    {code_field("s-b", "narrower", tr(DefinitionsMsg::TermNarrower), &narrower)}
+                    {run(Glyph::NETWORK, tr(DefinitionsMsg::TermTest))}
                 </form>
             };
             let words = |msg| {
@@ -913,15 +931,19 @@ pub fn SubsumptionTab() -> impl IntoView {
                 .into_any()
             };
             let verdict = verdict.map(|verdict| match verdict {
-                Ok(Some(true)) => answer(Outcome::Ok, words(Msg::TermSubsumes)),
+                Ok(Some(true)) => answer(Outcome::Ok, words(DefinitionsMsg::TermSubsumes)),
                 Ok(Some(false)) => view! {
-                    {answer(Outcome::Warn, words(Msg::TermNotSubsumes))}
+                    {answer(Outcome::Warn, words(DefinitionsMsg::TermNotSubsumes))}
                     {(terminology == "openehr")
-                        .then(|| view! { <p class="fui-small fui-muted">{tr(Msg::TermFlat)}</p> })}
+                        .then(|| {
+                            view! {
+                                <p class="fui-small fui-muted">{tr(DefinitionsMsg::TermFlat)}</p>
+                            }
+                        })}
                 }
                 .into_any(),
                 Ok(None) => off(),
-                Err(error) => refused(tr(Msg::TermSubsumptionRefused), &error, None),
+                Err(error) => refused(tr(DefinitionsMsg::TermSubsumptionRefused), &error, None),
             });
             panel(view! {
                 {plain_section(form)}
@@ -930,7 +952,7 @@ pub fn SubsumptionTab() -> impl IntoView {
         })
     });
     view! {
-        <Title text=tr(Msg::TermHierarchy) />
+        <Title text=tr(DefinitionsMsg::TermHierarchy) />
         {page}
     }
 }

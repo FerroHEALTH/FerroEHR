@@ -34,6 +34,8 @@ use crate::bff::ehrs::{aql_request_body, parse_result_set};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
+use crate::locale::records::RecordsMsg;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
 
 /// List an EHR's compositions newest-first, one page at `offset`, narrowed by
@@ -148,7 +150,7 @@ pub async fn commit_composition(
     if matches!(format, ReprFormat::Flat) {
         if template_id.is_empty() {
             return Err(ViewerError::Invalid(tr_served(
-                Msg::TemplateIdRequiredCommitFlatComposition,
+                RecordsMsg::TemplateIdRequiredCommitFlatComposition,
             )));
         }
         headers.push(("openehr-template-id", template_id));

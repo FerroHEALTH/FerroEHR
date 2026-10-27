@@ -115,9 +115,11 @@ pub mod state;
 /// The code splitter (`cargo leptos build --split`, `wasm_split_cli_support`)
 /// lays the read-only data out again for the entry and each chunk, aligned,
 /// and when that layout outgrows the input's data segment it leaves the whole
-/// segment in the entry WebAssembly, about 40000 brotli bytes against the
-/// viewer's budget (#4147). These bytes give the layout room; no module reads
-/// them, so the splitter writes them into none.
+/// segment in the entry WebAssembly, about 63000 brotli bytes against the
+/// viewer's budget. These bytes give the layout room; no module reads them,
+/// so the splitter writes them into none.
+// NOTE: wasm-split defect #4225; without these bytes the entry measured 474943 of 450000.
+// TODO(#4225): drop the room once the splitter splits an overlong segment.
 #[cfg(target_arch = "wasm32")]
 #[used]
 static SPLIT_ROOM: [u8; 4096] = [0xA5; 4096];

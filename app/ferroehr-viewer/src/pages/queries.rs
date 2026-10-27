@@ -35,6 +35,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
+use crate::locale::queries::QueriesMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::pages::common::{
     Refused, count, document_section, drawn, info_note, page_model, panel, plain_section, section,
@@ -218,7 +219,7 @@ async fn read_listing() -> Listed {
     let listing = match list_stored_queries().await {
         Ok(rows) if rows.is_empty() => Listing::Empty,
         Ok(rows) => grouped(&rows, only.as_deref()),
-        Err(error) => Listing::Refused(Refused::new(tr(Msg::QueriesRefused), error)),
+        Err(error) => Listing::Refused(Refused::new(tr(QueriesMsg::QueriesRefused), error)),
     };
     Listed { only, listing }
 }
@@ -228,7 +229,7 @@ fn table(groups: Vec<Group>) -> AnyView {
     let columns = [
         Column::text("name", tr(Msg::QueryName)).role(Role::Title),
         Column::text("version", tr(Msg::ColumnVersion)).role(Role::Sub),
-        Column::text("parameters", tr(Msg::QueryParameters)).role(Role::Meta),
+        Column::text("parameters", tr(QueriesMsg::QueryParameters)).role(Role::Meta),
         Column::text("menu", tr(Msg::ColumnActions)).role(Role::Menu),
     ];
     let mut body = Vec::new();
@@ -236,7 +237,7 @@ fn table(groups: Vec<Group>) -> AnyView {
     for group in groups {
         let label = match &group.namespace {
             Some(namespace) => view! { <code>{namespace.clone()}</code> }.into_any(),
-            None => tr(Msg::QueriesUnqualified).into_any(),
+            None => tr(QueriesMsg::QueriesUnqualified).into_any(),
         };
         body.push(group_row(
             &columns,
@@ -246,7 +247,7 @@ fn table(groups: Vec<Group>) -> AnyView {
                     {format!(
                         " · {}",
                         tr_with(
-                            Msg::QueriesGroupCount,
+                            QueriesMsg::QueriesGroupCount,
                             &[
                                 ("names", count(group.names)),
                                 ("versions", count(group.members.len())),
@@ -259,7 +260,8 @@ fn table(groups: Vec<Group>) -> AnyView {
         for row in &group.members {
             let href = stored_query_href(&row.name, &row.version);
             let sub = row.older.then(|| {
-                view! { <span class="fui-row-sub">{tr(Msg::QueriesOlderVersion)}</span> }.into_any()
+                view! { <span class="fui-row-sub">{tr(QueriesMsg::QueriesOlderVersion)}</span> }
+                    .into_any()
             });
             let menu = row_menu(
                 Menu::new(
@@ -271,19 +273,19 @@ fn table(groups: Vec<Group>) -> AnyView {
                     vec![
                         Item::new(Action::new(
                             Some(Glyph::PLAY),
-                            tr(Msg::QueryRun),
+                            tr(QueriesMsg::QueryRun),
                             Act::Link(format!("{href}/run")),
                         )),
                         Item::new(Action::new(
                             Some(Glyph::SQUARE_TERMINAL),
-                            tr(Msg::QueriesOpenInQuery),
+                            tr(QueriesMsg::QueriesOpenInQuery),
                             Act::Link(open_in_query(&row.name, &row.version)),
                         )),
                     ],
                 )
                 .destructive(vec![Item::new(Action::new(
                     Some(Glyph::TRASH),
-                    tr(Msg::QueriesDeleteVersion),
+                    tr(QueriesMsg::QueriesDeleteVersion),
                     Act::Link(format!("{href}?confirm=delete")),
                 ))]),
             );
@@ -326,14 +328,14 @@ fn listed(listed: Listed) -> AnyView {
     };
     let chips = only.as_ref().map(|namespace| {
         let words = if namespace == UNQUALIFIED {
-            tr(Msg::QueriesUnqualified)
+            tr(QueriesMsg::QueriesUnqualified)
         } else {
             namespace.clone()
         };
         active_filters(
             ActiveFilters {
                 chips: vec![FilterChip {
-                    label: tr_with(Msg::QueriesNamespaceChip, &[("value", words.into())]),
+                    label: tr_with(QueriesMsg::QueriesNamespaceChip, &[("value", words.into())]),
                     remove: "/queries".to_owned(),
                 }],
                 clear: "/queries".to_owned(),
@@ -360,7 +362,7 @@ pub fn StoredQueriesPage() -> impl IntoView {
     let heading = page_heading(
         Header {
             title: tr(Msg::NavStoredQueries).into(),
-            subtitle: Some(tr(Msg::QueriesSubtitle).into()),
+            subtitle: Some(tr(QueriesMsg::QueriesSubtitle).into()),
             crumbs: Vec::new(),
             mono: false,
             badge: None,
@@ -452,12 +454,12 @@ where
                 Ok(()) => {
                     redirect_with(
                         "/queries",
-                        &Done::ok(tr(Msg::QueriesDeleted))
+                        &Done::ok(tr(QueriesMsg::QueriesDeleted))
                             .line(format!("{name} {}", posted.text("version"))),
                     );
                     return Page::Deleted;
                 }
-                Err(error) => Some(Refused::new(tr(Msg::QueriesDeleteRefused), error)),
+                Err(error) => Some(Refused::new(tr(QueriesMsg::QueriesDeleteRefused), error)),
             }
         }
         None => None,
@@ -487,7 +489,7 @@ where
     let count = versions.len();
     let panel = match rows {
         Ok(_) => Ok(body(name.clone(), versions, version.clone()).await),
-        Err(error) => Err(Refused::new(tr(Msg::QueriesRefused), error)),
+        Err(error) => Err(Refused::new(tr(QueriesMsg::QueriesRefused), error)),
     };
     Page::Shown(Box::new(Frame {
         name,
@@ -526,13 +528,13 @@ fn page_view<T>(
     let mut tabs = vec![Tab::new(
         QueryTab::Definition.key(),
         stored_query_href(&name, &version),
-        tr(Msg::QueriesDefinition),
+        tr(QueriesMsg::QueriesDefinition),
     )];
     if !older {
         tabs.push(Tab::new(
             QueryTab::Run.key(),
             format!("{}/run", stored_query_href(&name, &version)),
-            tr(Msg::QueryRun),
+            tr(QueriesMsg::QueryRun),
         ));
     }
     tabs.push(
@@ -548,17 +550,17 @@ fn page_view<T>(
     );
     let more = Menu::new(
         "stored-more",
-        tr(Msg::QueriesMore),
+        tr(QueriesMsg::QueriesMore),
         vec![Item::new(Action::new(
             Some(Glyph::COPY),
-            tr(Msg::QueriesCopyName),
+            tr(QueriesMsg::QueriesCopyName),
             Act::Copy(name.clone()),
         ))],
     )
     .destructive(vec![Item::new(Action::new(
         Some(Glyph::TRASH),
         tr_with(
-            Msg::QueriesDeleteNamed,
+            QueriesMsg::QueriesDeleteNamed,
             &[("version", version.clone().into())],
         ),
         Act::Dialog(DELETE_DIALOG.to_owned()),
@@ -568,7 +570,7 @@ fn page_view<T>(
             title: bare_name_of(&name).to_owned().into(),
             subtitle: Some(
                 tr_with(
-                    Msg::QueriesLine,
+                    QueriesMsg::QueriesLine,
                     &[
                         ("name", name.clone().into()),
                         ("version", version.clone().into()),
@@ -583,7 +585,7 @@ fn page_view<T>(
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::SQUARE_TERMINAL),
-            tr(Msg::QueriesOpenInQuery),
+            tr(QueriesMsg::QueriesOpenInQuery),
             Act::Link(open_in_query(&name, &version)),
         ))
         .more(more),
@@ -593,14 +595,14 @@ fn page_view<T>(
         Confirmation {
             id: DELETE_DIALOG.into(),
             title: tr_with(
-                Msg::QueriesDeleteTitle,
+                QueriesMsg::QueriesDeleteTitle,
                 &[
                     ("name", bare_name_of(&name).to_owned().into()),
                     ("version", version.clone().into()),
                 ],
             )
             .into(),
-            message: tr(Msg::QueriesDeleteMessage).into(),
+            message: tr(QueriesMsg::QueriesDeleteMessage).into(),
         },
         delete_button(&name, &version),
     );
@@ -613,7 +615,7 @@ fn page_view<T>(
         <Title text=bare_name_of(&name).to_owned() />
         {heading}
         <div class="fui-stack">
-            {acted} {confirm} {binder(tr(Msg::QueriesViews), tabs, tab.key(), panel)}
+            {acted} {confirm} {binder(tr(QueriesMsg::QueriesViews), tabs, tab.key(), panel)}
         </div>
         {dialog}
     }
@@ -628,7 +630,10 @@ fn delete_button(name: &str, version: &str) -> AnyView {
             <input type="hidden" name="version" value=version.to_owned() />
             <button type="submit" class="fui-button fui-button-danger">
                 {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                {tr_with(Msg::QueriesDeleteConfirm, &[("version", version.to_owned().into())])}
+                {tr_with(
+                    QueriesMsg::QueriesDeleteConfirm,
+                    &[("version", version.to_owned().into())],
+                )}
             </button>
         </form>
     }
@@ -643,7 +648,7 @@ fn delete_form(name: &str, version: &str) -> AnyView {
         <p>
             <strong>
                 {tr_with(
-                    Msg::QueriesDeleteTitle,
+                    QueriesMsg::QueriesDeleteTitle,
                     &[
                         ("name", bare_name_of(name).to_owned().into()),
                         ("version", version.to_owned().into()),
@@ -651,7 +656,7 @@ fn delete_form(name: &str, version: &str) -> AnyView {
                 )}
             </strong>
             " "
-            {tr(Msg::QueriesDeleteMessage)}
+            {tr(QueriesMsg::QueriesDeleteMessage)}
         </p>
         <div class="fui-cluster">
             {delete_button(name, version)}
@@ -707,7 +712,10 @@ async fn read_definition(name: String, version: String) -> Page<Definition> {
                 if crate::pages::common::is_status(&error, http::StatusCode::NOT_FOUND) {
                     crate::request::set_status(http::StatusCode::NOT_FOUND);
                 }
-                return Definition::Refused(Refused::new(tr(Msg::QueriesStoredRefused), error));
+                return Definition::Refused(Refused::new(
+                    tr(QueriesMsg::QueriesStoredRefused),
+                    error,
+                ));
             }
         };
         let saved = versions
@@ -744,27 +752,27 @@ fn definition(name: &str, version: &str, found: Definition) -> AnyView {
     let older = latest.map(|latest| {
         plain_section(info_note(view! {
             {tr_with(
-                Msg::QueriesReadingOlder,
+                QueriesMsg::QueriesReadingOlder,
                 &[("version", version.to_owned().into()), ("latest", latest.clone().into())],
             )}
             " "
             <a href=stored_query_href(
                 name,
                 &latest,
-            )>{tr_with(Msg::QueriesReadVersion, &[("version", latest.clone().into())])}</a>
+            )>{tr_with(QueriesMsg::QueriesReadVersion, &[("version", latest.clone().into())])}</a>
         }))
     });
-    let mut facts = vec![(tr(Msg::QueriesType), "AQL".into_any())];
+    let mut facts = vec![(tr(QueriesMsg::QueriesType), "AQL".into_any())];
     if !saved.is_empty() {
-        facts.push((tr(Msg::QueriesSaved), when(&saved)));
+        facts.push((tr(QueriesMsg::QueriesSaved), when(&saved)));
     }
-    facts.push((tr(Msg::QueryParameters), parameters(&names)));
+    facts.push((tr(QueriesMsg::QueryParameters), parameters(&names)));
     panel(view! {
         {older}
         {section(Some(tr(Msg::PartyFacts)), None, None, definitions(facts))}
         {document_section(
             tr_with(
-                Msg::QueriesAqlTitle,
+                QueriesMsg::QueriesAqlTitle,
                 &[
                     ("name", bare_name_of(name).to_owned().into()),
                     ("version", version.to_owned().into()),
@@ -840,7 +848,7 @@ async fn read_run(name: String, version: String) -> Page<Run> {
         let aql = match fetch_stored_query(name.clone(), version.clone()).await {
             Ok(aql) => aql,
             Err(error) => {
-                return Run::Refused(Refused::new(tr(Msg::QueriesStoredRefused), error));
+                return Run::Refused(Refused::new(tr(QueriesMsg::QueriesStoredRefused), error));
             }
         };
         let mode = posted.as_ref().map_or(VersionResolution::Latest, |posted| {
@@ -882,7 +890,7 @@ async fn read_run(name: String, version: String) -> Page<Run> {
                 )),
                 Err(error) => {
                     version_error = Some(error.to_string());
-                    Some(Answer::NotRun(tr(Msg::QueriesFixVersion)))
+                    Some(Answer::NotRun(tr(QueriesMsg::QueriesFixVersion)))
                 }
             }
         } else {
@@ -918,7 +926,7 @@ fn run(name: &str, version: &str, found: Run) -> AnyView {
     // NOTE: leptos-ui.md §15.8: the version field shows whatever the choice, so a page with no
     // WebAssembly can pick Prefix or Exact and type the version in one post.
     let version_field = Field::new("rv", tr(Msg::ColumnVersion))
-        .help(tr(Msg::QueriesVersionHelp))
+        .help(tr(QueriesMsg::QueriesVersionHelp))
         .after(version_error.map(|error| view! { <p class="fui-field-error">{error}</p> }))
         .view(view! {
             <input
@@ -936,14 +944,14 @@ fn run(name: &str, version: &str, found: Run) -> AnyView {
             format!("POST /query/{name}/{}", typed.trim())
         }
     };
-    let sends = view! { <p class="fui-small fui-muted">{tr(Msg::QueriesSends)} " " <code>{sends}</code></p> };
+    let sends = view! { <p class="fui-small fui-muted">{tr(QueriesMsg::QueriesSends)} " " <code>{sends}</code></p> };
     let names = values.len();
     let fields = values
         .into_iter()
         .map(|(param, value)| {
             let id = format!("p-{param}");
             Field::new(id.clone(), param)
-                .help(tr(Msg::QueriesParamHelp))
+                .help(tr(QueriesMsg::QueriesParamHelp))
                 .view(view! {
                     <input
                         id=id.clone()
@@ -964,13 +972,18 @@ fn run(name: &str, version: &str, found: Run) -> AnyView {
                 None,
                 None,
                 view! {
-                    {choice_group("res", tr(Msg::QueriesWhichVersion), &modes, mode.as_str())}
+                    {choice_group(
+                        "res",
+                        tr(QueriesMsg::QueriesWhichVersion),
+                        &modes,
+                        mode.as_str(),
+                    )}
                     {version_field}
                     {sends}
                 },
             )}
             {section(
-                Some(tr(Msg::QueryParameters)),
+                Some(tr(QueriesMsg::QueryParameters)),
                 u64::try_from(names).ok(),
                 None,
                 view! {
@@ -978,7 +991,7 @@ fn run(name: &str, version: &str, found: Run) -> AnyView {
                     <div class="fui-transform-run">
                         <button type="submit" class="fui-button fui-button-primary">
                             {ferrohealth_ui::icon::icon(Glyph::PLAY, "16")}
-                            {tr(Msg::QueryRun)}
+                            {tr(QueriesMsg::QueryRun)}
                         </button>
                     </div>
                 },
@@ -1046,8 +1059,8 @@ async fn read_versions(name: String) -> Page<Vec<VersionRow>> {
 fn versions(name: &str, _version: &str, versions: Vec<VersionRow>) -> AnyView {
     let columns = [
         Column::text("version", tr(Msg::ColumnVersion)).role(Role::Title),
-        Column::text("saved", tr(Msg::QueriesSaved)).role(Role::Sub),
-        Column::text("parameters", tr(Msg::QueryParameters)).role(Role::Meta),
+        Column::text("saved", tr(QueriesMsg::QueriesSaved)).role(Role::Sub),
+        Column::text("parameters", tr(QueriesMsg::QueryParameters)).role(Role::Meta),
     ];
     let total = versions.len();
     let rows = versions
@@ -1085,7 +1098,7 @@ fn versions(name: &str, _version: &str, versions: Vec<VersionRow>) -> AnyView {
         u64::try_from(total).ok(),
         None,
         view! {
-            {ferrohealth_ui::view::surface::section_intro(tr(Msg::QueriesVersionsIntro))}
+            {ferrohealth_ui::view::surface::section_intro(tr(QueriesMsg::QueriesVersionsIntro))}
             {table}
         },
     ))

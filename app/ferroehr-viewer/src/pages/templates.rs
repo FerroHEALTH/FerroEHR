@@ -71,6 +71,7 @@ use crate::example_options::{ExampleDetail, ExampleType};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::format::ReprFormat;
+use crate::locale::definitions::DefinitionsMsg;
 use crate::locale::{Msg, message, tr, tr_with};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::pages::common::discarded;
@@ -123,9 +124,9 @@ fn asked_family() -> TemplateFamily {
 /// delete confirmation.
 fn rows_table(family: TemplateFamily, rows: &[TemplateRow]) -> AnyView {
     let columns = [
-        Column::text("template", tr(Msg::ColumnTemplate)).role(Role::Title),
-        Column::text("root", tr(Msg::ColumnRootArchetype)).role(Role::Sub),
-        Column::text("uploaded", tr(Msg::ColumnUploaded)).role(Role::Meta),
+        Column::text("template", tr(DefinitionsMsg::ColumnTemplate)).role(Role::Title),
+        Column::text("root", tr(DefinitionsMsg::ColumnRootArchetype)).role(Role::Sub),
+        Column::text("uploaded", tr(DefinitionsMsg::ColumnUploaded)).role(Role::Meta),
         Column::text("menu", tr(Msg::ColumnActions)).role(Role::Menu),
     ];
     let body = rows
@@ -161,7 +162,7 @@ fn rows_table(family: TemplateFamily, rows: &[TemplateRow]) -> AnyView {
                         .then(|| {
                             Item::new(Action::new(
                                 Some(Glyph::SQUARE_TERMINAL),
-                                tr(Msg::TemplateBuildQuery),
+                                tr(DefinitionsMsg::TemplateBuildQuery),
                                 Act::Link(query_href(&row.template_id, None)),
                             ))
                         })
@@ -170,7 +171,7 @@ fn rows_table(family: TemplateFamily, rows: &[TemplateRow]) -> AnyView {
                 )
                 .destructive(vec![Item::new(Action::new(
                     Some(Glyph::TRASH),
-                    tr(Msg::TemplateDeleteRow),
+                    tr(DefinitionsMsg::TemplateDeleteRow),
                     Act::Link(confirm),
                 ))]),
             );
@@ -209,11 +210,11 @@ fn delete_dialog(
         Confirmation {
             id: id.into(),
             title: tr_with(
-                Msg::TemplateDeleteTitle,
+                DefinitionsMsg::TemplateDeleteTitle,
                 &[("name", template_id.to_owned().into())],
             )
             .into(),
-            message: tr(Msg::TemplateDeleteMessage).into(),
+            message: tr(DefinitionsMsg::TemplateDeleteMessage).into(),
         },
         view! {
             <form method="post" action=action.to_owned()>
@@ -222,7 +223,7 @@ fn delete_dialog(
                 <input type="hidden" name="template" value=template_id.to_owned() />
                 <button type="submit" class="fui-button fui-button-danger">
                     {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                    {tr(Msg::TemplateDeleteConfirm)}
+                    {tr(DefinitionsMsg::TemplateDeleteConfirm)}
                 </button>
             </form>
         },
@@ -238,10 +239,13 @@ fn inline_confirm(family: TemplateFamily, template_id: &str, action: &str) -> Op
         crate::pages::common::warn_note(view! {
             <p>
                 <strong>
-                    {tr_with(Msg::TemplateDeleteTitle, &[("name", template_id.to_owned().into())])}
+                    {tr_with(
+                        DefinitionsMsg::TemplateDeleteTitle,
+                        &[("name", template_id.to_owned().into())],
+                    )}
                 </strong>
                 " "
-                {tr(Msg::TemplateDeleteMessage)}
+                {tr(DefinitionsMsg::TemplateDeleteMessage)}
             </p>
             <form method="post" action=action.to_owned() class="fui-cluster">
                 <input type="hidden" name="intent" value="delete-template" />
@@ -249,7 +253,7 @@ fn inline_confirm(family: TemplateFamily, template_id: &str, action: &str) -> Op
                 <input type="hidden" name="template" value=template_id.to_owned() />
                 <button type="submit" class="fui-button fui-button-danger">
                     {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                    {tr(Msg::TemplateDeleteConfirm)}
+                    {tr(DefinitionsMsg::TemplateDeleteConfirm)}
                 </button>
                 <a class="fui-button fui-button-secondary" href=action.to_owned()>
                     {tr(Msg::Cancel)}
@@ -271,7 +275,10 @@ async fn delete_posted(back: &str) -> Option<ViewerError> {
     };
     match done {
         Ok(()) => {
-            redirect_with(back, &Done::ok(tr(Msg::TemplateDeleted)).line(template));
+            redirect_with(
+                back,
+                &Done::ok(tr(DefinitionsMsg::TemplateDeleted)).line(template),
+            );
             None
         }
         Err(error) => Some(error),
@@ -280,7 +287,7 @@ async fn delete_posted(back: &str) -> Option<ViewerError> {
 
 /// The refusal of a delete the page answered.
 fn delete_refused(acted: Option<&ViewerError>) -> Option<AnyView> {
-    acted.map(|error| refused(tr(Msg::TemplateDeleteRefused), error, None))
+    acted.map(|error| refused(tr(DefinitionsMsg::TemplateDeleteRefused), error, None))
 }
 
 /// What Templates read: the delete it answered and both families' lists.
@@ -326,7 +333,7 @@ pub fn TemplatesPage() -> impl IntoView {
     let heading = page_heading(
         Header {
             title: tr(Msg::NavTemplates).into(),
-            subtitle: Some(tr(Msg::TemplatesSubtitle).into()),
+            subtitle: Some(tr(DefinitionsMsg::TemplatesSubtitle).into()),
             crumbs: Vec::new(),
             mono: false,
             badge: None,
@@ -334,7 +341,7 @@ pub fn TemplatesPage() -> impl IntoView {
         },
         ActionGroup::primary(Action::new(
             Some(Glyph::UPLOAD),
-            tr(Msg::TemplatesUpload),
+            tr(DefinitionsMsg::TemplatesUpload),
             Act::Link(format!("/templates/upload?family={}", family.as_query())),
         )),
     );
@@ -342,7 +349,7 @@ pub fn TemplatesPage() -> impl IntoView {
     let body = awaited(async move {
         let Templates { acted, adl14, adl2 } = match model.await {
             Ok(templates) => templates,
-            Err(error) => return refused(tr(Msg::TemplatesRefused), &error, None),
+            Err(error) => return refused(tr(DefinitionsMsg::TemplatesRefused), &error, None),
         };
         let acted = delete_refused(acted.as_ref());
         let needle = find.to_lowercase();
@@ -389,18 +396,18 @@ pub fn TemplatesPage() -> impl IntoView {
         let list = match shown {
             Ok(rows) if rows.is_empty() => list_empty(
                 tr(if find.is_empty() {
-                    Msg::TemplatesEmpty
+                    DefinitionsMsg::TemplatesEmpty
                 } else {
-                    Msg::TemplatesNoMatch
+                    DefinitionsMsg::TemplatesNoMatch
                 }),
                 None,
             ),
             Ok(rows) => rows_table(family, &rows),
-            Err(error) => refused(tr(Msg::TemplatesRefused), &error, None),
+            Err(error) => refused(tr(DefinitionsMsg::TemplatesRefused), &error, None),
         };
         let action = "/templates".to_owned();
         let fields = vec![("family".to_owned(), family.as_query().to_owned())];
-        let label = tr(Msg::TemplatesFind);
+        let label = tr(DefinitionsMsg::TemplatesFind);
         let toolbar = find_form(
             Find {
                 id: "t-find",
@@ -417,7 +424,10 @@ pub fn TemplatesPage() -> impl IntoView {
             active_filters(
                 ActiveFilters {
                     chips: vec![FilterChip {
-                        label: tr_with(Msg::ChipContains, &[("value", find.clone().into())]),
+                        label: tr_with(
+                            DefinitionsMsg::ChipContains,
+                            &[("value", find.clone().into())],
+                        ),
                         remove: format!("/templates?family={}", family.as_query()),
                     }],
                     clear: format!("/templates?family={}", family.as_query()),
@@ -431,7 +441,7 @@ pub fn TemplatesPage() -> impl IntoView {
             count: None,
             order: None,
             tabs: Some(TabRow {
-                label: tr(Msg::TemplatesFamilies),
+                label: tr(DefinitionsMsg::TemplatesFamilies),
                 tabs,
                 current: family.as_query().to_owned(),
             }),
@@ -485,7 +495,7 @@ pub async fn load_upload(
     };
     Ok(match uploaded {
         Ok(href) => {
-            redirect_with(&href, &Done::ok(tr(Msg::TemplateUploaded)));
+            redirect_with(&href, &Done::ok(tr(DefinitionsMsg::TemplateUploaded)));
             Uploaded::Left
         }
         Err(error) => Uploaded::Refused(error),
@@ -524,17 +534,17 @@ pub fn UploadTemplatePage() -> impl IntoView {
             .and_then(|posted| posted.get("source-text"))
             .unwrap_or_default();
         let mut top = None;
-        let mut line = (Glyph::UPLOAD, tr(Msg::TemplateNotYet));
+        let mut line = (Glyph::UPLOAD, tr(DefinitionsMsg::TemplateNotYet));
         match uploaded {
             Ok(Uploaded::Fresh) => {}
             Ok(Uploaded::Left) => return ().into_any(),
             Ok(Uploaded::Refused(error)) | Err(error) => {
-                line = (Glyph::CIRCLE_X, tr(Msg::TemplateNotUploaded));
+                line = (Glyph::CIRCLE_X, tr(DefinitionsMsg::TemplateNotUploaded));
                 let found = findings_of(&error, &source, "source-text")
                     .map(|(heading, file)| diagnostics(&heading, &file));
                 top = Some(
                     view! {
-                        {refused(tr(Msg::TemplateUploadRefused), &error, None)}
+                        {refused(tr(DefinitionsMsg::TemplateUploadRefused), &error, None)}
                         {found.map(card_panel)}
                     }
                     .into_any(),
@@ -545,12 +555,12 @@ pub fn UploadTemplatePage() -> impl IntoView {
             form: UPLOAD_FORM.to_owned(),
             line: line.1,
             glyph: line.0,
-            save: tr(Msg::TemplateUpload),
+            save: tr(DefinitionsMsg::TemplateUpload),
             blocked: None,
         });
         let families = [TemplateFamily::Adl14, TemplateFamily::Adl2];
         let switch = segmented_links(
-            tr(Msg::TemplatesFamily),
+            tr(DefinitionsMsg::TemplatesFamily),
             families
                 .iter()
                 .map(|each| {
@@ -564,11 +574,11 @@ pub fn UploadTemplatePage() -> impl IntoView {
         );
         let adl2 = family == TemplateFamily::Adl2;
         let heading = editor_heading(
-            message(Msg::TemplateUploadTitle),
+            message(DefinitionsMsg::TemplateUploadTitle),
             &Mode::Creating,
             Header {
                 title: String::new().into(),
-                subtitle: Some(tr(Msg::TemplateUploadSubtitle).into()),
+                subtitle: Some(tr(DefinitionsMsg::TemplateUploadSubtitle).into()),
                 crumbs: vec![Crumb::new(
                     tr(Msg::NavTemplates),
                     format!("/templates?family={}", family.as_query()),
@@ -580,7 +590,7 @@ pub fn UploadTemplatePage() -> impl IntoView {
             ActionGroup::none(),
         );
         view! {
-            <Title text=tr(Msg::TemplatesUpload) />
+            <Title text=tr(DefinitionsMsg::TemplatesUpload) />
             {heading}
             <div class="fui-stack">
                 {top} <form id=UPLOAD_FORM method="post" action="/templates/upload">
@@ -594,17 +604,17 @@ pub fn UploadTemplatePage() -> impl IntoView {
                                         source=source
                                         label=tr(
                                             if adl2 {
-                                                Msg::TemplateAdl2Source
+                                                DefinitionsMsg::TemplateAdl2Source
                                             } else {
-                                                Msg::TemplateOptSource
+                                                DefinitionsMsg::TemplateOptSource
                                             },
                                         )
-                                        choose=tr(Msg::TemplateChooseFile)
+                                        choose=tr(DefinitionsMsg::TemplateChooseFile)
                                         placeholder=tr(
                                             if adl2 {
-                                                Msg::TemplateAdl2Placeholder
+                                                DefinitionsMsg::TemplateAdl2Placeholder
                                             } else {
-                                                Msg::TemplateOptPlaceholder
+                                                DefinitionsMsg::TemplateOptPlaceholder
                                             },
                                         )
                                         adl2=adl2
@@ -669,13 +679,13 @@ impl TemplateTab {
 
     /// The tab's label.
     fn label(self) -> String {
-        tr(match self {
-            Self::Overview => Msg::PartyOverview,
-            Self::Paths => Msg::TemplatePaths,
-            Self::Source => Msg::TemplateSource,
-            Self::Json => Msg::TemplateJson,
-            Self::Example => Msg::TemplateExample,
-        })
+        match self {
+            Self::Overview => tr(Msg::PartyOverview),
+            Self::Paths => tr(DefinitionsMsg::TemplatePaths),
+            Self::Source => tr(DefinitionsMsg::TemplateSource),
+            Self::Json => tr(DefinitionsMsg::TemplateJson),
+            Self::Example => tr(DefinitionsMsg::TemplateExample),
+        }
     }
 }
 
@@ -739,13 +749,13 @@ fn paths_panel(template_id: &str, base: &str, root: &CatalogNode, note: Option<S
     open.insert("n".to_owned());
     let tree = catalog_node(root, "n", base, selected.as_deref(), &mut open);
     let left = BrowserPane::new(
-        tr(Msg::TemplatePaths),
+        tr(DefinitionsMsg::TemplatePaths),
         view! {
             <TreeView
                 tree=TreeData {
                     id: "template-paths".to_owned(),
                     label: tr_with(
-                        Msg::TemplatePathsOf,
+                        DefinitionsMsg::TemplatePathsOf,
                         &[("name", template_id.to_owned().into())],
                     ),
                     kind: TreeKind::Path,
@@ -782,7 +792,10 @@ fn paths_panel(template_id: &str, base: &str, root: &CatalogNode, note: Option<S
             query: (root.rm_type == "COMPOSITION")
                 .then(|| query_href(template_id, Some(&picked.aql_path))),
         }),
-        None => BrowserPane::new(tr(Msg::TemplateNode), info_note(tr(Msg::TemplatePickNode))),
+        None => BrowserPane::new(
+            tr(DefinitionsMsg::TemplateNode),
+            info_note(tr(DefinitionsMsg::TemplatePickNode)),
+        ),
     };
     panel(view! {
         {browser(Panes::Two, Heading::Three, vec![left, detail_pane])}
@@ -881,7 +894,7 @@ fn example_options(
                         </select>
                     },
                 )}
-            {Field::new("x-typ", tr(Msg::TemplateExampleType))
+            {Field::new("x-typ", tr(DefinitionsMsg::TemplateExampleType))
                 .view(
                     view! {
                         <select id="x-typ" name="type" class="fui-select">
@@ -889,7 +902,7 @@ fn example_options(
                         </select>
                     },
                 )}
-            {Field::new("x-det", tr(Msg::TemplateExampleDetail))
+            {Field::new("x-det", tr(DefinitionsMsg::TemplateExampleDetail))
                 .view(
                     view! {
                         <select id="x-det" name="detail" class="fui-select">
@@ -900,7 +913,7 @@ fn example_options(
             <div class="fui-transform-run">
                 <button type="submit" class="fui-button fui-button-secondary">
                     {ferrohealth_ui::icon::icon(Glyph::PLAY, "16")}
-                    {tr(Msg::TemplateShowExample)}
+                    {tr(DefinitionsMsg::TemplateShowExample)}
                 </button>
             </div>
         </form>
@@ -918,7 +931,7 @@ fn example_panel(
     let shown = match example {
         Ok(Some(text)) => document_section(
             tr_with(
-                Msg::TemplateExampleTitle,
+                DefinitionsMsg::TemplateExampleTitle,
                 &[("format", format.label().into())],
             ),
             if format == ReprFormat::CanonicalXml {
@@ -929,8 +942,12 @@ fn example_panel(
             text,
             "template-example",
         ),
-        Ok(None) => plain_section(info_note(tr(Msg::TemplateNoExample))),
-        Err(error) => plain_section(refused(tr(Msg::TemplateExampleRefused), &error, None)),
+        Ok(None) => plain_section(info_note(tr(DefinitionsMsg::TemplateNoExample))),
+        Err(error) => plain_section(refused(
+            tr(DefinitionsMsg::TemplateExampleRefused),
+            &error,
+            None,
+        )),
     };
     panel(view! {
         {plain_section(form)}
@@ -952,23 +969,23 @@ fn template_header(
 ) -> AnyView {
     let more = Menu::new(
         "template-more",
-        tr(Msg::TemplateMore),
+        tr(DefinitionsMsg::TemplateMore),
         vec![
             Item::new(Action::new(
                 Some(Glyph::DOWNLOAD),
-                tr(Msg::TemplateDownload),
+                tr(DefinitionsMsg::TemplateDownload),
                 Act::Download(download),
             )),
             Item::new(Action::new(
                 Some(Glyph::COPY),
-                tr(Msg::TemplateCopyId),
+                tr(DefinitionsMsg::TemplateCopyId),
                 Act::Copy(template_id.to_owned()),
             )),
         ],
     )
     .destructive(vec![Item::new(Action::new(
         Some(Glyph::TRASH),
-        tr(Msg::TemplateDelete),
+        tr(DefinitionsMsg::TemplateDelete),
         Act::Dialog(DELETE_DIALOG.to_owned()),
     ))]);
     let heading = page_heading(
@@ -986,7 +1003,7 @@ fn template_header(
         if queryable {
             ActionGroup::primary(Action::new(
                 Some(Glyph::SQUARE_TERMINAL),
-                tr(Msg::TemplateBuildQuery),
+                tr(DefinitionsMsg::TemplateBuildQuery),
                 Act::Link(query_href(template_id, None)),
             ))
         } else {
@@ -1116,7 +1133,7 @@ pub fn TemplatePage() -> impl IntoView {
             example,
         } = match model.await {
             Ok(template) => template,
-            Err(error) => return refused(tr(Msg::TemplateRefused), &error, None),
+            Err(error) => return refused(tr(DefinitionsMsg::TemplateRefused), &error, None),
         };
         let acted = delete_refused(acted.as_ref());
         let detail: TemplateDetail = match detail {
@@ -1126,7 +1143,7 @@ pub fn TemplatePage() -> impl IntoView {
                     <Title text=template_id.clone() />
                     {template_header(
                         template_id.clone(),
-                        tr(Msg::TemplateAdl14Line),
+                        tr(DefinitionsMsg::TemplateAdl14Line),
                         &template_id,
                         TemplateFamily::Adl14,
                         download,
@@ -1134,7 +1151,7 @@ pub fn TemplatePage() -> impl IntoView {
                         true,
                     )}
                     {acted}
-                    {refused(tr(Msg::TemplateRefused), &error, None)}
+                    {refused(tr(DefinitionsMsg::TemplateRefused), &error, None)}
                 }
                 .into_any();
             }
@@ -1152,7 +1169,7 @@ pub fn TemplatePage() -> impl IntoView {
         let body = match tab {
             TemplateTab::Paths => paths_panel(&template_id, &base, &detail.catalog, None),
             TemplateTab::Source => panel(document_section(
-                tr(Msg::TemplateSourceTitle),
+                tr(DefinitionsMsg::TemplateSourceTitle),
                 Language::Xml,
                 detail.source.clone(),
                 "template-source",
@@ -1166,7 +1183,7 @@ pub fn TemplatePage() -> impl IntoView {
                         example_panel(form, format, example)
                     }
                     _ => panel(plain_section(info_note(tr_with(
-                        Msg::TemplateNoExampleForRoot,
+                        DefinitionsMsg::TemplateNoExampleForRoot,
                         &[("root", root.into())],
                     )))),
                 }
@@ -1174,31 +1191,37 @@ pub fn TemplatePage() -> impl IntoView {
             _ => {
                 let meta = &detail.meta;
                 let mut facts = vec![
-                    (tr(Msg::TemplateConcept), meta.concept.clone().into_any()),
-                    (tr(Msg::TemplateVersion), meta.version.clone().into_any()),
                     (
-                        tr(Msg::TemplateDefaultLanguage),
+                        tr(DefinitionsMsg::TemplateConcept),
+                        meta.concept.clone().into_any(),
+                    ),
+                    (
+                        tr(DefinitionsMsg::TemplateVersion),
+                        meta.version.clone().into_any(),
+                    ),
+                    (
+                        tr(DefinitionsMsg::TemplateDefaultLanguage),
                         meta.language.clone().into_any(),
                     ),
                     (
-                        tr(Msg::TemplateLanguages),
+                        tr(DefinitionsMsg::TemplateLanguages),
                         meta.languages.join(", ").into_any(),
                     ),
                     (
-                        tr(Msg::TemplateUid),
+                        tr(DefinitionsMsg::TemplateUid),
                         view! { <code>{meta.uid.clone()}</code> }.into_any(),
                     ),
                     (
-                        tr(Msg::ColumnRootArchetype),
+                        tr(DefinitionsMsg::ColumnRootArchetype),
                         view! { <code>{detail.catalog.node_id.clone()}</code> }.into_any(),
                     ),
                 ];
                 if let Some(uploaded) = uploaded {
-                    facts.push((tr(Msg::ColumnUploaded), when(&uploaded)));
+                    facts.push((tr(DefinitionsMsg::ColumnUploaded), when(&uploaded)));
                 }
                 let use_section = queryable.then(|| {
                     section(
-                        Some(tr(Msg::TemplateUse)),
+                        Some(tr(DefinitionsMsg::TemplateUse)),
                         None,
                         None,
                         view! {
@@ -1206,13 +1229,18 @@ pub fn TemplatePage() -> impl IntoView {
                                 <a href=query_href(
                                     &template_id,
                                     None,
-                                )>{tr(Msg::TemplateUseLine)}</a>
+                                )>{tr(DefinitionsMsg::TemplateUseLine)}</a>
                             </p>
                         },
                     )
                 });
                 panel(view! {
-                    {section(Some(tr(Msg::TemplateIdentity)), None, None, definitions(facts))}
+                    {section(
+                        Some(tr(DefinitionsMsg::TemplateIdentity)),
+                        None,
+                        None,
+                        definitions(facts),
+                    )}
                     {use_section}
                 })
             }
@@ -1227,7 +1255,7 @@ pub fn TemplatePage() -> impl IntoView {
             {template_header(
                 title,
                 tr_with(
-                    Msg::TemplateAdl14Subtitle,
+                    DefinitionsMsg::TemplateAdl14Subtitle,
                     &[("concept", detail.meta.concept.clone().into())],
                 ),
                 &template_id,
@@ -1238,7 +1266,7 @@ pub fn TemplatePage() -> impl IntoView {
             )}
             <div class="fui-stack">
                 {acted} {inline_confirm(TemplateFamily::Adl14, &template_id, &base)}
-                {binder(tr(Msg::TemplateViews), tabs, tab.key(), body)}
+                {binder(tr(DefinitionsMsg::TemplateViews), tabs, tab.key(), body)}
             </div>
             {delete_dialog(TemplateFamily::Adl14, &template_id, DELETE_DIALOG, &base)}
         }
@@ -1429,7 +1457,7 @@ pub fn Adl2TemplatePage() -> impl IntoView {
         let template = match model.await {
             Ok(Adl2Page::Read(template)) => *template,
             Ok(Adl2Page::Left) => return ().into_any(),
-            Err(error) => return refused(tr(Msg::TemplateRefused), &error, None),
+            Err(error) => return refused(tr(DefinitionsMsg::TemplateRefused), &error, None),
         };
         let Adl2Template {
             acted,
@@ -1449,7 +1477,7 @@ pub fn Adl2TemplatePage() -> impl IntoView {
         let after = if older {
             Some(info_note(view! {
                 {tr_with(
-                    Msg::TemplateReadingRelease,
+                    DefinitionsMsg::TemplateReadingRelease,
                     &[("release", release.clone().unwrap_or_default().into())],
                 )}
                 " "
@@ -1458,7 +1486,7 @@ pub fn Adl2TemplatePage() -> impl IntoView {
                     None,
                 )>
                     {tr_with(
-                        Msg::TemplateReadLatest,
+                        DefinitionsMsg::TemplateReadLatest,
                         &[("release", latest.clone().unwrap_or_default().into())],
                     )}
                 </a>
@@ -1483,7 +1511,7 @@ pub fn Adl2TemplatePage() -> impl IntoView {
                         action=adl2_href(&stem, None)
                     >
                         <label class="fui-label" for="ver">
-                            {tr(Msg::TemplateRelease)}
+                            {tr(DefinitionsMsg::TemplateRelease)}
                         </label>
                         <select id="ver" name="release" class="fui-select">
                             {options}
@@ -1510,26 +1538,33 @@ pub fn Adl2TemplatePage() -> impl IntoView {
             .collect();
         let body = match body {
             Adl2Body::Paths(catalog) => match catalog {
-                Ok(Some(root)) => {
-                    paths_panel(&hrid, &base, &root, Some(tr(Msg::TemplateAdl2Paths)))
-                }
-                Ok(None) => panel(plain_section(info_note(tr(Msg::TemplateNoCatalog)))),
+                Ok(Some(root)) => paths_panel(
+                    &hrid,
+                    &base,
+                    &root,
+                    Some(tr(DefinitionsMsg::TemplateAdl2Paths)),
+                ),
+                Ok(None) => panel(plain_section(info_note(tr(
+                    DefinitionsMsg::TemplateNoCatalog,
+                )))),
                 Err(error) => panel(plain_section(refused(
-                    tr(Msg::TemplateRefused),
+                    tr(DefinitionsMsg::TemplateRefused),
                     &error,
                     None,
                 ))),
             },
             Adl2Body::Source(source) => match source {
                 Ok(Some(source)) => panel(document_section(
-                    tr(Msg::TemplateSourceTitle),
+                    tr(DefinitionsMsg::TemplateSourceTitle),
                     Language::Plain,
                     source,
                     "template-source",
                 )),
-                Ok(None) => panel(plain_section(info_note(tr(Msg::TemplateNoSource)))),
+                Ok(None) => panel(plain_section(info_note(tr(
+                    DefinitionsMsg::TemplateNoSource,
+                )))),
                 Err(error) => panel(plain_section(refused(
-                    tr(Msg::TemplateRefused),
+                    tr(DefinitionsMsg::TemplateRefused),
                     &error,
                     None,
                 ))),
@@ -1537,16 +1572,18 @@ pub fn Adl2TemplatePage() -> impl IntoView {
             Adl2Body::Json(json) => match json {
                 Ok(Some(json)) => panel(document_section(
                     tr_with(
-                        Msg::TemplateJsonTitle,
+                        DefinitionsMsg::TemplateJsonTitle,
                         &[("release", release.clone().unwrap_or_default().into())],
                     ),
                     Language::Json,
                     json,
                     "template-json",
                 )),
-                Ok(None) => panel(plain_section(info_note(tr(Msg::TemplateNoSource)))),
+                Ok(None) => panel(plain_section(info_note(tr(
+                    DefinitionsMsg::TemplateNoSource,
+                )))),
                 Err(error) => panel(plain_section(refused(
-                    tr(Msg::TemplateRefused),
+                    tr(DefinitionsMsg::TemplateRefused),
                     &error,
                     None,
                 ))),
@@ -1560,43 +1597,60 @@ pub fn Adl2TemplatePage() -> impl IntoView {
                 example_panel(form, format, example)
             }
             Adl2Body::Overview => {
-                let mut facts = vec![(tr(Msg::TemplateConcept), title.clone().into_any())];
+                let mut facts = vec![(
+                    tr(DefinitionsMsg::TemplateConcept),
+                    title.clone().into_any(),
+                )];
                 if let Some(release) = &release {
-                    facts.push((tr(Msg::TemplateRelease), release.clone().into_any()));
+                    facts.push((
+                        tr(DefinitionsMsg::TemplateRelease),
+                        release.clone().into_any(),
+                    ));
                 }
                 if let Some(row) = &row {
                     facts.push((
-                        tr(Msg::ColumnRootArchetype),
+                        tr(DefinitionsMsg::ColumnRootArchetype),
                         view! { <code>{row.archetype_id.clone()}</code> }.into_any(),
                     ));
-                    facts.push((tr(Msg::ColumnUploaded), when(&row.created)));
+                    facts.push((tr(DefinitionsMsg::ColumnUploaded), when(&row.created)));
                 }
                 facts.push((
-                    tr(Msg::TemplateReleases),
+                    tr(DefinitionsMsg::TemplateReleases),
                     count_words(releases.len()).into_any(),
                 ));
                 panel(view! {
-                    {section(Some(tr(Msg::TemplateIdentity)), None, None, definitions(facts))}
                     {section(
-                        Some(tr(Msg::TemplateUse)),
+                        Some(tr(DefinitionsMsg::TemplateIdentity)),
+                        None,
+                        None,
+                        definitions(facts),
+                    )}
+                    {section(
+                        Some(tr(DefinitionsMsg::TemplateUse)),
                         None,
                         None,
                         view! {
                             <p>
-                                <a href=query_href(&hrid, None)>{tr(Msg::TemplateUseLine)}</a>
+                                <a href=query_href(
+                                    &hrid,
+                                    None,
+                                )>{tr(DefinitionsMsg::TemplateUseLine)}</a>
                             </p>
                         },
                     )}
                 })
             }
         };
-        let subtitle = tr_with(Msg::TemplateAdl2Subtitle, &[("hrid", hrid.clone().into())]);
+        let subtitle = tr_with(
+            DefinitionsMsg::TemplateAdl2Subtitle,
+            &[("hrid", hrid.clone().into())],
+        );
         view! {
             <Title text=title.clone() />
             {template_header(title, subtitle, &hrid, TemplateFamily::Adl2, download, after, true)}
             <div class="fui-stack">
                 {acted} {inline_confirm(TemplateFamily::Adl2, &hrid, &base)}
-                {binder(tr(Msg::TemplateViews), tab_list, tab.key(), body)}
+                {binder(tr(DefinitionsMsg::TemplateViews), tab_list, tab.key(), body)}
             </div>
             {delete_dialog(TemplateFamily::Adl2, &hrid, DELETE_DIALOG, &base)}
         }
@@ -1607,5 +1661,8 @@ pub fn Adl2TemplatePage() -> impl IntoView {
 
 /// The words counting the releases of an ADL 2 template.
 fn count_words(total: usize) -> String {
-    tr_with(Msg::TemplateReleaseCount, &[("count", count(total))])
+    tr_with(
+        DefinitionsMsg::TemplateReleaseCount,
+        &[("count", count(total))],
+    )
 }

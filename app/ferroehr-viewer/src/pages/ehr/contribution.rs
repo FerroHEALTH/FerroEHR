@@ -51,6 +51,7 @@ use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
 use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
+use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, message, tr, tr_with};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::pages::common::discarded;
@@ -91,9 +92,9 @@ fn activity(days: Result<LastDays, Refused>) -> AnyView {
         .unwrap_or(0);
     let chart = ActivityChart {
         name: "contributions-per-day",
-        label: tr(Msg::ContributionsPerDay),
+        label: tr(RecordsMsg::ContributionsPerDay),
         summary: tr_with(
-            Msg::ContributionsPerDaySummary,
+            RecordsMsg::ContributionsPerDaySummary,
             &[
                 ("total", u64::from(total).into()),
                 ("most", u64::from(most).into()),
@@ -110,10 +111,10 @@ fn activity(days: Result<LastDays, Refused>) -> AnyView {
 /// The contributions of one page, as a table.
 fn listing(ehr_id: &str, page: &Listed) -> AnyView {
     let columns = [
-        Column::text("contribution", tr(Msg::ColumnContribution)).role(Role::Title),
-        Column::text("committed", tr(Msg::ColumnCommitted)).role(Role::Sub),
-        Column::text("committer", tr(Msg::ColumnCommitter)).role(Role::Meta),
-        Column::text("change", tr(Msg::ColumnChange)).role(Role::Meta),
+        Column::text("contribution", tr(RecordsMsg::ColumnContribution)).role(Role::Title),
+        Column::text("committed", tr(RecordsMsg::ColumnCommitted)).role(Role::Sub),
+        Column::text("committer", tr(RecordsMsg::ColumnCommitter)).role(Role::Meta),
+        Column::text("change", tr(RecordsMsg::ColumnChange)).role(Role::Meta),
     ];
     let rows = page
         .rows
@@ -128,7 +129,7 @@ fn listing(ehr_id: &str, page: &Listed) -> AnyView {
         })
         .collect_view()
         .into_any();
-    let caption = tr(Msg::EhrTabContributions);
+    let caption = tr(RecordsMsg::EhrTabContributions);
     data_table(DataTable {
         caption: &caption,
         columns: &columns,
@@ -146,8 +147,8 @@ fn change_words(rubric: &str) -> String {
         "amendment" => tr(Msg::ChangeAmendment),
         "modification" => tr(Msg::ChangeModification),
         "deleted" => tr(Msg::ChangeDeleted),
-        "attestation" => tr(Msg::ChangeAttestation),
-        "synthesis" => tr(Msg::ChangeSynthesis),
+        "attestation" => tr(RecordsMsg::ChangeAttestation),
+        "synthesis" => tr(RecordsMsg::ChangeSynthesis),
         other => other.to_owned(),
     }
 }
@@ -198,11 +199,11 @@ async fn read_tab(ehr_id: String) -> EhrModel<ContributionsPanel> {
         let activity = contribution_activity(ehr_id.clone())
             .await
             .map(|points| crate::pages::common::last_days(&points, ACTIVITY_DAYS))
-            .map_err(|error| Refused::new(tr(Msg::ContributionsActivityRefused), error));
+            .map_err(|error| Refused::new(tr(RecordsMsg::ContributionsActivityRefused), error));
         let list = page_of(&ehr_id, crate::paging::current(Listing::Contributions))
             .await
             .map(|(page, _)| page)
-            .map_err(|error| Refused::new(tr(Msg::ContributionsRefused), error));
+            .map_err(|error| Refused::new(tr(RecordsMsg::ContributionsRefused), error));
         ContributionsPanel { activity, list }
     })
     .await
@@ -214,17 +215,17 @@ fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> AnyView {
     let chart = self::activity(activity);
     let list = match list {
         Ok(page) if page.total == 0 => section(
-            Some(tr(Msg::EhrTabContributions)),
+            Some(tr(RecordsMsg::EhrTabContributions)),
             Some(0),
             None,
-            list_empty(tr(Msg::ContributionsEmpty), None),
+            list_empty(tr(RecordsMsg::ContributionsEmpty), None),
         ),
         Ok(page) => {
             let window = Window::over(page.total, crate::paging::current(Listing::Contributions));
             let fields = crate::paging::fields(Listing::Contributions);
             let pager = (window.pages > 1).then(|| {
                 post_pager(
-                    PagerListing::new(tr(Msg::ContributionsPages)),
+                    PagerListing::new(tr(RecordsMsg::ContributionsPages)),
                     window,
                     PostTo {
                         id: "contributions-pager",
@@ -234,7 +235,7 @@ fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> AnyView {
                 )
             });
             section(
-                Some(tr(Msg::EhrTabContributions)),
+                Some(tr(RecordsMsg::EhrTabContributions)),
                 Some(u64::from(page.total)),
                 None,
                 view! {
@@ -244,14 +245,14 @@ fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> AnyView {
             )
         }
         Err(refusal) => section(
-            Some(tr(Msg::EhrTabContributions)),
+            Some(tr(RecordsMsg::EhrTabContributions)),
             None,
             None,
             refusal.view(),
         ),
     };
     panel(view! {
-        {section(Some(tr(Msg::ContributionsPerDayTitle)), None, None, chart)}
+        {section(Some(tr(RecordsMsg::ContributionsPerDayTitle)), None, None, chart)}
         {list}
     })
 }
@@ -265,7 +266,7 @@ fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> AnyView {
 pub fn ContributionsTab() -> impl IntoView {
     let ehr_id = ehr_id_param();
     let title = tr_with(
-        Msg::ContributionsTitle,
+        RecordsMsg::ContributionsTitle,
         &[("id", shortened(&ehr_id).into())],
     );
     let model = page_model!(load_tab(ehr_id.clone()));
@@ -356,7 +357,7 @@ fn read(body: &str) -> Result<Read, serde_json::Error> {
 /// The versions a contribution made, as a table.
 fn made_table(ehr_id: &str, made: &[Made]) -> AnyView {
     let columns = [
-        Column::text("object", tr(Msg::ColumnObject)).role(Role::Title),
+        Column::text("object", tr(RecordsMsg::ColumnObject)).role(Role::Title),
         Column::text("kind", tr(Msg::ColumnKind)).role(Role::Sub),
         Column::text("version", tr(Msg::ColumnVersion)).role(Role::Meta),
     ];
@@ -373,7 +374,7 @@ fn made_table(ehr_id: &str, made: &[Made]) -> AnyView {
         })
         .collect_view()
         .into_any();
-    let caption = tr(Msg::ContributionVersions);
+    let caption = tr(RecordsMsg::ContributionVersions);
     data_table(DataTable {
         caption: &caption,
         columns: &columns,
@@ -419,7 +420,10 @@ async fn read_contribution(ehr_id: String, uid: String) -> ContributionModel {
             if crate::pages::common::is_status(&error, http::StatusCode::NOT_FOUND) {
                 crate::request::set_status(http::StatusCode::NOT_FOUND);
             }
-            return ContributionModel::Refused(Refused::new(tr(Msg::ContributionRefused), error));
+            return ContributionModel::Refused(Refused::new(
+                tr(RecordsMsg::ContributionRefused),
+                error,
+            ));
         }
     };
     match read(&body) {
@@ -428,9 +432,9 @@ async fn read_contribution(ehr_id: String, uid: String) -> ContributionModel {
             crate::bff::pretty_body(&body, crate::format::ReprFormat::CanonicalJson),
         ),
         Err(error) => ContributionModel::Refused(Refused::new(
-            tr(Msg::ContributionRefused),
+            tr(RecordsMsg::ContributionRefused),
             ViewerError::Internal(tr_with(
-                Msg::ContributionsJson,
+                RecordsMsg::ContributionsJson,
                 &[("e", error.to_string().into())],
             )),
         )),
@@ -440,28 +444,34 @@ async fn read_contribution(ehr_id: String, uid: String) -> ContributionModel {
 /// One contribution's audit, the versions it made and its record.
 fn contribution_view(ehr_id: &str, facts: &Read, record: String) -> AnyView {
     let mut rows = vec![
-        (tr(Msg::FactCommitted), when(&facts.committed)),
-        (tr(Msg::FactCommitter), facts.committer.clone().into_any()),
-        (tr(Msg::FactChange), change_words(&facts.change).into_any()),
+        (tr(RecordsMsg::FactCommitted), when(&facts.committed)),
+        (
+            tr(RecordsMsg::FactCommitter),
+            facts.committer.clone().into_any(),
+        ),
+        (
+            tr(RecordsMsg::FactChange),
+            change_words(&facts.change).into_any(),
+        ),
     ];
     if let Some(description) = facts.description.clone() {
-        rows.push((tr(Msg::FactDescription), description.into_any()));
+        rows.push((tr(RecordsMsg::FactDescription), description.into_any()));
     }
     rows.push((
-        tr(Msg::FactSystem),
+        tr(RecordsMsg::FactSystem),
         view! { <code>{facts.system.clone()}</code> }.into_any(),
     ));
     let made = u64::try_from(facts.made.len()).unwrap_or(u64::MAX);
     card_panel(view! {
-        {section(Some(tr(Msg::ContributionAudit)), None, None, definitions(rows))}
+        {section(Some(tr(RecordsMsg::ContributionAudit)), None, None, definitions(rows))}
         {section(
-            Some(tr(Msg::ContributionVersions)),
+            Some(tr(RecordsMsg::ContributionVersions)),
             Some(made),
             None,
             made_table(ehr_id, &facts.made),
         )}
         {document_section(
-            tr(Msg::ContributionRecord),
+            tr(RecordsMsg::ContributionRecord),
             Language::Json,
             record,
             "contribution-record",
@@ -480,16 +490,19 @@ pub fn ContributionPage() -> impl IntoView {
     let uid = crate::routes::params()
         .with(|params| params.get("uid"))
         .unwrap_or_default();
-    let title = tr_with(Msg::ContributionTitle, &[("id", shortened(&uid).into())]);
+    let title = tr_with(
+        RecordsMsg::ContributionTitle,
+        &[("id", shortened(&uid).into())],
+    );
     let mut trail = crumbs(&ehr_id);
     trail.push(Crumb::new(
-        tr(Msg::EhrTabContributions),
+        tr(RecordsMsg::EhrTabContributions),
         tab_href(&ehr_id, EhrTab::Contributions),
     ));
     let heading = page_heading(
         Header {
             title: title.clone().into(),
-            subtitle: Some(tr(Msg::ContributionSubtitle).into()),
+            subtitle: Some(tr(RecordsMsg::ContributionSubtitle).into()),
             crumbs: trail,
             mono: false,
             badge: None,
@@ -578,7 +591,7 @@ impl Draft {
                 )
             }
             StagedKind::CompositionAmend => shortened(&self.target),
-            StagedKind::StatusModify => tr(Msg::EhrTabStatus),
+            StagedKind::StatusModify => tr(RecordsMsg::EhrTabStatus),
         };
         StagedChange {
             seq: u32::from(self.number),
@@ -647,7 +660,7 @@ async fn fill(ehr_id: &str, draft: &mut Draft) -> Option<Refused> {
                     );
                     None
                 }
-                Err(error) => Some(Refused::new(tr(Msg::StatusRefused), error)),
+                Err(error) => Some(Refused::new(tr(RecordsMsg::StatusRefused), error)),
             }
         }
         StagedKind::CompositionAmend if !draft.target.is_empty() => {
@@ -669,7 +682,10 @@ async fn fill(ehr_id: &str, draft: &mut Draft) -> Option<Refused> {
                     None
                 }
                 Ok(None) => None,
-                Err(error) => Some(Refused::new(tr(Msg::ContributionCompositionRefused), error)),
+                Err(error) => Some(Refused::new(
+                    tr(RecordsMsg::ContributionCompositionRefused),
+                    error,
+                )),
             }
         }
         _ => None,
@@ -679,9 +695,9 @@ async fn fill(ehr_id: &str, draft: &mut Draft) -> Option<Refused> {
 /// The choices of what a change is.
 fn kind_options(kind: StagedKind) -> AnyView {
     [
-        (StagedKind::CompositionCreate, Msg::StagedCreate),
-        (StagedKind::CompositionAmend, Msg::StagedAmend),
-        (StagedKind::StatusModify, Msg::StagedStatus),
+        (StagedKind::CompositionCreate, RecordsMsg::StagedCreate),
+        (StagedKind::CompositionAmend, RecordsMsg::StagedAmend),
+        (StagedKind::StatusModify, RecordsMsg::StagedStatus),
     ]
     .into_iter()
     .map(|(option, words)| {
@@ -724,7 +740,7 @@ fn own_field(draft: &Draft, choices: &Choices) -> AnyView {
                 .collect_view();
             Field::new(id("template"), tr(Msg::FilterTemplate)).view(view! {
                 <select id=id("template") name=id("template") class="fui-select">
-                    <option value="">{tr(Msg::StagedFromDocument)}</option>
+                    <option value="">{tr(RecordsMsg::StagedFromDocument)}</option>
                     {options}
                 </select>
             })
@@ -741,11 +757,11 @@ fn own_field(draft: &Draft, choices: &Choices) -> AnyView {
                     }
                 })
                 .collect_view();
-            Field::new(id("target"), tr(Msg::StagedComposition))
-                .help(tr(Msg::StagedCompositionHelp))
+            Field::new(id("target"), tr(RecordsMsg::StagedComposition))
+                .help(tr(RecordsMsg::StagedCompositionHelp))
                 .view(view! {
                     <select id=id("target") name=id("target") class="fui-select">
-                        <option value="">{tr(Msg::StagedPick)}</option>
+                        <option value="">{tr(RecordsMsg::StagedPick)}</option>
                         {options}
                     </select>
                 })
@@ -753,7 +769,7 @@ fn own_field(draft: &Draft, choices: &Choices) -> AnyView {
         StagedKind::StatusModify => view! {
             <p class="fui-small fui-muted">
                 {tr_with(
-                    Msg::StagedStatusFrom,
+                    RecordsMsg::StagedStatusFrom,
                     &[("version", version_number(&draft.preceding).into())],
                 )}
             </p>
@@ -773,9 +789,9 @@ fn change_section(
     let number = draft.number;
     let id = |name: &str| format!("{name}-{number}");
     let change_type = draft.kind.default_change_type();
-    let kind = Field::new(id("kind"), tr(Msg::StagedWhat))
+    let kind = Field::new(id("kind"), tr(RecordsMsg::StagedWhat))
         .help(tr_with(
-            Msg::StagedRecordedAs,
+            RecordsMsg::StagedRecordedAs,
             &[("change", change_words(change_type.rubric()).into())],
         ))
         .view(field_row(
@@ -802,8 +818,8 @@ fn change_section(
                 text: draft.body.clone(),
                 opened: None,
                 marks: Vec::new(),
-                label: tr_with(Msg::StagedDocument, &[("number", u64::from(number).into())]),
-                lead: tr(Msg::EditorJson),
+                label: tr_with(RecordsMsg::StagedDocument, &[("number", u64::from(number).into())]),
+                lead: tr(RecordsMsg::EditorJson),
                 facts: vec![tr(Msg::EditorUtf8)],
                 findings: None,
             }
@@ -818,7 +834,10 @@ fn change_section(
                 name="intent"
                 value=format!("remove:{number}")
                 class="fui-icon-button"
-                aria-label=tr_with(Msg::StagedRemove, &[("number", u64::from(number).into())])
+                aria-label=tr_with(
+                    RecordsMsg::StagedRemove,
+                    &[("number", u64::from(number).into())],
+                )
             >
                 {ferrohealth_ui::icon::icon(Glyph::X, "16")}
             </button>
@@ -826,7 +845,7 @@ fn change_section(
         .into_any()
     });
     let title = tr_with(
-        Msg::StagedTitle,
+        RecordsMsg::StagedTitle,
         &[
             ("number", u64::from(number).into()),
             ("what", draft.staged().target.into()),
@@ -978,15 +997,18 @@ async fn read_new(ehr_id: String) -> NewModel {
                 };
                 redirect_with(
                     &href,
-                    &Done::ok(tr(Msg::ContributionCommitted)).line(tr_with(
-                        Msg::ContributionMadeVersions,
+                    &Done::ok(tr(RecordsMsg::ContributionCommitted)).line(tr_with(
+                        RecordsMsg::ContributionMadeVersions,
                         &[("count", count(outcome.version_uids.len()))],
                     )),
                 );
                 return NewModel::Left;
             }
             Err(error) => {
-                refused = Some(Refused::new(tr(Msg::ContributionCommitRefused), error));
+                refused = Some(Refused::new(
+                    tr(RecordsMsg::ContributionCommitRefused),
+                    error,
+                ));
             }
         }
     }
@@ -994,7 +1016,10 @@ async fn read_new(ehr_id: String) -> NewModel {
         Ok(choices) => (choices, None),
         Err(error) => (
             Choices::default(),
-            Some(Refused::new(tr(Msg::ContributionChoicesRefused), error)),
+            Some(Refused::new(
+                tr(RecordsMsg::ContributionChoicesRefused),
+                error,
+            )),
         ),
     };
     NewModel::Form(Box::new(NewForm {
@@ -1021,11 +1046,11 @@ fn new_form(ehr_id: &str, form: NewForm) -> AnyView {
         .map(|session| session.identity)
         .unwrap_or_default();
     let line = if refused.is_some() {
-        (Glyph::CIRCLE_X, tr(Msg::ContributionNotCommitted))
+        (Glyph::CIRCLE_X, tr(RecordsMsg::ContributionNotCommitted))
     } else {
         (
             Glyph::GIT_COMMIT,
-            tr_with(Msg::StagedCount, &[("count", count(drafts.len()))]),
+            tr_with(RecordsMsg::StagedCount, &[("count", count(drafts.len()))]),
         )
     };
     let staged = drafts.len();
@@ -1044,7 +1069,7 @@ fn new_form(ehr_id: &str, form: NewForm) -> AnyView {
                     class="fui-button fui-button-ghost fui-button-small"
                 >
                     {ferrohealth_ui::icon::icon(Glyph::PLUS, "14")}
-                    {tr(Msg::StagedStage)}
+                    {tr(RecordsMsg::StagedStage)}
                 </button>
             </div>
         }
@@ -1052,7 +1077,7 @@ fn new_form(ehr_id: &str, form: NewForm) -> AnyView {
     let audit = view! {
         <div class="fui-form-grid">
             <div class="fui-span-2">
-                {Field::new("au-d", tr(Msg::FactDescription))
+                {Field::new("au-d", tr(RecordsMsg::FactDescription))
                     .view(
                         view! {
                             <input
@@ -1066,7 +1091,7 @@ fn new_form(ehr_id: &str, form: NewForm) -> AnyView {
                     )}
             </div>
             <div class="fui-span-2">
-                {Field::new("au-c", tr(Msg::FactCommitter))
+                {Field::new("au-c", tr(RecordsMsg::FactCommitter))
                     .view(
                         view! {
                             <input
@@ -1076,7 +1101,7 @@ fn new_form(ehr_id: &str, form: NewForm) -> AnyView {
                                 class="fui-input"
                                 value=committer
                                 placeholder=tr_with(
-                                    Msg::ContributionCommitterPlaceholder,
+                                    RecordsMsg::ContributionCommitterPlaceholder,
                                     &[("name", you.clone().into())],
                                 )
                             />
@@ -1089,7 +1114,7 @@ fn new_form(ehr_id: &str, form: NewForm) -> AnyView {
         form: NEW_FORM.to_owned(),
         line: line.1,
         glyph: line.0,
-        save: tr_with(Msg::ContributionCommit, &[("count", count(staged))]),
+        save: tr_with(RecordsMsg::ContributionCommit, &[("count", count(staged))]),
         blocked: None,
     });
     view! {
@@ -1100,7 +1125,7 @@ fn new_form(ehr_id: &str, form: NewForm) -> AnyView {
                 view! {
                     {sections}
                     {crate::pages::common::plain_section(stage)}
-                    {section(Some(tr(Msg::ContributionNewAudit)), None, None, audit)}
+                    {section(Some(tr(RecordsMsg::ContributionNewAudit)), None, None, audit)}
                 },
             )}
         </form>
@@ -1126,11 +1151,11 @@ pub fn NewContributionPage() -> impl IntoView {
         }
     });
     let heading = editor_heading(
-        message(Msg::ContributionNewTitle),
+        message(RecordsMsg::ContributionNewTitle),
         &Mode::Creating,
         Header {
             title: String::new().into(),
-            subtitle: Some(tr(Msg::ContributionNewSubtitle).into()),
+            subtitle: Some(tr(RecordsMsg::ContributionNewSubtitle).into()),
             crumbs: crumbs(&ehr_id),
             mono: false,
             badge: None,
@@ -1139,7 +1164,7 @@ pub fn NewContributionPage() -> impl IntoView {
         ActionGroup::none(),
     );
     view! {
-        <Title text=tr(Msg::ContributionNewTitle) />
+        <Title text=tr(RecordsMsg::ContributionNewTitle) />
         {heading}
         <div class="fui-stack">{body}</div>
     }

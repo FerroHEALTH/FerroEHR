@@ -41,6 +41,8 @@ use crate::error::ViewerError;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::locale::Msg;
 #[cfg(not(target_arch = "wasm32"))]
+use crate::locale::records::RecordsMsg;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
 
 /// The demographic tag index (`GET /demographic/tags`), optionally filtered.
@@ -101,7 +103,7 @@ pub async fn fetch_party_tags(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     read_party_tags(&state, &session.credential, kind, &uid).await
 }
 
@@ -159,7 +161,7 @@ pub async fn set_party_tag(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     if key.trim().is_empty() {
         return Err(ViewerError::Invalid(
             { tr_served(Msg::TagKeyRequiredItemTagInvariant) }.clone(),
@@ -216,7 +218,7 @@ pub async fn delete_party_tag(
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
     let kind = PartyKind::from_segment(&kind)
-        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(Msg::PartyKind)))?;
+        .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let key = key.trim();
     if key.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::TagKeyRequired)));

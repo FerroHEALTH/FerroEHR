@@ -93,9 +93,10 @@ copy.
 - **Preferences are cookies** (`crate::prefs`, FerroUI's `Preferences`), each
   its own, read when a page is drawn. The theme is set in the user menu and on
   Your preferences, never in the top bar.
-- **Words come from the catalog** (`locales/en/ferroehr-viewer.ftl` through
-  `crate::locale::Msg`); `scripts/checks/stray-literals.sh` fails a literal a
-  reader sees. Numbers format through FerroUI's formatter.
+- **Words come from the catalogs** (`locales/<part>/en/<part>.ftl`, the
+  shell's through `crate::locale::Msg` and each route group's through its
+  own type in `crate::locale::<part>`, `.claude/rules/leptos-ui.md` §8);
+  `scripts/checks/stray-literals.sh` fails a literal a reader sees. Numbers format through FerroUI's formatter.
 
 ## The components are FerroUI's
 
