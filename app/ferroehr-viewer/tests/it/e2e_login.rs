@@ -117,7 +117,7 @@ async fn hydration_attaches_interactivity() {
     login_basic(&h).await;
     h.shot(1, "shell-before-toggle").await;
     // The browser opens the user menu's popover by itself; only the hydrated
-    // island says so on the button (`aria-expanded`), so that attribute is
+    // component says so on the button (`aria-expanded`), so that attribute is
     // the proof the WebAssembly attached.
     let user_button = h.wait_css("button[popovertarget='user-menu']").await;
     user_button.click().await;

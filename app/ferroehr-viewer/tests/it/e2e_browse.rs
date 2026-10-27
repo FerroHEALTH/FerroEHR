@@ -97,7 +97,7 @@ async fn template_upload_lists_and_inspects_path_catalog() {
     h.wait_css("ul.fui-tree[role='tree'] li[role='treeitem']")
         .await;
     h.wait_hydrated().await;
-    // The tree is a lazy island whose chunk loads after the page hydrates:
+    // The tree hydrates with the page and its lazy group:
     // its toggles are disabled in the server's HTML and come alive with it,
     // and a collapsed branch then opens on a click.
     let toggle = h

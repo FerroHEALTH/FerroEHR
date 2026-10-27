@@ -2062,7 +2062,7 @@ jobs:
           # cargo-leptos resolves its external tools from PATH before its
           # own downloader (which failed opaque on a runner), so it is
           # preinstalled deterministically.
-          tool: cargo-nextest,cargo-leptos@0.3.7,wasm-bindgen@0.2.129
+          tool: cargo-nextest,cargo-leptos@0.3.11,wasm-bindgen@0.2.129
       - name: Build the viewer + archive the e2e test binaries
         if: steps.viewer-cache.outputs.cache-hit != 'true'
         env:
