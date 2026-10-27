@@ -1136,7 +1136,7 @@ server_tls_gate() {
 viewer-url|https://${RELEASE_NAME}:8080
 viewer-management-url|https://${RELEASE_NAME}:8080/management
 bridge-url|https://${RELEASE_NAME}:8080/ferroehr/rest/openehr/v1
-viewer-certdir|/etc/ssl/certs:/etc/ferroehr-cdr-ca
+viewer-trust-roots|/etc/ferroehr-cdr-ca/ca.crt
 bridge-certdir|/etc/ssl/certs:/etc/ferroehr-cdr-ca
 viewer-ca-secret|ferroehr-server-ca
 bridge-ca-secret|ferroehr-server-ca
@@ -1168,7 +1168,7 @@ ingress-backend-protocol|absent
 CLAIMS
   [[ "$(grep -c -xF "probe-scheme HTTP" <<<"$facts")" -eq 3 ]] \
     || { red "  TLS off: the server's three probes do not all use scheme HTTP"; missing=1; }
-  ! grep -qE '^(viewer|bridge)-(certdir|ca-secret|ca-mount) ' <<<"$facts" \
+  ! grep -qE '^(viewer|bridge)-(certdir|trust-roots|ca-secret|ca-mount) ' <<<"$facts" \
     || { red "  TLS off: a client still mounts or names the CDR CA"; missing=1; }
   rm -f "$on" "$off"
   if [[ "$missing" -eq 0 ]]; then
@@ -1219,6 +1219,47 @@ viewer_management_gate() {
   fi
 }
 viewer_management_gate
+
+# ── The viewer trusts a private issuer CA only when one is named ────────────
+# viewer.auth.oidc.caExistingSecret mounts the Secret's key as a file and names
+# it in `[auth.oidc.tls] trust_roots_file`; unset, neither the variable nor the
+# volume renders. Both halves are read from the render.
+viewer_oidc_ca_gate() {
+  bold "── viewer: the issuer's CA when one is named ───────────"
+  local viewer="${CI_DIR}/viewer-values.yaml" render wrong=0 roots volume secret
+  local -a oidc=(--set viewer.auth.oidc.enabled=true
+                 --set viewer.auth.oidc.issuer=https://issuer.example/realms/ferroehr
+                 --set viewer.auth.oidc.clientId=ferroehr
+                 --set viewer.auth.oidc.publicBaseUrl=https://viewer.example)
+  for secret in "" issuer-ca; do
+    local -a extra=("${oidc[@]}")
+    [[ -z "$secret" ]] || extra+=(--set "viewer.auth.oidc.caExistingSecret=${secret}")
+    if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$viewer" \
+                   "${extra[@]}" -s templates/viewer.yaml 2>&1)"; then
+      red "  viewer: the OIDC overlay no longer renders${secret:+ with caExistingSecret=$secret}:"
+      printf '%s\n' "$render" | head -4
+      FAIL=1
+      return
+    fi
+    roots="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.containers[0].env[] | select(.name == "FERROEHR_VIEWER__AUTH__OIDC__TLS__TRUST_ROOTS_FILE") | .value')"
+    volume="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.volumes[] | select(.name == "oidc-ca") | .secret.secretName')"
+    if [[ -z "$secret" ]]; then
+      [[ -z "$roots" && -z "$volume" ]] \
+        || { red "  viewer, no CA named: the issuer CA still renders ('${roots}', '${volume}')"; wrong=1; }
+    else
+      [[ "$roots" == "/etc/ferroehr-viewer-oidc-ca/ca.crt" ]] \
+        || { red "  viewer, CA named: trust_roots_file is '${roots}', not /etc/ferroehr-viewer-oidc-ca/ca.crt"; wrong=1; }
+      [[ "$volume" == "$secret" ]] \
+        || { red "  viewer, CA named: the oidc-ca volume reads '${volume}', not ${secret}"; wrong=1; }
+    fi
+  done
+  if [[ "$wrong" -eq 0 ]]; then
+    echo "  viewer: the issuer's CA is mounted and named only when viewer.auth.oidc.caExistingSecret is set"
+  else
+    FAIL=1
+  fi
+}
+viewer_oidc_ca_gate
 
 for case in "${CASES[@]}"; do
   label="${case%%:*}"

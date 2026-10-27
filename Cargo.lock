@@ -2772,12 +2772,14 @@ dependencies = [
  "anyhow",
  "axum",
  "base64 0.23.1",
+ "clap",
  "console_error_panic_hook",
  "cookie",
  "csv",
  "ferrohealth-config",
  "ferrohealth-health",
  "ferrohealth-secret",
+ "ferrohealth-server",
  "ferrohealth-ui",
  "fluent-templates",
  "futures",
@@ -2793,6 +2795,7 @@ dependencies = [
  "openehr-query",
  "openehr-sdt 0.0.108",
  "openidconnect",
+ "rcgen",
  "reqwest",
  "secrecy",
  "serde",
@@ -2804,6 +2807,7 @@ dependencies = [
  "tower-http 0.7.1",
  "tracing",
  "tracing-subscriber",
+ "url",
  "urlencoding",
  "wasm-bindgen",
 ]
@@ -2890,6 +2894,7 @@ dependencies = [
  "tower",
  "tower-http 0.7.1",
  "tracing",
+ "url",
  "uuid",
 ]
 

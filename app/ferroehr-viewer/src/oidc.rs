@@ -9,9 +9,10 @@
 //!
 //! The issuer is reached through the workspace `reqwest`, whose `rustls`
 //! backend verifies against the platform trust store
-//! (`rustls-platform-verifier`) exactly as the CDR client does, so an issuer
-//! behind a private CA mounted into that store (or named by `SSL_CERT_DIR` /
-//! `SSL_CERT_FILE`) is trusted. No openEHR spec governs this — our own
+//! (`rustls-platform-verifier`) exactly as the CDR client does, with the
+//! extra roots and the client identity `[auth.oidc.tls]` names
+//! (`ferrohealth_server::tls_client`), so an issuer behind a private CA is
+//! trusted on every platform. No openEHR spec governs this — our own
 //! design/extension.
 
 use std::future::Future;
@@ -93,15 +94,35 @@ pub struct LoginParams {
 
 /// Runs OIDC discovery against the configured issuer.
 ///
-/// The issuer is reached over the platform trust store (module docs), never
-/// following redirects, and through the `resolve` override when one is
-/// configured.
+/// The issuer is reached over the platform trust store and `[auth.oidc.tls]`
+/// (module docs), never following redirects, and through the `resolve`
+/// override when one is configured.
 ///
 /// # Errors
-/// `anyhow::Error` on an unreachable/invalid issuer (boot-time failure —
-/// the binary refuses to start with a broken OIDC config).
+/// `anyhow::Error` on an unreachable/invalid issuer or `[auth.oidc.tls]`
+/// material that does not read (boot-time failure — the binary refuses to
+/// start with a broken OIDC config).
 pub async fn discover(config: &OidcConfig) -> anyhow::Result<OidcState> {
-    let mut builder = reqwest::Client::builder().redirect(reqwest::redirect::Policy::none()); // SSRF hardening
+    let http = OidcHttpClient(issuer_client(config)?);
+    let issuer = openidconnect::IssuerUrl::new(config.issuer.clone())?;
+    let metadata = openidconnect::core::CoreProviderMetadata::discover_async(issuer, &http).await?;
+    Ok(OidcState {
+        metadata,
+        http,
+        config: config.clone(),
+    })
+}
+
+/// The HTTP client that reaches the issuer: `[auth.oidc.tls]` over the
+/// platform roots, no redirect, and the `resolve` override.
+///
+/// # Errors
+/// `anyhow::Error` when the TLS material does not read, `resolve` is not
+/// `host=ip:port`, or the client refuses its settings.
+pub fn issuer_client(config: &OidcConfig) -> anyhow::Result<reqwest::Client> {
+    let tls = ferrohealth_server::tls_client::TlsClient::read("auth.oidc.tls", &config.tls)?;
+    let mut builder =
+        tls.apply(reqwest::Client::builder().redirect(reqwest::redirect::Policy::none()))?; // SSRF hardening
     // Split-horizon issuer resolution (`host=ip:port`): the canonical
     // issuer hostname may only resolve inside a container network; the
     // override points this client at the mapped address while every URL
@@ -113,14 +134,7 @@ pub async fn discover(config: &OidcConfig) -> anyhow::Result<OidcState> {
             .ok_or_else(|| anyhow::anyhow!("auth.oidc.resolve must be `host=ip:port`"))?;
         builder = builder.resolve(host.trim(), addr.trim().parse()?);
     }
-    let http = OidcHttpClient(builder.build()?);
-    let issuer = openidconnect::IssuerUrl::new(config.issuer.clone())?;
-    let metadata = openidconnect::core::CoreProviderMetadata::discover_async(issuer, &http).await?;
-    Ok(OidcState {
-        metadata,
-        http,
-        config: config.clone(),
-    })
+    Ok(builder.build()?)
 }
 
 impl OidcState {
