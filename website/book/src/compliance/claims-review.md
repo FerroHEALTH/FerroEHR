@@ -443,6 +443,7 @@ cut, after the texts in scope have been read.
 | 2026-10-24 | 5.4.0, after `de38ec433` | none | nothing |
 | 2026-10-24 | 5.4.1, after `9fdd36091` | 2 claims, in two book pages: the compliance index named `[terminology.external]` and a terminology route, and the crates page pinned `0.0.97` | nothing |
 | 2026-10-25 | 5.4.2, after `2333f98ba` | none; the changes of this release updated their own pages in the pull requests that made them | nothing |
+| 2026-10-27 | 5.5.0, after `0af3c232d` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4195 | the conformance chapter bars still count the CNF TDD cases, which only a new measured run removes (#4204) |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -634,3 +635,47 @@ Nothing at the cut: each change above updated its page in its own pull request.
 ### Left open on 2026-10-25, for 5.4.2
 
 Nothing.
+
+## The review of 2026-10-27, for 5.5.0
+
+Read on the tree after commit `0af3c232d`, for FerroEHR 5.5.0. The facts of
+this release checked in every text in scope: the server and the viewer run on
+the family's `ferrohealth-server`, `ferrohealth-config`, `ferrohealth-telemetry`,
+`ferrohealth-smart`, `ferrohealth-authz` and `ferrohealth-secret` crates, with
+the renamed and retired configuration keys under Changed and Removed (#4087,
+#4038, #4028, #4139, #4214); the EHR index asks an IHE patient identity source
+over PIXm by default (#3380); opaque access tokens are checked by introspection
+(#4033); `[auth] ca_file` trusts a private issuer CA (#4238); the audit trail is
+delivered and retrieved through `ihe-atna` and carries the data permit (#4029,
+#4030, #4120); Template Data Document import is removed (#4199); the quickstart
+Keycloak overlay trusts its CA through `ca_file` and signs the viewer in
+(#4236, #4243); chart 19.3.0 with `appVersion` 5.5.0.
+
+### Changed on 2026-10-27, for 5.5.0
+
+- **The hazard log**: H2 named `ehr_id_from_various_paths`, which #4195
+  replaced with `ehr_id_from_the_matched_route`; the log names the new test.
+
+### Read and kept on 2026-10-27, for 5.5.0
+
+- **The configuration pages**: [the server configuration](../installation/config-server.md),
+  [authentication](../installation/config-auth.md), [security](../security.md) and
+  the [viewer](../viewer/index.md) name the new keys and say which old keys
+  refuse the start (`slow_aql_ms`, `user_role`, `LEPTOS_SITE_ADDR`); no page
+  still offers `token_url`, `server.bind`, `ferroehr config default`,
+  `healthcheck --url` or the TDD routes.
+- **The CRA risk assessment**: its outbound data flows table gains the token
+  introspection flow and the patient identity source over PIXm, with revision 14.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  19.3.0 and image 5.5.0, and the [compose page](../installation/compose.md)
+  names `FERROEHR_CONFIG` and the Keycloak overlay's `ca_file`.
+- **The landing page, `SECURITY.md`, the crate READMEs, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-10-27, for 5.5.0
+
+- The conformance chapter bars still show the CNF TDD cases from the last
+  measured run; the record drops them only when the campaign runs again (#4204).
