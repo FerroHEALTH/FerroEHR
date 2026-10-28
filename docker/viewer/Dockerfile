@@ -151,7 +151,7 @@ RUN --mount=type=cache,target=/app/target,sharing=locked \
 # same base + `cc`-not-base-nossl rationale (libgcc_s.so.1) as docker/Dockerfile.
 # The HEALTHCHECK the previous split baked ONLY into the CI image (F8) is baked
 # here once, so both targets carry it identically.
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:83b9b50586253821cf63ffcec87d3d94265a093ad30da232039af962dd8f4edf AS runtime-base
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e AS runtime-base
 # The `:nonroot` tag already runs as uid 65532, but a scanner reading the
 # Dockerfile cannot see a base image.s user — and neither can a reader. Stating
 # it makes the posture a property of this file rather than of a tag someone
@@ -197,7 +197,7 @@ LABEL org.opencontainers.image.title="FerroEHR Viewer" \
       org.opencontainers.image.authors="Cadasto B.V. <https://www.cadasto.com/contact/>" \
       org.opencontainers.image.licenses="BUSL-1.1" \
       org.opencontainers.image.base.name="gcr.io/distroless/cc-debian13:nonroot" \
-      org.opencontainers.image.base.digest="sha256:83b9b50586253821cf63ffcec87d3d94265a093ad30da232039af962dd8f4edf" \
+      org.opencontainers.image.base.digest="sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}" \
       eu.ferroehr.image.manufacturer="Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com" \

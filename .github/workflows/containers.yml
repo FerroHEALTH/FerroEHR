@@ -311,7 +311,7 @@ jobs:
         org.opencontainers.image.authors=Cadasto B.V. <https://www.cadasto.com/contact/>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
-        org.opencontainers.image.base.digest=sha256:83b9b50586253821cf63ffcec87d3d94265a093ad30da232039af962dd8f4edf
+        org.opencontainers.image.base.digest=sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e
 
   # ── Viewer: server binary per arch + the arch-independent site ──────────────
   # The WASM/JS/CSS site bundle is architecture-independent, so cargo-leptos
@@ -466,7 +466,7 @@ jobs:
         org.opencontainers.image.authors=Cadasto B.V. <https://www.cadasto.com/contact/>
         org.opencontainers.image.licenses=BUSL-1.1
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
-        org.opencontainers.image.base.digest=sha256:83b9b50586253821cf63ffcec87d3d94265a093ad30da232039af962dd8f4edf
+        org.opencontainers.image.base.digest=sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e
 
   # ── PostgreSQL image (only on docker/postgres changes or tags; multi-arch) ──
   # One RUN layer (the Debian security upgrade, #2408, and the GnuPG purge,
