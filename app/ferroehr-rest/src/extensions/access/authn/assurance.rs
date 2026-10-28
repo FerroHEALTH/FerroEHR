@@ -412,7 +412,7 @@ mod tests {
             Some(AssuranceLevel::Low),
             Some(&ProfessionalSection::default()),
         )
-        .judge(&basic, Some(format!("{BASE}/terminology/x").as_str()))
+        .judge(&basic, Some("/ferroehr/rest/extensions/v1/terminology/x"))
         .expect("not patient data");
     }
 
