@@ -117,11 +117,12 @@ request() {
   shift 3
   local attempt code
   for attempt in $(seq 1 "$ATTEMPTS"); do
+    # curl prints 000 itself when it reaches no server; appending another would make 000000 and skip the retry.
     code=$(curl -sS -m 300 -u "$AUTH" -D "$HDR" -o "$BODY" -w '%{http_code}' \
-      -X "$method" "$url" "$@" || echo 000)
+      -X "$method" "$url" "$@") || code=000
     case "$code" in
       5?? | 000)
-        echo "  $label answered $code (attempt $attempt/$ATTEMPTS); a stale instance may still be serving — retrying" >&2
+        echo "  $label answered $code (attempt $attempt/$ATTEMPTS); a stale instance or a dropped connection, retrying" >&2
         sleep "$RETRY_DELAY"
         ;;
       *)
