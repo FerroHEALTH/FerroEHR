@@ -240,7 +240,7 @@ jobs:
       # — "Workflow runs cannot restore caches created for child branches or
       # sibling branches"). The tag/publish lanes that lack that property
       # (release.yml, publish-crates.yml) build cold instead.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with: # zizmor: ignore[cache-poisoning]
           shared-key: containers-${{ matrix.platform }}
 
@@ -251,7 +251,7 @@ jobs:
       # docker/Dockerfile and release-build.yml; the action fetches the
       # prebuilt binary and installs curl and jq into the slim container itself.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+        uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
         with:
           tool: cargo-auditable@0.7.5
 
@@ -358,14 +358,14 @@ jobs:
           fi
 
       # Same publishing-lane reasoning as the app binary job above.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with: # zizmor: ignore[cache-poisoning]
           shared-key: containers-viewer-${{ matrix.platform }}
 
       # The viewer binary carries its dependency list too (#3675): the same
       # pinned `cargo auditable` as the app binary job above.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+        uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
         with:
           tool: cargo-auditable@0.7.5
 
@@ -402,7 +402,7 @@ jobs:
         if: matrix.platform == 'amd64'
         run: apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
 
-      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
         if: matrix.platform == 'amd64'
         with:
           tool: cargo-leptos@0.3.11,wasm-bindgen@0.2.129
@@ -565,7 +565,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -637,7 +637,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
