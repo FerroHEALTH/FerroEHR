@@ -94,7 +94,12 @@ compression_min_bytes = 1024
 #? [server.tls]
 #? certificate_file = "/etc/ferroehr/server.pem"
 #? key_file = "/etc/ferroehr/server.key"
-#? client_auth = "none"            # none | optional | required (required = IHE mTLS)
+# client_auth: "none" (the default) asks no client certificate and takes no
+# client_ca_file; "optional" verifies a certificate against client_ca_file when
+# one is presented and admits a client without one; "required" admits only a
+# client presenting a certificate that chains to client_ca_file (IHE mTLS). A
+# client_ca_file under "none" is refused at load.
+#? client_auth = "required"
 #? client_ca_file = "/etc/ferroehr/client-ca.pem"
 # TLS 1.3 by default; "1.2" admits 1.2 alongside it, and 1.0 and 1.1 are
 # refused at load (RFC 8996).

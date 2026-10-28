@@ -709,6 +709,12 @@ why they are written as your checklist rather than as our claim.
   at each release that needs it; 4.2.0 is one, for demographic parties. Both
   routes are on
   [Admin & messaging APIs](operations-admin-apis.md#storage-integrity).
+- **Upgrading a 5.5.0 that sets `[server.tls] client_ca_file`: set
+  `client_auth = "required"` beside it.** Before 5.5.0 the CA alone meant a
+  required client certificate; 5.5.0 read it under the new `client_auth`
+  default `none` and asked for no certificate, and from 5.6.0 such a table is
+  refused at load (GHSA-52mf-qg39-4q4j). See
+  [`[server.tls]`](installation/config-server.md#servertls-native-tls-and-mutual-tls-client-authentication).
 - **Bound the DDL yourself.** Every pooled connection carries the
   `db.statement_timeout_ms` value (60 seconds by default), and the migration
   step runs on that pool, so a runaway statement is cut off, but there is **no
