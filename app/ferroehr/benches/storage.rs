@@ -293,7 +293,7 @@ async fn seed(svc: &Arc<FerroEhrService>, class: BenchClass) -> Corpus {
         .map(|index| {
             let svc = Arc::clone(svc);
             // Alternating per pass over the EHRs, so every EHR holds both.
-            let payload = if (index / ehrs.len()) % 2 == 0 {
+            let payload = if index.div_euclid(ehrs.len()).is_multiple_of(2) {
                 payload.clone()
             } else {
                 second_payload.clone()
