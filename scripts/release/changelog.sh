@@ -29,7 +29,15 @@
 #       the fragments, section by section in the Keep a Changelog order, as a
 #       loose list (a blank line between entries); moves the [Unreleased] link
 #       reference on and adds the version's; then `git rm`s the fragments.
-#       Exit 1 on any defect, with nothing written.
+#       A pre-release version (one with a "-" suffix, 5.6.0-rc1) writes its
+#       section the same way and keeps the fragments, the [Unreleased] entries
+#       and the [Unreleased] link reference for the stable cut, so every
+#       release candidate and the stable release each carry every change since
+#       the last stable release. Exit 1 on any defect, with nothing written.
+#   changelog.sh --covered <version>
+#       Exit 0 when the [<version>] section of CHANGELOG.md carries every
+#       fragment as the cut writes it, 1 naming each fragment it lacks. The
+#       release plan runs it at a pre-release tag, where fragments stay.
 #   changelog.sh --preview
 #       Prints CHANGELOG.md with every fragment folded into [Unreleased], as the
 #       next cut would write that section, and writes nothing.
@@ -57,7 +65,7 @@ die() {
 }
 
 usage() {
-  echo "usage: changelog.sh --check | --assemble <version> <date> | --preview | --check-preview | --self-test" >&2
+  echo "usage: changelog.sh --check | --assemble <version> <date> | --covered <version> | --preview | --check-preview | --self-test" >&2
   exit 2
 }
 
@@ -158,10 +166,11 @@ check() {
 # move. With "preview" it prints the file with the fragments folded into
 # [Unreleased] instead, and touches nothing.
 assemble() {
-  local version="$1" date="$2" mode="${3:-cut}" work start end total section file prev base out
+  local version="$1" date="$2" mode="${3:-cut}" work start end total section file prev base out pre=0
   if [[ "$mode" == cut ]]; then
     [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die "'$version' is not a version such as 0.0.9 or 0.0.9-rc.1"
     [[ "$date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die "'$date' is not a date written YYYY-MM-DD"
+    [[ "$version" != *-* ]] || pre=1
   fi
   [[ -f CHANGELOG.md ]] || die "CHANGELOG.md is missing"
   check > /dev/null
@@ -259,6 +268,15 @@ assemble() {
   out="$work/CHANGELOG.md"
   {
     sed -n "1,${start}p" CHANGELOG.md
+    # A pre-release leaves the [Unreleased] entries where they are, for the
+    # stable cut.
+    if [[ "$pre" -eq 1 ]]; then
+      sed -n "$((start + 1)),${end}p" CHANGELOG.md > "$work/unreleased"
+      if [[ -n "$(trim "$work/unreleased")" ]]; then
+        printf '\n'
+        trim "$work/unreleased"
+      fi
+    fi
     printf '\n## [%s] - %s\n' "$version" "$date"
     for section in "${SECTIONS[@]}"; do
       [[ -s "$work/new.$section" ]] || continue
@@ -267,9 +285,10 @@ assemble() {
     done
     printf '\n'
     if [[ "$end" -lt "$total" ]]; then
-      sed -n "$((end + 1)),${total}p" CHANGELOG.md | awk -v ver="$version" -v prev="$prev" -v base="$base" -v label="$label" '
+      sed -n "$((end + 1)),${total}p" CHANGELOG.md | awk -v ver="$version" -v prev="$prev" -v base="$base" -v label="$label" -v pre="$pre" '
         /^\[[Uu]nreleased\]: / {
-          print "[" label "]: " base "/compare/v" ver "...HEAD"
+          if (pre) print
+          else print "[" label "]: " base "/compare/v" ver "...HEAD"
           print "[" ver "]: " base "/compare/" prev "...v" ver
           next
         }
@@ -279,10 +298,56 @@ assemble() {
   } > "$out"
 
   cat "$out" > CHANGELOG.md
+  if [[ "$pre" -eq 1 ]]; then
+    echo "changelog: [$version] - $date assembled from ${#fragments[@]} fragment(s) and the [Unreleased] entries, which stay for the stable cut; review CHANGELOG.md and commit."
+    return 0
+  fi
   if [[ "${#fragments[@]}" -gt 0 ]]; then
     git rm -q -- "${fragments[@]}"
   fi
   echo "changelog: [$version] - $date assembled from ${#fragments[@]} fragment(s) and the [Unreleased] entries; review CHANGELOG.md and commit."
+}
+
+# covered VERSION: every fragment, as the cut writes it, appears entry by entry
+# in the [VERSION] section of CHANGELOG.md.
+covered() {
+  local version="$1" dir file entries missing=0 count=0
+  [[ -f CHANGELOG.md ]] || die "CHANGELOG.md is missing"
+  check > /dev/null
+  dir="$(mktemp -d)"
+  covered_dir="$dir"
+  trap 'rm -r -- "$covered_dir"' EXIT
+  awk -v heading="## [$version]" '
+    index($0, heading) == 1 { found = 1; next }
+    found && /^## \[/ { exit }
+    found { print }
+    END { exit !found }
+  ' CHANGELOG.md > "$dir/section" || die "CHANGELOG.md has no [$version] section"
+  for file in "$FRAGMENT_DIR"/*.md; do
+    [[ -e "$file" && "$file" != "$FRAGMENT_DIR/README.md" ]] || continue
+    count=$((count + 1))
+    entries="$dir/entries"
+    if [[ "$file" == *.security-reason.md ]]; then
+      trim "$file" > "$entries"
+    else
+      trim "$file" | name_issue "$file" > "$entries"
+    fi
+    if ! awk '
+      function look() {
+        if (entry != "" && !index(section, entry)) missing = 1
+        entry = ""
+      }
+      FNR == NR { section = section $0 "\n"; next }
+      /^- / { look() }
+      { entry = entry $0 "\n" }
+      END { look(); exit missing }
+    ' "$dir/section" "$entries"; then
+      echo "changelog: the [$version] section does not carry $file as the cut writes it." >&2
+      missing=1
+    fi
+  done
+  [[ "$missing" -eq 0 ]] || exit 1
+  echo "changelog: the [$version] section carries all $count fragment(s) under $FRAGMENT_DIR/."
 }
 
 # tracked FILE MODE: refuses an untracked fragment at the cut; the preview reads
@@ -632,6 +697,115 @@ EOF
   grep -qF "${REASON_PREFIX}the fix needs" "$work/out" || flunk "the cut did not open the Security section with the reason."
   [[ ! -e "$work/$FRAGMENT_DIR/20-reason.security-reason.md" ]] || flunk "the cut left the reason fragment behind."
 
+  # A pre-release keeps every fragment for the stable cut: each release
+  # candidate and the stable release carry every change since the last stable
+  # release, and only the stable cut moves the [Unreleased] link reference on
+  # and removes the fragments.
+  cat > "$work/CHANGELOG.md" <<'EOF'
+# Changelog
+
+## [Unreleased]
+
+## [0.0.3] - 2026-10-12
+
+### Added
+
+- The third release.
+
+[unreleased]: https://example.org/r/compare/v0.0.3...HEAD
+[0.0.3]: https://example.org/r/releases/tag/v0.0.3
+EOF
+  fragment 30-fix.fixed.md '- A fix.'
+  fragment 31-dep.security.md '- A dependency bump (GHSA-abcd-2345-wxyz).'
+  fragment 31-reason.security-reason.md "${REASON_PREFIX}the bump carries a fix."
+  stub_git add -A
+  stub_git commit -q -m "the fourth line"
+  expect "a missing version" 2 --covered
+  expect "a pre-release section that does not exist yet" 1 --covered 0.0.4-rc1
+  expect "the first release candidate" 0 --assemble 0.0.4-rc1 2026-10-13
+  for file in 30-fix.fixed.md 31-dep.security.md 31-reason.security-reason.md; do
+    stub_git ls-files --error-unmatch -- "$FRAGMENT_DIR/$file" > /dev/null 2>&1 ||
+      flunk "the release candidate removed $file."
+  done
+  expect "the fragments in the first release candidate" 0 --covered 0.0.4-rc1
+  expect "the fragments after the first release candidate" 0 --check
+  expect "the first release candidate again" 1 --assemble 0.0.4-rc1 2026-10-13
+  stub_git commit -q -a -m "the first release candidate"
+  fragment 32-feature.added.md '- A feature after the first candidate.'
+  stub_git add -A
+  stub_git commit -q -m "a feature"
+  expect "a fragment the first release candidate does not carry" 1 --covered 0.0.4-rc1
+  grep -q '32-feature.added.md' "$work/out" || flunk "the fragment the release candidate lacks was not named."
+  expect "the second release candidate" 0 --assemble 0.0.4-rc2 2026-10-14
+  expect "the fragments in the second release candidate" 0 --covered 0.0.4-rc2
+  stub_git commit -q -a -m "the second release candidate"
+  expect "the stable cut after two release candidates" 0 --assemble 0.0.4 2026-10-15
+  cat > "$work/want" <<EOF
+# Changelog
+
+## [Unreleased]
+
+## [0.0.4] - 2026-10-15
+
+### Added
+
+- A feature after the first candidate (#32).
+
+### Fixed
+
+- A fix (#30).
+
+### Security
+
+${REASON_PREFIX}the bump carries a fix.
+
+- A dependency bump (GHSA-abcd-2345-wxyz) (#31).
+
+## [0.0.4-rc2] - 2026-10-14
+
+### Added
+
+- A feature after the first candidate (#32).
+
+### Fixed
+
+- A fix (#30).
+
+### Security
+
+${REASON_PREFIX}the bump carries a fix.
+
+- A dependency bump (GHSA-abcd-2345-wxyz) (#31).
+
+## [0.0.4-rc1] - 2026-10-13
+
+### Fixed
+
+- A fix (#30).
+
+### Security
+
+${REASON_PREFIX}the bump carries a fix.
+
+- A dependency bump (GHSA-abcd-2345-wxyz) (#31).
+
+## [0.0.3] - 2026-10-12
+
+### Added
+
+- The third release.
+
+[unreleased]: https://example.org/r/compare/v0.0.4...HEAD
+[0.0.4]: https://example.org/r/compare/v0.0.3...v0.0.4
+[0.0.4-rc2]: https://example.org/r/compare/v0.0.3...v0.0.4-rc2
+[0.0.4-rc1]: https://example.org/r/compare/v0.0.3...v0.0.4-rc1
+[0.0.3]: https://example.org/r/releases/tag/v0.0.3
+EOF
+  diff -u "$work/want" "$work/CHANGELOG.md" > "$work/out" || flunk "the stable cut after two release candidates differs from the expected one."
+  if [[ -n "$(stub_git ls-files -- "$FRAGMENT_DIR" | grep -v '/README.md$' || true)" ]]; then
+    flunk "a fragment is still tracked after the stable cut."
+  fi
+
   echo "changelog: self-test passed."
 }
 
@@ -649,6 +823,11 @@ case "${1:-}" in
   [[ $# -eq 3 ]] || usage
   cd "$(dirname "$0")/../.."
   assemble "$2" "$3"
+  ;;
+--covered)
+  [[ $# -eq 2 ]] || usage
+  cd "$(dirname "$0")/../.."
+  covered "$2"
   ;;
 --preview)
   [[ $# -eq 1 ]] || usage
