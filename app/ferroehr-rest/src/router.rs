@@ -116,8 +116,8 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     let rest_root = cfg.rest.rest_root();
     let namespaces = crate::api::Namespaces::of(&cfg.rest);
 
-    // A known path called with a method it does not serve renders `405` with the
-    // openEHR body (overview §HTTP Methods); axum supplies the mandatory `Allow`
+    // A known path called with a method it does not serve renders `405` as
+    // problem details (overview §HTTP Methods); axum supplies the mandatory `Allow`
     // (RFC 9110 §15.5.6) from the matched route's method set. An unrecognized
     // method is `405` too: a catch-all fallback would report every unknown path
     // `501` instead of `404`.
