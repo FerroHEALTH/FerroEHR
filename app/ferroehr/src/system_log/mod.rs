@@ -86,6 +86,8 @@ mod feed;
 pub mod fhir;
 pub mod message;
 pub mod render;
+#[cfg(feature = "fhir")]
+pub(crate) mod search;
 pub mod sender;
 pub mod store;
 
@@ -155,6 +157,10 @@ pub enum AuditError {
         /// What could not be read.
         reason: &'static str,
     },
+    /// A search token or shared set of a record cannot be read back from the
+    /// store after it was stored.
+    #[error("an audit search token cannot be read back from the store")]
+    SearchToken,
     /// A JSON column of a stored record, or the render policy it names, does
     /// not read as the shape this build writes.
     #[error("audit record {chain_seq} cannot be read back: {column} does not read")]

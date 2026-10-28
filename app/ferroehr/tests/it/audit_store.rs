@@ -976,3 +976,143 @@ async fn a_record_keeps_the_policy_it_was_written_under() {
         .expect("count");
     assert_eq!(policies, 2, "each configuration is kept once");
 }
+
+/// Every value, system and system-value pair of `document`, as the token
+/// candidates of [`every_search_parameter_matches_what_the_document_says`].
+fn candidates(
+    document: &serde_json::Value,
+    values: &mut std::collections::BTreeSet<String>,
+    pairs: &mut std::collections::BTreeSet<(String, String)>,
+) {
+    match document {
+        serde_json::Value::Object(members) => {
+            let text = |key: &str| members.get(key).and_then(serde_json::Value::as_str);
+            for key in ["value", "code", "address"] {
+                if let Some(value) = text(key) {
+                    values.insert(value.to_owned());
+                    if let Some(system) = text("system") {
+                        pairs.insert((system.to_owned(), value.to_owned()));
+                    }
+                }
+            }
+            for member in members.values() {
+                candidates(member, values, pairs);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                candidates(item, values, pairs);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Every ITI-81 parameter on an element of the document finds through the
+/// search token index exactly the records whose served document the profile's
+/// matching selects: the three token forms of FHIR R4 Search §3.1.1.4.10 and
+/// the `address` substring of `RESTful` ATNA §3.81.4.1.2.2 (#4313).
+#[tokio::test]
+async fn every_search_parameter_matches_what_the_document_says() {
+    use ferroehr::system_log::store::{AuditCriterion, AuditElement, AuditToken, AuditTokenSystem};
+
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let policy = classifying_policy();
+    let compiled = policy.compile().expect("compile");
+    let store = AuditStore::new(pool.clone()).with_render_policy(policy);
+    let records: Vec<AuditRecord> = every_kind_of_record(&compiled)
+        .iter()
+        .map(|(event, subject)| record(event, subject.as_deref()))
+        .collect();
+    store.insert_batch(&records).await.expect("batch insert");
+
+    let documents = served(&store).await;
+    let mut values = std::collections::BTreeSet::new();
+    let mut pairs = std::collections::BTreeSet::new();
+    for document in &documents {
+        candidates(document, &mut values, &mut pairs);
+    }
+    values.insert("not-in-any-record".to_owned());
+    let systems: std::collections::BTreeSet<String> =
+        pairs.iter().map(|(system, _)| system.clone()).collect();
+
+    let token = |system: AuditTokenSystem, code: Option<&str>| AuditToken {
+        system,
+        code: code.map(str::to_owned),
+    };
+    let mut criteria = Vec::new();
+    for element in [
+        AuditElement::AgentIdentifier,
+        AuditElement::PatientIdentifier,
+        AuditElement::EntityIdentifier,
+        AuditElement::SourceIdentifier,
+        AuditElement::EntityType,
+        AuditElement::EntityRole,
+        AuditElement::Type,
+        AuditElement::Subtype,
+    ] {
+        for value in &values {
+            criteria.push(AuditCriterion::Element(
+                element,
+                vec![token(AuditTokenSystem::Any, Some(value))],
+            ));
+            criteria.push(AuditCriterion::Element(
+                element,
+                vec![token(AuditTokenSystem::Absent, Some(value))],
+            ));
+        }
+        for (system, value) in &pairs {
+            criteria.push(AuditCriterion::Element(
+                element,
+                vec![token(AuditTokenSystem::Named(system.clone()), Some(value))],
+            ));
+        }
+        for system in &systems {
+            criteria.push(AuditCriterion::Element(
+                element,
+                vec![token(AuditTokenSystem::Named(system.clone()), None)],
+            ));
+        }
+    }
+    for value in [
+        "10.0.0",
+        "10.42.23.77",
+        "UNKNOWN",
+        "unknown",
+        "no-such-host",
+    ] {
+        criteria.push(AuditCriterion::Address(vec![value.to_owned()]));
+    }
+
+    let mut matched = 0;
+    for criterion in criteria {
+        let mut expected: Vec<String> = documents
+            .iter()
+            .filter(|document| criterion.matches(document))
+            .map(ToString::to_string)
+            .collect();
+        let (total, found) = store
+            .search(&AuditSearchFilter {
+                count: 1000,
+                criteria: vec![criterion.clone()],
+                ..AuditSearchFilter::default()
+            })
+            .await
+            .expect("search");
+        let mut found: Vec<String> = found.iter().map(ToString::to_string).collect();
+        expected.sort();
+        found.sort();
+        assert_eq!(
+            usize::try_from(total).expect("a count"),
+            expected.len(),
+            "{criterion:?}"
+        );
+        assert_eq!(found, expected, "{criterion:?}");
+        matched += usize::from(!expected.is_empty());
+    }
+    assert!(
+        matched > 40,
+        "the candidates exercise matches, not only misses: {matched}"
+    );
+}

@@ -58,28 +58,37 @@ const INSERT_ONE: &str = "INSERT INTO audit.audit_event (recorded_at, action, ou
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
      acting_mode, assurance_level, assurance_value, professional_id, emergency_access, permit, \
      issuer, client_id, ehr_id, subject_namespace, subject_lookup_failed, category_content, \
-     render_policy) \
+     render_policy, search_tokens) \
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, \
      $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, \
-     $37) \
+     $37, $38) \
      RETURNING id";
 
 /// The batched insert: one row per element of the parallel column arrays, every
-/// row under the one render policy in `$39`.
+/// row under the one render policy in `$39`; each record's search tokens arrive
+/// as the text of an `integer[]` in `$40`, since an array of arrays unnests
+/// element by element.
 const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, outcome, \
      event_code, operation, principal, organisation, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
      acting_mode, assurance_level, assurance_value, professional_id, emergency_access, \
      retention_ends, retention_stated, permit, issuer, client_id, ehr_id, subject_namespace, \
-     subject_lookup_failed, category_content, render_policy) \
-     SELECT *, $39::bytea FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
+     subject_lookup_failed, category_content, render_policy, search_tokens) \
+     SELECT u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, u.c13, \
+     u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, u.c26, \
+     u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, u.c38, \
+     $39::bytea, u.tokens::integer[] \
+     FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
      $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], \
      $12::text[], $13::text[], $14::text[], $15::text[], $16::bigint[], $17::text[], \
      $18::jsonb[], $19::jsonb[], $20::bigint[], $21::jsonb[], $22::text[], \
      $23::jsonb[], $24::text[], $25::text[], $26::text[], $27::text[], $28::text[], \
      $29::boolean[], $30::text[]::date[], $31::boolean[], $32::text[], $33::text[], \
-     $34::text[], $35::text[], $36::text[], $37::boolean[], $38::jsonb[])";
+     $34::text[], $35::text[], $36::text[], $37::boolean[], $38::jsonb[], $40::text[]) \
+     AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, \
+     c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, c37, \
+     c38, tokens)";
 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
@@ -138,10 +147,6 @@ const OLDEST_OWED: &str = "SELECT \
      WHERE NOT (o.chain_seq = ANY($1)) \
      ORDER BY o.chain_seq ASC LIMIT 1";
 
-/// How many records one read of a document-matched ITI-81 search renders.
-#[cfg(feature = "fhir")]
-const SCAN_BATCH: u64 = 500;
-
 /// The first date a stored record may be deleted on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RecordEnd {
@@ -187,6 +192,21 @@ struct WritePolicy {
     policy: RenderPolicy,
     /// The policy's digest, once the store holds the policy.
     digest: OnceCell<Vec<u8>>,
+    /// The policy compiled, which renders each record's document for its
+    /// search tokens.
+    #[cfg(feature = "fhir")]
+    compiled: OnceCell<Arc<CompiledPolicy>>,
+}
+
+impl WritePolicy {
+    fn new(policy: RenderPolicy) -> Self {
+        Self {
+            policy,
+            digest: OnceCell::new(),
+            #[cfg(feature = "fhir")]
+            compiled: OnceCell::new(),
+        }
+    }
 }
 
 /// The policies records name, compiled once each, by digest.
@@ -205,6 +225,9 @@ pub struct AuditStore {
     /// The policies of the records this store has read.
     #[cfg(feature = "fhir")]
     policies: PolicyCache,
+    /// The search tokens and sets this store has written.
+    #[cfg(feature = "fhir")]
+    tokens: Arc<crate::system_log::search::TokenRegistry>,
 }
 
 impl AuditStore {
@@ -217,12 +240,11 @@ impl AuditStore {
         AuditStore {
             pool,
             fhir_feed: false,
-            writing: Arc::new(WritePolicy {
-                policy: RenderPolicy::default(),
-                digest: OnceCell::new(),
-            }),
+            writing: Arc::new(WritePolicy::new(RenderPolicy::default())),
             #[cfg(feature = "fhir")]
             policies: Arc::new(Mutex::new(BTreeMap::new())),
+            #[cfg(feature = "fhir")]
+            tokens: Arc::new(crate::system_log::search::TokenRegistry::default()),
         }
     }
 
@@ -245,10 +267,7 @@ impl AuditStore {
     /// FHIR `AuditEvent` is rendered under when it is read.
     #[must_use]
     pub fn with_render_policy(mut self, policy: RenderPolicy) -> Self {
-        self.writing = Arc::new(WritePolicy {
-            policy,
-            digest: OnceCell::new(),
-        });
+        self.writing = Arc::new(WritePolicy::new(policy));
         self
     }
 
@@ -274,6 +293,79 @@ impl AuditStore {
             .cloned()
     }
 
+    /// The `search_tokens` value of each record: the ITI-81 search tokens of
+    /// the document it renders under the store's policy. A record whose
+    /// document cannot be rendered is stored without tokens, metered and
+    /// logged, since its document cannot be served either.
+    ///
+    /// # Errors
+    /// The [`RenderPolicy::compile`] errors, [`AuditError::Store`] when a
+    /// token cannot be stored, and [`AuditError::SearchToken`] when one cannot
+    /// be read back.
+    #[cfg(feature = "fhir")]
+    async fn search_tokens<'a>(
+        &self,
+        records: impl Iterator<Item = (&'a AuditEvent, Option<&'a str>)>,
+    ) -> Result<Vec<Vec<i32>>, AuditError> {
+        let compiled = self
+            .writing
+            .compiled
+            .get_or_try_init(|| async { self.writing.policy.compile().map(Arc::new) })
+            .await?;
+        let tokens: Vec<_> = records
+            .map(|(event, subject)| {
+                match crate::system_log::fhir::to_fhir(event, &compiled.context, subject) {
+                    Ok(document) => crate::system_log::search::document_tokens(&document),
+                    Err(e) => {
+                        crate::telemetry::metrics::metrics()
+                            .atna_audit_serialize_failed
+                            .add(1, &[]);
+                        tracing::warn!("ATNA audit record stored without search tokens: {e}");
+                        std::collections::BTreeSet::new()
+                    }
+                }
+            })
+            .collect();
+        self.tokens.record_tokens(&self.pool, &tokens).await
+    }
+
+    /// The `search_tokens` of each record of a batch, as the text of an
+    /// `integer[]` the batched insert casts.
+    ///
+    /// # Errors
+    /// As [`Self::search_tokens`].
+    #[cfg(feature = "fhir")]
+    async fn batch_tokens(
+        store: &Self,
+        records: &[AuditRecord],
+    ) -> Result<Vec<String>, AuditError> {
+        let ids = store
+            .search_tokens(
+                records
+                    .iter()
+                    .map(|record| (&record.event, record.subject.as_deref())),
+            )
+            .await?;
+        Ok(ids
+            .iter()
+            .map(|ids| {
+                let ids: Vec<String> = ids.iter().map(ToString::to_string).collect();
+                format!("{{{}}}", ids.join(","))
+            })
+            .collect())
+    }
+
+    /// A slim build refuses the store at start
+    /// ([`crate::system_log::sender::start`]), so no record it writes is
+    /// searched: every record carries no search tokens.
+    #[cfg(not(feature = "fhir"))]
+    fn batch_tokens(
+        _store: &Self,
+        records: &[AuditRecord],
+    ) -> std::future::Ready<Result<Vec<String>, AuditError>> {
+        std::future::ready(Ok(records.iter().map(|_| "{}".to_owned()).collect()))
+    }
+
     /// Persist one audit record: its facts as columns, under the store's
     /// render policy. Returns the stored row id (for the per-sink delivery
     /// stamps).
@@ -286,6 +378,15 @@ impl AuditStore {
         subject: Option<&str>,
     ) -> Result<Uuid, AuditError> {
         let policy = self.writing_digest().await?;
+        #[cfg(feature = "fhir")]
+        let tokens = self
+            .search_tokens(std::iter::once((event, subject)))
+            .await?
+            .pop()
+            .ok_or(AuditError::SearchToken)?;
+        // NOTE: a slim build refuses the store at start, so no record it writes is searched.
+        #[cfg(not(feature = "fhir"))]
+        let tokens: Vec<i32> = Vec::new();
         let outcome = outcome_smallint(event);
         sqlx::query(self.owed(INSERT_ONE, &INSERT_ONE_OWED))
             .bind(Timestamp::from(event.timestamp))
@@ -325,6 +426,7 @@ impl AuditStore {
             .bind(event.subject_lookup_failed)
             .bind(category_content_json(event)?)
             .bind(policy)
+            .bind(tokens)
             .fetch_one(&mut *acquire(&self.pool).await?)
             .await?
             .try_get::<Uuid, _>("id")
@@ -377,6 +479,7 @@ impl AuditStore {
             return Ok(());
         }
         let policy = self.writing_digest().await?;
+        let tokens = Self::batch_tokens(self, records).await?;
         let mut recorded_at: Vec<Timestamp> = Vec::with_capacity(records.len());
         let mut actions: Vec<String> = Vec::with_capacity(records.len());
         let mut outcomes: Vec<i16> = Vec::with_capacity(records.len());
@@ -398,7 +501,6 @@ impl AuditStore {
         let mut origin_counts: Vec<Option<i64>> = Vec::with_capacity(records.len());
         let mut classified = CategoryColumns::with_capacity(records.len());
         let mut actors = ActorColumns::with_capacity(records.len());
-        let mut emergency: Vec<bool> = Vec::with_capacity(records.len());
         let mut retention = RetentionColumns::with_capacity(records.len());
         let mut subjects = SubjectColumns::with_capacity(records.len());
         for (index, AuditRecord { event, subject }) in records.iter().enumerate() {
@@ -424,7 +526,6 @@ impl AuditStore {
             origin_counts.push(origin_count(event));
             classified.push(event)?;
             actors.push(event);
-            emergency.push(event.emergency_access);
             subjects.push(event);
         }
         sqlx::query(self.owed(INSERT_BATCH, &INSERT_BATCH_OWED))
@@ -456,7 +557,7 @@ impl AuditStore {
             .bind(actors.levels)
             .bind(actors.values)
             .bind(actors.professionals)
-            .bind(emergency)
+            .bind(declared.emergency)
             .bind(retention.ends)
             .bind(retention.stated)
             .bind(declared.permits)
@@ -467,6 +568,7 @@ impl AuditStore {
             .bind(subjects.lookups_failed)
             .bind(classified.contents)
             .bind(policy)
+            .bind(tokens)
             .execute(&mut *acquire(&self.pool).await?)
             .await?;
         Ok(())
@@ -756,11 +858,11 @@ impl AuditStore {
     /// the total match count. The filter is the supported ITI-81
     /// search-parameter subset ([`AuditSearchFilter`]).
     ///
-    /// A criterion on a column is applied in the statement. A criterion on an
-    /// element of the document (`address` and the token parameters) is applied
-    /// to the rendered document, so it matches exactly what the record serves:
-    /// the records the column criteria leave are rendered in batches, newest
-    /// first, and counted and paged here.
+    /// A criterion on a column is applied to that column. A criterion on an
+    /// element of the document (`address` and the token parameters) is first
+    /// resolved to the ids of the stored search tokens it names, and the
+    /// statement keeps the records whose `search_tokens` carry one of them,
+    /// through its index. Only the page is rendered.
     ///
     /// # Errors
     /// [`AuditError::Store`] when a query fails, and the rendering errors of a
@@ -770,14 +872,25 @@ impl AuditStore {
         &self,
         filter: &AuditSearchFilter,
     ) -> Result<(i64, Vec<serde_json::Value>), AuditError> {
-        if filter.criteria.iter().any(AuditCriterion::reads_document) {
-            return self.search_documents(filter).await;
+        let mut resolved = Vec::with_capacity(filter.criteria.len());
+        for criterion in &filter.criteria {
+            let ids = crate::system_log::search::criterion_ids(&self.pool, criterion).await?;
+            if ids.as_ref().is_some_and(Vec::is_empty) {
+                // NOTE: `RESTful` ATNA §3.81.4.1.2.2 combines parameters with AND, so a parameter
+                // no stored token matches leaves no record.
+                return Ok((0, Vec::new()));
+            }
+            resolved.push(ids);
         }
-        let (count_sql, count_values, sql, values) = build_search_statements(filter);
+        let (count_sql, count_values, sql, values) = build_search_statements(filter, &resolved);
+        // NOTE: an unnamed statement is planned with the token ids it binds (PostgreSQL 18,
+        // "PREPARE", plan_cache_mode), so a rare token reaches its index rather than a generic plan.
         let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
+            .persistent(false)
             .fetch_one(&mut *acquire(&self.pool).await?)
             .await?;
         let rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
+            .persistent(false)
             .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
         let mut documents = Vec::with_capacity(rows.len());
@@ -786,92 +899,17 @@ impl AuditStore {
         }
         Ok((total, documents))
     }
-
-    /// [`Self::search`] with a criterion on the document: every record the
-    /// column criteria leave is rendered, newest first, `SCAN_BATCH` at a
-    /// time, and the ones whose document matches are counted and paged.
-    #[cfg(feature = "fhir")]
-    async fn search_documents(
-        &self,
-        filter: &AuditSearchFilter,
-    ) -> Result<(i64, Vec<serde_json::Value>), AuditError> {
-        let count = usize::try_from(filter.count.clamp(1, 1000)).unwrap_or(50);
-        let offset = usize::try_from(Ord::max(filter.offset, 0)).unwrap_or(usize::MAX);
-        let document_criteria: Vec<&AuditCriterion> = filter
-            .criteria
-            .iter()
-            .filter(|criterion| criterion.reads_document())
-            .collect();
-        let mut total: usize = 0;
-        let mut page = Vec::new();
-        let mut after: Option<ScanKey> = None;
-        loop {
-            let (sql, values) = build_scan_statement(filter, after.as_ref());
-            let rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
-                .fetch_all(&mut *acquire(&self.pool).await?)
-                .await?;
-            for row in &rows {
-                let document = self.render(row).await?;
-                if document_criteria
-                    .iter()
-                    .all(|criterion| criterion.matches(&document))
-                {
-                    total = total.saturating_add(1);
-                    if total > offset && page.len() < count {
-                        page.push(document);
-                    }
-                }
-            }
-            let Some(last) = rows.last() else {
-                break;
-            };
-            after = Some(ScanKey::of(last)?);
-            if u64::try_from(rows.len()).unwrap_or(u64::MAX) < SCAN_BATCH {
-                break;
-            }
-        }
-        Ok((i64::try_from(total).unwrap_or(i64::MAX), page))
-    }
 }
 
-/// The position of the last record one batch of a document-matched search
-/// rendered: the search order is `recorded_at`, `stored_at` and `chain_seq`,
-/// each descending, and the next batch starts below it.
-#[cfg(feature = "fhir")]
-#[derive(Debug, Clone)]
-struct ScanKey {
-    recorded_at: String,
-    stored_at: String,
-    chain_seq: i64,
-}
-
-#[cfg(feature = "fhir")]
-impl ScanKey {
-    /// The key of `row`.
-    fn of(row: &PgRow) -> Result<Self, AuditError> {
-        Ok(Self {
-            recorded_at: row
-                .try_get::<Timestamp, _>("recorded_at")?
-                .to_jiff()
-                .to_string(),
-            stored_at: row
-                .try_get::<Timestamp, _>("stored_at")?
-                .to_jiff()
-                .to_string(),
-            chain_seq: row.try_get("chain_seq")?,
-        })
-    }
-}
-
-/// The `WHERE` condition for the ITI-81 filter: the date window and the
-/// criteria on columns. A criterion on the document adds what its document
-/// match implies about a column, when that narrows the records to render.
+/// The `WHERE` condition for the ITI-81 filter: the date window, and each
+/// criterion on its column or, with the token ids it resolved to in
+/// `resolved` (one entry per criterion), on `search_tokens`.
 ///
 /// Every column name is a literal here; every caller-supplied value goes through
 /// `Expr::val` and therefore binds as a parameter rather than entering the SQL
 /// text. That split is the property `sql_injection`-style tests pin.
 #[cfg(feature = "fhir")]
-fn search_condition(filter: &AuditSearchFilter) -> sea_query::Cond {
+fn search_condition(filter: &AuditSearchFilter, resolved: &[Option<Vec<i32>>]) -> sea_query::Cond {
     use sea_query::{Alias, Expr, ExprTrait};
 
     let mut cond = sea_query::Cond::all();
@@ -892,18 +930,27 @@ fn search_condition(filter: &AuditSearchFilter) -> sea_query::Cond {
             Expr::col(Alias::new("recorded_at")).lt(bound)
         });
     }
-    for criterion in &filter.criteria {
-        if let Some(condition) = criterion_condition(criterion) {
-            cond = cond.add(condition);
-        }
+    for (index, criterion) in filter.criteria.iter().enumerate() {
+        let condition = match resolved.get(index).cloned().flatten() {
+            Some(ids) => {
+                let ids: Vec<String> = ids.iter().map(ToString::to_string).collect();
+                sea_query::Cond::all().add(Expr::cust_with_values(
+                    "search_tokens && CAST($1 AS integer[])",
+                    [format!("{{{}}}", ids.join(","))],
+                ))
+            }
+            None => criterion_condition(criterion),
+        };
+        cond = cond.add(condition);
     }
     cond
 }
 
-/// The column condition of one criterion: any of its values matches. `None`
-/// for a criterion on the document that implies nothing about a column.
+/// The column condition of one criterion: any of its values matches. A
+/// criterion on the document has no column, so it matches nothing here; the
+/// search resolves it to token ids instead.
 #[cfg(feature = "fhir")]
-fn criterion_condition(criterion: &AuditCriterion) -> Option<sea_query::Cond> {
+fn criterion_condition(criterion: &AuditCriterion) -> sea_query::Cond {
     use sea_query::{Alias, Expr, ExprTrait};
 
     let column_in = |column: &'static str, values: &[String]| {
@@ -912,28 +959,37 @@ fn criterion_condition(criterion: &AuditCriterion) -> Option<sea_query::Cond> {
         })
     };
     match criterion {
-        AuditCriterion::Patient(values) => Some(column_in("patient_id", values)),
-        AuditCriterion::Agent(values) => Some(column_in("principal", values)),
-        AuditCriterion::Entity(values) => Some(column_in("resource_id", values)),
-        AuditCriterion::Action(values) => Some(column_in("action", values)),
-        AuditCriterion::Outcome(values) => {
-            Some(values.iter().fold(sea_query::Cond::any(), |any, value| {
-                any.add(Expr::col(Alias::new("outcome")).eq(*value))
-            }))
+        AuditCriterion::Patient(values) => column_in("patient_id", values),
+        AuditCriterion::Agent(values) => column_in("principal", values),
+        // NOTE: our own design: resource_id is indexed by its hash, which a long stored query
+        // name fits, so the hash narrows through the index and the text decides.
+        AuditCriterion::Entity(values) => {
+            values.iter().fold(sea_query::Cond::any(), |any, value| {
+                any.add(
+                    sea_query::Cond::all()
+                        .add(Expr::cust_with_values(
+                            "hashtextextended(resource_id, 0) = hashtextextended($1, 0)",
+                            [value.clone()],
+                        ))
+                        .add(Expr::col(Alias::new("resource_id")).eq(value.clone())),
+                )
+            })
         }
-        // NOTE: our own design: the one patient entity a document carries is the record's
-        // patient_id, so a patient.identifier value can only match a record of that patient.
-        AuditCriterion::Element(AuditElement::PatientIdentifier, tokens) => tokens
-            .iter()
-            .map(|token| token.code.clone())
-            .collect::<Option<Vec<String>>>()
-            .map(|codes| column_in("patient_id", &codes)),
-        AuditCriterion::Address(_) | AuditCriterion::Element(..) => None,
+        AuditCriterion::Action(values) => column_in("action", values),
+        AuditCriterion::Outcome(values) => {
+            values.iter().fold(sea_query::Cond::any(), |any, value| {
+                any.add(Expr::col(Alias::new("outcome")).eq(*value))
+            })
+        }
+        AuditCriterion::Address(_) | AuditCriterion::Element(..) => {
+            sea_query::Cond::any().add(Expr::cust("false"))
+        }
     }
 }
 
 /// Build the ITI-81 retrieval's two statements — the count and the page — from a
-/// filter, with no database involved.
+/// filter and the token ids its criteria on the document resolved to, with no
+/// database involved.
 ///
 /// Extracted from [`AuditStore::search`] so the SQL is reachable by a test. This
 /// is the server's second runtime dynamic-SQL site after the AQL engine, and the
@@ -948,6 +1004,7 @@ fn criterion_condition(criterion: &AuditCriterion) -> Option<sea_query::Cond> {
 #[cfg(feature = "fhir")]
 fn build_search_statements(
     filter: &AuditSearchFilter,
+    resolved: &[Option<Vec<i32>>],
 ) -> (
     String,
     sea_query_sqlx::SqlxValues,
@@ -958,7 +1015,7 @@ fn build_search_statements(
     use sea_query_sqlx::SqlxBinder as _;
 
     let table = (Alias::new("audit"), Alias::new("audit_event"));
-    let condition = search_condition(filter);
+    let condition = search_condition(filter, resolved);
 
     let (count_sql, count_values) = Query::select()
         .expr(Expr::col(sea_query::Asterisk).count())
@@ -972,33 +1029,6 @@ fn build_search_statements(
         .build_sqlx(PostgresQueryBuilder);
 
     (count_sql, count_values, sql, values)
-}
-
-/// The statement that reads the next batch of a document-matched search: the
-/// records the filter's column criteria leave, newest first, below `after`.
-#[cfg(feature = "fhir")]
-fn build_scan_statement(
-    filter: &AuditSearchFilter,
-    after: Option<&ScanKey>,
-) -> (String, sea_query_sqlx::SqlxValues) {
-    use sea_query::{Expr, PostgresQueryBuilder};
-    use sea_query_sqlx::SqlxBinder as _;
-
-    let mut condition = search_condition(filter);
-    if let Some(after) = after {
-        condition = condition.add(Expr::cust_with_values(
-            "(recorded_at, stored_at, chain_seq) < \
-             (CAST($1 AS timestamptz), CAST($2 AS timestamptz), CAST($3 AS bigint))",
-            [
-                after.recorded_at.clone(),
-                after.stored_at.clone(),
-                after.chain_seq.to_string(),
-            ],
-        ));
-    }
-    newest_first(condition)
-        .limit(SCAN_BATCH)
-        .build_sqlx(PostgresQueryBuilder)
 }
 
 /// The record columns of the records `condition` selects, newest first.
@@ -1132,7 +1162,7 @@ impl AuditElement {
     /// The nodes of `document` the element names, and whether each is an
     /// `Identifier` (its code in `value`) rather than a `Coding` (its code in
     /// `code`).
-    fn nodes(self, document: &serde_json::Value) -> (Vec<&serde_json::Value>, bool) {
+    pub(crate) fn nodes(self, document: &serde_json::Value) -> (Vec<&serde_json::Value>, bool) {
         let entities = || lax_path(document, &["entity"]);
         match self {
             Self::AgentIdentifier => (lax_path(document, &["agent", "who", "identifier"]), true),
@@ -1229,7 +1259,10 @@ impl AuditToken {
 /// end, and a missing member yields nothing (ISO/IEC 9075-2 SQL/JSON path, as
 /// PostgreSQL 18 documents it in "The SQL/JSON Path Language",
 /// <https://www.postgresql.org/docs/18/functions-json.html#FUNCTIONS-SQLJSON-PATH>).
-fn lax_path<'a>(from: &'a serde_json::Value, steps: &[&str]) -> Vec<&'a serde_json::Value> {
+pub(crate) fn lax_path<'a>(
+    from: &'a serde_json::Value,
+    steps: &[&str],
+) -> Vec<&'a serde_json::Value> {
     let unwrap = |items: Vec<&'a serde_json::Value>| -> Vec<&'a serde_json::Value> {
         items
             .into_iter()
@@ -1387,11 +1420,13 @@ impl<'a> ActorColumns<'a> {
 }
 
 /// The columns of a batch that say on whose authority and why: the declared
-/// purpose, the deployment's legal basis and the declared data permit.
+/// purpose, the deployment's legal basis, the declared data permit and the
+/// emergency mark.
 struct DeclaredColumns<'a> {
     purposes: Vec<Option<&'a str>>,
     legal_bases: Vec<Option<&'a str>>,
     permits: Vec<Option<&'a str>>,
+    emergency: Vec<bool>,
 }
 
 impl<'a> DeclaredColumns<'a> {
@@ -1400,6 +1435,7 @@ impl<'a> DeclaredColumns<'a> {
             purposes: Vec::with_capacity(n),
             legal_bases: Vec::with_capacity(n),
             permits: Vec::with_capacity(n),
+            emergency: Vec::with_capacity(n),
         }
     }
 
@@ -1407,6 +1443,7 @@ impl<'a> DeclaredColumns<'a> {
         self.purposes.push(event.purpose.as_deref());
         self.legal_bases.push(event.legal_basis.as_deref());
         self.permits.push(event.permit.as_deref());
+        self.emergency.push(event.emergency_access);
     }
 }
 
@@ -1762,6 +1799,10 @@ mod tests {
         "' UNION SELECT fhir FROM audit.audit_event --",
     ];
 
+    /// The token ids the criteria of [`filter_with`] resolve to: none, so
+    /// each is read as its column condition.
+    const RESOLVED: [Option<Vec<i32>>; 0] = [];
+
     fn filter_with(value: &str) -> AuditSearchFilter {
         AuditSearchFilter {
             criteria: vec![
@@ -1791,14 +1832,15 @@ mod tests {
     /// appears in it.
     #[test]
     fn hostile_filter_values_never_change_the_generated_sql() {
-        let (baseline_count, _, baseline_page, _) = build_search_statements(&filter_with("benign"));
+        let (baseline_count, _, baseline_page, _) =
+            build_search_statements(&filter_with("benign"), &RESOLVED);
 
         for payload in HOSTILE {
             // The page statement's own values are not inspected: both statements
             // bind from the same condition, so asserting the count's bindings
             // covers both, and the page text is compared byte for byte below.
             let (count_sql, count_values, sql, _page_values) =
-                build_search_statements(&filter_with(payload));
+                build_search_statements(&filter_with(payload), &RESOLVED);
             assert_eq!(
                 count_sql, baseline_count,
                 "the count statement changed for {payload:?}"
@@ -1842,16 +1884,19 @@ mod tests {
     /// string-built SQL, not for an `Alias::new` argument).
     #[test]
     fn every_identifier_comes_from_the_closed_set() {
-        let (count_sql, _, sql, _) = build_search_statements(&AuditSearchFilter {
-            criteria: vec![
-                AuditCriterion::Patient(vec!["p".to_owned()]),
-                AuditCriterion::Agent(vec!["a".to_owned()]),
-                AuditCriterion::Entity(vec!["e".to_owned()]),
-                AuditCriterion::Action(vec!["x".to_owned()]),
-                AuditCriterion::Outcome(vec![0]),
-            ],
-            ..AuditSearchFilter::default()
-        });
+        let (count_sql, _, sql, _) = build_search_statements(
+            &AuditSearchFilter {
+                criteria: vec![
+                    AuditCriterion::Patient(vec!["p".to_owned()]),
+                    AuditCriterion::Agent(vec!["a".to_owned()]),
+                    AuditCriterion::Entity(vec!["e".to_owned()]),
+                    AuditCriterion::Action(vec!["x".to_owned()]),
+                    AuditCriterion::Outcome(vec![0]),
+                ],
+                ..AuditSearchFilter::default()
+            },
+            &[],
+        );
 
         let mut seen: Vec<String> = format!("{count_sql} {sql}")
             .split('"')
@@ -1879,11 +1924,14 @@ mod tests {
     /// statement as text — including a negative offset or an absurd count.
     #[test]
     fn paging_is_clamped_and_never_textual() {
-        let (_, _, sql, values) = build_search_statements(&AuditSearchFilter {
-            count: i64::MAX,
-            offset: i64::MIN,
-            ..AuditSearchFilter::default()
-        });
+        let (_, _, sql, values) = build_search_statements(
+            &AuditSearchFilter {
+                count: i64::MAX,
+                offset: i64::MIN,
+                ..AuditSearchFilter::default()
+            },
+            &[],
+        );
         // Paging binds as parameters rather than being written into the
         // statement, which is stronger than the clamp alone — so the clamped
         // values are asserted where they actually travel.
@@ -2036,26 +2084,27 @@ mod tests {
         }
     }
 
-    /// A `patient.identifier` value narrows the records to render to that
-    /// patient's, and a value with no code narrows nothing.
+    /// A criterion on the document becomes a condition on `search_tokens`
+    /// with the token ids it resolved to, bound as one value, and one with no
+    /// resolved ids matches nothing.
     #[test]
-    fn a_patient_identifier_narrows_the_statement_to_the_patient() {
-        let (_, values, sql, _) = build_search_statements(&AuditSearchFilter {
-            criteria: vec![AuditCriterion::Element(
-                AuditElement::PatientIdentifier,
-                vec![token(AuditTokenSystem::Any, Some("patient-42"))],
-            )],
+    fn a_resolved_token_criterion_reads_the_token_index() {
+        let filter = AuditSearchFilter {
+            criteria: vec![
+                AuditCriterion::Patient(vec!["patient-42".to_owned()]),
+                AuditCriterion::Element(
+                    AuditElement::PatientIdentifier,
+                    vec![token(AuditTokenSystem::Any, Some("patient-42"))],
+                ),
+            ],
             ..AuditSearchFilter::default()
-        });
-        assert!(sql.contains("\"patient_id\" = $"), "{sql}");
-        assert!(format!("{values:?}").contains("patient-42"));
-        let (_, _, sql, _) = build_search_statements(&AuditSearchFilter {
-            criteria: vec![AuditCriterion::Element(
-                AuditElement::PatientIdentifier,
-                vec![token(AuditTokenSystem::Named("urn:sys".to_owned()), None)],
-            )],
-            ..AuditSearchFilter::default()
-        });
-        assert!(!sql.contains("\"patient_id\" ="), "{sql}");
+        };
+        let (count_sql, values, sql, _) =
+            build_search_statements(&filter, &[None, Some(vec![3, 17])]);
+        assert!(sql.contains("search_tokens && CAST($"), "{sql}");
+        assert!(count_sql.contains("search_tokens && CAST($"), "{count_sql}");
+        assert!(format!("{values:?}").contains("{3,17}"), "{values:?}");
+        let (_, _, unresolved, _) = build_search_statements(&filter, &[]);
+        assert!(unresolved.contains("false"), "{unresolved}");
     }
 }

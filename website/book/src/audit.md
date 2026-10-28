@@ -560,11 +560,13 @@ parameter of the query must match. A token takes the three forms of FHIR R4
 Search §3.1.1.4.10: `code`, `|code` (recorded without a system) and
 `system|code` (or `system|` for any code of that system). FerroEHR records
 identifiers without a system, so a query that names a system for an
-identifier matches nothing. A parameter on an element of the document
-(`address` and the `.identifier`, `entity-type`, `entity-role`, `type` and
-`subtype` parameters) is matched against the rendered document, so a search
-that names one renders every record the other parameters leave within its
-`date` window; keep the window narrow, or add `patient`, `agent` or `entity`.
+identifier matches nothing. Every parameter answers through an index. A
+parameter on an element of the document (`address` and the `.identifier`,
+`entity-type`, `entity-role`, `type` and `subtype` parameters) matches the
+search tokens the store takes from the record's rendered document when it
+writes the record (`audit.audit_search_token`, `audit.audit_search_set` and
+the record's `search_tokens`), so the search finds what the served document
+says and renders only the page it serves.
 
 | Parameter | Matches |
 |---|---|

@@ -15,6 +15,13 @@
 -- configuration in audit_render_policy, content-addressed by its SHA-256, and
 -- each record names the policy it was written under (render_policy).
 --
+-- The ITI-81 parameters that match an element of the document (address and
+-- the token parameters) are answered from search tokens taken from the
+-- rendered document when the record is written: each distinct token once in
+-- audit_search_token, the tokens of the code-system parameters, which take few
+-- values, as one shared set in audit_search_set, and on the record the ids of
+-- its tokens and its set (search_tokens) under a GIN index.
+--
 -- The chain digest is one digest over every column but row_hash and the two
 -- delivery stamps. The versioned digests of 0003, 0011, 0013 and 0016 are
 -- retired with the records they covered: no installation holds records this
@@ -90,6 +97,98 @@ CREATE TRIGGER audit_render_policy_reject_truncate
     BEFORE TRUNCATE ON audit_render_policy
     FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_render_policy_reject_change();
 
+-- ── the search tokens ────────────────────────────────────────────────────────
+
+CREATE FUNCTION audit.search_token_digest(p_parameter text, p_system text, p_code text)
+    RETURNS bytea
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    SET search_path = pg_catalog
+    AS $$ SELECT substr(sha256(convert_to(jsonb_build_array(p_parameter, p_system, p_code)::text, 'UTF8')), 1, 16) $$;
+
+COMMENT ON FUNCTION audit.search_token_digest(text, text, text) IS
+    'The first 16 bytes of the SHA-256 over one search token: the ITI-81 parameter, the system and the code, NULL kept apart from the empty string.';
+
+CREATE FUNCTION audit.search_set_digest(p_tokens integer[]) RETURNS bytea
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    SET search_path = pg_catalog
+    AS $$ SELECT sha256(convert_to(p_tokens::text, 'UTF8')) $$;
+
+COMMENT ON FUNCTION audit.search_set_digest(integer[]) IS
+    'SHA-256 over the sorted token ids of one search set.';
+
+-- One row per distinct token. The digest is the key the writer deduplicates
+-- on and what the verifier recomputes. The lookups hash the code and the
+-- system, so a long identifier never meets the B-tree entry size limit, and
+-- the addresses, short and matched by substring, are read from a partial index.
+CREATE TABLE audit_search_token (
+    id        integer GENERATED ALWAYS AS IDENTITY,
+    -- The ITI-81 parameter: address, agent.identifier, entity.identifier,
+    -- entity-role, entity-type, patient.identifier, source.identifier,
+    -- subtype or type.
+    parameter text    NOT NULL,
+    -- The system of the coding or identifier; NULL when it names none.
+    system    text,
+    -- The code, the identifier value or the address; NULL when the element
+    -- carries none.
+    code      text,
+    digest    bytea   NOT NULL,
+    CONSTRAINT pk_audit_search_token PRIMARY KEY (id),
+    CONSTRAINT uq_audit_search_token_digest UNIQUE (digest),
+    CONSTRAINT ck_audit_search_token_digest
+        CHECK (digest = audit.search_token_digest(parameter, system, code))
+);
+
+CREATE INDEX ix_audit_search_token_code
+    ON audit_search_token (hashtextextended(code, 0));
+CREATE INDEX ix_audit_search_token_system
+    ON audit_search_token (hashtextextended(system, 0)) WHERE system IS NOT NULL;
+CREATE INDEX ix_audit_search_token_address
+    ON audit_search_token (code) INCLUDE (id) WHERE parameter = 'address';
+
+COMMENT ON TABLE audit_search_token IS
+    'Every distinct ITI-81 search token a stored record''s FHIR AuditEvent carries, once; append-only.';
+
+-- The tokens of type, subtype, entity-type, entity-role and source.identifier
+-- take their values from code systems and the audit source, so their
+-- combinations are few: a record names its combination by one set id.
+CREATE TABLE audit_search_set (
+    id     integer   GENERATED ALWAYS AS IDENTITY,
+    -- The sorted ids of the set's tokens.
+    tokens integer[] NOT NULL,
+    digest bytea     NOT NULL,
+    CONSTRAINT pk_audit_search_set PRIMARY KEY (id),
+    CONSTRAINT uq_audit_search_set_tokens UNIQUE (tokens),
+    CONSTRAINT ck_audit_search_set_digest CHECK (digest = audit.search_set_digest(tokens))
+);
+
+CREATE INDEX ix_audit_search_set_tokens ON audit_search_set USING gin (tokens);
+
+COMMENT ON TABLE audit_search_set IS
+    'Each distinct combination of the code-system search tokens of a record, once; append-only.';
+
+CREATE FUNCTION audit.audit_search_reject_change() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path = audit, pg_catalog
+    AS $$
+BEGIN
+    RAISE EXCEPTION '%.% is append-only: stored records name its rows', TG_TABLE_SCHEMA, TG_TABLE_NAME
+        USING ERRCODE = 'restrict_violation';
+END;
+$$;
+
+CREATE TRIGGER audit_search_token_reject_change
+    BEFORE UPDATE OR DELETE ON audit_search_token
+    FOR EACH ROW EXECUTE FUNCTION audit.audit_search_reject_change();
+CREATE TRIGGER audit_search_token_reject_truncate
+    BEFORE TRUNCATE ON audit_search_token
+    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_search_reject_change();
+CREATE TRIGGER audit_search_set_reject_change
+    BEFORE UPDATE OR DELETE ON audit_search_set
+    FOR EACH ROW EXECUTE FUNCTION audit.audit_search_reject_change();
+CREATE TRIGGER audit_search_set_reject_truncate
+    BEFORE TRUNCATE ON audit_search_set
+    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_search_reject_change();
+
 -- ── the record ───────────────────────────────────────────────────────────────
 
 ALTER TABLE audit_event
@@ -102,6 +201,7 @@ ALTER TABLE audit_event
     ADD COLUMN subject_lookup_failed boolean NOT NULL DEFAULT false,
     ADD COLUMN category_content      jsonb,
     ADD COLUMN render_policy         bytea   NOT NULL,
+    ADD COLUMN search_tokens         integer[] NOT NULL,
     ADD CONSTRAINT fk_audit_event_render_policy
         FOREIGN KEY (render_policy) REFERENCES audit_render_policy (digest),
     ADD CONSTRAINT ck_audit_event_category_content
@@ -123,6 +223,19 @@ COMMENT ON COLUMN audit_event.category_content IS
     'What the category classification read (the objects with their template and archetype ids, or the query constraints), from which the classification is computed again under the render policy''s category map; NULL exactly when categories is NULL.';
 COMMENT ON COLUMN audit_event.render_policy IS
     'The digest of the audit_render_policy row the record is rendered under.';
+COMMENT ON COLUMN audit_event.search_tokens IS
+    'The ITI-81 search tokens of the record''s FHIR AuditEvent: the ids of its audit_search_token rows, and its audit_search_set id negated.';
+
+-- The token parameters match through this index. Each insert updates it in
+-- place: the pending list of fastupdate leaves the index three times the size
+-- after the same writes (PostgreSQL 18 docs, "GIN Fast Update Technique",
+-- https://www.postgresql.org/docs/18/gin.html#GIN-FAST-UPDATE).
+CREATE INDEX ix_audit_event_search_tokens ON audit_event USING gin (search_tokens)
+    WITH (fastupdate = off);
+-- entity matches resource_id through its hash, since a resource id can be a
+-- stored query name longer than a B-tree entry holds.
+CREATE INDEX ix_audit_event_resource_id ON audit_event (hashtextextended(resource_id, 0));
+
 COMMENT ON COLUMN audit_event.row_hash IS
     'SHA-256 over every column of the record but row_hash and the delivery stamps (audit.audit_event_row_digest); recomputed by audit.verify_audit_chain().';
 
@@ -155,7 +268,8 @@ CREATE FUNCTION audit.audit_event_digest_columns() RETURNS text[]
         'retention_ends', 'retention_stated',
         'permit',
         'issuer', 'client_id', 'ehr_id', 'subject_namespace',
-        'subject_lookup_failed', 'category_content', 'render_policy'
+        'subject_lookup_failed', 'category_content', 'render_policy',
+        'search_tokens'
     ]
 $$;
 
@@ -250,6 +364,20 @@ BEGIN
       FROM audit.audit_render_policy p
      WHERE p.digest IS DISTINCT FROM sha256(convert_to(p.policy::text, 'UTF8'))
      ORDER BY p.digest;
+
+    -- A changed search token or set changes which records a search finds.
+    RETURN QUERY
+    SELECT NULL::bigint, NULL::uuid, NULL::timestamptz,
+           ('the search token ' || t.id || ' was modified after it was written')::text
+      FROM audit.audit_search_token t
+     WHERE t.digest IS DISTINCT FROM audit.search_token_digest(t.parameter, t.system, t.code)
+     ORDER BY t.id;
+    RETURN QUERY
+    SELECT NULL::bigint, NULL::uuid, NULL::timestamptz,
+           ('the search set ' || s.id || ' was modified after it was written')::text
+      FROM audit.audit_search_set s
+     WHERE s.digest IS DISTINCT FROM audit.search_set_digest(s.tokens)
+     ORDER BY s.id;
 
     RETURN QUERY
     WITH linked AS (
@@ -383,7 +511,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION audit.verify_audit_chain_incremental(boolean) IS
-    'Verifies the records written after the checkpoint (every record when p_full), the chain head and the render policies, and moves the checkpoint to the newest record when the run finds nothing; returns the findings as audit.verify_audit_chain() does.';
+    'Verifies the records written after the checkpoint (every record when p_full), the chain head, the render policies and the search tokens, and moves the checkpoint to the newest record when the run finds nothing; returns the findings as audit.verify_audit_chain() does.';
 
 -- ── grants ───────────────────────────────────────────────────────────────────
 
@@ -396,8 +524,10 @@ REVOKE ALL ON FUNCTION audit.verify_audit_chain_after(bigint, bytea) FROM PUBLIC
 DO $grants$
 BEGIN
     IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_clinical') THEN
-        REVOKE ALL ON audit_render_policy
+        REVOKE ALL ON audit_render_policy, audit_search_token, audit_search_set
             FROM ferroehr_clinical, ferroehr_clinical_reader;
+        GRANT SELECT, INSERT ON audit_search_token, audit_search_set TO ferroehr_clinical;
+        GRANT SELECT ON audit_search_token, audit_search_set TO ferroehr_clinical_reader;
         GRANT SELECT ON audit_render_policy
             TO ferroehr_clinical, ferroehr_clinical_reader;
         GRANT EXECUTE ON FUNCTION audit.register_render_policy(jsonb)

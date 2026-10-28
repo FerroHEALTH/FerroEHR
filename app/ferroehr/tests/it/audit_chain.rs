@@ -282,13 +282,21 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
     // Recording an event is exactly what it may do.
     sqlx::query(
         "INSERT INTO audit.audit_event \
-         (recorded_at, action, outcome, event_code, resource_class, render_policy) \
+         (recorded_at, action, outcome, event_code, resource_class, render_policy, \
+          search_tokens) \
          VALUES (now(), 'R', 0, '110110', 'composition', \
-                 audit.register_render_policy('{}'::jsonb))",
+                 audit.register_render_policy('{}'::jsonb), '{}')",
     )
     .execute(&mut conn)
     .await
     .expect("the application role must be able to record an audit event");
+    sqlx::query(
+        "INSERT INTO audit.audit_search_token (parameter, system, code, digest) \
+         VALUES ('type', NULL, 'rest', audit.search_token_digest('type', NULL, 'rest'))",
+    )
+    .execute(&mut conn)
+    .await
+    .expect("the application role must be able to store a search token");
 
     // Rewriting or removing one is not.
     for statement in [
@@ -303,6 +311,11 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
          VALUES (sha256(convert_to('{}', 'UTF8')), '{}'::jsonb)",
         "UPDATE audit.audit_render_policy SET policy = '{\"source_id\": \"x\"}'::jsonb",
         "DELETE FROM audit.audit_render_policy",
+        "UPDATE audit.audit_search_token SET code = 'someone-else'",
+        "DELETE FROM audit.audit_search_token",
+        "INSERT INTO audit.audit_search_token (parameter, system, code, digest) \
+         VALUES ('type', NULL, 'read', '\\x00'::bytea)",
+        "DELETE FROM audit.audit_search_set",
     ] {
         let outcome = sqlx::query(AssertSqlSafe(statement.to_owned()))
             .execute(&mut conn)
@@ -609,6 +622,7 @@ fn changed_value(column: &str, data_type: &str) -> Option<String> {
         "boolean" => format!("NOT coalesce(\"{column}\", false)"),
         "date" => format!("coalesce(\"{column}\", current_date) + 1"),
         "bytea" => format!("coalesce(\"{column}\", '\\x'::bytea) || '\\x00'::bytea"),
+        "ARRAY" => format!("array_append(\"{column}\", 0)"),
         _ => return None,
     };
     Some(value)
@@ -736,6 +750,52 @@ async fn a_changed_or_missing_render_policy_is_reported() {
             .iter()
             .any(|(seq, finding)| *seq == Some(1) && finding.contains("missing")),
         "a record naming a deleted render policy must be reported: {missing:?}"
+    );
+}
+
+/// A search token or set changed after records name it changes which records
+/// a search finds, so the verifier reports it.
+#[tokio::test]
+async fn a_changed_search_token_or_set_is_reported() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AuditStore::new(pool.clone());
+    seed(&store, 2).await;
+    assert!(store.verify_chain().await.expect("verify").is_empty());
+
+    let token = findings_after(
+        &pool,
+        &[
+            "ALTER TABLE audit.audit_search_token DISABLE TRIGGER USER".to_owned(),
+            "ALTER TABLE audit.audit_search_token DROP CONSTRAINT ck_audit_search_token_digest"
+                .to_owned(),
+            "UPDATE audit.audit_search_token SET code = 'someone-else' \
+             WHERE parameter = 'agent.identifier'"
+                .to_owned(),
+        ],
+    )
+    .await;
+    assert!(
+        token
+            .iter()
+            .any(|(seq, finding)| seq.is_none() && finding.contains("search token")),
+        "a changed search token must be reported: {token:?}"
+    );
+
+    let set = findings_after(
+        &pool,
+        &[
+            "ALTER TABLE audit.audit_search_set DISABLE TRIGGER USER".to_owned(),
+            "ALTER TABLE audit.audit_search_set DROP CONSTRAINT ck_audit_search_set_digest"
+                .to_owned(),
+            "UPDATE audit.audit_search_set SET tokens = tokens[2:]".to_owned(),
+        ],
+    )
+    .await;
+    assert!(
+        set.iter()
+            .any(|(seq, finding)| seq.is_none() && finding.contains("search set")),
+        "a changed search set must be reported: {set:?}"
     );
 }
 
