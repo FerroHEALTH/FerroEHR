@@ -981,6 +981,16 @@ this surface is unauthenticated by design.
 > instead, because that subcommand probes the status document rather than a
 > health endpoint, which would leave readiness never touching the database.
 
+While the database restarts or is out of reach, requests answer `503 Service
+Unavailable` with `Retry-After`: those that cannot get a connection, and those
+whose open connection the restart or the network cut (SQLSTATE class `08`,
+`57P01` admin shutdown, `57P02` crash shutdown, `57P03` cannot connect now,
+or a reset socket). A transaction the cut interrupted is rolled back by
+PostgreSQL. A request that cannot get a connection waits for one up to
+[`db.acquire_timeout_secs`](installation/config-server.md#db) (30 seconds by
+default) before it answers, so lower that value when clients should hear
+about an outage sooner.
+
 ## The management surface
 
 The management surface is **ops introspection only**: build info, Prometheus,

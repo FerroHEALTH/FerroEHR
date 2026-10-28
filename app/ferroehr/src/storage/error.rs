@@ -227,15 +227,31 @@ const CODEC_MESSAGE: &str = "the server encountered an internal storage-codec er
 /// - a failure only opening a connection can produce ([`is_connect_failure`])
 ///   → `CallStatusType::ServiceOverloaded` (`503` plus `Retry-After`): no
 ///   statement ran, so repeating the request is safe once the database answers.
-/// - anything else → `CallStatusType::Exception` (`500`, a genuine fault). That
-///   includes an I/O or protocol error on an established connection, after
-///   which the statement's outcome is unknown and a retry hint would be wrong.
+/// - a session the database or the network cut ([`is_cut_session`]: a
+///   database restart, a crash, a reset connection) →
+///   `CallStatusType::ServiceOverloaded` (`503` plus `Retry-After`): the
+///   outage is temporary, which is what `503` says (RFC 9110 §15.6.4). A
+///   transaction the cut interrupted is rolled back by the server; only a
+///   `COMMIT` cut between its execution and its reply leaves the outcome
+///   unknown, as it would behind a `500`.
+/// - anything else → `CallStatusType::Exception` (`500`, a genuine fault),
+///   including a protocol error, which no restart produces.
 pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::SmError {
     use crate::service::status::{CallStatusType, SmError};
     if is_connect_failure(e) {
         tracing::error!(
             error = %e,
             "storage bridge: the database refused or could not take a new connection → 503"
+        );
+        return SmError::new(
+            CallStatusType::ServiceOverloaded,
+            UNAVAILABLE_MESSAGE.to_owned(),
+        );
+    }
+    if is_cut_session(e) {
+        tracing::error!(
+            error = %e,
+            "storage bridge: the database or the network cut an open session → 503"
         );
         return SmError::new(
             CallStatusType::ServiceOverloaded,
@@ -386,6 +402,39 @@ pub(crate) fn is_connect_failure(e: &sqlx::Error) -> bool {
     }
 }
 
+/// Returns whether `e` reports an open session that the database or the
+/// network cut, an outage that a repeated request outlives.
+///
+/// - SQLSTATE class `08` connection exception, except `08P01`
+///   `protocol_violation`, and the class `57` codes a shutdown, a crash or a
+///   start-up raises: `57P01` `admin_shutdown`, `57P02` `crash_shutdown`,
+///   `57P03` `cannot_connect_now` and `57P05` `idle_session_timeout`
+///   (<https://www.postgresql.org/docs/18/errcodes-appendix.html>). `57014`
+///   `query_canceled` (a statement timeout or cancel) and `57P04`
+///   `database_dropped` are no outage and stay where they were.
+/// - an I/O error of kind `ConnectionReset`, `ConnectionAborted`,
+///   `BrokenPipe`, `NotConnected` or `UnexpectedEof`: the socket closed under
+///   the session.
+///
+/// No openEHR spec governs this — our own design.
+pub(crate) fn is_cut_session(e: &sqlx::Error) -> bool {
+    match e {
+        sqlx::Error::Io(io) => matches!(
+            io.kind(),
+            std::io::ErrorKind::ConnectionReset
+                | std::io::ErrorKind::ConnectionAborted
+                | std::io::ErrorKind::BrokenPipe
+                | std::io::ErrorKind::NotConnected
+                | std::io::ErrorKind::UnexpectedEof
+        ),
+        sqlx::Error::Database(db) => db.code().is_some_and(|code| {
+            (code.starts_with("08") && &*code != "08P01")
+                || matches!(&*code, "57P01" | "57P02" | "57P03" | "57P05")
+        }),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
@@ -510,17 +559,80 @@ mod tests {
         }
     }
 
-    /// A failure on an established connection stays `500`: the statement may
-    /// have run, so no retry hint is given (#3659).
+    /// A session a database restart or the network cut answers `503` with
+    /// the unavailable message, as a failed connect does: the outage is
+    /// temporary (#4290, RFC 9110 §15.6.4). The two 5.5.0 logged under a
+    /// PostgreSQL restart lead the list.
+    #[test]
+    fn a_cut_session_is_service_unavailable() {
+        let failures = [
+            db_error("57P01"),
+            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::ConnectionReset)),
+            db_error("57P02"),
+            db_error("57P05"),
+            db_error("08000"),
+            db_error("08003"),
+            db_error("08006"),
+            db_error("08007"),
+            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::ConnectionAborted)),
+            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::BrokenPipe)),
+            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::NotConnected)),
+            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::UnexpectedEof)),
+        ];
+        for failure in failures {
+            let sm = classify_sqlx(&failure);
+            assert_eq!(
+                sm.status,
+                CallStatusType::ServiceOverloaded,
+                "a cut session is a temporary unavailability: {failure}"
+            );
+            assert_eq!(sm.message, super::UNAVAILABLE_MESSAGE);
+        }
+    }
+
+    /// A backend the server terminates under an open session, as a restart
+    /// terminates every backend, reaches the driver as a cut session and
+    /// answers `503` (#4290).
+    #[tokio::test]
+    async fn a_terminated_backend_is_service_unavailable() {
+        let db = testkit::db().await.expect("testkit database");
+        let pool = db.pool();
+        let mut conn = crate::db::acquire::acquire(&pool)
+            .await
+            .expect("a connection");
+        let pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+            .fetch_one(&mut *conn)
+            .await
+            .expect("the backend pid");
+        let terminated: bool = sqlx::query_scalar("SELECT pg_terminate_backend($1)")
+            .bind(pid)
+            .fetch_one(&pool)
+            .await
+            .expect("the terminate call runs");
+        assert!(terminated, "the backend is terminated");
+        let failure = sqlx::query("SELECT 1")
+            .execute(&mut *conn)
+            .await
+            .expect_err("the terminated session cannot serve");
+        assert!(
+            super::is_cut_session(&failure),
+            "a cut session: {failure:?}"
+        );
+        let sm = classify_sqlx(&failure);
+        assert_eq!(sm.status, CallStatusType::ServiceOverloaded, "{failure}");
+        assert_eq!(sm.message, super::UNAVAILABLE_MESSAGE);
+    }
+
+    /// A failure on an established connection that no outage produces stays
+    /// `500`: a protocol violation, a cancelled or timed-out statement, a
+    /// dropped database, a statement error (#3659).
     #[test]
     fn a_failure_after_connecting_stays_an_exception() {
         let failures = [
-            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::ConnectionReset)),
-            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::BrokenPipe)),
-            sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::UnexpectedEof)),
             sqlx::Error::Protocol("unexpected message".to_owned()),
-            db_error("08006"),
-            db_error("57P01"),
+            db_error("08P01"),
+            db_error("57014"),
+            db_error("57P04"),
             db_error("42P01"),
         ];
         for failure in failures {
