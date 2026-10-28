@@ -2,4 +2,4 @@
 # §What is committed). Every run's record stays local; the deliberately
 # committed baseline is added with `git add -f` and, once tracked, is
 # unaffected by this rule.
-*/record.json
+*/*/record.json

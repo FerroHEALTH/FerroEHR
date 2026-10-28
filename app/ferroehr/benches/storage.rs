@@ -20,7 +20,7 @@
 //! cargo bench -p ferroehr --bench storage -- --profile-time 10
 //! ```
 //!
-//! The record lands in `docs/benchmarks/storage/<generation>/record.json`; its
+//! The record lands in `docs/benchmarks/storage/<generation>/<class>/record.json`; its
 //! shape is documented in that directory's README. Under `--profile-time`
 //! criterion measures nothing, so no record is written and an existing one is
 //! left intact; a run that measured only some of its operations says so in the
@@ -82,6 +82,11 @@ use openehr_rm::prelude::{Composition, PartyProxy};
 /// The vendored CKM template the seed commits against: an encounter carrying
 /// eight OBSERVATION archetypes, so a CONTAINS chain has a real ENTRY to find.
 const SEED_TEMPLATE: &str = "vital-signs";
+
+/// The second vendored CKM template every other seed commit uses: a GP data
+/// set whose EVALUATIONs carry coded and text values, which the vital signs
+/// carry none of, so the AQL hot paths filter on every value kind.
+const SECOND_TEMPLATE: &str = "gp-data-set";
 
 /// The identity every seeded version is composed and committed by.
 const BENCH_PARTY: &str = "storage bench";
@@ -161,8 +166,14 @@ struct Seeded {
 struct Corpus {
     /// The EHRs the corpus spans.
     ehrs: Vec<EhrId>,
-    /// The example COMPOSITION every commit writes.
+    /// The example COMPOSITION of [`SEED_TEMPLATE`], which the write benches
+    /// commit and every other seed commit writes.
     payload: Value,
+    /// The example COMPOSITION of [`SECOND_TEMPLATE`], which the remaining
+    /// seed commits write.
+    second_payload: Value,
+    /// The id of [`SECOND_TEMPLATE`].
+    second_template_id: String,
     /// The template the payload is bound to.
     template_id: String,
     /// The ENTRY RM type the payload carries, which the CONTAINS chain targets.
@@ -175,11 +186,28 @@ struct Corpus {
     seconds: f64,
 }
 
-/// The vendored corpus file for the seed template.
-fn corpus_file(extension: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
-        "../../corpus/templates/ckm/{SEED_TEMPLATE}.{extension}"
-    ))
+/// The vendored corpus file of one seed template.
+fn corpus_file(template: &str, extension: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(format!("../../corpus/templates/ckm/{template}.{extension}"))
+}
+
+/// Upload one vendored template and generate its committable example.
+async fn seed_template(svc: &FerroEhrService, template: &str) -> (String, Value) {
+    let xml = tokio::fs::read_to_string(corpus_file(template, "opt"))
+        .await
+        .expect("the vendored OPT is readable");
+    let template_id = openehr_its::opt14::from_xml(&xml)
+        .expect("the vendored OPT parses")
+        .template_id
+        .value;
+    svc.upload_opt(xml).await.expect("upload the seed template");
+    // `medium` is the generator's fully-populated, committable level.
+    let payload = svc
+        .template_adl14_example(template_id.clone(), Some("medium".to_owned()), None)
+        .await
+        .expect("the template generates an example composition");
+    (template_id, payload)
 }
 
 /// A `PARTY_IDENTIFIED` proxy named [`BENCH_PARTY`].
@@ -248,19 +276,8 @@ fn entry_rm_type(payload: &Value) -> String {
 /// the [`Corpus`] this returns.
 async fn seed(svc: &Arc<FerroEhrService>, class: BenchClass) -> Corpus {
     let start = Instant::now();
-    let xml = tokio::fs::read_to_string(corpus_file("opt"))
-        .await
-        .expect("the vendored OPT is readable");
-    let template_id = openehr_its::opt14::from_xml(&xml)
-        .expect("the vendored OPT parses")
-        .template_id
-        .value;
-    svc.upload_opt(xml).await.expect("upload the seed template");
-    // `medium` is the generator's fully-populated, committable level.
-    let payload = svc
-        .template_adl14_example(template_id.clone(), Some("medium".to_owned()), None)
-        .await
-        .expect("the template generates an example composition");
+    let (template_id, payload) = seed_template(svc, SEED_TEMPLATE).await;
+    let (second_template_id, second_payload) = seed_template(svc, SECOND_TEMPLATE).await;
 
     let ehrs: Vec<EhrId> = futures::stream::iter(0..class.ehrs)
         .map(|_| {
@@ -275,7 +292,12 @@ async fn seed(svc: &Arc<FerroEhrService>, class: BenchClass) -> Corpus {
     futures::stream::iter(commits)
         .map(|index| {
             let svc = Arc::clone(svc);
-            let payload = payload.clone();
+            // Alternating per pass over the EHRs, so every EHR holds both.
+            let payload = if (index / ehrs.len()) % 2 == 0 {
+                payload.clone()
+            } else {
+                second_payload.clone()
+            };
             let ehr = *ehrs.get(index % ehrs.len()).expect("the corpus holds EHRs");
             async move {
                 svc.create_composition(ehr, update_version(&payload, CREATION, None))
@@ -328,6 +350,8 @@ async fn seed(svc: &Arc<FerroEhrService>, class: BenchClass) -> Corpus {
         at: jiff::Timestamp::now().to_string(),
         ehrs,
         payload,
+        second_payload,
+        second_template_id,
         template_id,
         kept,
         seconds,
@@ -1003,6 +1027,396 @@ fn bench_paths(
     ops
 }
 
+/// One data value of a seed payload, addressed as an AQL path under the ENTRY
+/// that holds it.
+struct PayloadLeaf {
+    /// The RM type of that ENTRY.
+    entry_type: String,
+    /// The archetype id of the ENTRY the path starts from.
+    observation: String,
+    /// The path from that OBSERVATION to the `DV_*` object, `o/…`.
+    path: String,
+    /// The `DV_*` type of the value.
+    dv_type: String,
+    /// The scalar attribute AQL compares on, relative to the value
+    /// (`magnitude`, `value`, `defining_code/code_string`).
+    scalar: &'static str,
+    /// The scalar as the payload carries it.
+    literal: Value,
+    /// The holding ELEMENT's node id and name, when an ELEMENT holds it.
+    element: Option<(String, String)>,
+}
+
+impl PayloadLeaf {
+    /// The path to the scalar AQL compares on.
+    fn scalar_path(&self) -> String {
+        format!("{}/{}", self.path, self.scalar)
+    }
+
+    /// The scalar as an AQL literal: a number bare, a string quoted, `None`
+    /// for a string a plain single-quoted literal cannot carry.
+    fn aql_literal(&self) -> Option<String> {
+        match &self.literal {
+            Value::Number(n) => Some(n.to_string()),
+            Value::String(s) if !s.contains(['\'', '\\']) => Some(format!("'{s}'")),
+            _ => None,
+        }
+    }
+}
+
+/// The attribute AQL compares a `DV_*` value on, for the types the hot paths
+/// filter and project.
+fn comparable_scalar(dv_type: &str) -> Option<&'static str> {
+    match dv_type {
+        "DV_QUANTITY" | "DV_COUNT" => Some("magnitude"),
+        "DV_CODED_TEXT" => Some("defining_code/code_string"),
+        "DV_TEXT" | "DV_DATE_TIME" | "DV_DATE" | "DV_TIME" | "DV_BOOLEAN" | "DV_DURATION" => {
+            Some("value")
+        }
+        "DV_PROPORTION" => Some("numerator"),
+        "DV_IDENTIFIER" => Some("id"),
+        _ => None,
+    }
+}
+
+/// Collects every `DV_*` value below `node`, `path` being the AQL path that
+/// reaches `node`; a LOCATABLE child steps as `attribute[node_id]`.
+fn collect_leaves(
+    entry_type: &str,
+    observation: &str,
+    node: &Value,
+    path: &str,
+    element: Option<&(String, String)>,
+    out: &mut Vec<PayloadLeaf>,
+) {
+    let Some(fields) = node.as_object() else {
+        return;
+    };
+    for (attribute, child) in fields {
+        // The node's own identity and the participation and audit trees are
+        // not values a clinical query reads.
+        if matches!(
+            attribute.as_str(),
+            "_type"
+                | "name"
+                | "archetype_node_id"
+                | "archetype_details"
+                | "uid"
+                | "links"
+                | "feeder_audit"
+                | "subject"
+                | "provider"
+                | "other_participations"
+        ) {
+            continue;
+        }
+        let children: Vec<&Value> = match child {
+            Value::Array(items) => items.iter().collect(),
+            other => vec![other],
+        };
+        for item in children {
+            let Some(ty) = item.get("_type").and_then(Value::as_str) else {
+                continue;
+            };
+            if ty.starts_with("DV_") {
+                let Some(scalar) = comparable_scalar(ty) else {
+                    continue;
+                };
+                let mut literal = item;
+                for step in scalar.split('/') {
+                    literal = literal.get(step).unwrap_or(&Value::Null);
+                }
+                if literal.is_null() {
+                    continue;
+                }
+                out.push(PayloadLeaf {
+                    entry_type: entry_type.to_owned(),
+                    observation: observation.to_owned(),
+                    path: format!("{path}/{attribute}"),
+                    dv_type: ty.to_owned(),
+                    scalar,
+                    literal: literal.clone(),
+                    element: element.cloned(),
+                });
+                continue;
+            }
+            let Some(node_id) = item.get("archetype_node_id").and_then(Value::as_str) else {
+                continue;
+            };
+            let holder = (ty == "ELEMENT").then(|| {
+                let name = item
+                    .pointer("/name/value")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
+                (node_id.to_owned(), name.to_owned())
+            });
+            collect_leaves(
+                entry_type,
+                observation,
+                item,
+                &format!("{path}/{attribute}[{node_id}]"),
+                holder.as_ref(),
+                out,
+            );
+        }
+    }
+}
+
+/// Every `DV_*` value the seed payloads' ENTRYs carry, in document order, one
+/// entry per distinct path; an ENTRY nested in a SECTION is reached too.
+fn payload_leaves(payloads: &[&Value]) -> Vec<PayloadLeaf> {
+    /// Walks `node` for ENTRYs, descending through everything else.
+    fn entries(node: &Value, out: &mut Vec<PayloadLeaf>) {
+        match node {
+            Value::Array(items) => items.iter().for_each(|item| entries(item, out)),
+            Value::Object(fields) => {
+                let ty = fields
+                    .get("_type")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
+                let archetype = fields.get("archetype_node_id").and_then(Value::as_str);
+                if let (true, Some(archetype)) = (
+                    matches!(
+                        ty,
+                        "OBSERVATION" | "EVALUATION" | "INSTRUCTION" | "ACTION" | "ADMIN_ENTRY"
+                    ),
+                    archetype,
+                ) {
+                    collect_leaves(ty, archetype, node, "o", None, out);
+                    return;
+                }
+                fields.values().for_each(|child| entries(child, out));
+            }
+            _ => {}
+        }
+    }
+    let mut out = Vec::new();
+    for payload in payloads {
+        if let Some(content) = payload.get("content") {
+            entries(content, &mut out);
+        }
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    out.retain(|leaf| seen.insert((leaf.observation.clone(), leaf.path.clone())));
+    out
+}
+
+/// The first leaf of one of `types` whose scalar an AQL literal can carry.
+fn first_leaf<'a>(leaves: &'a [PayloadLeaf], types: &[&str]) -> Option<&'a PayloadLeaf> {
+    leaves
+        .iter()
+        .find(|leaf| types.contains(&leaf.dv_type.as_str()) && leaf.aql_literal().is_some())
+}
+
+/// The widest projection the seed payload offers: every comparable scalar of
+/// the OBSERVATION that carries the most, at most [`WIDE_COLUMNS`] of them.
+fn wide_projection(leaves: &[PayloadLeaf]) -> (String, String, Vec<String>) {
+    let mut per_entry: BTreeMap<(&str, &str), Vec<&PayloadLeaf>> = BTreeMap::new();
+    for leaf in leaves {
+        per_entry
+            .entry((leaf.entry_type.as_str(), leaf.observation.as_str()))
+            .or_default()
+            .push(leaf);
+    }
+    let ((entry_type, archetype), widest) = per_entry
+        .into_iter()
+        .max_by_key(|(_, leaves)| leaves.len())
+        .expect("the seed payloads carry an ENTRY with values");
+    let columns = widest
+        .iter()
+        .take(WIDE_COLUMNS)
+        .map(|leaf| leaf.scalar_path())
+        .collect();
+    (entry_type.to_owned(), archetype.to_owned(), columns)
+}
+
+/// The most columns the wide projection selects.
+const WIDE_COLUMNS: usize = 16;
+
+/// The archetype every AQL hot path but the wide projection descends into.
+const BP_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.blood_pressure.v2";
+
+/// One AQL hot path: its record name, the statement and its scope.
+struct AqlHotPath {
+    /// The operation name in the record.
+    name: &'static str,
+    /// The AQL text.
+    aql: String,
+    /// Whether it runs over one EHR (`true`) or the whole population.
+    one_ehr: bool,
+}
+
+/// The AQL hot paths the storage layout decides the cost of, built from the
+/// seed payload so every statement matches what was committed: CONTAINS as an
+/// existence test, a node predicate on archetype and name, a WHERE on a
+/// quantity, a coded value, a date-time and a text value, the widest
+/// projection, whole-object projections, and a version at a point in time.
+fn aql_hot_paths(corpus: &Corpus) -> Vec<AqlHotPath> {
+    let leaves = payload_leaves(&[&corpus.payload, &corpus.second_payload]);
+    let bp_from =
+        format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{BP_ARCHETYPE}]");
+    let filter = |name: &'static str, types: &[&str], op: &str, order: bool| {
+        let Some(leaf) = first_leaf(&leaves, types) else {
+            println!(
+                "storage_aql: the seed payload carries no {types:?} value; `{name}` is not run"
+            );
+            return None;
+        };
+        let scalar = leaf.scalar_path();
+        let literal = leaf.aql_literal().unwrap_or_default();
+        Some(AqlHotPath {
+            name,
+            aql: format!(
+                "SELECT c/uid/value, {scalar} FROM EHR e CONTAINS COMPOSITION c \
+                 CONTAINS {} o[{}] WHERE {scalar} {op} {literal}{} LIMIT 50",
+                leaf.entry_type,
+                leaf.observation,
+                if order {
+                    format!(" ORDER BY {scalar} DESC")
+                } else {
+                    String::new()
+                }
+            ),
+            one_ehr: false,
+        })
+    };
+    let named = leaves
+        .iter()
+        .filter(|leaf| leaf.observation == BP_ARCHETYPE)
+        .find_map(|leaf| {
+            leaf.element
+                .as_ref()
+                .filter(|(_, name)| !name.is_empty() && !name.contains(['\'', '\\']))
+        })
+        .expect("the blood-pressure OBSERVATION holds a named ELEMENT");
+    let (wide_entry, wide_archetype, wide_columns) = wide_projection(&leaves);
+    let wide = |name: &'static str, one_ehr: bool| AqlHotPath {
+        name,
+        aql: format!(
+            "SELECT c/uid/value, {} FROM EHR e CONTAINS COMPOSITION c \
+             CONTAINS {wide_entry} o[{wide_archetype}]{}",
+            wide_columns.join(", "),
+            if one_ehr { "" } else { " LIMIT 50" }
+        ),
+        one_ehr,
+    };
+    let filters = [
+        filter("where_magnitude", &["DV_QUANTITY", "DV_COUNT"], ">=", true),
+        filter("where_coded", &["DV_CODED_TEXT"], "=", false),
+        filter("where_date_time", &["DV_DATE_TIME"], "<=", false),
+        filter("where_text", &["DV_TEXT"], "=", false),
+    ];
+    let mut paths = vec![
+        AqlHotPath {
+            name: "contains_exists",
+            aql: format!("SELECT count(c) {bp_from}"),
+            one_ehr: false,
+        },
+        AqlHotPath {
+            name: "node_predicate",
+            aql: format!(
+                "SELECT c/uid/value {bp_from} CONTAINS ELEMENT x[{}, '{}'] LIMIT 50",
+                named.0, named.1
+            ),
+            one_ehr: false,
+        },
+    ];
+    paths.extend(filters.into_iter().flatten());
+    paths.extend([
+        wide("wide_projection_one_ehr", true),
+        wide("wide_projection_population", false),
+        AqlHotPath {
+            name: "select_observation",
+            aql: format!("SELECT o {bp_from} LIMIT 50"),
+            one_ehr: false,
+        },
+        AqlHotPath {
+            name: "select_composition_one_ehr",
+            aql: "SELECT c FROM EHR e CONTAINS COMPOSITION c".to_owned(),
+            one_ehr: true,
+        },
+        AqlHotPath {
+            name: "version_at_time",
+            aql: format!(
+                "SELECT c/uid/value FROM EHR e CONTAINS VERSION \
+                 v[commit_audit/time_committed <= '{}'] CONTAINS COMPOSITION c LIMIT 50",
+                corpus.at
+            ),
+            one_ehr: false,
+        },
+    ]);
+    paths
+}
+
+/// The rows one AQL execution returned.
+fn result_rows(result_set: &Value) -> usize {
+    result_set
+        .get("rows")
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len)
+}
+
+/// The AQL hot paths ([`aql_hot_paths`]), each checked to return rows before
+/// it is timed, so a statement that matches nothing cannot pass as fast.
+fn bench_aql(
+    c: &mut Criterion,
+    rt: &Runtime,
+    svc: &FerroEhrService,
+    pool: &PgPool,
+    corpus: &Corpus,
+) -> Vec<Value> {
+    const GROUP: &str = "storage_aql";
+    let one_ehr = AqlQueryRequest {
+        ehr_ids: vec![corpus.ehrs.first().expect("an EHR").to_string()],
+        ..AqlQueryRequest::default()
+    };
+    let mut group = c.benchmark_group(GROUP);
+    configure(&mut group);
+    let mut ops = Vec::new();
+    for path in aql_hot_paths(corpus) {
+        let request = if path.one_ehr {
+            one_ehr.clone()
+        } else {
+            AqlQueryRequest::default()
+        };
+        println!("storage_aql: `{}` runs {}", path.name, path.aql);
+        let rows = rt.block_on(async {
+            let outcome = svc
+                .execute_ad_hoc_query(path.aql.clone(), request.clone())
+                .await
+                .expect("the hot path executes before it is timed");
+            result_rows(&outcome.result_set)
+        });
+        assert!(
+            rows > 0,
+            "the `{}` hot path returned no rows: {}",
+            path.name,
+            path.aql
+        );
+        let mut op = measured(rt, pool, &mut group, GROUP, path.name, |b| {
+            b.iter_custom(|iters| {
+                rt.block_on(async {
+                    let start = Instant::now();
+                    for _ in 0..iters {
+                        svc.execute_ad_hoc_query(path.aql.clone(), request.clone())
+                            .await
+                            .expect("the hot path executes");
+                    }
+                    start.elapsed()
+                })
+            });
+        });
+        if let Some(fields) = op.as_object_mut() {
+            fields.insert("statement".to_owned(), Value::from(path.aql));
+            fields.insert("rows".to_owned(), Value::from(rows));
+            fields.insert("one_ehr".to_owned(), Value::from(path.one_ehr));
+        }
+        ops.push(op);
+    }
+    group.finish();
+    ops
+}
+
 /// The lifecycle paths: archive and restore of one EHR, and one retention
 /// prune of the event outbox.
 fn bench_lifecycle(
@@ -1247,11 +1661,13 @@ fn git_head() -> String {
         .map_or_else(|| "unknown".to_owned(), |rev| rev.trim().to_owned())
 }
 
-/// Write the record under `docs/benchmarks/storage/<generation>/`.
-fn write_record(generation: &str, record: &Value) {
+/// Write the record under `docs/benchmarks/storage/<generation>/<class>/`, so
+/// each class the lane offers keeps a baseline of its own.
+fn write_record(generation: &str, class: &str, record: &Value) {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../docs/benchmarks/storage")
-        .join(generation);
+        .join(generation)
+        .join(class);
     std::fs::create_dir_all(&dir).expect("the record directory must be creatable");
     let path = dir.join("record.json");
     std::fs::write(
@@ -1294,6 +1710,8 @@ fn storage(c: &mut Criterion) {
                 "operations": bench_query(c, &rt, &svc, &pool, &corpus) }),
         json!({ "name": "storage_paths",
                 "operations": bench_paths(c, &rt, &svc, &pool) }),
+        json!({ "name": "storage_aql",
+                "operations": bench_aql(c, &rt, &svc, &pool, &corpus) }),
         json!({ "name": "storage_lifecycle",
                 "operations": bench_lifecycle(c, &rt, &svc, &pool, &corpus) }),
     ];
@@ -1329,6 +1747,7 @@ fn storage(c: &mut Criterion) {
             "ehrs": class.ehrs,
             "compositions": class.compositions,
             "template_id": corpus.template_id,
+            "second_template_id": corpus.second_template_id,
             "entry_rm_type": corpus.entry_rm_type,
             "seconds": corpus.seconds,
         },
@@ -1337,7 +1756,7 @@ fn storage(c: &mut Criterion) {
         "explain": rt.block_on(explain_population(&pool, &corpus)),
         "relations": rt.block_on(relations(&pool)),
     });
-    write_record(&generation, &record);
+    write_record(&generation, class.name, &record);
 }
 
 /// Criterion `Profiler` glue over the `pprof` sampler: start a guard when

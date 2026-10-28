@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Render the storage-benchmark section for the book FROM the committed records
-# (docs/benchmarks/storage/<generation>/record.json, #3367).
+# (docs/benchmarks/storage/<generation>/<class>/record.json, #3367).
 #
 # The stale-numbers gate (scripts/checks/conformance-numbers.sh) forbids a
 # hand-typed latency in the site sources, so the performance page includes this
@@ -34,7 +34,7 @@ esac
 records=()
 while IFS= read -r -d '' path; do
   records+=("$path")
-done < <(git ls-files -z 'docs/benchmarks/storage/*/record.json')
+done < <(git ls-files -z 'docs/benchmarks/storage/*/*/record.json')
 
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT

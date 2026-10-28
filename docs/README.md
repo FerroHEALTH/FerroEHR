@@ -69,7 +69,7 @@ conformance record.
 - `benchmarks/` — benchmark records, which are deliberately NOT under
   `conformance/`: conformance is the CNF 2.0 suite
   [Veredictum](https://github.com/Vernum-Projecten/Veredictum) runs.
-  `benchmarks/storage/<schema-generation>/record.json` is the storage
+  `benchmarks/storage/<schema-generation>/<class>/record.json` is the storage
   harness's record (`cargo bench -p ferroehr --bench storage`): per-operation
   latencies for the write path, the point reads, AQL CONTAINS, archive/restore
   and prune, with the database-side facts beside them. Records are gitignored
