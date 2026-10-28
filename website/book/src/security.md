@@ -537,8 +537,9 @@ able to tell them apart from the status alone.
 
 **Connection bounds:** `[server] header_read_timeout_ms`. The limit that applies
 *before* a request exists, because a client that opens a socket and trickles
-headers reaches none of the others: a client that has not sent its request head
-in time is disconnected, on the plain and the TLS listener alike.
+headers, or sends nothing at all, reaches none of the others: a client that has
+not sent its request head in time, counted from accept, is disconnected, on the
+plain and the TLS listener alike.
 
 **Body size:** `[server] body_limit_bytes` and `[rest] body_limit_bytes`. Two
 tiers: the routes that accept bulk by design (template upload and
