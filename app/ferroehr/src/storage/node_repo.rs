@@ -51,7 +51,7 @@ fn write_nodes_sql(per_row_context: bool) -> String {
                 let _ = write!(selects, ", ext.openehr_timestamp(t.p{i})");
             }
         }
-        let _ = write!(arrays, ", ${}::text[]", 17 + i);
+        let _ = write!(arrays, ", ${}::text[]", 22 + i);
         let _ = write!(names, ", p{i}");
     }
     let (context_select, context_arrays, context_names) = if per_row_context {
@@ -67,15 +67,19 @@ fn write_nodes_sql(per_row_context: bool) -> String {
     format!(
         "INSERT INTO node (vo_id, sys_version, ehr_id, num, num_cap, parent_num, \
          rm_type, archetype, arch_entity, arch_concept, arch_major, name, name_code, \
-         name_terminology, path, data{columns}) \
+         name_terminology, path, data, value_type, value_num, value_text, value_code, \
+         value_terminology{columns}) \
          SELECT {context_select}, t.num, t.num_cap, t.parent_num, t.rm_type, \
          t.archetype, t.arch_entity, t.arch_concept, t.arch_major, t.name, t.name_code, \
-         t.name_terminology, t.path, t.data{selects} \
+         t.name_terminology, t.path, t.data, t.value_type, t.value_num::numeric, t.value_text, \
+         t.value_code, t.value_terminology{selects} \
          FROM unnest({context_arrays}{separator}$4::int[], $5::int[], $6::int[], $7::text[], $8::text[], \
          $9::text[], $10::text[], $11::int[], $12::text[], $13::text[], $14::text[], \
-         $15::text[], $16::jsonb[]{arrays}) \
+         $15::text[], $16::jsonb[], $17::text[], $18::text[], $19::text[], $20::text[], \
+         $21::text[]{arrays}) \
          AS t({context_names}num, num_cap, parent_num, rm_type, archetype, arch_entity, \
-         arch_concept, arch_major, name, name_code, name_terminology, path, data{names})"
+         arch_concept, arch_major, name, name_code, name_terminology, path, data, value_type, \
+         value_num, value_text, value_code, value_terminology{names})"
     )
 }
 
@@ -105,22 +109,26 @@ pub(crate) fn node_insert_cte(vo: &str, sys: &str, ehr: &str, first_array_param:
                 let _ = write!(selects, ", ext.openehr_timestamp(t.p{i})");
             }
         }
-        let _ = write!(arrays, ", ${}::text[]", first_array_param + 13 + i);
+        let _ = write!(arrays, ", ${}::text[]", first_array_param + 18 + i);
         let _ = write!(names, ", p{i}");
     }
     let p = |offset: usize| first_array_param + offset;
     format!(
         "INSERT INTO node (vo_id, sys_version, ehr_id, num, num_cap, parent_num, \
          rm_type, archetype, arch_entity, arch_concept, arch_major, name, name_code, \
-         name_terminology, path, data{columns}) \
+         name_terminology, path, data, value_type, value_num, value_text, value_code, \
+         value_terminology{columns}) \
          SELECT {vo}, {sys}, {ehr}, t.num, t.num_cap, t.parent_num, t.rm_type, \
          t.archetype, t.arch_entity, t.arch_concept, t.arch_major, t.name, t.name_code, \
-         t.name_terminology, t.path, t.data{selects} \
+         t.name_terminology, t.path, t.data, t.value_type, t.value_num::numeric, t.value_text, \
+         t.value_code, t.value_terminology{selects} \
          FROM unnest(${}::int[], ${}::int[], ${}::int[], ${}::text[], ${}::text[], \
          ${}::text[], ${}::text[], ${}::int[], ${}::text[], ${}::text[], ${}::text[], \
-         ${}::text[], ${}::jsonb[]{arrays}) \
+         ${}::text[], ${}::jsonb[], ${}::text[], ${}::text[], ${}::text[], ${}::text[], \
+         ${}::text[]{arrays}) \
          AS t(num, num_cap, parent_num, rm_type, archetype, arch_entity, \
-         arch_concept, arch_major, name, name_code, name_terminology, path, data{names}) \
+         arch_concept, arch_major, name, name_code, name_terminology, path, data, value_type, \
+         value_num, value_text, value_code, value_terminology{names}) \
          CROSS JOIN v",
         p(0),
         p(1),
@@ -135,6 +143,11 @@ pub(crate) fn node_insert_cte(vo: &str, sys: &str, ehr: &str, first_array_param:
         p(10),
         p(11),
         p(12),
+        p(13),
+        p(14),
+        p(15),
+        p(16),
+        p(17),
     )
 }
 
@@ -231,9 +244,13 @@ pub async fn write_nodes_batch(
     Ok(())
 }
 
-/// Bind the thirteen per-node column arrays plus the promoted-leaf arrays onto
+/// Bind the eighteen per-node column arrays plus the promoted-leaf arrays onto
 /// a node-insert statement whose storage-context parameters (`$1..$3`) are
 /// already bound.
+///
+/// The fragment is stored slimmed ([`crate::storage::slim::slim`]): the keys
+/// the row's columns hold are left out, and a typed `ELEMENT` value fills the
+/// five value columns instead.
 pub(crate) fn bind_node_arrays<'q>(
     mut query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
     rows: &[&'q NodeRow],
@@ -251,7 +268,12 @@ pub(crate) fn bind_node_arrays<'q>(
     let mut name_codes: Vec<Option<&str>> = Vec::with_capacity(n);
     let mut name_terminologies: Vec<Option<&str>> = Vec::with_capacity(n);
     let mut paths: Vec<&str> = Vec::with_capacity(n);
-    let mut datas: Vec<&Value> = Vec::with_capacity(n);
+    let mut datas: Vec<Option<Value>> = Vec::with_capacity(n);
+    let mut value_types: Vec<Option<String>> = Vec::with_capacity(n);
+    let mut value_nums: Vec<Option<String>> = Vec::with_capacity(n);
+    let mut value_texts: Vec<Option<String>> = Vec::with_capacity(n);
+    let mut value_codes: Vec<Option<String>> = Vec::with_capacity(n);
+    let mut value_terminologies: Vec<Option<String>> = Vec::with_capacity(n);
     for row in rows {
         nums.push(row.num);
         num_caps.push(row.num_cap);
@@ -265,7 +287,14 @@ pub(crate) fn bind_node_arrays<'q>(
         name_codes.push(row.name_code.as_deref());
         name_terminologies.push(row.name_terminology.as_deref());
         paths.push(&row.path);
-        datas.push(&row.data);
+        let stored = crate::storage::slim::slim(&row.rm_type, row.data.clone());
+        datas.push(stored.data);
+        let value = stored.value;
+        value_types.push(value.as_ref().map(|v| v.value_type.clone()));
+        value_nums.push(value.as_ref().and_then(|v| v.num.clone()));
+        value_texts.push(value.as_ref().and_then(|v| v.text.clone()));
+        value_codes.push(value.as_ref().and_then(|v| v.code.clone()));
+        value_terminologies.push(value.and_then(|v| v.terminology));
     }
     query = query
         .bind(nums)
@@ -280,7 +309,12 @@ pub(crate) fn bind_node_arrays<'q>(
         .bind(name_codes)
         .bind(name_terminologies)
         .bind(paths)
-        .bind(datas);
+        .bind(datas)
+        .bind(value_types)
+        .bind(value_nums)
+        .bind(value_texts)
+        .bind(value_codes)
+        .bind(value_terminologies);
     for (i, _leaf) in crate::storage::promoted::PROMOTED_LEAVES.iter().enumerate() {
         let leaf_values: Vec<Option<&str>> = rows
             .iter()
@@ -294,8 +328,51 @@ pub(crate) fn bind_node_arrays<'q>(
 /// The lean read-row statement: **only** the five columns
 /// [`crate::storage::codec::reassemble`] and the nested-set contract need — the
 /// promoted query columns are not read back.
-const READ_ROWS_SQL: &str = "SELECT num, num_cap, parent_num, path, data \
+const READ_ROWS_SQL: &str = "SELECT num, num_cap, parent_num, path, data, rm_type, archetype, \
+                             name, name_code, name_terminology, value_type, \
+                             value_num::text AS value_num, value_text, value_code, value_terminology \
                              FROM node WHERE vo_id = $1 AND sys_version = $2 ORDER BY num";
+
+/// The canonical fragment of one fetched node row: its stored `data` with the
+/// keys its columns hold put back ([`crate::storage::slim::rebuild`]).
+///
+/// The row carries, from column `at` on, `data`, `rm_type`, `archetype`,
+/// `name`, `name_code`, `name_terminology`, `value_type`, `value_num` (as
+/// text), `value_text`, `value_code` and `value_terminology`; they are read by
+/// position, because a by-name read searches the column list for every value.
+///
+/// # Errors
+/// [`StorageError::Database`] when a column cannot be read, and
+/// [`StorageError::InvalidRows`] when a typed number is no JSON number.
+fn row_fragment(row: &sqlx::postgres::PgRow, at: usize) -> Result<Value, StorageError> {
+    let rm_type: String = row.try_get(at + 1)?;
+    let archetype: Option<String> = row.try_get(at + 2)?;
+    let name: Option<String> = row.try_get(at + 3)?;
+    let name_code: Option<String> = row.try_get(at + 4)?;
+    let name_terminology: Option<String> = row.try_get(at + 5)?;
+    let value = row
+        .try_get::<Option<String>, _>(at + 6)?
+        .map(|value_type| -> Result<_, StorageError> {
+            Ok(crate::storage::slim::TypedValue {
+                value_type,
+                num: row.try_get(at + 7)?,
+                text: row.try_get(at + 8)?,
+                code: row.try_get(at + 9)?,
+                terminology: row.try_get(at + 10)?,
+            })
+        })
+        .transpose()?;
+    let columns = crate::storage::slim::Columns {
+        rm_type: &rm_type,
+        archetype: archetype.as_deref(),
+        name: name.as_deref(),
+        name_code: name_code.as_deref(),
+        name_terminology: name_terminology.as_deref(),
+    };
+    crate::storage::slim::rebuild(row.try_get(at)?, &columns, value.as_ref()).ok_or_else(|| {
+        StorageError::InvalidRows("a node row holds a typed number that is no JSON number".into())
+    })
+}
 
 /// Fetch the lean read rows of one stored version, ordered by `num`.
 ///
@@ -330,7 +407,7 @@ where
             num_cap: row.try_get("num_cap")?,
             parent_num: row.try_get("parent_num")?,
             path: row.try_get("path")?,
-            data: row.try_get("data")?,
+            data: row_fragment(&row, 4)?,
         });
     }
     Ok(read)
@@ -436,7 +513,9 @@ pub async fn read_version_rows_all(
     let sys_versions: Vec<i32> = keys.iter().map(|(_, sys_version)| *sys_version).collect();
 
     let db_rows = sqlx::query(
-        "SELECT n.vo_id, n.sys_version, n.num, n.num_cap, n.parent_num, n.path, n.data \
+        "SELECT n.vo_id, n.sys_version, n.num, n.num_cap, n.parent_num, n.path, n.data, \
+         n.rm_type, n.archetype, n.name, n.name_code, n.name_terminology, n.value_type, \
+         n.value_num::text AS value_num, n.value_text, n.value_code, n.value_terminology \
          FROM unnest($1::uuid[], $2::int[]) AS k(vo_id, sys_version) \
          JOIN node n ON n.vo_id = k.vo_id AND n.sys_version = k.sys_version",
     )
@@ -453,7 +532,7 @@ pub async fn read_version_rows_all(
             num_cap: row.try_get("num_cap")?,
             parent_num: row.try_get("parent_num")?,
             path: row.try_get("path")?,
-            data: row.try_get("data")?,
+            data: row_fragment(&row, 6)?,
         });
     }
 
@@ -549,7 +628,9 @@ pub async fn read_subtrees_canonical(
     // tagged by `idx`. `num BETWEEN anum AND acap` is the nested-set containment
     // predicate the single-row read also uses, now driven by the anchor set.
     let db_rows = sqlx::query(
-        "SELECT a.idx, n.num, n.path, n.data \
+        "SELECT a.idx, n.num, n.path, n.data, n.rm_type, n.archetype, n.name, n.name_code, \
+                n.name_terminology, n.value_type, n.value_num::text AS value_num, n.value_text, \
+                n.value_code, n.value_terminology \
          FROM unnest($1::int[], $2::uuid[], $3::int[], $4::int[], $5::int[]) \
               AS a(idx, vo_id, sys_version, anum, acap) \
          JOIN node n \
@@ -571,7 +652,7 @@ pub async fn read_subtrees_canonical(
         grouped.entry(group_idx).or_default().push((
             row.try_get("num")?,
             row.try_get("path")?,
-            row.try_get("data")?,
+            row_fragment(&row, 3)?,
         ));
     }
 

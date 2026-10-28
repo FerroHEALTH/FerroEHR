@@ -139,41 +139,7 @@ impl Builder<'_> {
             } => {
                 let agg = match arg {
                     None => aggregate_expr(*func, None, *distinct),
-                    Some(target) => {
-                        let mode = match func {
-                            AggFunc::Count => ValueMode::Projection,
-                            // MIN/MAX preserve the argument leaf's own
-                            // comparison type — "Input values type should be
-                            // either String, Date, Time, Integer or Real, and it
-                            // will also determine the return type" (QUERY master03
-                            // §MIN, §MAX) — never a forced numeric magnitude.
-                            AggFunc::Min | AggFunc::Max => ValueMode::Value(order_coercion(target)),
-                            // SUM/AVG accept Integer/Real only (§SUM, §AVG); the
-                            // analyzer rejects a non-numeric leaf, so the
-                            // magnitude coercion is always type-safe here.
-                            AggFunc::Sum | AggFunc::Avg => ValueMode::Value(Coercion::Magnitude),
-                        };
-                        let count = matches!(func, AggFunc::Count);
-                        if let Some(mut walk) = self.leaf_items(target, mode)? {
-                            if let Some(filter) = self.where_filter_for(&walk)? {
-                                walk.sub.and_where(filter);
-                            }
-                            let item = if count {
-                                json_null_is_null(walk.item.clone())
-                            } else {
-                                walk.item.clone()
-                            };
-                            aggregate_over_items(*func, *distinct, &walk.sub, &item)
-                        } else {
-                            let value = self.value_expr(target, mode)?;
-                            let value = if count && self.reads_fragment(target, mode) {
-                                json_null_is_null(value)
-                            } else {
-                                value
-                            };
-                            aggregate_expr(*func, Some(value), *distinct)
-                        }
-                    }
+                    Some(target) => self.aggregate_over(*func, target, *distinct)?,
                 };
                 let sql_col = format!("col{i}");
                 self.q.expr_as(to_jsonb(agg), Alias::new(sql_col.as_str()));
@@ -464,6 +430,60 @@ fn json_null_is_null(value: Expr) -> Expr {
 }
 
 impl Builder<'_> {
+    /// The aggregate `func` over the values of `target` (QUERY master03
+    /// §Aggregate functions).
+    ///
+    /// # Errors
+    /// [`AqlError`] from lowering the argument.
+    fn aggregate_over(
+        &mut self,
+        func: AggFunc,
+        target: &PathTarget,
+        distinct: bool,
+    ) -> Result<Expr, AqlError> {
+        let mode = match func {
+            AggFunc::Count => ValueMode::Projection,
+            // MIN/MAX preserve the argument leaf's own
+            // comparison type — "Input values type should be
+            // either String, Date, Time, Integer or Real, and it
+            // will also determine the return type" (QUERY master03
+            // §MIN, §MAX) — never a forced numeric magnitude.
+            AggFunc::Min | AggFunc::Max => ValueMode::Value(order_coercion(target)),
+            // SUM/AVG accept Integer/Real only (§SUM, §AVG); the
+            // analyzer rejects a non-numeric leaf, so the
+            // magnitude coercion is always type-safe here.
+            AggFunc::Sum | AggFunc::Avg => ValueMode::Value(Coercion::Magnitude),
+        };
+        let count = matches!(func, AggFunc::Count);
+        // A plain count only asks whether each object is there;
+        // a DISTINCT count compares the objects themselves.
+        self.presence_only = count && !distinct;
+        let walk = self.leaf_items(target, mode);
+        self.presence_only = false;
+        if let Some(mut walk) = walk? {
+            if let Some(filter) = self.where_filter_for(&walk)? {
+                walk.sub.and_where(filter);
+            }
+            let item = if count {
+                json_null_is_null(walk.item.clone())
+            } else {
+                walk.item.clone()
+            };
+            Ok(aggregate_over_items(func, distinct, &walk.sub, &item))
+        } else {
+            self.presence_only = count && !distinct;
+            let value = self.value_expr(target, mode);
+            self.presence_only = false;
+            let value = value?;
+            let value = if count && self.reads_fragment(target, mode) {
+                json_null_is_null(value)
+            } else {
+                value
+            };
+            Ok(aggregate_expr(func, Some(value), distinct))
+        }
+    }
+
     /// Whether `target` is read as a jsonb fragment value (a data path that is
     /// neither uid synthesis nor a promoted column).
     fn reads_fragment(&mut self, target: &PathTarget, mode: ValueMode) -> bool {

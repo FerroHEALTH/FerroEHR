@@ -22,7 +22,9 @@ use crate::db::iden::{Ehr, Node};
 use openehr_query::ast::{BuiltinFunction, DateTimeFunction, NumericFunction, StringFunction};
 use openehr_query::lexer::CompOp;
 
-use super::expr::{aql_like_to_sql, archetype_predicate, as_text, binoper, cast, col, jsonb_path};
+use super::expr::{
+    aql_like_to_sql, archetype_predicate, as_text, binoper, cast, col, fragment_source, jsonb_path,
+};
 use super::value::{coerce_rhs, jsonpath};
 use super::{Builder, ValueMode};
 
@@ -398,7 +400,7 @@ impl Builder<'_> {
 
     pub(super) fn std_cond(&self, node: &str, sp: &StdPredicate) -> Result<Expr, AqlError> {
         let jp = jsonpath(&sp.path);
-        let lhs = as_text(jsonb_path(col(node, Node::Data), &jp, None));
+        let lhs = as_text(jsonb_path(fragment_source(node, Some(&jp)), &jp, None));
         let rhs = cast(Expr::val(self.bind_value(&sp.value)?), "text");
         Ok(lhs.binary(binoper(sp.op), rhs))
     }

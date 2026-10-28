@@ -122,7 +122,9 @@ pub async fn current_status_root(
     ehr_id: EhrId,
 ) -> Result<Option<Value>, StorageError> {
     Ok(sqlx::query_scalar(
-        "SELECT n.data FROM version v \
+        "SELECT ext.node_fragment(n.data, n.rm_type, n.archetype, n.name, n.name_code, \
+         n.name_terminology, n.value_type, n.value_num, n.value_text, n.value_code, \
+         n.value_terminology) FROM version v \
          JOIN node n ON n.vo_id = v.vo_id AND n.sys_version = v.sys_version AND n.num = 0 \
          JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
          WHERE v.ehr_id = $1 AND v.kind = 'EHR_STATUS'",
@@ -537,8 +539,8 @@ pub async fn live_folder_root_exists(
            JOIN node n ON n.vo_id = v.vo_id AND n.sys_version = v.sys_version \
              AND n.num = 0 \
            WHERE f.ehr_id = $1 AND v.lifecycle_state <> '523' \
-             AND n.data->>'archetype_node_id' = $2 \
-             AND n.data#>>'{name,value}' = $3)",
+             AND COALESCE(n.data->>'archetype_node_id', n.archetype) = $2 \
+             AND n.name = $3)",
     )
     .bind(ehr_id)
     .bind(root_archetype_node_id)

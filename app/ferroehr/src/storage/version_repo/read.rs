@@ -176,7 +176,7 @@ macro_rules! version_select {
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, v.origins, ",
             "v.body, h.restricted_at, h.access_restricted_at, ",
-            "(SELECT n.data->>'archetype_node_id' FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
+            "(SELECT COALESCE(n.data->>'archetype_node_id', n.archetype) FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
             "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
             "a.time_committed, ",
@@ -208,7 +208,7 @@ macro_rules! version_select_raw {
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, ",
             "v.origins, v.body, h.restricted_at, h.access_restricted_at, ",
-            "(SELECT n.data->>'archetype_node_id' FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
+            "(SELECT COALESCE(n.data->>'archetype_node_id', n.archetype) FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
             "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
             "a.time_committed, ",
@@ -863,7 +863,7 @@ pub async fn content_of_objects(
         "SELECT DISTINCT c.ehr_id, c.kind, c.template_id, c.archetype \
          FROM unnest($1::uuid[]) AS a(vo_id) \
          CROSS JOIN LATERAL ( \
-             SELECT v.ehr_id, v.kind, v.template_id, n.data->>'archetype_node_id' AS archetype \
+             SELECT v.ehr_id, v.kind, v.template_id, COALESCE(n.data->>'archetype_node_id', n.archetype) AS archetype \
              FROM version v \
              LEFT JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
                   AND n.sys_version = v.sys_version AND n.num = 0 \
@@ -891,7 +891,7 @@ pub async fn content_of_contribution(
         "SELECT DISTINCT v.ehr_id, v.kind, c.template_id, c.archetype \
          FROM version v \
          LEFT JOIN LATERAL ( \
-             SELECT p.template_id, n.data->>'archetype_node_id' AS archetype \
+             SELECT p.template_id, COALESCE(n.data->>'archetype_node_id', n.archetype) AS archetype \
              FROM version p \
              LEFT JOIN node n ON n.tier = p.tier AND n.vo_id = p.vo_id \
                   AND n.sys_version = p.sys_version AND n.num = 0 \
@@ -952,7 +952,7 @@ pub async fn read_served(
                  coalesce(s.origins, jsonb_build_array(s.creating_system_id))) AS e(origin) \
          ), c AS ( \
              SELECT DISTINCT s.ehr_id, s.kind, s.template_id, \
-                    n.data->>'archetype_node_id' AS archetype \
+                    COALESCE(n.data->>'archetype_node_id', n.archetype) AS archetype \
              FROM s LEFT JOIN node n ON n.tier = s.tier AND n.vo_id = s.vo_id \
                   AND n.sys_version = s.sys_version AND n.num = 0 \
          ) \

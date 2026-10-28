@@ -163,8 +163,13 @@ erDiagram
         text archetype "case-folded"
         text name_code "promoted name/defining_code"
         text path "materialized, COLLATE C"
-        jsonb data "canonical fragment, children pruned"
+        jsonb data "what no column holds, NULL when nothing remains"
         timestamptz context_start "promoted, COMPOSITION root only"
+        text value_type "typed ELEMENT value"
+        numeric value_num
+        text value_text
+        text value_code
+        text value_terminology
     }
 ```
 
@@ -242,10 +247,19 @@ flowchart TD
 ## Content decomposition: the `node` table
 
 At commit, the accepted composition is decomposed into one row per RM
-structure node. Each row stores the node's **canonical openEHR JSON fragment
-verbatim** (the ITS-JSON encoding) with its structure children pruned out: no
-alias compaction, no synthetic fields, so what sits in `node.data` is
-byte-identical in shape to what the API serves. Storage equals wire.
+structure node. Each row holds the node's **canonical openEHR JSON fragment**
+(the ITS-JSON encoding) with its structure children pruned out: no alias
+compaction, no synthetic fields. A row stores only the part its own columns do
+not hold. `_type` is the `rm_type` column, a lowercase `archetype_node_id` is
+`archetype`, a plain or simply coded `name` is `name` with its code columns,
+and an ELEMENT value in one of the common basic shapes (a quantity, a count,
+an ordinal, a coded or plain text, a date, time or duration, an identifier, a
+boolean, a URI) sits in typed value columns. Everything else stays in
+`node.data` verbatim, and `data` is empty on two rows in three. The database
+functions `ext.node_fragment`, `ext.node_name` and `ext.node_value` put the
+omitted keys back, so every reader, AQL included, sees exactly the fragment
+the API would serve. A filter or projection on a quantity's magnitude or a
+code reads the typed column directly.
 
 A party body decomposes the same way. The party root, each `PARTY_IDENTITY`,
 `CONTACT`, `ADDRESS` and `CAPABILITY` nested in it, and the `ITEM_STRUCTURE`
@@ -342,8 +356,9 @@ loads the matching `body` rows in a batch instead of reassembling fragments.
 CONTAINS chains become nested-set interval joins, class and archetype
 predicates hit the promoted columns and their indexes, a COMPOSITION's
 `archetype_details/template_id/value` compares the indexed
-`version.template_id`, leaf values are
-extracted from the canonical fragments with `jsonb_path_query_first`, arrays
+`version.template_id`, a typed ELEMENT value's magnitude, units, text or code
+reads its typed column, other leaf values are
+extracted from the rebuilt fragments with `jsonb_path_query_first`, arrays
 are unnested with `jsonb_path_query` as a lateral set-returning function, and
 comparison and ordering go through `ext.openehr_magnitude` (the `IMMUTABLE`
 helper realizing DV_ORDERED ordering semantics) and `ext.openehr_timestamp`

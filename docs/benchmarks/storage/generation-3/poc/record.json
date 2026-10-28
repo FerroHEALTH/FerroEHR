@@ -1,0 +1,1061 @@
+{
+  "schema_generation": "generation-3",
+  "postgres_version": "PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+  "bench_class": "poc",
+  "cpu_count": 4,
+  "memory_bytes": 16758407168,
+  "measured_at_commit": "59b91af928a40fe39412eb2f5da9e7098d1c60e4",
+  "measured_at": "2026-10-28T16:03:49.557348018Z",
+  "timings_measured": true,
+  "seed": {
+    "ehrs": 20,
+    "compositions": 300,
+    "template_id": "Vital signs",
+    "second_template_id": "GP data set",
+    "entry_rm_type": "OBSERVATION",
+    "seconds": 1.101752176
+  },
+  "storage": {
+    "composition_versions": 340,
+    "bytes_per_composition_version": 27009.50588235294,
+    "node_rows_per_version": 51.64705882352941,
+    "node_heap_bytes_per_row": 329.8259681093394,
+    "node_row_bytes": 318.7715909090909,
+    "input_bytes_per_version": 13254.058823529413,
+    "stored_body_bytes_per_version": 2165.235294117647,
+    "audit_records": 0,
+    "audit_bytes_per_record": null,
+    "growth": [
+      {
+        "relation": "clinical.node_hot",
+        "bytes": 7241728
+      },
+      {
+        "relation": "clinical.version_hot",
+        "bytes": 1171456
+      },
+      {
+        "relation": "clinical.event_outbox",
+        "bytes": 237568
+      },
+      {
+        "relation": "clinical.contribution",
+        "bytes": 204800
+      },
+      {
+        "relation": "clinical.vo_head",
+        "bytes": 204800
+      },
+      {
+        "relation": "clinical.commit_audit",
+        "bytes": 122880
+      }
+    ]
+  },
+  "groups": [
+    {
+      "name": "storage_commit",
+      "operations": [
+        {
+          "name": "create_first_version",
+          "iterations": 840.0,
+          "samples": 10,
+          "mean_ns": 6899182.739285715,
+          "median_ns": 5840698.410714285,
+          "p50_ns": 5774297.797619048,
+          "p95_ns": 14630488.226190476,
+          "p99_ns": 14630488.226190476,
+          "database": {
+            "tables": [
+              {
+                "relation": "clinical.commit_audit",
+                "n_tup_ins_delta": 1095,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 1495,
+                "n_dead_tup": 0,
+                "total_bytes": 483328
+              },
+              {
+                "relation": "clinical.contribution",
+                "n_tup_ins_delta": 1095,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 1455,
+                "n_dead_tup": 0,
+                "total_bytes": 368640
+              },
+              {
+                "relation": "clinical.event_outbox",
+                "n_tup_ins_delta": 1095,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 1455,
+                "n_dead_tup": 0,
+                "total_bytes": 991232
+              },
+              {
+                "relation": "clinical.node_hot",
+                "n_tup_ins_delta": 47085,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 64685,
+                "n_dead_tup": 0,
+                "total_bytes": 27000832
+              },
+              {
+                "relation": "clinical.version_hot",
+                "n_tup_ins_delta": 1095,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 1475,
+                "n_dead_tup": 0,
+                "total_bytes": 4104192
+              },
+              {
+                "relation": "clinical.vo_head",
+                "n_tup_ins_delta": 1095,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 1455,
+                "n_dead_tup": 20,
+                "total_bytes": 507904
+              }
+            ],
+            "blks_hit_delta": 648612,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 2197,
+            "wal_bytes": 36459192
+          }
+        },
+        {
+          "name": "supersede",
+          "iterations": 610.0,
+          "samples": 10,
+          "mean_ns": 12009702.918032786,
+          "median_ns": 11556251.893442623,
+          "p50_ns": 11449275.147540983,
+          "p95_ns": 18941715.80327869,
+          "p99_ns": 18941715.80327869,
+          "database": {
+            "tables": [
+              {
+                "relation": "clinical.commit_audit",
+                "n_tup_ins_delta": 737,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 2233,
+                "n_dead_tup": 0,
+                "total_bytes": 688128
+              },
+              {
+                "relation": "clinical.contribution",
+                "n_tup_ins_delta": 737,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 2193,
+                "n_dead_tup": 0,
+                "total_bytes": 450560
+              },
+              {
+                "relation": "clinical.event_outbox",
+                "n_tup_ins_delta": 737,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 2193,
+                "n_dead_tup": 0,
+                "total_bytes": 1376256
+              },
+              {
+                "relation": "clinical.node_hot",
+                "n_tup_ins_delta": 31691,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 96419,
+                "n_dead_tup": 0,
+                "total_bytes": 40075264
+              },
+              {
+                "relation": "clinical.version_hot",
+                "n_tup_ins_delta": 737,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 2213,
+                "n_dead_tup": 0,
+                "total_bytes": 5939200
+              },
+              {
+                "relation": "clinical.vo_head",
+                "n_tup_ins_delta": 0,
+                "n_tup_upd_delta": 737,
+                "n_tup_hot_upd_delta": 737,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 1456,
+                "n_dead_tup": 79,
+                "total_bytes": 516096
+              }
+            ],
+            "blks_hit_delta": 13048343,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 744,
+            "wal_bytes": 24094664
+          }
+        },
+        {
+          "name": "supersede_if_match",
+          "iterations": 640.0,
+          "samples": 10,
+          "mean_ns": 13302193.415625,
+          "median_ns": 12618214.8828125,
+          "p50_ns": 12328530.8125,
+          "p95_ns": 21588932.890625,
+          "p99_ns": 21588932.890625,
+          "database": {
+            "tables": [
+              {
+                "relation": "clinical.commit_audit",
+                "n_tup_ins_delta": 895,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 3129,
+                "n_dead_tup": 0,
+                "total_bytes": 892928
+              },
+              {
+                "relation": "clinical.contribution",
+                "n_tup_ins_delta": 895,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 3089,
+                "n_dead_tup": 0,
+                "total_bytes": 655360
+              },
+              {
+                "relation": "clinical.event_outbox",
+                "n_tup_ins_delta": 895,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 3089,
+                "n_dead_tup": 0,
+                "total_bytes": 1933312
+              },
+              {
+                "relation": "clinical.node_hot",
+                "n_tup_ins_delta": 38485,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 134947,
+                "n_dead_tup": 0,
+                "total_bytes": 55910400
+              },
+              {
+                "relation": "clinical.version_hot",
+                "n_tup_ins_delta": 895,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 3109,
+                "n_dead_tup": 0,
+                "total_bytes": 8011776
+              },
+              {
+                "relation": "clinical.vo_head",
+                "n_tup_ins_delta": 0,
+                "n_tup_upd_delta": 895,
+                "n_tup_hot_upd_delta": 895,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 1457,
+                "n_dead_tup": 80,
+                "total_bytes": 516096
+              }
+            ],
+            "blks_hit_delta": 19143656,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 897,
+            "wal_bytes": 29310312
+          }
+        }
+      ]
+    },
+    {
+      "name": "storage_read",
+      "operations": [
+        {
+          "name": "by_version_uid",
+          "iterations": 9920.0,
+          "samples": 10,
+          "mean_ns": 414893.4255040322,
+          "median_ns": 418906.625,
+          "p50_ns": 418762.19153225806,
+          "p95_ns": 439705.57157258067,
+          "p99_ns": 439705.57157258067,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 245293,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 11988,
+            "wal_bytes": 472
+          }
+        },
+        {
+          "name": "latest_by_versioned_object_uid",
+          "iterations": 11710.0,
+          "samples": 10,
+          "mean_ns": 407271.68804440653,
+          "median_ns": 408237.02476515796,
+          "p50_ns": 404178.37660119554,
+          "p95_ns": 428485.5747224594,
+          "p99_ns": 428485.5747224594,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 301532,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 15827,
+            "wal_bytes": 0
+          }
+        },
+        {
+          "name": "version_at_time",
+          "iterations": 4940.0,
+          "samples": 10,
+          "mean_ns": 874779.4097165993,
+          "median_ns": 876209.7641700405,
+          "p50_ns": 874447.113360324,
+          "p95_ns": 886071.2914979757,
+          "p99_ns": 886071.2914979757,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 151435,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 5985,
+            "wal_bytes": 0
+          }
+        },
+        {
+          "name": "revision_history",
+          "iterations": 18710.0,
+          "samples": 10,
+          "mean_ns": 220187.0191876002,
+          "median_ns": 207063.27258150722,
+          "p50_ns": 206631.78460716194,
+          "p95_ns": 248458.08017103153,
+          "p99_ns": 248458.08017103153,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 502662,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 22827,
+            "wal_bytes": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "storage_query",
+      "operations": [
+        {
+          "name": "contains_one_ehr",
+          "iterations": 1410.0,
+          "samples": 10,
+          "mean_ns": 3509342.1780141843,
+          "median_ns": 3527216.8191489363,
+          "p50_ns": 3517575.780141844,
+          "p95_ns": 3561433.9929078016,
+          "p99_ns": 3561433.9929078016,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 859578,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 7729,
+            "wal_bytes": 7168
+          }
+        },
+        {
+          "name": "contains_population",
+          "iterations": 2690.0,
+          "samples": 10,
+          "mean_ns": 1845072.3475836434,
+          "median_ns": 1847165.996282528,
+          "p50_ns": 1841962.7249070632,
+          "p95_ns": 1870376.5687732343,
+          "p99_ns": 1870376.5687732343,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 824801,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 11142,
+            "wal_bytes": 8320
+          }
+        }
+      ]
+    },
+    {
+      "name": "storage_paths",
+      "operations": [
+        {
+          "name": "flat_2_sibling_leaves",
+          "iterations": 230.0,
+          "samples": 10,
+          "mean_ns": 19418161.004347827,
+          "median_ns": 19419854.43478261,
+          "p50_ns": 19405815.695652176,
+          "p95_ns": 20034765.347826086,
+          "p99_ns": 20034765.347826086,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 5239470,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 1472,
+            "wal_bytes": 43368
+          },
+          "statement": "SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude, o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2] ORDER BY c/uid/value LIMIT 50",
+          "from_shape": "flat"
+        },
+        {
+          "name": "flat_3_sibling_leaves",
+          "iterations": 210.0,
+          "samples": 10,
+          "mean_ns": 23524603.83809524,
+          "median_ns": 23530452.952380955,
+          "p50_ns": 23449361.85714286,
+          "p95_ns": 23842959.333333332,
+          "p99_ns": 23842959.333333332,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 4934788,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 1368,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude, o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude, o/data[at0001]/events[at0006]/data[at0003]/items[at1006]/value/magnitude FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2] ORDER BY c/uid/value LIMIT 50",
+          "from_shape": "flat"
+        },
+        {
+          "name": "streaming_2_sibling_leaves",
+          "iterations": 980.0,
+          "samples": 10,
+          "mean_ns": 5112951.98367347,
+          "median_ns": 5115062.459183674,
+          "p50_ns": 5106961.030612245,
+          "p95_ns": 5250428.4387755105,
+          "p99_ns": 5250428.4387755105,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 2960620,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 3712,
+            "wal_bytes": 3704
+          },
+          "statement": "SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude, o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2] LIMIT 50",
+          "from_shape": "streaming"
+        },
+        {
+          "name": "streaming_3_sibling_leaves",
+          "iterations": 900.0,
+          "samples": 10,
+          "mean_ns": 5512299.508888888,
+          "median_ns": 5474204.427777778,
+          "p50_ns": 5465995.0,
+          "p95_ns": 5734152.911111111,
+          "p99_ns": 5734152.911111111,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 3007660,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 3468,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude, o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude, o/data[at0001]/events[at0006]/data[at0003]/items[at1006]/value/magnitude FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2] LIMIT 50",
+          "from_shape": "streaming"
+        }
+      ]
+    },
+    {
+      "name": "storage_aql",
+      "operations": [
+        {
+          "name": "contains_exists",
+          "iterations": 470.0,
+          "samples": 10,
+          "mean_ns": 10525807.078723405,
+          "median_ns": 10557673.191489361,
+          "p50_ns": 10491595.723404255,
+          "p95_ns": 11058045.489361702,
+          "p99_ns": 11058045.489361702,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 8638704,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 1201,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT count(c) FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]",
+          "rows": 1,
+          "one_ehr": false
+        },
+        {
+          "name": "node_predicate",
+          "iterations": 1380.0,
+          "samples": 10,
+          "mean_ns": 3608147.2268115943,
+          "median_ns": 3595241.652173913,
+          "p50_ns": 3581108.282608696,
+          "p95_ns": 3695025.9492753623,
+          "p99_ns": 3695025.9492753623,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 2969000,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 5676,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2] CONTAINS ELEMENT x[at0004, 'Systolic'] LIMIT 50",
+          "rows": 50,
+          "one_ehr": false
+        },
+        {
+          "name": "where_magnitude",
+          "iterations": 110.0,
+          "samples": 10,
+          "mean_ns": 47714276.736363634,
+          "median_ns": 47703366.04545455,
+          "p50_ns": 47700143.45454545,
+          "p95_ns": 48666439.45454545,
+          "p99_ns": 48666439.45454545,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 5012010,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 430,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT c/uid/value, o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude >= 49.5 ORDER BY o/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude DESC LIMIT 50",
+          "rows": 50,
+          "one_ehr": false
+        },
+        {
+          "name": "where_coded",
+          "iterations": 230.0,
+          "samples": 10,
+          "mean_ns": 22171314.24347826,
+          "median_ns": 22180569.0,
+          "p50_ns": 22140370.47826087,
+          "p95_ns": 23059307.391304348,
+          "p99_ns": 23059307.391304348,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 5209927,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 882,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT c/uid/value, o/data[at0001]/items[at0002]/value/defining_code/code_string FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION o[openEHR-EHR-EVALUATION.adverse_reaction_risk.v1] WHERE o/data[at0001]/items[at0002]/value/defining_code/code_string = 'at0000' LIMIT 50",
+          "rows": 50,
+          "one_ehr": false
+        },
+        {
+          "name": "where_date_time",
+          "iterations": 1210.0,
+          "samples": 10,
+          "mean_ns": 4088700.3016528925,
+          "median_ns": 4061228.1404958675,
+          "p50_ns": 4053263.132231405,
+          "p95_ns": 4197454.314049587,
+          "p99_ns": 4197454.314049587,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 2292883,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 4401,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT c/uid/value, o/data[at0002]/origin/value FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.body_temperature.v2] WHERE o/data[at0002]/origin/value <= '2022-02-03T04:05:06Z' LIMIT 50",
+          "rows": 50,
+          "one_ehr": false
+        },
+        {
+          "name": "where_text",
+          "iterations": 230.0,
+          "samples": 10,
+          "mean_ns": 22469283.430434782,
+          "median_ns": 22434397.45652174,
+          "p50_ns": 22425318.913043477,
+          "p95_ns": 23332651.739130434,
+          "p99_ns": 23332651.739130434,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 5210914,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 882,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT c/uid/value, o/data[at0001]/items[at0006]/value/value FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION o[openEHR-EHR-EVALUATION.adverse_reaction_risk.v1] WHERE o/data[at0001]/items[at0006]/value/value = 'Comment' LIMIT 50",
+          "rows": 50,
+          "one_ehr": false
+        },
+        {
+          "name": "wide_projection_one_ehr",
+          "iterations": 120.0,
+          "samples": 10,
+          "mean_ns": 42091891.16666667,
+          "median_ns": 42191612.75,
+          "p50_ns": 42108420.583333336,
+          "p95_ns": 42873712.583333336,
+          "p99_ns": 42873712.583333336,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 526091,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 609,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT c/uid/value, o/data[at0001]/items[at0002]/value/defining_code/code_string, o/data[at0001]/items[at0063]/value/defining_code/code_string, o/data[at0001]/items[at0101]/value/defining_code/code_string, o/data[at0001]/items[at0120]/value/defining_code/code_string, o/data[at0001]/items[at0058]/value/defining_code/code_string, o/data[at0001]/items[at0006]/value/value, o/data[at0001]/items[at0009]/items[at0021]/value/defining_code/code_string, o/data[at0001]/items[at0009]/items[at0011]/value/defining_code/code_string, o/protocol[at0042]/items[at0062]/value/value FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION o[openEHR-EHR-EVALUATION.adverse_reaction_risk.v1]",
+          "rows": 7,
+          "one_ehr": true
+        },
+        {
+          "name": "wide_projection_population",
+          "iterations": 190.0,
+          "samples": 10,
+          "mean_ns": 27465088.61578948,
+          "median_ns": 27426933.52631579,
+          "p50_ns": 27349348.63157895,
+          "p95_ns": 28584060.263157893,
+          "p99_ns": 28584060.263157893,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 5064088,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 762,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT c/uid/value, o/data[at0001]/items[at0002]/value/defining_code/code_string, o/data[at0001]/items[at0063]/value/defining_code/code_string, o/data[at0001]/items[at0101]/value/defining_code/code_string, o/data[at0001]/items[at0120]/value/defining_code/code_string, o/data[at0001]/items[at0058]/value/defining_code/code_string, o/data[at0001]/items[at0006]/value/value, o/data[at0001]/items[at0009]/items[at0021]/value/defining_code/code_string, o/data[at0001]/items[at0009]/items[at0011]/value/defining_code/code_string, o/protocol[at0042]/items[at0062]/value/value FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION o[openEHR-EHR-EVALUATION.adverse_reaction_risk.v1] LIMIT 50",
+          "rows": 50,
+          "one_ehr": false
+        },
+        {
+          "name": "select_observation",
+          "iterations": 850.0,
+          "samples": 10,
+          "mean_ns": 5727563.16,
+          "median_ns": 5734197.411764706,
+          "p50_ns": 5729809.2,
+          "p95_ns": 5781150.788235294,
+          "p99_ns": 5781150.788235294,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 2121054,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 4443,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT o FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2] LIMIT 50",
+          "rows": 50,
+          "one_ehr": false
+        },
+        {
+          "name": "select_composition_one_ehr",
+          "iterations": 990.0,
+          "samples": 10,
+          "mean_ns": 4810221.675757576,
+          "median_ns": 4802778.898989899,
+          "p50_ns": 4799520.666666667,
+          "p95_ns": 4951533.484848484,
+          "p99_ns": 4951533.484848484,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 551999,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 6248,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT c FROM EHR e CONTAINS COMPOSITION c",
+          "rows": 16,
+          "one_ehr": true
+        },
+        {
+          "name": "aql_version_at_time",
+          "iterations": 1450.0,
+          "samples": 10,
+          "mean_ns": 3481431.656551724,
+          "median_ns": 3449853.379310345,
+          "p50_ns": 3431171.2896551723,
+          "p95_ns": 3599911.3172413795,
+          "p99_ns": 3599911.3172413795,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 2565200,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 5888,
+            "wal_bytes": 0
+          },
+          "statement": "SELECT c/uid/value FROM EHR e CONTAINS VERSION v[commit_audit/time_committed <= '2026-10-28T15:50:31.193222081Z'] CONTAINS COMPOSITION c LIMIT 50",
+          "rows": 50,
+          "one_ehr": false
+        }
+      ]
+    },
+    {
+      "name": "storage_lifecycle",
+      "operations": [
+        {
+          "name": "archive_ehr",
+          "iterations": 50.0,
+          "samples": 10,
+          "mean_ns": 52118448.82000001,
+          "median_ns": 51362305.9,
+          "p50_ns": 51293810.0,
+          "p95_ns": 54219163.6,
+          "p99_ns": 54219163.6,
+          "database": {
+            "tables": [
+              {
+                "relation": "clinical.node_cold",
+                "n_tup_ins_delta": 57200,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 57200,
+                "n_live_tup": 0,
+                "n_dead_tup": 57200,
+                "total_bytes": 18317312
+              },
+              {
+                "relation": "clinical.node_hot",
+                "n_tup_ins_delta": 57200,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 57200,
+                "n_live_tup": 134947,
+                "n_dead_tup": 57200,
+                "total_bytes": 74276864
+              },
+              {
+                "relation": "clinical.version_cold",
+                "n_tup_ins_delta": 1235,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 1235,
+                "n_live_tup": 0,
+                "n_dead_tup": 1235,
+                "total_bytes": 2711552
+              },
+              {
+                "relation": "clinical.version_hot",
+                "n_tup_ins_delta": 1235,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 1235,
+                "n_live_tup": 3109,
+                "n_dead_tup": 1235,
+                "total_bytes": 10731520
+              },
+              {
+                "relation": "clinical.vo_head",
+                "n_tup_ins_delta": 0,
+                "n_tup_upd_delta": 2340,
+                "n_tup_hot_upd_delta": 2340,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 1457,
+                "n_dead_tup": 66,
+                "total_bytes": 516096
+              }
+            ],
+            "blks_hit_delta": 1896225,
+            "blks_read_delta": 0,
+            "xact_commit_delta": 133,
+            "wal_bytes": 91990752
+          }
+        },
+        {
+          "name": "restore_ehr",
+          "iterations": 50.0,
+          "samples": 10,
+          "mean_ns": 64321059.04000001,
+          "median_ns": 64286019.2,
+          "p50_ns": 64247609.4,
+          "p95_ns": 65201336.2,
+          "p99_ns": 65201336.2,
+          "database": {
+            "tables": [
+              {
+                "relation": "clinical.node_cold",
+                "n_tup_ins_delta": 57200,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 57200,
+                "n_live_tup": 0,
+                "n_dead_tup": 0,
+                "total_bytes": 90112
+              },
+              {
+                "relation": "clinical.node_hot",
+                "n_tup_ins_delta": 57200,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 57200,
+                "n_live_tup": 134947,
+                "n_dead_tup": 0,
+                "total_bytes": 93634560
+              },
+              {
+                "relation": "clinical.version_cold",
+                "n_tup_ins_delta": 1235,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 1235,
+                "n_live_tup": 0,
+                "n_dead_tup": 0,
+                "total_bytes": 139264
+              },
+              {
+                "relation": "clinical.version_hot",
+                "n_tup_ins_delta": 1235,
+                "n_tup_upd_delta": 0,
+                "n_tup_hot_upd_delta": 0,
+                "n_tup_del_delta": 1235,
+                "n_live_tup": 3109,
+                "n_dead_tup": 0,
+                "total_bytes": 13287424
+              },
+              {
+                "relation": "clinical.vo_head",
+                "n_tup_ins_delta": 0,
+                "n_tup_upd_delta": 2340,
+                "n_tup_hot_upd_delta": 2340,
+                "n_tup_del_delta": 0,
+                "n_live_tup": 1457,
+                "n_dead_tup": 66,
+                "total_bytes": 516096
+              }
+            ],
+            "blks_hit_delta": 1945710,
+            "blks_read_delta": 4226,
+            "xact_commit_delta": 153,
+            "wal_bytes": 80859064
+          }
+        },
+        {
+          "name": "retention_prune",
+          "iterations": 40630.0,
+          "samples": 10,
+          "mean_ns": 118797.85395028305,
+          "median_ns": 118412.47587989172,
+          "p50_ns": 118367.21781934531,
+          "p95_ns": 121485.19369923702,
+          "p99_ns": 121485.19369923702,
+          "database": {
+            "tables": [],
+            "blks_hit_delta": 50499,
+            "blks_read_delta": 81,
+            "xact_commit_delta": 48847,
+            "wal_bytes": 120
+          }
+        }
+      ]
+    }
+  ],
+  "commit_probe": {
+    "operation": "create_composition",
+    "commits": 1,
+    "database": {
+      "tables": [
+        {
+          "relation": "clinical.commit_audit",
+          "n_tup_ins_delta": 1,
+          "n_tup_upd_delta": 0,
+          "n_tup_hot_upd_delta": 0,
+          "n_tup_del_delta": 0,
+          "n_live_tup": 3130,
+          "n_dead_tup": 0,
+          "total_bytes": 892928
+        },
+        {
+          "relation": "clinical.contribution",
+          "n_tup_ins_delta": 1,
+          "n_tup_upd_delta": 0,
+          "n_tup_hot_upd_delta": 0,
+          "n_tup_del_delta": 0,
+          "n_live_tup": 3090,
+          "n_dead_tup": 0,
+          "total_bytes": 655360
+        },
+        {
+          "relation": "clinical.event_outbox",
+          "n_tup_ins_delta": 1,
+          "n_tup_upd_delta": 0,
+          "n_tup_hot_upd_delta": 0,
+          "n_tup_del_delta": 0,
+          "n_live_tup": 3090,
+          "n_dead_tup": 0,
+          "total_bytes": 1933312
+        },
+        {
+          "relation": "clinical.node_hot",
+          "n_tup_ins_delta": 43,
+          "n_tup_upd_delta": 0,
+          "n_tup_hot_upd_delta": 0,
+          "n_tup_del_delta": 0,
+          "n_live_tup": 134990,
+          "n_dead_tup": 0,
+          "total_bytes": 93667328
+        },
+        {
+          "relation": "clinical.version_hot",
+          "n_tup_ins_delta": 1,
+          "n_tup_upd_delta": 0,
+          "n_tup_hot_upd_delta": 0,
+          "n_tup_del_delta": 0,
+          "n_live_tup": 3110,
+          "n_dead_tup": 0,
+          "total_bytes": 13287424
+        },
+        {
+          "relation": "clinical.vo_head",
+          "n_tup_ins_delta": 1,
+          "n_tup_upd_delta": 0,
+          "n_tup_hot_upd_delta": 0,
+          "n_tup_del_delta": 0,
+          "n_live_tup": 1458,
+          "n_dead_tup": 66,
+          "total_bytes": 516096
+        }
+      ],
+      "blks_hit_delta": 1322,
+      "blks_read_delta": 51,
+      "xact_commit_delta": 10,
+      "wal_bytes": 545512
+    }
+  },
+  "explain": {
+    "statement": "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o LIMIT 50",
+    "node_type": "Nested Loop",
+    "actual_total_ms": 38.639,
+    "rows": 10504.0,
+    "shared_hit_blocks": 17067,
+    "shared_read_blocks": 2050,
+    "wal_bytes": 66001,
+    "wal_records": 9,
+    "index_names": [
+      "idx_node_hot_composition_start",
+      "node_hot_pkey",
+      "pk_ehr",
+      "version_hot_pkey"
+    ]
+  },
+  "relations": [
+    {
+      "relation": "clinical.commit_audit",
+      "n_live_tup": 3130,
+      "n_dead_tup": 0,
+      "n_tup_upd": 0,
+      "n_tup_hot_upd": 0,
+      "total_bytes": 892928,
+      "dead_tuple_percent": 0.0
+    },
+    {
+      "relation": "clinical.contribution",
+      "n_live_tup": 3090,
+      "n_dead_tup": 0,
+      "n_tup_upd": 0,
+      "n_tup_hot_upd": 0,
+      "total_bytes": 655360,
+      "dead_tuple_percent": 0.0
+    },
+    {
+      "relation": "clinical.ehr",
+      "n_live_tup": 20,
+      "n_dead_tup": 0,
+      "n_tup_upd": 0,
+      "n_tup_hot_upd": 0,
+      "total_bytes": 65536,
+      "dead_tuple_percent": 0.0
+    },
+    {
+      "relation": "clinical.event_outbox",
+      "n_live_tup": 3090,
+      "n_dead_tup": 0,
+      "n_tup_upd": 0,
+      "n_tup_hot_upd": 0,
+      "total_bytes": 1933312,
+      "dead_tuple_percent": 0.0
+    },
+    {
+      "relation": "clinical.node_cold",
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "n_tup_upd": 0,
+      "n_tup_hot_upd": 0,
+      "total_bytes": 90112,
+      "dead_tuple_percent": 0.0
+    },
+    {
+      "relation": "clinical.node_hot",
+      "n_live_tup": 134990,
+      "n_dead_tup": 0,
+      "n_tup_upd": 0,
+      "n_tup_hot_upd": 0,
+      "total_bytes": 93667328,
+      "dead_tuple_percent": 0.0
+    },
+    {
+      "relation": "clinical.template_ref",
+      "n_live_tup": 2,
+      "n_dead_tup": 0,
+      "n_tup_upd": 0,
+      "n_tup_hot_upd": 0,
+      "total_bytes": 32768,
+      "dead_tuple_percent": 0.0
+    },
+    {
+      "relation": "clinical.template_store",
+      "n_live_tup": 2,
+      "n_dead_tup": 0,
+      "n_tup_upd": 0,
+      "n_tup_hot_upd": 0,
+      "total_bytes": 196608,
+      "dead_tuple_percent": 0.0
+    },
+    {
+      "relation": "clinical.version_cold",
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "n_tup_upd": 0,
+      "n_tup_hot_upd": 0,
+      "total_bytes": 139264,
+      "dead_tuple_percent": 0.0
+    },
+    {
+      "relation": "clinical.version_hot",
+      "n_live_tup": 3110,
+      "n_dead_tup": 0,
+      "n_tup_upd": 0,
+      "n_tup_hot_upd": 0,
+      "total_bytes": 13287424,
+      "dead_tuple_percent": 0.0
+    },
+    {
+      "relation": "clinical.vo_head",
+      "n_live_tup": 1458,
+      "n_dead_tup": 48,
+      "n_tup_upd": 6332,
+      "n_tup_hot_upd": 6332,
+      "total_bytes": 516096,
+      "dead_tuple_percent": 1.64
+    }
+  ]
+}

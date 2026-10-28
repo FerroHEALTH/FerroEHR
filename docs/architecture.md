@@ -113,11 +113,29 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   integer interval join, never a JSON walk. Promoted predicate columns
   (`rm_type` — full RM type names, no alias compaction —, `archetype`, `name`,
   `name_code`, `name_terminology`, `ehr_id`; `path COLLATE "C"` is the
-  reassembly key and never a predicate) and a **canonical openEHR JSON
-  fragment** in `data jsonb` (verbatim `openehr-its` encoding: zero translation
-  between storage and API, no synthetic fields). Point reads do not reassemble
-  the fragments: the whole canonical body is also stored verbatim as
-  `version.body text` and served from there in one statement.
+  reassembly key and never a predicate) and the node's **canonical openEHR
+  JSON fragment** (`openehr-its` encoding, no synthetic fields) stored as only
+  what no column holds (storage generation 3, #4306): `data jsonb` leaves out
+  `_type` (it is `rm_type`), a lowercase `archetype_node_id` (it is
+  `archetype`), a plain or simply coded `name` (it is `name`, `name_code`,
+  `name_terminology`) and an ELEMENT `value` of a common shape, which the typed
+  value columns `value_type`, `value_num`, `value_text`, `value_code` and
+  `value_terminology` hold instead (DV_QUANTITY, DV_COUNT, DV_ORDINAL,
+  DV_CODED_TEXT, DV_IDENTIFIER, DV_BOOLEAN and the string-valued types, each in
+  its basic shape only). A key is left out only when the columns rebuild it
+  exactly; everything else stays in `data` verbatim, and `data` is NULL when
+  nothing remains (two thirds of the rows). `ext.node_name`, `ext.node_value`
+  and `ext.node_fragment`, inlined `LANGUAGE sql` functions, rebuild the
+  omitted keys, so every reader sees the canonical fragment
+  (`crate::storage::slim` is the write half). The AQL emitter reads a fragment
+  through the first member its path names, and the scalar paths into a typed
+  value (`value/magnitude`, `value/value`, `value/units`, the defining code)
+  read the typed column directly. No index sits on the typed columns: no
+  measured statement would use one. Projections are read from the row and
+  never from the version body, whose per-row parse measured 50 to 300 times
+  slower than a fragment read. Point reads do not reassemble the fragments: the
+  whole canonical body is also stored verbatim as `version.body text` and
+  served from there in one statement.
 - **Tiers are partitions.** `version`, `node` and `vo_attestation` are each
   `PARTITION BY LIST (tier)` with a `hot` and a `cold` partition and no default
   partition. Archiving an EHR is `UPDATE version SET tier = 'cold' WHERE
@@ -151,7 +169,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   clinical content on a timer.
 - **`ext`** — our own helper functions over openEHR values
   (`openehr_magnitude(jsonb)` for DV_ORDERED ordering semantics, the date,
-  time, date-time and duration readers, `openehr_numeric`), the `posture`
+  time, date-time and duration readers, `openehr_numeric`), the node fragment
+  readers (`node_name`, `node_value`, `node_fragment`), the `posture`
   table the server stamps at boot and the clinical subject guard reads, and
   `storage_generation()`, a label the measurement harness files its records
   under. Each helper ships in the language that measured faster over a

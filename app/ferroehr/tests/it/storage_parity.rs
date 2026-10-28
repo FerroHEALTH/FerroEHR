@@ -108,6 +108,120 @@ async fn a_committed_composition_sweeps_clean() {
     );
 }
 
+/// The vendored CKM templates whose generated examples carry every value
+/// shape the typed value columns hold, and several they do not.
+const TYPED_VALUE_TEMPLATES: [&str; 4] = [
+    "vital-signs",
+    "gp-data-set",
+    "ccta-report",
+    "treat-registry-report",
+];
+
+/// Commits the `medium` example of every [`TYPED_VALUE_TEMPLATES`] entry into
+/// one new EHR.
+async fn seed_typed_value_compositions(svc: &FerroEhrService) {
+    let ehr_id = svc.create_ehr(None).await.expect("ehr create");
+    for template in TYPED_VALUE_TEMPLATES {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(format!("../../corpus/templates/ckm/{template}.opt"));
+        let xml = std::fs::read_to_string(&path).expect("the vendored OPT is readable");
+        let template_id = openehr_its::opt14::from_xml(&xml)
+            .expect("the vendored OPT parses")
+            .template_id
+            .value;
+        svc.upload_opt(xml).await.expect("upload the template");
+        let example = svc
+            .template_adl14_example(template_id, Some("medium".to_owned()), None)
+            .await
+            .expect("the template generates an example");
+        svc.create_composition(ehr_id, uv(&example, "249", None))
+            .await
+            .expect("the example commits");
+    }
+}
+
+/// A node row stores only what its columns do not hold (#4306), and the
+/// rebuilt fragments still reassemble into exactly the stored body: the sweep
+/// reads every row through `ext.node_fragment`.
+#[tokio::test]
+async fn slimmed_and_typed_node_rows_sweep_clean() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    seed_typed_value_compositions(&svc).await;
+
+    let (rows, without_data, typed, typed_kinds): (i64, i64, i64, i64) = sqlx::query_as(
+        "SELECT count(*), count(*) FILTER (WHERE data IS NULL), \
+                count(*) FILTER (WHERE value_type IS NOT NULL), \
+                count(DISTINCT value_type) FROM node",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("count the stored rows");
+    assert!(
+        without_data * 4 > rows && typed * 10 > rows && typed_kinds >= 5,
+        "the seed must exercise the slimmed layout: {rows} rows, {without_data} without a \
+         fragment, {typed} typed over {typed_kinds} value types"
+    );
+
+    let report = svc
+        .verify_storage_parity(StorageParityScope::default())
+        .await
+        .expect("sweep");
+    assert!(
+        report.is_clean(),
+        "every slimmed row must rebuild into the stored body: {report:?}"
+    );
+}
+
+/// The SQL rebuild and the codec agree row by row: each stored row's
+/// `ext.node_fragment` is the fragment the decomposer cut from the body.
+#[tokio::test]
+async fn node_fragment_rebuilds_every_row_the_decomposer_cut() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    seed_typed_value_compositions(&svc).await;
+
+    let versions: Vec<(Uuid, i32, String)> = sqlx::query_as(
+        "SELECT vo_id, sys_version, body FROM version WHERE body IS NOT NULL ORDER BY vo_id",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("read the stored bodies");
+    let mut compared = 0usize;
+    for (vo_id, sys_version, body) in versions {
+        let body: Value = serde_json::from_str(&body).expect("a stored body is JSON");
+        let expected = ferroehr::storage::codec::decompose(body).expect("a stored body decomposes");
+        let stored: Vec<(i32, Value)> = sqlx::query_as(
+            "SELECT num, ext.node_fragment(data, rm_type, archetype, name, name_code, \
+                    name_terminology, value_type, value_num, value_text, value_code, \
+                    value_terminology) \
+               FROM node WHERE vo_id = $1 AND sys_version = $2 ORDER BY num",
+        )
+        .bind(vo_id)
+        .bind(sys_version)
+        .fetch_all(&pool)
+        .await
+        .expect("read the rebuilt fragments");
+        assert_eq!(
+            stored.len(),
+            expected.len(),
+            "{vo_id} {sys_version}: row count"
+        );
+        for ((num, fragment), row) in stored.iter().zip(&expected) {
+            assert_eq!(*num, row.num);
+            assert_eq!(
+                fragment, &row.data,
+                "{vo_id} {sys_version} row {num} at {:?}",
+                row.path
+            );
+            compared += 1;
+        }
+    }
+    assert!(compared > 100, "only {compared} rows were compared");
+}
+
 #[tokio::test]
 async fn a_tampered_node_row_is_reported_as_content_differs() {
     let db = testkit::db().await.expect("testkit database");
@@ -552,7 +666,7 @@ async fn a_tampered_node_row_is_rebuilt_and_the_sweep_goes_clean() {
     // `c/name/value` reads straight out of the damaged row.
     tamper(
         &pool,
-        "UPDATE node SET data = jsonb_set(data, '{name,value}', '\"tampered\"') \
+        "UPDATE node SET name = 'tampered' \
          WHERE vo_id = $1 AND sys_version = $2 AND num = 0",
         vo_id,
         sys_version,
@@ -788,7 +902,7 @@ async fn an_archived_version_is_rebuilt_and_stays_archived() {
 
     tamper(
         &pool,
-        "UPDATE node SET data = jsonb_set(data, '{name,value}', '\"tampered\"') \
+        "UPDATE node SET name = 'tampered' \
          WHERE vo_id = $1 AND sys_version = $2 AND num = 0",
         vo_id,
         sys_version,
@@ -855,7 +969,7 @@ async fn a_scoped_rebuild_repairs_only_its_own_ehr() {
         let (vo_id, sys_version) = one_version(&pool, ehr_id, "COMPOSITION").await;
         tamper(
             &pool,
-            "UPDATE node SET data = jsonb_set(data, '{name,value}', '\"tampered\"') \
+            "UPDATE node SET name = 'tampered' \
              WHERE vo_id = $1 AND sys_version = $2 AND num = 0",
             vo_id,
             sys_version,
@@ -921,7 +1035,7 @@ async fn a_damaged_party_is_reported_by_a_sweep_with_no_scope() {
 
     tamper(
         &pool,
-        "UPDATE party.node SET data = jsonb_set(data, '{name,value}', '\"tampered\"') \
+        "UPDATE party.node SET name = 'tampered' \
          WHERE vo_id = $1 AND sys_version = $2 AND num = 0",
         vo_id,
         sys_version,
@@ -983,7 +1097,7 @@ async fn a_damaged_party_is_rebuilt_and_reads_correctly_afterwards() {
 
     tamper(
         &pool,
-        "UPDATE party.node SET data = jsonb_set(data, '{name,value}', '\"tampered\"') \
+        "UPDATE party.node SET name = 'tampered' \
          WHERE vo_id = $1 AND sys_version = $2 AND num = 0",
         vo_id,
         sys_version,
@@ -1011,7 +1125,7 @@ async fn a_damaged_party_is_rebuilt_and_reads_correctly_afterwards() {
     // The node rows are what a decomposed read serves, so this is the reader
     // that would still have seen the damage.
     let name: String = sqlx::query_scalar(
-        "SELECT data #>> '{name,value}' FROM party.node \
+        "SELECT name FROM party.node \
          WHERE vo_id = $1 AND sys_version = $2 AND num = 0",
     )
     .bind(vo_id)
@@ -1139,7 +1253,9 @@ async fn stored_demographic_body(pool: &PgPool, vo_id: VoId, sys_version: i32) -
 /// codec reassembles from.
 async fn stored_demographic_rows(pool: &PgPool, vo_id: VoId, sys_version: i32) -> Vec<ReadRow> {
     let rows: Vec<(i32, i32, i32, String, Value)> = sqlx::query_as(
-        "SELECT num, num_cap, parent_num, path, data FROM party.node \
+        "SELECT num, num_cap, parent_num, path, \
+                ext.node_fragment(data, rm_type, archetype, name, name_code, name_terminology, \
+                value_type, value_num, value_text, value_code, value_terminology) FROM party.node \
          WHERE vo_id = $1 AND sys_version = $2 ORDER BY num",
     )
     .bind(vo_id.0)

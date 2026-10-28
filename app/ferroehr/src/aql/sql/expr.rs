@@ -77,6 +77,92 @@ pub(super) fn to_jsonb(e: Expr) -> Expr {
     call("to_jsonb", vec![e])
 }
 
+/// The member a fragment jsonpath reads first (`$.value.magnitude` →
+/// `value`), `None` for the bare `$`.
+fn first_member(jp: &str) -> Option<&str> {
+    let rest = jp.strip_prefix("$.")?;
+    let end = rest
+        .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+        .unwrap_or(rest.len());
+    rest.get(..end).filter(|member| !member.is_empty())
+}
+
+/// The jsonb a fragment jsonpath `jp` reads off the node row `alias`: the
+/// stored `data` with the member `jp` starts at put back where the row's
+/// columns hold it (`crate::storage::slim`).
+///
+/// `value` comes from the typed value columns when the row has them, `name`
+/// and `archetype_node_id` from their columns when `data` lacks them, `_type`
+/// from `rm_type`, and every other member from `data` as stored. Without a
+/// fragment path the whole rebuilt fragment is read (`node_fragment`). No
+/// openEHR spec governs storage: our own design.
+pub(super) fn fragment_source(alias: &str, jp: Option<&str>) -> Expr {
+    let data = col(alias, Node::Data);
+    let value = || {
+        call(
+            "node_value",
+            vec![
+                col(alias, Node::ValueType),
+                col(alias, Node::ValueNum),
+                col(alias, Node::ValueText),
+                col(alias, Node::ValueCode),
+                col(alias, Node::ValueTerminology),
+            ],
+        )
+    };
+    let Some(jp) = jp else {
+        return call(
+            "node_fragment",
+            vec![
+                data,
+                col(alias, Node::RmType),
+                col(alias, Node::Archetype),
+                col(alias, Node::Name),
+                col(alias, Node::NameCode),
+                col(alias, Node::NameTerminology),
+                col(alias, Node::ValueType),
+                col(alias, Node::ValueNum),
+                col(alias, Node::ValueText),
+                col(alias, Node::ValueCode),
+                col(alias, Node::ValueTerminology),
+            ],
+        );
+    };
+    match first_member(jp) {
+        Some("value") => Expr::cust_with_exprs(
+            "CASE WHEN $1 IS NULL THEN $2 ELSE jsonb_build_object('value', $3) END",
+            [col(alias, Node::ValueType), data, value()],
+        ),
+        Some("name") => Expr::cust_with_exprs(
+            "CASE WHEN $1 IS NULL OR ($2 -> 'name') IS NOT NULL THEN $3 \
+             ELSE jsonb_build_object('name', node_name($4, $5, $6)) END",
+            [
+                col(alias, Node::Name),
+                data.clone(),
+                data,
+                col(alias, Node::Name),
+                col(alias, Node::NameCode),
+                col(alias, Node::NameTerminology),
+            ],
+        ),
+        Some("archetype_node_id") => Expr::cust_with_exprs(
+            "CASE WHEN $1 IS NULL OR ($2 -> 'archetype_node_id') IS NOT NULL THEN $3 \
+             ELSE jsonb_build_object('archetype_node_id', $4) END",
+            [
+                col(alias, Node::Archetype),
+                data.clone(),
+                data,
+                col(alias, Node::Archetype),
+            ],
+        ),
+        Some("_type") => Expr::cust_with_exprs(
+            "jsonb_build_object('_type', $1)",
+            [col(alias, Node::RmType)],
+        ),
+        _ => data,
+    }
+}
+
 /// `jsonb_path_query_first(data, '<jp>'::jsonpath[, vars])` — `vars` carries
 /// the filter-expression variables of a predicated fragment path, always as a
 /// bound jsonb parameter (never spliced into the path text).
