@@ -28,6 +28,9 @@
 #                          from HEAD)
 #     --tolerance <pct>    how far p50 or p99 may rise before the run fails
 #                          (default 15)
+#     --size-budget <pct>  how far the bytes per composition version or the
+#                          heap bytes per node row may grow before the run
+#                          fails (default 5)
 #     --summary <file>     where the markdown table is written (default
 #                          $GITHUB_STEP_SUMMARY, else stdout)
 #     --runner <text>      the machine this run measured on, named in the
@@ -44,13 +47,14 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/render/storage-bench-compare.sh [--measured <file>] [--baseline <file>] [--tolerance <pct>] [--summary <file>] [--runner <text>] | --self-test" >&2
+  echo "usage: scripts/render/storage-bench-compare.sh [--measured <file>] [--baseline <file>] [--tolerance <pct>] [--size-budget <pct>] [--summary <file>] [--runner <text>] | --self-test" >&2
   exit 2
 }
 
 MEASURED=""
 BASELINE=""
 TOLERANCE="15"
+SIZE_BUDGET="5"
 SUMMARY="${GITHUB_STEP_SUMMARY:-}"
 RUNNER=""
 SELF_TEST=0
@@ -60,6 +64,7 @@ while [[ $# -gt 0 ]]; do
     --measured) MEASURED="${2:-}"; shift 2 || usage ;;
     --baseline) BASELINE="${2:-}"; shift 2 || usage ;;
     --tolerance) TOLERANCE="${2:-}"; shift 2 || usage ;;
+    --size-budget) SIZE_BUDGET="${2:-}"; shift 2 || usage ;;
     --summary) SUMMARY="${2:-}"; shift 2 || usage ;;
     --runner) RUNNER="${2:-}"; shift 2 || usage ;;
     --self-test) SELF_TEST=1; shift ;;
@@ -117,6 +122,39 @@ $b[0] as $base | $m[0] as $meas |
     "\($verdict[1]) |"
   )
 | .[]
+'
+
+# The storage-size verdicts (#4303): bytes per composition version and heap
+# bytes per node row are judged against the budget; the other facts are
+# reported beside them. Sizes do not depend on the machine, so the budget is
+# tight, and a record without a `storage` section is reported, never judged.
+# shellcheck disable=SC2016 # every $name below is a jq variable, never a shell expansion
+readonly SIZE_JQ='
+def b: if . == null then "—" else ((. * 10 | round) / 10 | tostring) + " B" end;
+def n: if . == null then "—" else ((. * 100 | round) / 100 | tostring) end;
+def pc: if . == null then "—"
+        else (if . >= 0 then "+" else "" end) + ((. * 10 | round) / 10 | tostring) + "%" end;
+def rise($base; $meas): if ($base == null or $meas == null or $base == 0) then null
+                        else (($meas - $base) / $base * 100) end;
+$b[0].storage as $base | $m[0].storage as $meas |
+[ ["bytes_per_composition_version", "bytes per composition version", true, "b"],
+  ["node_heap_bytes_per_row", "heap bytes per node row", true, "b"],
+  ["node_rows_per_version", "node rows per version", false, "n"],
+  ["node_row_bytes", "node row width", false, "b"],
+  ["input_bytes_per_version", "canonical JSON per version", false, "b"],
+  ["audit_bytes_per_record", "audit bytes per record", false, "b"] ]
+| .[]
+| . as [$key, $label, $judged, $fmt]
+| ($base[$key]?) as $bv | ($meas[$key]?) as $mv
+| rise($bv; $mv) as $d
+| (if $fmt == "b" then [($bv|b), ($mv|b)] else [($bv|n), ($mv|n)] end) as $shown
+| (if ($judged | not) then ["reported", "reported"]
+   elif $mv == null then ["not-measured", "not measured in this run"]
+   elif $bv == null then ["no-baseline", "no committed baseline"]
+   elif $compare | not then ["not-compared", "not compared"]
+   elif $d <= $budget then ["within", (if $d < 0 then "smaller" else "within budget" end)]
+   else ["grew", "**grew**"] end) as $verdict
+| "\($verdict[0])\t| \($label) | \($shown[0]) | \($shown[1]) | \($d|pc) | \($verdict[1]) |"
 '
 
 # One line naming a record: what it measured, where, and when.
@@ -177,8 +215,8 @@ missing_baseline() {
 }
 
 compare() {
-  local measured="$1" baseline="$2" tolerance="$3" runner="$4"
-  local generation measured_class baseline_class compare_flag rows regressed=0
+  local measured="$1" baseline="$2" tolerance="$3" runner="$4" budget="${5:-5}"
+  local generation measured_class baseline_class compare_flag rows regressed=0 grew=0
 
   generation="$(jq -r '.schema_generation' "$measured")"
   measured_class="$(jq -r '.bench_class' "$measured")"
@@ -236,6 +274,30 @@ compare() {
     echo "regressed: $row"
   done
 
+  emit "Storage per composition version, a growth beyond ${budget}% fails the run:" "" \
+       "| Fact | Baseline | Measured | Delta | Verdict |" \
+       "|---|---|---|---|---|"
+  while IFS=$'\t' read -r verdict row; do
+    [[ -n "$row" ]] || continue
+    emit "$row"
+    if [[ "$verdict" == "grew" ]]; then
+      grew=$((grew + 1))
+      echo "grew: $row"
+    fi
+  done < <(jq -r -n \
+    --slurpfile b "$baseline" \
+    --slurpfile m "$measured" \
+    --argjson budget "$budget" \
+    --argjson compare "$compare_flag" \
+    "$SIZE_JQ")
+  emit ""
+
+  if [[ "$grew" -gt 0 ]]; then
+    emit "$grew storage fact(s) grew more than ${budget}% above the committed record." ""
+    echo "storage-bench-compare: $grew storage fact(s) beyond the ${budget}% budget." >&2
+    return 1
+  fi
+
   if [[ "$regressed" -gt 0 ]]; then
     emit "$regressed operation(s) rose more than ${tolerance}% above the committed record." ""
     echo "storage-bench-compare: $regressed operation(s) beyond the ${tolerance}% tolerance." >&2
@@ -254,6 +316,7 @@ compare() {
 
 record_fixture() {
   local path="$1" generation="$2" class="$3" ehrs="$4" p50="$5" p99="$6" when="${7:-2026-09-15T11:00:00Z}"
+  # $8 and $9 are the bytes per composition version and per node row.
   mkdir -p "$(dirname "$path")"
   cat > "$path" <<EOF
 {
@@ -275,7 +338,11 @@ record_fixture() {
         { "name": "supersede", "iterations": 100, "samples": 10,
           "mean_ns": 2000000, "median_ns": 2000000,
           "p50_ns": 2000000, "p95_ns": 3000000, "p99_ns": 3000000 }
-      ] } ]
+      ] } ],
+  "storage": { "composition_versions": 340, "bytes_per_composition_version": ${8:-20000},
+               "node_rows_per_version": 34.2, "node_heap_bytes_per_row": ${9:-461},
+               "node_row_bytes": 445, "input_bytes_per_version": 8400,
+               "audit_bytes_per_record": null }
 }
 EOF
 }
@@ -351,6 +418,25 @@ self_test() {
   [[ "$status" -eq 2 ]] \
     || { echo "self-test: a record compared with itself was not refused" >&2; failures=1; }
 
+  # 8. Bytes per composition version growing beyond the budget fails the run
+  # and names the fact; a smaller record passes.
+  record_fixture "$tmp/fat.json" generation-1 poc 20 1000000 2000000 2026-09-15T11:00:00Z 22000 461
+  status=0
+  compare "$tmp/fat.json" "$tmp/baseline.json" 15 "$runner" 5 \
+    > "$tmp/fat.out" 2>&1 || status=$?
+  out="$(cat "$tmp/fat.out")"
+  [[ "$status" -eq 1 ]] || { echo "self-test: storage growth beyond the budget did not fail the run" >&2; failures=1; }
+  grep -q 'bytes per composition version.*+10%.*grew' <<<"$out" \
+    || { echo "self-test: storage growth was not reported against its fact" >&2; failures=1; }
+  record_fixture "$tmp/slim.json" generation-1 poc 20 1000000 2000000 2026-09-15T11:00:00Z 15000 300
+  status=0
+  compare "$tmp/slim.json" "$tmp/baseline.json" 15 "$runner" 5 \
+    > "$tmp/slim.out" 2>&1 || status=$?
+  out="$(cat "$tmp/slim.out")"
+  [[ "$status" -eq 0 ]] || { echo "self-test: smaller storage failed the run" >&2; failures=1; }
+  grep -q 'heap bytes per node row.*smaller' <<<"$out" \
+    || { echo "self-test: smaller storage did not read as smaller" >&2; failures=1; }
+
   # 7. A generation with no committed record fails the run, and says so in
   # the summary as an error.
   status=0
@@ -365,7 +451,7 @@ self_test() {
     echo "storage-bench-compare: SELF-TEST FAILED" >&2
     return 1
   fi
-  echo "storage-bench-compare: self-test passed (7 cases)."
+  echo "storage-bench-compare: self-test passed (9 cases)."
   return 0
 }
 
@@ -410,4 +496,7 @@ if [[ -z "$BASELINE" ]]; then
 fi
 [[ -f "$BASELINE" ]] || { echo "error: no such record: $BASELINE" >&2; exit 2; }
 
-compare "$MEASURED" "$BASELINE" "$TOLERANCE" "$RUNNER"
+[[ "$SIZE_BUDGET" =~ ^[0-9]+(\.[0-9]+)?$ ]] \
+  || { echo "error: --size-budget takes a non-negative number, not '$SIZE_BUDGET'" >&2; exit 2; }
+
+compare "$MEASURED" "$BASELINE" "$TOLERANCE" "$RUNNER" "$SIZE_BUDGET"
