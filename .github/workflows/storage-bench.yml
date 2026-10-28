@@ -44,6 +44,11 @@ on:
         required: false
         default: "15"
         type: string
+      size_budget_percent:
+        description: "How far the bytes per composition version or per node row may grow above the committed record before the run fails"
+        required: false
+        default: "5"
+        type: string
 
 permissions: {}
 
@@ -102,10 +107,12 @@ jobs:
       - name: Compare with the committed record
         env:
           TOLERANCE_PERCENT: ${{ inputs.tolerance_percent }}
+          SIZE_BUDGET_PERCENT: ${{ inputs.size_budget_percent }}
         # RUNNER_OS, RUNNER_ARCH and RUNNER_NAME are the runner's own default
         # environment, so the machine reaches the summary without a `${{ }}`
         # expression in a shell (reliability.md § The build pipeline is code).
         run: |
           bash scripts/render/storage-bench-compare.sh \
             --tolerance "$TOLERANCE_PERCENT" \
+            --size-budget "$SIZE_BUDGET_PERCENT" \
             --runner "GitHub-hosted $RUNNER_OS/$RUNNER_ARCH ($RUNNER_NAME), $(nproc) cores"

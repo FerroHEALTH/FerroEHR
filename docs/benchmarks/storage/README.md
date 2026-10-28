@@ -66,6 +66,12 @@ which is how a new generation is set against the one it replaces.
   "seed": { "ehrs": 20, "compositions": 300, "template_id": "…",
             "second_template_id": "…",
             "entry_rm_type": "OBSERVATION", "seconds": 0.0 },
+  "storage": { "composition_versions": 0, "bytes_per_composition_version": 0.0,
+               "node_rows_per_version": 0.0, "node_heap_bytes_per_row": 0.0,
+               "node_row_bytes": 0.0, "input_bytes_per_version": 0.0,
+               "stored_body_bytes_per_version": 0.0, "audit_records": 0,
+               "audit_bytes_per_record": null,
+               "growth": [ { "relation": "clinical.…", "bytes": 0 } ] },
   "groups": [
     { "name": "storage_commit",
       "operations": [
@@ -161,6 +167,26 @@ appear. The instruments are the ones the PostgreSQL documentation names —
 first, because a backend's pending counts reach shared memory when its
 transaction ends and at most once a second; a WAL figure an unprivileged role
 may not read is absent rather than zero.
+
+`storage` is what the seed's composition commits cost on disk (#4303), read as
+the growth across them, so the EHRs and templates created before are not
+counted: `composition_versions` committed, `bytes_per_composition_version` (the
+growth of every relation in the clinical schema, `pg_total_relation_size`, over
+those versions), `node_rows_per_version`, `node_heap_bytes_per_row` (the growth
+of the `node` partitions' heap, `pg_relation_size`, over the rows added),
+`node_row_bytes` (`pg_column_size` of a whole row, averaged),
+`input_bytes_per_version` and `stored_body_bytes_per_version` (the canonical
+JSON and its compressed stored form), the audit records written and
+`audit_bytes_per_record` (null when the service wrote none, which is the case
+when it is driven below the REST layer), and `growth`, each relation's share.
+
+The compare step judges two of them against a budget, 5 % by default
+(`--size-budget`, the lane's `size_budget_percent` input): a run whose bytes per
+composition version or heap bytes per node row grow more than the budget above
+the committed record fails. Sizes do not depend on the machine the way
+latencies do, so the budget is tighter than the latency tolerance. The other
+facts are reported beside them. A change that is meant to grow storage commits
+the new record with it, which is the same procedure as a new generation.
 
 `commit_probe` is one representative commit on its own: the WAL it writes and
 the buffers it touches. It is measured around a real `create_composition` rather

@@ -184,6 +184,9 @@ struct Corpus {
     at: String,
     /// How long seeding took.
     seconds: f64,
+    /// What the seed's composition commits cost in storage
+    /// ([`storage_facts`]).
+    storage: Value,
 }
 
 /// The vendored corpus file of one seed template.
@@ -274,7 +277,7 @@ fn entry_rm_type(payload: &Value) -> String {
 ///
 /// The single seam the synthgen corpus replaces — everything below reads only
 /// the [`Corpus`] this returns.
-async fn seed(svc: &Arc<FerroEhrService>, class: BenchClass) -> Corpus {
+async fn seed(svc: &Arc<FerroEhrService>, pool: &PgPool, class: BenchClass) -> Corpus {
     let start = Instant::now();
     let (template_id, payload) = seed_template(svc, SEED_TEMPLATE).await;
     let (second_template_id, second_payload) = seed_template(svc, SECOND_TEMPLATE).await;
@@ -288,6 +291,9 @@ async fn seed(svc: &Arc<FerroEhrService>, class: BenchClass) -> Corpus {
         .collect()
         .await;
 
+    // Everything from here to the end of the seed is composition commits, so
+    // the growth across it is what the stored compositions cost.
+    let before = storage_sizes(pool).await;
     let commits: Vec<usize> = (0..class.compositions).collect();
     futures::stream::iter(commits)
         .map(|index| {
@@ -340,6 +346,8 @@ async fn seed(svc: &Arc<FerroEhrService>, class: BenchClass) -> Corpus {
         .await;
 
     let seconds = start.elapsed().as_secs_f64();
+    let versions = class.compositions + 2 * kept.len();
+    let storage = storage_facts(pool, &before, versions).await;
     println!(
         "seeded {} EHRs and {} compositions in {seconds:.1}s",
         ehrs.len(),
@@ -355,7 +363,142 @@ async fn seed(svc: &Arc<FerroEhrService>, class: BenchClass) -> Corpus {
         template_id,
         kept,
         seconds,
+        storage,
     }
+}
+
+/// The physical size of the stores a composition commit writes to, read at
+/// one instant.
+struct StorageSizes {
+    /// `pg_total_relation_size` of every relation in the schema that holds
+    /// `version`, keyed by `schema.relation`.
+    clinical: BTreeMap<String, i64>,
+    /// The heap of the `node` partitions alone (`pg_relation_size`).
+    node_heap: i64,
+    /// The `node` rows.
+    node_rows: i64,
+    /// `pg_total_relation_size` of the audit store, absent when this database
+    /// carries none.
+    audit_bytes: Option<i64>,
+    /// The audit records, absent with the store.
+    audit_records: Option<i64>,
+}
+
+/// Read [`StorageSizes`] now.
+///
+/// The relations are found through the catalogue from the schema `version`
+/// resolves to on the pool's `search_path`, so a schema generation that adds,
+/// drops or renames a relation is measured unchanged.
+async fn storage_sizes(pool: &PgPool) -> StorageSizes {
+    let rows = sqlx::query(
+        "SELECT n.nspname || '.' || c.relname AS relation, pg_total_relation_size(c.oid) AS bytes \
+           FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace \
+          WHERE c.relkind IN ('r', 'm') \
+            AND c.relnamespace = (SELECT relnamespace FROM pg_class WHERE oid = 'version'::regclass) \
+          ORDER BY 1",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("read the clinical relation sizes");
+    let clinical = rows
+        .iter()
+        .map(|row| {
+            (
+                row.try_get::<String, _>("relation").expect("relation"),
+                row.try_get::<i64, _>("bytes").expect("bytes"),
+            )
+        })
+        .collect();
+    let node: (i64, i64) = sqlx::query_as(
+        "SELECT (SELECT COALESCE(sum(pg_relation_size(inhrelid)), 0)::bigint \
+                   FROM pg_inherits WHERE inhparent = 'node'::regclass), \
+                (SELECT count(*) FROM node)",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("read the node heap and row count");
+    let audit: Option<(i64, i64)> = sqlx::query_as(
+        "SELECT (SELECT COALESCE(sum(pg_total_relation_size(c.oid)), 0)::bigint FROM pg_class c \
+                  WHERE c.relkind IN ('r', 'm') AND c.relnamespace = 'audit'::regnamespace), \
+                (SELECT count(*) FROM audit.audit_event)",
+    )
+    .fetch_one(pool)
+    .await
+    .ok();
+    StorageSizes {
+        clinical,
+        node_heap: node.0,
+        node_rows: node.1,
+        audit_bytes: audit.map(|a| a.0),
+        audit_records: audit.map(|a| a.1),
+    }
+}
+
+/// What the seed's composition commits cost in storage (#4303): the growth
+/// of the clinical relations, the `node` heap and the audit store between
+/// `before` and now, over the `versions` composition versions committed in
+/// between, beside the size of the canonical JSON they came from.
+async fn storage_facts(pool: &PgPool, before: &StorageSizes, versions: usize) -> Value {
+    let after = storage_sizes(pool).await;
+    let per = |bytes: i64, count: i64| -> Value {
+        match (u32::try_from(bytes), u32::try_from(count)) {
+            (Ok(bytes), Ok(count)) if count > 0 => Value::from(f64::from(bytes) / f64::from(count)),
+            _ => Value::Null,
+        }
+    };
+    let versions = i64::try_from(versions).expect("the seed's version count fits an i64");
+    let mut growth: Vec<(String, i64)> = after
+        .clinical
+        .iter()
+        .map(|(relation, bytes)| {
+            (
+                relation.clone(),
+                bytes - before.clinical.get(relation).copied().unwrap_or(0),
+            )
+        })
+        .filter(|(_, delta)| *delta != 0)
+        .collect();
+    growth.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    let clinical_bytes: i64 = growth.iter().map(|(_, delta)| delta).sum();
+    let node_rows = after.node_rows - before.node_rows;
+    let input: (Option<f64>, Option<f64>) = sqlx::query_as(
+        "SELECT avg(octet_length(body))::float8, avg(pg_column_size(body))::float8 \
+           FROM version WHERE kind = 'COMPOSITION' AND body IS NOT NULL",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("read the stored body sizes");
+    let node_row_bytes: Option<f64> =
+        sqlx::query_scalar("SELECT avg(pg_column_size(n.*))::float8 FROM node n")
+            .fetch_one(pool)
+            .await
+            .expect("read the node row width");
+    let audit_records = after
+        .audit_records
+        .zip(before.audit_records)
+        .map(|(a, b)| a - b);
+    let audit_bytes = after
+        .audit_bytes
+        .zip(before.audit_bytes)
+        .map(|(a, b)| a - b);
+    json!({
+        "composition_versions": versions,
+        "bytes_per_composition_version": per(clinical_bytes, versions),
+        "node_rows_per_version": per(node_rows, versions),
+        "node_heap_bytes_per_row": per(after.node_heap - before.node_heap, node_rows),
+        "node_row_bytes": node_row_bytes,
+        "input_bytes_per_version": input.0,
+        "stored_body_bytes_per_version": input.1,
+        "audit_records": audit_records,
+        "audit_bytes_per_record": match (audit_bytes, audit_records) {
+            (Some(bytes), Some(records)) => per(bytes, records),
+            _ => Value::Null,
+        },
+        "growth": growth
+            .iter()
+            .map(|(relation, bytes)| json!({ "relation": relation, "bytes": bytes }))
+            .collect::<Vec<_>>(),
+    })
 }
 
 // ── the database-side facts ─────────────────────────────────────────────────
@@ -1701,7 +1844,7 @@ fn storage(c: &mut Criterion) {
             &ferroehr::db::domain::DomainPools::from_shared(&pool),
         ))
     });
-    let corpus = rt.block_on(seed(&svc, class));
+    let corpus = rt.block_on(seed(&svc, &pool, class));
 
     let groups = vec![
         json!({ "name": "storage_commit",
@@ -1753,6 +1896,7 @@ fn storage(c: &mut Criterion) {
             "entry_rm_type": corpus.entry_rm_type,
             "seconds": corpus.seconds,
         },
+        "storage": corpus.storage,
         "groups": groups,
         "commit_probe": rt.block_on(commit_probe(&svc, &pool, &corpus)),
         "explain": rt.block_on(explain_population(&pool, &corpus)),
