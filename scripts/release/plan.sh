@@ -20,12 +20,13 @@
 #       release published, and ancestry plays no part.
 #   plan.sh notes <tag> <file>
 #       Writes the release notes for <tag>: its changelog section, the support
-#       period and the CRA user-information link.
+#       period and the CRA user-information link. A pre-release's support
+#       period says it is not supported and names the stable release that is.
 #   plan.sh support-end <YYYY-MM-DD>
 #       Prints the month the support period of a release of that date ends.
 #   plan.sh --self-test
-#       Proves prev-tag's ordering, the pre-release rule and support-end's
-#       arithmetic offline.
+#       Proves prev-tag's ordering, the pre-release rule, the support
+#       statement and support-end's arithmetic offline.
 #
 # The milestone check reads the tracker through gh (GH_TOKEN in CI, the
 # logged-in gh locally); the chart check needs helm. Exit 2 on a usage error.
@@ -105,6 +106,27 @@ support_end() {
 
 # ── The release notes ────────────────────────────────────────────────────────
 
+# stable_below VERSION: reads CHANGELOG.md on stdin and prints the first
+# release heading below [VERSION] that carries no pre-release suffix.
+stable_below() {
+  awk -v heading="## [$1]" '
+    index($0, heading) == 1 { found = 1; next }
+    found && /^## \[[0-9]+\.[0-9]+\.[0-9]+\]/ { sub(/^## \[/, ""); sub(/\].*/, ""); print; exit }
+  '
+}
+
+# support_statement VERSION END STABLE: the body of the notes' support period.
+# A pre-release is a test build of the version it precedes, so it promises no
+# support of its own and names the stable release that stays supported.
+support_statement() {
+  local version="$1" end="$2" stable="$3"
+  if prerelease "$version"; then
+    echo "This is a pre-release of ${version%%-*} for testing, and it is not a supported release: it receives no fixes, and the next pre-release or ${version%%-*} itself replaces it. Do not run it in production. ${stable} stays the newest supported release until ${version%%-*} is published, and security fixes ship only in the newest release (Regulation (EU) 2024/2847 Art 13(10)); see [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)."
+    return 0
+  fi
+  echo "Only the newest release is supported. When a new release is published, every earlier release stops receiving fixes: there are no maintenance branches, no long-term-support line and no backports. If you are not on the newest release, upgrade; upgrading is free. Under the Cyber Resilience Act, Cadasto B.V. commits to keep publishing security fixes for at least five years after each release (Art 13(8)) and ships them only in the newest release (Art 13(10)). For this release that commitment runs until the end of $end (Regulation (EU) 2024/2847 Art 13(19)); see [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)."
+}
+
 notes() {
   local tag="$1" out="$2" version="${1#v}" released end url
   if ! grep -q "^## \[$version\]" CHANGELOG.md; then
@@ -128,11 +150,18 @@ notes() {
     echo "::error::The [$version] heading carries no release date to count the support period from." >&2
     return 1
   fi
+  if prerelease "$version"; then
+    stable="$(stable_below "$version" <CHANGELOG.md)"
+    if [[ -z "$stable" ]]; then
+      echo "::error::CHANGELOG.md has no stable release below [$version] to name as the supported one." >&2
+      return 1
+    fi
+  fi
   {
     echo
     echo "### Support period"
     echo
-    echo "Only the newest release is supported. When a new release is published, every earlier release stops receiving fixes: there are no maintenance branches, no long-term-support line and no backports. If you are not on the newest release, upgrade; upgrading is free. Under the Cyber Resilience Act, Cadasto B.V. commits to keep publishing security fixes for at least five years after each release (Art 13(8)) and ships them only in the newest release (Art 13(10)). For this release that commitment runs until the end of $end (Regulation (EU) 2024/2847 Art 13(19)); see [SECURITY.md](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)."
+    support_statement "$version" "$end" "${stable:-}"
   } >>"$out"
   # CRA Art 13(18): the Annex II information and instructions to the user, in
   # the book the docs-freeze leg cuts for this tag.
@@ -345,6 +374,18 @@ self_test() {
   expect "a release candidate is a pre-release" "$(prerelease 5.6.0-rc1 && echo yes || echo no)" "yes"
   expect "a dotted suffix is a pre-release" "$(prerelease 5.6.0-rc.1 && echo yes || echo no)" "yes"
   expect "a stable version is no pre-release" "$(prerelease 5.6.0 && echo yes || echo no)" "no"
+  local log
+  log="$(printf '%s\n' '## [Unreleased]' '' '## [5.6.0-rc2] - 2026-11-02' '' '## [5.6.0-rc1] - 2026-10-28' '' \
+    '## [5.5.0] - 2026-10-27' '' '## [5.4.2] - 2026-10-25')"
+  expect "the stable release below a release candidate" "$(stable_below 5.6.0-rc2 <<<"$log")" "5.5.0"
+  expect "the stable release below a stable release" "$(stable_below 5.5.0 <<<"$log")" "5.4.2"
+  expect "no stable release below" "$(stable_below 5.4.2 <<<"$log")" ""
+  got="$(support_statement 5.6.0-rc1 "October 2031" 5.5.0)"
+  [[ "$got" == *"not a supported release"* && "$got" == *"5.5.0 stays the newest supported release"* && "$got" != *"October 2031"* ]] ||
+    expect "a pre-release promises no support of its own" "$got" "the pre-release statement naming 5.5.0"
+  got="$(support_statement 5.5.0 "October 2031" "")"
+  [[ "$got" == *"runs until the end of October 2031"* ]] ||
+    expect "a release carries its support period" "$got" "the statement ending October 2031"
   expect "a plain date" "$(support_end 2026-10-23)" "October 2031"
   expect "a leap day into a common year" "$(support_end 2028-02-29)" "March 2033"
   expect "a leap day into a leap year" "$(support_end 2031-02-29 || echo "$refused")" "$refused"
