@@ -116,8 +116,8 @@ The chart deploys no database, so the two halves are separate operations.
    them.
 
 3. Install the chart again with only the values every deployment must supply
-   (the DSN Secret and an authentication mechanism), and none of your other
-   overrides:
+   (the posture, the DSN Secret and an authentication mechanism), and none of
+   your other overrides:
 
    ```console
    helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \

@@ -629,22 +629,28 @@ config:
   # loudly at read otherwise).
   spec_profile: development
 
-  # The declared deployment posture, stated here so a rendered ferroehr.toml
-  # always says which one it runs. `sandbox` (the binary's default) must not
-  # hold real patient data: the server names every missing separation on its
-  # boot banner, in the log and on /management/status, and
+  # The declared deployment posture, which the chart REFUSES to render
+  # without: there is no default, so every installation says which posture it
+  # runs (EHDS Annex II 1.2: installed following the manufacturer's
+  # instructions without affecting the product's characteristics).
+  # `sandbox` must not hold real patient data: the server names every missing
+  # separation on its boot banner, in the log and on /management/status, and
   # GET /ferroehr/rest/status reports the profile. `production` refuses to boot
   # while a separation is missing and not named in `deployment_accepts`. These
   # chart defaults leave several open (one DSN for every domain, an empty
   # privacy.subject_namespaces, audit.fail_mode open, the open
   # authz.rbac.ehr_access_default, db.migrate apply on the runtime credential,
   # a plaintext listener behind the ingress), so a deployment holding patient
-  # data sets `production` and closes or accepts each one by name, e.g.
+  # data starts from values-production.yaml, or sets `production` and closes or
+  # accepts each one by name, e.g.
   #   deployment_profile: production
   #   deployment_accepts: [plaintext_listener]   # TLS terminates at the ingress
-  # No openEHR spec governs this; the reasoning is in the book's CRA risk
-  # assessment, Annex I Part I(2)(b).
-  deployment_profile: sandbox
+  # A trial install sets `deployment_profile: sandbox`. No openEHR spec governs
+  # this; the reasoning is in the book's CRA risk assessment, Annex I Part
+  # I(2)(b).
+  # -- (string)
+  # @default -- unset: the chart refuses to render
+  deployment_profile: null
 
   # [server] — the HTTP listener: the FerroHEALTH family's section, the same
   # keys in every product (the configuration reference lists them all).

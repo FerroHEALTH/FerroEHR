@@ -1,8 +1,8 @@
 # ferroehr
 
-Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). A stock install runs the sandbox deployment profile, which must not hold real patient data; set config.deployment_profile for a production holder.
+Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment_profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 20.0.1-rc1](https://img.shields.io/badge/Version-20.0.1--rc1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.0-rc1](https://img.shields.io/badge/AppVersion-5.6.0--rc1-informational?style=flat-square)
+![Version: 21.0.0-rc2](https://img.shields.io/badge/Version-21.0.0--rc2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.0-rc1](https://img.shields.io/badge/AppVersion-5.6.0--rc1-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -22,10 +22,10 @@ That is fail-closed and deliberate: the alternative is an openEHR repository
 serving patient data to anonymous callers. Configure a mechanism, or set
 `config.auth.enabled: false` for a throwaway evaluation.
 
-**A stock install runs the `sandbox` profile.** `config.deployment_profile`
-defaults to `sandbox`, the binary's default, which must not hold real patient
-data and names every missing separation on its boot banner. A deployment
-holding patient data sets `production`, which refuses to start until each
+**The chart has no default posture.** It refuses to render until
+`config.deployment_profile` names one, so no installation runs a posture it did
+not choose. `sandbox` must not hold real patient data and names every missing
+separation on its boot banner. `production` refuses to start until each
 separation is made or accepted by name; the comment above the key in
 `values.yaml` lists the ones these defaults leave open. The chart ships
 `values-production.yaml`, an overlay that sets `production`, makes those
@@ -44,11 +44,15 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 20.0.1-rc1 \
+  --version 21.0.0-rc2 \
   --namespace ferroehr --create-namespace \
+  --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.6.0-rc1
 ```
+
+`sandbox` is for a trial; a deployment holding patient data starts from
+`values-production.yaml` instead.
 
 OCI registries require Helm 3.8 or newer.
 
@@ -58,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `20.0.1-rc1` |
+| the **chart** (templates, defaults, this document) | `--version` | `21.0.0-rc2` |
 | the **server image** | `image.tag` | `5.6.0-rc1` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -70,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:20.0.1-rc1 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc2 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -78,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:20.0.1-rc1 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:20.0.1-rc1 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc2 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.6.0-rc1 \
   -R FerroHEALTH/FerroEHR
@@ -272,7 +276,7 @@ Kubernetes: `>=1.36.0-0`
 | config.db.migrate | string | `"apply"` |  |
 | config.db.min_connections | int | `0` |  |
 | config.db.statement_timeout_ms | int | `60000` |  |
-| config.deployment_profile | string | `"sandbox"` |  |
+| config.deployment_profile | string | unset: the chart refuses to render |  |
 | config.events.enabled | bool | `false` |  |
 | config.events.exchange | string | `"ferroehr.events"` |  |
 | config.events.tls | bool | `false` |  |

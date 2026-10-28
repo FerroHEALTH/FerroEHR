@@ -6,6 +6,8 @@
 # define, the `[audit.syslog] transport` that #3897 removed, and the gate must
 # refuse the render naming it. Not a deployment, so boot-check.sh skips it.
 config:
+  # The chart has no default posture and refuses to render without one.
+  deployment_profile: sandbox
   audit:
     syslog:
       transport: tls

@@ -16,6 +16,8 @@ database:
   existingSecretKey: FERROEHR__DB__URL
 
 config:
+  # The chart has no default posture and refuses to render without one.
+  deployment_profile: sandbox
   # The in-instance EHR index, the opt-in of a FerroEHR run on its own:
   # this overlay renders another surface and runs no identity source.
   ehr_index:

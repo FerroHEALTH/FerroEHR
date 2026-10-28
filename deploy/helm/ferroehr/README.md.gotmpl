@@ -22,10 +22,10 @@ That is fail-closed and deliberate: the alternative is an openEHR repository
 serving patient data to anonymous callers. Configure a mechanism, or set
 `config.auth.enabled: false` for a throwaway evaluation.
 
-**A stock install runs the `sandbox` profile.** `config.deployment_profile`
-defaults to `sandbox`, the binary's default, which must not hold real patient
-data and names every missing separation on its boot banner. A deployment
-holding patient data sets `production`, which refuses to start until each
+**The chart has no default posture.** It refuses to render until
+`config.deployment_profile` names one, so no installation runs a posture it did
+not choose. `sandbox` must not hold real patient data and names every missing
+separation on its boot banner. `production` refuses to start until each
 separation is made or accepted by name; the comment above the key in
 `values.yaml` lists the ones these defaults leave open. The chart ships
 `values-production.yaml`, an overlay that sets `production`, makes those
@@ -46,9 +46,13 @@ to add; `helm repo add` does not apply to this chart:
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
   --version {{ template "chart.version" . }} \
   --namespace ferroehr --create-namespace \
+  --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag={{ template "chart.appVersion" . }}
 ```
+
+`sandbox` is for a trial; a deployment holding patient data starts from
+`values-production.yaml` instead.
 
 OCI registries require Helm 3.8 or newer.
 

@@ -332,6 +332,12 @@ secret VALUE refused outright.
 {{- if hasKey $config "tenancy" -}}
 {{- fail "config.tenancy is set, and multi-tenancy no longer exists: it is achieved by running separate instances — one instance, one database, one set of domain roles per organisation (CHANGELOG.md, ### Removed). The server refuses unknown configuration keys, so rendering this key would crash-loop the pod at boot. Drop config.tenancy." -}}
 {{- end -}}
+{{/* EHDS Annex II 1.2: an installation that follows the quickstart rather than
+     the instructions for use must not run the sandbox posture by default, so the
+     chart has no default and refuses to render until the operator names one. */}}
+{{- if not $config.deployment_profile -}}
+{{- fail "config.deployment_profile is unset, and the chart has no default: choose the posture this installation runs. `sandbox` must not hold real patient data (the server names every missing separation on every boot); `production` refuses to boot while a separation is missing (start from values-production.yaml). Set it in your values file or with --set config.deployment_profile=sandbox|production." -}}
+{{- end -}}
 {{- $findings := include "ferroehr.secretScan" (dict "node" $config "path" "") | trim -}}
 {{- $lines := list -}}
 {{- range $finding := splitList "\n" $findings -}}

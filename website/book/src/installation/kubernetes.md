@@ -38,13 +38,18 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 20.0.1-rc1 -n ferroehr \
+  --version 21.0.0-rc2 -n ferroehr \
+  --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.6.0-rc1 \
   --set ferropix.enabled=false --set config.ehr_index.provider=local
 ```
 
-The last line opts in to the in-instance EHR index, for a CDR run on its own.
+`config.deployment_profile=sandbox` names the posture of a trial install,
+which must not hold real patient data; the chart has no default and refuses to
+render without one. A deployment holding patient data starts from the
+[production overlay](#the-production-overlay) instead. The last line opts in to
+the in-instance EHR index, for a CDR run on its own.
 By default the chart runs FerroPIX, the IHE patient identity source, beside the
 CDR and points the EHR index at it, which needs FerroPIX's own Secrets and an
 issuer: see [FerroPIX](#ferropix-the-patient-identity-source-on-by-default).
@@ -63,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 20.0.1-rc1
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc2
 ```
 
 ### Pin two versions, not one
@@ -76,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 20.0.1-rc1` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 21.0.0-rc2` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.6.0-rc1` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -176,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 20.0.1-rc1 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc2 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -253,10 +258,13 @@ anything neither `config:` nor `secrets:` surfaces.
 
 ### The deployment profile and the access log
 
-The chart's values declare three keys with the binary's own defaults, so a
-rendered `ferroehr.toml` always says what it runs:
+The chart's values declare three keys, so a rendered `ferroehr.toml` always
+says what it runs:
 
-- **`config.deployment_profile: sandbox`:** a stock install must not hold real
+- **`config.deployment_profile`:** no default; the chart refuses to render
+  until it names `sandbox` or `production`, so an installation that follows a
+  quickstart instead of the instructions for use does not end up in the sandbox
+  posture by omission (EHDS Annex II 1.2). `sandbox` must not hold real
   patient data: the server names every separation it has not made on its boot
   banner and on `/management/status`, and reports the profile on
   `GET /ferroehr/rest/status`. A deployment holding patient data sets
@@ -273,8 +281,10 @@ rendered `ferroehr.toml` always says what it runs:
   calendar years, such as `3` for a German SGB V § 309 controller with
   `config.audit.store.sgb_v_309_controller: true`.
 - **`config.audit.categories`:** an empty `templates` and `archetypes` map,
-  which records every access as `unclassified`. Map your templates and root
-  archetypes to their EHDS priority categories; the keys are template ids and
+  under which the [category map FerroEHR ships](config-audit.md#auditcategories)
+  applies: it classifies the published CKM templates and archetypes of one
+  priority category and records anything else as `unclassified`. Map your own
+  templates and root archetypes, which replaces the shipped map; the keys are template ids and
   archetype ids, so quote a template id that contains spaces:
 
 ```yaml
@@ -325,7 +335,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 20.0.1-rc1 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc2 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -801,7 +811,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 20.0.1-rc1 -n ferroehr --reuse-values \
+  --version 21.0.0-rc2 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -962,7 +972,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 20.0.1-rc1 -n ferroehr --reuse-values \
+  --version 21.0.0-rc2 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1290,7 +1300,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 20.0.1-rc1 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc2 \
   -n ferroehr -f my-values.yaml | less
 ```
 

@@ -7,9 +7,9 @@ description: >-
   schema preparation on its own credential. The default NetworkPolicy narrows
   ingress to the serving ports but admits every source until
   networkPolicy.ingressFrom is set, and the default-deny egress policy is off
-  (networkPolicy.egress.enabled). A stock install runs the sandbox deployment
-  profile, which must not hold real patient data; set config.deployment_profile
-  for a production holder.
+  (networkPolicy.egress.enabled). The chart refuses to render until
+  config.deployment_profile names the posture: sandbox, which must not hold
+  real patient data, or production (start from values-production.yaml).
 type: application
 
 # Chart versioning is independent of the application version, and is SemVer 2
@@ -22,7 +22,7 @@ type: application
 # A published OCI version is immutable by refusal rather than by the registry —
 # `helm push` over an existing tag replaces it silently — so a correction always
 # ships as a NEW version and the published one stands as it was.
-version: 20.0.1-rc1
+version: 21.0.0-rc2
 # The DEFAULT container image tag (overridable via image.tag). Equals the
 # workspace version in Cargo.toml, bumped in the release PR beside the
 # docker-compose.yml image tags — one version sweep, the compose treatment

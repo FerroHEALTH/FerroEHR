@@ -241,7 +241,7 @@ declared posture and makes the two impossible to confuse.
 
 | Value | Asserts | On boot |
 |---|---|---|
-| `sandbox` *(default)* | Nothing; the deployment must not hold real personal data | Says which separations are missing: a red notice on the banner, one `warn` line per gap with the structured field `posture = "deployment"`, and the same list on `GET /management/status` under `deployment`; the public `GET /ferroehr/rest/status` carries the profile only |
+| `sandbox` *(the binary's default; the Helm chart has none and refuses to render until you choose)* | Nothing; the deployment must not hold real personal data | Says which separations are missing: a red notice on the banner, one `warn` line per gap with the structured field `posture = "deployment"`, and the same list on `GET /management/status` under `deployment`; the public `GET /ferroehr/rest/status` carries the profile only |
 | `production` | Every separation below holds, or is accepted by name in `deployment_accepts` | Refuses to start otherwise, naming each open gap, what it found and what to change |
 
 The separations, each a real property the server checks rather than a box
