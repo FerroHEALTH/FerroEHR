@@ -15,7 +15,10 @@ could happen to a patient, the control, the test that shows the control holds,
 and what remains. "Normal conditions of use" are those of the
 [intended-purpose statement](intended-purpose.md). The log is the EHDS-side
 companion of the [CRA risk assessment](cra-risk-assessment.md), and it is
-versioned with the release like every page of this book.
+versioned with the release like every page of this book. The performance
+side of Annex II 1.1, the component's stated performance and the test that
+measures it on every release, is on
+[the logging component's intended performance](logging-performance.md).
 
 <!-- toc -->
 

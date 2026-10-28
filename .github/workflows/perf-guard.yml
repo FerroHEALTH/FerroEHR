@@ -9,7 +9,9 @@
 # when main's median throughput falls below 90 % of the release's or its
 # median p95 latency rises above 110 %, so a regression shows before a release
 # cut refuses it: release.yml runs the same A/B on the release candidate
-# before any image is tagged.
+# before any image is tagged. The same job then runs the logging component's
+# performance evaluation on main (scripts/perf/audit.sh, EHDS Annex II 1.1),
+# so a change that breaks a stated claim shows before the release cut does.
 #
 # A relative A/B on one runner is what makes a hosted runner usable here: both
 # sides share its noise, where an absolute figure would not be comparable
@@ -45,7 +47,7 @@ jobs:
   ab:
     name: main against the latest release
     runs-on: ubuntu-26.04
-    timeout-minutes: 90
+    timeout-minutes: 150
     permissions:
       contents: read # the checkout and the latest release's tag
       packages: read # pull main's image and the release's images
@@ -86,14 +88,23 @@ jobs:
           CANDIDATE: ${{ steps.candidate.outputs.digest }}
           LOADTEST_BIN: target/release/loadtest
         run: bash scripts/perf/ab.sh "$PREVIOUS" "$CANDIDATE" ferroehr-postgres:perf perf-out
+      - name: The logging component, access log off against on
+        if: always()
+        env:
+          CANDIDATE: ${{ steps.candidate.outputs.digest }}
+          LOADTEST_BIN: target/release/loadtest
+        run: bash scripts/perf/audit.sh "$CANDIDATE" ferroehr-postgres:perf perf-audit
       - name: Summary
         if: always()
         run: |
           if [ -f perf-out/summary.md ]; then cat perf-out/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f perf-audit/summary.md ]; then cat perf-audit/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
       - name: Keep the reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: perf-guard
-          path: perf-out/
+          path: |
+            perf-out/
+            perf-audit/
           if-no-files-found: ignore

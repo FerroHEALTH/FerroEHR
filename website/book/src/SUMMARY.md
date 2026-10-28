@@ -82,4 +82,5 @@
   - [Intended purpose](compliance/intended-purpose.md)
   - [CRA risk assessment](compliance/cra-risk-assessment.md)
   - [Hazard log: the logging component](compliance/hazard-log.md)
+  - [The logging component's intended performance](compliance/logging-performance.md)
   - [Claims review](compliance/claims-review.md)

@@ -602,7 +602,8 @@ jobs:
             "docker-compose.observability.yml" \
             "docker-compose.db-publish.yml" \
             "ferroehr-${TAG}-information-sheet.md" \
-            "ferroehr-${TAG}-instructions-for-use.md"; do
+            "ferroehr-${TAG}-instructions-for-use.md" \
+            "ferroehr-${TAG}-logging-performance.md"; do
             grep -Fxq "$asset" <<<"$assets" || missing="$missing $asset"
           done
           # The exploitability record (CRA Annex I Part I(2)(a)), and one SBOM
@@ -1124,14 +1125,20 @@ jobs:
   # image tags and its GitHub release stays a draft. The previous release is
   # the tag below this one by version (plan.sh prev-tag); its images must be
   # published, or the A/B cannot run and the leg fails.
+  # The same job then runs the logging component's performance evaluation
+  # (scripts/perf/audit.sh, EHDS Annex II 1.1 and Annex III point 2): the
+  # candidate with the access log off and on, failing closed, against the
+  # claims of website/book/src/compliance/logging-performance.md. A claim not
+  # met refuses the release, and the summary is attached to the draft as
+  # ferroehr-<tag>-logging-performance.md.
   performance:
     name: performance guard (amd64)
     runs-on: ubuntu-26.04
-    timeout-minutes: 90
+    timeout-minutes: 150
     permissions:
-      contents: read
+      contents: write # attach the logging performance evaluation to the draft
       packages: read # pull the image this run pushed and the previous release's
-    needs: [plan, app-image]
+    needs: [plan, app-image, github-release]
     env:
       APP_IMAGE: ghcr.io/ferrohealth/ferroehr
     steps:
@@ -1168,17 +1175,34 @@ jobs:
           PREVIOUS: ${{ steps.previous.outputs.tag }}
           LOADTEST_BIN: target/release/loadtest
         run: bash scripts/perf/ab.sh "$PREVIOUS" ferroehr:perf ferroehr-postgres:perf perf-out
+      - name: The logging component, access log off against on
+        env:
+          LOADTEST_BIN: target/release/loadtest
+        run: bash scripts/perf/audit.sh ferroehr:perf ferroehr-postgres:perf perf-audit
+      - name: Name the evaluation for the release
+        env:
+          TAG: ${{ needs.plan.outputs.tag }}
+        run: cp perf-audit/summary.md "ferroehr-${TAG}-logging-performance.md"
       - name: Summary
         if: always()
         run: |
           if [ -f perf-out/summary.md ]; then cat perf-out/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f perf-audit/summary.md ]; then cat perf-audit/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
       - name: Keep the reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: perf-guard
-          path: perf-out/
+          path: |
+            perf-out/
+            perf-audit/
           if-no-files-found: ignore
+      - name: Attach the logging performance evaluation to the draft release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          draft: true
+          tag_name: ${{ needs.plan.outputs.tag }}
+          files: ferroehr-${{ needs.plan.outputs.tag }}-logging-performance.md
 
   # ── The Helm chart ──────────────────────────────────────────────────────────
   # `needs: scan-and-tag` is the whole fix for the defect class this pipeline
