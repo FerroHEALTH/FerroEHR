@@ -127,7 +127,7 @@ for file in "$ROOT_DIR"/docker-compose*.yml "$ROOT_DIR"/docker/*.yml; do
     else
       echo "$rel:$line $ref matches the workspace version."
     fi
-  done < <(grep -noE 'ghcr\.io/ferrohealth/ferroehr(-postgres|-viewer)?:[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?' "$file" || true)
+  done < <(grep -noE 'ghcr\.io/ferrohealth/ferroehr(-postgres|-viewer)?:[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?' "$file" || true)
 done
 shopt -u nullglob
 if [[ "$checked" -eq 0 ]]; then
