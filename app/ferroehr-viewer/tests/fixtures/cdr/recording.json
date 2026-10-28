@@ -12,7 +12,7 @@
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/config",
+  "path": "/ferroehr/rest/extensions/v1/admin/config",
   "body": "",
   "status": 200,
   "headers": {
@@ -22,7 +22,7 @@
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/admin/event_subscription",
+  "path": "/ferroehr/rest/extensions/v1/admin/event_subscription",
   "body": "",
   "status": 404,
   "headers": {
@@ -144,7 +144,7 @@
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/party_relationship/00000000-0000-7000-8000-000000000003",
+  "path": "/ferroehr/rest/extensions/v1/demographic/party_relationship/00000000-0000-7000-8000-000000000003",
   "body": "",
   "status": 200,
   "headers": {
@@ -210,7 +210,7 @@
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/demographic/versioned_party_relationship/00000000-0000-7000-8000-000000000003/revision_history",
+  "path": "/ferroehr/rest/extensions/v1/demographic/versioned_party_relationship/00000000-0000-7000-8000-000000000003/revision_history",
   "body": "",
   "status": 200,
   "headers": {
@@ -255,7 +255,7 @@
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/contribution?offset=0&fetch=200",
+  "path": "/ferroehr/rest/extensions/v1/ehr/00000000-0000-7000-8000-000000000002/contribution?offset=0&fetch=200",
   "body": "",
   "status": 200,
   "headers": {
@@ -265,7 +265,7 @@
  },
  {
   "method": "GET",
-  "path": "/ferroehr/rest/openehr/v1/ehr/00000000-0000-7000-8000-000000000002/contribution?offset=0&fetch=25",
+  "path": "/ferroehr/rest/extensions/v1/ehr/00000000-0000-7000-8000-000000000002/contribution?offset=0&fetch=25",
   "body": "",
   "status": 200,
   "headers": {

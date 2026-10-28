@@ -61,7 +61,7 @@ use crate::{negotiate, params};
 
 /// The storage-integrity extension route as a native `utoipa-axum` router —
 /// **no ITS-REST contract** (see the module docs). Group-relative path (nested
-/// under `base_path`); the operation runs through [`guarded_dispatch`] with
+/// under the extensions root); the operation runs through [`guarded_dispatch`] with
 /// [`dispatch`].
 pub(crate) fn integrity_routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()

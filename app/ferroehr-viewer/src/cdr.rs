@@ -202,6 +202,22 @@ impl CdrClient {
         format!("{}{}", self.origin, self.base_path)
     }
 
+    /// A URL under the CDR's extensions root (`{rest_root}/extensions/v1`),
+    /// where the CDR serves its own API extensions beside the openEHR API:
+    /// terminology, event subscriptions, party relationships, the archetype
+    /// library and the admin extensions.
+    #[must_use]
+    pub fn extensions_v1(&self, path: &str) -> String {
+        self.rest_root_url(&format!("extensions/v1/{}", path.trim_start_matches('/')))
+    }
+
+    /// A URL under the CDR's FHIR root (`{rest_root}/fhir/r4`), where it
+    /// serves the IHE ITI-81 `AuditEvent` retrieval.
+    #[must_use]
+    pub fn fhir_r4(&self, path: &str) -> String {
+        self.rest_root_url(&format!("fhir/r4/{}", path.trim_start_matches('/')))
+    }
+
     /// A URL under the CDR's product root — the surfaces that sit beside the
     /// openEHR API rather than inside it (`status`, `api-docs/openapi.json`,
     /// `.well-known/smart-configuration`).

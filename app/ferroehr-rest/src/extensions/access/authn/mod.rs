@@ -1753,7 +1753,11 @@ mod tests {
             authenticator: Authenticator::new(&config).await.expect("authenticator"),
             authz: None,
             patient_data: None,
-            smart: Arc::new(SmartRoutes::new("", "__ferroehr.platform", Vec::new())),
+            smart: Arc::new(SmartRoutes::new(
+                &crate::api::Namespaces::of(&ferroehr::config::rest::RestConfig::default()),
+                "__ferroehr.platform",
+                Vec::new(),
+            )),
             served: Arc::new(ServedMethods::default()),
         };
         let app = axum::Router::new()

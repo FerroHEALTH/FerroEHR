@@ -537,7 +537,7 @@ to other products or systems, ensure that this is done in a secure manner"
   value that confirms it. `DELETE {base}/admin/ehr/{ehr_id}` and
   `DELETE {base}/admin/ehr/all` remove single EHRs with every version, the
   linkage row and orphaned multimedia; template and stored-query deletes
-  exist. Transfer runs over the authenticated API and `{base}/admin/dump`,
+  exist. Transfer runs over the authenticated API and `/ferroehr/rest/extensions/v1/admin/dump`,
   over TLS when the deployment enables it.
 - **Evidence:** `app/ferroehr/src/decommission.rs`;
   `app/ferroehr/tests/it/decommission.rs`;

@@ -116,7 +116,7 @@ never recomputed on a read, so a row edited behind the server's back is
 invisible to this check and can still reach a client through an AQL scalar
 result.
 
-That copy has its own channel: `POST {base}/admin/integrity/verify`
+That copy has its own channel: `POST /ferroehr/rest/extensions/v1/admin/integrity/verify`
 re-derives every stored version from its decomposed rows and reports any
 that no longer match the stored document. It is an admin route, it runs
 outside the request path, and it reports by identifier rather than by

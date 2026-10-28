@@ -342,9 +342,10 @@ contribution, or **404**. Add `Prefer: resolve_refs` to get full VERSION objects
 instead of `OBJECT_REF`s (see
 [Content negotiation & errors](content-negotiation.md#prefer-resolve_refs)).
 
-`GET /ehr/{ehr_id}/contribution` (no uid) lists the EHR's contributions, newest
-first, a FerroEHR extension (the openEHR REST API defines only the by-uid
-read). Paginate with `?offset=` (default 0) and `?fetch=` (default 20, capped at
+`GET /ferroehr/rest/extensions/v1/ehr/{ehr_id}/contribution` (no uid) lists the
+EHR's contributions, newest first. It is a FerroEHR extension (the openEHR REST
+API defines only the by-uid read), so it sits under the extensions root beside
+the openEHR API. Paginate with `?offset=` (default 0) and `?fetch=` (default 20, capped at
 100). It returns **200** with a JSON summary, or **404** for an unknown EHR:
 
 ```json

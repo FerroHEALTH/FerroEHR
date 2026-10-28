@@ -702,9 +702,9 @@ why they are written as your checklist rather than as our claim.
 - **Sweep for stale decomposition after a release that changes how content is
   decomposed.** The version body is unaffected and every read serves it
   correctly; what is stale is the decomposed index over it, which a
-  row-level query predicate depends on. `POST {base}/admin/integrity/verify`
+  row-level query predicate depends on. `POST /ferroehr/rest/extensions/v1/admin/integrity/verify`
   reports each such version as `stale_decomposition` and
-  `POST {base}/admin/integrity/rebuild-nodes`, run once unscoped, rewrites the
+  `POST /ferroehr/rest/extensions/v1/admin/integrity/rebuild-nodes`, run once unscoped, rewrites the
   rows from the stored document. The changelog names the affected object type
   at each release that needs it; 4.2.0 is one, for demographic parties. Both
   routes are on
@@ -912,7 +912,7 @@ carries its own switch, authorization class and status-code contract:
 - **The admin API** (`{base}/admin/…`, off by default): physical deletion, the
   activity report, archiving to the cold tier, and whole-repository dump and
   load.
-- **The messaging API** (`{base}/message/…`, always mounted): EHR Extract
+- **The messaging API** (`/ferroehr/rest/extensions/v1/message/…`, always mounted): EHR Extract
   export and import.
 
 The full reference is [Admin & messaging APIs](operations-admin-apis.md).

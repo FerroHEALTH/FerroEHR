@@ -93,7 +93,10 @@ is not a party or a `PARTY_RELATIONSHIP`, a lifecycle state outside the openEHR
 ## Relationships
 
 Party relationships are managed through a parallel set of routes (the FerroEHR
-extension the note above describes) with the same versioned shape as parties:
+extension the note above describes) with the same versioned shape as parties.
+ITS-REST defines no relationship routes, so they sit under the extensions root,
+`/ferroehr/rest/extensions/v1`, beside the openEHR API, and every path below is
+relative to it:
 
 | Method | Path | Purpose |
 |---|---|---|

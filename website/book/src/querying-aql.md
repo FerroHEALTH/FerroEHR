@@ -323,7 +323,7 @@ of the people one organisation cares for. Answering them normally means someone
 producing a list of patient identifiers first, which is exactly the disclosure
 the split between clinical and demographic storage exists to avoid.
 
-`POST /query/cohort` answers them without producing that list. It is a FerroEHR
+`POST /ferroehr/rest/extensions/v1/query/cohort` answers them without producing that list. It is a FerroEHR
 extension — no openEHR spec governs it: AQL is defined over the clinical domain
 and has no demographic source, and ITS-REST publishes an ad-hoc and a stored
 query and nothing else.
@@ -382,7 +382,7 @@ curl -u ferroehr:ferroehr -X POST \
         "purpose": "secondary-use",
         "fetch": 100
       }' \
-  http://localhost:8080/ferroehr/rest/openehr/v1/query/cohort
+  http://localhost:8080/ferroehr/rest/extensions/v1/query/cohort
 ```
 
 `q`, `offset`, `fetch` and `query_parameters` mean what they mean on the ad-hoc

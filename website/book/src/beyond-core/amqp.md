@@ -111,7 +111,7 @@ for everything.
 
 The server can also manage subscriptions for you. With the event-subscription
 admin API enabled (`FERROEHR__EVENTS__ADMIN_API`), the CRUD routes under
-`/admin/event_subscription` let you store subscription rows, and each **enabled**
+`/ferroehr/rest/extensions/v1/admin/event_subscription` let you store subscription rows, and each **enabled**
 row makes the server declare and bind a durable queue named `<exchange>.<name>`
 (for the default exchange, `ferroehr.events.<name>`). Its binding key is built
 from the row's `kind` / `change_type` / `template_id` predicates, with a wildcard
@@ -133,7 +133,7 @@ every default is on
 | `FERROEHR__EVENTS__URL_FILE` | unset | read the broker URL from a mounted file instead |
 | `FERROEHR__EVENTS__EXCHANGE` | `ferroehr.events` | topic exchange name, and the queue-name prefix |
 | `FERROEHR__EVENTS__TLS` | `false` | upgrade an `amqp://` URL to `amqps://` |
-| `FERROEHR__EVENTS__ADMIN_API` | `false` | mount the `/admin/event_subscription` routes |
+| `FERROEHR__EVENTS__ADMIN_API` | `false` | mount the `/ferroehr/rest/extensions/v1/admin/event_subscription` routes |
 
 Batch size, poll interval, publish retries, and the retention window for
 published rows are tunable too, and their defaults are sensible for a normal

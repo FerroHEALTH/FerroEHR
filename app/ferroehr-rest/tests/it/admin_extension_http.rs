@@ -47,12 +47,12 @@ async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
 
 /// A bodyless `GET` of the [`BASE`]-relative `path`.
 fn get(path: &str) -> Request<Body> {
-    common::get(&format!("{BASE}{path}"))
+    common::get(&common::full(path))
 }
 
 /// A JSON `POST` of `body` to the [`BASE`]-relative `path`.
 fn post_json(path: &str, body: &str) -> Request<Body> {
-    common::post_json(&format!("{BASE}{path}"), body)
+    common::post_json(&common::full(path), body)
 }
 
 /// Create an EHR through the released wire and return its id.
@@ -263,7 +263,7 @@ async fn the_archive_routes_refuse_unknown_malformed_and_shapeless_requests() {
 async fn create_demographic(app: &Router, segment: &str, body: &serde_json::Value) -> String {
     let request = Request::builder()
         .method("POST")
-        .uri(format!("{BASE}/demographic/{segment}"))
+        .uri(common::full(&format!("/demographic/{segment}")))
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(body.to_string()))
         .expect("request");

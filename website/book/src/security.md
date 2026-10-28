@@ -311,9 +311,9 @@ protect the person's vital interests, logged so the person can see it. No
 openEHR specification governs this; it is our own design.
 
 - **Recording it.** The controller records a restriction on the person's
-  instruction with `POST {base}/admin/access-restriction`, for a whole EHR or
+  instruction with `POST /ferroehr/rest/extensions/v1/admin/access-restriction`, for a whole EHR or
   for one versioned object, and lifts it with
-  `POST {base}/admin/access-restriction/lift`
+  `POST /ferroehr/rest/extensions/v1/admin/access-restriction/lift`
   ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
   A whole-EHR restriction covers data recorded after it too.
 - **What a professional sees.** Restricted data reads as absent: a restricted

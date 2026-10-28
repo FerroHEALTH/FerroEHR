@@ -73,8 +73,8 @@ enum Group {
 pub(crate) struct SmartRoutes {
     /// The generated operation and group of each `(method, full path)`.
     ops: HashMap<(Method, String), (&'static str, Group)>,
-    /// The configured API base path.
-    base_path: String,
+    /// The API namespaces.
+    namespaces: crate::api::Namespaces,
     /// The product scope (`[auth] product_scope`).
     product_scope: String,
     /// The clients that reach the DEMOGRAPHIC API.
@@ -85,7 +85,7 @@ impl SmartRoutes {
     /// Returns the table for an API under `base_path`, with the product scope
     /// and the DEMOGRAPHIC clients the deployment configured.
     pub(crate) fn new(
-        base_path: &str,
+        namespaces: &crate::api::Namespaces,
         product_scope: &str,
         demographic_clients: Vec<String>,
     ) -> Self {
@@ -108,13 +108,13 @@ impl SmartRoutes {
                 let Ok(method) = method.parse::<Method>() else {
                     continue;
                 };
-                let full = format!("{base_path}{}", crate::api::normalize_path(path));
+                let full = format!("{}{}", namespaces.openehr, crate::api::normalize_path(path));
                 ops.insert((method, full), (*op, group));
             }
         }
         Self {
             ops,
-            base_path: base_path.to_owned(),
+            namespaces: namespaces.clone(),
             product_scope: product_scope.to_owned(),
             demographic_clients,
         }
@@ -129,7 +129,7 @@ impl SmartRoutes {
         if let Some((op, group)) = self.ops.get(&(method.clone(), matched.to_owned())) {
             return self.need_of_op(op, *group, matched, path);
         }
-        let relative = matched.strip_prefix(&self.base_path).unwrap_or(matched);
+        let relative = self.namespaces.relative(matched).unwrap_or(matched);
         Need::Now(self.extension(method, relative, matched, path))
     }
 
@@ -388,7 +388,11 @@ mod tests {
     const BASE: &str = "/ferroehr/rest/openehr/v1";
 
     fn routes() -> SmartRoutes {
-        SmartRoutes::new(BASE, "__ferroehr.platform", vec!["mpi".to_owned()])
+        SmartRoutes::new(
+            &crate::api::Namespaces::of(&ferroehr::config::rest::RestConfig::default()),
+            "__ferroehr.platform",
+            vec!["mpi".to_owned()],
+        )
     }
 
     fn principal(scope: &str, client: Option<&str>, honoured: Honoured) -> Principal {
@@ -437,9 +441,11 @@ mod tests {
     #[test]
     fn every_mounted_route_has_a_requirement() {
         let table = routes();
-        let (_router, document) = crate::api::api_openapi_router().split_for_parts();
+        let document = crate::api::api_doc(&crate::api::Namespaces::of(
+            &ferroehr::config::rest::RestConfig::default(),
+        ));
         for (path, item) in &document.paths.paths {
-            let template = format!("{BASE}{path}");
+            let template = path.clone();
             for (method, operation) in [
                 (Method::GET, item.get.as_ref()),
                 (Method::PUT, item.put.as_ref()),

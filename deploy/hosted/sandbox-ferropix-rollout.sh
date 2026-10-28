@@ -662,7 +662,7 @@ EOF
   local probe probe_code
   probe="$(jq -r '.adl2.archetype_library.loinc.probe' "$MANIFEST")"
   probe_code="$(curl -sS -o "$WORK/loinc.out" -w "$HTTP_STATUS" -u "$DEMO_AUTH" \
-    "$PUBLIC_URL/ferroehr/rest/openehr/v1/terminology/http%3A%2F%2Floinc.org/term/$probe")"
+    "$PUBLIC_URL/ferroehr/rest/extensions/v1/terminology/http%3A%2F%2Floinc.org/term/$probe")"
   [[ "$probe_code" == 200 ]] \
     || fail "the CDR resolves no LOINC (LOINC $probe answered $probe_code): FerroTERM opens no LOINC index, so the seed's archetype-library pin cannot hold; check FERROTERM_INDEXES in .env (step 3) and the index (step 4)"
   ok "FerroTERM serves LOINC through the CDR: $probe is $(jq -r --arg c "$probe" '.terms[$c].text // "?"' "$WORK/loinc.out")"
@@ -674,7 +674,7 @@ EOF
     seed_identities
   fi
 
-  local base="$PUBLIC_URL/ferroehr/rest/openehr/v1" code
+  local ext="$PUBLIC_URL/ferroehr/rest/extensions/v1" code
   # The CDR resolves the hospital identifiers through FerroPIX: a cohort named
   # by the source domain's identifiers lands on the EHRs whose EHR_STATUS
   # carries the pseudonyms FerroPIX answered.
@@ -683,7 +683,7 @@ EOF
       subjects: [$s | split("\n")[] | select(startswith("sandbox-patient")) | {id: ., namespace: $ns}]
     }' > "$WORK/cohort.json"
   code="$(curl -sS -o "$WORK/cohort.out" -w "$HTTP_STATUS" -u "$DEMO_AUTH" \
-    -H 'Content-Type: application/json' -X POST "$base/query/cohort" --data-binary @"$WORK/cohort.json")"
+    -H 'Content-Type: application/json' -X POST "$ext/query/cohort" --data-binary @"$WORK/cohort.json")"
   [[ "$code" == 200 ]] || fail "POST /query/cohort answered $code: $(head -c 300 "$WORK/cohort.out")"
   local rows matched pattern=' [0-9a-f-]{36}$'
   rows="$(jq '.rows | length' "$WORK/cohort.out")"
@@ -697,7 +697,7 @@ EOF
     || fail "the cohort answered $rows rows, $matched of them on FerroPIX's pseudonyms"
   ok "the CDR resolved the hospital identifiers through FerroPIX: $rows EHRs, each on its pseudonym in the clinical domain"
 
-  code="$(curl -sS -o "$WORK/term.out" -w "$HTTP_STATUS" -u "$DEMO_AUTH" "$base/terminology/urn:iso:std:iso:3166/term/NL")"
+  code="$(curl -sS -o "$WORK/term.out" -w "$HTTP_STATUS" -u "$DEMO_AUTH" "$ext/terminology/urn:iso:std:iso:3166/term/NL")"
   { [[ "$code" == 200 ]] && grep -q Netherlands "$WORK/term.out"; } \
     || fail "FerroTERM did not answer through the CDR ($code): $(head -c 300 "$WORK/term.out")"
   ok "FerroTERM answers through the CDR: urn:iso:std:iso:3166 NL is $(jq -r '.terms.NL.text' "$WORK/term.out")"

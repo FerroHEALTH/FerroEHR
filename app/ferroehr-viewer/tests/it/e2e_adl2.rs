@@ -83,7 +83,7 @@ async fn remove_adl2_artefacts(hrids: &[&str]) {
     for hrid in hrids {
         let status = http
             .delete(format!(
-                "{cdr}/ferroehr/rest/openehr/v1/definition/artefact/adl2/{hrid}"
+                "{cdr}/ferroehr/rest/extensions/v1/definition/artefact/adl2/{hrid}"
             ))
             .basic_auth(&user, Some(&pass))
             .send()

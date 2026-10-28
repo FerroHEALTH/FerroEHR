@@ -81,7 +81,7 @@ fn admin_credentials() -> (String, String) {
 
 /// The subscription group's base URL on the CDR under test.
 fn group_url(cdr: &str) -> String {
-    format!("{cdr}/ferroehr/rest/openehr/v1/admin/event_subscription")
+    format!("{cdr}/ferroehr/rest/extensions/v1/admin/event_subscription")
 }
 
 /// Remove every fixture subscription (absent = nothing to do), so a scene both

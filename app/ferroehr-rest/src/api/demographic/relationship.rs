@@ -1037,7 +1037,9 @@ pub(super) async fn run(
 ) -> Result<Response, RestError> {
     const SEG: &str = "party_relationship";
     let h = &parts.headers;
-    let base = state.config().rest.base_path.clone();
+    // NOTE: our own design (#4330): PARTY_RELATIONSHIP is an extension, served beside the
+    // openEHR base path, so its `Location` names the extensions root.
+    let base = state.config().rest.extensions_path();
 
     // PARTY_RELATIONSHIP is not templated → no Simplified-Formats mapping;
     // reject a simplified Content-Type/Accept uniformly.

@@ -120,10 +120,12 @@ async fn example_composition(http: &reqwest::Client, v1: &str) -> String {
 ///
 /// # Panics
 /// When the list cannot be read.
-async fn contribution_total(http: &reqwest::Client, v1: &str, ehr_id: &str) -> u64 {
+async fn contribution_total(http: &reqwest::Client, extensions: &str, ehr_id: &str) -> u64 {
     let (user, pass) = basic_credentials();
     let body: serde_json::Value = http
-        .get(format!("{v1}/ehr/{ehr_id}/contribution?offset=0&fetch=1"))
+        .get(format!(
+            "{extensions}/ehr/{ehr_id}/contribution?offset=0&fetch=1"
+        ))
         .basic_auth(user, Some(pass))
         .header("Accept", "application/json")
         .send()
@@ -168,10 +170,11 @@ async fn two_staged_changes_commit_as_one_contribution_with_two_versions() {
         return;
     };
     let v1 = format!("{cdr}/ferroehr/rest/openehr/v1");
+    let extensions = format!("{cdr}/ferroehr/rest/extensions/v1");
     let http = reqwest::Client::new();
     let ehr_id = create_ehr(&http, &v1).await;
     let document = example_composition(&http, &v1).await;
-    let before = contribution_total(&http, &v1, &ehr_id).await;
+    let before = contribution_total(&http, &extensions, &ehr_id).await;
 
     login_basic(&h).await;
     h.goto(&format!("/ehrs/{ehr_id}")).await;
@@ -232,7 +235,7 @@ async fn two_staged_changes_commit_as_one_contribution_with_two_versions() {
     h.shot(3, "committed").await;
 
     assert_eq!(
-        contribution_total(&http, &v1, &ehr_id).await,
+        contribution_total(&http, &extensions, &ehr_id).await,
         before + 1,
         "an atomic commit adds exactly one CONTRIBUTION"
     );
@@ -252,10 +255,11 @@ async fn a_refused_member_commits_nothing_and_keeps_the_staging() {
         return;
     };
     let v1 = format!("{cdr}/ferroehr/rest/openehr/v1");
+    let extensions = format!("{cdr}/ferroehr/rest/extensions/v1");
     let http = reqwest::Client::new();
     let ehr_id = create_ehr(&http, &v1).await;
     let document = example_composition(&http, &v1).await;
-    let before = contribution_total(&http, &v1, &ehr_id).await;
+    let before = contribution_total(&http, &extensions, &ehr_id).await;
     let unvalidatable = document.replace(SEED_TEMPLATE, MISSING_TEMPLATE);
     assert_ne!(
         unvalidatable, document,
@@ -282,7 +286,7 @@ async fn a_refused_member_commits_nothing_and_keeps_the_staging() {
         "a refused commit keeps every staged change"
     );
     assert_eq!(
-        contribution_total(&http, &v1, &ehr_id).await,
+        contribution_total(&http, &extensions, &ehr_id).await,
         before,
         "an all-or-nothing change set must commit nothing when one member is refused"
     );

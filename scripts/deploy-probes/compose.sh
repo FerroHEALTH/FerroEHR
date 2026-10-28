@@ -24,6 +24,9 @@ CDR="http://localhost:${FERROEHR_PORT}"
 S3="http://localhost:${FERROEHR_S3_PORT}"
 BASIC="ferroehr:ferroehr"
 API="$CDR/ferroehr/rest/openehr/v1"
+# FerroEHR's own extensions sit beside the openEHR API (#4330).
+# shellcheck disable=SC2034 # read by signing.sh and terminology.sh, which deploy-probe.sh sources after this file
+EXT="$CDR/ferroehr/rest/extensions/v1"
 
 dc() { docker compose -p "$COMPOSE_PROJECT" "$@"; }
 

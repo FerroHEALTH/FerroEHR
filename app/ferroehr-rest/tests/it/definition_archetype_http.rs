@@ -32,8 +32,7 @@ use http_body_util::BodyExt;
 use tower::ServiceExt;
 
 use crate::common;
-
-const BASE: &str = "/ferroehr/rest/openehr/v1";
+use crate::common::EXT;
 
 /// A known-good ADL 1.4 source archetype: the same fixture the service-layer
 /// Definitions battery uses, read from the shared corpus at
@@ -62,7 +61,7 @@ async fn send(app: &Router, req: Request<Body>) -> (StatusCode, http::HeaderMap,
 fn get(path: &str) -> Request<Body> {
     Request::builder()
         .method("GET")
-        .uri(format!("{BASE}{path}"))
+        .uri(common::full(path))
         .body(Body::empty())
         .expect("request")
 }
@@ -70,7 +69,7 @@ fn get(path: &str) -> Request<Body> {
 fn delete(path: &str) -> Request<Body> {
     Request::builder()
         .method("DELETE")
-        .uri(format!("{BASE}{path}"))
+        .uri(common::full(path))
         .body(Body::empty())
         .expect("request")
 }
@@ -78,7 +77,7 @@ fn delete(path: &str) -> Request<Body> {
 fn post_text(path: &str, body: String) -> Request<Body> {
     Request::builder()
         .method("POST")
-        .uri(format!("{BASE}{path}"))
+        .uri(common::full(path))
         .header(header::CONTENT_TYPE, "text/plain")
         .body(Body::from(body))
         .expect("request")
@@ -175,7 +174,7 @@ async fn the_adl14_upload_refuses_invalid_source_and_a_wrong_media_type() {
 
     let req = Request::builder()
         .method("POST")
-        .uri(format!("{BASE}/definition/archetype/adl1.4"))
+        .uri(format!("{EXT}/definition/archetype/adl1.4"))
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(adl14_source()))
         .expect("request");

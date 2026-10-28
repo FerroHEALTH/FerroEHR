@@ -88,7 +88,7 @@ pub async fn list_contributions(
 ) -> Result<ContributionPage, ViewerError> {
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1(&format!(
+    let url = state.cdr.extensions_v1(&format!(
         "ehr/{}/contribution?offset={offset}&fetch={fetch}",
         urlencoding::encode(&ehr_id),
     ));

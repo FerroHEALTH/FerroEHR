@@ -1060,6 +1060,7 @@ async fn demographic_item_tag_operations_are_fully_documented() {
 )]
 async fn admin_operations_are_fully_documented() {
     const BASE: &str = "/ferroehr/rest/openehr/v1/admin";
+    const EXT: &str = "/ferroehr/rest/extensions/v1/admin";
 
     let doc = served_document().await;
 
@@ -1114,15 +1115,16 @@ async fn admin_operations_are_fully_documented() {
     };
 
     // ── every route: the RBAC pair, the gated 405 with its Allow, no Location ─
+    // The two ITS-REST deletes sit under the openEHR base; the extensions beside it.
     let all: [(String, &str); 5] = [
         (format!("{BASE}/ehr/all"), "delete"),
         (format!("{BASE}/ehr/{{ehr_id}}"), "delete"),
-        (format!("{BASE}/template/{{template_id}}"), "delete"),
+        (format!("{EXT}/template/{{template_id}}"), "delete"),
         (
-            format!("{BASE}/query/{{qualified_query_name}}/{{version}}"),
+            format!("{EXT}/query/{{qualified_query_name}}/{{version}}"),
             "delete",
         ),
-        (format!("{BASE}/config"), "get"),
+        (format!("{EXT}/config"), "get"),
     ];
     for (path, method) in &all {
         let op = doc["paths"][path][method].clone();
@@ -1255,7 +1257,7 @@ async fn admin_operations_are_fully_documented() {
     );
 
     // ── the template-delete extension: the in-use 409 guard ──────────────────
-    let path = format!("{BASE}/template/{{template_id}}");
+    let path = format!("{EXT}/template/{{template_id}}");
     let op = doc["paths"][&path]["delete"].clone();
     require(&op, &path, "DELETE", &["204", "404", "409"]);
     let conflict = op["responses"]["409"]["description"]
@@ -1271,7 +1273,7 @@ async fn admin_operations_are_fully_documented() {
     );
 
     // ── the stored-query-version delete: NOT SM delete_query ─────────────────
-    let path = format!("{BASE}/query/{{qualified_query_name}}/{{version}}");
+    let path = format!("{EXT}/query/{{qualified_query_name}}/{{version}}");
     let op = doc["paths"][&path]["delete"].clone();
     require(&op, &path, "DELETE", &["204", "404"]);
     let body = text(&op);
@@ -1286,7 +1288,7 @@ async fn admin_operations_are_fully_documented() {
     );
 
     // ── the config read: 200 with a redacted tree, no versioning headers ─────
-    let path = format!("{BASE}/config");
+    let path = format!("{EXT}/config");
     let op = doc["paths"][&path]["get"].clone();
     require(&op, &path, "GET", &["200"]);
     for banned in ["ETag", "Last-Modified"] {
@@ -1312,7 +1314,8 @@ async fn admin_operations_are_fully_documented() {
 /// conformance-profile claim.
 #[tokio::test]
 async fn admin_extension_operations_are_flagged_as_an_extension() {
-    const BASE: &str = "/ferroehr/rest/openehr/v1/admin";
+    const BASE: &str = "/ferroehr/rest/extensions/v1/admin";
+    const ITS: &str = "/ferroehr/rest/openehr/v1/admin";
 
     let doc = served_document().await;
 
@@ -1350,7 +1353,7 @@ async fn admin_extension_operations_are_flagged_as_an_extension() {
     // …and the released half of the group is exactly two operations, both EHR
     // deletes (`specifications/admin.openapi.yaml`), so nothing else may claim
     // released status.
-    let released = [format!("{BASE}/ehr/all"), format!("{BASE}/ehr/{{ehr_id}}")];
+    let released = [format!("{ITS}/ehr/all"), format!("{ITS}/ehr/{{ehr_id}}")];
     for path in &released {
         let op = doc["paths"][path]["delete"].clone();
         assert!(op.is_object(), "DELETE {path} must be documented");
@@ -1404,13 +1407,13 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
     },
     NonSpecFamily {
         label: "the terminology extension wire",
-        prefixes: &["/ferroehr/rest/openehr/v1/terminology"],
+        prefixes: &["/ferroehr/rest/extensions/v1/terminology"],
         flag: "no openehr spec governs this",
         operations: 6,
     },
     NonSpecFamily {
         label: "the event-subscription extension",
-        prefixes: &["/ferroehr/rest/openehr/v1/admin/event_subscription"],
+        prefixes: &["/ferroehr/rest/extensions/v1/admin/event_subscription"],
         flag: "no openehr spec governs this",
         operations: 5,
     },
@@ -1418,15 +1421,15 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // IHE ITI-81 is its own (non-openEHR) basis; the flag still has to say
         // that no openEHR spec governs the endpoint.
         label: "the ITI-81 ATNA audit retrieval",
-        prefixes: &["/ferroehr/rest/openehr/v1/fhir/r4/AuditEvent"],
+        prefixes: &["/ferroehr/rest/fhir/r4/AuditEvent"],
         flag: "no openehr spec governs this",
         operations: 1,
     },
     NonSpecFamily {
         label: "the PARTY_RELATIONSHIP demographic extension",
         prefixes: &[
-            "/ferroehr/rest/openehr/v1/demographic/party_relationship",
-            "/ferroehr/rest/openehr/v1/demographic/versioned_party_relationship",
+            "/ferroehr/rest/extensions/v1/demographic/party_relationship",
+            "/ferroehr/rest/extensions/v1/demographic/versioned_party_relationship",
         ],
         flag: "no its-rest operation governs this",
         operations: 8,
@@ -1435,17 +1438,17 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // ITS-REST publishes an ad-hoc and a stored query and nothing else;
         // AQL has no demographic source at all.
         label: "the cohort-query extension",
-        prefixes: &["/ferroehr/rest/openehr/v1/query/cohort"],
+        prefixes: &["/ferroehr/rest/extensions/v1/query/cohort"],
         flag: "no openehr spec governs this",
         operations: 1,
     },
     NonSpecFamily {
         label: "the ADMIN group's own-design routes",
         prefixes: &[
-            "/ferroehr/rest/openehr/v1/admin/config",
-            "/ferroehr/rest/openehr/v1/admin/template/",
-            "/ferroehr/rest/openehr/v1/admin/party/",
-            "/ferroehr/rest/openehr/v1/admin/query/",
+            "/ferroehr/rest/extensions/v1/admin/config",
+            "/ferroehr/rest/extensions/v1/admin/template/",
+            "/ferroehr/rest/extensions/v1/admin/party/",
+            "/ferroehr/rest/extensions/v1/admin/query/",
         ],
         flag: "no its-rest operation governs this",
         operations: 5,
@@ -1454,7 +1457,7 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // SM I_ADMIN_SERVICE's four statistics calls; the released Admin API
         // is the two EHR deletes alone.
         label: "the ADMIN activity-report extension",
-        prefixes: &["/ferroehr/rest/openehr/v1/admin/report/"],
+        prefixes: &["/ferroehr/rest/extensions/v1/admin/report/"],
         flag: "no its-rest operation governs this",
         operations: 4,
     },
@@ -1463,7 +1466,7 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // SM declares no operation for at all; nothing released moves a resource
         // to archival storage in either direction.
         label: "the ADMIN archive extension",
-        prefixes: &["/ferroehr/rest/openehr/v1/admin/archive/"],
+        prefixes: &["/ferroehr/rest/extensions/v1/admin/archive/"],
         flag: "no its-rest operation governs this",
         operations: 4,
     },
@@ -1473,8 +1476,8 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // operational templates only.
         label: "the ADL 1.4 / ADL 2 archetype + artefact extension",
         prefixes: &[
-            "/ferroehr/rest/openehr/v1/definition/archetype/",
-            "/ferroehr/rest/openehr/v1/definition/artefact/",
+            "/ferroehr/rest/extensions/v1/definition/archetype/",
+            "/ferroehr/rest/extensions/v1/definition/artefact/",
         ],
         flag: "no its-rest operation governs this",
         operations: 9,
@@ -1484,8 +1487,8 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // writes a file-system archive.
         label: "the ADMIN dump/load extension",
         prefixes: &[
-            "/ferroehr/rest/openehr/v1/admin/dump",
-            "/ferroehr/rest/openehr/v1/admin/load",
+            "/ferroehr/rest/extensions/v1/admin/dump",
+            "/ferroehr/rest/extensions/v1/admin/load",
         ],
         flag: "no its-rest operation governs this",
         operations: 2,
@@ -1494,7 +1497,7 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // The SM MESSAGE component (I_EHR_EXTRACT_SERVICE); the release
         // publishes no message API at all.
         label: "the MESSAGE extension group",
-        prefixes: &["/ferroehr/rest/openehr/v1/message/"],
+        prefixes: &["/ferroehr/rest/extensions/v1/message/"],
         flag: "no its-rest operation governs this",
         operations: 4,
     },

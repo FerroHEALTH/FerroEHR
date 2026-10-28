@@ -79,7 +79,7 @@ pub(crate) enum PatientDataRefusal {
 /// The configured patient-data gate of the one OIDC issuer.
 #[derive(Debug)]
 pub(crate) struct PatientDataGate {
-    base_path: String,
+    namespaces: crate::api::Namespaces,
     realm: String,
     assurance: AssuranceSection,
     professional: Option<ProfessionalSection>,
@@ -94,11 +94,11 @@ impl PatientDataGate {
         bearer: bool,
         assurance: &AssuranceSection,
         professional: Option<&ProfessionalSection>,
-        base_path: &str,
+        namespaces: crate::api::Namespaces,
         realm: &str,
     ) -> Option<Self> {
         bearer.then(|| Self {
-            base_path: base_path.to_owned(),
+            namespaces,
             realm: realm.to_owned(),
             assurance: assurance.clone(),
             professional: professional.cloned(),
@@ -106,13 +106,13 @@ impl PatientDataGate {
     }
 
     /// Whether the matched route (the full axum `MatchedPath`) serves patient
-    /// data; a route outside the base path is judged patient data.
+    /// data; a route outside the API namespaces is judged patient data.
     fn is_patient_data(&self, matched: Option<&str>) -> bool {
         let Some(matched) = matched else {
             return false;
         };
-        matched
-            .strip_prefix(self.base_path.as_str())
+        self.namespaces
+            .relative(matched)
             .is_none_or(is_patient_data_path)
     }
 
@@ -227,7 +227,14 @@ mod tests {
             minimum,
             ..AssuranceSection::default()
         };
-        PatientDataGate::new(true, &assurance, professional, BASE, "ferroehr").expect("gate")
+        PatientDataGate::new(
+            true,
+            &assurance,
+            professional,
+            crate::api::Namespaces::of(&ferroehr::config::rest::RestConfig::default()),
+            "ferroehr",
+        )
+        .expect("gate")
     }
 
     const EHR: &str = "/ferroehr/rest/openehr/v1/ehr/{ehr_id}";
@@ -405,7 +412,7 @@ mod tests {
             Some(AssuranceLevel::Low),
             Some(&ProfessionalSection::default()),
         )
-        .judge(&basic, Some(format!("{BASE}/terminology/x").as_str()))
+        .judge(&basic, Some("/ferroehr/rest/extensions/v1/terminology/x"))
         .expect("not patient data");
     }
 

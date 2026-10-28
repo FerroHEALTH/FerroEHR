@@ -39,8 +39,9 @@ use crate::state::AppState;
 /// FHIR R4 media type for the `Bundle` / `OperationOutcome` responses.
 const FHIR_JSON: &str = "application/fhir+json";
 
-/// The ITI-81 route as a native `utoipa-axum` router (group-relative path;
-/// nested under `base_path`). Served through [`guarded_dispatch`] →
+/// The ITI-81 route as a native `utoipa-axum` router (its path carries
+/// `/fhir/r4` and is nested under the REST root, beside the openEHR base path).
+/// Served through [`guarded_dispatch`] →
 /// [`dispatch`].
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new().routes(routes!(audit_event_search))

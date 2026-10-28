@@ -17,13 +17,23 @@ takes the same credentials. This book explains how to *use* the API.
 
 ## Base path
 
-All clinical API routes hang off a configurable base path, which defaults to:
+The openEHR REST API hangs off a configurable base path, which defaults to:
 
 ```text
 /ferroehr/rest/openehr/v1
 ```
 
-Every path in these chapters is relative to that base. So "`POST /ehr`" means
+Only what openEHR ITS-REST 1.1.0 defines is served there. FerroEHR's other
+interfaces sit beside it, under the same REST root:
+
+| Namespace | Default path | Holds |
+|---|---|---|
+| openEHR REST API | `/ferroehr/rest/openehr/v1` | the ITS-REST 1.1.0 routes: EHR, composition, directory, contribution, demographic parties, definition, query, the admin EHR deletes |
+| FerroEHR extensions | `/ferroehr/rest/extensions/v1` | FerroEHR's own routes, on their own version line: terminology, event subscriptions, party relationships, the archetype library, EHR Extract messages, the cohort query and the admin extensions |
+| FHIR and IHE | `/ferroehr/rest/fhir/r4` | the IHE ITI-81 `AuditEvent` retrieval |
+
+Every path in these chapters is relative to the openEHR base unless the page
+says otherwise. So "`POST /ehr`" means
 `POST http://your-host:8080/ferroehr/rest/openehr/v1/ehr`. The base path is set
 with `FERROEHR__REST__BASE_PATH`, and it may be shortened as far as
 `/ferroehr/v1` (see

@@ -191,7 +191,7 @@ async fn a_bound_deployment_serves_a_cohort() {
     let (status, text) = common::send_body(
         &app,
         common::post_json(
-            &format!("{}/query/cohort", common::BASE),
+            &format!("{}/query/cohort", common::EXT),
             &body("city", "Groningen"),
         ),
     )
@@ -233,7 +233,7 @@ async fn an_unbound_predicate_is_refused() {
     let (status, text) = common::send_body(
         &app,
         common::post_json(
-            &format!("{}/query/cohort", common::BASE),
+            &format!("{}/query/cohort", common::EXT),
             &body("national_identifier", "x"),
         ),
     )
@@ -262,7 +262,7 @@ async fn an_unconfigured_deployment_answers_not_found() {
     let (status, text) = common::send_body(
         &app,
         common::post_json(
-            &format!("{}/query/cohort", common::BASE),
+            &format!("{}/query/cohort", common::EXT),
             &body("city", "Groningen"),
         ),
     )
@@ -310,7 +310,7 @@ async fn a_cohort_names_its_subjects_by_identifier() {
 
     let (status, text) = common::send_body(
         &app,
-        common::post_json(&format!("{}/query/cohort", common::BASE), &request),
+        common::post_json(&format!("{}/query/cohort", common::EXT), &request),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{text}");

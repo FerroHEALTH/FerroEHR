@@ -106,10 +106,10 @@ probes_signing() {
     probe_fail "a tampered node row" "the UPDATE matched nothing" \
       "the probe could not reach the AQL index copy, so detection was never tested"
   else
-    sweep_code="$(http_code -u "$BASIC" -X POST "$API/admin/integrity/verify")"
+    sweep_code="$(http_code -u "$BASIC" -X POST "$EXT/admin/integrity/verify")"
     assert_eq "200" "$sweep_code" \
       "the sweep itself must succeed — a finding is reported in the body, not as a failed request"
-    sweep="$(curl -s -u "$BASIC" -X POST "$API/admin/integrity/verify")"
+    sweep="$(curl -s -u "$BASIC" -X POST "$EXT/admin/integrity/verify")"
     assert_contains "$sweep" "$node_vo" \
       "the sweep must name the tampered versioned object"
     assert_contains "$sweep" '"defect":"content_differs"' \

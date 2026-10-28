@@ -89,7 +89,8 @@ with something to look at:
   have more than one version, so `LATEST_VERSION` and `ALL_VERSIONS` differ on
   real data.
 - **233 ADL 2 archetypes and 5 ADL 2 templates**, browsable under
-  `definition/archetype/adl2` and `definition/template/adl2`. Two of the
+  `extensions/v1/definition/archetype/adl2` and
+  `openehr/v1/definition/template/adl2`. Two of the
   templates are ADL 2 source templates whose slots the server flattens against
   that archetype library, and the compositions committed from them came out of
   the server's own `…/example` generator.

@@ -31,6 +31,7 @@ use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
+use crate::common::EXT;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 
@@ -322,7 +323,7 @@ async fn relationship_stale_delete_conflict_echoes_latest_etag() {
     });
     let req = Request::builder()
         .method("POST")
-        .uri(format!("{BASE}/demographic/party_relationship"))
+        .uri(format!("{EXT}/demographic/party_relationship"))
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(rel.to_string()))
         .unwrap();
@@ -339,7 +340,7 @@ async fn relationship_stale_delete_conflict_echoes_latest_etag() {
     let put = Request::builder()
         .method("PUT")
         .uri(format!(
-            "{BASE}/demographic/party_relationship/{}",
+            "{EXT}/demographic/party_relationship/{}",
             vo_of(&r1)
         ))
         .header(header::CONTENT_TYPE, "application/json")
@@ -359,7 +360,7 @@ async fn relationship_stale_delete_conflict_echoes_latest_etag() {
     // matching the party delete this extension mirrors.
     let del = Request::builder()
         .method("DELETE")
-        .uri(format!("{BASE}/demographic/party_relationship/{r1}"))
+        .uri(format!("{EXT}/demographic/party_relationship/{r1}"))
         .body(Body::empty())
         .unwrap();
     let (status, h, body) = send(&app, del).await;

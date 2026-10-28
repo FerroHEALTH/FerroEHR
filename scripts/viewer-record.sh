@@ -107,6 +107,7 @@ fi
 wait_for "$CDR_URL/health/readiness" 120
 
 V1="$CDR_URL/ferroehr/rest/openehr/v1"
+EXT="$CDR_URL/ferroehr/rest/extensions/v1"
 AUTH=(-u ferroehr:ferroehr)
 JSON=(-H "Content-Type: application/json")
 ACCEPT=(-H "Accept: application/json")
@@ -220,7 +221,7 @@ RELATIONSHIP=$(jq -nc --arg s "$PARTY" --arg t "$ORGANISATION" '{
       "id": {"_type": "HIER_OBJECT_ID", "value": $s}},
     "target": {"_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
       "id": {"_type": "HIER_OBJECT_ID", "value": $t}}}' \
-  | ask "${AUTH[@]}" -X POST "$V1/demographic/party_relationship" \
+  | ask "${AUTH[@]}" -X POST "$EXT/demographic/party_relationship" \
     "${JSON[@]}" "${ACCEPT[@]}" \
     -H "Prefer: return=representation" --data-binary @- \
   | jq -r '.uid.value | split("::")[0]')

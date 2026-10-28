@@ -200,7 +200,7 @@ pub fn extensions_document(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
     // Authenticated: the management surface plus the entire API surface, nested
     // under the configured base path so the paths read as full server paths.
     let mut protected = management::openapi();
-    protected.merge(crate::api::api_doc(&cfg.rest.base_path));
+    protected.merge(crate::api::api_doc(&crate::api::Namespaces::of(&cfg.rest)));
 
     let scheme = advertised_scheme(&cfg.auth);
     if scheme.is_some() {
@@ -370,7 +370,8 @@ fn redirect_to_index(ui_path: &str) -> Response {
     get, path = "/ferroehr/rest/api-docs/ferroehr-{family}.openapi.json", tag = "openapi",
     params(("family" = String, Path,
         description = "The API family slug — one of the fixed set `ehr`, `query`, `definition`, \
-                       `demographic`, `admin`, `management`, `terminology`, `relationships`, \
+                       `demographic`, `admin`, `admin-extensions`, `archetypes`, `cohort`, `contributions`, \
+                       `management`, `terminology`, `relationships`, \
                        `messaging`, `events`, `audit`, `smart`. Not a free parameter: each value is \
                        its own static route.")),
     responses(
@@ -444,6 +445,12 @@ enum Members {
         /// paths but are part of the same API group.
         also_tagged: &'static [&'static str],
     },
+    /// Operations whose path relative to the extensions root starts with
+    /// `include` (on a segment boundary) and with none of `exclude`.
+    Extension {
+        include: &'static str,
+        exclude: &'static [&'static str],
+    },
     /// Operations carrying one of these tags.
     Tags(&'static [&'static str]),
 }
@@ -488,9 +495,7 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         "demographic",
         Members::Path {
             include: "/demographic",
-            // The own-design PARTY_RELATIONSHIP extension shares the /demographic
-            // root but is its own family (below).
-            exclude: &["/demographic/party_relationship"],
+            exclude: &[],
             also_tagged: &[],
         },
     ),
@@ -498,20 +503,43 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         "openEHR: Admin",
         "admin",
         Members::Path {
-            include: "/admin/ehr",
+            include: "/admin",
             exclude: &[],
-            // The ADMIN group's own-design routes live under sibling
-            // `/admin/*` paths rather than `/admin/ehr`, but belong in this
-            // group's document.
-            also_tagged: &[
-                "ADMIN",
-                "admin-report",
-                "admin-archive",
-                "admin-dump-load",
-                "admin-integrity",
-                "admin-marks",
-                "admin-identifiers",
-            ],
+            also_tagged: &[],
+        },
+    ),
+    // The server's own extensions under the extensions root, by path.
+    (
+        "FerroEHR: Admin",
+        "admin-extensions",
+        Members::Extension {
+            include: "/admin",
+            // The event subscriptions are their own family (below).
+            exclude: &["/admin/event_subscription"],
+        },
+    ),
+    (
+        "FerroEHR: Archetypes",
+        "archetypes",
+        Members::Extension {
+            include: "/definition",
+            exclude: &[],
+        },
+    ),
+    (
+        "FerroEHR: Cohort Query",
+        "cohort",
+        Members::Extension {
+            include: "/query",
+            exclude: &[],
+        },
+    ),
+    (
+        "FerroEHR: Contribution List",
+        "contributions",
+        Members::Extension {
+            include: "/ehr",
+            exclude: &[],
         },
     ),
     // The server's own extension families, by tag.
@@ -547,8 +575,8 @@ const FAMILIES: &[(&str, &str, Members)] = &[
     (
         "FerroEHR: Audit",
         "audit",
-        // The ITI-81 AuditEvent retrieval under `/fhir/r4`, gated by the local
-        // audit repository.
+        // The ITI-81 AuditEvent retrieval under the FHIR root `/fhir/r4`, gated
+        // by the local audit repository.
         Members::Tags(&["audit"]),
     ),
     (
@@ -703,6 +731,13 @@ fn prebuild_docs(cfg: &AppConfig) -> PrebuiltDocs {
                     include,
                     exclude,
                     also_tagged,
+                ),
+                Members::Extension { include, exclude } => filter_by_path(
+                    &full_doc,
+                    &cfg.rest.extensions_path(),
+                    include,
+                    exclude,
+                    &[],
                 ),
                 Members::Tags(tags) => filter_by_tags(&full_doc, tags),
             };

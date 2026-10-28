@@ -31,7 +31,7 @@ use tower::util::BoxCloneService;
 use tower_http::timeout::TimeoutLayer;
 
 use crate::common;
-use crate::common::BASE;
+use crate::common::EXT;
 
 /// A budget no sweep can meet: the aggregated form needs several sequential
 /// round trips to a real database before it can answer at all.
@@ -41,7 +41,7 @@ const IMPOSSIBLE: Duration = Duration::from_millis(1);
 fn verify(accept: Option<&str>) -> Request<Body> {
     let mut req = Request::builder()
         .method("POST")
-        .uri(format!("{BASE}/admin/integrity/verify"));
+        .uri(format!("{EXT}/admin/integrity/verify"));
     if let Some(accept) = accept {
         req = req.header(header::ACCEPT, accept);
     }
@@ -149,7 +149,7 @@ async fn a_wildcard_accept_keeps_the_aggregated_document() {
 fn rebuild(query: &str) -> Request<Body> {
     Request::builder()
         .method("POST")
-        .uri(format!("{BASE}/admin/integrity/rebuild-nodes{query}"))
+        .uri(format!("{EXT}/admin/integrity/rebuild-nodes{query}"))
         .body(Body::empty())
         .expect("request")
 }

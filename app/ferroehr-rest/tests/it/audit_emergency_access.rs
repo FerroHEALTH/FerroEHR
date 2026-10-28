@@ -48,6 +48,8 @@ use sqlx::PgPool;
 
 use crate::common;
 use crate::common::BASE;
+use crate::common::EXT;
+use crate::common::FHIR;
 
 /// The subject every EHR in this suite resolves to.
 const SUBJECT: &str = "patient-art-11-5";
@@ -232,7 +234,7 @@ async fn an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log(
     let (status, body) = common::send_body(
         &app,
         Request::get(format!(
-            "{BASE}/fhir/r4/AuditEvent?date=ge2026-01-01&patient={SUBJECT}"
+            "{FHIR}/AuditEvent?date=ge2026-01-01&patient={SUBJECT}"
         ))
         .header(header::AUTHORIZATION, basic("portal"))
         .body(Body::empty())
@@ -296,7 +298,7 @@ async fn an_emergency_purpose_does_not_lift_a_gdpr_restriction() {
 
     let (status, body) = common::send_body(
         &app,
-        Request::post(format!("{BASE}/admin/restriction"))
+        Request::post(format!("{EXT}/admin/restriction"))
             .header(header::AUTHORIZATION, basic("root"))
             .header(header::CONTENT_TYPE, "application/json")
             .body(Body::from(format!(

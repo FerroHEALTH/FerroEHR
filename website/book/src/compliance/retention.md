@@ -52,7 +52,7 @@ right to be told the retention period or the criteria that fix it.
 ### Declaring a period
 
 ```http
-PUT {base}/admin/retention/policy
+PUT /ferroehr/rest/extensions/v1/admin/retention/policy
 Content-Type: application/json
 
 {
@@ -66,7 +66,7 @@ Content-Type: application/json
 
 **204** on success, replacing any earlier period for that kind, category and
 jurisdiction. An unknown kind or category, an unknown anchor rule or a
-non-positive period is **400**. `GET {base}/admin/retention/policy` reads the
+non-positive period is **400**. `GET /ferroehr/rest/extensions/v1/admin/retention/policy` reads the
 whole register back, which is what an access answer and an audit both cite.
 
 ### Keying a period on a priority category
@@ -93,7 +93,7 @@ that content.
 ### Anchoring an EHR and holding it
 
 ```http
-PUT {base}/admin/retention/anchor
+PUT /ferroehr/rest/extensions/v1/admin/retention/anchor
 Content-Type: application/json
 
 {
@@ -113,7 +113,7 @@ Art. 10 Abs. 2 lit. b asks for, where the patient may ask that named data be
 exempted from the destruction the same article otherwise requires:
 
 ```http
-POST {base}/admin/retention/hold
+POST /ferroehr/rest/extensions/v1/admin/retention/hold
 Content-Type: application/json
 
 { "vo_id": "df58b2ee-30bd-4b2c-9b7d-3a0f8e5c6d21", "held": true }
@@ -122,7 +122,7 @@ Content-Type: application/json
 ### Reading what is due
 
 ```http
-GET {base}/admin/retention/due?limit=100
+GET /ferroehr/rest/extensions/v1/admin/retention/due?limit=100
 ```
 
 Oldest first. Every row carries `objects_due` and `objects_held`, so a
@@ -162,10 +162,10 @@ commits before the write and is seen, or waits for it. A malformed write to a
 restricted object therefore answers 422 rather than 403: the request is refused
 either way and nothing stored changes, but the status names the gate that
 stopped the write, not whether the restriction is in force.
-`GET {base}/admin/restriction?ehr_id=…` answers that.
+`GET /ferroehr/rest/extensions/v1/admin/restriction?ehr_id=…` answers that.
 
 ```http
-POST {base}/admin/restriction
+POST /ferroehr/rest/extensions/v1/admin/restriction
 Content-Type: application/json
 
 {
@@ -181,11 +181,11 @@ Art. 18(1) points — `gdpr-18-1-a` through `gdpr-18-1-d` — or `national` for 
 member-state rule that goes beyond them, which is how German BDSG § 35 Abs. 2
 and Abs. 3 are carried.
 
-`POST {base}/admin/restriction/lift` with the same grain lifts it. The register
+`POST /ferroehr/rest/extensions/v1/admin/restriction/lift` with the same grain lifts it. The register
 keeps the request and stamps it lifted rather than removing it, because
 Art. 18(3) makes the sequence itself the obligation: the subject is informed
 **before** the restriction is lifted, and a register that forgot the request
-could not show that anyone was. `GET {base}/admin/restriction?ehr_id=…` reads
+could not show that anyone was. `GET /ferroehr/rest/extensions/v1/admin/restriction?ehr_id=…` reads
 the whole sequence back. Lifting a whole-record restriction leaves an
 object-scoped one standing on its own.
 
@@ -202,7 +202,7 @@ a secondary-use consumer reads this repository through. A query that names the
 `ehr_id` and a read of the record by the treating clinician are untouched.
 
 ```http
-POST {base}/admin/research-objection
+POST /ferroehr/rest/extensions/v1/admin/research-objection
 Content-Type: application/json
 
 { "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398", "objected": true }
