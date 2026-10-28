@@ -41,7 +41,7 @@ use openehr_adl::artefact::ArchetypeRepository;
 use openehr_adl::assemble::parse_artefact;
 use openehr_adl::error::SyntaxErrorCode;
 use openehr_adl::parse::Dialect;
-use openehr_adl::validate::bindings::NoTerminologyResolver;
+use openehr_adl::validate::bindings::{NoTerminologyResolver, TerminologyResolver};
 use openehr_adl::validate::catalogue::{Severity, ValidationCode};
 use openehr_adl::validate::rm::{ProductionRmModel, production_model_governs};
 use openehr_adl::validate::{validate_source, validate_source_integrity};
@@ -834,8 +834,13 @@ fn parents_first(files: &[PathBuf]) -> Vec<PathBuf> {
 /// upload, in upload order: the full AOM2 catalogue against the production RM
 /// for an openEHR RM archetype, the integrity pass alone otherwise, each over a
 /// repository holding only the archetypes ACCEPTED so far — a refused parent is
-/// never a flat parent, and a child whose parent is absent is VASID.
-fn validate_all(files: &[PathBuf], adjudicated: &[ValidityRefusal]) -> ValidityOutcome {
+/// never a flat parent, and a child whose parent is absent is VASID. External
+/// term bindings (VETDF) are asked of `resolver`.
+fn validate_all(
+    files: &[PathBuf],
+    adjudicated: &[ValidityRefusal],
+    resolver: &dyn TerminologyResolver,
+) -> ValidityOutcome {
     let mut repo = ArchetypeRepository::new();
     let mut out = ValidityOutcome {
         failures: Vec::new(),
@@ -851,12 +856,7 @@ fn validate_all(files: &[PathBuf], adjudicated: &[ValidityRefusal]) -> ValidityO
             continue;
         };
         let issues = if production_model_governs(&archetype) {
-            validate_source(
-                &src,
-                Some(&repo),
-                &ProductionRmModel,
-                &NoTerminologyResolver,
-            )
+            validate_source(&src, Some(&repo), &ProductionRmModel, resolver)
         } else {
             validate_source_integrity(&src, Dialect::Adl2, Some(&repo))
         }
@@ -915,7 +915,7 @@ fn upstream_adl2_pack_validates_or_is_adjudicated() {
     let dir = artifacts_root().join("adl2/ckm-2013-12-09");
     let files = files_with_extension(&dir, "adls");
     assert!(!files.is_empty(), "no .adls files under {}", dir.display());
-    let out = validate_all(&files, ADJUDICATED_ADL2_VALIDITY);
+    let out = validate_all(&files, ADJUDICATED_ADL2_VALIDITY, &NoTerminologyResolver);
     assert!(
         out.broken_adjudications.is_empty(),
         "adl2 validity: adjudications that no longer describe reality:\n{}",
@@ -938,5 +938,124 @@ fn upstream_adl2_pack_validates_or_is_adjudicated() {
         out.clean + out.refused,
         files.len() - expected_refusals(&files, ADJUDICATED_PAIRS),
         "adl2 validity: accounting mismatch over the parseable pack"
+    );
+}
+
+/// The validity refusals a LOINC-serving terminology adds to
+/// [`ADJUDICATED_ADL2_VALIDITY`]: the posture of the hosted sandbox, where
+/// `FerroTERM` serves LOINC beside the CDR.
+const ADJUDICATED_ADL2_LOINC: &[ValidityRefusal] = &[
+    (
+        "openEHR-EHR-OBSERVATION.braden_scale.v1.0.0.adls",
+        ValidationCode::Vetdf,
+        "binds the mistyped LOINC answer code LA9605-4, which LOINC does not define (master03 VETDF); LA9605-2, the real code, is bound beside it",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.braden_scale-child.v1.0.0.adls",
+        ValidationCode::Vasid,
+        "its parent openEHR-EHR-OBSERVATION.braden_scale.v1.0.0 is refused above, so no flat parent exists to validate against (master03 VASID)",
+    ),
+];
+
+/// A terminology that serves LOINC and nothing else. A LOINC code exists
+/// unless it is the mistyped `LA9605-4` or lacks the check digit every LOINC
+/// code carries after its hyphen (the apgar sources bind `LA6713` to `LA6727`
+/// so); any other terminology is unverifiable.
+struct LoincServed;
+
+impl TerminologyResolver for LoincServed {
+    fn code_exists(&self, terminology_id: &str, code: &str) -> Option<bool> {
+        if !terminology_id.eq_ignore_ascii_case("LOINC") {
+            return None;
+        }
+        let id = code.strip_prefix("http://loinc.org/id/").unwrap_or(code);
+        Some(id != "LA9605-4" && id.contains('-'))
+    }
+}
+
+/// A count of the sandbox manifest's archetype-library pin.
+fn manifest_count(library: &serde_json::Value, key: &str) -> usize {
+    library[key]
+        .as_u64()
+        .and_then(|n| usize::try_from(n).ok())
+        .unwrap_or_else(|| panic!("the manifest's archetype library carries no `{key}` count"))
+}
+
+/// The sandbox seed's archetype-library pin (`scripts/sandbox/seed/manifest.json`,
+/// checked by `scripts/sandbox/reseed.sh`) is the split these tables predict.
+///
+/// With LOINC served, the pin holds exactly. Without it, VETDF cannot verify a
+/// LOINC binding and only warns ("subject to tool accessibility", master03
+/// VETDF), so the files the manifest names as refused when LOINC is served
+/// are stored instead, and the split moves by their number (#4278).
+#[test]
+fn sandbox_seed_pin_is_the_adjudicated_split() {
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let manifest: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(repo_root.join("scripts/sandbox/seed/manifest.json"))
+            .expect("read the sandbox seed manifest"),
+    )
+    .expect("the sandbox seed manifest is JSON");
+    let library = &manifest["adl2"]["archetype_library"];
+    let accepted = manifest_count(library, "accepted");
+    let refused = manifest_count(library, "refused");
+    let root = library["root"]
+        .as_str()
+        .expect("the manifest names the library root");
+    let files = files_with_extension(&repo_root.join(root), "adls");
+    assert_eq!(
+        files.len(),
+        accepted + refused,
+        "the manifest's {accepted} accepted + {refused} refused must cover the {} files under {root}",
+        files.len()
+    );
+
+    let mut named: Vec<&str> = library["loinc"]["refused_when_served"]
+        .as_array()
+        .expect("the manifest lists the files a LOINC-serving terminology refuses")
+        .iter()
+        .map(|f| f.as_str().expect("a file name"))
+        .collect();
+    named.sort_unstable();
+    let mut adjudicated: Vec<&str> = ADJUDICATED_ADL2_LOINC.iter().map(|(f, _, _)| *f).collect();
+    adjudicated.sort_unstable();
+    assert_eq!(
+        named, adjudicated,
+        "the manifest names the files LOINC refuses exactly as ADJUDICATED_ADL2_LOINC does"
+    );
+
+    let without = validate_all(&files, ADJUDICATED_ADL2_VALIDITY, &NoTerminologyResolver);
+    assert!(
+        without.failures.is_empty() && without.broken_adjudications.is_empty(),
+        "without LOINC: {:?} {:?}",
+        without.failures,
+        without.broken_adjudications
+    );
+    assert_eq!(
+        (without.clean, without.refused),
+        (accepted + named.len(), refused - named.len()),
+        "without LOINC the library stores the files LOINC would refuse"
+    );
+
+    let table: Vec<ValidityRefusal> = ADJUDICATED_ADL2_VALIDITY
+        .iter()
+        .chain(ADJUDICATED_ADL2_LOINC)
+        .copied()
+        .collect();
+    let with = validate_all(&files, &table, &LoincServed);
+    assert!(
+        with.broken_adjudications.is_empty(),
+        "with LOINC: adjudications that no longer describe reality:\n{}",
+        with.broken_adjudications.join("\n")
+    );
+    assert!(
+        with.failures.is_empty(),
+        "with LOINC: files refused and not adjudicated:\n{}",
+        with.failures.join("\n")
+    );
+    assert_eq!(
+        (with.clean, with.refused),
+        (accepted, refused),
+        "with LOINC served the library loads exactly the manifest's pin"
     );
 }

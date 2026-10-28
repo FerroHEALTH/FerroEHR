@@ -26,6 +26,8 @@
 # each manifest subject to the pseudonym FerroPIX minted for it, and every
 # EHR_STATUS names that pseudonym in the clinical domain (#4242). Unset, or
 # answering `provider local`, the subjects name themselves.
+# SANDBOX_TERMINOLOGY=without-loinc: a run against a CDR whose terminology
+# server serves no LOINC, which moves the archetype-library pin (step 3).
 set -Eeuo pipefail
 
 BASE="${SANDBOX_BASE:-https://sandbox.ferroehr.eu}/ferroehr/rest/openehr/v1"
@@ -238,14 +240,56 @@ adls_parents_first() {
 lib_root="$ROOT_DIR/$(mf '.adl2.archetype_library.root')"
 want_accepted="$(mf '.adl2.archetype_library.accepted')"
 want_refused="$(mf '.adl2.archetype_library.refused')"
+
+# The pin assumes a CDR whose terminology server serves LOINC: VETDF refuses
+# the files `loinc.refused_when_served` names only when it can look their
+# bindings up, and only warns when it cannot (AM ADL2 master03 VETDF, "subject
+# to tool accessibility"). Ask the CDR for a LOINC code first, so a posture
+# that serves no LOINC fails here by name rather than as a count mismatch
+# below (#4278). A local run without LOINC opts out with
+# SANDBOX_TERMINOLOGY=without-loinc and expects those files stored.
+loinc_probe="$(mf '.adl2.archetype_library.loinc.probe')"
+loinc_named="$(mf '.adl2.archetype_library.loinc.refused_when_served[]')"
+loinc_count="$(mf '.adl2.archetype_library.loinc.refused_when_served | length')"
+loinc_outcome=refused
+code=$(request "LOINC probe $loinc_probe" GET "$BASE/terminology/http%3A%2F%2Floinc.org/term/$loinc_probe")
+case "${SANDBOX_TERMINOLOGY:-}:$code" in
+  :200) echo "==> the CDR resolves LOINC $loinc_probe; VETDF verifies the library's LOINC bindings" ;;
+  :404)
+    echo "::error::the CDR resolves no LOINC (GET /terminology/http://loinc.org/term/$loinc_probe answered 404). The archetype-library pin assumes a terminology server that serves LOINC (FerroTERM with the LOINC index, FERROTERM_INDEXES); without it VETDF cannot refuse ${loinc_named//$'\n'/, }, and the library loads $((want_accepted + loinc_count)) / $((want_refused - loinc_count)). Fix the terminology posture, or set SANDBOX_TERMINOLOGY=without-loinc for a run that has no LOINC." >&2
+    exit 1
+    ;;
+  without-loinc:404)
+    loinc_outcome=accepted
+    want_accepted=$((want_accepted + loinc_count))
+    want_refused=$((want_refused - loinc_count))
+    echo "==> SANDBOX_TERMINOLOGY=without-loinc and the CDR resolves no LOINC: expecting $want_accepted / $want_refused"
+    ;;
+  without-loinc:200)
+    echo "::error::SANDBOX_TERMINOLOGY=without-loinc, but the CDR resolves LOINC $loinc_probe; unset it" >&2
+    exit 1
+    ;;
+  *:*)
+    if [[ -n "${SANDBOX_TERMINOLOGY:-}" && "${SANDBOX_TERMINOLOGY}" != without-loinc ]]; then
+      echo "::error::SANDBOX_TERMINOLOGY is '$SANDBOX_TERMINOLOGY'; want unset or without-loinc" >&2
+      exit 1
+    fi
+    expect "LOINC probe $loinc_probe" "$code" 200 404
+    ;;
+esac
+
 accepted=0
 refused=0
+: > "$WORK/library-refused"
 while read -r adls; do
   code=$(request "archetype $(basename "$adls")" POST "$BASE/definition/template/adl2" \
     -H "$CT_PLAIN" --data-binary @"$adls")
   case "$code" in
     200 | 201 | 409) accepted=$((accepted + 1)) ;;
-    422) refused=$((refused + 1)) ;;
+    422)
+      refused=$((refused + 1))
+      basename "$adls" >> "$WORK/library-refused"
+      ;;
     *) expect "archetype $(basename "$adls")" "$code" 201 409 422 ;;
   esac
 done < <(adls_parents_first "$lib_root")
@@ -254,6 +298,13 @@ if [[ "$accepted" != "$want_accepted" ]] || [[ "$refused" != "$want_refused" ]];
   echo "::error::the ADL 2 archetype library loaded $accepted accepted / $refused refused; the manifest pins $want_accepted / $want_refused. Re-check the corpus and the manifest together." >&2
   exit 1
 fi
+while read -r named; do
+  if grep -qxF "$named" "$WORK/library-refused"; then outcome=refused; else outcome=accepted; fi
+  [[ "$outcome" == "$loinc_outcome" ]] || {
+    echo "::error::$named was $outcome; under this terminology posture the manifest expects it $loinc_outcome" >&2
+    exit 1
+  }
+done <<< "$loinc_named"
 echo "==> $accepted ADL 2 archetypes stored ($refused refused by AOM2 validation, as pinned)"
 
 # ── 4. this repository's own ADL 2 artefacts and templates ───────────────────
