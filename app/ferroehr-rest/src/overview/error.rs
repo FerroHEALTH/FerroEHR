@@ -286,7 +286,7 @@ pub(crate) fn status_error_response(status: StatusCode, message: &str) -> Respon
 // in the spec's own status table.
 
 /// Axum fallback for a request whose method is not served by the matched
-/// resource: a `405` (overview §HTTP Methods) with the openEHR error body.
+/// resource: a `405` (overview §HTTP Methods) with problem details.
 ///
 /// The mandatory `Allow` header (RFC 9110 §15.5.6) is supplied by axum, not
 /// here: only the router knows the matched path's method set, and axum decorates

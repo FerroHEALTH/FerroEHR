@@ -8,7 +8,7 @@
 //!
 //! - [`overview`] — the cross-cutting Overview protocol (content negotiation,
 //!   committal headers, resource identification, common params, the HTTP
-//!   status/error table); [`overview::error::RestError`] renders the openEHR error body.
+//!   status/error table); [`overview::error::RestError`] renders RFC 9457 problem details.
 //! - [`api`] — the resource APIs, one module per group (`ehr`, `query`,
 //!   `definition`, `demographic`, `admin`) implementing the generated
 //!   `openehr_its::rest` contract, plus the hand-written `system` API

@@ -465,9 +465,8 @@ async fn upload_invalid_source_is_422_with_rule_codes() {
         .and_then(Value::as_array)
         .expect("the problem carries its violations in errors");
     assert!(
-        errors
-            .iter()
-            .any(|e| e["detail"].as_str().is_some_and(|s| s.contains("VARD"))),
+        errors.iter().any(|e| e["path"].as_str() == Some("VARD")
+            || e["detail"].as_str().is_some_and(|s| s.contains("VARD"))),
         "the rule code VARD is reported in the 422 body: {errors:?}"
     );
 }

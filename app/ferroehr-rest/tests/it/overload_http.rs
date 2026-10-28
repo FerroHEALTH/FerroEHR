@@ -22,7 +22,7 @@
 //!
 //! * beyond the `max_concurrent_requests` bound, an API request is shed
 //!   immediately with `503 Service Unavailable` + `Retry-After: 1` and the
-//!   openEHR error body;
+//!   problem details;
 //! * with the bound unset concurrency is unbounded;
 //! * the health routes are outside the bound and are never shed, even while
 //!   the bound is fully taken.

@@ -11,7 +11,7 @@
 //!
 //! The route is gated by the local store (`[audit.store]`) and answers `404` as
 //! an `OperationOutcome` when it is off. Every error on this surface is a FHIR
-//! `OperationOutcome` rather than the openEHR error body: this is a FHIR
+//! `OperationOutcome` rather than problem details: this is a FHIR
 //! boundary.
 
 use axum::Json;

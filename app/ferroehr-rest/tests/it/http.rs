@@ -543,7 +543,7 @@ async fn unknown_route_is_404() {
 }
 
 /// A known path called with a method it does not serve answers `405` with the
-/// openEHR `{ error, message }` body AND the `Allow` header.
+/// problem details AND the `Allow` header.
 ///
 /// ITS-REST `docs/overview/Requests_and_responses.md` §HTTP Methods: "If a
 /// method is recognized but not allowed for the target resource, the response
@@ -610,7 +610,7 @@ async fn unrecognized_method_is_405_with_allow() {
 /// status code (ITS-REST `Requests_and_responses.md` §HTTP status codes:
 /// "Additional status codes MAY be used as long as they do not conflict with
 /// the predefined codes"). The refusal must still leave the server in the
-/// openEHR `{ error, message }` shape, not tower-http's `text/plain` default.
+/// problem details, not tower-http's `text/plain` default.
 #[tokio::test]
 async fn oversized_request_body_is_413_with_the_openehr_error_body() {
     let (_pg, app) = app(false).await;
@@ -1090,14 +1090,14 @@ async fn an_over_limit_chunked_body_is_413_not_400() {
     );
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
-        "application/json",
-        "the refusal keeps the openEHR error body"
+        "application/problem+json",
+        "the refusal is problem details"
     );
 }
 
 /// A declared body over the listener's `server.body_limit_bytes` is refused
 /// `413` by the family stack before any route reads it, in the openEHR
-/// `{ error, message }` body every other refusal carries.
+/// problem details every other refusal carries.
 #[tokio::test]
 async fn a_declared_body_over_the_ceiling_is_413_in_the_openehr_body() {
     let (pg, service) = common::test_service().await;
