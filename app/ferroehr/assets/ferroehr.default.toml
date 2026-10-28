@@ -33,7 +33,7 @@ spec_profile = "development"
 # log and on GET /management/status; `production` refuses to start while one is
 # missing and not named in deployment_accepts (shared_credential,
 # shared_cluster, open_subject_namespace, audit_off, audit_fails_open,
-# open_ehr_access_default, migrate_on_runtime_credential,
+# no_category_map, open_ehr_access_default, migrate_on_runtime_credential,
 # auth_off, rbac_off, plaintext_listener, plaintext_broker, plaintext_audit_feed,
 # plaintext_object_store; accept plaintext_listener
 # behind a TLS-terminating ingress; a [management] port opens it too, since that
@@ -635,13 +635,19 @@ full_verify_interval_seconds = 604800
 # Laboratory-Reports | Discharge-Reports, or <system>|<code>; a national
 # category is declared under national as <system>|<code> and named the same
 # way; a key whose data hold no category maps to the word "none". EMPTY by
-# default: FerroEHR ships no map, and an access the map cannot classify is
-# recorded "unclassified" with its ids, never refused. Keys compare
+# default, and while no template and no archetype is declared the map FerroEHR
+# ships applies (app/ferroehr/assets/audit-categories.default.toml: the
+# published CKM templates and COMPOSITION archetypes of one priority category);
+# declaring any key replaces it whole. shipped_map = false with nothing declared
+# leaves no map, which production refuses as the no_category_map gap. An access
+# the map in force cannot classify is recorded "unclassified" with its ids,
+# never refused. Keys compare
 # case-insensitively; an unknown code or an empty list refuses boot. The map's
 # digest is on the boot line, on /management/info and on every access record,
 # and the map is mirrored into the retention register, so a retention period
 # can be keyed on a category.
 [audit.categories]
+shipped_map = true
 national = []                # e.g. ["urn:oid:2.16.840.1.113883.2.4.3.11.60.1|beeld"]
 [audit.categories.templates]
 #? "International Patient Summary" = ["Patient-Summaries"]

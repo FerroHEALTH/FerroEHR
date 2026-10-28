@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+#
+# The category map FerroEHR ships (EHDS Annex II 3.2(c), Art. 14(1)): applied
+# when [audit.categories] declares no template and no archetype, and replaced
+# whole by a map the deployment declares. It names only the published CKM
+# templates and COMPOSITION archetypes whose purpose places their data in one
+# priority category; an archetype used for more than one category is left out,
+# so an access through it is recorded "unclassified" and never misclassified.
+#
+# Left out on purpose:
+# - openEHR-EHR-COMPOSITION.report-result.v1 and report.v1: the generic result
+#   and report containers carry laboratory, imaging and other reports alike.
+# - Electronic-Dispensations: CKM publishes no COMPOSITION archetype or
+#   template for a dispensation, which is recorded as ACTION.medication inside
+#   a composition of another purpose.
+# - Medical-Imaging by archetype: CKM publishes no imaging COMPOSITION; the
+#   CCTA report template is named below.
+
+[templates]
+# CKM "International Patient Summary", root openEHR-EHR-COMPOSITION.health_summary.v1.
+"International Patient Summary" = ["Patient-Summaries"]
+# CKM "ePrescription (FHIR)", root openEHR-EHR-COMPOSITION.prescription.v0.
+"ePrescription (FHIR)" = ["Electronic-Prescriptions"]
+# CKM "Generic lab test result example simple", root report-result.v1 with
+# openEHR-EHR-OBSERVATION.laboratory_test_result.v1.
+"Generic lab test result example simple" = ["Laboratory-Reports"]
+# CKM "CCTA report" (coronary CT angiography), root report-result.v1.
+"CCTA report" = ["Medical-Imaging"]
+
+[archetypes]
+# Published: a summary of an individual's health information at a point in
+# time, the patient summary of Art. 14(1)(a).
+"openEHR-EHR-COMPOSITION.health_summary.v1" = ["Patient-Summaries"]
+# A structure to convey medication orders to the pharmacy, the
+# e-prescription of Art. 14(1)(b).
+"openEHR-EHR-COMPOSITION.prescription.v0" = ["Electronic-Prescriptions"]
+# Published: the clinical summary handed over at a transfer of care, the
+# discharge at the end of an episode included, the discharge report of
+# Art. 14(1)(f).
+"openEHR-EHR-COMPOSITION.transfer_summary.v1" = ["Discharge-Reports"]

@@ -323,8 +323,8 @@ pub struct AuditConfig {
     pub legal_basis: Option<String>,
     /// `[audit.categories]` — the template and archetype map every access is
     /// classified through by EHDS priority category (Annex II 3.2(c)). Empty by
-    /// default: FerroEHR ships no map, and an unmapped access is recorded
-    /// `unclassified`.
+    /// default, so the map FerroEHR ships applies; an unmapped access is
+    /// recorded `unclassified`.
     pub categories: crate::system_log::categories::CategoryMapConfig,
     /// `[audit.store]` — the local Audit Record Repository.
     pub store: StoreConfig,
