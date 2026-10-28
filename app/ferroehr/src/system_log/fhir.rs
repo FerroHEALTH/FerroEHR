@@ -28,10 +28,10 @@ use ehds_logging::record::{
 };
 use ehds_logging::retention::RetentionPolicy;
 use ihe_atna::balp::{
-    APPLICATION, CREATE, CUSTODIAN, Coded, DELETE, DESTINATION_ROLE, Described, Direction, EXPORT,
-    Entity, EventKind, Exchange, IMPORT, LOGIN, LOGOUT, NetworkAddress, OPERATION, Observer, Peer,
-    READ, REST, SEARCH, SOURCE_APPLICATION_SERVER, SOURCE_ROLE, SYSTEM_OBJECT, UPDATE,
-    USER_AUTHENTICATION, What,
+    APPLICATION, CREATE, CUSTODIAN, Coded, DELETE, DESTINATION_ROLE, DOMAIN_RESOURCE, Described,
+    Direction, EXPORT, Entity, EventKind, Exchange, IMPORT, LOGIN, LOGOUT, NetworkAddress,
+    OPERATION, Observer, Peer, READ, REST, SEARCH, SOURCE_APPLICATION_SERVER, SOURCE_ROLE,
+    SYSTEM_OBJECT, UPDATE, USER_AUTHENTICATION, What,
 };
 use ihe_atna::user::{Code, OnBehalfOf, PurposeOfUse, User};
 use secrecy::SecretString;
@@ -504,14 +504,32 @@ fn entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> Vec<Ent
             namespace: namespace.filter(|_| !uri),
         });
     }
-    if let Some(id) = event.object_id.as_deref().filter(|id| !id.is_empty()) {
+    // NOTE: BALP 1.1.4 Create, Read, Update and Delete require entity:data (type 2) with what
+    // and role, so those records name the operation when they name no object.
+    let crud = !matches!(
+        event.object,
+        ObjectClass::Authentication | ObjectClass::Extract
+    ) && matches!(
+        event.action,
+        EventActionCode::Create
+            | EventActionCode::Read
+            | EventActionCode::Update
+            | EventActionCode::Delete
+    );
+    let id = event
+        .object_id
+        .as_deref()
+        .filter(|id| !id.is_empty())
+        .map(str::to_owned)
+        .or_else(|| crud.then(|| operation(event)));
+    if let Some(id) = id {
         entities.push(Entity::Described(Described {
             what: Some(What::Identifier {
                 system: None,
-                value: id.to_owned(),
+                value: id,
             }),
             kind: SYSTEM_OBJECT,
-            role: None,
+            role: crud.then_some(DOMAIN_RESOURCE),
             name: Some(operation(event)),
             description: None,
             details: Vec::new(),
@@ -775,6 +793,43 @@ mod tests {
         }
     }
 
+    /// BALP 1.1.4 slices `AuditEvent.entity` by `type` on its Create, Read,
+    /// Update and Delete profiles and requires `entity:data` (type `2`) with
+    /// `what` and `role`
+    /// (<https://profiles.ihe.net/ITI/BALP/1.1.4/StructureDefinition-IHE.BasicAudit.Create.html>),
+    /// so an unclassified record carries it, naming the operation when it
+    /// names no object.
+    #[test]
+    fn an_unclassified_crud_record_carries_the_data_entity() {
+        for object_id in [Some("IDCR - Vital Signs.v1"), None] {
+            let mut e = event(
+                EventActionCode::Create,
+                ObjectClass::Template,
+                EventOutcome::Success,
+            );
+            e.object_id = object_id.map(str::to_owned);
+            e.event_type = Some(EventType::rest("definition_template_adl1.4_upload"));
+            let v = json(&e, None);
+            assert_eq!(
+                v["meta"]["profile"][0],
+                "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Create"
+            );
+            let data: Vec<&serde_json::Value> = v["entity"]
+                .as_array()
+                .expect("entities")
+                .iter()
+                .filter(|entity| entity["type"]["code"] == "2")
+                .collect();
+            assert_eq!(data.len(), 1, "{v}");
+            assert_eq!(data[0]["role"]["code"], "4", "{v}");
+            assert_eq!(
+                data[0]["what"]["identifier"]["value"],
+                object_id.unwrap_or("definition_template_adl1.4_upload"),
+                "{v}"
+            );
+        }
+    }
+
     #[test]
     fn create_uses_source_role_for_client() {
         let e = event(
@@ -846,8 +901,17 @@ mod tests {
             v["meta"]["profile"][0],
             "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Read"
         );
-        // No patient entity without a resolved subject.
-        assert!(v["entity"].as_array().is_none_or(Vec::is_empty));
+        // No patient entity without a resolved subject; the BALP Read profile's
+        // entity:data (type 2) is still there.
+        let entities = v["entity"].as_array().expect("entities");
+        assert!(
+            entities.iter().all(|entity| entity["type"]["code"] != "1"),
+            "{v}"
+        );
+        assert!(
+            entities.iter().any(|entity| entity["type"]["code"] == "2"),
+            "{v}"
+        );
     }
 
     /// The BALP `RESTful` profiles fix outcome = 0; a failure record keeps the
