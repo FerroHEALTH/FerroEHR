@@ -38,7 +38,7 @@ use crate::negotiate;
 use crate::state::AppState;
 
 /// The event-subscription extension routes as a native `utoipa-axum` router
-/// (group-relative paths; nested under `base_path`), mounted under `/admin`
+/// (group-relative paths; nested under the extensions root), mounted under `/admin`
 /// (the coarse RBAC gate classes it `Admin`). Served through [`guarded_dispatch`]
 /// → [`dispatch`]. No openEHR spec governs eventing — our own extension.
 pub(crate) fn routes() -> OpenApiRouter<AppState> {

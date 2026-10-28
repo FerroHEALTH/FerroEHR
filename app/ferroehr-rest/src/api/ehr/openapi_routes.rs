@@ -54,14 +54,19 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
             directory_delete
         ))
         .routes(routes!(directory_get_by_version_id))
-        // POST + GET share `/ehr/{ehr_id}/contribution`, so they are one route.
-        .routes(routes!(contribution_create, contribution_list))
+        .routes(routes!(contribution_create))
         .routes(routes!(contribution_get))
         .routes(routes!(ehr_tags_get))
         .routes(routes!(composition_tags_get, composition_tags_update))
         .routes(routes!(composition_tags_delete))
         .routes(routes!(ehr_status_tags_get, ehr_status_tags_update))
         .routes(routes!(ehr_status_tags_delete))
+}
+
+/// The EHR routes ITS-REST does not define: the paged CONTRIBUTION list,
+/// mounted beside the openEHR base path ([`crate::api::extension_openapi_router`]).
+pub(crate) fn extension_routes() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new().routes(routes!(contribution_list))
 }
 
 // Every handler snapshots the request into `RequestParts` and runs it through

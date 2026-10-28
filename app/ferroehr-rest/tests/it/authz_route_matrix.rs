@@ -175,7 +175,12 @@ const CLINICAL_READ: &[(&str, &str)] = &[
     ("GET", "/ehr/{ehr_id}/tags"),
     ("GET", "/ehr/{ehr_id}/composition/{uid_based_id}"),
     ("GET", "/ehr/{ehr_id}/composition/{uid_based_id}/tags"),
-    ("GET", "/ehr/{ehr_id}/contribution"),
+    // The paged list is an extension, so it is spelled at its full path:
+    // `common::full` places `/ehr/...` under the openEHR base.
+    (
+        "GET",
+        "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/contribution",
+    ),
     ("GET", "/ehr/{ehr_id}/contribution/{contribution_uid}"),
     ("GET", "/ehr/{ehr_id}/directory"),
     ("GET", "/ehr/{ehr_id}/directory/{version_uid}"),

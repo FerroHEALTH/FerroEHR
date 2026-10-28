@@ -40,7 +40,6 @@ use ferroehr_rest::extensions::openapi::extensions_document;
 use ferrohealth_smart::config::{AuthSection, IssuerKey};
 
 use crate::common;
-use crate::common::EXT;
 
 /// The issuer the served document is described for; its key set is a file.
 const ISSUER: &str = "https://issuer.example";
@@ -147,7 +146,9 @@ fn a_non_default_base_path_moves_the_documented_paths() {
         BASE.to_owned(),
         // …and the nested API groups follow the base path as they always did.
         format!("{BASE}/ehr"),
-        format!("{EXT}/terminology"),
+        // …and so do the extensions and the FHIR root, beside it.
+        format!("{ROOT}/extensions/v1/terminology"),
+        format!("{ROOT}/fhir/r4/AuditEvent"),
     ] {
         assert!(
             paths.contains_key(&expected),

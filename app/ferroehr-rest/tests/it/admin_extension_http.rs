@@ -263,7 +263,7 @@ async fn the_archive_routes_refuse_unknown_malformed_and_shapeless_requests() {
 async fn create_demographic(app: &Router, segment: &str, body: &serde_json::Value) -> String {
     let request = Request::builder()
         .method("POST")
-        .uri(format!("{BASE}/demographic/{segment}"))
+        .uri(common::full(&format!("/demographic/{segment}")))
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(body.to_string()))
         .expect("request");

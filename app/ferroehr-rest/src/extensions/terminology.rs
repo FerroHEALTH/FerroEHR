@@ -17,7 +17,7 @@
 //! master12 call semantics, and excluded from the ITS-REST drift check.
 //!
 //! The extension groups mount inside the ITS-REST API router, so the full path
-//! is `{base_path}/terminology/...`; nesting keeps the auth, ATNA-audit and ABAC
+//! is `{rest_root}/extensions/v1/terminology/...`; nesting keeps the auth, ATNA-audit and ABAC
 //! middleware stack uniform across the whole HTTP surface, which the SM does not
 //! govern (it defines the abstract interface, not a URL layout). The boolean
 //! `has_*` calls are surfaced through the `200`-versus-`404` of their `get`
@@ -51,7 +51,7 @@ use crate::{negotiate, params};
 
 /// The terminology extension routes as a native `utoipa-axum` router: each
 /// `#[utoipa::path]` handler single-sources its route and its `OpenAPI` path.
-/// Group-relative paths (nested under the configured `base_path`); every
+/// Group-relative paths (nested under the extensions root); every
 /// operation is served through [`guarded_dispatch`] → [`dispatch`], so the
 /// wire behaviour is identical to the generated groups' `mount` adapter.
 pub(crate) fn routes() -> OpenApiRouter<AppState> {

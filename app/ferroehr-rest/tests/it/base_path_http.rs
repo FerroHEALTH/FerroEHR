@@ -126,8 +126,9 @@ async fn the_root_surfaces_follow_the_derived_rest_root() {
 }
 
 /// Every path in the served document is one this deployment actually mounts:
-/// the API under the configured base path, the operational surfaces under the
-/// derived product root, the health family at the process root.
+/// the API under the configured base path, the extensions and the FHIR
+/// interfaces and the operational surfaces under the derived product root, the
+/// health family at the process root.
 #[tokio::test]
 async fn the_served_openapi_declares_only_paths_this_deployment_serves() {
     let (_pg, app) = short_base_router().await;
@@ -147,6 +148,8 @@ async fn the_served_openapi_declares_only_paths_this_deployment_serves() {
 
     let allowed = [
         SHORT_BASE.to_owned(),
+        format!("{SHORT_ROOT}/extensions/v1/"),
+        format!("{SHORT_ROOT}/fhir/r4/"),
         format!("{SHORT_ROOT}/status"),
         format!("{SHORT_ROOT}/api-docs"),
         format!("{SHORT_ROOT}/swagger-ui"),

@@ -370,7 +370,8 @@ fn redirect_to_index(ui_path: &str) -> Response {
     get, path = "/ferroehr/rest/api-docs/ferroehr-{family}.openapi.json", tag = "openapi",
     params(("family" = String, Path,
         description = "The API family slug — one of the fixed set `ehr`, `query`, `definition`, \
-                       `demographic`, `admin`, `management`, `terminology`, `relationships`, \
+                       `demographic`, `admin`, `admin-extensions`, `archetypes`, `cohort`, `contributions`, \
+                       `management`, `terminology`, `relationships`, \
                        `messaging`, `events`, `audit`, `smart`. Not a free parameter: each value is \
                        its own static route.")),
     responses(
@@ -530,6 +531,14 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         "cohort",
         Members::Extension {
             include: "/query",
+            exclude: &[],
+        },
+    ),
+    (
+        "FerroEHR: Contribution List",
+        "contributions",
+        Members::Extension {
+            include: "/ehr",
             exclude: &[],
         },
     ),

@@ -72,7 +72,7 @@ use crate::state::AppState;
 
 /// The dump/load extension routes as a native `utoipa-axum` router — **no
 /// ITS-REST contract** (see the module docs). Group-relative paths (nested
-/// under `base_path`); every operation runs through [`guarded_dispatch`] with
+/// under the extensions root); every operation runs through [`guarded_dispatch`] with
 /// [`dispatch`].
 pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (handlers in a single call must share the path).

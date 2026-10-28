@@ -180,7 +180,7 @@ fn etag_uid(h: &header::HeaderMap) -> String {
 async fn create(app: &Router, seg: &str, body: &Value) -> String {
     let req = Request::builder()
         .method("POST")
-        .uri(format!("{BASE}/demographic/{seg}"))
+        .uri(common::full(&format!("/demographic/{seg}")))
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(body.to_string()))
         .unwrap();

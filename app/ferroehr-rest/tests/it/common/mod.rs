@@ -76,8 +76,12 @@ const EXTENSION_ROOTS: &[&str] = &[
 
 /// The full server path of a route a test names relative to its namespace:
 /// below [`EXT`] for an extension, below the REST root for `/fhir/r4/...`,
-/// below [`BASE`] for everything else.
+/// below [`BASE`] for everything else. A path already spelled from the REST
+/// root (`/ferroehr/...`) is returned as it is.
 pub(crate) fn full(relative: &str) -> String {
+    if relative.starts_with("/ferroehr/") {
+        return relative.to_owned();
+    }
     let under = |root: &str| {
         relative
             .strip_prefix(root)

@@ -19,4 +19,6 @@
   `/admin/retention/...`. The old paths answer 404, with no redirect. The
   served OpenAPI document and its family documents name the new paths; the
   admin extensions, the archetype library and the cohort query have family
-  documents of their own (`admin-extensions`, `archetypes`, `cohort`).
+  documents of their own (`admin-extensions`, `archetypes`, `cohort`,
+  `contributions`). The paged CONTRIBUTION list moved too, to
+  `/ferroehr/rest/extensions/v1/ehr/{ehr_id}/contribution`.

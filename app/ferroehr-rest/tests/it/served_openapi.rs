@@ -1114,9 +1114,11 @@ async fn admin_operations_are_fully_documented() {
     };
 
     // ── every route: the RBAC pair, the gated 405 with its Allow, no Location ─
+    // The two ITS-REST deletes sit under the openEHR base; the extensions beside it.
+    let its = "/ferroehr/rest/openehr/v1/admin";
     let all: [(String, &str); 5] = [
-        (format!("{BASE}/ehr/all"), "delete"),
-        (format!("{BASE}/ehr/{{ehr_id}}"), "delete"),
+        (format!("{its}/ehr/all"), "delete"),
+        (format!("{its}/ehr/{{ehr_id}}"), "delete"),
         (format!("{BASE}/template/{{template_id}}"), "delete"),
         (
             format!("{BASE}/query/{{qualified_query_name}}/{{version}}"),
@@ -1312,7 +1314,7 @@ async fn admin_operations_are_fully_documented() {
 /// conformance-profile claim.
 #[tokio::test]
 async fn admin_extension_operations_are_flagged_as_an_extension() {
-    const BASE: &str = "/ferroehr/rest/openehr/v1/admin";
+    const BASE: &str = "/ferroehr/rest/extensions/v1/admin";
 
     let doc = served_document().await;
 
@@ -1494,7 +1496,7 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // The SM MESSAGE component (I_EHR_EXTRACT_SERVICE); the release
         // publishes no message API at all.
         label: "the MESSAGE extension group",
-        prefixes: &["/ferroehr/rest/openehr/v1/message/"],
+        prefixes: &["/ferroehr/rest/extensions/v1/message/"],
         flag: "no its-rest operation governs this",
         operations: 4,
     },

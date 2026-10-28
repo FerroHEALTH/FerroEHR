@@ -201,7 +201,7 @@ async fn mark(app: &Router, ehr: &str, vo: Option<&str>, lift: bool) {
     let (status, response) = send(
         app,
         "POST",
-        &format!("{BASE}/{path}"),
+        &common::full(&format!("/{path}")),
         "root",
         None,
         Some(("application/json", body.to_string())),
