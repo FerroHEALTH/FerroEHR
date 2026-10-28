@@ -139,7 +139,7 @@ return rows before it is timed:
 | `wide_projection_population` | the same over the population, `LIMIT 50` |
 | `select_observation` | `SELECT o`, the whole OBSERVATION reassembled |
 | `select_composition_one_ehr` | `SELECT c` over one EHR |
-| `version_at_time` | a `VERSION v[commit_audit/time_committed <= …]` scope |
+| `aql_version_at_time` | a `VERSION v[commit_audit/time_committed <= …]` scope; named apart from the `storage_read` operation, since the compare step keys operations by name |
 
 Each entry carries its `statement`, the `rows` it returned and whether it ran
 over one EHR (`one_ehr`).

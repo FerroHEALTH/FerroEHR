@@ -1336,7 +1336,7 @@ fn aql_hot_paths(corpus: &Corpus) -> Vec<AqlHotPath> {
             one_ehr: true,
         },
         AqlHotPath {
-            name: "version_at_time",
+            name: "aql_version_at_time",
             aql: format!(
                 "SELECT c/uid/value FROM EHR e CONTAINS VERSION \
                  v[commit_audit/time_committed <= '{}'] CONTAINS COMPOSITION c LIMIT 50",
