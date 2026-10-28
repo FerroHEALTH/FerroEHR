@@ -16,6 +16,13 @@
 //! arguments finish holding the same data. Any answer outside the expected
 //! status fails the run: an error is never counted as a fast operation.
 //!
+//! With `--audit` the run also measures the logging component (EHDS Annex II
+//! 1.1): after the measured phase it waits for the access log to settle, counts
+//! the access records of the measured window through ITI-81 (`_count=0`) per
+//! operation id (`subtype`), compares them with the operations that ran, and
+//! times paged ITI-81 retrievals over them. `scripts/perf/audit.sh` runs it with the log on and
+//! off and turns the figures into the verdict on the stated claims.
+//!
 //! No openEHR specification governs load testing: our own design. The
 //! comparison against the previous release is `scripts/perf/compare.sh`.
 //!
@@ -87,6 +94,20 @@ struct Args {
     /// Concurrent workers.
     #[arg(long, default_value_t = 8)]
     workers: usize,
+    /// Measure the access log too: count the measured window's records by
+    /// action and time ITI-81 retrievals over them.
+    #[arg(long)]
+    audit: bool,
+    /// The FHIR R4 base the ITI-81 retrieval is served under; by default the
+    /// base URL with its `openehr/v1` suffix replaced by `fhir/r4`.
+    #[arg(long)]
+    fhir_url: Option<String>,
+    /// ITI-81 pages fetched for the retrieval figures.
+    #[arg(long, default_value_t = 50)]
+    retrievals: usize,
+    /// Records per ITI-81 page.
+    #[arg(long, default_value_t = 50)]
+    page_size: usize,
     /// Where the JSON report is written.
     #[arg(long)]
     out: PathBuf,
@@ -395,6 +416,27 @@ struct Report {
     p50_ms: f64,
     p95_ms: f64,
     by_operation: BTreeMap<&'static str, OperationReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    audit: Option<AuditReport>,
+}
+
+/// What the `--audit` run measured of the access log.
+#[derive(Debug, Serialize)]
+struct AuditReport {
+    /// The ITS-REST operation id of each kind in the mix to the access records
+    /// the measured window holds for it (ITI-81 `subtype`).
+    records_by_operation: BTreeMap<&'static str, u64>,
+    /// The operation id to the operations of the measured phase that ran it.
+    operations_by_operation: BTreeMap<&'static str, u64>,
+    /// Whether every operation has its record: a composition create or read
+    /// exactly one, an AQL execution at least one (one per EHR it served).
+    complete: bool,
+    /// Seconds from the end of the measured phase until the counts settled.
+    settled_after_seconds: f64,
+    /// The paged ITI-81 retrievals over the measured window.
+    retrieval: OperationReport,
+    /// Records per retrieved page.
+    page_size: usize,
 }
 
 impl Report {
@@ -431,8 +473,194 @@ impl Report {
             p50_ms: millis(percentile(&all, 50)),
             p95_ms: millis(percentile(&all, 95)),
             by_operation,
+            audit: None,
         })
     }
+}
+
+/// The code system of the ITS-REST operation id a record carries as its
+/// `subtype` (the ITI-81 `subtype` token).
+const OPERATION_SYSTEM: &str = "urn:openehr:its-rest:operation";
+
+/// The operation ids whose records an operation writes: the AQL request body
+/// the load test sends is served as `query_execute_adhoc_query_body`, and the
+/// form without a body is counted too so a renamed route is never missed.
+fn operation_ids(op: Op) -> &'static [&'static str] {
+    match op {
+        Op::CompositionCreate => &["composition_create"],
+        Op::CompositionRead => &["composition_get"],
+        Op::AqlContains | Op::AqlOrderBy => &[
+            "query_execute_adhoc_query_body",
+            "query_execute_adhoc_query",
+        ],
+    }
+}
+
+/// The name an operation is counted under in the audit report.
+fn audit_key(op: Op) -> &'static str {
+    match op {
+        Op::CompositionCreate => "composition_create",
+        Op::CompositionRead => "composition_get",
+        Op::AqlContains | Op::AqlOrderBy => "query_execute_adhoc_query",
+    }
+}
+
+/// The FHIR R4 base the ITI-81 retrieval is served under, derived from the
+/// ITS-REST base when none is given.
+fn fhir_base(base: &str, explicit: Option<&str>) -> anyhow::Result<String> {
+    if let Some(url) = explicit {
+        return Ok(url.trim_end_matches('/').to_owned());
+    }
+    base.strip_suffix("/openehr/v1")
+        .map(|root| format!("{root}/fhir/r4"))
+        .ok_or_else(|| anyhow!("{base} does not end in /openehr/v1; pass --fhir-url"))
+}
+
+/// The window from `from` on as an ITI-81 `date` bound, in whole seconds.
+fn window_query(from: jiff::Timestamp) -> anyhow::Result<String> {
+    let from = jiff::Timestamp::from_second(from.as_second())?;
+    Ok(format!("date=ge{from}"))
+}
+
+/// The one member of a FHIR R4 `searchset` Bundle the count reads (FHIR R4
+/// Bundle.total, the number of matches a `_count=0` search reports).
+#[derive(Debug, serde::Deserialize)]
+struct CountBundle {
+    total: u64,
+}
+
+impl Target {
+    /// An authenticated ITI-81 search below `fhir`.
+    fn audit_search(&self, fhir: &str, query: &str) -> RequestBuilder {
+        self.client
+            .get(format!("{fhir}/AuditEvent?{query}"))
+            .basic_auth(&self.user, Some(&self.password))
+            .header(ACCEPT, "application/fhir+json")
+    }
+
+    /// The number of access records the window holds for operation `id`.
+    async fn audit_total(&self, fhir: &str, window: &str, id: &str) -> anyhow::Result<u64> {
+        let response = expect(
+            "count access records",
+            self.audit_search(
+                fhir,
+                &format!("{window}&subtype={OPERATION_SYSTEM}%7C{id}&_count=0"),
+            ),
+            &[StatusCode::OK],
+        )
+        .await?;
+        let bundle: CountBundle = response.json().await.context("the count Bundle")?;
+        Ok(bundle.total)
+    }
+
+    /// The window's records per counted operation.
+    async fn audit_counts(
+        &self,
+        fhir: &str,
+        window: &str,
+    ) -> anyhow::Result<BTreeMap<&'static str, u64>> {
+        let mut counts = BTreeMap::new();
+        for op in [Op::CompositionCreate, Op::CompositionRead, Op::AqlContains] {
+            let mut total = 0_u64;
+            for id in operation_ids(op) {
+                total = total.saturating_add(self.audit_total(fhir, window, id).await?);
+            }
+            counts.insert(audit_key(op), total);
+        }
+        Ok(counts)
+    }
+
+    /// Reads the counts until two readings a second apart agree, which is when
+    /// the asynchronous access log has written what the server served.
+    async fn audit_settled(
+        &self,
+        fhir: &str,
+        window: &str,
+    ) -> anyhow::Result<(BTreeMap<&'static str, u64>, Duration)> {
+        let started = Instant::now();
+        let mut previous = None;
+        loop {
+            let counts = self.audit_counts(fhir, window).await?;
+            if previous.as_ref() == Some(&counts) {
+                return Ok((counts, started.elapsed()));
+            }
+            if started.elapsed() > Duration::from_secs(120) {
+                bail!("the access record counts did not settle within 120 s: {counts:?}");
+            }
+            previous = Some(counts);
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    }
+
+    /// Fetches one ITI-81 page of the window's composition reads and returns
+    /// how long it took.
+    async fn audit_page(
+        &self,
+        fhir: &str,
+        window: &str,
+        page_size: usize,
+        offset: usize,
+    ) -> anyhow::Result<Duration> {
+        let started = Instant::now();
+        let response = expect(
+            "retrieve access records",
+            self.audit_search(
+                fhir,
+                &format!(
+                    "{window}&subtype={OPERATION_SYSTEM}%7Ccomposition_get\
+                     &_count={page_size}&_offset={offset}"
+                ),
+            ),
+            &[StatusCode::OK],
+        )
+        .await?;
+        response.bytes().await.context("the retrieved Bundle")?;
+        Ok(started.elapsed())
+    }
+}
+
+/// Counts the measured window's records per operation once they settle,
+/// compares them with what ran, then times `retrievals` ITI-81 pages over them.
+async fn measure_audit(
+    target: &Target,
+    fhir: &str,
+    window: &str,
+    timings: &[(Op, Duration)],
+    retrievals: usize,
+    page_size: usize,
+) -> anyhow::Result<AuditReport> {
+    let mut operations_by_operation: BTreeMap<&'static str, u64> = BTreeMap::new();
+    for (op, _) in timings {
+        *operations_by_operation.entry(audit_key(*op)).or_default() += 1;
+    }
+    let (records_by_operation, settled) = target.audit_settled(fhir, window).await?;
+    let count = |map: &BTreeMap<&'static str, u64>, key| map.get(key).copied().unwrap_or(0);
+    let complete = ["composition_create", "composition_get"]
+        .into_iter()
+        .all(|key| count(&records_by_operation, key) == count(&operations_by_operation, key))
+        && count(&records_by_operation, "query_execute_adhoc_query")
+            >= count(&operations_by_operation, "query_execute_adhoc_query");
+    let reads =
+        usize::try_from(count(&records_by_operation, "composition_get")).context("read count")?;
+    let pages = reads.div_ceil(page_size.max(1)).max(1);
+    let mut retrieval = Vec::with_capacity(retrievals);
+    for i in 0..retrievals.max(1) {
+        let offset = i.checked_rem(pages).unwrap_or(0).saturating_mul(page_size);
+        retrieval.push(target.audit_page(fhir, window, page_size, offset).await?);
+    }
+    retrieval.sort_unstable();
+    Ok(AuditReport {
+        records_by_operation,
+        operations_by_operation,
+        complete,
+        settled_after_seconds: settled.as_secs_f64(),
+        retrieval: OperationReport {
+            count: retrieval.len(),
+            p50_ms: millis(percentile(&retrieval, 50)),
+            p95_ms: millis(percentile(&retrieval, 95)),
+        },
+        page_size,
+    })
 }
 
 /// Seeds the server, runs the warm-up and the measured phase, and writes the report.
@@ -464,11 +692,39 @@ async fn run(args: Args) -> anyhow::Result<()> {
     drive(&target, args.workers, args.warmup)
         .await
         .context("warm-up")?;
+    let fhir = fhir_base(&target.base, args.fhir_url.as_deref())?;
+    // The seed and the warm-up are written to the log asynchronously, so the
+    // measured window opens only once their records have settled, a second
+    // later than the last of them.
+    if args.audit {
+        let seed = window_query(jiff::Timestamp::UNIX_EPOCH)?;
+        target
+            .audit_settled(&fhir, &seed)
+            .await
+            .context("the seed's access log")?;
+        tokio::time::sleep(Duration::from_millis(1100)).await;
+    }
+    let window_from = jiff::Timestamp::now();
     let started = Instant::now();
     let timings = drive(&target, args.workers, args.operations)
         .await
         .context("measured phase")?;
-    let report = Report::new(args.workers, &timings, started.elapsed())?;
+    let mut report = Report::new(args.workers, &timings, started.elapsed())?;
+    if args.audit {
+        let window = window_query(window_from)?;
+        report.audit = Some(
+            measure_audit(
+                &target,
+                &fhir,
+                &window,
+                &timings,
+                args.retrievals,
+                args.page_size,
+            )
+            .await
+            .context("the access log")?,
+        );
+    }
     let json = serde_json::to_string_pretty(&report).context("serialise the report")?;
     tokio::fs::write(&args.out, json)
         .await
@@ -509,6 +765,33 @@ mod tests {
             COMPOSITION.matches(EXAMPLE_START_TIME).count() - 1
         );
         assert_eq!(rendered.len(), COMPOSITION.len());
+    }
+
+    #[test]
+    fn the_fhir_base_follows_the_its_rest_base() {
+        assert_eq!(
+            fhir_base("http://localhost:8080/ferroehr/rest/openehr/v1", None).unwrap(),
+            "http://localhost:8080/ferroehr/rest/fhir/r4"
+        );
+        assert_eq!(
+            fhir_base("http://h/x", Some("http://h/fhir/r4/")).unwrap(),
+            "http://h/fhir/r4"
+        );
+        assert!(fhir_base("http://h/x", None).is_err());
+    }
+
+    #[test]
+    fn the_window_opens_on_a_whole_second() {
+        let from: jiff::Timestamp = "2026-10-28T10:00:00.700Z".parse().unwrap();
+        assert_eq!(window_query(from).unwrap(), "date=ge2026-10-28T10:00:00Z");
+    }
+
+    #[test]
+    fn each_operation_is_counted_under_its_operation_id() {
+        assert_eq!(operation_ids(Op::CompositionCreate), ["composition_create"]);
+        assert_eq!(operation_ids(Op::CompositionRead), ["composition_get"]);
+        assert_eq!(audit_key(Op::AqlContains), audit_key(Op::AqlOrderBy));
+        assert!(operation_ids(Op::AqlOrderBy).contains(&"query_execute_adhoc_query_body"));
     }
 
     #[test]

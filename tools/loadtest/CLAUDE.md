@@ -17,5 +17,11 @@ turns the medians into the verdict (#4081).
   seed changes what both sides measure, so the previous release is measured
   with the new workload in the same job; nothing compares across workload
   versions.
+- **`--audit` measures the access log too** (EHDS Annex II 1.1, #4293): the
+  measured window's records counted through ITI-81 per operation id, and
+  paged retrieval timings. `scripts/perf/audit.sh` runs it with the log off
+  and on, and `scripts/perf/audit-verdict.sh` holds the medians to the claims
+  on the book's logging-performance page; change a budget there and in the
+  script together.
 - **Gates:** `cargo clippy -p loadtest --all-targets -- -D warnings`,
-  `cargo nextest run -p loadtest`, `bash scripts/perf/compare.sh --self-test`.
+  `cargo nextest run -p loadtest`, `bash scripts/perf/compare.sh --self-test`, `bash scripts/perf/audit-verdict.sh --self-test`.
