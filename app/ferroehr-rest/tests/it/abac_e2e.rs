@@ -381,7 +381,7 @@ fn bearer_with_organisation(patient: Option<&str>, organisation: &str) -> String
 fn request(method: &str, path: &str, token: &str) -> Request<Body> {
     Request::builder()
         .method(method)
-        .uri(format!("{BASE}{path}"))
+        .uri(common::full(path))
         .header("authorization", token)
         .header("content-type", "application/json")
         .header("x-forwarded-for", "203.0.113.9")

@@ -364,7 +364,7 @@ fn req(method: &str, path: &str, auth: bool) -> Request<Body> {
 fn from_peer(peer: &str, method: &str, path: &str, auth: bool) -> Request<Body> {
     let mut b = Request::builder()
         .method(method)
-        .uri(format!("{BASE}{path}"))
+        .uri(common::full(path))
         .header("x-forwarded-for", CLIENT_IP)
         .header("content-type", "application/json")
         .extension(ConnectInfo(SocketAddr::new(

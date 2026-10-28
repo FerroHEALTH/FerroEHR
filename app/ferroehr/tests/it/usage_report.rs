@@ -221,7 +221,7 @@ async fn start_report(
         identity(),
         Arc::new(PgStore::new(pool.clone())),
         Arc::new(FerroEhr::new(pool.clone())),
-        product::window(BASE_PATH),
+        product::window(&[BASE_PATH.to_owned()]),
         Instant::now(),
         ci,
     )
@@ -301,7 +301,7 @@ fn the_contract_examples_decide_the_validator() {
 async fn start_and_daily_payloads_carry_exactly_the_v2_fields() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let window = product::window(BASE_PATH);
+    let window = product::window(&[BASE_PATH.to_owned()]);
     let reporter = reporter(&db, &server, &window).await;
     let validator = envelope_validator();
 
@@ -392,7 +392,7 @@ async fn start_and_daily_payloads_carry_exactly_the_v2_fields() {
 async fn no_route_parameter_query_text_or_licence_id_reaches_the_payload() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let window = product::window(BASE_PATH);
+    let window = product::window(&[BASE_PATH.to_owned()]);
     let reporter = reporter(&db, &server, &window).await;
 
     let sentinel_ehr = "5e171e1c-0000-4000-8000-5e171e1c0001";
@@ -452,8 +452,8 @@ async fn no_route_parameter_query_text_or_licence_id_reaches_the_payload() {
 async fn one_daily_report_per_window_across_two_replicas() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let first = reporter(&db, &server, &product::window(BASE_PATH)).await;
-    let second = reporter(&db, &server, &product::window(BASE_PATH)).await;
+    let first = reporter(&db, &server, &product::window(&[BASE_PATH.to_owned()])).await;
+    let second = reporter(&db, &server, &product::window(&[BASE_PATH.to_owned()])).await;
 
     let (a, b) = tokio::join!(first.send_daily(), second.send_daily());
     let outcomes = [a, b];
@@ -485,8 +485,8 @@ async fn one_daily_report_per_window_across_two_replicas() {
 async fn the_daily_report_carries_every_replicas_counts() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let first_window = product::window(BASE_PATH);
-    let second_window = product::window(BASE_PATH);
+    let first_window = product::window(&[BASE_PATH.to_owned()]);
+    let second_window = product::window(&[BASE_PATH.to_owned()]);
     let first = reporter(&db, &server, &first_window).await;
     let second = reporter(&db, &server, &second_window).await;
 
@@ -536,7 +536,7 @@ async fn an_unsent_daily_report_keeps_its_counts_for_the_retry() {
             .expect("a loopback collector"),
         ..UsageReportSection::default()
     };
-    let window = product::window(BASE_PATH);
+    let window = product::window(&[BASE_PATH.to_owned()]);
     let lost = replica(&db, &config, &window).await;
     record_traffic(&window);
     assert!(matches!(
@@ -545,7 +545,7 @@ async fn an_unsent_daily_report_keeps_its_counts_for_the_retry() {
     ));
 
     let server = collector(204).await;
-    let retry = reporter(&db, &server, &product::window(BASE_PATH)).await;
+    let retry = reporter(&db, &server, &product::window(&[BASE_PATH.to_owned()])).await;
     assert_eq!(
         retry.send_daily().await.expect("the retry is sent"),
         StatusCode::NO_CONTENT
@@ -566,8 +566,8 @@ async fn an_unsent_daily_report_keeps_its_counts_for_the_retry() {
 async fn the_start_report_is_rate_limited_to_one_per_ten_minutes() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let first = reporter(&db, &server, &product::window(BASE_PATH)).await;
-    let second = reporter(&db, &server, &product::window(BASE_PATH)).await;
+    let first = reporter(&db, &server, &product::window(&[BASE_PATH.to_owned()])).await;
+    let second = reporter(&db, &server, &product::window(&[BASE_PATH.to_owned()])).await;
 
     assert!(matches!(
         first.send_start().await.expect("first start"),
@@ -592,13 +592,13 @@ async fn first_start_is_true_on_a_fresh_database_and_false_after_a_restart() {
     let server = collector(204).await;
     let pool = replica_pool(&db);
 
-    reporter(&db, &server, &product::window(BASE_PATH))
+    reporter(&db, &server, &product::window(&[BASE_PATH.to_owned()]))
         .await
         .send_start()
         .await
         .expect("first boot");
     age_the_start_claim(&pool).await;
-    reporter(&db, &server, &product::window(BASE_PATH))
+    reporter(&db, &server, &product::window(&[BASE_PATH.to_owned()]))
         .await
         .send_start()
         .await
@@ -619,7 +619,7 @@ async fn first_start_is_true_on_a_fresh_database_and_false_after_a_restart() {
 async fn the_preview_equals_what_is_sent() {
     let db = testkit::db().await.expect("testkit database");
     let server = collector(204).await;
-    let window = product::window(BASE_PATH);
+    let window = product::window(&[BASE_PATH.to_owned()]);
     let reporter = reporter(&db, &server, &window).await;
     let pool = replica_pool(&db);
     let config = config_for(&server);
@@ -670,7 +670,7 @@ async fn the_preview_writes_nothing() {
         &config_for(&server),
         identity(),
         &replica_pool(&db),
-        &product::window(BASE_PATH),
+        &product::window(&[BASE_PATH.to_owned()]),
         EventKind::Start,
     )
     .await

@@ -339,7 +339,7 @@ async fn the_served_openapi_declares_the_profile_conflict_on_the_query_operation
         "/query/{qualified_query_name}/{version}",
     ] {
         for method in ["get", "post"] {
-            let full = format!("{BASE}{path}");
+            let full = common::full(path);
             let op = doc["paths"][&full][method]
                 .as_object()
                 .unwrap_or_else(|| panic!("{method} {full} is served"));
@@ -397,7 +397,7 @@ async fn the_served_openapi_declares_the_profile_conflict_on_version_reads() {
         ),
     ];
     for (path, method) in reads {
-        let full = format!("{BASE}{path}");
+        let full = common::full(path);
         let op = doc["paths"][&full][method]
             .as_object()
             .unwrap_or_else(|| panic!("{method} {full} is served"));

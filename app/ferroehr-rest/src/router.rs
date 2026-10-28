@@ -111,6 +111,7 @@ fn audited_management(state: AppState, authenticator: Arc<Authenticator>) -> Rou
 pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     let cfg = state.config().clone();
     let rest_root = cfg.rest.rest_root();
+    let namespaces = crate::api::Namespaces::of(&cfg.rest);
 
     // A known path called with a method it does not serve renders `405` with the
     // openEHR body (overview §HTTP Methods); axum supplies the mandatory `Allow`
@@ -120,8 +121,8 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     // NOTE: the overview's SHOULD-`501` (`Requests_and_responses.md` §HTTP
     // Methods) is honoured for a recognised but unimplemented operation via
     // `ApiError::NotImplemented`.
-    let api =
-        crate::api::api_router().method_not_allowed_fallback(error::method_not_allowed_handler);
+    let api = crate::api::api_router(&namespaces)
+        .method_not_allowed_fallback(error::method_not_allowed_handler);
     // Added before the authentication layer, which in axum's outermost-last
     // ordering puts it inside: the subject it keys on exists only after auth.
     let api = match cfg.server.caller_rate {
@@ -141,16 +142,16 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
                 authenticator.bearer_admitted(),
                 &cfg.assurance,
                 cfg.professional.as_ref(),
-                &cfg.rest.base_path,
+                namespaces.clone(),
                 ferroehr::config::auth::realm(&cfg.auth),
             )
             .map(Arc::new),
             smart: Arc::new(smart::routes::SmartRoutes::new(
-                &cfg.rest.base_path,
+                &namespaces,
                 ferroehr::config::auth::product_scope(&cfg.auth),
                 cfg.smart.demographic_clients.clone(),
             )),
-            served: Arc::new(crate::api::served::ServedMethods::new(&cfg.rest.base_path)),
+            served: Arc::new(crate::api::served::ServedMethods::new(&namespaces)),
         },
         authn::middleware,
     ));
@@ -334,7 +335,7 @@ fn mount_public_surface(
     let discovery = smart::discovery::router(cfg, rest_root, authenticator);
 
     let mut inner = Router::new()
-        .nest(&cfg.rest.base_path, api)
+        .merge(api)
         .merge(status::router(rest_root))
         .merge(discovery);
 

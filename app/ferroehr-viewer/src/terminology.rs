@@ -240,7 +240,7 @@ fn string_list(value: Option<&serde_json::Value>) -> Vec<String> {
 async fn terminology_get(path: &str) -> Result<Option<serde_json::Value>, ViewerError> {
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = leptos::prelude::expect_context();
-    let url = state.cdr.rest_v1(path);
+    let url = state.cdr.extensions_v1(path);
     let response = state
         .cdr
         .get(&session.credential, &url, "application/json")

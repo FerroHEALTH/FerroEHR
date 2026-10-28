@@ -29,9 +29,9 @@ pub(crate) struct ServedMethods {
 }
 
 impl ServedMethods {
-    /// Returns the table of the API mounted under `base_path`.
-    pub(crate) fn new(base_path: &str) -> Self {
-        let document = crate::api::api_doc(base_path);
+    /// Returns the table of the API mounted in `namespaces`.
+    pub(crate) fn new(namespaces: &crate::api::Namespaces) -> Self {
+        let document = crate::api::api_doc(namespaces);
         let mut routes = HashMap::new();
         for (path, item) in &document.paths.paths {
             let declared = [
@@ -90,7 +90,9 @@ mod tests {
 
     #[test]
     fn an_unserved_method_is_refused_with_the_served_set() {
-        let served = ServedMethods::new(BASE);
+        let served = ServedMethods::new(&crate::api::Namespaces::of(
+            &ferroehr::config::rest::RestConfig::default(),
+        ));
         let ehr = format!("{BASE}/ehr");
         let resp = served
             .refusal(&Method::DELETE, Some(&ehr))
@@ -107,7 +109,9 @@ mod tests {
 
     #[test]
     fn a_served_method_and_an_unknown_route_are_left_to_the_checks() {
-        let served = ServedMethods::new(BASE);
+        let served = ServedMethods::new(&crate::api::Namespaces::of(
+            &ferroehr::config::rest::RestConfig::default(),
+        ));
         let ehr = format!("{BASE}/ehr");
         assert!(served.refusal(&Method::POST, Some(&ehr)).is_none());
         let one = format!("{BASE}/ehr/{{ehr_id}}");

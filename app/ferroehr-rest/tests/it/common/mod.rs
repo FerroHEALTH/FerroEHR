@@ -39,8 +39,58 @@ use serde_json::Value;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-/// The configured API base path every gated route hangs off.
+/// The configured openEHR base path the ITS-REST routes hang off.
 pub(crate) const BASE: &str = "/ferroehr/rest/openehr/v1";
+
+/// The root FerroEHR's own extensions hang off, beside [`BASE`] (#4330).
+pub(crate) const EXT: &str = "/ferroehr/rest/extensions/v1";
+
+/// The root of the FHIR and IHE interfaces, beside [`BASE`] (#4330).
+pub(crate) const FHIR: &str = "/ferroehr/rest/fhir/r4";
+
+/// The paths below [`EXT`] the tests name relative to their namespace: every
+/// route ITS-REST does not define that is no FHIR interface.
+const EXTENSION_ROOTS: &[&str] = &[
+    "/admin/access-restriction",
+    "/admin/archive",
+    "/admin/config",
+    "/admin/dump",
+    "/admin/event_subscription",
+    "/admin/integrity",
+    "/admin/load",
+    "/admin/party",
+    "/admin/query",
+    "/admin/report",
+    "/admin/research-objection",
+    "/admin/restriction",
+    "/admin/retention",
+    "/admin/template",
+    "/definition/archetype",
+    "/definition/artefact",
+    "/demographic/party_relationship",
+    "/demographic/versioned_party_relationship",
+    "/message",
+    "/query/cohort",
+    "/terminology",
+];
+
+/// The full server path of a route a test names relative to its namespace:
+/// below [`EXT`] for an extension, below the REST root for `/fhir/r4/...`,
+/// below [`BASE`] for everything else.
+pub(crate) fn full(relative: &str) -> String {
+    let under = |root: &str| {
+        relative
+            .strip_prefix(root)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with('/') || rest.starts_with('?'))
+    };
+    if EXTENSION_ROOTS.iter().any(|root| under(root)) {
+        format!("{EXT}{relative}")
+    } else if let Some(fhir) = relative.strip_prefix("/fhir/r4") {
+        format!("{FHIR}{fhir}")
+    } else {
+        format!("{BASE}{relative}")
+    }
+}
 
 /// A fresh, fully migrated database from the shared harness.
 pub(crate) async fn test_db() -> testkit::TestDb {

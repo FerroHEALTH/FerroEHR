@@ -33,6 +33,7 @@ use http::{Request, StatusCode, header};
 
 use crate::common;
 use crate::common::BASE;
+use crate::common::EXT;
 
 /// A syntactically valid EHR id that is never created — the "unknown" probe.
 const OTHER: &str = "11111111-2222-3333-4444-555555555555";
@@ -162,7 +163,7 @@ async fn disabled_admin_config_is_405() {
     // uniformly across the group.
     let (_pg, app) = app(false).await;
     let (status, headers, body) =
-        common::send(&app, common::get(&format!("{BASE}/admin/config"))).await;
+        common::send(&app, common::get(&format!("{EXT}/admin/config"))).await;
     assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
     // Mandatory on every 405 (RFC 9110 §15.5.6), empty because the resource
     // currently allows no methods at all (RFC 9110 §10.2.1) — see
@@ -181,7 +182,7 @@ async fn enabled_admin_config_is_200_json() {
     // point is the route is mounted and served under the enabled gate.
     let (_pg, app) = app(true).await;
     let (status, _body) =
-        common::send_body(&app, common::get(&format!("{BASE}/admin/config"))).await;
+        common::send_body(&app, common::get(&format!("{EXT}/admin/config"))).await;
     assert_eq!(status, StatusCode::OK);
 }
 
@@ -223,7 +224,7 @@ async fn upload_ips_template(app: &Router) {
 }
 
 fn ips_template_path() -> String {
-    format!("{BASE}/admin/template/International%20Patient%20Summary")
+    format!("{EXT}/admin/template/International%20Patient%20Summary")
 }
 
 #[tokio::test]
@@ -252,7 +253,7 @@ async fn template_delete_unknown_is_404() {
     let (_pg, app) = app(true).await;
     let (status, _body) = common::send_body(
         &app,
-        common::delete(&format!("{BASE}/admin/template/no-such-template")),
+        common::delete(&format!("{EXT}/admin/template/no-such-template")),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
@@ -308,7 +309,7 @@ async fn query_version_delete_is_204_and_that_version_is_gone() {
     assert_eq!(status, StatusCode::OK, "query store: {body}");
     let (status, body) = common::send_body(
         &app,
-        common::delete(&format!("{BASE}/admin/query/cnf.admin::probe/1.0.0")),
+        common::delete(&format!("{EXT}/admin/query/cnf.admin::probe/1.0.0")),
     )
     .await;
     assert_eq!(
@@ -334,7 +335,7 @@ async fn query_version_delete_unknown_is_404() {
     let (_pg, app) = app(true).await;
     let (status, _body) = common::send_body(
         &app,
-        common::delete(&format!("{BASE}/admin/query/cnf.admin::absent/9.9.9")),
+        common::delete(&format!("{EXT}/admin/query/cnf.admin::absent/9.9.9")),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);

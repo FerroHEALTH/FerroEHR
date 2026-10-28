@@ -257,7 +257,7 @@ pub fn subscription_failure_copy(object: &str, error: &ViewerError) -> String {
 pub async fn probe_event_subscriptions() -> Result<SubscriptionAvailability, ViewerError> {
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1("admin/event_subscription");
+    let url = state.cdr.extensions_v1("admin/event_subscription");
     let response = state
         .cdr
         .get(&session.credential, &url, "application/json")
@@ -281,7 +281,7 @@ pub async fn probe_event_subscriptions() -> Result<SubscriptionAvailability, Vie
 pub async fn list_event_subscriptions() -> Result<Option<Vec<SubscriptionRow>>, ViewerError> {
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1("admin/event_subscription");
+    let url = state.cdr.extensions_v1("admin/event_subscription");
     let response = state
         .cdr
         .get(&session.credential, &url, "application/json")
@@ -329,7 +329,7 @@ pub async fn create_event_subscription(
         ));
     }
     let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1("admin/event_subscription");
+    let url = state.cdr.extensions_v1("admin/event_subscription");
     let response = state
         .cdr
         .post(
@@ -372,7 +372,7 @@ pub async fn update_event_subscription(
         return Err(ViewerError::Invalid(tr_served(Msg::NoSubscriptionIdUpdate)));
     }
     let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1(&format!(
+    let url = state.cdr.extensions_v1(&format!(
         "admin/event_subscription/{}",
         urlencoding::encode(&subscription_id)
     ));
@@ -408,7 +408,7 @@ pub async fn delete_event_subscription(
         return Err(ViewerError::Invalid(tr_served(Msg::NoSubscriptionIdDelete)));
     }
     let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1(&format!(
+    let url = state.cdr.extensions_v1(&format!(
         "admin/event_subscription/{}",
         urlencoding::encode(&subscription_id)
     ));

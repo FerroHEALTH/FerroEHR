@@ -312,7 +312,9 @@ pub async fn delete_adl2_artefact(
         return Err(ViewerError::Invalid(tr_served(Msg::NoAdl2ArtefactIdDelete)));
     }
     let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1(&crate::adl2::artefact_path(&artefact_id));
+    let url = state
+        .cdr
+        .extensions_v1(&crate::adl2::artefact_path(&artefact_id));
     let response = state.cdr.delete(&session.credential, &url, &[]).await?;
     crate::cdr::CdrClient::expect_success(response)?;
     Ok(())

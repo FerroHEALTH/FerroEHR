@@ -33,6 +33,8 @@ use sqlx::PgPool;
 
 use crate::common;
 use crate::common::BASE;
+use crate::common::EXT;
+use crate::common::FHIR;
 
 /// The headers the default configuration reads the purpose and the permit from.
 const PURPOSE: &str = "x-purpose-of-use";
@@ -115,7 +117,7 @@ async fn a_population_query_is_recorded_with_its_purpose_and_permit() {
 async fn an_export_is_recorded_with_its_purpose_and_permit() {
     let (_db, pool, app, ehr) = app().await;
     for permit in [Some(PERMIT_ID), None] {
-        let mut req = Request::get(format!("{BASE}/message/export/{ehr}"))
+        let mut req = Request::get(format!("{EXT}/message/export/{ehr}"))
             .header(header::AUTHORIZATION, common::basic_credential("root"))
             .header(PURPOSE, "RESEARCH");
         if let Some(permit) = permit {
@@ -146,7 +148,7 @@ async fn exported_policies(app: &Router) -> Vec<Value> {
         let (status, body) = common::send_body(
             app,
             Request::get(format!(
-                "{BASE}/fhir/r4/AuditEvent?date=ge2026-01-01&patient={SUBJECT}"
+                "{FHIR}/AuditEvent?date=ge2026-01-01&patient={SUBJECT}"
             ))
             .header(header::AUTHORIZATION, common::basic_credential("root"))
             .body(Body::empty())

@@ -128,7 +128,7 @@ async fn app(with_store: bool, rbac: bool) -> (testkit::TestDb, Router, AuditSto
 fn get(path: &str, auth: &str) -> Request<Body> {
     Request::builder()
         .method("GET")
-        .uri(format!("{BASE}{path}"))
+        .uri(common::full(path))
         .header("authorization", auth)
         .body(Body::empty())
         .expect("request")
@@ -139,6 +139,47 @@ async fn body_json(resp: axum::response::Response) -> Value {
         .await
         .expect("body");
     serde_json::from_slice(&bytes).expect("json")
+}
+
+/// The ITI-81 retrieval is a FHIR interface, served at the FHIR root beside
+/// the openEHR base path, and nothing answers under the base path any more:
+/// ITS-REST defines no FHIR route (#4330).
+#[tokio::test]
+async fn the_retrieval_is_served_at_the_fhir_root_only() {
+    let (_pg, app, store) = app(true, false).await;
+    seed(
+        &store,
+        "2026-07-10T08:00:00Z",
+        EventActionCode::Read,
+        "alice",
+        Some("patient-1"),
+    )
+    .await;
+    let served = app
+        .clone()
+        .oneshot(get("/fhir/r4/AuditEvent?date=ge2026-07-01", &basic("root")))
+        .await
+        .expect("response");
+    assert_eq!(served.status(), StatusCode::OK);
+    for old in [
+        format!("{BASE}/fhir/r4/AuditEvent?date=ge2026-07-01"),
+        format!("{BASE}/terminology"),
+        format!("{BASE}/admin/config"),
+    ] {
+        let gone = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(&old)
+                    .header("authorization", basic("root"))
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(gone.status(), StatusCode::NOT_FOUND, "{old}");
+    }
 }
 
 #[tokio::test]

@@ -160,7 +160,7 @@ pub async fn fetch_openapi(
 pub async fn fetch_admin_config() -> Result<String, ViewerError> {
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1("admin/config");
+    let url = state.cdr.extensions_v1("admin/config");
     let response = state
         .cdr
         .get(&session.credential, &url, "application/json")

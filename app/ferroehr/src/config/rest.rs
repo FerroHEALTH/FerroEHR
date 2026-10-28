@@ -117,6 +117,17 @@ impl RestConfig {
         format!("{}/api-docs/openapi.json", self.rest_root())
     }
 
+    /// The root of FerroEHR's own API extensions, beside the openEHR base
+    /// path on their own version line: `{rest_root}/extensions/v1`.
+    ///
+    /// No openEHR spec governs where a server serves its extensions: our own
+    /// design (#4330), so nothing ITS-REST does not define is served under
+    /// the openEHR base path.
+    #[must_use]
+    pub fn extensions_path(&self) -> String {
+        format!("{}/extensions/v1", self.rest_root())
+    }
+
     /// The deployment's product root, where the non-openEHR surfaces live
     /// (`/status`, `/swagger-ui`, `/api-docs/openapi.json`,
     /// `/.well-known/smart-configuration`).

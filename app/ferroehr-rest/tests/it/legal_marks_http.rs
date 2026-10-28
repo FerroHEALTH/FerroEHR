@@ -47,15 +47,15 @@ async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
 }
 
 fn get(path: &str) -> Request<Body> {
-    common::get(&format!("{BASE}{path}"))
+    common::get(&common::full(path))
 }
 
 fn post_json(path: &str, body: &str) -> Request<Body> {
-    common::post_json(&format!("{BASE}{path}"), body)
+    common::post_json(&common::full(path), body)
 }
 
 fn put_json(path: &str, body: &str) -> Request<Body> {
-    let mut req = common::post_json(&format!("{BASE}{path}"), body);
+    let mut req = common::post_json(&common::full(path), body);
     *req.method_mut() = http::Method::PUT;
     req
 }

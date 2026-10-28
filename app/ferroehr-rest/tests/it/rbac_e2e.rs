@@ -38,6 +38,7 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, ResolveError};
 
 use crate::common;
+use crate::common::EXT;
 use http::{Request, StatusCode};
 use serde_json::{Value, json};
 use testkit::syslog_tls::SyslogTlsListener;
@@ -205,7 +206,7 @@ fn bearer_with_roles(roles: &[&str]) -> String {
 fn req(method: &str, path: &str, authorization: &str) -> Request<Body> {
     Request::builder()
         .method(method)
-        .uri(format!("{BASE}{path}"))
+        .uri(common::full(path))
         .header("authorization", authorization)
         .header("content-type", "application/json")
         .header("x-forwarded-for", "203.0.113.9")
@@ -439,7 +440,7 @@ async fn rbac_deny_is_audited() {
 fn get_unauth(path: &str) -> Request<Body> {
     Request::builder()
         .method("GET")
-        .uri(format!("{BASE}{path}"))
+        .uri(common::full(path))
         .body(Body::empty())
         .expect("request")
 }
@@ -556,7 +557,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
     let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs)
         .await
         .expect("build app");
-    for uri in [format!("{BASE}/admin/config"), "/management/env".to_owned()] {
+    for uri in [format!("{EXT}/admin/config"), "/management/env".to_owned()] {
         let request = Request::builder()
             .method("GET")
             .uri(&uri)

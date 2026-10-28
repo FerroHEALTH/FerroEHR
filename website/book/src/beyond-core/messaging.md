@@ -9,7 +9,8 @@ for. FerroEHR implements whole-EHR export, import into a new or an existing EHR
 > [!NOTE]
 > The openEHR **service model** defines a Message component, but the released
 > REST API publishes no extract or message endpoint at all. FerroEHR
-> therefore serves these operations under a `/message` group of its own design;
+> therefore serves these operations under a `/message` group of its own design,
+> beside the openEHR API at `/ferroehr/rest/extensions/v1/message`;
 > the routes are ours, not the standard's, and they gate no openEHR conformance
 > claim. Unlike the admin extensions, they are **not** admin-gated: they carry
 > the same ordinary authentication as the clinical API. The four routes, with

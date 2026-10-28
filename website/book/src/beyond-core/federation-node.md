@@ -26,7 +26,7 @@ A node exposes the openEHR REST API (ITS-REST 1.1.0) under its own base URL
 | A follow-up read by version uid (N22) | `GET {base}/ehr/{ehr_id}/composition/{uid}` and the other resource reads |
 | A routed write (N23) | the ITS-REST commit operations; `ETag` and `Location` come back for the gateway to pass through (N31) |
 | The node's `system_id` and release | `OPTIONS {base}/` and `GET {base}/` (ITS-REST system information) |
-| Moving a record between nodes | `GET {base}/message/export/{ehr_id}` and `POST {base}/message/import?ehr_id=…` ([EHR Extract & messaging](messaging.md)) |
+| Moving a record between nodes | `GET /ferroehr/rest/extensions/v1/message/export/{ehr_id}` and `POST /ferroehr/rest/extensions/v1/message/import?ehr_id=…` ([EHR Extract & messaging](messaging.md)) |
 
 The node answers an ITS-REST `RESULT_SET` (N17). It runs `WHERE`, `ORDER BY`,
 `LIMIT` and `OFFSET` locally; merging pages across nodes is the gateway's work

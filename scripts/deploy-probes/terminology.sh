@@ -147,7 +147,7 @@ term_ft_api_validate() {
   system="$(jq -rn --arg s "$TERM_FT_SYSTEM" '$s | @uri')"
   value_set="$(jq -rn --arg s "$TERM_FT_VALUE_SET" '$s | @uri')"
   curl -s -u "$BASIC" -w ' %{http_code}' \
-    "$API/terminology/${system}/value_set/${value_set}/validate?candidate_code=$code" \
+    "$EXT/terminology/${system}/value_set/${value_set}/validate?candidate_code=$code" \
     | awk '{ status = $NF; $NF = ""; sub(/ $/, ""); print status " " $0 }'
 }
 
@@ -344,7 +344,7 @@ probes_terminology() {
   wait_http "$CDR/health/readiness" 90 >/dev/null || true
   local system
   system="$(jq -rn '"http://snomed.info/sct" | @uri')"
-  assert_eq "200" "$(http_code -u "$BASIC" "$API/terminology/${system}/term/73211009")" \
+  assert_eq "200" "$(http_code -u "$BASIC" "$EXT/terminology/${system}/term/73211009")" \
     "the /terminology/* route reaches FerroTERM for a terminology the bundle does not carry"
   probe_done
 

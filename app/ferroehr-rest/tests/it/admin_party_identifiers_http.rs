@@ -42,6 +42,7 @@ use sqlx::PgPool;
 
 use crate::common;
 use crate::common::BASE;
+use crate::common::EXT;
 
 const ISSUER: &str = "https://issuer.example";
 const AUDIENCE: &str = "ferroehr";
@@ -243,7 +244,7 @@ async fn an_admin_without_the_reader_role_is_refused() {
     let (status, _, body) = call(
         &app,
         "GET",
-        &format!("{BASE}/admin/party/identifiers?version_uid={first}"),
+        &format!("{EXT}/admin/party/identifiers?version_uid={first}"),
         &admin,
         None,
         None,
@@ -255,7 +256,7 @@ async fn an_admin_without_the_reader_role_is_refused() {
     let (status, _, _) = call(
         &app,
         "GET",
-        &format!("{BASE}/admin/party/identifiers?version_uid={first}"),
+        &format!("{EXT}/admin/party/identifiers?version_uid={first}"),
         &bearer("identifier-clerk", &[READER_ROLE]),
         None,
         None,
@@ -288,7 +289,7 @@ async fn a_reader_sees_each_versions_value_and_each_read_is_recorded() {
         let (status, _, body) = call(
             &app,
             "GET",
-            &format!("{BASE}/admin/party/identifiers?version_uid={version}"),
+            &format!("{EXT}/admin/party/identifiers?version_uid={version}"),
             &reader,
             None,
             None,
@@ -329,7 +330,7 @@ async fn a_bad_version_uid_is_400_and_an_unknown_one_404() {
         let (status, _, body) = call(
             &app,
             "GET",
-            &format!("{BASE}/admin/party/identifiers{query}"),
+            &format!("{EXT}/admin/party/identifiers{query}"),
             &reader,
             None,
             None,

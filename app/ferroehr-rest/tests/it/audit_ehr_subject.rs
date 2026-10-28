@@ -33,7 +33,6 @@ use serde_json::Value;
 use sqlx::PgPool;
 
 use crate::common;
-use crate::common::BASE;
 
 /// The synthetic patient subject every EHR of the test resolves to.
 const SUBJECT: &str = "patient-subject-1";
@@ -42,7 +41,7 @@ const USER: &str = "archivist";
 
 /// A `GET` of `path` under the base path, as the test's user.
 fn get(path: &str) -> Request<Body> {
-    Request::get(format!("{BASE}{path}"))
+    Request::get(common::full(path))
         .header(header::AUTHORIZATION, common::basic_credential(USER))
         .body(Body::empty())
         .unwrap()

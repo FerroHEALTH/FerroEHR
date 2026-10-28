@@ -37,7 +37,8 @@ serves:
 | `GET` | `/terminology/{terminology_id}/value_set/{value_set_id}` | get a value set |
 | `GET` | `/terminology/{terminology_id}/value_set/{value_set_id}/validate?candidate_code=&at_date=` | test membership |
 
-All paths are relative to the API base path, `/ferroehr/rest/openehr/v1`. An
+All paths are relative to the extensions root, `/ferroehr/rest/extensions/v1`,
+where FerroEHR serves its own extensions beside the openEHR API. An
 unknown terminology or value set is a `404`; a missing required query parameter
 is a `400`.
 

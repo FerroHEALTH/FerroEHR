@@ -47,12 +47,12 @@ async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
 
 /// A bodyless `GET` of the [`BASE`]-relative `path`.
 fn get(path: &str) -> Request<Body> {
-    common::get(&format!("{BASE}{path}"))
+    common::get(&common::full(path))
 }
 
 /// A JSON `POST` of `body` to the [`BASE`]-relative `path`.
 fn post_json(path: &str, body: &str) -> Request<Body> {
-    common::post_json(&format!("{BASE}{path}"), body)
+    common::post_json(&common::full(path), body)
 }
 
 /// Create an EHR through the released wire and return its id.

@@ -79,6 +79,13 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(admin_ehr_delete_all))
         .routes(routes!(admin_ehr_delete))
+}
+
+/// The ADMIN routes ITS-REST does not define (the template, party and stored
+/// query deletes and the configuration read), mounted beside the openEHR base
+/// path ([`crate::api::extension_openapi_router`]).
+pub(crate) fn extension_routes() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
         .routes(routes!(admin_template_delete))
         .routes(routes!(admin_party_delete))
         .routes(routes!(admin_query_delete))

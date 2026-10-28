@@ -378,7 +378,7 @@ Four properties worth knowing before you enable it:
   value. A miss is recorded too: it says someone asked whether this deployment
   holds that identifier.
 - **Reading a value back is audited and needs its own role.**
-  `GET {base}/admin/party/identifiers` serves a party version with its values
+  `GET /ferroehr/rest/extensions/v1/admin/party/identifiers` serves a party version with its values
   put back, for a caller holding both the admin role and
   `authz.rbac.identifier_reader_role`, and records each scheme it expands
   ([reading a party's protected identifiers](../operations-admin-apis.md#reading-a-partys-protected-identifiers)).

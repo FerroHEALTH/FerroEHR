@@ -43,6 +43,7 @@ use sqlx::PgPool;
 
 use crate::common;
 use crate::common::BASE;
+use crate::common::EXT;
 
 /// The header the default configuration reads the declared purpose from.
 const PURPOSE: &str = "x-purpose-of-use";
@@ -302,7 +303,7 @@ async fn a_restricted_composition_reads_as_absent_until_lifted() {
     let (status, export) = send(
         &app,
         "GET",
-        &format!("{BASE}/message/export/{ehr}"),
+        &format!("{EXT}/message/export/{ehr}"),
         "clinician",
         None,
         None,
@@ -396,7 +397,7 @@ async fn a_restricted_ehr_reads_as_absent() {
     let (status, body) = send(
         &app,
         "GET",
-        &format!("{BASE}/admin/access-restriction?ehr_id={ehr}"),
+        &format!("{EXT}/admin/access-restriction?ehr_id={ehr}"),
         "root",
         None,
         None,

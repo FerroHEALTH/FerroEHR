@@ -184,11 +184,12 @@ empty list, not an error.
 Deletes are deliberately not part of the openEHR definition API, and FerroEHR
 keeps them off the provisioning routes:
 
-- an **OPT 1.4** template is removed with `DELETE /admin/template/{template_id}`,
+- an **OPT 1.4** template is removed with
+  `DELETE /ferroehr/rest/extensions/v1/admin/template/{template_id}`,
   behind the admin gate (see
   [Admin & messaging APIs](operations-admin-apis.md));
 - an **ADL 2** artefact is removed with
-  `DELETE /definition/artefact/adl2/{artefact_id}`.
+  `DELETE /ferroehr/rest/extensions/v1/definition/artefact/adl2/{artefact_id}`.
 
 Both refuse with **409 Conflict** while any committed version still references
 the template, and the message names how many versions still hold the reference.
@@ -200,7 +201,9 @@ from under it. Delete the compositions first.
 
 Beyond operational templates, FerroEHR can also hold the **source archetypes**
 they were built from, so a deployment can keep its definition material in one
-place:
+place. ITS-REST defines no archetype routes, so they sit under the extensions
+root, `/ferroehr/rest/extensions/v1`, beside the openEHR API, and every route
+below is relative to it:
 
 | Route | What it does |
 |---|---|

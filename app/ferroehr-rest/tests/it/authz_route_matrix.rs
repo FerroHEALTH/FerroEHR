@@ -165,7 +165,7 @@ const MANAGEMENT: &[(&str, &str)] = &[
     ("GET", "/management/status"),
 ];
 
-/// Clinical reads (base-relative). `POST /query/**` is a read despite its verb
+/// Clinical reads (relative to their namespace, [`crate::common::full`]). `POST /query/**` is a read despite its verb
 /// (AQL execution selects, it never commits), and so is `POST /message/export`
 /// — SM `I_EHR_EXTRACT_SERVICE.export_ehr_extracts`, whose selector is an
 /// `EXTRACT_SPEC` body.
@@ -289,7 +289,7 @@ const CLINICAL_READ: &[(&str, &str)] = &[
     ("POST", "/message/export"),
 ];
 
-/// Clinical writes (base-relative). The `/message` imports sit here
+/// Clinical writes (relative to their namespace). The `/message` imports sit here
 /// deliberately: the group carries the ordinary clinical authentication class
 /// rather than the admin gate (`api::message` module docs), like every other
 /// route that commits clinical content.
@@ -355,7 +355,7 @@ const CLINICAL_WRITE: &[(&str, &str)] = &[
     ("POST", "/message/import/{ehr_id}"),
 ];
 
-/// Admin-class reads (base-relative) — every one under the `/admin/` prefix
+/// Admin-class reads (relative to their namespace) — every one under the `/admin/` prefix
 /// the coarse gate keys on.
 const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/config"),
@@ -383,7 +383,7 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/party/identifiers"),
 ];
 
-/// Admin-class writes (base-relative).
+/// Admin-class writes (relative to their namespace).
 const ADMIN_WRITE: &[(&str, &str)] = &[
     ("DELETE", "/admin/ehr/all"),
     ("DELETE", "/admin/ehr/{ehr_id}"),
@@ -436,24 +436,27 @@ const HANDLER_ADMIN_READ: &[(&str, &str)] = &[("GET", "/fhir/r4/AuditEvent")];
 /// `(method, absolute path)`.
 fn declared() -> BTreeMap<(String, String), (Class, Effect)> {
     let mut out = BTreeMap::new();
-    // `prefix` is empty for the tables that already spell absolute paths.
-    let mut rows = |rows: &[(&str, &str)], prefix: &str, class: Class, effect: Effect| {
+    // `relative` is false for the tables that already spell absolute paths;
+    // the others name each route relative to its namespace.
+    let mut rows = |rows: &[(&str, &str)], relative: bool, class: Class, effect: Effect| {
         for (method, path) in rows {
-            let prior = out.insert(
-                ((*method).to_owned(), format!("{prefix}{path}")),
-                (class, effect),
-            );
+            let absolute = if relative {
+                common::full(path)
+            } else {
+                (*path).to_owned()
+            };
+            let prior = out.insert(((*method).to_owned(), absolute), (class, effect));
             assert!(prior.is_none(), "duplicate table row: {method} {path}");
         }
     };
     let public: Vec<(&str, &str)> = PUBLIC.iter().map(|(m, p, _)| (*m, *p)).collect();
-    rows(&public, "", Class::Public, Effect::Read);
-    rows(MANAGEMENT, "", Class::Management, Effect::Read);
-    rows(CLINICAL_READ, BASE, Class::Clinical, Effect::Read);
-    rows(CLINICAL_WRITE, BASE, Class::Clinical, Effect::Write);
-    rows(ADMIN_READ, BASE, Class::Admin, Effect::Read);
-    rows(ADMIN_WRITE, BASE, Class::Admin, Effect::Write);
-    rows(HANDLER_ADMIN_READ, BASE, Class::HandlerAdmin, Effect::Read);
+    rows(&public, false, Class::Public, Effect::Read);
+    rows(MANAGEMENT, false, Class::Management, Effect::Read);
+    rows(CLINICAL_READ, true, Class::Clinical, Effect::Read);
+    rows(CLINICAL_WRITE, true, Class::Clinical, Effect::Write);
+    rows(ADMIN_READ, true, Class::Admin, Effect::Read);
+    rows(ADMIN_WRITE, true, Class::Admin, Effect::Write);
+    rows(HANDLER_ADMIN_READ, true, Class::HandlerAdmin, Effect::Read);
     out
 }
 

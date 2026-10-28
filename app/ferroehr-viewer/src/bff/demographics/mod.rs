@@ -182,6 +182,18 @@ impl VersionedFamily {
         }
     }
 
+    /// The CDR URL of `path` (a `demographic/...` path of this family): under
+    /// the openEHR API for the released `versioned_party`, under the CDR's
+    /// extensions root for the relationship container.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[must_use]
+    pub fn url(self, cdr: &crate::cdr::CdrClient, path: &str) -> String {
+        match self {
+            Self::Party => cdr.rest_v1(path),
+            Self::PartyRelationship => cdr.extensions_v1(path),
+        }
+    }
+
     /// The family a route segment names, or `None` for anything else.
     ///
     /// Server functions are a public HTTP API, so the segment they
@@ -216,6 +228,15 @@ impl DemographicResource {
             Self::Party(kind) => kind.segment(),
             Self::Relationship => "party_relationship",
         }
+    }
+
+    /// The CDR URL of `path` (a `demographic/...` path of this resource):
+    /// under the openEHR API for a party, under the CDR's extensions root for
+    /// a relationship.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[must_use]
+    pub fn url(self, cdr: &crate::cdr::CdrClient, path: &str) -> String {
+        self.family().url(cdr, path)
     }
 
     /// The versioned-object family this resource's versions live in.
@@ -311,13 +332,11 @@ pub async fn fetch_versioned_object(
 ) -> Result<VersionedObjectFacts, ViewerError> {
     let session = crate::session::require_session().await?;
     let state: crate::state::AppState = leptos::prelude::expect_context();
-    let family = VersionedFamily::from_segment(&family)
-        .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?
-        .segment();
+    let versioned = VersionedFamily::from_segment(&family)
+        .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?;
+    let family = versioned.segment();
     let container = urlencoding::encode(&container_uid_of(&versioned_object_uid)).into_owned();
-    let object_url = state
-        .cdr
-        .rest_v1(&format!("demographic/{family}/{container}"));
+    let object_url = versioned.url(&state.cdr, &format!("demographic/{family}/{container}"));
     let object_response = state
         .cdr
         .get(&session.credential, &object_url, "application/json")
@@ -326,14 +345,18 @@ pub async fn fetch_versioned_object(
 
     let version_uid = version_uid.trim();
     let version_url = if version_uid.is_empty() {
-        state
-            .cdr
-            .rest_v1(&format!("demographic/{family}/{container}/version"))
+        versioned.url(
+            &state.cdr,
+            &format!("demographic/{family}/{container}/version"),
+        )
     } else {
-        state.cdr.rest_v1(&format!(
-            "demographic/{family}/{container}/version/{}",
-            urlencoding::encode(version_uid)
-        ))
+        versioned.url(
+            &state.cdr,
+            &format!(
+                "demographic/{family}/{container}/version/{}",
+                urlencoding::encode(version_uid)
+            ),
+        )
     };
     let version_response = state
         .cdr
@@ -368,11 +391,14 @@ pub async fn fetch_demographic_revision_history(
     let state: crate::state::AppState = leptos::prelude::expect_context();
     let family = VersionedFamily::from_segment(&family)
         .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?;
-    let url = state.cdr.rest_v1(&format!(
-        "demographic/{}/{}/revision_history",
-        family.segment(),
-        urlencoding::encode(&container_uid_of(&versioned_object_uid))
-    ));
+    let url = family.url(
+        &state.cdr,
+        &format!(
+            "demographic/{}/{}/revision_history",
+            family.segment(),
+            urlencoding::encode(&container_uid_of(&versioned_object_uid))
+        ),
+    );
     let response = state
         .cdr
         .get(&session.credential, &url, "application/json")
@@ -419,12 +445,15 @@ pub async fn resolve_demographic_version_at_time(
     if at_time.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::PickDateTimeTravel)));
     }
-    let url = state.cdr.rest_v1(&format!(
-        "demographic/{}/{}/version?version_at_time={}",
-        family.segment(),
-        urlencoding::encode(&container_uid_of(&versioned_object_uid)),
-        urlencoding::encode(&at_time),
-    ));
+    let url = family.url(
+        &state.cdr,
+        &format!(
+            "demographic/{}/{}/version?version_at_time={}",
+            family.segment(),
+            urlencoding::encode(&container_uid_of(&versioned_object_uid)),
+            urlencoding::encode(&at_time),
+        ),
+    );
     let response = state
         .cdr
         .get(&session.credential, &url, "application/json")
@@ -466,11 +495,14 @@ pub async fn fetch_demographic_version_document(
             Msg::VersionUidRequiredReadPastVersion,
         )));
     }
-    let url = state.cdr.rest_v1(&format!(
-        "demographic/{}/{}",
-        resource.segment(),
-        urlencoding::encode(version_uid)
-    ));
+    let url = resource.url(
+        &state.cdr,
+        &format!(
+            "demographic/{}/{}",
+            resource.segment(),
+            urlencoding::encode(version_uid)
+        ),
+    );
     let response = state
         .cdr
         .get(&session.credential, &url, "application/json")

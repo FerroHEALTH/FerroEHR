@@ -83,7 +83,12 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
             query_execute_stored_query_version,
             query_execute_stored_query_version_body
         ))
-        .routes(routes!(query_execute_cohort))
+}
+
+/// The cohort query, which ITS-REST does not define, mounted beside the
+/// openEHR base path ([`crate::api::extension_openapi_router`]).
+pub(crate) fn cohort_routes() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new().routes(routes!(query_execute_cohort))
 }
 
 /// Execute an ad-hoc AQL query from the query string (`GET /query/aql`).

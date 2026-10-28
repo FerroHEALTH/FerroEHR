@@ -193,14 +193,16 @@ async fn seed(cdr: &str, user: &str, pass: &str, ehr: String, composition: Strin
     .await;
     println!("stored query seed -> {status}");
     let (status, _) = send(
-        http.post(format!("{root}/admin/event_subscription"))
-            .json(&serde_json::json!({
-                "name": SUBSCRIPTION,
-                "kind": "COMPOSITION",
-                "change_type": "249",
-                "template_id": TEMPLATE_ID,
-                "enabled": true
-            })),
+        http.post(format!(
+            "{cdr}/ferroehr/rest/extensions/v1/admin/event_subscription"
+        ))
+        .json(&serde_json::json!({
+            "name": SUBSCRIPTION,
+            "kind": "COMPOSITION",
+            "change_type": "249",
+            "template_id": TEMPLATE_ID,
+            "enabled": true
+        })),
         user,
         pass,
     )

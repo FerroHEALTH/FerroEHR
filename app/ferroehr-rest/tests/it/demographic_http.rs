@@ -39,6 +39,7 @@ use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
+use crate::common::EXT;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 
@@ -730,15 +731,15 @@ async fn versioned_party_relationship_reads_emit_versioning_headers() {
 
     for (uri, expected_etag) in [
         (
-            format!("{BASE}/demographic/versioned_party_relationship/{vo}"),
+            format!("{EXT}/demographic/versioned_party_relationship/{vo}"),
             vo.clone(),
         ),
         (
-            format!("{BASE}/demographic/versioned_party_relationship/{vo}/revision_history"),
+            format!("{EXT}/demographic/versioned_party_relationship/{vo}/revision_history"),
             vo.clone(),
         ),
         (
-            format!("{BASE}/demographic/versioned_party_relationship/{vo}/version/{ovid}"),
+            format!("{EXT}/demographic/versioned_party_relationship/{vo}/version/{ovid}"),
             ovid.clone(),
         ),
     ] {
@@ -790,7 +791,7 @@ async fn party_relationship_create_is_mounted_with_headers() {
     let (_pg, app) = app().await;
     let req = Request::builder()
         .method("POST")
-        .uri(format!("{BASE}/demographic/party_relationship"))
+        .uri(format!("{EXT}/demographic/party_relationship"))
         .header(header::CONTENT_TYPE, "application/json")
         .header("Prefer", "return=representation")
         .body(Body::from(relationship_body().to_string()))
@@ -802,7 +803,7 @@ async fn party_relationship_create_is_mounted_with_headers() {
     assert_eq!(etag(&h), Some(format!("W/\"{uid}\"").as_str()));
     assert_eq!(
         location(&h),
-        Some(format!("{BASE}/demographic/party_relationship/{uid}").as_str())
+        Some(format!("{EXT}/demographic/party_relationship/{uid}").as_str())
     );
     let v: Value = serde_json::from_str(&body).expect("json body");
     assert_eq!(v["_type"], "PARTY_RELATIONSHIP");
@@ -816,7 +817,7 @@ async fn party_relationship_get_is_mounted() {
 
     let req = Request::builder()
         .method("GET")
-        .uri(format!("{BASE}/demographic/party_relationship/{vo}"))
+        .uri(format!("{EXT}/demographic/party_relationship/{vo}"))
         .body(Body::empty())
         .unwrap();
     let (status, h, body) = send(&app, req).await;
@@ -840,7 +841,7 @@ async fn versioned_party_relationship_is_mounted() {
     let req = Request::builder()
         .method("GET")
         .uri(format!(
-            "{BASE}/demographic/versioned_party_relationship/{vo}"
+            "{EXT}/demographic/versioned_party_relationship/{vo}"
         ))
         .body(Body::empty())
         .unwrap();

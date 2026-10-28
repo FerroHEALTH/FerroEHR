@@ -542,11 +542,14 @@ Four controls sit on top of it, and they are separate on purpose:
 
 ## Retrieving audit records (ITI-81)
 
-The RESTful-ATNA **ITI-81 Retrieve ATNA Audit Event** transaction is served
-under the FHIR R4 path `fhir/r4`, the one FHIR route FerroEHR serves:
+The RESTful-ATNA **ITI-81 Retrieve ATNA Audit Event** transaction is a FHIR
+search on `AuditEvent`, so it is served at FerroEHR's FHIR R4 base,
+`/ferroehr/rest/fhir/r4`, beside the openEHR API rather than under it, where a
+FHIR client or an IHE Audit Consumer expects `[base]/AuditEvent`. It is the one
+FHIR route FerroEHR serves:
 
 ```text
-GET /ferroehr/rest/openehr/v1/fhir/r4/AuditEvent
+GET /ferroehr/rest/fhir/r4/AuditEvent
 ```
 
 It returns a FHIR `searchset` Bundle of the matching records' `AuditEvent`
@@ -605,7 +608,7 @@ store is disabled.
 ```bash
 # Who accessed patient-42's data this month?
 curl -u admin:pw \
-  "https://cdr.example.org/ferroehr/rest/openehr/v1/fhir/r4/AuditEvent?patient=patient-42&date=ge2026-07-01T00:00:00Z"
+  "https://cdr.example.org/ferroehr/rest/fhir/r4/AuditEvent?patient=patient-42&date=ge2026-07-01T00:00:00Z"
 ```
 
 This is also the openEHR "record demerging" instrument: when data lands in

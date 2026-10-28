@@ -31,6 +31,8 @@
 set -Eeuo pipefail
 
 BASE="${SANDBOX_BASE:-https://sandbox.ferroehr.eu}/ferroehr/rest/openehr/v1"
+# FerroEHR's own extensions sit beside the openEHR API (#4330).
+EXT="${SANDBOX_BASE:-https://sandbox.ferroehr.eu}/ferroehr/rest/extensions/v1"
 AUTH="${SANDBOX_USER:-ferroehr}:${SANDBOX_PASS:-ferroehr}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SEED_DIR="$ROOT_DIR/scripts/sandbox/seed"
@@ -253,7 +255,7 @@ loinc_probe="$(mf '.adl2.archetype_library.loinc.probe')"
 loinc_named="$(mf '.adl2.archetype_library.loinc.refused_when_served[]')"
 loinc_count="$(mf '.adl2.archetype_library.loinc.refused_when_served | length')"
 loinc_outcome=refused
-code=$(request "LOINC probe $loinc_probe" GET "$BASE/terminology/http%3A%2F%2Floinc.org/term/$loinc_probe")
+code=$(request "LOINC probe $loinc_probe" GET "$EXT/terminology/http%3A%2F%2Floinc.org/term/$loinc_probe")
 case "${SANDBOX_TERMINOLOGY:-}:$code" in
   :200) echo "==> the CDR resolves LOINC $loinc_probe; VETDF verifies the library's LOINC bindings" ;;
   :404)
@@ -532,7 +534,7 @@ while read -r entry; do
   render "$SEED_DIR/$file" "$WORK/relationship.json" \
     "__SOURCE__=${persons[$source_index]}" "__TARGET__=${persons[$target_index]}"
   code=$(request "relationship $(basename "$file")" POST \
-    "$BASE/demographic/party_relationship" \
+    "$EXT/demographic/party_relationship" \
     -H "$CT_JSON" --data-binary @"$WORK/relationship.json")
   expect "relationship $(basename "$file")" "$code" 201
   relationships=$((relationships + 1))

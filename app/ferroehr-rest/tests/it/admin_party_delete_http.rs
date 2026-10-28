@@ -40,6 +40,7 @@ use sqlx::PgPool;
 
 use crate::common;
 use crate::common::BASE;
+use crate::common::EXT;
 
 const ISSUER: &str = "https://issuer.example";
 const AUDIENCE: &str = "ferroehr";
@@ -187,7 +188,7 @@ async fn a_non_admin_is_refused_and_the_party_survives() {
     let (status, _) = call(
         &app,
         "DELETE",
-        &format!("{BASE}/admin/party/{party}"),
+        &format!("{EXT}/admin/party/{party}"),
         &bearer("party-clinician", "USER"),
         None,
     )
@@ -208,7 +209,7 @@ async fn an_admin_deletes_the_party_and_the_access_record_names_it() {
     let (status, headers) = call(
         &app,
         "DELETE",
-        &format!("{BASE}/admin/party/{party}"),
+        &format!("{EXT}/admin/party/{party}"),
         &admin,
         None,
     )
@@ -235,7 +236,7 @@ async fn an_unknown_party_is_404_and_a_malformed_id_400() {
     let (unknown, _) = call(
         &app,
         "DELETE",
-        &format!("{BASE}/admin/party/{UNKNOWN_PARTY}"),
+        &format!("{EXT}/admin/party/{UNKNOWN_PARTY}"),
         &admin,
         None,
     )
@@ -244,7 +245,7 @@ async fn an_unknown_party_is_404_and_a_malformed_id_400() {
     let (malformed, _) = call(
         &app,
         "DELETE",
-        &format!("{BASE}/admin/party/not-a-uuid"),
+        &format!("{EXT}/admin/party/not-a-uuid"),
         &admin,
         None,
     )

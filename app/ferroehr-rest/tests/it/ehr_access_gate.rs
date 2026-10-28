@@ -45,7 +45,6 @@ use http::{Request, StatusCode};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
-const BASE: &str = "/ferroehr/rest/openehr/v1";
 const EHR_ID: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
 // ── config + app assembly ─────────────────────────────────────────────────────
@@ -164,7 +163,7 @@ fn base64_encode(bytes: &[u8]) -> String {
 fn req(method: &str, path: &str, authorization: Option<&str>, body: &str) -> Request<Body> {
     let mut b = Request::builder()
         .method(method)
-        .uri(format!("{BASE}{path}"))
+        .uri(common::full(path))
         .header("content-type", "application/json")
         .header("x-forwarded-for", "203.0.113.9");
     if let Some(auth) = authorization {

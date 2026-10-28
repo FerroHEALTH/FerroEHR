@@ -155,7 +155,7 @@ pub async fn fetch_relationship(
             RecordsMsg::RelationshipIdRequired,
         )));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = state.cdr.extensions_v1(&format!(
         "demographic/party_relationship/{}",
         urlencoding::encode(&uid)
     ));
@@ -223,7 +223,7 @@ pub async fn create_relationship(
         details,
     })
     .map_err(ViewerError::Invalid)?;
-    let url = state.cdr.rest_v1("demographic/party_relationship");
+    let url = state.cdr.extensions_v1("demographic/party_relationship");
     let response = state
         .cdr
         .post(
@@ -284,7 +284,7 @@ pub async fn update_relationship(
     }
     let body = apply_relationship_edits(&base_body, &name, &details)?;
     let if_match = format!("\"{current}\"");
-    let url = state.cdr.rest_v1(&format!(
+    let url = state.cdr.extensions_v1(&format!(
         "demographic/party_relationship/{}",
         urlencoding::encode(&container_uid_of(&versioned_object_uid))
     ));
@@ -330,7 +330,7 @@ pub async fn delete_relationship(
             RecordsMsg::DeletingRelationshipNeedsLatestVersionS,
         )));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = state.cdr.extensions_v1(&format!(
         "demographic/party_relationship/{}",
         urlencoding::encode(version_uid)
     ));

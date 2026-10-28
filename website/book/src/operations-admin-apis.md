@@ -11,18 +11,21 @@ answers.
 
 ## Where these routes live, and what gates them
 
-Both groups are mounted under the API base path, so every path below is
-relative to it. With the default `rest.base_path`, `{base}` reads
-`/ferroehr/rest/openehr/v1`, and `{base}/admin/dump` is
-`/ferroehr/rest/openehr/v1/admin/dump`.
+The routes ITS-REST defines (the two EHR deletes) sit under the openEHR base
+path, `{base}`: with the default `rest.base_path` it reads
+`/ferroehr/rest/openehr/v1`. Every other route on this page is FerroEHR's own
+extension and sits beside it under `{ext}`, which reads
+`/ferroehr/rest/extensions/v1`; so `{ext}/admin/dump` is
+`/ferroehr/rest/extensions/v1/admin/dump`. Nothing ITS-REST does not define is
+served under the openEHR base path.
 
 The two groups are gated differently, and the difference matters
 operationally:
 
 | Group | Switch | Authorization class | While switched off |
 |---|---|---|---|
-| `{base}/admin/…` | `admin.enabled` (`FERROEHR__ADMIN__ENABLED`), default `false` | admin: the configured `authz.rbac.admin_role` (`ADMIN` by default) | every route answers **405 Method Not Allowed** with an **empty** `Allow` header: the resource exists but currently serves no method |
-| `{base}/message/…` | none (always mounted) | ordinary clinical, exactly like the composition API | n/a |
+| `{base}/admin/…` and `{ext}/admin/…` | `admin.enabled` (`FERROEHR__ADMIN__ENABLED`), default `false` | admin: the configured `authz.rbac.admin_role` (`ADMIN` by default) | every route answers **405 Method Not Allowed** with an **empty** `Allow` header: the resource exists but currently serves no method |
+| `{ext}/message/…` | none (always mounted) | ordinary clinical, exactly like the composition API | n/a |
 
 Two consequences worth planning around:
 
@@ -57,10 +60,10 @@ erasure requests and test-data cleanup.
 |---|---|---|
 | `DELETE {base}/admin/ehr/{ehr_id}` | **204**: the EHR and every resource it owns (compositions, `EHR_STATUS`, item tags, contributions, and all their historical versions) are physically gone | **400** malformed id (rejected before any deletion), **404** no EHR with that id |
 | `DELETE {base}/admin/ehr/all` | **204**: bulk delete | **400** any id in the list is not a well-formed UUID; the whole request is refused before anything is deleted |
-| `DELETE {base}/admin/party/{party_id}` | **204**: the demographic party, every `PARTY_RELATIONSHIP` naming it as source or target, and all their versions, contributions and commit audits are physically gone | **400** malformed id, **404** no party with that id (a relationship id is refused the same way) |
-| `DELETE {base}/admin/template/{template_id}` | **204** | **404** unknown template, **409** a committed version still references it |
-| `DELETE {base}/admin/query/{qualified_query_name}/{version}` | **204** | **404** unknown name, or a known name with no such version |
-| `GET {base}/admin/config` | **200**: the effective configuration as a redacted JSON tree | — |
+| `DELETE {ext}/admin/party/{party_id}` | **204**: the demographic party, every `PARTY_RELATIONSHIP` naming it as source or target, and all their versions, contributions and commit audits are physically gone | **400** malformed id, **404** no party with that id (a relationship id is refused the same way) |
+| `DELETE {ext}/admin/template/{template_id}` | **204** | **404** unknown template, **409** a committed version still references it |
+| `DELETE {ext}/admin/query/{qualified_query_name}/{version}` | **204** | **404** unknown name, or a known name with no such version |
+| `GET {ext}/admin/config` | **200**: the effective configuration as a redacted JSON tree | — |
 
 Every route additionally answers **401** unauthenticated, **403** for an
 authenticated caller outside the admin class, and **405** while the group is
@@ -78,7 +81,7 @@ is then erased in the linkage domain, and the externalized multimedia blobs no
 surviving version still references are removed from the object store.
 
 **A party delete announces itself the same way.** `DELETE
-{base}/admin/party/{party_id}` deletes a party physically. The released Admin API defines deletion for EHRs only, so the route
+{ext}/admin/party/{party_id}` deletes a party physically. The released Admin API defines deletion for EHRs only, so the route
 is our own extension, and the served OpenAPI document says so. It writes one
 erasure tombstone on the party domain's own outbox before its transaction
 commits, naming the party and every `PARTY_RELATIONSHIP` erased with it. A
@@ -143,10 +146,10 @@ rather than failing.
 
 | Route | **200** body |
 |---|---|
-| `GET {base}/admin/report/contribution` | the matching CONTRIBUTION ids as a JSON array, ordered by commit time then id |
-| `GET {base}/admin/report/contribution/count` | how many there are, as a bare JSON number |
-| `GET {base}/admin/report/versioned_composition/count` | how many distinct COMPOSITION version containers had a version committed in the interval |
-| `GET {base}/admin/report/composition_version/count` | how many individual COMPOSITION versions were committed in the interval |
+| `GET {ext}/admin/report/contribution` | the matching CONTRIBUTION ids as a JSON array, ordered by commit time then id |
+| `GET {ext}/admin/report/contribution/count` | how many there are, as a bare JSON number |
+| `GET {ext}/admin/report/versioned_composition/count` | how many distinct COMPOSITION version containers had a version committed in the interval |
+| `GET {ext}/admin/report/composition_version/count` | how many individual COMPOSITION versions were committed in the interval |
 
 **400** covers an absent `a_service`, one that names no known service, a
 `time_interval` that is not `<lower>/<upper>`, a bound that is not a valid ISO
@@ -165,10 +168,10 @@ whole revision history intact.
 
 | Route | Body | Success |
 |---|---|---|
-| `POST {base}/admin/archive/ehrs` | `{"ehr_ids": ["…"]}` | **204**: every named EHR and all its versioned content is archived |
-| `POST {base}/admin/archive/parties` | `{"party_ids": ["…"]}` | **204**: every named demographic party is archived |
-| `POST {base}/admin/archive/ehrs/restore` | `{"ehr_ids": ["…"]}` | **204**: every named EHR's archived content is back in the primary tier |
-| `POST {base}/admin/archive/parties/restore` | `{"party_ids": ["…"]}` | **204**: every named party's archived content is back in the primary tier |
+| `POST {ext}/admin/archive/ehrs` | `{"ehr_ids": ["…"]}` | **204**: every named EHR and all its versioned content is archived |
+| `POST {ext}/admin/archive/parties` | `{"party_ids": ["…"]}` | **204**: every named demographic party is archived |
+| `POST {ext}/admin/archive/ehrs/restore` | `{"ehr_ids": ["…"]}` | **204**: every named EHR's archived content is back in the primary tier |
+| `POST {ext}/admin/archive/parties/restore` | `{"party_ids": ["…"]}` | **204**: every named party's archived content is back in the primary tier |
 
 All four are **all-or-nothing and idempotent**: a body of the wrong shape or a
 malformed id is **400** and an id that names nothing is **404**, in both cases
@@ -189,7 +192,7 @@ archived: no extra tablespace, volume, or external service to operate. Reads
 of unarchived records never touch the cold tier; a read that addresses an
 archived record is served from it. Writing to an archived record brings it
 back to the primary tier first, so a versioned object is never split across
-tiers; a physical delete clears both tiers; and `{base}/admin/dump` still
+tiers; a physical delete clears both tiers; and `{ext}/admin/dump` still
 exports archived content.
 
 Two consequences to plan for:
@@ -214,18 +217,18 @@ anything.
 
 | Route | Body or parameter | Success |
 |---|---|---|
-| `POST {base}/admin/restriction` | `{"ehr_id": "…", "vo_id": "…"?, "ground": "…", "note": "…"?}` | **204**: the restriction is recorded and in force |
-| `GET {base}/admin/restriction` | `?ehr_id=…` | **200**: the register, newest request first, lifts included |
-| `POST {base}/admin/restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force restriction at that grain is lifted |
-| `POST {base}/admin/research-objection` | `{"ehr_id": "…", "objected": true, "ground": "…"?}` | **204**: the objection, its override, or its withdrawal is recorded |
-| `PUT {base}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set |
-| `GET {base}/admin/retention/policy` | — | **200**: the whole retention register, each period with its `category` (`null` for every object of the kind) |
-| `PUT {base}/admin/retention/anchor` | `{"ehr_id": "…", "jurisdiction": "…", "anchored_at": "…"?, "hold_at": "…"?, "hold_ground": "…"?}` | **204**: the EHR's anchor and any whole-record hold |
-| `POST {base}/admin/retention/hold` | `{"vo_id": "…", "held": true}` | **204**: the per-object exemption is placed or released |
-| `GET {base}/admin/retention/due` | `?limit=100` | **200**: what has run out, oldest first, per period and category, with the due and held object counts |
-| `POST {base}/admin/access-restriction` | `{"ehr_id": "…", "vo_id": "…"?, "note": "…"?}` | **204**: the EHDS Art. 8 restriction of access by health professionals is recorded and in force |
-| `GET {base}/admin/access-restriction` | `?ehr_id=…` | **200**: the access-restriction register, newest request first, lifts included |
-| `POST {base}/admin/access-restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force access restriction at that grain is lifted |
+| `POST {ext}/admin/restriction` | `{"ehr_id": "…", "vo_id": "…"?, "ground": "…", "note": "…"?}` | **204**: the restriction is recorded and in force |
+| `GET {ext}/admin/restriction` | `?ehr_id=…` | **200**: the register, newest request first, lifts included |
+| `POST {ext}/admin/restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force restriction at that grain is lifted |
+| `POST {ext}/admin/research-objection` | `{"ehr_id": "…", "objected": true, "ground": "…"?}` | **204**: the objection, its override, or its withdrawal is recorded |
+| `PUT {ext}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set |
+| `GET {ext}/admin/retention/policy` | — | **200**: the whole retention register, each period with its `category` (`null` for every object of the kind) |
+| `PUT {ext}/admin/retention/anchor` | `{"ehr_id": "…", "jurisdiction": "…", "anchored_at": "…"?, "hold_at": "…"?, "hold_ground": "…"?}` | **204**: the EHR's anchor and any whole-record hold |
+| `POST {ext}/admin/retention/hold` | `{"vo_id": "…", "held": true}` | **204**: the per-object exemption is placed or released |
+| `GET {ext}/admin/retention/due` | `?limit=100` | **200**: what has run out, oldest first, per period and category, with the due and held object counts |
+| `POST {ext}/admin/access-restriction` | `{"ehr_id": "…", "vo_id": "…"?, "note": "…"?}` | **204**: the EHDS Art. 8 restriction of access by health professionals is recorded and in force |
+| `GET {ext}/admin/access-restriction` | `?ehr_id=…` | **200**: the access-restriction register, newest request first, lifts included |
+| `POST {ext}/admin/access-restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force access restriction at that grain is lifted |
 
 A body of the wrong shape or a malformed id is **400**, an id that names nothing
 is **404**, and a body without `Content-Type: application/json` is **415**, in
@@ -268,7 +271,7 @@ professionals](security.md#restriction-of-access-by-health-professionals-ehds-ar
 With [national-identifier protection](installation/config-privacy.md#protecting-national-identifiers-in-the-demographic-domain)
 on, a party's versioned body carries a reference where each protected
 identifier stood, and every ordinary read serves that reference.
-`GET {base}/admin/party/identifiers` is the one route that puts the values back
+`GET {ext}/admin/party/identifiers` is the one route that puts the values back
 for a reader entitled to see them. No openEHR specification governs it; it is
 our own extension.
 
@@ -316,8 +319,8 @@ breaks that agreement.
 
 | Route | **200** body |
 |---|---|
-| `POST {base}/admin/integrity/verify` | the sweep report |
-| `POST {base}/admin/integrity/rebuild-nodes` | the rebuild report |
+| `POST {ext}/admin/integrity/verify` | the sweep report |
+| `POST {ext}/admin/integrity/rebuild-nodes` | the rebuild report |
 
 The sweep covers **both pseudonymisation domains**, clinical and demographic,
 in one pass. Every finding names the domain it came from, so a report can never
@@ -429,7 +432,7 @@ it saw, so the status stays **200** and the report is the body. Check
 
 ### Repairing what the sweep found
 
-The sweep is the diagnosis. `POST {base}/admin/integrity/rebuild-nodes` is the
+The sweep is the diagnosis. `POST {ext}/admin/integrity/rebuild-nodes` is the
 repair: it re-derives the decomposed rows of every damaged version from that
 version's stored document, one transaction per version.
 
@@ -530,7 +533,7 @@ Two routes that move the whole repository to and from an archive on the
 with a JSON array of per-entity failure reports; an **empty** array means
 everything succeeded.
 
-### `POST {base}/admin/dump`
+### `POST {ext}/admin/dump`
 
 Writes an archive of every EHR **and of every standalone demographic
 container**: the parties and party relationships that live outside any EHR.
@@ -565,7 +568,7 @@ archive's own bookkeeping (the manifest and the segment skeleton) stays JSON
 in both logical formats, because openEHR publishes no XML document form for
 it.
 
-### `POST {base}/admin/load`
+### `POST {ext}/admin/load`
 
 Populates the repository from an archive. It takes the location and nothing
 else: the container (loose files, a single `archive.zip`, or a single
@@ -628,17 +631,17 @@ while the rest of the archive loads.
 
 ## EHR Extract export and import
 
-Four routes under `{base}/message` that move whole records between systems.
+Four routes under `{ext}/message` that move whole records between systems.
 Unlike the admin extensions above, these are **not** admin-gated; see
 [the gate table](#where-these-routes-live-and-what-gates-them).
 
-- `GET {base}/message/export/{ehr_id}`: export one whole EHR. **200** with a
+- `GET {ext}/message/export/{ehr_id}`: export one whole EHR. **200** with a
   JSON array holding one `EXTRACT` that carries every versioned object of the
   EHR, latest versions only. **400** if `ehr_id` is not a well-formed
   identifier, which is refused before any lookup; **404** if the EHR does not
   exist; **406** if `Accept` cannot be satisfied (the extract list is JSON
   only).
-- `POST {base}/message/export` with an `EXTRACT_SPEC` body — export by
+- `POST {ext}/message/export` with an `EXTRACT_SPEC` body — export by
   specification. **200** with one `EXTRACT` per manifest entity, in manifest
   order. The manifest must name at least one entity, and each entity must
   name its record by `ehr_id` or `subject_id`, otherwise **400**; an
@@ -650,14 +653,14 @@ Unlike the admin extensions above, these are **not** admin-gated; see
   criteria, an unsupported commit-time interval). This route is classified as
   a **read**: it selects over held versions and commits nothing, exactly like
   the ad-hoc AQL `POST`.
-- `POST {base}/message/import` with an `EXTRACT` body — clone a whole EHR. Add
+- `POST {ext}/message/import` with an `EXTRACT` body — clone a whole EHR. Add
   `?ehr_id=<uuid>` to fix the identifier the clone lands under; leave it off
   and the source identifier the extract carries is re-used. **201** with
   `{"uid": "<ehr_id>"}`, so a caller that supplied no id still learns what was
   created. The extract must carry an `EHR_STATUS` (**400**), and the target
   must not already exist: **409**, which also covers an imported `EHR_STATUS`
   naming a subject another EHR already holds.
-- `POST {base}/message/import/{ehr_id}` with an `EXTRACT` body — add the
+- `POST {ext}/message/import/{ehr_id}` with an `EXTRACT` body — add the
   extract's content to an **existing** EHR as new versions. **204**. **404**
   if the EHR does not exist; **409** if the EHR already holds an `EHR_STATUS`
   or `EHR_ACCESS` under a different object id, or the imported status names
@@ -668,7 +671,7 @@ All four accept either `application/json` or `application/xml` bodies; any
 other `Content-Type` is **415**.
 
 > [!NOTE]
-> The whole `{base}/message` group is a FerroEHR extension: the openEHR service
+> The whole `{ext}/message` group is a FerroEHR extension: the openEHR service
 > model defines a Message component, but the released REST API publishes no
 > message or extract endpoint at all. These URLs are our own and gate no
 > openEHR conformance claim; see [Conformance](conformance.md). For the

@@ -24,7 +24,7 @@ command:
 - **Clinical records.** Medical-records law sets retention periods measured in
   years after the last treatment or after death. If the records must survive
   the instance, move them first: export each EHR over the API, or take a full
-  dump through `{base}/admin/dump`
+  dump through `/ferroehr/rest/extensions/v1/admin/dump`
   ([dump and load](operations-admin-apis.md#dump-and-load)), and check the
   copy in its new home before you erase. The retention marks and what is
   already due are described in
@@ -231,7 +231,7 @@ makes cryptographic erasure possible at the end.
 ## Removing a single party
 
 The openEHR Admin API in ITS-REST defines deletion routes for EHRs only.
-FerroEHR adds one of its own for a party: `DELETE {base}/admin/party/{party_id}`
+FerroEHR adds one of its own for a party: `DELETE /ferroehr/rest/extensions/v1/admin/party/{party_id}`
 runs the specification's `physical_party_delete` operation, removing the party
 and every `PARTY_RELATIONSHIP` that names it, with all their versions. It sits
 behind the admin API switch and the admin role, like the EHR delete, and

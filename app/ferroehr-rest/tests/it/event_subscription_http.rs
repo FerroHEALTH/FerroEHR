@@ -35,7 +35,7 @@ use ferrohealth_smart::config::AuthSection;
 use crate::common;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
-const GROUP: &str = "/ferroehr/rest/openehr/v1/admin/event_subscription";
+const GROUP: &str = "/ferroehr/rest/extensions/v1/admin/event_subscription";
 
 fn config(enabled: bool) -> AppConfig {
     AppConfig {

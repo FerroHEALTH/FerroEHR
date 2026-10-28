@@ -81,7 +81,7 @@ no way to spell an array index.
 > [!NOTE]
 > Enum values are lowercase / `snake_case` tokens, exactly as the tables show.
 > Secret-typed keys are redacted everywhere the configuration is rendered (the
-> `/management/env` snapshot, `GET {base}/admin/config`, `ferroehr config
+> `/management/env` snapshot, `GET /ferroehr/rest/extensions/v1/admin/config`, `ferroehr config
 > check`, `ferroehr report`, logs), and a secret-URL key shows its host and path
 > with the embedded credentials masked. Each secret, and each database and
 > broker URL, has a `*_file` sibling that reads the value from a

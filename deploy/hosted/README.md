@@ -175,7 +175,7 @@ first ask and answers the same one after. The answer is the file
 `reseed.sh` reads as `SANDBOX_IDENTITIES`. FerroPIX's database is never wiped,
 so every night answers the same pseudonyms, and after a reset the CDR's EHRs
 and FerroPIX's identities agree. A visitor sees the resolution through
-`POST /ferroehr/rest/openehr/v1/query/cohort` with `subjects` named in
+`POST /ferroehr/rest/extensions/v1/query/cohort` with `subjects` named in
 `urn:oid:2.999.1.1` (`[cohort] subjects = true`; the small-cell floor of 5
 applies).
 

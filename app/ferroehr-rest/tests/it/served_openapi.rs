@@ -1404,13 +1404,13 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
     },
     NonSpecFamily {
         label: "the terminology extension wire",
-        prefixes: &["/ferroehr/rest/openehr/v1/terminology"],
+        prefixes: &["/ferroehr/rest/extensions/v1/terminology"],
         flag: "no openehr spec governs this",
         operations: 6,
     },
     NonSpecFamily {
         label: "the event-subscription extension",
-        prefixes: &["/ferroehr/rest/openehr/v1/admin/event_subscription"],
+        prefixes: &["/ferroehr/rest/extensions/v1/admin/event_subscription"],
         flag: "no openehr spec governs this",
         operations: 5,
     },
@@ -1418,15 +1418,15 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // IHE ITI-81 is its own (non-openEHR) basis; the flag still has to say
         // that no openEHR spec governs the endpoint.
         label: "the ITI-81 ATNA audit retrieval",
-        prefixes: &["/ferroehr/rest/openehr/v1/fhir/r4/AuditEvent"],
+        prefixes: &["/ferroehr/rest/fhir/r4/AuditEvent"],
         flag: "no openehr spec governs this",
         operations: 1,
     },
     NonSpecFamily {
         label: "the PARTY_RELATIONSHIP demographic extension",
         prefixes: &[
-            "/ferroehr/rest/openehr/v1/demographic/party_relationship",
-            "/ferroehr/rest/openehr/v1/demographic/versioned_party_relationship",
+            "/ferroehr/rest/extensions/v1/demographic/party_relationship",
+            "/ferroehr/rest/extensions/v1/demographic/versioned_party_relationship",
         ],
         flag: "no its-rest operation governs this",
         operations: 8,
@@ -1435,17 +1435,17 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // ITS-REST publishes an ad-hoc and a stored query and nothing else;
         // AQL has no demographic source at all.
         label: "the cohort-query extension",
-        prefixes: &["/ferroehr/rest/openehr/v1/query/cohort"],
+        prefixes: &["/ferroehr/rest/extensions/v1/query/cohort"],
         flag: "no openehr spec governs this",
         operations: 1,
     },
     NonSpecFamily {
         label: "the ADMIN group's own-design routes",
         prefixes: &[
-            "/ferroehr/rest/openehr/v1/admin/config",
-            "/ferroehr/rest/openehr/v1/admin/template/",
-            "/ferroehr/rest/openehr/v1/admin/party/",
-            "/ferroehr/rest/openehr/v1/admin/query/",
+            "/ferroehr/rest/extensions/v1/admin/config",
+            "/ferroehr/rest/extensions/v1/admin/template/",
+            "/ferroehr/rest/extensions/v1/admin/party/",
+            "/ferroehr/rest/extensions/v1/admin/query/",
         ],
         flag: "no its-rest operation governs this",
         operations: 5,
@@ -1454,7 +1454,7 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // SM I_ADMIN_SERVICE's four statistics calls; the released Admin API
         // is the two EHR deletes alone.
         label: "the ADMIN activity-report extension",
-        prefixes: &["/ferroehr/rest/openehr/v1/admin/report/"],
+        prefixes: &["/ferroehr/rest/extensions/v1/admin/report/"],
         flag: "no its-rest operation governs this",
         operations: 4,
     },
@@ -1463,7 +1463,7 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // SM declares no operation for at all; nothing released moves a resource
         // to archival storage in either direction.
         label: "the ADMIN archive extension",
-        prefixes: &["/ferroehr/rest/openehr/v1/admin/archive/"],
+        prefixes: &["/ferroehr/rest/extensions/v1/admin/archive/"],
         flag: "no its-rest operation governs this",
         operations: 4,
     },
@@ -1473,8 +1473,8 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // operational templates only.
         label: "the ADL 1.4 / ADL 2 archetype + artefact extension",
         prefixes: &[
-            "/ferroehr/rest/openehr/v1/definition/archetype/",
-            "/ferroehr/rest/openehr/v1/definition/artefact/",
+            "/ferroehr/rest/extensions/v1/definition/archetype/",
+            "/ferroehr/rest/extensions/v1/definition/artefact/",
         ],
         flag: "no its-rest operation governs this",
         operations: 9,
@@ -1484,8 +1484,8 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         // writes a file-system archive.
         label: "the ADMIN dump/load extension",
         prefixes: &[
-            "/ferroehr/rest/openehr/v1/admin/dump",
-            "/ferroehr/rest/openehr/v1/admin/load",
+            "/ferroehr/rest/extensions/v1/admin/dump",
+            "/ferroehr/rest/extensions/v1/admin/load",
         ],
         flag: "no its-rest operation governs this",
         operations: 2,

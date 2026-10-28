@@ -127,11 +127,7 @@ pub async fn search_audit(
     params.push(format!("_count={PAGE_SIZE}"));
     params.push(format!("_offset={offset}"));
 
-    let url = format!(
-        "{}?{}",
-        state.cdr.rest_v1("fhir/r4/AuditEvent"),
-        params.join("&")
-    );
+    let url = format!("{}?{}", state.cdr.fhir_r4("AuditEvent"), params.join("&"));
     let response = state
         .cdr
         .get(&session.credential, &url, "application/fhir+json")

@@ -200,7 +200,7 @@ pub async fn admin_delete_template(
         )));
     }
     let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1(&format!(
+    let url = state.cdr.extensions_v1(&format!(
         "admin/template/{}",
         urlencoding::encode(&template_id)
     ));
@@ -234,7 +234,7 @@ pub async fn admin_delete_stored_query(
         )));
     }
     let state: crate::state::AppState = expect_context();
-    let url = state.cdr.rest_v1(&format!(
+    let url = state.cdr.extensions_v1(&format!(
         "admin/query/{}/{}",
         urlencoding::encode(&name),
         urlencoding::encode(&version)

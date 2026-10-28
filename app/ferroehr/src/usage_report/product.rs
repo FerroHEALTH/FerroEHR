@@ -167,7 +167,7 @@ impl RouteGroup {
 }
 
 /// The window's grouping: the [`RouteGroup`] of the part of a matched route
-/// template below `base_path` ([`api_mount`]), and nothing for a request
+/// template below `base_path` (one of [`api_mounts`]), and nothing for a request
 /// no route matched or a route outside that mount.
 ///
 /// Reading only the part below the mount keeps a family word in a configured
@@ -181,24 +181,27 @@ pub fn grouping(base_path: &str, route: Option<&str>) -> Option<Key> {
     RouteGroup::of_template(below).and_then(|group| Key::new(group.as_str()))
 }
 
-/// The mount the openEHR API's route templates sit under: `server.base_path`,
-/// where every route is served, followed by `rest.base_path`.
+/// The mounts FerroEHR's API route templates sit under.
+///
+/// Each is `server.base_path`, where every route is served, followed by
+/// `rest.base_path` for the openEHR API or by the extensions root for
+/// FerroEHR's own extensions (#4330).
 #[must_use]
-pub fn api_mount(config: &FerroEhrConfig) -> String {
-    format!(
-        "{}{}",
-        config.server.base_path.as_str(),
-        config.rest.base_path
-    )
+pub fn api_mounts(config: &FerroEhrConfig) -> Vec<String> {
+    let server = config.server.base_path.as_str();
+    vec![
+        format!("{server}{}", config.rest.base_path),
+        format!("{server}{}", config.rest.extensions_path()),
+    ]
 }
 
-/// A latency window over FerroEHR's grouping below `base_path`, for the
+/// A latency window over FerroEHR's grouping below each of `mounts`, for the
 /// request log to fill.
 #[must_use]
-pub fn window(base_path: &str) -> Arc<Window> {
-    let base_path = base_path.to_owned();
+pub fn window(mounts: &[String]) -> Arc<Window> {
+    let mounts = mounts.to_vec();
     Arc::new(Window::new(move |_method: &Method, route: Option<&str>| {
-        grouping(&base_path, route)
+        mounts.iter().find_map(|mount| grouping(mount, route))
     }))
 }
 
@@ -414,18 +417,27 @@ mod tests {
     }
 
     #[test]
-    fn the_api_mount_is_the_server_mount_then_the_rest_root() {
+    fn the_api_mounts_are_the_server_mount_then_the_openehr_and_extension_roots() {
         let mut config = FerroEhrConfig::default();
-        assert_eq!(api_mount(&config), BASE);
+        assert_eq!(
+            api_mounts(&config),
+            [BASE.to_owned(), "/ferroehr/rest/extensions/v1".to_owned()]
+        );
         config.server.base_path =
             ferrohealth_server::section::BasePath::new("/edge").expect("a base path");
         config.rest.base_path = "/ferroehr/ehr/v1".to_owned();
-        assert_eq!(api_mount(&config), "/edge/ferroehr/ehr/v1");
+        assert_eq!(
+            api_mounts(&config),
+            [
+                "/edge/ferroehr/ehr/v1".to_owned(),
+                "/edge/ferroehr/ehr/extensions/v1".to_owned()
+            ]
+        );
     }
 
     #[test]
     fn the_window_groups_below_its_base_path() {
-        let window = window("/ferroehr/query/v1");
+        let window = window(&["/ferroehr/query/v1".to_owned()]);
         window.record(
             &Method::GET,
             Some("/ferroehr/query/v1/ehr/{ehr_id}"),

@@ -59,7 +59,7 @@ async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
 fn get(path: &str) -> Request<Body> {
     Request::builder()
         .method("GET")
-        .uri(format!("{BASE}{path}"))
+        .uri(common::full(path))
         .body(Body::empty())
         .expect("request")
 }
@@ -67,7 +67,7 @@ fn get(path: &str) -> Request<Body> {
 fn post(path: &str, content_type: &str, body: String) -> Request<Body> {
     Request::builder()
         .method("POST")
-        .uri(format!("{BASE}{path}"))
+        .uri(common::full(path))
         .header(header::CONTENT_TYPE, content_type)
         .body(Body::from(body))
         .expect("request")
