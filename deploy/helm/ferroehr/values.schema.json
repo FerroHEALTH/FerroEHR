@@ -492,12 +492,12 @@
       "type": "object",
       "properties": {
         "deployment_profile": {
-          "description": "The declared deployment posture: sandbox (the binary's default; must not hold real patient data) or production (refuses to boot while a separation is missing and not named in deployment_accepts). The vocabulary is the server's and is judged at boot.",
+          "description": "The declared deployment posture, which the chart refuses to render without: sandbox (must not hold real patient data) or production (refuses to boot while a separation is missing and not named in deployment_accepts). The vocabulary is the server's and is judged at boot.",
           "type": [
             "string",
             "null"
           ],
-          "default": "sandbox"
+          "default": null
         },
         "rest": {
           "type": [

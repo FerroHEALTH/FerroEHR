@@ -214,7 +214,8 @@ k8s_namespace() {
 
 # Install with the chart's OWN defaults plus the things no default can carry —
 # where the database is, which image is under probe, and that a probe instance
-# sends no usage report. Deliberately nothing else: an overlay tuned until it
+# sends no usage report. The posture, which the chart has no default for, comes
+# with the authentication from $K8S_AUTH_VALUES. Deliberately nothing else: an overlay tuned until it
 # works is exactly what this instrument exists to stop being the only evidence.
 k8s_install() {
   helm upgrade --install "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
@@ -364,6 +365,7 @@ probes_k8s_boot() {
     "a stock install is refused at render, naming every configured way forward"
   local guard
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
+             --set config.deployment_profile=sandbox \
              --set database.existingSecret=ferroehr-db 2>&1)"
   assert_contains "$guard" "no authentication mechanism is configured" \
     "without this the stock install boots into a crash loop and explains itself in a log"

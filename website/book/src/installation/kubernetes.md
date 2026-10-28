@@ -39,12 +39,17 @@ kubectl -n ferroehr create secret generic ferroehr-db \
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
   --version 20.0.1-rc1 -n ferroehr \
+  --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.6.0-rc1 \
   --set ferropix.enabled=false --set config.ehr_index.provider=local
 ```
 
-The last line opts in to the in-instance EHR index, for a CDR run on its own.
+`config.deployment_profile=sandbox` names the posture of a trial install,
+which must not hold real patient data; the chart has no default and refuses to
+render without one. A deployment holding patient data starts from the
+[production overlay](#the-production-overlay) instead. The last line opts in to
+the in-instance EHR index, for a CDR run on its own.
 By default the chart runs FerroPIX, the IHE patient identity source, beside the
 CDR and points the EHR index at it, which needs FerroPIX's own Secrets and an
 issuer: see [FerroPIX](#ferropix-the-patient-identity-source-on-by-default).
@@ -253,10 +258,13 @@ anything neither `config:` nor `secrets:` surfaces.
 
 ### The deployment profile and the access log
 
-The chart's values declare three keys with the binary's own defaults, so a
-rendered `ferroehr.toml` always says what it runs:
+The chart's values declare three keys, so a rendered `ferroehr.toml` always
+says what it runs:
 
-- **`config.deployment_profile: sandbox`:** a stock install must not hold real
+- **`config.deployment_profile`:** no default; the chart refuses to render
+  until it names `sandbox` or `production`, so an installation that follows a
+  quickstart instead of the instructions for use does not end up in the sandbox
+  posture by omission (EHDS Annex II 1.2). `sandbox` must not hold real
   patient data: the server names every separation it has not made on its boot
   banner and on `/management/status`, and reports the profile on
   `GET /ferroehr/rest/status`. A deployment holding patient data sets

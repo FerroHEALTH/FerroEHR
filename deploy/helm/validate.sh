@@ -583,6 +583,7 @@ refusal_registry_gate() {
     "ingress.yaml|ingress.backendTlsAnnotations is empty|${tls}|--set ingress.backendTlsAnnotations=null|ingress.backendTlsAnnotations;nginx.ingress.kubernetes.io/backend-protocol"
     "hpa.yaml|with every target utilisation at 0|${base}|--set autoscaling.enabled=true --set autoscaling.targetCPUUtilizationPercentage=0 --set autoscaling.targetMemoryUtilizationPercentage=0|autoscaling.targetCPUUtilizationPercentage;autoscaling.targetMemoryUtilizationPercentage"
     "_helpers.tpl|multi-tenancy no longer exists|${base}|--set-string config.tenancy.enabled=true|config.tenancy;separate instances"
+    "_helpers.tpl|config.deployment_profile is unset, and the chart has no default|${base}|--set config.deployment_profile=null|config.deployment_profile;sandbox;production;values-production.yaml"
     "_helpers.tpl|refusing to render a secret into the ConfigMap|${base}|--set-string config.db.url=SENTINEL_PROBE|config.db.url;database.existingSecret"
     "_helpers.tpl|has no matching entry at config.auth.basic.users[]|${basic}|--set-string secrets.basicUserPasswordHashes.ghost=SENTINEL_PROBE|secrets.basicUserPasswordHashes.ghost"
     "_helpers.tpl|declares no grant|${base}|--set-string secrets.terminologyClientSecret=SENTINEL_PROBE|secrets.terminologyClientSecret;config.terminology.server.oauth"

@@ -27,6 +27,8 @@ secrets:
     ferroehr: '$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8'
 
 config:
+  # The chart has no default posture and refuses to render without one.
+  deployment_profile: sandbox
   # The in-instance EHR index: the live run has no identity source.
   ehr_index:
     provider: local

@@ -13,6 +13,8 @@ database:
   existingSecretKey: FERROEHR__DB__URL
 
 config:
+  # The chart has no default posture and refuses to render without one.
+  deployment_profile: sandbox
   auth:
     # `auth.enabled` is true in the chart defaults and a server with no
     # mechanism refuses to boot (RFC 9110 §11.6.1 — a 401 challenge must name a

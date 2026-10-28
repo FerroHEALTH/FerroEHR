@@ -17,6 +17,8 @@ secrets:
     clinician: "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
 config:
+  # The chart has no default posture and refuses to render without one.
+  deployment_profile: sandbox
   # The in-instance EHR index, the opt-in of a FerroEHR run on its own:
   # this overlay renders another surface and runs no identity source.
   ehr_index:

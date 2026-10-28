@@ -48,6 +48,8 @@ metrics:
     enabled: true
 
 config:
+  # The chart has no default posture and refuses to render without one.
+  deployment_profile: sandbox
   # The clinical domain FerroPIX mints pseudonyms in, and the grant the EHR
   # index asks it with; the chart injects the provider and the in-cluster
   # PIXm URL. The client secret is secrets.ehrIndexClientSecret.
