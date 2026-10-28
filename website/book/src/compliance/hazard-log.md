@@ -222,8 +222,8 @@ archetypes whose data sit in one priority category, and a deployment's own
 map replaces it whole, so a map that misses a template the deployment uses
 yields `unclassified` records. Records in the
 demographic domain carry no classification, because no priority category
-lives there. The Helm chart carries the map as `config.audit.categories`, empty
-by default as in the binary.
+lives there. The Helm chart carries a deployment's own map as
+`config.audit.categories`, empty by default, so the shipped map applies.
 
 ## H4: a record misstates where the data came from
 
@@ -234,13 +234,15 @@ origins taken from one row only.
 data that was read (Annex II 3.2(e)).
 
 **Control:** each committed version records the distinct originating systems
-of its body, or this server when it has none; a read records the origins of
+of its body; a body with none records the origin of the registered client that
+committed it directly (`[origins]`), or this server; a read records the origins of
 what it served, an AQL page the union, with the true count beside a capped
 set. The FHIR `AuditEvent` of a read or a query carries the origins of the
 data it served.
 
 **Shown by:** `app/ferroehr/tests/it/access_origins.rs`:
 `a_body_without_feeder_audit_has_this_server_as_its_origin`,
+`a_registered_client_stamps_its_origin_on_a_direct_commit`,
 `feeder_audits_anywhere_in_the_body_count_once_each`,
 `an_aql_page_records_the_union_of_the_origins_it_served`,
 `an_unstamped_row_is_assessed_from_the_body_at_read`;
@@ -445,3 +447,4 @@ EHDS-side risk assessment of the component.
 | 9 | 2026-10-24 | Reviewed for release 5.4.0 (changes since 5.3.3: `ehds-logging` and `ihe-atna` 0.2.5, and the audit drain closes its syslog connection with a TLS `close_notify` when it exits, logging and counting a close that fails, so the records it sent last are not lost to a reset (#3959); H5 names its test); every named test exists and asserts its control; no hazard added |
 | 10 | 2026-10-27 | Reviewed for release 5.5.0 (changes since 5.4.2: syslog frames are delivered from `ihe-atna`'s spool with retries, and `[audit.fhir_feed] batch_size` and `max_retries` are gone (#4029); the ITI-81 query is read and answered by `ihe-atna`'s `retrieve` and requires a `date` (#4030, #4040); each access record is deleted at its own retention end (#3899); the chain check verifies from the last intact link, and the FHIR feed owes only the records written while it is configured (#4100, #4102); the access record and its renderings carry the data permit (#3379, #4120); the source address comes from the family server stack, believing a forwarded address only from a trusted proxy (#4025); every access to one EHR names the EHR and the user, so H2 names `ehr_id_from_the_matched_route`, the test #4192 put in place of `ehr_id_from_various_paths`); every named test exists; no hazard added |
 | 11 | 2026-10-28 | Reviewed for release candidate 5.6.0-rc1 (changes since 5.5.0: the store keeps each record's facts in columns and renders its `AuditEvent` on read under the render policy the record names, the chain digest covers every column in one version, and audit migration 0017 refuses a store holding records of an earlier release, so no record keeps an older digest and H7 drops that remainder (#4300); the `recorded_at` indexes ascend (#4302); every ITI-81 parameter answers through search tokens the chain covers (#4313); the ITI-81 retrieval moves to `/ferroehr/rest/fhir/r4/AuditEvent` (#4330); a deployment that declares no category map records the published CKM priority-category templates and archetypes through the shipped map, so H3 names its test and its remainder no longer says FerroEHR ships none (#4298); H7 names the render-policy and search-token tests and the digest test #4300 renamed); every named test exists; no hazard added |
+| 12 | 2026-10-29 | Reviewed for release candidate 5.6.0-rc2 (changes since the 5.6.0-rc1 review: a body without `FEEDER_AUDIT` committed directly by a client the `[origins]` register names records that client's origin, so H4 names it and its test, and the retention register keys a period on the origin of the data (#4299); H3's remainder said the binary ships no category map, which #4298 changed); every named test exists; no hazard added |
