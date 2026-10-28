@@ -652,7 +652,7 @@ EOF
   out="$(cat "$WORK/out")"
   printf '%s\n' "$out" | indent_app
   local ferroterm_version
-  ferroterm_version="$(awk '$1 == "ferroehr-sandbox-ferroterm" { print $3 }' <<<"$out")"
+  ferroterm_version="$(awk '$1 == "ferroehr-sandbox-ferroterm" && NF == 3 && $2 ~ /^ghcr/ { print $3; exit }' <<<"$out")"
   [[ "$ferroterm_version" == "$FERROTERM_PIN_VERSION" ]] \
     || fail "FerroTERM runs ${ferroterm_version:-nothing}, the posture pins $FERROTERM_PIN_VERSION; a FERROTERM_IMAGE line in .env overrides it (step 3 retires it)"
   ok "FerroTERM runs the pinned $FERROTERM_PIN_VERSION"
