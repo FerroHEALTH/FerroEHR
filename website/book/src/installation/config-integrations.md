@@ -27,12 +27,13 @@ max_result_rows = 10000
 | `max_result_rows` | int | `10000` | The largest page one query execution serves: the page of a query nothing else bounds, and the maximum an explicit `LIMIT` or `fetch` may ask for (a larger page is refused `400`); `0` means unbounded. |
 
 **`timeout_ms` is on by default, and deliberately tighter than
-[`db.statement_timeout_ms`](config-server.md#db).** The HTTP request timeout
-cannot stand in for it: answering the client by dropping the handler does not
-cancel the statement PostgreSQL is running, so overrunning queries would keep
-holding pooled connections after their callers had been given up on. Keeping
-this budget the tighter of the two means an overrun surfaces as the engine's own
-typed `408` rather than a driver error.
+[`db.statement_timeout_ms`](config-server.md#db).** Keeping this budget the
+tighter of the two means an overrun surfaces as the engine's own typed `408`
+rather than a driver error. When it fires, or when the client disconnects or
+the HTTP request timeout gives up first, the query's connection is closed
+instead of returned to the pool, so its pool slot frees at once and PostgreSQL
+stops the statement within about a second (the session's
+`client_connection_check_interval`).
 
 **`max_result_rows` is the largest page one execution serves.** Without it,
 `SELECT c FROM COMPOSITION c` with no `fetch` generates SQL with no `LIMIT` and
