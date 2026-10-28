@@ -533,3 +533,36 @@ pub(crate) fn log_filter() -> ferroehr_rest::extensions::management::LogFilter {
     });
     filter.clone()
 }
+
+/// The FHIR `AuditEvent` the audit store serves for the record at chain
+/// position `chain_seq`, rendered from its columns.
+pub(crate) async fn rendered_audit_event(pool: &PgPool, chain_seq: i64) -> Value {
+    ferroehr::system_log::store::AuditStore::new(pool.clone())
+        .rendered(chain_seq)
+        .await
+        .expect("render the stored audit record")
+        .expect("the audit record is stored")
+}
+
+/// The columns migration 0017 added of every stored audit record, then every
+/// record's served FHIR document, as text, for the tests that assert a value
+/// never reaches the trail.
+pub(crate) async fn audit_texts(pool: &PgPool) -> Vec<String> {
+    use ferroehr::system_log::store::{AuditSearchFilter, AuditStore};
+    let mut texts: Vec<String> = sqlx::query_scalar(
+        "SELECT concat_ws(' ', issuer, client_id, ehr_id, subject_namespace, \
+         category_content::text) FROM audit.audit_event ORDER BY chain_seq",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("read the stored audit rows");
+    let (_, documents) = AuditStore::new(pool.clone())
+        .search(&AuditSearchFilter {
+            count: 1000,
+            ..AuditSearchFilter::default()
+        })
+        .await
+        .expect("render the stored audit records");
+    texts.extend(documents.iter().map(ToString::to_string));
+    texts
+}

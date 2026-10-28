@@ -49,7 +49,7 @@ fn event() -> AuditEvent {
     );
     "alice".clone_into(&mut e.user_id);
     e.object_id = Some("8fa1::ferroehr::1".to_owned());
-    e.event_type = Some(EventType::RestOperation("composition_get"));
+    e.event_type = Some(EventType::rest("composition_get"));
     e
 }
 

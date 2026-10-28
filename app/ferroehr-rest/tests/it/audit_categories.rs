@@ -264,13 +264,13 @@ struct Classified {
     fhir: Value,
 }
 
-/// The four classification columns and the FHIR document of one stored record.
+/// The four classification columns and the chain position of one stored record.
 type StoredClassification = (
     Option<Value>,
     Option<String>,
     Option<Value>,
     Option<String>,
-    Value,
+    i64,
 );
 
 /// The classification of the newest record of `operation` on `resource_class`,
@@ -283,7 +283,7 @@ async fn classified(pool: &PgPool, operation: &str, resource_class: &str) -> Cla
     let deadline = std::time::Instant::now() + Duration::from_secs(60);
     loop {
         let found: Option<StoredClassification> = sqlx::query_as(
-            "SELECT categories, category_basis, category_evidence, category_map_digest, fhir \
+            "SELECT categories, category_basis, category_evidence, category_map_digest, chain_seq \
                  FROM audit.audit_event WHERE operation = $1 AND resource_class = $2 \
                  ORDER BY chain_seq DESC LIMIT 1",
         )
@@ -292,7 +292,8 @@ async fn classified(pool: &PgPool, operation: &str, resource_class: &str) -> Cla
         .fetch_optional(pool)
         .await
         .expect("read the trail");
-        if let Some((categories, basis, evidence, digest, fhir)) = found {
+        if let Some((categories, basis, evidence, digest, chain_seq)) = found {
+            let fhir = common::rendered_audit_event(pool, chain_seq).await;
             return Classified {
                 categories: categories.unwrap_or(Value::Null),
                 basis,

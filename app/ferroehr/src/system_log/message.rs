@@ -88,7 +88,7 @@ pub fn build(event: &AuditEvent, ctx: &AuditContext, subject: Option<&str>) -> A
             type_codes: event
                 .event_type
                 .as_ref()
-                .map(|kind| coded(kind.code()))
+                .map(AtnaEventType::coded)
                 .into_iter()
                 .collect(),
             outcome_description: Some(event.outcome.description().to_owned()),
@@ -507,7 +507,7 @@ mod tests {
             EventOutcome::Success,
         );
         e.object_id = Some("8fa1::ferroehr::1".to_owned());
-        e.event_type = Some(EventType::RestOperation("composition_get"));
+        e.event_type = Some(EventType::rest("composition_get"));
         let xml = xml(&e, Some("patient-42"));
         assert!(xml.contains(r#"csd-code="composition_get""#));
         assert!(xml.contains(r#"codeSystemName="openEHR-ITS-REST""#));

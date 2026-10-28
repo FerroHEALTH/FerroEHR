@@ -189,7 +189,7 @@ fn emit_served_ehr_records(
             ObjectClass::Ehr,
             EventOutcome::Success,
         );
-        event.event_type = Some(EventType::RestOperation(op));
+        event.event_type = Some(EventType::rest(op));
         fill_common(&mut event, caller, client_ip.map(str::to_owned), timestamp);
         event.ehr_id = Some(ehr_id.clone());
         event.object_id = Some(ehr_id.clone());
@@ -303,7 +303,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         let mut event = AuditEvent::new(action, object_class, outcome_from_status(status));
         // The concrete operation is the `EventTypeCode` (DICOM PS3.15 §A.5
         // EventIdentification); the id is ours.
-        event.event_type = Some(EventType::RestOperation(op));
+        event.event_type = Some(EventType::rest(op));
         fill_common(&mut event, caller, client_ip.clone(), timestamp);
         // NOTE: EHDS Art. 9(2)(c) (`docs/law/eu/ehds/text.html`), the record names
         // whose data was accessed, so the subject-scoped ITI-81 retrieval finds it.

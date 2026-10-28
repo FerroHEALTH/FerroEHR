@@ -47,8 +47,8 @@ emergency_purpose_codes = []
 | `legal_basis` | string | unset | The legal basis this deployment processes under, recorded on every access record. A deployment-level fact: the controller establishes the GDPR Art. 6/9 condition once. Unset records nothing rather than a guess. |
 
 > [!NOTE]
-> The local store and the ATX:FHIR Feed both carry a FHIR R4 `AuditEvent`
-> document, so both need the `fhir` build feature, on in the published binary
+> The local store renders a FHIR R4 `AuditEvent` from each record when it is
+> read, and the ATX:FHIR Feed sends one, so both need the `fhir` build feature, on in the published binary
 > and container images. A binary built with `--no-default-features` refuses at
 > startup if `audit.store.enabled` or `audit.fhir_feed.enabled` is set; the
 > DICOM/syslog feed needs no FHIR and stays available.

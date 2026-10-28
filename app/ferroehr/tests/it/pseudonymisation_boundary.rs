@@ -1863,11 +1863,7 @@ async fn resolving_an_identifier_is_recorded_as_an_access() {
     );
     assert_eq!(record.2, Some(0), "a miss is recorded as nothing resolved");
 
-    let events: Vec<String> = sqlx::query_scalar("SELECT fhir::text FROM audit.audit_event")
-        .fetch_all(&pool)
-        .await
-        .expect("every recorded event");
-    for event in events {
+    for event in crate::audit_text::audit_texts(&pool).await {
         assert!(
             !event.contains(SYNTHETIC_BSN),
             "no audit record may carry the identifier value: {event}"
@@ -2086,8 +2082,8 @@ async fn resolving_a_party_to_its_ehr_is_recorded_as_an_access() {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     let record = loop {
         let found: Option<LinkageAccessRow> = sqlx::query_as(
-            "SELECT domain, principal, purpose, result_count, fhir::text \
-             FROM audit.audit_event \
+            "SELECT domain, principal, purpose, result_count, to_jsonb(e)::text \
+             FROM audit.audit_event e \
              WHERE domain = 'linkage' AND action = 'R' AND resource_id = $1 \
              ORDER BY recorded_at DESC LIMIT 1",
         )
@@ -2173,11 +2169,7 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
     );
     "alice".clone_into(&mut event.user_id);
     let id = store
-        .insert(
-            &event,
-            None,
-            &serde_json::json!({"resourceType": "AuditEvent"}),
-        )
+        .insert(&event, None)
         .await
         .expect("the clinical role inserts an access record");
     let seq: i64 = sqlx::query_scalar("SELECT chain_seq FROM audit.audit_event WHERE id = $1")

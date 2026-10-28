@@ -11,8 +11,9 @@
 //! `audit.fhir_feed_outbox`, which the store writes with the record while the
 //! feed is configured, read oldest first by its chain position, and removed
 //! once the repository accepted it, when the record's `delivered_fhir_feed_at`
-//! is stamped. A record the repository
-//! refused is held aside in memory until the next start, because the table is
+//! is stamped. The document is rendered from the record's columns when it is
+//! read. A record the repository refused, or one that cannot be rendered, is
+//! held aside in memory until the next start, because the table is
 //! append-only beside its two delivery stamps (no specification governs where
 //! a refused record waits: our own design).
 
@@ -137,15 +138,32 @@ impl Outbox for StoreOutbox {
             }
             self.backlog.store(true, Ordering::Relaxed);
         }
-        let (oldest, waiting) = self
-            .store
-            .oldest_fhir_feed(&self.refused())
-            .await
-            .map_err(outbox_error)?;
-        self.waiting
-            .store(usize::try_from(waiting).unwrap_or(0), Ordering::Relaxed);
-        let Some((sequence, document)) = oldest else {
-            return Ok(None);
+        let (sequence, document) = loop {
+            let (oldest, waiting) = self
+                .store
+                .oldest_fhir_feed(&self.refused())
+                .await
+                .map_err(outbox_error)?;
+            self.waiting
+                .store(usize::try_from(waiting).unwrap_or(0), Ordering::Relaxed);
+            let Some((sequence, rendered)) = oldest else {
+                return Ok(None);
+            };
+            match rendered {
+                Ok(document) => break (sequence, document),
+                Err(e) => {
+                    tracing::error!(
+                        chain_seq = sequence,
+                        error = %crate::service::error::ErrorChain::new(&e),
+                        "ATNA audit FHIR feed: the record cannot be rendered; it is held aside \
+                         until the next start"
+                    );
+                    self.refused
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner)
+                        .insert(sequence);
+                }
+            }
         };
         let sequence = u64::try_from(sequence).map_err(|e| OutboxError(Box::new(e)))?;
         let message = serde_json::to_vec(&document).map_err(|e| OutboxError(Box::new(e)))?;

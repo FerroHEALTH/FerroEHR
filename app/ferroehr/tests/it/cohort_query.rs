@@ -572,11 +572,7 @@ async fn every_execution_is_recorded_as_a_linkage_access() {
         "a suppressed execution disclosed nothing, and says so"
     );
 
-    let events: Vec<String> = sqlx::query_scalar("SELECT fhir::text FROM audit.audit_event")
-        .fetch_all(&pool)
-        .await
-        .expect("every recorded event");
-    for event in events {
+    for event in crate::audit_text::audit_texts(&pool).await {
         assert!(
             !event.contains("Groningen"),
             "no access record may carry the value the cohort was selected on: {event}"

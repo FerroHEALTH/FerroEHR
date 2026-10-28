@@ -387,9 +387,9 @@ corruptions"
   [the justification](#configuration-integrity-annex-i-part-i2f).
 - **How:** data: immutable versions, each signed (digest or OpenPGP) and
   verified on read in `strict` mode by default; the access log is
-  hash-chained in the database over every column of a record (digest version
-  2; records written before 4.3.9 keep version 1, which covers the original
-  columns), and `UPDATE`, `DELETE` and `TRUNCATE` on it are refused. The
+  hash-chained in the database over every column of a record, the render
+  policy its FHIR document is rendered under is checked against its digest,
+  and `UPDATE`, `DELETE` and `TRUNCATE` on it are refused. The
   runtime roles read the migration bookkeeping of their schema and cannot
   write it, and the server refuses to start while one can. Programs: SLSA Build L3 provenance and SBOM attestations, cosign on
   the chart, signed tags, immutable releases, a read-only root filesystem.
