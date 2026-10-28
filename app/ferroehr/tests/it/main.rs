@@ -44,6 +44,7 @@ mod cohort_query;
 mod cohort_subjects;
 mod commit_lock_order;
 mod db_lease;
+mod db_outage;
 mod decommission;
 mod directory_item_refs;
 mod ehr_index_ihe;

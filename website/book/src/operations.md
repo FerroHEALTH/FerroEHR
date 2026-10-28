@@ -986,10 +986,13 @@ Unavailable` with `Retry-After`: those that cannot get a connection, and those
 whose open connection the restart or the network cut (SQLSTATE class `08`,
 `57P01` admin shutdown, `57P02` crash shutdown, `57P03` cannot connect now,
 or a reset socket). A transaction the cut interrupted is rolled back by
-PostgreSQL. A request that cannot get a connection waits for one up to
+PostgreSQL. A request that waits more than a second for a connection makes
+the server try a connection of its own: when that cannot reach the database,
+the request answers `503` at once, and so does every request after it, until
+a fresh attempt (at most every half second) connects again. A pool that is
+only busy keeps its requests queued up to
 [`db.acquire_timeout_secs`](installation/config-server.md#db) (30 seconds by
-default) before it answers, so lower that value when clients should hear
-about an outage sooner.
+default).
 
 ## The management surface
 
