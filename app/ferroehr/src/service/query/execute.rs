@@ -627,6 +627,21 @@ fn map_exec_error(e: AqlError) -> SmError {
             )
             .with_source(db)
         }
+        // Class 54 `program_limit_exceeded` (`54001` statement_too_complex,
+        // PostgreSQL Appendix A) is the query's own shape outgrowing a database
+        // limit, so it is the invalid input `400_Query` names, never a `500`.
+        AqlError::Exec(ExecError::Database(db))
+            if db
+                .as_database_error()
+                .and_then(sqlx::error::DatabaseError::code)
+                .is_some_and(|code| code.starts_with("54")) =>
+        {
+            SmError::precondition(
+                "the query is too complex for the database to run; split it or \
+                 write a long OR over one path as MATCHES {...}",
+            )
+            .with_source(db)
+        }
         // No connection could be obtained: no statement ran, so the request can
         // be repeated (`503` plus `Retry-After`).
         AqlError::Exec(
@@ -693,6 +708,22 @@ mod tests {
             !fault.message.contains("RowNotFound"),
             "the driver diagnostic never reaches the wire body, got {fault:?}"
         );
+    }
+
+    /// A statement PostgreSQL refuses for its own complexity limit is the
+    /// query's fault (`400`), not the server's.
+    #[test]
+    fn a_program_limit_refusal_is_a_precondition() {
+        for sqlstate in ["54000", "54001"] {
+            let sm = map_exec_error(AqlError::Exec(ExecError::Database(
+                crate::storage::error::tests::db_error(sqlstate),
+            )));
+            assert_eq!(
+                sm.status,
+                CallStatusType::PreconditionViolation,
+                "{sqlstate}"
+            );
+        }
     }
 
     /// A closed pool: every acquire on it fails before any statement runs.

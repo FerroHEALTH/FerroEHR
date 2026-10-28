@@ -80,6 +80,135 @@ pub enum ParseError {
         /// Every position the parser reported, in report order.
         faults: Vec<SyntaxFault>,
     },
+    /// The query nests deeper than this parser accepts.
+    ///
+    /// The bound is checked over the tokens before the grammar runs, so
+    /// neither the parser nor any recursive pass over the tree it builds
+    /// meets a tree deeper than [`MAX_NESTING`] or [`MAX_EXPRESSION_DEPTH`].
+    #[error("the query's {measure} exceeds {limit} levels, the deepest this parser accepts")]
+    TooDeep {
+        /// What nested too deep.
+        measure: Nesting,
+        /// The bound that was crossed.
+        limit: usize,
+        /// The token at which the bound was crossed.
+        at: SyntaxFault,
+    },
+}
+
+/// The deepest bracket and `CONTAINS` nesting the parser accepts.
+///
+/// Every `(`, `[` and `{`, and every `CONTAINS` until the end of its group,
+/// opens one level of the grammar's recursion. No openEHR specification
+/// bounds AQL nesting (`AqlParser.g4` is unbounded): the limit is this
+/// crate's own, far above any query a person writes and far below the depth
+/// at which a recursive descent exhausts a thread's stack.
+pub const MAX_NESTING: usize = 64;
+
+/// The deepest expression tree the parser builds.
+///
+/// `AND` and `OR` fold left and `NOT` folds right, so a chain of `n`
+/// operators is a tree `n` levels deep: each operator, each `CONTAINS` and
+/// each bracket counts one level on its path. No openEHR specification
+/// bounds it: the limit is this crate's own. A long `OR` over one path is
+/// written as `MATCHES {…}`, which builds no tree at all.
+pub const MAX_EXPRESSION_DEPTH: usize = 512;
+
+/// The measure a [`ParseError::TooDeep`] refusal names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Nesting {
+    /// Brackets and `CONTAINS` nested beyond [`MAX_NESTING`].
+    Brackets,
+    /// An expression tree deeper than [`MAX_EXPRESSION_DEPTH`].
+    Expression,
+}
+
+impl std::fmt::Display for Nesting {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Brackets => "nesting of brackets and CONTAINS",
+            Self::Expression => "expression depth (AND, OR, NOT, CONTAINS and brackets)",
+        })
+    }
+}
+
+/// One bracket group of the bound check: the levels its own tokens add and
+/// the deepest group closed inside it.
+#[derive(Default)]
+struct Group {
+    /// `AND`, `OR`, `NOT` and `CONTAINS` tokens directly in this group.
+    levels: usize,
+    /// `CONTAINS` tokens directly in this group, which nest until it closes.
+    contains: usize,
+    /// The depth of the deepest group already closed inside this one.
+    deepest_child: usize,
+}
+
+/// Refuses a token stream that nests beyond [`MAX_NESTING`] or builds a tree
+/// deeper than [`MAX_EXPRESSION_DEPTH`], in one pass with no recursion.
+///
+/// The expression depth is an upper bound: a group adds every operator it
+/// holds to every path through it, wherever the operator stands. An
+/// unbalanced closer is left to the grammar, which reports it.
+fn check_bounds(tokens: &[Token], spanned: Option<&SpannedTokens>) -> Result<(), ParseError> {
+    let refuse = |measure: Nesting, limit: usize, at: usize| {
+        let range = at..at.saturating_add(1);
+        ParseError::TooDeep {
+            measure,
+            limit,
+            at: SyntaxFault {
+                bytes: spanned.map(|stream| stream.byte_span(&range)),
+                tokens: range,
+                found: tokens.get(at).cloned(),
+            },
+        }
+    };
+    let mut stack = vec![Group::default()];
+    // `nesting` counts the open brackets plus every open group's CONTAINS;
+    // `path` counts the open groups' levels plus one per open bracket.
+    let mut nesting = 0usize;
+    let mut path = 0usize;
+    for (at, token) in tokens.iter().enumerate() {
+        match token {
+            Token::LeftParen | Token::LeftBracket | Token::LeftCurly => {
+                stack.push(Group::default());
+                nesting = nesting.saturating_add(1);
+                path = path.saturating_add(1);
+            }
+            Token::RightParen | Token::RightBracket | Token::RightCurly if stack.len() > 1 => {
+                if let Some(closed) = stack.pop() {
+                    nesting = nesting.saturating_sub(closed.contains.saturating_add(1));
+                    path = path.saturating_sub(closed.levels.saturating_add(1));
+                    let depth = closed
+                        .levels
+                        .saturating_add(closed.deepest_child)
+                        .saturating_add(1);
+                    if let Some(open) = stack.last_mut() {
+                        open.deepest_child = open.deepest_child.max(depth);
+                    }
+                }
+            }
+            Token::And | Token::Or | Token::Not | Token::Contains(_) => {
+                if let Some(open) = stack.last_mut() {
+                    open.levels = open.levels.saturating_add(1);
+                    if matches!(token, Token::Contains(_)) {
+                        open.contains = open.contains.saturating_add(1);
+                        nesting = nesting.saturating_add(1);
+                    }
+                }
+                path = path.saturating_add(1);
+            }
+            _ => continue,
+        }
+        if nesting > MAX_NESTING {
+            return Err(refuse(Nesting::Brackets, MAX_NESTING, at));
+        }
+        let deepest = stack.last().map_or(0, |open| open.deepest_child);
+        if path.saturating_add(deepest) > MAX_EXPRESSION_DEPTH {
+            return Err(refuse(Nesting::Expression, MAX_EXPRESSION_DEPTH, at));
+        }
+    }
+    Ok(())
 }
 
 /// Parses a token slice into a [`SelectQuery`].
@@ -89,7 +218,9 @@ pub enum ParseError {
 /// unknown; use [`parse_spanned`] to keep them.
 ///
 /// # Errors
-/// [`ParseError::Syntax`], carrying every token position the parser reported.
+/// [`ParseError::TooDeep`] for a query nested beyond [`MAX_NESTING`] or
+/// [`MAX_EXPRESSION_DEPTH`], otherwise [`ParseError::Syntax`], carrying every
+/// token position the parser reported.
 pub fn parse(tokens: &[Token]) -> Result<SelectQuery, ParseError> {
     run(tokens, None)
 }
@@ -98,13 +229,16 @@ pub fn parse(tokens: &[Token]) -> Result<SelectQuery, ParseError> {
 /// positions: on every [`Span`] in the tree, and on any failure.
 ///
 /// # Errors
-/// [`ParseError::Syntax`], each fault carrying both the token indices and the
-/// byte range of the source they cover.
+/// [`ParseError::TooDeep`] for a query nested beyond [`MAX_NESTING`] or
+/// [`MAX_EXPRESSION_DEPTH`], otherwise [`ParseError::Syntax`], each fault
+/// carrying both the token indices and the byte range of the source they
+/// cover.
 pub fn parse_spanned(tokens: &SpannedTokens) -> Result<SelectQuery, ParseError> {
     run(tokens.tokens(), Some(tokens))
 }
 
 fn run(tokens: &[Token], spanned: Option<&SpannedTokens>) -> Result<SelectQuery, ParseError> {
+    check_bounds(tokens, spanned)?;
     let mut parsed = query().parse(tokens).into_result().map_err(|errs| {
         let faults = errs
             .iter()
@@ -145,8 +279,10 @@ fn token_span(range: core::ops::Range<usize>) -> Span {
 /// Lexes then parses `src` in one step.
 ///
 /// # Errors
-/// [`ParseError::Lex`] if the source does not tokenize, otherwise
-/// [`ParseError::Syntax`], whose faults locate the failure in `src` itself.
+/// [`ParseError::Lex`] if the source does not tokenize,
+/// [`ParseError::TooDeep`] if it nests beyond [`MAX_NESTING`] or
+/// [`MAX_EXPRESSION_DEPTH`], otherwise [`ParseError::Syntax`], whose faults
+/// locate the failure in `src` itself.
 pub fn parse_str(src: &str) -> Result<SelectQuery, ParseError> {
     parse_spanned(&crate::lexer::lex_spanned(src)?)
 }

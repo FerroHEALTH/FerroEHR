@@ -1551,6 +1551,15 @@ fn grammar(aql: &str) -> Option<(String, FileFindings)> {
                 mapping: None,
             })
             .collect(),
+        Err(openehr_query::parser::ParseError::TooDeep {
+            limit, at: fault, ..
+        }) => vec![Finding {
+            gravity: Gravity::Error,
+            code: "AQL-DEPTH".to_owned(),
+            at: fault.bytes.as_ref().and_then(|bytes| at(bytes.start)),
+            message: tr_with(QueriesMsg::QueryNestsTooDeep, &[("limit", count(limit))]),
+            mapping: None,
+        }],
     };
     let total = findings.len();
     Some((

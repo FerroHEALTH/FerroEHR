@@ -436,7 +436,7 @@ pub(crate) fn is_cut_session(e: &sqlx::Error) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use std::borrow::Cow;
     use std::error::Error as StdError;
     use std::fmt;
@@ -502,7 +502,9 @@ mod tests {
         }
     }
 
-    fn db_error(sqlstate: &'static str) -> sqlx::Error {
+    /// A driver error carrying `sqlstate`, for the classification tests here
+    /// and in the query service.
+    pub(crate) fn db_error(sqlstate: &'static str) -> sqlx::Error {
         sqlx::Error::Database(Box::new(PgErrorDouble { sqlstate }))
     }
 

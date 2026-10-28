@@ -16,6 +16,12 @@ hand-written and corpus-validated.
   `app/ferroehr`; keep the boundary clean.
 - The parser corpus tests are the regression net — extend them with every
   grammar-touching change; never delete a corpus case to get green.
+- **Nesting is bounded before the grammar runs** (`parser::check_bounds`,
+  #4284): `MAX_NESTING` brackets and `CONTAINS`, `MAX_EXPRESSION_DEPTH`
+  levels of `AND`/`OR`/`NOT`/`CONTAINS`/brackets on one path, refused as
+  `ParseError::TooDeep`. Every recursive pass downstream (the visitors,
+  `bind`, the printer, the engine's lowering and SQL generation) relies on
+  it; a new recursive production adds its tokens to the scan.
 - Spec pin: QUERY 1.1.0 via `SPEC_VERSION`; the package version is the
   crate's own SemVer line (`.claude/rules/crates-publishing.md`).
 - Gates: `cargo clippy -p openehr-query --all-targets` +

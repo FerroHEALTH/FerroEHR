@@ -112,6 +112,7 @@ query-grammar-heading = { $count ->
 }
 query-unexpected = Unexpected { $token } here.
 query-ended-early = The query ends before it is complete.
+query-nests-too-deep = The query nests deeper than { $limit } levels. A long OR over one path is written as MATCHES.
 query-parameters = Parameters
 query-param-name-n = Name of parameter { $number }
 query-param-value-n = Value of parameter { $number }

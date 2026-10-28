@@ -10,6 +10,7 @@
 mod backtracking;
 mod bind;
 mod corpus;
+mod depth_bounds;
 #[cfg(feature = "federation")]
 mod federation;
 mod parse_errors;
