@@ -103,10 +103,10 @@ CREATE FUNCTION audit.search_token_digest(p_parameter text, p_system text, p_cod
     RETURNS bytea
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
     SET search_path = pg_catalog
-    AS $$ SELECT sha256(convert_to(jsonb_build_array(p_parameter, p_system, p_code)::text, 'UTF8')) $$;
+    AS $$ SELECT substr(sha256(convert_to(jsonb_build_array(p_parameter, p_system, p_code)::text, 'UTF8')), 1, 16) $$;
 
 COMMENT ON FUNCTION audit.search_token_digest(text, text, text) IS
-    'SHA-256 over one search token: the ITI-81 parameter, the system and the code, NULL kept apart from the empty string.';
+    'The first 16 bytes of the SHA-256 over one search token: the ITI-81 parameter, the system and the code, NULL kept apart from the empty string.';
 
 CREATE FUNCTION audit.search_set_digest(p_tokens integer[]) RETURNS bytea
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
@@ -117,8 +117,9 @@ COMMENT ON FUNCTION audit.search_set_digest(integer[]) IS
     'SHA-256 over the sorted token ids of one search set.';
 
 -- One row per distinct token. The digest is the key the writer deduplicates
--- on and what the verifier recomputes; the lookup index hashes the code, so a
--- long identifier never meets the B-tree entry size limit.
+-- on and what the verifier recomputes. The lookups hash the code and the
+-- system, so a long identifier never meets the B-tree entry size limit, and
+-- the addresses, short and matched by substring, are read from a partial index.
 CREATE TABLE audit_search_token (
     id        integer GENERATED ALWAYS AS IDENTITY,
     -- The ITI-81 parameter: address, agent.identifier, entity.identifier,
@@ -138,7 +139,11 @@ CREATE TABLE audit_search_token (
 );
 
 CREATE INDEX ix_audit_search_token_code
-    ON audit_search_token (parameter, hashtextextended(code, 0));
+    ON audit_search_token (hashtextextended(code, 0));
+CREATE INDEX ix_audit_search_token_system
+    ON audit_search_token (hashtextextended(system, 0)) WHERE system IS NOT NULL;
+CREATE INDEX ix_audit_search_token_address
+    ON audit_search_token (code) INCLUDE (id) WHERE parameter = 'address';
 
 COMMENT ON TABLE audit_search_token IS
     'Every distinct ITI-81 search token a stored record''s FHIR AuditEvent carries, once; append-only.';
@@ -221,10 +226,15 @@ COMMENT ON COLUMN audit_event.render_policy IS
 COMMENT ON COLUMN audit_event.search_tokens IS
     'The ITI-81 search tokens of the record''s FHIR AuditEvent: the ids of its audit_search_token rows, and its audit_search_set id negated.';
 
--- The token parameters match through this index, and entity through the
--- hash index, since a resource id can be a stored query name of any length.
-CREATE INDEX ix_audit_event_search_tokens ON audit_event USING gin (search_tokens);
-CREATE INDEX ix_audit_event_resource_id ON audit_event USING hash (resource_id);
+-- The token parameters match through this index. Each insert updates it in
+-- place: the pending list of fastupdate leaves the index three times the size
+-- after the same writes (PostgreSQL 18 docs, "GIN Fast Update Technique",
+-- https://www.postgresql.org/docs/18/gin.html#GIN-FAST-UPDATE).
+CREATE INDEX ix_audit_event_search_tokens ON audit_event USING gin (search_tokens)
+    WITH (fastupdate = off);
+-- entity matches resource_id through its hash, since a resource id can be a
+-- stored query name longer than a B-tree entry holds.
+CREATE INDEX ix_audit_event_resource_id ON audit_event (hashtextextended(resource_id, 0));
 
 COMMENT ON COLUMN audit_event.row_hash IS
     'SHA-256 over every column of the record but row_hash and the delivery stamps (audit.audit_event_row_digest); recomputed by audit.verify_audit_chain().';

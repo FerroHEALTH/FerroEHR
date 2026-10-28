@@ -961,7 +961,20 @@ fn criterion_condition(criterion: &AuditCriterion) -> sea_query::Cond {
     match criterion {
         AuditCriterion::Patient(values) => column_in("patient_id", values),
         AuditCriterion::Agent(values) => column_in("principal", values),
-        AuditCriterion::Entity(values) => column_in("resource_id", values),
+        // NOTE: our own design: resource_id is indexed by its hash, which a long stored query
+        // name fits, so the hash narrows through the index and the text decides.
+        AuditCriterion::Entity(values) => {
+            values.iter().fold(sea_query::Cond::any(), |any, value| {
+                any.add(
+                    sea_query::Cond::all()
+                        .add(Expr::cust_with_values(
+                            "hashtextextended(resource_id, 0) = hashtextextended($1, 0)",
+                            [value.clone()],
+                        ))
+                        .add(Expr::col(Alias::new("resource_id")).eq(value.clone())),
+                )
+            })
+        }
         AuditCriterion::Action(values) => column_in("action", values),
         AuditCriterion::Outcome(values) => {
             values.iter().fold(sea_query::Cond::any(), |any, value| {

@@ -339,29 +339,33 @@ fn token_lookup(
     parameter: &'static str,
     token: &AuditToken,
 ) -> sqlx::query::QueryScalar<'static, sqlx::Postgres, i32, sqlx::postgres::PgArguments> {
-    let by_code = "SELECT id FROM audit.audit_search_token WHERE parameter = $1 \
-                   AND hashtextextended(code, 0) = hashtextextended($2, 0) AND code = $2";
+    let by_code = "SELECT id FROM audit.audit_search_token \
+                   WHERE hashtextextended(code, 0) = hashtextextended($2, 0) AND code = $2 \
+                   AND parameter = $1";
     match (&token.system, token.code.clone()) {
         (AuditTokenSystem::Any, Some(code)) => {
             sqlx::query_scalar(by_code).bind(parameter).bind(code)
         }
         (AuditTokenSystem::Absent, Some(code)) => sqlx::query_scalar(
-            "SELECT id FROM audit.audit_search_token WHERE parameter = $1 \
-             AND hashtextextended(code, 0) = hashtextextended($2, 0) AND code = $2 \
-             AND system IS NULL",
+            "SELECT id FROM audit.audit_search_token \
+             WHERE hashtextextended(code, 0) = hashtextextended($2, 0) AND code = $2 \
+             AND parameter = $1 AND system IS NULL",
         )
         .bind(parameter)
         .bind(code),
         (AuditTokenSystem::Named(system), Some(code)) => sqlx::query_scalar(
-            "SELECT id FROM audit.audit_search_token WHERE parameter = $1 \
-             AND hashtextextended(code, 0) = hashtextextended($2, 0) AND code = $2 \
-             AND system = $3",
+            "SELECT id FROM audit.audit_search_token \
+             WHERE hashtextextended(code, 0) = hashtextextended($2, 0) AND code = $2 \
+             AND parameter = $1 AND system = $3",
         )
         .bind(parameter)
         .bind(code)
         .bind(system.clone()),
         (AuditTokenSystem::Named(system), None) => sqlx::query_scalar(
-            "SELECT id FROM audit.audit_search_token WHERE parameter = $1 AND system = $2",
+            "SELECT id FROM audit.audit_search_token \
+             WHERE system IS NOT NULL \
+             AND hashtextextended(system, 0) = hashtextextended($2, 0) AND system = $2 \
+             AND parameter = $1",
         )
         .bind(parameter)
         .bind(system.clone()),
