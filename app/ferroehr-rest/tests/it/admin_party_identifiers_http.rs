@@ -306,11 +306,7 @@ async fn a_reader_sees_each_versions_value_and_each_read_is_recorded() {
         vec![format!("party:{party}#national-identifier:nl-bsn"); 2],
         "one record per read, naming the party and the scheme"
     );
-    let events: Vec<String> = sqlx::query_scalar("SELECT fhir::text FROM audit.audit_event")
-        .fetch_all(&pool)
-        .await
-        .expect("every recorded event");
-    for event in events {
+    for event in common::audit_texts(&pool).await {
         assert!(!event.contains(FIRST_BSN), "a value reached the trail");
         assert!(!event.contains(SECOND_BSN), "a value reached the trail");
     }

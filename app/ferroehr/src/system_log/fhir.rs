@@ -408,8 +408,12 @@ fn kind(event: &AuditEvent, patient: bool) -> EventKind {
     } else {
         (SOURCE_ROLE, DESTINATION_ROLE)
     };
-    let operation = match event.event_type {
-        Some(EventType::RestOperation(op)) => Some(Coded::fixed(OPERATION_SYSTEM, op, op)),
+    let operation = match &event.event_type {
+        Some(EventType::RestOperation(op)) => Some(Coded {
+            system: std::borrow::Cow::Borrowed(OPERATION_SYSTEM),
+            code: op.clone(),
+            display: op.clone(),
+        }),
         _ => None,
     };
     let fixed = |event_type: Coded, subtypes: Vec<Coded>, action: &'static str| EventKind {
@@ -520,8 +524,8 @@ fn entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> Vec<Ent
 /// The operation a record names: the ITS-REST operation id, else the DICOM
 /// event the resource class audits as.
 fn operation(event: &AuditEvent) -> String {
-    match event.event_type {
-        Some(EventType::RestOperation(op)) => op.to_owned(),
+    match &event.event_type {
+        Some(EventType::RestOperation(op)) => op.to_string(),
         _ => event.object.event_id(event.action).1.to_owned(),
     }
 }
@@ -665,7 +669,7 @@ mod tests {
             EventOutcome::Success,
         );
         e.object_id = Some("8fa1::ferroehr::1".to_owned());
-        e.event_type = Some(EventType::RestOperation("composition_get"));
+        e.event_type = Some(EventType::rest("composition_get"));
         let v = json(&e, Some("patient-42"));
         insta::assert_json_snapshot!("fhir_patient_composition_read", v);
     }
@@ -1090,7 +1094,7 @@ mod tests {
             ObjectClass::Composition,
             EventOutcome::Success,
         );
-        e.event_type = Some(EventType::RestOperation("composition_get"));
+        e.event_type = Some(EventType::rest("composition_get"));
         for v in [json(&e, Some("patient-42")), {
             e.category =
                 Some(Classifier::default().classify(&AccessedContent::Objects(Vec::new()), false));

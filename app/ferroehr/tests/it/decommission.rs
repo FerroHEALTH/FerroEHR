@@ -64,8 +64,9 @@ async fn seed_every_domain(pool: &PgPool) {
         .expect("write a linkage row");
     sqlx::query(
         "INSERT INTO audit.audit_event \
-         (recorded_at, action, outcome, event_code, resource_class, fhir) \
-         VALUES (now(), 'R', 0, '110110', 'composition', '{}'::jsonb)",
+         (recorded_at, action, outcome, event_code, resource_class, render_policy) \
+         VALUES (now(), 'R', 0, '110110', 'composition', \
+                 audit.register_render_policy('{}'::jsonb))",
     )
     .execute(pool)
     .await

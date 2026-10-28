@@ -12,11 +12,12 @@
 //! §Access logging), so the store lives in its own `audit` schema, strictly
 //! outside the EHR data (`migrations/audit/0001_schema_and_roles.sql`).
 //!
-//! The canonical stored form is the FHIR R4 `AuditEvent` (IHE BALP shape,
-//! rendered by the `fhir` cargo feature) in the `fhir` jsonb column, the exact
-//! document the RESTful-ATNA ITI-81 search serves; the promoted columns are
-//! derived search keys. Rows are append-only except the per-sink delivery stamps
-//! and retention reaping.
+//! A record keeps its facts in columns and names the render policy it was
+//! written under ([`crate::system_log::render`]). The FHIR R4 `AuditEvent`
+//! (IHE BALP shape, the `fhir` cargo feature) is rendered from them when the
+//! record is read by the RESTful-ATNA ITI-81 search or delivered by the FHIR
+//! Feed, so the same record always renders the same document. Rows are
+//! append-only except the per-sink delivery stamps and retention reaping.
 
 #![expect(
     clippy::disallowed_types,
@@ -24,42 +25,122 @@
               already-rendered FHIR document, never a typed resource"
 )]
 
-use std::sync::LazyLock;
+#[cfg(feature = "fhir")]
+use std::collections::BTreeMap;
+use std::sync::{Arc, LazyLock};
+#[cfg(feature = "fhir")]
+use std::sync::{Mutex, PoisonError};
 
 use jiff_sqlx::Timestamp;
+use sqlx::postgres::PgRow;
 use sqlx::{PgPool, Row};
+use tokio::sync::OnceCell;
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
+#[cfg(feature = "fhir")]
+use crate::system_log::categories::{ClassifiedContent, MapDigest};
 use crate::system_log::codes::AtnaAction;
+#[cfg(feature = "fhir")]
+use crate::system_log::event::{AccessDomain, EventActionCode};
 use crate::system_log::event::{ActingMode, AuditEvent, EventOutcome, EventType, ObjectClass};
+use crate::system_log::render::RenderPolicy;
+#[cfg(feature = "fhir")]
+use crate::system_log::render::{CompiledPolicy, StoredRecord};
 
 use ferrohealth_smart::assurance::AssuranceLevel;
 
 /// The single-record insert, returning the stored row id.
 const INSERT_ONE: &str = "INSERT INTO audit.audit_event (recorded_at, action, outcome, \
      event_code, operation, principal, organisation, patient_id, resource_class, resource_id, \
-     client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, fhir, roles, \
+     client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
-     acting_mode, assurance_level, assurance_value, professional_id, emergency_access, permit) \
+     acting_mode, assurance_level, assurance_value, professional_id, emergency_access, permit, \
+     issuer, client_id, ehr_id, subject_namespace, subject_lookup_failed, category_content, \
+     render_policy) \
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, \
-     $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31) \
+     $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, \
+     $37) \
      RETURNING id";
 
-/// The batched insert: one row per element of the parallel column arrays.
+/// The batched insert: one row per element of the parallel column arrays, every
+/// row under the one render policy in `$39`.
 const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, outcome, \
      event_code, operation, principal, organisation, patient_id, resource_class, resource_id, \
-     client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, fhir, roles, \
+     client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
      acting_mode, assurance_level, assurance_value, professional_id, emergency_access, \
-     retention_ends, retention_stated, permit) \
-     SELECT * FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
+     retention_ends, retention_stated, permit, issuer, client_id, ehr_id, subject_namespace, \
+     subject_lookup_failed, category_content, render_policy) \
+     SELECT *, $39::bytea FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
      $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], \
      $12::text[], $13::text[], $14::text[], $15::text[], $16::bigint[], $17::text[], \
-     $18::jsonb[], $19::jsonb[], $20::jsonb[], $21::bigint[], $22::jsonb[], $23::text[], \
-     $24::jsonb[], $25::text[], $26::text[], $27::text[], $28::text[], $29::text[], \
-     $30::boolean[], $31::text[]::date[], $32::boolean[], $33::text[])";
+     $18::jsonb[], $19::jsonb[], $20::bigint[], $21::jsonb[], $22::text[], \
+     $23::jsonb[], $24::text[], $25::text[], $26::text[], $27::text[], $28::text[], \
+     $29::boolean[], $30::text[]::date[], $31::boolean[], $32::text[], $33::text[], \
+     $34::text[], $35::text[], $36::text[], $37::boolean[], $38::jsonb[])";
+
+/// The columns a stored record is read back from, in the order the ITI-81
+/// search and the FHIR Feed select them.
+#[cfg(feature = "fhir")]
+const RECORD_COLUMNS: [&str; 35] = [
+    "chain_seq",
+    "recorded_at",
+    "stored_at",
+    "action",
+    "outcome",
+    "operation",
+    "principal",
+    "organisation",
+    "patient_id",
+    "resource_class",
+    "resource_id",
+    "client_ip",
+    "token_id",
+    "domain",
+    "purpose",
+    "legal_basis",
+    "result_count",
+    "request_id",
+    "roles",
+    "origins",
+    "origin_count",
+    "category_map_digest",
+    "acting_mode",
+    "assurance_level",
+    "assurance_value",
+    "professional_id",
+    "emergency_access",
+    "permit",
+    "issuer",
+    "client_id",
+    "ehr_id",
+    "subject_namespace",
+    "subject_lookup_failed",
+    "category_content",
+    "render_policy",
+];
+
+/// The oldest record the FHIR Feed owes past the chain positions in `$1`,
+/// read as [`RECORD_COLUMNS`].
+#[cfg(feature = "fhir")]
+const OLDEST_OWED: &str = "SELECT \
+     e.chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.operation, \
+     e.principal, e.organisation, e.patient_id, e.resource_class, e.resource_id, \
+     e.client_ip, e.token_id, e.domain, e.purpose, e.legal_basis, e.result_count, \
+     e.request_id, e.roles, e.origins, e.origin_count, e.category_map_digest, \
+     e.acting_mode, e.assurance_level, e.assurance_value, e.professional_id, \
+     e.emergency_access, e.permit, e.issuer, e.client_id, e.ehr_id, \
+     e.subject_namespace, e.subject_lookup_failed, e.category_content, e.render_policy \
+     FROM audit.fhir_feed_outbox o \
+     JOIN audit.audit_event e ON e.chain_seq = o.chain_seq \
+     WHERE NOT (o.chain_seq = ANY($1)) \
+     ORDER BY o.chain_seq ASC LIMIT 1";
+
+/// How many records one read of a document-matched ITI-81 search renders.
+#[cfg(feature = "fhir")]
+const SCAN_BATCH: u64 = 500;
 
 /// The first date a stored record may be deleted on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -68,6 +149,16 @@ pub enum RecordEnd {
     On(jiff::civil::Date),
     /// Never: the record is kept without end.
     Never,
+}
+
+/// One record as the store writes it: the resolved event and the patient its
+/// subject resolver found behind the event's EHR.
+#[derive(Debug, Clone)]
+pub struct AuditRecord {
+    /// The resolved event.
+    pub event: AuditEvent,
+    /// The patient (EHR subject) id, when the resolver found one.
+    pub subject: Option<String>,
 }
 
 /// [`INSERT_ONE`] that also enters the record in the FHIR Feed's outbox, in
@@ -89,6 +180,19 @@ static INSERT_BATCH_OWED: LazyLock<String> = LazyLock::new(|| {
     )
 });
 
+/// The render policy a store writes its records under, registered in the
+/// store the first time a record is written.
+#[derive(Debug)]
+struct WritePolicy {
+    policy: RenderPolicy,
+    /// The policy's digest, once the store holds the policy.
+    digest: OnceCell<Vec<u8>>,
+}
+
+/// The policies records name, compiled once each, by digest.
+#[cfg(feature = "fhir")]
+type PolicyCache = Arc<Mutex<BTreeMap<Vec<u8>, Arc<CompiledPolicy>>>>;
+
 /// The PG-backed Audit Record Repository (the `store` sink).
 #[derive(Debug, Clone)]
 pub struct AuditStore {
@@ -96,17 +200,29 @@ pub struct AuditStore {
     /// Whether the FHIR Feed delivers from this store, so each record written
     /// is owed to it.
     fhir_feed: bool,
+    /// The policy every record this store writes is rendered under.
+    writing: Arc<WritePolicy>,
+    /// The policies of the records this store has read.
+    #[cfg(feature = "fhir")]
+    policies: PolicyCache,
 }
 
 impl AuditStore {
-    /// A store over the given pool. The pool should be the plain
-    /// pool: the audit trail is the node's operator surface, written by the
-    /// drain task rather than by a request.
+    /// A store over the given pool, writing under the default render policy
+    /// until [`Self::with_render_policy`] names the deployment's. The pool
+    /// should be the plain pool: the audit trail is the node's operator
+    /// surface, written by the drain task rather than by a request.
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
         AuditStore {
             pool,
             fhir_feed: false,
+            writing: Arc::new(WritePolicy {
+                policy: RenderPolicy::default(),
+                digest: OnceCell::new(),
+            }),
+            #[cfg(feature = "fhir")]
+            policies: Arc::new(Mutex::new(BTreeMap::new())),
         }
     }
 
@@ -125,9 +241,41 @@ impl AuditStore {
         self
     }
 
-    /// Persist one audit record: the rendered FHIR `AuditEvent` as the
-    /// canonical payload plus the promoted search columns derived from the
-    /// resolved event. Returns the stored row id (for the per-sink delivery
+    /// This store writing every record under `policy`, the configuration its
+    /// FHIR `AuditEvent` is rendered under when it is read.
+    #[must_use]
+    pub fn with_render_policy(mut self, policy: RenderPolicy) -> Self {
+        self.writing = Arc::new(WritePolicy {
+            policy,
+            digest: OnceCell::new(),
+        });
+        self
+    }
+
+    /// The digest of the policy this store writes under, storing the policy
+    /// the first time.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the policy cannot be stored.
+    async fn writing_digest(&self) -> Result<Vec<u8>, AuditError> {
+        let writing = &self.writing;
+        writing
+            .digest
+            .get_or_try_init(|| async {
+                let policy = serde_json::to_value(&writing.policy)
+                    .map_err(|e| AuditError::Policy(Box::new(e)))?;
+                let digest: Vec<u8> = sqlx::query_scalar("SELECT audit.register_render_policy($1)")
+                    .bind(policy)
+                    .fetch_one(&mut *acquire(&self.pool).await?)
+                    .await?;
+                Ok::<_, AuditError>(digest)
+            })
+            .await
+            .cloned()
+    }
+
+    /// Persist one audit record: its facts as columns, under the store's
+    /// render policy. Returns the stored row id (for the per-sink delivery
     /// stamps).
     ///
     /// # Errors
@@ -136,8 +284,8 @@ impl AuditStore {
         &self,
         event: &AuditEvent,
         subject: Option<&str>,
-        fhir: &serde_json::Value,
     ) -> Result<Uuid, AuditError> {
+        let policy = self.writing_digest().await?;
         let outcome = outcome_smallint(event);
         sqlx::query(self.owed(INSERT_ONE, &INSERT_ONE_OWED))
             .bind(Timestamp::from(event.timestamp))
@@ -157,7 +305,6 @@ impl AuditStore {
             .bind(event.legal_basis.as_deref())
             .bind(result_count(event))
             .bind(event.request_id.as_deref())
-            .bind(fhir.clone())
             .bind(roles_json(event))
             .bind(origins_json(event))
             .bind(origin_count(event))
@@ -171,6 +318,13 @@ impl AuditStore {
             .bind(event.actor.professional_id.as_deref())
             .bind(event.emergency_access)
             .bind(event.permit.as_deref())
+            .bind(event.issuer.as_deref())
+            .bind(event.client_id.as_deref())
+            .bind(access_ehr_id(event))
+            .bind(event.subject_namespace.as_deref())
+            .bind(event.subject_lookup_failed)
+            .bind(category_content_json(event)?)
+            .bind(policy)
             .fetch_one(&mut *acquire(&self.pool).await?)
             .await?
             .try_get::<Uuid, _>("id")
@@ -181,19 +335,12 @@ impl AuditStore {
     /// parallel column arrays) — the throughput path for the default
     /// store-only posture, where per-event round trips cannot keep up with a
     /// loaded write path. No row ids are returned: the batch path is used
-    /// only when no per-row delivery stamping is needed (the syslog sink
-    /// keeps the per-event [`Self::insert`]).
-    ///
-    /// A record whose FHIR rendering failed carries no document and is
-    /// skipped here — the drop is already metered where the rendering failed.
+    /// only when no per-row delivery stamping is needed.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the INSERT fails (the whole batch fails
     /// together; the caller retries).
-    pub async fn insert_batch(
-        &self,
-        records: &[(AuditEvent, Option<String>, Option<serde_json::Value>)],
-    ) -> Result<(), AuditError> {
+    pub async fn insert_batch(&self, records: &[AuditRecord]) -> Result<(), AuditError> {
         self.write_batch(records, &[]).await
     }
 
@@ -206,7 +353,7 @@ impl AuditStore {
     /// when `ends` does not hold one end per record.
     pub async fn insert_batch_ending(
         &self,
-        records: &[(AuditEvent, Option<String>, Option<serde_json::Value>)],
+        records: &[AuditRecord],
         ends: &[RecordEnd],
     ) -> Result<(), AuditError> {
         if ends.len() != records.len() {
@@ -223,12 +370,13 @@ impl AuditStore {
     /// end and keeps the store horizon.
     async fn write_batch(
         &self,
-        records: &[(AuditEvent, Option<String>, Option<serde_json::Value>)],
+        records: &[AuditRecord],
         ends: &[RecordEnd],
     ) -> Result<(), AuditError> {
         if records.is_empty() {
             return Ok(());
         }
+        let policy = self.writing_digest().await?;
         let mut recorded_at: Vec<Timestamp> = Vec::with_capacity(records.len());
         let mut actions: Vec<String> = Vec::with_capacity(records.len());
         let mut outcomes: Vec<i16> = Vec::with_capacity(records.len());
@@ -245,7 +393,6 @@ impl AuditStore {
         let mut declared = DeclaredColumns::with_capacity(records.len());
         let mut result_counts: Vec<Option<i64>> = Vec::with_capacity(records.len());
         let mut request_ids: Vec<Option<&str>> = Vec::with_capacity(records.len());
-        let mut fhir_docs: Vec<serde_json::Value> = Vec::with_capacity(records.len());
         let mut roles: Vec<Option<serde_json::Value>> = Vec::with_capacity(records.len());
         let mut origins: Vec<Option<serde_json::Value>> = Vec::with_capacity(records.len());
         let mut origin_counts: Vec<Option<i64>> = Vec::with_capacity(records.len());
@@ -253,10 +400,8 @@ impl AuditStore {
         let mut actors = ActorColumns::with_capacity(records.len());
         let mut emergency: Vec<bool> = Vec::with_capacity(records.len());
         let mut retention = RetentionColumns::with_capacity(records.len());
-        for (index, (event, subject, fhir)) in records.iter().enumerate() {
-            let Some(fhir) = fhir else {
-                continue;
-            };
+        let mut subjects = SubjectColumns::with_capacity(records.len());
+        for (index, AuditRecord { event, subject }) in records.iter().enumerate() {
             retention.push(ends.get(index));
             recorded_at.push(Timestamp::from(event.timestamp));
             actions.push(action_str(event));
@@ -274,16 +419,13 @@ impl AuditStore {
             declared.push(event);
             result_counts.push(result_count(event));
             request_ids.push(event.request_id.as_deref());
-            fhir_docs.push(fhir.clone());
             roles.push(roles_json(event));
             origins.push(origins_json(event));
             origin_counts.push(origin_count(event));
-            classified.push(event);
+            classified.push(event)?;
             actors.push(event);
             emergency.push(event.emergency_access);
-        }
-        if fhir_docs.is_empty() {
-            return Ok(());
+            subjects.push(event);
         }
         sqlx::query(self.owed(INSERT_BATCH, &INSERT_BATCH_OWED))
             .bind(recorded_at)
@@ -303,7 +445,6 @@ impl AuditStore {
             .bind(declared.legal_bases)
             .bind(result_counts)
             .bind(request_ids)
-            .bind(fhir_docs)
             .bind(roles)
             .bind(origins)
             .bind(origin_counts)
@@ -319,45 +460,134 @@ impl AuditStore {
             .bind(retention.ends)
             .bind(retention.stated)
             .bind(declared.permits)
+            .bind(subjects.issuers)
+            .bind(subjects.clients)
+            .bind(subjects.ehr_ids)
+            .bind(subjects.namespaces)
+            .bind(subjects.lookups_failed)
+            .bind(classified.contents)
+            .bind(policy)
             .execute(&mut *acquire(&self.pool).await?)
             .await?;
         Ok(())
     }
 
+    /// The compiled render policy `digest` names, read from the store the
+    /// first time.
+    ///
+    /// # Errors
+    /// [`AuditError::Unreadable`] when the store holds no such policy,
+    /// [`AuditError::UnreadableJson`] when it does not read, and the
+    /// [`RenderPolicy::compile`] errors when it does not compile.
+    #[cfg(feature = "fhir")]
+    async fn policy(
+        &self,
+        chain_seq: i64,
+        digest: &[u8],
+    ) -> Result<Arc<CompiledPolicy>, AuditError> {
+        if let Some(policy) = self
+            .policies
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(digest)
+        {
+            return Ok(Arc::clone(policy));
+        }
+        let stored: Option<serde_json::Value> =
+            sqlx::query_scalar("SELECT policy FROM audit.audit_render_policy WHERE digest = $1")
+                .bind(digest)
+                .fetch_optional(&mut *acquire(&self.pool).await?)
+                .await?;
+        let Some(stored) = stored else {
+            return Err(AuditError::Unreadable {
+                chain_seq,
+                reason: "it names a render policy the store does not hold",
+            });
+        };
+        let policy: RenderPolicy =
+            serde_json::from_value(stored).map_err(|source| AuditError::UnreadableJson {
+                chain_seq,
+                column: "render_policy",
+                source,
+            })?;
+        let compiled = Arc::new(policy.compile()?);
+        self.policies
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(digest.to_vec(), Arc::clone(&compiled));
+        Ok(compiled)
+    }
+
+    /// The FHIR R4 `AuditEvent` of a stored row, rendered under the policy it
+    /// names.
+    ///
+    /// # Errors
+    /// [`AuditError::Unreadable`] and [`AuditError::UnreadableJson`] when the
+    /// row or its policy does not read, [`AuditError::Render`] when the
+    /// document cannot be written.
+    #[cfg(feature = "fhir")]
+    async fn render(&self, row: &PgRow) -> Result<serde_json::Value, AuditError> {
+        let (digest, stored) = stored_record(row)?;
+        let policy = self.policy(stored.chain_seq, &digest).await?;
+        crate::system_log::render::render(stored, &policy)
+    }
+
+    /// The FHIR R4 `AuditEvent` of the record at chain position `chain_seq`,
+    /// rendered from its columns as the ITI-81 search serves it; `None` when
+    /// no record holds that position.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the SELECT fails, and the rendering errors of
+    /// a record that cannot be read back.
+    #[cfg(feature = "fhir")]
+    pub async fn rendered(&self, chain_seq: i64) -> Result<Option<serde_json::Value>, AuditError> {
+        use sea_query::{Alias, Expr, ExprTrait, PostgresQueryBuilder};
+        use sea_query_sqlx::SqlxBinder as _;
+
+        let (sql, values) = newest_first(
+            sea_query::Cond::all().add(Expr::col(Alias::new("chain_seq")).eq(chain_seq)),
+        )
+        .build_sqlx(PostgresQueryBuilder);
+        let row = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
+            .fetch_optional(&mut *acquire(&self.pool).await?)
+            .await?;
+        match row {
+            Some(row) => self.render(&row).await.map(Some),
+            None => Ok(None),
+        }
+    }
+
     /// The oldest record the FHIR Feed still owes, past the chain positions in
-    /// `skip`, as `(chain_seq, fhir document)`, and how many such records there
-    /// are.
+    /// `skip`, as `(chain_seq, its FHIR document)`, and how many such records
+    /// there are. A record whose document cannot be rendered comes back as its
+    /// chain position with the error, for the feed to hold aside.
     ///
     /// # Errors
     /// [`AuditError::Store`] when a SELECT fails.
+    #[cfg(feature = "fhir")]
     pub async fn oldest_fhir_feed(
         &self,
         skip: &[i64],
-    ) -> Result<(Option<(i64, serde_json::Value)>, i64), AuditError> {
+    ) -> Result<(Option<(i64, Result<serde_json::Value, AuditError>)>, i64), AuditError> {
         let mut conn = acquire(&self.pool).await?;
-        let row = sqlx::query(
-            "SELECT o.chain_seq, e.fhir FROM audit.fhir_feed_outbox o \
-             JOIN audit.audit_event e ON e.chain_seq = o.chain_seq \
-             WHERE NOT (o.chain_seq = ANY($1)) \
-             ORDER BY o.chain_seq ASC LIMIT 1",
-        )
-        .bind(skip)
-        .fetch_optional(&mut *conn)
-        .await?;
+        let row = sqlx::query(OLDEST_OWED)
+            .bind(skip)
+            .fetch_optional(&mut *conn)
+            .await?;
         let waiting: i64 = sqlx::query_scalar(
             "SELECT count(*) FROM audit.fhir_feed_outbox WHERE NOT (chain_seq = ANY($1))",
         )
         .bind(skip)
         .fetch_one(&mut *conn)
         .await?;
-        let oldest = row
-            .map(|row| -> Result<_, AuditError> {
-                Ok((
-                    row.try_get::<i64, _>("chain_seq")?,
-                    row.try_get::<serde_json::Value, _>("fhir")?,
-                ))
-            })
-            .transpose()?;
+        drop(conn);
+        let oldest = match row {
+            Some(row) => {
+                let chain_seq = row.try_get::<i64, _>("chain_seq")?;
+                Some((chain_seq, self.render(&row).await))
+            }
+            None => None,
+        };
         Ok((oldest, waiting))
     }
 
@@ -521,40 +751,126 @@ impl AuditStore {
         findings(rows)
     }
 
-    /// The RESTful-ATNA ITI-81 retrieval: filtered, newest-first stored FHIR
-    /// `AuditEvent` documents plus the total match count. The filter is the
-    /// supported ITI-81 search-parameter subset ([`AuditSearchFilter`]).
+    /// The RESTful-ATNA ITI-81 retrieval: the FHIR `AuditEvent` documents of
+    /// the matching records, newest first, rendered from their columns, plus
+    /// the total match count. The filter is the supported ITI-81
+    /// search-parameter subset ([`AuditSearchFilter`]).
+    ///
+    /// A criterion on a column is applied in the statement. A criterion on an
+    /// element of the document (`address` and the token parameters) is applied
+    /// to the rendered document, so it matches exactly what the record serves:
+    /// the records the column criteria leave are rendered in batches, newest
+    /// first, and counted and paged here.
     ///
     /// # Errors
-    /// [`AuditError::Store`] when either query fails.
+    /// [`AuditError::Store`] when a query fails, and the rendering errors of a
+    /// record that cannot be read back.
+    #[cfg(feature = "fhir")]
     pub async fn search(
         &self,
         filter: &AuditSearchFilter,
     ) -> Result<(i64, Vec<serde_json::Value>), AuditError> {
+        if filter.criteria.iter().any(AuditCriterion::reads_document) {
+            return self.search_documents(filter).await;
+        }
         let (count_sql, count_values, sql, values) = build_search_statements(filter);
         let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
             .fetch_one(&mut *acquire(&self.pool).await?)
             .await?;
-
         let rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
             .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
-        let documents = rows
-            .into_iter()
-            .map(|row| {
-                row.try_get::<serde_json::Value, _>("fhir")
-                    .map_err(AuditError::Store)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let mut documents = Vec::with_capacity(rows.len());
+        for row in &rows {
+            documents.push(self.render(row).await?);
+        }
         Ok((total, documents))
+    }
+
+    /// [`Self::search`] with a criterion on the document: every record the
+    /// column criteria leave is rendered, newest first, `SCAN_BATCH` at a
+    /// time, and the ones whose document matches are counted and paged.
+    #[cfg(feature = "fhir")]
+    async fn search_documents(
+        &self,
+        filter: &AuditSearchFilter,
+    ) -> Result<(i64, Vec<serde_json::Value>), AuditError> {
+        let count = usize::try_from(filter.count.clamp(1, 1000)).unwrap_or(50);
+        let offset = usize::try_from(Ord::max(filter.offset, 0)).unwrap_or(usize::MAX);
+        let document_criteria: Vec<&AuditCriterion> = filter
+            .criteria
+            .iter()
+            .filter(|criterion| criterion.reads_document())
+            .collect();
+        let mut total: usize = 0;
+        let mut page = Vec::new();
+        let mut after: Option<ScanKey> = None;
+        loop {
+            let (sql, values) = build_scan_statement(filter, after.as_ref());
+            let rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
+                .fetch_all(&mut *acquire(&self.pool).await?)
+                .await?;
+            for row in &rows {
+                let document = self.render(row).await?;
+                if document_criteria
+                    .iter()
+                    .all(|criterion| criterion.matches(&document))
+                {
+                    total = total.saturating_add(1);
+                    if total > offset && page.len() < count {
+                        page.push(document);
+                    }
+                }
+            }
+            let Some(last) = rows.last() else {
+                break;
+            };
+            after = Some(ScanKey::of(last)?);
+            if u64::try_from(rows.len()).unwrap_or(u64::MAX) < SCAN_BATCH {
+                break;
+            }
+        }
+        Ok((i64::try_from(total).unwrap_or(i64::MAX), page))
     }
 }
 
-/// The `WHERE` condition for the ITI-81 filter.
+/// The position of the last record one batch of a document-matched search
+/// rendered: the search order is `recorded_at`, `stored_at` and `chain_seq`,
+/// each descending, and the next batch starts below it.
+#[cfg(feature = "fhir")]
+#[derive(Debug, Clone)]
+struct ScanKey {
+    recorded_at: String,
+    stored_at: String,
+    chain_seq: i64,
+}
+
+#[cfg(feature = "fhir")]
+impl ScanKey {
+    /// The key of `row`.
+    fn of(row: &PgRow) -> Result<Self, AuditError> {
+        Ok(Self {
+            recorded_at: row
+                .try_get::<Timestamp, _>("recorded_at")?
+                .to_jiff()
+                .to_string(),
+            stored_at: row
+                .try_get::<Timestamp, _>("stored_at")?
+                .to_jiff()
+                .to_string(),
+            chain_seq: row.try_get("chain_seq")?,
+        })
+    }
+}
+
+/// The `WHERE` condition for the ITI-81 filter: the date window and the
+/// criteria on columns. A criterion on the document adds what its document
+/// match implies about a column, when that narrows the records to render.
 ///
 /// Every column name is a literal here; every caller-supplied value goes through
 /// `Expr::val` and therefore binds as a parameter rather than entering the SQL
 /// text. That split is the property `sql_injection`-style tests pin.
+#[cfg(feature = "fhir")]
 fn search_condition(filter: &AuditSearchFilter) -> sea_query::Cond {
     use sea_query::{Alias, Expr, ExprTrait};
 
@@ -577,13 +893,17 @@ fn search_condition(filter: &AuditSearchFilter) -> sea_query::Cond {
         });
     }
     for criterion in &filter.criteria {
-        cond = cond.add(criterion_condition(criterion));
+        if let Some(condition) = criterion_condition(criterion) {
+            cond = cond.add(condition);
+        }
     }
     cond
 }
 
-/// The condition of one criterion: any of its values matches.
-fn criterion_condition(criterion: &AuditCriterion) -> sea_query::Cond {
+/// The column condition of one criterion: any of its values matches. `None`
+/// for a criterion on the document that implies nothing about a column.
+#[cfg(feature = "fhir")]
+fn criterion_condition(criterion: &AuditCriterion) -> Option<sea_query::Cond> {
     use sea_query::{Alias, Expr, ExprTrait};
 
     let column_in = |column: &'static str, values: &[String]| {
@@ -592,66 +912,24 @@ fn criterion_condition(criterion: &AuditCriterion) -> sea_query::Cond {
         })
     };
     match criterion {
-        AuditCriterion::Patient(values) => column_in("patient_id", values),
-        AuditCriterion::Agent(values) => column_in("principal", values),
-        AuditCriterion::Entity(values) => column_in("resource_id", values),
-        AuditCriterion::Action(values) => column_in("action", values),
+        AuditCriterion::Patient(values) => Some(column_in("patient_id", values)),
+        AuditCriterion::Agent(values) => Some(column_in("principal", values)),
+        AuditCriterion::Entity(values) => Some(column_in("resource_id", values)),
+        AuditCriterion::Action(values) => Some(column_in("action", values)),
         AuditCriterion::Outcome(values) => {
-            values.iter().fold(sea_query::Cond::any(), |any, value| {
+            Some(values.iter().fold(sea_query::Cond::any(), |any, value| {
                 any.add(Expr::col(Alias::new("outcome")).eq(*value))
-            })
+            }))
         }
-        // NOTE: `RESTful` ATNA §3.81.4.1.2.2, `address` matches
-        // `agent.network.address`; every agent of the stored document is read.
-        AuditCriterion::Address(values) => {
-            values.iter().fold(sea_query::Cond::any(), |any, value| {
-                any.add(Expr::cust_with_values(
-                    "EXISTS (SELECT 1 FROM jsonb_path_query(fhir, CAST($1 AS jsonpath)) \
-                     AS address(value) WHERE strpos(lower(address.value #>> '{}'), lower($2)) > 0)",
-                    ["$.agent[*].network.address".to_owned(), value.clone()],
-                ))
-            })
-        }
-        AuditCriterion::Element(element, tokens) => {
-            tokens.iter().fold(sea_query::Cond::any(), |any, token| {
-                let (path, vars) = token_path(*element, token);
-                any.add(Expr::cust_with_values(
-                    "jsonb_path_exists(fhir, CAST($1 AS jsonpath), CAST($2 AS jsonb))",
-                    [path, vars.to_string()],
-                ))
-            })
-        }
+        // NOTE: our own design: the one patient entity a document carries is the record's
+        // patient_id, so a patient.identifier value can only match a record of that patient.
+        AuditCriterion::Element(AuditElement::PatientIdentifier, tokens) => tokens
+            .iter()
+            .map(|token| token.code.clone())
+            .collect::<Option<Vec<String>>>()
+            .map(|codes| column_in("patient_id", &codes)),
+        AuditCriterion::Address(_) | AuditCriterion::Element(..) => None,
     }
-}
-
-/// The SQL/JSON path that finds `token` at `element`, and its variables: the
-/// three token forms of FHIR R4 Search §3.1.1.4.10, with the values bound as
-/// `$code` and `$system` rather than written into the path.
-fn token_path(element: AuditElement, token: &AuditToken) -> (String, serde_json::Value) {
-    let (path, identifier) = element.path();
-    let by_code = if identifier {
-        " ? (@.value == $code"
-    } else {
-        " ? (@.code == $code"
-    };
-    let filter: [&str; 2] = match (&token.system, token.code.is_some()) {
-        (AuditTokenSystem::Any, _) => [by_code, ")"],
-        (AuditTokenSystem::Absent, _) => [by_code, " && !exists(@.system))"],
-        (AuditTokenSystem::Named(_), true) => [by_code, " && @.system == $system)"],
-        (AuditTokenSystem::Named(_), false) => [" ? (@.system == $system", ")"],
-    };
-    let system = match &token.system {
-        AuditTokenSystem::Named(system) => serde_json::Value::String(system.clone()),
-        AuditTokenSystem::Any | AuditTokenSystem::Absent => serde_json::Value::Null,
-    };
-    let code = token
-        .code
-        .clone()
-        .map_or(serde_json::Value::Null, serde_json::Value::String);
-    (
-        [path, filter[0], filter[1]].concat(),
-        serde_json::json!({ "code": code, "system": system }),
-    )
 }
 
 /// Build the ITI-81 retrieval's two statements — the count and the page — from a
@@ -667,6 +945,7 @@ fn token_path(element: AuditElement, token: &AuditToken) -> (String, serde_json:
 /// The guard `scripts/checks/sql-string-building.sh` catches string-built SQL but
 /// cannot see an `Alias::new` argument, which is why the closed set is pinned by a
 /// test rather than only by the guard.
+#[cfg(feature = "fhir")]
 fn build_search_statements(
     filter: &AuditSearchFilter,
 ) -> (
@@ -675,7 +954,7 @@ fn build_search_statements(
     String,
     sea_query_sqlx::SqlxValues,
 ) {
-    use sea_query::{Alias, Expr, ExprTrait, Order, PostgresQueryBuilder, Query};
+    use sea_query::{Alias, Expr, ExprTrait, PostgresQueryBuilder, Query};
     use sea_query_sqlx::SqlxBinder as _;
 
     let table = (Alias::new("audit"), Alias::new("audit_event"));
@@ -683,16 +962,11 @@ fn build_search_statements(
 
     let (count_sql, count_values) = Query::select()
         .expr(Expr::col(sea_query::Asterisk).count())
-        .from(table.clone())
+        .from(table)
         .cond_where(condition.clone())
         .build_sqlx(PostgresQueryBuilder);
 
-    let (sql, values) = Query::select()
-        .column(Alias::new("fhir"))
-        .from(table)
-        .cond_where(condition)
-        .order_by(Alias::new("recorded_at"), Order::Desc)
-        .order_by(Alias::new("stored_at"), Order::Desc)
+    let (sql, values) = newest_first(condition)
         .limit(u64::try_from(filter.count.clamp(1, 1000)).unwrap_or(50))
         .offset(u64::try_from(Ord::max(filter.offset, 0)).unwrap_or(0))
         .build_sqlx(PostgresQueryBuilder);
@@ -700,8 +974,50 @@ fn build_search_statements(
     (count_sql, count_values, sql, values)
 }
 
+/// The statement that reads the next batch of a document-matched search: the
+/// records the filter's column criteria leave, newest first, below `after`.
+#[cfg(feature = "fhir")]
+fn build_scan_statement(
+    filter: &AuditSearchFilter,
+    after: Option<&ScanKey>,
+) -> (String, sea_query_sqlx::SqlxValues) {
+    use sea_query::{Expr, PostgresQueryBuilder};
+    use sea_query_sqlx::SqlxBinder as _;
+
+    let mut condition = search_condition(filter);
+    if let Some(after) = after {
+        condition = condition.add(Expr::cust_with_values(
+            "(recorded_at, stored_at, chain_seq) < \
+             (CAST($1 AS timestamptz), CAST($2 AS timestamptz), CAST($3 AS bigint))",
+            [
+                after.recorded_at.clone(),
+                after.stored_at.clone(),
+                after.chain_seq.to_string(),
+            ],
+        ));
+    }
+    newest_first(condition)
+        .limit(SCAN_BATCH)
+        .build_sqlx(PostgresQueryBuilder)
+}
+
+/// The record columns of the records `condition` selects, newest first.
+#[cfg(feature = "fhir")]
+fn newest_first(condition: sea_query::Cond) -> sea_query::SelectStatement {
+    use sea_query::{Alias, Order, Query};
+
+    Query::select()
+        .columns(RECORD_COLUMNS.map(Alias::new))
+        .from((Alias::new("audit"), Alias::new("audit_event")))
+        .cond_where(condition)
+        .order_by(Alias::new("recorded_at"), Order::Desc)
+        .order_by(Alias::new("stored_at"), Order::Desc)
+        .order_by(Alias::new("chain_seq"), Order::Desc)
+        .to_owned()
+}
+
 /// The findings a verification query returned, in its order.
-fn findings(rows: Vec<sqlx::postgres::PgRow>) -> Result<Vec<AuditChainFinding>, AuditError> {
+fn findings(rows: Vec<PgRow>) -> Result<Vec<AuditChainFinding>, AuditError> {
     rows.into_iter()
         .map(|row| {
             Ok(AuditChainFinding {
@@ -780,7 +1096,7 @@ pub enum AuditCriterion {
     /// `address` — a substring of an `agent.network.address`, compared
     /// without regard to case.
     Address(Vec<String>),
-    /// A token parameter matched against an element of the stored
+    /// A token parameter matched against an element of the rendered
     /// `AuditEvent`.
     Element(AuditElement, Vec<AuditToken>),
 }
@@ -808,24 +1124,141 @@ pub enum AuditElement {
     Subtype,
 }
 
+/// The code system the role of the patient entity is coded in (FHIR R4
+/// `object-role`, code `1` Patient).
+const OBJECT_ROLE_SYSTEM: &str = "http://terminology.hl7.org/CodeSystem/object-role";
+
 impl AuditElement {
-    /// The SQL/JSON path of the element, and whether it is an `Identifier`
-    /// (its code in `value`) rather than a `Coding` (its code in `code`).
-    const fn path(self) -> (&'static str, bool) {
+    /// The nodes of `document` the element names, and whether each is an
+    /// `Identifier` (its code in `value`) rather than a `Coding` (its code in
+    /// `code`).
+    fn nodes(self, document: &serde_json::Value) -> (Vec<&serde_json::Value>, bool) {
+        let entities = || lax_path(document, &["entity"]);
         match self {
-            Self::AgentIdentifier => ("$.agent[*].who.identifier", true),
+            Self::AgentIdentifier => (lax_path(document, &["agent", "who", "identifier"]), true),
             Self::PatientIdentifier => (
-                "$.entity[*] ? (@.role.code == \"1\" && @.role.system == \"http://terminology.hl7.org/CodeSystem/object-role\").what.identifier",
+                entities()
+                    .into_iter()
+                    .filter(|entity| {
+                        any_equals(entity, &["role", "code"], "1")
+                            && any_equals(entity, &["role", "system"], OBJECT_ROLE_SYSTEM)
+                    })
+                    .flat_map(|entity| lax_path(entity, &["what", "identifier"]))
+                    .collect(),
                 true,
             ),
-            Self::EntityIdentifier => ("$.entity[*].what.identifier", true),
-            Self::SourceIdentifier => ("$.source.observer.identifier", true),
-            Self::EntityType => ("$.entity[*].type", false),
-            Self::EntityRole => ("$.entity[*].role", false),
-            Self::Type => ("$.type", false),
-            Self::Subtype => ("$.subtype[*]", false),
+            Self::EntityIdentifier => (lax_path(document, &["entity", "what", "identifier"]), true),
+            Self::SourceIdentifier => (
+                lax_path(document, &["source", "observer", "identifier"]),
+                true,
+            ),
+            Self::EntityType => (lax_path(document, &["entity", "type"]), false),
+            Self::EntityRole => (lax_path(document, &["entity", "role"]), false),
+            Self::Type => (lax_path(document, &["type"]), false),
+            Self::Subtype => (lax_path(document, &["subtype"]), false),
         }
     }
+}
+
+impl AuditCriterion {
+    /// Whether the criterion is matched against the rendered document rather
+    /// than a column.
+    #[must_use]
+    pub fn reads_document(&self) -> bool {
+        matches!(self, Self::Address(_) | Self::Element(..))
+    }
+
+    /// Whether `document` matches this criterion: any of its values does. A
+    /// criterion on a column matches every document; the statement applied it.
+    #[must_use]
+    pub fn matches(&self, document: &serde_json::Value) -> bool {
+        match self {
+            // NOTE: `RESTful` ATNA §3.81.4.1.2.2, `address` matches a substring of
+            // `agent.network.address`, compared without regard to case.
+            Self::Address(values) => {
+                let addresses: Vec<String> = lax_path(document, &["agent", "network", "address"])
+                    .into_iter()
+                    .map(|address| match address {
+                        serde_json::Value::String(text) => text.to_lowercase(),
+                        other => other.to_string().to_lowercase(),
+                    })
+                    .collect();
+                values.iter().any(|value| {
+                    let value = value.to_lowercase();
+                    addresses.iter().any(|address| address.contains(&value))
+                })
+            }
+            Self::Element(element, tokens) => {
+                let (nodes, identifier) = element.nodes(document);
+                tokens
+                    .iter()
+                    .any(|token| nodes.iter().any(|node| token.matches(node, identifier)))
+            }
+            Self::Patient(_)
+            | Self::Agent(_)
+            | Self::Entity(_)
+            | Self::Outcome(_)
+            | Self::Action(_) => true,
+        }
+    }
+}
+
+impl AuditToken {
+    /// Whether `node`, an `Identifier` when `identifier` and a `Coding`
+    /// otherwise, carries this token: the three token forms of FHIR R4 Search
+    /// §3.1.1.4.10.
+    fn matches(&self, node: &serde_json::Value, identifier: bool) -> bool {
+        let key = if identifier { "value" } else { "code" };
+        let code = || match &self.code {
+            Some(code) => any_is(node, &[key], &serde_json::Value::String(code.clone())),
+            None => any_is(node, &[key], &serde_json::Value::Null),
+        };
+        match &self.system {
+            AuditTokenSystem::Any => code(),
+            AuditTokenSystem::Absent => code() && lax_path(node, &["system"]).is_empty(),
+            AuditTokenSystem::Named(system) if self.code.is_some() => {
+                code() && any_equals(node, &["system"], system)
+            }
+            AuditTokenSystem::Named(system) => any_equals(node, &["system"], system),
+        }
+    }
+}
+
+/// The items `steps` reaches from `from`, read as an SQL/JSON path in lax mode
+/// reads them: an array is unwrapped before each member step and once at the
+/// end, and a missing member yields nothing (ISO/IEC 9075-2 SQL/JSON path, as
+/// PostgreSQL 18 documents it in "The SQL/JSON Path Language",
+/// <https://www.postgresql.org/docs/18/functions-json.html#FUNCTIONS-SQLJSON-PATH>).
+fn lax_path<'a>(from: &'a serde_json::Value, steps: &[&str]) -> Vec<&'a serde_json::Value> {
+    let unwrap = |items: Vec<&'a serde_json::Value>| -> Vec<&'a serde_json::Value> {
+        items
+            .into_iter()
+            .flat_map(|item| match item {
+                serde_json::Value::Array(elements) => elements.iter().collect::<Vec<_>>(),
+                other => vec![other],
+            })
+            .collect()
+    };
+    let mut items = vec![from];
+    for step in steps {
+        items = unwrap(items)
+            .into_iter()
+            .filter_map(|item| item.get(*step))
+            .collect();
+    }
+    unwrap(items)
+}
+
+/// Whether any item `steps` reaches from `from` is `value`.
+fn any_is(from: &serde_json::Value, steps: &[&str], value: &serde_json::Value) -> bool {
+    lax_path(from, steps).into_iter().any(|item| item == value)
+}
+
+/// Whether any item `steps` reaches from `from` is the string `text`.
+fn any_equals(from: &serde_json::Value, steps: &[&str], text: &str) -> bool {
+    lax_path(from, steps)
+        .into_iter()
+        .any(|item| item.as_str() == Some(text))
 }
 
 /// A token value (FHIR R4 Search §3.1.1.4.10).
@@ -867,14 +1300,20 @@ fn event_code(event: &AuditEvent) -> &'static str {
 
 /// The `operation` column: the ITS-REST operation id, or the DCM
 /// login/logout `EventTypeCode` csd-code for authentication records.
-fn operation(event: &AuditEvent) -> Option<&'static str> {
-    match event.event_type {
+fn operation(event: &AuditEvent) -> Option<&str> {
+    match &event.event_type {
         Some(EventType::RestOperation(op)) => Some(op),
-        Some(EventType::Login) => Some("110122"),
-        Some(EventType::Logout) => Some("110123"),
+        Some(EventType::Login) => Some(LOGIN_OPERATION),
+        Some(EventType::Logout) => Some(LOGOUT_OPERATION),
         None => None,
     }
 }
+
+/// The `operation` of an authentication record: DCM 110122 "Login".
+const LOGIN_OPERATION: &str = "110122";
+
+/// The `operation` of a session end: DCM 110123 "Logout".
+const LOGOUT_OPERATION: &str = "110123";
 
 const fn resource_class(object: ObjectClass) -> &'static str {
     match object {
@@ -1001,6 +1440,7 @@ struct CategoryColumns {
     bases: Vec<Option<&'static str>>,
     evidence: Vec<Option<serde_json::Value>>,
     digests: Vec<Option<String>>,
+    contents: Vec<Option<serde_json::Value>>,
 }
 
 impl CategoryColumns {
@@ -1010,15 +1450,74 @@ impl CategoryColumns {
             bases: Vec::with_capacity(capacity),
             evidence: Vec::with_capacity(capacity),
             digests: Vec::with_capacity(capacity),
+            contents: Vec::with_capacity(capacity),
         }
     }
 
-    fn push(&mut self, event: &AuditEvent) {
+    fn push(&mut self, event: &AuditEvent) -> Result<(), AuditError> {
         self.categories.push(categories_json(event));
         self.bases.push(category_basis(event));
         self.evidence.push(category_evidence_json(event));
         self.digests.push(category_map_digest(event));
+        self.contents.push(category_content_json(event)?);
+        Ok(())
     }
+}
+
+/// The columns of a batch that name who the caller and the subject are beyond
+/// the principal and the patient: the token's issuer and client, the EHR, the
+/// subject's namespace and whether its lookup failed.
+struct SubjectColumns<'a> {
+    issuers: Vec<Option<&'a str>>,
+    clients: Vec<Option<&'a str>>,
+    ehr_ids: Vec<Option<&'a str>>,
+    namespaces: Vec<Option<&'a str>>,
+    lookups_failed: Vec<bool>,
+}
+
+impl<'a> SubjectColumns<'a> {
+    fn with_capacity(n: usize) -> Self {
+        Self {
+            issuers: Vec::with_capacity(n),
+            clients: Vec::with_capacity(n),
+            ehr_ids: Vec::with_capacity(n),
+            namespaces: Vec::with_capacity(n),
+            lookups_failed: Vec::with_capacity(n),
+        }
+    }
+
+    fn push(&mut self, event: &'a AuditEvent) {
+        self.issuers.push(event.issuer.as_deref());
+        self.clients.push(event.client_id.as_deref());
+        self.ehr_ids.push(access_ehr_id(event));
+        self.namespaces.push(event.subject_namespace.as_deref());
+        self.lookups_failed.push(event.subject_lookup_failed);
+    }
+}
+
+/// The `ehr_id` column value: the EHR a classified access reached, which its
+/// EHDS access record names; `NULL` for every other record, whose document
+/// names no EHR.
+///
+/// NOTE: no specification governs this: our own design; a linkage record names a party, and
+/// the EHR beside it would make the audit store a second copy of the linkage map.
+fn access_ehr_id(event: &AuditEvent) -> Option<&str> {
+    event.category.as_ref().and(event.ehr_id.as_deref())
+}
+
+/// The `category_content` column value: what the classification read, or
+/// `NULL` when the operation touched no clinical content.
+///
+/// # Errors
+/// [`AuditError::Render`] when the content cannot be written as JSON, which
+/// its plain shape does not cause.
+fn category_content_json(event: &AuditEvent) -> Result<Option<serde_json::Value>, AuditError> {
+    event
+        .category
+        .as_ref()
+        .map(|record| serde_json::to_value(&record.content))
+        .transpose()
+        .map_err(|e| AuditError::Render(Box::new(e)))
 }
 
 /// The `categories` column value: the stored category words as a JSON array,
@@ -1068,10 +1567,175 @@ fn roles_json(event: &AuditEvent) -> Option<serde_json::Value> {
     ))
 }
 
-#[cfg(test)]
+/// The render policy digest and the event a stored row holds.
+///
+/// # Errors
+/// [`AuditError::Store`] when a column does not decode,
+/// [`AuditError::Unreadable`] when it holds a value this build does not write,
+/// and [`AuditError::UnreadableJson`] when a JSON column does not read.
+#[cfg(feature = "fhir")]
+fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), AuditError> {
+    let chain_seq: i64 = row.try_get("chain_seq")?;
+    let unreadable = |reason: &'static str| AuditError::Unreadable { chain_seq, reason };
+    let action = match row.try_get::<&str, _>("action")? {
+        "C" => EventActionCode::Create,
+        "R" => EventActionCode::Read,
+        "U" => EventActionCode::Update,
+        "D" => EventActionCode::Delete,
+        "E" => EventActionCode::Execute,
+        _ => return Err(unreadable("its action is none this build writes")),
+    };
+    let outcome = match row.try_get::<i16, _>("outcome")? {
+        0 => EventOutcome::Success,
+        4 => EventOutcome::MinorFailure,
+        8 => EventOutcome::SeriousFailure,
+        _ => return Err(unreadable("its outcome is none this build writes")),
+    };
+    let object = object_class(row.try_get("resource_class")?)
+        .ok_or_else(|| unreadable("its resource class is none this build writes"))?;
+    let mut event = AuditEvent::new(action, object, outcome);
+    event.timestamp = row.try_get::<Timestamp, _>("recorded_at")?.to_jiff();
+    event.event_type = row
+        .try_get::<Option<String>, _>("operation")?
+        .map(|operation| match operation.as_str() {
+            LOGIN_OPERATION => EventType::Login,
+            LOGOUT_OPERATION => EventType::Logout,
+            _ => EventType::RestOperation(std::borrow::Cow::Owned(operation)),
+        });
+    event.user_id = row
+        .try_get::<Option<String>, _>("principal")?
+        .unwrap_or_default();
+    event.issuer = row.try_get("issuer")?;
+    event.client_id = row.try_get("client_id")?;
+    event.organisation = row.try_get("organisation")?;
+    event.roles = strings(row, "roles", chain_seq)?;
+    event.client_ip = row.try_get("client_ip")?;
+    event.ehr_id = row.try_get("ehr_id")?;
+    event.subject_namespace = row.try_get("subject_namespace")?;
+    event.subject_lookup_failed = row.try_get("subject_lookup_failed")?;
+    event.object_id = row.try_get("resource_id")?;
+    event.token_id = row.try_get("token_id")?;
+    event.domain = access_domain(row.try_get("domain")?)
+        .ok_or_else(|| unreadable("its domain is none this build writes"))?;
+    event.purpose = row.try_get("purpose")?;
+    event.permit = row.try_get("permit")?;
+    event.emergency_access = row.try_get("emergency_access")?;
+    event.legal_basis = row.try_get("legal_basis")?;
+    event.result_count = count(row, "result_count", chain_seq)?;
+    event.origins = strings(row, "origins", chain_seq)?;
+    event.origin_count = count(row, "origin_count", chain_seq)?;
+    event.actor.mode = match row.try_get::<Option<&str>, _>("acting_mode")? {
+        None => None,
+        Some("person") => Some(ActingMode::Person),
+        Some("client") => Some(ActingMode::Client),
+        Some(_) => return Err(unreadable("its acting mode is none this build writes")),
+    };
+    event.actor.assurance_level = match row.try_get::<Option<&str>, _>("assurance_level")? {
+        None => None,
+        Some("low") => Some(AssuranceLevel::Low),
+        Some("substantial") => Some(AssuranceLevel::Substantial),
+        Some("high") => Some(AssuranceLevel::High),
+        Some(_) => return Err(unreadable("its assurance level is none this build writes")),
+    };
+    event.actor.assurance_value = row.try_get("assurance_value")?;
+    event.actor.professional_id = row.try_get("professional_id")?;
+    event.request_id = row.try_get("request_id")?;
+    let map_digest = row
+        .try_get::<Option<&str>, _>("category_map_digest")?
+        .map(str::parse::<MapDigest>)
+        .transpose()
+        .map_err(|_unreadable| unreadable("its category map digest does not read"))?;
+    event.category_map_digest = map_digest;
+    let content = row
+        .try_get::<Option<serde_json::Value>, _>("category_content")?
+        .map(serde_json::from_value::<ClassifiedContent>)
+        .transpose()
+        .map_err(|source| AuditError::UnreadableJson {
+            chain_seq,
+            column: "category_content",
+            source,
+        })?;
+    let stored = StoredRecord {
+        chain_seq,
+        event,
+        subject: row.try_get("patient_id")?,
+        content,
+        map_digest,
+    };
+    Ok((row.try_get("render_policy")?, stored))
+}
+
+/// The resource class `stored` names, the inverse of [`resource_class`].
+#[cfg(feature = "fhir")]
+fn object_class(stored: &str) -> Option<ObjectClass> {
+    [
+        ObjectClass::Ehr,
+        ObjectClass::Composition,
+        ObjectClass::Contribution,
+        ObjectClass::Directory,
+        ObjectClass::Query,
+        ObjectClass::Template,
+        ObjectClass::Demographic,
+        ObjectClass::Extract,
+        ObjectClass::ApplicationActivity,
+        ObjectClass::Authentication,
+    ]
+    .into_iter()
+    .find(|object| resource_class(*object) == stored)
+}
+
+/// The domain `stored` names, the inverse of [`AccessDomain::as_str`].
+#[cfg(feature = "fhir")]
+fn access_domain(stored: Option<&str>) -> Option<AccessDomain> {
+    let stored = stored?;
+    [
+        AccessDomain::Ehr,
+        AccessDomain::Demographic,
+        AccessDomain::Linkage,
+        AccessDomain::System,
+    ]
+    .into_iter()
+    .find(|domain| domain.as_str() == stored)
+}
+
+/// The strings of the JSON array in `column`; none for `NULL`.
+///
+/// # Errors
+/// [`AuditError::Unreadable`] when the column holds anything but an array of
+/// strings.
+#[cfg(feature = "fhir")]
+fn strings(row: &PgRow, column: &'static str, chain_seq: i64) -> Result<Vec<String>, AuditError> {
+    let Some(stored) = row.try_get::<Option<serde_json::Value>, _>(column)? else {
+        return Ok(Vec::new());
+    };
+    serde_json::from_value(stored).map_err(|source| AuditError::UnreadableJson {
+        chain_seq,
+        column,
+        source,
+    })
+}
+
+/// The count in `column`.
+///
+/// # Errors
+/// [`AuditError::Unreadable`] for a negative count.
+#[cfg(feature = "fhir")]
+fn count(row: &PgRow, column: &'static str, chain_seq: i64) -> Result<Option<u64>, AuditError> {
+    row.try_get::<Option<i64>, _>(column)?
+        .map(u64::try_from)
+        .transpose()
+        .map_err(|_negative| AuditError::Unreadable {
+            chain_seq,
+            reason: "it holds a negative count",
+        })
+}
+
+#[cfg(all(test, feature = "fhir"))]
 mod tests {
-    use super::build_search_statements;
-    use super::{AuditCriterion, AuditElement, AuditSearchFilter, AuditToken, AuditTokenSystem};
+    use super::{
+        AuditCriterion, AuditElement, AuditSearchFilter, AuditToken, AuditTokenSystem,
+        RECORD_COLUMNS, build_search_statements,
+    };
 
     /// Twenty payloads that break SQL when they reach the statement text rather
     /// than a bound parameter.
@@ -1198,19 +1862,10 @@ mod tests {
         seen.sort_unstable();
         seen.dedup();
 
-        let mut expected = vec![
-            "action",
-            "audit",
-            "audit_event",
-            "fhir",
-            "outcome",
-            "patient_id",
-            "principal",
-            "recorded_at",
-            "resource_id",
-            "stored_at",
-        ];
+        let mut expected: Vec<&str> = RECORD_COLUMNS.to_vec();
+        expected.extend(["audit", "audit_event"]);
         expected.sort_unstable();
+        expected.dedup();
         assert_eq!(
             seen,
             expected.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>(),
@@ -1245,5 +1900,162 @@ mod tests {
             !bound.contains(&i64::MIN.to_string()),
             "a negative offset must never reach the database: {bound}"
         );
+    }
+
+    fn token(system: AuditTokenSystem, code: Option<&str>) -> AuditToken {
+        AuditToken {
+            system,
+            code: code.map(str::to_owned),
+        }
+    }
+
+    /// The FHIR Feed reads a record back by the same columns the search does.
+    #[test]
+    fn the_feed_reads_every_record_column() {
+        let selected: Vec<&str> = super::OLDEST_OWED
+            .split(" FROM ")
+            .next()
+            .unwrap_or_default()
+            .trim_start_matches("SELECT")
+            .split(',')
+            .map(|column| column.trim().trim_start_matches("e."))
+            .collect();
+        assert_eq!(selected, RECORD_COLUMNS);
+    }
+
+    /// A rendered document with an agent, the patient and an object entity.
+    fn document() -> serde_json::Value {
+        serde_json::json!({
+            "type": {"system": "http://dicom.nema.org/resources/ontology/DCM", "code": "110110"},
+            "subtype": [{"code": "composition_get"}],
+            "agent": [
+                {"who": {"identifier": {"value": "alice"}}, "network": {"address": "10.0.0.9"}},
+                {"who": {"identifier": {"system": "urn:sys", "value": "ferroehr"}}}
+            ],
+            "entity": [
+                {
+                    "role": {"system": "http://terminology.hl7.org/CodeSystem/object-role", "code": "1"},
+                    "what": {"identifier": {"value": "patient-42"}}
+                },
+                {"what": {"identifier": {"value": "8fa1::ferroehr::1"}}}
+            ]
+        })
+    }
+
+    /// The three token forms of FHIR R4 Search §3.1.1.4.10 match an
+    /// `Identifier` by its `value` and a `Coding` by its `code`, as the stored
+    /// document's SQL/JSON path did.
+    #[test]
+    fn a_token_matches_the_document_element_it_names() {
+        let document = document();
+        let element = |element, tokens| AuditCriterion::Element(element, tokens);
+        let any = |code| token(AuditTokenSystem::Any, Some(code));
+        let cases = [
+            (
+                element(AuditElement::AgentIdentifier, vec![any("alice")]),
+                true,
+            ),
+            (
+                element(
+                    AuditElement::AgentIdentifier,
+                    vec![token(AuditTokenSystem::Absent, Some("alice"))],
+                ),
+                true,
+            ),
+            (
+                element(
+                    AuditElement::AgentIdentifier,
+                    vec![token(AuditTokenSystem::Absent, Some("ferroehr"))],
+                ),
+                false,
+            ),
+            (
+                element(
+                    AuditElement::AgentIdentifier,
+                    vec![token(
+                        AuditTokenSystem::Named("urn:sys".to_owned()),
+                        Some("ferroehr"),
+                    )],
+                ),
+                true,
+            ),
+            (
+                element(
+                    AuditElement::AgentIdentifier,
+                    vec![token(AuditTokenSystem::Named("urn:sys".to_owned()), None)],
+                ),
+                true,
+            ),
+            (
+                element(
+                    AuditElement::AgentIdentifier,
+                    vec![token(
+                        AuditTokenSystem::Named("urn:other".to_owned()),
+                        Some("ferroehr"),
+                    )],
+                ),
+                false,
+            ),
+            (
+                element(AuditElement::PatientIdentifier, vec![any("patient-42")]),
+                true,
+            ),
+            (
+                element(
+                    AuditElement::PatientIdentifier,
+                    vec![any("8fa1::ferroehr::1")],
+                ),
+                false,
+            ),
+            (
+                element(
+                    AuditElement::EntityIdentifier,
+                    vec![any("8fa1::ferroehr::1")],
+                ),
+                true,
+            ),
+            (element(AuditElement::Type, vec![any("110110")]), true),
+            (
+                element(
+                    AuditElement::Subtype,
+                    vec![any("composition_get"), any("nothing")],
+                ),
+                true,
+            ),
+            (element(AuditElement::Subtype, vec![any("nothing")]), false),
+            (
+                element(AuditElement::SourceIdentifier, vec![any("ferroehr")]),
+                false,
+            ),
+            (AuditCriterion::Address(vec!["0.0.9".to_owned()]), true),
+            (AuditCriterion::Address(vec!["10.1".to_owned()]), false),
+        ];
+        for (criterion, expected) in cases {
+            assert!(criterion.reads_document(), "{criterion:?}");
+            assert_eq!(criterion.matches(&document), expected, "{criterion:?}");
+        }
+    }
+
+    /// A `patient.identifier` value narrows the records to render to that
+    /// patient's, and a value with no code narrows nothing.
+    #[test]
+    fn a_patient_identifier_narrows_the_statement_to_the_patient() {
+        let (_, values, sql, _) = build_search_statements(&AuditSearchFilter {
+            criteria: vec![AuditCriterion::Element(
+                AuditElement::PatientIdentifier,
+                vec![token(AuditTokenSystem::Any, Some("patient-42"))],
+            )],
+            ..AuditSearchFilter::default()
+        });
+        assert!(sql.contains("\"patient_id\" = $"), "{sql}");
+        assert!(format!("{values:?}").contains("patient-42"));
+        let (_, _, sql, _) = build_search_statements(&AuditSearchFilter {
+            criteria: vec![AuditCriterion::Element(
+                AuditElement::PatientIdentifier,
+                vec![token(AuditTokenSystem::Named("urn:sys".to_owned()), None)],
+            )],
+            ..AuditSearchFilter::default()
+        });
+        assert!(!sql.contains("\"patient_id\" ="), "{sql}");
     }
 }

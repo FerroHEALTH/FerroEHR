@@ -31,23 +31,11 @@ use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::event::{
     AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
-use ferroehr::system_log::fhir;
-use ferroehr::system_log::message::AuditContext;
 use ferroehr::system_log::sender;
-use ferroehr::system_log::store::{AuditStore, VerifyScope};
+use ferroehr::system_log::store::{AuditRecord, AuditStore, VerifyScope};
 use ferroehr::telemetry::indicators::AuditChainHealth;
 use ferrohealth_health::document::State;
 use ferrohealth_health::registry::HealthIndicator;
-
-fn ctx() -> AuditContext {
-    AuditContext {
-        source_id: "ferroehr".to_owned(),
-        enterprise_site_id: "site-1".to_owned(),
-        server_ip: "10.42.23.77".to_owned(),
-        value_if_missing: "UNKNOWN".to_owned(),
-        ..AuditContext::default()
-    }
-}
 
 fn read_event(at: Timestamp, subject: &str) -> AuditEvent {
     let mut event = AuditEvent::new(
@@ -58,7 +46,7 @@ fn read_event(at: Timestamp, subject: &str) -> AuditEvent {
     "alice".clone_into(&mut event.user_id);
     event.client_ip = Some("10.0.0.9".to_owned());
     event.object_id = Some(subject.to_owned());
-    event.event_type = Some(EventType::RestOperation("composition_get"));
+    event.event_type = Some(EventType::rest("composition_get"));
     event.timestamp = at;
     event
 }
@@ -68,9 +56,8 @@ async fn seed(store: &AuditStore, count: u32) {
     for n in 0..count {
         let at = Timestamp::now() - jiff::SignedDuration::from_hours(i64::from(count - n));
         let event = read_event(at, &format!("8fa1::ferroehr::{n}"));
-        let rendered = fhir::to_fhir(&event, &ctx(), Some("patient-42")).expect("render");
         store
-            .insert(&event, Some("patient-42"), &rendered)
+            .insert(&event, Some("patient-42"))
             .await
             .expect("insert");
     }
@@ -186,8 +173,7 @@ async fn retention_reaping_leaves_a_verifiable_trail() {
         now,
     ] {
         let event = read_event(at, "8fa1::ferroehr::1");
-        let rendered = fhir::to_fhir(&event, &ctx(), None).expect("render");
-        store.insert(&event, None, &rendered).await.expect("insert");
+        store.insert(&event, None).await.expect("insert");
     }
 
     assert_eq!(store.reap(30).await.expect("reap"), 2);
@@ -222,7 +208,9 @@ async fn the_audit_table_refuses_mutation_deletion_and_truncation() {
 
     for statement in [
         "UPDATE audit.audit_event SET principal = 'nobody'",
-        "UPDATE audit.audit_event SET fhir = '{}'::jsonb",
+        "UPDATE audit.audit_event SET category_content = '{}'::jsonb",
+        "UPDATE audit.audit_render_policy SET policy = '{}'::jsonb",
+        "DELETE FROM audit.audit_render_policy",
         "UPDATE audit.audit_event SET row_hash = '\\x00'::bytea",
         "DELETE FROM audit.audit_event",
         "TRUNCATE audit.audit_event",
@@ -294,8 +282,9 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
     // Recording an event is exactly what it may do.
     sqlx::query(
         "INSERT INTO audit.audit_event \
-         (recorded_at, action, outcome, event_code, resource_class, fhir) \
-         VALUES (now(), 'R', 0, '110110', 'composition', '{}'::jsonb)",
+         (recorded_at, action, outcome, event_code, resource_class, render_policy) \
+         VALUES (now(), 'R', 0, '110110', 'composition', \
+                 audit.register_render_policy('{}'::jsonb))",
     )
     .execute(&mut conn)
     .await
@@ -310,6 +299,10 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
         "UPDATE audit.audit_chain_state SET head_hash = '\\x00'::bytea",
         "INSERT INTO audit.audit_chain_gap (from_seq, to_seq, link_hash) \
          VALUES (1, 99, '\\x00'::bytea)",
+        "INSERT INTO audit.audit_render_policy (digest, policy) \
+         VALUES (sha256(convert_to('{}', 'UTF8')), '{}'::jsonb)",
+        "UPDATE audit.audit_render_policy SET policy = '{\"source_id\": \"x\"}'::jsonb",
+        "DELETE FROM audit.audit_render_policy",
     ] {
         let outcome = sqlx::query(AssertSqlSafe(statement.to_owned()))
             .execute(&mut conn)
@@ -438,8 +431,10 @@ async fn the_batched_write_path_is_chained_too() {
     let mut batch = Vec::new();
     for n in 0..5_u32 {
         let event = read_event(Timestamp::now(), &format!("8fa1::ferroehr::{n}"));
-        let rendered = fhir::to_fhir(&event, &ctx(), None).expect("render");
-        batch.push((event, None, Some(rendered)));
+        batch.push(AuditRecord {
+            event,
+            subject: None,
+        });
     }
     store.insert_batch(&batch).await.expect("batch insert");
 
@@ -564,12 +559,6 @@ async fn the_audit_subsystem_schedules_the_chain_check() {
 /// stamps, the one permitted change to a stored record.
 const UNHASHED_COLUMNS: [&str; 3] = ["row_hash", "delivered_syslog_at", "delivered_fhir_feed_at"];
 
-/// The original (version 1) digest of a stored record, as the chain wrote it
-/// before the versioned digest existed.
-const V1_DIGEST: &str = "audit.audit_event_digest(prev_hash, chain_seq, id, recorded_at, \
-                         stored_at, action, outcome, event_code, operation, principal, \
-                         patient_id, resource_class, resource_id, client_ip, token_id, fhir)";
-
 /// Every column of `audit.audit_event` with its `information_schema` data type,
 /// in table order.
 async fn audit_event_columns(pool: &PgPool) -> Vec<(String, String)> {
@@ -625,20 +614,18 @@ fn changed_value(column: &str, data_type: &str) -> Option<String> {
     Some(value)
 }
 
-/// The current digest version lists every column of the record but the
-/// unhashed three, so a migration that adds a column fails here until it adds
-/// a digest version covering it.
+/// The digest lists every column of the record but the unhashed three, so a
+/// migration that adds a column fails here until it lists the column.
 #[tokio::test]
-async fn the_current_digest_covers_every_column() {
+async fn the_digest_covers_every_column() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
 
-    let mut covered: Vec<String> = sqlx::query_scalar(
-        "SELECT unnest(audit.audit_event_digest_columns(audit.audit_chain_digest_version()))",
-    )
-    .fetch_all(&pool)
-    .await
-    .expect("the current digest's columns");
+    let mut covered: Vec<String> =
+        sqlx::query_scalar("SELECT unnest(audit.audit_event_digest_columns())")
+            .fetch_all(&pool)
+            .await
+            .expect("the current digest's columns");
     covered.sort();
 
     let mut expected: Vec<String> = audit_event_columns(&pool)
@@ -652,8 +639,7 @@ async fn the_current_digest_covers_every_column() {
     assert_eq!(
         covered, expected,
         "every column of audit.audit_event outside {UNHASHED_COLUMNS:?} must be in the \
-         current chain digest: a new column needs a new digest version \
-         (audit.audit_event_digest_columns + audit.audit_chain_digest_version)"
+         chain digest: list a new column in audit.audit_event_digest_columns"
     );
 }
 
@@ -666,30 +652,17 @@ async fn every_hashed_column_is_tamper_evident() {
     let store = AuditStore::new(pool.clone());
     seed(&store, 3).await;
 
-    let version: i16 = sqlx::query_scalar(
-        "SELECT chain_digest_version FROM audit.audit_event WHERE chain_seq = 2",
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("the target record");
-    let current: i16 = sqlx::query_scalar("SELECT audit.audit_chain_digest_version()")
-        .fetch_one(&pool)
-        .await
-        .expect("the current digest version");
-    assert_eq!(
-        version, current,
-        "a new record is written under the current digest"
-    );
     assert!(
         store.verify_chain().await.expect("verify").is_empty(),
         "a freshly written trail must verify clean"
     );
 
-    // The owner can drop a CHECK as easily as disable a trigger, and a value the
-    // constraints refuse is still a change the chain must see.
+    // The owner can drop a CHECK or the render policy's foreign key as easily
+    // as disable a trigger, and a value the constraints refuse is still a
+    // change the chain must see.
     let checks: Vec<String> = sqlx::query_scalar(
         "SELECT conname::text FROM pg_constraint \
-         WHERE conrelid = 'audit.audit_event'::regclass AND contype = 'c'",
+         WHERE conrelid = 'audit.audit_event'::regclass AND contype IN ('c', 'f')",
     )
     .fetch_all(&pool)
     .await
@@ -721,165 +694,57 @@ async fn every_hashed_column_is_tamper_evident() {
     }
 }
 
-/// A trail written under the original digest keeps verifying after records
-/// under the current digest join it, a change to a column the original digest
-/// covers is still reported, and moving a record back to the original digest is
-/// reported even when its hash is recomputed to match.
+/// A render policy changed after records name it changes what they render,
+/// so the verifier reports it, and a record whose policy is gone is reported
+/// on its own position.
 #[tokio::test]
-async fn records_under_the_original_digest_still_verify() {
+async fn a_changed_or_missing_render_policy_is_reported() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AuditStore::new(pool.clone());
     seed(&store, 2).await;
+    assert!(store.verify_chain().await.expect("verify").is_empty());
 
-    // Rewrite the two records into the shape the chain wrote before the
-    // versioned digest: version 1, hashed and linked with the original digest.
-    for statement in [
-        format!(
-            "UPDATE audit.audit_event SET chain_digest_version = 1, row_hash = {V1_DIGEST} WHERE chain_seq = 1"
-        ),
-        "UPDATE audit.audit_event SET chain_digest_version = 1, prev_hash = \
-         (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 1) WHERE chain_seq = 2"
-            .to_owned(),
-        format!("UPDATE audit.audit_event SET row_hash = {V1_DIGEST} WHERE chain_seq = 2"),
-        "UPDATE audit.audit_chain_state SET head_hash = \
-         (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 2)"
-            .to_owned(),
-    ] {
-        with_triggers_disabled(&pool, &statement).await;
-    }
-    seed(&store, 2).await;
-
-    let versions: Vec<i16> =
-        sqlx::query_scalar("SELECT chain_digest_version FROM audit.audit_event ORDER BY chain_seq")
-            .fetch_all(&pool)
-            .await
-            .expect("versions");
-    let current: i16 = sqlx::query_scalar("SELECT audit.audit_chain_digest_version()")
-        .fetch_one(&pool)
-        .await
-        .expect("current version");
-    assert_eq!(versions, vec![1, 1, current, current]);
-    assert!(
-        store.verify_chain().await.expect("verify").is_empty(),
-        "a trail spanning both digest versions must verify clean"
-    );
-
-    let findings = findings_after(
-        &pool,
-        &["UPDATE audit.audit_event SET principal = 'nobody' WHERE chain_seq = 1".to_owned()],
-    )
-    .await;
-    assert!(
-        findings
-            .iter()
-            .any(|(seq, finding)| *seq == Some(1) && finding.contains("modified")),
-        "a version 1 record is still verified under its own digest: {findings:?}"
-    );
-
-    let findings = findings_after(
+    let changed = policy_findings_after(
         &pool,
         &[
-            "UPDATE audit.audit_event SET chain_digest_version = 1, \
-             professional_id = 'someone-else' WHERE chain_seq = 4"
+            "ALTER TABLE audit.audit_render_policy DROP CONSTRAINT ck_audit_render_policy_digest"
                 .to_owned(),
-            format!("UPDATE audit.audit_event SET row_hash = {V1_DIGEST} WHERE chain_seq = 4"),
-            "UPDATE audit.audit_chain_state SET head_hash = \
-             (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 4)"
+            "UPDATE audit.audit_render_policy SET policy = \
+             jsonb_set(policy, '{source_id}', '\"someone-else\"')"
                 .to_owned(),
         ],
     )
     .await;
     assert!(
-        findings
+        changed
             .iter()
-            .any(|(seq, finding)| *seq == Some(4) && finding.contains("older digest version")),
-        "a record moved back to the original digest must be reported: {findings:?}"
-    );
-}
-
-/// Records written under digest version 2 keep verifying under the columns
-/// version 2 names after later versions added columns, and a change to one of
-/// them is still reported.
-#[tokio::test]
-async fn records_under_digest_version_2_still_verify() {
-    records_under_an_older_digest_version_still_verify(2).await;
-}
-
-/// Records written under digest version 3 keep verifying under the columns
-/// version 3 names after version 4 added the data permit, and a change to one
-/// of them is still reported.
-#[tokio::test]
-async fn records_under_digest_version_3_still_verify() {
-    records_under_an_older_digest_version_still_verify(3).await;
-}
-
-/// Two records rewritten as written under digest version `older`, then two
-/// written under the current version: the trail verifies clean, and a change
-/// to a column `older` covers is reported on its record.
-async fn records_under_an_older_digest_version_still_verify(older: i16) {
-    let testdb = testkit::db().await.expect("testkit database");
-    let pool = testdb.pool();
-    let store = AuditStore::new(pool.clone());
-    seed(&store, 2).await;
-
-    let current: i16 = sqlx::query_scalar("SELECT audit.audit_chain_digest_version()")
-        .fetch_one(&pool)
-        .await
-        .expect("the current digest version");
-    assert!(
-        current > older,
-        "version {older} is older than the current {current}"
+            .any(|(seq, finding)| seq.is_none() && finding.contains("render policy")),
+        "a changed render policy must be reported: {changed:?}"
     );
 
-    for statement in [
-        format!("UPDATE audit.audit_event SET chain_digest_version = {older} WHERE chain_seq = 1"),
-        "UPDATE audit.audit_event e SET row_hash = audit.audit_event_row_digest(e) \
-         WHERE chain_seq = 1"
-            .to_owned(),
-        format!(
-            "UPDATE audit.audit_event SET chain_digest_version = {older}, prev_hash = \
-             (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 1) WHERE chain_seq = 2"
-        ),
-        "UPDATE audit.audit_event e SET row_hash = audit.audit_event_row_digest(e) \
-         WHERE chain_seq = 2"
-            .to_owned(),
-        "UPDATE audit.audit_chain_state SET head_hash = \
-         (SELECT row_hash FROM audit.audit_event WHERE chain_seq = 2)"
-            .to_owned(),
-    ] {
-        with_triggers_disabled(&pool, &statement).await;
-    }
-    seed(&store, 2).await;
-
-    let versions: Vec<i16> =
-        sqlx::query_scalar("SELECT chain_digest_version FROM audit.audit_event ORDER BY chain_seq")
-            .fetch_all(&pool)
-            .await
-            .expect("versions");
-    assert_eq!(
-        versions,
-        vec![older, older, current, current],
-        "two records under version {older}, two under the current {current}"
-    );
-    assert!(
-        store.verify_chain().await.expect("verify").is_empty(),
-        "a trail spanning digest versions {older} and {current} must verify clean"
-    );
-
-    let findings = findings_after(
+    let missing = policy_findings_after(
         &pool,
-        &["UPDATE audit.audit_event SET emergency_access = NOT coalesce(emergency_access, false) \
-           WHERE chain_seq = 2"
-            .to_owned()],
+        &[
+            "ALTER TABLE audit.audit_event DROP CONSTRAINT fk_audit_event_render_policy".to_owned(),
+            "DELETE FROM audit.audit_render_policy".to_owned(),
+        ],
     )
     .await;
     assert!(
-        findings
+        missing
             .iter()
-            .any(|(seq, finding)| *seq == Some(2) && finding.contains("modified")),
-        "a version {older} record is still verified under its own columns: {findings:?}"
+            .any(|(seq, finding)| *seq == Some(1) && finding.contains("missing")),
+        "a record naming a deleted render policy must be reported: {missing:?}"
     );
+}
+
+/// [`findings_after`] for statements over the render policy table, whose
+/// append-only triggers are switched off with the record table's.
+async fn policy_findings_after(pool: &PgPool, statements: &[String]) -> Vec<(Option<i64>, String)> {
+    let mut all = vec!["ALTER TABLE audit.audit_render_policy DISABLE TRIGGER USER".to_owned()];
+    all.extend_from_slice(statements);
+    findings_after(pool, &all).await
 }
 
 /// The position the verification checkpoint has reached, `None` before any
@@ -1015,8 +880,7 @@ async fn an_incremental_run_verifies_across_a_reaped_checkpoint() {
     let now = Timestamp::now();
     let insert = async |at: Timestamp| {
         let event = read_event(at, "8fa1::ferroehr::1");
-        let rendered = fhir::to_fhir(&event, &ctx(), None).expect("render");
-        store.insert(&event, None, &rendered).await.expect("insert");
+        store.insert(&event, None).await.expect("insert");
     };
     insert(now - jiff::SignedDuration::from_hours(60 * 24)).await;
     insert(now - jiff::SignedDuration::from_hours(50 * 24)).await;

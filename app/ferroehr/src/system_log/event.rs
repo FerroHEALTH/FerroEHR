@@ -12,6 +12,8 @@
 //! depends on `openehr-its`, HTTP, or DICOM; the DICOM / RFC-3881 renderings of
 //! these enums live in [`super::codes`], the wire model in [`super::message`].
 
+use std::borrow::Cow;
+
 use jiff::Timestamp;
 
 use ferrohealth_smart::assurance::AssuranceLevel;
@@ -88,18 +90,27 @@ pub enum ObjectClass {
 
 /// The concrete kind of event within its `EventID` family — rendered as the
 /// DICOM `EventTypeCode` (DICOM PS3.15 §A.5 `EventIdentification`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EventType {
     /// DCM 110122 "Login" — a user-authentication attempt (success or failure).
     Login,
     /// DCM 110123 "Logout" — a session end (reserved; no session teardown
     /// surface emits it yet).
     Logout,
-    /// The concrete ITS-REST operation, carried as the generated operation id.
+    /// The concrete ITS-REST operation, carried as the generated operation id,
+    /// or as the stored text when a record is read back from the store.
     /// NOTE: no external code system governs openEHR REST operations — our own
     /// design/extension: the id is emitted under the `openEHR-ITS-REST` code
     /// system name.
-    RestOperation(&'static str),
+    RestOperation(Cow<'static, str>),
+}
+
+impl EventType {
+    /// The event of the ITS-REST operation `op`.
+    #[must_use]
+    pub const fn rest(op: &'static str) -> Self {
+        EventType::RestOperation(Cow::Borrowed(op))
+    }
 }
 
 /// A fully-resolved audit event, ready to be rendered into a DICOM

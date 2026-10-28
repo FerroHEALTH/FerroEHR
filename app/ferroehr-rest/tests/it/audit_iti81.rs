@@ -25,8 +25,7 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::event::{
     AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
-use ferroehr::system_log::fhir;
-use ferroehr::system_log::message::AuditContext;
+use ferroehr::system_log::render::RenderPolicy;
 use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, ResolveError};
@@ -79,13 +78,14 @@ fn basic(name: &str) -> String {
     )
 }
 
-fn ctx() -> AuditContext {
-    AuditContext {
+/// The render policy the seeded records are written under.
+fn policy() -> RenderPolicy {
+    RenderPolicy {
         source_id: "ferroehr".to_owned(),
         enterprise_site_id: "site-1".to_owned(),
-        server_ip: "10.42.23.77".to_owned(),
+        server_host: "10.42.23.77".to_owned(),
         value_if_missing: "UNKNOWN".to_owned(),
-        ..AuditContext::default()
+        ..RenderPolicy::default()
     }
 }
 
@@ -101,16 +101,15 @@ async fn seed(
     let mut e = AuditEvent::new(action, ObjectClass::Composition, EventOutcome::Success);
     principal.clone_into(&mut e.user_id);
     e.object_id = Some("8fa1::ferroehr::1".to_owned());
-    e.event_type = Some(EventType::RestOperation("composition_get"));
+    e.event_type = Some(EventType::rest("composition_get"));
     e.timestamp = at.parse::<Timestamp>().expect("ts");
-    let rendered = fhir::to_fhir(&e, &ctx(), patient).expect("render");
-    store.insert(&e, patient, &rendered).await.expect("seed");
+    store.insert(&e, patient).await.expect("seed");
 }
 
 /// The app + store over a fresh DB; `with_store` controls the ITI-81 gate.
 async fn app(with_store: bool, rbac: bool) -> (testkit::TestDb, Router, AuditStore) {
     let (pg, pool) = common::migrated_pool().await;
-    let store = AuditStore::new(pool.clone());
+    let store = AuditStore::new(pool.clone()).with_render_policy(policy());
     let mut svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     if with_store {
         svc = svc.with_audit_store(store.clone());
@@ -490,13 +489,9 @@ async fn seed_two(store: &AuditStore) {
         principal.clone_into(&mut e.user_id);
         e.client_ip = Some(address.to_owned());
         e.object_id = Some(object.to_owned());
-        e.event_type = Some(EventType::RestOperation(operation));
+        e.event_type = Some(EventType::rest(operation));
         e.timestamp = at.parse::<Timestamp>().expect("ts");
-        let rendered = fhir::to_fhir(&e, &ctx(), Some(patient)).expect("render");
-        store
-            .insert(&e, Some(patient), &rendered)
-            .await
-            .expect("seed");
+        store.insert(&e, Some(patient)).await.expect("seed");
     }
 }
 

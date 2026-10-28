@@ -29,10 +29,13 @@
 //! Failures are fail-open (drop + `tracing` + a `metrics` counter) or
 //! fail-closed (the REST layer returns `503`); see [`EmitOutcome`].
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 6, settled by #1885): the drain carries an \
+#![cfg_attr(
+    feature = "fhir",
+    expect(
+        clippy::disallowed_types,
+        reason = "owner-approved 2026-08-03 (#1694 family 6, settled by #1885): the drain carries an \
               already-rendered FHIR document, never a typed resource"
+    )
 )]
 
 use std::collections::BTreeSet;
@@ -56,7 +59,8 @@ use crate::system_log::AuditError;
 use crate::system_log::chain_check::ChainCheck;
 use crate::system_log::config::{AuditConfig, FailMode, Retention, StoreConfig};
 use crate::system_log::message::AuditContext;
-use crate::system_log::store::{AuditStore, RecordEnd};
+use crate::system_log::render::{CompiledPolicy, RenderPolicy};
+use crate::system_log::store::{AuditRecord, AuditStore, RecordEnd};
 use crate::system_log::syslog::SyslogRoute;
 
 /// The patient subject of an EHR: `EHR_STATUS.subject.external_ref`'s id and
@@ -471,9 +475,14 @@ struct Sinks {
     feed_notify: Option<Arc<Notify>>,
 }
 
-/// One drained event with its resolved subject id and rendered FHIR
-/// `AuditEvent` document, the unit every sink consumes.
-type DrainRecord = (AuditEvent, Option<String>, Option<serde_json::Value>);
+/// One drained batch, the unit every sink consumes: each record with its
+/// resolved subject, and beside each the FHIR `AuditEvent` document the
+/// store-off FHIR feed sends (none when that feed is off).
+struct Drained {
+    records: Vec<AuditRecord>,
+    #[cfg(feature = "fhir")]
+    rendered: Vec<Option<serde_json::Value>>,
+}
 
 /// The drain's `ehr_id` → subject-id memo (an EHR's subject is immutable for
 /// audit purposes, so one lookup serves every later record).
@@ -505,9 +514,14 @@ pub async fn start(
         None
     };
 
+    let policy = RenderPolicy::of(&config);
     let store = if config.store.enabled {
         if let Some(pool) = pool {
-            Some(AuditStore::new(pool).with_fhir_feed(config.fhir_feed.enabled))
+            Some(
+                AuditStore::new(pool)
+                    .with_fhir_feed(config.fhir_feed.enabled)
+                    .with_render_policy(policy.clone()),
+            )
         } else {
             tracing::warn!(
                 "ATNA audit store enabled but no database pool supplied — store sink off"
@@ -533,20 +547,11 @@ pub async fn start(
         );
     }
 
-    let categories = config
-        .categories
-        .compile()
-        .map_err(AuditError::CategoryMap)?;
-    let emergency = emergency_purposes(&config)?;
-
-    let ctx = AuditContext {
-        source_id: config.source_id.clone(),
-        enterprise_site_id: config.enterprise_site_id.clone().unwrap_or_default(),
-        server_ip: config.server_host.clone().unwrap_or_default(),
-        value_if_missing: config.value_if_missing.clone(),
-        #[cfg(feature = "fhir")]
-        recording: recording(&config, &categories, &emergency)?,
-    };
+    let CompiledPolicy {
+        context: ctx,
+        categories,
+        emergency,
+    } = policy.compile()?;
 
     let store_healthy = Arc::new(AtomicBool::new(true));
     let (tx, rx) = mpsc::channel(config.queue_capacity.max(1));
@@ -643,83 +648,6 @@ fn start_feed(
     Ok((Some(notify), None))
 }
 
-/// The purposes of use `[audit] emergency_purpose_codes` declares, held by
-/// `ehds-logging`.
-///
-/// # Errors
-/// [`AuditError::Emergency`] for an empty code; boot validation refuses one
-/// first.
-fn emergency_purposes(
-    config: &AuditConfig,
-) -> Result<ehds_logging::emergency::EmergencyPurposes, AuditError> {
-    let purposes: Vec<ehds_logging::record::Purpose> = config
-        .emergency_purpose_codes
-        .iter()
-        .map(|code| ehds_logging::record::Purpose {
-            system: None,
-            code: code.clone(),
-        })
-        .collect();
-    ehds_logging::emergency::EmergencyPurposes::declare(&purposes).map_err(AuditError::Emergency)
-}
-
-/// The policies the EHDS access record is written under: the store's horizon
-/// as the record's retention, the categories' and origins' labels, and the
-/// emergency purposes.
-///
-/// The record states the horizon as configured: years, days, or without end
-/// for `retention_days = 0`. A horizon under the three years of EHDS Art. 9(2)
-/// passes the boot validation only where no Union jurisdiction is in force,
-/// so its record names the deployment's own retention as the ground of its
-/// floor, never Art. 9(2).
-///
-/// # Errors
-/// [`AuditError::Policy`] when `ehds-logging` refuses the retention or the
-/// label policy, which a validated configuration does not cause.
-#[cfg(feature = "fhir")]
-fn recording(
-    config: &AuditConfig,
-    categories: &crate::system_log::categories::Classifier,
-    emergency: &ehds_logging::emergency::EmergencyPurposes,
-) -> Result<crate::system_log::fhir::Recording, AuditError> {
-    use ehds_logging::retention::{Bounds, FLOOR_YEARS, Period, RetentionPolicy};
-    let none = std::collections::BTreeMap::new();
-    let period = match config.store.retention() {
-        Retention::Forever => Period::Indefinite,
-        Retention::Days(days) => Period::Days(days),
-        Retention::Years(years) => Period::Years(u16::try_from(years).unwrap_or(u16::MAX)),
-    };
-    let bounds = if matches!(period, Period::Years(years) if years < FLOOR_YEARS)
-        || matches!(period, Period::Days(days) if days < 1096)
-    {
-        // NOTE: EHDS Art. 9(2) binds the Member States; the boot validation refuses a horizon
-        // under a Union floor, so one under three years runs under no Union jurisdiction.
-        Bounds::outside_union(
-            period,
-            format!(
-                "the audit.store horizon ({}), under no Union jurisdiction",
-                config.store.retention().describe()
-            ),
-        )
-        .map_err(|e| AuditError::Policy(Box::new(e)))?
-    } else {
-        Bounds::union()
-    };
-    let retention =
-        RetentionPolicy::declare_within(&bounds, period, &none, &none, categories.map())
-            .map_err(|e| AuditError::Policy(Box::new(e)))?;
-    let unlabelled = std::collections::BTreeMap::new();
-    let labels =
-        ehds_logging::label::LabelPolicy::declare(None, &unlabelled, &unlabelled, categories.map())
-            .map_err(|e| AuditError::Policy(Box::new(e)))?;
-    Ok(crate::system_log::fhir::Recording {
-        retention,
-        labels,
-        emergency: emergency.clone(),
-        horizon: config.store.retention(),
-    })
-}
-
 /// Spawns the local store's upkeep workers onto `workers`: the retention
 /// reaper, which deletes each record at its own end, and the scheduled hash-chain
 /// verification unless `verify_interval_seconds` is `0`, whose shared result is
@@ -773,7 +701,7 @@ async fn drain(
             (Some(resolve), true) => memoize_subjects(&batch, resolve, &subject_cache).await,
             _ => BTreeSet::new(),
         };
-        let records = render_batch(
+        let drained = render_batch(
             &mut batch,
             &ctx,
             &subject_cache,
@@ -783,13 +711,13 @@ async fn drain(
         .await;
 
         // The store is the durability anchor and is written first.
-        write_to_store(&sinks, &records, &ctx, &store_healthy).await;
+        write_to_store(&sinks, &drained.records, &ctx, &store_healthy).await;
         if let Some(route) = &sinks.syslog {
-            submit_to_syslog(route, &records, &ctx).await;
+            submit_to_syslog(route, &drained.records, &ctx).await;
         }
         #[cfg(feature = "fhir")]
         if let Some(forwarder) = &sinks.feed_spool {
-            submit_to_feed_spool(forwarder, &records).await;
+            submit_to_feed_spool(forwarder, &drained.rendered).await;
         }
     }
     tracing::debug!("ATNA audit drain: channel closed, task exiting");
@@ -835,26 +763,31 @@ async fn memoize_subjects(
 }
 
 /// Drains the batch into records, attaching each event's memoized subject (or
-/// marking its lookup failed when its EHR is in `unavailable`) and, when any
-/// FHIR consumer is enabled, its rendered `AuditEvent` document. `unavailable`
-/// is `None` when subjects are not resolved at all.
+/// marking its lookup failed when its EHR is in `unavailable`) and, when the
+/// store-off FHIR feed is on, its rendered `AuditEvent` document.
+/// `unavailable` is `None` when subjects are not resolved at all.
 ///
-/// The document is rendered once here because both the store and the FHIR feed
-/// consume it; with neither sink enabled nothing is rendered at all.
+/// The store renders its documents from its columns when they are read, so
+/// with the store on nothing is rendered here. Every event time is cut to the
+/// microsecond the store keeps, so a document rendered now and one rendered
+/// from the store name the same instant.
 async fn render_batch(
     batch: &mut Vec<AuditEvent>,
     ctx: &AuditContext,
     subject_cache: &SubjectCache,
     unavailable: Option<&BTreeSet<String>>,
     sinks: &Sinks,
-) -> Vec<DrainRecord> {
+) -> Drained {
     #[cfg(feature = "fhir")]
-    let render_fhir = sinks.store.is_some() || sinks.feed_spool.is_some();
+    let render_fhir = renders_for_feed(sinks);
     #[cfg(not(feature = "fhir"))]
-    let render_fhir = sinks.store.is_some();
-    let mut records: Vec<DrainRecord> = Vec::with_capacity(batch.len());
+    let _: (&Sinks, &AuditContext) = (sinks, ctx);
+    let mut records: Vec<AuditRecord> = Vec::with_capacity(batch.len());
+    #[cfg(feature = "fhir")]
+    let mut rendered: Vec<Option<serde_json::Value>> = Vec::with_capacity(batch.len());
     for event in batch.drain(..) {
         let mut event = event;
+        event.timestamp = stored_instant(event.timestamp);
         let resolved = match (unavailable, &event.ehr_id) {
             (Some(failed), Some(ehr_id)) if failed.contains(ehr_id) => {
                 event.subject_lookup_failed = true;
@@ -867,19 +800,43 @@ async fn render_batch(
             .subject_namespace
             .clone_from(&resolved.as_ref().and_then(|s| s.namespace.clone()));
         let subject = resolved.map(|s| s.id);
-        let rendered = render_fhir
-            .then(|| render_audit_event(&event, ctx, subject.as_deref()))
-            .flatten();
-        records.push((event, subject, rendered));
+        #[cfg(feature = "fhir")]
+        rendered.push(
+            render_fhir
+                .then(|| render_audit_event(&event, ctx, subject.as_deref()))
+                .flatten(),
+        );
+        records.push(AuditRecord { event, subject });
     }
-    records
+    Drained {
+        records,
+        #[cfg(feature = "fhir")]
+        rendered,
+    }
+}
+
+/// Whether the drain renders documents for the store-off FHIR feed's spool.
+#[cfg(feature = "fhir")]
+fn renders_for_feed(sinks: &Sinks) -> bool {
+    sinks.feed_spool.is_some()
+}
+
+/// `at` cut to the microsecond `timestamptz` keeps; `at` itself when it is
+/// already that fine.
+fn stored_instant(at: jiff::Timestamp) -> jiff::Timestamp {
+    at.round(
+        jiff::TimestampRound::new()
+            .smallest(jiff::Unit::Microsecond)
+            .mode(jiff::RoundMode::Trunc),
+    )
+    .unwrap_or(at)
 }
 
 /// Writes the batch to the local Audit Record Repository in one multi-row
 /// INSERT, each record with its own retention end.
 async fn write_to_store(
     sinks: &Sinks,
-    records: &[DrainRecord],
+    records: &[AuditRecord],
     ctx: &AuditContext,
     store_healthy: &AtomicBool,
 ) {
@@ -898,16 +855,16 @@ async fn write_to_store(
 
 /// The first date each record may be deleted on ([`crate::system_log::fhir::record_end`]).
 #[cfg(feature = "fhir")]
-fn record_ends(records: &[DrainRecord], ctx: &AuditContext) -> Vec<RecordEnd> {
+fn record_ends(records: &[AuditRecord], ctx: &AuditContext) -> Vec<RecordEnd> {
     records
         .iter()
-        .map(|(event, _, _)| crate::system_log::fhir::record_end(event, ctx))
+        .map(|record| crate::system_log::fhir::record_end(&record.event, ctx))
         .collect()
 }
 
 /// A slim build has no store sink ([`start`] refuses one), so no record has an end.
 #[cfg(not(feature = "fhir"))]
-fn record_ends(_records: &[DrainRecord], _ctx: &AuditContext) -> Vec<RecordEnd> {
+fn record_ends(_records: &[AuditRecord], _ctx: &AuditContext) -> Vec<RecordEnd> {
     Vec::new()
 }
 
@@ -915,7 +872,7 @@ fn record_ends(_records: &[DrainRecord], _ctx: &AuditContext) -> Vec<RecordEnd> 
 /// updating the store health flag the fail-closed mode reads.
 async fn store_whole_batch(
     store: &AuditStore,
-    records: &[DrainRecord],
+    records: &[AuditRecord],
     ends: &[RecordEnd],
     store_healthy: &AtomicBool,
     feed_notify: Option<&Arc<Notify>>,
@@ -956,8 +913,8 @@ async fn store_whole_batch(
 
 /// Stores every record's DICOM PS3.15 §A.5 XML frame in the syslog spool,
 /// which the forwarder delivers.
-async fn submit_to_syslog(route: &SyslogRoute, records: &[DrainRecord], ctx: &AuditContext) {
-    for (event, subject, _) in records {
+async fn submit_to_syslog(route: &SyslogRoute, records: &[AuditRecord], ctx: &AuditContext) {
+    for AuditRecord { event, subject } in records {
         let xml = match crate::system_log::message::to_xml(event, ctx, subject.as_deref()) {
             Ok(xml) => xml,
             Err(e) => {
@@ -982,8 +939,11 @@ async fn submit_to_syslog(route: &SyslogRoute, records: &[DrainRecord], ctx: &Au
 /// Stores every rendered document in the store-off FHIR feed's spool, which
 /// the forwarder delivers.
 #[cfg(feature = "fhir")]
-async fn submit_to_feed_spool(forwarder: &Forwarder<Spool>, records: &[DrainRecord]) {
-    for (_, _, rendered) in records {
+async fn submit_to_feed_spool(
+    forwarder: &Forwarder<Spool>,
+    rendered: &[Option<serde_json::Value>],
+) {
+    for rendered in rendered {
         let Some(document) = rendered else {
             continue;
         };
@@ -1024,18 +984,6 @@ fn render_audit_event(
             None
         }
     }
-}
-
-/// A slim build renders no FHIR document. Unreachable: [`start`] refuses a
-/// configuration that enables the store or the FHIR feed, and nothing else
-/// consumes the document.
-#[cfg(not(feature = "fhir"))]
-fn render_audit_event(
-    _event: &AuditEvent,
-    _ctx: &AuditContext,
-    _subject: Option<&str>,
-) -> Option<serde_json::Value> {
-    None
 }
 
 /// The hourly retention reaper, for a horizon in days or in calendar years.

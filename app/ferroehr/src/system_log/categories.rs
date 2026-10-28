@@ -191,6 +191,29 @@ impl fmt::Display for MapDigest {
     }
 }
 
+impl std::str::FromStr for MapDigest {
+    type Err = MapDigestError;
+
+    /// Reads the `sha256:<hex>` text [`fmt::Display`] writes.
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        let hex = text.strip_prefix("sha256:").ok_or(MapDigestError)?;
+        let mut digest = [0_u8; 32];
+        if hex.len() != 64 || !hex.is_ascii() {
+            return Err(MapDigestError);
+        }
+        for (byte, pair) in digest.iter_mut().zip(hex.as_bytes().as_chunks::<2>().0) {
+            let pair = std::str::from_utf8(pair).map_err(|_not_text| MapDigestError)?;
+            *byte = u8::from_str_radix(pair, 16).map_err(|_not_hex| MapDigestError)?;
+        }
+        Ok(MapDigest(digest))
+    }
+}
+
+/// A text that is no `sha256:<64 hex digits>` map digest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+#[error("a category map digest is `sha256:` and 64 hex digits")]
+pub struct MapDigestError;
+
 impl fmt::Debug for MapDigest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
@@ -228,7 +251,8 @@ impl Default for Classifier {
 pub type ResourceKind = ehds_logging::classify::ResourceKind;
 
 /// The identifiers of one object an access delivered, read or wrote.
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(into = "StoredIds", from = "StoredIds")]
 pub struct ContentIds {
     /// The `template_id` the object was committed against.
     pub template_id: Option<String>,
@@ -238,6 +262,38 @@ pub struct ContentIds {
     /// (`EHR_STATUS`, `EHR_ACCESS`, `FOLDER`), which is classified by kind
     /// alone.
     pub resource_kind: Option<ResourceKind>,
+}
+
+/// The serialized form of [`ContentIds`]: the kind by its code.
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StoredIds {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    template_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    archetype_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    resource_kind: Option<String>,
+}
+
+impl From<ContentIds> for StoredIds {
+    fn from(ids: ContentIds) -> Self {
+        Self {
+            template_id: ids.template_id,
+            archetype_id: ids.archetype_id,
+            resource_kind: ids.resource_kind.map(|kind| kind.code().to_owned()),
+        }
+    }
+}
+
+impl From<StoredIds> for ContentIds {
+    fn from(ids: StoredIds) -> Self {
+        Self {
+            template_id: ids.template_id,
+            archetype_id: ids.archetype_id,
+            resource_kind: ids.resource_kind.as_deref().map(kind_code::of),
+        }
+    }
 }
 
 impl ContentIds {
@@ -274,7 +330,8 @@ impl ContentIds {
 ///
 /// Positive means reachable through `CONTAINS` and asserted rather than
 /// negated: a `NOT CONTAINS` operand and a predicate under `NOT` never count.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct QueryConstraints {
     /// Template ids the query constrains to.
     pub template_ids: BTreeSet<String>,
@@ -288,18 +345,107 @@ pub struct QueryConstraints {
     pub every_root_bound: bool,
     /// The no-category resource kinds the query reads, as evidence for a query
     /// that reaches no content.
+    #[serde(with = "kind_code::set")]
     pub resource_kinds: BTreeSet<ResourceKind>,
 }
 
 /// What an access touched, as FerroEHR reads it off its own data.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum AccessedContent {
     /// The objects the access delivered, read or wrote.
     Objects(Vec<ContentIds>),
     /// A query answer that carries no object, classified from the query.
     Query(QueryConstraints),
     /// A resource kind that holds no data of any category.
-    ResourceKind(ResourceKind),
+    ResourceKind(#[serde(with = "kind_code")] ResourceKind),
+}
+
+/// What one classification read, and whether the access wrote it: the input
+/// [`Classifier::classify`] takes, which the audit store keeps so the
+/// classification is computed again when a record is rendered.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ClassifiedContent {
+    /// What the access touched.
+    pub content: AccessedContent,
+    /// Whether the access wrote its objects rather than read them.
+    pub written: bool,
+}
+
+/// The serialized form of a [`ResourceKind`]: its code, which
+/// [`ResourceKind::code`] writes and every record names it by.
+mod kind_code {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    use super::ResourceKind;
+
+    /// The kind a code names; a code no listed kind writes is a kind the
+    /// deployment names.
+    pub(super) fn of(code: &str) -> ResourceKind {
+        match code {
+            "EHR" => ResourceKind::Ehr,
+            "EHR_STATUS" => ResourceKind::EhrStatus,
+            "EHR_ACCESS" => ResourceKind::EhrAccess,
+            "FOLDER" => ResourceKind::Folder,
+            "ITEM_TAG" => ResourceKind::ItemTag,
+            "REVISION_HISTORY" => ResourceKind::RevisionHistory,
+            other => ResourceKind::Other(other.to_owned()),
+        }
+    }
+
+    pub(super) fn serialize<S: Serializer>(kind: &ResourceKind, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(kind.code())
+    }
+
+    pub(super) fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<ResourceKind, D::Error> {
+        String::deserialize(d).map(|code| of(&code))
+    }
+
+    pub(super) mod set {
+        use std::collections::BTreeSet;
+
+        use serde::{Deserialize, Deserializer, Serializer};
+
+        use super::ResourceKind;
+
+        pub(in super::super) fn serialize<S: Serializer>(
+            kinds: &BTreeSet<ResourceKind>,
+            s: S,
+        ) -> Result<S::Ok, S::Error> {
+            s.collect_seq(kinds.iter().map(ResourceKind::code))
+        }
+
+        pub(in super::super) fn deserialize<'de, D: Deserializer<'de>>(
+            d: D,
+        ) -> Result<BTreeSet<ResourceKind>, D::Error> {
+            Vec::<String>::deserialize(d)
+                .map(|codes| codes.iter().map(|code| super::of(code)).collect())
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use std::collections::BTreeSet;
+
+        use super::{ResourceKind, of};
+
+        #[test]
+        fn every_listed_kind_reads_back_from_its_code() {
+            let kinds = BTreeSet::from([
+                ResourceKind::Ehr,
+                ResourceKind::EhrStatus,
+                ResourceKind::EhrAccess,
+                ResourceKind::Folder,
+                ResourceKind::ItemTag,
+                ResourceKind::RevisionHistory,
+                ResourceKind::Other("CUSTOM".to_owned()),
+            ]);
+            for kind in kinds {
+                assert_eq!(of(kind.code()), kind);
+            }
+        }
+    }
 }
 
 /// What a stored classification was read from, as `ehds-logging` names it;
@@ -316,6 +462,9 @@ pub struct CategoryRecord {
     pub classification: Classification,
     /// What the classification was read from.
     pub read_from: ReadFrom,
+    /// What the classifier was given, from which the same map classifies the
+    /// same record again.
+    pub content: ClassifiedContent,
 }
 
 impl CategoryRecord {
@@ -466,6 +615,10 @@ impl Classifier {
         CategoryRecord {
             classification: self.map.classify(&evidence),
             read_from,
+            content: ClassifiedContent {
+                content: content.clone(),
+                written,
+            },
         }
     }
 }

@@ -464,23 +464,22 @@ its own content. The chain is built by the database itself, not by the server,
 which means it covers every writer: the per-event insert, the batched drain,
 and any statement typed by hand.
 
-Each record's digest covers every column of the record except the digest itself
-and the two per-sink forwarding stamps. Each record also stores the digest
-version it was hashed under, in `chain_digest_version`:
+Each record's digest covers every column of the record except the digest
+itself (`row_hash`) and the two per-sink forwarding stamps
+(`delivered_syslog_at`, `delivered_fhir_feed_at`). A column added by a later
+release joins the digest in the same release.
 
-| Version | Written | Columns the digest covers |
-|---|---|---|
-| `3` | by the current release | every column except `row_hash`, `delivered_syslog_at` and `delivered_fhir_feed_at`, the retention end (`retention_ends`, `retention_stated`) included |
-| `2` | before the upgrade that introduced version 3 | the version 3 columns without the retention end |
-| `1` | before the upgrade that introduced version 2 | `id`, `recorded_at`, `stored_at`, `action`, `outcome`, `event_code`, `operation`, `principal`, `patient_id`, `resource_class`, `resource_id`, `client_ip`, `token_id`, the `fhir` document, `chain_seq` and the link to the predecessor |
-
-A record keeps verifying under the version it was written under; it is not
-rehashed. A version 2 record states no retention end, so the store horizon
-reaps it. A version 1 record keeps verifying under version 1 after the upgrade. Its other columns (the purpose, legal basis, categories, assurance
-level, professional and the emergency mark among them) are protected by the
-append-only trigger only, and the `fhir` document repeats some of them. A record
-whose version is lower than its predecessor's is reported, so a record cannot be
-moved back to the narrower digest unnoticed.
+The store keeps a record's facts in columns and renders its FHIR `AuditEvent`
+from them when the record is read (ITI-81) or delivered (the FHIR feed). What
+the rendering takes from the configuration (`source_id`, `enterprise_site_id`,
+`server_host`, `value_if_missing`, the store horizon, `[audit.categories]` and
+`emergency_purpose_codes`) is kept once per distinct configuration in
+`audit.audit_render_policy`, keyed by the SHA-256 of its text, and every record
+names the policy it was written under. A record therefore renders the same
+document after the configuration changes, and the verification below reports a
+policy whose text no longer matches its digest, as it reports a changed record.
+Release 5.6.0 starts on an empty audit store: its migration refuses a store
+that holds records written by an earlier release, and names the remedy.
 
 Four controls sit on top of it, and they are separate on purpose:
 
@@ -507,8 +506,8 @@ Four controls sit on top of it, and they are separate on purpose:
 
   An empty result means the trail is intact. Any row names one record (its
   chain position, its id, when it was recorded) and what is wrong with it:
-  content modified after it was written, a digest version lower than the
-  preceding record's, records deleted with no retention record for the removal,
+  content modified after it was written, a render policy changed or missing,
+  records deleted with no retention record for the removal,
   or records removed from the end of the chain where no successor would have
   noticed.
 - **The server runs the check itself, on a schedule.** With the local store on,
@@ -550,8 +549,8 @@ under the FHIR R4 path `fhir/r4`, the one FHIR route FerroEHR serves:
 GET /ferroehr/rest/openehr/v1/fhir/r4/AuditEvent
 ```
 
-It returns a FHIR `searchset` Bundle of the stored `AuditEvent` documents,
-newest first, with the full match `total`, a `self` link and a `next` link
+It returns a FHIR `searchset` Bundle of the matching records' `AuditEvent`
+documents, rendered from the store, newest first, with the full match `total`, a `self` link and a `next` link
 while more pages follow. The query is read by `ihe-atna`, the family's audit
 crate. At least one `date` parameter is required (RESTful ATNA
 §3.81.4.1.2.1): a query without one is a `400`. Every search parameter
@@ -561,7 +560,11 @@ parameter of the query must match. A token takes the three forms of FHIR R4
 Search §3.1.1.4.10: `code`, `|code` (recorded without a system) and
 `system|code` (or `system|` for any code of that system). FerroEHR records
 identifiers without a system, so a query that names a system for an
-identifier matches nothing.
+identifier matches nothing. A parameter on an element of the document
+(`address` and the `.identifier`, `entity-type`, `entity-role`, `type` and
+`subtype` parameters) is matched against the rendered document, so a search
+that names one renders every record the other parameters leave within its
+`date` window; keep the window narrow, or add `patient`, `agent` or `entity`.
 
 | Parameter | Matches |
 |---|---|

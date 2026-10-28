@@ -140,21 +140,20 @@ pub(crate) trait AtnaOutcome {
 /// ATNA (DICOM PS3.15 §A.5.1) rendering of an [`EventType`].
 pub(crate) trait AtnaEventType {
     /// The `EventTypeCode` coded value.
-    fn code(&self) -> Code;
+    fn coded(&self) -> ihe_atna::atna::message::CodedValue;
 }
 
 impl AtnaEventType for EventType {
     /// DCM login/logout codes; ITS-REST operation ids under our own
     /// `openEHR-ITS-REST` system name (see [`OPENEHR_ITS_REST`]).
-    fn code(&self) -> Code {
+    fn coded(&self) -> ihe_atna::atna::message::CodedValue {
+        use ihe_atna::atna::message::CodedValue;
+        let fixed =
+            |code: Code| CodedValue::new(code.csd_code, code.code_system, code.original_text);
         match self {
-            EventType::Login => TYPE_LOGIN,
-            EventType::Logout => TYPE_LOGOUT,
-            EventType::RestOperation(op) => Code {
-                csd_code: op,
-                code_system: OPENEHR_ITS_REST,
-                original_text: op,
-            },
+            EventType::Login => fixed(TYPE_LOGIN),
+            EventType::Logout => fixed(TYPE_LOGOUT),
+            EventType::RestOperation(op) => CodedValue::new(op, OPENEHR_ITS_REST, op),
         }
     }
 }

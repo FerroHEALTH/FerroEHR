@@ -851,15 +851,19 @@ async fn aql_execute_emits_one_access_record_per_served_ehr() {
 async fn latest_composition_get_record(pool: &sqlx::PgPool) -> (Option<Value>, Option<i64>, Value) {
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     loop {
-        let found: Option<(Option<Value>, Option<i64>, Value)> = sqlx::query_as(
-            "SELECT origins, origin_count, fhir FROM audit.audit_event \
+        let found: Option<(Option<Value>, Option<i64>, i64)> = sqlx::query_as(
+            "SELECT origins, origin_count, chain_seq FROM audit.audit_event \
              WHERE operation = 'composition_get' ORDER BY recorded_at DESC LIMIT 1",
         )
         .fetch_optional(pool)
         .await
         .expect("read the trail");
-        if let Some(row) = found {
-            return row;
+        if let Some((origins, origin_count, chain_seq)) = found {
+            return (
+                origins,
+                origin_count,
+                common::rendered_audit_event(pool, chain_seq).await,
+            );
         }
         assert!(
             std::time::Instant::now() < deadline,

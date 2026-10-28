@@ -66,7 +66,7 @@ fn access_event() -> AuditEvent {
     e.origin_count = Some(2);
     e.client_ip = Some("10.0.0.9".to_owned());
     e.object_id = Some("8fa1::ferroehr::1".to_owned());
-    e.event_type = Some(EventType::RestOperation("composition_get"));
+    e.event_type = Some(EventType::rest("composition_get"));
     e.token_id = Some("jti-1".to_owned());
     e.purpose = Some("TREAT".to_owned());
     e.legal_basis = Some("gdpr-9-2-h".to_owned());

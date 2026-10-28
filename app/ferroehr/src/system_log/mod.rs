@@ -58,15 +58,20 @@
 //!   BALP exchange written by `ihe-atna`.
 //! - [`syslog`] — the ITI-20 syslog sink: `ihe-atna`'s RFC 5424 frame over its
 //!   RFC 5425 TLS connection.
+//! - [`render`] — the render policy a stored record's FHIR `AuditEvent` is
+//!   rendered under, and the rendering of a stored record.
 //! - [`store`] — the local Audit Record Repository and the ITI-81 search filter.
 //! - [`sender`] — the bounded-mpsc sender, background drain, sink fan-out and
 //!   fail modes.
 //! - [`config`] — the `[audit]` section struct ([`config::AuditConfig`]).
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 6, settled by #1885): a carrier of an \
+#![cfg_attr(
+    feature = "fhir",
+    expect(
+        clippy::disallowed_types,
+        reason = "owner-approved 2026-08-03 (#1694 family 6, settled by #1885): a carrier of an \
               already-rendered FHIR document stays a JSON value"
+    )
 )]
 
 pub mod access_context;
@@ -80,6 +85,7 @@ mod feed;
 #[cfg(feature = "fhir")]
 pub mod fhir;
 pub mod message;
+pub mod render;
 pub mod sender;
 pub mod store;
 
@@ -139,6 +145,27 @@ pub enum AuditError {
         ends: usize,
         /// How many records it held.
         records: usize,
+    },
+    /// A stored record holds a value this build does not read, or names a
+    /// render policy the store does not hold.
+    #[error("audit record {chain_seq} cannot be read back: {reason}")]
+    Unreadable {
+        /// The record's chain position.
+        chain_seq: i64,
+        /// What could not be read.
+        reason: &'static str,
+    },
+    /// A JSON column of a stored record, or the render policy it names, does
+    /// not read as the shape this build writes.
+    #[error("audit record {chain_seq} cannot be read back: {column} does not read")]
+    UnreadableJson {
+        /// The record's chain position.
+        chain_seq: i64,
+        /// The column that does not read.
+        column: &'static str,
+        /// Why it does not read.
+        #[source]
+        source: serde_json::Error,
     },
 }
 
@@ -358,9 +385,9 @@ impl FerroEhrService {
         self.audit_store.is_some()
     }
 
-    /// The RESTful-ATNA **ITI-81** retrieval: the stored FHIR `AuditEvent`
-    /// documents matching the filter, newest first, plus the total match
-    /// count. The read side of the SM System Log component (the only
+    /// The RESTful-ATNA **ITI-81** retrieval: the FHIR `AuditEvent` documents
+    /// of the matching records, rendered from the store, newest first, plus
+    /// the total match count. The read side of the SM System Log component (the only
     /// normative openEHR statement is the "IHE ATNA-compliant system log"
     /// line above; the retrieval semantics are IHE's — the `RESTful` ATNA
     /// supplement's ITI-81 FHIR search on `AuditEvent`).
@@ -368,6 +395,7 @@ impl FerroEhrService {
     /// # Errors
     /// [`SmError`] `precondition_violation` when no local store is wired, or
     /// `exception` when the store query fails.
+    #[cfg(feature = "fhir")]
     pub async fn audit_event_search(
         &self,
         filter: &store::AuditSearchFilter,

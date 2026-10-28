@@ -4,12 +4,19 @@
 //! Integration tests for the local IHE ATNA Audit Record Repository
 //! (`ferroehr::system_log::store`) against a real `PostgreSQL` 18
 //! (shared testkit harness): the `audit` schema migrates cleanly alongside
-//! `ext`/`ehr`, inserted records land with the promoted search columns and
-//! the FHIR R4 `AuditEvent` payload (IHE BALP shape), and the retention
+//! `ext`/`ehr`, inserted records land with their columns and render the FHIR
+//! R4 `AuditEvent` (IHE BALP shape) the drain would have rendered, and the retention
 //! reaper deletes only rows older than the horizon (0 = keep forever).
 //! No openEHR spec governs audit storage — our own design/extension (the
 //! schema-separation rationale is BASE
 //! `architecture_overview/master07-security.adoc` §Access logging).
+
+#![expect(
+    clippy::expect_used,
+    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only reaches \
+              `#[test]`-annotated functions, so it misses this module's helpers; panicking \
+              assertions are the intended shape here (the Rust Book ch11)"
+)]
 
 use jiff::Timestamp;
 use sqlx::Row;
@@ -19,15 +26,46 @@ use ferroehr::system_log::event::{
 };
 use ferroehr::system_log::fhir;
 use ferroehr::system_log::message::AuditContext;
-use ferroehr::system_log::store::AuditStore;
+use ferroehr::system_log::render::RenderPolicy;
+use ferroehr::system_log::store::{AuditRecord, AuditSearchFilter, AuditStore};
 
-fn ctx() -> AuditContext {
-    AuditContext {
+fn policy() -> RenderPolicy {
+    RenderPolicy {
         source_id: "ferroehr".to_owned(),
         enterprise_site_id: "site-1".to_owned(),
-        server_ip: "10.42.23.77".to_owned(),
+        server_host: "10.42.23.77".to_owned(),
         value_if_missing: "UNKNOWN".to_owned(),
-        ..AuditContext::default()
+        ..RenderPolicy::default()
+    }
+}
+
+/// The context the drain renders with under [`policy`].
+fn ctx() -> AuditContext {
+    policy().compile().expect("the policy compiles").context
+}
+
+/// A store writing under [`policy`].
+fn store_over(pool: &sqlx::PgPool) -> AuditStore {
+    AuditStore::new(pool.clone()).with_render_policy(policy())
+}
+
+/// Every stored record's FHIR document as the store serves it, oldest first.
+async fn served(store: &AuditStore) -> Vec<serde_json::Value> {
+    let (_, mut documents) = store
+        .search(&AuditSearchFilter {
+            count: 1000,
+            ..AuditSearchFilter::default()
+        })
+        .await
+        .expect("search");
+    documents.reverse();
+    documents
+}
+
+fn record(event: &AuditEvent, subject: Option<&str>) -> AuditRecord {
+    AuditRecord {
+        event: event.clone(),
+        subject: subject.map(str::to_owned),
     }
 }
 
@@ -40,28 +78,27 @@ fn read_event(at: Timestamp) -> AuditEvent {
     "alice".clone_into(&mut e.user_id);
     e.client_ip = Some("10.0.0.9".to_owned());
     e.object_id = Some("8fa1::ferroehr::1".to_owned());
-    e.event_type = Some(EventType::RestOperation("composition_get"));
+    e.event_type = Some(EventType::rest("composition_get"));
     e.token_id = Some("jti-1".to_owned());
     e.timestamp = at;
     e
 }
 
 #[tokio::test]
-async fn insert_persists_promoted_columns_and_fhir_payload() {
+async fn insert_persists_the_columns_and_serves_the_rendered_document() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let store = AuditStore::new(pool.clone());
+    let store = store_over(&pool);
 
     let event = read_event("2026-07-10T08:30:00Z".parse().unwrap());
-    let rendered = fhir::to_fhir(&event, &ctx(), Some("patient-42")).expect("render");
     store
-        .insert(&event, Some("patient-42"), &rendered)
+        .insert(&event, Some("patient-42"))
         .await
         .expect("insert");
 
     let row = sqlx::query(
         "SELECT action, outcome, event_code, operation, principal, patient_id, \
-         resource_class, resource_id, client_ip, token_id, fhir, \
+         resource_class, resource_id, client_ip, token_id, \
          delivered_syslog_at, delivered_fhir_feed_at \
          FROM audit.audit_event",
     )
@@ -104,9 +141,10 @@ async fn insert_persists_promoted_columns_and_fhir_payload() {
         None
     );
 
-    // The stored payload is the exact rendered BALP AuditEvent.
-    let stored: serde_json::Value = row.get("fhir");
-    assert_eq!(stored, serde_json::to_value(&rendered).expect("value"));
+    // The served document is the BALP AuditEvent the drain renders.
+    let rendered = fhir::to_fhir(&event, &ctx(), Some("patient-42")).expect("render");
+    let stored = served(&store).await.remove(0);
+    assert_eq!(stored, rendered);
     assert_eq!(stored["resourceType"], "AuditEvent");
     assert_eq!(
         stored["meta"]["profile"][0],
@@ -118,29 +156,18 @@ async fn insert_persists_promoted_columns_and_fhir_payload() {
 async fn insert_batch_persists_every_record_with_identical_shape() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let store = AuditStore::new(pool.clone());
+    let store = store_over(&pool);
 
     // A drained batch: distinct events, one with a subject, one without.
     let first = read_event("2026-07-10T09:00:00Z".parse().unwrap());
     let mut second = read_event("2026-07-10T09:00:01Z".parse().unwrap());
     "bob".clone_into(&mut second.user_id);
     second.object_id = Some("9bb2::ferroehr::1".to_owned());
-    let records = vec![
-        (
-            first.clone(),
-            Some("patient-42".to_owned()),
-            Some(fhir::to_fhir(&first, &ctx(), Some("patient-42")).expect("render")),
-        ),
-        (
-            second.clone(),
-            None,
-            Some(fhir::to_fhir(&second, &ctx(), None).expect("render")),
-        ),
-    ];
+    let records = vec![record(&first, Some("patient-42")), record(&second, None)];
     store.insert_batch(&records).await.expect("batch insert");
 
     let rows = sqlx::query(
-        "SELECT principal, patient_id, resource_id, fhir \
+        "SELECT principal, patient_id, resource_id \
          FROM audit.audit_event ORDER BY recorded_at",
     )
     .fetch_all(&pool)
@@ -164,13 +191,16 @@ async fn insert_batch_persists_every_record_with_identical_shape() {
         rows[1].get::<Option<String>, _>("resource_id").as_deref(),
         Some("9bb2::ferroehr::1")
     );
-    // The batch path stores the exact same canonical payload as the
-    // per-event path.
-    let stored: serde_json::Value = rows[0].get("fhir");
+    // A batch-written record serves the document the drain renders, as a
+    // record written by the per-event path does.
+    let documents = served(&store).await;
     assert_eq!(
-        stored,
-        serde_json::to_value(&records[0].2).expect("value"),
-        "batch-stored FHIR document differs from the rendered one"
+        documents,
+        vec![
+            fhir::to_fhir(&first, &ctx(), Some("patient-42")).expect("render"),
+            fhir::to_fhir(&second, &ctx(), None).expect("render"),
+        ],
+        "a batch-written record serves a document other than the rendered one"
     );
 
     // An empty batch is a no-op, never an error.
@@ -181,15 +211,14 @@ async fn insert_batch_persists_every_record_with_identical_shape() {
 async fn reap_deletes_only_rows_past_the_horizon() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let store = AuditStore::new(pool.clone());
+    let store = store_over(&pool);
 
     // One fresh record and one 40 days old.
     let now = Timestamp::now();
     let old = now - jiff::SignedDuration::from_hours(40 * 24);
     for at in [now, old] {
         let event = read_event(at);
-        let rendered = fhir::to_fhir(&event, &ctx(), None).expect("render");
-        store.insert(&event, None, &rendered).await.expect("insert");
+        store.insert(&event, None).await.expect("insert");
     }
 
     // retention 0 = keep forever.
@@ -216,7 +245,7 @@ async fn reap_deletes_only_rows_past_the_horizon() {
 async fn reap_years_deletes_only_rows_past_the_calendar_horizon() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let store = AuditStore::new(pool.clone());
+    let store = store_over(&pool);
 
     // One record 1000 days old (inside three calendar years) and one 1200 days
     // old (outside them).
@@ -224,8 +253,7 @@ async fn reap_years_deletes_only_rows_past_the_calendar_horizon() {
     for days in [1000_i64, 1200] {
         let at = now - jiff::SignedDuration::from_hours(days * 24);
         let event = read_event(at);
-        let rendered = fhir::to_fhir(&event, &ctx(), None).expect("render");
-        store.insert(&event, None, &rendered).await.expect("insert");
+        store.insert(&event, None).await.expect("insert");
     }
 
     assert_eq!(store.reap_years(0).await.expect("reap 0 years"), 0);
@@ -256,17 +284,11 @@ async fn reap_due_deletes_each_record_at_its_own_end() {
 
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let store = AuditStore::new(pool.clone());
+    let store = store_over(&pool);
 
     let today: jiff::civil::Date = "2026-10-26".parse().unwrap();
     let written: Timestamp = "2026-10-01T08:00:00Z".parse().unwrap();
-    let records: Vec<_> = (0..3)
-        .map(|_| {
-            let event = read_event(written);
-            let rendered = fhir::to_fhir(&event, &ctx(), None).expect("render");
-            (event, None, Some(rendered))
-        })
-        .collect();
+    let records: Vec<_> = (0..3).map(|_| record(&read_event(written), None)).collect();
     let ends = [
         RecordEnd::On(today),
         RecordEnd::On(today.tomorrow().unwrap()),
@@ -278,9 +300,8 @@ async fn reap_due_deletes_each_record_at_its_own_end() {
         .expect("batch insert with ends");
     // A record from before per-record ends states none.
     let legacy = read_event("2020-01-01T00:00:00Z".parse().unwrap());
-    let legacy_fhir = fhir::to_fhir(&legacy, &ctx(), None).expect("render");
     store
-        .insert_batch(&[(legacy, None, Some(legacy_fhir))])
+        .insert_batch(&[record(&legacy, None)])
         .await
         .expect("legacy insert");
 
@@ -341,16 +362,15 @@ async fn reap_due_deletes_each_record_at_its_own_end() {
 async fn access_fields_round_trip_on_both_write_paths() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let store = AuditStore::new(pool.clone());
+    let store = store_over(&pool);
 
     let mut single = read_event("2026-07-10T08:30:00Z".parse().unwrap());
     single.purpose = Some("TREATMENT".to_owned());
     single.legal_basis = Some("gdpr-art-9-2-h".to_owned());
     single.result_count = Some(17);
     single.request_id = Some("req-single".to_owned());
-    let rendered = fhir::to_fhir(&single, &ctx(), Some("patient-42")).expect("render");
     store
-        .insert(&single, Some("patient-42"), &rendered)
+        .insert(&single, Some("patient-42"))
         .await
         .expect("insert");
 
@@ -360,9 +380,8 @@ async fn access_fields_round_trip_on_both_write_paths() {
     batched.purpose = Some("TREATMENT".to_owned());
     batched.result_count = Some(1);
     batched.request_id = Some("req-batch".to_owned());
-    let batched_fhir = fhir::to_fhir(&batched, &ctx(), None).expect("render");
     store
-        .insert_batch(&[(batched, None, Some(batched_fhir))])
+        .insert_batch(&[record(&batched, None)])
         .await
         .expect("insert batch");
 
@@ -418,37 +437,30 @@ async fn access_fields_round_trip_on_both_write_paths() {
 async fn the_accessing_organisation_round_trips_on_both_write_paths() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let store = AuditStore::new(pool.clone());
+    let store = store_over(&pool);
 
     let mut single = read_event("2026-07-10T08:30:00Z".parse().unwrap());
     single.organisation = Some("zh-noordwest".to_owned());
-    let rendered = fhir::to_fhir(&single, &ctx(), Some("patient-42")).expect("render");
     store
-        .insert(&single, Some("patient-42"), &rendered)
+        .insert(&single, Some("patient-42"))
         .await
         .expect("insert");
 
     let mut batched = read_event("2026-07-10T08:31:00Z".parse().unwrap());
     batched.organisation = Some("huisartsenpost-zuid".to_owned());
-    let batched_fhir = fhir::to_fhir(&batched, &ctx(), None).expect("render");
     // A record with no organisation resolved: the column stays NULL rather
     // than carrying the previous row's value or a placeholder.
     let anonymous = read_event("2026-07-10T08:32:00Z".parse().unwrap());
-    let anonymous_fhir = fhir::to_fhir(&anonymous, &ctx(), None).expect("render");
     store
-        .insert_batch(&[
-            (batched, None, Some(batched_fhir)),
-            (anonymous, None, Some(anonymous_fhir)),
-        ])
+        .insert_batch(&[record(&batched, None), record(&anonymous, None)])
         .await
         .expect("insert batch");
 
-    let rows = sqlx::query(
-        "SELECT organisation, principal, fhir FROM audit.audit_event ORDER BY recorded_at",
-    )
-    .fetch_all(&pool)
-    .await
-    .expect("three rows");
+    let rows =
+        sqlx::query("SELECT organisation, principal FROM audit.audit_event ORDER BY recorded_at")
+            .fetch_all(&pool)
+            .await
+            .expect("three rows");
     assert_eq!(rows.len(), 3, "one row per written record");
     assert_eq!(
         rows[0].get::<Option<String>, _>("organisation").as_deref(),
@@ -471,10 +483,10 @@ async fn the_accessing_organisation_round_trips_on_both_write_paths() {
         "an unresolved organisation is recorded as absent, never guessed"
     );
 
-    // The stored FHIR document carries the same fact as the column: the
+    // The served FHIR document carries the same fact as the column: the
     // organisation as an agent of its own, a logical reference to an
     // Organization (FHIR R4 `Reference.type` and `Reference.identifier`).
-    let stored: serde_json::Value = rows[0].get("fhir");
+    let stored = served(&store).await.remove(0);
     let agents = stored["agent"].as_array().expect("the agent list");
     assert!(
         agents.iter().any(|agent| {
@@ -492,36 +504,32 @@ async fn the_accessing_organisation_round_trips_on_both_write_paths() {
 async fn the_actor_roles_round_trip_on_both_write_paths() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let store = AuditStore::new(pool.clone());
+    let store = store_over(&pool);
 
     let mut single = read_event("2026-07-10T08:30:00Z".parse().unwrap());
     single.roles = vec!["USER".to_owned(), "clinician".to_owned()];
-    let rendered = fhir::to_fhir(&single, &ctx(), Some("patient-42")).expect("render");
     store
-        .insert(&single, Some("patient-42"), &rendered)
+        .insert(&single, Some("patient-42"))
         .await
         .expect("insert");
 
     let mut batched = read_event("2026-07-10T08:31:00Z".parse().unwrap());
     batched.roles = vec!["ADMIN".to_owned()];
-    let batched_fhir = fhir::to_fhir(&batched, &ctx(), None).expect("render");
     let mut roleless = read_event("2026-07-10T08:32:00Z".parse().unwrap());
     roleless.roles.clear();
-    let roleless_fhir = fhir::to_fhir(&roleless, &ctx(), None).expect("render");
     let mut anonymous = read_event("2026-07-10T08:33:00Z".parse().unwrap());
     anonymous.user_id.clear();
     anonymous.roles.clear();
-    let anonymous_fhir = fhir::to_fhir(&anonymous, &ctx(), None).expect("render");
     store
         .insert_batch(&[
-            (batched, None, Some(batched_fhir)),
-            (roleless, None, Some(roleless_fhir)),
-            (anonymous, None, Some(anonymous_fhir)),
+            record(&batched, None),
+            record(&roleless, None),
+            record(&anonymous, None),
         ])
         .await
         .expect("insert batch");
 
-    let rows = sqlx::query("SELECT roles, fhir FROM audit.audit_event ORDER BY recorded_at")
+    let rows = sqlx::query("SELECT roles FROM audit.audit_event ORDER BY recorded_at")
         .fetch_all(&pool)
         .await
         .expect("four rows");
@@ -544,7 +552,7 @@ async fn the_actor_roles_round_trip_on_both_write_paths() {
     );
     assert_eq!(roles(3), None, "no principal means no roles to record");
 
-    let stored: serde_json::Value = rows[0].get("fhir");
+    let stored = served(&store).await.remove(0);
     let requestor = stored["agent"]
         .as_array()
         .expect("the agent list")
@@ -570,12 +578,11 @@ async fn the_actor_roles_round_trip_on_both_write_paths() {
 async fn the_access_trail_refuses_rewriting_deletion_and_truncation() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let store = AuditStore::new(pool.clone());
+    let store = store_over(&pool);
 
     let event = read_event("2026-07-10T08:30:00Z".parse().unwrap());
-    let rendered = fhir::to_fhir(&event, &ctx(), Some("patient-42")).expect("render");
     let id = store
-        .insert(&event, Some("patient-42"), &rendered)
+        .insert(&event, Some("patient-42"))
         .await
         .expect("insert");
 
@@ -643,7 +650,7 @@ async fn both_inserts_persist_the_authentication_columns() {
 
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let store = AuditStore::new(pool.clone());
+    let store = store_over(&pool);
 
     let mut client = read_event("2026-07-10T10:00:00Z".parse().unwrap());
     "scheduler-app".clone_into(&mut client.user_id);
@@ -653,11 +660,7 @@ async fn both_inserts_persist_the_authentication_columns() {
         assurance_value: Some("http://eidas.europa.eu/LoA/high".to_owned()),
         professional_id: Some("prof-007".to_owned()),
     };
-    let rendered = fhir::to_fhir(&client, &ctx(), None).expect("render");
-    store
-        .insert(&client, None, &rendered)
-        .await
-        .expect("insert");
+    store.insert(&client, None).await.expect("insert");
 
     let mut person = read_event("2026-07-10T10:00:01Z".parse().unwrap());
     person.actor = ActorAuthentication {
@@ -667,18 +670,7 @@ async fn both_inserts_persist_the_authentication_columns() {
         professional_id: Some("alice".to_owned()),
     };
     let plain = read_event("2026-07-10T10:00:02Z".parse().unwrap());
-    let records = vec![
-        (
-            person.clone(),
-            None,
-            Some(fhir::to_fhir(&person, &ctx(), None).expect("render")),
-        ),
-        (
-            plain.clone(),
-            None,
-            Some(fhir::to_fhir(&plain, &ctx(), None).expect("render")),
-        ),
-    ];
+    let records = vec![record(&person, None), record(&plain, None)];
     store.insert_batch(&records).await.expect("batch insert");
 
     let rows = sqlx::query(
@@ -734,34 +726,19 @@ async fn both_inserts_persist_the_authentication_columns() {
 async fn both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let store = AuditStore::new(pool.clone());
+    let store = store_over(&pool);
 
     let mut single = read_event("2026-07-10T11:00:00Z".parse().unwrap());
     single.purpose = Some("ETREAT".to_owned());
     single.emergency_access = true;
-    let rendered = fhir::to_fhir(&single, &ctx(), None).expect("render");
-    store
-        .insert(&single, None, &rendered)
-        .await
-        .expect("insert");
+    store.insert(&single, None).await.expect("insert");
 
     let mut marked = read_event("2026-07-10T11:00:01Z".parse().unwrap());
     marked.purpose = Some("ETREAT".to_owned());
     marked.emergency_access = true;
     let mut plain = read_event("2026-07-10T11:00:02Z".parse().unwrap());
     plain.purpose = Some("TREAT".to_owned());
-    let records = vec![
-        (
-            marked.clone(),
-            None,
-            Some(fhir::to_fhir(&marked, &ctx(), None).expect("render")),
-        ),
-        (
-            plain.clone(),
-            None,
-            Some(fhir::to_fhir(&plain, &ctx(), None).expect("render")),
-        ),
-    ];
+    let records = vec![record(&marked, None), record(&plain, None)];
     store.insert_batch(&records).await.expect("batch insert");
 
     let marks: Vec<bool> =
@@ -785,4 +762,217 @@ async fn both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten() {
             .await
             .expect("verify");
     assert!(findings.is_empty(), "{findings:?}");
+}
+
+/// The policy of [`a_record_renders_the_document_the_drain_rendered`]: a
+/// category map, an emergency purpose and a ten-year horizon, so every part
+/// of the EHDS access record has something to write.
+fn classifying_policy() -> RenderPolicy {
+    let config: ferroehr::system_log::config::AuditConfig = toml::from_str(
+        r#"
+        source_id = "ferroehr"
+        enterprise_site_id = "site-1"
+        server_host = "10.42.23.77"
+        purpose_codes = ["TREAT", "ETREAT"]
+        emergency_purpose_codes = ["ETREAT"]
+        [store]
+        retention_years = 10
+        [categories.templates]
+        "Lab Report" = ["Laboratory-Reports"]
+        "#,
+    )
+    .expect("parse");
+    RenderPolicy::of(&config)
+}
+
+/// One event of every rendering path, each field filled that the path reads.
+fn every_kind_of_record(
+    compiled: &ferroehr::system_log::render::CompiledPolicy,
+) -> Vec<(AuditEvent, Option<String>)> {
+    use ferroehr::system_log::categories::{AccessedContent, ContentIds, QueryConstraints};
+    use ferroehr::system_log::event::{ActingMode, ActorAuthentication};
+    use ferrohealth_smart::assurance::AssuranceLevel;
+
+    let at = |text: &str| text.parse::<Timestamp>().expect("timestamp");
+    let mut classified = read_event(at("2026-07-10T08:30:00.123456Z"));
+    classified.issuer = Some("https://idp.example.org".to_owned());
+    classified.client_id = Some("portal".to_owned());
+    classified.organisation = Some("zh-noordwest".to_owned());
+    classified.roles = vec!["clinician".to_owned()];
+    classified.ehr_id = Some("7d44b88c-4199-4bad-97dc-d78268e01398".to_owned());
+    classified.subject_namespace = Some("urn:oid:2.999.1.1".to_owned());
+    classified.purpose = Some("ETREAT".to_owned());
+    classified.emergency_access = true;
+    classified.permit = Some("permit-1".to_owned());
+    classified.legal_basis = Some("gdpr-art-9-2-h".to_owned());
+    classified.request_id = Some("req-1".to_owned());
+    classified.result_count = Some(1);
+    classified.record_origins(vec!["lab-system".to_owned(), "gp-system".to_owned()], None);
+    classified.actor = ActorAuthentication {
+        mode: Some(ActingMode::Client),
+        assurance_level: Some(AssuranceLevel::High),
+        assurance_value: Some("http://eidas.europa.eu/LoA/high".to_owned()),
+        professional_id: Some("prof-007".to_owned()),
+    };
+    classified.category = Some(compiled.categories.classify(
+        &AccessedContent::Objects(vec![ContentIds {
+            template_id: Some("Lab Report".to_owned()),
+            archetype_id: Some("openEHR-EHR-COMPOSITION.report.v1".to_owned()),
+            resource_kind: None,
+        }]),
+        false,
+    ));
+    classified.category_map_digest = Some(compiled.categories.digest());
+
+    let mut query = AuditEvent::new(
+        EventActionCode::Execute,
+        ObjectClass::Query,
+        EventOutcome::Success,
+    );
+    "alice".clone_into(&mut query.user_id);
+    query.event_type = Some(EventType::rest("query_execute_ad_hoc"));
+    query.object_id = Some("SELECT c FROM EHR e CONTAINS COMPOSITION c".to_owned());
+    query.ehr_id = Some("7d44b88c-4199-4bad-97dc-d78268e01398".to_owned());
+    query.subject_lookup_failed = true;
+    query.timestamp = at("2026-07-10T08:30:01.000001Z");
+    query.category = Some(compiled.categories.classify(
+        &AccessedContent::Query(QueryConstraints {
+            reaches_content: true,
+            ..QueryConstraints::default()
+        }),
+        false,
+    ));
+    query.category_map_digest = Some(compiled.categories.digest());
+
+    let mut login = AuditEvent::new(
+        EventActionCode::Execute,
+        ObjectClass::Authentication,
+        EventOutcome::MinorFailure,
+    );
+    login.event_type = Some(EventType::Login);
+    login.client_ip = Some("10.0.0.9".to_owned());
+    login.timestamp = at("2026-07-10T08:30:02Z");
+
+    let mut failed = read_event(at("2026-07-10T08:30:03Z"));
+    failed.outcome = EventOutcome::SeriousFailure;
+
+    let mut template = AuditEvent::new(
+        EventActionCode::Create,
+        ObjectClass::Template,
+        EventOutcome::Success,
+    );
+    "admin".clone_into(&mut template.user_id);
+    template.roles = vec!["ADMIN".to_owned()];
+    template.event_type = Some(EventType::rest("definition_template_adl1_4_upload"));
+    template.object_id = Some("Lab Report".to_owned());
+    template.timestamp = at("2026-07-10T08:30:04Z");
+
+    let mut extract = AuditEvent::new(
+        EventActionCode::Read,
+        ObjectClass::Extract,
+        EventOutcome::Success,
+    );
+    extract.object_id = Some("extract-1".to_owned());
+    extract.ehr_id = Some("7d44b88c-4199-4bad-97dc-d78268e01398".to_owned());
+    extract.timestamp = at("2026-07-10T08:30:05Z");
+
+    vec![
+        (classified, Some("patient-42".to_owned())),
+        (query, None),
+        (login, None),
+        (failed, Some("patient-42".to_owned())),
+        (template, None),
+        (extract, Some("patient-42".to_owned())),
+    ]
+}
+
+/// A stored record renders, byte for byte, the FHIR `AuditEvent` the drain
+/// rendered from the event before the store kept it (#4300), on both write
+/// paths, and renders it again the same way on every read.
+#[tokio::test]
+async fn a_record_renders_the_document_the_drain_rendered() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let policy = classifying_policy();
+    let compiled = policy.compile().expect("compile");
+    let store = AuditStore::new(pool.clone()).with_render_policy(policy);
+
+    let records = every_kind_of_record(&compiled);
+    let (first, rest) = records.split_first().expect("records");
+    store
+        .insert(&first.0, first.1.as_deref())
+        .await
+        .expect("insert");
+    let batch: Vec<AuditRecord> = rest
+        .iter()
+        .map(|(event, subject)| record(event, subject.as_deref()))
+        .collect();
+    store.insert_batch(&batch).await.expect("batch insert");
+
+    let expected: Vec<Vec<u8>> = records
+        .iter()
+        .map(|(event, subject)| {
+            let document =
+                fhir::to_fhir(event, &compiled.context, subject.as_deref()).expect("render");
+            serde_json::to_vec(&document).expect("bytes")
+        })
+        .collect();
+    let bytes = |documents: Vec<serde_json::Value>| -> Vec<Vec<u8>> {
+        documents
+            .iter()
+            .map(|document| serde_json::to_vec(document).expect("bytes"))
+            .collect()
+    };
+    let first_read = bytes(served(&store).await);
+    for (index, (served, rendered)) in first_read.iter().zip(&expected).enumerate() {
+        assert_eq!(
+            String::from_utf8_lossy(served),
+            String::from_utf8_lossy(rendered),
+            "record {index} serves a document other than the one the drain rendered"
+        );
+    }
+    assert_eq!(first_read.len(), expected.len());
+
+    // A second reader, with a cold policy cache, renders the same bytes.
+    let reader = AuditStore::new(pool.clone());
+    assert_eq!(
+        bytes(served(&reader).await),
+        first_read,
+        "the rendering moved"
+    );
+}
+
+/// A record renders under the policy it was written under, so a store that
+/// now writes under another configuration still serves the old record's
+/// document unchanged.
+#[tokio::test]
+async fn a_record_keeps_the_policy_it_was_written_under() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let before = store_over(&pool);
+    let event = read_event("2026-07-10T08:30:00Z".parse().unwrap());
+    before
+        .insert(&event, Some("patient-42"))
+        .await
+        .expect("insert");
+
+    let moved = AuditStore::new(pool.clone()).with_render_policy(RenderPolicy {
+        source_id: "renamed".to_owned(),
+        ..policy()
+    });
+    moved
+        .insert(&read_event("2026-07-10T08:31:00Z".parse().unwrap()), None)
+        .await
+        .expect("insert under the new policy");
+
+    let documents = served(&moved).await;
+    assert_eq!(
+        documents[0],
+        fhir::to_fhir(&event, &ctx(), Some("patient-42")).expect("render")
+    );
+    let policies: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_render_policy")
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(policies, 2, "each configuration is kept once");
 }
