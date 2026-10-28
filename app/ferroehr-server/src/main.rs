@@ -8,6 +8,16 @@
 
 use clap::Parser;
 
+/// The process-wide allocator: mimalloc instead of the platform `malloc`.
+///
+/// Under sustained load glibc's per-thread arenas kept freed memory and the
+/// resident set grew run after run to the container's limit (#4288);
+/// `MALLOC_ARENA_MAX=2` held it flat at a 16 % throughput cost. mimalloc
+/// holds it flat and serves the same load faster
+/// (<https://microsoft.github.io/mimalloc/>).
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 /// The stack of every runtime thread, workers and the blocking pool alike.
 ///
 /// Tokio's default is 2 MiB, which the AOM engine's recursive walks over a

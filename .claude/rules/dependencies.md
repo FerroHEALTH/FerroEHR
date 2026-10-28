@@ -108,6 +108,12 @@ Errors & utilities: `thiserror` 2 (libs), `anyhow` 1 (bins only), `config`
 `bitflags` 2. Use `std::sync::LazyLock` (edition 2024) instead of `once_cell`
 for statics.
 
+Allocator: `mimalloc` 0.1 is the server binary's `#[global_allocator]`
+(#4288). glibc's per-thread arenas kept freed memory and grew the resident
+set to the OOM kill; under the same load mimalloc held it flat and served
+faster than glibc, glibc with `MALLOC_ARENA_MAX=2`, and `tikv-jemallocator`.
+Only a binary sets an allocator, never a library crate.
+
 HTTP client & external integration: `reqwest` 0.13 (rustls, json) for the
 terminology/FHIR client and conformance runner; `jsonschema` 0.46 *(verify)*
 to validate against the openEHR ITS-JSON schemas.

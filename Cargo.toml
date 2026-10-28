@@ -210,6 +210,7 @@ bytes = "1"
 
 # ── Async runtime ─────────────────────────────────────────────────────────────
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "net", "time", "sync", "fs", "io-util"] }
+mimalloc = { version = "0.1.52", default-features = false }   # the server binary's global allocator (#4288): glibc malloc kept per-thread arenas and grew RSS to the OOM kill
 futures = "0.3"
 async-trait = "0.1"                 # still handy for dyn traits; native async-fn-in-trait since 1.75
 
