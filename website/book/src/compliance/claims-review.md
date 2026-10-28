@@ -679,3 +679,56 @@ Keycloak overlay trusts its CA through `ca_file` and signs the viewer in
 
 - The conformance chapter bars still show the CNF TDD cases from the last
   measured run; the record drops them only when the campaign runs again (#4204).
+
+## The review of 2026-10-28, for 5.6.0-rc1
+
+Read on the tree after commit `da5966342`, for the FerroEHR release candidate
+5.6.0-rc1. The facts of this release checked in every text in scope: the REST
+surface serves three namespaces, ITS-REST alone under `/openehr/v1/`, FHIR and
+IHE under `/fhir/r4/` and FerroEHR's extensions under `/extensions/v1/`, with
+no redirect from the old paths (#4330); the audit store renders each record's
+`AuditEvent` from its columns, answers every ITI-81 parameter through search
+tokens, and its migration refuses a store holding records of an earlier
+release (#4300, #4302, #4313); `ferrohealth-server` 0.3.7 bounds a silent
+connection by `[server] header_read_timeout_ms` (#4283, GHSA-2mc2-h3jq-c5wg);
+an AQL query nested past its depth bound answers `400` (#4284); a cut or
+unreachable database answers `503` with `Retry-After` within about a second
+(#4290, #4323); an abandoned query frees its connection (#4285); storage
+generation 3 (#4306); chart 20.0.1-rc1 with `appVersion` 5.6.0-rc1.
+
+### Changed on 2026-10-28, for 5.6.0-rc1
+
+- **The hazard log**: H7 named `the_current_digest_covers_every_column` and
+  `records_under_the_original_digest_still_verify` and kept a remainder for
+  records under the version 1 digest; #4300 retired the versioned digests with
+  the records they covered, so H7 names `the_digest_covers_every_column` and
+  the render-policy and search-token tests, and drops that remainder.
+- **The technical documentation** named the FerroAUDIT pins as 0.2.5; it names
+  0.3.1, the version the root `Cargo.toml` pins.
+
+### Read and kept on 2026-10-28, for 5.6.0-rc1
+
+- **The API pages**: [the API overview](../using-the-api/index.md) names the
+  three namespaces, the [resources page](../using-the-api/resources.md) the
+  paged CONTRIBUTION list under `/extensions/v1/`, and the
+  [audit trail](../audit.md) the ITI-81 route under `/fhir/r4/` and the empty
+  audit store 5.6.0 starts on; no page in scope names a moved route under
+  `/openehr/v1/`.
+- **The operations pages**: [AQL](../querying-aql.md) states the depth bounds,
+  [operations](../operations.md) the `503` on a cut or unreachable database,
+  and [the server configuration](../installation/config-server.md) and
+  [security](../security.md) `header_read_timeout_ms`.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  20.0.1-rc1 and image 5.6.0-rc1 in the book of main; the frozen book of 5.5.0
+  under `/docs/latest/` keeps the 5.5.0 pins, since a pre-release freezes no
+  book.
+- **The landing page, `SECURITY.md`, the crate READMEs, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-10-28, for 5.6.0-rc1
+
+- The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+  serves the old paths until 5.6.0 ships.
