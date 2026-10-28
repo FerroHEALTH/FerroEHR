@@ -340,6 +340,10 @@ struct Builder<'a> {
     /// then JOIN instead of adding comma-separated FROM items, or a later
     /// `LATERAL` could no longer reference them (SQL join-tree scoping).
     streaming: bool,
+    /// Whether a whole-object read only has to say that the object is there:
+    /// set while a plain `COUNT` lowers its argument, so the row stands for
+    /// its rebuilt fragment, which is never `NULL` (`crate::storage::slim`).
+    presence_only: bool,
     /// Whether the request enforces the EHDS Art. 8 restriction of access, read
     /// once when the builder starts: a restricted object or EHR then
     /// contributes no row (`crate::system_log::access_context`).
@@ -378,6 +382,7 @@ impl<'a> Builder<'a> {
             branch_roots: Vec::new(),
             sub_ctr: 0,
             streaming: false,
+            presence_only: false,
             access_restricted: crate::system_log::access_context::access_restriction_enforced(),
             step_bindings: Vec::new(),
         }

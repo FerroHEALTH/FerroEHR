@@ -60,6 +60,15 @@ macro_rules! predicate_statement {
     };
 }
 
+/// The ELEMENT's value as canonical JSON, whether the row stores it in its
+/// fragment or in the typed value columns (`crate::storage::slim`).
+macro_rules! element_value {
+    () => {
+        "COALESCE(e.data -> 'value', ext.node_value(e.value_type, e.value_num, e.value_text, \
+         e.value_code, e.value_terminology))"
+    };
+}
+
 /// The statement `kind` runs, in full.
 ///
 /// Exposed so a test can pin the four texts: the property that matters is that
@@ -68,17 +77,28 @@ macro_rules! predicate_statement {
 #[must_use]
 pub fn predicate_sql(kind: PredicateKind) -> &'static str {
     match kind {
-        PredicateKind::Text => predicate_statement!("e.data #>> '{value,value}' = $3"),
+        PredicateKind::Text => {
+            predicate_statement!(concat!(element_value!(), " #>> '{value}' = $3"))
+        }
         PredicateKind::TextPrefix => {
-            predicate_statement!(r"e.data #>> '{value,value}' LIKE $3 ESCAPE '\'")
+            predicate_statement!(concat!(
+                element_value!(),
+                r" #>> '{value}' LIKE $3 ESCAPE '\'"
+            ))
         }
         PredicateKind::Coded => {
-            predicate_statement!("e.data #>> '{value,defining_code,code_string}' = $3")
+            predicate_statement!(concat!(
+                element_value!(),
+                " #>> '{defining_code,code_string}' = $3"
+            ))
         }
-        PredicateKind::BirthDate => predicate_statement!(
-            "(e.data #>> '{value,value}')::date > current_date - make_interval(years => $4) \
-             AND (e.data #>> '{value,value}')::date <= current_date - make_interval(years => $3)"
-        ),
+        PredicateKind::BirthDate => predicate_statement!(concat!(
+            "(",
+            element_value!(),
+            " #>> '{value}')::date > current_date - make_interval(years => $4) AND (",
+            element_value!(),
+            " #>> '{value}')::date <= current_date - make_interval(years => $3)"
+        )),
     }
 }
 

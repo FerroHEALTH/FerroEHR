@@ -53,6 +53,10 @@ pub const CHANGE_CONTROL: &str = include_str!("../../migrations/templates/change
 /// The node template: the decomposed content of every version.
 pub const NODE: &str = include_str!("../../migrations/templates/node.sql.in");
 
+/// The node values template: the typed value columns and the nullable,
+/// slimmed fragment (#4306).
+pub const NODE_VALUES: &str = include_str!("../../migrations/templates/node_values.sql.in");
+
 /// The marker opening a block rendered only for a domain that owns an `ehr`
 /// relation.
 const EHR_BEGIN: &str = "--@ehr-begin";
@@ -117,6 +121,12 @@ mod tests {
         ),
         ("migrations/clinical/0004_node.sql", CLINICAL, NODE),
         ("migrations/party/0003_node.sql", PARTY, NODE),
+        (
+            "migrations/clinical/0019_node_values.sql",
+            CLINICAL,
+            NODE_VALUES,
+        ),
+        ("migrations/party/0012_node_values.sql", PARTY, NODE_VALUES),
     ];
 
     /// Set to `1` to rewrite the committed files from the templates instead of
@@ -150,7 +160,7 @@ mod tests {
 
     #[test]
     fn the_two_domains_differ_only_in_kinds_and_the_clinical_references() {
-        for template in [CHANGE_CONTROL, NODE] {
+        for template in [CHANGE_CONTROL, NODE, NODE_VALUES] {
             let clinical = render(template, &CLINICAL);
             let party = render(template, &PARTY);
             let differences: Vec<(&str, &str)> = diff_lines(&clinical, &party);
