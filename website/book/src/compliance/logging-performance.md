@@ -33,7 +33,7 @@ set for real data: the access log on, the local store on, and
 | Loss under outage | No access succeeds without its record. A record the queue or the local store cannot take refuses the request with `503`, and a record owed to a FHIR Audit Record Repository that is down stays owed and is delivered when it returns. | Deterministic tests, not a load measurement: `app/ferroehr-rest/tests/it/audit_e2e.rs` (`fail_closed_returns_503_when_channel_full`, `fail_closed_503_carries_openehr_error_body_and_retry_after`), `app/ferroehr/tests/it/access_event_fail_closed.rs`, and `app/ferroehr/tests/it/audit_feed.rs` (`arr_outage_leaves_rows_pending_then_delivers_on_recovery`). |
 | Latency added | With the access log on, the median p50 and p95 request latency are at most 125 % of those with it off. | Measured: the same workload with the log off and on, on one machine. |
 | Throughput kept | With the access log on, the median throughput is at least 80 % of that with it off. | Measured, as above. |
-| Retrieval | A page of 50 access records retrieved through ITI-81 from the measured window takes at most 250 ms at p95. | Measured: 50 paged retrievals after each run. |
+| Retrieval | A page of 50 access records retrieved through ITI-81 from the measured window takes at most a quarter of a second at p95 (`MAX_RETRIEVAL_P95_MS` in the verdict script). | Measured: 50 paged retrievals after each run. |
 
 "Normal conditions of use" for these figures are the load of the release
 performance guard: a store seeded with 20 EHRs of 10 compositions each, then
