@@ -416,7 +416,7 @@ wasm-bindgen-futures = "0.4.79"
 # `manager` feature downloads and unpacks a WebDriver binary through zip 8
 # (RUSTSEC-2026-0367/0368/0369, #3806); the journeys reach a chromedriver
 # the harness starts.
-thirtyfour = { version = "0.37.2", default-features = false, features = ["reqwest", "rustls", "component", "cdp"] }
+thirtyfour = { version = "0.38.1", default-features = false, features = ["reqwest", "rustls", "component", "cdp"] }
 
 # ── Observability (opentelemetry set is lockstep: keep versions equal) ────────
 tracing = "0.1"
