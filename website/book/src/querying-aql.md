@@ -605,6 +605,19 @@ which one you hit:
 | [`query.max_result_rows`](installation/config-integrations.md#query) | server config, default `10000` | The largest page one execution serves: the page of a query nothing else bounds, and the maximum a `LIMIT` or `fetch` may ask for. `0` means unbounded. |
 | [`query.timeout_ms`](installation/config-integrations.md#query) | server config, default `30000` | Per-query database execution budget. **On by default**; `0` disables it. |
 
+Two bounds on the shape of the query text are fixed in the server. Brackets
+and `CONTAINS` may nest at most 64 levels, and a `WHERE` expression may be at
+most 512 levels deep, where each `AND`, `OR`, `NOT`, `CONTAINS` and bracket on
+a path counts one level. A query beyond either returns **400 Bad Request**
+naming the bound, and a stored query beyond either is refused when you store
+it. `AND` and `OR` chain one level per operator, so a long list of
+alternatives over one path belongs in `MATCHES {…}`, which the bound does not
+count:
+
+```sql
+WHERE c/name/value MATCHES {'Blood pressure', 'Pulse', 'Body weight'}
+```
+
 A query that exceeds the time budget returns **408 Request Timeout**; narrow it
 (add archetype constraints, an `ehr_id` scope, or a `WHERE` filter) rather than
 retrying it unchanged. A `LIMIT` or `fetch` larger than the row ceiling returns

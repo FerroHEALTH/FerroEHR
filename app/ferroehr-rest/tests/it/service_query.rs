@@ -152,6 +152,42 @@ async fn malformed_adhoc_aql_is_400() {
     assert_eq!(status, StatusCode::BAD_REQUEST, "malformed AQL → 400");
 }
 
+/// The two queries that aborted the 5.5.0 server with a stack overflow (a
+/// 20 000-deep `NOT` chain and a 30 000-term `OR` chain) are refused as
+/// invalid input (`400_Query.yaml`), and the same router serves the next
+/// query (#4284).
+#[tokio::test]
+async fn adhoc_aql_nested_beyond_the_depth_bound_is_400_and_the_server_keeps_serving() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let app = app(&pool).await;
+    let prefix = "SELECT c FROM EHR e CONTAINS COMPOSITION c WHERE ";
+    let nots = format!("{prefix}{}c/name/value = 'x'", "NOT ".repeat(20_000));
+    let ors = format!(
+        "{prefix}{}",
+        (0..30_000)
+            .map(|i| format!("c/name/value = 'x{i}'"))
+            .collect::<Vec<_>>()
+            .join(" OR ")
+    );
+    for aql in [nots, ors] {
+        let body = serde_json::json!({ "q": aql }).to_string();
+        let (status, answer) = post_json(app.clone(), &format!("{BASE}/query/aql"), &body).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{answer}");
+        assert!(
+            answer.contains("deepest this parser accepts"),
+            "the answer says why: {answer}"
+        );
+    }
+    let (status, body) = post_json(
+        app,
+        &format!("{BASE}/query/aql"),
+        r#"{"q":"SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c"}"#,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "the server still serves: {body}");
+}
+
 #[tokio::test]
 async fn versioned_store_returns_200_with_location_and_409_on_duplicate() {
     let db = testkit::db().await.expect("testkit database");

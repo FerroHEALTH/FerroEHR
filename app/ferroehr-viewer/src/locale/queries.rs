@@ -122,6 +122,8 @@ crate::locale::messages! {
         QueryLimit = "query-limit",
         /// `Namespace`
         QueryNamespace = "query-namespace",
+        /// `The query nests deeper than { $limit } levels. A long OR over one path is written as MATCHES.`
+        QueryNestsTooDeep = "query-nests-too-deep",
         /// `Newest first`
         QueryNewestFirst = "query-newest-first",
         /// `No data point yet; the query returns nothing until you add one.`

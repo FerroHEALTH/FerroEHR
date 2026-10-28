@@ -301,3 +301,20 @@ async fn store_refuses_a_query_the_engine_refuses_and_stores_nothing() {
         assert_eq!(body.trim(), "[]", "{name} was stored: {body}");
     }
 }
+
+/// A stored query text nested beyond the parser's depth bound is refused at
+/// store time with the operation's `400` (`definition_query_store.yaml`), so no
+/// execution of a stored query ever meets one (#4284).
+#[tokio::test]
+async fn store_refuses_a_query_nested_beyond_the_depth_bound() {
+    let (_pg, app) = app().await;
+    let aql = format!(
+        "SELECT c FROM EHR e CONTAINS COMPOSITION c WHERE {}c/name/value = 'x'",
+        "NOT ".repeat(20_000)
+    );
+    for name in ["org.test::deep", "org.test::deep_v/1.0.0"] {
+        let uri = format!("{BASE}/definition/query/{name}");
+        let (status, _h, body) = send(&app, put_text(uri.clone(), &aql)).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}: {body}");
+    }
+}

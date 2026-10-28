@@ -30,6 +30,7 @@ mod adl2_fixture;
 mod adl2_vetdf;
 mod adl2_vetdf_ferroterm;
 mod admin_fixture;
+mod aql_depth_bound;
 mod aql_planner;
 mod audit_chain;
 mod audit_ehds_mapping;
