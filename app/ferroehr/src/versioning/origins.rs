@@ -32,7 +32,7 @@ pub(crate) const RECORD_CAP: usize = 32;
 /// `FEEDER_AUDIT.originating_system_audit.system_id` found anywhere in it,
 /// sorted, or `system_id` alone when it carries none.
 #[must_use]
-pub(crate) fn origins(system_id: &str, canonical: &Value) -> Vec<String> {
+pub fn origins(system_id: &str, canonical: &Value) -> Vec<String> {
     let mut found = BTreeSet::new();
     walk(canonical, &mut found);
     if found.is_empty() {

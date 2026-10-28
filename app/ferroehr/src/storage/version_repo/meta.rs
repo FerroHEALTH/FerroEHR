@@ -245,6 +245,83 @@ pub async fn template_id_of(
         .await?)
 }
 
+/// What the ABAC point reads off one stored version for its category and origin
+/// attributes (EHDS Annex II 3.4): the template, the root archetype and the
+/// origins.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct VersionContent {
+    /// `version.template_id`.
+    pub template_id: Option<String>,
+    /// The root node's archetype id, in the case-folded form the node table
+    /// stores it.
+    pub archetype_id: Option<String>,
+    /// The commit-time origin stamp (`version.origins`), or the creating
+    /// system for an unstamped row.
+    pub origins: Vec<String>,
+}
+
+/// The [`VersionContent`] of one version.
+///
+/// `tree` = `(trunk, branch_number, branch_version)`, or the current trunk head
+/// when `None`. One indexed read that joins the root node row, so the ABAC
+/// check never pays a reassembly.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn content_of(
+    pool: &PgPool,
+    vo_id: VoId,
+    tree: Option<(i32, i32, i32)>,
+) -> Result<Option<VersionContent>, StorageError> {
+    const BY_TREE_SQL: &str = "SELECT v.template_id, n.archetype, \
+         coalesce(v.origins, jsonb_build_array(v.creating_system_id)) AS origins \
+         FROM version v \
+         LEFT JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
+          AND n.sys_version = v.sys_version AND n.num = 0 \
+         WHERE v.vo_id = $1 AND v.trunk_version = $2 AND v.branch_number = $3 \
+           AND v.branch_version = $4";
+    const CURRENT_SQL: &str = "SELECT v.template_id, n.archetype, \
+         coalesce(v.origins, jsonb_build_array(v.creating_system_id)) AS origins \
+         FROM version v \
+         JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
+         LEFT JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
+          AND n.sys_version = v.sys_version AND n.num = 0 \
+         WHERE v.vo_id = $1";
+    let mut conn = acquire(pool).await?;
+    let row = if let Some((trunk, branch, branch_version)) = tree {
+        sqlx::query(BY_TREE_SQL)
+            .bind(vo_id)
+            .bind(trunk)
+            .bind(branch)
+            .bind(branch_version)
+            .fetch_optional(&mut *conn)
+            .await?
+    } else {
+        sqlx::query(CURRENT_SQL)
+            .bind(vo_id)
+            .fetch_optional(&mut *conn)
+            .await?
+    };
+    row.map(|row| {
+        let origins: Value = row.try_get("origins")?;
+        Ok(VersionContent {
+            template_id: row.try_get("template_id")?,
+            archetype_id: row.try_get("archetype")?,
+            origins: origins
+                .as_array()
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .map(str::to_owned)
+                        .collect()
+                })
+                .unwrap_or_default(),
+        })
+    })
+    .transpose()
+}
+
 // ── existence / kind / ownership ──────────────────────────────────────────────
 
 /// Whether the EHR row exists (the CONTRIBUTION-commit `Pre_has_ehr` precheck

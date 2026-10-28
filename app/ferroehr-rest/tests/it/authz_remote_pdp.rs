@@ -56,6 +56,8 @@ fn composition_req<'a>(patient: Option<Attr>, template: Option<Attr>) -> AuthzRe
         subject_patient: None,
         patient,
         template,
+        category: None,
+        origin: None,
     }
 }
 
@@ -189,6 +191,8 @@ async fn unconfigured_kind_fails_closed() {
         subject_patient: None,
         patient: Some(Attr::One("p-1".to_owned())),
         template: None,
+        category: None,
+        origin: None,
     };
     let err = decide(&pdp, &req)
         .await

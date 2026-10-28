@@ -859,7 +859,7 @@ async fn apply_change(
             // node rows reassemble to these bytes, and the released-generation
             // reader's answer is what a later `stable` deployment reads back.
             let stable_compatible = profile::stable_compatible(ctx.spec_profile, kind, &canonical);
-            let origins = crate::versioning::origins::origins(&ctx.system_id, &canonical);
+            let origins = crate::versioning::origins::origins(&ctx.direct_origin, &canonical);
             let canonical_text = Some(canonical_body_text(&canonical)?);
             let rows = decompose(canonical)?;
             let time_committed = match known_now {
@@ -918,7 +918,7 @@ async fn apply_change(
                 &object_version_id(vo_id, &ctx.system_id, next.tree),
             )?;
             let stable_compatible = profile::stable_compatible(ctx.spec_profile, kind, &canonical);
-            let origins = crate::versioning::origins::origins(&ctx.system_id, &canonical);
+            let origins = crate::versioning::origins::origins(&ctx.direct_origin, &canonical);
             let canonical_text = Some(canonical_body_text(&canonical)?);
             let rows = decompose(canonical)?;
             ResolvedWrite {

@@ -202,3 +202,59 @@ async fn an_unstamped_row_is_assessed_from_the_body_at_read() {
         "the aggregate falls back to the creating system for an unstamped row"
     );
 }
+
+/// A body with no `FEEDER_AUDIT`, committed by a client the `[origins]`
+/// register names, is stamped with that client's origin; any other caller's
+/// direct commit keeps this server (EHDS Annex II 3.4).
+#[tokio::test]
+async fn a_registered_client_stamps_its_origin_on_a_direct_commit() {
+    let (db, svc, ehr_id) = setup().await;
+    let origins: ferroehr::origins::OriginsConfig = toml::from_str(
+        r#"
+        [[registered]]
+        id = "lab.example"
+        clients = ["lab-gateway"]
+        "#,
+    )
+    .expect("the register parses");
+    let svc = svc.with_origins(origins);
+    let as_client = |client: &str| ferroehr::service::committer::CommitterIdentity {
+        subject: "dr.jansen".to_owned(),
+        id_type: "oauth2",
+        issuer: Some("https://idp.example".to_owned()),
+        client: Some(client.to_owned()),
+    };
+
+    let (registered, _) = ferroehr::service::committer::with_committer(
+        Some(as_client("lab-gateway")),
+        Box::pin(commit(&svc, ehr_id, &composition("from the gateway"))),
+    )
+    .await;
+    assert_eq!(
+        stamped_origins(&db, registered).await,
+        Some(json!(["lab.example"]))
+    );
+
+    let (other, creating_system) = ferroehr::service::committer::with_committer(
+        Some(as_client("a-portal")),
+        Box::pin(commit(&svc, ehr_id, &composition("from a portal"))),
+    )
+    .await;
+    assert_eq!(
+        stamped_origins(&db, other).await,
+        Some(json!([creating_system]))
+    );
+
+    let mut imported = composition("fed by the lab, sent by the gateway");
+    imported["feeder_audit"] = feeder_audit("pacs.example");
+    let (fed, _) = ferroehr::service::committer::with_committer(
+        Some(as_client("lab-gateway")),
+        Box::pin(commit(&svc, ehr_id, &imported)),
+    )
+    .await;
+    assert_eq!(
+        stamped_origins(&db, fed).await,
+        Some(json!(["pacs.example"])),
+        "a body that names its origin keeps it"
+    );
+}

@@ -77,6 +77,9 @@ pub struct RetentionPolicyRow {
     /// The EHDS priority category the period is keyed on, or `None` for every
     /// object of the kind (Annex II 3.4).
     pub category: Option<String>,
+    /// The registered origin the period is keyed on, or `None` for every
+    /// origin (Annex II 3.4).
+    pub origin: Option<String>,
 }
 
 /// One EHR whose retention period has run.
@@ -99,6 +102,9 @@ pub struct RetentionDueRow {
     /// The EHDS priority category the period is keyed on, or `None` for every
     /// object of the kind.
     pub category: Option<String>,
+    /// The registered origin the period is keyed on, or `None` for every
+    /// origin.
+    pub origin: Option<String>,
 }
 
 /// The marks one EHR carries, as one read.
@@ -498,8 +504,33 @@ pub async fn ehr_marks(pool: &PgPool, ehr_id: EhrId) -> Result<Option<EhrMarks>,
 
 // ── retention ────────────────────────────────────────────────────────────────
 
+/// One retention period as the register declares it.
+///
+/// The content kind and jurisdiction it applies to, the optional EHDS category
+/// and origin it is keyed on (Annex II 3.4), the period, what it runs from, and
+/// its citation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RetentionPeriod<'a> {
+    /// The RM kind (`EHR`, `COMPOSITION`, ...).
+    pub kind: &'a str,
+    /// The ISO 3166-1 alpha-2 jurisdiction whose rule it is.
+    pub jurisdiction: &'a str,
+    /// The EHDS category, as its `<system>|<code>` token or `none`; `None` for
+    /// every object of the kind.
+    pub category: Option<&'a str>,
+    /// The registered origin ([`crate::origins`]); `None` for every origin.
+    pub origin: Option<&'a str>,
+    /// The period, as a PostgreSQL `interval`.
+    pub period: &'a str,
+    /// What the period is measured from.
+    pub anchor: &'a str,
+    /// The legal citation the period rests on.
+    pub source: &'a str,
+}
+
 /// Declare (or re-declare) the retention period of one content kind in one
-/// jurisdiction, optionally keyed on one EHDS priority category (Annex II 3.4).
+/// jurisdiction, optionally keyed on one EHDS category and one registered
+/// origin (Annex II 3.4).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, including the CHECKs
@@ -507,25 +538,22 @@ pub async fn ehr_marks(pool: &PgPool, ehr_id: EhrId) -> Result<Option<EhrMarks>,
 /// non-positive period.
 pub async fn put_retention_policy(
     tx: &mut PgConnection,
-    kind: &str,
-    jurisdiction: &str,
-    category: Option<&str>,
-    period: &str,
-    anchor: &str,
-    source: &str,
+    period: RetentionPeriod<'_>,
 ) -> Result<(), StorageError> {
     sqlx::query(
-        "INSERT INTO retention_policy (kind, jurisdiction, category, period, anchor, source) \
-         VALUES ($1, $2, $3, $4::interval, $5, $6) \
-         ON CONFLICT (kind, jurisdiction, category) DO UPDATE \
+        "INSERT INTO retention_policy \
+            (kind, jurisdiction, category, origin, period, anchor, source) \
+         VALUES ($1, $2, $3, $4, $5::interval, $6, $7) \
+         ON CONFLICT (kind, jurisdiction, category, origin) DO UPDATE \
             SET period = EXCLUDED.period, anchor = EXCLUDED.anchor, source = EXCLUDED.source",
     )
-    .bind(kind)
-    .bind(jurisdiction)
-    .bind(category)
-    .bind(period)
-    .bind(anchor)
-    .bind(source)
+    .bind(period.kind)
+    .bind(period.jurisdiction)
+    .bind(period.category)
+    .bind(period.origin)
+    .bind(period.period)
+    .bind(period.anchor)
+    .bind(period.source)
     .execute(&mut *tx)
     .await?;
     Ok(())
@@ -537,8 +565,9 @@ pub async fn put_retention_policy(
 /// [`StorageError::Database`] on a driver failure.
 pub async fn retention_policies(pool: &PgPool) -> Result<Vec<RetentionPolicyRow>, StorageError> {
     let rows = sqlx::query(
-        "SELECT kind, jurisdiction, category, period::text AS period, anchor, source \
-         FROM retention_policy ORDER BY jurisdiction, kind, category NULLS FIRST",
+        "SELECT kind, jurisdiction, category, origin, period::text AS period, anchor, source \
+         FROM retention_policy \
+         ORDER BY jurisdiction, kind, category NULLS FIRST, origin NULLS FIRST",
     )
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
@@ -551,6 +580,7 @@ pub async fn retention_policies(pool: &PgPool) -> Result<Vec<RetentionPolicyRow>
                 anchor: row.try_get("anchor")?,
                 source: row.try_get("source")?,
                 category: row.try_get("category")?,
+                origin: row.try_get("origin")?,
             })
         })
         .collect()
@@ -662,9 +692,10 @@ pub async fn retention_due(
     limit: i64,
 ) -> Result<Vec<RetentionDueRow>, StorageError> {
     let rows = sqlx::query(
-        "SELECT ehr_id, jurisdiction, kind, category, source, due_at, objects_due, \
+        "SELECT ehr_id, jurisdiction, kind, category, origin, source, due_at, objects_due, \
          objects_held \
-         FROM retention_due ORDER BY due_at, ehr_id, kind, category NULLS FIRST LIMIT $1",
+         FROM retention_due \
+         ORDER BY due_at, ehr_id, kind, category NULLS FIRST, origin NULLS FIRST LIMIT $1",
     )
     .bind(limit)
     .fetch_all(&mut *acquire(pool).await?)
@@ -680,6 +711,7 @@ pub async fn retention_due(
                 objects_due: row.try_get("objects_due")?,
                 objects_held: row.try_get("objects_held")?,
                 category: row.try_get("category")?,
+                origin: row.try_get("origin")?,
             })
         })
         .collect()

@@ -49,6 +49,7 @@ pub mod extensions;
 pub mod ids;
 pub mod licence;
 pub mod manufacturer;
+pub mod origins;
 pub mod privacy;
 pub mod report;
 pub mod served_vocabulary;

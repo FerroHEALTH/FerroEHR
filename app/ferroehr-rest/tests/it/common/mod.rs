@@ -430,7 +430,8 @@ pub(crate) fn bearer(claims: &Value) -> String {
 pub(crate) fn null_resolvers() -> AuthzResolvers {
     AuthzResolvers {
         subject: Arc::new(|_| Box::pin(async { Ok::<_, ResolveError>(None) })),
-        template_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
+        content_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
+        content: Arc::default(),
     }
 }
 

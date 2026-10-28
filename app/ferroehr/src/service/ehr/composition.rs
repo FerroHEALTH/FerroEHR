@@ -644,6 +644,28 @@ impl FerroEhrService {
         .flatten())
     }
 
+    /// The template, root archetype and origins of one version, the content
+    /// the ABAC template, category and origin attributes are read from (EHDS
+    /// Annex II 3.4). `version` = the `VERSION_TREE_ID` lexical form (`N` or
+    /// `N.B.V`); `None` = the current version. One indexed read, no node
+    /// reassembly. No openEHR spec governs authorization: our own design.
+    ///
+    /// # Errors
+    /// [`ServiceError`] for a malformed `version` string or a failing read.
+    pub async fn content_of_version(
+        &self,
+        vo_id: VoId,
+        version: Option<&str>,
+    ) -> Result<Option<crate::storage::version_repo::meta::VersionContent>, ServiceError> {
+        let tree = version.map(parse_tree_id).transpose()?;
+        Ok(crate::storage::version_repo::meta::content_of(
+            &self.pool,
+            vo_id,
+            tree.map(TreeId::columns),
+        )
+        .await?)
+    }
+
     /// `delete_composition` (SM `i_ehr_composition.adoc`): commits a
     /// `523|deleted|` version of the addressed COMPOSITION (RM common master06
     /// §Logical Deletion), returning the now-deleted version identity

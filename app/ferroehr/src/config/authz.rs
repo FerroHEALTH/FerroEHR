@@ -149,7 +149,8 @@ pub enum AbacEngineKind {
 }
 
 /// One flat parameter a remote PDP body may carry: the resolved
-/// attribute keys, exactly `organization` / `patient` / `template` on the wire.
+/// attribute keys, exactly `organization` / `patient` / `template` /
+/// `category` / `origin` on the wire.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AbacParam {
@@ -159,6 +160,10 @@ pub enum AbacParam {
     Patient,
     /// The resource's template id.
     Template,
+    /// The EHDS categories of the resource's data (EHDS Annex II 3.4).
+    Category,
+    /// The origins of the resource's data (EHDS Annex II 3.4, `[origins]`).
+    Origin,
 }
 
 impl AbacParam {
@@ -171,6 +176,8 @@ impl AbacParam {
             AbacParam::Organization => "organization",
             AbacParam::Patient => "patient",
             AbacParam::Template => "template",
+            AbacParam::Category => "category",
+            AbacParam::Origin => "origin",
         }
     }
 }

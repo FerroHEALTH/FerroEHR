@@ -26,7 +26,8 @@ use ferroehr_server::build_authz;
 fn inert_resolvers() -> AuthzResolvers {
     AuthzResolvers {
         subject: Arc::new(|_| Box::pin(async { Ok::<_, ResolveError>(None) })),
-        template_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
+        content_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
+        content: Arc::default(),
     }
 }
 
