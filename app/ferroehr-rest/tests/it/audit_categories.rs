@@ -382,6 +382,28 @@ async fn an_unmapped_template_is_unclassified_with_its_ids_as_evidence() {
     assert_eq!(read.evidence, json!([IPS, HEALTH_SUMMARY]));
 }
 
+/// With no template and no archetype declared, the map FerroEHR ships applies,
+/// so a read of an International Patient Summary is recorded as a patient
+/// summary instead of `unclassified` (EHDS Annex II 3.2(c)).
+#[tokio::test]
+async fn the_shipped_map_classifies_an_undeclared_deployment() {
+    let (_db, pool, app, ehr) = app(json!({}), Observability::default()).await;
+    let vo = commit(&app, &ehr, &ips_composition()).await;
+    let (status, _, _) = send(
+        &app,
+        Request::get(format!("{BASE}/ehr/{ehr}/composition/{vo}"))
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let read = classified(&pool, "composition_get", "composition").await;
+    assert_eq!(read.categories, json!([token("Patient-Summaries")]));
+    assert_eq!(read.basis.as_deref(), Some("returned"));
+    assert_eq!(read.evidence, json!([IPS, HEALTH_SUMMARY]));
+}
+
 /// A leaf-only answer of a `DISTINCT` projection carries no object, so the
 /// query's positive archetype constraint classifies it.
 #[tokio::test]

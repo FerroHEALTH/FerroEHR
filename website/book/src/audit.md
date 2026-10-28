@@ -223,8 +223,12 @@ template id, or failing that the root archetype id, maps to a set of categories
 (a priority category by its code in HL7 Europe's
 `EEHRxFDocumentPriorityCategoryCS`, such as `Patient-Summaries` or
 `Laboratory-Reports`, a national category as its `<system>|<code>`), or to
-`none` for content that holds no data of any category. FerroEHR ships no map,
-and `ehds-logging` classifies each access through it.
+`none` for content that holds no data of any category. While you declare no
+template and no archetype, the map FerroEHR ships applies: the published CKM
+templates and COMPOSITION archetypes whose data sit in one priority category
+([the shipped map](installation/config-audit.md#auditcategories)). Your own
+map replaces it, and `ehds-logging` classifies each access through the map in
+force.
 
 Each record is classified when the access happens, from what it served or
 wrote, and never at commit, because the map is your reading of your templates

@@ -29,6 +29,8 @@ crate::locale::messages! {
         RequestsServedWithoutAuthentication = "requests-served-without-authentication",
         /// `schema preparation runs on the clinical runtime credential`
         SchemaPreparationRunsClinicalRuntimeCredential = "schema-preparation-runs-clinical-runtime-credential",
+        /// `every access is recorded without the category of the data it reached`
+        AccessRecordedWithoutCategoryData = "access-recorded-without-category-data",
         /// `access is not recorded to a durable audit trail`
         AccessNotRecordedDurableAuditTrail = "access-not-recorded-durable-audit-trail",
         /// `two domains reach the same PostgreSQL cluster`
