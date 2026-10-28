@@ -81,6 +81,11 @@ expression: v
     },
     {
       "name": "composition_get",
+      "role": {
+        "code": "4",
+        "display": "Domain Resource",
+        "system": "http://terminology.hl7.org/CodeSystem/object-role"
+      },
       "type": {
         "code": "2",
         "display": "System Object",
