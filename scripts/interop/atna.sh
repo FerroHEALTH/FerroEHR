@@ -273,7 +273,8 @@ for q in "${searches[@]}"; do
     echo "    ${q:-<window only>}: both answer $o records"
   else
     fail "the search '${q:-<window only>}' answers $o records on FerroEHR and $t on HAPI"
-    diff <(printf '%s\n' "$ours") <(printf '%s\n' "$theirs") | head -10 || true
+    difference="$(diff <(printf '%s\n' "$ours") <(printf '%s\n' "$theirs") || true)"
+    sed -n 1,10p <<<"$difference"
   fi
 done
 
