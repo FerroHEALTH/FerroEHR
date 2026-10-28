@@ -682,7 +682,7 @@ Keycloak overlay trusts its CA through `ca_file` and signs the viewer in
 
 ## The review of 2026-10-28, for 5.6.0-rc1
 
-Read on the tree after commit `da5966342`, for the FerroEHR release candidate
+Read on the tree after commit `df14b4311`, for the FerroEHR release candidate
 5.6.0-rc1. The facts of this release checked in every text in scope: the REST
 surface serves three namespaces, ITS-REST alone under `/openehr/v1/`, FHIR and
 IHE under `/fhir/r4/` and FerroEHR's extensions under `/extensions/v1/`, with
@@ -694,7 +694,9 @@ connection by `[server] header_read_timeout_ms` (#4283, GHSA-2mc2-h3jq-c5wg);
 an AQL query nested past its depth bound answers `400` (#4284); a cut or
 unreachable database answers `503` with `Retry-After` within about a second
 (#4290, #4323); an abandoned query frees its connection (#4285); storage
-generation 3 (#4306); chart 20.0.1-rc1 with `appVersion` 5.6.0-rc1.
+generation 3 (#4306); a deployment that declares no category map records
+accesses through the map FerroEHR ships (#4298); chart 20.0.1-rc1 with
+`appVersion` 5.6.0-rc1.
 
 ### Changed on 2026-10-28, for 5.6.0-rc1
 
@@ -702,7 +704,9 @@ generation 3 (#4306); chart 20.0.1-rc1 with `appVersion` 5.6.0-rc1.
   `records_under_the_original_digest_still_verify` and kept a remainder for
   records under the version 1 digest; #4300 retired the versioned digests with
   the records they covered, so H7 names `the_digest_covers_every_column` and
-  the render-policy and search-token tests, and drops that remainder.
+  the render-policy and search-token tests, and drops that remainder. H3
+  said FerroEHR ships no category map; it names the shipped map and its test
+  (#4298).
 - **The technical documentation** named the FerroAUDIT pins as 0.2.5; it names
   0.3.1, the version the root `Cargo.toml` pins.
 

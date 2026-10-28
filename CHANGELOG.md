@@ -21,6 +21,10 @@ has no matching section here.
 
 5.6.0-rc1 is the first release candidate of 5.6.0, published for testing. 5.5.0 stays the stable release: this pre-release moves neither the `latest` image tags, the book under `/docs/latest/` nor the hosted sandbox, it publishes no crates, and it receives no fixes; the next release candidate or 5.6.0 itself replaces it. Before you try it: every route ITS-REST 1.1.0 does not define moves from `/ferroehr/rest/openehr/v1/` to `/ferroehr/rest/extensions/v1/`, and the ITI-81 retrieval to `/ferroehr/rest/fhir/r4/AuditEvent`, with no redirect from the old paths; and audit migration 0017 refuses an audit store that holds records written by an earlier release, so point the release candidate at an empty audit store. Storage generation 3 adds node columns and migrates no data. Helm chart 20.0.1-rc1 carries `appVersion` 5.6.0-rc1. Security carries one advisory, GHSA-2mc2-h3jq-c5wg.
 
+### Added
+
+- FerroEHR ships an EHDS category map for the published CKM templates and COMPOSITION archetypes whose data sit in one Art. 14(1) priority category (the International Patient Summary, ePrescription, the generic laboratory result and CCTA report templates; the `health_summary`, `prescription` and `transfer_summary` archetypes), so an installation that declares no `[audit.categories]` keys records those accesses classified instead of `unclassified` (EHDS Annex II 3.2(c)). A deployment that declares any template or archetype replaces it whole. `[audit.categories] shipped_map = false` with nothing declared leaves no map, which `deployment_profile = "production"` refuses as the new `no_category_map` gap unless `deployment_accepts` names it (#4298).
+
 ### Changed
 
 - The audit store keeps each record's facts in columns and renders its FHIR R4

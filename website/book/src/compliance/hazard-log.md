@@ -188,10 +188,13 @@ classified by the version it deleted, a `VERSIONED_COMPOSITION` read by the
 composition it holds, a `CONTRIBUTION` read (with or without
 `Prefer: resolve_refs`) by the versions it committed, and an EHR Extract
 export or import by the versions it carried or landed. `EHR`, `EHR_STATUS`,
-`EHR_ACCESS` and the directory are recorded `none` by resource kind. An
-access the map cannot classify is recorded `unclassified`, with the ids as
-evidence, and is never refused. Each record carries the digest of the map
-that classified it.
+`EHR_ACCESS` and the directory are recorded `none` by resource kind. While
+the deployment declares no template and no archetype, the map FerroEHR ships
+for the published CKM templates and COMPOSITION archetypes of one priority
+category applies, and `deployment_profile = "production"` refuses a
+deployment that switches it off with nothing declared. An access the map
+cannot classify is recorded `unclassified`, with the ids as evidence, and is
+never refused. Each record carries the digest of the map that classified it.
 
 **Shown by:**
 
@@ -204,14 +207,17 @@ that classified it.
   `a_flat_write_is_classified_by_its_template`,
   `a_logical_delete_is_classified_by_the_version_it_deletes`,
   `a_versioned_composition_read_is_classified_by_its_composition`,
-  `a_contribution_read_is_classified_by_its_versions`;
+  `a_contribution_read_is_classified_by_its_versions`,
+  `the_shipped_map_classifies_an_undeclared_deployment`;
 - `app/ferroehr/tests/it/service_message_audit.rs`:
   `the_extract_records_carry_the_categories_of_the_data`;
 - `app/ferroehr/tests/it/audit_ehds_mapping.rs`:
   `element_c_the_priority_category_is_recorded_and_rendered_in_fhir_only`.
 
-**Remains:** the map is the deploying organisation's, and FerroEHR ships
-none, so an incomplete map yields `unclassified` records. Records in the
+**Remains:** the shipped map covers only the published CKM templates and
+archetypes whose data sit in one priority category, and a deployment's own
+map replaces it whole, so a map that misses a template the deployment uses
+yields `unclassified` records. Records in the
 demographic domain carry no classification, because no priority category
 lives there. The Helm chart carries the map as `config.audit.categories`, empty
 by default as in the binary.
@@ -435,4 +441,4 @@ EHDS-side risk assessment of the component.
 | 8 | 2026-10-22 | Reviewed for release 5.3.2 (changes since 5.2.0: the move onto FerroAUDIT of review 7 (#3887), then `ehds-logging` and `ihe-atna` 0.2.4 (#3902), so the record carries the token's `jti`, the operation subtype, `outcomeDesc` and the optional DICOM elements again, a Basic user is recorded with no issuer, a retention without end or under three years is stated as such, and archetype ids are compared as openEHR BASE 1.3.0 asks with each id kept as the access named it (#3908); the ITI-81 search form-decodes its query string (#3891)); every named test exists and asserts its control; no hazard added |
 | 9 | 2026-10-24 | Reviewed for release 5.4.0 (changes since 5.3.3: `ehds-logging` and `ihe-atna` 0.2.5, and the audit drain closes its syslog connection with a TLS `close_notify` when it exits, logging and counting a close that fails, so the records it sent last are not lost to a reset (#3959); H5 names its test); every named test exists and asserts its control; no hazard added |
 | 10 | 2026-10-27 | Reviewed for release 5.5.0 (changes since 5.4.2: syslog frames are delivered from `ihe-atna`'s spool with retries, and `[audit.fhir_feed] batch_size` and `max_retries` are gone (#4029); the ITI-81 query is read and answered by `ihe-atna`'s `retrieve` and requires a `date` (#4030, #4040); each access record is deleted at its own retention end (#3899); the chain check verifies from the last intact link, and the FHIR feed owes only the records written while it is configured (#4100, #4102); the access record and its renderings carry the data permit (#3379, #4120); the source address comes from the family server stack, believing a forwarded address only from a trusted proxy (#4025); every access to one EHR names the EHR and the user, so H2 names `ehr_id_from_the_matched_route`, the test #4192 put in place of `ehr_id_from_various_paths`); every named test exists; no hazard added |
-| 11 | 2026-10-28 | Reviewed for release candidate 5.6.0-rc1 (changes since 5.5.0: the store keeps each record's facts in columns and renders its `AuditEvent` on read under the render policy the record names, the chain digest covers every column in one version, and audit migration 0017 refuses a store holding records of an earlier release, so no record keeps an older digest and H7 drops that remainder (#4300); the `recorded_at` indexes ascend (#4302); every ITI-81 parameter answers through search tokens the chain covers (#4313); the ITI-81 retrieval moves to `/ferroehr/rest/fhir/r4/AuditEvent` (#4330); H7 names the render-policy and search-token tests and the digest test #4300 renamed); every named test exists; no hazard added |
+| 11 | 2026-10-28 | Reviewed for release candidate 5.6.0-rc1 (changes since 5.5.0: the store keeps each record's facts in columns and renders its `AuditEvent` on read under the render policy the record names, the chain digest covers every column in one version, and audit migration 0017 refuses a store holding records of an earlier release, so no record keeps an older digest and H7 drops that remainder (#4300); the `recorded_at` indexes ascend (#4302); every ITI-81 parameter answers through search tokens the chain covers (#4313); the ITI-81 retrieval moves to `/ferroehr/rest/fhir/r4/AuditEvent` (#4330); a deployment that declares no category map records the published CKM priority-category templates and archetypes through the shipped map, so H3 names its test and its remainder no longer says FerroEHR ships none (#4298); H7 names the render-policy and search-token tests and the digest test #4300 renamed); every named test exists; no hazard added |
