@@ -95,7 +95,7 @@ jobs:
         if: always()
         with:
           name: storage-bench-record-${{ inputs.class }}
-          path: docs/benchmarks/storage/*/record.json
+          path: docs/benchmarks/storage/*/*/record.json
           # A bench that died before writing has nothing to upload, and the
           # step that died is already the run's failure.
           if-no-files-found: warn

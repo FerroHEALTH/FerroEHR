@@ -1,7 +1,7 @@
 # Storage benchmark records
 
 `app/ferroehr/benches/storage.rs` writes one record per run, at
-`docs/benchmarks/storage/<schema-generation>/record.json`. It exists so a
+`docs/benchmarks/storage/<schema-generation>/<class>/record.json`. It exists so a
 storage change is argued from a before/after pair taken with the same
 instrument, rather than from a claim: the harness drives the operations through
 `FerroEhrService` and the public `ferroehr::storage` / `ferroehr::versioning`
@@ -35,9 +35,12 @@ run needs the same PostgreSQL 18 container the test suite uses and nothing else.
 `.github/workflows/storage-bench.yml` runs the same benchmark on a
 GitHub-hosted runner by dispatch and hands the fresh record to
 `scripts/render/storage-bench-compare.sh`, which compares it per operation with
-the record committed for the same generation and fails the run when a p50 or
-p99 rose further than the dispatched tolerance. That comparison runs locally
-too:
+the record committed for the same generation and class and fails the run when
+a p50 or p99 rose further than the dispatched tolerance. A generation and class
+with no committed record fails the run too, with the error in the job summary:
+a schema-generation change once left the lane comparing nothing and passing
+(#4291), so the change that moves `ext.storage_generation()` commits the new
+generation's records with it. That comparison runs locally too:
 
 ```bash
 bash scripts/render/storage-bench-compare.sh --tolerance 15
@@ -45,7 +48,8 @@ bash scripts/render/storage-bench-compare.sh --tolerance 15
 
 It reads the baseline from `HEAD`, because the run just overwrote the
 working-tree copy, and judges nothing when the two records carry different
-`bench_class` values.
+`bench_class` values. `--baseline <file>` compares against any other record,
+which is how a new generation is set against the one it replaces.
 
 ## The shape
 
@@ -60,6 +64,7 @@ working-tree copy, and judges nothing when the two records carry different
   "measured_at": "2026-09-14T…Z",
   "timings_measured": true,
   "seed": { "ehrs": 20, "compositions": 300, "template_id": "…",
+            "second_template_id": "…",
             "entry_rm_type": "OBSERVATION", "seconds": 0.0 },
   "groups": [
     { "name": "storage_commit",
@@ -104,12 +109,40 @@ and says so.
 
 ### Operations
 
-One entry per benched operation, in four groups: `storage_commit` (a first
+One entry per benched operation, in six groups: `storage_commit` (a first
 version, a blind supersession, and the `If-Match` supersession that states the
 version it replaces), `storage_read` (by version uid, by versioned-object uid,
 `version_at_time`, the revision history), `storage_query` (the CONTAINS chain
-over one EHR and over the population), and `storage_lifecycle` (archive and
+over one EHR and over the population), `storage_paths` (two and three sibling
+leaves under a repeated EVENT, in the flat and the streaming FROM shape),
+`storage_aql` (the AQL hot paths below), and `storage_lifecycle` (archive and
 restore of one EHR, and one retention prune).
+
+The seed commits two vendored CKM templates in turn over every EHR: the vital
+signs (`template_id`), which the write benches commit too, and a GP data set
+(`second_template_id`), whose EVALUATIONs carry the coded and text values the
+vital signs lack.
+
+`storage_aql` holds the statements whose cost the node layout decides. They are
+built from the seed payload, so each matches what was committed, and each must
+return rows before it is timed:
+
+| Operation | What it exercises |
+|---|---|
+| `contains_exists` | `count(c)` over a CONTAINS chain into an archetyped OBSERVATION: containment as an existence test |
+| `node_predicate` | a CONTAINS step with an at-code and a name predicate, for example `ELEMENT x[at0004, 'Systolic']` |
+| `where_magnitude` | a WHERE and an ORDER BY on a `DV_QUANTITY` magnitude |
+| `where_coded` | a WHERE on a `DV_CODED_TEXT` code |
+| `where_date_time` | a WHERE on a `DV_DATE_TIME` value |
+| `where_text` | a WHERE on a `DV_TEXT` value |
+| `wide_projection_one_ehr` | up to 16 leaf values of one OBSERVATION, every row of one EHR |
+| `wide_projection_population` | the same over the population, `LIMIT 50` |
+| `select_observation` | `SELECT o`, the whole OBSERVATION reassembled |
+| `select_composition_one_ehr` | `SELECT c` over one EHR |
+| `aql_version_at_time` | a `VERSION v[commit_audit/time_committed <= …]` scope; named apart from the `storage_read` operation, since the compare step keys operations by name |
+
+Each entry carries its `statement`, the `rows` it returned and whether it ran
+over one EHR (`one_ehr`).
 
 `iterations` is how many times the routine ran across every sample;
 `mean_ns` / `median_ns` are criterion's own point estimates; the percentiles are
@@ -151,14 +184,19 @@ reason the deployment records under `docs/conformance/deployment/` are: a record
 measures one machine on one day, and a directory of them invites comparison
 between runs that measured different systems.
 
-The exception is deliberate: the pre-rewrite **baseline** is committed, because
-the whole point of the instrument is a before/after pair. Commit one with
+The exception is deliberate: each generation's **baseline** is committed, one
+per class the lane offers (`poc` and `s`), because the whole point of the
+instrument is a before/after pair. A baseline comes from a run of the lane, so
+every committed record measured the same kind of machine:
 
 ```bash
-git add -f docs/benchmarks/storage/<generation>/record.json
+gh workflow run storage-bench.yml --ref <branch> -f class=poc
+gh workflow run storage-bench.yml --ref <branch> -f class=s
+# each run's artifact holds <generation>/<class>/record.json
+git add -f docs/benchmarks/storage/<generation>/<class>/record.json
 ```
 
-and say in the commit which machine it was taken on. A tracked record stays
+and say in the commit which run it came from. A tracked record stays
 tracked — the ignore rule only keeps the untracked ones out of `git status`.
 
 ## Where the numbers are published

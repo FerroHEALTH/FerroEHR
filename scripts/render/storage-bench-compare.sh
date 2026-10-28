@@ -5,7 +5,7 @@
 # same schema generation, and say per operation whether it moved (#3370).
 #
 # The harness (`app/ferroehr/benches/storage.rs`) writes its record over
-# `docs/benchmarks/storage/<generation>/record.json`, which is where the
+# `docs/benchmarks/storage/<generation>/<class>/record.json`, which is where the
 # committed baseline lives, so the baseline is read from `HEAD` rather than
 # from the working tree: after a run the file on disk IS the fresh record.
 #
@@ -22,9 +22,10 @@
 # Usage:
 #   scripts/render/storage-bench-compare.sh [options]
 #     --measured <file>    the fresh record (default: the newest
-#                          docs/benchmarks/storage/*/record.json on disk)
+#                          docs/benchmarks/storage/*/*/record.json on disk)
 #     --baseline <file>    the record to compare against (default: the
-#                          measured record's generation, read from HEAD)
+#                          measured record's generation and class, read
+#                          from HEAD)
 #     --tolerance <pct>    how far p50 or p99 may rise before the run fails
 #                          (default 15)
 #     --summary <file>     where the markdown table is written (default
@@ -33,9 +34,13 @@
 #                          summary so a red verdict is attributable
 #   scripts/render/storage-bench-compare.sh --self-test
 #
-# Exit: 0 when nothing regressed beyond the tolerance (and 0 when there is no
-# committed record to compare against), 1 when something did, 2 on a usage or
-# input error.
+# A generation with no committed record fails the run (#4291): a schema
+# generation change once left the lane comparing nothing and passing, so the
+# change that moves the generation commits the new baseline with it.
+#
+# Exit: 0 when nothing regressed beyond the tolerance, 1 when something did or
+# when the measured generation has no committed record, 2 on a usage or input
+# error.
 set -euo pipefail
 
 usage() {
@@ -136,7 +141,7 @@ describe_record() {
 discover_measured() {
   local newest="" path
   shopt -s nullglob
-  for path in docs/benchmarks/storage/*/record.json; do
+  for path in docs/benchmarks/storage/*/*/record.json; do
     if [[ -z "$newest" ]] \
       || [[ "$(measured_at "$path")" > "$(measured_at "$newest")" ]]; then
       newest="$path"
@@ -154,6 +159,21 @@ emit() {
   else
     printf '%s\n' "$@"
   fi
+}
+
+# The verdict for a generation that has no committed record: written to the
+# summary as an error, and a failed run.
+missing_baseline() {
+  local generation="$1" committed="$2"
+  emit "## Storage benchmark, schema generation \`$generation\`" ""
+  emit "**Error: no committed record.** \`$committed\` is not in this" \
+       "repository, so this run has nothing to compare against and fails. The" \
+       "change that moved the schema generation commits its baseline with it;" \
+       "the procedure is in \`docs/benchmarks/storage/README.md\`. The fresh" \
+       "record is attached to the run as an artifact." ""
+  [[ -z "${GITHUB_ACTIONS:-}" ]] || echo "::error::no committed storage-bench record at $committed"
+  echo "storage-bench-compare: no committed record for $generation." >&2
+  return 1
 }
 
 compare() {
@@ -176,7 +196,7 @@ compare() {
   emit "## Storage benchmark, schema generation \`$generation\`" ""
   emit "Exploration, never a conformance record: this lane measures the storage" \
        "layer below the wire and earns no performance class. The records live in" \
-       "\`docs/benchmarks/storage/<generation>/\`; their shape is documented in" \
+       "\`docs/benchmarks/storage/<generation>/<class>/\`; their shape is documented in" \
        "\`docs/benchmarks/storage/README.md\`." ""
   emit "- Baseline (committed): $(describe_record "$baseline")"
   emit "- Measured (this run): $(describe_record "$measured")"
@@ -229,8 +249,8 @@ compare() {
 # ── the self-test ───────────────────────────────────────────────────────────
 # The verdict logic is what this script exists for, so it is exercised rather
 # than trusted: an improvement, a rise inside the tolerance, a rise beyond it,
-# a mismatched class, an operation each side carries alone, and a record
-# compared with itself.
+# a mismatched class, an operation each side carries alone, a record compared
+# with itself, and a generation with no committed record.
 
 record_fixture() {
   local path="$1" generation="$2" class="$3" ehrs="$4" p50="$5" p99="$6" when="${7:-2026-09-15T11:00:00Z}"
@@ -331,11 +351,21 @@ self_test() {
   [[ "$status" -eq 2 ]] \
     || { echo "self-test: a record compared with itself was not refused" >&2; failures=1; }
 
+  # 7. A generation with no committed record fails the run, and says so in
+  # the summary as an error.
+  status=0
+  SUMMARY="$tmp/missing.md" missing_baseline generation-9 docs/benchmarks/storage/generation-9/poc/record.json \
+    > "$tmp/missing.out" 2>&1 || status=$?
+  [[ "$status" -eq 1 ]] \
+    || { echo "self-test: a generation without a committed record did not fail the run" >&2; failures=1; }
+  grep -q 'Error: no committed record' "$tmp/missing.md" \
+    || { echo "self-test: a missing record was not reported as an error" >&2; failures=1; }
+
   if [[ "$failures" -ne 0 ]]; then
     echo "storage-bench-compare: SELF-TEST FAILED" >&2
     return 1
   fi
-  echo "storage-bench-compare: self-test passed (6 cases)."
+  echo "storage-bench-compare: self-test passed (7 cases)."
   return 0
 }
 
@@ -359,7 +389,7 @@ cd "$(dirname "$0")/../.."
 
 if [[ -z "$MEASURED" ]]; then
   MEASURED="$(discover_measured)" \
-    || { echo "error: no docs/benchmarks/storage/*/record.json on disk — run the bench first" >&2; exit 2; }
+    || { echo "error: no docs/benchmarks/storage/*/*/record.json on disk — run the bench first" >&2; exit 2; }
 fi
 [[ -f "$MEASURED" ]] || { echo "error: no such record: $MEASURED" >&2; exit 2; }
 
@@ -368,20 +398,14 @@ generation="$(jq -r '.schema_generation' "$MEASURED")"
 # The baseline is the COMMITTED record: the run overwrote the working-tree copy.
 baseline_tmp=""
 if [[ -z "$BASELINE" ]]; then
-  committed="docs/benchmarks/storage/$generation/record.json"
+  committed="docs/benchmarks/storage/$generation/$(jq -r '.bench_class' "$MEASURED")/record.json"
   if git cat-file -e "HEAD:$committed" 2>/dev/null; then
     baseline_tmp="$(mktemp)"
     trap 'rm -f "$baseline_tmp"' EXIT
     git show "HEAD:$committed" > "$baseline_tmp"
     BASELINE="$baseline_tmp"
   else
-    emit "## Storage benchmark, schema generation \`$generation\`" ""
-    emit "No committed record: \`$committed\` is not in this repository, so this" \
-         "run has nothing to compare against. The fresh record is attached to the" \
-         "run as an artifact; committing a baseline is described in" \
-         "\`docs/benchmarks/storage/README.md\`." ""
-    echo "storage-bench-compare: no committed record for $generation."
-    exit 0
+    missing_baseline "$generation" "$committed" || exit $?
   fi
 fi
 [[ -f "$BASELINE" ]] || { echo "error: no such record: $BASELINE" >&2; exit 2; }
