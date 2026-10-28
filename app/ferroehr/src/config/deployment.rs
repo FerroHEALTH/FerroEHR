@@ -130,6 +130,13 @@ pub enum DeploymentGap {
     /// cannot take is dropped and the request succeeds: the access happened and
     /// nothing says so.
     AuditFailsOpen,
+    /// Auditing is on and no category map applies: `[audit.categories]`
+    /// declares no template and no archetype and `shipped_map` is `false`, so
+    /// every access is recorded `unclassified`.
+    ///
+    /// `docs/law/eu/ehds/text.html Annex II 3.2(c)`: the logging records "the
+    /// categories of data accessed".
+    NoCategoryMap,
     /// `authz.rbac.ehr_access_default` is `open`, so an EHR carrying no
     /// `ACCESS_CONTROL_SETTINGS` — which every new EHR does — admits any caller
     /// the coarse layers already let through.
@@ -207,6 +214,7 @@ impl DeploymentGap {
             Self::OpenSubjectNamespace => "open_subject_namespace",
             Self::AuditOff => "audit_off",
             Self::AuditFailsOpen => "audit_fails_open",
+            Self::NoCategoryMap => "no_category_map",
             Self::OpenEhrAccessDefault => "open_ehr_access_default",
             Self::MigrateOnRuntimeCredential => "migrate_on_runtime_credential",
             Self::AuthOff => "auth_off",
@@ -245,6 +253,11 @@ impl DeploymentGap {
                 "[audit] fail_mode is `open`, so a record the audit queue cannot take is dropped \
                  and the request succeeds; set [audit] fail_mode = \"closed\" to refuse the \
                  operation instead"
+            }
+            Self::NoCategoryMap => {
+                "no category map applies: [audit.categories] declares no template and no \
+                 archetype and shipped_map is false, so every access is recorded unclassified; \
+                 declare this deployment's templates and archetypes, or set shipped_map = true"
             }
             Self::OpenEhrAccessDefault => {
                 "[authz.rbac] ehr_access_default is `open`, so an EHR carrying no \
@@ -397,6 +410,11 @@ impl DeploymentPosture {
             // Only while a trail exists: a disabled trail makes the fail mode
             // moot, and naming both would report one posture twice.
             gaps.push(DeploymentGap::AuditFailsOpen);
+        }
+        if audit.enabled
+            && audit.categories.source() == crate::system_log::categories::MapSource::None
+        {
+            gaps.push(DeploymentGap::NoCategoryMap);
         }
         // NOTE: no openEHR spec governs this, our own design/extension; the configured default is the
         // effective one: the REST layer applies it with RBAC off, and validation refuses it unenforced.
@@ -716,6 +734,7 @@ mod tests {
             DeploymentGap::OpenSubjectNamespace,
             DeploymentGap::AuditOff,
             DeploymentGap::AuditFailsOpen,
+            DeploymentGap::NoCategoryMap,
             DeploymentGap::OpenEhrAccessDefault,
             DeploymentGap::MigrateOnRuntimeCredential,
             DeploymentGap::AuthOff,
@@ -743,14 +762,15 @@ mod tests {
             DeploymentGap::OpenSubjectNamespace => 2,
             DeploymentGap::AuditOff => 3,
             DeploymentGap::AuditFailsOpen => 4,
-            DeploymentGap::OpenEhrAccessDefault => 5,
-            DeploymentGap::MigrateOnRuntimeCredential => 6,
-            DeploymentGap::AuthOff => 7,
-            DeploymentGap::RbacOff => 8,
-            DeploymentGap::PlaintextListener => 9,
-            DeploymentGap::PlaintextBroker => 10,
-            DeploymentGap::PlaintextAuditFeed => 11,
-            DeploymentGap::PlaintextObjectStore => 12,
+            DeploymentGap::NoCategoryMap => 5,
+            DeploymentGap::OpenEhrAccessDefault => 6,
+            DeploymentGap::MigrateOnRuntimeCredential => 7,
+            DeploymentGap::AuthOff => 8,
+            DeploymentGap::RbacOff => 9,
+            DeploymentGap::PlaintextListener => 10,
+            DeploymentGap::PlaintextBroker => 11,
+            DeploymentGap::PlaintextAuditFeed => 12,
+            DeploymentGap::PlaintextObjectStore => 13,
         };
         for (i, token) in DEPLOYMENT_GAPS.iter().enumerate() {
             let gap: DeploymentGap =
@@ -1173,6 +1193,44 @@ mod tests {
         let accepted = FerroEhrConfig {
             deployment_accepts: vec![DeploymentGap::PlaintextObjectStore],
             ..store(true, true)
+        };
+        assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
+    }
+
+    /// With the shipped map off and no key declared, no map classifies an
+    /// access, and production refuses it unless accepted by name; the shipped
+    /// map or a declared one closes the gap (EHDS Annex II 3.2(c)).
+    #[test]
+    fn production_refuses_a_trail_with_no_category_map() {
+        let unmapped = || {
+            let mut config = production(separated());
+            config.audit.categories.shipped_map = false;
+            config
+        };
+        let posture = DeploymentPosture::evaluate(&unmapped(), &distinct_clusters());
+        assert_eq!(posture.gaps, [DeploymentGap::NoCategoryMap]);
+        assert!(!posture.permits_boot());
+        assert!(posture.refusal_message().contains("no_category_map"));
+
+        let shipped = production(separated());
+        assert!(
+            DeploymentPosture::evaluate(&shipped, &distinct_clusters())
+                .gaps
+                .is_empty(),
+            "the shipped map applies by default"
+        );
+        let mut declared = unmapped();
+        declared.audit.categories.templates.insert(
+            "Lab Report".to_owned(),
+            ehds_logging::map::Declared::Codes(vec!["Laboratory-Reports".to_owned()]),
+        );
+        assert_eq!(
+            DeploymentPosture::evaluate(&declared, &distinct_clusters()).gaps,
+            Vec::<DeploymentGap>::new()
+        );
+        let accepted = FerroEhrConfig {
+            deployment_accepts: vec![DeploymentGap::NoCategoryMap],
+            ..unmapped()
         };
         assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
     }

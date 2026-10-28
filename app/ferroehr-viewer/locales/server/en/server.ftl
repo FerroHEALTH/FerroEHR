@@ -10,6 +10,7 @@ no-ehr-id-delete = no EHR id to delete
 stored-query-delete-needs-both-qualified = a stored-query delete needs both a qualified name and a version
 no-template-id-delete = no template id to delete
 row-order = Row order
+access-recorded-without-category-data = every access is recorded without the category of the data it reached
 multimedia-files-stored-over-connection-without = multimedia files are stored over a connection without encryption
 access-records-sent-audit-repository-without = access records are sent to the audit repository without encryption
 change-events-published-message-broker-without = change events are published to a message broker without encryption

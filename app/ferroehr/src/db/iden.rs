@@ -244,13 +244,27 @@ pub enum Node {
     /// `COLLATE "C"` equals tree order; used for reassembly, never as an AQL
     /// predicate.
     Path,
-    /// `data` — the node's canonical openEHR JSON fragment verbatim, with
-    /// structure children pruned.
+    /// `data` — the node's canonical openEHR JSON fragment, structure children
+    /// pruned, without the keys the row's columns hold
+    /// ([`crate::storage::slim`]); `NULL` when nothing remains. Read it through
+    /// `ext.node_fragment`, never bare.
     Data,
     /// `context_start` — the promoted `EVENT_CONTEXT.start_time.value` of the
     /// `COMPOSITION` root row; `NULL` elsewhere and on a context-less
     /// persistent composition.
     ContextStart,
+    /// `value_type` — the RM type of the `ELEMENT` value the typed value
+    /// columns hold; `NULL` when `data` holds the value.
+    ValueType,
+    /// `value_num` — a `DV_QUANTITY` or `DV_COUNT` magnitude, or a
+    /// `DV_ORDINAL` value.
+    ValueNum,
+    /// `value_text` — the text of a typed value ([`crate::storage::slim::TypedValue`]).
+    ValueText,
+    /// `value_code` — the code string of a coded typed value.
+    ValueCode,
+    /// `value_terminology` — the terminology id of that code.
+    ValueTerminology,
 }
 
 #[cfg(test)]
@@ -285,9 +299,10 @@ mod tests {
 
     /// The later clinical migrations that add columns to those relations with
     /// `ALTER TABLE … ADD COLUMN`.
-    const ALTERS: &[&str] = &[include_str!(
-        "../../migrations/clinical/0015_access_restriction.sql"
-    )];
+    const ALTERS: &[&str] = &[
+        include_str!("../../migrations/clinical/0015_access_restriction.sql"),
+        include_str!("../../migrations/clinical/0019_node_values.sql"),
+    ];
 
     /// Whether a later migration adds `col` to `table`.
     fn added_by_alter(table: &str, col: &str) -> bool {
@@ -337,6 +352,35 @@ mod tests {
             t.strip_prefix(col)
                 .is_some_and(|rest| rest.starts_with([' ', '\t']))
         })
+    }
+
+    /// The `node` columns the catalog names.
+    fn node_columns() -> Vec<String> {
+        vec![
+            Node::Tier.to_string(),
+            Node::VoId.to_string(),
+            Node::SysVersion.to_string(),
+            Node::Num.to_string(),
+            Node::NumCap.to_string(),
+            Node::ParentNum.to_string(),
+            Node::EhrId.to_string(),
+            Node::RmType.to_string(),
+            Node::Archetype.to_string(),
+            Node::ArchEntity.to_string(),
+            Node::ArchConcept.to_string(),
+            Node::ArchMajor.to_string(),
+            Node::Name.to_string(),
+            Node::NameCode.to_string(),
+            Node::NameTerminology.to_string(),
+            Node::Path.to_string(),
+            Node::Data.to_string(),
+            Node::ContextStart.to_string(),
+            Node::ValueType.to_string(),
+            Node::ValueNum.to_string(),
+            Node::ValueText.to_string(),
+            Node::ValueCode.to_string(),
+            Node::ValueTerminology.to_string(),
+        ]
     }
 
     /// Every catalog entry, as `(table, [column, …])`, rendered through the
@@ -417,29 +461,7 @@ mod tests {
                     VoHead::ArchiveReason.to_string(),
                 ],
             ),
-            (
-                Node::Table.to_string(),
-                vec![
-                    Node::Tier.to_string(),
-                    Node::VoId.to_string(),
-                    Node::SysVersion.to_string(),
-                    Node::Num.to_string(),
-                    Node::NumCap.to_string(),
-                    Node::ParentNum.to_string(),
-                    Node::EhrId.to_string(),
-                    Node::RmType.to_string(),
-                    Node::Archetype.to_string(),
-                    Node::ArchEntity.to_string(),
-                    Node::ArchConcept.to_string(),
-                    Node::ArchMajor.to_string(),
-                    Node::Name.to_string(),
-                    Node::NameCode.to_string(),
-                    Node::NameTerminology.to_string(),
-                    Node::Path.to_string(),
-                    Node::Data.to_string(),
-                    Node::ContextStart.to_string(),
-                ],
-            ),
+            (Node::Table.to_string(), node_columns()),
         ]
     }
 

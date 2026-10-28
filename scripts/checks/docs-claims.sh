@@ -317,7 +317,7 @@ for f in $files; do
     [[ -n "$v" ]] || continue
     [[ "$v" = "$chart_version" ]] \
       || report "$f" "pins chart \`--version $v\`; Chart.yaml says $chart_version"
-  done < <(grep -ohE '\-\-version +[0-9]+\.[0-9]+\.[0-9]+' "$f" | awk '{print $2}' | sort -u)
+  done < <(grep -ohE '\-\-version +[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?' "$f" | awk '{print $2}' | sort -u)
   # `image.tag=<ver>` is in the pattern deliberately (#2779). The motivating
   # defect this section records is "`image.tag=3.17.3` against a 3.17.5
   # appVersion", and the pattern did not match that spelling at all — only a
@@ -339,7 +339,7 @@ if [[ -f "$f" ]]; then
     [[ -n "$v" ]] || continue
     [[ "$v" = "$chart_version" ]] \
       || report "$f" "pins chart \`--version $v\`; Chart.yaml says $chart_version"
-  done < <(grep -ohE '\-\-version +[0-9]+\.[0-9]+\.[0-9]+' "$f" | awk '{print $2}' | sort -u)
+  done < <(grep -ohE '\-\-version +[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?' "$f" | awk '{print $2}' | sort -u)
   while read -r v; do
     [[ -n "$v" ]] || continue
     [[ "$v" = "$app_version" ]] \

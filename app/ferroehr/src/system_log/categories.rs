@@ -15,8 +15,11 @@
 //!
 //! **No openEHR spec governs this — our own design/extension.**
 //!
-//! An object the map cannot classify is recorded `unclassified` and is never
-//! refused. `EHR`, `EHR_STATUS`, `EHR_ACCESS`, the directory `FOLDER`, item
+//! FerroEHR ships a map (`assets/audit-categories.default.toml`) for the
+//! published CKM templates and archetypes whose data sit in one priority
+//! category; it applies while the deployment declares no key of its own. An
+//! object the map in force cannot classify is recorded `unclassified` and is
+//! never refused. `EHR`, `EHR_STATUS`, `EHR_ACCESS`, the directory `FOLDER`, item
 //! tags and revision history hold no data of any category. The classification
 //! is audit content: it is never written to the request log, a span or a
 //! metric label.
@@ -45,12 +48,18 @@ pub const NONE: &str = ehds_logging::map::NONE;
 /// `Electronic-Prescriptions`, `Electronic-Dispensations`, `Medical-Imaging`,
 /// `Laboratory-Reports`, `Discharge-Reports`) or as `<system>|<code>`, or a
 /// national one declared in `national` as `<system>|<code>`; a key whose data
-/// hold no category maps to the word `"none"`. Empty by default: FerroEHR
-/// ships no map, so every access is recorded `unclassified` until a deployment
-/// declares one.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+/// hold no category maps to the word `"none"`. Empty by default, and while it
+/// declares no template and no archetype the map FerroEHR ships applies
+/// ([`SHIPPED_MAP`]); a deployment that declares a key replaces it whole.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct CategoryMapConfig {
+    /// Whether the map FerroEHR ships applies while this section declares no
+    /// template and no archetype (`shipped_map`, on by default). Off with
+    /// nothing declared, no map applies and every access is recorded
+    /// `unclassified`, which `deployment_profile = "production"` refuses as
+    /// the `no_category_map` gap.
+    pub shipped_map: bool,
     /// The national categories (Art. 14(1) third subparagraph), each
     /// `<system>|<code>`.
     pub national: Vec<String>,
@@ -87,6 +96,35 @@ pub enum CategoryMapError {
     NotAnArchetypeId(String),
 }
 
+impl Default for CategoryMapConfig {
+    fn default() -> Self {
+        Self {
+            shipped_map: true,
+            national: Vec::new(),
+            templates: BTreeMap::new(),
+            archetypes: BTreeMap::new(),
+        }
+    }
+}
+
+/// The category map FerroEHR ships, in the `[audit.categories]` form: the
+/// published CKM templates and COMPOSITION archetypes whose data sit in one
+/// EHDS Art. 14(1) priority category.
+pub const SHIPPED_MAP: &str = include_str!("../../assets/audit-categories.default.toml");
+
+/// Which map classifies the accesses: the deployment's own, the one FerroEHR
+/// ships, or none.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MapSource {
+    /// The deployment declares a template or an archetype.
+    Declared,
+    /// The deployment declares none, and the shipped map applies.
+    Shipped,
+    /// The deployment declares none and turned the shipped map off.
+    None,
+}
+
 impl From<MapError> for CategoryMapError {
     fn from(error: MapError) -> Self {
         match error {
@@ -110,21 +148,25 @@ impl CategoryMapConfig {
     /// # Errors
     /// Every [`CategoryMapError`] the map carries.
     pub fn compile(&self) -> Result<Classifier, Vec<CategoryMapError>> {
+        let shipped;
+        let (templates, archetypes) = match self.source() {
+            MapSource::Shipped => {
+                shipped = shipped_tables();
+                (&shipped.templates, &shipped.archetypes)
+            }
+            MapSource::Declared | MapSource::None => (&self.templates, &self.archetypes),
+        };
         // NOTE: openEHR BASE 1.1.0 Base Types, Composite Identifiers and Case: ids compare
         // case-insensitively and keep their case, which ehds-logging's OpenEhr matching does.
-        let map = CategoryMap::declare_with(
-            Matching::OpenEhr,
-            &self.national,
-            &self.templates,
-            &self.archetypes,
-        )
-        .map_err(|errors| {
-            errors
-                .into_iter()
-                .map(CategoryMapError::from)
-                .collect::<Vec<_>>()
-        })?
-        .with_evidence_limit(crate::versioning::origins::RECORD_CAP);
+        let map =
+            CategoryMap::declare_with(Matching::OpenEhr, &self.national, templates, archetypes)
+                .map_err(|errors| {
+                    errors
+                        .into_iter()
+                        .map(CategoryMapError::from)
+                        .collect::<Vec<_>>()
+                })?
+                .with_evidence_limit(crate::versioning::origins::RECORD_CAP);
         let digest = MapDigest::of(&map);
         let mut rows = Vec::new();
         for (kind, keys) in [
@@ -152,6 +194,18 @@ impl CategoryMapConfig {
         })
     }
 
+    /// Which map classifies the accesses under this section.
+    #[must_use]
+    pub fn source(&self) -> MapSource {
+        if !self.templates.is_empty() || !self.archetypes.is_empty() {
+            MapSource::Declared
+        } else if self.shipped_map {
+            MapSource::Shipped
+        } else {
+            MapSource::None
+        }
+    }
+
     /// The boot validation's findings, as messages; empty when the map compiles.
     #[must_use]
     pub fn errors(&self) -> Vec<String> {
@@ -160,6 +214,23 @@ impl CategoryMapConfig {
             Err(errors) => errors.iter().map(ToString::to_string).collect(),
         }
     }
+}
+
+/// The template and archetype tables of [`SHIPPED_MAP`].
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ShippedTables {
+    templates: BTreeMap<String, Declared>,
+    archetypes: BTreeMap<String, Declared>,
+}
+
+/// The tables of [`SHIPPED_MAP`], read from the text compiled into the binary.
+#[expect(
+    clippy::expect_used,
+    reason = "SHIPPED_MAP is a constant the unit test the_shipped_map_compiles_and_classifies               parses and compiles, so it cannot fail at run time"
+)]
+fn shipped_tables() -> ShippedTables {
+    toml::from_str(SHIPPED_MAP).expect("the shipped category map should parse")
 }
 
 /// The comparison form of an identifier, which the retention register's
@@ -828,6 +899,79 @@ mod tests {
         );
         assert_eq!(ehr_only.stored_categories(), [NONE]);
         assert_eq!(ehr_only.read_from, ReadFrom::ResourceKind);
+    }
+
+    /// The shipped map applies while no key is declared, a national category
+    /// alone keeps it, any declared key replaces it whole, and turning it off
+    /// with nothing declared leaves no map (EHDS Annex II 3.2(c)).
+    #[test]
+    fn the_shipped_map_compiles_and_classifies() {
+        let shipped = CategoryMapConfig::default();
+        assert_eq!(shipped.source(), MapSource::Shipped);
+        let classifier = shipped.compile().expect("the shipped map compiles");
+        assert!(!classifier.is_empty());
+        let ips = classifier.classify(
+            &AccessedContent::Objects(vec![object(
+                Some("International Patient Summary"),
+                Some("openEHR-EHR-COMPOSITION.health_summary.v1"),
+            )]),
+            false,
+        );
+        assert_eq!(ips.stored_categories(), [SUMMARY]);
+        let discharge = classifier.classify(
+            &AccessedContent::Objects(vec![object(
+                Some("a local discharge template"),
+                Some("openEHR-EHR-COMPOSITION.transfer_summary.v1"),
+            )]),
+            true,
+        );
+        assert_eq!(
+            discharge.stored_categories(),
+            [
+                "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs|\
+              Discharge-Reports"
+            ]
+        );
+        let generic = classifier.classify(
+            &AccessedContent::Objects(vec![object(
+                Some("a local result template"),
+                Some("openEHR-EHR-COMPOSITION.report-result.v1"),
+            )]),
+            false,
+        );
+        assert_eq!(
+            generic.stored_categories(),
+            [UNCLASSIFIED],
+            "a container shared by several categories is never guessed"
+        );
+
+        let national: CategoryMapConfig =
+            toml::from_str(r#"national = ["urn:oid:2.16.840.1.113883.2.4.3.11.60.1|beeld"]"#)
+                .expect("parse");
+        assert_eq!(national.source(), MapSource::Shipped);
+        assert_eq!(
+            national.compile().expect("compile").rows(),
+            classifier.rows()
+        );
+
+        let declared = map(MAP);
+        assert_eq!(
+            declared
+                .classify(
+                    &AccessedContent::Objects(vec![object(
+                        Some("unmapped"),
+                        Some("openEHR-EHR-COMPOSITION.health_summary.v1"),
+                    )]),
+                    false,
+                )
+                .stored_categories(),
+            [UNCLASSIFIED],
+            "a declared map replaces the shipped one whole"
+        );
+
+        let off: CategoryMapConfig = toml::from_str("shipped_map = false").expect("parse");
+        assert_eq!(off.source(), MapSource::None);
+        assert!(off.compile().expect("compile").is_empty());
     }
 
     #[test]

@@ -44,7 +44,10 @@ optional:
   the `## [X.Y.Z] - YYYY-MM-DD` heading, month and year (CRA Art 13(8), (10)
   and (19), Annex II point 7, `docs/law/eu/cra/text.html`; `SECURITY.md`
   §Supported versions). The heading's date is therefore the
-  release date, and a heading without one stops the lane.
+  release date, and a heading without one stops the lane. A pre-release
+  (`vX.Y.Z-rcN`) promises no support of its own: its support period says it
+  is a test build that receives no fixes and names the stable release below
+  it in this changelog as the newest supported one (#4344).
 - **The user information goes into every release's notes.** After the support
   period the lane appends an "Information and instructions to the user (CRA
   Annex II)" section linking `website/book/src/compliance/cra-user-information.md`
@@ -57,7 +60,14 @@ optional:
   `## [X.Y.Z] - YYYY-MM-DD` under a fresh empty `[Unreleased]` from the
   fragments in Keep a Changelog order (`--preview` shows it first), moves the
   `[unreleased]` link reference on, adds the version's, and `git rm`s the
-  fragments (the `plan` job refuses a tag that still holds one); add the
+  fragments (the `plan` job refuses a tag that still holds one). **A
+  pre-release (`--assemble X.Y.Z-rcN`) keeps the fragments, the
+  `[Unreleased]` entries and the `[unreleased]` link reference** and links
+  its section from the last stable tag, so each release candidate and the
+  stable `X.Y.Z` cut after it carry every change since the last stable
+  release, and only the stable cut deletes the fragments; at a pre-release
+  tag the `plan` job checks the section carries each fragment
+  (`changelog.sh --covered`, #4341). Add the
   release's opening paragraph under the heading by hand, bump the
   workspace `version` in the root `Cargo.toml` (+ `Cargo.lock` via a
   `cargo check`, + `CITATION.cff` `version` and
@@ -99,7 +109,12 @@ optional:
   release ships a DISTINCT packaged chart (the changes annotation is injected
   at package time), and an unbumped version collides with refuse-overwrite at
   the tag (#2818 — the pipeline's
-  `plan` refuses that tag before anything builds). Then
+  `plan` refuses that tag before anything builds). A pre-release takes a
+  pre-release chart version (`20.0.1-rc1`), because `helm install` without
+  `--version` skips only SemVer pre-release chart versions; the stable cut
+  then takes the plain version (#4344). The pin guards (`docs-claims`,
+  `compose-image-tags.sh`, `deploy/helm/validate.sh`) read a version with
+  its pre-release suffix. Then
   regenerate whatever that change moved — the golden renders
   (`deploy/helm/validate.sh --update`) and the generated chart README
   (`helm-docs --chart-search-root deploy/helm/ferroehr --template-files

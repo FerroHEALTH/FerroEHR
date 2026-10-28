@@ -28,7 +28,9 @@ use crate::aql::ir::{
 use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow};
 use crate::storage::promoted::{PROMOTED_LEAVES, PromotedKind};
 
-use super::expr::{as_text, call, cast, col, derived_col, extract_base, order_coercion};
+use super::expr::{
+    as_text, call, cast, col, derived_col, extract_base, fragment_source, order_coercion, to_jsonb,
+};
 use super::from::{attribute_child, is_vo_root_type};
 use super::{Builder, ValueMode};
 
@@ -111,17 +113,20 @@ impl Builder<'_> {
         // jsonb array cell; scalar contexts keep the first-match extraction.
         let projected_array =
             matches!(mode, ValueMode::Projection) && jp.is_some() && leaf.fragment_multi_valued();
-        let extract = |data: Expr| -> Expr {
+        let presence = self.presence_only;
+        let extract = |alias: &str| -> Expr {
             let vars = fragment.as_ref().and_then(|(_, v)| v.clone());
             match (&jp, projected_array) {
-                (Some(jp), true) => super::expr::jsonb_path_array(data, jp, vars),
-                _ => extract_base(data, jp.as_deref(), vars),
+                (Some(jp), true) => {
+                    super::expr::jsonb_path_array(fragment_source(alias, Some(jp)), jp, vars)
+                }
+                _ => fragment_read(alias, leaf, jp.as_deref(), vars, presence),
             }
         };
 
         let (start, rest) = self.walk_start(leaf)?;
         if rest.is_empty() {
-            let base = extract(col(&start, Node::Data));
+            let base = extract(&start);
             let value = coerce_value(base, mode, leaf);
             // A root predicate guards the inline read: the value only exists
             // where the source node satisfies it (QUERY master03 §Identified
@@ -141,7 +146,7 @@ impl Builder<'_> {
                 sub.and_where(cond);
             }
         }
-        let base = extract(col(&last, Node::Data));
+        let base = extract(&last);
         sub.expr(coerce_value(base, mode, leaf));
         // NOTE: QUERY master03 §ORDER BY is silent on a key reaching several nodes;
         // an unbound step reads the first match in document order.
@@ -248,12 +253,22 @@ impl Builder<'_> {
         let (mut sub, aliases) = self.anchored_walk(&start, rest)?;
         let last = aliases.last().cloned().unwrap_or_else(|| start.clone());
         let base = match (fragment, multi) {
-            (Some((jp, vars)), true) => {
-                fragment_items(&mut sub, col(&last, Node::Data), &jp, vars, self.next_ctr())
-            }
+            (Some((jp, vars)), true) => fragment_items(
+                &mut sub,
+                fragment_source(&last, Some(&jp)),
+                &jp,
+                vars,
+                self.next_ctr(),
+            ),
             (fragment, _) => {
                 let (jp, vars) = fragment.unzip();
-                extract_base(col(&last, Node::Data), jp.as_deref(), vars.flatten())
+                fragment_read(
+                    &last,
+                    leaf,
+                    jp.as_deref(),
+                    vars.flatten(),
+                    self.presence_only,
+                )
             }
         };
         if let Some(pred) = &leaf.root_predicate {
@@ -299,13 +314,19 @@ impl Builder<'_> {
         Ok(match (fragment, multi) {
             (Some((jp, vars)), true) => {
                 let mut sub = Query::select();
-                let base =
-                    fragment_items(&mut sub, col(at, Node::Data), &jp, vars, self.next_ctr());
+                let base = fragment_items(
+                    &mut sub,
+                    fragment_source(at, Some(&jp)),
+                    &jp,
+                    vars,
+                    self.next_ctr(),
+                );
                 (Some(sub), coerce_value(base, mode, leaf))
             }
             (fragment, _) => {
                 let (jp, vars) = fragment.unzip();
-                let base = extract_base(col(at, Node::Data), jp.as_deref(), vars.flatten());
+                let base =
+                    fragment_read(at, leaf, jp.as_deref(), vars.flatten(), self.presence_only);
                 (None, coerce_value(base, mode, leaf))
             }
         })
@@ -629,6 +650,138 @@ impl Builder<'_> {
             self.q.offset(u64::try_from(offset).unwrap_or(0));
         }
     }
+}
+
+// ── fragment reads ──────────────────────────────────────────────────────────
+
+/// A typed value column, as a fast path reads it.
+#[derive(Clone, Copy)]
+enum TypedColumn {
+    /// `value_num`.
+    Num,
+    /// `value_text`.
+    Text,
+    /// `value_text` as a JSON boolean (a `DV_BOOLEAN`).
+    Flag,
+    /// `value_code`.
+    Code,
+    /// `value_terminology`.
+    Terminology,
+}
+
+/// The typed columns that hold the scalar a fragment path addresses, per
+/// value type, for the paths into an `ELEMENT` value the typed value columns
+/// rebuild (`crate::storage::slim::TypedValue`); empty for any other path.
+fn typed_reads(path: &[&str]) -> Vec<(&'static [&'static str], TypedColumn)> {
+    use crate::storage::slim::STRING_VALUED;
+    const TEXT_VALUED: [&str; 8] = [
+        STRING_VALUED[0],
+        STRING_VALUED[1],
+        STRING_VALUED[2],
+        STRING_VALUED[3],
+        STRING_VALUED[4],
+        STRING_VALUED[5],
+        STRING_VALUED[6],
+        "DV_CODED_TEXT",
+    ];
+    match path {
+        ["value", "magnitude"] => vec![(&["DV_QUANTITY", "DV_COUNT"], TypedColumn::Num)],
+        ["value", "units"] => vec![(&["DV_QUANTITY"], TypedColumn::Text)],
+        ["value", "value"] => vec![
+            (&TEXT_VALUED, TypedColumn::Text),
+            (&["DV_ORDINAL"], TypedColumn::Num),
+            (&["DV_BOOLEAN"], TypedColumn::Flag),
+        ],
+        ["value", "id"] => vec![(&["DV_IDENTIFIER"], TypedColumn::Text)],
+        ["value", "defining_code", "code_string"] => {
+            vec![(&["DV_CODED_TEXT"], TypedColumn::Code)]
+        }
+        ["value", "defining_code", "terminology_id", "value"] => {
+            vec![(&["DV_CODED_TEXT"], TypedColumn::Terminology)]
+        }
+        ["value", "symbol", "value"] => vec![(&["DV_ORDINAL"], TypedColumn::Text)],
+        ["value", "symbol", "defining_code", "code_string"] => {
+            vec![(&["DV_ORDINAL"], TypedColumn::Code)]
+        }
+        _ => Vec::new(),
+    }
+}
+
+/// The member and the `node` column that holds the scalar a fragment path
+/// addresses, for the paths into a key the row stores as a column when the
+/// fragment leaves it out (`crate::storage::slim`): the name's value and
+/// code, and the archetype node id.
+fn column_read(path: &[&str]) -> Option<(&'static str, Node)> {
+    match path {
+        ["name", "value"] => Some(("name", Node::Name)),
+        ["name", "defining_code", "code_string"] => Some(("name", Node::NameCode)),
+        ["name", "defining_code", "terminology_id", "value"] => {
+            Some(("name", Node::NameTerminology))
+        }
+        ["archetype_node_id"] => Some(("archetype_node_id", Node::Archetype)),
+        _ => None,
+    }
+}
+
+/// Reads `leaf`'s fragment path `jp` off the node row `alias` as the jsonb
+/// the stored fragment would have answered.
+///
+/// A path to one scalar of an `ELEMENT` value reads the typed column directly
+/// on a row that has typed columns, and the stored `data` on one that does
+/// not ([`typed_reads`]); every other path reads through
+/// [`fragment_source`]. Either way the result is the same jsonb, so every
+/// coercion downstream behaves as before. No openEHR spec governs storage:
+/// our own design.
+/// With `presence`, a whole-object read (no fragment path) yields a jsonb
+/// that is non-`NULL` exactly when the node row is there, which is all a
+/// plain `COUNT` asks of it, instead of rebuilding the fragment.
+fn fragment_read(
+    alias: &str,
+    leaf: &LeafPath,
+    jp: Option<&str>,
+    vars: Option<Expr>,
+    presence: bool,
+) -> Expr {
+    if presence && jp.is_none() {
+        return to_jsonb(col(alias, Node::Num));
+    }
+    let names: Vec<&str> = leaf.fragment.iter().map(|s| s.name.as_str()).collect();
+    let plain = leaf.fragment.iter().all(|step| step.predicate.is_none());
+    if let (Some(path), true, Some((member, column))) = (jp, plain, column_read(&names)) {
+        // The stored fragment answers when it still carries the member; the
+        // row's column answers when the member was left out for it.
+        return Expr::cust_with_exprs(
+            "CASE WHEN ($1 -> $2) IS NULL THEN to_jsonb($3) ELSE $4 END",
+            [
+                col(alias, Node::Data),
+                Expr::val(member),
+                col(alias, column),
+                extract_base(col(alias, Node::Data), Some(path), vars),
+            ],
+        );
+    }
+    let reads = typed_reads(&names);
+    let Some(path) = jp
+        .filter(|_| !reads.is_empty() && leaf.fragment.iter().all(|step| step.predicate.is_none()))
+    else {
+        return extract_base(fragment_source(alias, jp), jp, vars);
+    };
+    let value_type = || col(alias, Node::ValueType);
+    let mut case = sea_query::CaseStatement::new().case(
+        value_type().is_null(),
+        extract_base(col(alias, Node::Data), Some(path), vars),
+    );
+    for (types, column) in reads {
+        let read = match column {
+            TypedColumn::Num => to_jsonb(col(alias, Node::ValueNum)),
+            TypedColumn::Text => to_jsonb(col(alias, Node::ValueText)),
+            TypedColumn::Flag => to_jsonb(cast(col(alias, Node::ValueText), "boolean")),
+            TypedColumn::Code => to_jsonb(col(alias, Node::ValueCode)),
+            TypedColumn::Terminology => to_jsonb(col(alias, Node::ValueTerminology)),
+        };
+        case = case.case(value_type().is_in(types.iter().copied()), read);
+    }
+    case.into()
 }
 
 // ── coercions ─────────────────────────────────────────────────────────────────

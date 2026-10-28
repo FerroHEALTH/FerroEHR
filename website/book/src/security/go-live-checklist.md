@@ -73,7 +73,7 @@ in deployment_accepts (which is then stated on every boot and on /management/sta
 ```
 
 The gaps are `shared_credential`, `shared_cluster`, `open_subject_namespace`,
-`audit_off`, `audit_fails_open`, `open_ehr_access_default`,
+`audit_off`, `audit_fails_open`, `no_category_map`, `open_ehr_access_default`,
 `migrate_on_runtime_credential`, `auth_off`, `rbac_off`, `plaintext_listener`,
 `plaintext_broker`, `plaintext_audit_feed` and `plaintext_object_store`. `shared_cluster` is read from
 `pg_control_system().system_identifier` on each pool, the audit pool included,

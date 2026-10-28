@@ -28,6 +28,8 @@
 //! - [`promoted::PROMOTED_LEAVES`] — the `(rm_type, path)` to node-column
 //!   mapping the write codec and the AQL read lowering both consult, so a hot
 //!   leaf reads an indexed column.
+//! - [`slim::slim`] — what a `node` row stores of its fragment once its
+//!   columns hold the rest, and the typed `ELEMENT` value columns.
 //! - [`node_repo`] — `node`-table writes and the node-to-canonical reloads.
 //! - [`blob_ref`] — the multimedia blob reference index the node write path
 //!   maintains and the blob collector reads.
@@ -53,6 +55,7 @@ pub mod marks;
 pub mod node_repo;
 pub mod promoted;
 pub mod row;
+pub mod slim;
 pub mod structure;
 pub mod tag_repo;
 pub mod version_repo;

@@ -248,6 +248,26 @@ impl Builder<'_> {
         }
     }
 
+    /// The test an `EXISTS <path>` operand lowers to (QUERY master03
+    /// §EXISTS).
+    ///
+    /// # Errors
+    /// [`AqlError`] from lowering the path.
+    fn exists_operand(&mut self, target: &PathTarget) -> Result<ExistsOperand, AqlError> {
+        Ok(match self.leaf_items(target, ValueMode::Projection)? {
+            Some(walk) => {
+                let mut sub = walk.sub;
+                sub.and_where(walk.item.is_not_null());
+                sub.expr(Expr::val(1));
+                ExistsOperand::Walk(Box::new(sub))
+            }
+            None => ExistsOperand::Value(
+                self.value_expr(target, ValueMode::Projection)?
+                    .is_not_null(),
+            ),
+        })
+    }
+
     /// Lowers every `EXISTS` operand of `expr`, in the order
     /// [`Self::where_formula`] meets them, before the WHERE bindings exist.
     ///
@@ -272,19 +292,12 @@ impl Builder<'_> {
             }
             ir::Expr::Not(a) => self.collect_exists(a, out),
             ir::Expr::Exists(target) => {
-                let operand = match self.leaf_items(target, ValueMode::Projection)? {
-                    Some(walk) => {
-                        let mut sub = walk.sub;
-                        sub.and_where(walk.item.is_not_null());
-                        sub.expr(Expr::val(1));
-                        ExistsOperand::Walk(Box::new(sub))
-                    }
-                    None => ExistsOperand::Value(
-                        self.value_expr(target, ValueMode::Projection)?
-                            .is_not_null(),
-                    ),
-                };
-                out.push_back(operand);
+                // EXISTS only asks whether the data is there, so a whole object
+                // is tested by its row rather than by its rebuilt fragment.
+                self.presence_only = true;
+                let operand = self.exists_operand(target);
+                self.presence_only = false;
+                out.push_back(operand?);
                 Ok(())
             }
             ir::Expr::Compare { .. }

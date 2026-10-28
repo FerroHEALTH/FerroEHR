@@ -303,6 +303,7 @@ separation that profile checks made, except one it accepts by name:
 | `migrate_on_runtime_credential` | `config.db.migrate: verify`, with `migrations.job.enabled` preparing the schema on `database.migrateExistingSecret` |
 | `open_subject_namespace` | `config.privacy.subject_namespaces` declared |
 | `audit_off`, `audit_fails_open` | the audit trail on with its local store, `config.audit.fail_mode: closed` |
+| `no_category_map` | the shipped category map (the default), or `config.audit.categories` templates and archetypes of your own |
 | `open_ehr_access_default` | `config.authz.rbac.ehr_access_default: restricted` |
 | `auth_off` | OIDC authentication on |
 | `rbac_off` | the role gate on (`config.authz.rbac.enabled: true`, the chart's default) |

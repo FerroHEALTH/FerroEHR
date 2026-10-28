@@ -95,9 +95,33 @@ The map every access record is classified through by EHDS category (Annex II
 The classification is done by `ehds-logging`, the EHDS logging component the
 FerroHEALTH products share (FerroAUDIT); this section is the deployment's map.
 A template id, or failing that a root archetype id, maps to a list of
-categories, or to the word `none` for data of no category. **Empty by
-default**: FerroEHR ships no map, and an access the map cannot classify is
-recorded `unclassified` with its ids, never refused.
+categories, or to the word `none` for data of no category. An access the map
+in force cannot classify is recorded `unclassified` with its ids, never
+refused.
+
+**The shipped map.** While the section declares no template and no archetype,
+the map FerroEHR ships applies
+([`app/ferroehr/assets/audit-categories.default.toml`](https://github.com/FerroHEALTH/FerroEHR/blob/main/app/ferroehr/assets/audit-categories.default.toml)).
+It names the published CKM templates and COMPOSITION archetypes whose purpose
+places their data in one priority category:
+
+| Key | Category |
+|---|---|
+| template `International Patient Summary`, archetype `openEHR-EHR-COMPOSITION.health_summary.v1` | `Patient-Summaries` |
+| template `ePrescription (FHIR)`, archetype `openEHR-EHR-COMPOSITION.prescription.v0` | `Electronic-Prescriptions` |
+| template `Generic lab test result example simple` | `Laboratory-Reports` |
+| template `CCTA report` | `Medical-Imaging` |
+| archetype `openEHR-EHR-COMPOSITION.transfer_summary.v1` | `Discharge-Reports` |
+
+It leaves out the generic `report.v1` and `report-result.v1` containers, which
+carry laboratory, imaging and other reports alike, so an access through them
+is recorded `unclassified` instead of guessed. CKM publishes no composition for
+an electronic dispensation. A deployment that declares any template or
+archetype replaces the shipped map whole, so copy its entries into your own
+map to keep them. A national category declared alone keeps the shipped map.
+`shipped_map = false` with nothing declared leaves no map: every access is then
+recorded `unclassified`, and `deployment_profile = "production"` refuses to
+start on the `no_category_map` gap unless `deployment_accepts` names it.
 
 ```toml
 [audit.categories]
@@ -114,6 +138,7 @@ national = ["urn:oid:2.16.840.1.113883.2.4.3.11.60.1|beeld"]
 
 | Key | Type | Default | Description |
 |---|---|---|---|
+| `shipped_map` | bool | `true` | Apply the map FerroEHR ships while no template and no archetype is declared. |
 | `national` | list of `<system>\|<code>` | empty | The national categories (EHDS Art. 14(1) third subparagraph) the map may name. |
 | `templates` | table of template id → list of category, or `"none"` | empty | Consulted first, by the template id the object was committed against. |
 | `archetypes` | table of archetype id → list of category, or `"none"` | empty | Consulted for an object whose template the map does not name, by its root archetype id. A key that is not an archetype id refuses boot. |
