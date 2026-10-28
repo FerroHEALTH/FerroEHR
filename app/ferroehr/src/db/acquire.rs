@@ -72,3 +72,68 @@ pub async fn acquire(pool: &PgPool) -> Result<PoolConnection<Postgres>, AcquireE
         .record(started.elapsed().as_secs_f64(), &[]);
     result.map_err(AcquireError)
 }
+
+/// A pooled connection that is closed, instead of returned to the pool, when
+/// it is dropped while a statement started through [`Lease::run`] is still
+/// running.
+///
+/// Dropping a request future mid-statement drops the driver's future, which
+/// sends PostgreSQL nothing: returned to the pool, the connection would wait
+/// for the abandoned statement to finish before it could serve again (sqlx
+/// 0.9 tests a released connection with a round trip). Closed, its pool slot
+/// frees at once, and the backend sees the closed socket at its next
+/// `client_connection_check_interval` check
+/// (<https://www.postgresql.org/docs/18/runtime-config-connection.html#GUC-CLIENT-CONNECTION-CHECK-INTERVAL>),
+/// which every session of this crate's pools sets, and stops the statement.
+///
+/// No openEHR spec governs this — our own design.
+#[derive(Debug)]
+pub struct Lease {
+    conn: PoolConnection<Postgres>,
+    running: bool,
+}
+
+impl Lease {
+    /// Runs `statement` on the leased connection.
+    ///
+    /// The lease is armed for as long as the returned future runs: drop the
+    /// future before it completes, and dropping the lease closes the
+    /// connection. A statement that completes, successfully or not, leaves
+    /// the connection fit to return to the pool.
+    pub async fn run<'c, F>(
+        &'c mut self,
+        statement: impl FnOnce(&'c mut sqlx::PgConnection) -> F,
+    ) -> F::Output
+    where
+        F: Future + 'c,
+    {
+        let Self { conn, running } = self;
+        *running = true;
+        let output = statement(conn).await;
+        *running = false;
+        output
+    }
+}
+
+impl Drop for Lease {
+    fn drop(&mut self) {
+        if self.running {
+            tracing::debug!("closing a pooled connection whose statement was abandoned");
+            self.conn.close_on_drop();
+        }
+    }
+}
+
+/// Obtains a [`Lease`] on a connection from `pool`, for a statement that may
+/// run long enough for its caller to give up on it.
+///
+/// # Errors
+///
+/// [`AcquireError`] when the pool timed out, was closed, or could not open a
+/// new connection.
+pub async fn lease(pool: &PgPool) -> Result<Lease, AcquireError> {
+    Ok(Lease {
+        conn: acquire(pool).await?,
+        running: false,
+    })
+}

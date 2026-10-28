@@ -317,13 +317,16 @@ statement_timeout_ms = 60000
 | `acquire_timeout_secs` | int | `30` | Seconds to wait for a free connection before failing. |
 | `statement_timeout_ms` | int | `60000` | `statement_timeout` applied to every pooled connection; `0` leaves the server default. |
 
-`statement_timeout_ms` is the backstop the HTTP request timeout cannot be:
-answering a client by dropping the handler future does **not** cancel the
-statement PostgreSQL is running, so without it a handful of expensive queries
-can hold every pooled connection while every one of their callers has already
-given up. Keep it **above** [`query.timeout_ms`](config-integrations.md#query)
-so the AQL engine's own typed refusal fires first and this only catches what
-the engine does not govern.
+`statement_timeout_ms` is the backstop for every statement. An AQL query
+(ad hoc or stored) and the composition-count statistics stop sooner when their
+caller goes away: a client that disconnects, or the AQL engine's own
+[`query.timeout_ms`](config-integrations.md#query), closes the statement's
+connection, its pool slot frees at once, and every pooled session sets
+PostgreSQL's `client_connection_check_interval` to one second, so the backend
+stops the statement within about a second. Other statements run to their end
+or to this timeout, so keep it **above** `query.timeout_ms`: the AQL engine's
+typed refusal then fires first and this only catches what the engine does not
+govern.
 
 ## `[storage]`
 

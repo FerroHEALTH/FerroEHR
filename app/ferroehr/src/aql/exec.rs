@@ -24,7 +24,7 @@ use super::error::{AqlError, ExecError};
 use super::ir::{Params, QueryIr};
 use super::sql::{CellKind, ColumnSpec, SqlCtx};
 use super::subject::EhrSubject;
-use crate::db::acquire::acquire;
+use crate::db::acquire::lease;
 use crate::ids::{EhrId, VoId};
 use crate::storage::node_repo::SubtreeAnchor;
 
@@ -107,11 +107,18 @@ pub async fn execute(
     // which collapses the streaming shape. An unnamed statement is
     // custom-planned with the real values on every execution (PostgreSQL docs:
     // PREPARE / plan caching).
-    let rows = sqlx::query_with(sqlx::AssertSqlSafe(prepared.sql), prepared.values)
-        .persistent(false)
-        .fetch_all(&mut *acquire(pool).await.map_err(ExecError::from)?)
+    let mut lease = lease(pool).await.map_err(ExecError::from)?;
+    let rows = lease
+        .run(|conn| {
+            // A lease: an abandoned request closes the connection and stops the
+            // statement instead of holding a pool slot until it ends.
+            sqlx::query_with(sqlx::AssertSqlSafe(prepared.sql), prepared.values)
+                .persistent(false)
+                .fetch_all(conn)
+        })
         .await
         .map_err(ExecError::from)?;
+    drop(lease);
 
     let columns = prepared
         .columns
@@ -339,11 +346,16 @@ pub async fn collect_scope(
     };
     // `persistent(false)` for the same reason as `execute` above: dynamic
     // SQL, unnamed statement, custom plan per execution.
-    let rows = sqlx::query_with(sqlx::AssertSqlSafe(scope.sql), scope.values)
-        .persistent(false)
-        .fetch_all(&mut *acquire(pool).await.map_err(ExecError::from)?)
+    let mut lease = lease(pool).await.map_err(ExecError::from)?;
+    let rows = lease
+        .run(|conn| {
+            sqlx::query_with(sqlx::AssertSqlSafe(scope.sql), scope.values)
+                .persistent(false)
+                .fetch_all(conn)
+        })
         .await
         .map_err(ExecError::from)?;
+    drop(lease);
     let mut ehr_ids = std::collections::BTreeSet::new();
     let mut template_ids = std::collections::BTreeSet::new();
     // A NULL cell is a left binding whose branch did not match; a cell that

@@ -13,12 +13,32 @@
 //! our own design over the greenfield `contribution` / `version` /
 //! `commit_audit` tables (`clinical/0003_change_control.sql`).
 
-use crate::db::acquire::acquire;
+use crate::db::acquire::{acquire, lease};
 use crate::service::FerroEhrService;
 use crate::service::admin::types::StatTimeRange;
 use crate::service::error::ServiceError;
 use crate::service::platform_service::PlatformService;
 use crate::service::status::SmError;
+
+/// The distinct versioned COMPOSITIONs, unbounded.
+const VO_COUNT: &str = "SELECT count(DISTINCT vo_id) FROM version WHERE kind = 'COMPOSITION'";
+
+/// The distinct versioned COMPOSITIONs committed within `$1..=$2`.
+const VO_COUNT_IN_RANGE: &str = "SELECT count(DISTINCT v.vo_id) FROM version v \
+     JOIN commit_audit a ON a.id = v.commit_audit_id \
+     WHERE v.kind = 'COMPOSITION' \
+       AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
+       AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)";
+
+/// The COMPOSITION version rows, unbounded.
+const VERSION_COUNT: &str = "SELECT count(*) FROM version WHERE kind = 'COMPOSITION'";
+
+/// The COMPOSITION version rows committed within `$1..=$2`.
+const VERSION_COUNT_IN_RANGE: &str = "SELECT count(*) FROM version v \
+     JOIN commit_audit a ON a.id = v.commit_audit_id \
+     WHERE v.kind = 'COMPOSITION' \
+       AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
+       AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)";
 
 /// Whether a [`PlatformService`]'s CONTRIBUTIONs are EHR-scoped (`Some(true)` →
 /// `ehr_id IS NOT NULL`), ehr-less (`Some(false)` → `ehr_id IS NULL`), or the
@@ -176,27 +196,24 @@ impl FerroEhrService {
         if a_service != PlatformService::Ehr {
             return Ok(0);
         }
-        // Unbounded: no reason to touch `audit` at all.
+        // A lease: a caller that gives up on a long count frees its connection.
+        let mut lease = lease(&self.pool).await?;
         let count: i64 = if lo.is_none() && hi.is_none() {
-            sqlx::query_scalar(
-                "SELECT count(DISTINCT vo_id) FROM version WHERE kind = 'COMPOSITION'",
-            )
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await
-            .map_err(ServiceError::from)?
+            // Unbounded: no reason to touch `audit` at all.
+            lease
+                .run(|conn| sqlx::query_scalar(VO_COUNT).fetch_one(conn))
+                .await
         } else {
-            sqlx::query_scalar(
-                "SELECT count(DISTINCT v.vo_id) FROM version v JOIN commit_audit a ON a.id = v.commit_audit_id \
-                 WHERE v.kind = 'COMPOSITION' \
-                   AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
-                   AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)",
-            )
-            .bind(lo)
-            .bind(hi)
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await
-            .map_err(ServiceError::from)?
-        };
+            lease
+                .run(|conn| {
+                    sqlx::query_scalar(VO_COUNT_IN_RANGE)
+                        .bind(lo)
+                        .bind(hi)
+                        .fetch_one(conn)
+                })
+                .await
+        }
+        .map_err(ServiceError::from)?;
         Ok(count)
     }
 
@@ -218,24 +235,22 @@ impl FerroEhrService {
         if a_service != PlatformService::Ehr {
             return Ok(0);
         }
+        let mut lease = lease(&self.pool).await?;
         let count: i64 = if lo.is_none() && hi.is_none() {
-            sqlx::query_scalar("SELECT count(*) FROM version WHERE kind = 'COMPOSITION'")
-                .fetch_one(&mut *acquire(&self.pool).await?)
+            lease
+                .run(|conn| sqlx::query_scalar(VERSION_COUNT).fetch_one(conn))
                 .await
-                .map_err(ServiceError::from)?
         } else {
-            sqlx::query_scalar(
-                "SELECT count(*) FROM version v JOIN commit_audit a ON a.id = v.commit_audit_id \
-                 WHERE v.kind = 'COMPOSITION' \
-                   AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
-                   AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)",
-            )
-            .bind(lo)
-            .bind(hi)
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await
-            .map_err(ServiceError::from)?
-        };
+            lease
+                .run(|conn| {
+                    sqlx::query_scalar(VERSION_COUNT_IN_RANGE)
+                        .bind(lo)
+                        .bind(hi)
+                        .fetch_one(conn)
+                })
+                .await
+        }
+        .map_err(ServiceError::from)?;
         Ok(count)
     }
 }
