@@ -281,8 +281,10 @@ says what it runs:
   calendar years, such as `3` for a German SGB V § 309 controller with
   `config.audit.store.sgb_v_309_controller: true`.
 - **`config.audit.categories`:** an empty `templates` and `archetypes` map,
-  which records every access as `unclassified`. Map your templates and root
-  archetypes to their EHDS priority categories; the keys are template ids and
+  under which the [category map FerroEHR ships](config-audit.md#auditcategories)
+  applies: it classifies the published CKM templates and archetypes of one
+  priority category and records anything else as `unclassified`. Map your own
+  templates and root archetypes, which replaces the shipped map; the keys are template ids and
   archetype ids, so quote a template id that contains spaces:
 
 ```yaml
