@@ -353,7 +353,7 @@ async fn run(
             state.backend().import_ehr_extract(ehr_id, extract).await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted message extract operation: {other}"
         )))),
     }
@@ -371,7 +371,7 @@ fn query_ehr_id(parts: &RequestParts) -> Result<Option<EhrId>, RestError> {
         return Ok(None);
     };
     raw.parse::<EhrId>().map(Some).map_err(|e| {
-        RestError(ApiError::BadRequest(format!(
+        RestError::from(ApiError::BadRequest(format!(
             "query parameter `ehr_id` is not a well-formed EHR identifier: {e}"
         )))
     })

@@ -672,7 +672,7 @@ fn rbac_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opti
         return None;
     };
     count_auth_failure(mechanism_label(principal.method), "403");
-    let mut resp = RestError(ApiError::Forbidden(reason)).into_response();
+    let mut resp = RestError::from(ApiError::Forbidden(reason)).into_response();
     resp.extensions_mut().insert(principal.clone());
     Some(resp)
 }
@@ -711,7 +711,7 @@ fn smart_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opt
     };
     count_auth_failure(mechanism_label(principal.method), "403");
     tracing::debug!(reason, "a SMART on openEHR requirement was not met");
-    let mut resp = RestError(ApiError::Forbidden(
+    let mut resp = RestError::from(ApiError::Forbidden(
         "the credential does not permit this request".to_owned(),
     ))
     .into_response();
@@ -749,7 +749,7 @@ fn patient_data_refusal(
                 reason = "insufficient_user_authentication",
                 "patient-data request refused"
             );
-            let mut resp = RestError(ApiError::Unauthorized(
+            let mut resp = RestError::from(ApiError::Unauthorized(
                 "patient data requires a higher authentication assurance level".to_owned(),
             ))
             .into_response();
@@ -764,7 +764,7 @@ fn patient_data_refusal(
                 reason = "no_natural_person",
                 "patient-data request refused"
             );
-            RestError(ApiError::Forbidden(
+            RestError::from(ApiError::Forbidden(
                 "patient data requires a credential that names a natural person, or a \
                  client credential acting for a named professional"
                     .to_owned(),
@@ -847,7 +847,7 @@ fn refusal_response(auth: &Authenticator, headers: &header::HeaderMap, e: &AuthE
             "authentication refused"
         );
     }
-    let mut resp = RestError(api).into_response();
+    let mut resp = RestError::from(api).into_response();
     if matches!(
         status,
         StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN | StatusCode::BAD_REQUEST
@@ -939,7 +939,7 @@ impl<S: Sync> FromRequestParts<S> for AuthenticatedUser {
                 .cloned()
                 .map(AuthenticatedUser)
                 .ok_or_else(|| {
-                    RestError(ApiError::Unauthorized("authentication required".to_owned()))
+                    RestError::from(ApiError::Unauthorized("authentication required".to_owned()))
                 }),
         )
     }

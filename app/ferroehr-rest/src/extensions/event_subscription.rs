@@ -193,7 +193,7 @@ async fn run(
     // Config gate: the group is opt-in. When disabled every route answers 404
     // (as if unmounted) without consulting the backend.
     if !state.config().events_admin_api {
-        return Err(RestError(ApiError::NotFound(
+        return Err(RestError::from(ApiError::NotFound(
             "event subscription API is disabled".to_owned(),
         )));
     }
@@ -228,7 +228,7 @@ async fn run(
             state.backend().event_subscription_delete(id).await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted event subscription operation: {other}"
         )))),
     }
@@ -243,12 +243,12 @@ async fn run(
 )]
 fn subscription_id(parts: &RequestParts) -> Result<Uuid, RestError> {
     let raw = parts.path.get("subscription_id").ok_or_else(|| {
-        RestError(ApiError::Internal(
+        RestError::from(ApiError::Internal(
             "missing path parameter `subscription_id`".to_owned(),
         ))
     })?;
     raw.parse::<Uuid>().map_err(|_| {
-        RestError(ApiError::BadRequest(format!(
+        RestError::from(ApiError::BadRequest(format!(
             "invalid event subscription id `{raw}`"
         )))
     })

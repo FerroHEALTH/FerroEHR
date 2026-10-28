@@ -238,7 +238,7 @@ pub(super) fn ensure_served_version(addressed: &str, body: &Value) -> Result<(),
         .and_then(|u| u.get("value"))
         .and_then(Value::as_str)
     {
-        Some(served) if !served.eq_ignore_ascii_case(addressed) => Err(RestError(
+        Some(served) if !served.eq_ignore_ascii_case(addressed) => Err(RestError::from(
             ApiError::NotFound(format!("version {addressed}")),
         )),
         _ => Ok(()),

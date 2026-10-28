@@ -88,7 +88,7 @@ pub(super) async fn execute(
                 .execute_ad_hoc_query(body.q, request)
                 .await?)
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted ad-hoc query operation: {other}"
         )))),
     }

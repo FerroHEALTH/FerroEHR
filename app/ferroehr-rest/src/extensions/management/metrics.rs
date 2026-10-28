@@ -8,12 +8,6 @@
 //! and `metrics/{name}` the per-metric samples — parsed from the same
 //! exposition text so the two views can never disagree.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 8): genuinely open operational JSON (config \
-              dump, management env, validity-checker input, OpenAPI schema literals)"
-)]
-
 use std::collections::BTreeMap;
 
 use axum::Json;
@@ -46,11 +40,11 @@ pub(super) fn prometheus(telemetry: &Telemetry) -> Response {
 /// The `500` of a metrics surface whose exposition could not be rendered.
 fn unrendered(e: &ferrohealth_telemetry::telemetry::InitError) -> Response {
     tracing::error!(error = %e, "the metrics could not be rendered");
-    (
+    crate::overview::problem::Refused::blank(
         StatusCode::INTERNAL_SERVER_ERROR,
         "metrics could not be rendered",
     )
-        .into_response()
+    .into_response()
 }
 
 /// The `GET /management/metrics` body: the set of registered metric names.
@@ -97,11 +91,11 @@ pub(super) fn detail(telemetry: &Telemetry, Path(name): Path<String>) -> Respons
     };
     let (metric_type, help, measurements) = samples_for(&text, &name);
     if measurements.is_empty() && metric_type.is_none() && help.is_none() {
-        return (
+        return crate::overview::problem::Refused::blank(
             StatusCode::NOT_FOUND,
-            Json(serde_json::json!({ "error": format!("no such metric: {name}") })),
+            format!("no such metric: {name}"),
         )
-            .into_response();
+        .into_response();
     }
     Json(MetricDetail {
         name,

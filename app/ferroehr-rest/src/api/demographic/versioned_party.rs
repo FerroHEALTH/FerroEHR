@@ -100,7 +100,7 @@ pub(super) async fn run(
             // ORIGINAL_VERSION's commit_audit.time_committed.
             Ok(super::read_versioned(h, &vo, &resp.body))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted versioned_party operation: {other}"
         )))),
     }

@@ -275,7 +275,7 @@ async fn run(
                 &fail_reports(&reports),
             ))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin dump/load operation: {other}"
         )))),
     }
@@ -291,7 +291,7 @@ fn file_sys_loc(body: &Value) -> Result<String, RestError> {
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .ok_or_else(|| {
-            RestError(ApiError::BadRequest(
+            RestError::from(ApiError::BadRequest(
                 "request body must carry a non-empty `file_sys_loc` string (the SM \
                  file-system location parameter)"
                     .to_owned(),
@@ -307,7 +307,7 @@ fn export_spec(body: &Value) -> Result<ExportSpec, RestError> {
     // `ENCODING_FORMAT` (encoding_format.adoc) is an enumeration with NO
     // members, so no value a client can send names one.
     if body.get("encoding").is_some() {
-        return Err(RestError(ApiError::BadRequest(
+        return Err(RestError::from(ApiError::BadRequest(
             "`encoding` names an ENCODING_FORMAT member, and the vendored SM enumeration \
              (encoding_format.adoc) declares none — no value is representable"
                 .to_owned(),
@@ -322,7 +322,7 @@ fn export_spec(body: &Value) -> Result<ExportSpec, RestError> {
         // an omitted size takes 1024 kb so "just dump it" needs no tuning knob.
         None | Some(Value::Null) => 1024,
         Some(value) => value.as_i64().ok_or_else(|| {
-            RestError(ApiError::BadRequest(format!(
+            RestError::from(ApiError::BadRequest(format!(
                 "`segment_split_size` is the EXPORT_SPEC Integer size in kb, got {value}"
             )))
         })?,
@@ -333,7 +333,7 @@ fn export_spec(body: &Value) -> Result<ExportSpec, RestError> {
                   already states while echoing the rejected size"
     )]
     let segment_split_size = i32::try_from(segment_split_size).map_err(|_| {
-        RestError(ApiError::BadRequest(format!(
+        RestError::from(ApiError::BadRequest(format!(
             "`segment_split_size` {segment_split_size} is outside the representable kb range"
         )))
     })?;
@@ -356,12 +356,12 @@ fn enum_member<T: std::str::FromStr<Err = ()>>(
         None | Some(Value::Null) => Ok(None),
         Some(value) => {
             let raw = value.as_str().ok_or_else(|| {
-                RestError(ApiError::BadRequest(format!(
+                RestError::from(ApiError::BadRequest(format!(
                     "`{field}` must be a {enumeration} enumeration literal, got {value}"
                 )))
             })?;
             raw.parse::<T>().map(Some).map_err(|()| {
-                RestError(ApiError::BadRequest(format!(
+                RestError::from(ApiError::BadRequest(format!(
                     "`{field}` names no {enumeration} member: {raw:?}"
                 )))
             })

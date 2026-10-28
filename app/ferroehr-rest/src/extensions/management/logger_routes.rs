@@ -4,12 +4,6 @@
 //! Axum handlers for the logger-reload surface, over the console filter of
 //! `ferrohealth-telemetry`.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 8): genuinely open operational JSON (config \
-              dump, management env, validity-checker input, OpenAPI schema literals)"
-)]
-
 use axum::Json;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_telemetry::telemetry::InitError;
@@ -59,11 +53,11 @@ pub(super) fn reset(filter: &LogFilter) -> Response {
 fn answer(filter: &LogFilter, outcome: Result<(), InitError>, prefix: &str) -> Response {
     match outcome {
         Ok(()) => (StatusCode::OK, Json(view(filter))).into_response(),
-        Err(e) => (
+        Err(e) => crate::overview::problem::Refused::blank(
             refusal_status(&e),
-            Json(serde_json::json!({ "error": refusal_message(prefix, &e) })),
+            refusal_message(prefix, &e),
         )
-            .into_response(),
+        .into_response(),
     }
 }
 

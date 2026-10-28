@@ -46,12 +46,12 @@ use crate::overview::error::RestError;
 /// panic, and never a lookup with a fabricated id.
 fn path_ehr_id(parts: &RequestParts) -> Result<EhrId, RestError> {
     let raw = parts.path.get("ehr_id").ok_or_else(|| {
-        RestError(ApiError::BadRequest(
+        RestError::from(ApiError::BadRequest(
             "missing path parameter 'ehr_id'".to_owned(),
         ))
     })?;
     raw.parse::<EhrId>().map_err(|e| {
-        RestError(ApiError::BadRequest(format!(
+        RestError::from(ApiError::BadRequest(format!(
             "path parameter `ehr_id` is not a well-formed EHR identifier: {e}"
         )))
     })

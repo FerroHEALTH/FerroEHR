@@ -336,7 +336,7 @@ fn server_disposition(authz: Option<&AuthzHandle>) -> (EhrAccessDefault, &str) {
 /// ITS-REST `401`/`403` discipline).
 fn forbidden(principal: Option<&Principal>, detail: &str) -> Response {
     let mut resp =
-        RestError(ApiError::Forbidden(format!("access denied: {detail}"))).into_response();
+        RestError::from(ApiError::Forbidden(format!("access denied: {detail}"))).into_response();
     if let Some(principal) = principal {
         resp.extensions_mut().insert(principal.clone());
     }
@@ -346,7 +346,7 @@ fn forbidden(principal: Option<&Principal>, detail: &str) -> Response {
 /// A `500` (fail-closed) when the settings cannot be read — an access decision
 /// must never proceed on unknown policy.
 fn server_error(principal: Option<&Principal>, detail: &str) -> Response {
-    let mut resp = RestError(crate::overview::error::internal_fault(
+    let mut resp = RestError::from(crate::overview::error::internal_fault(
         "read the EHR access-control settings",
         &detail,
     ))

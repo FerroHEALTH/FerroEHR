@@ -350,7 +350,7 @@ async fn run(
             state.backend().restore_archived_parties(ids).await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin archive operation: {other}"
         )))),
     }
@@ -366,7 +366,7 @@ fn id_list(body: &serde_json::Value, field: &str) -> Result<Vec<String>, RestErr
         .get(field)
         .and_then(serde_json::Value::as_array)
         .ok_or_else(|| {
-            RestError(ApiError::BadRequest(format!(
+            RestError::from(ApiError::BadRequest(format!(
                 "request body must be an object with a `{field}` array of ids"
             )))
         })?;
@@ -374,7 +374,7 @@ fn id_list(body: &serde_json::Value, field: &str) -> Result<Vec<String>, RestErr
         .iter()
         .map(|item| {
             item.as_str().map(str::to_owned).ok_or_else(|| {
-                RestError(ApiError::BadRequest(format!(
+                RestError::from(ApiError::BadRequest(format!(
                     "every `{field}` element must be a string id, got {item}"
                 )))
             })

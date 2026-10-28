@@ -140,5 +140,6 @@ pub mod committal;
 pub mod error;
 pub mod negotiate;
 pub mod params;
+pub mod problem;
 pub mod status;
 pub mod version_id;

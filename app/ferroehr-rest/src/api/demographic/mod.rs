@@ -266,7 +266,7 @@ fn set_item_tag_headers(resp_out: &mut Response, resp: &ServiceResponse) {
 /// No `Location`: an error response creates nothing, and overview §Location
 /// scopes the header to creation/redirect responses only.
 fn error_with_meta(error: ApiError, meta: Option<&ResourceMeta>) -> Response {
-    let mut out = RestError(error).into_response();
+    let mut out = RestError::from(error).into_response();
     set_versioning_headers(&mut out, meta);
     out
 }

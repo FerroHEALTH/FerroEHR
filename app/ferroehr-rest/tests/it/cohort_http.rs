@@ -239,9 +239,9 @@ async fn an_unbound_predicate_is_refused() {
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{text}");
-    let error: Value = serde_json::from_str(&text).expect("an openEHR error body");
+    let error: Value = serde_json::from_str(&text).expect("problem details");
     assert!(
-        error.get("message").is_some() && error.get("error").is_some(),
+        error.get("type").is_some() && error.get("detail").is_some(),
         "the refusal uses the server's one error shape: {text}"
     );
     assert!(

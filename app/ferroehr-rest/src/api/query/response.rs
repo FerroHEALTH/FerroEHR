@@ -74,9 +74,9 @@ pub(super) fn decode_body<T: serde::de::DeserializeOwned>(
     h: &HeaderMap,
     body: &bytes::Bytes,
 ) -> Result<T, RestError> {
-    let value = negotiate::json_value(h, body).map_err(RestError)?;
+    let value = negotiate::json_value(h, body).map_err(RestError::from)?;
     serde_json::from_value(value).map_err(|e| {
-        RestError(ApiError::BadRequest(format!(
+        RestError::from(ApiError::BadRequest(format!(
             "invalid query request body: {e}"
         )))
     })
@@ -137,7 +137,7 @@ pub(super) fn ehr_id_from_request(
 /// The `400` for a request whose `ehr_id` query parameter and `openehr-ehr-id`
 /// header name different EHRs (see [`ehr_id_from_request`]).
 fn conflicting_ehr_id(first: &str, second: &str) -> RestError {
-    RestError(ApiError::BadRequest(format!(
+    RestError::from(ApiError::BadRequest(format!(
         "conflicting EHR scope: the `ehr_id` query parameter and the `{H_EHR_ID}` \
          request header name different EHRs (`{first}` vs `{second}`)"
     )))
@@ -147,7 +147,7 @@ fn conflicting_ehr_id(first: &str, second: &str) -> RestError {
 /// the generated `*BodyParams` for POST carry only the name and version parts.
 pub(super) fn path_segment(parts: &RequestParts, key: &str) -> Result<String, RestError> {
     parts.path.get(key).cloned().ok_or_else(|| {
-        RestError(ApiError::BadRequest(format!(
+        RestError::from(ApiError::BadRequest(format!(
             "missing path parameter `{key}`"
         )))
     })
@@ -231,14 +231,14 @@ pub(super) fn merge_body_and_url_i64(
     let url = crate::params::query_param(query, key)
         .map(|raw| {
             raw.parse::<i64>().map_err(|_| {
-                RestError(ApiError::BadRequest(format!(
+                RestError::from(ApiError::BadRequest(format!(
                     "the `{key}` query parameter is not an integer: {raw:?}"
                 )))
             })
         })
         .transpose()?;
     match (body, url) {
-        (Some(b), Some(u)) if b != u => Err(RestError(ApiError::BadRequest(format!(
+        (Some(b), Some(u)) if b != u => Err(RestError::from(ApiError::BadRequest(format!(
             "`{key}` is {b} in the request body but {u} in the URL — a request may \
              carry the value in either place, not two disagreeing ones"
         )))),
@@ -264,7 +264,7 @@ pub(super) fn merge_body_and_url_parameters(
         if let Some(body_value) = body.get(key)
             && body_value != url_value
         {
-            return Err(RestError(ApiError::BadRequest(format!(
+            return Err(RestError::from(ApiError::BadRequest(format!(
                 "query parameter `{key}` differs between the request body and the URL"
             ))));
         }
@@ -456,7 +456,11 @@ mod tests {
         // text assigns a precedence, so this handling is our own.
         let h = headers(&[(H_EHR_ID, "from-header")]);
         let err = ehr_id_from_request(Some("from-query".to_owned()), &h).unwrap_err();
-        assert!(matches!(err.0, ApiError::BadRequest(_)), "got {:?}", err.0);
+        assert!(
+            matches!(err.error(), ApiError::BadRequest(_)),
+            "got {:?}",
+            err.error()
+        );
     }
 
     #[test]
@@ -467,7 +471,7 @@ mod tests {
         conflicting.append(H_EHR_ID, HeaderValue::from_static("a"));
         conflicting.append(H_EHR_ID, HeaderValue::from_static("b"));
         assert!(matches!(
-            ehr_id_from_request(None, &conflicting).unwrap_err().0,
+            ehr_id_from_request(None, &conflicting).unwrap_err().error(),
             ApiError::BadRequest(_)
         ));
 
@@ -505,9 +509,9 @@ mod tests {
         let err =
             decode_body::<serde_json::Value>(&xml_h, &Bytes::from_static(b"<q/>")).unwrap_err();
         assert!(
-            matches!(err.0, ApiError::UnsupportedMediaType(_)),
+            matches!(err.error(), ApiError::UnsupportedMediaType(_)),
             "got {:?}",
-            err.0
+            err.error()
         );
     }
 

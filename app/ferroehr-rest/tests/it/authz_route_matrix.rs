@@ -646,13 +646,13 @@ struct Probe {
     refusal: Option<Refusal>,
 }
 
-/// Classify a `403` body by the reason the RBAC layer renders — the openEHR
-/// `{ error, message }` shape, or a FHIR `OperationOutcome` where the handler
+/// Classify a `403` body by the reason the RBAC layer renders — the problem
+/// details' `detail`, or a FHIR `OperationOutcome` where the handler
 /// gate speaks FHIR (the ITI-81 retrieval).
 fn reason_of(body: &[u8]) -> Option<Refusal> {
     let value: Value = serde_json::from_slice(body).ok()?;
     let message = value
-        .get("message")
+        .get("detail")
         .and_then(Value::as_str)
         .or_else(|| {
             value

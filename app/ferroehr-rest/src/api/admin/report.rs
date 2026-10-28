@@ -406,7 +406,7 @@ async fn run(
                 .await?;
             Ok(negotiate::respond(h, StatusCode::OK, &count))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin report operation: {other}"
         )))),
     }
@@ -416,12 +416,12 @@ async fn run(
 /// member; absent or unknown → `400` (SM `precondition_violation`).
 fn platform_service(query: Option<&str>) -> Result<PlatformService, RestError> {
     let raw = params::query_param(query, "a_service").ok_or_else(|| {
-        RestError(ApiError::BadRequest(
+        RestError::from(ApiError::BadRequest(
             "query parameter `a_service` is required (a PLATFORM_SERVICE member)".to_owned(),
         ))
     })?;
     raw.parse::<PlatformService>().map_err(|()| {
-        RestError(ApiError::BadRequest(format!(
+        RestError::from(ApiError::BadRequest(format!(
             "query parameter `a_service` names no PLATFORM_SERVICE member: {raw:?}"
         )))
     })
@@ -441,7 +441,7 @@ fn time_interval(query: Option<&str>) -> Result<StatTimeRange, RestError> {
         return Ok(None);
     };
     let (lower, upper) = raw.split_once('/').ok_or_else(|| {
-        RestError(ApiError::BadRequest(format!(
+        RestError::from(ApiError::BadRequest(format!(
             "query parameter `time_interval` must be `<lower>/<upper>` (either bound may be \
              empty), got {raw:?}"
         )))

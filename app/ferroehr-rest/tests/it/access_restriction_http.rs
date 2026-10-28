@@ -234,9 +234,9 @@ async fn composition_uids(app: &Router, user: &str, purpose: Option<&str>) -> Ve
         .collect()
 }
 
-/// The `error` member of an error body.
+/// The problem type of an error body.
 fn error_kind(body: &str) -> Value {
-    serde_json::from_str::<Value>(body).expect("an error body")["error"].clone()
+    serde_json::from_str::<Value>(body).expect("an error body")["type"].clone()
 }
 
 /// A restricted composition answers every professional read as an unknown one

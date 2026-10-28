@@ -306,7 +306,7 @@ async fn run(
                 &rebuild_report(&report),
             ))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin integrity operation: {other}"
         )))),
     }
@@ -324,7 +324,7 @@ async fn run(
 fn parity_scope(query: Option<&str>) -> Result<StorageParityScope, RestError> {
     let ehr_id = match params::query_param(query, "ehr_id") {
         Some(raw) => Some(raw.parse::<uuid::Uuid>().map_err(|e| {
-            RestError(ApiError::BadRequest(format!(
+            RestError::from(ApiError::BadRequest(format!(
                 "query parameter `ehr_id` must be a UUID, got {raw:?}: {e}"
             )))
         })?),
@@ -332,7 +332,7 @@ fn parity_scope(query: Option<&str>) -> Result<StorageParityScope, RestError> {
     };
     let committed_since = match params::query_param(query, "committed_since") {
         Some(raw) => Some(raw.parse::<jiff::Timestamp>().map_err(|e| {
-            RestError(ApiError::BadRequest(format!(
+            RestError::from(ApiError::BadRequest(format!(
                 "query parameter `committed_since` must be an RFC 3339 timestamp, got \
                  {raw:?}: {e}"
             )))
@@ -341,7 +341,7 @@ fn parity_scope(query: Option<&str>) -> Result<StorageParityScope, RestError> {
     };
     let vo_id = match params::query_param(query, "vo_id") {
         Some(raw) => Some(raw.parse::<uuid::Uuid>().map_err(|e| {
-            RestError(ApiError::BadRequest(format!(
+            RestError::from(ApiError::BadRequest(format!(
                 "query parameter `vo_id` must be a UUID, got {raw:?}: {e}"
             )))
         })?),
@@ -349,7 +349,7 @@ fn parity_scope(query: Option<&str>) -> Result<StorageParityScope, RestError> {
     };
     let sys_version = match params::query_param(query, "sys_version") {
         Some(raw) => Some(raw.parse::<i32>().map_err(|e| {
-            RestError(ApiError::BadRequest(format!(
+            RestError::from(ApiError::BadRequest(format!(
                 "query parameter `sys_version` must be an integer, got {raw:?}: {e}"
             )))
         })?),
@@ -359,7 +359,7 @@ fn parity_scope(query: Option<&str>) -> Result<StorageParityScope, RestError> {
     // every object in the scope — which is never what an operator naming a
     // version means.
     if sys_version.is_some() && vo_id.is_none() {
-        return Err(RestError(ApiError::BadRequest(
+        return Err(RestError::from(ApiError::BadRequest(
             "query parameter `sys_version` names a version of one object and needs `vo_id`"
                 .to_owned(),
         )));

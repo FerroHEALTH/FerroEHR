@@ -490,33 +490,36 @@ impl CdrClient {
     }
 }
 
-/// The `validationErrors` entries of an openEHR error body, one string each.
+/// The `errors` entries of a problem, one `path: detail` line each.
 ///
-/// The released error shape declares the member as required and carries one
-/// string per violation
-/// (`docs/specs/openehr/ITS-REST/specifications/schemas/others/Error.yaml`),
-/// so a `422` can name every offending path instead of one generic line.
-fn validation_errors(value: &serde_json::Value) -> Vec<String> {
+/// FerroEHR's `validation-failed` problem lists every violation as
+/// `{path, detail}` in its `errors` member, the additional detail a request
+/// with `Prefer: return=representation` receives, so a `422` can name every
+/// offending path instead of one generic line.
+fn problem_errors(value: &serde_json::Value) -> Vec<String> {
     value
-        .get("validationErrors")
+        .get("errors")
         .and_then(serde_json::Value::as_array)
         .map(|entries| {
             entries
                 .iter()
-                .map(|entry| {
-                    entry
-                        .as_str()
-                        .map_or_else(|| entry.to_string(), str::to_owned)
+                .filter_map(|entry| {
+                    let detail = entry.get("detail").and_then(serde_json::Value::as_str)?;
+                    Some(
+                        match entry.get("path").and_then(serde_json::Value::as_str) {
+                            Some(path) if !path.is_empty() => format!("{path}: {detail}"),
+                            _ => detail.to_owned(),
+                        },
+                    )
                 })
-                .filter(|text| !text.is_empty())
                 .collect()
         })
         .unwrap_or_default()
 }
 
 /// Pull the human diagnostic out of a refused body, whatever its vocabulary:
-/// the openEHR error shape (`{"message": …, "validationErrors": […]}` per
-/// ITS-REST — the message first, then one line per violation) or a FHIR
+/// RFC 9457 problem details (`detail`, else `title`, then one line per
+/// entry of `errors`) or a FHIR
 /// `OperationOutcome` (the connector authors its refusals as outcomes — their
 /// `issue[].diagnostics` join into one line), falling back to the raw body or
 /// the bare status. ONE reader for both vocabularies, so no screen ever hands
@@ -567,8 +570,8 @@ fn diagnostic_of(response: &CdrResponse) -> String {
                 return joined;
             }
         }
-        let details = validation_errors(&value);
-        for key in ["message", "error"] {
+        let details = problem_errors(&value);
+        for key in ["detail", "title"] {
             if let Some(text) = value.get(key).and_then(serde_json::Value::as_str) {
                 return std::iter::once(text.to_owned())
                     .chain(details)
@@ -631,22 +634,24 @@ mod tests {
     }
 
     #[test]
-    fn diagnostic_prefers_the_openehr_message_field() {
+    fn diagnostic_prefers_the_problem_detail() {
         let r = response(
             http::StatusCode::BAD_REQUEST,
-            r#"{"error":"Bad Request","message":"AQL syntax error at line 1"}"#,
+            r#"{"type":"https://ferroehr.eu/docs/latest/using-the-api/problems.html#aql-invalid",
+                "title":"The AQL query is not valid","status":400,
+                "detail":"AQL syntax error at line 1"}"#,
         );
         assert_eq!(diagnostic_of(&r), "AQL syntax error at line 1");
     }
 
     #[test]
-    fn diagnostic_falls_back_to_error_then_raw_then_status() {
+    fn diagnostic_falls_back_to_title_then_raw_then_status() {
         assert_eq!(
             diagnostic_of(&response(
                 http::StatusCode::CONFLICT,
-                r#"{"error":"duplicate"}"#
+                r#"{"type":"about:blank","title":"Conflict","status":409}"#
             )),
-            "duplicate"
+            "Conflict"
         );
         assert_eq!(
             diagnostic_of(&response(http::StatusCode::IM_A_TEAPOT, "teapot")),
@@ -659,15 +664,15 @@ mod tests {
     }
 
     #[test]
-    fn every_validation_error_gets_its_own_line_under_the_message() {
-        // `Error.yaml` declares `validationErrors` as a required member: a 422
-        // names each offending path, so the reader renders all of them.
+    fn every_validation_error_gets_its_own_line_under_the_detail() {
+        // The `validation-failed` problem lists each violation in `errors`: a
+        // 422 names each offending path, so the reader renders all of them.
         let r = response(
             http::StatusCode::UNPROCESSABLE_ENTITY,
-            r#"{"message":"Validation failed","validationErrors":[
-                "/content[0]/data: missing mandatory element",
-                "/content[0]/items[1]: cardinality 1..1 violated",
-                "/context/start_time: value is not a DV_DATE_TIME"]}"#,
+            r#"{"type":"about:blank","status":422,"detail":"Validation failed","errors":[
+                {"path":"/content[0]/data","detail":"missing mandatory element"},
+                {"path":"/content[0]/items[1]","detail":"cardinality 1..1 violated"},
+                {"path":"/context/start_time","detail":"value is not a DV_DATE_TIME"}]}"#,
         );
         assert_eq!(
             diagnostic_of(&r),
@@ -677,16 +682,16 @@ mod tests {
     }
 
     #[test]
-    fn validation_errors_render_even_without_a_message_member() {
+    fn validation_errors_render_even_without_a_detail_member() {
         let r = response(
             http::StatusCode::UNPROCESSABLE_ENTITY,
-            r#"{"validationErrors":["/content: missing"]}"#,
+            r#"{"status":422,"errors":[{"path":"/content","detail":"missing"}]}"#,
         );
         assert_eq!(diagnostic_of(&r), "/content: missing");
-        // An empty list leaves the message exactly as it was.
+        // An empty list leaves the detail exactly as it was.
         let plain = response(
             http::StatusCode::UNPROCESSABLE_ENTITY,
-            r#"{"message":"Validation failed","validationErrors":[]}"#,
+            r#"{"status":422,"detail":"Validation failed","errors":[]}"#,
         );
         assert_eq!(diagnostic_of(&plain), "Validation failed");
     }
@@ -768,7 +773,7 @@ mod tests {
         // different next actions, so two variants.
         let unauthorized = CdrClient::expect_success(response(
             http::StatusCode::UNAUTHORIZED,
-            r#"{"message":"the bearer token has expired"}"#,
+            r#"{"status":401,"detail":"the bearer token has expired"}"#,
         ))
         .unwrap_err();
         assert_eq!(
@@ -782,7 +787,7 @@ mod tests {
 
         let err = CdrClient::expect_success(response(
             http::StatusCode::FORBIDDEN,
-            r#"{"message":"scope"}"#,
+            r#"{"status":403,"detail":"scope"}"#,
         ))
         .unwrap_err();
         assert_eq!(err, ViewerError::Forbidden("scope".to_owned()));
@@ -791,7 +796,7 @@ mod tests {
         // A diagnostic that repeats the refusal's own word reads once.
         let err = CdrClient::expect_success(response(
             http::StatusCode::FORBIDDEN,
-            r#"{"error":"forbidden: operation requires the 'ADMIN' role"}"#,
+            r#"{"status":403,"detail":"forbidden: operation requires the 'ADMIN' role"}"#,
         ))
         .unwrap_err();
         assert_eq!(
@@ -800,7 +805,7 @@ mod tests {
         );
         let err = CdrClient::expect_success(response(
             http::StatusCode::FORBIDDEN,
-            r#"{"error":"forbidden"}"#,
+            r#"{"status":403,"detail":"forbidden"}"#,
         ))
         .unwrap_err();
         assert_eq!(err.to_string(), "forbidden: the CDR refused this session");

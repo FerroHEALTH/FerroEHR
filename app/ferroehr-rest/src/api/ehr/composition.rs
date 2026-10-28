@@ -80,7 +80,7 @@ async fn decode_composition_body(
         Some(WireFormat::Structured) => typed_composition(
             &crate::formats::dispatch::composition_from_structured(state, h, body).await?,
         ),
-        _ => Err(RestError(ApiError::UnsupportedMediaType(
+        _ => Err(RestError::from(ApiError::UnsupportedMediaType(
             "a COMPOSITION is committed as application/json, application/xml, \
              application/openehr.wt.flat+json, or application/openehr.wt.structured+json"
                 .to_owned(),
@@ -100,7 +100,7 @@ fn typed_composition(value: &Value) -> Result<Composition, RestError> {
         } else {
             ""
         };
-        RestError(ApiError::Unprocessable(format!(
+        RestError::from(ApiError::Unprocessable(format!(
             "the simplified-format body did not convert to a valid COMPOSITION: {detail}{hint}"
         )))
     })
@@ -119,7 +119,7 @@ pub(super) async fn run(
         "composition_tags_get" => tags_get(state, parts).await,
         "composition_tags_update" => tags_update(state, parts).await,
         "composition_tags_delete" => tags_delete(state, parts).await,
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted ehr operation: {other}"
         )))),
     }

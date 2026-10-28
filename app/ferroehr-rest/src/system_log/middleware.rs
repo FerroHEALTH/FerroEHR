@@ -377,7 +377,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         // must not be reported as having succeeded. No openEHR spec governs the
         // error-body shape (a MAY, `Requests_and_responses.md` §HTTP status
         // codes) — our own design keeps every error path consistent.
-        let mut resp = RestError(ApiError::ServiceUnavailable(
+        let mut resp = RestError::from(ApiError::ServiceUnavailable(
             "audit trail unavailable (fail-closed)".to_owned(),
         ))
         .into_response();

@@ -405,46 +405,63 @@ against the versioned object only, so both headers carry the same list there.)
 ## Error responses
 
 Errors use conventional HTTP status codes (see the summary in
-[Resource walkthroughs](resources.md#status-code-summary)) with **one uniform
-JSON body shape**: the openEHR `Error` object's members plus a
-machine-readable `error` reason phrase:
+[Resource walkthroughs](resources.md#status-code-summary)) with one body
+shape on every openEHR and extension route: RFC 9457
+[problem details](https://www.rfc-editor.org/rfc/rfc9457), media type
+`application/problem+json`. The body is JSON, so a client that sends
+`Accept: application/json` reads it as well. The FHIR routes under
+`/ferroehr/rest/fhir/r4/` answer a FHIR `OperationOutcome` instead.
 
-- **Validation errors** (a composition that fails its template) populate the
-  list:
+```json
+{
+  "type": "https://ferroehr.eu/docs/latest/using-the-api/problems.html#validation-failed",
+  "title": "The content fails validation",
+  "status": 422,
+  "detail": "the content fails validation at 2 path(s); a request with `Prefer: return=representation` receives each path and its violation",
+  "instance": "urn:uuid:0190a6f3-7c1e-7d7a-9f43-1c5b8a2e4d10"
+}
+```
+
+- `type` names the problem. A refusal you can act on has a FerroEHR type,
+  documented on [Problem types](problems.md); every other error is
+  `about:blank`, whose `title` is the status phrase, such as `Not Found`.
+- `title` is the same for every occurrence of a type; `detail` explains this
+  occurrence.
+- `status` repeats the HTTP status.
+- `instance` is the server's request id, the one the `X-Request-Id` response
+  header and the server log carry, so an operator can find the request.
+
+The openEHR REST specification lets a server return additional error details
+when the request carries `Prefer: return=representation`. FerroEHR does: with
+that header, a problem carries its extension members, and the response says
+`Preference-Applied: return=representation`.
+
+- `validation-failed` lists every violation in `errors`, as
+  `{"path": …, "detail": …}`, so a client can point the user at the exact
+  offending node:
 
   ```json
-  {
-    "message": "Composition validation failed",
-    "validationErrors": [
-      "/content[0]/data/events[0]/data/items[1]/value/magnitude: value out of range",
-      "/content[0]/data/events[0]/data/items[2]/value/defining_code: code not in group"
-    ],
-    "error": "Unprocessable Entity"
-  }
+  "errors": [
+    { "path": "/content[0]/data/events[0]/data/items[1]/value/magnitude", "detail": "value out of range" },
+    { "path": "/content[0]/data/events[0]/data/items[2]/value/defining_code", "detail": "code not in group" }
+  ]
   ```
 
-  Each entry is `"<path>: <message>"`, so a client can point the user at the
-  exact offending node. A refusal from the
+  A refusal from the
   [data-minimisation rules](../installation/config-privacy.md) uses the same
-  list and the same shape, with one entry per finding, and deliberately never
-  echoes the value that matched: repeating it would carry the identifier into
-  the response body, the access log and the traces.
+  list, with one entry per finding, and deliberately never echoes the value
+  that matched: repeating it would carry the identifier into the response
+  body, the access log and the traces.
+- `aql-invalid` gives the byte range of the AQL text it points at as
+  `position`, `{"start": …, "end": …}`.
+- `version-conflict` names the latest version as `current_version`, the same
+  value its `ETag` carries.
 
-- **All other errors** carry the same shape with an empty list:
+No problem carries a stack trace, SQL, a server path or a value from the
+store: a server fault is a `500` with a fixed detail.
 
-  ```json
-  { "message": "No EHR with id …", "validationErrors": [], "error": "Not Found" }
-  ```
-
-  This shape is used consistently, including for `405 Method Not Allowed` and
-  `501 Not Implemented`, which some servers leave bodyless, and for the two
-  refusals that come from the transport layer rather than a handler:
-  `408 Request Timeout` (the request exceeded the server's request-execution
-  limit) and `413 Payload Too Large` (the request body exceeds the accepted
-  size).
-
-Match on the HTTP status first; read the body for the human-readable detail and,
-for validation, the per-node list.
+Match on the HTTP status first, then on `type`; read `detail` for the
+human-readable explanation.
 
 ### `405` always names the allowed methods
 
@@ -456,9 +473,9 @@ requires, so a client can discover the right method without guessing:
 ```http
 HTTP/1.1 405 Method Not Allowed
 Allow: GET,HEAD,PUT
-Content-Type: application/json
+Content-Type: application/problem+json
 
-{ "message": "the request method is not allowed on this resource", "validationErrors": [], "error": "Method Not Allowed" }
+{ "type": "about:blank", "title": "Method Not Allowed", "status": 405, "detail": "the request method is not allowed on this resource" }
 ```
 
 Whether a method is served depends on the resource, never on your credential.

@@ -121,7 +121,7 @@ pub(super) async fn run(
             // types; RM common version.adoc `Owner_id_valid`), so an incoherent
             // pair names nothing here and is a 404.
             if crate::overview::version_id::object_id_uuid(&ovid) != Some(vo_id) {
-                return Err(RestError(ApiError::NotFound(format!(
+                return Err(RestError::from(ApiError::NotFound(format!(
                     "version {} in versioned object {}",
                     p.version_uid, p.versioned_object_uid
                 ))));
@@ -142,7 +142,7 @@ pub(super) async fn run(
                 VERSION_ROOT_TAG,
             ))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted ehr operation: {other}"
         )))),
     }

@@ -1209,7 +1209,7 @@ pub(super) async fn run(
                 .await?;
             Ok(super::read_versioned(h, &vo, &resp.body))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted demographic relationship operation: {other}"
         )))),
     }

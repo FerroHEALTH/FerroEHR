@@ -76,8 +76,10 @@ async fn run(
         "contribution_create" | "contribution_get" | "contribution_list" => {
             super::contribution::run(state, op, parts).await
         }
-        other => Err(RestError(openehr_its::rest::runtime::ApiError::Internal(
-            format!("unrouted ehr operation: {other}"),
-        ))),
+        other => Err(RestError::from(
+            openehr_its::rest::runtime::ApiError::Internal(format!(
+                "unrouted ehr operation: {other}"
+            )),
+        )),
     }
 }

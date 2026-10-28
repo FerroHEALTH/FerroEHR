@@ -83,7 +83,7 @@ pub(super) async fn run(
             super::set_versioning_headers(&mut out, Some(&meta));
             Ok(out)
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted demographic contribution operation: {other}"
         )))),
     }

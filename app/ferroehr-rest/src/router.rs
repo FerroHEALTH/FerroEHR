@@ -17,8 +17,8 @@
 //! layer would otherwise treat it as a preflight. [`router`] wraps those routes
 //! in `ferrohealth_server::stack::app`, which adds the request id, the panic
 //! catch, the request timeout, the body limit, the overload bound, compression,
-//! the request log and the health routes, and writes its panics and refusals in
-//! the openEHR `{ error, message }` body ([`stack_policy`]). The trailing-slash
+//! the request log and the health routes, and writes its panics and refusals as
+//! RFC 9457 problem details ([`stack_policy`]). The trailing-slash
 //! normalization runs before routing and the security headers outermost.
 //!
 //! The overload bound covers every FerroEHR route and never the health routes,
@@ -36,15 +36,14 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::middleware::from_fn_with_state;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use ferrohealth_server::caller_rate::{self, CallerKey, CallerLimit};
 use ferrohealth_server::health::Health;
 use ferrohealth_server::panic::PanicBody;
 use ferrohealth_server::refusal::RefusalBody;
 use ferrohealth_server::stack::{self, StackPolicy};
 use http::header::AUTHORIZATION;
-use http::{HeaderName, HeaderValue, header};
-use openehr_its::rest::runtime::ApiError;
+use http::{HeaderName, HeaderValue, StatusCode, header};
 use tower::{Layer as _, ServiceBuilder};
 use tower_http::cors::CorsLayer;
 use tower_http::normalize_path::NormalizePathLayer;
@@ -55,6 +54,7 @@ use crate::api::system;
 use crate::extensions::access::authn::{self, Authenticator, Principal};
 use crate::extensions::management::{self, ManagementState};
 use crate::extensions::openapi;
+use crate::overview::problem::{self, FhirBase};
 use crate::overview::{error, status};
 use crate::smart;
 use crate::state::AppState;
@@ -83,7 +83,10 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
         product,
         health,
         &cfg.server,
-        stack_policy(observability.request_log.clone()),
+        stack_policy(
+            observability.request_log.clone(),
+            FhirBase::of(&cfg.rest.rest_root()),
+        ),
     );
     with_security_headers(normalized(app))
 }
@@ -165,7 +168,13 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     // buffered or audited; the stack's body limit is the ceiling of every route.
     let api = api.layer(from_fn_with_state(state.clone(), crate::limits::middleware));
 
-    let inner = mount_public_surface(&cfg, &state, authenticator, api, &rest_root);
+    // A path no route serves answers a `404` problem, never an empty body.
+    let inner = mount_public_surface(&cfg, &state, authenticator, api, &rest_root)
+        .fallback(not_found)
+        .layer(from_fn_with_state(
+            FhirBase::of(&rest_root),
+            problem::finish,
+        ));
 
     let cors = if cfg.rest.cors_permissive {
         CorsLayer::very_permissive()
@@ -209,6 +218,11 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     inner.merge(Router::new().route(&cfg.rest.base_path, system::options::route(manifest)))
 }
 
+/// The `404` of a path no route serves, as an `about:blank` problem.
+async fn not_found() -> Response {
+    error::status_error_response(StatusCode::NOT_FOUND, "no resource is served at this path")
+}
+
 /// Puts the authenticated subject on the request as the caller the
 /// `[server.caller_rate]` limit keys on.
 ///
@@ -229,38 +243,41 @@ async fn caller_key(mut request: axum::extract::Request, next: axum::middleware:
 /// What FerroEHR decides inside the family stack.
 ///
 /// A panic and each refusal the stack writes (`408`, `413`, `429`, `503`)
-/// answer the openEHR `{ error, message }` body, and the request log is the one
-/// the observability bundle carries.
+/// answer as problem details, or as an `OperationOutcome` under the FHIR base
+/// ([`problem::stack_answer`]), and the request log is the one the
+/// observability bundle carries.
 #[must_use]
-pub fn stack_policy(request_log: RequestLog) -> StackPolicy {
+pub fn stack_policy(request_log: RequestLog, fhir: FhirBase) -> StackPolicy {
     StackPolicy {
-        panic_body: panic_body(),
-        refusal_body: refusal_body(),
+        panic_body: panic_body(fhir.clone()),
+        refusal_body: refusal_body(fhir),
         request_log,
     }
 }
 
-/// Renders a panicked handler as a `500` in the openEHR `{ error, message }`
-/// body every other error path emits ([`crate::overview::error`]).
-///
-/// The panic payload never reaches the body or the log. No openEHR spec governs
-/// the error-body shape (a MAY, `Requests_and_responses.md` §HTTP status codes)
-/// — our own design.
-fn panic_body() -> PanicBody {
-    Arc::new(|_uri, _request_id| {
-        error::RestError(ApiError::Internal(error::INTERNAL_MESSAGE.to_owned())).into_response()
+/// Renders a panicked handler as a `500` problem with the curated opaque
+/// detail; the panic payload never reaches the body or the log.
+fn panic_body(fhir: FhirBase) -> PanicBody {
+    Arc::new(move |uri, request_id| {
+        problem::stack_answer(
+            &fhir,
+            uri,
+            request_id,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            error::INTERNAL_MESSAGE,
+        )
     })
 }
 
-/// Renders a refusal the stack writes itself in the openEHR
-/// `{ error, message }` body, keeping its status.
+/// Renders a refusal the stack writes itself as a problem, keeping its
+/// status.
 ///
 /// `408` is a predefined status (`Requests_and_responses.md` §HTTP status
-/// codes) and `413`, `429` and `503` additional codes the same section permits;
-/// the error body itself is a MAY there, so this is consistency across our own
-/// surface.
-fn refusal_body() -> RefusalBody {
-    Arc::new(|_uri, _request_id, status, reason| error::status_error_response(status, reason))
+/// codes) and `413`, `429` and `503` additional codes the same section permits.
+fn refusal_body(fhir: FhirBase) -> RefusalBody {
+    Arc::new(move |uri, request_id, status, reason| {
+        problem::stack_answer(&fhir, uri, request_id, status, reason)
+    })
 }
 
 /// Trims a trailing slash before routing, so `/ehr/` and `/ehr` reach one route.
@@ -389,12 +406,13 @@ pub fn management_router(state: &AppState, authenticator: Arc<Authenticator>) ->
         state,
         authenticator,
         management_rbac(state),
-    ));
+    ))
+    .layer(from_fn_with_state(FhirBase::default(), problem::finish));
     normalized(stack::app(
         routes,
         health,
         &state.config().server,
-        stack_policy(observability.request_log.clone()),
+        stack_policy(observability.request_log.clone(), FhirBase::default()),
     ))
 }
 
@@ -404,42 +422,69 @@ mod tests {
     use http::StatusCode;
 
     use super::{panic_body, refusal_body};
+    use crate::overview::problem::{BASE, FhirBase};
 
-    /// A panicked handler renders the standard openEHR `{ error, message }`
-    /// JSON 500 body (never a bare status), and nothing of the request reaches
-    /// it.
+    const ID: &str = "0190a6f3-7c1e-7d7a-9f43-1c5b8a2e4d10";
+
+    /// A panicked handler renders the problem details every other error path
+    /// emits (never a bare status), and nothing of the request reaches it.
     #[tokio::test]
-    async fn the_panic_body_is_the_openehr_error_body() {
-        let uri: http::Uri = "/ferroehr/rest/openehr/v1/ehr".parse().unwrap();
-        let resp = panic_body()(&uri, "0190a6f3-request-id");
+    async fn the_panic_body_is_a_problem() {
+        let uri: http::Uri = "/ferroehr/rest/openehr/v1/ehr/Qz7sentinel".parse().unwrap();
+        let resp = panic_body(FhirBase::of("/ferroehr/rest"))(&uri, ID);
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(
             resp.headers().get(http::header::CONTENT_TYPE).unwrap(),
-            "application/json"
+            "application/problem+json"
         );
         let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
         let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(body["error"], "Internal Server Error");
-        assert!(body["message"].as_str().is_some());
+        assert_eq!(body["type"], "about:blank");
+        assert_eq!(body["title"], "Internal Server Error");
+        assert_eq!(body["status"], 500);
+        assert_eq!(body["instance"], format!("urn:uuid:{ID}"));
+        assert!(!body.to_string().contains("Qz7sentinel"), "{body}");
     }
 
-    /// Each refusal the stack writes keeps its status and carries the reason in
-    /// the openEHR `{ error, message }` shape.
+    /// Each refusal the stack writes keeps its status and carries the reason
+    /// as the problem's detail; the availability refusals are FerroEHR types.
     #[tokio::test]
-    async fn a_refusal_is_the_openehr_error_body_with_its_status() {
+    async fn a_refusal_is_a_problem_with_its_status() {
         let uri: http::Uri = "/ferroehr/rest/openehr/v1/ehr".parse().unwrap();
-        for (status, error) in [
-            (StatusCode::REQUEST_TIMEOUT, "Request Timeout"),
-            (StatusCode::PAYLOAD_TOO_LARGE, "Payload Too Large"),
-            (StatusCode::TOO_MANY_REQUESTS, "Too Many Requests"),
-            (StatusCode::SERVICE_UNAVAILABLE, "Service Unavailable"),
+        for (status, kind) in [
+            (StatusCode::REQUEST_TIMEOUT, "about:blank".to_owned()),
+            (StatusCode::PAYLOAD_TOO_LARGE, "about:blank".to_owned()),
+            (StatusCode::TOO_MANY_REQUESTS, format!("{BASE}rate-limited")),
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                format!("{BASE}unavailable"),
+            ),
         ] {
-            let resp = refusal_body()(&uri, "id", status, "the reason");
+            let resp = refusal_body(FhirBase::default())(&uri, ID, status, "the reason");
             assert_eq!(resp.status(), status);
             let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
             let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-            assert_eq!(body["error"], error, "{status}");
-            assert_eq!(body["message"], "the reason");
+            assert_eq!(body["type"], kind.as_str(), "{status}");
+            assert_eq!(body["status"], status.as_u16(), "{status}");
+            assert_eq!(body["detail"], "the reason");
         }
+    }
+
+    /// Under the FHIR base a stack refusal is an `OperationOutcome` (FHIR R4
+    /// `http.html`).
+    #[cfg(feature = "fhir")]
+    #[tokio::test]
+    async fn a_refusal_under_the_fhir_base_is_an_operation_outcome() {
+        let uri: http::Uri = "/ferroehr/rest/fhir/r4/AuditEvent".parse().unwrap();
+        let resp = refusal_body(FhirBase::of("/ferroehr/rest"))(
+            &uri,
+            ID,
+            StatusCode::REQUEST_TIMEOUT,
+            "the reason",
+        );
+        assert_eq!(resp.status(), StatusCode::REQUEST_TIMEOUT);
+        let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body["resourceType"], "OperationOutcome");
     }
 }

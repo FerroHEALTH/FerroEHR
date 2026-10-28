@@ -214,6 +214,20 @@ pub fn extensions_document(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
             .add_security_scheme(SECURITY_SCHEME, scheme);
     }
 
+    let health: Vec<String> = [
+        ferrohealth_server::health::SUMMARY,
+        ferrohealth_server::health::LIVENESS,
+        ferrohealth_server::health::READINESS,
+    ]
+    .iter()
+    .map(|route| cfg.server.base_path.join(route))
+    .collect();
+    declare_problems(
+        &mut doc,
+        &format!("{rest_root}{}", crate::api::FHIR_PREFIX),
+        &health,
+    );
+
     // A document-level `x-` extension, so the contract identity is
     // machine-readable and cannot be confused with `info.version` (the product
     // SemVer). The value is the shared provenance constant every identity
@@ -224,6 +238,66 @@ pub fn extensions_document(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
     )]));
 
     doc
+}
+
+/// The media type of a problem details document (RFC 9457 §3).
+const PROBLEM_JSON: &str = "application/problem+json";
+
+/// Declares the problem details schema as the body of every `4xx` and `5xx`
+/// answer in `doc`, except under the FHIR base, whose errors are
+/// `OperationOutcome` (FHIR R4 `http.html`), and on the health routes, whose
+/// `503` is the health document.
+pub(crate) fn declare_problems(
+    doc: &mut utoipa::openapi::OpenApi,
+    fhir_base: &str,
+    health: &[String],
+) {
+    use utoipa::openapi::{Content, Ref, RefOr};
+    doc.components
+        .get_or_insert_with(Default::default)
+        .schemas
+        .extend(
+            utoipa::openapi::ComponentsBuilder::new()
+                .schema_from::<crate::overview::problem::ProblemDocument>()
+                .schema_from::<crate::overview::problem::Violation>()
+                .schema_from::<crate::overview::problem::Position>()
+                .build()
+                .schemas,
+        );
+    for (path, item) in &mut doc.paths.paths {
+        let fhir = path
+            .strip_prefix(fhir_base)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'));
+        if fhir || health.iter().any(|route| route == path) {
+            continue;
+        }
+        for op in [
+            item.get.as_mut(),
+            item.put.as_mut(),
+            item.post.as_mut(),
+            item.delete.as_mut(),
+            item.options.as_mut(),
+            item.head.as_mut(),
+            item.patch.as_mut(),
+            item.trace.as_mut(),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            for (status, response) in &mut op.responses.responses {
+                if !(status.starts_with('4') || status.starts_with('5')) {
+                    continue;
+                }
+                if let RefOr::T(response) = response {
+                    response.content.clear();
+                    response.content.insert(
+                        PROBLEM_JSON.to_owned(),
+                        RefOr::T(Content::new(Some(Ref::from_schema_name("Problem")))),
+                    );
+                }
+            }
+        }
+    }
 }
 
 /// The document-level extension key carrying the implemented openEHR ITS-REST
@@ -881,6 +955,54 @@ fn serve_ui_file(file: &str, config: &Arc<Config<'static>>) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every `4xx` and `5xx` the served document declares outside the FHIR
+    /// base and the health routes carries the problem details schema, and
+    /// nothing else, so an error route declared without it fails here.
+    #[test]
+    fn every_error_answer_declares_problem_details() {
+        let mut cfg = AppConfig::default();
+        cfg.rest.swagger_ui = ferroehr::config::management::AccessLevel::Public;
+        let doc = extensions_document(&cfg);
+        let fhir_base = format!("{}{}", cfg.rest.rest_root(), crate::api::FHIR_PREFIX);
+        let mut checked = 0_usize;
+        for (path, item) in &doc.paths.paths {
+            if path.starts_with(&fhir_base) || path.contains("/health") {
+                continue;
+            }
+            for op in [
+                item.get.as_ref(),
+                item.put.as_ref(),
+                item.post.as_ref(),
+                item.delete.as_ref(),
+                item.options.as_ref(),
+                item.head.as_ref(),
+                item.patch.as_ref(),
+            ]
+            .into_iter()
+            .flatten()
+            {
+                for (status, response) in &op.responses.responses {
+                    if !(status.starts_with('4') || status.starts_with('5')) {
+                        continue;
+                    }
+                    let utoipa::openapi::RefOr::T(response) = response else {
+                        panic!("{path} {status}: a response reference");
+                    };
+                    let keys: Vec<&String> = response.content.keys().collect();
+                    assert_eq!(keys, vec![PROBLEM_JSON], "{path} {status}");
+                    checked += 1;
+                }
+            }
+        }
+        assert!(checked > 100, "the guard saw the error answers: {checked}");
+        assert!(
+            doc.components
+                .as_ref()
+                .is_some_and(|c| c.schemas.contains_key("Problem")),
+            "the Problem schema is a component"
+        );
+    }
 
     /// The served families are the shared vocabulary the viewer compiles, in
     /// the same order, so a family added on one side alone fails here.

@@ -125,7 +125,7 @@ pub(super) async fn run(
                 VERSION_ROOT_TAG,
             ))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted ehr operation: {other}"
         )))),
     }

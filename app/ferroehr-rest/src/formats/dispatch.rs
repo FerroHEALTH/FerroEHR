@@ -69,7 +69,7 @@ fn now() -> String {
 /// trace record and the `500` body carries the curated opaque message
 /// ([`crate::overview::error::internal_fault`]).
 fn internal(detail: impl std::fmt::Display) -> RestError {
-    RestError(crate::overview::error::internal_fault(
+    RestError::from(crate::overview::error::internal_fault(
         "convert between the canonical and Simplified Formats",
         &detail,
     ))
@@ -81,7 +81,7 @@ fn internal(detail: impl std::fmt::Display) -> RestError {
 /// well-formed-but-unprocessable request (`Requests_and_responses.md §HTTP
 /// status codes`, row `422`).
 fn missing_template_id() -> RestError {
-    RestError(ApiError::Unprocessable(
+    RestError::from(ApiError::Unprocessable(
         "a Simplified-Format COMPOSITION commit requires the target template id \
          in the `openehr-template-id` request header (Requests_and_responses \
          §openehr-template-id)"
@@ -109,9 +109,9 @@ fn flat_input_err(e: &openehr_sdt::flat::error::FlatError) -> RestError {
         ferroehr::service::error::ErrorChain::new(e)
     );
     if syntactic {
-        RestError(ApiError::BadRequest(msg))
+        RestError::from(ApiError::BadRequest(msg))
     } else {
-        RestError(ApiError::Unprocessable(msg))
+        RestError::from(ApiError::Unprocessable(msg))
     }
 }
 
@@ -135,7 +135,7 @@ pub(crate) async fn composition_from_flat(
 ) -> Result<Value, RestError> {
     let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
     let flat: Map<String, Value> = serde_json::from_slice(body)
-        .map_err(|e| RestError(ApiError::BadRequest(format!("invalid FLAT JSON: {e}"))))?;
+        .map_err(|e| RestError::from(ApiError::BadRequest(format!("invalid FLAT JSON: {e}"))))?;
     let wt = state
         .backend()
         .web_template(&template_id)
@@ -153,7 +153,7 @@ pub(crate) async fn composition_from_structured(
 ) -> Result<Value, RestError> {
     let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
     let structured: Value = serde_json::from_slice(body).map_err(|e| {
-        RestError(ApiError::BadRequest(format!(
+        RestError::from(ApiError::BadRequest(format!(
             "invalid STRUCTURED JSON: {e}"
         )))
     })?;
@@ -257,7 +257,7 @@ pub(crate) async fn contribution_from_simplified(
 ) -> Result<Value, RestError> {
     let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
     let mut envelope: NewContribution<Value> = serde_json::from_slice(body).map_err(|e| {
-        RestError(ApiError::BadRequest(format!(
+        RestError::from(ApiError::BadRequest(format!(
             "invalid CONTRIBUTION envelope: {e}"
         )))
     })?;
@@ -274,7 +274,7 @@ pub(crate) async fn contribution_from_simplified(
         let comp = match format {
             WireFormat::Flat => {
                 let map = data.as_object().ok_or_else(|| {
-                    RestError(ApiError::Unprocessable(
+                    RestError::from(ApiError::Unprocessable(
                         "a FLAT CONTRIBUTION versions[].data must be a JSON object".to_owned(),
                     ))
                 })?;
@@ -322,7 +322,7 @@ pub(crate) async fn contribution_to_simplified(
             };
             let kind = data.pointer("/_type").and_then(Value::as_str);
             if kind != Some("COMPOSITION") {
-                return Err(RestError(ApiError::NotAcceptable(
+                return Err(RestError::from(ApiError::NotAcceptable(
                     "only COMPOSITION version payloads can be serialized in a Simplified \
                      Format; request application/json for this CONTRIBUTION"
                         .to_owned(),
@@ -378,7 +378,7 @@ pub(crate) fn guard_non_templated(headers: &HeaderMap) -> Result<(), RestError> 
     if let Some(WireFormat::Flat | WireFormat::Structured | WireFormat::WebTemplate) =
         negotiate::content_type_format(headers)
     {
-        return Err(RestError(ApiError::UnsupportedMediaType(
+        return Err(RestError::from(ApiError::UnsupportedMediaType(
             "Simplified Formats are not defined for this resource; supported request \
              Content-Type: application/json, application/xml"
                 .to_owned(),
@@ -386,7 +386,7 @@ pub(crate) fn guard_non_templated(headers: &HeaderMap) -> Result<(), RestError> 
     }
     if negotiate::resolve_accept(headers, negotiate::CANONICAL, WireFormat::CanonicalJson).is_none()
     {
-        return Err(RestError(ApiError::NotAcceptable(
+        return Err(RestError::from(ApiError::NotAcceptable(
             "Simplified Formats are not defined for this resource; supported response \
              formats: application/json, application/xml"
                 .to_owned(),
@@ -467,7 +467,6 @@ mod tests {
                 "application/openehr.wt.flat+json"
             )]))
             .unwrap_err()
-            .0
             .status(),
             StatusCode::UNSUPPORTED_MEDIA_TYPE
         );
@@ -477,7 +476,6 @@ mod tests {
                 "application/openehr.wt.structured+json"
             )]))
             .unwrap_err()
-            .0
             .status(),
             StatusCode::NOT_ACCEPTABLE
         );

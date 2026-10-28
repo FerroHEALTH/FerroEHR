@@ -789,7 +789,7 @@ fn resolve_target(principal: &Principal, uid: &str) -> Result<(String, Option<St
 /// A 403 carrying the principal (audited by the ATNA layer).
 fn forbidden(principal: &Principal, detail: &str) -> Response {
     let mut resp =
-        RestError(ApiError::Forbidden(format!("access denied: {detail}"))).into_response();
+        RestError::from(ApiError::Forbidden(format!("access denied: {detail}"))).into_response();
     resp.extensions_mut().insert(principal.clone());
     resp
 }
@@ -801,7 +801,7 @@ fn forbidden(principal: &Principal, detail: &str) -> Response {
 /// would write a false subject into the audit trail, so the ATNA layer records
 /// the denial from the request itself.
 fn forbidden_unauthenticated(detail: &str) -> Response {
-    RestError(ApiError::Forbidden(format!("access denied: {detail}"))).into_response()
+    RestError::from(ApiError::Forbidden(format!("access denied: {detail}"))).into_response()
 }
 
 /// A fail-closed refusal carrying the principal: `503` plus `Retry-After` when
@@ -820,9 +820,8 @@ fn engine_error(
         .find(|sm| sm.status == CallStatusType::ServiceOverloaded);
     let mut resp = match overloaded {
         Some(sm) => RestError::from(sm.clone()).into_response(),
-        None => {
-            RestError(crate::overview::error::internal_fault_caused(step, error)).into_response()
-        }
+        None => RestError::from(crate::overview::error::internal_fault_caused(step, error))
+            .into_response(),
     };
     resp.extensions_mut().insert(principal.clone());
     resp

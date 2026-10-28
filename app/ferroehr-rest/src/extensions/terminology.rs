@@ -270,7 +270,7 @@ async fn run(
     // Config gate: the terminology extension is opt-in. When disabled every
     // route answers 404 (as if unmounted) without consulting the backend.
     if !state.config().terminology_api_enabled {
-        return Err(RestError(ApiError::NotFound(
+        return Err(RestError::from(ApiError::NotFound(
             "terminology API is disabled".to_owned(),
         )));
     }
@@ -331,7 +331,7 @@ async fn run(
                 .await?;
             Ok(negotiate::respond(h, ok, &json!({ "valid": valid })))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted terminology operation: {other}"
         )))),
     }
@@ -341,7 +341,7 @@ async fn run(
 /// absence is a routing bug → `500`).
 fn path_get(parts: &RequestParts, key: &str) -> Result<String, RestError> {
     parts.path.get(key).cloned().ok_or_else(|| {
-        RestError(ApiError::Internal(format!(
+        RestError::from(ApiError::Internal(format!(
             "missing path parameter `{key}`"
         )))
     })
@@ -352,7 +352,7 @@ fn require_query(query: Option<&str>, key: &str) -> Result<String, RestError> {
     params::query_param(query, key)
         .filter(|v| !v.is_empty())
         .ok_or_else(|| {
-            RestError(ApiError::BadRequest(format!(
+            RestError::from(ApiError::BadRequest(format!(
                 "missing required query parameter `{key}`"
             )))
         })

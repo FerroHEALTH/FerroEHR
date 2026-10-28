@@ -134,7 +134,7 @@ pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Respon
     // `406`; absent or `*/*` defaults to the canonical OPT.
     let Some(fmt) = negotiate::resolve_accept(h, TEMPLATE_DEF_FORMATS, WireFormat::CanonicalXml)
     else {
-        return Err(RestError(ApiError::NotAcceptable(
+        return Err(RestError::from(ApiError::NotAcceptable(
             "the template is available as application/xml (canonical OPT), \
              application/openehr.wt+json, or application/json (web template)"
                 .to_owned(),
@@ -199,7 +199,7 @@ pub(super) async fn example_get(
                 "composition",
             ))
         }
-        _ => Err(RestError(ApiError::NotAcceptable(
+        _ => Err(RestError::from(ApiError::NotAcceptable(
             "the template example is available as application/json, application/xml, \
              application/openehr.wt.flat+json, or application/openehr.wt.structured+json"
                 .to_owned(),
@@ -289,7 +289,7 @@ async fn web_template_response(
         .await
         .map_err(RestError::from)?;
     let json = serde_json::to_string(&*built).map_err(|e| {
-        RestError(crate::overview::error::internal_fault(
+        RestError::from(crate::overview::error::internal_fault(
             "serialize the WebTemplate response",
             &e,
         ))

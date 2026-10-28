@@ -2709,6 +2709,7 @@ dependencies = [
  "openehr-base",
  "openehr-its",
  "openehr-lang",
+ "openehr-query",
  "openehr-rm",
  "openehr-sdt",
  "opentelemetry",

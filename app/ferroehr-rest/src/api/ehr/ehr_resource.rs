@@ -111,7 +111,7 @@ pub(super) async fn run(
                 &openehr_its::json::to_canonical_value(&tags),
             ))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted ehr operation: {other}"
         )))),
     }

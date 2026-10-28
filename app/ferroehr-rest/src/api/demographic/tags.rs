@@ -137,7 +137,7 @@ pub(super) async fn run(
                 .await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted demographic tag operation: {seg}_{other}"
         )))),
     }

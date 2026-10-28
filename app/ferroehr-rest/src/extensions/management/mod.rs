@@ -626,7 +626,7 @@ async fn flamegraph_view(
 ) -> Response {
     match flamegraph::sample_flamegraph_svg(&s.profiler, s.config.profiling, &params).await {
         Ok(svg) => ([(header::CONTENT_TYPE, "image/svg+xml")], svg).into_response(),
-        Err(err) => RestError(err).into_response(),
+        Err(err) => RestError::from(err).into_response(),
     }
 }
 
@@ -687,13 +687,11 @@ async fn status_view(State(s): State<ManagementState>) -> Json<FullStatus> {
 }
 
 fn recorder_unavailable() -> Response {
-    (
+    crate::overview::problem::Refused::blank(
         StatusCode::SERVICE_UNAVAILABLE,
-        Json(
-            serde_json::json!({ "error": "the corresponding telemetry facility is not installed" }),
-        ),
+        "the corresponding telemetry facility is not installed",
     )
-        .into_response()
+    .into_response()
 }
 
 // ── Access-level layer ────────────────────────────────────────────────────
@@ -774,8 +772,8 @@ impl AccessGuard {
 }
 
 fn unauthorized(authenticator: &Authenticator) -> Response {
-    let mut resp =
-        RestError(ApiError::Unauthorized("authentication required".to_owned())).into_response();
+    let mut resp = RestError::from(ApiError::Unauthorized("authentication required".to_owned()))
+        .into_response();
     // No credential was presented, so the challenge carries no RFC 6750 §3.1
     // error code: "If the request lacks any authentication information … the
     // resource server SHOULD NOT include an error code".
@@ -785,7 +783,7 @@ fn unauthorized(authenticator: &Authenticator) -> Response {
 }
 
 fn forbidden(reason: &str) -> Response {
-    RestError(ApiError::Forbidden(format!(
+    RestError::from(ApiError::Forbidden(format!(
         "management endpoint: {reason}"
     )))
     .into_response()

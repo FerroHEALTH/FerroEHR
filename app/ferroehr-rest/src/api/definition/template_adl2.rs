@@ -209,7 +209,7 @@ pub(super) async fn example_get(
                 "composition",
             ))
         }
-        _ => Err(RestError(ApiError::NotAcceptable(
+        _ => Err(RestError::from(ApiError::NotAcceptable(
             "the template example is available as application/json, application/xml, \
              application/openehr.wt.flat+json, or application/openehr.wt.structured+json"
                 .to_owned(),
@@ -259,7 +259,7 @@ async fn render(
             set_template_etag(&mut resp, &template.hrid);
             Ok(resp)
         }
-        None => Err(RestError(ApiError::NotAcceptable(
+        None => Err(RestError::from(ApiError::NotAcceptable(
             "the ADL2 template is served as text/plain source or application/json \
              OperationalTemplateV2; application/xml has no declared response body"
                 .to_owned(),
