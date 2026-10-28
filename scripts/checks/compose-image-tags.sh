@@ -23,9 +23,10 @@
 # + sed only.
 #
 # Usage: scripts/checks/compose-image-tags.sh [--self-test]
-#   --self-test mutates a COPY of the compose files ten ways (a stale tag in
-#   the terminology overlay, a stale tag on every postgres reference of
-#   docker-compose.yml after the first, a removed quickstart default, a
+#   --self-test mutates a COPY of the compose files eleven ways (a stale tag in
+#   the terminology overlay, a pre-release suffix the workspace version
+#   lacks, a stale tag on every postgres reference of docker-compose.yml
+#   after the first, a removed quickstart default, a
 #   versioned hosted default, a Keycloak tag moved in one file, a Keycloak
 #   reference without its digest, a database box pin without its digest, on
 #   `:latest` or past the workspace version, and a hosted README naming
@@ -45,8 +46,9 @@ if [[ "$#" -eq 1 && "$1" == "--self-test" ]]; then
   self_fail=0
   # <label>|<file>|<sed program>
   mutations=(
-    "a stale server tag in the terminology overlay|${self_root}/docker-compose.terminology.yml|s|ferrohealth/ferroehr:[0-9][0-9.]*}|ferrohealth/ferroehr:0.0.1}|"
-    "a stale tag on a later postgres reference of docker-compose.yml|${self_root}/docker-compose.yml|/ferroehr-postgres:[0-9]/{x;s/^/x/;/^xx/{x;s|ferroehr-postgres:[0-9][0-9.]*}|ferroehr-postgres:0.0.1}|;x;};x;}"
+    "a stale server tag in the terminology overlay|${self_root}/docker-compose.terminology.yml|s|ferrohealth/ferroehr:[0-9][0-9A-Za-z.-]*}|ferrohealth/ferroehr:0.0.1}|"
+    "a pre-release suffix the workspace version lacks|${self_root}/docker-compose.yml|s|\(ferrohealth/ferroehr:[0-9][0-9A-Za-z.-]*\)}|\1-rc9}|"
+    "a stale tag on a later postgres reference of docker-compose.yml|${self_root}/docker-compose.yml|/ferroehr-postgres:[0-9]/{x;s/^/x/;/^xx/{x;s|ferroehr-postgres:[0-9][0-9A-Za-z.-]*}|ferroehr-postgres:0.0.1}|;x;};x;}"
     "docker-compose.yml without its viewer default|${self_root}/docker-compose.yml|s|\${FERROEHR_VIEWER_IMAGE:-[^}]*}|ghcr.io/ferrohealth/ferroehr-viewer:local|"
     "a versioned hosted default|${self_root}/deploy/hosted/docker-compose.yml|s|ferrohealth/ferroehr:latest|ferrohealth/ferroehr:1.2.3|"
     "a Keycloak tag the quickstart overlay alone moves|${self_root}/docker-compose.keycloak.yml|s|quay.io/keycloak/keycloak:[0-9][0-9.]*@|quay.io/keycloak/keycloak:1.0.0@|g"
@@ -125,7 +127,7 @@ for file in "$ROOT_DIR"/docker-compose*.yml "$ROOT_DIR"/docker/*.yml; do
     else
       echo "$rel:$line $ref matches the workspace version."
     fi
-  done < <(grep -noE 'ghcr\.io/ferrohealth/ferroehr(-postgres|-viewer)?:[0-9]+\.[0-9]+\.[0-9]+' "$file" || true)
+  done < <(grep -noE 'ghcr\.io/ferrohealth/ferroehr(-postgres|-viewer)?:[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?' "$file" || true)
 done
 shopt -u nullglob
 if [[ "$checked" -eq 0 ]]; then

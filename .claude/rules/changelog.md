@@ -112,7 +112,9 @@ optional:
   `plan` refuses that tag before anything builds). A pre-release takes a
   pre-release chart version (`20.0.1-rc1`), because `helm install` without
   `--version` skips only SemVer pre-release chart versions; the stable cut
-  then takes the plain version (#4344). Then
+  then takes the plain version (#4344). The pin guards (`docs-claims`,
+  `compose-image-tags.sh`, `deploy/helm/validate.sh`) read a version with
+  its pre-release suffix. Then
   regenerate whatever that change moved — the golden renders
   (`deploy/helm/validate.sh --update`) and the generated chart README
   (`helm-docs --chart-search-root deploy/helm/ferroehr --template-files
