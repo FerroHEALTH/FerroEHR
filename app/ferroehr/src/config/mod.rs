@@ -1676,7 +1676,7 @@ mod tests {
                 .expect_err("a client CA under none is refused");
             let text = err.to_string();
             assert!(
-                text.contains("client_ca_file") && text.contains("required"),
+                text.contains("client_ca_file") && text.contains("client_auth"),
                 "{policy:?}: {err}"
             );
         }
