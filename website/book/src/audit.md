@@ -658,6 +658,31 @@ ingress leave `[server.tls]` unset and enforce mTLS there instead.
 Complete the posture with time synchronisation (IHE Consistent Time): run
 NTP/chrony on every node so audit timestamps align across systems.
 
+## Against independent ATNA implementations
+
+The transactions above are tested by FerroEHR's own suites, which read the
+profiles the way FerroEHR's authors read them. EHDS Annex II 1.4 asks that a
+component meant to work with other products does so reliably, so
+[`scripts/interop/atna.sh`](https://github.com/FerroHEALTH/FerroEHR/blob/main/scripts/interop/atna.sh)
+runs the quickstart against software FerroEHR's authors did not write, each
+from a published image:
+
+| Transaction | Independent implementation | What the run requires |
+|---|---|---|
+| ITI-20 FHIR feed | HAPI FHIR, an open-source FHIR R4 server, as the Audit Record Repository, with IHE BALP 1.1.4 loaded | It accepts every record, and its validator finds no error against base R4 and the BALP profile each record names |
+| ITI-20 syslog | syslog-ng over RFC 5425 TLS | Every message parses as RFC 5424, and its payload is a well-formed DICOM PS3.15 A.5.1 `AuditMessage` (libxml2) |
+| ITI-81 | HAPI FHIR's AuditEvent search over the records the feed delivered | The same searches answer the same records on both |
+
+```shell
+cargo build --release -p loadtest
+bash scripts/interop/atna.sh ghcr.io/ferrohealth/ferroehr:<tag> \
+  ghcr.io/ferrohealth/ferroehr-postgres:<tag> atna-out
+```
+
+It prints every disagreement and exits non-zero on any. A disagreement is
+either FerroEHR's or a shared crate's defect, filed and fixed, or the other
+side's, recorded with the profile text that shows it.
+
 ## Configuration summary
 
 Auditing defaults to on with the local store only; see the
