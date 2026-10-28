@@ -22,6 +22,12 @@
 #       Writes the release notes for <tag>: its changelog section, the support
 #       period and the CRA user-information link. A pre-release's support
 #       period says it is not supported and names the stable release that is.
+#   plan.sh fragments <tag>
+#       Runs the fragment check of the list alone: no fragment left at a
+#       stable tag, every fragment carried by the section at a pre-release
+#       tag. CI runs it in the merge queue on a change that moves the
+#       workspace version, so a fragment merged ahead of a release PR fails
+#       that PR before its tag can.
 #   plan.sh support-end <YYYY-MM-DD>
 #       Prints the month the support period of a release of that date ends.
 #   plan.sh --self-test
@@ -35,7 +41,7 @@ set -euo pipefail
 readonly TAG_RE='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
 
 usage() {
-  echo "usage: plan.sh checks <tag> [--notes <file>] | prev-tag <tag> | notes <tag> <file> | support-end <YYYY-MM-DD> | --self-test" >&2
+  echo "usage: plan.sh checks <tag> [--notes <file>] | prev-tag <tag> | notes <tag> <file> | fragments <tag> | support-end <YYYY-MM-DD> | --self-test" >&2
   exit 2
 }
 
@@ -303,7 +309,7 @@ check_milestone The milestone titled as the tag holds no open item
 check_version The tag matches the workspace version
 check_changelog_structure Changelog structure (no duplicate subsections, canonical types)
 check_changelog_security The Security section of the cut names its advisories and its reason
-check_changelog_fragments No changelog fragment is left unassembled
+check_changelog_fragments The changelog fragments are assembled, or carried by a pre-release's section
 check_change_control The technical documentation and the CRA risk assessment follow their paths
 check_notes The changelog section for this tag becomes the release notes
 check_notes_content The release notes carry the CRA user information and the support period
@@ -393,11 +399,50 @@ self_test() {
   expect "an empty date" "$(support_end "" || echo "$refused")" "$refused"
   expect "a month out of range" "$(support_end 2026-13-01 || echo "$refused")" "$refused"
   expect "a day out of range" "$(support_end 2026-04-31 || echo "$refused")" "$refused"
+  fragments_self_test
   if [[ "$fails" -gt 0 ]]; then
     echo "plan.sh self-test FAILED ($fails case(s))" >&2
     exit 1
   fi
   echo "plan.sh self-test OK"
+}
+
+# fragments_self_test: `plan.sh fragments` over a stub tree, for a pre-release
+# tag whose section carries every fragment, one whose section misses a
+# fragment merged after the cut, and a stable tag with a fragment left.
+fragments_self_test() {
+  local here stub rc
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  stub="$(mktemp -d)"
+  mkdir -p "$stub/scripts/release" "$stub/changelog.d"
+  cp "$here/plan.sh" "$here/changelog.sh" "$stub/scripts/release/"
+  printf 'The fragment format.\n' > "$stub/changelog.d/README.md"
+  printf '%s\n' '- A fix.' > "$stub/changelog.d/30-fix.fixed.md"
+  printf '%s\n' '# Changelog' '' '## [Unreleased]' '' '## [0.0.3] - 2026-10-12' '' '### Added' '' '- The third release.' '' \
+    '[unreleased]: https://example.org/r/compare/v0.0.3...HEAD' '[0.0.3]: https://example.org/r/releases/tag/v0.0.3' \
+    > "$stub/CHANGELOG.md"
+  stub_git() {
+    git -C "$stub" -c user.name=self-test -c user.email=self-test@example.org \
+      -c commit.gpgsign=false -c core.hooksPath=/dev/null "$@"
+  }
+  run_fragments() {
+    rc=0
+    bash "$stub/scripts/release/plan.sh" fragments "$1" > "$stub/out" 2>&1 || rc=$?
+  }
+  stub_git init -q -b main
+  stub_git add -A
+  stub_git commit -q -m "the stub"
+  bash "$stub/scripts/release/changelog.sh" --assemble 0.0.4-rc1 2026-10-13 > /dev/null
+  run_fragments v0.0.4-rc1
+  expect "a pre-release section that carries every fragment" "$rc" "0"
+  printf '%s\n' '- A feature merged after the cut.' > "$stub/changelog.d/31-late.added.md"
+  run_fragments v0.0.4-rc1
+  expect "a pre-release section that misses a fragment" "$rc" "1"
+  grep -q '31-late.added.md' "$stub/out" || expect "the missed fragment named" "$(cat "$stub/out")" "31-late.added.md"
+  run_fragments v0.0.4
+  expect "a stable tag with fragments left" "$rc" "1"
+  chmod -R u+w "$stub"
+  rm -r -- "$stub"
 }
 
 main() {
@@ -424,6 +469,15 @@ main() {
     [[ "$out" == /* ]] || out="$PWD/$out"
     cd "$(dirname "$0")/../.."
     notes "$tag" "$out"
+    ;;
+  fragments)
+    local tag="${2:-}"
+    [[ "$#" -eq 2 ]] || usage
+    valid_tag "$tag"
+    cd "$(dirname "$0")/../.."
+    TAG="$tag"
+    VERSION="${tag#v}"
+    check_changelog_fragments
     ;;
   support-end)
     local date="${2:-}"
