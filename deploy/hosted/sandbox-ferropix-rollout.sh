@@ -54,6 +54,10 @@ INDEX_RECORD="$ROOT/deploy/hosted/ferroterm-index.env"
 SOURCE_DOMAIN="urn:oid:2.999.1.1"
 # The image the DB box runs: the default cloud-init-postgres.yaml pins.
 DB_IMAGE="$(sed -nE 's/.*\$\{FERROEHR_POSTGRES_IMAGE:-([^}]+)\}.*/\1/p' "$CLOUD_INIT_DB" | sed -n 1p)"
+# The FerroTERM the posture pins, and its version: the default the compose
+# file gives FERROTERM_IMAGE.
+FERROTERM_PIN="$(sed -nE 's/.*\$\{FERROTERM_IMAGE:-([^}]+)\}.*/\1/p' "$ROOT/deploy/hosted/docker-compose.yml" | sed -n 1p)"
+FERROTERM_PIN_VERSION="$(sed -nE 's#.*:([0-9][0-9.]*)@sha256:.*#\1#p' <<<"$FERROTERM_PIN")"
 
 CHECK=0
 SELF_TEST=0
@@ -378,6 +382,13 @@ for name in FERROPIX_DATABASE_URL FERROPIX_DATA_KEY FERROTERM_INDEXES; do
 done
 legacy="\$(sed -n 's/^FERROTERM_INDEX=//p' .env | tail -n 1)"
 echo "ferroterm_index_legacy=\$([ -n "\$legacy" ] && echo "\$legacy" || echo unset)"
+# A FERROTERM_IMAGE line overrides the FerroTERM the posture pins. The box
+# carried FerroTERM 0.1.6 that way, which reads none of the 0.3 names the
+# compose file passes, so it opened no index and served no LOINC (#4278).
+override="\$(sed -n 's/^FERROTERM_IMAGE=//p' .env | tail -n 1)"
+if [ -z "\$override" ]; then echo "ferroterm_image=unset"
+elif [ "\$override" = "$FERROTERM_PIN" ]; then echo "ferroterm_image=pin"
+else echo "ferroterm_image=stale \$override"; fi
 if [ "$CHECK" -eq 0 ]; then
   umask 077
   cp -p .env .env.prev
@@ -396,6 +407,9 @@ if [ "$CHECK" -eq 0 ]; then
     [ -z "\$indexes" ] || echo "\${prefix}FERROTERM_INDEXES=\$indexes"
   } > .env.next
   mv .env.next .env
+  if [ -n "\$override" ] && [ "\$override" != "$FERROTERM_PIN" ]; then
+    sed -i -E 's|^(FERROTERM_IMAGE=.*)\$|# \1 (retired by sandbox-ferropix-rollout.sh, #4278: the posture pins FerroTERM)|' .env
+  fi
   chmod 600 .env
   cmp -s .env .env.prev && echo "changed=no" || echo "changed=yes (previous: $APP_DIR/.env.prev)"
 fi
@@ -406,6 +420,7 @@ for name in FERROPIX_DATABASE_URL FERROPIX_DATA_KEY FERROTERM_INDEXES; do
   grep -qE "^# ?\$name=" .env && state=commented
   echo "after \$name \$state \$([ -n "\$v" ] && printf '%s' "\$v" | sha256sum | cut -c1-12)"
 done
+echo "after_ferroterm_image=\$(grep -qE '^FERROTERM_IMAGE=' .env && sed -n 's/^FERROTERM_IMAGE=//p' .env | tail -n 1 || echo unset)"
 echo "env_mode=\$(stat -c %a .env)"
 EOF
   out="$(cat "$WORK/out")"
@@ -422,6 +437,13 @@ EOF
   fi
   [[ "$(sed -n 's/^env_mode=//p' <<<"$out")" == 600 ]] || fail ".env is not mode 600"
   ok "the .env lines are in place (states and fingerprints above)"
+  local image_after
+  image_after="$(sed -n 's/^after_ferroterm_image=//p' <<<"$out")"
+  if [[ "$image_after" == unset || "$image_after" == "$FERROTERM_PIN" ]]; then
+    ok "no FERROTERM_IMAGE line overrides the pinned FerroTERM $FERROTERM_PIN_VERSION"
+  else
+    fail "the .env pins FerroTERM $image_after over the posture's $FERROTERM_PIN; FerroTERM 0.1 reads none of the 0.3 names, so it serves no index and no LOINC; run step 3 without --check"
+  fi
 
   # The deploy script does not update itself, and the reseed's `identities`
   # verb needs this version of it.
@@ -564,22 +586,21 @@ seed_identities() {
   if [[ "$code" == 200 ]]; then
     ok "the demo data is seeded under the pseudonyms (marker EHR present)"
   else
-    code="$(curl -sS -o /dev/null -w "$HTTP_STATUS" -u "$DEMO_AUTH" \
-      "$base/ehr?subject_id=$(jq -r '.marker.subject' "$MANIFEST")&subject_namespace=$(jq -r '.subject_namespace' "$MANIFEST")")"
-    if [[ "$code" == 200 ]]; then
-      # Data seeded before FerroPIX names its subjects outside the clinical
-      # domain: wipe and restart as the nightly reset does, then seed.
-      printf 'SSH_ORIGINAL_COMMAND=wipe %q/deploy.sh 2>&1\n' "$APP_DIR" | remote "$APP_HOST" > "$WORK/wipe" \
-        || fail "the wipe verb failed: $(tail -n 5 "$WORK/wipe")"
-      echo "  app: wipe dropped $(grep -c '^DROP SCHEMA' "$WORK/wipe" || true) schemas"
-      printf 'SSH_ORIGINAL_COMMAND=restart %q/deploy.sh 2>&1\n' "$APP_DIR" | remote "$APP_HOST" | tail -n 2 | indent_app
-      ok "wiped the pre-FerroPIX demo data and restarted the CDR"
-      local deadline=$(($(date +%s) + 600))
-      until [[ "$(curl -sS -m 30 -o /dev/null -w "$HTTP_STATUS" "$PUBLIC_URL/health/readiness" || true)" == 200 ]]; do
-        [[ "$(date +%s)" -lt "$deadline" ]] || fail "the CDR was not ready 10 minutes after the restart"
-        sleep 15
-      done
-    fi
+    # No finished seed under the pseudonyms: the CDR holds nothing, the demo
+    # data seeded before FerroPIX, or a seed that stopped part way. Wipe and
+    # restart as the nightly reset does, then seed. A definition an
+    # unfinished seed stored answers 409 on the next run and counts as stored,
+    # so seeding over it moves the archetype-library split (#4278).
+    printf 'SSH_ORIGINAL_COMMAND=wipe %q/deploy.sh 2>&1\n' "$APP_DIR" | remote "$APP_HOST" > "$WORK/wipe" \
+      || fail "the wipe verb failed: $(tail -n 5 "$WORK/wipe")"
+    echo "  app: wipe dropped $(grep -c '^DROP SCHEMA' "$WORK/wipe" || true) schemas"
+    printf 'SSH_ORIGINAL_COMMAND=restart %q/deploy.sh 2>&1\n' "$APP_DIR" | remote "$APP_HOST" | tail -n 2 | indent_app
+    ok "wiped the sandbox schemas and restarted the CDR"
+    local deadline=$(($(date +%s) + 600))
+    until [[ "$(curl -sS -m 30 -o /dev/null -w "$HTTP_STATUS" "$PUBLIC_URL/health/readiness" || true)" == 200 ]]; do
+      [[ "$(date +%s)" -lt "$deadline" ]] || fail "the CDR was not ready 10 minutes after the restart"
+      sleep 15
+    done
     SANDBOX_BASE="$PUBLIC_URL" SANDBOX_IDENTITIES="$WORK/identities" bash "$ROOT/scripts/sandbox/reseed.sh" \
       | grep -E '^==>|::error' | sed 's/^/  seed: /' || true
     code="$(curl -sS -o /dev/null -w "$HTTP_STATUS" -u "$DEMO_AUTH" "$base/ehr?subject_id=$marker&subject_namespace=$ns")"
@@ -630,6 +651,21 @@ docker stats --no-stream --format '{{.Name}} {{.MemUsage}}' | grep ferroehr-sand
 EOF
   out="$(cat "$WORK/out")"
   printf '%s\n' "$out" | indent_app
+  local ferroterm_version
+  ferroterm_version="$(awk '$1 == "ferroehr-sandbox-ferroterm" { print $3 }' <<<"$out")"
+  [[ "$ferroterm_version" == "$FERROTERM_PIN_VERSION" ]] \
+    || fail "FerroTERM runs ${ferroterm_version:-nothing}, the posture pins $FERROTERM_PIN_VERSION; a FERROTERM_IMAGE line in .env overrides it (step 3 retires it)"
+  ok "FerroTERM runs the pinned $FERROTERM_PIN_VERSION"
+
+  # The reseed's archetype-library pin holds only while the CDR resolves LOINC
+  # (scripts/sandbox/seed/manifest.json, #4278): ask before seeding.
+  local probe probe_code
+  probe="$(jq -r '.adl2.archetype_library.loinc.probe' "$MANIFEST")"
+  probe_code="$(curl -sS -o "$WORK/loinc.out" -w "$HTTP_STATUS" -u "$DEMO_AUTH" \
+    "$PUBLIC_URL/ferroehr/rest/openehr/v1/terminology/http%3A%2F%2Floinc.org/term/$probe")"
+  [[ "$probe_code" == 200 ]] \
+    || fail "the CDR resolves no LOINC (LOINC $probe answered $probe_code): FerroTERM opens no LOINC index, so the seed's archetype-library pin cannot hold; check FERROTERM_INDEXES in .env (step 3) and the index (step 4)"
+  ok "FerroTERM serves LOINC through the CDR: $probe is $(jq -r --arg c "$probe" '.terms[$c].text // "?"' "$WORK/loinc.out")"
 
   jq -r '.ehrs[].subject, .marker.subject' "$MANIFEST" > "$WORK/subjects"
   if [[ "$CHECK" -eq 1 ]]; then

@@ -191,26 +191,37 @@ One run loads, in about 590 requests:
 
 | What | How much |
 |---|---|
-| ADL 1.4 operational templates | 16 (the curated CKM pack, `corpus/templates/ckm/`) |
-| ADL 2 archetypes | 235 — 232 from the vendored 2013 CKM corpus plus 3 of our own |
+| ADL 1.4 operational templates | 17 (the curated CKM pack, `corpus/templates/ckm/`, plus one terminology-binding template) |
+| ADL 2 archetypes | 233: 230 from the vendored 2013 CKM corpus plus 3 of our own |
 | ADL 2 templates | 5 (4 of our own plus one carried by the corpus); two of ours are SOURCE templates the CDR flattens against that archetype library |
 | EHRs | 8, each with a distinct subject and a mixed record |
-| Compositions | 182 (166 ADL 1.4, 16 from CDR-generated ADL 2 examples) |
+| Compositions | 183 (167 ADL 1.4, 16 from CDR-generated ADL 2 examples) |
 | Further versions | 6 COMPOSITION, 2 EHR_STATUS |
 | Demographic parties | 6 persons, 3 roles, 2 party relationships |
 | Directories | one FOLDER tree per EHR, its items real composition references |
 | Stored AQL queries | 5, under the `eu.ferroehr.sandbox` namespace |
 
 The ADL 2 archetype step offers the whole 322-file corpus, parents before
-children, and pins both outcomes in the manifest: 233 artefacts stored, 89
-refused with a `422`. The refusals are AOM2 validity findings on the 2013
+children, and pins both outcomes in the manifest: 231 artefacts stored, 91
+refused with a `422`. 89 refusals are AOM2 validity findings on the 2013
 conversions: constraints on attributes the RM does not declare
 (`DV_QUANTITY.property`, and the RM functions `is_integral` and `offset` the
 machine-readable RM omits), languages, slots and node ids that do not conform
 to the flat parent, and eight children of refused parents that therefore have
 no flat parent to validate against. Every refused file is adjudicated by name
 in the corpus gate (`crates/openehr-adl/tests/it/ckm_archetype_packs.rs`), and
-a change in either count fails the run instead of passing quietly. Two of the eight EHRs end the run with
+a change in either count fails the run instead of passing quietly.
+
+The other two refusals need the LOINC index FerroTERM serves on the box:
+`braden_scale` binds the mistyped LOINC answer code `LA9605-4` (VETDF), and
+`braden_scale-child` then has no stored parent (VASID). A terminology server
+that serves no LOINC cannot verify the binding, so the CDR warns and stores
+both (AOM2 VETDF: "subject to tool accessibility"), and the library loads 233
+/ 89. The seed asks the CDR for a LOINC code before the library step and
+stops with that diagnosis when the posture serves none (#4278). A local run
+without LOINC sets `SANDBOX_TERMINOLOGY=without-loinc` and expects 233 / 89.
+
+Two of the eight EHRs end the run with
 a second `EHR_STATUS` version: one not queryable, one not modifiable, so both
 flags are visible on live data.
 
@@ -306,7 +317,10 @@ No secret is printed: the log shows a 12-digit SHA-256 fingerprint.
    container of the installed posture receives the name. These three are
    compose substitution names that no container receives, so they are written
    active: the v5.5.0 deploy refuses a posture whose FerroPIX names are unset,
-   and would otherwise never install. It also installs this checkout's
+   and would otherwise never install. It comments out a `FERROTERM_IMAGE`
+   line that names another FerroTERM than the compose file pins: the box
+   carried FerroTERM 0.1.6 that way, which reads none of the 0.3 settings,
+   so it served no index and no LOINC (#4278). It also installs this checkout's
    `deploy.sh`, which carries the `identities` verb the nightly reseed calls
    from the moment this change merges.
 4. **The FerroTERM index.** Compares each index's `storeLayout` on the box
@@ -315,9 +329,12 @@ No secret is printed: the log shows a 12-digit SHA-256 fingerprint.
    (`docker compose pull`, then the CDR and FerroPIX removed and `up -d`,
    never `restart`), or installs the posture with the `deploy` verb if the
    release's deploy did not. It waits for every container to report healthy,
-   registers the demo patients through the `identities` verb, wipes and
-   reseeds if the database still holds the demo data seeded before FerroPIX,
-   and verifies end to end: a cohort named by the hospital identifiers
+   checks that FerroTERM runs the pinned version and that the CDR resolves the
+   manifest's LOINC probe code, registers the demo patients through the
+   `identities` verb, and, unless the demo data is already seeded under the
+   pseudonyms, wipes and restarts the CDR before it reseeds (a definition an
+   unfinished seed stored answers `409` and would count as stored). It then
+   verifies end to end: a cohort named by the hospital identifiers
    resolves through FerroPIX to the EHRs carrying FerroPIX's pseudonyms,
    FerroTERM answers through the CDR's `/terminology` route, and the public
    URL serves the CDR and the viewer.
