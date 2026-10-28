@@ -1,7 +1,7 @@
 - The audit store keeps each record's facts in columns and renders its FHIR R4
   `AuditEvent` from them when the record is read over ITI-81 or delivered by
   the FHIR feed, instead of storing the rendered document in every record. A
-  record takes about a sixth of the space it took before. The configuration
+  record takes about a quarter of the space it took before. The configuration
   the rendering depends on (the audit source, the store horizon, the category
   map and the emergency purposes) is kept once per distinct configuration in
   `audit.audit_render_policy`, and every record names the policy it was
