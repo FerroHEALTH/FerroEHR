@@ -39,6 +39,7 @@ use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use ferroehr::storage::marks::RetentionPeriod;
 use openehr_its::rest::runtime::ApiError;
 
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
@@ -244,7 +245,8 @@ pub(crate) async fn admin_research_objection(
         (status = 200, description = "Every declared period, with the content \
                                       kind, the EHDS priority category it is \
                                       keyed on (null for every object of the \
-                                      kind), the jurisdiction, the anchor rule \
+                                      kind), the registered origin it is keyed \
+                                      on (null for every origin), the jurisdiction, the anchor rule \
                                       and the legal citation it rests on. This \
                                       is the register GDPR Art. 30(1)(f), DSG \
                                       Art. 25 Abs. 2 lit. d and EHDS Annex II \
@@ -271,7 +273,8 @@ pub(crate) async fn admin_retention_policies(
     put, path = "/admin/retention/policy", tag = "admin-marks",
     request_body(content = serde_json::Value,
                  description = "`{ \"kind\": …, \"jurisdiction\": …, \
-                                \"category\": …?, \"period\": …, \"anchor\": …, \
+                                \"category\": …?, \"origin\": …?, \
+                                \"period\": …, \"anchor\": …, \
                                 \"source\": … }`. `kind` is COMPOSITION | \
                                 EHR_STATUS | FOLDER | EHR; `category`, when \
                                 present, keys the period on one EHDS priority \
@@ -285,6 +288,10 @@ pub(crate) async fn admin_retention_policies(
                                 stored as its <system>|<code> token, \
                                 and an object the map cannot classify takes \
                                 the longest period configured for its kind; \
+                                `origin`, when present, keys it on one origin \
+                                `[[origins.registered]]` declares, by its id, \
+                                matched against the origins each version \
+                                recorded at commit; \
                                 `period` is a PostgreSQL interval, `anchor` one \
                                 of last_commit | death | majority, and \
                                 `source` the legal citation the period rests \
@@ -298,11 +305,12 @@ pub(crate) async fn admin_retention_policies(
                  })),
     responses(
         (status = 204, description = "The period is declared, replacing any \
-                                      earlier one for that kind, category and \
-                                      jurisdiction."),
+                                      earlier one for that kind, category, \
+                                      origin and jurisdiction."),
         (status = 400, description = "The body is not the object above, or the \
                                       register refused the kind, the category, \
-                                      the anchor rule or a non-positive period.",
+                                      an unregistered origin, the anchor rule \
+                                      or a non-positive period.",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated.", body = serde_json::Value),
         (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
@@ -667,6 +675,7 @@ async fn run(
                         "anchor": row.anchor,
                         "source": row.source,
                         "category": row.category,
+                        "origin": row.origin,
                     })
                 })
                 .collect();
@@ -680,14 +689,15 @@ async fn run(
             let body = negotiate::json_value(h, &parts.body)?;
             state
                 .backend()
-                .put_retention_policy(
-                    required_str(&body, "kind")?,
-                    required_str(&body, "jurisdiction")?,
-                    optional_str(&body, "category")?,
-                    required_str(&body, "period")?,
-                    required_str(&body, "anchor")?,
-                    required_str(&body, "source")?,
-                )
+                .put_retention_policy(RetentionPeriod {
+                    kind: required_str(&body, "kind")?,
+                    jurisdiction: required_str(&body, "jurisdiction")?,
+                    category: optional_str(&body, "category")?,
+                    origin: optional_str(&body, "origin")?,
+                    period: required_str(&body, "period")?,
+                    anchor: required_str(&body, "anchor")?,
+                    source: required_str(&body, "source")?,
+                })
                 .await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
@@ -757,6 +767,7 @@ async fn run(
                         "objects_due": row.objects_due,
                         "objects_held": row.objects_held,
                         "category": row.category,
+                        "origin": row.origin,
                     })
                 })
                 .collect();

@@ -221,8 +221,8 @@ anything.
 | `GET {ext}/admin/restriction` | `?ehr_id=…` | **200**: the register, newest request first, lifts included |
 | `POST {ext}/admin/restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force restriction at that grain is lifted |
 | `POST {ext}/admin/research-objection` | `{"ehr_id": "…", "objected": true, "ground": "…"?}` | **204**: the objection, its override, or its withdrawal is recorded |
-| `PUT {ext}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set |
-| `GET {ext}/admin/retention/policy` | — | **200**: the whole retention register, each period with its `category` (`null` for every object of the kind) |
+| `PUT {ext}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "origin": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set and on one registered origin (`[origins]`) when `origin` is set |
+| `GET {ext}/admin/retention/policy` | — | **200**: the whole retention register, each period with its `category` and `origin` (`null` for every object of the kind, or every origin) |
 | `PUT {ext}/admin/retention/anchor` | `{"ehr_id": "…", "jurisdiction": "…", "anchored_at": "…"?, "hold_at": "…"?, "hold_ground": "…"?}` | **204**: the EHR's anchor and any whole-record hold |
 | `POST {ext}/admin/retention/hold` | `{"vo_id": "…", "held": true}` | **204**: the per-object exemption is placed or released |
 | `GET {ext}/admin/retention/due` | `?limit=100` | **200**: what has run out, oldest first, per period and category, with the due and held object counts |

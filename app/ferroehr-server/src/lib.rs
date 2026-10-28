@@ -47,7 +47,7 @@ use ferroehr::usage_report::store::PgStore;
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::{
-    AuthzHandle, AuthzResolvers, ResolveError, build_engine,
+    AuthzHandle, AuthzResolvers, ContentRules, ResolveError, build_engine,
 };
 use ferroehr_rest::extensions::management::{LogFilter, Observability};
 use ferrohealth_health::lifecycle::Lifecycle;
@@ -609,6 +609,7 @@ fn assemble_service(
         .with_outbox_enabled(outbox_enabled)
         .with_privacy(Arc::new(privacy))
         .with_cohort(config.cohort.clone())
+        .with_origins(config.origins.clone())
         .with_identifier_protection_opt(identifiers.map(Arc::new))
         .with_query_config(&config.query)
         .with_ehr_index(ehr_index);
@@ -644,10 +645,21 @@ fn wire_authz(
     if !config.auth.enabled {
         return Ok(None);
     }
+    // `validate` has already refused a category map that does not compile.
+    let content = ContentRules {
+        categories: config
+            .audit
+            .categories
+            .compile()
+            .map_err(ferroehr::system_log::AuditError::CategoryMap)
+            .context("compiling the [audit.categories] map for the ABAC category attribute")?,
+        origins: config.origins.clone(),
+        system_id: config.rest.system_id.clone(),
+    };
     let authz = build_authz(
         &config.authz,
         &config.rest.base_path,
-        authz_resolvers(pool.clone(), Arc::clone(service)),
+        authz_resolvers(pool.clone(), Arc::clone(service), content),
     )?;
     if let Some(handle) = &authz {
         let ehr_access_default = handle.ehr_access_default();
@@ -1316,12 +1328,17 @@ pub fn build_authz(
 /// Builds `ferroehr_rest::extensions::access::authz::AuthzResolvers`: the EHR
 /// subject as the patient scope addresses it (`ferroehr::aql::subject::ehr_subject`,
 /// the rule the AQL patient scope applies) and the committed template of a
-/// COMPOSITION version (`version.template_id` via the service read-back).
+/// COMPOSITION version with its root archetype and origins (via the service
+/// read-back), and the category and origin rules in `content`.
 /// Failures are typed [`ResolveError`]s — the PEP fails closed on them, never
 /// silently permits; a subject lookup that cannot obtain a connection carries
 /// the `service_overloaded` call status, which the PEP answers with `503`.
 #[must_use]
-pub fn authz_resolvers(pool: PgPool, service: Arc<FerroEhrService>) -> AuthzResolvers {
+pub fn authz_resolvers(
+    pool: PgPool,
+    service: Arc<FerroEhrService>,
+    content: ContentRules,
+) -> AuthzResolvers {
     AuthzResolvers {
         subject: Arc::new(move |ehr_id: String| {
             let pool = pool.clone();
@@ -1333,18 +1350,19 @@ pub fn authz_resolvers(pool: PgPool, service: Arc<FerroEhrService>) -> AuthzReso
                     .map_err(|e| ResolveError::new("ehr subject lookup", SmError::from(e)))
             })
         }),
-        template_of_version: Arc::new(move |vo: String, version: Option<String>| {
+        content_of_version: Arc::new(move |vo: String, version: Option<String>| {
             let service = Arc::clone(&service);
             Box::pin(async move {
                 let vo_id = vo
                     .parse::<ferroehr::ids::VoId>()
                     .map_err(|e| ResolveError::new(format!("vo id {vo}"), e))?;
                 service
-                    .template_of_version(vo_id, version.as_deref())
+                    .content_of_version(vo_id, version.as_deref())
                     .await
-                    .map_err(|e| ResolveError::new("template lookup", e))
+                    .map_err(|e| ResolveError::new("version content lookup", e))
             })
         }),
+        content: Arc::new(content),
     }
 }
 

@@ -55,6 +55,8 @@ fn composition<'a>(
         subject_patient,
         patient,
         template,
+        category: None,
+        origin: None,
     }
 }
 

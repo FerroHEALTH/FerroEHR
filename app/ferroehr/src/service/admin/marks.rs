@@ -183,8 +183,8 @@ impl FerroEhrService {
     }
 
     /// Declare the retention period of one content kind in one jurisdiction,
-    /// optionally keyed on one EHDS priority category, with the legal citation
-    /// it rests on.
+    /// optionally keyed on one EHDS category and one registered origin, with
+    /// the legal citation it rests on.
     ///
     /// GDPR Art. 30(1)(f) asks the record of processing activities for "the
     /// envisaged time limits for erasure of the different categories of data"
@@ -194,25 +194,31 @@ impl FerroEhrService {
     /// `docs/law/ch/fadp/text-de.html`). EHDS Annex II 3.4 asks the storing
     /// components to support retention periods that "take into account the
     /// origins and categories of electronic health data"
-    /// (`docs/law/eu/ehds/text.html`); `category` is that dimension, named as
-    /// `[audit.categories]` names a category and stored as its
-    /// `<system>|<code>` token, and `None` keys the period on every object of
-    /// the kind. The register is where those answers come from.
+    /// (`docs/law/eu/ehds/text.html`); `category` and `origin` are those
+    /// dimensions. A category is named as `[audit.categories]` names one and
+    /// stored as its `<system>|<code>` token; an origin is the id of a
+    /// registered origin (`[origins]`). `None` keys the period on every object
+    /// of the kind, or of every origin. The register is where those answers
+    /// come from.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a kind, category, anchor rule or
-    ///   period the register refuses.
+    /// - `precondition_violation` (`400`) — a kind, category, origin, anchor
+    ///   rule or period the register refuses.
     /// - `exception` — a database fault mid-transaction (rolled back).
     pub async fn put_retention_policy(
         &self,
-        kind: &str,
-        jurisdiction: &str,
-        category: Option<&str>,
-        period: &str,
-        anchor: &str,
-        source: &str,
+        period: marks::RetentionPeriod<'_>,
     ) -> Result<(), SmError> {
-        let category = category
+        if let Some(origin) = period.origin
+            && !self.origins().is_registered(origin)
+        {
+            return Err(SmError::precondition(format!(
+                "{origin:?} is not a registered origin: a retention period is keyed only on an \
+                 origin [[origins.registered]] declares, by its id"
+            )));
+        }
+        let category = period
+            .category
             .map(|reference| {
                 let fallback = crate::system_log::categories::Classifier::default();
                 let map = self.audit.as_ref().map_or(
@@ -237,12 +243,10 @@ impl FerroEhrService {
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         marks::put_retention_policy(
             &mut tx,
-            kind,
-            jurisdiction,
-            category.as_deref(),
-            period,
-            anchor,
-            source,
+            marks::RetentionPeriod {
+                category: category.as_deref(),
+                ..period
+            },
         )
         .await
         .map_err(|e| {

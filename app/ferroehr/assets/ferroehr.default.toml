@@ -675,6 +675,21 @@ url = "http://localhost:8080/fhir"   # POSTs {url}/AuditEvent; URL creds redacte
 poll_interval_ms = 2000      # how long the forwarder waits for a new record before reading the store again
 retry_max_ms = 60000         # the longest wait between two attempts
 
+# ── [origins] — the origins of data this deployment recognises ───────────────
+# EHDS Annex II 3.4: retention periods and access rights that take the origin
+# of the data into account. Every version records its origins at commit: each
+# FEEDER_AUDIT originating_system_audit system_id the body carries, or, for a
+# body with none, the registered origin of the committing client (a Basic user,
+# or an access token's client_id, failing that its azp), or this server's
+# system_id for any other caller. A retention period
+# (PUT /admin/retention/policy, `origin`) and an ABAC rule (the `origin`
+# resource attribute) name only a registered id. EMPTY by default. An id or a
+# client registered twice, a blank one, or a client in two origins refuses boot.
+[origins]
+#? [[origins.registered]]
+#? id = "lab.example"           # the system_id the origin's data carry, compared exactly
+#? clients = ["lab-gateway"]    # whose direct commits come from this origin
+
 # ── [privacy] — the clinical-side data-minimisation policy ────────────────────
 # GDPR Art. 4(5) + Art. 25(2); the openEHR RM leaves the subject reference open
 # and only advises against identifying party proxies, so these are FerroEHR

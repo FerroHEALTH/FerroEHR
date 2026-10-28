@@ -39,11 +39,16 @@ use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::rest::RestConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::status::SmError;
+use ferroehr::storage::version_repo::meta::VersionContent;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
-use ferroehr_rest::extensions::access::authz::request::{PATIENT, ResourceKind, TEMPLATE};
-use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, ResolveError};
+use ferroehr_rest::extensions::access::authz::request::{
+    CATEGORY, ORIGIN, PATIENT, ResourceKind, TEMPLATE,
+};
+use ferroehr_rest::extensions::access::authz::{
+    AuthzHandle, AuthzResolvers, ContentRules, ResolveError,
+};
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::{build_full, build_with};
 use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
@@ -186,9 +191,15 @@ fn resolvers() -> AuthzResolvers {
                 Ok::<_, ResolveError>(subject)
             })
         }),
-        template_of_version: Arc::new(|_vo: String, _v: Option<String>| {
-            Box::pin(async move { Ok::<_, ResolveError>(Some("org.openehr::t.v1".to_owned())) })
+        content_of_version: Arc::new(|_vo: String, _v: Option<String>| {
+            Box::pin(async move {
+                Ok::<_, ResolveError>(Some(VersionContent {
+                    template_id: Some("org.openehr::t.v1".to_owned()),
+                    ..VersionContent::default()
+                }))
+            })
         }),
+        content: Arc::default(),
     }
 }
 
@@ -196,15 +207,15 @@ fn resolvers() -> AuthzResolvers {
 /// service — i.e. from the `version.template_id` the commit routes stamp.
 fn service_resolvers(svc: Arc<FerroEhrService>) -> AuthzResolvers {
     AuthzResolvers {
-        template_of_version: Arc::new(move |vo: String, version: Option<String>| {
+        content_of_version: Arc::new(move |vo: String, version: Option<String>| {
             let svc = Arc::clone(&svc);
             Box::pin(async move {
                 let vo_id = vo
                     .parse::<ferroehr::ids::VoId>()
                     .map_err(|e| ResolveError::new("vo id", e))?;
-                svc.template_of_version(vo_id, version.as_deref())
+                svc.content_of_version(vo_id, version.as_deref())
                     .await
-                    .map_err(|e| ResolveError::new("template of version", e))
+                    .map_err(|e| ResolveError::new("content of version", e))
             })
         }),
         ..resolvers()
@@ -805,6 +816,169 @@ async fn template_scoped_rule_does_not_bind_a_templateless_composition() {
         StatusCode::FORBIDDEN,
         "a templateless composition carries no template attribute, so the \
          template-scoped rule must deny"
+    );
+}
+
+// ── the category and origin attributes (EHDS Annex II 3.4) ───────────────────
+
+/// A PDP that permits only when every value of the category attribute is
+/// `category` and every value of the origin attribute is `origin`: access
+/// rights keyed on the category and the origin of the data.
+#[derive(Debug)]
+struct RequireContent {
+    category: String,
+    origin: String,
+}
+
+#[async_trait]
+impl PolicyEngine for RequireContent {
+    async fn decide(
+        &self,
+        req: &ferrohealth_authz::request::Request<'_>,
+    ) -> Result<Decision, AuthzError> {
+        let only = |name: &str, want: &str| match req.attributes().get(name) {
+            Some(Attr::One(value)) => value == want,
+            Some(Attr::Set(values)) => values.iter().all(|value| value == want),
+            None => false,
+        };
+        Ok(
+            if only(CATEGORY, &self.category) && only(ORIGIN, &self.origin) {
+                permit()
+            } else {
+                deny()
+            },
+        )
+    }
+}
+
+/// The app whose PDP is `engine`, with the content resolved from the REAL
+/// service and IPS mapped to the patient summaries.
+async fn content_scoped_app(svc: Arc<FerroEhrService>, engine: RequireContent) -> Router {
+    let categories: ferroehr::system_log::categories::CategoryMapConfig =
+        serde_json::from_value(json!({ "templates": { IPS_TEMPLATE_ID: ["Patient-Summaries"] } }))
+            .expect("the map parses");
+    let resolvers = AuthzResolvers {
+        content: Arc::new(ContentRules {
+            categories: categories.compile().expect("the map compiles"),
+            ..ContentRules::default()
+        }),
+        ..service_resolvers(Arc::clone(&svc))
+    };
+    build_full(
+        rest_config(),
+        Arc::clone(&svc),
+        authz_with(Arc::new(engine), resolvers),
+        Observability::default(),
+    )
+    .await
+    .expect("build app")
+}
+
+/// The category token a stored record carries for `code`.
+fn category_token(code: &str) -> String {
+    format!(
+        "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs|{code}"
+    )
+}
+
+/// A rule on the category and the origin binds on a composition read: the
+/// post-check classifies the stored version through the category map and reads
+/// the origins it recorded at commit, so the patient-summary rule permits and
+/// a laboratory rule refuses.
+#[tokio::test]
+async fn category_and_origin_rules_bind_on_a_composition_read() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr(&seed, EHR_OWN).await;
+    let uid = seed_templated_composition(&seed, EHR_OWN).await;
+    let path = format!("/ehr/{EHR_OWN}/composition/{uid}");
+    let direct = ferroehr::service::DEFAULT_SYSTEM_ID.to_owned();
+
+    let summaries = content_scoped_app(
+        Arc::clone(&svc),
+        RequireContent {
+            category: category_token("Patient-Summaries"),
+            origin: direct.clone(),
+        },
+    )
+    .await;
+    assert_eq!(
+        probe(&summaries, "GET", &path, Some(PATIENT_OWN)).await,
+        StatusCode::OK,
+        "a rule on the patient summaries from this server permits the read"
+    );
+
+    let laboratory = content_scoped_app(
+        Arc::clone(&svc),
+        RequireContent {
+            category: category_token("Laboratory-Reports"),
+            origin: direct,
+        },
+    )
+    .await;
+    assert_eq!(
+        probe(&laboratory, "GET", &path, Some(PATIENT_OWN)).await,
+        StatusCode::FORBIDDEN,
+        "a rule on the laboratory reports refuses a patient summary"
+    );
+
+    let elsewhere = content_scoped_app(
+        svc,
+        RequireContent {
+            category: category_token("Patient-Summaries"),
+            origin: "lab.example".to_owned(),
+        },
+    )
+    .await;
+    assert_eq!(
+        probe(&elsewhere, "GET", &path, Some(PATIENT_OWN)).await,
+        StatusCode::FORBIDDEN,
+        "a rule on another origin refuses data this server created"
+    );
+}
+
+/// A composition write is decided on the content its body names: the category
+/// its template carries and the origin the commit will stamp, its
+/// `FEEDER_AUDIT` system when it names one and this server when it does not.
+#[tokio::test]
+async fn category_and_origin_rules_bind_on_a_composition_write() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr(&seed, EHR_OWN).await;
+    seed_templated_composition(&seed, EHR_OWN).await;
+    let app = content_scoped_app(
+        svc,
+        RequireContent {
+            category: category_token("Patient-Summaries"),
+            origin: "lab.example".to_owned(),
+        },
+    )
+    .await;
+    let write = |body: Value| {
+        Request::builder()
+            .method("POST")
+            .uri(common::full(&format!("/ehr/{EHR_OWN}/composition")))
+            .header("authorization", bearer(Some(PATIENT_OWN)))
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string()))
+            .expect("request")
+    };
+
+    let mut fed = common::ips_canonical_composition();
+    fed["feeder_audit"] = json!({
+        "_type": "FEEDER_AUDIT",
+        "originating_system_audit": {
+            "_type": "FEEDER_AUDIT_DETAILS",
+            "system_id": "lab.example"
+        }
+    });
+    assert_ne!(
+        status(&app, write(fed)).await,
+        StatusCode::FORBIDDEN,
+        "a patient summary fed by the lab clears a rule on the lab's patient summaries"
+    );
+    assert_eq!(
+        status(&app, write(common::ips_canonical_composition())).await,
+        StatusCode::FORBIDDEN,
+        "a direct commit originates at this server, which the rule does not name"
     );
 }
 

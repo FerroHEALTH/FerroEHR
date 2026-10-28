@@ -36,6 +36,7 @@ use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::service::status::CallStatusType;
+use ferroehr::storage::marks::RetentionPeriod;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender;
 
@@ -413,14 +414,15 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
     // EPDV Art. 10 Abs. 1 lit. d asks a certified community to destroy the
     // medical data of the dossier after twenty years, so the category is the
     // whole EHR and the due row counts every object of it.
-    svc.put_retention_policy(
-        "EHR",
-        "CH",
-        None,
-        "20 years",
-        "last_commit",
-        "EPDV Art. 10 Abs. 1 lit. d",
-    )
+    svc.put_retention_policy(RetentionPeriod {
+        kind: "EHR",
+        jurisdiction: "CH",
+        category: None,
+        origin: None,
+        period: "20 years",
+        anchor: "last_commit",
+        source: "EPDV Art. 10 Abs. 1 lit. d",
+    })
     .await
     .expect("declare the CH period");
     let policies = svc.retention_policies().await.expect("register");
@@ -429,7 +431,15 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
 
     // A period the register refuses stays out of it.
     let bad = svc
-        .put_retention_policy("SOMETHING_ELSE", "CH", None, "20 years", "last_commit", "x")
+        .put_retention_policy(RetentionPeriod {
+            kind: "SOMETHING_ELSE",
+            jurisdiction: "CH",
+            category: None,
+            origin: None,
+            period: "20 years",
+            anchor: "last_commit",
+            source: "x",
+        })
         .await
         .expect_err("an unknown content category is refused");
     assert_eq!(bad.status, CallStatusType::PreconditionViolation);
@@ -499,6 +509,19 @@ fn token(code: &str) -> String {
     )
 }
 
+/// A COMPOSITION period in DE keyed on `category` and on no origin.
+fn de_composition<'a>(category: Option<&'a str>, period: &'a str) -> RetentionPeriod<'a> {
+    RetentionPeriod {
+        kind: "COMPOSITION",
+        jurisdiction: "DE",
+        category,
+        origin: None,
+        period,
+        anchor: "last_commit",
+        source: "test period",
+    }
+}
+
 /// Declare three COMPOSITION periods in DE: ten years for test results, thirty
 /// for imaging (the longest), and five keyed on no category, each priority
 /// category named by its bare code.
@@ -508,16 +531,9 @@ async fn declare_category_periods(svc: &FerroEhrService) {
         (Some("Medical-Imaging"), "30 years"),
         (None, "5 years"),
     ] {
-        svc.put_retention_policy(
-            "COMPOSITION",
-            "DE",
-            category,
-            period,
-            "last_commit",
-            "test period",
-        )
-        .await
-        .expect("declare the period");
+        svc.put_retention_policy(de_composition(category, period))
+            .await
+            .expect("declare the period");
     }
 }
 
@@ -561,14 +577,7 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
 
     declare_category_periods(&svc).await;
     let bad = svc
-        .put_retention_policy(
-            "COMPOSITION",
-            "DE",
-            Some("laboratory"),
-            "1 year",
-            "last_commit",
-            "x",
-        )
+        .put_retention_policy(de_composition(Some("laboratory"), "1 year"))
         .await
         .expect_err("an unknown category is refused");
     assert_eq!(bad.status, CallStatusType::PreconditionViolation);
@@ -635,6 +644,99 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
             .objects_due,
         2
     );
+}
+
+/// A period keyed on a registered origin lists the objects whose latest
+/// version came from it, an unregistered origin is refused, and the period
+/// keyed on no origin still lists every object (Regulation (EU) 2025/327
+/// Annex II 3.4, `docs/law/eu/ehds/text.html`, #4299).
+#[tokio::test]
+async fn an_origin_keyed_period_lists_the_objects_of_its_origin() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let origins: ferroehr::origins::OriginsConfig = toml::from_str(
+        r#"
+        [[registered]]
+        id = "lab.example"
+        "#,
+    )
+    .expect("the register parses");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_origins(origins);
+    let (ehr_id, _status_vo) = seed(&svc).await;
+
+    let mut fed = crate::fixtures::composition("fed by the lab");
+    fed["feeder_audit"] = json!({
+        "_type": "FEEDER_AUDIT",
+        "originating_system_audit": {
+            "_type": "FEEDER_AUDIT_DETAILS",
+            "system_id": "lab.example"
+        }
+    });
+    svc.create_composition(ehr_id, uv(&fed, "249", None))
+        .await
+        .expect("the fed composition");
+    svc.create_composition(
+        ehr_id,
+        uv(&crate::fixtures::composition("home grown"), "249", None),
+    )
+    .await
+    .expect("the direct composition");
+
+    let period = |origin: Option<&'static str>, period: &'static str| RetentionPeriod {
+        kind: "COMPOSITION",
+        jurisdiction: "DE",
+        category: None,
+        origin,
+        period,
+        anchor: "last_commit",
+        source: "test period",
+    };
+    let bad = svc
+        .put_retention_policy(period(Some("pacs.example"), "1 year"))
+        .await
+        .expect_err("an unregistered origin is refused");
+    assert_eq!(bad.status, CallStatusType::PreconditionViolation);
+    svc.put_retention_policy(period(Some("lab.example"), "10 years"))
+        .await
+        .expect("declare the origin period");
+    svc.put_retention_policy(period(None, "30 years"))
+        .await
+        .expect("declare the every-origin period");
+    let policies = svc.retention_policies().await.expect("register");
+    assert_eq!(
+        policies
+            .iter()
+            .filter(|p| p.origin.as_deref() == Some("lab.example"))
+            .count(),
+        1
+    );
+
+    svc.put_retention_anchor(
+        &ehr_id.to_string(),
+        "DE",
+        Some("1950-01-01T00:00:00Z"),
+        None,
+    )
+    .await
+    .expect("anchor");
+    let due = svc.retention_due(100).await.expect("due list");
+    let row = |origin: Option<&str>| {
+        due.iter()
+            .find(|row| row.origin.as_deref() == origin)
+            .expect("a due row per origin dimension")
+    };
+    assert_eq!(
+        row(Some("lab.example")).objects_due,
+        1,
+        "only the fed composition came from the lab"
+    );
+    assert_eq!(
+        row(None).objects_due,
+        2,
+        "the period keyed on no origin lists every composition"
+    );
+    assert_eq!(due.len(), 2, "{due:#?}");
 }
 
 #[tokio::test]

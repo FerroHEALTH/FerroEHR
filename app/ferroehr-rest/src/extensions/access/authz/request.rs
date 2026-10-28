@@ -6,8 +6,8 @@
 //!
 //! An operation maps onto a [`ResourceKind`] and an [`AccessMode`], and the PEP
 //! resolves the attributes a policy reads: the caller's organization and
-//! patient claims, and the patient and template of every object the operation
-//! touches. [`model`] declares the same names to the Cedar engine, so the
+//! patient claims, and the patient, template, category and origin of every
+//! object the operation touches. [`model`] declares the same names to the Cedar engine, so the
 //! schema a deployment's policies are validated against is the request this
 //! module builds. The engine decides every combination of a set attribute and
 //! permits only when each is permitted. No openEHR specification governs
@@ -132,13 +132,21 @@ pub const ORGANIZATION: &str = "organization";
 pub const PATIENT: &str = "patient";
 /// The resource attribute naming a template.
 pub const TEMPLATE: &str = "template";
+/// The resource attribute naming an EHDS category of the data, as the stored
+/// access record spells it: a `<system>|<code>` token, `none` or
+/// `unclassified` (EHDS Annex II 3.4).
+pub const CATEGORY: &str = "category";
+/// The resource attribute naming an origin of the data, as `version.origins`
+/// records it (EHDS Annex II 3.4, `[origins]`).
+pub const ORIGIN: &str = "origin";
 /// The context attribute naming the generated operation.
 pub const OPERATION_ID: &str = "operation_id";
 
 /// The names the Cedar schema declares.
 ///
 /// The principal's organization and patient, one resource type per
-/// [`ResourceKind`] with its patient and template, one action per kind and
+/// [`ResourceKind`] with its patient, template, category and origin, one
+/// action per kind and
 /// mode, and the operation id as context.
 #[must_use]
 pub fn model() -> Model {
@@ -147,7 +155,7 @@ pub fn model() -> Model {
         .subject_attribute(PATIENT)
         .context(OPERATION_ID);
     for kind in KINDS {
-        model = model.resource(kind.resource_type(), [PATIENT, TEMPLATE]);
+        model = model.resource(kind.resource_type(), [PATIENT, TEMPLATE, CATEGORY, ORIGIN]);
         for mode in MODES {
             model = model.action(action_id(kind, mode), [kind.resource_type()]);
         }
@@ -182,6 +190,12 @@ pub struct AuthzRequest<'a> {
     /// The template of the touched objects (one, or a set for a contribution
     /// or a query).
     pub template: Option<Attr>,
+    /// The EHDS categories of the touched data, as the access record spells
+    /// them; `None` where the operation touches no content.
+    pub category: Option<Attr>,
+    /// The origins of the touched data, as `version.origins` records them;
+    /// `None` where they are not known before the operation runs.
+    pub origin: Option<Attr>,
 }
 
 impl AuthzRequest<'_> {
@@ -204,7 +218,8 @@ impl AuthzRequest<'_> {
     ///
     /// # Errors
     ///
-    /// [`RequestError::EmptySet`] for a patient or template set with no value.
+    /// [`RequestError::EmptySet`] for a patient, template, category or origin
+    /// set with no value.
     pub fn to_request<'s>(&self, subject: &'s Subject) -> Result<Request<'s>, RequestError> {
         let mut request = Request::new(
             subject,
@@ -217,6 +232,12 @@ impl AuthzRequest<'_> {
         }
         if let Some(template) = &self.template {
             request = request.with_attribute(TEMPLATE, template.clone())?;
+        }
+        if let Some(category) = &self.category {
+            request = request.with_attribute(CATEGORY, category.clone())?;
+        }
+        if let Some(origin) = &self.origin {
+            request = request.with_attribute(ORIGIN, origin.clone())?;
         }
         Ok(request)
     }
@@ -238,6 +259,11 @@ mod tests {
             subject_patient: None,
             patient,
             template,
+            category: Some(Attr::One("none".to_owned())),
+            origin: Some(Attr::Set(vec![
+                "lab.example".to_owned(),
+                "ferroehr".to_owned(),
+            ])),
         }
     }
 
@@ -247,6 +273,8 @@ mod tests {
         let schema = model().schema_source();
         assert!(schema.contains("action \"composition.create\""), "{schema}");
         assert!(schema.contains("entity EhrStatus"), "{schema}");
+        assert!(schema.contains("category"), "{schema}");
+        assert!(schema.contains("origin"), "{schema}");
         assert!(
             schema.contains("context: { operation_id: String }"),
             "{schema}"
@@ -263,7 +291,11 @@ mod tests {
         let request = r.to_request(&subject).expect("a request");
         assert_eq!(request.action(), "composition.create");
         assert_eq!(request.resource_type(), "Composition");
-        assert_eq!(request.combinations().len(), 2);
+        assert_eq!(request.combinations().len(), 4);
+        assert_eq!(
+            request.attributes().get(CATEGORY),
+            Some(&Attr::One("none".to_owned()))
+        );
         assert_eq!(
             subject.attributes().get(ORGANIZATION).map(String::as_str),
             Some("org1")

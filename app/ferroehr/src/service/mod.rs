@@ -217,6 +217,11 @@ pub struct FerroEhrService {
     /// [`Self::new`] so a bare service (tests, embeddings) never silently drops
     /// an event; the binary sets the real gate via [`Self::with_outbox_enabled`].
     outbox_enabled: bool,
+    /// The `[origins]` register: which origin a direct commit by a registered
+    /// client is stamped with, and which origins a retention period may name
+    /// (EHDS Annex II 3.4). Empty in [`Self::new`]; the binary sets it via
+    /// [`Self::with_origins`].
+    origins: Arc<crate::origins::OriginsConfig>,
     /// Short-lived stash of a just-created EHR's RM `EHR` wire body, built from
     /// the commit results at creation and popped by the `ehr_created_object`
     /// adapter seam so a `Prefer: return=representation` create response is
@@ -303,6 +308,7 @@ impl FerroEhrService {
             query_timeout: None,
             query_result_ceiling: None,
             outbox_enabled: true,
+            origins: Arc::default(),
             created_ehr_repr: moka::future::Cache::builder()
                 .max_capacity(4096)
                 .time_to_live(Duration::from_secs(30))
@@ -507,6 +513,19 @@ impl FerroEhrService {
         self
     }
 
+    /// Set the `[origins]` register (EHDS Annex II 3.4).
+    #[must_use]
+    pub fn with_origins(mut self, origins: crate::origins::OriginsConfig) -> Self {
+        self.origins = Arc::new(origins);
+        self
+    }
+
+    /// The `[origins]` register in force.
+    #[must_use]
+    pub fn origins(&self) -> &crate::origins::OriginsConfig {
+        &self.origins
+    }
+
     /// Set whether the transactional event outbox is written on commit. The
     /// binary calls this with `events.enabled` so the
     /// `event_outbox` INSERT is skipped when no consumer will ever read it. The
@@ -599,6 +618,12 @@ impl FerroEhrService {
             multimedia: self.multimedia.as_deref(),
             identifiers: self.identifiers.as_deref(),
             outbox_enabled: self.outbox_enabled,
+            direct_origin: self.origins.direct_origin(
+                committer::current_committer()
+                    .and_then(|committer| committer.client)
+                    .as_deref(),
+                &self.system_id,
+            ),
         }
     }
 }

@@ -75,7 +75,7 @@ pub(crate) mod import;
 pub(crate) mod integrity;
 pub(crate) mod lifecycle;
 pub mod object_version_id;
-pub(crate) mod origins;
+pub mod origins;
 pub(crate) mod profile;
 pub(crate) mod read;
 pub mod signature;
@@ -215,6 +215,10 @@ pub(crate) struct SigningCtx<'a> {
     /// INSERT + envelope serialization is skipped entirely. No openEHR spec
     /// governs eventing — our own extension.
     pub(crate) outbox_enabled: bool,
+    /// The origin a body with no `FEEDER_AUDIT` is stamped with
+    /// (`version.origins`): the committing client's registered origin, or
+    /// [`Self::system_id`] (EHDS Annex II 3.4, [`crate::origins`]).
+    pub(crate) direct_origin: String,
 }
 
 /// The cross-area hooks the CONTRIBUTION commit orchestration

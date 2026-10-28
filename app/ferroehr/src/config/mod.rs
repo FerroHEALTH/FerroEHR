@@ -105,6 +105,9 @@ pub struct FerroEhrConfig {
     /// `[audit]` — the IHE ATNA audit trail / System Log (local Audit Record
     /// Repository + the syslog and FHIR-feed forwarding sinks).
     pub audit: crate::system_log::config::AuditConfig,
+    /// `[origins]` — the origins of data this deployment recognises, which a
+    /// retention period and an access rule may name (EHDS Annex II 3.4).
+    pub origins: crate::origins::OriginsConfig,
     /// `[privacy]` — the clinical-side data-minimisation policy.
     pub privacy: crate::privacy::config::PrivacyConfig,
     /// `[demographic]` — the demographic domain, including national-identifier
@@ -152,6 +155,7 @@ impl Default for FerroEhrConfig {
             terminology: crate::service::terminology::config::TerminologyConfig::default(),
             multimedia: crate::extensions::multimedia::config::MultimediaConfig::default(),
             audit: crate::system_log::config::AuditConfig::default(),
+            origins: crate::origins::OriginsConfig::default(),
             privacy: crate::privacy::config::PrivacyConfig::default(),
             demographic:
                 crate::service::demographic::identifier::config::DemographicConfig::default(),
@@ -183,6 +187,7 @@ impl FerroEhrConfig {
         self.validate_privacy(&mut errors);
         self.validate_audit(&mut errors);
         self.validate_outbound_clients(&mut errors);
+        errors.extend(self.origins.errors().into_iter().map(ConfigError::semantic));
         errors.extend(
             self.audit
                 .categories

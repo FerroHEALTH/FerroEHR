@@ -85,7 +85,8 @@ fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
     // RBAC-only: no engine, inert resolvers (nothing here consults ABAC).
     let resolvers = AuthzResolvers {
         subject: Arc::new(|_| Box::pin(async { Ok::<_, ResolveError>(None) })),
-        template_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
+        content_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
+        content: Arc::default(),
     };
     AuthzHandle::build(&cfg, &rest_config().rest.base_path, None, resolvers).map(Arc::new)
 }

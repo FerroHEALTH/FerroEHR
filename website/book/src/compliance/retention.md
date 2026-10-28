@@ -27,6 +27,7 @@ legal citation the period rests on.
 |---|---|
 | `kind` | The content category: `COMPOSITION`, `EHR_STATUS`, `FOLDER`, or `EHR` for the whole record |
 | `category` | Optional: the EHDS category the period is keyed on, named as `[audit.categories]` names it: a priority category by its code (`Patient-Summaries`, `Electronic-Prescriptions`, `Electronic-Dispensations`, `Medical-Imaging`, `Laboratory-Reports`, `Discharge-Reports`) or as `<system>\|<code>`, a declared national category as its `<system>\|<code>`, or `none`; stored as the `<system>\|<code>` token; empty keys the period on every object of the kind |
+| `origin` | Optional: the origin the period is keyed on, the id of an origin [`[origins]`](#keying-a-period-on-an-origin) registers; empty keys the period on every origin |
 | `jurisdiction` | ISO 3166-1 alpha-2, the same key the [identifier scanner](../installation/config-privacy.md) rules use |
 | `period` | How long content of that category is kept |
 | `anchor` | What the period is measured from: `last_commit`, `death`, or `majority` |
@@ -37,8 +38,8 @@ the anchor instant once the deployment knows it, and any hold that suspends
 disposal for the whole record with the reason it was placed.
 
 `retention_due` joins the two and lists what has run out. Each row names the
-EHR, the kind, the priority category where the period is keyed on one, the
-citation, when the period expired, and two counts: the objects that are due,
+EHR, the kind, the priority category and the origin where the period is keyed
+on one, the citation, when the period expired, and two counts: the objects that are due,
 and the objects exempted by a per-object hold.
 
 Ship the register empty and declare the periods your organisation is subject
@@ -64,8 +65,9 @@ Content-Type: application/json
 }
 ```
 
-**204** on success, replacing any earlier period for that kind, category and
-jurisdiction. An unknown kind or category, an unknown anchor rule or a
+**204** on success, replacing any earlier period for that kind, category,
+origin and jurisdiction. An unknown kind or category, an unregistered origin,
+an unknown anchor rule or a
 non-positive period is **400**. `GET /ferroehr/rest/extensions/v1/admin/retention/policy` reads the
 whole register back, which is what an access answer and an audit both cite.
 
@@ -84,11 +86,30 @@ configured for its kind, so a missing map entry can only keep content longer. A
 category row with no object is left out of the due list, and a period without a
 category lists every object of its kind.
 
-The register does not key a period on the origin of the data. The origins the
-server records are the `FEEDER_AUDIT` originating-system ids a sending system
-chooses, as free text, and content committed directly carries none, so an
-origin key could not be checked the way a category is and would never reach
-that content.
+### Keying a period on an origin
+
+Every version records its origins at commit: each `FEEDER_AUDIT`
+originating-system id the body carries (RM common, `FEEDER_AUDIT_DETAILS`), or,
+for a body that carries none, the origin of the client that committed it. The
+ids a sending system writes are free text, so you declare the origins your
+deployment recognises in `[origins]`, each by the id its data carry and with the
+clients whose direct commits come from it:
+
+```toml
+[[origins.registered]]
+id = "lab.example"          # the FEEDER_AUDIT system_id the lab's feed writes
+clients = ["lab-gateway"]   # a Basic user, or an access token's client_id (else azp)
+```
+
+A body without a `FEEDER_AUDIT` committed by `lab-gateway` is then stamped
+`lab.example`; a direct commit by any other caller keeps this server's
+`system_id`. Add `"origin": "lab.example"` to a period and it covers only the
+objects whose latest version carrying content came from that origin. A period
+names only a registered id, so a misspelt origin is refused with **400**
+instead of keying a period that reaches nothing. A period without an origin
+lists every object of its kind, and an origin row with no object is left out of
+the due list. Ids compare exactly. Origin and category combine: a period keyed
+on both lists the objects of that category from that origin.
 
 ### Anchoring an EHR and holding it
 

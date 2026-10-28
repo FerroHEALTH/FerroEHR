@@ -43,9 +43,11 @@ use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;
 use crate::extensions::access::authn::{Principal, current_principal};
-use crate::extensions::access::authz::AbacGate;
+use crate::extensions::access::authz::{AbacGate, ContentRules};
 use crate::overview::error::RestError;
 use ferroehr::config::authz::AbacEngineKind;
+use ferroehr::storage::version_repo::meta::VersionContent;
+use ferroehr::system_log::categories::{AccessedContent, ContentIds};
 
 use crate::smart::routes;
 use crate::state::AppState;
@@ -175,6 +177,12 @@ pub(crate) async fn query_post(
     }
     let template =
         (!outcome.template_ids.is_empty()).then(|| Attr::Set(outcome.template_ids.clone()));
+    let category = outcome
+        .accessed
+        .as_ref()
+        .map(|accessed| category_attr(&abac.resolvers.content, accessed, false));
+    let origin =
+        (!outcome.served_origins.is_empty()).then(|| Attr::Set(outcome.served_origins.clone()));
     let mut patients = Vec::with_capacity(2);
     if !subjects.ids.is_empty() {
         patients.push(Some(Attr::Set(subjects.ids.clone())));
@@ -194,6 +202,8 @@ pub(crate) async fn query_post(
             subject_patient: abac.subject_patient(claim.as_ref()),
             patient,
             template: template.clone(),
+            category: category.clone(),
+            origin: origin.clone(),
         };
         decide(abac, &principal, &req).await?;
     }
@@ -254,7 +264,7 @@ async fn abac_pre(
     )
     .await?;
 
-    let template = pre_template(abac, &principal, op, kind, parts).await?;
+    let content = pre_content(abac, &principal, op, parts).await?;
 
     let req = AuthzRequest {
         operation_id: op,
@@ -266,7 +276,9 @@ async fn abac_pre(
         organization: organization(abac, &principal),
         subject_patient: abac.subject_patient(patient.as_ref()),
         patient: patient.map(Attr::One),
-        template,
+        template: content.template,
+        category: content.category,
+        origin: content.origin,
     };
     decide(abac, &principal, &req).await
 }
@@ -324,13 +336,14 @@ async fn abac_post(state: &AppState, op: &'static str, resp: Response) -> Respon
         return deny;
     }
 
-    // Template attribute: for a composition read, from the returned version uid.
-    let template = match kind {
-        ResourceKind::Composition => match post_template(abac, &principal, uid.as_deref()).await {
-            Ok(t) => t.map(Attr::One),
+    // The template, category and origin attributes: for a composition read,
+    // from the returned version uid.
+    let content = match kind {
+        ResourceKind::Composition => match post_content(abac, &principal, uid.as_deref()).await {
+            Ok(content) => content,
             Err(deny) => return deny,
         },
-        _ => None,
+        _ => ContentAttrs::default(),
     };
 
     let req = AuthzRequest {
@@ -343,7 +356,9 @@ async fn abac_post(state: &AppState, op: &'static str, resp: Response) -> Respon
         organization: organization(abac, &principal),
         subject_patient: abac.subject_patient(patient.as_ref()),
         patient: patient.map(Attr::One),
-        template,
+        template: content.template,
+        category: content.category,
+        origin: content.origin,
     };
     match decide(abac, &principal, &req).await {
         Ok(()) => resp,
@@ -448,55 +463,189 @@ async fn subject_gate(
     }
 }
 
-/// Returns the template attribute for a pre-checked op.
-async fn pre_template(
-    abac: &AbacGate,
-    principal: &Principal,
-    op: &str,
-    kind: ResourceKind,
-    parts: &RequestParts,
-) -> Result<Option<Attr>, Response> {
-    match op {
-        "composition_create" | "composition_update" => {
-            Ok(composition_template(parts).map(Attr::One))
-        }
-        "composition_delete" => {
-            // The template of the preceding (current) version being deleted.
-            let Some(uid) = parts.path.get("uid_based_id") else {
-                return Ok(None);
-            };
-            let (vo_id, _) = resolve_target(principal, uid)?;
-            let template = (abac.resolvers.template_of_version)(vo_id, None)
-                .await
-                .map_err(|e| engine_error(principal, "resolve the template attribute", &e))?;
-            Ok(template.map(Attr::One))
-        }
-        "contribution_create" => {
-            let templates = contribution_templates(parts, principal)?;
-            Ok((!templates.is_empty()).then_some(Attr::Set(templates)))
-        }
-        _ => {
-            // EHR / EHR_STATUS / DIRECTORY carry no template.
-            let _ = kind;
-            Ok(None)
-        }
+/// The template, category and origin attributes of one operation (EHDS
+/// Annex II 3.4); each `None` where the operation names no such value.
+#[derive(Debug, Default)]
+struct ContentAttrs {
+    template: Option<Attr>,
+    category: Option<Attr>,
+    origin: Option<Attr>,
+}
+
+/// The category attribute of `content`, as the access record spells each
+/// category: a `<system>|<code>` token, `none` or `unclassified`.
+fn category_attr(rules: &ContentRules, content: &AccessedContent, written: bool) -> Attr {
+    Attr::Set(
+        rules
+            .categories
+            .classify(content, written)
+            .stored_categories(),
+    )
+}
+
+/// The attributes of objects identified by `objects`, with `origins` as the
+/// origin set; an empty set leaves the attribute out.
+fn attrs_of(
+    rules: &ContentRules,
+    templates: Vec<String>,
+    objects: Vec<ContentIds>,
+    origins: Vec<String>,
+    written: bool,
+) -> ContentAttrs {
+    let template = match templates.len() {
+        0 => None,
+        1 => templates.into_iter().next().map(Attr::One),
+        _ => Some(Attr::Set(templates)),
+    };
+    let category = (!objects.is_empty())
+        .then(|| category_attr(rules, &AccessedContent::Objects(objects), written));
+    let mut origins = origins;
+    origins.sort();
+    origins.dedup();
+    ContentAttrs {
+        template,
+        category,
+        origin: (!origins.is_empty()).then_some(Attr::Set(origins)),
     }
 }
 
-/// Returns the template of a returned composition version, via the version uid
-/// the dispatch recorded.
-async fn post_template(
+/// The attributes of one stored version.
+fn stored_attrs(rules: &ContentRules, content: VersionContent, written: bool) -> ContentAttrs {
+    let object = ContentIds {
+        template_id: content.template_id.clone(),
+        archetype_id: content.archetype_id,
+        resource_kind: None,
+    };
+    attrs_of(
+        rules,
+        content.template_id.into_iter().collect(),
+        vec![object],
+        content.origins,
+        written,
+    )
+}
+
+/// Returns the template, category and origin attributes for a pre-checked op.
+async fn pre_content(
+    abac: &AbacGate,
+    principal: &Principal,
+    op: &str,
+    parts: &RequestParts,
+) -> Result<ContentAttrs, Response> {
+    let rules = &abac.resolvers.content;
+    match op {
+        "composition_create" | "composition_update" => {
+            Ok(composition_content(rules, principal, parts))
+        }
+        "composition_delete" => {
+            // The content of the preceding (current) version being deleted.
+            let Some(uid) = parts.path.get("uid_based_id") else {
+                return Ok(ContentAttrs::default());
+            };
+            let (vo_id, _) = resolve_target(principal, uid)?;
+            let content = (abac.resolvers.content_of_version)(vo_id, None)
+                .await
+                .map_err(|e| engine_error(principal, "resolve the content attributes", &e))?;
+            Ok(content.map_or_else(ContentAttrs::default, |content| {
+                stored_attrs(rules, content, true)
+            }))
+        }
+        "contribution_create" => contribution_content(rules, parts, principal),
+        // EHR / EHR_STATUS / DIRECTORY carry no template.
+        _ => Ok(ContentAttrs::default()),
+    }
+}
+
+/// Returns the template, category and origin attributes of a returned
+/// composition version, via the version uid the dispatch recorded.
+async fn post_content(
     abac: &AbacGate,
     principal: &Principal,
     uid: Option<&str>,
-) -> Result<Option<String>, Response> {
+) -> Result<ContentAttrs, Response> {
     let Some(uid) = uid else {
-        return Ok(None);
+        return Ok(ContentAttrs::default());
     };
     let (vo_id, version) = resolve_target(principal, uid)?;
-    (abac.resolvers.template_of_version)(vo_id, version)
+    let content = (abac.resolvers.content_of_version)(vo_id, version)
         .await
-        .map_err(|e| engine_error(principal, "resolve the template attribute", &e))
+        .map_err(|e| engine_error(principal, "resolve the content attributes", &e))?;
+    Ok(content.map_or_else(ContentAttrs::default, |content| {
+        stored_attrs(&abac.resolvers.content, content, false)
+    }))
+}
+
+/// The origin a body with no `FEEDER_AUDIT` committed by `principal` is
+/// stamped with: the caller's registered origin, or this server.
+fn direct_origin(rules: &ContentRules, principal: &Principal) -> String {
+    rules.origins.direct_origin(
+        crate::extensions::access::authn::client_of(principal).as_deref(),
+        &rules.system_id,
+    )
+}
+
+/// The attributes of a COMPOSITION write, read off its body the way the commit
+/// will: the template, the root archetype, and the `FEEDER_AUDIT` origins or
+/// the caller's direct origin. A simplified-format body names its template in
+/// a header and is converted only at the commit seam, so it carries the
+/// template and the category it implies and no origin attribute.
+fn composition_content(
+    rules: &ContentRules,
+    principal: &Principal,
+    parts: &RequestParts,
+) -> ContentAttrs {
+    let h = &parts.headers;
+    if crate::formats::dispatch::is_simplified_body(h) {
+        let template = crate::formats::dispatch::header_template_id(h);
+        let objects = template
+            .iter()
+            .map(|template| ContentIds {
+                template_id: Some(template.clone()),
+                ..ContentIds::default()
+            })
+            .collect();
+        return attrs_of(
+            rules,
+            template.into_iter().collect(),
+            objects,
+            Vec::new(),
+            true,
+        );
+    }
+    // The same typed decode the commit seam performs: the ids come off the
+    // typed value, never a JSON pointer a shape change could silently stop
+    // matching. An undecodable body is the dispatch's 400; nothing to check.
+    let Ok(composition) = negotiate::rm_value::<Composition>(h, &parts.body) else {
+        return ContentAttrs::default();
+    };
+    composition_attrs(rules, principal, &composition)
+}
+
+/// The attributes of one decoded COMPOSITION a write carries.
+fn composition_attrs(
+    rules: &ContentRules,
+    principal: &Principal,
+    composition: &Composition,
+) -> ContentAttrs {
+    let canonical = openehr_its::json::to_canonical_value(composition);
+    let origins =
+        ferroehr::versioning::origins::origins(&direct_origin(rules, principal), &canonical);
+    let details = composition.archetype_details.as_ref();
+    let template = details
+        .and_then(|a| a.template_id.as_ref())
+        .map(|id| id.value.clone());
+    let object = ContentIds {
+        template_id: template.clone(),
+        archetype_id: details.map(|a| a.archetype_id.value.clone()),
+        resource_kind: None,
+    };
+    attrs_of(
+        rules,
+        template.into_iter().collect(),
+        vec![object],
+        origins,
+        true,
+    )
 }
 
 /// Extracts the composition template id from the request body, or from the
@@ -517,19 +666,23 @@ fn composition_template(parts: &RequestParts) -> Option<String> {
         .map(|id| id.value)
 }
 
-/// Returns the COMPOSITION template ids in a contribution payload.
+/// Returns the template, category and origin attributes of the COMPOSITION
+/// versions in a contribution payload.
 ///
 /// A COMPOSITION version without a template is unresolvable, so it is
 /// fail-closed (403).
-fn contribution_templates(
+fn contribution_content(
+    rules: &ContentRules,
     parts: &RequestParts,
     principal: &Principal,
-) -> Result<Vec<String>, Response> {
+) -> Result<ContentAttrs, Response> {
     let Ok(value) = negotiate::json_value(&parts.headers, &parts.body) else {
         // A malformed body: let the dispatch return the 400; nothing to check.
-        return Ok(Vec::new());
+        return Ok(ContentAttrs::default());
     };
-    let mut out = Vec::new();
+    let mut templates = Vec::new();
+    let mut objects = Vec::new();
+    let mut origins = Vec::new();
     if let Some(versions) = value.get("versions").and_then(|v| v.as_array()) {
         for version in versions {
             let Some(data) = version.get("data") else {
@@ -545,14 +698,19 @@ fn contribution_templates(
             else {
                 // Undecodable: the dispatch answers 400 for this body, so there
                 // is nothing here to authorize.
-                return Ok(Vec::new());
+                return Ok(ContentAttrs::default());
             };
-            match composition
-                .archetype_details
-                .and_then(|a| a.template_id)
-                .map(|id| id.value)
-            {
-                Some(t) => out.push(t),
+            let attrs = composition_attrs(rules, principal, &composition);
+            let details = composition.archetype_details.as_ref();
+            match details.and_then(|a| a.template_id.as_ref()) {
+                Some(template) => {
+                    templates.push(template.value.clone());
+                    objects.push(ContentIds {
+                        template_id: Some(template.value.clone()),
+                        archetype_id: details.map(|a| a.archetype_id.value.clone()),
+                        resource_kind: None,
+                    });
+                }
                 None => {
                     return Err(forbidden(
                         principal,
@@ -560,9 +718,12 @@ fn contribution_templates(
                     ));
                 }
             }
+            if let Some(Attr::Set(found)) = attrs.origin {
+                origins.extend(found);
+            }
         }
     }
-    Ok(out)
+    Ok(attrs_of(rules, templates, objects, origins, true))
 }
 
 /// Runs the engine and maps the verdict: permit to `Ok`, deny to 403, error to
@@ -830,9 +991,10 @@ mod tests {
                     let subject = subject.clone();
                     Box::pin(async move { Ok::<_, ResolveError>(subject) })
                 }),
-                template_of_version: Arc::new(|_vo: String, _v: Option<String>| {
+                content_of_version: Arc::new(|_vo: String, _v: Option<String>| {
                     Box::pin(async move { Ok::<_, ResolveError>(None) })
                 }),
+                content: Arc::default(),
             },
             organization_claim: None,
             patient_claim: Some("patient_id".to_owned()),

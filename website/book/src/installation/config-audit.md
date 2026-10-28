@@ -132,6 +132,35 @@ The map's SHA-256 digest is on the boot line, on `GET /management/info` under
 mirrored into the retention register, so a retention period can be keyed on a
 category through the [admin marks API](../operations-admin-apis.md).
 
+### `[origins]`: the origins a deployment recognises
+
+Every version records where its data came from at commit: each `FEEDER_AUDIT`
+originating-system id its body carries, and the access log reports them (EHDS
+Annex II 3.2(e)). Annex II 3.4 also asks for retention periods and access
+rights that take the origin into account. The ids a sending system writes are
+free text, so this register declares the origins your deployment recognises,
+which a [retention period](../compliance/retention.md#keying-a-period-on-an-origin)
+and an [ABAC rule](../security.md#abac-attribute-based-fine-grained) may then
+name. A top-level table, not part of `[audit]`.
+
+```toml
+[[origins.registered]]
+id = "lab.example"
+clients = ["lab-gateway"]
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `registered` | list of tables | empty | The recognised origins. |
+| `registered[].id` | string | (required) | The id the origin's data carry: the `FEEDER_AUDIT` `system_id` its feed writes, compared exactly, and the origin a direct commit by one of its clients is stamped with. |
+| `registered[].clients` | list of string | empty | The clients whose direct commits come from this origin: a Basic user name, or an access token's `client_id`, failing that its `azp`. |
+
+A body that carries no `FEEDER_AUDIT`, committed by a listed client, is stamped
+with that client's origin; a direct commit by any other caller keeps this
+server's `[rest] system_id`, as before. A blank id or one with whitespace, an
+id registered twice, a blank client, or a client listed under two origins
+refuses boot.
+
 ### `[audit.syslog]`: the classic DICOM/syslog feed (ITI-20)
 
 The DICOM PS3.15 audit message, framed as RFC 5424 syslog and sent over RFC

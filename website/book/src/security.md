@@ -456,12 +456,40 @@ about, and a missing one is a boot error rather than a first-request surprise.
 
 A policy sees the **caller**, not just the request: the authenticated subject,
 its roles (as the role layer above resolved them), its scopes, the resolved
-organization and patient, the resource's patient and template, and the operation
-id. So a rule can be written about one caller, a role, a scope, or a single
-operation; the [shipped example policy](https://github.com/FerroHEALTH/FerroEHR/tree/main/app/ferroehr-rest/examples/policies)
+organization and patient, the resource's patient, template, category and
+origin, and the operation id. So a rule can be written about one caller, a role,
+a scope, or a single operation; the [shipped example policy](https://github.com/FerroHEALTH/FerroEHR/tree/main/app/ferroehr-rest/examples/policies)
 shows a role-keyed break-glass permit and a scope-keyed write restriction.
 
-A request whose `patient` or `template` resolves to several values is evaluated
+**Category and origin** (EHDS Annex II 3.4 asks for access rights that take
+the origins and categories of the data into account). On a composition read,
+write or delete, a contribution and a query, `resource.category` holds each
+EHDS category of the data, spelt as the access record spells it: the
+`<system>|<code>` token of a priority or national category,
+[`[audit.categories]`](installation/config-audit.md#auditcategories) classifying
+the template, then the root archetype; `none`; or `unclassified`.
+`resource.origin` holds each origin the data came from, as the version recorded
+it at commit: a `FEEDER_AUDIT` originating-system id, the registered origin of
+the committing client, or this server's `system_id`
+([keying on an origin](compliance/retention.md#keying-a-period-on-an-origin)
+declares the register). A write is decided on what its body names: its
+template's category and the origin the commit will stamp. A FLAT or STRUCTURED
+write is converted only after the check, so it carries the category its
+template header implies and no origin attribute. A remote PDP receives both as
+the `category` and `origin` parameters of `[authz.abac.policy.<kind>]`.
+
+```cedar
+// Laboratory reports fed by the lab are readable by the lab's own staff only.
+forbid (principal, action == Action::"composition.read", resource)
+when {
+  resource has category && resource has origin &&
+  resource.category == "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs|Laboratory-Reports" &&
+  resource.origin == "lab.example" &&
+  !(principal has organization && principal.organization == "lab")
+};
+```
+
+A request whose `patient`, `template`, `category` or `origin` resolves to several values is evaluated
 over the full cartesian product of them, and **every** combination must permit;
 the first deny short-circuits. A request that resolves to no combination at all
 permits vacuously, because there is nothing to decide about.

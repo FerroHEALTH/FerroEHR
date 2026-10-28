@@ -299,6 +299,7 @@ rather than inherit from a quickstart. See
 | `[events]` | Change eventing | [Integrations](config-integrations.md) |
 | `[terminology]`, `[multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |
+| `[origins]` | The origins of data the deployment recognises, which a retention period and an ABAC rule may name (EHDS Annex II 3.4) | [Audit](config-audit.md#origins-the-origins-a-deployment-recognises) |
 | `[privacy]`, `[privacy.identifier_scan]` | What the clinical side refuses to hold: the subject reference, identified parties, the identifier scanner | [Privacy & data minimisation](config-privacy.md) |
 | `[cohort]`, `[cohort.predicates]` | Cross-domain cohort queries: the demographic predicate allow-list, the small-cell floor, the cohort ceiling | [Privacy & data minimisation](config-privacy.md) |
 | `[demographic.identifier_protection]` | Sealing national identifiers in the demographic domain, and the key that opens them | [Privacy & data minimisation](config-privacy.md) |

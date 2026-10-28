@@ -44,6 +44,9 @@ use ferroehr::aql::subject::EhrSubject;
 use ferroehr::config::authz::{
     AbacConfig, AbacEngineKind, AuthzConfig, EhrAccessDefault, RbacConfig,
 };
+use ferroehr::origins::OriginsConfig;
+use ferroehr::storage::version_repo::meta::VersionContent;
+use ferroehr::system_log::categories::Classifier;
 use ferrohealth_authz::cedar::CedarEngine;
 use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
 use ferrohealth_authz::remote::{Binding, RemotePdp, RemoteSettings};
@@ -99,14 +102,41 @@ pub type ResolverFuture<T> = Pin<Box<dyn Future<Output = Result<T, ResolveError>
 /// REST layer stays `uuid`-free (the binary parses).
 pub type SubjectFn = Arc<dyn Fn(String) -> ResolverFuture<Option<EhrSubject>> + Send + Sync>;
 
-/// `(vo_id, version) → template_id` (`version.template_id`, read back via
-/// `ferroehr::service` in the binary).
+/// `(vo_id, version) →` the template, root archetype and origins of that
+/// version (read back via `ferroehr::service` in the binary), or `None` when
+/// no such version exists.
 ///
 /// `version` is the `VERSION_TREE_ID` lexical form (`N` or `N.B.V` — trunk or
 /// branch, RM common master06 §The 'Virtual Version Tree'); `None` = the
 /// current version.
-pub type TemplateOfVersionFn =
-    Arc<dyn Fn(String, Option<String>) -> ResolverFuture<Option<String>> + Send + Sync>;
+pub type ContentOfVersionFn =
+    Arc<dyn Fn(String, Option<String>) -> ResolverFuture<Option<VersionContent>> + Send + Sync>;
+
+/// The deployment's rules for the category and origin attributes (EHDS
+/// Annex II 3.4).
+///
+/// The category map every access is classified through, the `[origins]`
+/// register, and the `system_id` a direct commit by an unregistered client is
+/// stamped with.
+#[derive(Debug, Clone)]
+pub struct ContentRules {
+    /// The compiled `[audit.categories]` map.
+    pub categories: Classifier,
+    /// The `[origins]` register.
+    pub origins: OriginsConfig,
+    /// The effective openEHR `system_id` (`[rest] system_id`).
+    pub system_id: String,
+}
+
+impl Default for ContentRules {
+    fn default() -> Self {
+        Self {
+            categories: Classifier::default(),
+            origins: OriginsConfig::default(),
+            system_id: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        }
+    }
+}
 
 /// The DB-backed attribute resolvers the ABAC PEP calls.
 ///
@@ -117,8 +147,10 @@ pub type TemplateOfVersionFn =
 pub struct AuthzResolvers {
     /// EHR subject lookup.
     pub subject: SubjectFn,
-    /// COMPOSITION version → template id lookup.
-    pub template_of_version: TemplateOfVersionFn,
+    /// COMPOSITION version → template, root archetype and origins.
+    pub content_of_version: ContentOfVersionFn,
+    /// How the category and origin attributes are read off that content.
+    pub content: Arc<ContentRules>,
 }
 
 impl std::fmt::Debug for AuthzResolvers {
@@ -685,7 +717,8 @@ mod tests {
     fn inert_resolvers() -> AuthzResolvers {
         AuthzResolvers {
             subject: Arc::new(|_| Box::pin(async { Ok::<_, ResolveError>(None) })),
-            template_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
+            content_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
+            content: Arc::default(),
         }
     }
 
@@ -830,9 +863,15 @@ mod tests {
                     }))
                 })
             }),
-            template_of_version: Arc::new(|_vo: String, version: Option<String>| {
-                Box::pin(async move { Ok(version.map(|v| format!("t.v{v}"))) })
+            content_of_version: Arc::new(|_vo: String, version: Option<String>| {
+                Box::pin(async move {
+                    Ok(version.map(|v| VersionContent {
+                        template_id: Some(format!("t.v{v}")),
+                        ..VersionContent::default()
+                    }))
+                })
             }),
+            content: Arc::default(),
         };
         assert_eq!(
             (resolvers.subject)("known".to_owned()).await.unwrap(),
@@ -843,9 +882,10 @@ mod tests {
         );
         assert_eq!((resolvers.subject)("other".to_owned()).await.unwrap(), None);
         assert_eq!(
-            (resolvers.template_of_version)("vo".to_owned(), Some("3".to_owned()))
+            (resolvers.content_of_version)("vo".to_owned(), Some("3".to_owned()))
                 .await
-                .unwrap(),
+                .unwrap()
+                .and_then(|content| content.template_id),
             Some("t.v3".to_owned())
         );
     }
