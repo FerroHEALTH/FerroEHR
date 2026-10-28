@@ -1060,6 +1060,7 @@ async fn demographic_item_tag_operations_are_fully_documented() {
 )]
 async fn admin_operations_are_fully_documented() {
     const BASE: &str = "/ferroehr/rest/openehr/v1/admin";
+    const EXT: &str = "/ferroehr/rest/extensions/v1/admin";
 
     let doc = served_document().await;
 
@@ -1115,16 +1116,15 @@ async fn admin_operations_are_fully_documented() {
 
     // ── every route: the RBAC pair, the gated 405 with its Allow, no Location ─
     // The two ITS-REST deletes sit under the openEHR base; the extensions beside it.
-    let its = "/ferroehr/rest/openehr/v1/admin";
     let all: [(String, &str); 5] = [
-        (format!("{its}/ehr/all"), "delete"),
-        (format!("{its}/ehr/{{ehr_id}}"), "delete"),
-        (format!("{BASE}/template/{{template_id}}"), "delete"),
+        (format!("{BASE}/ehr/all"), "delete"),
+        (format!("{BASE}/ehr/{{ehr_id}}"), "delete"),
+        (format!("{EXT}/template/{{template_id}}"), "delete"),
         (
-            format!("{BASE}/query/{{qualified_query_name}}/{{version}}"),
+            format!("{EXT}/query/{{qualified_query_name}}/{{version}}"),
             "delete",
         ),
-        (format!("{BASE}/config"), "get"),
+        (format!("{EXT}/config"), "get"),
     ];
     for (path, method) in &all {
         let op = doc["paths"][path][method].clone();
@@ -1257,7 +1257,7 @@ async fn admin_operations_are_fully_documented() {
     );
 
     // ── the template-delete extension: the in-use 409 guard ──────────────────
-    let path = format!("{BASE}/template/{{template_id}}");
+    let path = format!("{EXT}/template/{{template_id}}");
     let op = doc["paths"][&path]["delete"].clone();
     require(&op, &path, "DELETE", &["204", "404", "409"]);
     let conflict = op["responses"]["409"]["description"]
@@ -1273,7 +1273,7 @@ async fn admin_operations_are_fully_documented() {
     );
 
     // ── the stored-query-version delete: NOT SM delete_query ─────────────────
-    let path = format!("{BASE}/query/{{qualified_query_name}}/{{version}}");
+    let path = format!("{EXT}/query/{{qualified_query_name}}/{{version}}");
     let op = doc["paths"][&path]["delete"].clone();
     require(&op, &path, "DELETE", &["204", "404"]);
     let body = text(&op);
@@ -1288,7 +1288,7 @@ async fn admin_operations_are_fully_documented() {
     );
 
     // ── the config read: 200 with a redacted tree, no versioning headers ─────
-    let path = format!("{BASE}/config");
+    let path = format!("{EXT}/config");
     let op = doc["paths"][&path]["get"].clone();
     require(&op, &path, "GET", &["200"]);
     for banned in ["ETag", "Last-Modified"] {
@@ -1315,6 +1315,7 @@ async fn admin_operations_are_fully_documented() {
 #[tokio::test]
 async fn admin_extension_operations_are_flagged_as_an_extension() {
     const BASE: &str = "/ferroehr/rest/extensions/v1/admin";
+    const ITS: &str = "/ferroehr/rest/openehr/v1/admin";
 
     let doc = served_document().await;
 
@@ -1352,7 +1353,7 @@ async fn admin_extension_operations_are_flagged_as_an_extension() {
     // …and the released half of the group is exactly two operations, both EHR
     // deletes (`specifications/admin.openapi.yaml`), so nothing else may claim
     // released status.
-    let released = [format!("{BASE}/ehr/all"), format!("{BASE}/ehr/{{ehr_id}}")];
+    let released = [format!("{ITS}/ehr/all"), format!("{ITS}/ehr/{{ehr_id}}")];
     for path in &released {
         let op = doc["paths"][path]["delete"].clone();
         assert!(op.is_object(), "DELETE {path} must be documented");

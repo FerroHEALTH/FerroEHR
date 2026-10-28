@@ -225,7 +225,9 @@ async fn seed(cdr: &str, user: &str, pass: &str, ehr: String, composition: Strin
     .await;
     println!("composition tag seed -> {status}");
     let (_, listed) = send(
-        http.get(format!("{root}/ehr/{ehr}/contribution?offset=0&fetch=1")),
+        http.get(format!(
+            "{cdr}/ferroehr/rest/extensions/v1/ehr/{ehr}/contribution?offset=0&fetch=1"
+        )),
         user,
         pass,
     )

@@ -34,6 +34,7 @@ use ferrohealth_smart::config::{AuthSection, IssuerKey};
 use crate::common;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
+const EXT: &str = "/ferroehr/rest/extensions/v1";
 const AUDIENCE: &str = "ferroehr";
 const DISCOVERY: &str = "/ferroehr/rest/.well-known/smart-configuration";
 
@@ -310,10 +311,10 @@ async fn a_patient_grant_reaches_the_launch_context_ehr_on_its_routes() {
         "patient/composition-*.r",
         &json!({ "ehrId": launched }),
     );
-    for route in ["", "/ehr_status", "/contribution"] {
+    for (base, route) in [(BASE, ""), (BASE, "/ehr_status"), (EXT, "/contribution")] {
         let (status, body) = send(
             &app,
-            get(&format!("{BASE}/ehr/{launched}{route}"), Some(&credential)),
+            get(&format!("{base}/ehr/{launched}{route}"), Some(&credential)),
         )
         .await;
         assert_ne!(
@@ -323,7 +324,7 @@ async fn a_patient_grant_reaches_the_launch_context_ehr_on_its_routes() {
         );
         let (status, body) = send(
             &app,
-            get(&format!("{BASE}/ehr/{other}{route}"), Some(&credential)),
+            get(&format!("{base}/ehr/{other}{route}"), Some(&credential)),
         )
         .await;
         assert_eq!(
@@ -345,7 +346,7 @@ async fn a_user_grant_reaches_the_contribution_list() {
     let (status, body) = send(
         &app,
         get(
-            &format!("{BASE}/ehr/{ehr}/contribution"),
+            &format!("{EXT}/ehr/{ehr}/contribution"),
             Some(&token(&uri, "user/composition-*.r", &json!({}))),
         ),
     )
