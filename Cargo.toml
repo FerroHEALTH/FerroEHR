@@ -452,7 +452,7 @@ indexmap = { version = "2", features = ["serde"] }
 
 # ── HTTP client & external integration ───────────────────────────────────────
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "json", "gzip", "brotli"] }
-jsonschema = "0.58.3"               # validate against openEHR ITS-JSON schemas (verify latest)
+jsonschema = "0.59.0"               # validate against openEHR ITS-JSON schemas (verify latest)
 
 # ── Dev / test (dev-dependencies at the crate level) ─────────────────────────
 insta = { version = "1", features = ["json", "redactions", "filters"] }
