@@ -1499,12 +1499,12 @@ CHART_VERSION="$(awk '$1=="version:"{print $2; exit}' "${CHART_DIR}/Chart.yaml")
 for page in "${REPO_ROOT}/README.md" "${REPO_ROOT}/website/book/src/installation/kubernetes.md"; do
   rel="${page#"${REPO_ROOT}/"}"
   [[ -f "$page" ]] || { red "chart-version pin page missing: ${rel}"; FAIL=1; continue; }
-  stale="$(grep -ohE -- '--version +[0-9]+\.[0-9]+\.[0-9]+' "$page" | awk '{print $2}' | sort -u | grep -vx "$CHART_VERSION" || true)"
+  stale="$(grep -ohE -- '--version +[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?' "$page" | awk '{print $2}' | sort -u | grep -vxF "$CHART_VERSION" || true)"
   if [[ -z "$stale" ]]; then
     green "${rel}: chart pins are ${CHART_VERSION}"
   elif [[ "$UPDATE" -eq 1 ]]; then
     tmp="$(mktemp)"
-    sed -E "s/(--version )[0-9]+\.[0-9]+\.[0-9]+/\1${CHART_VERSION}/g" "$page" > "$tmp"
+    sed -E "s/(--version )[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?/\1${CHART_VERSION}/g" "$page" > "$tmp"
     mv "$tmp" "$page"
     green "${rel}: rewrote the chart pins $(echo "$stale" | tr '\n' ' ')to ${CHART_VERSION}"
   else
