@@ -64,4 +64,8 @@ without the `no-changelog` label.
 The release cut runs `scripts/release/changelog.sh --assemble <version> <date>`,
 which moves the fragments into `CHANGELOG.md` under the new version and
 deletes them; the release `plan` job refuses a tag that still has a fragment
-here. This README is not a fragment.
+here. A pre-release cut (`5.6.0-rc1`) copies the fragments into its section
+and keeps them, so every release candidate and the stable release of that
+version each carry every change since the last stable release; at a
+pre-release tag the `plan` job checks that the section carries each fragment
+(`changelog.sh --covered <version>`). This README is not a fragment.

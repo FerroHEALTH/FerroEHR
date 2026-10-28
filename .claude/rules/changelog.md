@@ -57,7 +57,14 @@ optional:
   `## [X.Y.Z] - YYYY-MM-DD` under a fresh empty `[Unreleased]` from the
   fragments in Keep a Changelog order (`--preview` shows it first), moves the
   `[unreleased]` link reference on, adds the version's, and `git rm`s the
-  fragments (the `plan` job refuses a tag that still holds one); add the
+  fragments (the `plan` job refuses a tag that still holds one). **A
+  pre-release (`--assemble X.Y.Z-rcN`) keeps the fragments, the
+  `[Unreleased]` entries and the `[unreleased]` link reference** and links
+  its section from the last stable tag, so each release candidate and the
+  stable `X.Y.Z` cut after it carry every change since the last stable
+  release, and only the stable cut deletes the fragments; at a pre-release
+  tag the `plan` job checks the section carries each fragment
+  (`changelog.sh --covered`, #4341). Add the
   release's opening paragraph under the heading by hand, bump the
   workspace `version` in the root `Cargo.toml` (+ `Cargo.lock` via a
   `cargo check`, + `CITATION.cff` `version` and

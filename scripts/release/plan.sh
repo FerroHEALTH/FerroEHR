@@ -24,7 +24,8 @@
 #   plan.sh support-end <YYYY-MM-DD>
 #       Prints the month the support period of a release of that date ends.
 #   plan.sh --self-test
-#       Proves prev-tag's ordering and support-end's arithmetic offline.
+#       Proves prev-tag's ordering, the pre-release rule and support-end's
+#       arithmetic offline.
 #
 # The milestone check reads the tracker through gh (GH_TOKEN in CI, the
 # logged-in gh locally); the chart check needs helm. Exit 2 on a usage error.
@@ -175,12 +176,23 @@ check_changelog_security() {
   bash scripts/checks/changelog-security.sh --section "$VERSION"
 }
 
+# prerelease VERSION: true for a version with a "-" suffix (5.6.0-rc1), the
+# rule .github/actions/release-kind applies to the tag.
+prerelease() { [[ "$1" == *-* ]]; }
+
 # The cut assembles every fragment under changelog.d/ into the section it
 # writes and deletes them (scripts/release/changelog.sh --assemble), so a
 # fragment left at the tagged commit is an entry the release notes would miss.
+# A pre-release keeps the fragments for the stable cut, so its section must
+# carry each of them instead.
 check_changelog_fragments() {
   local left
   bash scripts/release/changelog.sh --check
+  if prerelease "$VERSION"; then
+    bash scripts/release/changelog.sh --covered "$VERSION"
+    echo "a pre-release keeps the fragments under changelog.d/ for the stable cut"
+    return 0
+  fi
   left="$(find changelog.d -maxdepth 1 -type f ! -name README.md | sort)"
   if [[ -n "$left" ]]; then
     echo "::error::changelog.d/ still holds fragments the cut did not assemble; run scripts/release/changelog.sh --assemble $VERSION <date> on the release branch:" >&2
@@ -330,6 +342,9 @@ self_test() {
   expect "an unpushed tag" "$got" "v5.3.3"
   got="$(printf '%s\n' v5.3.3 | order_prev v1.0.0)"
   expect "no tag below" "$got" ""
+  expect "a release candidate is a pre-release" "$(prerelease 5.6.0-rc1 && echo yes || echo no)" "yes"
+  expect "a dotted suffix is a pre-release" "$(prerelease 5.6.0-rc.1 && echo yes || echo no)" "yes"
+  expect "a stable version is no pre-release" "$(prerelease 5.6.0 && echo yes || echo no)" "no"
   expect "a plain date" "$(support_end 2026-10-23)" "October 2031"
   expect "a leap day into a common year" "$(support_end 2028-02-29)" "March 2033"
   expect "a leap day into a leap year" "$(support_end 2031-02-29 || echo "$refused")" "$refused"
