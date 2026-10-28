@@ -117,3 +117,101 @@ async fn a_complete_request_is_unaffected_by_the_bound() {
         "a complete request must be served: {text}"
     );
 }
+
+/// A connection that opens and never sends a byte is closed once the
+/// header-read bound passes, counted from accept, so silent connections
+/// cannot hold the process's file descriptors (GHSA-2mc2-h3jq-c5wg).
+#[tokio::test]
+async fn a_silent_connection_is_closed_at_the_header_read_bound() {
+    let port = serve().await;
+
+    let mut socket = tokio::net::TcpStream::connect(("127.0.0.1", port))
+        .await
+        .expect("connect");
+
+    let mut buffer = [0_u8; 64];
+    let outcome = tokio::time::timeout(Duration::from_secs(10), socket.read(&mut buffer)).await;
+    let read = outcome.expect("a silent connection must be closed, not held open");
+    assert_eq!(
+        0,
+        read.unwrap_or(0),
+        "a connection that sent nothing must be closed without an answer"
+    );
+}
+
+/// Serves the assembled FerroEHR router over a real service through the family
+/// listener, with the header-read bound of [`serve`], returning the bound port
+/// and the database guard the service reads.
+async fn serve_ferroehr() -> (testkit::TestDb, u16) {
+    let (db, app) = crate::common::test_router().await;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    let section = ServerSection {
+        header_read_timeout_ms: std::num::NonZeroU64::new(1_000).expect("non-zero"),
+        ..crate::common::server()
+    };
+    tokio::spawn(async move {
+        let _served = ferrohealth_server::serve::run(
+            listener,
+            app,
+            &section,
+            Lifecycle::default(),
+            std::future::pending(),
+        )
+        .await;
+    });
+    (db, port)
+}
+
+/// A `POST` of a large body to a path FerroEHR does not serve is answered `404`
+/// with its body unread, and the connection is then either reused for the
+/// client's next request or announced closed with `Connection: close`
+/// (RFC 9112 §9.6), so a client never sends its next request into a socket the
+/// server already closed.
+#[tokio::test]
+async fn a_connection_after_an_unmatched_large_post_is_reused_or_announced_closed() {
+    const SIZE: usize = 300_000;
+    let (_db, port) = serve_ferroehr().await;
+
+    let stream = tokio::net::TcpStream::connect(("127.0.0.1", port))
+        .await
+        .expect("connect");
+    let (mut reader, mut writer) = stream.into_split();
+    let head = format!(
+        "POST {}/no-such-resource HTTP/1.1\r\nHost: localhost\r\n\
+         Content-Type: application/xml\r\nContent-Length: {SIZE}\r\n\r\n",
+        crate::common::BASE
+    );
+    let sent = tokio::spawn(async move {
+        writer.write_all(head.as_bytes()).await?;
+        writer.write_all(&vec![b'x'; SIZE]).await?;
+        writer
+            .write_all(
+                b"GET /health/liveness HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+            )
+            .await?;
+        Ok::<_, std::io::Error>(writer)
+    });
+
+    let mut answer = Vec::new();
+    // The server may reset the socket once it closes with bytes unread,
+    // so a read error ends the answer; what it wrote before is what counts.
+    let _read = tokio::time::timeout(Duration::from_secs(10), reader.read_to_end(&mut answer))
+        .await
+        .expect("the server answers or closes");
+    let _sent = sent.await;
+
+    let answer = String::from_utf8_lossy(&answer).to_ascii_lowercase();
+    let first = answer.split("\r\n\r\n").next().unwrap_or_default();
+    assert!(
+        first.starts_with("http/1.1 404"),
+        "an unserved path is answered 404: {answer}"
+    );
+    let second_answered = answer.matches("http/1.1 ").count() > 1;
+    assert!(
+        second_answered || first.contains("\r\nconnection: close"),
+        "the next request is answered or the 404 says the connection closes: {answer}"
+    );
+}
