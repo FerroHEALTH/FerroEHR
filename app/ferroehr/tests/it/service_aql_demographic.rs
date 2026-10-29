@@ -584,3 +584,245 @@ async fn a_join_leaves_out_a_non_queryable_ehr() {
         "the non-queryable EHR of {bram} answers no joined row"
     );
 }
+
+/// The party's versioned-object id: its `uid/value` before the first `::`
+/// (RM common master06 §Version Identification).
+fn party_id(uid: &str) -> &str {
+    uid.split("::").next().expect("a versioned-object id")
+}
+
+/// An `EHR_STATUS` whose subject is a `PARTY_SELF` with an `external_ref`
+/// naming `id` in `namespace` as an object of class `class` (RM ehr master04
+/// §EHR Status; BASE `OBJECT_REF`), written as `POST /ehr` receives it.
+fn status_naming(id: &str, namespace: &str, class: &str) -> openehr_rm::prelude::EhrStatus {
+    openehr_its::json::from_canonical_value(&json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "namespace": namespace,
+                "type": class,
+                "id": { "_type": "HIER_OBJECT_ID", "value": id }
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    }))
+    .expect("the subject-bearing EHR_STATUS decodes")
+}
+
+/// An EHR whose subject names `id` as `class` in `namespace`, holding one
+/// composition named `composition`; no `link` call is made.
+async fn subject_ehr(
+    svc: &FerroEhrService,
+    id: &str,
+    namespace: &str,
+    class: &str,
+    composition: &str,
+) -> ferroehr::ids::EhrId {
+    let ehr = svc
+        .create_ehr(Some(status_naming(id, namespace, class)))
+        .await
+        .unwrap_or_else(|e| panic!("create_ehr naming {class} {id}: {e:?}"));
+    svc.create_composition(
+        ehr,
+        crate::fixtures::uv(&crate::fixtures::composition(composition), "249", None),
+    )
+    .await
+    .unwrap_or_else(|e| panic!("create_composition ({composition}): {e:?}"));
+    ehr
+}
+
+/// An EHR created with an `EHR_STATUS.subject.external_ref` that names a party
+/// joins to that party with no `link` call, for each served root, in any
+/// namespace, and when the reference names the root's abstract RM ancestor
+/// (BASE `OBJECT_REF.type`: "the class (concrete or abstract)"; `PARTY_REF`
+/// admits `PARTY` and `ACTOR`). A subject naming no party, a subject naming
+/// the party under another class, and a deleted party answer nothing; an EHR
+/// that is both linked and named answers once (#4411).
+#[tokio::test]
+async fn an_ehr_whose_subject_names_the_party_joins_without_a_link() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = new_service(&db);
+
+    let ada = create(&svc, PartyKind::Person, &person("Ada", "P-1", "urn:bsn")).await;
+    let ada_ehr = subject_ehr(&svc, party_id(&ada), "local", "PERSON", "visit a").await;
+    let pia = create(&svc, PartyKind::Person, &person("Pia", "P-2", "urn:bsn")).await;
+    let pia_ehr = subject_ehr(&svc, party_id(&pia), "demographic", "PARTY", "visit p").await;
+    let acme = create(
+        &svc,
+        PartyKind::Organisation,
+        &organisation("Acme", "O-1", "urn:agb"),
+    )
+    .await;
+    let acme_ehr = subject_ehr(&svc, party_id(&acme), "local", "ORGANISATION", "visit o").await;
+    let nurse = create(&svc, PartyKind::Role, &role("Nurse", "R-1", "urn:big")).await;
+    let nurse_ehr = subject_ehr(&svc, party_id(&nurse), "local", "ROLE", "visit r").await;
+
+    // Linked through the map AND named by its subject: one EHR, one row.
+    let both = create(&svc, PartyKind::Person, &person("Both", "P-3", "urn:bsn")).await;
+    let both_ehr = subject_ehr(&svc, party_id(&both), "local", "PERSON", "visit b").await;
+    svc.link(
+        ferroehr::ids::VoId(party_id(&both).parse().expect("party id")),
+        both_ehr,
+    )
+    .await
+    .expect("link the party to its EHR");
+
+    // The subject names the PERSON as an ORGANISATION: no PERSON row.
+    let otto = create(&svc, PartyKind::Person, &person("Otto", "P-4", "urn:bsn")).await;
+    subject_ehr(&svc, party_id(&otto), "local", "ORGANISATION", "visit x").await;
+    // The subject names no party.
+    subject_ehr(
+        &svc,
+        "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "local",
+        "PERSON",
+        "visit n",
+    )
+    .await;
+    // The party is deleted after its EHR was created.
+    let gone = create(&svc, PartyKind::Person, &person("Gone", "P-5", "urn:bsn")).await;
+    subject_ehr(&svc, party_id(&gone), "local", "PERSON", "visit g").await;
+    svc.party_delete(PartyKind::Person, gone.clone(), Some(gone), None)
+        .await
+        .expect("delete");
+
+    let rows = run(
+        &svc,
+        "SELECT p/uid/value, e/ehr_id/value FROM PERSON p CONTAINS EHR e ORDER BY p/name/value",
+        AqlQueryRequest::default(),
+    )
+    .await;
+    assert_eq!(
+        rows,
+        vec![
+            json!([ada, ada_ehr.to_string()]),
+            json!([both, both_ehr.to_string()]),
+            json!([pia, pia_ehr.to_string()]),
+        ],
+        "each PERSON joins to the EHR its subject names, once"
+    );
+
+    let rows = run(
+        &svc,
+        "SELECT p/uid/value, c/name/value \
+         FROM PERSON p CONTAINS EHR e CONTAINS COMPOSITION c ORDER BY p/name/value",
+        AqlQueryRequest::default(),
+    )
+    .await;
+    assert_eq!(
+        rows,
+        vec![
+            json!([ada, "visit a"]),
+            json!([both, "visit b"]),
+            json!([pia, "visit p"]),
+        ],
+        "the content below the EHR joins too"
+    );
+
+    for (root, uid, ehr, composition) in [
+        ("ORGANISATION", &acme, acme_ehr, "visit o"),
+        ("ROLE", &nurse, nurse_ehr, "visit r"),
+    ] {
+        let rows = run(
+            &svc,
+            &format!("SELECT p/uid/value, e/ehr_id/value FROM {root} p CONTAINS EHR e"),
+            AqlQueryRequest::default(),
+        )
+        .await;
+        assert_eq!(rows, vec![json!([uid, ehr.to_string()])], "{root}");
+        let rows = run(
+            &svc,
+            &format!(
+                "SELECT p/uid/value, c/name/value FROM {root} p CONTAINS EHR e CONTAINS COMPOSITION c"
+            ),
+            AqlQueryRequest::default(),
+        )
+        .await;
+        assert_eq!(rows, vec![json!([uid, composition])], "{root} content");
+    }
+
+    let rows = run(
+        &svc,
+        "SELECT e/ehr_id/value FROM PERSON p CONTAINS EHR e WHERE p/uid/value = $uid",
+        params(&[("uid", &otto)]),
+    )
+    .await;
+    assert!(
+        rows.is_empty(),
+        "a subject naming the PERSON as an ORGANISATION answers nothing: {rows:?}"
+    );
+}
+
+/// A join that reaches its EHR through the subject reference alone still
+/// leaves the party read on the party-domain record and the crossing on the
+/// linkage-domain record, each counting what it served (#4411).
+#[tokio::test]
+async fn a_subject_join_is_recorded_in_the_party_and_linkage_domains() {
+    use ferroehr::system_log::config::{AuditConfig, StoreConfig};
+    use ferroehr::system_log::sender::{AuditHandle, start};
+
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let audit_config = AuditConfig {
+        enabled: true,
+        store: StoreConfig {
+            enabled: true,
+            retention_days: 0,
+            retention_years: None,
+            sgb_v_309_controller: false,
+            verify_interval_seconds: 0,
+            full_verify_interval_seconds: 0,
+        },
+        ..AuditConfig::default()
+    };
+    let (sender, _handle): (_, AuditHandle) = start(audit_config, None, Some(pool.clone()))
+        .await
+        .expect("the audit sender");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_audit(sender);
+
+    let ada = create(&svc, PartyKind::Person, &person("Ada", "P-1", "urn:bsn")).await;
+    subject_ehr(&svc, party_id(&ada), "local", "PERSON", "visit a").await;
+    let rows = run(
+        &svc,
+        "SELECT p/uid/value, e/ehr_id/value FROM PERSON p CONTAINS EHR e",
+        AqlQueryRequest::default(),
+    )
+    .await;
+    assert_eq!(rows.len(), 1, "the subject join answers its row: {rows:?}");
+
+    for (domain, resource) in [("linkage", "party-ehr:query"), ("party", "party-query")] {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        let count = loop {
+            let found: Option<Option<i64>> = sqlx::query_scalar(
+                "SELECT result_count FROM audit.audit_event \
+                 WHERE domain = $1 AND resource_id = $2 ORDER BY recorded_at DESC LIMIT 1",
+            )
+            .bind(domain)
+            .bind(resource)
+            .fetch_optional(&pool)
+            .await
+            .expect("read the access log");
+            if let Some(count) = found {
+                break count;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the {domain} read was not recorded within the drain window"
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        };
+        assert_eq!(count, Some(1), "the {domain} record counts one {resource}");
+    }
+}

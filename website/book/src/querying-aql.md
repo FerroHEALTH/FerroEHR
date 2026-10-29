@@ -498,8 +498,7 @@ construct, so you can tell a refusal from an empty result:
   party is in no EHR.
 
 **Joining a party to its EHR.** An `EHR` operand directly under the root
-reaches the EHR the party is the subject of, through the party-to-EHR map the
-linkage service keeps:
+reaches the EHR the party is the subject of:
 
 ```
 SELECT p/uid/value, c/name/value
@@ -508,13 +507,31 @@ WHERE p/details[at0001]/items[at0002]/value/id = $identifier
 ORDER BY c/context/start_time/value DESC
 ```
 
+A party is the subject of an EHR when either of these holds:
+
+- the EHR's current `EHR_STATUS.subject` is a `PARTY_SELF` whose
+  `external_ref` names the party: its `id.value` is the party's uid without
+  `::<system>::<version>`, and its `type` is the root class or one of its
+  abstract RM ancestors (`ACTOR` for `PERSON` and `ORGANISATION`, `PARTY` for
+  all three). This is the reference `POST /ehr` stores, so an EHR created with
+  that subject joins with no other call;
+- the linkage service's party-to-EHR map holds the pair.
+
+An EHR that both name answers once. The `namespace` of the reference is not
+compared: BASE `OBJECT_REF.namespace` takes any name a deployment chooses
+(`local`, `demographic`, or your own), and the id and the class already name
+one party. A deployment that pseudonymises the subject stores a pseudonym in
+`id.value`, and a pseudonym is not a party uid, so its EHRs join only through
+the map.
+
 Party classes may sit beside the `EHR` in an `AND`
 (`PERSON p CONTAINS (CLUSTER id[…] AND EHR e CONTAINS COMPOSITION c)`). A row
 is a party row together with a clinical row of an EHR that party is the subject
 of, so a party with no EHR, and an EHR whose subject has no party, answer no
-row. FerroEHR runs the query as three statements, one on each database
-credential: the party half, the map, and the clinical half scoped to the EHRs
-the map names. It then joins, orders and pages the rows. The rules that follow:
+row. FerroEHR runs the query as four statements, each on one database
+credential: the party half, the map, the EHRs whose subject names
+those parties, and the clinical half scoped to the EHRs the two reads name. It
+then joins, orders and pages the rows. The rules that follow:
 
 - each column, each `WHERE` condition joined by `AND`, and each `ORDER BY` key
   reads one side only, the party or the EHR; a condition comparing the two, or
@@ -524,8 +541,8 @@ the map names. It then joins, orders and pages the rows. The rules that follow:
   rows; above that the query is a **400** asking you to narrow it, never a
   shortened answer;
 - the clinical half carries your per-EHR access decision and patient scope as
-  any query does, and the party read and the map read each leave an access
-  record in their own domain.
+  any query does, and the party read and the crossing to the EHRs each leave
+  an access record in their own domain.
 
 **Who may run it.** The query runs under the authorisation of a Demographic API
 read: the role check that admits a party read admits the query, and the per-EHR
