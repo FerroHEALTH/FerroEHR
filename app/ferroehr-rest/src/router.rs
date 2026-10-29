@@ -41,6 +41,7 @@ use ferrohealth_server::caller_rate::{self, CallerKey, CallerLimit};
 use ferrohealth_server::health::Health;
 use ferrohealth_server::panic::PanicBody;
 use ferrohealth_server::refusal::RefusalBody;
+use ferrohealth_server::request_id::RequestIds;
 use ferrohealth_server::stack::{self, StackPolicy};
 use http::header::AUTHORIZATION;
 use http::{HeaderName, HeaderValue, StatusCode, header};
@@ -271,12 +272,16 @@ pub fn stack_policy(request_log: RequestLog, fhir: FhirBase) -> StackPolicy {
 
 /// Renders a panicked handler as a `500` problem with the curated opaque
 /// detail; the panic payload never reaches the body or the log.
+///
+/// The `instance` names the server's request id, as every refusal a FerroEHR
+/// handler writes does ([`problem::finish`]), so one id finds the exchange in
+/// the request log whichever layer answered.
 fn panic_body(fhir: FhirBase) -> PanicBody {
-    Arc::new(move |uri, request_id| {
+    Arc::new(move |uri, ids: RequestIds<'_>| {
         problem::stack_answer(
             &fhir,
             uri,
-            request_id,
+            ids.server,
             StatusCode::INTERNAL_SERVER_ERROR,
             error::INTERNAL_MESSAGE,
         )
@@ -288,9 +293,10 @@ fn panic_body(fhir: FhirBase) -> PanicBody {
 ///
 /// `408` is a predefined status (`Requests_and_responses.md` §HTTP status
 /// codes) and `413`, `429` and `503` additional codes the same section permits.
+/// The `instance` names the server's request id, as [`panic_body`]'s does.
 fn refusal_body(fhir: FhirBase) -> RefusalBody {
-    Arc::new(move |uri, request_id, status, reason| {
-        problem::stack_answer(&fhir, uri, request_id, status, reason)
+    Arc::new(move |uri, ids: RequestIds<'_>, status, reason| {
+        problem::stack_answer(&fhir, uri, ids.server, status, reason)
     })
 }
 
@@ -435,17 +441,26 @@ mod tests {
     use axum::body::to_bytes;
     use http::StatusCode;
 
+    use ferrohealth_server::request_id::RequestIds;
+
     use super::{panic_body, refusal_body};
     use crate::overview::problem::{BASE, FhirBase};
 
     const ID: &str = "0190a6f3-7c1e-7d7a-9f43-1c5b8a2e4d10";
+    const CLIENT_ID: &str = "7d2c41e8-93b0-4f6a-8e15-c0a9b3d7e254";
+
+    /// The ids of an exchange whose client sent `X-Request-Id: CLIENT_ID`.
+    fn ids() -> RequestIds<'static> {
+        RequestIds::new(ID, Some(CLIENT_ID))
+    }
 
     /// A panicked handler renders the problem details every other error path
-    /// emits (never a bare status), and nothing of the request reaches it.
+    /// emits (never a bare status), and nothing of the request reaches it:
+    /// the `instance` is the server's id, never the one the client sent.
     #[tokio::test]
     async fn the_panic_body_is_a_problem() {
         let uri: http::Uri = "/ferroehr/rest/openehr/v1/ehr/Qz7sentinel".parse().unwrap();
-        let resp = panic_body(FhirBase::of("/ferroehr/rest"))(&uri, ID);
+        let resp = panic_body(FhirBase::of("/ferroehr/rest"))(&uri, ids());
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(
             resp.headers().get(http::header::CONTENT_TYPE).unwrap(),
@@ -461,7 +476,8 @@ mod tests {
     }
 
     /// Each refusal the stack writes keeps its status and carries the reason
-    /// as the problem's detail; the availability refusals are FerroEHR types.
+    /// as the problem's detail; the availability refusals are FerroEHR types,
+    /// and the `instance` is the server's id.
     #[tokio::test]
     async fn a_refusal_is_a_problem_with_its_status() {
         let uri: http::Uri = "/ferroehr/rest/openehr/v1/ehr".parse().unwrap();
@@ -474,13 +490,14 @@ mod tests {
                 format!("{BASE}unavailable"),
             ),
         ] {
-            let resp = refusal_body(FhirBase::default())(&uri, ID, status, "the reason");
+            let resp = refusal_body(FhirBase::default())(&uri, ids(), status, "the reason");
             assert_eq!(resp.status(), status);
             let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
             let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
             assert_eq!(body["type"], kind.as_str(), "{status}");
             assert_eq!(body["status"], status.as_u16(), "{status}");
             assert_eq!(body["detail"], "the reason");
+            assert_eq!(body["instance"], format!("urn:uuid:{ID}"), "{status}");
         }
     }
 
@@ -492,7 +509,7 @@ mod tests {
         let uri: http::Uri = "/ferroehr/rest/fhir/r4/AuditEvent".parse().unwrap();
         let resp = refusal_body(FhirBase::of("/ferroehr/rest"))(
             &uri,
-            ID,
+            ids(),
             StatusCode::REQUEST_TIMEOUT,
             "the reason",
         );

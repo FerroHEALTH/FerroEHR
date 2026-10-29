@@ -56,9 +56,13 @@ listen = "0.0.0.0:8080"
 # serves them at the process root; the openEHR API path is [rest] base_path.
 base_path = ""
 request_timeout_ms = 30000     # a request still running then is answered 408
-# How long a client may take to send its request head once connected or after
-# its last response; a client still sending then is disconnected.
+# How long a client may take to send its request head, counted from accept for
+# the first request and from the first byte of each later one; a client still
+# sending then is disconnected.
 header_read_timeout_ms = 30000
+# How long a kept-alive connection may wait for its next request before the
+# server closes it; longer than the 90 s a Go client keeps one idle.
+idle_timeout_ms = 120000
 # The largest request body any route reads, refused 413 above it. The bulk
 # routes (template upload, /message/import) take up to this;
 # [rest] body_limit_bytes narrows the clinical surface below it. 64 MiB; the
