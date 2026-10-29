@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: openEHR Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 //! openEHR QUERY (AQL 1.1.0): a hand-written lexer, parser, and AST over the
 //! canonical ANTLR4 grammar vendored at `vendor/grammar/`, with no ANTLR

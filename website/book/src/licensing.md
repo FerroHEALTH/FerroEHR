@@ -38,8 +38,8 @@ named in
 ## FerroEHR's own code: the Business Source License 1.1
 
 Everything written for this project (the server and application crates, the
-code generator and tooling, the viewer, and the three hand-written
-specification engines `openehr-query`, `openehr-adl` and `openehr-sdt`) is licensed under the
+code generator and tooling, the viewer, and the two hand-written
+specification engines `openehr-adl` and `openehr-sdt`) is licensed under the
 [Business Source License 1.1](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE),
 SPDX identifier `BUSL-1.1`. The Licensor is Cadasto B.V. The copyright
 holder is stated as *Cadasto B.V.*, identically in `LICENSE`, in
@@ -58,7 +58,8 @@ the MIT terms they were published with, and so do the `openehr-*` crate
 versions 0.0.56 and earlier on crates.io (MIT AND Apache-2.0 for the crates
 that embed openEHR-derived material); `openehr-query`, `openehr-adl` and
 `openehr-its` 0.0.58 and 0.0.59 stay Apache-2.0, and `openehr-its` 0.0.60 to
-0.0.67 stay `BUSL-1.1 AND Apache-2.0`. Relicensing changes future versions
+0.0.67 stay `BUSL-1.1 AND Apache-2.0`, and `openehr-query` 0.0.60 to
+0.0.115 stay `BUSL-1.1`. Relicensing changes future versions
 only. `LICENSES/MIT.txt` reproduces that grant as those versions carry
 it, Ruben Talstra's copyright line included, because a published grant is a
 record of what was handed out and is not rewritten afterwards.
@@ -92,7 +93,11 @@ wire-validation dispatcher are Apache-2.0 with it, because the generated code
 cannot ship without them. From 0.0.69 it declares `Apache-2.0`, and every
 file names the openEHR Foundation as the second copyright holder.
 
-The three hand-written engines, `openehr-query` (the AQL parser), `openehr-adl`
+`openehr-query`, the AQL parser hand-written from openEHR's Apache-2.0
+grammar, declares `Apache-2.0` from 0.0.116 and names the openEHR Foundation
+as the second copyright holder in every file.
+
+The two hand-written engines, `openehr-adl`
 (the ADL engine) and `openehr-sdt` (the Simplified Formats, RM-instance
 validation and the SMART scope grammar), are the project's own engineering and
 carry the Business Source License 1.1 like the application, each with its own
@@ -214,8 +219,8 @@ So licensing is **also** published in the machine-readable form the
   `SPDX-FileCopyrightText` line and an `SPDX-License-Identifier` line stating the
   same position `REUSE.toml` declares for it, so a file copied out of this
   repository takes its licensing along. Rust files of the five generated spec
-  crates and of `openehr-its` state `Apache-2.0`, and every other first-party
-  Rust, shell, SQL and YAML file, the `openehr-query`, `openehr-adl` and
+  crates, of `openehr-its` and of `openehr-query` state `Apache-2.0`, and every
+  other first-party Rust, shell, SQL and YAML file, the `openehr-adl` and
   `openehr-sdt` sources included, states `BUSL-1.1`. A copied migration or
   script arrives licensed, which is the whole point.
 

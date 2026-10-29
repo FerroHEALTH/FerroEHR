@@ -102,12 +102,12 @@ every member is verified together.
   `cargo publish --workspace --dry-run --locked`.
 - New vendored/embedded material changes the license adjudication: openEHR
   machine-readable artifacts are Apache-2.0, so a crate that first embeds
-  the crate keeps `Apache-2.0` in its `license` expression (six crates are
+  the crate keeps `Apache-2.0` in its `license` expression (seven crates are
   `Apache-2.0`: the five generated model crates plus `openehr-its`, whose
   hand-written runtimes, entry points and wire-validation dispatcher ship
-  with the generated code they carry; the three hand-written engines
-  `openehr-query`, `openehr-adl` and `openehr-sdt` are `BUSL-1.1` — owner
-  decisions 2026-09-03, 2026-09-04 and 2026-09-24, #3482; each BUSL crate
+  with the generated code they carry, and `openehr-query` from 0.0.116, #4405;
+  the two hand-written engines `openehr-adl` and `openehr-sdt` are `BUSL-1.1`
+  — owner decisions 2026-09-03, 2026-09-04 and 2026-09-24, #3482; each BUSL crate
   ships its own `LICENSE` naming the crate as the Licensed Work) and ships
   `LICENSE-APACHE-2.0`.
 - No Apache-2.0 crate takes a normal or build dependency on a BUSL-1.1 crate

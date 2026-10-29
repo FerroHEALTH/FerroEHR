@@ -45,13 +45,14 @@ precedence = "closest"
 SPDX-FileCopyrightText = "Cadasto B.V."
 SPDX-License-Identifier = "BUSL-1.1"
 
-# ── The five generated model crates: Apache-2.0 ────────────────────────────
+# ── The five generated model crates and openehr-query: Apache-2.0 ──────────
 # Owner decision 2026-09-03: the crates generated from openEHR's own
 # machine-readable artifacts stay Apache-2.0, the licence of those inputs, so
 # any Rust project can consume the model. They embed openEHR specification
 # text, terminology XML or JSON Schema and name the openEHR Foundation as a
-# second holder. The vendored inputs and assets INSIDE these crates are narrowed
-# further below.
+# second holder. openehr-query, the AQL parser hand-written from openEHR's
+# Apache-2.0 grammar, joined them by owner decision 2026-10-29 (#4405). The
+# vendored inputs and assets INSIDE these crates are narrowed further below.
 [[annotations]]
 path = [
   "crates/openehr-base/**",
@@ -60,14 +61,15 @@ path = [
   "crates/openehr-lang/**",
   "crates/openehr-term/**",
   "crates/openehr-its/**",
+  "crates/openehr-query/**",
 ]
 precedence = "closest"
 SPDX-FileCopyrightText = ["Cadasto B.V.", "openEHR Foundation"]
 SPDX-License-Identifier = "Apache-2.0"
 
-# ── The three hand-written spec engines: BUSL-1.1 ──────────────────────────
-# Owner decisions 2026-09-04 and 2026-09-24 (#3482): the ADL engine, the AQL
-# parser and the Simplified Data Template engine are the project's own
+# ── The two hand-written spec engines: BUSL-1.1 ────────────────────────────
+# Owner decisions 2026-09-04 and 2026-09-24 (#3482): the ADL engine and the
+# Simplified Data Template engine are the project's own
 # engineering and carry the Business Source License like the application (the
 # parameters are in each crate's LICENSE). None of them embeds openEHR
 # material, so each has one holder. openehr-its, the ITS wire layer generated
@@ -75,7 +77,6 @@ SPDX-License-Identifier = "Apache-2.0"
 # embedded, is Apache-2.0 with the generated model crates above.
 [[annotations]]
 path = [
-  "crates/openehr-query/**",
   "crates/openehr-adl/**",
   "crates/openehr-sdt/**",
 ]

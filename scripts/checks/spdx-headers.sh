@@ -48,17 +48,18 @@ readonly PROJECT_COPYRIGHT='// SPDX-FileCopyrightText: Cadasto B.V.'
 readonly OPENEHR_COPYRIGHT='// SPDX-FileCopyrightText: openEHR Foundation'
 readonly BUSL_HEADER="$PROJECT_COPYRIGHT
 // SPDX-License-Identifier: BUSL-1.1"
-# The five generated model crates and the openehr-its wire layer: the
-# project's code and the openEHR-derived material it carries, both Apache-2.0
-# (owner decisions 2026-09-03 and 2026-09-24). The three hand-written engines,
-# openehr-adl, openehr-query and openehr-sdt, embed nothing and carry the plain
-# BUSL header like the application.
+# The five generated model crates, the openehr-its wire layer and the
+# openehr-query AQL parser: the project's code and the openEHR-derived
+# material it carries, both Apache-2.0 (owner decisions 2026-09-03, 2026-09-24
+# and 2026-10-29). The two hand-written engines, openehr-adl and openehr-sdt,
+# embed nothing and carry the plain BUSL header like the application.
 readonly DUAL_HEADER="$PROJECT_COPYRIGHT
 $OPENEHR_COPYRIGHT
 // SPDX-License-Identifier: Apache-2.0"
 readonly -a DUAL_CRATES=(
   openehr-am
   openehr-its
+  openehr-query
   openehr-base
   openehr-lang
   openehr-rm
