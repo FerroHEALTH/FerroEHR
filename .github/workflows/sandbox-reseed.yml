@@ -26,6 +26,16 @@
 # image refused the box's first-generation database at boot; with the wipe
 # chained behind the deploy, nothing could ever clear it.
 #
+# The seed runs the scripts and data of the release the sandbox serves (#4370):
+# the box runs the latest stable image, while a scheduled run checks out
+# `main`, whose routes, corpus and manifest pins move ahead of that release
+# (#4333 moved the terminology route the seed probes, and the 5.5.0 sandbox
+# answered the probe 404). The identities job reads `solution_version` from
+# the ITS-REST system OPTIONS and both jobs check out `v<version>`, so the
+# seed always addresses the deployed version. The env contract between this
+# file and reseed.sh (SANDBOX_IDENTITIES) must stay readable by the scripts
+# of the release the box runs.
+#
 # Secrets: HOSTED_SSH_KEY / HOSTED_KNOWN_HOSTS — the deploy key, in the
 # hosted environment. An empty secret is a hard failure, never a skip
 # (#2755). Environment secrets demonstrably reach these jobs on the
@@ -167,9 +177,34 @@ jobs:
       contents: read
     outputs:
       identities: ${{ steps.register.outputs.identities }}
+      ref: ${{ steps.deployed.outputs.ref }}
     steps:
+      # ITS-REST 1.1.0 System API, OPTIONS on the base URL
+      # (specifications/schemas/others/Options.yaml): the one route no
+      # FerroEHR release moves. A version with no tag in this repository is
+      # a hard failure: nothing else says which scripts the box can serve.
+      - name: Read the release the sandbox serves
+        id: deployed
+        run: |
+          set -euo pipefail
+          options="$(curl -sS --fail -m 30 --retry 10 --retry-all-errors --retry-delay 15 \
+            -X OPTIONS https://sandbox.ferroehr.eu/ferroehr/rest/openehr/v1)"
+          version="$(jq -r '.solution_version // empty' <<< "$options")"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::the sandbox's OPTIONS answered solution_version '${version}', which names no FerroEHR release; the seed cannot pick the scripts the box serves." >&2
+            exit 1
+          fi
+          ref="v$version"
+          if ! git ls-remote --exit-code --tags "https://github.com/$GITHUB_REPOSITORY" "refs/tags/$ref" > /dev/null; then
+            echo "::error::the sandbox serves FerroEHR $version, and this repository has no tag $ref to seed it from." >&2
+            exit 1
+          fi
+          echo "the sandbox serves FerroEHR $version; seeding with the scripts of $ref"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ steps.deployed.outputs.ref }}
           persist-credentials: false
 
       - name: Register the demo patients and read their pseudonyms
@@ -219,6 +254,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.identities.outputs.ref }}
           persist-credentials: false
       - name: Seed the demo data
         env:

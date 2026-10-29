@@ -159,6 +159,14 @@ walker over `scripts/sandbox/seed/manifest.json`, and the bodies live as files
 beside it, so **adding content is editing data**: a template slug, an EHR
 subject, an AQL file, a party. The walker itself never changes.
 
+The reseed seeds the release the sandbox runs, with that release's scripts
+(#4370). Its `identities` job reads `solution_version` from the ITS-REST
+system `OPTIONS /ferroehr/rest/openehr/v1`, and both the `identities` and the
+`seed` job check out the tag `v<version>`, so the routes the walker calls,
+the corpus it loads and the manifest's pins are the deployed version's. A
+change to the walker or the dataset on `main` reaches the sandbox with the
+next release, and a version with no tag fails the run by name.
+
 ### The patients and FerroPIX
 
 The CDR resolves patients through FerroPIX (`[ehr_index] provider = "ihe"`),
