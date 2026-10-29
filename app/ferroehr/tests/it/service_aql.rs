@@ -238,6 +238,17 @@ async fn aql_acceptance_set() {
     )
     .await;
     assert_eq!(rows(&r)[0][0], json!(4), "4 compositions across all EHRs");
+    // COUNT of the whole object counts the same objects, scoped and not
+    // (QUERY master03 §COUNT), though it reads no node row (#4286).
+    for (scope, expected) in [(ehr_scope(&ehr_id), 3), (AqlQueryRequest::default(), 4)] {
+        let r = run_aql(
+            &svc,
+            "SELECT COUNT(c) FROM EHR e CONTAINS COMPOSITION c",
+            scope,
+        )
+        .await;
+        assert_eq!(rows(&r)[0][0], json!(expected), "COUNT(c): {r}");
+    }
 
     // ── CONTAINS chain (EHR→COMPOSITION→OBSERVATION) + ORDER BY magnitude ────
     let aql = format!(

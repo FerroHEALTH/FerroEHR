@@ -33,8 +33,8 @@ use uuid::Uuid;
 
 use crate::aql::error::{AqlError, AqlFeatureError, SqlError};
 use crate::aql::ir::{
-    Contained, ContainsTree, EhrField, EhrPredicate, LeafPath, Link, PathTarget, QueryIr, RmSource,
-    Source, VersionField, VersionScope,
+    AggFunc, Contained, ContainsTree, EhrField, EhrPredicate, LeafPath, Link, PathTarget, QueryIr,
+    RmSource, SelectValue, Source, VersionField, VersionScope,
 };
 use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow, VoHead};
 
@@ -290,6 +290,32 @@ pub(super) struct StreamPlan {
     contained: Vec<(usize, usize)>,
 }
 
+impl StreamPlan {
+    /// Whether the query only counts the root objects of this chain: every
+    /// SELECT column is `COUNT(*)` or a plain `COUNT` of the whole root, and
+    /// nothing is contained below the root. Such a count reads the version
+    /// spine alone (QUERY master03 §COUNT), which the flat shape cannot
+    /// skip.
+    pub(super) fn counts_roots(&self, ir: &QueryIr) -> bool {
+        self.contained.is_empty()
+            && !ir.distinct
+            && !ir.select.is_empty()
+            && ir.select.iter().all(|column| match &column.value {
+                SelectValue::Aggregate {
+                    func: AggFunc::Count,
+                    arg: None,
+                    ..
+                } => true,
+                SelectValue::Aggregate {
+                    func: AggFunc::Count,
+                    arg: Some(target),
+                    distinct: false,
+                } => is_whole_root_object(target, self.root),
+                _ => false,
+            })
+    }
+}
+
 /// Extract the streaming-eligible containment chain, or `None` when the
 /// tree needs the general flat shape: `OR`/`NOT CONTAINS` branches,
 /// `VERSION` sources, a bare `EHR` with no versioned-object root, nested
@@ -413,12 +439,41 @@ fn path_needs_root_node(target: &PathTarget, root: usize) -> bool {
     }
 }
 
+/// Whether `target` is the whole streaming root object itself (`c` in
+/// `COUNT(c)`): no structure hop, no fragment, no predicate.
+pub(super) fn is_whole_root_object(target: &PathTarget, root: usize) -> bool {
+    matches!(target, PathTarget::Data(leaf)
+        if leaf.source.0 == root
+            && leaf.anchor.is_empty()
+            && leaf.root_predicate.is_none()
+            && leaf.is_whole_object())
+}
+
 /// Whether ANY identified path in the query (SELECT, WHERE, ORDER BY) reads
 /// the streaming root's node row — the projection/predicate half of the
 /// dead-root-lateral test (`build_from_streaming`).
+///
+/// A plain `COUNT` of the whole root object reads no node: it asks only
+/// whether the object is there (QUERY master03 §COUNT), which the spine row
+/// of a version that is not logically deleted already answers.
 fn root_node_referenced(ir: &QueryIr, root: usize) -> bool {
     let mut needed = false;
-    ir.for_each_path(&mut |t| needed |= path_needs_root_node(t, root));
+    for column in &ir.select {
+        match &column.value {
+            SelectValue::Aggregate {
+                func: AggFunc::Count,
+                arg: Some(target),
+                distinct: false,
+            } if is_whole_root_object(target, root) => {}
+            value => value.for_each_path(&mut |t| needed |= path_needs_root_node(t, root)),
+        }
+    }
+    if let Some(filter) = &ir.filter {
+        filter.for_each_path(&mut |t| needed |= path_needs_root_node(t, root));
+    }
+    for key in &ir.order_by {
+        needed |= path_needs_root_node(&key.path, root);
+    }
     needed
 }
 
