@@ -965,6 +965,45 @@ fn multi_valued_fragment_projection_is_an_array_cell() {
     );
 }
 
+/// A path that ends on a list attribute in a fragment names the list's
+/// elements (`[*]`), so the array cell holds the list itself rather than the
+/// list wrapped once more (#4413); the path below a list keeps its matches.
+#[test]
+fn a_fragment_path_ending_on_a_list_names_its_elements() {
+    // The jsonpath travels as a bound value, so it is read off the bound values.
+    let built = |q: &str| {
+        let ctx = SqlCtx {
+            system_id: "sys.example.com".to_owned(),
+            ehr_ids: Vec::new(),
+            ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
+            subject_scope: None,
+            ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
+            limit: None,
+            offset: None,
+            archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        };
+        let built = ferroehr::aql::sql::build(&plan_ok(q), &Params::new(), &ctx)
+            .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"));
+        (built.sql, format!("{:?}", built.values))
+    };
+    let (sql, values) = built(
+        "SELECT c/feeder_audit/originating_system_item_ids FROM EHR e CONTAINS COMPOSITION c",
+    );
+    assert!(
+        sql.contains("jsonb_path_query_array(") && sql.contains("nullif("),
+        "array-cell projection: {sql}"
+    );
+    assert!(
+        values.contains("\"$.originating_system_item_ids[*]\""),
+        "the list step names its elements: {values}"
+    );
+    let (_, below) = built("SELECT c/links/target/value FROM EHR e CONTAINS COMPOSITION c");
+    assert!(
+        below.contains("$.links[*].target.value"),
+        "the path below a list matches each element's value: {below}"
+    );
+}
+
 /// A single-valued fragment leaf keeps the exact first-match scalar
 /// extraction — the existential machinery only fires where multiplicity is
 /// real.

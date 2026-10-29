@@ -2213,6 +2213,135 @@ async fn multi_valued_fragment_projection_serves_every_match() {
     );
 }
 
+/// A composition carrying every list attribute a fragment reaches: the
+/// `links`, `context/participations` and composer `identifiers` of
+/// [`multi_fragment_composition`], a placer and a filler order number in
+/// `feeder_audit/originating_system_item_ids` (RM Common IM `FEEDER_AUDIT`),
+/// and two `mappings` on `context/setting` (RM Data Types `DV_TEXT`).
+fn list_tail_composition() -> Value {
+    let mut c = multi_fragment_composition();
+    c["feeder_audit"] = json!({
+        "_type": "FEEDER_AUDIT",
+        "originating_system_audit": { "_type": "FEEDER_AUDIT_DETAILS", "system_id": "lab" },
+        "originating_system_item_ids": [
+            { "_type": "DV_IDENTIFIER", "issuer": "ward", "assigner": "ward",
+              "id": "ORD-PLACER-1", "type": "placer" },
+            { "_type": "DV_IDENTIFIER", "issuer": "lab", "assigner": "lab",
+              "id": "ORD-FILLER-1", "type": "filler" }
+        ]
+    });
+    c["context"]["setting"]["mappings"] = json!([
+        { "_type": "TERM_MAPPING", "match": "=",
+          "target": { "_type": "CODE_PHRASE",
+                      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
+                      "code_string": "home" } },
+        { "_type": "TERM_MAPPING", "match": ">",
+          "target": { "_type": "CODE_PHRASE",
+                      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
+                      "code_string": "community" } }
+    ]);
+    c
+}
+
+/// A projection whose path ENDS on a list attribute inside a fragment answers
+/// that attribute's own list, one level deep, and `null` when the list is
+/// absent; a path below the list keeps the array of its matches (#4413). The
+/// RM fixes the value at the path as the attribute's `List<T>` (RM Common IM
+/// `FEEDER_AUDIT.originating_system_item_ids`); the column shape is our own
+/// design, QUERY master03 §Identified Paths being silent.
+#[tokio::test]
+async fn a_projection_ending_on_a_fragment_list_answers_the_list() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let body = list_tail_composition();
+    let uid = create_comp_body(&svc, &ehr_id, body.clone(), "list tails").await;
+
+    // The report's query.
+    let mut request = ehr_scope(&ehr_id);
+    request
+        .parameters
+        .insert("order".to_owned(), json!("ORD-FILLER-1"));
+    let r = run_aql(
+        &svc,
+        "SELECT c/uid/value, c/feeder_audit/originating_system_item_ids \
+         FROM EHR e CONTAINS COMPOSITION c \
+         WHERE c/feeder_audit/originating_system_item_ids/id = $order",
+        request,
+    )
+    .await;
+    assert_eq!(
+        rows(&r),
+        &vec![json!([
+            uid,
+            body["feeder_audit"]["originating_system_item_ids"]
+        ])],
+        "the order numbers are the list itself, never [[...]]: {r}"
+    );
+
+    let r = run_aql(
+        &svc,
+        "SELECT c/feeder_audit/originating_system_item_ids/id FROM EHR e CONTAINS COMPOSITION c",
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(
+        rows(&r)[0][0],
+        json!(["ORD-PLACER-1", "ORD-FILLER-1"]),
+        "a path below the list keeps the array of its matches: {r}"
+    );
+
+    for (path, expected) in [
+        ("c/links", &body["links"]),
+        (
+            "c/context/participations",
+            &body["context"]["participations"],
+        ),
+        ("c/composer/identifiers", &body["composer"]["identifiers"]),
+        (
+            "c/context/setting/mappings",
+            &body["context"]["setting"]["mappings"],
+        ),
+    ] {
+        let r = run_aql(
+            &svc,
+            &format!("SELECT {path} FROM EHR e CONTAINS COMPOSITION c"),
+            ehr_scope(&ehr_id),
+        )
+        .await;
+        assert_eq!(&rows(&r)[0][0], expected, "{path} answers its list: {r}");
+    }
+
+    let r = run_aql(
+        &svc,
+        "SELECT COUNT(c/links) FROM EHR e CONTAINS COMPOSITION c",
+        ehr_scope(&ehr_id),
+    )
+    .await;
+    assert_eq!(
+        rows(&r),
+        &vec![json!([2])],
+        "a list tail counts its elements: {r}"
+    );
+
+    // A composition without these lists (its one participation aside): null cells.
+    let plain = create_ehr(&svc).await;
+    create_comp(&svc, &plain, "plain", 1.0).await;
+    let r = run_aql(
+        &svc,
+        "SELECT c/feeder_audit/originating_system_item_ids, c/links, \
+         c/composer/identifiers, c/context/setting/mappings \
+         FROM EHR e CONTAINS COMPOSITION c",
+        ehr_scope(&plain),
+    )
+    .await;
+    assert_eq!(
+        rows(&r),
+        &vec![json!([null, null, null, null])],
+        "an absent list is a null cell: {r}"
+    );
+}
+
 /// A predicate ON a fragment step lowers as a jsonpath filter and selects the
 /// matching element — the SECOND link here, so a first-element shortcut fails
 /// this (QUERY master03 §Standard predicate at a non-structure step; the
