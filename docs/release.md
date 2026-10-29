@@ -5,7 +5,7 @@ pushing the `vX.Y.Z` tag, which runs `.github/workflows/release.yml`. The cut
 procedure (the changelog section, the version bumps, the chart, the per-release
 reviews) is in `.claude/rules/changelog.md`; the post-market steps that follow a
 release are in `post-market.md`. This page covers the check you run before the
-tag.
+tag and the recovery of the chart leg after it.
 
 ## Preflight: the plan job, before the tag
 
@@ -47,3 +47,34 @@ check; it is never skipped.
 
 To add a release fact, add a function and a line to the list in
 `scripts/release/plan.sh`. The plan job and the preflight both pick it up.
+
+## Recovering the chart leg
+
+A chart version in the registry is never pushed twice. When the chart leg
+(`.github/workflows/build-chart.yml`) finds its version published already, it
+unpacks both packages and compares their files
+(`scripts/release/chart-published.sh`), since `helm package` stamps the
+packaging time into the tarball. The same files skip the push, and the
+signature, the provenance and SBOM attestations and the Artifact Hub ownership
+tag are made again against the published digest. Other files refuse the
+publish.
+
+A chart leg that pushed and then failed after the push, on a Sigstore outage
+for example, is therefore finished by re-running the failed jobs of the release
+run. The signing identity stays `build-chart.yml`, so the verification commands
+in the book's supply-chain page apply unchanged.
+
+A release runs its workflows from the tag's tree, so a re-run of a tag cut
+before this recovery existed runs the old leg, which refuses the published
+version. Recover such a tag with the `Publish chart` workflow dispatched from
+`main`, which packages the chart of the tag's tree as the release did:
+
+```sh
+gh workflow run publish-chart.yml --repo FerroHEALTH/FerroEHR --ref main \
+  -f release-tag=vX.Y.Z -f publish=true
+```
+
+Without `-f publish=true` the dispatch is a dry run that reports whether the
+published chart holds the same files. After a recovery, close the milestone the
+release run left open:
+`GITHUB_REPOSITORY=FerroHEALTH/FerroEHR bash scripts/release/milestone.sh close vX.Y.Z`.

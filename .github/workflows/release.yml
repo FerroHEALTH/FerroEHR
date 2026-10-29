@@ -56,11 +56,13 @@
 # green no-op on an already-cut version, the sandbox deploy is a pull-and-
 # recreate the box repeats harmlessly, and the crates leg treats an
 # already-published version as done.
-# The ONE leg that is not is the chart: a published chart version is immutable,
-# so a failure after `helm push` means the fix ships as the next chart version
-# (that lane says so at the point of failure). A crates.io version is immutable
-# too, but it can be YANKED and superseded, so its recovery is a version bump
-# rather than a wedged pipeline.
+# The chart leg is idempotent too (#4331): a published chart version is never
+# pushed again, and when the version is published already with the same files
+# the leg skips the push and signs and attests the published digest, so a
+# failure after `helm push` is finished by a re-run. A tag cut before that
+# recovery existed is recovered with publish-chart.yml dispatched from main.
+# A crates.io version is immutable, but it can be YANKED and superseded, so its
+# recovery is a version bump rather than a wedged pipeline.
 #
 # `workflow_dispatch` re-runs the pipeline for an existing tag, and must be
 # dispatched AT the tag (`gh workflow run Release --ref vX.Y.Z -f tag=vX.Y.Z`).
@@ -1226,6 +1228,7 @@ jobs:
       cancel-in-progress: false
     uses: ./.github/workflows/build-chart.yml
     with:
+      publish: true
       release-tag: ${{ needs.plan.outputs.tag }}
       sha: ${{ github.sha }}
 
