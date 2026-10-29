@@ -91,6 +91,17 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
     with_security_headers(normalized(app))
 }
 
+/// Runs the request inside [`ferroehr::db::acquire::request_scope`], so it
+/// checks a connection out of each pool once and keeps it until it answers.
+///
+/// No openEHR spec governs connection handling: our own design.
+async fn one_connection_per_request(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    ferroehr::db::acquire::request_scope(next.run(request)).await
+}
+
 /// The management surface inside the audit trail (#3244): every management
 /// request is recorded as a system-domain access, `/management/loggers` writes
 /// included.
@@ -167,6 +178,9 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     // Above the audit layer so an over-large body is refused before it is read,
     // buffered or audited; the stack's body limit is the ceiling of every route.
     let api = api.layer(from_fn_with_state(state.clone(), crate::limits::middleware));
+    // Outermost, so every statement of the request, its authorization
+    // lookups included, runs on the one connection each pool lent it.
+    let api = api.layer(axum::middleware::from_fn(one_connection_per_request));
 
     // A path no route serves answers a `404` problem, never an empty body.
     let inner = mount_public_surface(&cfg, &state, authenticator, api, &rest_root)

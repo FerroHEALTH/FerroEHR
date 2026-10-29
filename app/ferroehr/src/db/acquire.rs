@@ -27,11 +27,21 @@
 //! probe at a time testing whether it is back. A probe that connects leaves a
 //! busy pool queueing as before.
 //!
+//! Inside [`request_scope`], a request keeps the connection it checked out
+//! between its statements: a connection [`acquire`] handed out goes back to
+//! the scope when its guard drops, and the next [`acquire`] of the same pool
+//! takes it from there, so a request queues for the pool once and returns its
+//! connection to the pool once, when the scope ends. Outside a scope every
+//! guard returns its connection to the pool, as before.
+//!
 //! No openEHR spec governs this — our own design.
 //!
 //! [`Pool::acquire`]: sqlx::Pool::acquire
 
+use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::ops::{Deref, DerefMut};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
@@ -298,20 +308,164 @@ async fn probe_and_record(pool: &PgPool, claim: ProbeClaim<'_>) -> Result<(), Ar
     outcome
 }
 
+tokio::task_local! {
+    /// The connections a [`request_scope`] keeps between checkouts, at most
+    /// one per pool, each under its pool's [`pool_key`].
+    static HELD: RefCell<Vec<(usize, PoolConnection<Postgres>)>>;
+}
+
+/// How many connections [`acquire`] has taken from a pool, rather than from a
+/// [`request_scope`], since the process started.
+static POOL_CHECKOUTS: AtomicU64 = AtomicU64::new(0);
+
+/// Runs `body` as one request: the connection each pool hands it is kept
+/// between its checkouts and returns to the pool when `body` ends.
+pub async fn request_scope<F: Future>(body: F) -> F::Output {
+    HELD.scope(RefCell::new(Vec::new()), body).await
+}
+
+/// How many connections [`acquire`] has taken from a pool since the process
+/// started; a checkout a [`request_scope`] answered from its kept connection
+/// is not counted.
+#[must_use]
+pub fn pool_checkouts() -> u64 {
+    POOL_CHECKOUTS.load(Ordering::Relaxed)
+}
+
+/// The identity of the shared pool `pool` is a handle to: the address of the
+/// options every handle of it reads.
+fn pool_key(pool: &PgPool) -> usize {
+    std::ptr::from_ref(pool.options()).addr()
+}
+
+/// The connection the current [`request_scope`] keeps for the pool `key`,
+/// taken out of the scope; `None` outside a scope or when it keeps none.
+fn take_held(key: usize) -> Option<PoolConnection<Postgres>> {
+    HELD.try_with(|held| {
+        let mut held = held.try_borrow_mut().ok()?;
+        let at = held.iter().position(|(pool, _)| *pool == key)?;
+        Some(held.swap_remove(at).1)
+    })
+    .ok()
+    .flatten()
+}
+
+/// A connection [`acquire`] handed out. It derefs to the connection; when it
+/// drops, the connection goes back to the current [`request_scope`] when that
+/// keeps none of its pool yet, and to the pool otherwise.
+#[derive(Debug)]
+pub struct Checkout {
+    conn: Option<PoolConnection<Postgres>>,
+    pool: usize,
+    close: bool,
+}
+
+impl Checkout {
+    /// A checkout of `conn`, a connection of the pool `pool`.
+    fn new(conn: PoolConnection<Postgres>, pool: usize) -> Self {
+        Self {
+            conn: Some(conn),
+            pool,
+            close: false,
+        }
+    }
+
+    /// Closes the connection when the checkout drops, instead of keeping it or
+    /// returning it to the pool.
+    pub fn close_on_drop(&mut self) {
+        self.close = true;
+    }
+
+    /// Takes the connection out of its pool for good: the pool opens another
+    /// in its place, and the caller closes this one.
+    ///
+    /// # Panics
+    ///
+    /// Never: only this method and `Drop::drop` take the connection out, and
+    /// both consume the checkout.
+    #[must_use]
+    #[expect(
+        clippy::expect_used,
+        reason = "the connection is taken out only here and by `Drop::drop`, and both consume the checkout"
+    )]
+    pub fn detach(mut self) -> PgConnection {
+        self.conn
+            .take()
+            .expect("the connection should be held until the checkout is consumed")
+            .detach()
+    }
+}
+
+impl Deref for Checkout {
+    type Target = PgConnection;
+
+    #[expect(
+        clippy::expect_used,
+        reason = "the connection is taken out only by `Drop::drop`, after which nothing derefs the checkout"
+    )]
+    fn deref(&self) -> &PgConnection {
+        self.conn
+            .as_deref()
+            .expect("the connection should be held until the checkout drops")
+    }
+}
+
+impl DerefMut for Checkout {
+    #[expect(
+        clippy::expect_used,
+        reason = "the connection is taken out only by `Drop::drop`, after which nothing derefs the checkout"
+    )]
+    fn deref_mut(&mut self) -> &mut PgConnection {
+        self.conn
+            .as_deref_mut()
+            .expect("the connection should be held until the checkout drops")
+    }
+}
+
+impl Drop for Checkout {
+    fn drop(&mut self) {
+        let Some(mut conn) = self.conn.take() else {
+            return;
+        };
+        if self.close {
+            conn.close_on_drop();
+            return;
+        }
+        let pool = self.pool;
+        // Outside a scope, or with the scope already keeping a connection of
+        // this pool, the closure is dropped unrun or hands `conn` back, and
+        // dropping it returns it to the pool.
+        let returned = HELD.try_with(move |held| match held.try_borrow_mut() {
+            Ok(mut held) if !held.iter().any(|(kept, _)| *kept == pool) => {
+                held.push((pool, conn));
+                None
+            }
+            _ => Some(conn),
+        });
+        drop(returned);
+    }
+}
+
 /// Obtains a connection from `pool`, marking any failure as acquire-time.
 ///
-/// The wait, successful or not, is recorded on
+/// Inside a [`request_scope`] that keeps a connection of `pool`, that
+/// connection is handed out without asking the pool. Otherwise the wait,
+/// successful or not, is recorded on
 /// [`DB_POOL_ACQUIRE_DURATION`](crate::telemetry::metrics::DB_POOL_ACQUIRE_DURATION).
 ///
-/// The connection returns to the pool when the returned guard drops; a caller
-/// that executes one statement passes `&mut *acquire(pool).await?` so the guard
+/// The connection is released when the returned guard drops; a caller that
+/// executes one statement passes `&mut *acquire(pool).await?` so the guard
 /// drops at the end of that statement, as an implicit acquire would.
 ///
 /// # Errors
 ///
 /// [`AcquireError`] when the pool timed out, was closed, or could not open a
 /// new connection.
-pub async fn acquire(pool: &PgPool) -> Result<PoolConnection<Postgres>, AcquireError> {
+pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
+    let key = pool_key(pool);
+    if let Some(conn) = take_held(key) {
+        return Ok(Checkout::new(conn, key));
+    }
     let started = Instant::now();
     // Boxed: the probe and the pool's connect future are large, and every
     // caller's state machine would otherwise carry them inline.
@@ -319,7 +473,9 @@ pub async fn acquire(pool: &PgPool) -> Result<PoolConnection<Postgres>, AcquireE
     crate::telemetry::metrics::metrics()
         .db_pool_acquire_duration
         .record(started.elapsed().as_secs_f64(), &[]);
-    result
+    let conn = result?;
+    POOL_CHECKOUTS.fetch_add(1, Ordering::Relaxed);
+    Ok(Checkout::new(conn, key))
 }
 
 /// [`acquire`] without the metric: the outage gate, then the pool, with one
@@ -380,7 +536,7 @@ async fn acquire_unmetered(pool: &PgPool) -> Result<PoolConnection<Postgres>, Ac
 /// No openEHR spec governs this — our own design.
 #[derive(Debug)]
 pub struct Lease {
-    conn: PoolConnection<Postgres>,
+    conn: Checkout,
     running: bool,
 }
 
