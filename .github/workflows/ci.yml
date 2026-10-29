@@ -2660,6 +2660,39 @@ jobs:
   # already gated on the pull request. The fragment and structure checks are
   # whole-tree checks, but they are not worth a second job for a queue that
   # cannot change the files between the pull request and the merge.
+  # A release PR is checked against the tree it merges into (#4361): the
+  # v5.6.0-rc1 PR passed its preflight at its own head, a fragment merged
+  # 23 seconds ahead of it in the queue, and the plan refused the tag. On a
+  # change that moves the workspace version this job runs the plan's own
+  # fragment check at the merge ref or the merge group, whose first parent is
+  # main or the queue entry ahead.
+  release-fragments:
+    name: release-fragments
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: The plan proves its fragment check
+        run: bash scripts/release/plan.sh --self-test
+      - name: A release change carries every fragment of the tree it merges into
+        run: |
+          set -euo pipefail
+          version() { git show "$1:Cargo.toml" | sed -nE 's/^version = "(.*)"$/\1/p' | sed -n 1p; }
+          old="$(version HEAD^1)"
+          new="$(version HEAD)"
+          if [ "$old" = "$new" ]; then
+            echo "the workspace version stays $new: no release cut to check."
+            exit 0
+          fi
+          echo "the workspace version moves from $old to $new"
+          bash scripts/release/plan.sh fragments "v$new"
+
   changelog:
     name: changelog-guard
     if: github.event_name == 'pull_request'
@@ -2888,6 +2921,7 @@ jobs:
       - migration-immutability
       - ixit-declarations
       - changelog
+      - release-fragments
       - citation
       - compose-version-guard
       - viewer-tool-pins
