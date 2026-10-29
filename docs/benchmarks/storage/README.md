@@ -32,15 +32,38 @@ cargo bench -p ferroehr --bench storage -- --profile-time 10
 The database comes from the shared testkit harness (`testkit::db()`), so the
 run needs the same PostgreSQL 18 container the test suite uses and nothing else.
 
-`.github/workflows/storage-bench.yml` runs the same benchmark on a
-GitHub-hosted runner by dispatch and hands the fresh record to
-`scripts/render/storage-bench-compare.sh`, which compares it per operation with
-the record committed for the same generation and class and fails the run when
-a p50 or p99 rose further than the dispatched tolerance. A generation and class
-with no committed record fails the run too, with the error in the job summary:
-a schema-generation change once left the lane comparing nothing and passing
-(#4291), so the change that moves `ext.storage_generation()` commits the new
-generation's records with it. That comparison runs locally too:
+`.github/workflows/storage-bench.yml` runs the benchmark by dispatch on one
+GitHub-hosted runner for two builds, a baseline and a candidate, and judges
+the candidate's latency against the baseline measured there (#4318):
+
+1. It builds the bench of both revisions. The candidate is the dispatched ref
+   (or the `candidate` input), and the baseline is the candidate's merge base
+   with `main` (or the `baseline` input). Dispatched on `main`, both are the
+   same commit and the run measures the lane's own noise.
+2. It runs the two builds in turn, `rounds` times each (2 by default),
+   alternating the order (baseline then candidate, candidate then baseline),
+   so a runner that slows down part way through slows both alike.
+3. `scripts/render/storage-bench-compare.sh --ab <dir>` takes, per operation
+   and per build, the median of the rounds' p50 and p99, and shows the range
+   of the rounds beside it. An operation regresses when a median rose more
+   than the tolerance above the baseline's and every candidate round is slower
+   than every baseline round at that percentile. A rise beyond the tolerance
+   whose rounds overlap the baseline's is reported as within the noise of the
+   rounds: the run cannot separate it, so dispatch it again with more rounds.
+   The candidate's storage sizes are judged against the record committed for
+   its generation and class, as before, because they do not depend on the
+   machine.
+
+A latency is never compared across two runners: two hosted runs of the same
+bench code on 2026-10-28 read 20 of 27 operations 40 to 156 % apart, so a
+committed record is the source of the size facts and of the book's numbers,
+never of a latency verdict. A generation and class with no committed record
+fails the run, with the error in the job summary: a schema-generation change
+once left the lane comparing nothing and passing (#4291), so the change that
+moves `ext.storage_generation()` commits the new generation's records with it.
+
+The single-record comparison runs locally too, against the record committed at
+`HEAD`:
 
 ```bash
 bash scripts/render/storage-bench-compare.sh --tolerance 15
@@ -49,7 +72,9 @@ bash scripts/render/storage-bench-compare.sh --tolerance 15
 It reads the baseline from `HEAD`, because the run just overwrote the
 working-tree copy, and judges nothing when the two records carry different
 `bench_class` values. `--baseline <file>` compares against any other record,
-which is how a new generation is set against the one it replaces.
+which is how a new generation is set against the one it replaces. Like the
+lane's own judgement, a local verdict is sound only for two records measured
+on the same machine.
 
 ## The shape
 
