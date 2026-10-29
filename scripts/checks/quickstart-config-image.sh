@@ -29,7 +29,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 docker compose -f docker-compose.yml config --format json >"$work/compose.json"
-version="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)"
+version="$(awk -F'"' '/^version = /{print $2; exit}' Cargo.toml)"
 fail=0
 
 # Pull an image, or report that it is not published; exit status 0 = pulled.

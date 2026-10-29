@@ -31,9 +31,10 @@ pub const fn lang_for(profile: crate::config::profile::SpecProfile) -> &'static 
 
 /// The version this server reports.
 ///
-/// `--version`, `GET /ferroehr/rest/status` and `/management/info` carry it:
+/// `--version` and `server_version` on `GET /ferroehr/rest/status` carry it:
 /// the package version for a release build, and the package version with
-/// `+dev.<commit>` for any other build (`build.rs`).
+/// `+dev.<commit>` for any other build (`build.rs`). The boot banner and
+/// `/management/info` name the package version and the commit apart.
 pub const SERVER_VERSION: &str = env!("FERROEHR_SERVER_VERSION");
 
 /// The openEHR ITS-REST contract version this server implements.

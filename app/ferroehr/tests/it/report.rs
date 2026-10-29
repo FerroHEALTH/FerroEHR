@@ -183,10 +183,7 @@ async fn the_report_names_the_build_and_the_manufacturer() {
 
     assert_eq!(report.format, ferroehr::report::FORMAT);
     assert_eq!(report.build.manufacturer, MANUFACTURER);
-    assert_eq!(
-        report.build.version,
-        ferroehr::telemetry::provenance::SERVER_VERSION
-    );
+    assert_eq!(report.build.version, env!("CARGO_PKG_VERSION"));
     assert_eq!(report.build.spec.its_rest, openehr_its::SPEC_VERSION);
     assert!(
         report
