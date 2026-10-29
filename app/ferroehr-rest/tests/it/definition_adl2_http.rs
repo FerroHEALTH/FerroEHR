@@ -679,6 +679,7 @@ async fn upload_with_absent_parent_is_422_with_vasid() {
         .method("POST")
         .uri(format!("{BASE}/definition/template/adl2"))
         .header(header::CONTENT_TYPE, "text/plain")
+        .header("prefer", "return=representation")
         .body(Body::from(src))
         .unwrap();
     let (status, _h, body) = send(&app, req).await;
