@@ -52,10 +52,14 @@ ferropix:
   dataKey:
     existingSecret: ferropix-data-key
   config:
-    server:
-      public_base_url: https://pix.example.com
+    public_base_url: https://pix.example.com
     auth:
       audience: [https://pix.example.com/fhir]
+      issuer:
+        - issuer: https://idp.example.com/realms/pix
+    # The clients the issuer signs for that may act as a Patient Identity
+    # Source.
+    trust:
       issuer:
         - issuer: https://idp.example.com/realms/pix
           clients: [hospital-source]

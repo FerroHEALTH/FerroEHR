@@ -1,6 +1,6 @@
 dependencies:
 - name: ferropix
   repository: oci://ghcr.io/ferrohealth/charts
-  version: 0.2.2
-digest: sha256:0fc7f48bf30ef486ce2b262c3a41036e45fbf3f2f3cbeb8dd13933daea10bcef
-generated: "2026-10-26T21:08:41.682556+01:00"
+  version: 0.3.4
+digest: sha256:6e9d4be89072e383a94cd1aceba702375fe35d4f131491d1ac588eb74ba8df50
+generated: "2026-10-29T17:36:54.064878+01:00"

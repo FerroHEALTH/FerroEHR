@@ -2862,6 +2862,25 @@ jobs:
       - name: The quickstart's inline configurations read under the pinned images
         run: bash scripts/checks/quickstart-config-image.sh
 
+  # FerroPIX pin guard (#4392): the quickstart, the Helm chart and the hosted
+  # sandbox pin one FerroPIX release by digest, and the sandbox's
+  # configuration and each chart golden's ferropix.toml read under it. The
+  # Dependabot entry for the quickstart pin then moves all three together.
+  ferropix-pins:
+    name: ferropix-pins
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: FerroPIX pin guard self-test
+        run: bash scripts/checks/ferropix-pins.sh --self-test
+      - name: Every FerroPIX pin is one release, and its configurations read under it
+        run: bash scripts/checks/ferropix-pins.sh
+
   # Viewer tool-pin guard (#4222): the wasm-bindgen CLI must equal the
   # wasm-bindgen Cargo.lock resolves, and every cargo-leptos pin must agree,
   # or a viewer build in one lane fails its bindings step while CI is green.
@@ -2952,6 +2971,7 @@ jobs:
       - citation
       - compose-version-guard
       - quickstart-config
+      - ferropix-pins
       - viewer-tool-pins
       - crate-version
       - chart-version

@@ -1050,6 +1050,8 @@ networkPolicy:
 # in the kernel. On a node without it the pod does not start — a loud failure,
 # not a silent downgrade
 # (https://kubernetes.io/docs/tasks/configure-pod-container/user-namespaces/).
+# The FerroPIX dependency reads its own `ferropix.hostUsers` (false by
+# default), so set that to `true` as well.
 hostUsers: false
 
 podSecurityContext:
@@ -1759,9 +1761,11 @@ bridge:
 #     database: {existingSecret: ferropix-db}
 #     dataKey: {existingSecret: ferropix-data-key}
 #     config:
-#       server: {public_base_url: https://pix.example.org}
+#       public_base_url: https://pix.example.org
 #       auth:
 #         audience: [https://pix.example.org/fhir]
+#         issuer: [{issuer: https://idp.example.org}]
+#       trust:
 #         issuer: [{issuer: https://idp.example.org, clients: [hospital-source]}]
 #       pseudonym_domain:
 #         - {namespace: urn:oid:2.999.7.1, name: Clinical domain, consumer_client_id: ferroehr}
@@ -1774,10 +1778,10 @@ ferropix:
   image:
     # -- The FerroPIX release the pinned `digest` belongs to. The dependency
     # chart deploys the digest, and the Artifact Hub entry names this tag.
-    tag: "0.0.7"
+    tag: "0.0.12"
     # -- FerroPIX image digest of release `tag`. Pinned here so
     # the image this chart deploys is stated by this chart.
-    digest: "sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825"
+    digest: "sha256:01adb1e7cc91b46409cc315162200fb99a712a9232508d5c85a228554d22d6d3"
   config:
     server:
       # -- FerroPIX's `[server] base_path`, read here to build the FHIR base the
