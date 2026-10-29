@@ -62,6 +62,11 @@ pub const NODE_VALUES: &str = include_str!("../../migrations/templates/node_valu
 pub const VERSION_TREE_KEY: &str =
     include_str!("../../migrations/templates/version_tree_key.sql.in");
 
+/// The version-tree read template: an index on the object and its three
+/// tree columns, so a read by version tree id probes one version (#4420).
+pub const VERSION_TREE_READ: &str =
+    include_str!("../../migrations/templates/version_tree_read.sql.in");
+
 /// The marker opening a block rendered only for a domain that owns an `ehr`
 /// relation.
 const EHR_BEGIN: &str = "--@ehr-begin";
@@ -142,6 +147,16 @@ mod tests {
             PARTY,
             VERSION_TREE_KEY,
         ),
+        (
+            "migrations/clinical/0023_version_tree_read.sql",
+            CLINICAL,
+            VERSION_TREE_READ,
+        ),
+        (
+            "migrations/party/0014_version_tree_read.sql",
+            PARTY,
+            VERSION_TREE_READ,
+        ),
     ];
 
     /// Set to `1` to rewrite the committed files from the templates instead of
@@ -175,7 +190,13 @@ mod tests {
 
     #[test]
     fn the_two_domains_differ_only_in_kinds_and_the_clinical_references() {
-        for template in [CHANGE_CONTROL, NODE, NODE_VALUES, VERSION_TREE_KEY] {
+        for template in [
+            CHANGE_CONTROL,
+            NODE,
+            NODE_VALUES,
+            VERSION_TREE_KEY,
+            VERSION_TREE_READ,
+        ] {
             let clinical = render(template, &CLINICAL);
             let party = render(template, &PARTY);
             let differences: Vec<(&str, &str)> = diff_lines(&clinical, &party);

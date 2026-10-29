@@ -520,6 +520,134 @@ async fn the_foreign_key_check_of_a_node_row_probes_one_version() {
     }
 }
 
+/// Every `version_hot` node of a plan tree: its `Index Cond`, if any, and the
+/// rows its `Filter` dropped.
+fn version_hot_probes(node: &Value, out: &mut Vec<(Option<String>, f64)>) {
+    if node
+        .get("Relation Name")
+        .and_then(Value::as_str)
+        .is_some_and(|relation| relation == "version_hot")
+    {
+        out.push((
+            node.get("Index Cond")
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned),
+            node.get("Rows Removed by Filter")
+                .and_then(Value::as_f64)
+                .unwrap_or_default(),
+        ));
+    }
+    for child in node
+        .get("Plans")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        version_hot_probes(child, out);
+    }
+}
+
+#[tokio::test]
+async fn a_read_by_version_tree_id_probes_one_version() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    // Single-version objects beside one long history, as in the foreign-key
+    // probe above; the read addresses a trunk version in the middle of it.
+    let ehr = svc.create_ehr(None).await.expect("create an EHR");
+    let body = composition("tree id read");
+    for _ in 0..300 {
+        svc.create_composition(ehr, uv(&body, "249", None))
+            .await
+            .expect("commit a single-version composition");
+    }
+    let mut head = svc
+        .create_composition(ehr, uv(&body, "249", None))
+        .await
+        .expect("commit the long history's first version");
+    for _ in 0..60 {
+        let preceding = head.version_uid();
+        head = svc
+            .update_composition(ehr, head.vo_id, uv(&body, "251", Some(&preceding)))
+            .await
+            .expect("extend the long history");
+    }
+
+    // A session switches to the generic plan from its sixth execution on when
+    // it costs no more than the custom plans did (`PostgreSQL` docs § PREPARE),
+    // so the generic plan is the one a pooled connection holds, with and
+    // without statistics. Before any ANALYZE every candidate index of a custom
+    // plan estimates one row at the same cost, which no index layout decides.
+    let mut unbounded = Vec::new();
+    for (statistics, modes) in [
+        ("without ANALYZE", &["force_generic_plan"][..]),
+        (
+            "after ANALYZE",
+            &["force_custom_plan", "force_generic_plan"][..],
+        ),
+    ] {
+        if statistics == "after ANALYZE" {
+            pool.execute("ANALYZE")
+                .await
+                .expect("give the planner statistics over the seeded corpus");
+        }
+        for mode in modes {
+            let mut tx = explain_tx(&pool).await;
+            tx.execute(sqlx::AssertSqlSafe(format!(
+                "SET LOCAL plan_cache_mode = {mode}"
+            )))
+            .await
+            .expect("set the plan cache mode");
+            tx.execute(sqlx::AssertSqlSafe(format!(
+                "PREPARE tree_read (uuid, int, int, int) AS {}",
+                read::READ_VERSION_SQL
+            )))
+            .await
+            .expect("prepare the by-tree read");
+            let plan: Value = sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
+                "{EXPLAIN}EXECUTE tree_read ('{}', 30, 0, 0)",
+                head.vo_id.0
+            )))
+            .fetch_one(&mut *tx)
+            .await
+            .expect("explain the by-tree read")
+            .try_get(0)
+            .expect("EXPLAIN FORMAT JSON returns one json column");
+            // A prepared statement outlives the transaction it was made in.
+            tx.execute("DEALLOCATE tree_read")
+                .await
+                .expect("drop the prepared by-tree read");
+            tx.rollback().await.expect("roll the explain back");
+
+            let root = plan
+                .get(0)
+                .and_then(|first| first.get("Plan"))
+                .expect("EXPLAIN FORMAT JSON returns a one-element array carrying a Plan");
+            let mut probes = Vec::new();
+            version_hot_probes(root, &mut probes);
+            let bounded = matches!(
+                probes.as_slice(),
+                [(Some(cond), removed)]
+                    if ["vo_id", "trunk_version"].iter().all(|column| cond.contains(column))
+                        && removed.abs() < f64::EPSILON
+            );
+            if !bounded {
+                unbounded.push(format!(
+                    "{statistics}, {mode}: {probes:?}\n{}",
+                    render(&scans(&plan))
+                ));
+            }
+        }
+    }
+    assert!(
+        unbounded.is_empty(),
+        "the by-tree read reaches its version through an index on the tree id columns \
+         and filters out no other version of the object:\n{}",
+        unbounded.join("\n")
+    );
+}
+
 #[tokio::test]
 async fn the_revision_history_walks_one_object_by_index() {
     let db = testkit::db().await.expect("testkit database");

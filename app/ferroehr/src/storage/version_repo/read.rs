@@ -239,7 +239,7 @@ fn visible(stored: &StoredVersion) -> bool {
 }
 
 // ── the rendered statements ──────────────────────────────────────────────────
-// The three point reads below expose the statement they run as a named
+// The point reads below expose the statement they run as a named
 // constant. Their access path is pinned by the plan-shape suite
 // (`tests/it/storage_plans.rs`), which runs EXPLAIN over these constants, so
 // what it explains is the statement the read path emits and not a copy that can
@@ -265,6 +265,13 @@ pub const VERSION_AT_SQL: &str = version_select!(
 /// its storage ordinal, addressed on the partitioned parent.
 pub const READ_VERSION_BY_ORDINAL_SQL: &str =
     version_select!("WHERE v.vo_id = $1 AND v.sys_version = $2");
+
+/// The statement [`read_version`] runs: one version of an object by its
+/// `VERSION_TREE_ID` columns, addressed on the partitioned parent.
+pub const READ_VERSION_SQL: &str = version_select!(
+    "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
+     AND v.branch_number = $3 AND v.branch_version = $4"
+);
 
 /// Build a [`StoredVersion`] from a `version`⋈`audit` row; the canonical
 /// body is the row's own materialized `body` column (`NULL` → [`Value::Null`],
@@ -587,11 +594,7 @@ pub async fn read_version(
     branch_number: i32,
     branch_version: i32,
 ) -> Result<Option<StoredVersion>, StorageError> {
-    const SQL: &str = version_select!(
-        "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
-         AND v.branch_number = $3 AND v.branch_version = $4"
-    );
-    sqlx::query(SQL)
+    sqlx::query(READ_VERSION_SQL)
         .bind(vo_id)
         .bind(trunk_version)
         .bind(branch_number)
