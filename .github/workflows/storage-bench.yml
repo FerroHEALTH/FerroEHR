@@ -23,7 +23,11 @@
 # Both builds now run on this runner, alternating (A B, B A, ...), and an
 # operation regresses only when its median rose beyond the tolerance AND every
 # candidate round is slower than every baseline round at that percentile
-# (scripts/render/storage-bench-compare.sh --ab). The baseline defaults to the
+# (scripts/render/storage-bench-compare.sh --ab). Two rounds a build were too
+# few: unchanged code read one p99 15 % apart with the rounds separated (run
+# 40897166186), and with k rounds a build an unchanged operation separates
+# by chance once in C(2k, k) orders, 1 in 6 at two rounds, 1 in 70 at four,
+# so four is the default. The baseline defaults to the
 # candidate's merge base with main, so a dispatch on main measures the same
 # code twice: the lane's own noise check.
 #
@@ -56,9 +60,9 @@ on:
         default: "5"
         type: string
       rounds:
-        description: "Interleaved rounds per build (2 to 6); the spread of the rounds is the noise band"
+        description: "Interleaved rounds per build (3 to 6); the spread of the rounds is the noise band"
         required: false
-        default: "2"
+        default: "4"
         type: string
       baseline:
         description: "The baseline revision (empty = the candidate's merge base with main)"
@@ -84,7 +88,8 @@ jobs:
   bench:
     name: measure + compare
     runs-on: ubuntu-latest
-    # Two release builds and 2 x rounds bench runs of about 15 minutes each.
+    # Two release builds and 2 x rounds bench runs of about 15 minutes each:
+    # about 160 minutes at the default 4 rounds, 220 at 6.
     timeout-minutes: 300
     permissions:
       contents: read
@@ -120,7 +125,7 @@ jobs:
           ROUNDS: ${{ inputs.rounds }}
         run: |
           set -euo pipefail
-          [[ "$ROUNDS" =~ ^[2-6]$ ]] || { echo "::error::rounds takes 2 to 6, not '$ROUNDS'; the noise band needs two rounds a build"; exit 1; }
+          [[ "$ROUNDS" =~ ^[3-6]$ ]] || { echo "::error::rounds takes 3 to 6, not '$ROUNDS'"; exit 1; }
           candidate="$(git rev-parse --verify "${CANDIDATE:-HEAD}^{commit}")"
           if [ -n "$BASELINE" ]; then
             baseline="$(git rev-parse --verify "${BASELINE}^{commit}")"

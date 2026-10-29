@@ -40,7 +40,9 @@ the candidate's latency against the baseline measured there (#4318):
    (or the `candidate` input), and the baseline is the candidate's merge base
    with `main` (or the `baseline` input). Dispatched on `main`, both are the
    same commit and the run measures the lane's own noise.
-2. It runs the two builds in turn, `rounds` times each (2 by default),
+2. It runs the two builds in turn, `rounds` times each (4 by default, 3 at
+   least: with two rounds a build, unchanged code read one operation's p99
+   15 % apart with the rounds separated),
    alternating the order (baseline then candidate, candidate then baseline),
    so a runner that slows down part way through slows both alike.
 3. `scripts/render/storage-bench-compare.sh --ab <dir>` takes, per operation
