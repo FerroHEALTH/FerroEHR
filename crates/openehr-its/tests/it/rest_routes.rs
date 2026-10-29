@@ -589,14 +589,14 @@ fn path_parameters_name_their_identifier_class() {
 /// `from_request` decodes an AQL query string as the generated router does:
 /// the declared keys into their fields, every other pair into
 /// `query_parameters` with its value read as JSON when it parses (ITS-REST
-/// `query/` `query_parameters`, OAS `style: form, explode: true`), a `+` read
-/// as a space and `%2B` as a literal plus (WHATWG URL Standard §5.1).
+/// `query/` `query_parameters`, OAS `style: form, explode: true`), `%20` read
+/// as a space and both `+` and `%2B` as a literal plus (RFC 3986 §2.1, §3.4).
 #[test]
 fn from_request_decodes_the_adhoc_query_string() {
     let m = matched(&Method::GET, "/query/aql").unwrap();
     let params = query::QueryExecuteAdhocQueryParams::from_request(
         &m,
-        Some("q=SELECT+1&offset=1&fetch=2&uid=x&n=3&sum=1%2B2"),
+        Some("q=SELECT%201&offset=1&fetch=2&uid=x&n=3&sum=1%2B2&raw=1+2"),
         &http::HeaderMap::new(),
     )
     .unwrap();
@@ -604,8 +604,9 @@ fn from_request_decodes_the_adhoc_query_string() {
     assert_eq!(params.offset, Some(1));
     assert_eq!(params.fetch, Some(2));
     let members = params.query_parameters.unwrap();
-    assert_eq!(members.len(), 3);
+    assert_eq!(members.len(), 4);
     assert_eq!(members.get("sum"), Some(&serde_json::json!("1+2")));
+    assert_eq!(members.get("raw"), Some(&serde_json::json!("1+2")));
     assert_eq!(members.get("uid"), Some(&serde_json::json!("x")));
     assert_eq!(members.get("n"), Some(&serde_json::json!(3)));
 }

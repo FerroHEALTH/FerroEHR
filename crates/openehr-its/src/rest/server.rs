@@ -19,8 +19,8 @@
 //! A query parameter is read as the generated client writes it: one
 //! `name=value` pair per scalar, one pair per array item, and one pair per
 //! member of a form-exploded object (`style: form, explode: true`). Both the
-//! name and the value are form-decoded (WHATWG URL Standard §5.1), so a `+` is
-//! a space and `%2B` a literal plus.
+//! name and the value are percent-decoded (RFC 3986 §2.1, §3.4), so a `+` and
+//! `%2B` are both a literal plus.
 
 use std::sync::Arc;
 

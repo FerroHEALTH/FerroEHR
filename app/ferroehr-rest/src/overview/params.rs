@@ -8,8 +8,8 @@
 //! An ITS-REST operation's parameters decode through its generated
 //! `*Params::from_request` (`openehr_its::rest::generated`). A query string read
 //! here decodes the same way, through
-//! [`openehr_its::rest::decode::query_component_octets`]: a `+` is a space and
-//! `%2B` a literal plus (WHATWG URL Standard §5.1).
+//! [`openehr_its::rest::decode::query_component_octets`]: percent-decoding
+//! alone (RFC 3986 §2.1, §3.4), so a `+` and `%2B` are both a literal plus.
 
 #![expect(
     clippy::disallowed_types,
@@ -31,8 +31,8 @@ use openehr_rm::prelude::ItemTag;
 pub(crate) const QUERY_RESERVED_KEYS: &[&str] =
     &["ehr_id", "offset", "fetch", "q", "query_parameters"];
 
-/// The pairs of `query`, each name and value form-decoded (WHATWG URL
-/// Standard §5.1): a `+` is a space, then every percent-encoded octet decodes.
+/// The pairs of `query`, each name and value percent-decoded (RFC 3986 §2.1,
+/// §3.4): every percent-encoded octet decodes and a `+` stays a plus.
 ///
 /// Octets that do not decode to UTF-8 are replaced, never dropped, so a pair
 /// keeps its place.
@@ -407,7 +407,7 @@ mod tests {
                 "temperature_from=36&temperature_unit=Cel&$flagged=true\
                  &uid=90910cf0-66a0-4382-b1f8-c0f27e81b42d::openEHRSys.example.com::1\
                  &offset=10&fetch=5&ehr_id=abc&q=SELECT\
-                 &shared=named-form&name=a+b&plus=a%2Bb",
+                 &shared=named-form&name=a+b&plus=a%2Bb&space=a%20b",
             ),
             &["ehr_id", "offset", "fetch", "q"],
         );
@@ -431,9 +431,10 @@ mod tests {
             json!("named-form"),
             "named form wins a collision"
         );
-        // WHATWG URL Standard §5.1 step 3.4: `+` is a space, `%2B` a plus.
-        assert_eq!(got["name"], json!("a b"), "a plus is a space");
+        // RFC 3986 §2.1, §3.4: `+` and `%2B` are both a plus, `%20` a space.
+        assert_eq!(got["name"], json!("a+b"), "a plus is a plus");
         assert_eq!(got["plus"], json!("a+b"), "an encoded plus is a plus");
+        assert_eq!(got["space"], json!("a b"), "an encoded space is a space");
         for reserved in QUERY_RESERVED_KEYS {
             assert!(
                 !got.contains_key(*reserved),
@@ -461,13 +462,13 @@ mod tests {
         assert!(aql_binds(None).expect("binds").is_empty());
     }
 
-    /// WHATWG URL Standard §5.1: `+` and `%20` are both a space, `%2B` is a
-    /// literal plus, and the `+` replacement runs before percent-decoding.
+    /// RFC 3986 §2.1, §3.4: `%20` is a space, and a `+` stays a literal plus
+    /// whether it arrives as `+` or `%2B`, in a name and in a value.
     #[test]
     fn percent_and_plus_decoding() {
         let pairs = query_pairs(
-            "q=SELECT+e%2Fehr_id%2Fvalue+FROM+EHR+e&p=SELECT%20c\
-             &tz=2024-01-01T00:00:00%2B01:00&a+b=x&raw=1+2",
+            "q=SELECT%20e%2Fehr_id%2Fvalue%20FROM%20EHR%20e&p=SELECT%20c\
+             &tz=2024-01-01T00:00:00%2B01:00&since=2026-10-28T10:00:00+01:00&a+b=x&raw=1+2",
         );
         assert_eq!(
             pairs,
@@ -478,8 +479,9 @@ mod tests {
                 ),
                 ("p".to_owned(), "SELECT c".to_owned()),
                 ("tz".to_owned(), "2024-01-01T00:00:00+01:00".to_owned()),
-                ("a b".to_owned(), "x".to_owned()),
-                ("raw".to_owned(), "1 2".to_owned()),
+                ("since".to_owned(), "2026-10-28T10:00:00+01:00".to_owned()),
+                ("a+b".to_owned(), "x".to_owned()),
+                ("raw".to_owned(), "1+2".to_owned()),
             ]
         );
     }
