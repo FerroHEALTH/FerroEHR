@@ -325,3 +325,42 @@ async fn a_quoted_get_parameter_binds_the_string_it_denotes() {
         executed[0]
     );
 }
+
+/// An `EHR` predicate whose `ehr_id/value` is not a UUID answers an empty
+/// result on POST and GET, exactly as its `WHERE` spelling does: the value is
+/// a `String` (BASE `OBJECT_ID`), `'1234'` is the AQL 1.1.0 standard-predicate
+/// example (QUERY master03 §Standard predicate), and `COUNT` over no rows is
+/// `0` (QUERY master03 §COUNT) (#4378).
+#[tokio::test]
+async fn a_non_uuid_ehr_id_predicate_answers_an_empty_result() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let cases = [
+        (
+            "SELECT COUNT(c) FROM EHR e[ehr_id/value='not-a-uuid'] CONTAINS COMPOSITION c",
+            serde_json::json!([[0]]),
+        ),
+        (
+            "SELECT COUNT(c) FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = 'not-a-uuid'",
+            serde_json::json!([[0]]),
+        ),
+        (
+            "SELECT e/ehr_id/value FROM EHR e[ehr_id/value='1234']",
+            serde_json::json!([]),
+        ),
+    ];
+    for (aql, expected) in cases {
+        let body = serde_json::json!({ "q": aql }).to_string();
+        let (status, answer) =
+            post_json(app(&pool).await, &format!("{BASE}/query/aql"), &body).await;
+        assert_eq!(status, StatusCode::OK, "POST {aql}: {answer}");
+        let json: serde_json::Value = serde_json::from_str(&answer).expect("result set json");
+        assert_eq!(json["rows"], expected, "POST {aql}");
+
+        let uri = format!("{BASE}/query/aql?q={}", urlencoding::encode(aql));
+        let (status, answer) = get(app(&pool).await, &uri).await;
+        assert_eq!(status, StatusCode::OK, "GET {aql}: {answer}");
+        let json: serde_json::Value = serde_json::from_str(&answer).expect("result set json");
+        assert_eq!(json["rows"], expected, "GET {aql}");
+    }
+}

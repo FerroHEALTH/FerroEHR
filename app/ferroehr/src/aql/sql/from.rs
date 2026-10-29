@@ -33,8 +33,8 @@ use uuid::Uuid;
 
 use crate::aql::error::{AqlError, AqlFeatureError, SqlError};
 use crate::aql::ir::{
-    Contained, ContainsTree, EhrField, EhrPredicate, LeafPath, Link, PathTarget, QueryIr, RmSource,
-    Source, VersionField, VersionScope,
+    Coercion, Contained, ContainsTree, EhrField, EhrPredicate, LeafPath, Link, PathTarget, QueryIr,
+    RmSource, Source, VersionField, VersionScope,
 };
 use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow, VoHead};
 
@@ -1748,12 +1748,17 @@ impl Builder<'_> {
     }
 
     fn push_ehr_predicate(&mut self, alias: &str, p: &EhrPredicate) -> Result<(), AqlError> {
-        let value = self.bind_value(&p.value)?;
-        let (lhs, rhs) = match p.field {
-            EhrField::EhrId => (col(alias, Ehr::Id), cast(Expr::val(value), "uuid")),
-            EhrField::TimeCreated => (
-                col(alias, Ehr::TimeCreated),
-                cast(Expr::val(value), "timestamptz"),
+        let cond = match p.field {
+            EhrField::EhrId => match self.ehr_id_value(&p.value)? {
+                Some(raw) => super::predicate::ehr_id_compare(alias, p.op, &raw),
+                None => cast(col(alias, Ehr::Id), "text").binary(
+                    super::expr::binoper(p.op),
+                    super::value::coerce_rhs(self.bind_value(&p.value)?, Coercion::Text)?,
+                ),
+            },
+            EhrField::TimeCreated => col(alias, Ehr::TimeCreated).binary(
+                super::expr::binoper(p.op),
+                cast(Expr::val(self.bind_value(&p.value)?), "timestamptz"),
             ),
             EhrField::SystemId | EhrField::Whole => {
                 return Err(SqlError::Unsupported(
@@ -1762,8 +1767,7 @@ impl Builder<'_> {
                 .into());
             }
         };
-        self.q
-            .and_where(lhs.binary(super::expr::binoper(p.op), rhs));
+        self.q.and_where(cond);
         Ok(())
     }
 }
