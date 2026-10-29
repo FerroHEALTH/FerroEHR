@@ -48,7 +48,7 @@
 use std::sync::Arc;
 
 use serde_json::Value;
-use sqlx::{Executor as _, PgPool, Postgres, Transaction};
+use sqlx::{Executor as _, PgPool, Postgres, Row as _, Transaction};
 
 use ferroehr::aql::ir::Params;
 use ferroehr::aql::lineage::ArchetypeLineage;
@@ -419,6 +419,105 @@ async fn the_if_match_check_probes_the_head_row_by_primary_key() {
         render(&scans)
     );
     assert_no_policy_qual(&plan, &scans);
+}
+
+/// The lookup the foreign-key trigger of `node` and `vo_attestation` runs on
+/// the referenced `version` for every inserted row, as `pg_stat_statements`
+/// records it (`PostgreSQL` docs § Foreign Keys,
+/// <https://www.postgresql.org/docs/18/ddl-constraints.html#DDL-CONSTRAINTS-FK>).
+const FK_VERSION_LOOKUP_SQL: &str = "SELECT 1 FROM version x \
+     WHERE tier OPERATOR(pg_catalog.=) $1 AND vo_id OPERATOR(pg_catalog.=) $2 \
+     AND sys_version OPERATOR(pg_catalog.=) $3 FOR KEY SHARE OF x";
+
+/// Every `Index Cond` a plan tree applies to an index of `version_hot`.
+fn version_hot_index_conds(node: &Value, out: &mut Vec<String>) {
+    let on_version_hot = node
+        .get("Index Name")
+        .and_then(Value::as_str)
+        .is_some_and(|index| index.contains("version_hot"));
+    if on_version_hot && let Some(cond) = node.get("Index Cond").and_then(Value::as_str) {
+        out.push(cond.to_owned());
+    }
+    for child in node
+        .get("Plans")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        version_hot_index_conds(child, out);
+    }
+}
+
+#[tokio::test]
+async fn the_foreign_key_check_of_a_node_row_probes_one_version() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    // Mostly single-version objects beside one long history: the statistics
+    // under which the planner rated a scan of all of an object's versions as
+    // cheap as the primary key (#4340).
+    let ehr = svc.create_ehr(None).await.expect("create an EHR");
+    let body = composition("foreign-key lookup");
+    for _ in 0..300 {
+        svc.create_composition(ehr, uv(&body, "249", None))
+            .await
+            .expect("commit a single-version composition");
+    }
+    let mut head = svc
+        .create_composition(ehr, uv(&body, "249", None))
+        .await
+        .expect("commit the long history's first version");
+    for _ in 0..40 {
+        let preceding = head.version_uid();
+        head = svc
+            .update_composition(ehr, head.vo_id, uv(&body, "251", Some(&preceding)))
+            .await
+            .expect("extend the long history");
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded corpus");
+
+    let mut tx = explain_tx(&pool).await;
+    // A session switches to the generic plan from its sixth check on when it
+    // costs no more than the custom plans did (`PostgreSQL` docs § PREPARE).
+    // Sent as a simple query: an extended-protocol bind would have to supply
+    // the three parameters the generic plan leaves open.
+    let generic: Value = sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
+        "EXPLAIN (GENERIC_PLAN, FORMAT JSON) {FK_VERSION_LOOKUP_SQL}"
+    )))
+    .fetch_one(&mut *tx)
+    .await
+    .expect("explain the generic foreign-key lookup")
+    .try_get(0)
+    .expect("EXPLAIN FORMAT JSON returns one json column");
+    let custom: Value = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "{EXPLAIN}{FK_VERSION_LOOKUP_SQL}"
+    )))
+    .bind("hot")
+    .bind(head.vo_id)
+    .bind(head.sys_version)
+    .fetch_one(&mut *tx)
+    .await
+    .expect("explain the foreign-key lookup of the long history's head");
+    tx.rollback().await.expect("roll the explain back");
+
+    for (shape, plan) in [("generic", &generic), ("custom", &custom)] {
+        let root = plan
+            .get(0)
+            .and_then(|first| first.get("Plan"))
+            .expect("EXPLAIN FORMAT JSON returns a one-element array carrying a Plan");
+        let mut conds = Vec::new();
+        version_hot_index_conds(root, &mut conds);
+        assert!(
+            !conds.is_empty() && conds.iter().all(|cond| cond.contains("sys_version")),
+            "the {shape} plan of the foreign-key lookup bounds its version_hot index \
+             scan by sys_version, so it reads one version however long the history: \
+             {conds:?}\n{}",
+            render(&scans(plan))
+        );
+    }
 }
 
 #[tokio::test]
