@@ -7,7 +7,7 @@
 # The one pattern both crate-version guards share: the `crate-version-guard`
 # CI job and .claude/hooks/crate_version_bump_guard.sh. Each used to carry its
 # own copy, and both copies matched `LICENSE-` only, so the bare `LICENSE` the
-# BUSL crates (openehr-adl, openehr-query, openehr-sdt) list in their
+# BUSL crates (openehr-adl, openehr-sdt) list in their
 # `include` passed without the lockstep bump (#3573).
 #
 # The scope mirrors the manifests' `include` lists: sources, the embedded
@@ -37,7 +37,7 @@ self_test() {
   local failures=0 path
   for path in \
     crates/openehr-sdt/LICENSE \
-    crates/openehr-query/LICENSE \
+    crates/openehr-query/LICENSE-APACHE-2.0 \
     crates/openehr-adl/LICENSE \
     crates/openehr-rm/LICENSE-APACHE-2.0 \
     crates/openehr-term/LICENSE-CC-BY-SA-3.0 \

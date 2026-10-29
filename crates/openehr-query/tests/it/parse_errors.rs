@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: openEHR Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 //! The parser's error contract: a caller branches on the failure, and reads
 //! the located diagnostic only to show it to a human.

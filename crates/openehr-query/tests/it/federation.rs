@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: openEHR Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 //! The federation directive: lifted out of `FROM` at the token level, the
 //! remainder strict AQL, the directive printed back only on request.

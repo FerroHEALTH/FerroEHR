@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: openEHR Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 //! The federation-only `FROM ENDPOINT` / `ORGANISATION` directive, separated
 //! from a query before the strict AQL 1.1.0 parse.

@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: openEHR Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 //! Traversal of the [`crate::ast`]: a read-only [`Visit`] and a mutating
 //! [`VisitMut`], each exhaustive over every node type.
