@@ -80,6 +80,16 @@ inputs:
 runs:
   using: composite
   steps:
+    # deploy.sh does not update itself, so the box can hold an older release's
+    # copy than this action expects: the verb is asked for first (#4372).
+    - name: The box's deploy script offers the verb
+      uses: ./.github/actions/deploy-verbs
+      with:
+        verb: ${{ inputs.verb }}
+        ssh-key: ${{ inputs.ssh-key }}
+        known-hosts: ${{ inputs.known-hosts }}
+        host: ${{ inputs.host }}
+
     # A release deploy means `:latest` must ALREADY be the tag's image,
     # because `:latest` is what the box pulls. A stale tag fails here, before
     # any deploy. Anonymous registry reads: the image is public.
