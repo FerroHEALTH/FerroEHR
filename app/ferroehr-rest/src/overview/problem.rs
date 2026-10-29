@@ -539,7 +539,11 @@ mod tests {
         let uid = "8849182c-82ad-4088-a07f-48ead4180515::openEHRSys.example.com::2";
         for etag in [format!("W/\"{uid}\""), format!("\"{uid}\""), uid.to_owned()] {
             let value = HeaderValue::from_str(&etag).expect("a header value");
-            assert_eq!(Some(uid.to_owned()), version_of(&value), "{etag}");
+            assert_eq!(
+                Some(uid.to_owned()),
+                version_of(&value),
+                "each ETag form names its version"
+            );
         }
     }
 
