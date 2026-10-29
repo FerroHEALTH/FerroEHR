@@ -1070,18 +1070,125 @@ fn header_text(headers: &HeaderMap, name: &str) -> Option<String> {
 }
 
 /// The body of an error answer: the bytes as received, and the ITS-REST
-/// `Error` they decode to when they are one.
+/// `Error` or the RFC 9457 problem details they decode to when they are one.
 ///
 /// ITS-REST attaches the `Error` schema to a `400` and says the body "MAY
 /// contain error details" (the `400` response component); every other error
-/// status describes no body. A service may still send one in any shape, so
-/// the raw bytes are kept beside the decoded form and nothing the service
+/// status describes no body. A service may still send one in any shape, and a
+/// service may answer problem details (<https://www.rfc-editor.org/rfc/rfc9457>),
+/// so the raw bytes are kept beside the decoded forms and nothing the service
 /// said is lost.
 #[derive(Clone)]
 pub struct ErrorBody {
     raw: Vec<u8>,
-    // Boxed: the decoded form rides inside every `ClientError` variant.
+    // Boxed: the decoded forms ride inside every `ClientError` variant.
     error: Option<Box<Error>>,
+    problem: Option<Box<Problem>>,
+}
+
+/// An RFC 9457 problem details object: the five members of §3.1, each one
+/// present only when the body carries it with the type §3.1 names.
+///
+/// A member of another type is ignored, as RFC 9457 §3.1 requires; extension
+/// members stay in [`ErrorBody::raw`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Problem {
+    kind: Option<String>,
+    title: Option<String>,
+    status: Option<StatusCode>,
+    detail: Option<String>,
+    instance: Option<String>,
+}
+
+/// One member of a problem details object as the wire carries it: the type
+/// RFC 9457 §3.1 names, or anything else, which the reader ignores.
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+enum Member<T> {
+    /// The member has the type §3.1 names.
+    Typed(T),
+    /// The member has another type.
+    Other(serde::de::IgnoredAny),
+}
+
+impl<T> Member<T> {
+    /// The value, when the member has the type §3.1 names.
+    fn typed(self) -> Option<T> {
+        match self {
+            Self::Typed(value) => Some(value),
+            Self::Other(_) => None,
+        }
+    }
+}
+
+/// The five members of RFC 9457 §3.1 as the wire carries them; extension
+/// members are ignored.
+#[derive(serde::Deserialize)]
+struct ProblemWire {
+    #[serde(rename = "type")]
+    kind: Option<Member<String>>,
+    title: Option<Member<String>>,
+    status: Option<Member<u64>>,
+    detail: Option<Member<String>>,
+    instance: Option<Member<String>>,
+}
+
+impl Problem {
+    /// The problem details `body` holds: a JSON object with at least one of
+    /// the five members of RFC 9457 §3.1 of the type that section names.
+    #[must_use]
+    pub fn from_slice(body: &[u8]) -> Option<Self> {
+        // NOTE: RFC 9457 §3 makes problem details one format among others, so a body that is not
+        // a JSON object is legitimately no problem; the caller keeps the bytes.
+        let wire = serde_json::from_slice::<ProblemWire>(body).ok()?;
+        let problem = Self {
+            kind: wire.kind.and_then(Member::typed),
+            title: wire.title.and_then(Member::typed),
+            status: wire
+                .status
+                .and_then(Member::typed)
+                .and_then(|code| u16::try_from(code).ok())
+                .and_then(|code| StatusCode::from_u16(code).ok()),
+            detail: wire.detail.and_then(Member::typed),
+            instance: wire.instance.and_then(Member::typed),
+        };
+        let any = problem.kind.is_some()
+            || problem.title.is_some()
+            || problem.status.is_some()
+            || problem.detail.is_some()
+            || problem.instance.is_some();
+        any.then_some(problem)
+    }
+
+    /// The problem type URI (§3.1.1), `about:blank` when the body names none.
+    #[must_use]
+    pub fn problem_type(&self) -> &str {
+        self.kind.as_deref().unwrap_or("about:blank")
+    }
+
+    /// The short summary of the problem type (§3.1.3).
+    #[must_use]
+    pub fn title(&self) -> Option<&str> {
+        self.title.as_deref()
+    }
+
+    /// The status code the service generated for this occurrence (§3.1.2).
+    #[must_use]
+    pub fn status(&self) -> Option<StatusCode> {
+        self.status
+    }
+
+    /// The explanation specific to this occurrence (§3.1.4).
+    #[must_use]
+    pub fn detail(&self) -> Option<&str> {
+        self.detail.as_deref()
+    }
+
+    /// The URI reference that identifies this occurrence (§3.1.5).
+    #[must_use]
+    pub fn instance(&self) -> Option<&str> {
+        self.instance.as_deref()
+    }
 }
 
 impl ErrorBody {
@@ -1092,7 +1199,12 @@ impl ErrorBody {
         // MAY contain error details", so a body that is not an `Error` is
         // legitimately absent detail, not a defect; the bytes stay in `raw`.
         let error = serde_json::from_slice::<Error>(&raw).ok().map(Box::new);
-        Self { raw, error }
+        let problem = Problem::from_slice(&raw).map(Box::new);
+        Self {
+            raw,
+            error,
+            problem,
+        }
     }
 
     /// The bytes as received.
@@ -1115,10 +1227,21 @@ impl ErrorBody {
         self.error.as_deref()
     }
 
-    /// The `message` of the ITS-REST `Error`, when the body is one.
+    /// The decoded RFC 9457 problem details, when the body is one.
+    #[must_use]
+    pub fn problem(&self) -> Option<&Problem> {
+        self.problem.as_deref()
+    }
+
+    /// The service's message: the `message` of the ITS-REST `Error` when the
+    /// body is one, else the problem's `detail`, else its `title`.
     #[must_use]
     pub fn message(&self) -> Option<&str> {
-        self.error.as_ref().map(|e| e.message.as_str())
+        self.error.as_ref().map(|e| e.message.as_str()).or_else(|| {
+            self.problem
+                .as_ref()
+                .and_then(|problem| problem.detail().or_else(|| problem.title()))
+        })
     }
 
     /// The `validationErrors` of the ITS-REST `Error`; empty when the body is
@@ -1141,6 +1264,7 @@ impl fmt::Debug for ErrorBody {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ErrorBody")
             .field("error", &self.error)
+            .field("problem", &self.problem)
             .field("raw", &String::from_utf8_lossy(&self.raw))
             .finish()
     }
@@ -1713,6 +1837,45 @@ mod tests {
         assert_eq!(other.text(), Some("<html>gateway</html>"));
         assert_eq!(other.raw(), b"<html>gateway</html>");
         assert!(ErrorBody::from_bytes(Vec::new()).is_empty());
+    }
+
+    /// An RFC 9457 body exposes its five members, a member of the wrong type
+    /// is ignored (§3.1), and the message is the `detail`, else the `title`.
+    #[test]
+    fn an_error_body_decodes_problem_details() {
+        let full = ErrorBody::from_bytes(
+            br#"{"type":"https://example.org/problems#conflict","title":"Conflict","status":409,"detail":"the EHR is not modifiable","instance":"urn:uuid:7d44b88c-4199-4bad-97dc-d78268e01398","errors":[]}"#
+                .to_vec(),
+        );
+        let problem = full.problem().expect("a problem");
+        assert_eq!(
+            problem.problem_type(),
+            "https://example.org/problems#conflict"
+        );
+        assert_eq!(problem.title(), Some("Conflict"));
+        assert_eq!(problem.status(), Some(http::StatusCode::CONFLICT));
+        assert_eq!(problem.detail(), Some("the EHR is not modifiable"));
+        assert_eq!(
+            problem.instance(),
+            Some("urn:uuid:7d44b88c-4199-4bad-97dc-d78268e01398")
+        );
+        assert!(full.error().is_none());
+        assert_eq!(full.message(), Some("the EHR is not modifiable"));
+        assert_eq!(full.validation_errors(), Vec::<String>::new());
+
+        let titled = ErrorBody::from_bytes(br#"{"title":"Not Found","status":"404"}"#.to_vec());
+        let problem = titled.problem().expect("a problem");
+        assert_eq!(problem.problem_type(), "about:blank");
+        assert_eq!(problem.status(), None, "a string status is ignored");
+        assert_eq!(titled.message(), Some("Not Found"));
+
+        let mistyped = ErrorBody::from_bytes(br#"{"title":7,"detail":["x"]}"#.to_vec());
+        assert!(mistyped.problem().is_none());
+        assert_eq!(mistyped.message(), None);
+
+        let its = ErrorBody::from_bytes(br#"{"message":"unknown template"}"#.to_vec());
+        assert!(its.problem().is_none());
+        assert_eq!(its.message(), Some("unknown template"));
     }
 
     #[test]
