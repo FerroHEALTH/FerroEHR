@@ -4047,3 +4047,69 @@ async fn a_configured_patient_namespace_admits_the_pair_exactly() {
         assert!(rows(&none).is_empty(), "{aql}: no EHR in a third namespace");
     }
 }
+
+/// The `EHR` class predicate and the `WHERE` spelling state one condition on
+/// `ehr_id/value` and answer one result, for a stored UUID, its uppercase
+/// spelling, and values that are not UUIDs. `EHR.ehr_id` is a
+/// `HIER_OBJECT_ID` whose `value` is a `String` (RM 1.2.0 `EHR`, BASE
+/// `OBJECT_ID`), and `'1234'` is the AQL 1.1.0 standard-predicate example
+/// (QUERY master03 §Standard predicate), so a value that is not a UUID matches
+/// no EHR and is never a cast error (#4378).
+#[tokio::test]
+async fn an_ehr_id_predicate_and_its_where_spelling_answer_alike() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    let ehr_id = create_ehr(&svc).await;
+    create_comp(&svc, &ehr_id, "BP", 80.0).await;
+    create_comp(&svc, &ehr_id, "BP", 120.0).await;
+    let other = create_ehr(&svc).await;
+    create_comp(&svc, &other, "BP", 999.0).await;
+
+    let upper = ehr_id.to_uppercase();
+    let cases: [(&str, &str, i64); 7] = [
+        ("=", ehr_id.as_str(), 2),
+        ("=", upper.as_str(), 2),
+        ("=", "not-a-uuid", 0),
+        ("=", "1234", 0),
+        ("!=", ehr_id.as_str(), 1),
+        ("!=", "not-a-uuid", 3),
+        ("!=", "1234", 3),
+    ];
+    for (op, value, expected) in cases {
+        let predicate =
+            format!("SELECT COUNT(c) FROM EHR e[ehr_id/value{op}'{value}'] CONTAINS COMPOSITION c");
+        let where_form = format!(
+            "SELECT COUNT(c) FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value {op} '{value}'"
+        );
+        let by_predicate = run_aql(&svc, &predicate, AqlQueryRequest::default()).await;
+        let by_where = run_aql(&svc, &where_form, AqlQueryRequest::default()).await;
+        assert_eq!(rows(&by_predicate), &vec![json!([expected])], "{predicate}");
+        assert_eq!(rows(&by_where), &vec![json!([expected])], "{where_form}");
+    }
+
+    let r = run_aql(
+        &svc,
+        "SELECT e/ehr_id/value FROM EHR e[ehr_id/value='1234']",
+        AqlQueryRequest::default(),
+    )
+    .await;
+    assert!(rows(&r).is_empty(), "no EHR has the id '1234': {r}");
+
+    let mut by_param = AqlQueryRequest::default();
+    by_param
+        .parameters
+        .insert("id".to_owned(), json!("not-a-uuid"));
+    let r = run_aql(
+        &svc,
+        "SELECT COUNT(c) FROM EHR e[ehr_id/value=$id] CONTAINS COMPOSITION c",
+        by_param,
+    )
+    .await;
+    assert_eq!(
+        rows(&r),
+        &vec![json!([0])],
+        "a parameter takes the same path"
+    );
+}

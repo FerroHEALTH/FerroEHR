@@ -605,13 +605,20 @@ fn map_plan_error(e: AqlError) -> SmError {
 /// internal node-row shape, and a missing column alias names a generated SQL
 /// alias — server-internal detail that goes to `tracing` instead
 /// ([`internal_fault_caused`]).
+/// The refusal of a value the query compares that the database cannot cast to
+/// the type of the path it is compared with. The driver error does not say
+/// whether the value was written in the query or bound from
+/// `query_parameters`, so the message names neither.
+const CAST_REFUSAL: &str = "a value in the query cannot be coerced to the type its predicate \
+                            compares against (an invalid date/time or text representation); \
+                            correct the value";
+
 fn map_exec_error(e: AqlError) -> SmError {
     match e {
-        // A data-exception the DRIVER raises here is the caller's own binding
-        // failing Postgres coercion: the lowered literals are typed, so only
-        // client `query_parameters` reach text→type casts. 22007 / 22008 / 22P02
-        // (PostgreSQL Appendix A, errcodes) are therefore a 400 naming the
-        // defect class, never an opaque 500.
+        // A data-exception the DRIVER raises here is a value of the query (a
+        // literal or a bound `query_parameters` value) failing a text→type
+        // cast: 22007 / 22008 / 22P02 (PostgreSQL Appendix A, errcodes) are a
+        // 400 naming the defect class, never an opaque 500.
         AqlError::Exec(ExecError::Database(db))
             if matches!(
                 db.as_database_error()
@@ -620,12 +627,7 @@ fn map_exec_error(e: AqlError) -> SmError {
                 Some("22007" | "22008" | "22P02")
             ) =>
         {
-            SmError::precondition(
-                "a query parameter value cannot be coerced to the type its \
-                 predicate compares against (an invalid date/time or text \
-                 representation); correct the parameter value",
-            )
-            .with_source(db)
+            SmError::precondition(CAST_REFUSAL).with_source(db)
         }
         // Class 54 `program_limit_exceeded` (`54001` statement_too_complex,
         // PostgreSQL Appendix A) is the query's own shape outgrowing a database
@@ -708,6 +710,28 @@ mod tests {
             !fault.message.contains("RowNotFound"),
             "the driver diagnostic never reaches the wire body, got {fault:?}"
         );
+    }
+
+    /// A cast the database refuses is the query's fault (`400`), and its
+    /// message never claims the value came from a query parameter: a literal
+    /// written in the query reaches the same cast (#4378).
+    #[test]
+    fn a_cast_refusal_names_no_query_parameter() {
+        for sqlstate in ["22007", "22008", "22P02"] {
+            let sm = map_exec_error(AqlError::Exec(ExecError::Database(
+                crate::storage::error::tests::db_error(sqlstate),
+            )));
+            assert_eq!(
+                sm.status,
+                CallStatusType::PreconditionViolation,
+                "{sqlstate}"
+            );
+            assert!(
+                !sm.message.contains("parameter"),
+                "{sqlstate}: {}",
+                sm.message
+            );
+        }
     }
 
     /// A statement PostgreSQL refuses for its own complexity limit is the
