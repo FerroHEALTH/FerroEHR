@@ -57,12 +57,14 @@ async fn a_route_change_starts_the_focus_at_the_skip_link() {
     h.wait_css("main table").await;
     assert!(
         poll_until(async || h.focus_matches("main h1").await).await,
-        "a page the router draws takes the focus at its heading"
+        "a page the router draws takes the focus at its heading (focus: {})",
+        h.focused().await
     );
     h.press(Key::Tab).await;
     assert!(
         h.focus_matches("main *").await,
-        "the first Tab after the heading stays in the main area"
+        "the first Tab after the heading stays in the main area (focus: {})",
+        h.focused().await
     );
 
     h.goto("/ehrs").await;
@@ -70,14 +72,16 @@ async fn a_route_change_starts_the_focus_at_the_skip_link() {
     h.press(Key::Tab).await;
     assert!(
         h.focus_matches("a.fui-skip").await,
-        "the first Tab on a new page reaches the skip link"
+        "the first Tab on a new page reaches the skip link (focus: {})",
+        h.focused().await
     );
     h.press(Key::Enter).await;
     h.wait_url_contains("#main").await;
     h.press(Key::Tab).await;
     assert!(
         h.focus_matches("main *").await,
-        "after the skip link the next Tab lands in the main area"
+        "after the skip link the next Tab lands in the main area (focus: {})",
+        h.focused().await
     );
     h.shot(1, "focus-in-main").await;
 

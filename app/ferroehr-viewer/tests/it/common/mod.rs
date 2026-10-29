@@ -53,6 +53,21 @@ const POLL_STEP: Duration = Duration::from_millis(200);
 /// it ([`bounded_for`]), so a failure reports where its time went.
 const SLOW_COMMAND: Duration = Duration::from_secs(1);
 
+/// The script [`Harness::focused`] runs: the focused element's tag, id,
+/// classes and first words, whether it sits in the main area, whether the
+/// document has the focus, and the page's address.
+const DESCRIBE_FOCUS: &str = r"
+const e = document.activeElement;
+const at = location.pathname + location.search + location.hash;
+if (!e) { return 'nothing at ' + at; }
+const id = e.id ? '#' + e.id : '';
+const cls = typeof e.className === 'string' && e.className.trim()
+  ? '.' + e.className.trim().split(/\s+/).join('.') : '';
+const text = (e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+return e.tagName.toLowerCase() + id + cls + ' “' + text + '” (in main: '
+  + !!e.closest('main') + ', document focused: ' + document.hasFocus() + ') at ' + at;
+";
+
 /// The budget [`Harness::wait_hydrated`] allows, four times [`WAIT`]: the host
 /// lane's debug WASM is ~91 MB and the browser has to fetch, compile and run it
 /// before the marker appears, which is comfortably slower than any wait that
@@ -659,6 +674,25 @@ impl Harness {
         .await
         .expect("read the focused element");
         answer.json().as_bool().unwrap_or(false)
+    }
+
+    /// The focused element as a failure message names it: its tag, id and
+    /// classes, the start of its text, and the address the page is at.
+    ///
+    /// # Panics
+    /// When the `WebDriver` does not answer.
+    pub(crate) async fn focused(&self) -> String {
+        let answer = bounded(
+            "execute(describe activeElement)",
+            self.driver.execute(DESCRIBE_FOCUS, Vec::new()),
+        )
+        .await
+        .expect("describe the focused element");
+        answer
+            .json()
+            .as_str()
+            .unwrap_or("an answer that is not text")
+            .to_owned()
     }
 
     /// Press Tab until the focus reaches an element matching `css`, at most
