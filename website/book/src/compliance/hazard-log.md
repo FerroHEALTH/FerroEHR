@@ -137,7 +137,10 @@ refused with a step-up challenge. The DICOM message and the FHIR
 PS3.15 §A.5.2.7, IHE BALP): on a read the server is the source and the client
 the destination, on a write or a query the client is the source. A FHIR
 record of a delete carries the agent types the BALP `Delete` profile fixes
-(the client as DCM `110150` Application, the server as `custodian`).
+(the client as DCM `110150` Application, the server as `custodian`). The
+FHIR `AuditEvent` names the object a read, create, update or delete touched
+by its openEHR object id, as `entity.what.identifier` in the system
+`urn:openehr:object-id`, and ITI-81 finds it by `entity.identifier`.
 
 **Shown by:**
 
@@ -164,7 +167,8 @@ record of a delete carries the agent types the BALP `Delete` profile fixes
   `aql_execute_emits_one_access_record_per_served_ehr`;
 - `app/ferroehr/src/system_log/fhir.rs`:
   `dicom_and_fhir_agree_on_the_data_flow_direction`,
-  `delete_carries_the_agent_types_balp_delete_fixes`.
+  `delete_carries_the_agent_types_balp_delete_fixes`,
+  `a_classified_read_names_its_object_by_identifier`.
 
 **Remains:** both blocks are off by default, and until the deployment
 configures `[authz.professional]` a client application's credential is
@@ -448,3 +452,4 @@ EHDS-side risk assessment of the component.
 | 10 | 2026-10-27 | Reviewed for release 5.5.0 (changes since 5.4.2: syslog frames are delivered from `ihe-atna`'s spool with retries, and `[audit.fhir_feed] batch_size` and `max_retries` are gone (#4029); the ITI-81 query is read and answered by `ihe-atna`'s `retrieve` and requires a `date` (#4030, #4040); each access record is deleted at its own retention end (#3899); the chain check verifies from the last intact link, and the FHIR feed owes only the records written while it is configured (#4100, #4102); the access record and its renderings carry the data permit (#3379, #4120); the source address comes from the family server stack, believing a forwarded address only from a trusted proxy (#4025); every access to one EHR names the EHR and the user, so H2 names `ehr_id_from_the_matched_route`, the test #4192 put in place of `ehr_id_from_various_paths`); every named test exists; no hazard added |
 | 11 | 2026-10-28 | Reviewed for release candidate 5.6.0-rc1 (changes since 5.5.0: the store keeps each record's facts in columns and renders its `AuditEvent` on read under the render policy the record names, the chain digest covers every column in one version, and audit migration 0017 refuses a store holding records of an earlier release, so no record keeps an older digest and H7 drops that remainder (#4300); the `recorded_at` indexes ascend (#4302); every ITI-81 parameter answers through search tokens the chain covers (#4313); the ITI-81 retrieval moves to `/ferroehr/rest/fhir/r4/AuditEvent` (#4330); a deployment that declares no category map records the published CKM priority-category templates and archetypes through the shipped map, so H3 names its test and its remainder no longer says FerroEHR ships none (#4298); H7 names the render-policy and search-token tests and the digest test #4300 renamed); every named test exists; no hazard added |
 | 12 | 2026-10-29 | Reviewed for release candidate 5.6.0-rc2 (changes since the 5.6.0-rc1 review: a body without `FEEDER_AUDIT` committed directly by a client the `[origins]` register names records that client's origin, so H4 names it and its test, and the retention register keys a period on the origin of the data (#4299); H3's remainder said the binary ships no category map, which #4298 changed; the FHIR rendering of an access record `ehds-logging` does not classify carries the BALP `entity:data` slice its profile requires (#4353); the component's intended performance is stated and measured (#4293), and its ATNA transactions are exercised against independent implementations (#4296)); every named test exists; no hazard added |
+| 13 | 2026-10-29 | Reviewed for release candidate 5.6.0-rc3 (changes since the 5.6.0-rc2 review: FerroEHR takes `ehds-logging` and `ihe-atna` 0.3.2, and the FHIR `AuditEvent` names the object it touched by its openEHR object id as `entity.what.identifier` where it wrote a `what.reference` no FHIR server resolves, so H2 states it and names its test (#4366); the audit store writes a drained batch, its search tokens and its token sets in one transaction on one connection, and the GIN index on `search_tokens` takes new entries through a 512 kB pending list, which changes no control H5 or H7 states (#4375); the ITI-81 route answers an authentication refusal as an `OperationOutcome`, the fail-closed `503` is RFC 9457 problem details, and `fail_closed_503_carries_openehr_error_body_and_retry_after` asserts the problem body (#4342)); every named test exists; no hazard added |

@@ -784,3 +784,58 @@ record's FHIR rendering carries the BALP `entity:data` slice (#4353); chart
 
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
   serves the old paths until 5.6.0 ships.
+
+## The review of 2026-10-29, for 5.6.0-rc3
+
+Read on the tree after commit `df26a92e6`, for the FerroEHR release candidate
+5.6.0-rc3. The review of 2026-10-29 for 5.6.0-rc2 stands for everything that
+release candidate carried. The facts added since and checked in every text in
+scope: every error on the openEHR, extension and management routes is RFC 9457
+problem details, the violations of a validation refusal reach a client as
+`errors` under `Prefer: return=representation`, and an authentication refusal
+under the FHIR base is an `OperationOutcome` (#4342); the `openehr-its` client
+reads a problem details refusal (#4355); a `+` in a query string is a literal
+plus (#4356); `FROM PERSON p CONTAINS EHR e` joins through the EHR's
+`EHR_STATUS.subject.external_ref` (#4411); a projection ending on a list
+attribute answers the list once (#4413); the local EHR index is a supported
+posture (#4379); `[server] idle_timeout_ms` closes an idle kept-alive
+connection on `ferrohealth-server` 0.4.0 (#4417); the FHIR `AuditEvent` names
+the object it touched by `entity.what.identifier` on FerroAUDIT 0.3.2 (#4366);
+`openehr-query` is Apache-2.0 from 0.0.116 (#4405); the chart and the sandbox
+run FerroPIX 0.0.12 (#4392); chart 21.0.0-rc3 with `appVersion` 5.6.0-rc3.
+
+### Changed on 2026-10-29, for 5.6.0-rc3
+
+- **The validation pages**: [template validation](../templates-validation.md)
+  and the [privacy configuration](../installation/config-privacy.md) said a
+  `422` lists its violations in `validationErrors`, the body #4342 replaced;
+  they name the problem's `errors`, sent under
+  `Prefer: return=representation`, and link the `validation-failed` type.
+- **The hazard log**: H2 states that the FHIR `AuditEvent` names the object it
+  touched by `entity.what.identifier` and names its test (#4366).
+
+### Read and kept on 2026-10-29, for 5.6.0-rc3
+
+- **The API pages**: [Problem types](../using-the-api/problems.md) and
+  [content negotiation and errors](../using-the-api/content-negotiation.md)
+  describe the problem body, its types and the `Prefer` members as the code
+  writes them; [querying with AQL](../querying-aql.md) describes the party
+  join through the subject reference and the list projection as the engine
+  answers them.
+- **The server configuration**: [the server configuration](../installation/config-server.md)
+  states `idle_timeout_ms` and the head bound as `ferrohealth-server` 0.4.0
+  applies them.
+- **The licensing page and the crate READMEs** name `openehr-query` Apache-2.0
+  from 0.0.116 and BUSL-1.1 for 0.0.60 to 0.0.115.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  21.0.0-rc3 and image 5.6.0-rc3 in the book of main.
+- **The landing page, `SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-10-29, for 5.6.0-rc3
+
+- The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+  serves the old paths and the old error body until 5.6.0 ships.
