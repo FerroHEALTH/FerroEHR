@@ -100,7 +100,8 @@ defines) and answers an outcome enum with one variant per status the OpenAPI
 documents for it; declared response headers such as `ETag` and `Location`
 arrive in a per-answer `headers` struct, and every `4xx` variant carries the
 answer body as an `ErrorBody` (the bytes as received, decoded as the ITS-REST
-`Error` when they are one, with `message()` and `validation_errors()`). A
+`Error` or as RFC 9457 problem details when they are one, with `message()`,
+`validation_errors()` and `problem()`). A
 path parameter is percent-encoded with `:` kept literal, so a version uid
 travels as the specification writes it. The base is a `url::Url` ending in
 the API version segment, so the caller depends on the `url` crate too; a
