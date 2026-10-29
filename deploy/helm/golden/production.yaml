@@ -7,9 +7,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/version: "0.0.12"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.2.2
+    helm.sh/chart: ferropix-0.3.4
 spec:
   podSelector:
     matchLabels:
@@ -81,9 +81,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/version: "0.0.12"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.2.2
+    helm.sh/chart: ferropix-0.3.4
 spec:
   maxUnavailable: 1
   unhealthyPodEvictionPolicy: AlwaysAllow
@@ -126,9 +126,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/version: "0.0.12"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.2.2
+    helm.sh/chart: ferropix-0.3.4
 automountServiceAccountToken: false
 
 ---
@@ -155,18 +155,18 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/version: "0.0.12"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.2.2
+    helm.sh/chart: ferropix-0.3.4
 data:
   ferropix.toml: |
     profile = "production"
+    public_base_url = "https://pix.example.com"
     
     [auth]
       audience = ["https://pix.example.com/fhir"]
     
       [[auth.issuer]]
-        clients = ["hospital-source"]
         issuer = "https://idp.example.com/realms/pix"
     
     [db]
@@ -191,7 +191,12 @@ data:
     [server]
       base_path = ""
       listen = "0.0.0.0:8080"
-      public_base_url = "https://pix.example.com"
+    
+    [trust]
+    
+      [[trust.issuer]]
+        clients = ["hospital-source"]
+        issuer = "https://idp.example.com/realms/pix"
     
     [usage_report]
       deployment = "helm"
@@ -331,9 +336,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/version: "0.0.12"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.2.2
+    helm.sh/chart: ferropix-0.3.4
     app.kubernetes.io/component: server
 spec:
   type: ClusterIP
@@ -382,9 +387,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.7"
+    app.kubernetes.io/version: "0.0.12"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.2.2
+    helm.sh/chart: ferropix-0.3.4
     app.kubernetes.io/component: server
 spec:
   replicas: 1
@@ -398,25 +403,28 @@ spec:
       labels:
         app.kubernetes.io/name: ferropix
         app.kubernetes.io/instance: ferroehr
-        app.kubernetes.io/version: "0.0.7"
+        app.kubernetes.io/version: "0.0.12"
         app.kubernetes.io/managed-by: Helm
-        helm.sh/chart: ferropix-0.2.2
+        helm.sh/chart: ferropix-0.3.4
         app.kubernetes.io/component: server
       annotations:
-        checksum/config: ee6e9176aa424e0fff9d033b96790a04bb9d18d98ff452d4778a11adab01c132
+        checksum/config: 7b6bf5aaab794d1bad427f629d127e4dfe5ebaef6732b1c617acfc91f90e777f
     spec:
       serviceAccountName: ferroehr-ferropix
       automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostUsers: false
       securityContext:
         runAsNonRoot: true
         fsGroup: 65532
+        supplementalGroupsPolicy: Strict
         seccompProfile:
           type: RuntimeDefault
-      # Longer than the server's drain window, [server] drain_timeout_ms.
+      # Longer than the server's drain, [server] drain_delay_ms and shutdown_timeout_ms.
       terminationGracePeriodSeconds: 30
       containers:
         - name: ferropix
-          image: "ghcr.io/ferrohealth/ferropix@sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825"
+          image: "ghcr.io/ferrohealth/ferropix@sha256:01adb1e7cc91b46409cc315162200fb99a712a9232508d5c85a228554d22d6d3"
           imagePullPolicy: IfNotPresent
           args: ["serve"]
           env:
@@ -438,7 +446,7 @@ spec:
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /health
+              path: /health/liveness
               port: http
             periodSeconds: 15
           securityContext:
@@ -453,9 +461,11 @@ spec:
               type: RuntimeDefault
           resources:
             limits:
+              ephemeral-storage: 256Mi
               memory: 512Mi
             requests:
               cpu: 100m
+              ephemeral-storage: 64Mi
               memory: 128Mi
           volumeMounts:
             - name: config

@@ -174,7 +174,7 @@ Kubernetes: `>=1.36.0-0`
 
 | Repository | Name | Version |
 |------------|------|---------|
-| oci://ghcr.io/ferrohealth/charts | ferropix | 0.2.2 |
+| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.4 |
 
 > [!NOTE]
 > Rows under `config.*` carry no description here on purpose. Those keys are the
@@ -340,12 +340,12 @@ Kubernetes: `>=1.36.0-0`
 | extraVolumes | list | `[]` | Extra volumes / volumeMounts (e.g. an external secret store for the PGP key). |
 | ferropix.config.server.base_path | string | `""` | FerroPIX's `[server] base_path`, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.enabled | bool | `true` | Deploy FerroPIX beside the CDR and point config.ehr_index at it. |
-| ferropix.image.digest | string | `"sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
-| ferropix.image.tag | string | `"0.0.7"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
+| ferropix.image.digest | string | `"sha256:01adb1e7cc91b46409cc315162200fb99a712a9232508d5c85a228554d22d6d3"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
+| ferropix.image.tag | string | `"0.0.12"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
 | ferropix.service.port | int | `8080` | FerroPIX's Service port, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.usageReport.enabled | bool | `true` | FerroPIX's own usage report switch, read by the dependency chart. A dependency chart cannot read this chart's `usageReport.enabled`, so with that set to false, set this false too: the render refuses the pair `usageReport.enabled=false` and `ferropix.usageReport.enabled=true`. |
 | fullnameOverride | string | `""` | Override the full resource name. |
-| hostUsers | bool | `false` | Run the pods in their own USER NAMESPACE, so container UIDs map to unprivileged host UIDs and a container escape lands as nobody rather than as the UID it ran under (KEP-127, stable v1.36 — the reason this chart's kubeVersion floor is 1.36). `false` here is the Kubernetes field spelling and means user namespaces are ON; set it to `true` to share the host's user namespace, which is the API default.  Set it to `true` if your nodes cannot support it. The requirement is a node-level one the chart cannot check: a Linux node whose container runtime implements it (containerd >= 2.0 or CRI-O >= 1.25) with idmap-mount support in the kernel. On a node without it the pod does not start — a loud failure, not a silent downgrade (https://kubernetes.io/docs/tasks/configure-pod-container/user-namespaces/). |
+| hostUsers | bool | `false` | Run the pods in their own USER NAMESPACE, so container UIDs map to unprivileged host UIDs and a container escape lands as nobody rather than as the UID it ran under (KEP-127, stable v1.36 — the reason this chart's kubeVersion floor is 1.36). `false` here is the Kubernetes field spelling and means user namespaces are ON; set it to `true` to share the host's user namespace, which is the API default.  Set it to `true` if your nodes cannot support it. The requirement is a node-level one the chart cannot check: a Linux node whose container runtime implements it (containerd >= 2.0 or CRI-O >= 1.25) with idmap-mount support in the kernel. On a node without it the pod does not start — a loud failure, not a silent downgrade (https://kubernetes.io/docs/tasks/configure-pod-container/user-namespaces/). The FerroPIX dependency reads its own `ferropix.hostUsers` (false by default), so set that to `true` as well. |
 | image.digest | string | `""` | Image digest (`sha256:…`). Set it and the pod runs `repository@digest`, ignoring `tag` entirely: a digest is what the provenance attestation is made over, so deploying by digest is what makes verification bind to the running image. A tag can be moved afterwards; a digest cannot. |
 | image.pullPolicy | string | `"IfNotPresent"` | Pull policy. IfNotPresent + an immutable pinned tag/digest in production. |
 | image.repository | string | `"ghcr.io/ferrohealth/ferroehr"` | Image repository. Multi-arch distroless (gcr.io/distroless/cc-debian13:nonroot base). |

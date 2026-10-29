@@ -90,6 +90,20 @@ fi
 bold "helm dependency build"
 helm dependency build "$CHART_DIR" >/dev/null
 
+# The dependency chart is the one built for the FerroPIX release the values pin
+# (#4392): a newer chart's defaults can carry keys an older image refuses, and
+# an older chart's defaults keys a newer image refuses (FerroPIX 0.0.8 moved
+# `server.public_base_url` to the top level).
+pix_tag="$(yq -r '.ferropix.image.tag' "${CHART_DIR}/values.yaml")"
+pix_chart="$(find "${CHART_DIR}/charts" -maxdepth 1 -name 'ferropix-*.tgz' 2>/dev/null | sort | sed -n 1p)"
+[[ -n "$pix_chart" ]] || { red "no FerroPIX chart under ${CHART_DIR}/charts after helm dependency build"; exit 1; }
+pix_app="$(helm show chart "$pix_chart" | yq -r '.appVersion')"
+if [[ "$pix_app" != "$pix_tag" ]]; then
+  red "the FerroPIX chart $(basename "$pix_chart") is built for FerroPIX ${pix_app}, while ferropix.image.tag pins ${pix_tag}: move the Chart.yaml dependency to the chart whose appVersion is ${pix_tag} (helm dependency update) with the pin"
+  exit 1
+fi
+echo "  the FerroPIX chart $(basename "$pix_chart" .tgz) is built for the pinned FerroPIX ${pix_tag}"
+
 # The value sets to validate: <label>:<values-file>
 # The viewer overlay is here because its ABSENCE was a hole, not a saving:
 # the viewer is the second pod-bearing workload, the restricted-profile gate is

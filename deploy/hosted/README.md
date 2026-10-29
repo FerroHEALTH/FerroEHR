@@ -352,7 +352,10 @@ No secret is printed: the log shows a 12-digit SHA-256 fingerprint.
    and would otherwise never install. It comments out a `FERROTERM_IMAGE`
    line that names another FerroTERM than the compose file pins: the box
    carried FerroTERM 0.1.6 that way, which reads none of the 0.3 settings,
-   so it served no index and no LOINC (#4278). It also installs this checkout's
+   so it served no index and no LOINC (#4278). A `FERROPIX_IMAGE` line that
+   names another FerroPIX than the compose file pins is commented out the
+   same way, since `ferropix.sandbox.toml` is written for the pinned release
+   (#4392). It also installs this checkout's
    `deploy.sh`, which carries the `identities` verb the nightly reseed calls
    from the moment this change merges.
 4. **The FerroTERM index.** Compares each index's `storeLayout` on the box
@@ -361,7 +364,8 @@ No secret is printed: the log shows a 12-digit SHA-256 fingerprint.
    (`docker compose pull`, then the CDR and FerroPIX removed and `up -d`,
    never `restart`), or installs the posture with the `deploy` verb if the
    release's deploy did not. It waits for every container to report healthy,
-   checks that FerroTERM runs the pinned version and that the CDR resolves the
+   checks that FerroTERM and FerroPIX run the pinned versions (FerroPIX
+   0.0.12 since #4392) and that the CDR resolves the
    manifest's LOINC probe code, registers the demo patients through the
    `identities` verb, and, unless the demo data is already seeded under the
    pseudonyms, wipes and restarts the CDR before it reseeds (a definition an

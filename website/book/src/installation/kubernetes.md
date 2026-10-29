@@ -926,9 +926,11 @@ ferropix:
   database: {existingSecret: ferropix-db}
   dataKey: {existingSecret: ferropix-data-key}
   config:
-    server: {public_base_url: https://pix.example.org}
+    public_base_url: https://pix.example.org
     auth:
       audience: [https://pix.example.org/fhir]
+      issuer: [{issuer: https://idp.example.org/realms/pix}]
+    trust:
       issuer: [{issuer: https://idp.example.org/realms/pix, clients: [hospital-source]}]
     pseudonym_domain:
       - {namespace: urn:oid:2.999.7.1, name: Clinical domain, consumer_client_id: ferroehr}
@@ -952,10 +954,19 @@ Secret you own through `extraEnv` instead. Another PIX Manager:
 `ferropix.enabled: false` and `config.ehr_index.pixm_url`. A CDR run on its
 own: `ferropix.enabled: false` and `config.ehr_index.provider: local`.
 
+The chart pins FerroPIX 0.0.12 by digest (`ferropix.image`) with the
+FerroPIX chart built for it. Since FerroPIX 0.0.8, `public_base_url` is a
+top-level key and the clients that may act as a Patient Identity Source sit
+in the `[[trust.issuer]]` table, apart from the `[[auth.issuer]]` entry that
+names the issuer; FerroPIX refuses the older `server.public_base_url` and `auth.issuer[].clients`, so an
+upgrade from a chart that pinned FerroPIX 0.0.7 moves those two keys in your
+values.
+
 The restricted-profile gate holds FerroPIX's pods to the Pod Security
-Standards `restricted` profile like every other pod in the release. The two
-properties this chart adds for its own pods, `enableServiceLinks: false` and
-one user-namespace posture across workloads, are FerroPIX's chart's to set.
+Standards `restricted` profile like every other pod in the release. FerroPIX's
+chart sets the two properties this chart adds for its own pods itself:
+`enableServiceLinks: false`, and a user namespace per pod unless FerroPIX's
+own `hostUsers` value, under `ferropix:`, is `true`.
 
 ### FerroTERM (a terminology server beside the CDR, off by default)
 

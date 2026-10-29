@@ -63,6 +63,10 @@ DB_IMAGE="$(sed -nE 's/.*\$\{FERROEHR_POSTGRES_IMAGE:-([^}]+)\}.*/\1/p' "$CLOUD_
 # file gives FERROTERM_IMAGE.
 FERROTERM_PIN="$(sed -nE 's/.*\$\{FERROTERM_IMAGE:-([^}]+)\}.*/\1/p' "$ROOT/deploy/hosted/docker-compose.yml" | sed -n 1p)"
 FERROTERM_PIN_VERSION="$(sed -nE 's#.*:([0-9][0-9.]*)@sha256:.*#\1#p' <<<"$FERROTERM_PIN")"
+# The FerroPIX the posture pins, and its version: the default the compose file
+# gives FERROPIX_IMAGE (#4392).
+FERROPIX_PIN="$(sed -nE 's/.*\$\{FERROPIX_IMAGE:-([^}]+)\}.*/\1/p' "$ROOT/deploy/hosted/docker-compose.yml" | sed -n 1p)"
+FERROPIX_PIN_VERSION="$(sed -nE 's#.*:([0-9][0-9.]*)@sha256:.*#\1#p' <<<"$FERROPIX_PIN")"
 
 CHECK=0
 SELF_TEST=0
@@ -436,6 +440,9 @@ override="\$(sed -n 's/^FERROTERM_IMAGE=//p' .env | tail -n 1)"
 if [ -z "\$override" ]; then echo "ferroterm_image=unset"
 elif [ "\$override" = "$FERROTERM_PIN" ]; then echo "ferroterm_image=pin"
 else echo "ferroterm_image=stale \$override"; fi
+# A FERROPIX_IMAGE line overrides the FerroPIX the posture pins, whose
+# configuration the posture writes for that release alone (#4392).
+pix_override="\$(sed -n 's/^FERROPIX_IMAGE=//p' .env | tail -n 1)"
 if [ "$CHECK" -eq 0 ]; then
   umask 077
   cp -p .env .env.prev
@@ -457,6 +464,9 @@ if [ "$CHECK" -eq 0 ]; then
   if [ -n "\$override" ] && [ "\$override" != "$FERROTERM_PIN" ]; then
     sed -i -E 's|^(FERROTERM_IMAGE=.*)\$|# \1 (retired by sandbox-ferropix-rollout.sh, #4278: the posture pins FerroTERM)|' .env
   fi
+  if [ -n "\$pix_override" ] && [ "\$pix_override" != "$FERROPIX_PIN" ]; then
+    sed -i -E 's|^(FERROPIX_IMAGE=.*)\$|# \1 (retired by sandbox-ferropix-rollout.sh, #4392: the posture pins FerroPIX)|' .env
+  fi
   chmod 600 .env
   cmp -s .env .env.prev && echo "changed=no" || echo "changed=yes (previous: $APP_DIR/.env.prev)"
 fi
@@ -468,6 +478,7 @@ for name in FERROPIX_DATABASE_URL FERROPIX_DATA_KEY FERROTERM_INDEXES; do
   echo "after \$name \$state \$([ -n "\$v" ] && printf '%s' "\$v" | sha256sum | cut -c1-12)"
 done
 echo "after_ferroterm_image=\$(grep -qE '^FERROTERM_IMAGE=' .env && sed -n 's/^FERROTERM_IMAGE=//p' .env | tail -n 1 || echo unset)"
+echo "after_ferropix_image=\$(grep -qE '^FERROPIX_IMAGE=' .env && sed -n 's/^FERROPIX_IMAGE=//p' .env | tail -n 1 || echo unset)"
 echo "env_mode=\$(stat -c %a .env)"
 EOF
   out="$(cat "$WORK/out")"
@@ -490,6 +501,12 @@ EOF
     ok "no FERROTERM_IMAGE line overrides the pinned FerroTERM $FERROTERM_PIN_VERSION"
   else
     fail "the .env pins FerroTERM $image_after over the posture's $FERROTERM_PIN; FerroTERM 0.1 reads none of the 0.3 names, so it serves no index and no LOINC; run step 3 without --check"
+  fi
+  image_after="$(sed -n 's/^after_ferropix_image=//p' <<<"$out")"
+  if [[ "$image_after" == unset || "$image_after" == "$FERROPIX_PIN" ]]; then
+    ok "no FERROPIX_IMAGE line overrides the pinned FerroPIX $FERROPIX_PIN_VERSION"
+  else
+    fail "the .env pins FerroPIX $image_after over the posture's $FERROPIX_PIN, whose ferropix.sandbox.toml is written for $FERROPIX_PIN_VERSION; run step 3 without --check"
   fi
 
   # The deploy script does not update itself, and the reseed's `identities`
@@ -703,6 +720,11 @@ EOF
   [[ "$ferroterm_version" == "$FERROTERM_PIN_VERSION" ]] \
     || fail "FerroTERM runs ${ferroterm_version:-nothing}, the posture pins $FERROTERM_PIN_VERSION; a FERROTERM_IMAGE line in .env overrides it (step 3 retires it)"
   ok "FerroTERM runs the pinned $FERROTERM_PIN_VERSION"
+  local ferropix_version
+  ferropix_version="$(awk '$1 == "ferroehr-sandbox-ferropix" && NF == 3 && $2 ~ /^ghcr/ { print $3; exit }' <<<"$out")"
+  [[ "$ferropix_version" == "$FERROPIX_PIN_VERSION" ]] \
+    || fail "FerroPIX runs ${ferropix_version:-nothing}, the posture pins $FERROPIX_PIN_VERSION; deploy the release whose posture pins it, and retire a FERROPIX_IMAGE line in .env (step 3)"
+  ok "FerroPIX runs the pinned $FERROPIX_PIN_VERSION"
 
   # The reseed's archetype-library pin holds only while the CDR resolves LOINC
   # (scripts/sandbox/seed/manifest.json, #4278): ask before seeding.
