@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+name: The sandbox's deploy script offers a verb
+description: >-
+  Ask the hosted sandbox's deploy script which verbs it offers and refuse a
+  verb it lacks, before a workflow calls it (#4372).
+
+# deploy.sh lives on the box and does not update itself (deploy/hosted/
+# README.md), while the workflows that call its verbs run from main, so a
+# verb a workflow needs can be missing from the copy the box holds. This asks
+# the box first and names the fix instead of failing inside the verb.
+inputs:
+  verb:
+    description: The verb the calling step is about to run.
+    required: true
+  ssh-key:
+    description: The deploy key, restricted on the box to the deploy script.
+    required: true
+  known-hosts:
+    description: The box's host key, from the same environment as `ssh-key`.
+    required: true
+  host:
+    description: The box's IPv4 address (runners have no IPv6 route).
+    required: false
+    default: "167.233.172.220"
+
+runs:
+  using: composite
+  steps:
+    - name: Read the verbs the box's deploy script offers
+      shell: bash
+      env:
+        VERB: ${{ inputs.verb }}
+        KEY: ${{ inputs.ssh-key }}
+        KNOWN_HOSTS: ${{ inputs.known-hosts }}
+        HOST: ${{ inputs.host }}
+        READER: ${{ github.action_path }}/verbs.sh
+      run: |
+        set -euo pipefail
+        if [ -z "$KEY" ] || [ -z "$KNOWN_HOSTS" ]; then
+          echo "::error::the deploy key or the box's host key is empty; the verb contract cannot be read." >&2
+          exit 1
+        fi
+        dir="$(mktemp -d)"
+        trap 'rm -rf "$dir"' EXIT
+        umask 077
+        printf '%s\n' "$KEY" > "$dir/key"
+        printf '%s\n' "$KNOWN_HOSTS" > "$dir/known_hosts"
+        # A deploy.sh from before the verbs verb refuses it and exits 1, with
+        # the list of the verbs it runs, which the reader reads too.
+        ssh -i "$dir/key" -o IdentitiesOnly=yes -o BatchMode=yes \
+          -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$dir/known_hosts" \
+          "deploy@$HOST" verbs < /dev/null > "$dir/answer" 2>&1 || true
+        bash "$READER" check "$VERB" < "$dir/answer"

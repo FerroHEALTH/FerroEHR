@@ -101,7 +101,7 @@ That leaves about 1.1 GiB for the OS, Docker and the page cache. The one-shots
 | `ferroehr-viewer.sandbox.toml` | The viewer's sandbox posture | the same way |
 | `ferropix.sandbox.toml` | FerroPIX's sandbox posture: the loopback base, the development issuer, the synthetic identifier domain `urn:oid:2.999.1.1` fed by `sandbox-source`, and the pseudonymisation domain `urn:oid:2.999.7.1` whose consumer is the CDR (`ferroehr`) | the same way |
 | `ferropix-seed.sh` | The one-shot that registers the demo patients with FerroPIX (ITI-104) and answers their pseudonyms (ITI-83); the deploy script's `identities` verb runs it | baked into the image; the compose file mounts the image into the one-shot, so `deploy.sh` never handles it |
-| `sandbox-ferropix-rollout.sh` | The operator's script for the FerroPIX rollout on both boxes (below) | never. The operator runs it from a checkout |
+| `sandbox-ferropix-rollout.sh` | The operator's script for the FerroPIX rollout on both boxes (below) | never. The operator runs it from a checkout of the tag the sandbox serves |
 | `env.example` | A copy-to-`.env` template: the DB box's private-network DSNs, FerroPIX's sealing key, the image references and the FerroTERM index list | never. `.env` is the operator's file, written by hand on the box (the rollout script writes the FerroPIX lines) |
 | `cloud-init-postgres.yaml` | The DATABASE box, fresh to serving state: the `deploy` user, key-only SSH, both firewalls, Docker, and the `ferroehr-postgres` compose posture bound to the private address | the DB server's user data at creation, once |
 | `ferroterm-index.env` | The record of the terminology index the box carries: its artifact layout, the `ferroterm-build` version and the editions. `scripts/checks/ferroterm-index-layout.sh` refuses a FerroTERM pin in `docker-compose.yml` whose layout differs | never. The index is built off-box and copied by the operator (below), and this file changes in the same pull request as the pin |
@@ -113,6 +113,28 @@ a posture change arrives at a release, with that artifact's provenance. The
 `hosted-deploy-script` CI job extracts `deploy.sh` out of `cloud-init.yaml`
 and shellchecks it, and checks that `docker/Dockerfile` bakes every posture
 path the script reads and every path the compose file reads out of the image.
+
+## A script that acts on the sandbox runs at the release the sandbox serves
+
+The box runs the latest stable image, and `main` moves its routes, corpus and
+pins ahead of that release (#4333 moved FerroEHR's own routes from
+`/ferroehr/rest/openehr/v1` to `/ferroehr/rest/extensions/v1`). So every
+script that addresses the sandbox reads the version the box serves
+(`solution_version` on the ITS-REST system `OPTIONS /ferroehr/rest/openehr/v1`)
+and runs from the tag of that version, or refuses and names the tag to check
+out (#4372):
+
+- the nightly reseed checks out `v<version>` for its seed (below);
+- `sandbox-ferropix-rollout.sh` refuses to run from a checkout whose workspace
+  version is not the served one, so the routes it probes and the `deploy.sh`
+  it installs are that release's;
+- the workflows that call `deploy.sh` verbs run from `main`, while the
+  `deploy.sh` on the box does not update itself. Each caller first asks the
+  box's copy for its `verbs` (`.github/actions/deploy-verbs`) and refuses a
+  verb the copy lacks, naming the fix. A verb keeps its name, input and output
+  for good, and a changed meaning is a new verb;
+  `scripts/checks/hosted-deploy-script.sh` holds every verb a caller names to
+  the list the committed script offers.
 
 ## How a deploy happens
 
@@ -137,7 +159,8 @@ every step. Three callers:
 
 The deploy key is restricted on the box to `deploy.sh` (`command=` in
 `cloud-init.yaml`), which reads `SSH_ORIGINAL_COMMAND` and accepts exactly
-`deploy`, `restart`, `wipe` and `identities`. The lane builds nothing; it asserts by digest that
+`deploy`, `restart`, `wipe`, `identities` and `verbs` (the list of the verbs
+the copy offers, which each caller reads first). The lane builds nothing; it asserts by digest that
 `:latest` is the tagged image, refuses an image that does not declare
 `eu.ferroehr.image.carries-sandbox-posture=true`, deploys through
 [`rubentalstra/hetzner-deploy-action`](https://github.com/rubentalstra/hetzner-deploy-action),
@@ -302,7 +325,8 @@ no rebuild.
 ## Rolling out FerroPIX (#4242)
 
 `sandbox-ferropix-rollout.sh` carries every hand step on both boxes. Run it
-from a checkout on your own machine; it reaches the boxes over SSH as
+from a checkout of the tag the sandbox serves on your own machine (it refuses
+any other checkout and names the tag); it reaches the boxes over SSH as
 `deploy` (`APP_HOST`, default `167.233.172.220`; `DB_HOST`, default
 `postgres.ferroehr.eu`; `SSH_USER`). Every step prints `==> step N:` and then
 `OK:`, `SKIP:` or `FAIL:` with its evidence, a re-run is safe, and `--check`
