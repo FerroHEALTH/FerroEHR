@@ -338,15 +338,14 @@ impl AuditStore {
         self.tokens.record_tokens(conn, &tokens).await
     }
 
-    /// Holds the shared sets of a committed write.
-    #[cfg(feature = "fhir")]
+    /// Holds the shared sets of a committed write; a slim build stores no
+    /// search tokens, so it learns no set.
     fn remember(&self, learned: LearnedSets) {
+        #[cfg(feature = "fhir")]
         self.tokens.remember(learned);
+        #[cfg(not(feature = "fhir"))]
+        let _: (LearnedSets, &Self) = (learned, self);
     }
-
-    /// A slim build stores no search tokens, so it learns no set.
-    #[cfg(not(feature = "fhir"))]
-    fn remember(&self, _learned: LearnedSets) {}
 
     /// The `search_tokens` of each record of a batch, as the text of an
     /// `integer[]` the batched insert casts, with the shared sets learned.
