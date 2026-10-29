@@ -160,6 +160,42 @@ pub async fn ehr_id_by_subject<'e>(
     )
 }
 
+/// The `(subject_id, EHR)` pairs of the EHRs whose current `EHR_STATUS`
+/// subject `external_ref` has an `id.value` in `subject_ids` and a `type` in
+/// `types`, ordered by subject then EHR, in any namespace.
+///
+/// The id is matched on the promoted `ehr.subject_id` column and the type on
+/// the current `EHR_STATUS` root fragment, where `subject.external_ref` stays
+/// inline (see [`current_status_root`]). An empty `subject_ids` makes no round
+/// trip. No openEHR spec governs this read: our own storage design.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn ehrs_by_subject_ids(
+    pool: &PgPool,
+    subject_ids: &[String],
+    types: &[&str],
+) -> Result<Vec<(String, EhrId)>, StorageError> {
+    if subject_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    Ok(sqlx::query_as::<_, (String, EhrId)>(
+        "SELECT e.subject_id, e.id FROM ehr e \
+         JOIN vo_head h ON h.ehr_id = e.id AND h.kind = 'EHR_STATUS' \
+         JOIN node n ON n.tier = h.tier AND n.vo_id = h.vo_id \
+             AND n.sys_version = h.trunk_head_sys_version AND n.num = 0 \
+         WHERE e.subject_id = ANY($1) \
+           AND ext.node_fragment(n.data, n.rm_type, n.archetype, n.name, n.name_code, \
+               n.name_terminology, n.value_type, n.value_num, n.value_text, n.value_code, \
+               n.value_terminology) #>> '{subject,external_ref,type}' = ANY($2) \
+         ORDER BY e.subject_id, e.id",
+    )
+    .bind(subject_ids)
+    .bind(types)
+    .fetch_all(&mut *acquire(pool).await?)
+    .await?)
+}
+
 /// The promoted subject `(subject_id, subject_namespace)` of an EHR.
 ///
 /// The columns of its current `EHR_STATUS` (RM ehr master04 §EHR Status), or
